@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import type { SpendNode } from "../../core";
-import { buildSpendTree, callerName, type SpendSourceRow } from "./tree";
+import {
+  buildSpendTree,
+  callerName,
+  launcherName,
+  type SpendSourceRow,
+} from "./tree";
 
 const MANDATES = { roleSession: "supervisor-role", adhoc: "supervisor" };
 
@@ -13,7 +18,10 @@ function conv(
     source: `conv:${id}`,
     costUsd: cost,
     billedUsd: 0,
+    unattributed: false,
     caller: null,
+    session: null,
+    systemLauncher: null,
     conversation: { id, title: `Conversation ${id}`, live: false },
     attempt: null,
     task: null,
@@ -31,6 +39,15 @@ function cli(caller: string, cost: number): SpendSourceRow {
     source: `cli:${caller}`,
     caller,
     conversation: null,
+  };
+}
+
+function outside(id: string, cost: number): SpendSourceRow {
+  return {
+    ...conv("x", cost),
+    source: `session:${id}`,
+    conversation: null,
+    session: { id, title: null, projectDir: "-Users-me-proj" },
   };
 }
 
@@ -184,6 +201,59 @@ describe("buildSpendTree", () => {
     expect(at(billed, "you").billedUsd).toBe(4);
   });
 
+  test("a system conversation is Background, under its launcher", () => {
+    const triageTask = { id: "task-tri", title: "Triage: Boot perf" };
+    const sys = buildSpendTree(
+      [
+        conv("c-tri", 3, {
+          attempt: { id: "att-tri", number: 1 },
+          task: triageTask,
+          root: triageTask,
+          mandateId: "interactive",
+          systemLauncher: "tasks.task-triage",
+        }),
+      ],
+      MANDATES,
+    );
+    expect(sys.children.map((c) => c.id)).toEqual(["background"]);
+    const launcher = at(sys, "background", "system:tasks.task-triage");
+    expect(launcher.name).toBe("Task triage");
+    expect(at(launcher, "task-tri").conversationId).toBe("c-tri");
+  });
+
+  test("a session equin did not launch is the person's own, never a removed conversation", () => {
+    const own = buildSpendTree(
+      [outside("abcdef123456", 4), outside("0123456789", 1)],
+      MANDATES,
+    );
+    const group = at(own, "you", "outside");
+    expect(group.name).toBe("Claude Code outside equin");
+    expect(group.sub).toBe("2 sessions");
+    const leaf = at(group, "session:abcdef123456");
+    expect(leaf.kind).toBe("outside-session");
+    expect(leaf.name).toBe("Session abcdef12");
+    expect(leaf.sub).toBe("-Users-me-proj");
+  });
+
+  test("usage under no account is its own category, last", () => {
+    const mixed = buildSpendTree(
+      [
+        conv("c1", 10),
+        { ...conv("c1", 2), unattributed: true },
+        { ...outside("s1", 3), unattributed: true },
+        { ...cli("task-title", 1), unattributed: true },
+      ],
+      MANDATES,
+    );
+    expect(mixed.children.map((c) => c.id)).toEqual(["you", "unknown"]);
+    const unknown = at(mixed, "unknown");
+    expect(unknown.costUsd).toBe(6);
+    expect(unknown.short).toBe("Unknown");
+    expect(at(unknown, "c1").conversationId).toBe("c1");
+    expect(at(unknown, "session:s1").kind).toBe("outside-session");
+    expect(at(unknown, "cli:task-title").kind).toBe("caller");
+  });
+
   test("no spend: no categories", () => {
     expect(buildSpendTree([], MANDATES).children).toEqual([]);
   });
@@ -193,5 +263,8 @@ describe("callerName", () => {
   test("a caller's id, in words", () => {
     expect(callerName("task-title")).toBe("Task title");
     expect(callerName("page-auto-icon")).toBe("Page auto icon");
+  });
+  test("a launcher plugin id, by its last segment", () => {
+    expect(launcherName("tasks.task-triage")).toBe("Task triage");
   });
 });

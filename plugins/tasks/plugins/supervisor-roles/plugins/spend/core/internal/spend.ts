@@ -2,8 +2,9 @@ import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import { cappedList } from "@plugins/packages/plugins/list-bound/core";
 
-// Where this week's Claude spend went, as one drill tree: the four categories
-// (Supervisors, Ad hoc, Background, You), each opening into the next level.
+// Where this week's Claude spend went, as one drill tree: the categories
+// (Supervisors, Ad hoc, Background, You — and Unknown, usage no pass could
+// file under an account), each opening into the next level.
 // Amounts are API-equivalent dollars, read off the priced usage ledger
 // (`claude_spend_hours_v`, infra/claude-cli/usage-ledger/pricing).
 
@@ -11,7 +12,7 @@ import { cappedList } from "@plugins/packages/plugins/list-bound/core";
 export const SPEND_ROOT_ID = "week";
 
 /**
- * The four categories, in the order every surface draws them (the glance's
+ * The categories, in the order every surface draws them (the glance's
  * legend, the root level's rows), each with the short name the glance's
  * legend uses. A closed list: classification is the server's, the names are
  * both runtimes'.
@@ -21,6 +22,7 @@ export const SPEND_CATEGORIES = [
   { id: "adhoc", name: "Ad-hoc supervisors", short: "Ad hoc" },
   { id: "background", name: "Background", short: "Background" },
   { id: "you", name: "Your conversations", short: "You" },
+  { id: "unknown", name: "Unknown account", short: "Unknown" },
 ] as const;
 export type SpendCategoryId = (typeof SPEND_CATEGORIES)[number]["id"];
 
@@ -38,6 +40,8 @@ export const SPEND_NODE_KINDS = [
   "conversation",
   "automation",
   "caller",
+  "outside",
+  "outside-session",
   "rest",
 ] as const;
 export type SpendNodeKind = (typeof SPEND_NODE_KINDS)[number];

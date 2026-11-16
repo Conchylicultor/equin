@@ -20,16 +20,29 @@ export interface SpendTaskRef {
 
 /**
  * One source's spend in the windows, with what spent it. A `cli:` source
- * names its caller and no conversation; a `conv:` source whose conversation
- * is gone names neither.
+ * names its caller and no conversation; a `session:` source its session and
+ * no conversation; a `conv:` source whose conversation is gone names neither.
  */
 export interface SpendSourceRow {
   source: string;
   costUsd: number;
   /** The part spent on API-key accounts. */
   billedUsd: number;
+  /** Counted under no account (`UNKNOWN_ACCOUNT`): its own category. */
+  unattributed: boolean;
   /** The caller of a `cli:` source (`task-title`), else `null`. */
   caller: string | null;
+  /** A `session:` source's Claude Code session, which equin did not launch. */
+  session: {
+    id: string;
+    title: string | null;
+    projectDir: string | null;
+  } | null;
+  /**
+   * The plugin that launched a `system` conversation (`tasks.task-triage`) —
+   * one the app runs for itself — else `null`.
+   */
+  systemLauncher: string | null;
   conversation: { id: string; title: string | null; live: boolean } | null;
   /** The conversation's attempt and its number on its task (1, 2, …). */
   attempt: { id: string; number: number } | null;
@@ -104,6 +117,36 @@ export function callerName(caller: string): string {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
+/** "Task triage", from the launcher plugin `tasks.task-triage`. */
+export function launcherName(pluginId: string): string {
+  return callerName(pluginId.slice(pluginId.lastIndexOf(".") + 1));
+}
+
+/** The leaf of a `session:` row, under `parent`. */
+function outsideSessionOf(
+  parent: Draft,
+  row: SpendSourceRow,
+  session: NonNullable<SpendSourceRow["session"]>,
+): Draft {
+  return child(parent, row.source, () =>
+    draft(
+      row.source,
+      "outside-session",
+      session.title ?? `Session ${session.id.slice(0, 8)}`,
+      { sub: session.projectDir },
+    ),
+  );
+}
+
+/** A `cli:` row's caller node, under `parent`. */
+function callerOf(parent: Draft, row: SpendSourceRow, caller: string): Draft {
+  return child(parent, row.source, () =>
+    draft(row.source, "caller", callerName(caller), {
+      sub: "Background calls",
+    }),
+  );
+}
+
 /** The conversation leaf of a `conv:` row, under `parent`. */
 function conversationOf(parent: Draft, row: SpendSourceRow): Draft {
   const conv = row.conversation;
@@ -153,9 +196,11 @@ function underSupervisor(
 
 /**
  * Where one source's cost lands: the chain of nodes from its category down to
- * its leaf, made as needed. First match wins: a background caller; a role
- * session's tree; an ad-hoc supervisor's tree; an automation's task; else the
- * person's own (a conversation without a task included).
+ * its leaf, made as needed. First match wins: usage under no account; a
+ * background caller; a Claude Code session equin did not launch (the
+ * person's own); a system conversation (by its launcher); a role session's
+ * tree; an ad-hoc supervisor's tree; an automation's task; else the person's
+ * own (a conversation without a task included).
  */
 function chainOf(
   categories: ReadonlyMap<SpendCategoryId, Draft>,
@@ -167,17 +212,41 @@ function chainOf(
     if (!found) throw new Error(`spend: no category ${id}`);
     return found;
   };
+  if (row.unattributed) {
+    // Which account spent it is unknown, so no window was its: one leaf per
+    // source, named as elsewhere.
+    const unknown = category("unknown");
+    if (row.caller !== null)
+      return [unknown, callerOf(unknown, row, row.caller)];
+    if (row.session !== null)
+      return [unknown, outsideSessionOf(unknown, row, row.session)];
+    return [unknown, conversationOf(unknown, row)];
+  }
   if (row.caller !== null) {
-    const caller = row.caller;
     const bg = category("background");
-    return [
-      bg,
-      child(bg, row.source, () =>
-        draft(row.source, "caller", callerName(caller), {
-          sub: "Background calls",
-        }),
-      ),
-    ];
+    return [bg, callerOf(bg, row, row.caller)];
+  }
+  if (row.session !== null) {
+    const you = category("you");
+    const outside = child(you, "outside", () =>
+      draft("outside", "outside", "Claude Code outside equin"),
+    );
+    return [you, outside, outsideSessionOf(outside, row, row.session)];
+  }
+  if (row.systemLauncher !== null) {
+    const launcher = row.systemLauncher;
+    const bg = category("background");
+    const node = child(bg, `system:${launcher}`, () =>
+      draft(`system:${launcher}`, "caller", launcherName(launcher), {
+        sub: "System conversations",
+      }),
+    );
+    const { task } = row;
+    if (!task) return [bg, node, conversationOf(node, row)];
+    const taskNode = child(node, task.id, () =>
+      draft(task.id, "task", task.title),
+    );
+    return [bg, node, taskNode, ...underTask(taskNode, row)];
   }
   const { task, root } = row;
   if (!task || !root) {
@@ -236,6 +305,7 @@ const NOUNS: Partial<Record<SpendNodeKind, readonly [string, string]>> = {
   conversation: ["conversation", "conversations"],
   automation: ["automation", "automations"],
   caller: ["source", "sources"],
+  "outside-session": ["session", "sessions"],
 };
 
 /** "3 tasks", "1 conversation" — `count` parts of `kinds`; `more` adds "more". */

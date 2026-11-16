@@ -62000,7 +62000,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/jsonl-viewer/tool-call/orchestration-tools`
               - `tasks/supervisor-roles/events`
               - `tasks/supervisor-roles/pane`
-        - **`spend`** — The supervisors spend breakdown, web half: the Spent this week glance atop the Supervisors list (the total, the four categories as a thin bar and a legend; a segment or an entry opens its category) and the breakdown pane (/agents/supervisors/spend/<path>): one level at a time, the title its path, the total counting to each level's, the bar zooming into the picked part, the rows (a DataView) cross-fading, Esc going up; a conversation's row opens it in a new pane. Each account counts from its own weekly reset (an API-key account, or one with no usage reading, over the last 7 days). The supervisors spend breakdown, server half: serves supervisors.spend — this week's Claude spend (each account over its own window, the browser's) as one drill tree: Supervisors (a role's sessions and workers), Ad hoc, Background (automations and background calls) and You, each level its five biggest parts and a rest. One aggregate over the spend ledger joined to the conversation → attempt → task → mandate root → role / automation, recomputed on every ledger write.
+        - **`spend`** — The supervisors spend breakdown, web half: the Spent this week glance atop the Supervisors list (the total, the categories as a thin bar and a legend; a segment or an entry opens its category) and the breakdown pane (/agents/supervisors/spend/<path>): one level at a time, the title its path, the total counting to each level's, the bar zooming into the picked part, the rows (a DataView) cross-fading, Esc going up; a conversation's row opens it in a new pane. Each account counts from its own weekly reset (an API-key account, or one with no usage reading, over the last 7 days); usage counted under no account, from the earliest of them. The supervisors spend breakdown, server half: serves supervisors.spend — this week's Claude spend (each account over its own window, the browser's) as one drill tree: Supervisors (a role's sessions and workers), Ad hoc, Background (automations, background calls and system conversations such as triage), You (Claude Code sessions outside equin included) and Unknown (usage counted under no account, from the earliest window), each level its five biggest parts and a rest. One aggregate over the spend ledger joined to the conversation → attempt → task → mandate root → role / automation, recomputed on every ledger write.
           - Web:
             - Slots:
               - `supervisors-spend.actions`
@@ -62037,6 +62037,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes: `resource.declare` "supervisors.spend"
             - Uses:
               - `database.db`
+              - `infra/claude-cli/usage-ledger._claudeUsageSources`
               - `infra/claude-cli/usage-ledger/pricing.claudeSpendHoursView`
               - `network/live.serveValue`
               - `tasks/automations.tasksOrigin`

@@ -1,8 +1,9 @@
 /**
  * The breakdown's read over a real Postgres (db-test-fixture, the real
  * migration chain, the priced view): each account cut at its own window,
- * usage under `UNKNOWN_ACCOUNT` left out, and a `conv:` source joined through attempt → task →
- * mandate root → role / automation so it lands in its category.
+ * usage a writer counted under `UNKNOWN_ACCOUNT` in its own category (the
+ * imported history's left out), and a `conv:` source joined through attempt
+ * → task → mandate root → role / automation so it lands in its category.
  */
 import {
   afterAll,
@@ -40,15 +41,17 @@ async function run(
   taskId: string,
   created: string,
   ended: boolean,
+  kind: "user" | "system" = "user",
+  launchedFrom: string | null = null,
 ) {
   await t.db.execute(sql`
     INSERT INTO attempts (id, task_id, worktree_path, created_at)
     VALUES (${attempt}, ${taskId}, ${`/tmp/${attempt}`}, ${created}::timestamptz)
     ON CONFLICT (id) DO NOTHING`);
   await t.db.execute(sql`
-    INSERT INTO conversations (id, attempt_id, title, status, runtime, model, kind, launch_cause, ended_at)
-    VALUES (${conv}, ${attempt}, ${`Chat ${conv}`}, ${ended ? "done" : "working"}, 'sdk', 'opus', 'user', 'direct',
-            ${ended ? created : null}::timestamptz)`);
+    INSERT INTO conversations (id, attempt_id, title, status, runtime, model, kind, launch_cause, launched_from, ended_at)
+    VALUES (${conv}, ${attempt}, ${`Chat ${conv}`}, ${ended ? "done" : "working"}, 'sdk', 'opus', ${kind}, 'direct',
+            ${launchedFrom}, ${ended ? created : null}::timestamptz)`);
 }
 
 async function mandate(taskId: string, mandateId: string, source: string) {
@@ -64,10 +67,11 @@ async function spend(
   hour: string,
   source: string,
   cost: number,
+  origin: "counted" | "imported" = "counted",
 ) {
   await t.db.execute(sql`
-    INSERT INTO claude_usage_hours (account_id, hour, source, model, speed, input_below)
-    VALUES (${account}, ${hour}::timestamptz, ${source}, 'm-a', 'standard', ${cost * 1e6})`);
+    INSERT INTO claude_usage_hours (account_id, hour, source, model, speed, origin, input_below)
+    VALUES (${account}, ${hour}::timestamptz, ${source}, 'm-a', 'standard', ${origin}, ${cost * 1e6})`);
 }
 
 beforeAll(async () => {
@@ -106,6 +110,22 @@ beforeAll(async () => {
   await task("task-you", "Boot perf", "2026-11-11T00:00:00Z");
   await mandate("task-you", "interactive", "task-you");
   await run("conv-you", "att-you", "task-you", "2026-11-11T00:00:00Z", true);
+  // A triage run: a system conversation under its own interactive root.
+  await task("task-tri", "Triage: Boot perf", "2026-11-11T00:00:00Z");
+  await mandate("task-tri", "interactive", "task-tri");
+  await run(
+    "conv-tri",
+    "att-tri",
+    "task-tri",
+    "2026-11-11T00:00:00Z",
+    true,
+    "system",
+    "tasks.task-triage",
+  );
+  // A Claude Code session equin did not launch, with its source row.
+  await t.db.execute(sql`
+    INSERT INTO claude_usage_sources (source, project_dir, is_repo, title)
+    VALUES ('session:abcdef1234', '-Users-me-elsewhere', false, 'Terminal chat')`);
 
   // The ledger: "max" (a plan) from Nov 12 09:00, "api" (API key) from Nov 8.
   await spend("max", "2026-11-12T08:00:00Z", "conv:conv-you", 1000); // before its window
@@ -116,7 +136,22 @@ beforeAll(async () => {
   await spend("max", "2026-11-12T11:00:00Z", "conv:conv-a", 14);
   await spend("max", "2026-11-12T11:00:00Z", "conv:conv-auto", 18);
   await spend("max", "2026-11-12T12:00:00Z", "cli:task-title", 11);
-  await spend(UNKNOWN_ACCOUNT, "2026-11-13T00:00:00Z", "conv:conv-you", 500); // unattributed: left out
+  await spend("max", "2026-11-12T12:00:00Z", "conv:conv-tri", 3);
+  await spend("max", "2026-11-12T12:00:00Z", "session:abcdef1234", 5);
+  await spend(
+    UNKNOWN_ACCOUNT,
+    "2026-11-13T00:00:00Z",
+    "conv:conv-you",
+    500,
+    "imported",
+  ); // history: left out
+  await spend(UNKNOWN_ACCOUNT, "2026-11-09T00:00:00Z", "session:abcdef1234", 7); // counted, no account
+  await spend(
+    UNKNOWN_ACCOUNT,
+    "2026-11-07T00:00:00Z",
+    "session:abcdef1234",
+    900,
+  ); // before every window
   await spend("max", "2026-11-12T12:00:00Z", "conv:conv-gone", 2); // its conversation is gone
   await spend("api", "2026-11-09T00:00:00Z", "conv:conv-you", 6);
   await spend("api", "2026-11-07T00:00:00Z", "conv:conv-you", 2000); // before its window
@@ -162,7 +197,9 @@ describe("readSpendBreakdown", () => {
 
   test("each account over its own window; history and other accounts left out", async () => {
     const { tree, attributedSince } = await readSpendBreakdown(t.db, windows);
-    expect(tree.costUsd).toBe(64 + 28 + 30 + 16 + 14 + 18 + 11 + 2 + 6);
+    expect(tree.costUsd).toBe(
+      64 + 28 + 30 + 16 + 14 + 18 + 11 + 2 + 6 + 3 + 5 + 7,
+    );
     expect(tree.billedUsd).toBe(6);
     expect(attributedSince).toBe("2026-11-07T00:00:00.000Z");
   });
@@ -189,6 +226,20 @@ describe("readSpendBreakdown", () => {
     expect(at(tree, "you", "task-you").costUsd).toBe(70);
     expect(at(tree, "you", "task-you").billedUsd).toBe(6);
     expect(at(tree, "you", "conv:conv-gone").name).toBe("Removed conversation");
+    const triage = at(tree, "background", "system:tasks.task-triage");
+    expect(triage.name).toBe("Task triage");
+    expect(at(triage, "task-tri").conversationId).toBe("conv-tri");
+    const outside = at(tree, "you", "outside", "session:abcdef1234");
+    expect(outside.name).toBe("Terminal chat");
+    expect(outside.costUsd).toBe(5);
+  });
+
+  test("usage counted under no account: its own category, from the earliest window", async () => {
+    const { tree } = await readSpendBreakdown(t.db, windows);
+    const unknown = at(tree, "unknown");
+    expect(unknown.costUsd).toBe(7);
+    expect(unknown.billedUsd).toBe(0);
+    expect(at(unknown, "session:abcdef1234").kind).toBe("outside-session");
   });
 
   test("no windows: an empty tree", async () => {

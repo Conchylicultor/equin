@@ -5,7 +5,9 @@ import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import {
   SPEND_SOURCE_PREFIX,
   UNKNOWN_ACCOUNT,
+  type UsageOrigin,
 } from "@plugins/infra/plugins/claude-cli/plugins/usage-ledger/core";
+import { _claudeUsageSources } from "@plugins/infra/plugins/claude-cli/plugins/usage-ledger/server";
 import { claudeSpendHoursView } from "@plugins/infra/plugins/claude-cli/plugins/usage-ledger/plugins/pricing/server";
 import {
   _attempts,
@@ -32,7 +34,11 @@ export const SPEND_JOINED_RELATIONS = [
   tasksSupervisor.table,
   _supervisorRoles,
   tasksOrigin.table,
+  _claudeUsageSources,
 ];
+
+/** Usage a writer counted (not the one-shot history import). */
+const COUNTED: UsageOrigin = "counted";
 
 const MANDATES = {
   roleSession: supervisorRoleMandate.id,
@@ -43,9 +49,14 @@ const SourceRowSchema = z.object({
   source: z.string(),
   cost_usd: z.number(),
   billed_usd: z.number(),
+  unattributed: z.boolean(),
   conv_id: z.string().nullable(),
   conv_title: z.string().nullable(),
   conv_live: z.boolean().nullable(),
+  conv_kind: z.string().nullable(),
+  conv_launched_from: z.string().nullable(),
+  session_title: z.string().nullable(),
+  session_project_dir: z.string().nullable(),
   attempt_id: z.string().nullable(),
   attempt_number: z.number().int().nullable(),
   task_id: z.string().nullable(),
@@ -60,6 +71,11 @@ const SourceRowSchema = z.object({
 });
 type SourceRowRaw = z.infer<typeof SourceRowSchema>;
 
+/** A conversation the app runs for itself (a triage run), not for a person. */
+const SYSTEM_CONVERSATION_KIND = "system";
+/** The launcher of a system conversation that names none. */
+const UNKNOWN_LAUNCHER = "system";
+
 const FirstRowSchema = z.object({ first: z.string().nullable() });
 
 /** A raw joined row, as the tree builder reads it. */
@@ -67,11 +83,24 @@ function sourceRow(r: SourceRowRaw): SpendSourceRow {
   const cli = r.source.startsWith(SPEND_SOURCE_PREFIX.cli)
     ? r.source.slice(SPEND_SOURCE_PREFIX.cli.length)
     : null;
+  const session = r.source.startsWith(SPEND_SOURCE_PREFIX.session)
+    ? {
+        id: r.source.slice(SPEND_SOURCE_PREFIX.session.length),
+        title: r.session_title,
+        projectDir: r.session_project_dir,
+      }
+    : null;
   return {
     source: r.source,
     costUsd: r.cost_usd,
     billedUsd: r.billed_usd,
+    unattributed: r.unattributed,
     caller: cli,
+    session,
+    systemLauncher:
+      r.conv_kind === SYSTEM_CONVERSATION_KIND
+        ? (r.conv_launched_from ?? UNKNOWN_LAUNCHER)
+        : null,
     conversation:
       r.conv_id === null
         ? null
@@ -94,12 +123,16 @@ function sourceRow(r: SourceRowRaw): SpendSourceRow {
 }
 
 /**
- * Each source's spend over the windows (every account from its own `since`;
- * usage no pass could attribute — `UNKNOWN_ACCOUNT` — left out), priced by
+ * Each source's spend over the windows (every account from its own `since`),
+ * plus the usage a writer counted under `UNKNOWN_ACCOUNT` (a job's pass, which
+ * cannot know the account) since the earliest window — `unattributed`, kept
+ * apart; the history import's `UNKNOWN_ACCOUNT` rows (usage from before the
+ * ledger recorded accounts) are left out. Priced by
  * `claude_spend_hours_v` (an hour it cannot price adds nothing; the
  * `cost-unpriced-model` report names it), joined to what spent it: a `conv:`
  * source's conversation → attempt → task → the task's effective mandate and
- * the root stating it → the root's owning role and filing automation.
+ * the root stating it → the root's owning role and filing automation; a
+ * `session:` source to its source row (title, project dir).
  */
 export async function readSpendSources(
   exec: DbExecutor,
@@ -115,17 +148,28 @@ export async function readSpendSources(
         SELECT * FROM jsonb_to_recordset(${JSON.stringify(windows)}::jsonb)
           AS w("accountId" text, "since" timestamptz, "metered" boolean)
       ), spend AS (
-        SELECT h.source,
+        SELECT h.source, false AS unattributed,
                coalesce(sum(h.cost_usd), 0)::float8 AS cost_usd,
                coalesce(sum(h.cost_usd) FILTER (WHERE w.metered), 0)::float8 AS billed_usd
           FROM ${h} h
           JOIN w ON w."accountId" = h.account_id AND h.hour >= w.since
          WHERE h.account_id <> ${UNKNOWN_ACCOUNT}
          GROUP BY h.source
+        UNION ALL
+        SELECT h.source, true AS unattributed,
+               coalesce(sum(h.cost_usd), 0)::float8 AS cost_usd,
+               0::float8 AS billed_usd
+          FROM ${h} h
+         WHERE h.account_id = ${UNKNOWN_ACCOUNT}
+           AND h.origin = ${COUNTED}
+           AND h.hour >= (SELECT min(w.since) FROM w)
+         GROUP BY h.source
       )
-      SELECT s.source, s.cost_usd, s.billed_usd,
+      SELECT s.source, s.unattributed, s.cost_usd, s.billed_usd,
              c.id AS conv_id, c.title AS conv_title,
              CASE WHEN c.id IS NULL THEN NULL ELSE c.ended_at IS NULL END AS conv_live,
+             c.kind AS conv_kind, c.launched_from AS conv_launched_from,
+             us.title AS session_title, us.project_dir AS session_project_dir,
              a.id AS attempt_id,
              CASE WHEN a.id IS NULL THEN NULL ELSE (
                SELECT count(*)::int FROM ${_attempts} a2
@@ -157,7 +201,10 @@ export async function readSpendSources(
         LEFT JOIN ${_tasks} r ON r.id = m.source_task_id
         LEFT JOIN ${tasksSupervisor.table} sup ON sup.parent_id = r.id
         LEFT JOIN ${_supervisorRoles} sr ON sr.id = sup.supervisor
-        LEFT JOIN ${tasksOrigin.table} o ON o.parent_id = r.id`,
+        LEFT JOIN ${tasksOrigin.table} o ON o.parent_id = r.id
+        LEFT JOIN ${_claudeUsageSources} us
+          ON s.source LIKE ${`${SPEND_SOURCE_PREFIX.session}%`}
+         AND us.source = s.source`,
     row: SourceRowSchema,
   });
   return rows.map(sourceRow);
