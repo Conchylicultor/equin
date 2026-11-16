@@ -46,7 +46,13 @@ Production grade apps which can be deployed as standalone.
 The author's showcase: custom versions of every app they use daily, connected
 to each other in one app:
 
-agent manager · notes · mail · maps · piano · files · …
+* A custom agent manager
+* A custom Notion
+* A custom design tool
+* A custom map app
+* A custom piano learning app
+* A custom file explorer
+* ...
 
 </td>
 </tr>
