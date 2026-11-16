@@ -94,6 +94,11 @@ same answer for the local-serve e2e script) answers four questions at once:
   (served from exactly `head`), so a host can tell a current serve from one a
   push has left behind. A ref advance recomputes it (`recomputeOn:
   [refHeadServed]`).
+- `building` (client-side, `useServeStatus` only) — a build of this checkout
+  naming the composition is in flight: the newest `build.history` row has no
+  `finishedAt` and lists it in `targets`. The ledger, not the namespace dir,
+  because a build is claimed — and may wait for the build lock — before it
+  writes anything there. `ready` waits for both reads.
 - `autoTriggersHere` — whether the automatic modes are acted on by the backend
   that answered. Like `namespace`, a fact about THIS BACKEND rather than about
   the composition.

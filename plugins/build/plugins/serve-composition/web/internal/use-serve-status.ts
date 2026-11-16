@@ -4,6 +4,7 @@ import {
   asNamespace,
   namespaceHost,
 } from "@plugins/infra/plugins/namespace/core";
+import { buildHistory } from "@plugins/build/core";
 import { serveStatus } from "../../shared/serve-status";
 
 /**
@@ -46,6 +47,13 @@ export type ServeStatus =
       /** This checkout's HEAD, as the server read it. */
       head: string;
       /**
+       * A build of this checkout naming this composition is in flight — its
+       * `build_runs` row has no `finishedAt` yet. Read from the ledger, not
+       * the namespace dir: a build is claimed (and can wait a while for the
+       * build lock) before it writes anything there.
+       */
+      building: boolean;
+      /**
        * Whether the automatic serve modes are acted on by the backend that
        * answered — a fact about THAT BACKEND, not about this composition. They
        * run on main only, so a worktree's panel must say so rather than offer
@@ -70,12 +78,24 @@ export type ServeStatus =
  */
 export function useServeStatus(composition: string): ServeStatus {
   const result = useLive(serveStatus, { composition });
+  // The default window (newest first), the one the Build button reads and the
+  // boot snapshot hydrates. A checkout has at most one build in flight
+  // (`build_runs_inflight_uniq`), so if one is running it is the newest row.
+  const history = useLive(buildHistory);
   return useMemo<ServeStatus>(() => {
-    if (result.status === "loading") return { kind: "pending" };
+    if (result.status === "loading" || history.status === "loading")
+      return { kind: "pending" };
     if (result.status === "unavailable")
       return { kind: "error", message: result.message };
     if (result.status === "error")
       return { kind: "error", message: result.error.message };
+    if (history.status === "error")
+      return { kind: "error", message: history.error.message };
+    const newest = history.data[0];
+    const building =
+      newest !== undefined &&
+      newest.finishedAt === null &&
+      newest.targets.includes(composition);
     const { namespace, url, liveness, head, autoTriggersHere } = result.data;
     return {
       kind: "ready",
@@ -87,6 +107,7 @@ export function useServeStatus(composition: string): ServeStatus {
       url,
       autoTriggersHere,
       head,
+      building,
       live: liveness.served
         ? {
             served: true,
@@ -96,5 +117,5 @@ export function useServeStatus(composition: string): ServeStatus {
           }
         : { served: false },
     };
-  }, [result]);
+  }, [result, history, composition]);
 }

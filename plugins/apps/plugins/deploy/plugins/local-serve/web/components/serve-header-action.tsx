@@ -13,6 +13,7 @@ import {
 import type { SiteProps } from "@plugins/apps/plugins/deploy/plugins/deployments/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { testLocally } from "../internal/test-locally";
 
 const laptopIcon = symbol("laptop-mac");
@@ -67,6 +68,14 @@ function ServeHeaderButton({
     );
   }
   const action = testLocally(item.name, status);
+  if (action.kind === "building") {
+    return (
+      <Button variant="ghost" disabled tooltip={action.tooltip}>
+        <Spinner shape="ring" />
+        Building…
+      </Button>
+    );
+  }
   if (action.kind === "open") {
     return (
       <Button

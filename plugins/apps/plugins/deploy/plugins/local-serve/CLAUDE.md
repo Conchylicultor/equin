@@ -25,7 +25,10 @@ Test locally is the rehearsal of Deploy, which builds from this checkout's
 HEAD. So both surfaces OPEN the local serve only when it is live and was built
 from HEAD (`live.current` of the serve status), and BUILD in every other case —
 nothing served, or a build a push has since left behind. Opening a stale serve
-would show an old version beside a Deploy button that ships a newer one. The
+would show an old version beside a Deploy button that ships a newer one. While
+a build naming the composition is in flight (`building`, read from the build
+ledger) both show Building… instead — disabled, since the old serve is not what
+is being rehearsed and a second build would be dropped by the claim. The
 decision is one pure function, `web/internal/test-locally.ts`, so the header
 and the row cannot disagree.
 
@@ -80,6 +83,7 @@ round-trip.
     - `build/serve-composition.useServeComposition`
     - `build/serve-composition.useServeStatus`
     - `plugin-meta/composition.useManifestItemByName`
+    - `primitives/css/spinner.Spinner`
     - `primitives/css/ui-kit.Button`
     - `primitives/icon-button.IconButton`
     - `primitives/link-gesture/new-tab.NewTabButton`

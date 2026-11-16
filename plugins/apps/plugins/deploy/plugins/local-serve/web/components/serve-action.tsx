@@ -84,6 +84,16 @@ function ServeRowAction({
   }
 
   const action = testLocally(item.name, status);
+  if (action.kind === "building") {
+    return (
+      <IconButton
+        icon={boltIcon}
+        label="Building…"
+        tooltip={action.tooltip}
+        disabled
+      />
+    );
+  }
   if (action.kind === "open") {
     return (
       <NewTabButton

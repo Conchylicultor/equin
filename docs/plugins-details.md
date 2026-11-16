@@ -3182,6 +3182,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build/serve-composition.useServeComposition`
               - `build/serve-composition.useServeStatus`
               - `plugin-meta/composition.useManifestItemByName`
+              - `primitives/css/spinner.Spinner`
               - `primitives/css/ui-kit.Button`
               - `primitives/icon-button.IconButton`
               - `primitives/link-gesture/new-tab.NewTabButton`
@@ -50163,8 +50164,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `SpinnerProps`
             - Exports (values): `Spinner`
           - Cross-plugin:
-            - Imported by: 21 plugins — full list in [`plugins/primitives/plugins/css/plugins/spinner/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spinner/REFERENCE.md)
-              - `apps` ×10
+            - Imported by: 22 plugins — full list in [`plugins/primitives/plugins/css/plugins/spinner/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spinner/REFERENCE.md)
+              - `apps` ×11
               - `primitives` ×3
               - `conversations` ×2
               - `build`
