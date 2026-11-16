@@ -35,7 +35,7 @@ Decision: `research/2026-10-25-global-equin-internal-identifiers.md`.
 
 ## The source repository: `SOURCE_REPO`
 
-`SOURCE_REPO` (`Conchylicultor/equin`) and `SOURCE_REPO_URL` are where the code
+`SOURCE_REPO` (`equinai/equin`) and `SOURCE_REPO_URL` are where the code
 is published — read by the git remotes (is this checkout the publisher, or a
 fork?) and the website (source link, install command). Files that cannot import
 them (`install.sh`, `docs/setup.md`, `CITATION.cff`, `sidequests/clean-install`)

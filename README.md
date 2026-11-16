@@ -67,14 +67,14 @@ to each other in one app:
 ## ⚡ Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Conchylicultor/equin/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/equinai/equin/main/install.sh | bash
 ```
 
 Or prompt your agent:
 
 ```
-Install equin (https://github.com/Conchylicultor/equin) on this Mac with its installer:
-curl -fsSL https://raw.githubusercontent.com/Conchylicultor/equin/main/install.sh | bash
+Install equin (https://github.com/equinai/equin) on this Mac with its installer:
+curl -fsSL https://raw.githubusercontent.com/equinai/equin/main/install.sh | bash
 If a step fails, fix it and run the installer again. When it is done, give me the link to the app.
 ```
 

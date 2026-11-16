@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { cacheDecision, NO_PUBLISH } from "./cache";
 
-const URL = "https://github.com/Conchylicultor/equin.git";
+const URL = "https://github.com/equinai/equin.git";
 
 describe("cacheDecision", () => {
   test("nothing recorded means probe", () => {
@@ -47,7 +47,7 @@ describe("cacheDecision", () => {
       cacheDecision(
         { remote: "origin", url: URL },
         "origin",
-        "git@github.com:Conchylicultor/equin.git",
+        "git@github.com:equinai/equin.git",
       ),
     ).toEqual({ kind: "stale" });
   });

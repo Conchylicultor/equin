@@ -17,7 +17,7 @@ import { WEBSITE_MEDIA_PINS } from "./pins";
 export const websiteMediaSource = defineAssetMirrorSource({
   id: "website-media",
   remoteBaseUrl:
-    "https://github.com/Conchylicultor/equin/releases/download/website-media",
+    "https://github.com/equinai/equin/releases/download/website-media",
   files: WEBSITE_MEDIA_PINS,
 });
 

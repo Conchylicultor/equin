@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { normalizeRepoUrl, remoteTransport, sameRepoUrl } from "./remote-url";
 
-const CANONICAL = "https://github.com/Conchylicultor/equin";
+const CANONICAL = "https://github.com/equinai/equin";
 
 describe("normalizeRepoUrl", () => {
   test("reads scp-like syntax, which is not a URL", () => {
@@ -43,10 +43,10 @@ describe("normalizeRepoUrl", () => {
 describe("sameRepoUrl", () => {
   test("the four spellings of one repo are one repo", () => {
     for (const spelling of [
-      "https://github.com/Conchylicultor/equin.git",
-      "https://github.com/conchylicultor/equin/",
-      "git@github.com:Conchylicultor/equin.git",
-      "ssh://git@github.com/Conchylicultor/equin",
+      "https://github.com/equinai/equin.git",
+      "https://github.com/EquinAI/equin/",
+      "git@github.com:equinai/equin.git",
+      "ssh://git@github.com/equinai/equin",
     ]) {
       expect(sameRepoUrl(spelling, CANONICAL)).toBe(true);
     }
@@ -59,9 +59,9 @@ describe("sameRepoUrl", () => {
   });
 
   test("a different host is a different repo", () => {
-    expect(
-      sameRepoUrl("https://gitlab.com/Conchylicultor/equin", CANONICAL),
-    ).toBe(false);
+    expect(sameRepoUrl("https://gitlab.com/equinai/equin", CANONICAL)).toBe(
+      false,
+    );
   });
 
   test("two local paths compare as text, and never as equal to a URL", () => {

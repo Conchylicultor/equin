@@ -1,5 +1,5 @@
 // Pinned by `./equin run plugins/infra/plugins/asset-mirror/scripts/pin.ts`
-// from https://github.com/Conchylicultor/equin/releases/download/website-media — each file's sha256, checked before the mirror stores it.
+// from https://github.com/equinai/equin/releases/download/website-media — each file's sha256, checked before the mirror stores it.
 export const WEBSITE_MEDIA_PINS = {
   "equin-v22-web-poster.jpg":
     "64056a08603aabb36630de68e0c521bf85818c8f69d07a3891a296bc872deac8",

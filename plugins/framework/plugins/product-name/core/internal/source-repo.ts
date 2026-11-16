@@ -5,7 +5,7 @@
 // no repository is created again under that name.
 
 /** The GitHub repository the product is published from (`owner/name`). */
-export const SOURCE_REPO = "Conchylicultor/equin";
+export const SOURCE_REPO = "equinai/equin";
 
 /** The repository's web and clone URL. */
 export const SOURCE_REPO_URL = `https://github.com/${SOURCE_REPO}`;

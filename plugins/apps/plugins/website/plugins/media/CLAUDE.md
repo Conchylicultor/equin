@@ -23,10 +23,10 @@ file name, never a re-upload under the same one**:
 1. Render it: `promo-film`'s `film.ts` writes the master
    `~/Downloads/showcase/equin-v<N>.mp4` and, beside it, the web version
    `equin-v<N>-web.mp4` (~16 MB, faststart) — the site serves the web one.
-2. `gh release upload website-media -R Conchylicultor/equin equin-v<N>-web.mp4 equin-v<N>-web-poster.jpg`
+2. `gh release upload website-media -R equinai/equin equin-v<N>-web.mp4 equin-v<N>-web-poster.jpg`
    (the poster: a frame of the film, `ffmpeg -ss <t> -i … -frames:v 1 -q:v 3`).
 3. Pin them: `./equin run plugins/infra/plugins/asset-mirror/scripts/pin.ts
-   --base https://github.com/Conchylicultor/equin/releases/download/website-media
+   --base https://github.com/equinai/equin/releases/download/website-media
    --out plugins/apps/plugins/website/plugins/media/core/pins.ts
    --export WEBSITE_MEDIA_PINS equin-v<N>-web.mp4 equin-v<N>-web-poster.jpg`,
    and check the film's sha256 against the local render's (`shasum -a 256`) —

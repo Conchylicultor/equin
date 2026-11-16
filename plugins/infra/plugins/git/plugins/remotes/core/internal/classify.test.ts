@@ -107,7 +107,7 @@ describe("classifyRemoteFailure", () => {
       classifyRemoteFailure(
         capture(
           `remote: Permission to ${SOURCE_REPO}.git denied to someone.\n` +
-            "fatal: unable to access 'https://github.com/Conchylicultor/equin.git/': The requested URL returned error: 403\n",
+            "fatal: unable to access 'https://github.com/equinai/equin.git/': The requested URL returned error: 403\n",
         ),
       ).kind,
     ).toBe("denied");
