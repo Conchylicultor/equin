@@ -36,9 +36,7 @@ It adds [hundreds of improvements](https://equin.ai/about/foundations) on top of
 
 ### Apps for a team or an organization
 
-Real apps with many workflows, grown one request at a time.
-Users ask for a change, agents build it.
-Each app ships on its own.
+Production grade apps which can be deployed as standalone.
 
 </td>
 <td width="50%" valign="top">
