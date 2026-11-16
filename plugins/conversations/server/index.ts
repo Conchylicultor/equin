@@ -64,6 +64,7 @@ export type { Turn } from "./internal/claude-transcript";
 export {
   Runtime,
   conversationRunningAccount,
+  conversationRunningAccountSince,
   getConversationRow,
   interruptConversation,
   readConversationTurns,
@@ -74,6 +75,7 @@ export type {
   RuntimeSignal,
   ConversationRuntime,
   OutgoingTurn,
+  RunningAccount,
 } from "./internal/runtime";
 export { submitTurn } from "./internal/turns";
 export { resolvePromptAttachments } from "./internal/resolve-prompt-attachments";

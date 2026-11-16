@@ -112,6 +112,7 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `OutgoingTurn`
     - `QuestionHold`
     - `QuestionHoldSource`
+    - `RunningAccount`
     - `RuntimeInfo`
     - `RuntimeInspection`
     - `RuntimeSignal`
@@ -121,6 +122,7 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
   - Exports (values):
     - `afterTurn`
     - `conversationRunningAccount`
+    - `conversationRunningAccountSince`
     - `conversationTurnCompleted`
     - `createConversation`
     - `deleteConversation`

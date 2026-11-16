@@ -188,9 +188,27 @@ export interface ConversationRuntime {
    * The Claude account the conversation's running agent signs in as — whose
    * credit or quota what it spends now is drawn from (the usage sync files
    * each newly counted cost under it). `null` when no agent runs, or when the
-   * running one cannot say.
+   * running one cannot say. Cheap: asked on every priced transcript append.
    */
   runningAccount(conversationId: string): Promise<string | null>;
+  /**
+   * As {@link runningAccount}, with since when the agent's process has run on
+   * it — the process proven to be the conversation's agent, so a pid the
+   * system reused after a crash never vouches for past usage. For a reader
+   * filing usage it did not see appended (the usage backfill); costs a
+   * process query.
+   */
+  runningAccountSince(conversationId: string): Promise<RunningAccount | null>;
+}
+
+/**
+ * The Claude account a running agent signs in as, and when its process
+ * started: an agent keeps its account until its process restarts, so every
+ * token it spent at or after `since` was drawn from `account`.
+ */
+export interface RunningAccount {
+  account: string;
+  since: Date;
 }
 
 const registry = new Map<string, ConversationRuntime>();
@@ -300,6 +318,21 @@ export async function conversationRunningAccount(
   for (const runtime of Runtime.all()) {
     const account = await runtime.runningAccount(id);
     if (account !== null) return account;
+  }
+  return null;
+}
+
+/**
+ * The Claude account the conversation's running agent signs in as and since
+ * when its process has run on it (its runtime's `runningAccountSince`); null
+ * when no agent runs or it cannot say.
+ */
+export async function conversationRunningAccountSince(
+  id: string,
+): Promise<RunningAccount | null> {
+  for (const runtime of Runtime.all()) {
+    const running = await runtime.runningAccountSince(id);
+    if (running !== null) return running;
   }
   return null;
 }

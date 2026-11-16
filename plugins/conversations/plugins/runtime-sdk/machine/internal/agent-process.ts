@@ -241,21 +241,21 @@ export async function startAgentProcess(
   // Not demoted: the agent leaves darwinbg itself and demotes only what its
   // CLI launches (bin/agent.ts, scheduling tier).
   const command = [
-      namedBun ?? process.execPath,
-      AGENT_SCRIPT,
-      "--dir",
-      agentDir(id),
-      "--socket",
-      agentSocketPath(id),
-      "--pid-file",
-      agentPidPath(id),
-      "--account",
-      account,
-      "--usage-file",
-      claudeUsagePath(account),
-    ]
-      .map(shellWord)
-      .join(" ");
+    namedBun ?? process.execPath,
+    AGENT_SCRIPT,
+    "--dir",
+    agentDir(id),
+    "--socket",
+    agentSocketPath(id),
+    "--pid-file",
+    agentPidPath(id),
+    "--account",
+    account,
+    "--usage-file",
+    claudeUsagePath(account),
+  ]
+    .map(shellWord)
+    .join(" ");
   const launch = agentSessionLaunch({
     env: agentSessionEnv(id, {
       workspaceRoot: options.cwd,
@@ -317,7 +317,7 @@ const PROCESS_QUERY_TIMEOUT_MS = 30_000;
  * left behind can name a pid the system has since given to another process,
  * which must never be killed for it.
  */
-async function livePid(id: string): Promise<number | null> {
+export async function livePid(id: string): Promise<number | null> {
   const pidFile = agentPidPath(id);
   const read = await readPidFile(pidFile);
   if (read.kind !== "pid" || !pidAlive(read.pid)) return null;

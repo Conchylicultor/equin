@@ -45,6 +45,7 @@ import {
   awaitAgentExit,
   forgetAgentProcess,
   killAgentProcess,
+  livePid,
   nextLaunchAccount,
   readAgentOptions,
   startAgentProcess,
@@ -688,5 +689,15 @@ export const sdkRuntime: ConversationRuntime = {
   async runningAccount(id: string) {
     const agent = await runningAgentAccount(id);
     return agent.kind === "running" ? agent.account : null;
+  },
+
+  // The same pid file, its pid proven to be this conversation's agent (its
+  // argv names the file): a file a killed agent left behind can name a pid
+  // the system has since given to another process.
+  async runningAccountSince(id: string) {
+    const agent = await runningAgentAccount(id);
+    if (agent.kind !== "running" || agent.account === null) return null;
+    if ((await livePid(id)) !== agent.pid) return null;
+    return { account: agent.account, since: agent.since };
   },
 };

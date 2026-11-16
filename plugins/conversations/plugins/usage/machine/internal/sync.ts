@@ -2,7 +2,10 @@ import { basename, dirname } from "node:path";
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { resolveConversationTranscriptPaths } from "@plugins/conversations/plugins/transcript-watcher/server";
-import { conversationRunningAccount } from "@plugins/conversations/server";
+import {
+  conversationRunningAccount,
+  conversationRunningAccountSince,
+} from "@plugins/conversations/server";
 import {
   listSubagentEntries,
   subagentDirOf,
@@ -31,6 +34,7 @@ import {
 } from "./write";
 import { releaseSessions } from "./session-sync";
 import { rekeyStoredRows, transcriptKey } from "./transcript-key";
+import { backfillAccountOf } from "./backfill-account";
 import {
   _conversationUsageFiles,
   conversationUsage,
@@ -59,7 +63,9 @@ import {
 //      conversation's `conv:` source and the Claude account that spent it: a
 //      live pass runs right after the agent's own append, so the account its
 //      runtime runs it on NOW is the one the tokens were drawn from; a job
-//      pass (the backfill) cannot know, and files them under
+//      pass (the backfill) files an hour under the running agent's account
+//      only when the hour began after its process started (its account is
+//      fixed for the process's life), and every other hour under
 //      `UNKNOWN_ACCOUNT` — in the same statement as the file rows and the
 //      agent count, then price any model first seen (`ensureModelRates`).
 //      A session file counted for the first time may already be in the
@@ -273,25 +279,29 @@ async function syncConversationUsage(
   const counted = changed.flatMap((scan) =>
     tokenDelta(priorOf(scan.path)?.buckets, scan.buckets),
   );
-  const accountId = await accountOf(
+  const accountAt = await accountOf(
     conversationId,
     state,
     cause,
     counted.length > 0,
   );
-  const usage: AccountUsage[] = counted.map((b) => ({
-    accountId: accountId ?? UNKNOWN_ACCOUNT,
-    hour: new Date(spendHourKey(b)),
-    model: b.model,
-    speed: b.speed,
-    tokens: {
+  const usage: AccountUsage[] = counted.map((b) => {
+    const hour = new Date(spendHourKey(b));
+    const tokens = {
       input: b.input,
       output: b.output,
       cacheRead: b.cacheRead,
       cacheCreate5m: b.cacheCreate5m,
       cacheCreate1h: b.cacheCreate1h,
-    },
-  }));
+    };
+    return {
+      accountId: accountAt(hour, tokens) ?? UNKNOWN_ACCOUNT,
+      hour,
+      model: b.model,
+      speed: b.speed,
+      tokens,
+    };
+  });
   const source =
     usage.length > 0 && !sourced.has(conversationId)
       ? await sourceFacts(sessionPaths)
@@ -331,21 +341,33 @@ async function syncConversationUsage(
 }
 
 /**
- * The Claude account the pass's newly counted usage was drawn from — `null`
- * on a job's pass (it cannot know), when there is nothing to file, or when no
- * account is known. Asks the runtime only when there is something to file
- * (one pid-file read, no database read).
+ * The Claude account each hour of the pass's newly counted usage was drawn
+ * from — `null` when there is nothing to file, or when no account is known.
+ * Asks the runtime only when there is something to file (a live pass: one
+ * pid-file read, no database read; a job's: and a process query proving the
+ * pid is the agent's).
+ *
+ * A live pass runs right after the agent's own append: the whole count is the
+ * running agent's (else the account it was last found on). A job's pass (the
+ * backfill, catching up what was appended while no backend ran) files an hour
+ * under the running agent's account only when the hour began after its
+ * process started, and every other hour under unknown (`backfillAccountOf`).
  */
 async function accountOf(
   conversationId: string,
   state: UsageState,
   cause: SyncCause,
   anything: boolean,
-): Promise<string | null> {
-  if (cause === "reload" || !anything) return null;
+): Promise<(hour: Date, tokens: AccountUsage["tokens"]) => string | null> {
+  if (!anything) return () => null;
+  if (cause === "reload") {
+    const running = await conversationRunningAccountSince(conversationId);
+    return (hour, tokens) => backfillAccountOf(running, hour, tokens);
+  }
   const running = await conversationRunningAccount(conversationId);
   if (running !== null) state.account = running;
-  return state.account;
+  const account = state.account;
+  return () => account;
 }
 
 /**

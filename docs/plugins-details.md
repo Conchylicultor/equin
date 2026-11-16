@@ -16996,6 +16996,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `OutgoingTurn`
       - `QuestionHold`
       - `QuestionHoldSource`
+      - `RunningAccount`
       - `RuntimeInfo`
       - `RuntimeInspection`
       - `RuntimeSignal`
@@ -17005,6 +17006,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Exports (values):
       - `afterTurn`
       - `conversationRunningAccount`
+      - `conversationRunningAccountSince`
       - `conversationTurnCompleted`
       - `createConversation`
       - `deleteConversation`

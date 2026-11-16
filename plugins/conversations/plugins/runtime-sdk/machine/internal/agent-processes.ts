@@ -3,7 +3,11 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { readdir, readFile } from "@plugins/packages/plugins/timed-fs/core";
+import {
+  readdir,
+  readFile,
+  stat,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
 import {
   parsePidFile,
@@ -82,18 +86,34 @@ async function pidFileAgents(namespace: string): Promise<PidFileAgent[]> {
 /**
  * The Claude account `id`'s running agent signs in as, read from the pid file
  * the agent itself wrote — the one authority on it (the stop row's `account`
- * is the consumer's copy, and a copy can be stale). `not-running` while no
- * live pid is named; `account: null` for an agent started before pid files
- * named their account.
+ * is the consumer's copy, and a copy can be stale) — and since when: the pid
+ * file's mtime, as the agent writes it once, at its start, before its Claude
+ * Code runs a turn. `not-running` while no live pid is named; `account: null`
+ * for an agent started before pid files named their account.
  */
 export async function runningAgentAccount(
   id: string,
 ): Promise<
-  { kind: "not-running" } | { kind: "running"; account: string | null }
+  | { kind: "not-running" }
+  | { kind: "running"; pid: number; account: string | null; since: Date }
 > {
+  const path = agentPidPath(id);
   let text: string;
+  let since: Date;
   try {
-    text = await readFile(agentPidPath(id), "utf8");
+    // One file's text and time: a restart replaces the file (the old agent
+    // removes it, the new one writes another) — read again when the file
+    // changed between the two, so a time is never paired with another
+    // start's account.
+    for (;;) {
+      const before = await stat(path);
+      text = await readFile(path, "utf8");
+      const after = await stat(path);
+      if (before.ino === after.ino && before.mtimeMs === after.mtimeMs) {
+        since = after.mtime;
+        break;
+      }
+    }
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT")
       return { kind: "not-running" };
@@ -102,7 +122,12 @@ export async function runningAgentAccount(
   const read = parsePidFile(text);
   if (read.kind !== "pid" || !pidAlive(read.pid))
     return { kind: "not-running" };
-  return { kind: "running", account: agentPidFileAccount(text) };
+  return {
+    kind: "running",
+    pid: read.pid,
+    account: agentPidFileAccount(text),
+    since,
+  };
 }
 
 /** The conversation ids of `namespace`'s agents whose pid file names a live pid. */
