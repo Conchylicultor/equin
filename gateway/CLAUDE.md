@@ -248,7 +248,7 @@ Logic belongs with the data it operates on: spawn/stop/readiness are methods on 
 
 ## Zero-downtime restart
 
-`POST /gateway/worktrees/<name>/restart` performs a hot restart when the backend is already running. The gateway spawns a new backend on an alternate socket (`<name>.next.sock`) while the old one keeps serving. Once the new backend is ready, the proxy pointer is swapped atomically — new requests go to the new process, in-flight requests and WebSocket connections finish on the old one. The old backend then drains and exits.
+`POST /gateway/worktrees/<name>/restart` performs a hot restart when the backend is already running. The gateway spawns a new backend on an alternate socket (`<name>.next.sock`) while the old one keeps serving. Once the new backend is ready, the proxy pointer is swapped atomically — new requests go to the new process, in-flight HTTP requests finish on the old one. The old backend's WebSocket connections are closed **at the swap** (`backend.retireWS`; one still dialling it is refused), so their clients reconnect to the new process; the old backend then drains and exits. Never defer the cut to the drain, which can wait minutes (for a handover's predecessor): a client must not hold a socket to one backend while its HTTP reads reach another — the live-state client would see two boot epochs and drop the answers as `stale-epoch`.
 
 Two socket paths per worktree: `<name>.sock` (primary) and `<name>.next.sock` (secondary). They alternate on each restart — the gateway always spawns on whichever socket the current backend is NOT using. The `backend` struct groups per-process state (cmd, exitCh, proxy, socket path, WS conn count) so two backends can coexist briefly during the swap window.
 

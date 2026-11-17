@@ -237,14 +237,18 @@ type backend struct {
 	// exited between passing readiness and being published.
 	exited bool
 
-	// connMu guards both connection counters. httpConns tracks in-flight HTTP
+	// connMu guards the connection state. httpConns tracks in-flight HTTP
 	// requests — bounded, short-lived, and waited on at drain so they finish
-	// cleanly instead of resetting into a 502. wsConns tracks WebSocket
-	// connections (live-state, terminal, logs) — long-lived, never close on
-	// their own, so they are NOT waited on at drain; clients reconnect.
+	// cleanly instead of resetting into a 502. ws holds the WebSocket
+	// connections (live-state, terminal, logs) proxied to it — long-lived,
+	// never closed on their own, so they are NOT waited on at drain: they are
+	// closed the moment the backend stops serving (retireWS), and their
+	// clients reconnect to its successor. retired: it no longer serves, so a
+	// WebSocket still dialling it is refused rather than pinned to it.
 	connMu    sync.Mutex
 	httpConns int
-	wsConns   int
+	ws        map[io.Closer]struct{}
+	retired   bool
 }
 
 func (b *backend) incHTTP() {
@@ -261,18 +265,51 @@ func (b *backend) decHTTP() {
 	b.connMu.Unlock()
 }
 
-func (b *backend) incWS() {
+// addWS registers a WebSocket connection proxied to b, closed by retireWS.
+// It answers false — the caller must give the connection up — once b is
+// retired: a WebSocket whose Ensure resolved to b just before a hot restart
+// swapped it out must reconnect to the successor, never live on the old one.
+func (b *backend) addWS(c io.Closer) bool {
 	b.connMu.Lock()
-	b.wsConns++
+	defer b.connMu.Unlock()
+	if b.retired {
+		return false
+	}
+	if b.ws == nil {
+		b.ws = make(map[io.Closer]struct{})
+	}
+	b.ws[c] = struct{}{}
+	return true
+}
+
+func (b *backend) removeWS(c io.Closer) {
+	b.connMu.Lock()
+	delete(b.ws, c)
 	b.connMu.Unlock()
 }
 
-func (b *backend) decWS() {
+// retireWS marks b as no longer serving and closes every WebSocket proxied to
+// it, so each client reconnects — through the gateway, to the backend now
+// serving. Called the moment a hot restart swaps b out, never deferred to its
+// drain: the drain may wait minutes (a gateway handover's predecessor), and a
+// client whose socket stays on the old backend while its HTTP reads reach the
+// new one sees two servers at once — two boot epochs the live-state client
+// cannot reconcile (report-1794916004-gmwdaj: sonata's attachments.bytes
+// dropped as stale-epoch for two minutes). Idempotent; returns how many it
+// closed.
+func (b *backend) retireWS() int {
 	b.connMu.Lock()
-	if b.wsConns > 0 {
-		b.wsConns--
+	b.retired = true
+	conns := make([]io.Closer, 0, len(b.ws))
+	for c := range b.ws {
+		conns = append(conns, c)
 	}
+	b.ws = nil
 	b.connMu.Unlock()
+	for _, c := range conns {
+		_ = c.Close()
+	}
+	return len(conns)
 }
 
 func (b *backend) httpCount() int {
@@ -284,7 +321,7 @@ func (b *backend) httpCount() int {
 func (b *backend) wsCount() int {
 	b.connMu.Lock()
 	defer b.connMu.Unlock()
-	return b.wsConns
+	return len(b.ws)
 }
 
 // conns returns total active connections (in-flight HTTP + WebSocket). Used by
@@ -292,7 +329,7 @@ func (b *backend) wsCount() int {
 func (b *backend) conns() int {
 	b.connMu.Lock()
 	defer b.connMu.Unlock()
-	return b.httpConns + b.wsConns
+	return b.httpConns + len(b.ws)
 }
 
 // Worktree owns one backend's lifecycle: spawn, supervise, proxy, idle teardown.
@@ -810,7 +847,13 @@ func (w *Worktree) Restart(ctx context.Context, cand *DeploySpec) error {
 	slog.Info("hot restart: swapped", "worktree", w.Name,
 		"old_socket", oldBk.socketPath, "new_socket", newSocketPath)
 
-	// --- Step 4: Drain old backend in background ---
+	// --- Step 4: cut the old backend's WebSockets now, drain it in background ---
+	// Its clients reconnect to the backend now serving, so none keeps a
+	// socket on the old process while its HTTP reads reach the new one.
+	if n := oldBk.retireWS(); n > 0 {
+		slog.Info("hot restart: cut the old backend's WebSocket connections; clients will reconnect",
+			"worktree", w.Name, "wsConns", n)
+	}
 	go w.drainAfterPredecessor(oldBk)
 	return nil
 }
@@ -850,9 +893,10 @@ func (w *Worktree) drainAfterPredecessor(bk *backend) {
 // drainAndStop lets in-flight HTTP requests on bk finish (up to drainTimeout)
 // before terminating the process — killing mid-request resets the connection
 // and the client sees a 502. WebSocket connections (live-state, terminal, logs)
-// are long-lived and never close on their own, so they are NOT waited on; they
-// are cut when the process exits and clients reconnect to the already-live new
-// backend. Runs in a goroutine kicked off by Restart(); never modifies w.phase.
+// are long-lived and never close on their own, so they are NOT waited on; a
+// hot restart already cut them at its swap (retireWS), and any left (a backend
+// adopted from a predecessor generation) are cut here, before the process
+// stops. Runs in a goroutine kicked off by Restart(); never modifies w.phase.
 func (w *Worktree) drainAndStop(bk *backend) {
 	deadline := time.Now().Add(drainTimeout)
 	for bk.httpCount() > 0 && time.Now().Before(deadline) {
@@ -862,7 +906,7 @@ func (w *Worktree) drainAndStop(bk *backend) {
 		slog.Warn("drain timeout; forcing stop with in-flight HTTP requests",
 			"worktree", w.Name, "httpConns", n)
 	}
-	if n := bk.wsCount(); n > 0 {
+	if n := bk.retireWS(); n > 0 {
 		slog.Info("hot restart: cutting WebSocket connections; clients will reconnect",
 			"worktree", w.Name, "wsConns", n)
 	}

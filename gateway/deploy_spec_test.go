@@ -278,3 +278,39 @@ func TestRestartWithoutBodyAdoptsTheFile(t *testing.T) {
 		t.Fatalf("spawns = %d, want 1", pf.spawnCount())
 	}
 }
+
+// A hot restart cuts the old backend's WebSockets at its swap, even while its
+// drain is held back by a gateway handover's predecessor (the drain waits for
+// predecessor-gone): a client must never keep its socket on the old backend
+// while its HTTP reads reach the new one (report-1794916004-gmwdaj — for two
+// minutes sonata read attachments.bytes from one boot over a socket to another
+// and dropped every answer as stale-epoch).
+func TestHotRestartCutsWebSocketsAtTheSwap(t *testing.T) {
+	pf := newPriorityFixture(t, "alpha", false)
+	predecessor := make(chan struct{})
+	pf.wt.cfg.PredecessorGone = predecessor
+	t.Cleanup(func() { close(predecessor) })
+
+	old, err := pf.wt.Ensure(context.Background(), StartDeploy, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ws := &closeRecorder{}
+	if !old.addWS(ws) {
+		t.Fatal("the serving backend refused a WebSocket")
+	}
+	if rec := postRestart(pf.proxy, nil); rec.Code != http.StatusOK {
+		t.Fatalf("restart = %d %q", rec.Code, rec.Body.String())
+	}
+	if ws.closed.Load() != 1 {
+		t.Fatal("the old backend's WebSocket outlived the swap")
+	}
+	if old.addWS(&closeRecorder{}) {
+		t.Fatal("the swapped-out backend accepted a new WebSocket")
+	}
+	select {
+	case <-old.exitCh:
+		t.Fatal("the old backend stopped before its predecessor gateway was gone")
+	default:
+	}
+}

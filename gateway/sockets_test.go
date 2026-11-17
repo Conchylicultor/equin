@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"testing"
 	"time"
@@ -414,13 +415,20 @@ func TestSocketPathAlternation(t *testing.T) {
 	}
 }
 
+// closeRecorder is a proxied WebSocket stand-in that records its Close.
+type closeRecorder struct{ closed atomic.Int32 }
+
+func (c *closeRecorder) Close() error { c.closed.Add(1); return nil }
+
 func TestBackendConnTracking(t *testing.T) {
 	bk := &backend{}
 	if bk.conns() != 0 {
 		t.Fatal("initial conns should be 0")
 	}
-	bk.incWS()
-	bk.incWS()
+	a, b := &closeRecorder{}, &closeRecorder{}
+	if !bk.addWS(a) || !bk.addWS(b) {
+		t.Fatal("a serving backend should accept WebSockets")
+	}
 	bk.incHTTP()
 	if bk.wsCount() != 2 {
 		t.Fatalf("expected 2 ws conns, got %d", bk.wsCount())
@@ -431,16 +439,41 @@ func TestBackendConnTracking(t *testing.T) {
 	if bk.conns() != 3 {
 		t.Fatalf("expected 3 total conns, got %d", bk.conns())
 	}
-	bk.decWS()
+	bk.removeWS(a)
 	bk.decHTTP()
 	if bk.conns() != 1 {
 		t.Fatalf("expected 1 total conn, got %d", bk.conns())
 	}
-	bk.decWS()
-	bk.decWS()   // should not go negative
-	bk.decHTTP() // should not go negative
+	bk.removeWS(b)
+	bk.removeWS(b) // unknown: a no-op
+	bk.decHTTP()   // should not go negative
 	if bk.conns() != 0 {
 		t.Fatalf("expected 0 conns, got %d", bk.conns())
+	}
+}
+
+// Retiring a backend closes every WebSocket proxied to it, and refuses one
+// that reaches it afterwards (its Ensure resolved just before the swap).
+func TestRetireWSClosesAndRefuses(t *testing.T) {
+	bk := &backend{}
+	a, b := &closeRecorder{}, &closeRecorder{}
+	bk.addWS(a)
+	bk.addWS(b)
+	if n := bk.retireWS(); n != 2 {
+		t.Fatalf("retireWS closed %d, want 2", n)
+	}
+	if a.closed.Load() != 1 || b.closed.Load() != 1 {
+		t.Fatalf("closes = %d, %d; want 1 each", a.closed.Load(), b.closed.Load())
+	}
+	if bk.wsCount() != 0 {
+		t.Fatalf("wsCount after retire = %d", bk.wsCount())
+	}
+	late := &closeRecorder{}
+	if bk.addWS(late) {
+		t.Fatal("a retired backend accepted a WebSocket")
+	}
+	if n := bk.retireWS(); n != 0 {
+		t.Fatalf("a second retireWS closed %d", n)
 	}
 }
 
@@ -518,12 +551,16 @@ func TestDrainWaitsForHTTPNotWS(t *testing.T) {
 	// WebSocket connections alone must NOT hold the drain — they never close on
 	// their own. With no in-flight HTTP, drainAndStop returns promptly.
 	bk := &backend{socketPath: filepath.Join(cfg.SocketsDir, "t.sock")}
-	bk.incWS()
-	bk.incWS()
+	ws1, ws2 := &closeRecorder{}, &closeRecorder{}
+	bk.addWS(ws1)
+	bk.addWS(ws2)
 	start := time.Now()
 	wt.drainAndStop(bk)
 	if elapsed := time.Since(start); elapsed > 2*time.Second {
 		t.Fatalf("drain should not wait on WS conns; took %v", elapsed)
+	}
+	if ws1.closed.Load() != 1 || ws2.closed.Load() != 1 {
+		t.Fatal("drain should cut the WebSockets it did not wait on")
 	}
 
 	// An in-flight HTTP request holds the drain until it completes.

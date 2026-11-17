@@ -442,9 +442,10 @@ func (p *Proxy) handleHTTP(w http.ResponseWriter, r *http.Request, wt *Worktree)
 }
 
 // handleWebSocket cold-starts the backend, hijacks the client connection, and
-// shuttles bytes both ways until either side closes. The WebSocket connection
-// is pinned to the backend that was active at dial time — a hot restart swaps
-// new requests to the new backend without disturbing open connections.
+// shuttles bytes both ways until either side closes. The connection lives on
+// the backend that was active at dial time only while that backend serves: a
+// hot restart closes it at its swap (backend.retireWS), and the client
+// reconnects to the new backend.
 func (p *Proxy) handleWebSocket(w http.ResponseWriter, r *http.Request, wt *Worktree) {
 	bk, err := wt.Ensure(r.Context(), startReasonOf(r), startCause(r, "websocket"))
 	if p.handover.forwardIfHandedOver(w, r, err) {
@@ -494,8 +495,13 @@ func (p *Proxy) handleWebSocket(w http.ResponseWriter, r *http.Request, wt *Work
 	}
 
 	wt.TouchBackend()
-	bk.incWS()
-	defer bk.decWS()
+	// Closed when bk stops serving (a hot restart's swap): the client
+	// reconnects to the successor. Refused if that already happened.
+	ws := wsPair{clientConn, backendConn}
+	if !bk.addWS(ws) {
+		return
+	}
+	defer bk.removeWS(ws)
 
 	errc := make(chan error, 2)
 	go func() {
@@ -507,6 +513,14 @@ func (p *Proxy) handleWebSocket(w http.ResponseWriter, r *http.Request, wt *Work
 		errc <- e
 	}()
 	<-errc
+}
+
+// wsPair is one proxied WebSocket: closing it closes both legs, ending the
+// copies in handleWebSocket.
+type wsPair struct{ client, backend net.Conn }
+
+func (p wsPair) Close() error {
+	return errors.Join(p.client.Close(), p.backend.Close())
 }
 
 // handleGatewayAPI serves /gateway/* endpoints.
