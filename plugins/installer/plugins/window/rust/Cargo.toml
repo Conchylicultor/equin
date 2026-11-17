@@ -1,0 +1,33 @@
+[package]
+name = "equin-installer"
+version = "0.1.0"
+description = "The equin installer window: runs install.sh as its child and draws its event stream (protocol v1) in a page compiled into the binary"
+edition = "2021"
+rust-version = "1.77"
+publish = false
+
+# A crate of its own (infra/deps' rust kind builds it with --locked), never a
+# member of an enclosing workspace.
+[workspace]
+
+[[bin]]
+name = "equin-installer"
+path = "src/main.rs"
+
+[dependencies]
+# wry + tao directly, not Tauri: one page, one window, one child process needs
+# no config file, ACL or capabilities. The same releases the menu-bar helper
+# reaches through Tauri (plugins/companions/plugins/menu-bar/rust/Cargo.lock).
+wry = "0.57"
+tao = "0.37"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# pipe / dup2 / setpgid / tcsetpgrp / sigwait / kill: the process model.
+libc = "0.2"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

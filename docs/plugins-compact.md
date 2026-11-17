@@ -223,6 +223,10 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`infra`** [test helpers] [exempt] [121 sub-plugins] — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
 
+- **`installer`** — The equin installer: install.sh's structured event stream (protocol v1 — plan, step, log, done and exit events, one zod schema in core) and the renderers that draw it. Its window sub-plugin is the…
+  - Plugins:
+    - **`window`** — The installer window: equin-installer, a small wry/tao Rust app (rust/) that runs install.sh as its child — events on fd 3, decisions on fd 4 — and draws the stream in a page bundled into the binary…
+
 - **`integrations`** — Umbrella for third-party service integrations that consume an auth connection (Gmail, …).
   - Plugins:
     - **`github-issues`** — GitHub new-issue links: buildIssueUrl turns a written request (its <ui-context> picks made readable, each raw tag kept in a collapsed block), the page it is about and the host's own note lines into…

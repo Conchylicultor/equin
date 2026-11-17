@@ -27,7 +27,7 @@
     - `setEnvDefault`
     - `unsetEnv`
 - Cross-plugin:
-  - Imported by: 52 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 53 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework` ×18
     - `infra` ×14
     - `debug` ×5
@@ -36,6 +36,7 @@
     - `auth`
     - `build`
     - `conversations/agent-launch`
+    - `installer/window`
     - `plugin-meta/barrel-import`
     - `release`
     - `upstream`

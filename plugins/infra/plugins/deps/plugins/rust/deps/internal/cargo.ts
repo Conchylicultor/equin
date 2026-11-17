@@ -1,4 +1,5 @@
-import { chmod, copyFile } from "node:fs/promises";
+import { chmod, copyFile, mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { exists } from "@plugins/packages/plugins/timed-fs/core";
 import { isAbsolute, join } from "node:path";
 import {
@@ -34,12 +35,30 @@ export interface CargoSource extends BuildSource {
 }
 
 /**
+ * Files a crate compiles in that are built from repo sources OUTSIDE its
+ * `rust/` folder (the installer window's page, bundled from TypeScript):
+ * built before cargo runs, into a scratch dir removed after the build, and
+ * handed to the crate's `build.rs` through environment variables — so the
+ * crate stays a `rust/` folder with no TypeScript, and its build fails loudly
+ * when built without them.
+ */
+export interface CargoEmbed {
+  /** Repo-relative `git ls-files` globs `build` reads: part of the identity. */
+  readonly inputs: readonly string[];
+  /** Build into `scratch` (exists, empty); answer the env vars cargo runs with. */
+  readonly build: (
+    ctx: BuildContext,
+    scratch: string,
+  ) => Promise<Readonly<Record<string, string>>>;
+}
+
+/**
  * What a crate's build leaves in `env/`. Either the binary itself, under its
  * own name, or — with `then` — whatever `then` assembles from it (a macOS
  * `.app` around it), declared as `output`, with `binary` naming where inside
  * `env/` the binary ended up.
  */
-export type CargoBuildSpec =
+export type CargoBuildSpec = (
   | { readonly crate: string; readonly bin: string }
   | {
       readonly crate: string;
@@ -54,7 +73,8 @@ export type CargoBuildSpec =
        * is replaced by the next build): copy it, never move or link it.
        */
       readonly then: (ctx: BuildContext, built: string) => Promise<void>;
-    };
+    }
+) & { readonly embed?: CargoEmbed };
 
 /**
  * The environment every cargo and rustc invocation runs under: PATH as the
@@ -134,16 +154,24 @@ export function cargoBuild(spec: CargoBuildSpec): CargoSource {
   const output = assembled === null ? bin : assembled.output;
   const binary = assembled === null ? bin : assembled.binary;
 
+  const { embed } = spec;
   const source = build({
-    inputs: [`${crate}/**`, `${crate}/Cargo.toml`, `${crate}/Cargo.lock`],
+    inputs: [
+      `${crate}/**`,
+      `${crate}/Cargo.toml`,
+      `${crate}/Cargo.lock`,
+      ...(embed?.inputs ?? []),
+    ],
     tool: { versionArgv: ["rustc", "-vV"], env: () => cargoEnv() },
     output,
     run: (ctx) =>
       withStagedTargetDir(ctx, crate, async (targetDir) => {
-        await ctx.run(cargoBuildArgv(ctx.root, crate, bin), {
-          cwd: ctx.root,
-          env: cargoEnv({ targetDir }),
-          timeoutMs: BUILD_TIMEOUT_MS,
+        await withEmbedded(ctx, embed, async (embedded) => {
+          await ctx.run(cargoBuildArgv(ctx.root, crate, bin), {
+            cwd: ctx.root,
+            env: { ...cargoEnv({ targetDir }), ...embedded },
+            timeoutMs: BUILD_TIMEOUT_MS,
+          });
         });
         const built = join(targetDir, "release", bin);
         if (!(await exists(built))) {
@@ -171,6 +199,21 @@ export function cargoBuild(spec: CargoBuildSpec): CargoSource {
     bin,
     binary,
   };
+}
+
+/** Run `body` with the embed's env vars, its scratch dir removed afterwards. */
+async function withEmbedded(
+  ctx: BuildContext,
+  embed: CargoEmbed | undefined,
+  body: (env: Readonly<Record<string, string>>) => Promise<void>,
+): Promise<void> {
+  if (embed === undefined) return body({});
+  const scratch = await mkdtemp(join(tmpdir(), "equin-cargo-embed-"));
+  try {
+    await body(await embed.build(ctx, scratch));
+  } finally {
+    await rm(scratch, { recursive: true, force: true });
+  }
 }
 
 function validate(spec: CargoBuildSpec): void {

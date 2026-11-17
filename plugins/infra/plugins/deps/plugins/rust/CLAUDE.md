@@ -83,6 +83,7 @@ CLI in `framework/cli/release`), and the toolchain updater's `cargo check
     - `infra/deps/build.BuildSource`
   - Exports (types):
     - `CargoBuildSpec`
+    - `CargoEmbed`
     - `CargoSource`
   - Exports (values):
     - `cargoBinary`
@@ -96,6 +97,7 @@ CLI in `framework/cli/release`), and the toolchain updater's `cargo check
   - Imported by:
     - `companions/menu-bar`
     - `infra/deps/rust/cargo-updater`
+    - `installer/window`
 - Sub-plugins:
   - **`cargo-updater`** — The `cargo` updater: moves every rust/ crate's Cargo.lock to the newest crates.io releases past a 3-day cooldown (within each Cargo.toml's requirements), contributed to the infra/deps updater…
 

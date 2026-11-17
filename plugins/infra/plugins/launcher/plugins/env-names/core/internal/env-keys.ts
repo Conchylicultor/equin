@@ -63,6 +63,12 @@ export const RUNTIME_FORWARDED_PREFIXES = {
  * would act as whichever process happened to start the gateway.
  */
 export const RUNTIME_WITHHELD_ENV = {
+  INSTALL_DRY_RUN_PACE:
+    "seconds between the lines of `install.sh --dry-run` (installer), set by `./equin installer window` for that one run",
+  INSTALL_DRY_RUN_FAIL:
+    "the step `install.sh --dry-run` fails once (installer), set by `./equin installer window --fail` and the stream test for that one run",
+  INSTALLER_PAGE:
+    "the bundled installer page the installer window's crate compiles in (installer/window rust/build.rs), set by its dependency build for that one cargo run",
   PEAK_FOOTPRINT_REPORT:
     "the file one bun script child writes its peak physical footprint to at exit; set by infra/spawn for that one child (peakFootprint: \"report\") and removed by the child's preload (packages/proc-rusage bin/peak-footprint-preload.ts), never a backend's",
   PEAK_FOOTPRINT_BASE_BUN_OPTIONS:

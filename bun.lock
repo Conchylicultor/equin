@@ -5060,6 +5060,14 @@
       "name": "@equin/plugin-infra-worktree-spare-pool",
       "version": "0.0.1",
     },
+    "plugins/installer": {
+      "name": "@equin/plugin-installer",
+      "version": "0.0.1",
+    },
+    "plugins/installer/plugins/window": {
+      "name": "@equin/plugin-installer-window",
+      "version": "0.0.1",
+    },
     "plugins/integrations": {
       "name": "@equin/plugin-integrations",
       "version": "0.0.1",
@@ -10614,6 +10622,10 @@
     "@equin/plugin-infra-worktree-reclaim": ["@equin/plugin-infra-worktree-reclaim@workspace:plugins/infra/plugins/worktree/plugins/reclaim"],
 
     "@equin/plugin-infra-worktree-spare-pool": ["@equin/plugin-infra-worktree-spare-pool@workspace:plugins/infra/plugins/worktree/plugins/spare-pool"],
+
+    "@equin/plugin-installer": ["@equin/plugin-installer@workspace:plugins/installer"],
+
+    "@equin/plugin-installer-window": ["@equin/plugin-installer-window@workspace:plugins/installer/plugins/window"],
 
     "@equin/plugin-integrations": ["@equin/plugin-integrations@workspace:plugins/integrations"],
 

@@ -31640,11 +31640,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readMergeMarkers`
           - `resolveGitDir`
       - Cross-plugin:
-        - Imported by: 40 plugins — full list in [`plugins/framework/plugins/cli/REFERENCE.md`](../plugins/framework/plugins/cli/REFERENCE.md)
+        - Imported by: 41 plugins — full list in [`plugins/framework/plugins/cli/REFERENCE.md`](../plugins/framework/plugins/cli/REFERENCE.md)
           - `framework` ×29
           - `infra` ×5
           - `apps` ×3
           - `plugin-meta` ×2
+          - `installer/window`
           - `toolchain`
       - Exemptions:
         - Exempts itself from:
@@ -36056,7 +36057,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/font-family --font-mono`
-        - Imported by: 33 plugins — full list in [`plugins/infra/plugins/deps/REFERENCE.md`](../plugins/infra/plugins/deps/REFERENCE.md)
+        - Imported by: 34 plugins — full list in [`plugins/infra/plugins/deps/REFERENCE.md`](../plugins/infra/plugins/deps/REFERENCE.md)
           - `infra` ×12
           - `framework` ×6
           - `apps` ×5
@@ -36066,6 +36067,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages` ×2
           - `conversations/runtime-sdk`
           - `debug/profiling/tab-memory`
+          - `installer/window`
       - Deps:
         - Exports (types):
           - `BundleSpec`
@@ -36333,6 +36335,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/deps/build.BuildSource`
             - Exports (types):
               - `CargoBuildSpec`
+              - `CargoEmbed`
               - `CargoSource`
             - Exports (values):
               - `cargoBinary`
@@ -36346,6 +36349,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `companions/menu-bar`
               - `infra/deps/rust/cargo-updater`
+              - `installer/window`
           - Plugins:
             - **`cargo-updater`** — The `cargo` updater: moves every rust/ crate's Cargo.lock to the newest crates.io releases past a 3-day cooldown (within each Cargo.toml's requirements), contributed to the infra/deps updater registry.
               - Server:
@@ -38539,7 +38543,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `takeRunErrorPath`
               - `writeRunErrorSync`
           - Cross-plugin:
-            - Imported by: 33 plugins — full list in [`plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md`](../plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md)
+            - Imported by: 34 plugins — full list in [`plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md`](../plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md)
               - `framework` ×10
               - `infra` ×6
               - `apps` ×5
@@ -38549,6 +38553,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `backup`
               - `conversations/workspace/worktree`
               - `database/fork`
+              - `installer/window`
               - `release`
           - Exemptions:
             - Exempts itself from:
@@ -38707,7 +38712,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `setEnvDefault`
               - `unsetEnv`
           - Cross-plugin:
-            - Imported by: 52 plugins — full list in [`plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md)
+            - Imported by: 53 plugins — full list in [`plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md)
               - `framework` ×18
               - `infra` ×14
               - `debug` ×5
@@ -38716,6 +38721,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `auth`
               - `build`
               - `conversations/agent-launch`
+              - `installer/window`
               - `plugin-meta/barrel-import`
               - `release`
               - `upstream`
@@ -39682,7 +39688,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/host-fs/user-path.asAppPath`
             - Exports (values): `REPO_ROOT`
           - Cross-plugin:
-            - Imported by: 56 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
+            - Imported by: 57 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
               - `framework` ×15
               - `infra` ×8
               - `apps` ×7
@@ -39694,6 +39700,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `code-explorer`
               - `config_v2`
               - `database`
+              - `installer/window`
               - `primitives/css/layout-harness`
               - `release`
               - `upstream`
@@ -40137,7 +40144,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `spawnPassthrough`
           - `spawnToFile`
       - Cross-plugin:
-        - Imported by: 99 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
+        - Imported by: 100 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
           - `framework` ×32
           - `infra` ×26
           - `apps` ×9
@@ -40153,6 +40160,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `auth/apple-signing`
           - `backup`
           - `hints/ask`
+          - `installer/window`
           - `review/plugin-changes`
           - `stats/commits`
           - `tasks`
@@ -40577,6 +40585,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `defineWarmup('worktree.spare-refill')`
           - Cross-plugin:
             - Imported by: `conversations/workspace/worktree`
+
+- **`installer`** — The equin installer: install.sh's structured event stream (protocol v1 — plan, step, log, done and exit events, one zod schema in core) and the renderers that draw it. Its window sub-plugin is the native installer window.
+  - Core:
+    - Exports (values):
+      - `INSTALL_PROTOCOL_VERSION`
+      - `InstallEvent`
+      - `InstallMode`
+      - `InstallStepId`
+      - `parseInstallEventLine`
+      - `PlanStep`
+  - Plugins:
+    - **`window`** — The installer window: equin-installer, a small wry/tao Rust app (rust/) that runs install.sh as its child — events on fd 3, decisions on fd 4 — and draws the stream in a page bundled into the binary (standalone-page/). Built locally as the installer-window dependency; `./equin installer window` runs it over this checkout's install.sh.
+      - Cli:
+        - Uses: `infra/jobs/supervised-job.cliExecContext`
+      - Deps:
+        - Uses:
+          - `infra/deps.defineDep`
+          - `infra/deps/rust.cargoBuild`
+        - Exports (values): `installerWindow`
 
 - **`integrations`** — Umbrella for third-party service integrations that consume an auth connection (Gmail, …).
   - Plugins:
@@ -43799,7 +43826,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TIMED_FS_CALLS`
           - `withFsCallTally`
       - Cross-plugin:
-        - Imported by: 180 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+        - Imported by: 181 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
           - `infra` ×53
           - `framework` ×28
           - `apps` ×16
@@ -43819,6 +43846,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `code-explorer`
           - `companions/browser-extension`
           - `hints/ask`
+          - `installer/window`
           - `stats/commits`
           - `toolchain`
           - `ui/icons/icon-sets`

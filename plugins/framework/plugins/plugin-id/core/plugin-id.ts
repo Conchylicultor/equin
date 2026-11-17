@@ -140,7 +140,11 @@ export type RuntimeFolder = (typeof RUNTIME_FOLDERS)[number];
  *  the entry the build bundles), which the owning plugin's `cli/` builds into
  *  the data root and Chrome loads from there; `build-step/` holds the steps a
  *  plugin contributes to `./equin build` (`defineBuildStep`), collected by
- *  `framework/cli/build/build-steps` and run at their build phase.
+ *  `framework/cli/build/build-steps` and run at their build phase;
+ *  `standalone-page/` holds a page that no app serves — its HTML and the
+ *  entry a build bundles into ONE self-contained file — which a native shell
+ *  compiles in and loads with no server (the installer window,
+ *  `installer/window`).
  *
  *  Together with `RUNTIME_FOLDERS` this is the whole folder vocabulary a
  *  plugin may contain (plus `plugins/`, which holds child plugins, not code).
@@ -162,6 +166,7 @@ export const LEAF_FOLDERS = [
   "login-services",
   "browser-extension",
   "build-step",
+  "standalone-page",
 ] as const;
 export type LeafFolder = (typeof LEAF_FOLDERS)[number];
 

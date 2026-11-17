@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>equin installer</title>
+<!--
+  The installer window's page, ported from the approved mockup's window view
+  (proto-1794832268-wlybzk). Bundled into one file with main.ts inlined at
+  BUNDLE (../deps/internal/page.ts) and compiled into the binary: nothing is
+  fetched. The font is the system's (SF Pro on macOS): no web font to embed,
+  and the mockup's Inter falls back to it wherever Inter isn't installed.
+-->
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #07090e; }
+  body { -webkit-font-smoothing: antialiased; -webkit-user-select: none; user-select: none; cursor: default; }
+  .fadein { animation: fin .3s ease-out both; } @keyframes fin { from { opacity: 0; transform: translateY(4px) } }
+
+  .iw {
+    --accent: #2563eb;
+    --bg: #07090e; --panel: #0e1219; --line: rgba(255,255,255,.08);
+    --fg: #f4f4f5; --fg2: #b4b4bd; --fg3: #71717a; --cyan: #22d3ee;
+    --accent-2: color-mix(in oklab, var(--accent) 55%, #fff);
+    --glow1: color-mix(in oklab, var(--accent) 36%, transparent); --glow2: rgba(34,211,238,.12);
+    /* The window itself: 760 × 640 points, fixed. */
+    width: 100vw; height: 100vh; background: var(--bg); color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Ubuntu, Cantarell, sans-serif;
+    font-size: 14px; position: relative; overflow: hidden;
+    display: flex; align-items: center; justify-content: center; padding: 40px 40px 56px;
+  }
+  /* The transparent title bar: drag the window by its top strip. */
+  .iw-drag { position: absolute; top: 0; left: 0; right: 0; height: 36px; z-index: 4; }
+  .iw::before {
+    content: ""; position: absolute; left: 50%; top: 50%; width: 1000px; height: 640px; transform: translate(-50%, -66%);
+    background: radial-gradient(ellipse at center, var(--glow1), var(--glow2) 40%, transparent 70%);
+    filter: blur(40px); pointer-events: none; transition: opacity 1.2s ease;
+  }
+  .iw.running::before { animation: breathe 7s ease-in-out infinite; }
+  .iw.failed::before { opacity: .38; }
+  .iw.done::before { opacity: 1.15; }
+  @keyframes breathe { 0%,100% { opacity: .75 } 50% { opacity: 1 } }
+
+  .iw-col { position: relative; width: min(640px, 100%); display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .iw-mark { font-weight: 700; font-size: 76px; letter-spacing: -.05em; line-height: 1; }
+  .iw-mark span { color: var(--accent-2); }
+  .iw-body { margin-top: 48px; width: 100%; display: flex; flex-direction: column; align-items: center; min-height: 150px; }
+  .iw.running .iw-mark, .iw.failed .iw-mark { font-size: 54px; }
+  .iw.running .iw-body, .iw.failed .iw-body { margin-top: 26px; min-height: 0; }
+
+  .iw-status { font-size: 15px; color: var(--fg2); height: 22px; }
+  .iw-progress { width: 100%; display: flex; flex-direction: column; align-items: center; }
+  .iw.failed .iw-progress { margin-top: 24px; }
+  .iw-bar { width: min(320px, 100%); height: 4px; border-radius: 99px; background: rgba(255,255,255,.08); margin-top: 18px; overflow: hidden; }
+  .iw-bar > i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--accent), var(--cyan)); box-shadow: 0 0 14px var(--glow1); transition: width .3s linear; }
+  .iw-bar.paused > i { background: #f5a524; box-shadow: none; }
+  .iw-eta { margin-top: 12px; font-size: 13px; color: var(--fg3); font-variant-numeric: tabular-nums; height: 18px; }
+
+  .iw-title { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -.02em; }
+  .iw-text { margin: 10px 0 0; color: var(--fg2); font-size: 15px; line-height: 1.55; max-width: 380px; }
+  .iw-actions { display: flex; gap: 10px; margin-top: 28px; flex-wrap: wrap; justify-content: center; }
+  .iw.failed .iw-actions { margin-top: 22px; }
+  .pill { border: 1px solid transparent; border-radius: 999px; padding: 10px 18px; font: inherit; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: background .15s, box-shadow .15s, border-color .15s, color .15s; }
+  .pill.white { background: var(--fg); color: #000; }
+  .pill.white:hover { background: #fff; box-shadow: 0 0 0 4px var(--glow1); }
+  .pill.ghost { background: transparent; color: var(--fg); border-color: rgba(255,255,255,.16); }
+  .pill.ghost:hover { border-color: rgba(255,255,255,.32); background: rgba(255,255,255,.04); }
+  .pill.small { padding: 7px 14px; font-size: 13px; }
+  .pill.big { padding: 12px 22px; font-size: 15px; }
+  .pill[disabled] { opacity: .5; pointer-events: none; }
+  .pill:focus { outline: none; } .pill:focus-visible { box-shadow: 0 0 0 3px var(--glow1); }
+  .linkbtn { all: unset; cursor: pointer; font-size: 13px; color: var(--fg3); transition: color .15s; }
+  .linkbtn:hover { color: var(--fg2); }
+
+  .iw-log { margin-top: 24px; width: min(640px, 100%); height: 250px; overflow-y: auto; text-align: left; background: rgba(14,18,25,.75); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font: 12px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--fg3); white-space: pre-wrap; word-break: break-word; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.15) transparent; display: flex; flex-direction: column-reverse; -webkit-user-select: text; user-select: text; cursor: text; }
+  .iw.failed .iw-log { height: 200px; margin-top: 20px; }
+  .iw-log[hidden] { display: none; }
+  #log-lines > div:last-child { color: var(--fg2); }
+  .iw-log .err { color: #fca5a5; } .iw-log .sec { color: var(--fg2); margin-top: 8px; } .iw-log .sec:first-child { margin-top: 0; }
+  .iw-evidence { margin: 16px 0 0; max-width: 560px; max-height: 160px; overflow: auto; text-align: left; font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; color: #fca5a5; white-space: pre-wrap; -webkit-user-select: text; user-select: text; }
+  .iw-foot { position: absolute; left: 0; right: 0; bottom: 18px; display: flex; justify-content: center; }
+  .iw-foot[hidden] { display: none; }
+
+  .iw-scrim { position: absolute; inset: 0; z-index: 5; background: rgba(4,6,10,.6); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 24px; animation: fin .15s both; }
+  .iw-sheet { width: min(420px, 100%); background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 24px; box-shadow: 0 40px 80px -30px #000, 0 0 60px -24px var(--glow1); text-align: left; }
+  .iw-sheet h3 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -.01em; }
+  .iw-sheet p { margin: 8px 0 0; font-size: 14px; color: var(--fg2); line-height: 1.55; }
+  .iw-sheet .row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+</style>
+</head>
+<body>
+<div id="root" class="iw running">
+  <div class="iw-drag" id="drag"></div>
+  <div class="iw-col">
+    <div class="iw-mark">equin<span>.</span></div>
+    <div class="iw-body" id="body"></div>
+    <div class="iw-log" id="log"><div id="log-lines"></div></div>
+  </div>
+  <div class="iw-foot" id="foot"><button class="linkbtn" id="toggle-log">Hide log</button></div>
+</div>
+<script>/*BUNDLE*/</script>
+</body>
+</html>

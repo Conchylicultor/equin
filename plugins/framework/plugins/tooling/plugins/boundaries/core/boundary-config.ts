@@ -163,6 +163,11 @@ export default defineBoundaries({
       "machine",
       "deps",
     ],
+    // A standalone page (`installer/window`): bundled into one HTML file a
+    // native shell compiles in and loads with no server, so it runs in a
+    // webview like `web`, but outside the app — no slots, no live state, no
+    // endpoints. It reaches `core` only (the protocol it draws).
+    "standalone-page": ["core"],
   },
 
   // Which folders may import a platform API (a Node builtin, `bun`, `pg`,
@@ -204,6 +209,8 @@ export default defineBoundaries({
     "browser-extension": "forbidden",
     // Runs in the build process, like `cli`.
     "build-step": "allowed",
+    // Runs in a webview, like `web`.
+    "standalone-page": "forbidden",
   },
 
   runtimeExceptions: [

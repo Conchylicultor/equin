@@ -426,3 +426,35 @@ P-256 rather than minisign or ed25519 because the `openssl` every Mac ships (Lib
 4. **Only if a separate key is still wanted,** the meaningful version keeps it **offline**: the maintainer signs `SHA256SUMS` locally during `./equin version cut`, and the key is never in CI. That adds a manual step and makes losing the key a real risk.
 
 **Recommendation:** no signature in stage 0 for now. Do 1 now, keep 2 as planned, and treat 3 as the real answer for macOS.
+
+## Spike results (task 1, 2026-11-17)
+
+Landed as `plugins/installer` (`core`: the protocol v1 schema) and `plugins/installer/plugins/window` (`rust/`, `standalone-page/`, `deps/`, `cli/`). Docs: the two plugins' `CLAUDE.md`.
+
+**Settled:**
+
+- **Folder kind: `standalone-page`.** A new leaf folder (`plugin-id`'s `LEAF_FOLDERS`; boundary row `["core"]`; platform APIs forbidden, like `web`). It is bundled into one HTML file before cargo runs, through a new `embed` option on the rust kind's `cargoBuild`: the page's sources, `installer/core` and `bun.lock` are identity inputs, and the file reaches `build.rs` as `EQUIN_INSTALLER_PAGE`. A bare `cargo build` fails loudly without it.
+- **Font: the system font.** SF Pro on macOS; the platform's own font on Linux. Nothing is embedded or fetched. The mockup's Inter already falls back to it wherever Inter isn't installed.
+
+**Changed from §2, found while proving it:**
+
+- **The child is the terminal's foreground job.** It still runs in its own process group, but that group is also made the terminal's foreground group. A background group that reads the terminal is stopped by SIGTTIN, so `sudo`'s password prompt would hang. Ctrl-C now reaches the install directly. When the child exits, the window takes the terminal back.
+- **Signals use a self-pipe handler, not a blocked mask plus `sigwait`.** macOS starts its dispatch worker threads without the blocked mask. A SIGTERM delivered to one of them killed the window and left the install running.
+- **The child starts with default signal dispositions.** An ignored signal survives `exec`, and a window started with `&` from a script has SIGINT ignored.
+- **install.sh traps INT, TERM and HUP** when it has an event fd. Without the traps, bash runs its EXIT trap with `$?` = 0, and an interrupted decision read is taken as quit.
+
+**Proven:**
+
+- The `--dry-run` stream is checked against the schema under `/bin/bash` 3.2, through the window's own fd layout. The tests cover:
+  - escaping;
+  - retry and quit on fd 4;
+  - an unknown decision, and EOF;
+  - SIGINT while paused, which exits 130.
+- The page model has its own tests.
+- The real window was run over the dry run:
+  - Stopping it while paused or mid-step stops the whole install: the window exits 130 and nothing is left running.
+  - A full run exits 0.
+  - The terminal prints one line per step.
+- The page's running, paused, done and stop states were drawn in a headless browser from the recorded streams.
+
+**Not yet proven:** a real install in a fresh macOS account. That needs a second account and a GUI session in it. It also collides with this machine's own instance, because the gateway's port 9000 is machine-wide. The steps are in the task's report.

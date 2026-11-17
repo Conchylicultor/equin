@@ -837,7 +837,7 @@ construction, and the job and the body it spawns cannot drift apart.
     - `takeRunErrorPath`
     - `writeRunErrorSync`
 - Cross-plugin:
-  - Imported by: 33 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 34 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework` ×10
     - `infra` ×6
     - `apps` ×5
@@ -847,6 +847,7 @@ construction, and the job and the body it spawns cannot drift apart.
     - `backup`
     - `conversations/workspace/worktree`
     - `database/fork`
+    - `installer/window`
     - `release`
 - Exemptions:
   - Exempts itself from:
