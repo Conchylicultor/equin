@@ -25,7 +25,6 @@
     - `tasks/task-graph`
   - Imported by:
     - `apps/home/shell`
-    - `apps/places/shell`
     - `companions/panel`
     - `ui/tokens/categorical/customizer`
 - Sub-plugins:

@@ -65806,7 +65806,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `effectiveColorMode`
           - `fixedThemeGroupValues`
           - `isBuiltInThemeId`
-          - `lightOnly`
           - `mergeGroupValues`
           - `NEUTRAL_COLOR_ADJUSTMENT`
           - `paintedTokenGroups`
@@ -66131,7 +66130,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/task-graph`
             - Imported by:
               - `apps/home/shell`
-              - `apps/places/shell`
               - `companions/panel`
               - `ui/tokens/categorical/customizer`
           - Plugins:
@@ -66276,13 +66274,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tag-tree/picker`
               - `upstream`
               - `wish`
-            - Imported by: 21 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
-              - `apps` ×15
-              - `ui` ×2
+            - Imported by:
               - `apps-core/chrome-theme`
+              - `apps/agent-manager/shell`
+              - `apps/browser/shell`
+              - `apps/chord/shell`
+              - `apps/deploy/shell`
+              - `apps/desktop/shell`
+              - `apps/file-explorer/shell`
+              - `apps/home/new-app`
+              - `apps/home/shell`
+              - `apps/pages/shell`
+              - `apps/prototypes/shell`
+              - `apps/sonata/shell`
+              - `apps/website/pages/foundations`
+              - `apps/website/shell`
               - `companions/panel`
               - `hints`
               - `media/player`
+              - `ui/theme-engine/theme-gallery`
+              - `ui/tokens/color-palette/customizer`
           - Plugins:
             - **`customizer`** — Customizer section for the color palette token group, with the palette dots in its header.
               - Web:
@@ -66727,8 +66738,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `ui/theme-engine.defineTokenGroup`
             - Exports (types): `RichTextPaletteValues`
             - Exports (values): `richTextPaletteGroup`
-          - Cross-plugin:
-            - Imported by: `apps/places/shell`
         - **`scrollbar`** — Scrollbar token group (the thumb and track colours of the native scrollbar, `auto` by default). Its customizer section is the `customizer` child.
           - Web:
             - Contributes: `ThemeEngine.TokenGroup` "Scrollbar"
@@ -66994,7 +67003,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/shell`
               - `apps/file-explorer/shell`
               - `apps/pages/shell`
-              - `apps/places/shell`
               - `ui/tokens/sidebar-palette/customizer`
           - Plugins:
             - **`customizer`** — Customizer section for the sidebar palette token group, with the palette dots in its header.

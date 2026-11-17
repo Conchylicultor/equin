@@ -1,7 +1,6 @@
 export {
   both,
   defineTokenGroup,
-  lightOnly,
   tokenGroupMatchesSearch,
 } from "./define-token-group";
 export type {

@@ -54,13 +54,26 @@
     - `tag-tree/picker`
     - `upstream`
     - `wish`
-  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×15
-    - `ui` ×2
+  - Imported by:
     - `apps-core/chrome-theme`
+    - `apps/agent-manager/shell`
+    - `apps/browser/shell`
+    - `apps/chord/shell`
+    - `apps/deploy/shell`
+    - `apps/desktop/shell`
+    - `apps/file-explorer/shell`
+    - `apps/home/new-app`
+    - `apps/home/shell`
+    - `apps/pages/shell`
+    - `apps/prototypes/shell`
+    - `apps/sonata/shell`
+    - `apps/website/pages/foundations`
+    - `apps/website/shell`
     - `companions/panel`
     - `hints`
     - `media/player`
+    - `ui/theme-engine/theme-gallery`
+    - `ui/tokens/color-palette/customizer`
 - Sub-plugins:
   - **`customizer`** — Customizer section for the color palette token group, with the palette dots in its header.
 

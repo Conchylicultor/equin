@@ -28,7 +28,6 @@
     - `apps/deploy/shell`
     - `apps/file-explorer/shell`
     - `apps/pages/shell`
-    - `apps/places/shell`
     - `ui/tokens/sidebar-palette/customizer`
 - Sub-plugins:
   - **`customizer`** — Customizer section for the sidebar palette token group, with the palette dots in its header.

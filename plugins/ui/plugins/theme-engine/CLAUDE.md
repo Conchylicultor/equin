@@ -461,7 +461,6 @@ the `""` entry.
     - `effectiveColorMode`
     - `fixedThemeGroupValues`
     - `isBuiltInThemeId`
-    - `lightOnly`
     - `mergeGroupValues`
     - `NEUTRAL_COLOR_ADJUSTMENT`
     - `paintedTokenGroups`
