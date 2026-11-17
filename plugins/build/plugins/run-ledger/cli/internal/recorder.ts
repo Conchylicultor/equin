@@ -6,6 +6,7 @@ import {
   closeRunOn,
   insertRunOn,
   lastClosedRunOn,
+  recordRunCommitOn,
   type BuildRunRecorder,
 } from "../../shared/recorder";
 
@@ -30,10 +31,14 @@ export function createBuildRunRecorder(namespace: Namespace): BuildRunRecorder {
   // what the CLI runs.
   return {
     insertRun: async (r) => insertRunOn((await open()).db, namespace, r),
+    recordRunCommit: async (id, commitHash) =>
+      recordRunCommitOn((await open()).db, id, commitHash),
     closeRun: async (id, exitCode) =>
       closeRunOn((await open()).db, id, exitCode),
     lastClosedRun: async (target) =>
       lastClosedRunOn((await open()).db, namespace, target),
+    lastClosedRunOf: async (target, commit) =>
+      lastClosedRunOn((await open()).db, namespace, target, commit),
     close: async () => {
       if (opened === null) return;
       await (await opened).pool.end();

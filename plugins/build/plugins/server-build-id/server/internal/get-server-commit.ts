@@ -1,5 +1,5 @@
 import { webDistDir } from "@plugins/infra/plugins/paths/server";
-import { readFile } from "@plugins/packages/plugins/timed-fs/core";
+import { readDistTrailer } from "./dist-trailers";
 
 // The commit the frontend bundle this backend serves was BUILT FROM, read from
 // `dist/.build-commit` FRESH on every call — same rule, and same reason, as
@@ -12,13 +12,10 @@ import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 // whatever the checkout moved to while the compile ran. That distinction is the
 // whole point: a `git rev-parse HEAD` taken after the compile once made a stale
 // frontend read as current and cost a catch-up build.
+//
+// THIS PROCESS's dist (`webDistDir()`, from its runtime namespace): a process
+// with none — a CLI — throws here. It reads a namespace's dist by naming it
+// (`readDistTrailer(worktreeArtifacts.webDist(ns), …)`).
 export async function getServerCommit(): Promise<string | null> {
-  try {
-    return (
-      (await readFile(`${webDistDir()}/.build-commit`, "utf8")).trim() || null
-    );
-    // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- best-effort optional dotfile read; a missing/unreadable .build-commit (before the first build, or a build whose git could not answer) legitimately means "commit unknown" → the caller turns it into an explicit unresolved(reason), never a fake sha
-  } catch {
-    return null;
-  }
+  return readDistTrailer(webDistDir(), ".build-commit");
 }

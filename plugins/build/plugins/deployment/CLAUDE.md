@@ -85,8 +85,9 @@ the backend that holds the server pin.
 
 Auto-build's decision does NOT run in a backend any more: main's convergence
 run (`./equin build --allow-main --converge`, started by the gateway) works
-precisely when main's backend is down. It reads `readServedDeployment()` (the
-`cli/` barrel): HEAD and the `web` carrier only — the dist the gateway serves,
+precisely when main's backend is down. It reads `readServedDeployment(namespace)` (the
+`cli/` barrel; the namespace named, never `webDistDir()` — a CLI has no
+runtime namespace): HEAD and the `web` carrier only — the dist the gateway serves,
 through the same `withAncestry` / `webCarrier` as the backend's read
 (`machine/internal/git-chain.ts`). The `server` carrier is a backend's
 in-memory pin, unknowable from outside; the served dist stands in for "last

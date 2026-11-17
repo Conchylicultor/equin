@@ -4,8 +4,7 @@ export default [
   {
     rule: "boundaries/no-platform-api",
     paths: [
-      "server/internal/get-server-commit.ts",
-      "server/internal/get-server-graph-hash.ts",
+      "server/internal/dist-trailers.ts",
       "server/internal/retired-build-file.ts",
     ],
     kind: "debt",

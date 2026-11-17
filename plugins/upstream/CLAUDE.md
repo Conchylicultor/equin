@@ -16,8 +16,8 @@ The author pushes to `main` a hundred times a day, so "behind upstream's main"
 is true of every clone all the time — noise. A clone is measured against
 **releases** instead: annotated tags `v<YYYY.MM.DD>` (`.2`, `.3`… for another the
 same UTC day) on main, cut on purpose with `./equin version cut`
-(`framework/cli/plugins/version`), which refuses unless main is published,
-serving HEAD, and its build of HEAD passed. The tag grammar is
+(`framework/cli/plugins/version`), which tags the commit main serves and
+refuses unless it is published, newer than every release, and its build passed. The tag grammar is
 `plugins/release` (web-safe core).
 
 - `core/`: `fetchUpstreamStatus(root)` — resolve upstream (via

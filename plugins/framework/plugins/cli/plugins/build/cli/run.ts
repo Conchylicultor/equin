@@ -1369,6 +1369,12 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
                 `build-runs: no ledger in ${name} yet — this build is not recorded`,
               );
             }
+          } else if (headAtStart !== null) {
+            // The backend (or main's convergence run) minted this row with
+            // the HEAD it saw at claim time; the checkout can have moved
+            // before `headAtStart` was sampled. Put the commit this build
+            // actually reads — the one `.build-commit` will name — on its row.
+            await recorder.recordRunCommit(buildId, headAtStart);
           }
 
           // Stage 2 — DB migrations + manifest-level codegen + the mandatory

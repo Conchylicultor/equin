@@ -1,6 +1,7 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 export { getServerCommit } from "./internal/get-server-commit";
 export { getServerGraphHash } from "./internal/get-server-graph-hash";
+export { readDistTrailer } from "./internal/dist-trailers";
 export { isRetiredBuildFile } from "./internal/retired-build-file";
 export {
   adoptServerPin,

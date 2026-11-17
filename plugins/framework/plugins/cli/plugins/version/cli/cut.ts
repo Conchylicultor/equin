@@ -9,10 +9,7 @@ import {
 import { resolvePublishTarget } from "@plugins/infra/plugins/git/plugins/remotes/core";
 import { actAsCheckoutNamespace } from "@plugins/infra/plugins/paths/core";
 import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
-import {
-  convergenceOf,
-  sameCommit,
-} from "@plugins/build/plugins/deployment/core";
+import { unresolved } from "@plugins/network/plugins/live/plugins/live-state/core";
 import { readServedDeployment } from "@plugins/build/plugins/deployment/cli";
 import { createBuildRunRecorder } from "@plugins/build/plugins/run-ledger/cli";
 import { UPSTREAM_BRANCH } from "@plugins/upstream/core";
@@ -47,24 +44,54 @@ async function git(root: string, ...args: string[]): Promise<string> {
   ).stdout.trim();
 }
 
+/** Is `commit` on the line leading to `ref` (or `ref` itself)? */
+async function isAncestor(
+  root: string,
+  commit: string,
+  ref: string,
+): Promise<boolean> {
+  const r = await spawnCaptured(
+    ["git", "merge-base", "--is-ancestor", commit, ref],
+    { cwd: root, timeoutMs: GIT_TIMEOUT_MS },
+  );
+  if (r.exitCode === 0) return true;
+  if (r.exitCode === 1) return false;
+  refuse(
+    `git merge-base --is-ancestor ${commit} ${ref} failed:\n${r.stderr.trim()}`,
+  );
+}
+
+/** " (HEAD is <sha>)" when main has moved past the served commit. */
+function behind(served: string, head: string): string {
+  return served === head
+    ? ""
+    : ` (main's HEAD has since moved to ${head.slice(0, 9)})`;
+}
+
 /**
- * `./equin version cut` — make main's HEAD a release.
+ * `./equin version cut` — make the commit main SERVES a release.
  *
- * A release is what every clone is told about and updates to, so it must be a
- * main that is known good. Each refusal below is one way it might not be:
+ * Not HEAD: main moves many times a day, so "main serves HEAD" is true only in
+ * the windows between a build finishing and the next push, and a cut that
+ * needed it was a race. The served commit is the newest main known good — its
+ * deploy came up (a deploy whose backend does not rolls its dist back) and its
+ * build passed — so it is the one to release, whatever landed since.
  *
- * 1. **This checkout publishes** (`resolvePublishTarget`). A clone has nowhere
+ * Each refusal below is one way it might not be a good release:
+ *
+ * 1. **Main's checkout, on `main`.** The served dist read is main's.
+ * 2. **This checkout publishes** (`resolvePublishTarget`). A clone has nowhere
  *    to push a tag its users would see.
- * 2. **Main's checkout, on `main`.** The deploy read below is this checkout's
- *    own served dist, and main's is the one the author runs.
- * 3. **HEAD is published** — in `<remote>/main` after a fetch. A tag on a
- *    commit upstream's main does not hold is not a release a clone would ever
- *    see (detection reads tags merged into upstream's main).
- * 4. **Main serves HEAD** — `readServedDeployment()` converged on HEAD: the
- *    deploy of this exact commit came up.
- * 5. **Main's last build of HEAD passed** — the newest closed `build_runs` row
- *    of a plain main build names HEAD and exited 0, checks included.
- * 6. **HEAD is not already a release.**
+ * 3. **Main serves a known commit** — the served dist's `.build-commit`
+ *    (`readServedDeployment(namespace)`), and it is on main's line (an
+ *    ancestor of HEAD, or HEAD).
+ * 4. **It is published** — in `<remote>/main` after a fetch. A tag on a commit
+ *    upstream's main does not hold is not a release a clone would ever see
+ *    (detection reads tags merged into upstream's main).
+ * 5. **No release holds it yet** — neither on it nor on a later commit: a
+ *    release older than the newest one would read as a step back.
+ * 6. **Its build passed** — the newest closed plain main build of that commit
+ *    (`build_runs`) exited 0, checks included.
  *
  * Not a flag on `push`: a release must follow a CONFIRMED green main, which
  * `push` cannot know when it lands — main builds itself after the push.
@@ -75,8 +102,8 @@ const run: CliAction<[], { message?: string; dryRun?: boolean }> = async (
   const root = await getWorktreeRoot();
   if (root !== (await getMainRepoRoot()))
     refuse(
-      `Run \`./equin version cut\` in main's checkout (${await getMainRepoRoot()}): a release is main's HEAD, ` +
-        `checked against what main serves and main's own build of it.`,
+      `Run \`./equin version cut\` in main's checkout (${await getMainRepoRoot()}): a release is the commit ` +
+        `main serves, checked against main's own build of it.`,
     );
 
   const target = await resolvePublishTarget(root);
@@ -93,7 +120,24 @@ const run: CliAction<[], { message?: string; dryRun?: boolean }> = async (
     );
   const head = await git(root, "rev-parse", "HEAD");
 
-  // Fetch first: "is HEAD published" and "which release names are taken" are
+  const namespace = await actAsCheckoutNamespace(root);
+  const web = (await readServedDeployment(namespace)).deployable.find(
+    (c) => c.id === "web",
+  );
+  const servedCommit = web?.commit ?? unresolved("no web carrier");
+  if (!servedCommit.resolved)
+    refuse(
+      `Main serves no known commit (${servedCommit.reason}), so there is nothing deployed to release. ` +
+        `Wait for main's build to finish, or fix it.`,
+    );
+  const served = servedCommit.value;
+  const short = served.slice(0, 9);
+  if (!(await isAncestor(root, served, head)))
+    refuse(
+      `Main serves ${short}, which is not on main's line (HEAD ${head.slice(0, 9)}). A release is a commit of main.`,
+    );
+
+  // Fetch first: "is it published" and "which release names are taken" are
   // questions about the remote, not about refs as old as the last fetch.
   const fetchArgv = [
     "git",
@@ -108,62 +152,47 @@ const run: CliAction<[], { message?: string; dryRun?: boolean }> = async (
   });
   if (fetched.exitCode !== 0 || fetched.timedOut)
     refuse(
-      `Could not fetch ${target.remote} (${target.url}), so whether HEAD is published and which release names ` +
-        `are taken are unknown. Nothing was tagged.\n\n${fetched.stderr.trim()}`,
+      `Could not fetch ${target.remote} (${target.url}), so whether ${short} is published and which release ` +
+        `names are taken are unknown. Nothing was tagged.\n\n${fetched.stderr.trim()}`,
     );
 
   const remoteMain = `${target.remote}/${UPSTREAM_BRANCH}`;
-  const published = await spawnCaptured(
-    ["git", "merge-base", "--is-ancestor", head, remoteMain],
-    { cwd: root, timeoutMs: GIT_TIMEOUT_MS },
-  );
-  if (published.exitCode === 1)
+  if (!(await isAncestor(root, served, remoteMain)))
     refuse(
-      `HEAD (${head.slice(0, 9)}) is not on ${remoteMain}. Push main first: a tag on a commit ${target.remote}'s ` +
-        `main does not hold is a release no clone would see.`,
-    );
-  if (published.exitCode !== 0)
-    refuse(
-      `git merge-base --is-ancestor ${head} ${remoteMain} failed:\n${published.stderr.trim()}`,
+      `The served commit (${short}) is not on ${remoteMain}. Push main first: a tag on a commit ` +
+        `${target.remote}'s main does not hold is a release no clone would see.`,
     );
 
-  const already = releaseTags(
-    lines(await git(root, "tag", "--points-at", head, "-l", RELEASE_TAG_GLOB)),
+  const onIt = releaseTags(
+    lines(
+      await git(root, "tag", "--points-at", served, "-l", RELEASE_TAG_GLOB),
+    ),
   );
-  if (already.length > 0)
+  if (onIt.length > 0)
     refuse(
-      `HEAD is already released as ${already.map((r) => r.tag).join(", ")}. Nothing to cut.`,
+      `The served commit (${short}) is already released as ${onIt.map((r) => r.tag).join(", ")}. Nothing to cut.`,
     );
-
-  const namespace = await actAsCheckoutNamespace(root);
-  const deployment = await readServedDeployment();
-  const convergence = convergenceOf(deployment);
-  if (
-    convergence !== "converged" ||
-    !deployment.target.resolved ||
-    !sameCommit(deployment.target.value, head)
-  )
+  const later = releaseTags(
+    lines(await git(root, "tag", "--contains", served, "-l", RELEASE_TAG_GLOB)),
+  );
+  if (later.length > 0)
     refuse(
-      `Main is not serving HEAD (${head.slice(0, 9)}): its deployment reads ${convergence}. ` +
-        `A release is a main whose deploy came up — wait for main's build of HEAD to finish, or fix it.`,
+      `A later commit is already released (${later.map((r) => r.tag).join(", ")}), so releasing the served ` +
+        `commit (${short}) would be a step back. Wait for main to serve a newer build.`,
     );
 
   const recorder = createBuildRunRecorder(namespace);
-  const last = await recorder
-    .lastClosedRun({ only: MAIN_COMPOSITION_ID })
+  const build = await recorder
+    .lastClosedRunOf({ only: MAIN_COMPOSITION_ID }, served)
     .finally(() => recorder.close());
-  if (last.kind !== "run")
+  if (build.kind !== "run")
     refuse(
-      `Main has no finished build on record (${last.kind}), so nothing says HEAD built and passed its checks.`,
+      `Main has no finished build of ${short} on record (${build.kind}), so nothing says it built and passed ` +
+        `its checks.`,
     );
-  if (last.commitHash === null || !sameCommit(last.commitHash, head))
+  if (build.exitCode !== 0)
     refuse(
-      `Main's last finished build was of ${last.commitHash?.slice(0, 9) ?? "an unknown commit"}, not HEAD ` +
-        `(${head.slice(0, 9)}). Wait for main's build of HEAD to finish.`,
-    );
-  if (last.exitCode !== 0)
-    refuse(
-      `Main's last build of HEAD failed (exit ${last.exitCode ?? "unknown"}). A release must be a main that ` +
+      `Main's last build of ${short} failed (exit ${build.exitCode ?? "unknown"}). A release must be a main that ` +
         `built and passed its checks.`,
     );
 
@@ -177,12 +206,12 @@ const run: CliAction<[], { message?: string; dryRun?: boolean }> = async (
 
   if (opts.dryRun === true) {
     console.log(
-      `Every check passed. Would tag ${head.slice(0, 9)} as ${tag} ("${message}") and push it to ${target.remote}.`,
+      `Every check passed. Would tag the served commit ${short}${behind(served, head)} as ${tag} ("${message}") and push it to ${target.remote}.`,
     );
     return;
   }
 
-  await git(root, "tag", "-a", tag, "-m", message, head);
+  await git(root, "tag", "-a", tag, "-m", message, served);
   const pushed = await spawnPassthrough(
     ["git", "push", target.remote, `refs/tags/${tag}`],
     { cwd: root },
@@ -196,7 +225,7 @@ const run: CliAction<[], { message?: string; dryRun?: boolean }> = async (
     );
   }
   console.log(
-    `\nReleased ${releaseVersion(tag)}: ${tag} on ${head.slice(0, 9)}, pushed to ${target.remote} (${target.url}).`,
+    `\nReleased ${releaseVersion(tag)}: ${tag} on ${short}${behind(served, head)}, pushed to ${target.remote} (${target.url}).`,
   );
 };
 

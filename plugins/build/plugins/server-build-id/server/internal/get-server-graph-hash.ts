@@ -1,5 +1,5 @@
 import { webDistDir } from "@plugins/infra/plugins/paths/server";
-import { readFile } from "@plugins/packages/plugins/timed-fs/core";
+import { readDistTrailer } from "./dist-trailers";
 
 // The content identity of the frontend bundle this backend is serving, read
 // from `dist/.build-graph` FRESH on every call — same rule, and same reason, as
@@ -14,14 +14,7 @@ import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 // builds of an unchanged tree return the same value — a tab holding it is not
 // asked to reload for a rebuild that changed nothing.
 export async function getServerGraphHash(): Promise<string | null> {
-  try {
-    return (
-      (await readFile(`${webDistDir()}/.build-graph`, "utf8")).trim() || null
-    );
-    // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- best-effort optional dotfile read; a missing/unreadable .build-graph (before the first build that writes one) legitimately means "graph unknown" → staleness detection inert, never a bug to surface
-  } catch {
-    return null;
-  }
+  return readDistTrailer(webDistDir(), ".build-graph");
 }
 
 // The central build the served page was built against, read from the served
@@ -30,12 +23,8 @@ export async function getServerGraphHash(): Promise<string | null> {
 // backend names it on its ack frames (`setServedCentralBuild`), so a tab can
 // tell a central value a reload fixes from one no reload can.
 export async function getServedCentralBuild(): Promise<string | null> {
-  try {
-    return (
-      (await readFile(`${webDistDir()}/.central-build`, "utf8")).trim() || null
-    );
-    // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- best-effort optional dotfile read, the `.build-graph` sibling's rule: a dist composed before the trailer existed, or a page naming no central build (a release), legitimately means "unnamed" — the tab then keeps central's `skew` reading as before, never claiming a `deploy-skew` it cannot see
-  } catch {
-    return null;
-  }
+  // A dist composed before the trailer existed, or a page naming no central
+  // build (a release), legitimately means "unnamed" — the tab then keeps
+  // central's `skew` reading as before, never claiming a `deploy-skew`.
+  return readDistTrailer(webDistDir(), ".central-build");
 }

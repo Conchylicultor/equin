@@ -15908,6 +15908,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `getServerCommit`
           - `getServerGraphHash`
           - `isRetiredBuildFile`
+          - `readDistTrailer`
           - `sealServerPin`
           - `serverPin`
           - `serverPinCommit`
@@ -15918,7 +15919,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `upstream`
       - Exemptions:
         - Exempts itself from:
-          - `boundaries/no-platform-api` — `server/internal/get-server-commit.ts`, `server/internal/get-server-graph-hash.ts`, `server/internal/retired-build-file.ts` (debt)
+          - `boundaries/no-platform-api` — `server/internal/dist-trailers.ts`, `server/internal/retired-build-file.ts` (debt)
           - `blocking-fs/no-sync-fs` — `server/internal/server-pin.ts` (sanctioned)
     - **`step-baseline`** — Build-step-regression report kind's Debug → Reports summary view: one line naming the step, its value against its baseline, and for file calls where the extra calls went. Filed by main's build through the report outbox — no collector here. Build-step-regression report kind: one row per step and metric (time, or file calls in a build that rebuilt nothing), filed through the report outbox by main's `./equin build` when a step jumps against its own recent baseline in two same-work builds in a row. Renders a task naming the step, the before/after and, for file calls, the path prefixes the extra calls went to. Warning, re-arms every 6 h.
       - Web:
@@ -32708,7 +32709,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `backup/targets/local` (1 debt)
               - `build/restart-skip` (0 debt)
               - `build/serve-composition` (1 debt)
-              - `build/server-build-id` (3 debt)
+              - `build/server-build-id` (2 debt)
               - `code-explorer` (5 debt)
               - `config_v2/disk-read` (1 debt)
               - `config_v2/ledger` (1 debt)
@@ -39151,12 +39152,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 136 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 137 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `infra` ×33
           - `framework` ×22
           - `apps` ×18
           - `debug` ×15
-          - `build` ×7
+          - `build` ×8
           - `conversations` ×7
           - `backup` ×4
           - `packages` ×3
@@ -42322,7 +42323,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 316 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+            - Imported by: 317 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `apps` ×85
               - `conversations` ×49
               - `debug` ×31
@@ -42337,11 +42338,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core` ×4
               - `auth` ×4
               - `companions` ×3
+              - `framework` ×3
               - `integrations` ×3
               - `network` ×3
               - `review` ×3
               - `config_v2` ×2
-              - `framework` ×2
               - `hints` ×2
               - `reports` ×2
               - `shell` ×2

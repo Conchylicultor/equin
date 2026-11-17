@@ -1,7 +1,6 @@
-import {
-  getServerCommit,
-  getServerGraphHash,
-} from "@plugins/build/plugins/server-build-id/server";
+import { readDistTrailer } from "@plugins/build/plugins/server-build-id/server";
+import type { Namespace } from "@plugins/infra/plugins/namespace/core";
+import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
 import type { Deployment } from "../../core";
 import {
   readTarget,
@@ -25,14 +24,19 @@ import {
  * later crashed on the same code — is not something a rebuild of the same
  * commit fixes either (`wantsBuild`'s termination refuses it regardless).
  *
- * The caller's process must already run as the namespace whose dist this reads
- * (`actAsCheckoutNamespace`): `getServerCommit` resolves `webDistDir()` from it.
+ * The dist is `namespace`'s, named by the caller — never `webDistDir()`, which
+ * answers from a RUNTIME namespace a CLI does not have (it throws there). That
+ * read once failed silently and every caller saw "the served dist carries no
+ * .build-commit" on a dist that carried one.
  */
-export async function readServedDeployment(): Promise<Deployment> {
+export async function readServedDeployment(
+  namespace: Namespace,
+): Promise<Deployment> {
+  const dist = worktreeArtifacts.webDist(namespace);
   const target = await readTarget();
   const [distCommit, distGraph] = await Promise.all([
-    getServerCommit(),
-    getServerGraphHash(),
+    readDistTrailer(dist, ".build-commit"),
+    readDistTrailer(dist, ".build-graph"),
   ]);
   return {
     target,

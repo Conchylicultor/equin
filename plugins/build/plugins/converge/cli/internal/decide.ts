@@ -60,8 +60,8 @@ export interface ConvergenceDecision {
  * checkout. The gateway runs it for main alone. `autoBuild: false` is the
  * checkout's kill switch, read off disk like every other input here.
  *
- * The caller's process must already run as `namespace`
- * (`actAsCheckoutNamespace`) — the served dist is resolved from it.
+ * `namespace` is the checkout's own (`actAsCheckoutNamespace`) — the served
+ * dist read is that namespace's.
  */
 export async function decideConvergence(i: {
   root: AppPath;
@@ -72,7 +72,7 @@ export async function decideConvergence(i: {
   recorder: BuildRunRecorder;
   now: Date;
 }): Promise<ConvergenceDecision> {
-  const deployment = await readServedDeployment();
+  const deployment = await readServedDeployment(i.namespace);
   const head = deployment.target.resolved ? deployment.target.value : null;
   let ledger: ConvergenceDecision["ledger"] = "present";
   const lastAttempt = async (

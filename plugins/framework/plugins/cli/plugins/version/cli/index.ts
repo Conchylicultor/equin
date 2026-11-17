@@ -23,10 +23,10 @@ export default defineCliCommand({
     defineCliCommand<[], { message?: string; dryRun?: boolean }>({
       name: "cut",
       description:
-        "Cut a release: tag main's HEAD with an annotated `v<YYYY.MM.DD>` tag (`.2`, `.3`… for another the same " +
-        "UTC day) and push it to the publish remote. Run in main's checkout. Refused unless this checkout can " +
-        "publish, main's HEAD is pushed, what main serves is that HEAD, and main's last build of it passed — so " +
-        "a release is always a main that built and passed its checks.",
+        "Cut a release: tag the commit main serves with an annotated `v<YYYY.MM.DD>` tag (`.2`, `.3`… for another " +
+        "the same UTC day) and push it to the publish remote. Run in main's checkout. Refused unless this checkout " +
+        "can publish, the served commit is pushed and newer than every release, and main's build of it passed — " +
+        "so a release is always a main that deployed, built and passed its checks.",
       options: [
         {
           flags: "-m, --message <text>",

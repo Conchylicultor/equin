@@ -14,20 +14,25 @@ checkout that publishes, the newest release it has cut.
 
 ## `cut`
 
-Tags main's HEAD `v<UTC date>` (or `.2`, `.3`… the same day; the name is
-`nextReleaseTag` over the remote's tags, fetched first) with a one-line
-annotated message and pushes `refs/tags/<tag>` to the publish remote. Refused,
-before anything is written, unless:
+Tags the commit main SERVES (the served dist's `.build-commit`) `v<UTC date>`
+(or `.2`, `.3`… the same day; the name is `nextReleaseTag` over the remote's
+tags, fetched first) with a one-line annotated message and pushes
+`refs/tags/<tag>` to the publish remote. Not HEAD: main moves many times a day,
+so "main serves HEAD" holds only between a build finishing and the next push —
+the served commit is the newest main known good, and a cut is not a race.
+Refused, before anything is written, unless:
 
 1. it runs in main's checkout, on `main`;
 2. this checkout can publish (`resolvePublishTarget`) — a clone cannot release;
-3. HEAD is on `<remote>/main` after a fetch (a tag off upstream's main is a
-   release no clone would see — detection reads tags merged into it);
-4. HEAD is not already a release;
-5. what main serves is HEAD (`readServedDeployment()` converged on it);
-6. main's newest closed plain build (`build_runs`, `only: <main composition>`)
-   is of HEAD and exited 0 — so a release is always a main that built and
-   passed its checks.
+3. main serves a known commit (`readServedDeployment(namespace)`), on main's
+   line (an ancestor of HEAD, or HEAD);
+4. that commit is on `<remote>/main` after a fetch (a tag off upstream's main
+   is a release no clone would see — detection reads tags merged into it);
+5. no release is on it or on a later commit (an older release than the newest
+   one would read as a step back);
+6. main's newest closed plain build OF THAT COMMIT (`build_runs`,
+   `only: <main composition>`, `lastClosedRunOf`) exited 0 — so a release is
+   always a main that deployed, built and passed its checks.
 
 A failed push deletes the local tag, so a retry names the release afresh.
 `--dry-run` runs every check and prints the tag it would cut.

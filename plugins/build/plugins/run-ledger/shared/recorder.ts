@@ -66,6 +66,13 @@ export interface BuildRunRecorder {
    * invocation is one row with N targets, so this is an array, not a scalar.
    */
   insertRun(r: InsertRunRow): Promise<"claimed" | "lost" | "unavailable">;
+  /**
+   * Re-stamp a run's `commit_hash` with the commit the build actually read —
+   * for a row minted before the build ran (a UI/auto build's backend, or main's
+   * convergence run, recorded HEAD at claim time; the checkout can move before
+   * the build samples its tree). See {@link recordRunCommitOn}.
+   */
+  recordRunCommit(id: string, commitHash: string): Promise<void>;
   /** Stamp a run terminal, first-writer-wins (guarded `where(isNull(finishedAt))`). */
   closeRun(id: string, exitCode: number): Promise<void>;
   /**
@@ -74,6 +81,15 @@ export interface BuildRunRecorder {
    * {@link lastClosedRunOn}.
    */
   lastClosedRun(target: AttemptTarget): Promise<LastClosedRun>;
+  /**
+   * The newest CLOSED run of this namespace for `target` that built `commit` —
+   * "did the build of THIS commit pass", whatever ran after it. See
+   * {@link lastClosedRunOn}.
+   */
+  lastClosedRunOf(
+    target: AttemptTarget,
+    commit: string,
+  ): Promise<LastClosedRun>;
   /** Release the pool. */
   close(): Promise<void>;
 }
@@ -275,6 +291,32 @@ export async function closeRunOn(
 }
 
 /**
+ * `recordRunCommit`'s body over any drizzle handle. The build stamps the commit
+ * it sampled before reading a source file (`headAtStart`) into the dist as
+ * `.build-commit`; this puts the same sha on its row, so "did the build of the
+ * commit main serves pass" (`./equin version cut`) and the convergence
+ * decision's "already attempted" read a row that names the tree it built — not
+ * the HEAD its claimer saw, which a push in between makes another commit.
+ *
+ * Open rows only, like `closeRunOn`; a namespace with no ledger has no row.
+ */
+export async function recordRunCommitOn(
+  db: NodePgDatabase,
+  id: string,
+  commitHash: string,
+): Promise<void> {
+  try {
+    // sql-writes:hand-written — the CLI's ledger write against the previous build's schema, naming only its own columns
+    await db.execute(sql`
+      update "build_runs" set "commit_hash" = ${commitHash}
+      where "id" = ${buildRunIdKind.key(id)} and "finished_at" is null
+    `);
+  } catch (err) {
+    if (!isMissingLedger(err)) throw err;
+  }
+}
+
+/**
  * `lastClosedRun`'s body over any drizzle handle: the newest run of
  * `namespace` with `finished_at` set whose `targets` match `target`.
  *
@@ -287,11 +329,17 @@ export async function lastClosedRunOn(
   db: NodePgDatabase,
   namespace: Namespace,
   target: AttemptTarget,
+  /** Only runs that built this exact commit (a full sha, as the CLI records it). */
+  commit?: string,
 ): Promise<LastClosedRun> {
-  const match =
+  const targetMatch =
     "only" in target
       ? sql`"targets" = ${sql.param([target.only])}`
       : sql`"targets" @> ${sql.param([target.includes])}`;
+  const match =
+    commit === undefined
+      ? targetMatch
+      : sql`${targetMatch} and "commit_hash" = ${commit}`;
   try {
     const rows = await executeRows(db, {
       label: "build_runs: last closed run",
