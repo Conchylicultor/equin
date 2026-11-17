@@ -29,6 +29,13 @@ export {
 } from "./internal/spare";
 export { withWorktreeMutateSlot } from "./internal/mutate-gate";
 export {
+  type SetupStep,
+  type SetupStepName,
+  type OnSetupStep,
+  describeSetupStep,
+  recordSetupSteps,
+} from "./internal/setup-steps";
+export {
   dropRetiredBranchReflogs,
   type RetiredReflogSweep,
 } from "./internal/retired-reflogs";

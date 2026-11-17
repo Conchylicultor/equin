@@ -3,7 +3,9 @@ import { getConfig } from "@plugins/config_v2/server";
 import { defineSupervisedJob } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import {
   describeAdoption,
+  describeSetupStep,
   describeTreeStart,
+  recordSetupSteps,
   setupWorktree,
 } from "@plugins/infra/plugins/worktree/server";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
@@ -54,15 +56,22 @@ export const worktreePrepareJob = defineSupervisedJob({
     // included) rather than inside `infra/worktree`, which must stay importable
     // from the CLI.
     log(`checkout ${attemptId} at ${path}: starting`);
+    // Each step as it ends (a hung one shows where it hung), then the whole
+    // split on the result line — the record every launch leaves of where its
+    // checkout's time went.
+    const steps = recordSetupSteps((s) =>
+      log(`checkout ${attemptId} step: ${describeSetupStep(s)}`),
+    );
     const { source, tree, depStore, untrackedCache } = await setupWorktree(
       attemptId,
       path,
       new Set(getConfig(compositionsConfig).manifests.map((m) => m.id)),
       // This backend: its database is where the attempt row lives.
       runtimeNamespace(),
+      steps.onStep,
     );
     log(
-      `checkout ${attemptId}: ${source}; ${tree === null ? "" : `${describeTreeStart(tree)}; `}${describeAdoption(depStore)}; untracked cache: ${untrackedCache}`,
+      `checkout ${attemptId}: ${source}; ${tree === null ? "" : `${describeTreeStart(tree)}; `}${describeAdoption(depStore)}; untracked cache: ${untrackedCache}; steps: ${steps.summary()}`,
     );
   },
   // A checkout was made — from a spare (the pool is now one short) or cold

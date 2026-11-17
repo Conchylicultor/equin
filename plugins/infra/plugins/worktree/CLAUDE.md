@@ -130,6 +130,14 @@ every path settles (fresh add, claimed spare — whose switch may move `bun.lock
 gate. Without it, a checkout's first program (the guard hook, not `./equin`)
 resolved npm packages by walking up into main's `node_modules`.
 
+## Every checkout records where its time went (`server/internal/setup-steps.ts`)
+
+`setupWorktree` / `createSpareWorktree` take a REQUIRED `onStep`, called as each
+step ends (also when it throws): `gate-wait`, `claim`, `switch`, `add` (with
+`tree-write` nested inside it), `lock`, `dep-store`, `install`, `index-refresh`.
+The prepare job and the spare refill log each step as it ends and the split on
+their result line (`worktree-prepare`, `worktree-spare-refill` channels).
+
 ## Every new checkout starts with a refreshed index (`infra/git/index-refresh`)
 
 No git read of ours writes a checkout's index (spawn's `GIT_OPTIONAL_LOCKS=0`),
@@ -286,8 +294,8 @@ count bounded by the live checkouts. See
 
 ## Cancellation
 
-`setupWorktree(id, path, compositionIds, signal?)`,
-`removeWorktree(path, signal?)` and `withWorktreeMutateSlot(fn, signal?)` all take
+`setupWorktree(id, path, compositionIds, minter, onStep, signal?)`,
+`removeWorktree(path, signal?)` and `withWorktreeMutateSlot(fn, signal?, onStep?)` all take
 an optional ambient `AbortSignal` — a job handler passes its `ctx.signal`.
 
 This is the gate where cancellation matters most. A handler stuck inside the
@@ -371,7 +379,10 @@ pid liveness.
     - `NamespaceClaimant`
     - `NamespaceKind`
     - `NamespaceProbe`
+    - `OnSetupStep`
     - `RetiredReflogSweep`
+    - `SetupStep`
+    - `SetupStepName`
     - `TreeHarvestResult`
     - `TreeStart`
     - `WorktreeEntry`
@@ -391,6 +402,7 @@ pid liveness.
     - `createSpareWorktree`
     - `describeAdoption`
     - `describeHarvest`
+    - `describeSetupStep`
     - `describeTreeHarvest`
     - `describeTreeStart`
     - `dropRetiredBranchReflogs`
@@ -415,6 +427,7 @@ pid liveness.
     - `probeNamespace`
     - `probeWorktreeOp`
     - `pruneSpares`
+    - `recordSetupSteps`
     - `removeWorktree`
     - `removeWorktreeSpec`
     - `setupWorktree`

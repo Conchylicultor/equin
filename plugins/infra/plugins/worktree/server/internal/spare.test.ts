@@ -12,6 +12,7 @@ import { basename, join } from "node:path";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { createSpareIn, pruneSparesIn } from "./spare";
+import type { SetupStep } from "./setup-steps";
 import {
   ADD_IN_PROGRESS_LOCK,
   checkoutAttempt,
@@ -55,6 +56,8 @@ async function commit(file: string, content: string): Promise<string> {
 const wtFor = (id: string) => join(gitWorktreesDir(repo), id);
 const noGate = <T>(fn: () => Promise<T>) => fn();
 const noInstall = async (): Promise<void> => {};
+// These tests check what a checkout makes, not how long its steps take.
+const noSteps = (): void => {};
 
 // What a concurrent `git worktree add` leaves for a moment: its admin entry
 // with `commondir` created but not yet written.
@@ -68,7 +71,7 @@ function plantHalfWrittenAdd(id: string): void {
 
 // Runs `setupWorktree`'s cold path again after a crash, and checks it landed.
 async function checkAttemptAgain(id: string, wt: string): Promise<string> {
-  const { source } = await checkoutAttempt(repo, id, wt);
+  const { source } = await checkoutAttempt(repo, id, wt, noSteps);
   expect(await git(wt, "symbolic-ref", "HEAD")).toBe(
     `refs/heads/claude-web/${id}`,
   );
@@ -98,13 +101,41 @@ afterEach(() => {
   rmSync(base, { recursive: true, force: true });
 });
 
+describe("step timing", () => {
+  const stepsOf = () => {
+    const seen: string[] = [];
+    return { seen, onStep: (s: SetupStep) => seen.push(s.step) };
+  };
+
+  test("a spare claim reports its claim, switch and lock", async () => {
+    await createSpareIn(repo, noInstall, noSteps);
+    const { seen, onStep } = stepsOf();
+    await checkoutAttempt(repo, "att-steps", wtFor("att-steps"), onStep);
+    expect(seen).toEqual(["claim", "switch", "lock"]);
+  });
+
+  test("a cold add reports the failed claim, the tree write inside the add, and the lock", async () => {
+    const { seen, onStep } = stepsOf();
+    await checkoutAttempt(repo, "att-cold", wtFor("att-cold"), onStep);
+    expect(seen).toEqual(["claim", "tree-write", "add", "lock"]);
+  });
+
+  test("a spare's writing reports the tree write inside its add", async () => {
+    const { seen, onStep } = stepsOf();
+    await createSpareIn(repo, noInstall, onStep);
+    expect(seen).toEqual(["tree-write", "add"]);
+  });
+});
+
 describe("spare claim", () => {
   test("a claim takes a ready spare: on the attempt branch, at main, locked", async () => {
-    const spare = (await createSpareIn(repo, noInstall)).path;
+    const spare = (await createSpareIn(repo, noInstall, noSteps)).path;
     expect(await listReadySpares(repo)).toEqual([spare]);
 
     const wt = wtFor("att-1");
-    expect((await checkoutAttempt(repo, "att-1", wt)).source).toBe("spare");
+    expect((await checkoutAttempt(repo, "att-1", wt, noSteps)).source).toBe(
+      "spare",
+    );
 
     expect(existsSync(spare)).toBe(false);
     expect(await git(wt, "symbolic-ref", "HEAD")).toBe(
@@ -129,7 +160,7 @@ describe("spare claim", () => {
     const older = await git(repo, "rev-parse", "main");
     const newer = await commit("b.txt", "two");
     await git(repo, "update-ref", "refs/heads/main", older);
-    await createSpareIn(repo, noInstall);
+    await createSpareIn(repo, noInstall, noSteps);
 
     const fired = join(base, "push-landed");
     const hook = join(base, "fsmonitor-push.sh");
@@ -141,9 +172,9 @@ describe("spare claim", () => {
     await git(repo, "config", "core.fsmonitor", hook);
     const wt = wtFor("att-raced");
     try {
-      expect((await checkoutAttempt(repo, "att-raced", wt)).source).toBe(
-        "spare",
-      );
+      expect(
+        (await checkoutAttempt(repo, "att-raced", wt, noSteps)).source,
+      ).toBe("spare");
     } finally {
       await git(repo, "config", "--unset", "core.fsmonitor");
     }
@@ -159,9 +190,13 @@ describe("spare claim", () => {
 
   test("a spare is installed before it is locked: ready means installed", async () => {
     const seen: { path: string; lock: string | null | undefined }[] = [];
-    const { path: spare } = await createSpareIn(repo, async (path) => {
-      seen.push({ path, lock: await lockOf(path) });
-    });
+    const { path: spare } = await createSpareIn(
+      repo,
+      async (path) => {
+        seen.push({ path, lock: await lockOf(path) });
+      },
+      noSteps,
+    );
     expect(seen).toEqual([{ path: spare, lock: null }]);
     expect(await listReadySpares(repo)).toEqual([spare]);
   });
@@ -169,10 +204,14 @@ describe("spare claim", () => {
   test("a spare whose install fails throws and is never ready", async () => {
     let path = "";
     expect(
-      createSpareIn(repo, async (p) => {
-        path = p;
-        throw new Error("bun install exited 1");
-      }),
+      createSpareIn(
+        repo,
+        async (p) => {
+          path = p;
+          throw new Error("bun install exited 1");
+        },
+        noSteps,
+      ),
     ).rejects.toMatchObject({ message: "bun install exited 1" });
     expect(existsSync(path)).toBe(true);
     expect(await lockOf(path)).toBeNull();
@@ -180,12 +219,14 @@ describe("spare claim", () => {
   });
 
   test("an unlocked (half-written) spare is skipped", async () => {
-    const spare = (await createSpareIn(repo, noInstall)).path;
+    const spare = (await createSpareIn(repo, noInstall, noSteps)).path;
     await git(repo, "worktree", "unlock", spare);
     expect(await listReadySpares(repo)).toEqual([]);
 
     const wt = wtFor("att-2");
-    expect((await checkoutAttempt(repo, "att-2", wt)).source).toBe("fresh");
+    expect((await checkoutAttempt(repo, "att-2", wt, noSteps)).source).toBe(
+      "fresh",
+    );
     expect(existsSync(spare)).toBe(true);
     expect(await git(wt, "symbolic-ref", "HEAD")).toBe(
       "refs/heads/claude-web/att-2",
@@ -194,7 +235,9 @@ describe("spare claim", () => {
 
   test("with no spare, the claim falls back to the cold add", async () => {
     const wt = wtFor("att-3");
-    expect((await checkoutAttempt(repo, "att-3", wt)).source).toBe("fresh");
+    expect((await checkoutAttempt(repo, "att-3", wt, noSteps)).source).toBe(
+      "fresh",
+    );
     expect(await git(wt, "symbolic-ref", "HEAD")).toBe(
       "refs/heads/claude-web/att-3",
     );
@@ -202,10 +245,10 @@ describe("spare claim", () => {
   });
 
   test("two concurrent claims of one spare: one wins, the other falls back", async () => {
-    await createSpareIn(repo, noInstall);
+    await createSpareIn(repo, noInstall, noSteps);
     const sources = await Promise.all([
-      checkoutAttempt(repo, "att-4", wtFor("att-4")),
-      checkoutAttempt(repo, "att-5", wtFor("att-5")),
+      checkoutAttempt(repo, "att-4", wtFor("att-4"), noSteps),
+      checkoutAttempt(repo, "att-5", wtFor("att-5"), noSteps),
     ]);
     expect(sources.map((s) => s.source).sort()).toEqual(["fresh", "spare"]);
     for (const id of ["att-4", "att-5"]) {
@@ -221,7 +264,7 @@ describe("spare claim", () => {
     // `unlink`s of one file both succeed about half the time, so an unlock that
     // unlinked `locked` handed one spare to both claimers (2026-11-04: the
     // concurrent-claim test above failed 1 run in 3, ENOENT in the move).
-    const spare = (await createSpareIn(repo, noInstall)).path;
+    const spare = (await createSpareIn(repo, noInstall, noSteps)).path;
     for (let round = 0; round < 20; round++) {
       const results = await Promise.all(
         Array.from({ length: 8 }, () => unlockWorktree(repo, spare)),
@@ -236,7 +279,7 @@ describe("spare claim", () => {
     // entry with `commondir` created but not yet written. `git worktree lock`
     // dies on it ("failed to read …/commondir") — 2026-11-02: a claim's
     // checkout was left unlocked while another add ran beside it.
-    const spare = (await createSpareIn(repo, noInstall)).path;
+    const spare = (await createSpareIn(repo, noInstall, noSteps)).path;
     plantHalfWrittenAdd("att-half");
     const raced = await spawnCaptured(
       [GIT, "-C", repo, "worktree", "lock", spare, "--reason", "x"],
@@ -258,7 +301,7 @@ describe("spare claim", () => {
     // `git worktree list` dies on the same state as `lock` — and with it every
     // reader of the list: a claim's spare lookup, the crash check, the prune,
     // a removal's registration check.
-    const spare = (await createSpareIn(repo, noInstall)).path;
+    const spare = (await createSpareIn(repo, noInstall, noSteps)).path;
     plantHalfWrittenAdd("att-half");
     const raced = await spawnCaptured(
       [GIT, "-C", repo, "worktree", "list", "--porcelain"],
@@ -284,7 +327,7 @@ describe("spare claim", () => {
     // `git worktree add` / `move` / `switch <branch>` enumerate every worktree
     // and die on the same state as `list` — a claim's move and the cold add
     // fell over beside a concurrent refill (task-1793664733-b6mwon).
-    const spare = (await createSpareIn(repo, noInstall)).path;
+    const spare = (await createSpareIn(repo, noInstall, noSteps)).path;
     plantHalfWrittenAdd("att-half");
     for (const argv of [
       ["worktree", "add", "--detach", wtFor("att-raw"), "main"],
@@ -298,26 +341,26 @@ describe("spare claim", () => {
 
     // A claim (the switch creates the branch) …
     const claimed = wtFor("att-claim");
-    expect((await checkoutAttempt(repo, "att-claim", claimed)).source).toBe(
-      "spare",
-    );
+    expect(
+      (await checkoutAttempt(repo, "att-claim", claimed, noSteps)).source,
+    ).toBe("spare");
     // … a claim onto a branch that already exists …
     await git(repo, "branch", "claude-web/att-old", "main");
-    await createSpareIn(repo, noInstall);
+    await createSpareIn(repo, noInstall, noSteps);
     const reclaimed = wtFor("att-old");
-    expect((await checkoutAttempt(repo, "att-old", reclaimed)).source).toBe(
-      "spare",
-    );
+    expect(
+      (await checkoutAttempt(repo, "att-old", reclaimed, noSteps)).source,
+    ).toBe("spare");
     // … a cold add of a new branch, and one of an existing branch.
     const fresh = wtFor("att-fresh");
-    expect((await checkoutAttempt(repo, "att-fresh", fresh)).source).toBe(
-      "fresh",
-    );
+    expect(
+      (await checkoutAttempt(repo, "att-fresh", fresh, noSteps)).source,
+    ).toBe("fresh");
     await git(repo, "branch", "claude-web/att-kept", "main");
     const kept = wtFor("att-kept");
-    expect((await checkoutAttempt(repo, "att-kept", kept)).source).toBe(
-      "fresh",
-    );
+    expect(
+      (await checkoutAttempt(repo, "att-kept", kept, noSteps)).source,
+    ).toBe("fresh");
 
     for (const [id, wt] of [
       ["att-claim", claimed],
@@ -342,7 +385,9 @@ describe("spare claim", () => {
 
   test("a new checkout is registered as git would: same files, same admin entry", async () => {
     const wt = wtFor("att-shape");
-    expect((await checkoutAttempt(repo, "att-shape", wt)).source).toBe("fresh");
+    expect((await checkoutAttempt(repo, "att-shape", wt, noSteps)).source).toBe(
+      "fresh",
+    );
     const admin = await git(wt, "rev-parse", "--absolute-git-dir");
     expect(admin).toBe(join(repo, ".git", "worktrees", "att-shape"));
     expect(
@@ -368,9 +413,9 @@ describe("spare claim", () => {
       wtFor("elsewhere"),
       "claude-web/att-dup",
     );
-    await createSpareIn(repo, noInstall);
+    await createSpareIn(repo, noInstall, noSteps);
     expect(
-      await checkoutAttempt(repo, "att-dup", wtFor("att-dup")).then(
+      await checkoutAttempt(repo, "att-dup", wtFor("att-dup"), noSteps).then(
         () => "ok",
         (err: Error) => err.message,
       ),
@@ -380,7 +425,9 @@ describe("spare claim", () => {
   test("an add killed before its dir was made is discarded by the next add", async () => {
     // The entry is published (locked "initializing") before the dir exists.
     const wt = wtFor("att-early");
-    expect((await checkoutAttempt(repo, "att-early", wt)).source).toBe("fresh");
+    expect((await checkoutAttempt(repo, "att-early", wt, noSteps)).source).toBe(
+      "fresh",
+    );
     await git(repo, "worktree", "unlock", wt);
     writeFileSync(
       join(repo, ".git", "worktrees", "att-early", "locked"),
@@ -394,7 +441,7 @@ describe("spare claim", () => {
     // The claim unlocks the spare, rewrites its entry's gitdir to the
     // attempt's path, then moves the dir: a crash between leaves an unlocked
     // entry naming an absent path, and the spare dir stranded, unregistered.
-    const spare = (await createSpareIn(repo, noInstall)).path;
+    const spare = (await createSpareIn(repo, noInstall, noSteps)).path;
     const wt = wtFor("att-cut");
     const admin = join(repo, ".git", "worktrees", basename(spare));
     rmSync(join(admin, "locked"));
@@ -410,7 +457,7 @@ describe("spare claim", () => {
   });
 
   test("the listing reads what `git worktree list` reports", async () => {
-    const spare = (await createSpareIn(repo, noInstall)).path;
+    const spare = (await createSpareIn(repo, noInstall, noSteps)).path;
     const branch = wtFor("att-branch");
     await git(repo, "worktree", "add", "-q", "-b", "b1", branch);
     await git(repo, "worktree", "lock", branch);
@@ -446,24 +493,28 @@ describe("spare claim", () => {
   });
 
   test("a spare made at an older main ends at the current main", async () => {
-    await createSpareIn(repo, noInstall);
+    await createSpareIn(repo, noInstall, noSteps);
     const head = await commit("b.txt", "two");
 
     const wt = wtFor("att-6");
-    expect((await checkoutAttempt(repo, "att-6", wt)).source).toBe("spare");
+    expect((await checkoutAttempt(repo, "att-6", wt, noSteps)).source).toBe(
+      "spare",
+    );
     expect(await git(wt, "rev-parse", "HEAD")).toBe(head);
     expect(existsSync(join(wt, "b.txt"))).toBe(true);
     expect(await git(wt, "status", "--porcelain")).toBe("");
   });
 
   test("an existing attempt branch is checked out, not re-created", async () => {
-    await createSpareIn(repo, noInstall);
+    await createSpareIn(repo, noInstall, noSteps);
     await git(repo, "branch", "claude-web/att-7", "main");
     const branchHead = await git(repo, "rev-parse", "claude-web/att-7");
     await commit("c.txt", "three");
 
     const wt = wtFor("att-7");
-    expect((await checkoutAttempt(repo, "att-7", wt)).source).toBe("spare");
+    expect((await checkoutAttempt(repo, "att-7", wt, noSteps)).source).toBe(
+      "spare",
+    );
     expect(await git(wt, "symbolic-ref", "HEAD")).toBe(
       "refs/heads/claude-web/att-7",
     );
@@ -473,14 +524,16 @@ describe("spare claim", () => {
 
 describe("crash convergence", () => {
   test("a spare moved into place but still detached is checked out again and locked", async () => {
-    const spare = (await createSpareIn(repo, noInstall)).path;
+    const spare = (await createSpareIn(repo, noInstall, noSteps)).path;
     const wt = wtFor("att-8");
     // The claim's first two steps, then a crash before the switch.
     await git(repo, "worktree", "unlock", spare);
     await git(repo, "worktree", "move", spare, wt);
     expect(await isUnfinishedCheckout(repo, wt)).toBe(true);
 
-    expect(await convergeExistingCheckout(repo, "att-8", wt, noGate)).toEqual({
+    expect(
+      await convergeExistingCheckout(repo, "att-8", wt, noGate, noSteps),
+    ).toEqual({
       source: "fresh",
       tree: { kind: "empty" },
     });
@@ -497,7 +550,7 @@ describe("crash convergence", () => {
     // after it had written main's new files but before it moved HEAD or the
     // index, so every added file was left untracked and every later switch
     // refused with "untracked working tree file would be overwritten".
-    const spare = (await createSpareIn(repo, noInstall)).path;
+    const spare = (await createSpareIn(repo, noInstall, noSteps)).path;
     await commit("added.txt", "new on main");
     await commit("a.txt", "changed on main");
     const wt = wtFor("att-10");
@@ -524,7 +577,8 @@ describe("crash convergence", () => {
     expect(await isUnfinishedCheckout(repo, wt)).toBe(true);
 
     expect(
-      (await convergeExistingCheckout(repo, "att-10", wt, noGate)).source,
+      (await convergeExistingCheckout(repo, "att-10", wt, noGate, noSteps))
+        .source,
     ).not.toBe("existing");
     expect(await git(wt, "symbolic-ref", "HEAD")).toBe(
       "refs/heads/claude-web/att-10",
@@ -558,7 +612,8 @@ describe("crash convergence", () => {
     expect(await isUnfinishedCheckout(repo, wt)).toBe(true);
 
     expect(
-      (await convergeExistingCheckout(repo, "att-12", wt, noGate)).source,
+      (await convergeExistingCheckout(repo, "att-12", wt, noGate, noSteps))
+        .source,
     ).not.toBe("existing");
     expect(existsSync(join(wt, "a.txt"))).toBe(true);
     expect(await git(wt, "symbolic-ref", "HEAD")).toBe(
@@ -570,13 +625,15 @@ describe("crash convergence", () => {
   });
 
   test("a finished checkout is left in place and only re-locked", async () => {
-    await createSpareIn(repo, noInstall);
+    await createSpareIn(repo, noInstall, noSteps);
     const wt = wtFor("att-11");
-    await checkoutAttempt(repo, "att-11", wt);
+    await checkoutAttempt(repo, "att-11", wt, noSteps);
     writeFileSync(join(wt, "work.txt"), "the agent's work");
     await git(repo, "worktree", "unlock", wt);
 
-    expect(await convergeExistingCheckout(repo, "att-11", wt, noGate)).toEqual({
+    expect(
+      await convergeExistingCheckout(repo, "att-11", wt, noGate, noSteps),
+    ).toEqual({
       source: "existing",
       tree: null,
     });
@@ -585,9 +642,9 @@ describe("crash convergence", () => {
   });
 
   test("a finished checkout on a detached HEAD (e.g. mid-rebase) is left alone", async () => {
-    await createSpareIn(repo, noInstall);
+    await createSpareIn(repo, noInstall, noSteps);
     const wt = wtFor("att-9");
-    await checkoutAttempt(repo, "att-9", wt);
+    await checkoutAttempt(repo, "att-9", wt, noSteps);
     await git(wt, "switch", "--detach", "HEAD");
     expect(await isUnfinishedCheckout(repo, wt)).toBe(false);
   });
@@ -617,22 +674,22 @@ describe("checkoutState", () => {
     expect(await lockOf(wt)).toBe(ADD_IN_PROGRESS_LOCK);
 
     // A spare moved into place whose switch never ran.
-    const spare = (await createSpareIn(repo, noInstall)).path;
+    const spare = (await createSpareIn(repo, noInstall, noSteps)).path;
     const claimed = wtFor("att-21");
     await git(repo, "worktree", "unlock", spare);
     await git(repo, "worktree", "move", spare, claimed);
     expect(await checkoutState(repo, claimed)).toBe("unfinished");
 
     const done = wtFor("att-22");
-    await checkoutAttempt(repo, "att-22", done);
+    await checkoutAttempt(repo, "att-22", done, noSteps);
     expect(await checkoutState(repo, done)).toBe("complete");
   });
 });
 
 describe("pruneSparesIn", () => {
   test("reclaims stale unlocked spares and over-age ready ones, keeps fresh ready ones", async () => {
-    const ready = (await createSpareIn(repo, noInstall)).path;
-    const debris = (await createSpareIn(repo, noInstall)).path;
+    const ready = (await createSpareIn(repo, noInstall, noSteps)).path;
+    const debris = (await createSpareIn(repo, noInstall, noSteps)).path;
     await git(repo, "worktree", "unlock", debris);
 
     const removed: string[] = [];
@@ -653,7 +710,7 @@ describe("pruneSparesIn", () => {
   });
 
   test("reclaims a stale spare whose add was killed (git's own lock still on)", async () => {
-    const killed = (await createSpareIn(repo, noInstall)).path;
+    const killed = (await createSpareIn(repo, noInstall, noSteps)).path;
     await git(repo, "worktree", "unlock", killed);
     await git(
       repo,

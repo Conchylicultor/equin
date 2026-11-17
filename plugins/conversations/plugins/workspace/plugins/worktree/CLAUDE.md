@@ -57,24 +57,14 @@ Design: [`research/2026-10-28-global-supervised-worktree-checkout.md`](../../../
 
 - Description: The worktree workspace: a conversation runs in its attempt's git checkout of this repo (`.claude/worktrees/<id>`), with a forked DB and config dir — checked out by the supervised worktree.prepare job (a detached child a restart does not kill) that the spawn job requests and waits on, resumable while the checkout exists.
 - Server:
-  - Uses:
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/worktree` ×8
+    - `infra/jobs/supervised-job` ×5
+    - `infra/jobs` ×2
     - `config_v2.getConfig`
     - `conversations/workspace.Workspace`
     - `database/admin.databaseExists`
     - `database/fork.databaseForkJob`
-    - `infra/jobs.JobCtx`
-    - `infra/jobs.NonRetryableError`
-    - `infra/jobs/supervised-job.defineSupervisedJob`
-    - `infra/jobs/supervised-job.latestSupervisedRun`
-    - `infra/jobs/supervised-job.runEnded`
-    - `infra/jobs/supervised-job.RunEndedPayload`
-    - `infra/jobs/supervised-job.SupervisedRunRow`
-    - `infra/worktree.checkoutState`
-    - `infra/worktree.describeAdoption`
-    - `infra/worktree.describeTreeStart`
-    - `infra/worktree.ensureMainWorktreeRoot`
-    - `infra/worktree.gitWorktreesDir`
-    - `infra/worktree.setupWorktree`
     - `infra/worktree/spare-pool.spareRefillJob`
     - `primitives/log-channels.defineLogSink`
   - Register: `defineSupervisedJob('worktree.prepare')`

@@ -1,5 +1,6 @@
 import { defineHostPool } from "@plugins/infra/plugins/host/plugins/host-admission/server";
 import { HOST_POOLS } from "@plugins/infra/plugins/host/plugins/host-admission/core";
+import type { OnSetupStep } from "./setup-steps";
 
 // A DEDICATED host-wide gate for heavy `git worktree add`/`remove` — deliberately
 // SEPARATE from `heavy-read` (infra/host/host-read-pool), not a reuse of it:
@@ -54,9 +55,29 @@ const gate = defineHostPool({
 // host slot back immediately instead of when `fn` eventually settles (which, for a
 // wedged handler, may be never). `fn` still owns cancelling its own subprocesses —
 // pass the same signal to them; `spawnCaptured` accepts one.
-export function withWorktreeMutateSlot<T>(
+//
+// `onStep` hears the acquire as the `gate-wait` step of a checkout's timing
+// (setup-steps.ts): once the slot is held, or — failed — when the acquire
+// itself rejects (aborted), so a stall at the gate is never a silent gap.
+export async function withWorktreeMutateSlot<T>(
   fn: () => Promise<T>,
   signal?: AbortSignal,
+  onStep?: OnSetupStep,
 ): Promise<T> {
-  return gate.run(() => fn(), { signal });
+  const t0 = performance.now();
+  let held = false;
+  try {
+    return await gate.run(
+      () => {
+        held = true;
+        onStep?.({ step: "gate-wait", ms: performance.now() - t0 });
+        return fn();
+      },
+      { signal },
+    );
+  } catch (err) {
+    if (!held)
+      onStep?.({ step: "gate-wait", ms: performance.now() - t0, failed: true });
+    throw err;
+  }
 }

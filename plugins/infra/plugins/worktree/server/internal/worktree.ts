@@ -50,6 +50,7 @@ import {
   type TreeStart,
 } from "./tree-pool";
 import { withWorktreeMutateSlot } from "./mutate-gate";
+import { type OnSetupStep, timeStep } from "./setup-steps";
 import { isSpareName, SPARE_LOCK_REASON } from "./spare-name";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
@@ -877,7 +878,8 @@ export async function addCheckout(
   repoRoot: AppPath,
   wtPath: string,
   head: CheckoutHead,
-  opts: { recycle: boolean },
+  // `onStep` hears the tree write (`tree-write`, setup-steps.ts).
+  opts: { recycle: boolean; onStep: OnSetupStep },
   signal?: AbortSignal,
 ): Promise<TreeStart> {
   // Never written into: an existing dir is someone's checkout (or a retry's
@@ -954,6 +956,7 @@ export async function addCheckout(
           wtPath,
           headText,
           taken,
+          opts.onStep,
           signal,
         );
         return { kind: "recycled", entry: taken.entry, ageMs: taken.ageMs };
@@ -973,6 +976,7 @@ export async function addCheckout(
           wtPath,
           headText,
           null,
+          opts.onStep,
           signal,
         );
         return { kind: "empty", recycleFailed: err.message };
@@ -985,11 +989,21 @@ export async function addCheckout(
       wtPath,
       headText,
       null,
+      opts.onStep,
       signal,
     );
     return { kind: "empty" };
   }
-  await writeCheckout(label, common, repoRoot, wtPath, headText, null, signal);
+  await writeCheckout(
+    label,
+    common,
+    repoRoot,
+    wtPath,
+    headText,
+    null,
+    opts.onStep,
+    signal,
+  );
   return { kind: "not-asked" };
 }
 
@@ -1005,6 +1019,7 @@ async function writeCheckout(
   wtPath: string,
   headText: string,
   recycled: TakenTree | null,
+  onStep: OnSetupStep,
   signal?: AbortSignal,
 ): Promise<void> {
   // Staged beside `worktrees/`, not in it: nothing enumerates it there, and a
@@ -1068,33 +1083,36 @@ async function writeCheckout(
     // its file, so the reset would keep whatever (or nothing) is there. No
     // checkout of ours sets either; one that does is not recycled.
     if (recycled !== null) await assertNoTrustFlags(label, wtPath, signal);
-    // Demoted (`tier: "background"` applies backgroundArgv/darwinbg): a
-    // checkout runs in a deferred job — always background work relative to
-    // the interactive backends.
-    await runCheckoutWrite(
-      label,
-      wtPath,
-      [
-        ...checkoutGit(wtPath),
-        "reset",
-        "--hard",
-        "--quiet",
-        "--no-recurse-submodules",
-      ],
-      signal,
-    );
-    // A recycled tree still holds whatever its last agent left untracked or
-    // ignored (build output, the `node_modules` links its store's harvest
-    // left): gone, so the tree is the target's exactly. `-ff` for a nested
-    // repo too. An empty start has nothing to clean.
-    if (recycled !== null) {
+    const writeTree = async () => {
+      // Demoted (`tier: "background"` applies backgroundArgv/darwinbg): a
+      // checkout runs in a deferred job — always background work relative to
+      // the interactive backends.
       await runCheckoutWrite(
         label,
         wtPath,
-        [GIT, "-C", wtPath, "clean", "-ffdxq"],
+        [
+          ...checkoutGit(wtPath),
+          "reset",
+          "--hard",
+          "--quiet",
+          "--no-recurse-submodules",
+        ],
         signal,
       );
-    }
+      // A recycled tree still holds whatever its last agent left untracked or
+      // ignored (build output, the `node_modules` links its store's harvest
+      // left): gone, so the tree is the target's exactly. `-ff` for a nested
+      // repo too. An empty start has nothing to clean.
+      if (recycled !== null) {
+        await runCheckoutWrite(
+          label,
+          wtPath,
+          [GIT, "-C", wtPath, "clean", "-ffdxq"],
+          signal,
+        );
+      }
+    };
+    await timeStep(onStep, "tree-write", writeTree);
     await unlink(join(admin, "locked"));
   } catch (err) {
     // Any failure — a killed or failed write, an abort — leaves no partial
@@ -1321,18 +1339,24 @@ async function claimSpare(
   repoRoot: AppPath,
   id: string,
   wtPath: string,
+  onStep: OnSetupStep,
   signal?: AbortSignal,
 ): Promise<boolean> {
-  for (const spare of await listReadySpares(repoRoot, signal)) {
-    signal?.throwIfAborted();
-    const unlocked = await unlockWorktree(repoRoot, spare);
-    // Another claimer unlocked (or already moved) it first.
-    if (unlocked !== "unlocked") continue;
-    if (!(await moveClaimedSpare(repoRoot, spare, wtPath))) continue;
-    await switchToAttemptBranch(repoRoot, id, wtPath, signal);
-    return true;
-  }
-  return false;
+  const claimed = await timeStep(onStep, "claim", async () => {
+    for (const spare of await listReadySpares(repoRoot, signal)) {
+      signal?.throwIfAborted();
+      const unlocked = await unlockWorktree(repoRoot, spare);
+      // Another claimer unlocked (or already moved) it first.
+      if (unlocked !== "unlocked") continue;
+      if (await moveClaimedSpare(repoRoot, spare, wtPath)) return true;
+    }
+    return false;
+  });
+  if (!claimed) return false;
+  await timeStep(onStep, "switch", () =>
+    switchToAttemptBranch(repoRoot, id, wtPath, signal),
+  );
+  return true;
 }
 
 /**
@@ -1417,11 +1441,12 @@ export async function checkoutAttempt(
   repoRoot: AppPath,
   id: string,
   wtPath: string,
+  onStep: OnSetupStep,
   signal?: AbortSignal,
 ): Promise<AttemptCheckout> {
   let source: CheckoutSource = "spare";
   let tree: TreeStart | null = null;
-  if (!(await claimSpare(repoRoot, id, wtPath, signal))) {
+  if (!(await claimSpare(repoRoot, id, wtPath, onStep, signal))) {
     source = "fresh";
     // Converge from a half-finished earlier try instead of assuming
     // all-or-nothing. The branch is created before the checkout is written, so
@@ -1434,20 +1459,25 @@ export async function checkoutAttempt(
     const head: CheckoutHead = (await attemptBranchExists(repoRoot, id, signal))
       ? { kind: "branch", branch }
       : { kind: "new-branch", branch, from: "main" };
-    tree = await addCheckout(
-      id,
-      repoRoot,
-      wtPath,
-      head,
-      { recycle: true },
-      signal,
+    // `add` spans the whole add; its `tree-write` is reported inside it.
+    tree = await timeStep(onStep, "add", () =>
+      addCheckout(
+        id,
+        repoRoot,
+        wtPath,
+        head,
+        { recycle: true, onStep },
+        signal,
+      ),
     );
   }
   // Locked inside the same gate hold as the checkout that created it: the
   // window between "the directory exists" and "the directory is protected" is
   // exactly the window an outside sweep can take it, so it is closed here
   // rather than after the gate is released.
-  await ensureWorktreeLocked(repoRoot, wtPath, signal);
+  await timeStep(onStep, "lock", () =>
+    ensureWorktreeLocked(repoRoot, wtPath, signal),
+  );
   return { source, tree };
 }
 
@@ -1489,12 +1519,13 @@ export async function convergeExistingCheckout(
   id: string,
   wtPath: string,
   gate: <T>(fn: () => Promise<T>) => Promise<T>,
+  onStep: OnSetupStep,
   signal?: AbortSignal,
 ): Promise<Pick<WorktreeSetup, "source" | "tree">> {
   if (await isUnfinishedCheckout(repoRoot, wtPath, signal)) {
     return gate(async () => {
       await discardPartialCheckout(id, repoRoot, wtPath);
-      return checkoutAttempt(repoRoot, id, wtPath, signal);
+      return checkoutAttempt(repoRoot, id, wtPath, onStep, signal);
     });
   }
   await ensureWorktreeLocked(repoRoot, wtPath, signal);
@@ -1527,6 +1558,9 @@ export async function convergeExistingCheckout(
  * instead of merely recording that we gave up. Without it, an abandoned checkout
  * keeps one of three host-wide slots for as long as git keeps running.
  *
+ * @param onStep hears each step's duration as it ends (`setup-steps.ts`):
+ * REQUIRED, so no caller makes a checkout whose time cannot be split.
+ *
  * @returns where the checkout came from, so the caller can refill the spare
  * pool after a checkout (`spare` or `fresh`), and skip it when nothing was made.
  */
@@ -1535,6 +1569,7 @@ export async function setupWorktree(
   wtPath: string,
   compositionIds: ReadonlySet<string>,
   minter: Namespace,
+  onStep: OnSetupStep,
   signal?: AbortSignal,
 ): Promise<WorktreeSetup> {
   const repoRoot = await ensureMainWorktreeRoot(signal);
@@ -1554,7 +1589,8 @@ export async function setupWorktree(
       repoRoot,
       id,
       wtPath,
-      (fn) => withWorktreeMutateSlot(fn, signal),
+      (fn) => withWorktreeMutateSlot(fn, signal, onStep),
+      onStep,
       signal,
     );
     // Every path ends installed — this one too: it covers a checkout made
@@ -1564,7 +1600,7 @@ export async function setupWorktree(
     const depStore = await installCheckout(
       repoRoot,
       wtPath,
-      { frozen: false },
+      { frozen: false, onStep },
       signal,
     );
     // A checkout discarded and written again here is a new one: fill its
@@ -1572,7 +1608,9 @@ export async function setupWorktree(
     const untrackedCache =
       source === "existing"
         ? "not-primed"
-        : await refreshCheckoutIndex(wtPath, signal);
+        : await timeStep(onStep, "index-refresh", () =>
+            refreshCheckoutIndex(wtPath, signal),
+          );
     await stampMinter(id, minter);
     return { source, tree, depStore, untrackedCache };
   }
@@ -1600,8 +1638,9 @@ export async function setupWorktree(
   // offender). The idempotent existsSync early-return stays outside the gate —
   // it is cheap and must not hold a slot.
   const { source, tree } = await withWorktreeMutateSlot(
-    () => checkoutAttempt(repoRoot, id, wtPath, signal),
+    () => checkoutAttempt(repoRoot, id, wtPath, onStep, signal),
     signal,
+    onStep,
   );
   // Outside the gate: it serialises git mutations host-wide, and the install is
   // guarded by the checkout's own `.install.lock`. A claimed spare is already
@@ -1611,12 +1650,14 @@ export async function setupWorktree(
   const depStore = await installCheckout(
     repoRoot,
     wtPath,
-    { frozen: true },
+    { frozen: true, onStep },
     signal,
   );
   // Installed, at its final path, and nobody works in it yet — the one moment
   // its untracked cache can be filled (see refreshCheckoutIndex).
-  const untrackedCache = await refreshCheckoutIndex(wtPath, signal);
+  const untrackedCache = await timeStep(onStep, "index-refresh", () =>
+    refreshCheckoutIndex(wtPath, signal),
+  );
   await stampMinter(id, minter);
   return { source, tree, depStore, untrackedCache };
 }

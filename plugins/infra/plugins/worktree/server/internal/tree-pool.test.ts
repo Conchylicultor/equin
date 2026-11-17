@@ -29,6 +29,9 @@ import {
 } from "./tree-pool";
 import { addCheckout, gitWorktreesDir } from "./worktree";
 
+// These tests check the trees a checkout starts from, not how long it takes.
+const noSteps = (): void => {};
+
 // Every test runs against a throwaway repository — never the real checkout.
 let base: AppPath;
 let repo: AppPath;
@@ -109,7 +112,7 @@ describe("a removed checkout's tree goes to the next checkout", () => {
       old,
       { kind: "detached", rev: "main" },
       {
-        recycle: false,
+        recycle: false, onStep: noSteps,
       },
     );
     // What its agent left: an edit, an untracked file, ignored output, the
@@ -141,7 +144,7 @@ describe("a removed checkout's tree goes to the next checkout", () => {
       repo,
       wt,
       { kind: "new-branch", branch: "claude-web/att-new", from: "main" },
-      { recycle: true },
+      { recycle: true, onStep: noSteps },
     );
     expect(start).toMatchObject({ kind: "recycled", entry: `${T}-att-old` });
     expect(await git(wt, "status", "--porcelain", "--ignored")).toBe("");
@@ -168,7 +171,7 @@ describe("a removed checkout's tree goes to the next checkout", () => {
         wt,
         { kind: "detached", rev: "main" },
         {
-          recycle: true,
+          recycle: true, onStep: noSteps,
         },
       ),
     ).toEqual({ kind: "empty" });
@@ -184,7 +187,7 @@ describe("a removed checkout's tree goes to the next checkout", () => {
         kind: "detached",
         rev: "main",
       },
-      { recycle: false },
+      { recycle: false, onStep: noSteps },
     );
     const trash = await removeLikeTheReaper("att-old", T);
     writeFileSync(trashedIndexPath(trash), "not an index");
@@ -196,7 +199,7 @@ describe("a removed checkout's tree goes to the next checkout", () => {
       repo,
       wt,
       { kind: "detached", rev: "main" },
-      { recycle: true },
+      { recycle: true, onStep: noSteps },
     );
     expect(start.kind).toBe("empty");
     expect(start.kind === "empty" && start.recycleFailed).toContain("index");
@@ -212,7 +215,7 @@ describe("a removed checkout's tree goes to the next checkout", () => {
       old,
       { kind: "detached", rev: "main" },
       {
-        recycle: false,
+        recycle: false, onStep: noSteps,
       },
     );
     await git(old, "update-index", "--skip-worktree", "kept.txt");
@@ -225,7 +228,7 @@ describe("a removed checkout's tree goes to the next checkout", () => {
       repo,
       wt,
       { kind: "detached", rev: "main" },
-      { recycle: true },
+      { recycle: true, onStep: noSteps },
     );
     expect(start.kind === "empty" && start.recycleFailed).toContain(
       "skip-worktree",
@@ -243,7 +246,7 @@ describe("a removed checkout's tree goes to the next checkout", () => {
         kind: "detached",
         rev: "main",
       },
-      { recycle: false },
+      { recycle: false, onStep: noSteps },
     );
     const trash = await removeLikeTheReaper("att-old", T);
     rmSync(trashedIndexPath(trash));
@@ -264,7 +267,7 @@ describe("a removed checkout's tree goes to the next checkout", () => {
         kind: "detached",
         rev: "main",
       },
-      { recycle: false },
+      { recycle: false, onStep: noSteps },
     );
     const trash = await removeLikeTheReaper("att-old", T);
     await harvestTree(repo, trash, T);
@@ -282,7 +285,7 @@ describe("a removed checkout's tree goes to the next checkout", () => {
         kind: "detached",
         rev: "main",
       },
-      { recycle: false },
+      { recycle: false, onStep: noSteps },
     );
     await harvestTree(repo, await removeLikeTheReaper("att-old", T), T);
     const [a, b] = await Promise.all([takeTree(repo, T), takeTree(repo, T)]);

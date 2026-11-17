@@ -4,6 +4,7 @@ import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { type AdoptResult, adoptDepStore } from "./dep-store-pool";
+import { type OnSetupStep, timeStep } from "./setup-steps";
 
 /**
  * A cold `bun install` of this repo plus its postinstall provisions. Like the
@@ -42,23 +43,27 @@ const OUTPUT_TAIL_CHARS = 8000;
 export async function installCheckout(
   repoRoot: AppPath,
   path: string,
-  opts: { frozen: boolean },
+  opts: { frozen: boolean; onStep: OnSetupStep },
   signal?: AbortSignal,
 ): Promise<AdoptResult> {
-  const depStore = await adoptDepStore(repoRoot, path, Date.now());
+  const depStore = await timeStep(opts.onStep, "dep-store", () =>
+    adoptDepStore(repoRoot, path, Date.now()),
+  );
   const argv = [join(path, CLI_NAME), "install"];
   // Demoted like the checkout itself: background work relative to the
   // interactive backends.
-  const r = await spawnCaptured(argv, {
+  const r = await timeStep(opts.onStep, "install", () =>
+    spawnCaptured(argv, {
     cwd: path,
     env: opts.frozen
       ? { ...process.env, ...envEntries({ FROZEN_LOCKFILE: "1" }) }
       : process.env,
     tier: "background",
     mergeStderr: true,
-    timeoutMs: INSTALL_TIMEOUT_MS,
-    signal,
-  });
+      timeoutMs: INSTALL_TIMEOUT_MS,
+      signal,
+    }),
+  );
   if (r.timedOut || r.exitCode !== 0) {
     const how = r.timedOut
       ? `did not finish within ${INSTALL_TIMEOUT_MS} ms and was killed`

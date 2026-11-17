@@ -6,8 +6,10 @@ import {
   countReadySpares,
   createSpareWorktree,
   describeAdoption,
+  describeSetupStep,
   describeTreeStart,
   pruneSpares,
+  recordSetupSteps,
 } from "@plugins/infra/plugins/worktree/server";
 
 /**
@@ -53,9 +55,14 @@ export const spareRefillJob = defineSupervisedJob({
     const pruned = await pruneSpares();
     if (pruned.length > 0) log(`pruned ${pruned.join(", ")}`);
     while ((await countReadySpares()) < SPARE_TARGET) {
-      const { tree, depStore } = await createSpareWorktree();
+      // Each step as it ends (a hung one shows where it hung), then the
+      // whole split on the result line.
+      const steps = recordSetupSteps((s) =>
+        log(`spare step: ${describeSetupStep(s)}`),
+      );
+      const { tree, depStore } = await createSpareWorktree(steps.onStep);
       log(
-        `wrote a ready spare; ${describeTreeStart(tree)}; ${describeAdoption(depStore)}`,
+        `wrote a ready spare; ${describeTreeStart(tree)}; ${describeAdoption(depStore)}; steps: ${steps.summary()}`,
       );
     }
   },

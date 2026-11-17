@@ -36,8 +36,10 @@ and `infra/warmup` (DB pool, runtime identity at module eval).
     - `infra/worktree.countReadySpares`
     - `infra/worktree.createSpareWorktree`
     - `infra/worktree.describeAdoption`
+    - `infra/worktree.describeSetupStep`
     - `infra/worktree.describeTreeStart`
     - `infra/worktree.pruneSpares`
+    - `infra/worktree.recordSetupSteps`
     - `primitives/log-channels.defineLogSink`
   - Exports (values): `spareRefillJob`
   - Register:

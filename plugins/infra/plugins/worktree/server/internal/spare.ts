@@ -12,6 +12,7 @@ import type { AdoptResult } from "./dep-store-pool";
 import { installCheckout } from "./install-checkout";
 import type { TreeStart } from "./tree-pool";
 import { withWorktreeMutateSlot } from "./mutate-gate";
+import { type OnSetupStep, timeStep } from "./setup-steps";
 import { isSpareName, newSpareName, SPARE_LOCK_REASON } from "./spare-name";
 import {
   ADD_IN_PROGRESS_LOCK,
@@ -59,16 +60,20 @@ const SPARE_MAX_AGE_MS = 24 * 60 * 60_000;
 export async function createSpareIn(
   repoRoot: AppPath,
   install: (path: string, signal?: AbortSignal) => Promise<void>,
+  onStep: OnSetupStep,
   signal?: AbortSignal,
 ): Promise<{ path: string; tree: TreeStart }> {
   const path = joinAppPath(gitWorktreesDir(repoRoot), newSpareName());
-  const tree = await addCheckout(
-    basename(path),
-    repoRoot,
-    path,
-    { kind: "detached", rev: "main" },
-    { recycle: true },
-    signal,
+  // `add` spans the whole add; its `tree-write` is reported inside it.
+  const tree = await timeStep(onStep, "add", () =>
+    addCheckout(
+      basename(path),
+      repoRoot,
+      path,
+      { kind: "detached", rev: "main" },
+      { recycle: true, onStep },
+      signal,
+    ),
   );
   // Before the lock, so ready == installed. A failed install throws and leaves
   // an unlocked spare: not ready, and the prune reclaims it.
@@ -85,6 +90,7 @@ export async function createSpareIn(
 
 /** Write one ready spare under the host-wide `worktree-mutate` gate. */
 export async function createSpareWorktree(
+  onStep: OnSetupStep,
   signal?: AbortSignal,
 ): Promise<{ path: string; tree: TreeStart; depStore: AdoptResult }> {
   const repoRoot = await ensureMainWorktreeRoot(signal);
@@ -97,13 +103,15 @@ export async function createSpareWorktree(
           depStore = await installCheckout(
             repoRoot,
             path,
-            { frozen: true },
+            { frozen: true, onStep },
             sig,
           );
         },
+        onStep,
         signal,
       ),
     signal,
+    onStep,
   );
   return { path, tree, depStore };
 }

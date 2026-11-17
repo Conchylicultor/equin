@@ -117,7 +117,9 @@ export async function acquireReleaseCheckout(opts: {
         sourceRoot,
         root,
         { kind: "detached", rev: sha },
-        { recycle: false },
+        // Untimed: a release checkout is one step of a release, timed as
+        // that, not a launch's checkout.
+        { recycle: false, onStep: () => {} },
       ),
     );
     await assertCheckoutAt(root, sha);
