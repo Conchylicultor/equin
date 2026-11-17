@@ -26,6 +26,7 @@ export default {
     SystemPrompt.Section({
       id: "page-instructions",
       label: "Page instructions",
+      followsMandate: false,
       render: (conversationId) => renderGlobalSection(conversationId),
     }),
     CompactionContext({

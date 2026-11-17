@@ -35,6 +35,25 @@ function failedSectionNotice(id: string, message: string): string {
   );
 }
 
+/** Every contributed section, in id order (the order they are joined in). */
+function sectionsInOrder(): SystemPromptSection[] {
+  return [...SystemPrompt.Section.getContributions()].sort((a, b) =>
+    a.id < b.id ? -1 : a.id > b.id ? 1 : 0,
+  );
+}
+
+function renderSections(
+  sections: readonly SystemPromptSection[],
+  conversationId: string,
+): Promise<{ section: SystemPromptSection; text: string | null }[]> {
+  return Promise.all(
+    sections.map(async (section) => ({
+      section,
+      text: await renderSection(section, conversationId),
+    })),
+  );
+}
+
 async function renderSection(
   section: SystemPromptSection,
   conversationId: string,
@@ -70,15 +89,7 @@ export async function composeSystemPromptAppend(
   conversationId: string,
   preprompt: string | undefined,
 ): Promise<string | undefined> {
-  const contributed = [...SystemPrompt.Section.getContributions()].sort(
-    (a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
-  );
-  const rendered = await Promise.all(
-    contributed.map(async (s) => ({
-      section: s,
-      text: await renderSection(s, conversationId),
-    })),
-  );
+  const rendered = await renderSections(sectionsInOrder(), conversationId);
 
   const parts: { record: SystemPromptSectionRecord; text: string }[] = [];
   if (preprompt) {
@@ -105,4 +116,46 @@ export async function composeSystemPromptAppend(
     sections: parts.map((p) => p.record),
   });
   return parts.length === 0 ? undefined : parts.map((p) => p.text).join("\n\n");
+}
+
+/** One mandate-following section, as the mandate change notice re-sends it. */
+export type MandateSectionRefresh =
+  /** What it says now, wrapped as in the system prompt (`<equin-context>`). */
+  | { kind: "current"; id: string; label: string; text: string }
+  /** It was in the agent's system prompt and now renders nothing: drop it. */
+  | { kind: "withdrawn"; id: string; label: string };
+
+/**
+ * The conversation's mandate changed under its running agent: every section
+ * that follows the mandate (`followsMandate`), rendered again now, in id
+ * order — what each says now, or that one the agent's system prompt carried
+ * (its last spawn's record) no longer applies. A section empty both then and
+ * now is left out. Renders exactly as a spawn would (a throwing section is
+ * reported and replaced by its notice); the record is left alone — it says
+ * what the process was started with.
+ */
+export async function refreshMandateSections(
+  conversationId: string,
+): Promise<MandateSectionRefresh[]> {
+  const [rendered, record] = await Promise.all([
+    renderSections(
+      sectionsInOrder().filter((s) => s.followsMandate),
+      conversationId,
+    ),
+    conversationSystemPromptExt.get(conversationId),
+  ]);
+  const carried = new Set(record?.sections.map((s) => s.id) ?? []);
+  const out: MandateSectionRefresh[] = [];
+  for (const { section, text } of rendered) {
+    const { id, label } = section;
+    if (text !== null && text.trim() !== "")
+      out.push({
+        kind: "current",
+        id,
+        label,
+        text: wrapContextSection(id, label, text),
+      });
+    else if (carried.has(id)) out.push({ kind: "withdrawn", id, label });
+  }
+  return out;
 }

@@ -23464,7 +23464,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types): `SystemPromptSection`
         - Exports (values): `SystemPrompt`
       - Plugins:
-        - **`composer`** — Composes what equin appends to an agent's system prompt at a spawn: composeSystemPromptAppend (the preprompt, then every SystemPrompt.Section in id order inside <equin-context id>, a throwing section reported and replaced by a notice), which the launch and resume paths call right before the agent process starts. Records each part's size per conversation (conversations_ext_system_prompt), read by the context card through the lookup-only conversations.system-prompt collection. Apart from the section contribution so a contributor's closure does not carry the conversations table.
+        - **`composer`** — Composes what equin appends to an agent's system prompt at a spawn: composeSystemPromptAppend (the preprompt, then every SystemPrompt.Section in id order inside <equin-context id>, a throwing section reported and replaced by a notice), which the launch and resume paths call right before the agent process starts; refreshMandateSections (every section that follows the mandate, rendered again — what it says now, or that one the process carried no longer applies), which the mandate change notice sends a running agent. Records each part's size per conversation (conversations_ext_system_prompt), read by the context card through the lookup-only conversations.system-prompt collection. Apart from the section contribution so a contributor's closure does not carry the conversations table.
           - Server:
             - Contributes: `resource.declare` "conversations.system-prompt:rows"
             - Uses:
@@ -23475,12 +23475,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/tasks-core._conversations`
             - DB schema: `plugins/conversations/plugins/system-prompt/plugins/composer/server/internal/tables.ts`
             - Entity extension of: `tasks/tasks-core` (table `conversations_ext_system_prompt`)
+            - Exports (types): `MandateSectionRefresh`
             - Exports (values):
               - `_conversationSystemPromptTable`
               - `composeSystemPromptAppend`
+              - `refreshMandateSections`
             - Resources: `conversations.system-prompt:rows` (keyed, point)
           - Cross-plugin:
-            - Imported by: `conversations`
+            - Imported by:
+              - `conversations`
+              - `tasks/orchestration/mandate/change-notice`
     - **`task-categories`** — The task categories a conversation's own task is filed under (Conversations, System), registered from a portable barrel so every host labels them — the browser host included, which does not boot the conversations server barrel that files them.
       - Server:
         - Contributes:
@@ -61159,7 +61163,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/push-and-exit`
               - `conversations/self-compact`
               - `tasks`
-              - `tasks/orchestration/mandate/change-notice`
               - `tasks/orchestration/message`
               - `tasks/orchestration/tree-digest`
               - `tasks/orchestration/watch`
@@ -61168,15 +61171,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/supervisor-roles/events`
               - `tasks/supervisor-roles/sessions`
           - Plugins:
-            - **`change-notice`** — A running agent follows a change of its task's mandate without a restart: on tasks.mandateChanged each live agent on those tasks reconnects the equin MCP server (its tools are the new mandate's at once), then is sent the new Mandate section as an event turn — its system prompt is fixed for the life of its process. The notice is typed now, the way a user message is (a working agent reads it at its next step), and says it is information only, not a request to act; an agent this backend does not run gets none.
+            - **`change-notice`** — A running agent follows a change of its task's mandate without a restart: on tasks.mandateChanged each live agent on those tasks reconnects the equin MCP server (its tools are the new mandate's at once), then is sent every system-prompt section that follows the mandate (Mandate, Supervisor prompt, Task tree…), rendered again — and those that no longer apply named — as an event turn — its system prompt is fixed for the life of its process. The notice is typed now, the way a user message is (a working agent reads it at its next step), and says it is information only, not a request to act; an agent this backend does not run gets none.
               - Server:
                 - Contributes: `trigger` "mandate-change-notice.on-change"
                 - Uses:
                   - `conversations.Runtime`
                   - `conversations.submitTurn`
+                  - `conversations/system-prompt/composer.refreshMandateSections`
                   - `infra/events.Trigger`
                   - `infra/jobs.defineJob`
-                  - `tasks/orchestration/mandate.renderMandateInstructions`
                   - `tasks/tasks-core.listActiveConversations`
                   - `tasks/tasks-core.taskMandateChanged`
                 - Register: `defineJob('mandate-change-notice.on-change')`

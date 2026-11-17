@@ -78,11 +78,13 @@ export async function renderSupervisorPrompt(
 export const supervisorRolesSection = SystemPrompt.Section({
   id: "supervisor-roles",
   label: "Supervisor roles",
+  followsMandate: true,
   render: renderSupervisorRoles,
 });
 
 export const supervisorPromptSection = SystemPrompt.Section({
   id: "supervisor-prompt",
   label: "Supervisor prompt",
+  followsMandate: true,
   render: renderSupervisorPrompt,
 });

@@ -32,5 +32,6 @@ export async function renderMandateInstructions(
 export const mandateSection = SystemPrompt.Section({
   id: "mandate",
   label: "Mandate",
+  followsMandate: true,
   render: (conversationId) => renderMandateInstructions(conversationId),
 });

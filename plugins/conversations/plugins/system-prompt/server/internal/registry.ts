@@ -9,8 +9,9 @@ import { defineServerContribution } from "@plugins/framework/plugins/server-core
  * `render` runs at every spawn of the agent's process — its launch and every
  * resume — right before the process starts, so what it returns is what that
  * process runs with until it stops. A change while it runs reaches it as an
- * event turn, from the plugin that owns the change. `null` (or blank) adds
- * nothing. Sections join in id order, each wrapped in `<equin-context id>`.
+ * event turn, from the plugin that owns the change — a section that depends
+ * on the agent's mandate says so (`followsMandate`), and the mandate change
+ * notice re-sends it. `null` (or blank) adds nothing. Sections join in id order, each wrapped in `<equin-context id>`.
  *
  * Nothing caps the system prompt the way MCP server instructions are capped
  * (4,096 characters, cut silently), but every character is paid on every turn:
@@ -22,6 +23,14 @@ export interface SystemPromptSection {
   id: string;
   /** What the context card calls it ("Mandate", "Task tree"). */
   label: string;
+  /**
+   * Whether what `render` returns depends on the conversation's mandate (its
+   * grants, its kind, where it is stated). Such a section is rendered again
+   * when the mandate changes under a running agent and sent to it in the
+   * change notice, since its system prompt is fixed for the life of its
+   * process. Required, so every section decides.
+   */
+  followsMandate: boolean;
   render(conversationId: string): Promise<string | null>;
 }
 

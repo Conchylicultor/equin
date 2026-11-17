@@ -25,5 +25,6 @@ export async function renderSourcePage(
 export const sourcePageSection = SystemPrompt.Section({
   id: "source-page",
   label: "Source page",
+  followsMandate: false,
   render: (conversationId) => renderSourcePage(conversationId),
 });

@@ -45,8 +45,13 @@ right place for instructions to the agent rather than about a server's tools.
 ## Stated bounds
 
 - **Fixed for the life of a process.** A change while the agent runs reaches it
-  as an event turn from the plugin that owns it (the mandate change notice);
-  the next spawn renders the new state anyway.
+  as an event turn from the plugin that owns it; the next spawn renders the new
+  state anyway. Every section declares `followsMandate` (required): the mandate
+  change notice (`tasks/orchestration/mandate/change-notice`) re-renders each
+  one that does through the composer's `refreshMandateSections` and sends them
+  all — so a task switched to Supervisor gets the Supervisor prompt, not just
+  the `## Mandate` lines — naming those its process carried that no longer
+  apply.
 - **runtime-sdk's own relaunches** (moving to another launch account, a rewind
   through `stop`) replay the options file of their spawn, append included.
 - **Every character is paid on every turn.** Write a section only for what no
