@@ -1,47 +1,10 @@
-// The page's update state outside React: the two flags `UpdatePolicyRoot`
-// derives over time (overdue, blocked) and the Update pill reads, and the
-// record an update reload leaves for the page it loads.
+// The page's update state outside React: the record an update reload leaves
+// for the page it loads, and the reloads themselves.
 
-import { useSyncExternalStore } from "react";
 import { z } from "zod";
 import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { flushKept } from "@plugins/primitives/plugins/kept-state/web";
 import { quietReload } from "@plugins/primitives/plugins/dom/plugins/reload-readiness/web";
-
-export interface UpdateFlags {
-  /** A pending update has waited longer than `UPDATE_OVERDUE_MS` for its moment. */
-  overdue: boolean;
-  /** An update reload already came back behind on the same target: no auto-reload. */
-  blocked: boolean;
-}
-
-const NO_FLAGS: UpdateFlags = { overdue: false, blocked: false };
-
-/* eslint-disable scoped-store/no-module-mutable-store -- page-global by design: there is one page to reload, and its update state is a fact about the whole page shared by every surface (the policy root writes it once per page, the Update pill in every action bar reads it) — a per-surface store would let two bars disagree about one reload. */
-let flags: UpdateFlags = NO_FLAGS;
-/* eslint-enable scoped-store/no-module-mutable-store */
-const listeners = new Set<() => void>();
-
-export function setUpdateFlags(next: UpdateFlags): void {
-  if (next.overdue === flags.overdue && next.blocked === flags.blocked) return;
-  flags = next;
-  for (const l of [...listeners]) l();
-}
-
-function subscribe(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-export function useUpdateFlags(): UpdateFlags {
-  return useSyncExternalStore(
-    subscribe,
-    () => flags,
-    () => flags,
-  );
-}
 
 // ── the update reload's record, for the page it loads ──────────────────────
 
@@ -105,7 +68,6 @@ export function retryLoad(): void {
 
 /** Back to the initial state, for this plugin's own tests only. */
 export function resetUpdateState(): void {
-  flags = NO_FLAGS;
   arrival = undefined;
   updateReloadStore.remove("");
 }

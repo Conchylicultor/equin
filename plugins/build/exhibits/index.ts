@@ -5,7 +5,7 @@ import { appExhibit } from "@plugins/plugin-meta/plugins/exhibits/core";
 export default [
   appExhibit({
     id: "build/update-pill",
-    label: "Update pill (waiting, overdue, a user's fault retry)",
+    label: "Update pill (waiting, ready, a user's fault retry)",
     home: "chrome",
     widths: [480],
     load: () => import("./internal/update-pill"),

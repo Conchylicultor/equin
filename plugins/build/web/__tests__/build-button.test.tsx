@@ -54,7 +54,8 @@ import { BuildButton } from "../components/build-button";
  * pill the tab needed.
  */
 
-const READY = "A new version is ready — click to update";
+const READY =
+  "A new version is ready — it updates itself at a quiet moment, or click to update now";
 const WAITING =
   "A new version is ready. Update waits for: Playback — click to update now";
 
@@ -78,7 +79,7 @@ describe("BuildButton without history", () => {
     expect(buttons[0]!.getAttribute("aria-disabled")).toBe("true");
   });
 
-  it("loading + an overdue update: the Update pill still shows", () => {
+  it("loading + a pending update: the Update pill still shows", () => {
     state.history = {
       status: "loading",
       refetch: vi.fn(),
@@ -172,7 +173,7 @@ describe("BuildButton with history", () => {
     expect(buttons[0]!.getAttribute("aria-label")).toBe("Builds");
   });
 
-  it("a build running beside an overdue update: status and Update share one tray", () => {
+  it("a build running beside a pending update: status and Update share one tray", () => {
     state.history = {
       status: "ready",
       data: [run({ finishedAt: null, exitCode: null })],

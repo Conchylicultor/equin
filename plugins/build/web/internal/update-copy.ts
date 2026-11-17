@@ -19,7 +19,7 @@ export function updateMessageFor(
     case "waiting":
       return `A new version is ready. Update waits for: ${affordance.waitsFor.join(", ")} — click to update now`;
     case "ready":
-      return "A new version is ready — click to update";
+      return "A new version is ready — it updates itself at a quiet moment, or click to update now";
     case "fault": {
       if (!developer) return "Part of the app didn't load — click to retry";
       const n = affordance.failedPaths.length;

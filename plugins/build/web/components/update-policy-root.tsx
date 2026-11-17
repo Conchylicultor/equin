@@ -7,14 +7,9 @@ import { useTabUpdate } from "../hooks/use-tab-update";
 import {
   IDLE_BEFORE_UPDATE_MS,
   isPending,
-  UPDATE_OVERDUE_MS,
   updateMoment,
 } from "../internal/update-policy";
-import {
-  quietUpdate,
-  setUpdateFlags,
-  updateArrival,
-} from "../internal/update-state";
+import { quietUpdate, updateArrival } from "../internal/update-state";
 
 /** The channel the policy narrates its decisions on (`~/.equin/worktrees/<wt>/logs`). */
 const LOG = "tab-update";
@@ -26,10 +21,10 @@ const LOG = "tab-update";
  * `quietReload`, so the update is lossless and needs no click. See
  * `internal/update-policy.ts` for the branches.
  *
- * What it keeps over time, for the Update pill: whether the pending update is
- * overdue (no moment found for `UPDATE_OVERDUE_MS`), and whether an update
- * reload already came back behind on the same target (`blocked` — reloading
- * again would loop, so the pill offers it instead).
+ * It draws nothing: the Update pill shows the pending update the whole time,
+ * so a click needs no moment. What it keeps is whether an update reload already
+ * came back behind on the same target (`blocked` — reloading again would loop,
+ * so the update is left to the pill).
  */
 export function UpdatePolicyRoot() {
   const update = useTabUpdate();
@@ -39,25 +34,6 @@ export function UpdatePolicyRoot() {
   const pending = isPending(update);
   const target = pending ? update.target : null;
   const blocked = pending && arrival !== null && arrival.target === target;
-  // ── overdue: one deadline per pending target ──
-  // Which pending target's deadline passed, so a new target starts afresh
-  // without resetting anything.
-  const pendingKey = pending ? (target ?? "(graph unknown)") : null;
-  const [overdueKey, setOverdueKey] = useState<string | null>(null);
-  const overdue = pendingKey !== null && overdueKey === pendingKey;
-  useEffect(() => {
-    if (pendingKey === null) return;
-    const timer = setTimeout(
-      () => setOverdueKey(pendingKey),
-      UPDATE_OVERDUE_MS,
-    );
-    return () => clearTimeout(timer);
-  }, [pendingKey]);
-
-  useEffect(() => {
-    setUpdateFlags({ overdue, blocked });
-  }, [overdue, blocked]);
-
   // The reloading page's own line dies with it (clientLog buffers), so the
   // record of an update reload is written by the page it loads.
   useEffect(() => {

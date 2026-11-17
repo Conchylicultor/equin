@@ -24,7 +24,7 @@ export { useStaleFrontend } from "./hooks/use-stale-frontend";
 export default {
   collapsed: true,
   description:
-    "Trigger `./equin build` from the toolbar. Tabs on an older build update themselves: useTabUpdate() is the one verdict (current / available / required / fault) of the build this tab runs against the build served, and the page's UpdatePolicyRoot (Core.Root) reloads into the served build at a safe moment through reload-readiness's quietReload — hidden, or visible and idle, or at once when the old build already fails here — with a neutral Update pill only for what the user can act on (an update a process holds, an overdue one) and a red fault, for developers only, when plugins fail on the served build itself.",
+    "Trigger `./equin build` from the toolbar. Tabs on an older build update themselves: useTabUpdate() is the one verdict (current / available / required / fault) of the build this tab runs against the build served, and the page's UpdatePolicyRoot (Core.Root) reloads into the served build at a safe moment through reload-readiness's quietReload — hidden, or visible and idle, or at once when the old build already fails here — with a neutral Update pill the whole time an update is pending (naming what holds it, if anything) and a red fault, for developers only, when plugins fail on the served build itself.",
   contributions: [
     IdKinds.Kind({ kind: buildRunIdKind }),
     ActionBar.Item({

@@ -48,24 +48,11 @@ vi.mock("@plugins/shell/plugins/toast/web", async (importOriginal) => ({
 
 import { act, cleanup, render } from "@testing-library/react";
 import { UpdatePolicyRoot } from "../components/update-policy-root";
-import {
-  IDLE_BEFORE_UPDATE_MS,
-  UPDATE_OVERDUE_MS,
-} from "../internal/update-policy";
-import {
-  quietUpdate,
-  resetUpdateState,
-  useUpdateFlags,
-} from "../internal/update-state";
+import { IDLE_BEFORE_UPDATE_MS } from "../internal/update-policy";
+import { quietUpdate, resetUpdateState } from "../internal/update-state";
 
-function FlagsProbe({
-  out,
-}: {
-  out: { overdue?: boolean; blocked?: boolean };
-}) {
-  Object.assign(out, useUpdateFlags());
-  return null;
-}
+/** Longer than any wait the policy has: a reload not made by then never is. */
+const LONG_AFTER_MS = 60 * 60_000;
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -115,24 +102,16 @@ describe("UpdatePolicyRoot", () => {
     expect(state.quietReload).toHaveBeenCalledTimes(1);
   });
 
-  it("a held available update never reloads on its own, and goes overdue", () => {
+  it("a held available update never reloads on its own", () => {
     state.update = { kind: "available", target: "g2" };
     state.readiness = {
       holds: [{ label: "Playback" }],
       engaged: false,
       hidden: true,
     };
-    const flags: { overdue?: boolean } = {};
-    render(
-      <>
-        <UpdatePolicyRoot />
-        <FlagsProbe out={flags} />
-      </>,
-    );
-    expect(flags.overdue).toBe(false);
-    act(() => void vi.advanceTimersByTime(UPDATE_OVERDUE_MS));
+    render(<UpdatePolicyRoot />);
+    act(() => void vi.advanceTimersByTime(LONG_AFTER_MS));
     expect(state.quietReload).not.toHaveBeenCalled();
-    expect(flags.overdue).toBe(true);
   });
 
   it("a required update reloads at once, even with the user engaged", () => {
@@ -151,7 +130,7 @@ describe("UpdatePolicyRoot", () => {
     state.update = { kind: "fault", failedPaths: ["apps/x"] };
     state.readiness = { holds: [], engaged: false, hidden: true };
     render(<UpdatePolicyRoot />);
-    act(() => void vi.advanceTimersByTime(UPDATE_OVERDUE_MS));
+    act(() => void vi.advanceTimersByTime(LONG_AFTER_MS));
     expect(state.quietReload).not.toHaveBeenCalled();
   });
 
@@ -162,15 +141,9 @@ describe("UpdatePolicyRoot", () => {
     // This page: still behind, on the same target.
     state.update = { kind: "available", target: "g2" };
     state.readiness = { holds: [], engaged: false, hidden: true };
-    const flags: { blocked?: boolean } = {};
-    render(
-      <>
-        <UpdatePolicyRoot />
-        <FlagsProbe out={flags} />
-      </>,
-    );
+    render(<UpdatePolicyRoot />);
+    act(() => void vi.advanceTimersByTime(LONG_AFTER_MS));
     expect(state.quietReload).not.toHaveBeenCalled();
-    expect(flags.blocked).toBe(true);
   });
 
   it("a newer target after an update reload is a new update", () => {

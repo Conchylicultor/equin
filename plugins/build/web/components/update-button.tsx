@@ -15,28 +15,27 @@ import {
   updateMessageFor,
   type ShownAffordance,
 } from "../internal/update-copy";
-import { retryLoad, updateNow, useUpdateFlags } from "../internal/update-state";
+import { retryLoad, updateNow } from "../internal/update-state";
 import { BuildTray } from "./build-tray";
 
 const refreshIcon = symbol("refresh");
 
-/** The pill's affordance, from the one verdict and the policy's flags. */
+/** The pill's affordance, from the one verdict and the page's holds. */
 export function useUpdateAffordance(): {
   update: TabUpdate;
   affordance: UpdateAffordance;
 } {
   const update = useTabUpdate();
   const readiness = useReloadReadiness();
-  const flags = useUpdateFlags();
-  return { update, affordance: updateAffordance(update, readiness, flags) };
+  return { update, affordance: updateAffordance(update, readiness) };
 }
 
 /**
  * The one Update control. A newer build is an update, not a fault: the tab
- * reloads itself at a safe moment (`UpdatePolicyRoot`), so this shows only
- * when the user can act on something — an update a running process holds
- * ("Update waits for: Playback"), one that found no moment in time, or a
- * reload that came back behind — and then in a NEUTRAL fill: nothing is wrong.
+ * reloads itself at a safe moment (`UpdatePolicyRoot`), and this says so the
+ * whole time the update is pending — never only once it is late — and offers
+ * it at once, in a NEUTRAL fill: nothing is wrong. Its tooltip names what holds
+ * the update ("Update waits for: Playback") when a running process does.
  *
  * Plugins that failed to load with no update to explain them are a real bug
  * (reported by the loader): a developer sees it red, marked developer-only,
@@ -127,8 +126,8 @@ function UpdatePill({
 
 /**
  * The collapsed floating bar's glance (`ActionBar.Glance`): the Build tray
- * holding only the Update pill, so an update the user can act on stays
- * visible while the Build control is hidden. Nothing otherwise.
+ * holding only the Update pill, so a pending update stays visible while the
+ * Build control is hidden. Nothing otherwise.
  */
 export function UpdateGlance() {
   const { update, affordance } = useUpdateAffordance();

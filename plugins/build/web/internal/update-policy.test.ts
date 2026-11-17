@@ -67,59 +67,32 @@ describe("updateMoment", () => {
 });
 
 describe("updateAffordance", () => {
-  const calm = { overdue: false, blocked: false };
-
   it("shows nothing for a current tab", () => {
-    expect(updateAffordance({ kind: "current" }, ready(), calm)).toEqual({
+    expect(updateAffordance({ kind: "current" }, ready())).toEqual({
       kind: "none",
     });
   });
 
-  it("an available update waits silently until overdue", () => {
-    expect(
-      updateAffordance(AVAILABLE, ready({ holds: PLAYING }), calm),
-    ).toEqual({
-      kind: "none",
-    });
-    expect(
-      updateAffordance(AVAILABLE, ready({ holds: PLAYING }), {
-        overdue: true,
-        blocked: false,
-      }),
-    ).toEqual({ kind: "waiting", waitsFor: ["Playback", "Upload"] });
-    expect(
-      updateAffordance(AVAILABLE, ready(), { overdue: true, blocked: false }),
-    ).toEqual({
+  it("an available update is shown at once, whatever the moment", () => {
+    expect(updateAffordance(AVAILABLE, ready())).toEqual({ kind: "ready" });
+    expect(updateAffordance(AVAILABLE, ready({ engaged: true }))).toEqual({
       kind: "ready",
     });
+    expect(updateAffordance(AVAILABLE, ready({ holds: PLAYING }))).toEqual({
+      kind: "waiting",
+      waitsFor: ["Playback", "Upload"],
+    });
   });
 
-  it("a required update shows only while held: it reloads the moment they release", () => {
-    expect(updateAffordance(REQUIRED, ready(), calm)).toEqual({ kind: "none" });
+  it("a required update is shown too, naming what holds it", () => {
+    expect(updateAffordance(REQUIRED, ready())).toEqual({ kind: "ready" });
     expect(
-      updateAffordance(
-        REQUIRED,
-        ready({ holds: [{ label: "Recording" }] }),
-        calm,
-      ),
+      updateAffordance(REQUIRED, ready({ holds: [{ label: "Recording" }] })),
     ).toEqual({ kind: "waiting", waitsFor: ["Recording"] });
   });
 
-  it("a blocked update is offered at once", () => {
-    expect(
-      updateAffordance(AVAILABLE, ready(), { overdue: false, blocked: true }),
-    ).toEqual({
-      kind: "ready",
-    });
-    expect(
-      updateAffordance(REQUIRED, ready(), { overdue: false, blocked: true }),
-    ).toEqual({
-      kind: "ready",
-    });
-  });
-
-  it("a fault is shown as a fault, whatever the flags", () => {
-    expect(updateAffordance(FAULT, ready(), calm)).toEqual({
+  it("a fault is shown as a fault", () => {
+    expect(updateAffordance(FAULT, ready())).toEqual({
       kind: "fault",
       failedPaths: ["a/b"],
     });

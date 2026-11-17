@@ -301,11 +301,12 @@ storage (`internal/update-state.ts`); a page that loads from it and is still
 behind on the SAME target is `blocked` (logged on the `tab-update` channel):
 it never reloads on its own again, and the pill offers the update instead.
 
-**The Update pill** (`components/update-button.tsx`) shows only what the user
-can act on, in a NEUTRAL fill: an update a running process holds ("Update
-waits for: Playback"), an available one that found no moment within
-`UPDATE_OVERDUE_MS` (ambient music can hold a page for hours), or a blocked
-one. Pressing it updates at once, over the holds — the user chose to stop
+**The Update pill** (`components/update-button.tsx`) shows for the whole
+time an update is pending, in a NEUTRAL fill — the UI never hides that the tab
+runs an older build than the one served, even while the policy waits for a
+safe moment (a composer holding focus counts as engaged indefinitely). Its
+tooltip names what holds the update, if anything ("Update waits for:
+Playback"). Pressing it updates at once, over the holds — the user chose to stop
 them. A `fault` is the one red state, and only for a developer
 (`ForAudience`, the developer mark), naming the failed plugins; a user sees
 the neutral "Reload" retry. The collapsed bar's `ActionBar.Glance` is
@@ -327,7 +328,7 @@ the common case.
 
 ## Plugin reference
 
-- Description: Trigger `./equin build` from the toolbar. Tabs on an older build update themselves: useTabUpdate() is the one verdict (current / available / required / fault) of the build this tab runs against the build served, and the page's UpdatePolicyRoot (Core.Root) reloads into the served build at a safe moment through reload-readiness's quietReload — hidden, or visible and idle, or at once when the old build already fails here — with a neutral Update pill only for what the user can act on (an update a process holds, an overdue one) and a red fault, for developers only, when plugins fail on the served build itself. Build, portable half: the build-run id kind, the build config, the Build task category and the build.history collection over build_runs — what a host without the computer serves too. Running builds (the jobs, the routes, the auto-build reconcile) is build/machine.
+- Description: Trigger `./equin build` from the toolbar. Tabs on an older build update themselves: useTabUpdate() is the one verdict (current / available / required / fault) of the build this tab runs against the build served, and the page's UpdatePolicyRoot (Core.Root) reloads into the served build at a safe moment through reload-readiness's quietReload — hidden, or visible and idle, or at once when the old build already fails here — with a neutral Update pill the whole time an update is pending (naming what holds it, if anything) and a red fault, for developers only, when plugins fail on the served build itself. Build, portable half: the build-run id kind, the build config, the Build task category and the build.history collection over build_runs — what a host without the computer serves too. Running builds (the jobs, the routes, the auto-build reconcile) is build/machine.
 - Web:
   - Slots:
     - `BuildDetailSlots.Section`

@@ -6,7 +6,7 @@ const AVAILABLE = { kind: "available", target: "exhibit" } as const;
 
 /**
  * The Update pill in each state a user can meet it, each in the Build tray as
- * the action bar shows it: an update a process holds, an overdue one, and the
+ * the action bar shows it: an update a process holds, a pending one, and the
  * neutral retry a user (not in Developer mode) sees for a failed load.
  */
 export default function UpdatePillExhibit() {

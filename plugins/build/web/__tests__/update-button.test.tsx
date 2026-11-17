@@ -52,10 +52,10 @@ describe("UpdateButton", () => {
     expect(pill.className).not.toContain("bg-info-solid");
   });
 
-  it("an overdue update: neutral, offering it", () => {
+  it("a pending update: neutral, offering it", () => {
     const { getByRole } = renderPill(AVAILABLE, { kind: "ready" });
     const pill = getByRole("button", {
-      name: "A new version is ready — click to update",
+      name: "A new version is ready — it updates itself at a quiet moment, or click to update now",
     });
     expect(pill.className).not.toContain("bg-destructive-solid");
   });
