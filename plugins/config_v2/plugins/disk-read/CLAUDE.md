@@ -25,6 +25,7 @@
     - `build/serve-composition`
     - `framework/cli/build`
     - `framework/cli/deploy`
+    - `infra/git/main-slots`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/effective-on-disk.ts` (debt)
 

@@ -101,6 +101,7 @@ the build lock.
   - Imported by:
     - `framework/cli/build`
     - `framework/cli/install`
+    - `infra/git/main-slots`
 - Exemptions:
   - Exempts itself from: `repo-walk-safety/no-adhoc-repo-walk` — `cli/ensure-deps.ts` (sanctioned)
 - Core:

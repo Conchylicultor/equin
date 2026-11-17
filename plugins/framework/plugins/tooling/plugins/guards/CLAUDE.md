@@ -448,6 +448,7 @@ can blind or deafen all of them at once.
 - Exemptions:
   - Exempts itself from:
     - `timed-fs/no-untimed-fs-read` — `bin/bootstrap.ts` (sanctioned)
+    - `owned-fd/no-raw-fd-close` — `bin/bootstrap.ts` (sanctioned)
     - `guard-path-safety/no-adhoc-path-resolve` — `core/guards/main-edits.ts` (sanctioned)
     - `user-path/no-sync-fs` — `core/context.ts`, `core/git-target.ts`, `core/guards/poll-loop.ts`, `core/walk-scope.ts` (sanctioned)
     - `python/no-system-python` — `core` (sanctioned)

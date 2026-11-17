@@ -4,10 +4,8 @@ import { callEndpoint } from "@plugins/infra/plugins/endpoints/server";
 import { EndpointError } from "@plugins/infra/plugins/endpoints/core";
 import { adaptiveTimeoutMs } from "@plugins/framework/plugins/cli/plugins/bootstrap/cli";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
-import {
-  getMainRepoRoot,
-  getWorktreeRoot,
-} from "@plugins/infra/plugins/spawn/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
+import { checkoutRef } from "@plugins/infra/plugins/paths/core";
 import {
   fileReportFromProcess,
   mergeBaseWithMain,
@@ -112,8 +110,9 @@ async function reportCannotJudge(data: CannotJudgePayload): Promise<void> {
   const who =
     data.namespace === null ? "central" : `the ${data.namespace} backend`;
   const message = `${who} cannot judge whether a deploy changes its code, so it restarts on every deploy: ${data.reason}`;
-  // The same test the build uses for "this is main" (`run.ts`'s central step).
-  if ((await getWorktreeRoot()) !== (await getMainRepoRoot())) {
+  // The build's own "this is main" answer (`checkoutRef`: the repo root or a
+  // main slot of the repo main is served from).
+  if ((await checkoutRef(await getWorktreeRoot())).kind !== "main") {
     console.error(
       `Restart-skip cannot judge (not reported: a worktree build): ${message}`,
     );

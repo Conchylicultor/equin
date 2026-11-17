@@ -1,9 +1,7 @@
-import {
-  getMainRepoRoot,
-  getWorktreeRoot,
-} from "@plugins/infra/plugins/spawn/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import {
   checkoutNamespace,
+  isMainCheckoutOrSlot,
   worktreeArtifacts,
 } from "@plugins/infra/plugins/paths/core";
 import { realGates } from "./gates";
@@ -28,7 +26,9 @@ export async function upgradeThisWorktree(
   opts: { cooldown: Cooldown },
 ): Promise<UpgradeReceipt> {
   const root = await getWorktreeRoot();
-  if (root === (await getMainRepoRoot())) {
+  // Main's own checkout or one of main's slots (infra/git/main-slots): both run
+  // (or land) main's code, neither is where an upgrade is proven.
+  if (await isMainCheckoutOrSlot(root)) {
     throw new Error(
       `Refusing to run the ${selection.map((s) => s.updater.id).join(", ")} upgrade in the main checkout. Main's backend runs on its locks; ` +
         "a new release is proven in a worktree and reaches main through `./equin push`.",

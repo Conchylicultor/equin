@@ -29,6 +29,7 @@ import {
   worktreesDir,
 } from "./paths";
 import { listWorktreeDirsSync } from "./worktree-dirs";
+import { getMainRepoRoot } from "@plugins/infra/plugins/spawn/core";
 
 // Which deploys a CHECKOUT published — read back out of the registry that
 // checkout wrote, never guessed from a directory basename.
@@ -552,7 +553,13 @@ export function resolveCheckoutDeploySync(
 /**
  * Which checkout this data root's main app (the main namespace) is served from —
  * read from the `spec.json` that checkout's build wrote, like every other
- * "who published this?" answer in this file.
+ * "who published this?" answer in this file — and the REPOSITORY it belongs to.
+ *
+ * The repository is the identity that matters: main is built and served from
+ * per-commit slots (`infra/git/main-slots`, linked worktrees of the repo), so
+ * the spec may name a slot while the repo root, and every other slot, are main
+ * too. `repoRoot` is the repo's main checkout (the dir holding its git common
+ * dir) — the one git spawn here, so this one function is not git-free.
  *
  * `unclaimed` when no checkout on disk holds it: no spec yet (a fresh machine),
  * or a spec naming a checkout that no longer exists (the repo was moved). Both
@@ -563,7 +570,14 @@ export function resolveCheckoutDeploySync(
  * "unclaimed" — that would let any clone on the machine take main's namespace.
  */
 export type MainNamespaceOwner =
-  { kind: "unclaimed" } | { kind: "claimed"; checkoutRoot: string };
+  | { kind: "unclaimed" }
+  | {
+      kind: "claimed";
+      /** The checkout the spec's `server` names (the repo root or a slot), comparable. */
+      checkoutRoot: string;
+      /** That checkout's repository: its main checkout, comparable. */
+      repoRoot: string;
+    };
 
 export async function mainNamespaceOwner(): Promise<MainNamespaceOwner> {
   const path = worktreeArtifacts.spec(MAIN_WORKTREE_NAME);
@@ -586,7 +600,11 @@ export async function mainNamespaceOwner(): Promise<MainNamespaceOwner> {
   // The checkout a spec the app wrote names: app-owned by that claim.
   const checkoutRoot = asAppPath(server.slice(0, -suffix.length));
   if (!(await exists(checkoutRoot))) return { kind: "unclaimed" };
-  return { kind: "claimed", checkoutRoot: await comparablePath(checkoutRoot) };
+  return {
+    kind: "claimed",
+    checkoutRoot: await comparablePath(checkoutRoot),
+    repoRoot: await comparablePath(await getMainRepoRoot(checkoutRoot)),
+  };
 }
 
 /** `root`'s comparable identity, for matching against {@link mainNamespaceOwner}. */

@@ -43,22 +43,25 @@ unrewritten and unburied.
 
 ## Main's build writes nothing git sees
 
-On the main checkout (`checkoutRef(root).kind === "main"`, i.e. the auto-build),
-`cli/internal/main-tree-guard.ts` snapshots `git status` before the first writer
-and compares after the last one (the formatter). Every generated file on main
-was already checked in sync by the push that landed it, so a difference means
-main read an input no worktree had: a stray untracked file, typically. The build
-**fails**, names every path it changed and every untracked suspect, and restores
-to HEAD every tracked path that was clean before the build (modified or deleted
-— `planRestore`, a pure function of the snapshot diff), generated or
-hand-authored alike: it matched HEAD when the build started, so no edit can be
-lost. Paths dirty before the build stay as they are; untracked files are never
-removed (they are the evidence). Restoring only `merge=regen-*` artifacts was not
-enough: 2026-11-04 a main build raced a push's fast-forward, codegen read a mixed
-tree and re-stamped 135 hand-authored `config/` overrides, which stayed dirty and
-failed every later main build. Left dirty, main's checkout made every push's `git merge
---ff-only` abort (2026-10-17;
-[`research/2026-10-17-global-main-checkout-read-only-build.md`](../../../../../../research/2026-10-17-global-main-checkout-read-only-build.md)).
+Main builds only in a SLOT (`infra/git/main-slots`): a linked worktree checked
+out at the one commit it builds, which no push writes into and nothing runs
+from while it is built. A main build that was not handed one (the Build
+button's, a hand-run one at the repo root) relays itself into one
+(`cli/internal/slot-relay.ts`); one that reached its writers anywhere else
+throws. There, `cli/internal/main-tree-guard.ts` is a DETERMINISM check: it
+snapshots `git status` before the first writer and compares after the last one
+(the formatter). Every generated file on main was already checked in sync by
+the push that landed it, so a difference means the build read an input its
+commit does not hold (a stray untracked file, typically) or is not
+deterministic. The build **fails** and names every path it changed and every
+untracked suspect. Nothing is restored — on a failed guard or on a throw: the
+slot is never served from that build, and the next build that takes the slot
+runs `git checkout --force` there. (When main built in the checkout `./equin
+push` fast-forwards, a dirty file there aborted every push's `git merge
+--ff-only` and failed every later main build — 2026-10-17, 2026-11-04,
+2026-11-16 — so the guard used to restore to HEAD; see
+[`research/2026-10-17-global-main-checkout-read-only-build.md`](../../../../../../research/2026-10-17-global-main-checkout-read-only-build.md)
+and [`research/2026-11-16-global-main-slots.md`](../../../../../../research/2026-11-16-global-main-slots.md).)
 
 **Plugin-move leftovers fail first, by name** (`cli/internal/moved-plugin-leftovers.ts`).
 A move leaves a plugin's ignored build output at the old address, un-ignored
@@ -82,7 +85,7 @@ through `EQUIN_BUILD_DETACHED` instead.
 
 - Description: `./equin build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
 - Cli:
-  - Uses: 69 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 72 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework/cli/op-runtime` ×32
     - `installer` ×6
     - `debug/profiling/op-log` ×4
@@ -91,8 +94,9 @@ through `EQUIN_BUILD_DETACHED` instead.
     - `framework/cli/migrations` ×3
     - `framework/tooling/web-artifacts/served-addresses` ×3
     - `plugin-meta/plugin-records` ×3
+    - `build/converge` ×2
+    - `infra/git/main-slots` ×2
     - `build/central-build-id.centralBuildOf`
-    - `build/converge.decideConvergence`
     - `build/run-ledger.createBuildRunRecorder`
     - `build/step-baseline.judgeBuildSteps`
     - `framework/cli/build/build-steps.runBuildSteps`

@@ -56,6 +56,7 @@ export const dataDirsEntries: CollectedEntry[] = [
   { pluginPath: "infra/plugins/deps", id: "infra.deps", loader: () => import("@plugins/infra/plugins/deps/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/deps/plugins/python", id: "infra.deps.python", loader: () => import("@plugins/infra/plugins/deps/plugins/python/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/deps/plugins/rust", id: "infra.deps.rust", loader: () => import("@plugins/infra/plugins/deps/plugins/rust/data-dirs"), dependsOn: [] },
+  { pluginPath: "infra/plugins/git/plugins/main-slots", id: "infra.git.main-slots", loader: () => import("@plugins/infra/plugins/git/plugins/main-slots/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/host-fs/plugins/image", id: "infra.host-fs.image", loader: () => import("@plugins/infra/plugins/host-fs/plugins/image/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/host/plugins/duress/plugins/latch", id: "infra.host.duress.latch", loader: () => import("@plugins/infra/plugins/host/plugins/duress/plugins/latch/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/host/plugins/host-admission", id: "infra.host.host-admission", loader: () => import("@plugins/infra/plugins/host/plugins/host-admission/data-dirs"), dependsOn: [] },

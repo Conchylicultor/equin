@@ -227,6 +227,7 @@ export default defineBoundaries({
     "plugin.database.core -> plugin.database.data-dirs",
     "plugin.framework.tooling.checks.core -> plugin.framework.tooling.checks.data-dirs",
     "plugin.framework.tooling.web-artifacts.core -> plugin.framework.tooling.web-artifacts.data-dirs",
+    "plugin.infra.git.main-slots.core -> plugin.infra.git.main-slots.data-dirs",
     "plugin.packages.signal-origin.sink.core -> plugin.packages.signal-origin.sink.data-dirs",
     "plugin.reports.outbox.file.core -> plugin.reports.outbox.file.data-dirs",
   ],

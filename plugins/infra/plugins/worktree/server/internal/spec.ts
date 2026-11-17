@@ -1,5 +1,5 @@
 import { mkdir, rename, rm, writeFile } from "node:fs/promises";
-import { access } from "@plugins/packages/plugins/timed-fs/core";
+import { access, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, dirname, join } from "node:path";
 import {
   asNamespace,
@@ -117,6 +117,61 @@ export async function writeWorktreeSpec({
   await writeFile(tmp, JSON.stringify(spec, null, 2) + "\n");
   await rename(tmp, path);
   return path;
+}
+
+/** What {@link readWorktreeSpec} found. */
+export type WorktreeSpecRead =
+  { kind: "absent" } | { kind: "spec"; spec: WorktreeSpec };
+
+/**
+ * A namespace's spec as written — what a deploy puts back when the backend it
+ * was about to replace is still the one serving (a failed restart). Throws on
+ * a spec that is there but not one `writeWorktreeSpec` could have written.
+ */
+export async function readWorktreeSpec(
+  name: string,
+): Promise<WorktreeSpecRead> {
+  const path = worktreeArtifacts.spec(asNamespace(name));
+  let text: string;
+  try {
+    text = await readFile(path, "utf8");
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === "ENOENT" || code === "ENOTDIR") return { kind: "absent" };
+    throw err;
+  }
+  const raw = JSON.parse(text) as Record<string, unknown>;
+  const strings = (v: unknown): v is string[] =>
+    Array.isArray(v) && v.every((x) => typeof x === "string");
+  if (
+    typeof raw.server !== "string" ||
+    (raw.web !== undefined && typeof raw.web !== "string") ||
+    (raw.command !== undefined && !strings(raw.command)) ||
+    (raw.composition !== undefined && typeof raw.composition !== "string") ||
+    (raw.env !== undefined &&
+      (typeof raw.env !== "object" ||
+        raw.env === null ||
+        !Object.values(raw.env).every((v) => typeof v === "string")))
+  ) {
+    throw new Error(`${path} is not a spec this app writes: ${text}`);
+  }
+  return {
+    kind: "spec",
+    spec: {
+      name,
+      server: raw.server,
+      ...(raw.web !== undefined ? { web: raw.web as string } : {}),
+      ...(raw.command !== undefined
+        ? { command: raw.command as string[] }
+        : {}),
+      ...(raw.composition !== undefined
+        ? { composition: raw.composition as string }
+        : {}),
+      ...(raw.env !== undefined
+        ? { env: raw.env as Record<string, string> }
+        : {}),
+    },
+  };
 }
 
 /**

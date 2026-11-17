@@ -1,6 +1,10 @@
 import type { CentralPluginDefinition } from "@plugins/framework/plugins/central-core/core";
 
-export { closureChangedSince, sourceDigest } from "../shared/digest";
+export {
+  closureChangedSince,
+  closureDigestNow,
+  sourceDigest,
+} from "../shared/digest";
 
 export default {
   description:

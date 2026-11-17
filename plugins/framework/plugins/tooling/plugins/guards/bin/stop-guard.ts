@@ -2,6 +2,7 @@
 import {
   assertCheckoutInstalled,
   CheckoutNotInstalledError,
+  holdGuardLease,
 } from "./bootstrap";
 
 /**
@@ -37,4 +38,19 @@ try {
   process.exit(0);
 }
 
-process.stdout.write(await (await import("./stop-hook")).stopHook(raw));
+// Held while the hook loads and runs, as `guard.ts` does (a main slot only).
+// A lease that cannot be taken skips the guard — it fails open, like the rest.
+let lease: ReturnType<typeof holdGuardLease>;
+try {
+  lease = holdGuardLease(import.meta.path);
+} catch (err) {
+  process.stderr.write(
+    `guards: stop guard skipped: could not hold its main slot: ${err instanceof Error ? err.message : String(err)}\n`,
+  );
+  process.exit(0);
+}
+try {
+  process.stdout.write(await (await import("./stop-hook")).stopHook(raw));
+} finally {
+  lease.release();
+}

@@ -1,4 +1,4 @@
-import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
+import playwrightPackage from "playwright/package.json" with { type: "json" };
 import { attachMarker, encodeAttachTicket } from "../core";
 import { bindEndpoint, openTab, type Session, type Tab } from "./host-session";
 
@@ -8,11 +8,11 @@ import { bindEndpoint, openTab, type Session, type Tab } from "./host-session";
  * so a mismatch is a sentence, not a protocol error).
  */
 function playwrightVersion(): string {
-  const path = Bun.resolveSync("playwright/package.json", import.meta.dir);
-  const { version } = JSON.parse(readFileSync(path, "utf8")) as {
-    version?: string;
-  };
-  if (!version) throw new Error(`${path} names no version`);
+  // Imported, not resolved from this file's location: in the host's bundle
+  // `playwright` is an external beside the bundle, and this resolves there
+  // exactly as `import("playwright")` does.
+  const { version } = playwrightPackage as { version?: string };
+  if (!version) throw new Error("playwright/package.json names no version");
   return version;
 }
 

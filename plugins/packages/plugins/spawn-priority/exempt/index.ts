@@ -4,7 +4,6 @@ export default [
   {
     rule: "boundaries/no-platform-api",
     paths: [
-      "core/internal/background.ts",
       "core/internal/darwin-background.ts",
       "server/internal/spawn-priority.ts",
     ],

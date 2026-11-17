@@ -1,5 +1,5 @@
 import type { BrowserContext, Page, Request } from "playwright";
-import { isWorkerChunkPath } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/core";
+import { isWorkerChunkPath } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/plugins/served-paths/core";
 
 /**
  * Network-idle as the harness measures it — Playwright's own `networkidle`

@@ -12,7 +12,7 @@ import {
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { currentRecordStore } from "@plugins/plugin-meta/plugins/plugin-records/core";
-import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
+import { existsSync, realpath } from "@plugins/packages/plugins/timed-fs/core";
 import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { sweepDistLeftovers } from "./internal/dist-publish";
 import {
@@ -48,7 +48,6 @@ import {
 import { reapLegacyCheckoutDist } from "./internal/legacy-dist-reap";
 import {
   assertMainTreeUntouched,
-  restoringMainTreeOnThrow,
   snapshotTree,
 } from "./internal/main-tree-guard";
 import { assertNoMoveLeftovers } from "./internal/moved-plugin-leftovers";
@@ -61,6 +60,7 @@ import {
   worktreeDataDir,
 } from "@plugins/infra/plugins/paths/server";
 import {
+  asNamespace,
   MAIN_WORKTREE_NAME,
   NAMESPACE_RE,
   namespaceUrl,
@@ -99,10 +99,24 @@ import {
   type Verdict,
 } from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
 import {
-  getMainRepoRoot,
   getWorktreeRoot,
   spawnCaptured,
 } from "@plugins/infra/plugins/spawn/core";
+import {
+  claimHandedBuildSlot,
+  servedMainRoot,
+  serveSlot,
+  stampUnservedSlots,
+} from "@plugins/infra/plugins/git/plugins/main-slots/core";
+import { readDrainReportAfterMs } from "@plugins/infra/plugins/git/plugins/main-slots/cli";
+import { relayIntoSlot } from "./internal/slot-relay";
+import { createHandOver } from "./internal/hand-over";
+import {
+  deployEachTarget,
+  ownTargetFirst,
+  type TargetFailure,
+} from "./internal/fan-out";
+import { isMainSlotCheckout } from "@plugins/infra/plugins/paths/core";
 import { registerMergeDrivers } from "@plugins/framework/plugins/cli/plugins/git-artifacts/cli";
 import { assertPrerequisites } from "@plugins/framework/plugins/cli/plugins/doctor/cli";
 import { installLockedToolchain } from "@plugins/infra/plugins/deps/plugins/mise/core";
@@ -129,6 +143,7 @@ import { createOpProfiler } from "@plugins/debug/plugins/profiling/plugins/op-lo
 import { judgeBuildSteps } from "@plugins/build/plugins/step-baseline/cli";
 import {
   markWorktreeOpStart,
+  readWorktreeSpec,
   writeWorktreeSpec,
 } from "@plugins/infra/plugins/worktree/server";
 import { createBuildRunRecorder } from "@plugins/build/plugins/run-ledger/cli";
@@ -604,6 +619,48 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
     );
   }
 
+  // ── Main builds in a slot ─────────────────────────────────────────────
+  // A main build (`--allow-main` from one of main's checkouts) builds in a
+  // SLOT (`infra/git/main-slots`): a checkout of exactly one commit no push
+  // writes into and nothing runs from while it is built. One handed a slot
+  // (`EQUIN_BUILD_SLOT`: main's convergence run, or the relay below) takes its
+  // exclusive lease here and holds it to the end — turned shared when it hands
+  // the slot to the backend it restarts there (`handOver`). Any other — the
+  // Build button's (`build/machine`'s build job runs `./equin build
+  // --allow-main` in the checkout its backend serves from), a hand-run one on
+  // the repo root — relays itself into a slot at `refs/heads/main`: never
+  // into the slot main is served from, whose code every process of main runs.
+  const slotRoot = await getWorktreeRoot();
+  const handedSlot = await claimHandedBuildSlot(
+    slotRoot,
+    readEnv("BUILD_ID") ?? "build",
+  );
+  if (
+    handedSlot.kind === "not-handed" &&
+    opts.allowMain &&
+    (await checkoutRef(slotRoot)).kind === "main"
+  ) {
+    process.exit(await relayIntoSlot(slotRoot));
+  }
+  const slotLease = handedSlot.kind === "handed" ? handedSlot.lease : null;
+  // Hand the slot over to the backend (or central) about to be restarted from
+  // it: its boot takes the slot shared, which this build's exclusive lease
+  // would refuse while the build waits for that backend's health — a
+  // deadlock. Turned shared in place, not released: the slot stays held until
+  // this build exits. The conversion is not atomic (flock drops the exclusive
+  // lock, then takes the shared one), and that is safe: the only process that
+  // ever waits for a slot EXCLUSIVELY is a main build, and main builds are
+  // serialized (one convergence run at a time, one in-flight `build_runs` row
+  // for main) — this is the one running. And nothing else tries a slot a
+  // build holds: `acquireBuildSlot` and `reclaimSlots` take only FREE slots,
+  // and a slot with a build's lease is `building` (`slotStates`). A spec
+  // naming the slot is written only once it is handed over
+  // (`afterHandOver`, ./internal/hand-over.ts).
+  const slotHandover = createHandOver(
+    slotLease === null ? null : () => slotLease.downgrade(),
+  );
+  const handOver = (): Promise<void> => slotHandover.handOver();
+
   // The releases mise.lock records, installed if a lock arrived without them
   // (a clone, a pull, an upstream merge) — before the doctor, which would
   // otherwise only report them missing.
@@ -640,10 +697,19 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
     "branch guard",
   );
   const branch = await getCurrentBranch();
-  if (branch === "main" && !opts.allowMain) {
+  const root = await getWorktreeRoot();
+  // The checkout half of every namespace this invocation touches — minted
+  // once, because every target of one build is built from one tree. Also
+  // THE "is this main?" answer for every decision below (the guard, the lane,
+  // the priority): a main slot (`infra/git/main-slots`) sits detached at one
+  // commit, so its branch is `HEAD`, and only `checkoutRef` knows it is main.
+  const checkout = await checkoutRef(root);
+  // The guard keeps refusing the `main` branch anywhere (another clone's
+  // main checkout included), and now a main slot too.
+  if ((branch === "main" || checkout.kind === "main") && !opts.allowMain) {
     console.error(
       [
-        "ERROR: refusing to build from the main branch.",
+        "ERROR: refusing to build from the main branch (or one of main's checkouts).",
         "",
         "Agents should work in a worktree, not directly on main.",
         "If you are inside a worktree conversation, make sure you are running",
@@ -664,16 +730,13 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   await checkBroadcasts("build");
   endSpan();
 
-  const root = await getWorktreeRoot();
-  // The checkout half of every namespace this invocation touches — minted
-  // once, because every target of one build is built from one tree.
-  const checkout = await checkoutRef(root);
   // Main deploys this account's one equin: only from the checkout that holds
   // it. Asked of a build of `main` and of any checkout that would mint the
   // main namespace — a second clone's main checkout with no deploy record yet
   // (only the background service names the first) would otherwise deploy over
   // the running app, on a database its code may predate
-  // (`infra/launcher/instance-owner`).
+  // (`infra/launcher/instance-owner`). A main slot answers for its
+  // repository: the claims name the repo, whichever slot serves it.
   if (branch === "main" || checkout.kind === "main") {
     try {
       await assertThisInstance(root, "build");
@@ -696,11 +759,16 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   // unknown composition, an illegal id or an occupied namespace costs
   // milliseconds here rather than ten minutes at the step that would
   // otherwise have noticed. Throws; `runCli` renders it.
-  const { manifest, targets } = await resolveBuildTargets({
+  const resolved = await resolveBuildTargets({
     root,
     requested: opts.composition ?? [],
     checkout,
   });
+  const { manifest } = resolved;
+  // The checkout's own app first, whatever order `--composition` named them
+  // in: the build's validation rides on the first target, and central and
+  // the deployed-phase steps follow the own app (./internal/fan-out.ts).
+  const targets = ownTargetFirst(resolved.targets);
 
   // Open the durable, crash-safe build-progress log now that `name` (the same
   // namespace key the op marker and writeBuildProfile use) is known. Every
@@ -739,7 +807,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   // background. Derived ONCE, here, because two consumers need the same
   // fact: this record (the lane explains WHY a wait was as long as it was)
   // and the build's admission (`withBuildAdmission`) below.
-  const lane: Lane = laneFor(branch === "main");
+  const lane: Lane = laneFor(checkout.kind === "main");
 
   // The op log's record for this build. `markRequested` lands where the old
   // build-log "started" record did — but the old record's `startedAt` was
@@ -1082,12 +1150,16 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   // Publish the lane from the same fact BEFORE any child is spawned below —
   // the check pass is exactly the inheriting subprocess this exists for, and
   // it classifies itself from what it reads here. See ../lane.ts.
-  publishLane(branch === "main");
+  publishLane(checkout.kind === "main");
 
   // The build's admission priority: a sidequest checkout's build queues
   // behind every waiting main-track op (see op-runtime's priority.ts). Asked
   // once, here, where the build is about to queue for its grant.
-  const priority: Priority = await opPriority(root, "build", branch === "main");
+  const priority: Priority = await opPriority(
+    root,
+    "build",
+    checkout.kind === "main",
+  );
 
   // Duress gate: a background-lane build takes the host-wide agent-build gate
   // BEFORE it queues for the host grant — while the host duress latch is
@@ -1293,180 +1365,195 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
 
       // Main's tree as git sees it BEFORE the first writer below — compared after
       // the last one (the formatter), because main's build may write nothing git
-      // tracks. See ./internal/main-tree-guard.ts.
+      // tracks. See ./internal/main-tree-guard.ts. A main build runs only in a
+      // slot handed to it (any other relayed itself into one above), so this is
+      // the build's determinism check: a slot is checked out at one commit and
+      // nothing but this build writes there. Nothing is restored, on a throw or
+      // on a failed guard: the slot's next `checkout --force` resets it.
+      if (checkout.kind === "main" && slotLease === null) {
+        throw new Error(
+          `[build] a main build reached its writers in ${root}, which is no slot handed to it — main builds only in a slot (the relay above)`,
+        );
+      }
       const mainTreeBefore =
         checkout.kind === "main" ? await snapshotTree(root) : null;
 
-      // Every writer to the repo tree below runs inside this wrapper: a build that
-      // THROWS before the guard (4b''') still puts main back — see
-      // restoreMainTreeWrites. The success path is checked by the guard itself.
-      const { pass, mainRoot, centralDir } = await restoringMainTreeOnThrow(
-        root,
-        mainTreeBefore,
-        async () => {
-          // Stage 1 — dependencies + registry-level codegen + every target's
-          // filtered registry. Runs before central is spawned below (its
-          // plugins.generated.ts must be in sync). See ./internal/app-artifacts.ts.
-          //
-          // The manifest handed over is THIS CHECKOUT's resolved `compositions`
-          // config, already read by `resolveBuildTargets` — the same document the
-          // targets came from, so `extends` resolves against what this checkout
-          // declares. Deliberately different from the hermetic posture, which reads
-          // the code seed; see `readCheckoutCompositions`.
-          //
-          // A plain build passes the main composition's id, which emits NO filtered
-          // registry: the main composition's registry IS the committed
-          // `<dir>.generated.ts`, so stage 1 has nothing to write and skips the
-          // plugin-tree walk entirely.
-          const { pass } = await prepareCompositionSources({
-            root,
-            manifest,
-            compositions: targets.map((t) => t.composition),
-            grant,
-            hooks,
-          });
-
-          // 1c. Contributed build steps of the `dependencies` phase: stage 1 made
-          // `node_modules` and every registry current, and the backend this build
-          // restarts has not started yet. See build/build-steps.
-          await runBuildSteps("dependencies", { root, log: hooks.log });
-
-          // 2b'. Write the central spec early too — otherwise the gateway has no
-          // way to spawn central. (Repeated at end of build for idempotency.)
-          // central.json always points at *main's* central-core/, not the current
-          // worktree's: central is a singleton serving every worktree, so the
-          // canonical source is main. The file is idempotent across worktree
-          // builds — same content every time.
-          endSpan = buildProfilerStart(
-            "centralJson",
-            "build:codegen",
-            "central.json",
-          );
-          const mainRoot = await getMainRepoRoot();
-          const centralDir = resolve(
-            mainRoot,
-            "plugins/framework/plugins/central-core",
-          );
-          if (existsSync(join(centralDir, "bin", "index.ts"))) {
-            // No `composition`: central is not an app. It is a singleton API
-            // runtime with its own registry (`central.generated.ts`), which no
-            // composition filters, so there is nothing for one to select.
-            await writeWorktreeSpec({
-              name: "central",
-              server: centralDir,
-              // Main's Bun (central runs main's code), never this checkout's.
-              command: await namedBackendCommand(
-                "central",
-                await checkoutBun(mainRoot),
-                "bin/index.ts",
-              ),
-            });
-          }
-          endSpan();
-
-          // Mint THIS INVOCATION's single build_runs row for a manual terminal
-          // build: a UI/auto build's backend already minted it (uiTriggered) and
-          // stamped its own `targets` there. Deferred to here — NOT right after the
-          // build lock — on purpose: the recorder writes to a database, so the mint
-          // must land after waitForPg above, or a cold manual build would race
-          // Postgres startup. The row is closed once every target has deployed,
-          // which is what keeps the UI's "Building…" spinner honest.
-          if (!uiTriggered) {
-            const claim = await recorder.insertRun({
-              id: buildId,
-              targets: targets.map((t) => t.composition),
-              trigger: "manual",
-              // `headAtStart`, the full sha: the same one stamped into the dist as
-              // `.build-commit` and onto the receipt, so the ledger row and the
-              // pin name the same commit in the same spelling by construction —
-              // which is what lets the convergence decision compare them at all.
-              commitHash: headAtStart,
-              pid: process.pid,
-            });
-            if (claim === "lost") {
-              // "lost" now means a LIVE build holds the slot: a holder whose build
-              // already ended was settled from its run's exit marker and the claim
-              // retried inside `insertRun`.
-              softNotes.push(
-                `build-runs: a live build of ${name} holds the slot — no ledger row minted`,
-              );
-            } else if (claim === "unavailable") {
-              // No ledger to write to — either no database at all (a checkout that has
-              // never been deployed, which a composition-only build legitimately
-              // reaches), or a database whose `build_runs` table this build has not
-              // created yet (the machine's very first build). Either way it is a note,
-              // never a failure: nothing about the deploy depends on it.
-              softNotes.push(
-                `build-runs: no ledger in ${name} yet — this build is not recorded`,
-              );
-            }
-          } else if (headAtStart !== null) {
-            // The backend (or main's convergence run) minted this row with
-            // the HEAD it saw at claim time; the checkout can have moved
-            // before `headAtStart` was sampled. Put the commit this build
-            // actually reads — the one `.build-commit` will name — on its row.
-            await recorder.recordRunCommit(buildId, headAtStart);
-          }
-
-          // Stage 2 — DB migrations + manifest-level codegen + the mandatory
-          // config-override seed. Runs AFTER the DB interlude above (drizzle's
-          // generate is stateful) and BEFORE propagation below, which reads the
-          // freshly-seeded git layer. May terminate the process on a migration
-          // prompt (exit 2) — unchanged. See ./internal/app-artifacts.ts.
-          await generateAppSources({
-            root,
-            pass,
-            migration: {
-              name: opts.migrationName,
-              reset: opts.resetMigration,
-              custom: opts.customMigration,
-              answers: opts.migrationAnswers
-                ? parseMigrationAnswers(opts.migrationAnswers)
-                : undefined,
-            },
-            hooks,
-          });
-
-          // 4b'. Every generated artifact has now been re-derived from this tree's
-          //      sources, so any merge marker a rebase left behind is answered — a
-          //      build normalizes by construction rather than by marker. Consuming
-          //      them here (and never earlier: a build that dies mid-codegen must
-          //      leave the signal intact) is what keeps the
-          //      `generated-artifacts-normalized` check from firing after a build
-          //      has already done the repair.
-          clearMergeMarkers(root);
-
-          // 4b''. THE LAST WRITER TO THE REPO TREE. Every generated artifact above
-          //       is already in its final byte form (writeGenerated), so this pass
-          //       covers hand-written source, scoped to this branch's diff vs main.
-          //
-          //       The position is load-bearing, not incidental: it must run after
-          //       ALL codegen writes and before anything hashes the tree. The check
-          //       cache keys a PASS on the whole working-tree hash (see
-          //       `checks/core/read-set.ts` — "ONE changed byte anywhere re-runs all
-          //       ~62 checks") and web-artifact store keys are the plugin's own
-          //       source bytes (`web-artifacts/core/hash.ts`, fingerprinted on
-          //       `(mtimeMs, size)`). A formatter running after either would
-          //       invalidate both on the NEXT build, every build.
-          //
-          //       Runs regardless of `--skip-checks`: it is not validation.
-          endSpan = buildProfilerStart(
-            "formatSources",
-            "build:codegen",
-            "format changed sources",
-          );
-          const formatPass = await formatChangedSources({
-            root,
-            log: (l) => console.log(l),
-          });
-          if (formatPass.formatted.length > 0) {
-            console.log(`Formatted ${formatPass.formatted.length} file(s):`);
-            for (const f of formatPass.formatted) console.log(`  ${f}`);
-          }
-          endSpan();
-          return { pass, mainRoot, centralDir };
-        },
+      // The code central runs: main's own. A main build's is the tree it builds
+      // (a slot, once main is built in slots); any other build's is the tree
+      // main serves (`servedMainRoot`) — central is a singleton every
+      // namespace shares, and it always runs main's code.
+      const mainRoot = checkout.kind === "main" ? root : await servedMainRoot();
+      const centralDir = resolve(
+        mainRoot,
+        "plugins/framework/plugins/central-core",
       );
+      const centralSpecExists = existsSync(
+        worktreeArtifacts.spec(asNamespace("central")),
+      );
+
+      // Stage 1 — dependencies + registry-level codegen + every target's
+      // filtered registry. Runs before central is spawned below (its
+      // plugins.generated.ts must be in sync). See ./internal/app-artifacts.ts.
+      //
+      // The manifest handed over is THIS CHECKOUT's resolved `compositions`
+      // config, already read by `resolveBuildTargets` — the same document the
+      // targets came from, so `extends` resolves against what this checkout
+      // declares. Deliberately different from the hermetic posture, which reads
+      // the code seed; see `readCheckoutCompositions`.
+      //
+      // A plain build passes the main composition's id, which emits NO filtered
+      // registry: the main composition's registry IS the committed
+      // `<dir>.generated.ts`, so stage 1 has nothing to write and skips the
+      // plugin-tree walk entirely.
+      const { pass, compositionFailures } = await prepareCompositionSources({
+        root,
+        manifest,
+        compositions: targets.map((t) => t.composition),
+        grant,
+        hooks,
+      });
+
+      // 1c. Contributed build steps of the `dependencies` phase: stage 1 made
+      // `node_modules` and every registry current, and the backend this build
+      // restarts has not started yet. See build/build-steps.
+      await runBuildSteps("dependencies", { root, log: hooks.log });
+
+      // 2b'. Write the central spec early when there is none — otherwise the
+      // gateway has no way to spawn central. Only then: an existing spec
+      // names the main tree central runs, and only main's build moves it
+      // (6c, once main's own app deployed) — a main slot mid-build is no
+      // place for a respawned central to start from. In a slot (a fresh
+      // machine's first main build), held back until the build hands the
+      // slot over: a central spawned from it boots holding it shared, which
+      // would wait behind this build's exclusive lease.
+      endSpan = buildProfilerStart(
+        "centralJson",
+        "build:codegen",
+        "central.json",
+      );
+      if (
+        !centralSpecExists &&
+        existsSync(join(centralDir, "bin", "index.ts"))
+      ) {
+        // No `composition`: central is not an app. It is a singleton API
+        // runtime with its own registry (`central.generated.ts`), which no
+        // composition filters, so there is nothing for one to select.
+        const earlyCentral = {
+          name: "central",
+          server: centralDir,
+          // Main's Bun (central runs main's code), never this checkout's.
+          command: await namedBackendCommand(
+            "central",
+            await checkoutBun(mainRoot),
+            "bin/index.ts",
+          ),
+        };
+        await slotHandover.afterHandOver(async () => {
+          await writeWorktreeSpec(earlyCentral);
+        });
+      }
+      endSpan();
+
+      // Mint THIS INVOCATION's single build_runs row for a manual terminal
+      // build: a UI/auto build's backend already minted it (uiTriggered) and
+      // stamped its own `targets` there. Deferred to here — NOT right after the
+      // build lock — on purpose: the recorder writes to a database, so the mint
+      // must land after waitForPg above, or a cold manual build would race
+      // Postgres startup. The row is closed once every target has deployed,
+      // which is what keeps the UI's "Building…" spinner honest.
+      if (!uiTriggered) {
+        const claim = await recorder.insertRun({
+          id: buildId,
+          targets: targets.map((t) => t.composition),
+          trigger: "manual",
+          // `headAtStart`, the full sha: the same one stamped into the dist as
+          // `.build-commit` and onto the receipt, so the ledger row and the
+          // pin name the same commit in the same spelling by construction —
+          // which is what lets the convergence decision compare them at all.
+          commitHash: headAtStart,
+          pid: process.pid,
+        });
+        if (claim === "lost") {
+          // "lost" now means a LIVE build holds the slot: a holder whose build
+          // already ended was settled from its run's exit marker and the claim
+          // retried inside `insertRun`.
+          softNotes.push(
+            `build-runs: a live build of ${name} holds the slot — no ledger row minted`,
+          );
+        } else if (claim === "unavailable") {
+          // No ledger to write to — either no database at all (a checkout that has
+          // never been deployed, which a composition-only build legitimately
+          // reaches), or a database whose `build_runs` table this build has not
+          // created yet (the machine's very first build). Either way it is a note,
+          // never a failure: nothing about the deploy depends on it.
+          softNotes.push(
+            `build-runs: no ledger in ${name} yet — this build is not recorded`,
+          );
+        }
+      } else if (headAtStart !== null) {
+        // The backend (or main's convergence run) minted this row with
+        // the HEAD it saw at claim time; the checkout can have moved
+        // before `headAtStart` was sampled. Put the commit this build
+        // actually reads — the one `.build-commit` will name — on its row.
+        await recorder.recordRunCommit(buildId, headAtStart);
+      }
+
+      // Stage 2 — DB migrations + manifest-level codegen + the mandatory
+      // config-override seed. Runs AFTER the DB interlude above (drizzle's
+      // generate is stateful) and BEFORE propagation below, which reads the
+      // freshly-seeded git layer. May terminate the process on a migration
+      // prompt (exit 2) — unchanged. See ./internal/app-artifacts.ts.
+      await generateAppSources({
+        root,
+        pass,
+        migration: {
+          name: opts.migrationName,
+          reset: opts.resetMigration,
+          custom: opts.customMigration,
+          answers: opts.migrationAnswers
+            ? parseMigrationAnswers(opts.migrationAnswers)
+            : undefined,
+        },
+        hooks,
+      });
+
+      // 4b'. Every generated artifact has now been re-derived from this tree's
+      //      sources, so any merge marker a rebase left behind is answered — a
+      //      build normalizes by construction rather than by marker. Consuming
+      //      them here (and never earlier: a build that dies mid-codegen must
+      //      leave the signal intact) is what keeps the
+      //      `generated-artifacts-normalized` check from firing after a build
+      //      has already done the repair.
+      clearMergeMarkers(root);
+
+      // 4b''. THE LAST WRITER TO THE REPO TREE. Every generated artifact above
+      //       is already in its final byte form (writeGenerated), so this pass
+      //       covers hand-written source, scoped to this branch's diff vs main.
+      //
+      //       The position is load-bearing, not incidental: it must run after
+      //       ALL codegen writes and before anything hashes the tree. The check
+      //       cache keys a PASS on the whole working-tree hash (see
+      //       `checks/core/read-set.ts` — "ONE changed byte anywhere re-runs all
+      //       ~62 checks") and web-artifact store keys are the plugin's own
+      //       source bytes (`web-artifacts/core/hash.ts`, fingerprinted on
+      //       `(mtimeMs, size)`). A formatter running after either would
+      //       invalidate both on the NEXT build, every build.
+      //
+      //       Runs regardless of `--skip-checks`: it is not validation.
+      endSpan = buildProfilerStart(
+        "formatSources",
+        "build:codegen",
+        "format changed sources",
+      );
+      const formatPass = await formatChangedSources({
+        root,
+        log: (l) => console.log(l),
+      });
+      if (formatPass.formatted.length > 0) {
+        console.log(`Formatted ${formatPass.formatted.length} file(s):`);
+        for (const f of formatPass.formatted) console.log(`  ${f}`);
+      }
+      endSpan();
 
       // 4b'''. Every writer to the repo tree has run. On main none of them may
       //        have changed a path git sees — ./internal/main-tree-guard.ts.
@@ -1620,11 +1707,10 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
       };
 
       // How far the fan-out got, for a verdict that has to be honest about a
-      // partial deploy. `deployedIndex` is the index of the target currently
-      // being deployed (-1 before the loop), so everything after it was never
-      // attempted.
+      // partial deploy: what published, and which targets were attempted
+      // (deployed or failed) — every other one was never attempted.
       const deployedUrls: string[] = [];
-      let deployingIndex = -1;
+      const attempted = new Set<string>();
 
       // The single fatal funnel. Every post-steps failure routes through here so
       // the build's own verdict — with the failing step last, the full step
@@ -1646,12 +1732,12 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
             `Check logs:  ${worktreeArtifacts.checkLog(name, buildId)}`,
           );
         }
-        // What a multi-target invocation owes its reader, in the same shape
-        // `hermetic-build.ts` reports it: fail-fast means everything already
-        // published stays published, and everything after the failure was never
+        // What a multi-target invocation owes its reader: everything already
+        // published stays published, and what the fan-out never reached (the
+        // first target failing stops it — ./internal/fan-out.ts) was never
         // attempted. Silent on a single-target build, where both are empty.
         const notAttempted = targets
-          .slice(deployingIndex + 1)
+          .filter((t) => !attempted.has(t.namespace))
           .map((t) => t.namespace);
         const fanOut = [
           ...(deployedUrls.length > 0
@@ -1722,67 +1808,137 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
         steps: stepRoster(),
       });
 
-      // ── The fan-out: one deploy per target, FAIL-FAST ────────────────────
+      // ── The fan-out: one deploy per target ───────────────────────────────
       //
       // Everything above this line was a function of the SOURCE TREE and ran
       // once; everything inside is a function of one (composition, checkout)
-      // pair. The first failure ends the invocation — compositions in one build
-      // share a plugin union, so a second failure is almost always the same
-      // failure re-derived at ~10 min a go, and what already published stays
-      // published (which the verdict says).
-      for (const [i, target] of targets.entries()) {
-        deployingIndex = i;
-        // Namespaces are the only thing separating N otherwise identical step
-        // blocks in the transcript.
-        if (targets.length > 1) {
-          console.log(
-            `\n── ${target.namespace} (${i + 1}/${targets.length}) ──────────────`,
+      // pair. The checkout's own app goes first (`ownTargetFirst`) and carries
+      // the tree's validation, so ITS failure ends the fan-out (nothing is
+      // deployed from a tree that failed its checks). A later target's
+      // failure is that target's: the rest still deploy, and central and the
+      // deployed-phase steps still follow the own app below — one composition
+      // failing must not leave main's central on the previous slot until the
+      // next push (the convergence loop does not retry an attempted commit).
+      // The verdict is failed if any target failed. What published stays
+      // published, and the verdict says so. See ./internal/fan-out.ts.
+      //
+      // A composition whose stage-1 registry failed is one of those failures,
+      // recorded without a deploy.
+      const preparedFailures = new Map<
+        (typeof targets)[number],
+        TargetFailure<(typeof targets)[number]>
+      >();
+      const unpreparedResidents: string[] = [];
+      for (const f of compositionFailures) {
+        const target = targets.find((t) => t.composition === f.composition);
+        const message =
+          f.error instanceof Error ? f.error.message : String(f.error);
+        if (target === undefined) {
+          // A resident registry this build did not name: no target fails,
+          // but the build does — a stale registry is tsc input.
+          unpreparedResidents.push(
+            `Composition "${f.composition}" (resident, not built here): its registry failed — ${message}`,
           );
+          continue;
         }
-        openReceipt(target.namespace);
-        const deployed = await deployNamespace({
+        attempted.add(target.namespace);
+        preparedFailures.set(target, {
           target,
-          root,
-          pass,
-          webDir,
-          buildId,
-          commit: headAtStart,
-          checkout,
-          minify: opts.minify,
-          // The red frame marks an agent-worktree deploy, and that is a fact
-          // about the CHECKOUT, not about the composition — so every namespace
-          // a worktree publishes carries it, and main's publishes none.
-          experimental: checkout.kind === "worktree",
-          background: backgroundBuild,
-          // Validation belongs to the SOURCE TREE, which every target shares,
-          // so it runs with the first target only — early enough that a broken
-          // tree fails before burning N artifact builds, and once rather than N
-          // times. Reads like a bug at a glance; it is the opposite, and it is
-          // exactly what `hermetic-build.ts` does.
-          companions: i === 0 ? companions : [],
-          // The build's ONE grant, held across every target.
-          grant,
-          restart: opts.restart,
-          onSteps,
-          hooks,
+          failedLabels: [`${target.namespace} registry`],
+          reason: [
+            `NOT DEPLOYED: ${namespaceUrl(target.namespace, "", gatewayPortSync())} — its composition registry failed: ${message}`,
+          ],
         });
-        if (!deployed.ok) {
-          return await failBuild(deployed.reason, deployed.failedLabels);
-        }
-        softNotes.push(...deployed.notes);
-        // This namespace IS deployed. Its receipt is stamped terminal NOW rather
-        // than at finalizeBuild, so a later target's failure — or a kill — can
-        // never rewrite a published namespace's receipt as `failed`.
-        closeReceipt(target.namespace, "ok", 0);
-        deployedUrls.push(
-          namespaceUrl(target.namespace, "", gatewayPortSync()),
-        );
       }
+      const fanned = await deployEachTarget(
+        targets,
+        async (target, { index: i, first }) => {
+          attempted.add(target.namespace);
+          // Namespaces are the only thing separating N otherwise identical step
+          // blocks in the transcript.
+          if (targets.length > 1) {
+            console.log(
+              `\n── ${target.namespace} (${i + 1}/${targets.length}) ──────────────`,
+            );
+          }
+          openReceipt(target.namespace);
+          const deployed = await deployNamespace({
+            target,
+            root,
+            pass,
+            webDir,
+            buildId,
+            commit: headAtStart,
+            checkout,
+            minify: opts.minify,
+            // The red frame marks an agent-worktree deploy, and that is a fact
+            // about the CHECKOUT, not about the composition — so every namespace
+            // a worktree publishes carries it, and main's publishes none.
+            experimental: checkout.kind === "worktree",
+            background: backgroundBuild,
+            // Validation belongs to the SOURCE TREE, which every target shares,
+            // so it runs with the first target ATTEMPTED only (not index 0: a
+            // target whose registry failed in stage 1 is skipped, and the next
+            // one carries it) — early enough that a broken tree fails before
+            // burning N artifact builds, and once rather than N times. Reads
+            // like a bug at a glance; it is the opposite, and it is exactly
+            // what `hermetic-build.ts` does.
+            companions: first ? companions : [],
+            // The build's ONE grant, held across every target.
+            grant,
+            restart: opts.restart,
+            handOver,
+            onSteps,
+            hooks,
+          });
+          // A failed target's receipt stays open: `failBuild` stamps it with
+          // the build's own terminal status (failed, or superseded).
+          if (!deployed.ok) return deployed;
+          softNotes.push(...deployed.notes);
+          // This namespace IS deployed. Its receipt is stamped terminal NOW rather
+          // than at finalizeBuild, so a later target's failure — or a kill — can
+          // never rewrite a published namespace's receipt as `failed`.
+          closeReceipt(target.namespace, "ok", 0);
+          deployedUrls.push(
+            namespaceUrl(target.namespace, "", gatewayPortSync()),
+          );
+          // This app (main's own, or a composition built with it) deployed
+          // healthy from a slot: the slot holds the newest code deployed for
+          // it, so its `current/<namespace>` link moves here — whether the
+          // backend restarted onto the slot or ADOPTED the deploy from its
+          // previous slot (`kept`: identical backend code, so its spec keeps
+          // naming the slot it runs from). Everything that reads the link
+          // wants the new code: the gateway's next convergence run starts
+          // here, main's gateway is built from here, agents' guard hooks run
+          // from here — a gateway-, guard- or CLI-only change is deployed by
+          // exactly this. The previous slot stays protected while the spec
+          // still names it (`slotStates`: serving). Per target — a later
+          // target failing leaves this one served; never on a failed deploy
+          // (returned above), leaving the link on the slot still serving.
+          // Handed over first: from here code runs from the slot (a guard
+          // hook, the gateway build), and they take it shared.
+          if (
+            checkout.kind === "main" &&
+            opts.restart &&
+            (await isMainSlotCheckout(root))
+          ) {
+            await handOver();
+            await serveSlot(root, target.namespace, {
+              drainReportAfterMs: readDrainReportAfterMs(root),
+            });
+            console.log(
+              `${target.namespace} is served from ${root} now (current/${target.namespace} → this slot${deployed.served === "kept" ? "; its backend adopted the deploy and runs from its previous slot" : ""}).`,
+            );
+          }
+          return { ok: true };
+        },
+        preparedFailures,
+      );
+      const ownTarget = fanned.deployed.find((t) => t.isMainComposition);
 
       // 6b. Contributed build steps of the `deployed` phase, once the
-      // checkout's own app is live (a build deploying only other compositions
-      // skips them). See build/build-steps.
-      const ownTarget = targets.find((t) => t.isMainComposition);
+      // checkout's own app is live (a build deploying only other compositions,
+      // or whose own app failed, skips them). See build/build-steps.
       if (ownTarget !== undefined) {
         await runBuildSteps("deployed", {
           root,
@@ -1791,8 +1947,12 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
         });
       }
 
-      // 6c. Re-register the `central` worktree spec for idempotency. Path is
-      // always main's central-core/ — see comment at the early write above.
+      // 6c. Register the `central` worktree spec: main's own build (the one
+      // that deployed main's app) points it at the tree it just deployed (its
+      // slot); any other build writes it only when there is none (the early
+      // write above) — never moving central off the tree main serves. A
+      // composition-only build of main's (converge builds those in slots
+      // too) leaves central alone: its slot is not the one main serves.
       //
       // Invocation-scoped, so it sits OUTSIDE the loop: central is a singleton
       // API runtime shared by every namespace, and restarting it once per
@@ -1802,7 +1962,11 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
       // talking to a new central for the whole ~10-minute heavy section. Here
       // the only cost is that the backends just restarted above reconnect once
       // — which the networking primitive does on its own.
-      if (existsSync(join(centralDir, "bin", "index.ts"))) {
+      const movesCentral = checkout.kind === "main" && ownTarget !== undefined;
+      if (
+        (movesCentral || !centralSpecExists) &&
+        existsSync(join(centralDir, "bin", "index.ts"))
+      ) {
         // No `composition` — see the early central write above.
         // Main's Bun (central runs main's code), never this checkout's.
         const centralCommand = await namedBackendCommand(
@@ -1810,22 +1974,30 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
           await checkoutBun(mainRoot),
           "bin/index.ts",
         );
-        await writeWorktreeSpec({
+        const centralSpec = {
           name: "central",
           server: centralDir,
           command: centralCommand,
-        });
+        };
+        const previousCentral = await readWorktreeSpec("central");
+        const centralSwitching =
+          previousCentral.kind === "spec" &&
+          (await comparablePath(previousCentral.spec.server)) !==
+            (await comparablePath(centralDir));
 
         // 6d. Restart central so it picks up freshly-merged main code. Only
-        // done when building from main — agent worktrees never change central's
+        // done when building main — agent worktrees never change central's
         // running code (central always runs main's central-core/), so restarting on
         // every worktree build would needlessly drop every open WS connection.
         //
         // Central is asked first whether it already runs this tree's code
-        // (build/restart-skip); most main deploys change nothing central
-        // loads, and a restart drops every worktree's central socket.
+        // (build/restart-skip) — BEFORE its spec moves: most main deploys
+        // change nothing central loads, and a restart drops every worktree's
+        // central socket. Adopted from another checkout (main's previous
+        // slot, holding the same code byte for byte), central's spec keeps
+        // naming that one, so a respawn boots the code that runs.
         let centralAdoption: AdoptVerdict | null = null;
-        if (root === mainRoot) {
+        if (movesCentral) {
           endSpan = buildProfilerStart(
             "adoptCentral",
             "build:deploy",
@@ -1842,6 +2014,20 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
             commit: headAtStart,
           });
           endSpan();
+        }
+        if (centralAdoption?.kind === "adopted" && centralSwitching) {
+          console.log(
+            `Central kept: it runs code identical to this tree's (no restart); its spec keeps naming ${previousCentral.kind === "spec" ? previousCentral.spec.server : "?"}.`,
+          );
+        } else {
+          // Central (re)spawned from this tree boots holding it shared: hand
+          // the slot over first (see `handOver`).
+          await handOver();
+          await writeWorktreeSpec(centralSpec);
+          // Central's spec was the last thing naming the slot main left: it
+          // serves no app now, and starts draining.
+          if (movesCentral && (await isMainSlotCheckout(root)))
+            await stampUnservedSlots(readDrainReportAfterMs(root));
         }
         if (centralAdoption?.kind === "adopted") {
           console.log(
@@ -1873,6 +2059,26 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
           }
           endSpan();
         }
+      }
+
+      // Any target that did not deploy fails the build — after central and
+      // the deployed-phase steps above, so main's own app that DID deploy is
+      // complete. Every failure's reasons, in target order.
+      if (fanned.failed.length > 0 || unpreparedResidents.length > 0) {
+        return await failBuild(
+          [
+            ...fanned.failed.flatMap((f) =>
+              fanned.failed.length + unpreparedResidents.length > 1
+                ? [`── ${f.target.namespace}:`, ...f.reason]
+                : f.reason,
+            ),
+            ...unpreparedResidents,
+          ],
+          [
+            ...fanned.failed.flatMap((f) => f.failedLabels),
+            ...(unpreparedResidents.length > 0 ? ["composition registry"] : []),
+          ],
+        );
       }
 
       // A build that PASSED across a mid-run tree swap still deployed artifacts
@@ -1908,3 +2114,13 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
 };
 
 export default run;
+
+/** `path` resolved (a missing one as itself), for comparing two checkouts' dirs. */
+async function comparablePath(path: string): Promise<string> {
+  try {
+    return await realpath(path);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return resolve(path);
+    throw err;
+  }
+}

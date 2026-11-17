@@ -23,7 +23,9 @@ main — and when it is not, make it so. Two halves over one comparison
    gateway) and `compareGatewayLaunch` compares (a login service `start`
    registered, not a release, this data root).
 3. `prepareMainGateway` builds main's `gateway-binary` (`ensureDep`; a hash
-   when unchanged); compared again, plus the whole rendered job
+   when unchanged) from the Go source of the slot main serves — the commit
+   just deployed, held shared while read (`withServedMainRoot`), never the
+   repo root a push may be rewriting; compared again, plus the whole rendered job
    (`isCurrent` — the environment, which this run inherits from the gateway's
    declared one) — current is a no-op.
 4. The launch key (a hash of the build, argv, cwd and the environment's
@@ -83,7 +85,7 @@ whichever checkout runs it — derived exactly as `start` derives it
 
 | | installed | expected |
 |---|---|---|
-| binary | the definition's argv[0] | `builtFile` of main's `gateway-binary` (`readyNow`, main's root); not built yet ⇒ older |
+| binary | the definition's argv[0] | `builtFile` of main's `gateway-binary` (`readyNow` over the code main serves — its slot, `infra/git/main-slots`' `servedMainRoot`; the repo root before any slot exists); not built yet ⇒ older |
 | flags | the definition's argv[1..] | `gatewayLaunchFlags(...)`, `-log-level` taken from the installed argv (a `start` flag) |
 | cwd | the definition's `WorkingDirectory` | main's checkout |
 | signature | `gatewaySignature(argv[0])` (`launcher/deps`; reads the identity, never mints one) | signed as `GATEWAY_CODESIGN_IDENTIFIER` by this machine's identity |

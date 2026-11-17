@@ -90,16 +90,21 @@ opens, each side closes the other. No host to reach → one `error` event and a
 
 `ensureHost()` (`machine/internal/host-client.ts`): refused in a release;
 Chromium via `readyNow` (not installed → `requestDep` and an error saying it is
-installing); `defineDaemon(...).launchDetached` `bun bin/host.ts --launched-by
-<namespace>`; waits on the status file (`defineFileWatcher`). A running host
-with this checkout's `codeId` (hash of `bin/` + `shared/` + `core/`) and
-protocol is used. Otherwise **main**, or the namespace that launched it (a
+installing); the host bundled (`infra/spawn/daemon/bundle`: `cache/browser-engine-bundles/<hash>.bundle`,
+Playwright external, Chromium sealed) and `defineDaemon(...).launchDetached`
+`bun <bundle>/…/bin/host.js --launched-by <namespace> --code-id <id>` holding
+the bundle for life — never from the checkout (main's is a slot a later build
+rewrites); waits on the status file (`defineFileWatcher`). A running host
+with this checkout's `codeId` (hash of `bin/` + `shared/` + `core/`, computed
+by the backend and passed in — a bundle has no source) and protocol is used:
+a push that does not touch the engine keeps every tab, even when the bundle
+would differ. Otherwise **main**, or the namespace that launched it (a
 worktree iterating on the engine), replaces it (`/shutdown`, then relaunch —
 open tabs reload into fresh pages); any other backend uses a same-protocol
 host and refuses another protocol.
 
 Files: `services/browser-engine/` (`data-dirs`) — `host.sock`, `host.pid`,
-`host.lock`, `status.json`; `cache/browser-engine-uploads/` — uploaded files.
+`host.lock`, `status.json`; `cache/browser-engine-bundles/` — the host's code; `cache/browser-engine-uploads/` — uploaded files.
 
 ## Not yet
 

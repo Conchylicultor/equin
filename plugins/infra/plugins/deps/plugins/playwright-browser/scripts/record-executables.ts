@@ -17,8 +17,10 @@ if (!coreBundle || !out || !playwrightCore) {
     "usage: record-executables.ts <playwright-core coreBundle> <out.json> <playwright-core version>",
   );
 }
+// Required from its own path (absolute): no base from this file's location,
+// which a self-contained bundle carrying this script would move.
 const registry = (
-  createRequire(import.meta.url)(coreBundle) as {
+  createRequire(coreBundle)(coreBundle) as {
     registry: {
       registry: {
         findExecutable(name: string): { executablePath(): string };

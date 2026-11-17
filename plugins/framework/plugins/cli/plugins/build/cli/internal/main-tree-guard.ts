@@ -15,19 +15,22 @@
 // 25df26786e, made main's docgen list config_v2 as a `--shadow` user and
 // blocked the fleet.
 //
+// Main now builds in a slot (`infra/git/main-slots`) — a linked worktree checked
+// out at one commit, which no push writes into — so here the guard is a
+// DETERMINISM check: a build of a commit must not change what that commit
+// holds. The same reasoning applies; only the slot, not every pusher, pays.
+//
 // So a main build snapshots the tree before its first writer and compares after
 // its last one (the formatter). A difference FAILS the build, naming every path
-// and every untracked suspect — and restores every tracked path this build
-// dirtied, so the failure stays this build's and never becomes every pusher's.
-// Restorable means: clean before this build (it matched HEAD when the build
-// started, so no one's edit can be lost) and present in HEAD (a modified or
-// deleted tracked file, which `git checkout HEAD --` puts back). Whether the file
-// is generated does not matter: 2026-11-04 a main build raced a push's
-// fast-forward, codegen read a mixed tree, and seedAuthoredOverrides rewrote 135
-// hand-authored `config/` overrides — restoring only `merge=regen-*` paths left
-// them dirty and failed every later main build. Paths dirty before the build are
-// reported and left alone; untracked files are never removed: they are the
-// evidence.
+// it wrote and every untracked suspect. Nothing is restored: the slot is never
+// served (the guard runs before the deploy), and the next build that takes it
+// runs `git checkout --force` there, which resets every tracked path. (It used
+// to restore every path the build dirtied, when main built in the checkout
+// `./equin push` fast-forwards: a dirty file there failed every later main
+// build and aborted every push's merge — 2026-11-04 a build raced a push's
+// fast-forward and seedAuthoredOverrides rewrote 135 hand-authored `config/`
+// overrides; 2026-11-16 a crashed build's half-written docs failed the next.)
+// Untracked files are evidence, reported, never removed.
 //
 // A snapshot pair rather than a write-mode switch on every generator: one check
 // after all writers catches every one of them, including ones not written yet.
@@ -136,124 +139,37 @@ export async function snapshotTree(root: string): Promise<TreeSnapshot> {
   return snapshot;
 }
 
-/** Why a written path was left as it is rather than restored to HEAD. */
-export type KeptReason =
-  /** Dirty before this build: restoring could lose someone's edit. */
-  | "dirty-before"
-  /** No HEAD version to return to (untracked, added, renamed or copied to), or unmerged. */
-  | "not-restorable";
-
-export interface RestorePlan {
-  /** Clean before the build and present in HEAD: `git checkout HEAD --` them. */
-  restore: TreeDrift["written"];
-  kept: Array<TreeDrift["written"][number] & { reason: KeptReason }>;
-}
-
 /**
- * Porcelain codes of a path that exists in HEAD and differs from it only by
- * modification, deletion or type change, in the index or the worktree — what
- * `git checkout HEAD -- <path>` returns to HEAD's bytes, index included.
- * Anything else (`??`, `A`, `R`, `C`, unmerged) names a path HEAD lacks or a
- * merge in progress.
+ * Compare main's tree against `before`. Returns `null` when the build wrote
+ * nothing git sees, else the full account to print. Never exits: the guard
+ * fails the build on a non-null account (assertMainTreeUntouched).
  */
-const RESTORABLE_SIDE = new Set([" ", "M", "D", "T"]);
-function inHeadAndRestorable(status: string): boolean {
-  return (
-    status !== "  " &&
-    RESTORABLE_SIDE.has(status[0]!) &&
-    RESTORABLE_SIDE.has(status[1]!)
-  );
-}
-
-/**
- * Split the build's writes into what to restore to HEAD and what to leave: a
- * pure function of the snapshot diff. Every path clean before the build that
- * HEAD holds is restored, generated or hand-authored alike.
- */
-export function planRestore(written: TreeDrift["written"]): RestorePlan {
-  const plan: RestorePlan = { restore: [], kept: [] };
-  for (const w of written) {
-    if (!w.wasClean) plan.kept.push({ ...w, reason: "dirty-before" });
-    else if (!inHeadAndRestorable(w.status))
-      plan.kept.push({ ...w, reason: "not-restorable" });
-    else plan.restore.push(w);
-  }
-  return plan;
-}
-
-/**
- * Compare main's tree against `before` and restore every restorable write
- * (planRestore; see the file comment). Returns `null` when the build wrote
- * nothing git sees, else the full account to print. Never exits: the success
- * path fails the build on a non-null account (assertMainTreeUntouched), and the
- * crash path prints it and rethrows — a build that throws between its first
- * writer and the guard must still put main back, or its half-written files are
- * "dirty before" to the NEXT build, which then refuses to restore them and
- * fails too (2026-11-16: build-1794818863-qp2oev crashed on a tree a push
- * fast-forwarded mid-codegen, and build-1794818895-qrn55q failed on its
- * leftovers).
- */
-export async function restoreMainTreeWrites(
+export async function describeMainTreeWrites(
   root: string,
   before: TreeSnapshot,
 ): Promise<string[] | null> {
   const drift = diffSnapshots(before, await snapshotTree(root));
   if (drift.written.length === 0) return null;
 
-  const { restore, kept } = planRestore(drift.written);
-  if (restore.length > 0) {
-    await git(root, ["checkout", "HEAD", "--", ...restore.map((w) => w.path)]);
-    // The restore is the guarantee this guard exists for: prove it held.
-    const after = await snapshotTree(root);
-    const stillDirty = restore.filter((w) => after.has(w.path));
-    if (stillDirty.length > 0) {
-      throw new Error(
-        `main-tree guard: git checkout HEAD left ${stillDirty.length} path(s) dirty: ` +
-          stillDirty.map((w) => w.path).join(", "),
-      );
-    }
-  }
-
   const lines = [
-    "ERROR: this build changed files git tracks on main.",
+    "ERROR: this build changed files git tracks in the commit it built.",
     "",
-    "Main's checkout is read-only to its own build: every generated file here was",
-    "checked in sync by the push that landed it, so a difference means this checkout",
-    "read an input no pushing worktree had — usually a stray untracked file left by an",
-    "older build, or one a later .gitignore change stopped ignoring — or the tree moved",
-    "under the build (a push fast-forwarding main mid-build). Left in place, the",
-    "change would make every push's merge into main abort.",
+    "A main build is a function of its commit: every generated file in it was",
+    "checked in sync by the push that landed it, so a difference means the build",
+    "read an input that commit does not hold — usually a stray untracked file —",
+    "or is not deterministic. Not deployed; the slot's next build resets it",
+    "(`git checkout --force`).",
+    "",
+    "Written by this build:",
   ];
-  if (restore.length > 0) {
+  for (const w of drift.written)
     lines.push(
-      "",
-      "Written by this build, restored to HEAD (clean before the build):",
+      `  ${w.status} ${w.path}${w.wasClean ? "" : " (already dirty before the build)"}`,
     );
-    for (const w of restore) lines.push(`  ${w.status} ${w.path}`);
-  }
-  const dirtyBefore = kept.filter((w) => w.reason === "dirty-before");
-  if (dirtyBefore.length > 0) {
-    lines.push(
-      "",
-      "Written by this build, NOT restored (already modified before the build —",
-      "restoring could lose someone's edit):",
-    );
-    for (const w of dirtyBefore) lines.push(`  ${w.status} ${w.path}`);
-  }
-  const notRestorable = kept.filter((w) => w.reason === "not-restorable");
-  if (notRestorable.length > 0) {
-    lines.push(
-      "",
-      "Written by this build, NOT restored (no HEAD version to return to — new,",
-      "added or renamed — or unmerged; kept as evidence):",
-    );
-    for (const w of notRestorable) lines.push(`  ${w.status} ${w.path}`);
-  }
   if (drift.untracked.length > 0) {
     lines.push(
       "",
-      "Untracked, not-ignored files in main's checkout — the likely stray input",
-      "(not removed; delete or ignore the one that does not belong):",
+      "Untracked, not-ignored files in the checkout — the likely stray input:",
     );
     for (const p of drift.untracked) lines.push(`  ${p}`);
   }
@@ -261,47 +177,17 @@ export async function restoreMainTreeWrites(
 }
 
 /**
- * The success-path guard, after the build's last writer: restore what can be
- * (restoreMainTreeWrites), print the full account and exit 1 when the build
- * wrote anything git sees — the build's exit hooks close its receipt and ledger
- * row as failed, and the backend keeps serving the previous deploy.
+ * The guard, after the build's last writer: print the full account
+ * (describeMainTreeWrites) and exit 1 when the build wrote anything git sees —
+ * the build's exit hooks close its receipt and ledger row as failed, and the
+ * backend keeps serving the previous deploy.
  */
 export async function assertMainTreeUntouched(
   root: string,
   before: TreeSnapshot,
 ): Promise<void> {
-  const account = await restoreMainTreeWrites(root, before);
+  const account = await describeMainTreeWrites(root, before);
   if (account === null) return;
   console.error(account.join("\n"));
   process.exit(1);
-}
-
-/**
- * Run the build's repo-tree writers; if they THROW, restore what they wrote on
- * main (restoreMainTreeWrites), print the account, and rethrow the original
- * error — so a crashed build's verdict stays its own and main's checkout is
- * left as HEAD has it for the next build. `before === null` (not main) runs
- * `writers` unwrapped.
- */
-export async function restoringMainTreeOnThrow<T>(
-  root: string,
-  before: TreeSnapshot | null,
-  writers: () => Promise<T>,
-): Promise<T> {
-  if (before === null) return await writers();
-  try {
-    return await writers();
-  } catch (err) {
-    const account = await restoreMainTreeWrites(root, before).catch(
-      (restoreErr: unknown) => {
-        // Both failures are the story; neither may hide the other.
-        throw new AggregateError(
-          [err, restoreErr],
-          "build crashed, and restoring main's tree after it failed too",
-        );
-      },
-    );
-    if (account !== null) console.error(account.join("\n"));
-    throw err;
-  }
 }

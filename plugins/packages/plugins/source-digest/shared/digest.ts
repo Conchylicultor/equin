@@ -584,6 +584,21 @@ export async function sourceDigest(
 }
 
 /**
+ * The digest of the closure of `entries` (absolute module paths) as the disk
+ * holds it NOW — never memoized, unlike {@link sourceDigest} (which names the
+ * code this process loaded, read once). For comparing two trees' code at the
+ * moment of asking: restart-skip's "does that checkout hold exactly the code
+ * this one runs?" across main's slots. Equal for equal code wherever the
+ * checkout lives (repo files by path relative to the closure, packages by
+ * `name@version`); throws when the walk cannot follow the code (fails closed).
+ */
+export async function closureDigestNow(
+  entries: readonly string[],
+): Promise<string> {
+  return computeDigest([...entries].sort());
+}
+
+/**
  * The repo files a digest whose set includes `entries` (absolute module
  * paths) covers, sorted — the same walk {@link sourceDigest} reads, so what
  * moves such a digest is exactly an edit to one of these (or a package

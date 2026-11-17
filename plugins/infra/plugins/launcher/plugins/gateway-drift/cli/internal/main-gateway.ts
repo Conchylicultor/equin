@@ -1,6 +1,7 @@
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { getMainRepoRoot } from "@plugins/infra/plugins/spawn/core";
+import { withServedMainRoot } from "@plugins/infra/plugins/git/plugins/main-slots/core";
 import {
   ensureDep,
   holdDep,
@@ -54,13 +55,22 @@ export async function prepareMainGateway(opts: {
   app: MacosAppHost;
   log: (line: string) => void;
 }): Promise<PreparedGateway> {
-  // The machine's gateway is MAIN's: built from the main checkout's Go source
-  // whichever checkout asks.
+  // The machine's gateway is MAIN's: built from the Go source of the code
+  // main SERVES (its slot, `infra/git/main-slots` — the commit just
+  // deployed; the repo's checkout before any slot exists), held while it is
+  // read, whichever checkout asks — never from the repo root a push may be
+  // rewriting. The launch still names the repo's checkout (`-main-checkout`:
+  // the git store whose refs/heads/main the gateway watches).
   const repoRoot = await getMainRepoRoot();
-  const gateway = await ensureDep(gatewayBinary, cliExecContext(), {
-    root: repoRoot,
-    log: opts.log,
-  });
+  const gateway = await withServedMainRoot(
+    "exec-child",
+    "gateway-build",
+    (source) =>
+      ensureDep(gatewayBinary, cliExecContext(), {
+        root: source,
+        log: opts.log,
+      }),
+  );
   opts.log(`Gateway binary: ${gateway.dir} (${gateway.identity})`);
   return {
     gateway,

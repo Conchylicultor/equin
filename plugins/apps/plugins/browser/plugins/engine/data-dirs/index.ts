@@ -17,6 +17,23 @@ export const browserEngineDir = defineDataDir({
 });
 
 /**
+ * The browser-engine host's code: self-contained bundles of `bin/host.ts`
+ * (`infra/spawn/daemon/bundle`), one `<hash>.bundle` per distinct content,
+ * which the host runs from instead of a checkout. The launching backend makes
+ * one when none matches and deletes the ones no host holds.
+ */
+export const browserEngineBundlesDir = defineDataDir({
+  kind: "cache",
+  name: "browser-engine-bundles",
+  owner: "apps/browser/engine",
+  description:
+    "Self-contained bundles of the Browser app engine host's code (one per distinct content), which the host runs from instead of a checkout",
+  // A running host runs from one (its in-use lock held); the next launch
+  // makes it again, and reclaims every bundle no host holds.
+  reclaim: { kind: "restart" },
+});
+
+/**
  * The engine's Chromium as launched on macOS: a copy of the installed headed
  * app bundle flagged background-only (`bin/background-app.ts`), one per
  * installed Chromium build. Derived from the install, so rebuilt on demand.

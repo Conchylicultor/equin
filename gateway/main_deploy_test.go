@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -81,7 +82,7 @@ func testDeployer(t *testing.T, script string) (*mainDeployer, string, string, *
 	t.Helper()
 	checkout := fakeCheckout(t, "aaaa")
 	logDir, outbox := t.TempDir(), t.TempDir()
-	d, err := newMainDeployer(checkout, ChildEnv{}, logDir, outbox)
+	d, err := newMainDeployer(checkout, "", ChildEnv{}, logDir, outbox)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -236,7 +237,7 @@ func TestNewMainDeployerRefusesALinkedWorktree(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, ".git"), []byte("gitdir: /x\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := newMainDeployer(dir, ChildEnv{}, t.TempDir(), t.TempDir()); err == nil || !strings.Contains(err.Error(), "linked worktree") {
+	if _, err := newMainDeployer(dir, "", ChildEnv{}, t.TempDir(), t.TempDir()); err == nil || !strings.Contains(err.Error(), "linked worktree") {
 		t.Fatalf("err: %v", err)
 	}
 }
@@ -249,4 +250,98 @@ func shRun(script, logPath string) (*child, error) {
 		Stdout: outputTo{Path: logPath},
 		Stderr: outputTo{Path: logPath},
 	})
+}
+
+// recordingSpawner records the spec of each run it is asked to start, and
+// starts nothing.
+type recordingSpawner struct{ specs []spawnSpec }
+
+func (r *recordingSpawner) spawn(s spawnSpec) (*child, error) {
+	r.specs = append(r.specs, s)
+	return nil, errors.New("recorded, not started")
+}
+
+// A run starts in the slot main's `current/<main namespace>` link names,
+// resolved before EACH run — a build that re-points it moves the next run —
+// and in the checkout while there is no such link (no pool yet, or only the
+// pre-v2 single `current` link, which the next build migrates), or it links
+// to a slot gone from disk.
+func TestMainDeployRunsFromTheCurrentSlot(t *testing.T) {
+	checkout := fakeCheckout(t, "aaaa")
+	pool := t.TempDir()
+	current := filepath.Join(pool, "current", mainNamespace)
+	d, err := newMainDeployer(checkout, current, ChildEnv{}, t.TempDir(), t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec := &recordingSpawner{}
+	d.spawner = rec
+	run := func() spawnSpec {
+		t.Helper()
+		n := len(rec.specs)
+		if _, err := d.spawn(filepath.Join(t.TempDir(), "main.log"), nil); err == nil {
+			t.Fatal("the recording spawner started something")
+		}
+		if len(rec.specs) != n+1 {
+			t.Fatalf("spawn did not reach the spawner (err: %v)", err)
+		}
+		return rec.specs[n]
+	}
+	expect := func(s spawnSpec, dir string) {
+		t.Helper()
+		if s.Dir != dir || s.Argv[0] != filepath.Join(dir, "equin") {
+			t.Fatalf("ran %v in %s, want %s/equin in %s", s.Argv, s.Dir, dir, dir)
+		}
+	}
+	mkSlot := func(name string) string {
+		t.Helper()
+		dir := filepath.Join(pool, name)
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		real, err := filepath.EvalSymlinks(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return real
+	}
+	point := func(slot string) {
+		t.Helper()
+		if err := os.MkdirAll(filepath.Dir(current), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		tmp := current + ".tmp"
+		if err := os.Symlink(slot, tmp); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Rename(tmp, current); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	expect(run(), checkout) // no slot yet
+	a, b := mkSlot("slot-1"), mkSlot("slot-2")
+	// The pre-v2 single link: `current` itself names a slot, so
+	// current/<main namespace> resolves into the slot and finds nothing there.
+	if err := os.Symlink(a, filepath.Dir(current)); err != nil {
+		t.Fatal(err)
+	}
+	expect(run(), checkout)
+	if err := os.Remove(filepath.Dir(current)); err != nil {
+		t.Fatal(err)
+	}
+	point(a)
+	expect(run(), a)
+	point(b)
+	expect(run(), b) // re-resolved, not remembered
+	if err := os.RemoveAll(b); err != nil {
+		t.Fatal(err)
+	}
+	expect(run(), checkout) // a link to a slot gone from disk
+}
+
+func TestConvergeDirWithNoPoolIsTheCheckout(t *testing.T) {
+	if dir, err := convergeDir("/repo", ""); err != nil || dir != "/repo" {
+		t.Fatalf("dir %q err %v", dir, err)
+	}
 }

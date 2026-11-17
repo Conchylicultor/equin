@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { REPO_ROOT, repoRootOf } from "./repo-root";
+import { bundledScriptName, REPO_ROOT, repoRootOf } from "./repo-root";
 
 describe("repoRootOf", () => {
   test("strips the module's own repo-relative dir", () => {
@@ -37,4 +37,31 @@ test("REPO_ROOT is this checkout", () => {
       ),
     ),
   ).toBe(true);
+});
+
+describe("a self-contained bundle", () => {
+  test("its entry at the bundle's root answers the bundle dir", () => {
+    expect(repoRootOf("/data/bundles/ab12.bundle", "lib/x/core")).toBe(
+      "/data/bundles/ab12.bundle",
+    );
+  });
+
+  test("a script at its repo-relative path inside answers the bundle dir", () => {
+    expect(
+      repoRootOf("/data/bundles/ab12.bundle/lib/p/scripts", "lib/x/core"),
+    ).toBe("/data/bundles/ab12.bundle");
+  });
+
+  test("a checkout is still found by its own dir first", () => {
+    expect(repoRootOf("/home/x.bundle/repo/lib/x/core", "lib/x/core")).toBe(
+      "/home/x.bundle/repo",
+    );
+  });
+});
+
+test("bundledScriptName: a TypeScript script becomes its .js, anything else keeps its name", () => {
+  expect(bundledScriptName("lib/p/scripts/a.ts")).toBe("lib/p/scripts/a.js");
+  expect(bundledScriptName("lib/p/bin/background-shell")).toBe(
+    "lib/p/bin/background-shell",
+  );
 });

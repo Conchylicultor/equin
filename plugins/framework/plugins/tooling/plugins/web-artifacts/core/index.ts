@@ -7,10 +7,7 @@ export {
   isBareSpecifier,
   isBrowserUnreachableDynamic,
   isInlinedPackage,
-  isWorkerChunkPath,
-  isWorkerTreePath,
   packageNameOf,
-  WORKER_ASSETS_DIR,
 } from "./constants";
 export { COMPOSITION_SPECIFIERS } from "./composition-modules";
 export { makeArtifactExternal } from "./externals";

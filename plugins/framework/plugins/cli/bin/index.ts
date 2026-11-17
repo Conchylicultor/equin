@@ -16,6 +16,9 @@ import {
   DataRootSplitError,
   declareDataRootLayoutSync,
 } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
+import { holdSlotLeaseSync } from "@plugins/infra/plugins/git/plugins/main-slots/plugins/boot-lease/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
+import { realpathSync } from "@plugins/packages/plugins/timed-fs/core";
 
 /**
  * `./equin`'s entrypoint — and deliberately NOT the CLI. Four ordered
@@ -87,6 +90,34 @@ import {
 // `detachable` and the mapper disarms it once argv is parsed — see
 // `./orphan-guard.ts`.
 installOrphanGuard(() => process.exit(ORPHAN_EXIT_CODE));
+
+// A `./equin` running from one of main's SLOTS (infra/git/main-slots) — a
+// supervised child of main's backend, main's convergence run — holds the
+// slot shared for its whole life, so no build checks the slot out while this
+// process may still load code from it (its command, its lazy imports, the
+// workers and scripts it starts). Taken before anything below loads more of
+// the slot; dropped by the kernel when the process ends. Not in a slot handed
+// to a build (`EQUIN_BUILD_SLOT`): that build takes the slot's exclusive lease
+// itself, and its descendants are covered by it. A no-op anywhere else.
+// The hold is labelled with what this process is, for the slow-drain report
+// (main-slots' `main-slot-drain-slow`): argv read as a LABEL only, never to
+// decide what runs. A `./equin build` here was handed no slot, so it relays
+// into one and waits for it (main's convergence run, a relayed build) —
+// holding this slot past the switch it causes by design (`build-relay`).
+const handedSlot = readEnv("BUILD_SLOT");
+if (
+  handedSlot === undefined ||
+  realpathSync(handedSlot) !== realpathSync(REPO_ROOT)
+) {
+  const [verb, job] = process.argv.slice(2);
+  holdSlotLeaseSync(
+    REPO_ROOT,
+    verb === "build" ? "build-relay" : "exec-child",
+    verb === "supervised-exec" && job !== undefined
+      ? job
+      : (verb ?? "(no verb)"),
+  );
+}
 
 // The CLI is the root of its process tree: decide the data root from the disk
 // before anything reads a path. `./equin` has already put the same answer in

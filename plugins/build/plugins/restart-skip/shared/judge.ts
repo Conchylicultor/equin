@@ -1,6 +1,7 @@
-import { isAbsolute, join, sep } from "node:path";
+import { isAbsolute, join, relative, sep } from "node:path";
 import {
   readdir,
+  readFile,
   realpath,
   stat,
 } from "@plugins/packages/plugins/timed-fs/core";
@@ -16,6 +17,8 @@ import type { AdoptRequest, AdoptVerdict, ChildIncarnation } from "../core";
 export interface ProcessView {
   /** When the process started (ms since the epoch): nothing it loaded predates its start. */
   startedAtMs: number;
+  /** The checkout it runs from (its `REPO_ROOT`). */
+  root: string;
   /** The Bun binary it runs on. */
   bin: string;
   /** The serving entry it was spawned with. */
@@ -39,6 +42,12 @@ export interface ProcessView {
     entries: readonly string[],
     sinceMs: number,
   ) => Promise<ClosureSince>;
+  /**
+   * source-digest's `closureDigestNow`: the digest of a closure's code as the
+   * disk holds it now (repo files by relative path and bytes) — what tells
+   * two checkouts' code apart, handed in like `closureSince`.
+   */
+  digestNow: (entries: readonly string[]) => Promise<string>;
 }
 
 const NODE_MODULES = `${sep}node_modules${sep}`;
@@ -71,6 +80,18 @@ const NODE_MODULES = `${sep}node_modules${sep}`;
  *    process — the restart would respawn it from the new tree): its binary
  *    and the closure of its module entries untouched since IT was spawned. A
  *    child whose code cannot be pointed at refuses.
+ *
+ * The deploy may spawn from ANOTHER checkout — main's slots
+ * (infra/git/main-slots): each build is a checkout of its own, the running
+ * backend runs the previous one's. Then 1–5 still judge this process against
+ * its own checkout (nothing it runs changed since it started), and
+ * {@link sameCodeElsewhere} adds that the other checkout holds the same code,
+ * byte for byte, at the same paths relative to it: the entry's closure (and
+ * every child's), the runtime's resolution inputs, the boot inputs. Then a
+ * process spawned there runs exactly this one's code, and adopting is sound;
+ * the deploy then keeps the spec naming this checkout. Bytes, not change
+ * times, because a fresh checkout's files are all new — and sound here
+ * because 1–5 hold this process's own files to what it loaded.
  */
 export async function judgeAdoption(
   p: ProcessView,
@@ -92,9 +113,8 @@ export async function judgeAdoption(
     );
   }
   if ((await realpathOr(p.entry)) !== (await realpathOr(req.entry))) {
-    return restart(
-      `the deploy spawns another entry (${req.entry}, running ${p.entry})`,
-    );
+    const elsewhere = await sameCodeElsewhere(p, req.entry);
+    if (elsewhere !== null) return elsewhere;
   }
 
   const inputs = [
@@ -140,6 +160,109 @@ export async function judgeAdoption(
     return why.blind ? cannotJudge(reason) : restart(reason);
   }
   return { kind: "adopted" };
+}
+
+/**
+ * `null` when the checkout holding `reqEntry` holds exactly the code this
+ * process runs from its own (see {@link judgeAdoption}); else the verdict
+ * saying why not.
+ */
+async function sameCodeElsewhere(
+  p: ProcessView,
+  reqEntry: string,
+): Promise<AdoptVerdict | null> {
+  const restart = (reason: string): AdoptVerdict => ({
+    kind: "restart",
+    reason,
+  });
+  const root = await realpath(p.root);
+  const entry = await realpath(p.entry);
+  const otherEntry = await realpathOr(reqEntry);
+  const rel = relative(root, entry);
+  if (rel.startsWith("..") || !otherEntry.endsWith(`${sep}${rel}`)) {
+    return restart(
+      `the deploy spawns another entry (${reqEntry}, running ${p.entry})`,
+    );
+  }
+  const otherRoot = otherEntry.slice(0, -(rel.length + 1));
+  const there = (path: string): string | null => {
+    const r = relative(root, path);
+    return r.startsWith("..") || isAbsolute(r) ? null : join(otherRoot, r);
+  };
+
+  const digests = async (
+    entries: readonly string[],
+    what: string,
+  ): Promise<AdoptVerdict | null> => {
+    const mapped = entries.map(there);
+    if (mapped.some((m) => m === null))
+      return restart(`${what} loads code outside ${root}`);
+    let here: string;
+    let away: string;
+    try {
+      here = await p.digestNow(entries);
+      away = await p.digestNow(mapped as string[]);
+    } catch (err) {
+      return {
+        kind: "cannot-judge",
+        reason: `${what}: the closure cannot be measured: ${err instanceof Error ? err.message : String(err)}`,
+      };
+    }
+    return here === away
+      ? null
+      : restart(`${what}: ${otherRoot} holds other code than ${root}`);
+  };
+
+  const entryVerdict = await digests([entry], "the entry's closure");
+  if (entryVerdict !== null) return entryVerdict;
+
+  const inputs = [
+    { what: "the runtime's resolution inputs", paths: p.runtimeInputs },
+    ...p.bootInputs,
+  ];
+  for (const input of inputs) {
+    for (const path of await expand(input.paths)) {
+      const away = there(path);
+      // Outside the checkout (a data dir): the same file either way.
+      if (away === null) continue;
+      const differs = await bytesDiffer(path, away);
+      if (differs !== null)
+        return restart(`${input.what}: ${differs} differs in ${otherRoot}`);
+    }
+  }
+
+  for (const child of p.children) {
+    const entries = child.code?.entries;
+    if (entries === null || entries === undefined)
+      return restart(
+        `the child ${child.label}: it runs code this process cannot point at`,
+      );
+    const childVerdict = await digests(
+      await Promise.all(entries.map((e) => realpath(e))),
+      `the child ${child.label}`,
+    );
+    if (childVerdict !== null) return childVerdict;
+  }
+  return null;
+}
+
+/**
+ * `null` when `a` and `b` hold the same thing — the same bytes, the same
+ * entry names (directories), or both missing; else `a`.
+ */
+async function bytesDiffer(a: string, b: string): Promise<string | null> {
+  const read = async (path: string): Promise<string> => {
+    try {
+      if ((await stat(path)).isDirectory())
+        return `dir:${(await readdir(path)).sort().join("\n")}`;
+      return `file:${(await readFile(path)).toString("base64")}`;
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === "ENOENT") return "missing";
+      throw err;
+    }
+  };
+  const [x, y] = await Promise.all([read(a), read(b)]);
+  return x === y ? null : a;
 }
 
 /**

@@ -3,6 +3,7 @@ import { exists, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { codeSignature } from "@plugins/infra/plugins/codesign/deps";
 import { readyNow } from "@plugins/infra/plugins/deps/deps";
 import { isRelease } from "@plugins/infra/plugins/paths/core";
+import { servedMainRoot } from "@plugins/infra/plugins/git/plugins/main-slots/core";
 import {
   getMainRepoRoot,
   spawnCaptured,
@@ -164,7 +165,10 @@ export async function compareGatewayLaunch(): Promise<GatewayLaunchComparison> {
   // on a busy host: asked together, the comparison costs the slowest, not
   // their sum.
   const [binary, signature, running] = await Promise.all([
-    describeBinary(installedBinary, repoRoot, app),
+    // Main's build comes from the code main serves (`prepareMainGateway`).
+    servedMainRoot().then((source) =>
+      describeBinary(installedBinary, source, app),
+    ),
     bundle === null
       ? gatewaySignature(installedBinary)
       : codeSignature(bundle, APP_BUNDLE_ID),
@@ -214,11 +218,11 @@ export async function compareGatewayLaunch(): Promise<GatewayLaunchComparison> {
  */
 async function describeBinary(
   installedBinary: string,
-  repoRoot: AppPath,
+  source: AppPath,
   app: MacosAppHost,
 ): Promise<string | null> {
   const [now, installedAs] = await Promise.all([
-    readyNow(gatewayBinary, { root: repoRoot }),
+    readyNow(gatewayBinary, { root: source }),
     installedIdentity(installedBinary, app),
   ]);
   const was = installedAs ?? installedBinary;

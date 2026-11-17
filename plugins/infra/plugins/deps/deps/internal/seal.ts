@@ -2,17 +2,19 @@ import {
   type AppPath,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { cp, mkdir, rm } from "node:fs/promises";
+import { cp, mkdir, rm, symlink } from "node:fs/promises";
 import { exists } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname } from "node:path";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import type { ExecContext } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
 import {
+  hostTarget,
   sameTarget,
   targetLabel,
   type Dep,
   type DepSource,
   type DepTarget,
+  type Ready,
 } from "./dep";
 import { dirBytes, installInCache, writeJsonAtomic } from "./ensure";
 import {
@@ -98,6 +100,37 @@ export async function sealDep(
     delete m.unsealed[dep.id];
   });
   return { kind: "sealed", identity, dir, bytes };
+}
+
+/**
+ * Seal an install THIS host already has into the bundle at `outDir` by
+ * reference: `<outDir>/deps/<id>` is a symlink to the install's payload in the
+ * host cache, recorded in `deps.sealed.json` like a copied one (bytes 0 — the
+ * payload is not in the bundle). For a bundle that only ever runs on the host
+ * that made it — a detached daemon's self-contained bundle
+ * (`infra/spawn/daemon/bundle`), which reads its Chromium this way rather than
+ * resolving it through a checkout it must not touch. The payload stays the
+ * cache's: a sweep that removes it leaves the link dangling, and the bundle's
+ * read of it fails loudly (`sealedLookup`: payload missing).
+ */
+export async function linkSealedDep(
+  ready: Ready,
+  outDir: AppPath,
+): Promise<void> {
+  const rel = sealedPayloadDir(ready.dep.id);
+  const dir = joinAppPath(outDir, rel);
+  await rm(dir, { recursive: true, force: true });
+  await mkdir(dirname(dir), { recursive: true });
+  await symlink(ready.dir, dir);
+  await updateManifest(outDir, hostTarget(), (m) => {
+    m.deps[ready.dep.id] = {
+      kind: ready.dep.source.kind,
+      identity: ready.identity,
+      dir: rel,
+      bytes: 0,
+    };
+    delete m.unsealed[ready.dep.id];
+  });
 }
 
 async function updateManifest(

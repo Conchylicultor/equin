@@ -1,6 +1,6 @@
+import { scriptPath } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { renameSync, writeFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import {
   envEntries,
   readEnv,
@@ -42,8 +42,8 @@ export type PeakFootprint =
       why: "not-requested" | "no-report" | "unsupported";
     };
 
-const PRELOAD = fileURLToPath(
-  new URL("../../bin/peak-footprint-preload.ts", import.meta.url),
+const PRELOAD = scriptPath(
+  "plugins/packages/plugins/proc-rusage/bin/peak-footprint-preload.ts",
 );
 
 /**

@@ -4,7 +4,10 @@ import {
   liveSupervisedIncarnations,
   stopOnCodeAdopted,
 } from "@plugins/infra/plugins/spawn/plugins/daemon/server";
-import { closureChangedSince } from "@plugins/packages/plugins/source-digest/server";
+import {
+  closureChangedSince,
+  closureDigestNow,
+} from "@plugins/packages/plugins/source-digest/server";
 import { adoptDeploy } from "../../core";
 import { RestartSkip } from "@plugins/build/plugins/restart-skip/plugins/hooks/server";
 import { judgeAdoption } from "../../shared/judge";
@@ -25,6 +28,7 @@ export const handleAdopt = implementMachine(adoptDeploy, async ({ body }) => {
       bootInputs: RestartSkip.BootInput.getContributions(),
       children: liveSupervisedIncarnations(),
       closureSince: closureChangedSince,
+      digestNow: closureDigestNow,
     }),
     body,
   );

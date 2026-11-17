@@ -1,4 +1,5 @@
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
+import { isMainSlotCheckout } from "@plugins/infra/plugins/paths/core";
 import {
   resolved,
   unresolved,
@@ -31,14 +32,18 @@ import { CHAIN_CAP, sameCommit, type Carrier, type Chain } from "../../core";
  * No namespace branching is needed: main's checkout is on `main` and a worktree
  * checkout is on its own branch, so `HEAD` of `REPO_ROOT` is the target in both.
  * (`computeTrackedRefs` in git-watcher already watches both refs, so the
- * resource's `dependsOn` fires either way.)
+ * resource's `dependsOn` fires either way.) The one exception is a main SLOT
+ * (`infra/git/main-slots`): it sits detached at the commit it was built from,
+ * which is what it serves, not what it should converge on — its target is
+ * `refs/heads/main` (the refs are the repo's, shared by every worktree).
  *
  * A checkout that git cannot answer for is `unresolved`, not an error: a release
  * bundle's `REPO_ROOT` resolves into the compiled binary's virtual FS, where
  * there is no repository and the question is genuinely unanswerable.
  */
 export async function readTarget(): Promise<Resolvable<string>> {
-  const result = await tryRunGit(["rev-parse", "HEAD"], REPO_ROOT).catch(
+  const rev = (await targetIsMainBranch()) ? "refs/heads/main" : "HEAD";
+  const result = await tryRunGit(["rev-parse", rev], REPO_ROOT).catch(
     (err: unknown) => {
       // The one determinate arm worth folding in here: no directory at all is
       // the same answer as no repository. Anything else is a real fault.
@@ -49,6 +54,14 @@ export async function readTarget(): Promise<Resolvable<string>> {
   if (result === null || !result.ok) return unresolved("no checkout");
   const sha = result.stdout.trim();
   return sha ? resolved(sha) : unresolved("no checkout");
+}
+
+// Whether REPO_ROOT is a main slot never changes for a process (the stamp is
+// written when the slot is made), so it is read once.
+let mainSlot: Promise<boolean> | null = null;
+function targetIsMainBranch(): Promise<boolean> {
+  mainSlot ??= isMainSlotCheckout(REPO_ROOT);
+  return mainSlot;
 }
 
 /**

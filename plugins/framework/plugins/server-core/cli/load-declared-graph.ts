@@ -1,7 +1,5 @@
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { declareRuntimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
-import { holdTreeRead } from "@plugins/infra/plugins/git/plugins/tree-lock/core";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { loadServerPlugins } from "../core/boot-stages";
 import type { LoadedServerPlugin } from "../core/types";
 
@@ -39,17 +37,10 @@ export async function loadDeclaredGraph(
   namespace: Namespace,
 ): Promise<readonly LoadedServerPlugin[]> {
   declareRuntimeNamespace(namespace);
-  // The graph loads from the checkout's live tree, which a push's fast-forward
-  // rewrites file by file — held so every module comes from one commit, as in
-  // `runExec`.
-  const treeRead = await holdTreeRead(REPO_ROOT);
-  try {
-    // Dynamic, like `runExec`'s: keeps a declaration that reaches this barrel
-    // light (`cli:command-declarations-light` stops at dynamic edges).
-    const { serverEntries, machineEntries } =
-      await import("../bin/active-runtime");
-    return await loadServerPlugins([...serverEntries, ...machineEntries]);
-  } finally {
-    treeRead.releaseNow();
-  }
+  // The graph loads from the checkout this process runs from, which no push
+  // rewrites (a worktree; on main a slot this `./equin` holds for life —
+  // `runExec` says why).
+  const { serverEntries, machineEntries } =
+    await import("../bin/active-runtime");
+  return loadServerPlugins([...serverEntries, ...machineEntries]);
 }

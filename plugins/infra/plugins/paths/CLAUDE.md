@@ -401,13 +401,14 @@ reaped namespaces' gateway logs were each found by accident, months in.
 
 - Description: Canonical machine paths, plus the boot-time publication of this namespace's declared data-dir set so an audit running in another checkout can tell one of this branch's directories from an orphan.
 - Core:
-  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `packages/timed-fs` ×10
     - `infra/namespace` ×8
     - `infra/launcher/env-names` ×4
     - `infra/host-fs/user-path` ×3
     - `framework/product-name` ×2
     - `framework/tooling/collected-dir` ×2
+    - `infra/git/main-slots/boot-lease` ×2
     - `infra/paths/data-root-layout` ×2
     - `infra/runtime-identity` ×2
     - `infra/paths/repo-root.REPO_ROOT`
@@ -429,6 +430,7 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `LegacyMove`
     - `LogBound`
     - `LogClaim`
+    - `MainNamespaceOwner`
     - `MigrationStep`
     - `MovedFrom`
     - `NotLogs`
@@ -440,7 +442,9 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `backupsDir`
     - `backupsDirs`
     - `CHECK_ARTIFACTS_RETENTION`
+    - `checkoutAdminDir`
     - `checkoutBuildLock`
+    - `checkoutLockPath`
     - `checkoutNamespace`
     - `checkoutRef`
     - `checkoutWorktreeName`
@@ -458,6 +462,8 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `deploysForCheckoutSync`
     - `getDataDirs`
     - `isHostSingleton`
+    - `isMainCheckoutOrSlot`
+    - `isMainSlotCheckout`
     - `isRelease`
     - `LEGACY_LAYOUT`
     - `listWorktreeDirsAsync`
@@ -488,6 +494,7 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `settleDeclaredDataDirMoves`
     - `stampCheckoutMinter`
     - `stampCheckoutMinterSync`
+    - `stampMainSlot`
     - `toolchainPin`
     - `webGraphRecordPath`
     - `webGraphRecordsDir`
@@ -496,16 +503,16 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `worktreeDataDir`
     - `worktreesDir`
 - Cross-plugin:
-  - Imported by: 141 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra` ×35
-    - `framework` ×23
+  - Imported by: 144 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra` ×36
+    - `framework` ×24
     - `apps` ×18
     - `debug` ×15
     - `build` ×8
     - `conversations` ×7
     - `backup` ×4
+    - `plugin-meta` ×4
     - `packages` ×3
-    - `plugin-meta` ×3
     - `primitives` ×3
     - `release` ×3
     - `reports` ×3
@@ -525,9 +532,10 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `paths:no-hardcoded-paths` — `check/index.ts` (sanctioned)
     - `paths:no-inlined-worktree-artifacts` — `.` (sanctioned)
     - `paths:data-root-not-joined` — `.` (sanctioned)
-    - `boundaries/no-platform-api` — `core/internal/checkout-deploys.ts`, `core/internal/checkout-minter.ts`, `core/internal/checkout-owner.ts`, `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/data-dirs-manifest.ts`, `core/internal/paths.ts`, `core/internal/prune-artifacts.ts`, `core/internal/toolchain-pin.ts`, `core/internal/worktree-dirs.ts` (debt)
+    - `boundaries/no-platform-api` — `core/internal/checkout-admin-dir.ts`, `core/internal/checkout-deploys.ts`, `core/internal/checkout-minter.ts`, `core/internal/checkout-owner.ts`, `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/data-dirs-manifest.ts`, `core/internal/paths.ts`, `core/internal/prune-artifacts.ts`, `core/internal/toolchain-pin.ts`, `core/internal/worktree-dirs.ts` (debt)
     - `user-path/no-unproven-claim` — `core/internal/paths.ts` (sanctioned)
     - `user-path/no-unproven-claim` — `core/internal/checkout-deploys.ts` (sanctioned)
+    - `user-path/no-unproven-claim` — `core/internal/checkout-admin-dir.ts` (sanctioned)
 - Server:
   - Exports (types):
     - `AppIdentity`

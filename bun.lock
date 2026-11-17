@@ -4489,6 +4489,10 @@
       "name": "@equin/plugin-framework-tooling-web-artifacts-served-addresses",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/web-artifacts/plugins/served-paths": {
+      "name": "@equin/plugin-framework-tooling-web-artifacts-served-paths",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/web-core": {
       "name": "@equin/web",
       "version": "0.0.1",
@@ -4750,16 +4754,24 @@
       "name": "@equin/plugin-infra-git-index-refresh",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/git/plugins/main-slots": {
+      "name": "@equin/plugin-infra-git-main-slots",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/git/plugins/main-slots/plugins/boot-lease": {
+      "name": "@equin/plugin-infra-git-main-slots-boot-lease",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/git/plugins/main-slots/plugins/reclaim": {
+      "name": "@equin/plugin-infra-git-main-slots-reclaim",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/git/plugins/private-index": {
       "name": "@equin/plugin-infra-git-private-index",
       "version": "0.0.1",
     },
     "plugins/infra/plugins/git/plugins/remotes": {
       "name": "@equin/plugin-infra-git-remotes",
-      "version": "0.0.1",
-    },
-    "plugins/infra/plugins/git/plugins/tree-lock": {
-      "name": "@equin/plugin-infra-git-tree-lock",
       "version": "0.0.1",
     },
     "plugins/infra/plugins/health": {
@@ -5031,6 +5043,10 @@
     },
     "plugins/infra/plugins/spawn/plugins/daemon/plugins/background-arm": {
       "name": "@equin/plugin-infra-spawn-daemon-background-arm",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/spawn/plugins/daemon/plugins/bundle": {
+      "name": "@equin/plugin-infra-spawn-daemon-bundle",
       "version": "0.0.1",
     },
     "plugins/infra/plugins/ssh": {
@@ -10391,6 +10407,8 @@
 
     "@equin/plugin-framework-tooling-web-artifacts-served-addresses": ["@equin/plugin-framework-tooling-web-artifacts-served-addresses@workspace:plugins/framework/plugins/tooling/plugins/web-artifacts/plugins/served-addresses"],
 
+    "@equin/plugin-framework-tooling-web-artifacts-served-paths": ["@equin/plugin-framework-tooling-web-artifacts-served-paths@workspace:plugins/framework/plugins/tooling/plugins/web-artifacts/plugins/served-paths"],
+
     "@equin/plugin-framework-web-sdk": ["@equin/plugin-framework-web-sdk@workspace:plugins/framework/plugins/web-sdk"],
 
     "@equin/plugin-fullscreen": ["@equin/plugin-fullscreen@workspace:plugins/fullscreen"],
@@ -10505,11 +10523,15 @@
 
     "@equin/plugin-infra-git-index-refresh": ["@equin/plugin-infra-git-index-refresh@workspace:plugins/infra/plugins/git/plugins/index-refresh"],
 
+    "@equin/plugin-infra-git-main-slots": ["@equin/plugin-infra-git-main-slots@workspace:plugins/infra/plugins/git/plugins/main-slots"],
+
+    "@equin/plugin-infra-git-main-slots-boot-lease": ["@equin/plugin-infra-git-main-slots-boot-lease@workspace:plugins/infra/plugins/git/plugins/main-slots/plugins/boot-lease"],
+
+    "@equin/plugin-infra-git-main-slots-reclaim": ["@equin/plugin-infra-git-main-slots-reclaim@workspace:plugins/infra/plugins/git/plugins/main-slots/plugins/reclaim"],
+
     "@equin/plugin-infra-git-private-index": ["@equin/plugin-infra-git-private-index@workspace:plugins/infra/plugins/git/plugins/private-index"],
 
     "@equin/plugin-infra-git-remotes": ["@equin/plugin-infra-git-remotes@workspace:plugins/infra/plugins/git/plugins/remotes"],
-
-    "@equin/plugin-infra-git-tree-lock": ["@equin/plugin-infra-git-tree-lock@workspace:plugins/infra/plugins/git/plugins/tree-lock"],
 
     "@equin/plugin-infra-health": ["@equin/plugin-infra-health@workspace:plugins/infra/plugins/health"],
 
@@ -10636,6 +10658,8 @@
     "@equin/plugin-infra-spawn-daemon": ["@equin/plugin-infra-spawn-daemon@workspace:plugins/infra/plugins/spawn/plugins/daemon"],
 
     "@equin/plugin-infra-spawn-daemon-background-arm": ["@equin/plugin-infra-spawn-daemon-background-arm@workspace:plugins/infra/plugins/spawn/plugins/daemon/plugins/background-arm"],
+
+    "@equin/plugin-infra-spawn-daemon-bundle": ["@equin/plugin-infra-spawn-daemon-bundle@workspace:plugins/infra/plugins/spawn/plugins/daemon/plugins/bundle"],
 
     "@equin/plugin-infra-ssh": ["@equin/plugin-infra-ssh@workspace:plugins/infra/plugins/ssh"],
 

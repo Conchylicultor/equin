@@ -15,7 +15,7 @@ See the top-level [`CLAUDE.md`](../CLAUDE.md) for overall architecture and [`ser
 - Discovers worktrees from `~/.equin/worktrees/<name>/spec.json`
 - Exposes `/gateway/*` on every host as an API for apps to query gateway state
 - **Supervises configured services** (e.g. embedded Postgres) via a generic process supervisor. See "Service supervision" below.
-- **Triggers main's deploy** (`-main-checkout`): on every advance of `refs/heads/main` it runs `./equin build --allow-main --converge` in main's checkout, one run at a time. See "Main's deploy" below.
+- **Triggers main's deploy** (`-main-checkout`): on every advance of `refs/heads/main` it runs `./equin build --allow-main --converge` from main's served slot (the checkout before any exists), one run at a time. See "Main's deploy" below.
 - **Is replaced by main's deploy when main changes it**: that same run rebuilds this binary and hands the running gateway over to it — no one runs `./equin start --force` for a pushed gateway change, and no backend restarts. See "The gateway follows main" below.
 - **Runs as a keeper and its generations** (`keeper.go`): the process a service manager or launcher starts holds the listening sockets and is the parent of every backend; the gateway proper is its child, replaced by `POST /gateway/handover` with no request refused and no backend stopped. See "The keeper: a gateway update is a handover" below.
 
@@ -476,11 +476,19 @@ minutes until a person reloaded this gateway).
   gateway deploys nothing. A path that is not a main checkout (a `.git` dir and
   an `equin` CLI) is fatal at boot, after the services start.
 - **No policy.** On an edge, with no run going, it starts ONE
-  `<checkout>/equin build --allow-main --converge` (cwd the checkout, the
-  declared child env plus `EQUIN_BUILD_DETACHED=1`). That run decides from
-  durable state whether anything is due and builds it
-  (`plugins/build/plugins/converge`) — the commit being deployed decides with
-  its own code.
+  `<dir>/equin build --allow-main --converge` (cwd `<dir>`, the declared child
+  env plus `EQUIN_BUILD_DETACHED=1`). `<dir>` is resolved before every run
+  (`convergeDir`): the main slot `-main-slots-current` links to — main's own
+  `current/<main namespace>` link in the slot pool (default
+  `<data root>/services/main-slots/current/<main namespace>`; one link per
+  served app), the code main serves
+  (`plugins/infra/plugins/git/plugins/main-slots`) — or the checkout while that
+  link does not exist (before main's first slot build, the pre-v2 single
+  `current` link the next build migrates, or a link to a slot gone from disk,
+  warned). That run decides from durable state whether
+  anything is due and builds it, each main build in a slot of its own checked
+  out at the decided commit (`plugins/build/plugins/converge`). The checkout
+  stays the git store: its `refs/heads/main` is what is watched.
 - **Edges:** `refs/heads/main` moved (trailing debounce, 5 s), this gateway's
   boot, and `POST /gateway/deploy/converge {"cause": "…"}` (a backend: a
   composition config change, the composition cadence tick). An edge during a

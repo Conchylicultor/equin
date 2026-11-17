@@ -247,7 +247,7 @@ script load as a request of the page that started it, but the response lands in
 the worker's target, which Playwright does not attach to — so that request never
 finishes. `waitForNetworkIdle(page)` (`page-ready/core/internal/network-idle.ts`, and `boot()`
 without a marker) counts the page's in-flight requests itself and leaves out a
-worker script load (`isWorkerChunkPath` from web-artifacts, read off the two
+worker script load (`isWorkerChunkPath` from `web-artifacts/served-paths`, read off the two
 layouts it emits worker scripts in: an artifact's worker chunk, and a browser
 host's worker tree — the demo's SharedWorker host). The request carries no other
 sign of being a worker's: resource type `script`, no `Sec-Fetch-Dest`. Every

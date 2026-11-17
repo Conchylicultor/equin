@@ -1,4 +1,4 @@
-import { join } from "node:path";
+import { scriptPath } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { Worker } from "node:worker_threads";
 import {
   envEntries,
@@ -70,7 +70,7 @@ export function exitWithParent(): void {
   // own spawn's lifeline, or by nothing.
   unsetEnv("PARENT_LIFELINE");
   const worker = new Worker(
-    join(import.meta.dir, "../../scripts/lifeline-block.ts"),
+    scriptPath("plugins/packages/plugins/flock/scripts/lifeline-block.ts"),
     { workerData: { file } },
   );
   worker.unref();

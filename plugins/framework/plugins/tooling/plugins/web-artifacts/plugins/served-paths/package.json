@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-framework-tooling-web-artifacts-served-paths",
+  "description": "The served URL grammar of web artifacts, as a leaf with no imports: where a worker chunk sits inside an artifact dir (WORKER_ASSETS_DIR), a worker tree's store-entry prefix (WORKER_TREE_PREFIX), and isWorkerTreePath / isWorkerChunkPath over a request path — so a URL reader (the e2e harness's network-idle count, the agent browser host) never loads the artifact build pipeline.",
+  "version": "0.0.1",
+  "private": true
+}

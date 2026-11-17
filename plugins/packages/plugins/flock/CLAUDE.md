@@ -34,8 +34,9 @@ a SIGKILLed holder's lock drops), cancellable (an abort kills the child and
 throws `signal.reason`), and loud (a child that exits without granting throws).
 The pair moved here from `packages/host-semaphore`, which now consumes it, so
 `single-flight` could wait on a lock without a second copy. The two scripts
-import nothing cross-plugin (only `node:*` + `bun:ffi`): they are loaded by path
-and stay independently runnable. The one lock file arrives via
+import nothing cross-plugin but `repo-root`'s `scriptPath` (every path-run
+script is named that way, so a self-contained daemon bundle carries them): they
+are loaded by path and stay independently runnable. The one lock file arrives via
 `FLOCK_WAIT_FILE`.
 
 **Why the blocking flock sits on a worker thread, not the child's main
@@ -74,6 +75,7 @@ coalescing; `checkout-lock.ts` builds a size-1 mutex.
     - `infra/launcher/env-names.envEntries`
     - `infra/launcher/env-names.readEnv`
     - `infra/launcher/env-names.unsetEnv`
+    - `infra/paths/repo-root.scriptPath`
     - `packages/owned-fd.openOwnedFd`
   - Exports (types):
     - `HeldFlock`
@@ -87,8 +89,8 @@ coalescing; `checkout-lock.ts` builds a size-1 mutex.
     - `holdParentLifeline`
     - `waitForFlock`
 - Cross-plugin:
-  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra` ×11
+  - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra` ×12
     - `framework` ×7
     - `packages` ×4
     - `apps/chord/song-index`
@@ -100,7 +102,7 @@ coalescing; `checkout-lock.ts` builds a size-1 mutex.
 - Exemptions:
   - Exempts itself from:
     - `spawn-safety/no-raw-bun-spawn` — `core/internal/wait.ts` (sanctioned)
-    - `boundaries/no-platform-api` — `core/internal/flock.ts`, `core/internal/lifeline.ts`, `core/internal/wait.ts` (debt)
+    - `boundaries/no-platform-api` — `core/internal/flock.ts`, `core/internal/lifeline.ts` (debt)
 - Server:
   - Exports (types):
     - `HeldFlock`

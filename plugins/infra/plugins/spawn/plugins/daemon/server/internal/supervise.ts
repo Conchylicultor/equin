@@ -523,13 +523,15 @@ export function launchDetachedIn(
     detached: true,
     env: opts.env,
     cwd: opts.cwd,
-    stdin: "ignore",
-    stdout:
+    // fds 0–2, then each held descriptor as 3, 4, … (`holdFds`).
+    stdio: [
+      "ignore",
       opts.outputFd?.fd ??
-      (opts.onOutputLine === undefined ? "ignore" : "pipe"),
-    stderr:
+        (opts.onOutputLine === undefined ? "ignore" : "pipe"),
       opts.outputFd?.fd ??
-      (opts.onOutputLine === undefined ? "ignore" : "pipe"),
+        (opts.onOutputLine === undefined ? "ignore" : "pipe"),
+      ...(opts.holdFds ?? []).map((h) => h.fd),
+    ],
     onExit: (_p, code, signalCode) => {
       bootstrap = {
         kind: "exited",

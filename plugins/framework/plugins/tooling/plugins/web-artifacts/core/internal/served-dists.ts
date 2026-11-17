@@ -39,7 +39,7 @@ import {
 import { basename, dirname } from "node:path";
 import { worktreesDir } from "@plugins/infra/plugins/paths/core";
 import { webArtifactsDir } from "../../data-dirs";
-import { WORKER_TREE_PREFIX } from "../constants";
+import { WORKER_TREE_PREFIX } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/plugins/served-paths/core";
 import { sha256Hex } from "../hash";
 
 /** Where dists are found, and where what each links is memoized. */

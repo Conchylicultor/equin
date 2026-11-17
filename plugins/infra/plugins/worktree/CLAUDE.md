@@ -408,6 +408,7 @@ pid liveness.
     - `WorktreeRemoval`
     - `WorktreeSetup`
     - `WorktreeSpec`
+    - `WorktreeSpecRead`
   - Exports (values):
     - `addCheckout`
     - `appCheckoutOf`
@@ -442,6 +443,7 @@ pid liveness.
     - `probeNamespace`
     - `probeWorktreeOp`
     - `pruneSpares`
+    - `readWorktreeSpec`
     - `recordSetupSteps`
     - `removeWorktree`
     - `removeWorktreeSpec`
@@ -453,9 +455,9 @@ pid liveness.
     - `worktreePathFor`
     - `writeWorktreeSpec`
 - Cross-plugin:
-  - Imported by: 39 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 40 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×9
-    - `infra` ×8
+    - `infra` ×9
     - `conversations` ×4
     - `framework` ×4
     - `tasks` ×4

@@ -159,6 +159,15 @@ export type DetachedLaunch = DaemonStartCommon & {
   cwd?: string;
   /** Where the long-lived process writes its pid (first line). */
   pidFile: AppPath;
+  /**
+   * Descriptors the process keeps open for its whole life, as fds 3, 4, … —
+   * a lock it holds while it lives without taking it itself (a self-contained
+   * bundle's in-use lock, `daemon/bundle`): the flock rides the open file
+   * description, so it passes from this caller to the process with no moment
+   * unheld, and the kernel drops it when the process dies, however it dies.
+   * The caller still owns its handles and closes them once this returns.
+   */
+  holdFds?: readonly OwnedFd[];
 } & (
     | {
         /** Each line the bootstrap prints, while it runs. */

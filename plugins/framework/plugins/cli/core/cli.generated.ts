@@ -46,6 +46,7 @@ export const cliEntries: CollectedEntry[] = [
   { pluginPath: "infra/plugins/audio-analysis", id: "infra.audio-analysis", loader: () => import("@plugins/infra/plugins/audio-analysis/cli"), dependsOn: ["infra/plugins/jobs/plugins/supervised-job"] },
   { pluginPath: "infra/plugins/codesign", id: "infra.codesign", loader: () => import("@plugins/infra/plugins/codesign/cli"), dependsOn: [] },
   { pluginPath: "infra/plugins/deps", id: "infra.deps", loader: () => import("@plugins/infra/plugins/deps/cli"), dependsOn: ["infra/plugins/jobs/plugins/supervised-job"] },
+  { pluginPath: "infra/plugins/git/plugins/main-slots/plugins/reclaim", id: "infra.git.main-slots.reclaim", loader: () => import("@plugins/infra/plugins/git/plugins/main-slots/plugins/reclaim/cli"), dependsOn: [] },
   { pluginPath: "infra/plugins/jobs/plugins/supervised-job", id: "infra.jobs.supervised-job", loader: () => import("@plugins/infra/plugins/jobs/plugins/supervised-job/cli"), dependsOn: [] },
   { pluginPath: "infra/plugins/launcher/plugins/gateway-port", id: "infra.launcher.gateway-port", loader: () => import("@plugins/infra/plugins/launcher/plugins/gateway-port/cli"), dependsOn: [] },
   { pluginPath: "infra/plugins/paths/plugins/root-migration", id: "infra.paths.root-migration", loader: () => import("@plugins/infra/plugins/paths/plugins/root-migration/cli"), dependsOn: [] },

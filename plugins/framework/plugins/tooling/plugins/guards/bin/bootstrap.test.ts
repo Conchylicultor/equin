@@ -1,17 +1,34 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
 import {
   mkdirSync,
   mkdtempSync,
+  readdirSync,
+  readFileSync,
   realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import * as BOOT_LEASE from "@plugins/infra/plugins/git/plugins/main-slots/plugins/boot-lease/core";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
+import { flockTry } from "@plugins/packages/plugins/flock/core";
+import { openOwnedFdSync } from "@plugins/packages/plugins/owned-fd/core";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { STAMP_REL } from "@plugins/framework/plugins/cli/plugins/bootstrap/cli";
 import {
+  adminDirOf,
   assertCheckoutInstalled,
   CheckoutNotInstalledError,
+  GIT_LOCK_DIR,
+  holdGuardLease,
+  MAIN_SLOT_SERVED_FILE,
+  MAIN_SLOT_STAMP,
+  O_SHLOCK_DARWIN,
+  servedMainRoot,
+  SLOT_LEASES_DIR,
+  SLOT_LOCK_FILE,
   INSTALL_STAMP_REL,
   runGuardWithFallback,
   withNotice,
@@ -172,5 +189,103 @@ describe("assertCheckoutInstalled", () => {
     mkdirSync(join(root, "node_modules"));
     writeFileSync(join(root, STAMP_REL), "{}");
     expect(() => assertCheckoutInstalled(script)).not.toThrow();
+  });
+});
+
+describe("the main-slot lease", () => {
+  const dirs: string[] = [];
+  afterEach(() => {
+    for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true });
+  });
+
+  function git(cwd: string, ...args: string[]): string {
+    const r = spawnSync(
+      "git",
+      ["-c", "user.email=t@t", "-c", "user.name=t", ...args],
+      {
+        cwd,
+        encoding: "utf8",
+      },
+    );
+    if (r.status !== 0) throw new Error(`git ${args.join(" ")}: ${r.stderr}`);
+    return r.stdout.trim();
+  }
+
+  /** A repo and a linked worktree of it, the worktree stamped a main slot. */
+  function repoWithSlot(): { repo: string; slot: string; script: string } {
+    const base = realpathSync(mkdtempSync(join(tmpdir(), "guard-slot-")));
+    dirs.push(base);
+    const repo = join(base, "repo");
+    mkdirSync(repo);
+    git(repo, "init", "-q", "-b", "main");
+    writeFileSync(join(repo, "a.txt"), "a\n");
+    git(repo, "add", "-A");
+    git(repo, "commit", "-q", "-m", "a");
+    const slot = join(base, "slot-1");
+    git(repo, "worktree", "add", "-q", "--detach", slot);
+    const admin = adminDirOf(slot)!;
+    mkdirSync(admin, { recursive: true });
+    writeFileSync(join(admin, MAIN_SLOT_STAMP), "{}\n");
+    const script = join(slot, "bin", "guard.ts");
+    mkdirSync(dirname(script), { recursive: true });
+    writeFileSync(script, "");
+    return { repo, slot, script };
+  }
+
+  /** Whether a build could take the slot now (a non-blocking exclusive flock). */
+  function buildCouldTake(slot: string): boolean {
+    const fd = openOwnedFdSync(
+      asAppPath(join(adminDirOf(slot)!, SLOT_LOCK_FILE)),
+      "a",
+    );
+    try {
+      return flockTry(fd.fd);
+    } finally {
+      fd.close();
+    }
+  }
+
+  test("its copies of the slot layout are main-slots' own", () => {
+    expect(GIT_LOCK_DIR).toBe(LEGACY_IDS.gitLockDir);
+    expect(SLOT_LOCK_FILE).toBe(BOOT_LEASE.SLOT_LOCK_FILE);
+    expect(SLOT_LEASES_DIR).toBe(BOOT_LEASE.SLOT_LEASES_DIR);
+    expect(MAIN_SLOT_STAMP).toBe(BOOT_LEASE.MAIN_SLOT_STAMP);
+    expect(MAIN_SLOT_SERVED_FILE).toBe(BOOT_LEASE.MAIN_SLOT_SERVED_FILE);
+    expect(O_SHLOCK_DARWIN).toBe(BOOT_LEASE.O_SHLOCK_DARWIN);
+  });
+
+  test("a guard in a slot holds it while it runs, recorded; outside one it holds nothing", () => {
+    const { repo, slot, script } = repoWithSlot();
+    const repoScript = join(repo, "guard.ts");
+    writeFileSync(repoScript, "");
+    expect(holdGuardLease(repoScript).slot).toBeNull();
+
+    const lease = holdGuardLease(script);
+    expect(lease.slot).toBe(slot);
+    expect(buildCouldTake(slot)).toBe(false);
+    const records = readdirSync(join(adminDirOf(slot)!, SLOT_LEASES_DIR));
+    expect(records).toEqual([`${process.pid}.g1.json`]);
+    const record = BOOT_LEASE.parseHolder(
+      records[0]!,
+      readFileSync(
+        join(adminDirOf(slot)!, SLOT_LEASES_DIR, records[0]!),
+        "utf8",
+      ),
+    );
+    expect([record.kind, record.mode]).toEqual(["guard", "shared"]);
+    lease.release();
+    expect(readdirSync(join(adminDirOf(slot)!, SLOT_LEASES_DIR))).toEqual([]);
+    expect(buildCouldTake(slot)).toBe(true);
+  });
+
+  test("main's served root is the slot most recently served, else the repo's checkout", () => {
+    const { repo, slot } = repoWithSlot();
+    const commonDir = join(repo, ".git");
+    expect(servedMainRoot(commonDir, repo)).toBe(repo);
+    writeFileSync(
+      join(adminDirOf(slot)!, MAIN_SLOT_SERVED_FILE),
+      "2026-11-17T00:00:00.000Z\n",
+    );
+    expect(realpathSync(servedMainRoot(commonDir, repo))).toBe(slot);
   });
 });

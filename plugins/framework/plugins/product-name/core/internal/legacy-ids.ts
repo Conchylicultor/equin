@@ -149,6 +149,11 @@ export const LEGACY_ID_NOTES: Readonly<Record<LegacyIdKey, LegacyIdNote>> = {
   autoIdentityDomain: { kept: "in the author e-mail of existing commits" },
   gitLockDir: {
     kept: "shared by every worktree on mixed versions; renaming splits the lock",
+    // The guard hook's bootstrap may import nothing from the repo
+    // (guards:bootstrap-builtins-only); its test holds the copy to this value.
+    mirrors: [
+      "plugins/framework/plugins/tooling/plugins/guards/bin/bootstrap.ts",
+    ],
   },
   mergeMarkersDir: {
     kept: "shared by every worktree on mixed versions",

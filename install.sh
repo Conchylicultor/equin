@@ -240,9 +240,10 @@ stage0_verify() {
 # and succeeds, when that is not the folder this run installs into. The same
 # two records `instance-owner` reads: the checkout main's deploy names, and the
 # one the background service is registered to follow. A record naming a folder
-# that is gone (the code moved) claims nothing.
+# that is gone (the code moved) claims nothing; one naming a main slot claims
+# its repository.
 other_instance() {
-  local target spec claim unit
+  local target spec claim unit common
   target="$INSTALL_DIR"
   [ -d "$target" ] && target="$(cd "$target" && pwd -P)"
   spec="$(data_root)/worktrees/singularity/spec.json"
@@ -255,6 +256,10 @@ other_instance() {
          [ -f "$unit" ] && sed -n 's/^ExecStart=.*"-main-checkout" "\([^"]*\)".*/\1/p' "$unit"
        done | head -n 1)"; do
     [ -n "$claim" ] && [ -d "$claim" ] || continue
+    # A claim naming one of main's slots (infra/git/main-slots: a linked
+    # worktree of the repo) claims its repository: the repo's main checkout.
+    common="$(git -C "$claim" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" \
+      && [ -d "$common" ] && claim="$(dirname "$common")"
     claim="$(cd "$claim" && pwd -P)"
     if [ "$claim" != "$target" ]; then
       printf '%s\n' "$claim"

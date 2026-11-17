@@ -16,13 +16,20 @@ import {
   getHealth,
   type HealthResponse,
 } from "@plugins/infra/plugins/health/core";
-import { adoptDeploy } from "@plugins/build/plugins/restart-skip/core";
+import {
+  adoptDeploy,
+  type AdoptVerdict,
+} from "@plugins/build/plugins/restart-skip/core";
+import { realpath } from "@plugins/packages/plugins/timed-fs/core";
 import {
   propagateConfigToUser,
   type CodegenPass,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { ensureDatabase } from "@plugins/database/plugins/admin/server";
+import { settleFailedServe, switchSpec } from "./spec-switch";
 import {
+  type WorktreeSpec,
+  readWorktreeSpec,
   stampCompositionMarker,
   writeWorktreeSpec,
   type CompositionMarker,
@@ -97,6 +104,14 @@ export type DeployNamespaceResult =
       ok: true;
       /** Soft degrades folded into the invocation's OK verdict (still booting, …). */
       notes: string[];
+      /**
+       * Which checkout the namespace's spec names now: `this-tree` — the one
+       * built (restarted onto it, or its running backend already ran from it);
+       * `kept` — the running backend runs code identical to this tree's from
+       * ANOTHER checkout (main's previous slot) and adopted the deploy, so the
+       * spec still names that one and nothing runs from this tree.
+       */
+      served: "this-tree" | "kept";
     }
   | {
       ok: false;
@@ -129,6 +144,14 @@ export interface DeployNamespaceOptions {
   grant: Grant;
   /** `--no-restart`: publish the artifacts and leave the gateway alone. */
   restart: boolean;
+  /**
+   * Called right before the spec names this checkout for a (re)spawn: what
+   * the build must let go of so a backend booting from `root` can start.
+   * Main's slot build turns its exclusive lease shared here — the backend's
+   * boot takes the slot shared, and would wait forever behind a build that
+   * waits for its health (run.ts). Idempotent; a no-op outside a slot.
+   */
+  handOver: () => Promise<void>;
   onSteps: (steps: StepResult[]) => void;
   hooks: ArtifactHooks;
 }
@@ -644,10 +667,28 @@ export async function deployNamespace(
   // an unexpected throw says nothing about which backend serves, so the
   // publication is left as it stands (the next build sweeps it).
   let backendAsked = false;
+  // Set once the spec was switched to this checkout from ANOTHER (main's
+  // slots): what puts the previous spec back when the previous backend is left
+  // serving.
+  const rollback: { restoreSpec: (() => Promise<void>) | null } = {
+    restoreSpec: null,
+  };
+  const askBackend = (
+    server: string,
+    command: string[] | undefined,
+  ): Promise<AdoptVerdict> =>
+    askAdoption({
+      endpoint: adoptDeploy,
+      asked: { process: "backend", namespace: ns },
+      origin: site,
+      server,
+      command,
+      commit: opts.commit,
+    });
   // A failure here also says which backend the namespace is left on — what
   // decides the publication below (see `HealthOutcome`).
   type ServeResult =
-    | { ok: true; notes: string[] }
+    | { ok: true; notes: string[]; served: "this-tree" | "kept" }
     | {
         ok: false;
         failedLabels: string[];
@@ -753,7 +794,7 @@ export async function deployNamespace(
       asAppPath(process.execPath),
       backendEntryFor(target.composition),
     );
-    await writeWorktreeSpec({
+    const spec = {
       name: ns,
       server,
       web: artifact.livePath,
@@ -761,12 +802,48 @@ export async function deployNamespace(
       // Which app the namespace IS — the backend refuses to boot when the
       // entry it was spawned with imports any other composition's registries.
       composition: target.composition,
+    };
+    // The spec this deploy replaces may name ANOTHER checkout — main's slots
+    // (infra/git/main-slots): the backend serving runs from the slot the
+    // previous build deployed, this build is in another one. Such a SWITCH is
+    // asked BEFORE the spec moves: `adopted` (build/restart-skip judges by
+    // content) keeps the backend and leaves the spec naming the checkout it
+    // runs from — this slot is let go, `current` stays (the deploy answers
+    // `kept`). Otherwise the build hands its tree over first (main's slot: its
+    // exclusive lease turned shared, so the backend's boot lease is granted —
+    // see `handOver`), then writes the spec; a switch that ends with the
+    // previous backend still serving puts the previous spec back
+    // (`settleFailedServe`).
+    const previous = await readWorktreeSpec(ns);
+    const switched = await switchSpec<WorktreeSpec>({
+      spec,
+      previous: previous.kind === "spec" ? previous.spec : null,
+      restart: opts.restart,
+      sameCheckout: async (a, b) =>
+        (await comparable(a)) === (await comparable(b)),
+      ask: () => {
+        backendAsked = true;
+        return askBackend(server, command);
+      },
+      handOver: opts.handOver,
+      write: async (written) => {
+        await writeWorktreeSpec(written);
+      },
     });
+    if (switched.kind === "kept") {
+      endRegister();
+      console.log(
+        `Backend kept: ${site} runs code identical to this tree's (no restart); its spec keeps naming ${switched.servedFrom}.`,
+      );
+      return { ok: true, notes, served: "kept" };
+    }
+    const askedFirst = switched.askedFirst;
+    rollback.restoreSpec = switched.restore;
     endRegister();
 
     if (!opts.restart) {
       notes.push(`restart skipped (${ns})`);
-      return { ok: true, notes };
+      return { ok: true, notes, served: "this-tree" };
     }
 
     backendAsked = true;
@@ -776,28 +853,23 @@ export async function deployNamespace(
     // because only it knows what it loaded (build/restart-skip). `adopted`
     // means no restart is needed — it already re-pinned itself to this
     // deploy — so the dist stays published and there is no new backend to
-    // probe. Anything else, including no answer, restarts as before.
-    const adoption = await span(
-      "adoptDeploy",
-      "build:deploy",
-      "ask the backend to adopt",
-      () =>
-        askAdoption({
-          endpoint: adoptDeploy,
-          asked: { process: "backend", namespace: ns },
-          origin: site,
-          server,
-          command,
-          commit: opts.commit,
-        }),
-      // The running backend's answer: its own work, not this build's.
-      { wait: true },
-    );
+    // probe. Anything else, including no answer, restarts as before. (A
+    // switch was asked above, before the spec moved.)
+    const adoption =
+      askedFirst ??
+      (await span(
+        "adoptDeploy",
+        "build:deploy",
+        "ask the backend to adopt",
+        () => askBackend(server, command),
+        // The running backend's answer: its own work, not this build's.
+        { wait: true },
+      ));
     if (adoption.kind === "adopted") {
       console.log(
         `Backend kept: ${site} already runs this tree's code (no restart).`,
       );
-      return { ok: true, notes };
+      return { ok: true, notes, served: "this-tree" };
     }
     console.log(`Restart needed: ${adoption.reason}`);
 
@@ -853,7 +925,7 @@ export async function deployNamespace(
       if (health.note !== null) notes.push(health.note);
     }
 
-    return { ok: true, notes };
+    return { ok: true, notes, served: "this-tree" };
   };
 
   let result: ServeResult;
@@ -868,26 +940,26 @@ export async function deployNamespace(
     return result;
   }
   const { backend, ...failure } = result;
-  if (backend === "this-tree") {
-    // The new backend took over and the old one is gone: the frontend that
-    // matches what any respawn runs is the new one.
-    await publication.keep();
-    return {
-      ...failure,
-      reason: [
-        ...failure.reason,
-        `The new frontend stays published: it matches the backend code every respawn of ${site} boots.`,
-      ],
-    };
-  }
-  await publication.revert();
   return {
     ...failure,
     reason: [
       ...failure.reason,
-      publication.revertible
-        ? `The new frontend was rolled back with it: ${site} serves the previous build, frontend and backend alike.`
-        : `There was no previous frontend to roll back to, so the new one stays published.`,
+      ...(await settleFailedServe({
+        backend,
+        publication,
+        restore: rollback.restoreSpec,
+        site,
+      })),
     ],
   };
+}
+
+/** `path` resolved (a missing one as itself), for comparing two checkouts' dirs. */
+async function comparable(path: string): Promise<string> {
+  try {
+    return await realpath(path);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return resolve(path);
+    throw err;
+  }
 }

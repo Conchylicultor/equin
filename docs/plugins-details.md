@@ -15627,8 +15627,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `MainDeployFailedPayloadSchema`
       - Cli:
         - Uses: `build/deployment.readServedDeployment`
-        - Exports (types): `ConvergenceDecision`
-        - Exports (values): `decideConvergence`
+        - Exports (types):
+          - `ConvergenceBuild`
+          - `ConvergenceDecision`
+        - Exports (values):
+          - `convergenceBuild`
+          - `decideConvergence`
       - Cross-plugin:
         - Imported by: `framework/cli/build`
     - **`deployment`** — The client half of the deployment description: `useDeployment()` composes THIS tab's own baked pin in beside the server's two deployable carriers, and `<DeploymentChain/>` renders the four arms — one commit row when converged, the chain with a carrier chip on each carrier's own commit when behind, and the raw pins plus the reason when there is no line to draw. Also eagerly registers the boot-critical build.deployment resource descriptor so boot-snapshot can hydrate it before first paint.
@@ -15758,7 +15762,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses: `infra/endpoints.implementMachine`
         - Routes: `POST /api/build/restart-skip/adopt`
       - Central:
-        - Uses: `packages/source-digest.closureChangedSince`
+        - Uses:
+          - `packages/source-digest.closureChangedSince`
+          - `packages/source-digest.closureDigestNow`
         - Routes: `POST /api/restart-skip/central/adopt`
       - Core:
         - Uses: `infra/endpoints.defineEndpoint`
@@ -16563,8 +16569,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins: the registry over the user-layer store (the ConfigStore host service) and the committed layer (ConfigGitLayer), its live values and the scope routes.
   - Web:
     - Slots: `ConfigV2.WebRegister`
-    - Slot contributors: 102 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×102
+    - Slot contributors: 103 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×103
     - Uses:
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
@@ -16763,7 +16769,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 152 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+    - Imported by: 153 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×43
       - `debug` ×15
       - `conversations` ×14
@@ -16771,8 +16777,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ui` ×11
       - `config_v2` ×8
       - `tasks` ×8
+      - `infra` ×7
       - `auth` ×6
-      - `infra` ×6
       - `framework` ×5
       - `build` ×3
       - `primitives` ×3
@@ -16881,6 +16887,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build/serve-composition`
           - `framework/cli/build`
           - `framework/cli/deploy`
+          - `infra/git/main-slots`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `core/effective-on-disk.ts` (debt)
     - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
@@ -30279,12 +30286,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `intField`
               - `intSample`
           - Cross-plugin:
-            - Imported by: 64 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
+            - Imported by: 65 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
               - `apps` ×19
               - `debug` ×14
               - `conversations` ×8
+              - `infra` ×6
               - `tasks` ×6
-              - `infra` ×5
               - `backup` ×4
               - `active-data`
               - `build/run-ledger`
@@ -31651,9 +31658,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readMergeMarkers`
           - `resolveGitDir`
       - Cross-plugin:
-        - Imported by: 42 plugins — full list in [`plugins/framework/plugins/cli/REFERENCE.md`](../plugins/framework/plugins/cli/REFERENCE.md)
+        - Imported by: 43 plugins — full list in [`plugins/framework/plugins/cli/REFERENCE.md`](../plugins/framework/plugins/cli/REFERENCE.md)
           - `framework` ×29
-          - `infra` ×6
+          - `infra` ×7
           - `apps` ×3
           - `plugin-meta` ×2
           - `installer/window`
@@ -31715,13 +31722,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `framework/cli/build`
               - `framework/cli/install`
+              - `infra/git/main-slots`
           - Exemptions:
             - Exempts itself from: `repo-walk-safety/no-adhoc-repo-walk` — `cli/ensure-deps.ts` (sanctioned)
           - Core:
             - Exports (values): `INSTALL_VERB`
         - **`build`** — `./equin build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
           - Cli:
-            - Uses: 69 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
+            - Uses: 72 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
               - `framework/cli/op-runtime` ×32
               - `installer` ×6
               - `debug/profiling/op-log` ×4
@@ -31730,8 +31738,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/migrations` ×3
               - `framework/tooling/web-artifacts/served-addresses` ×3
               - `plugin-meta/plugin-records` ×3
+              - `build/converge` ×2
+              - `infra/git/main-slots` ×2
               - `build/central-build-id.centralBuildOf`
-              - `build/converge.decideConvergence`
               - `build/run-ledger.createBuildRunRecorder`
               - `build/step-baseline.judgeBuildSteps`
               - `framework/cli/build/build-steps.runBuildSteps`
@@ -31814,9 +31823,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CLI_NAMES`
               - `isCliName`
           - Cross-plugin:
-            - Imported by: 29 plugins — full list in [`plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md)
-              - `framework` ×8
-              - `infra` ×7
+            - Imported by: 31 plugins — full list in [`plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md)
+              - `framework` ×9
+              - `infra` ×8
               - `debug` ×4
               - `apps` ×2
               - `build` ×2
@@ -32254,16 +32263,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `UNDOCUMENTED_RUNTIME_FOLDERS`
           - `VERIFYING_FOLDERS`
       - Cross-plugin:
-        - Imported by: 98 plugins — full list in [`plugins/framework/plugins/plugin-id/REFERENCE.md`](../plugins/framework/plugins/plugin-id/REFERENCE.md)
+        - Imported by: 99 plugins — full list in [`plugins/framework/plugins/plugin-id/REFERENCE.md`](../plugins/framework/plugins/plugin-id/REFERENCE.md)
           - `plugin-meta` ×21
           - `apps` ×15
           - `tasks` ×12
           - `framework` ×11
           - `conversations` ×7
           - `debug` ×5
+          - `infra` ×4
           - `build` ×3
           - `config_v2` ×3
-          - `infra` ×3
           - `page` ×3
           - `active-data` ×2
           - `apps-core` ×2
@@ -32859,9 +32868,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/git/checkout-watch` (1 debt)
               - `infra/git/git-watcher` (2 debt)
               - `infra/git/index-refresh` (1 debt)
+              - `infra/git/main-slots` (4 debt)
+              - `infra/git/main-slots/boot-lease` (2 debt)
               - `infra/git/private-index` (1 debt)
               - `infra/git/remotes` (2 debt)
-              - `infra/git/tree-lock` (1 debt)
               - `infra/host-fs` (16 debt)
               - `infra/host-fs/image` (1 debt)
               - `infra/host-fs/zip` (1 debt)
@@ -32873,19 +32883,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/jobs/supervised-job` (3 debt)
               - `infra/launcher` (3 debt)
               - `infra/mcp/browser` (2 debt)
-              - `infra/paths` (10 debt)
+              - `infra/paths` (11 debt)
               - `infra/paths/data-root-layout` (2 debt)
               - `infra/request-origin/agent-write-ledger` (1 debt)
               - `infra/runtime-profiler` (1 debt)
               - `infra/safe-fetch` (1 debt)
               - `infra/spawn` (4 debt)
               - `infra/spawn/daemon` (1 debt)
+              - `infra/spawn/daemon/bundle` (1 debt)
               - `infra/ssh` (2 debt)
               - `infra/stack-sampler` (1 debt)
               - `infra/worktree` (11 debt)
               - `infra/worktree/reclaim` (2 debt)
               - `integrations/youtube/audio-fetch` (3 debt)
-              - `packages/flock` (3 debt)
+              - `packages/flock` (2 debt)
               - `packages/host-semaphore` (1 debt)
               - `packages/owned-fd` (0 debt)
               - `packages/proc-rusage` (2 debt)
@@ -32893,7 +32904,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/single-flight` (1 debt)
               - `packages/sleep-clock` (1 debt)
               - `packages/source-digest` (0 debt)
-              - `packages/spawn-priority` (3 debt)
+              - `packages/spawn-priority` (2 debt)
               - `packages/thread-cpu-clock` (1 debt)
               - `packages/ticket-line` (1 debt)
               - `packages/timed-fs` (0 debt)
@@ -33622,7 +33633,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Plugins:
             - **`page-ready`**
               - Core:
-                - Uses: `framework/tooling/web-artifacts.isWorkerChunkPath`
+                - Uses: `framework/tooling/web-artifacts/served-paths.isWorkerChunkPath`
                 - Exports (types):
                   - `Flatness`
                   - `NetworkIdleOptions`
@@ -33803,6 +33814,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Exemptions:
             - Exempts itself from:
               - `timed-fs/no-untimed-fs-read` — `bin/bootstrap.ts` (sanctioned)
+              - `owned-fd/no-raw-fd-close` — `bin/bootstrap.ts` (sanctioned)
               - `guard-path-safety/no-adhoc-path-resolve` — `core/guards/main-edits.ts` (sanctioned)
               - `user-path/no-sync-fs` — `core/context.ts`, `core/git-target.ts`, `core/guards/poll-loop.ts`, `core/walk-scope.ts` (sanctioned)
               - `python/no-system-python` — `core` (sanctioned)
@@ -34190,7 +34202,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `source-read-safety/no-text-source-read` — `check/index.ts`, `check/runner-split.scan.ts` (debt)
         - **`web-artifacts`** — Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
           - Core:
-            - Uses: 51 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
+            - Uses: 53 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
               - `packages/timed-fs` ×8
               - `framework/import-map-names` ×6
               - `framework/plugin-id` ×4
@@ -34200,6 +34212,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core/app-preload` ×3
               - `framework/image-import` ×3
               - `plugin-meta/plugin-records` ×3
+              - `framework/tooling/web-artifacts/served-paths` ×2
               - `framework/tooling` ×2
               - `packages/owned-fd` ×2
               - `framework/browser-server/host-storage.decodeHostSnapshot`
@@ -34245,8 +34258,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `isBareSpecifier`
               - `isBrowserUnreachableDynamic`
               - `isInlinedPackage`
-              - `isWorkerChunkPath`
-              - `isWorkerTreePath`
               - `makeArtifactExternal`
               - `packageNameOf`
               - `pruneWebArtifactCaches`
@@ -34256,7 +34267,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SHARED_ROOT`
               - `STATIC_HOST_ENTRY_REL`
               - `takeCrawlSnapshot`
-              - `WORKER_ASSETS_DIR`
           - Cli:
             - Uses: `packages/thread-pool.createThreadPool`
             - Exports (types): `CarryForwardResult`
@@ -34267,10 +34277,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `seedAddressDir`
           - Cross-plugin:
             - Imported by:
-              - `apps/website/landing/screenshot`
               - `framework/cli/build`
               - `framework/tooling/codegen`
-              - `framework/tooling/e2e-harness/page-ready`
               - `framework/tooling/web-artifacts/prune`
           - Exemptions:
             - Exempts itself from:
@@ -34343,6 +34351,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `publishReleaseDist`
                   - `retainAddresses`
                   - `servedGraphOf`
+            - **`served-paths`** — The served URL grammar of web artifacts, as a leaf with no imports: where a worker chunk sits inside an artifact dir (WORKER_ASSETS_DIR), a worker tree's store-entry prefix (WORKER_TREE_PREFIX), and isWorkerTreePath / isWorkerChunkPath over a request path — so a URL reader (the e2e harness's network-idle count, the agent browser host) never loads the artifact build pipeline.
+              - Cross-plugin:
+                - Imported by:
+                  - `apps/website/landing/screenshot`
+                  - `framework/tooling/e2e-harness/page-ready`
+                  - `framework/tooling/web-artifacts`
+              - Core:
+                - Exports (values):
+                  - `isWorkerChunkPath`
+                  - `isWorkerTreePath`
+                  - `WORKER_ASSETS_DIR`
+                  - `WORKER_TREE_PREFIX`
     - **`web-core`**
       - Web:
         - Uses:
@@ -36090,8 +36110,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/font-family --font-mono`
-        - Imported by: 34 plugins — full list in [`plugins/infra/plugins/deps/REFERENCE.md`](../plugins/infra/plugins/deps/REFERENCE.md)
-          - `infra` ×12
+        - Imported by: 35 plugins — full list in [`plugins/infra/plugins/deps/REFERENCE.md`](../plugins/infra/plugins/deps/REFERENCE.md)
+          - `infra` ×13
           - `framework` ×6
           - `apps` ×5
           - `companions` ×2
@@ -36128,6 +36148,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `heldDep`
           - `holdDep`
           - `hostTarget`
+          - `linkSealedDep`
           - `readyNow`
           - `removeDep`
           - `sealDep`
@@ -36304,10 +36325,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `readBrowserExecutablesSync`
           - Cross-plugin:
             - Imported by:
+              - `apps/browser/engine`
               - `apps/prototypes/thumbnails`
               - `companions/browser-extension`
               - `debug/profiling/tab-memory`
               - `framework/tooling/e2e-harness`
+              - `infra/mcp/browser`
               - `infra/safe-fetch/browser-fetch`
               - `primitives/css/layout-harness`
           - Exemptions:
@@ -36325,6 +36348,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `connectChromium`
               - `launchChromium`
               - `launchPersistentChromium`
+              - `PLAYWRIGHT_BUNDLE_EXTERNAL`
               - `playwrightBrowser`
         - **`python`** — The python installer kind of infra/deps (pythonEnv, runPython, PythonEntryError) over uv, with its caches as declared data dirs Its uv-updater sub-plugin keeps every python/ project's uv.lock and .python-version current.
           - Cross-plugin:
@@ -37300,6 +37324,154 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Core:
             - Exports (types): `IndexRacyCount`
             - Exports (values): `countRacyEntries`
+        - **`main-slots`** — Main's per-commit slots: every app main serves (its own and its compositions) runs from a checkout of the commit it was built from, apps built together share one, and one free slot is kept ready (see the plugin's core and cli). Web half: registers the main-slots config (drainReportAfterSec — how long a process may keep an old slot busy after its app switched away before it is reported) for Settings → Config. Main's per-commit slots (the checkouts main and its compositions are built and served from; see the plugin's core and cli), server half: the main-slots config (drainReportAfterSec), the main-slot-drain-slow report kind (a process that kept an old slot busy past the threshold after its app switched away, one row per job), the main-slots-exhausted report kind (a build found no free slot and the draining ones at the leak limit, and waited), and the daily main-slots.reclaim job (main only) — the backstop reclaim for slots freed by a killed process.
+          - Web:
+            - Contributes: `ConfigV2.WebRegister` "main-slots"
+            - Uses: `config_v2.ConfigV2`
+          - Server:
+            - Contributes:
+              - `ConfigV2.Register` "main-slots"
+              - `report-kind` "main-slot-drain-slow"
+              - `report-kind` "main-slots-exhausted"
+            - Uses:
+              - `config_v2.ConfigV2`
+              - `infra/jobs/supervised-job.defineSupervisedJob`
+              - `primitives/log-channels.defineLogSink`
+              - `reports.ReportKind`
+              - `reports.ReportRow`
+            - Register: `defineSupervisedJob('main-slots.reclaim')`
+          - Core:
+            - Uses: 44 symbols — full list in [`plugins/infra/plugins/git/plugins/main-slots/REFERENCE.md`](../plugins/infra/plugins/git/plugins/main-slots/REFERENCE.md)
+              - `infra/git/main-slots/boot-lease` ×18
+              - `infra/paths` ×5
+              - `packages/timed-fs` ×5
+              - `infra/namespace` ×4
+              - `packages/flock` ×4
+              - `infra/host-fs/user-path` ×3
+              - `packages/owned-fd` ×2
+              - `infra/launcher/env-names.readEnv`
+              - `infra/paths/repo-root.REPO_ROOT`
+              - `infra/spawn.getMainRepoRoot`
+            - Exports (types):
+              - `DrainSlowPayload`
+              - `HandedBuildSlot`
+              - `MainSlot`
+              - `SlotHanded`
+              - `SlotHold`
+              - `SlotLease`
+              - `SlotLockProbe`
+              - `SlotsExhaustedPayload`
+              - `SlotState`
+              - `SlotStateKind`
+              - `TryExclusiveLease`
+            - Exports (values):
+              - `acquireSharedLease`
+              - `claimHandedBuildSlot`
+              - `clearSlotHanded`
+              - `clearUnserved`
+              - `currentLinkFor`
+              - `currentLinksDir`
+              - `DRAIN_SLOW_REPORT_KIND`
+              - `drainSlowFingerprint`
+              - `drainSlowMessage`
+              - `DrainSlowPayloadSchema`
+              - `holdSlotForLife`
+              - `isInSlotPool`
+              - `listSlots`
+              - `mainSlotsDir`
+              - `markSlotHanded`
+              - `readSlotHanded`
+              - `readSlotHolders`
+              - `servedMainRoot`
+              - `servedSlotOf`
+              - `serveSlot`
+              - `SLOTS_EXHAUSTED_REPORT_KIND`
+              - `SlotsExhaustedPayloadSchema`
+              - `slotStates`
+              - `stampUnservedSlots`
+              - `tryExclusiveLease`
+              - `waitExclusiveLease`
+              - `withServedMainRoot`
+              - `withSlotPool`
+          - Cli:
+            - Uses: `framework/cli/bootstrap.ensureDeps`
+            - Exports (types):
+              - `AcquireBuildSlotOptions`
+              - `BuildSlot`
+              - `HandedSlot`
+              - `HeldSlot`
+              - `ReclaimOptions`
+              - `ReclaimOutcome`
+              - `RunInBuildSlotOptions`
+            - Exports (values):
+              - `acquireBuildSlot`
+              - `DRAINING_SLOT_LIMIT`
+              - `FREE_SLOTS_KEPT`
+              - `readDrainReportAfterMs`
+              - `reclaimSlots`
+              - `runInBuildSlot`
+          - Cross-plugin:
+            - Imported by:
+              - `conversations/runtime-sdk`
+              - `framework/cli/build`
+              - `infra/git/main-slots/reclaim`
+              - `infra/launcher`
+              - `infra/launcher/gateway-drift`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `core/internal/handoff.ts`, `core/internal/lease.ts`, `core/internal/pool-lock.ts`, `core/internal/slots.ts` (debt)
+          - Plugins:
+            - **`boot-lease`** — A main slot's lease file layout (the tree.lock flock, the holder records beside it, the main-slot stamp) and holdSlotLeaseSync — the shared lease a process takes on the slot it runs from BEFORE it loads code from it (an open with O_SHLOCK, the same flock main-slots' leases take), with its holder record, for entry points that cannot load main-slots' core first: the CLI bootstrap (every ./equin run from a slot), the agent host's boot.
+              - Core:
+                - Uses:
+                  - `framework/product-name.LEGACY_IDS`
+                  - `infra/host-fs/user-path.AppPath`
+                  - `infra/host-fs/user-path.asAppPath`
+                  - `infra/host-fs/user-path.joinAppPath`
+                  - `packages/owned-fd.openOwnedFdSync`
+                  - `packages/timed-fs.existsSync`
+                  - `packages/timed-fs.readFileSync`
+                  - `packages/timed-fs.statSync`
+                - Exports (types):
+                  - `DrainRecord`
+                  - `SlotHolder`
+                  - `SlotHolderKind`
+                  - `SlotLeaseHold`
+                  - `SlotLeaseMode`
+                  - `UnservedStamp`
+                - Exports (values):
+                  - `checkoutRootOfSync`
+                  - `detachedHeadOf`
+                  - `drainRecordFor`
+                  - `drainsByDesign`
+                  - `holdSlotLeaseSync`
+                  - `MAIN_SLOT_SERVED_FILE`
+                  - `MAIN_SLOT_STAMP`
+                  - `O_SHLOCK_DARWIN`
+                  - `parseDrainRecord`
+                  - `parseHolder`
+                  - `parseUnserved`
+                  - `releaseRecordSync`
+                  - `renderDrainRecord`
+                  - `renderHolder`
+                  - `renderUnserved`
+                  - `SLOT_DRAIN_LOG_DIR`
+                  - `SLOT_HANDED_FILE`
+                  - `SLOT_HOLDER_KINDS`
+                  - `SLOT_LEASES_DIR`
+                  - `SLOT_LOCK_FILE`
+                  - `SLOT_UNSERVED_FILE`
+              - Cross-plugin:
+                - Imported by:
+                  - `infra/git/main-slots`
+                  - `infra/paths`
+              - Exemptions:
+                - Exempts itself from:
+                  - `boundaries/no-platform-api` — `core/internal/hold-sync.ts`, `core/internal/drain-sync.ts` (debt)
+                  - `user-path/no-unproven-claim` — `core/internal/hold-sync.ts` (sanctioned)
+                  - `user-path/no-sync-fs` — `core/internal/hold-sync.ts`, `core/internal/drain-sync.ts` (sanctioned)
+            - **`reclaim`** — `./equin main-slots-reclaim` — reclaim main's slot pool (stamp the slots no app lives in any more, file a main-slot-drain-slow report per process that kept one busy past the threshold, remove free slots beyond the one kept ready): the body of the daily main-slots.reclaim job, and what every main build ends with.
+              - Cli:
+                - Uses: `infra/git/main-slots.reclaimSlots`
         - **`private-index`** — Refresh a checkout's index on a private copy, then publish it back: copy the index WITH its mtime (racy git), let git write the copy (privateIndexWrites), and swap it into place by compare-and-swap under git's own index.lock taken wx — skipped while a git writer holds the lock or once the real index was written since the copy. One protocol, in a sync form (the tree hash, on the CLI's thread) and an async one (a backend's checkout primer).
           - Core:
             - Uses:
@@ -37360,33 +37532,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `upstream`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `core/internal/commit-identity.ts`, `core/internal/publish-target.ts` (debt)
-        - **`tree-lock`** — A checkout's working tree as a reader/writer lock: holdTreeRead(root) while a process loads code from the tree (shared, in-process fast path), withTreeWrite(root, write) around a git command that rewrites it (push's fast-forward of main) — so a booting process sees the tree wholly before or wholly after a fast-forward, never a mix of the two commits.
-          - Core:
-            - Uses:
-              - `framework/product-name.LEGACY_IDS`
-              - `infra/host-fs/user-path.AppPath`
-              - `infra/host-fs/user-path.asAppPath`
-              - `infra/host-fs/user-path.joinAppPath`
-              - `packages/flock.flockTryShared`
-              - `packages/flock.HeldFlock`
-              - `packages/flock.waitForFlock`
-              - `packages/owned-fd.openOwnedFdSync`
-              - `packages/timed-fs.existsSync`
-              - `packages/timed-fs.readFileSync`
-              - `packages/timed-fs.statSync`
-            - Exports (values):
-              - `holdTreeRead`
-              - `treeLockPath`
-              - `withTreeWrite`
-          - Cross-plugin:
-            - Imported by:
-              - `framework/cli/push`
-              - `framework/server-core`
-          - Exemptions:
-            - Exempts itself from:
-              - `user-path/no-unproven-claim` — `core/internal/tree-lock.ts` (sanctioned)
-              - `boundaries/no-platform-api` — `core/internal/tree-lock.ts` (debt)
-              - `blocking-fs/sync-named` — `core/internal/tree-lock.ts` (sanctioned)
     - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers; watches for a live-state channel that stopped delivering (PUSH_STALL_MS, the threshold its Connection row — the connection-row sub-plugin — shares). Liveness endpoint used by clients to detect server restarts.
       - Web:
         - Contributes:
@@ -38023,7 +38168,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/web-artifacts` (0 debt)
               - `infra/asset-mirror/bundle` (0 debt)
               - `infra/file-sink` (0 debt)
-              - `infra/git/tree-lock` (0 debt)
               - `infra/launcher` (0 debt)
               - `infra/worktree` (0 debt)
               - `packages/blocking-write` (0 debt)
@@ -38056,8 +38200,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/sweep.ts` (debt)
         - **`user-path`** — Which host paths a synchronous fs call may touch: AppPath (a path the app owns — its data dirs, its checkout; the only kind a sync fs call in runtime code may take) and UserPath (one the user or their config chose), with the type-aware lint that refuses a sync fs call on any path not proven app-owned — so a macOS Files & Folders prompt can never freeze a backend's JS thread, whether or not anyone marked the user's path.
           - Cross-plugin:
-            - Imported by: 113 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
-              - `infra` ×41
+            - Imported by: 115 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
+              - `infra` ×43
               - `framework` ×20
               - `apps` ×8
               - `debug` ×7
@@ -38092,7 +38236,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/claude-cli/sdk` (0 debt)
               - `infra/deps/playwright-browser` (0 debt)
               - `infra/git/index-refresh` (0 debt)
-              - `infra/git/tree-lock` (0 debt)
+              - `infra/git/main-slots/boot-lease` (0 debt)
               - `infra/host-fs/user-path` (0 debt)
               - `infra/launcher/env-names` (0 debt)
               - `infra/launcher/login-services` (0 debt)
@@ -38579,9 +38723,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `takeRunErrorPath`
               - `writeRunErrorSync`
           - Cross-plugin:
-            - Imported by: 34 plugins — full list in [`plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md`](../plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md)
+            - Imported by: 35 plugins — full list in [`plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md`](../plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md)
               - `framework` ×10
-              - `infra` ×6
+              - `infra` ×7
               - `apps` ×5
               - `build` ×3
               - `debug` ×3
@@ -38748,9 +38892,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `setEnvDefault`
               - `unsetEnv`
           - Cross-plugin:
-            - Imported by: 55 plugins — full list in [`plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md)
+            - Imported by: 56 plugins — full list in [`plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md)
               - `framework` ×18
-              - `infra` ×15
+              - `infra` ×16
               - `debug` ×5
               - `packages` ×5
               - `database` ×4
@@ -39129,6 +39273,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/mcp.McpCallerContext`
               - `infra/spawn/daemon.DaemonInstance`
               - `infra/spawn/daemon.defineDaemon`
+              - `infra/spawn/daemon/bundle.bundleDaemon`
               - `infra/worktree.appCheckoutOf`
               - `network/live.serveValue`
               - `tasks/tasks-core.conversationStatusChanged`
@@ -39251,11 +39396,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `namespaceUrl`
           - `resolveNamespaceAlias`
       - Cross-plugin:
-        - Imported by: 84 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
+        - Imported by: 85 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
           - `framework` ×15
           - `apps` ×13
+          - `infra` ×12
           - `debug` ×11
-          - `infra` ×11
           - `conversations` ×7
           - `build` ×6
           - `database` ×3
@@ -39288,13 +39433,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `ndjsonResponse`
     - **`paths`** — Canonical machine paths, plus the boot-time publication of this namespace's declared data-dir set so an audit running in another checkout can tell one of this branch's directories from an orphan.
       - Core:
-        - Uses: 35 symbols — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Uses: 37 symbols — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `packages/timed-fs` ×10
           - `infra/namespace` ×8
           - `infra/launcher/env-names` ×4
           - `infra/host-fs/user-path` ×3
           - `framework/product-name` ×2
           - `framework/tooling/collected-dir` ×2
+          - `infra/git/main-slots/boot-lease` ×2
           - `infra/paths/data-root-layout` ×2
           - `infra/runtime-identity` ×2
           - `infra/paths/repo-root.REPO_ROOT`
@@ -39316,6 +39462,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LegacyMove`
           - `LogBound`
           - `LogClaim`
+          - `MainNamespaceOwner`
           - `MigrationStep`
           - `MovedFrom`
           - `NotLogs`
@@ -39327,7 +39474,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `backupsDir`
           - `backupsDirs`
           - `CHECK_ARTIFACTS_RETENTION`
+          - `checkoutAdminDir`
           - `checkoutBuildLock`
+          - `checkoutLockPath`
           - `checkoutNamespace`
           - `checkoutRef`
           - `checkoutWorktreeName`
@@ -39345,6 +39494,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `deploysForCheckoutSync`
           - `getDataDirs`
           - `isHostSingleton`
+          - `isMainCheckoutOrSlot`
+          - `isMainSlotCheckout`
           - `isRelease`
           - `LEGACY_LAYOUT`
           - `listWorktreeDirsAsync`
@@ -39375,6 +39526,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `settleDeclaredDataDirMoves`
           - `stampCheckoutMinter`
           - `stampCheckoutMinterSync`
+          - `stampMainSlot`
           - `toolchainPin`
           - `webGraphRecordPath`
           - `webGraphRecordsDir`
@@ -39383,16 +39535,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 141 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
-          - `infra` ×35
-          - `framework` ×23
+        - Imported by: 144 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+          - `infra` ×36
+          - `framework` ×24
           - `apps` ×18
           - `debug` ×15
           - `build` ×8
           - `conversations` ×7
           - `backup` ×4
+          - `plugin-meta` ×4
           - `packages` ×3
-          - `plugin-meta` ×3
           - `primitives` ×3
           - `release` ×3
           - `reports` ×3
@@ -39412,9 +39564,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `paths:no-hardcoded-paths` — `check/index.ts` (sanctioned)
           - `paths:no-inlined-worktree-artifacts` — `.` (sanctioned)
           - `paths:data-root-not-joined` — `.` (sanctioned)
-          - `boundaries/no-platform-api` — `core/internal/checkout-deploys.ts`, `core/internal/checkout-minter.ts`, `core/internal/checkout-owner.ts`, `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/data-dirs-manifest.ts`, `core/internal/paths.ts`, `core/internal/prune-artifacts.ts`, `core/internal/toolchain-pin.ts`, `core/internal/worktree-dirs.ts` (debt)
+          - `boundaries/no-platform-api` — `core/internal/checkout-admin-dir.ts`, `core/internal/checkout-deploys.ts`, `core/internal/checkout-minter.ts`, `core/internal/checkout-owner.ts`, `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/data-dirs-manifest.ts`, `core/internal/paths.ts`, `core/internal/prune-artifacts.ts`, `core/internal/toolchain-pin.ts`, `core/internal/worktree-dirs.ts` (debt)
           - `user-path/no-unproven-claim` — `core/internal/paths.ts` (sanctioned)
           - `user-path/no-unproven-claim` — `core/internal/checkout-deploys.ts` (sanctioned)
+          - `user-path/no-unproven-claim` — `core/internal/checkout-admin-dir.ts` (sanctioned)
       - Server:
         - Exports (types):
           - `AppIdentity`
@@ -39807,16 +39960,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `infra/host-fs/user-path.AppPath`
               - `infra/host-fs/user-path.asAppPath`
-            - Exports (values): `REPO_ROOT`
+              - `infra/host-fs/user-path.joinAppPath`
+            - Exports (values):
+              - `BUNDLE_DIR_SUFFIX`
+              - `bundledScriptName`
+              - `REPO_ROOT`
+              - `REPO_ROOT_MODULE`
+              - `scriptPath`
           - Cross-plugin:
-            - Imported by: 57 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
-              - `framework` ×15
-              - `infra` ×8
+            - Imported by: 61 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
+              - `framework` ×14
+              - `infra` ×10
               - `apps` ×7
               - `build` ×6
               - `debug` ×4
               - `plugin-meta` ×4
               - `conversations` ×3
+              - `packages` ×3
               - `reports` ×3
               - `code-explorer`
               - `config_v2`
@@ -40266,9 +40426,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `spawnPassthrough`
           - `spawnToFile`
       - Cross-plugin:
-        - Imported by: 101 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
+        - Imported by: 104 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
           - `framework` ×32
-          - `infra` ×27
+          - `infra` ×30
           - `apps` ×9
           - `database` ×5
           - `debug` ×5
@@ -40375,6 +40535,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/spawn/daemon.listDaemons`
                   - `infra/spawn/daemon.onDaemonActivity`
                 - Register: `defineBackgroundKind('daemon')`
+            - **`bundle`** — bundleDaemon: a detached daemon's entry as a self-contained, content-addressed directory (<dir>/<hash>.bundle) — one Bun.build JS file per entry with repo code and pure-JS packages inlined, the scripts it runs by path (scriptPath literals) bundled beside it, the external packages cloned into its node_modules and the sealed dependency installs linked — held by a shared in-use flock the daemon inherits (launchDetached holdFds), so a process run from it reads nothing from the checkout it was made from; every call reclaims the bundles nothing holds.
+              - Cross-plugin:
+                - Imported by:
+                  - `apps/browser/engine`
+                  - `infra/mcp/browser`
+              - Exemptions:
+                - Exempts itself from: `boundaries/no-platform-api` — `server/internal/bundle.ts` (debt)
+              - Server:
+                - Exports (types):
+                  - `DaemonBundle`
+                  - `DaemonBundleSpec`
+                - Exports (values): `bundleDaemon`
     - **`ssh`** — Hermetic SSH client primitive: sshRun (one remote command) and sshUpload (one file, over scp) open a session to (host, port, user) with EXACTLY the private key they are given — IdentitiesOnly + IdentityAgent=none + -F /dev/null keep the machine's own agent, config and multiplexed sessions out, so a connection test proves the key it was handed works — and return a discriminated result whose failures are classified from OpenSSH stderr (dns / unreachable / timeout / auth / host-key-mismatch / command-failed / unknown). Both are built from one shared hermetic invocation, so the isolation flags cannot drift between them. Host-key policy is pinned-or-learn with no 'off'; the key is materialized 0600 into a mkdtemp dir removed in finally. An upload lands on a staging sibling and is renamed over its destination, so it can neither fail because the destination is being executed nor leave a truncated file where a working one was.
       - Cross-plugin:
         - Imported by:
@@ -40572,6 +40744,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WorktreeRemoval`
           - `WorktreeSetup`
           - `WorktreeSpec`
+          - `WorktreeSpecRead`
         - Exports (values):
           - `addCheckout`
           - `appCheckoutOf`
@@ -40606,6 +40779,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `probeNamespace`
           - `probeWorktreeOp`
           - `pruneSpares`
+          - `readWorktreeSpec`
           - `recordSetupSteps`
           - `removeWorktree`
           - `removeWorktreeSpec`
@@ -40617,9 +40791,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreePathFor`
           - `writeWorktreeSpec`
       - Cross-plugin:
-        - Imported by: 39 plugins — full list in [`plugins/infra/plugins/worktree/REFERENCE.md`](../plugins/infra/plugins/worktree/REFERENCE.md)
+        - Imported by: 40 plugins — full list in [`plugins/infra/plugins/worktree/REFERENCE.md`](../plugins/infra/plugins/worktree/REFERENCE.md)
           - `debug` ×9
-          - `infra` ×8
+          - `infra` ×9
           - `conversations` ×4
           - `framework` ×4
           - `tasks` ×4
@@ -43317,6 +43491,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/launcher/env-names.envEntries`
           - `infra/launcher/env-names.readEnv`
           - `infra/launcher/env-names.unsetEnv`
+          - `infra/paths/repo-root.scriptPath`
           - `packages/owned-fd.openOwnedFd`
         - Exports (types):
           - `HeldFlock`
@@ -43330,8 +43505,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `holdParentLifeline`
           - `waitForFlock`
       - Cross-plugin:
-        - Imported by: 28 plugins — full list in [`plugins/packages/plugins/flock/REFERENCE.md`](../plugins/packages/plugins/flock/REFERENCE.md)
-          - `infra` ×11
+        - Imported by: 29 plugins — full list in [`plugins/packages/plugins/flock/REFERENCE.md`](../plugins/packages/plugins/flock/REFERENCE.md)
+          - `infra` ×12
           - `framework` ×7
           - `packages` ×4
           - `apps/chord/song-index`
@@ -43343,7 +43518,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from:
           - `spawn-safety/no-raw-bun-spawn` — `core/internal/wait.ts` (sanctioned)
-          - `boundaries/no-platform-api` — `core/internal/flock.ts`, `core/internal/lifeline.ts`, `core/internal/wait.ts` (debt)
+          - `boundaries/no-platform-api` — `core/internal/flock.ts`, `core/internal/lifeline.ts` (debt)
       - Server:
         - Exports (types):
           - `HeldFlock`
@@ -43521,8 +43696,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `yieldMacrotask`
     - **`owned-fd`** — Owned file descriptors: openOwnedFd / adoptFd return an OwnedFd whose close() closes its descriptor exactly once — a second close throws FdAlreadyClosedError naming where the first happened, instead of closing whatever reused the number. Imports node:fs and the AppPath type only; enforced by the owned-fd/no-raw-fd-close lint (no fs.closeSync / fs.close outside it) and owned-fd/no-raw-spawn-stdio-fd (a spawn's stdio descriptor is an OwnedFd's .fd).
       - Cross-plugin:
-        - Imported by: 31 plugins — full list in [`plugins/packages/plugins/owned-fd/REFERENCE.md`](../plugins/packages/plugins/owned-fd/REFERENCE.md)
-          - `infra` ×13
+        - Imported by: 33 plugins — full list in [`plugins/packages/plugins/owned-fd/REFERENCE.md`](../plugins/packages/plugins/owned-fd/REFERENCE.md)
+          - `infra` ×15
           - `framework` ×7
           - `packages` ×4
           - `database` ×2
@@ -43537,6 +43712,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `owned-fd/no-raw-fd-close` — `core/internal/owned-fd.ts` (sanctioned)
         - Exempted by:
           - `framework/tooling/checks/bun-runtime` (0 debt)
+          - `framework/tooling/guards` (0 debt)
           - `infra/host/io-health/monitor` (0 debt)
           - `packages/owned-fd` (0 debt)
       - Core:
@@ -43572,6 +43748,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/launcher/env-names.readEnv`
           - `infra/launcher/env-names.readEnvPath`
           - `infra/launcher/env-names.unsetEnv`
+          - `infra/paths/repo-root.scriptPath`
           - `packages/timed-fs.readFile`
         - Exports (types):
           - `PeakFootprint`
@@ -43837,12 +44014,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Exports (values):
           - `closureChangedSince`
+          - `closureDigestNow`
           - `closureFiles`
           - `closureRefusal`
           - `sourceDigest`
       - Central:
         - Exports (values):
           - `closureChangedSince`
+          - `closureDigestNow`
           - `sourceDigest`
       - Core:
         - Exports (types):
@@ -43879,7 +44058,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Non-standard folders: `native/`
     - **`spawn-priority`** — OS scheduling-priority isolation: backgroundArgv/backgroundPrefix wrap heavy background work (DB forks, builds, worktree checkouts) in darwinbg (taskpolicy -b) so it yields host CPU/IO to the interactive backends, and backgroundShellPrefix does it for every command an SDK agent's CLI launches; spawnInForeground starts a scarce slot holder's child out of darwinbg; boostInteractiveQos raises the calling thread to user-interactive QoS (main backend's event loop only).
       - Core:
-        - Uses: `infra/launcher/env-names.readEnv`
+        - Uses:
+          - `infra/launcher/env-names.readEnv`
+          - `infra/paths/repo-root.scriptPath`
         - Exports (types):
           - `DarwinBackground`
           - `SpawnTier`
@@ -43905,7 +44086,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/host/host-admission`
           - `infra/spawn`
       - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `core/internal/background.ts`, `core/internal/darwin-background.ts`, `server/internal/spawn-priority.ts` (debt)
+        - Exempts itself from: `boundaries/no-platform-api` — `core/internal/darwin-background.ts`, `server/internal/spawn-priority.ts` (debt)
       - Server:
         - Exports (types): `DarwinBackground`
         - Exports (values):
@@ -44031,8 +44212,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TIMED_FS_CALLS`
           - `withFsCallTally`
       - Cross-plugin:
-        - Imported by: 184 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
-          - `infra` ×55
+        - Imported by: 186 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+          - `infra` ×57
           - `framework` ×29
           - `apps` ×16
           - `debug` ×15
@@ -54537,10 +54718,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 78 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+        - Imported by: 79 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `apps` ×14
           - `debug` ×14
-          - `infra` ×11
+          - `infra` ×12
           - `conversations` ×6
           - `database` ×6
           - `framework` ×6
@@ -58662,11 +58843,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `versionSkewCode`
       - `versionSkewExplains`
   - Cross-plugin:
-    - Imported by: 89 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 90 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×34
       - `debug` ×21
       - `conversations` ×7
-      - `infra` ×5
+      - `infra` ×6
       - `build` ×4
       - `database` ×4
       - `apps` ×3
@@ -59311,6 +59492,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/checks/type-check`
               - `framework/tooling/checks/type-check/backstop`
               - `framework/tooling/web-artifacts/blocker-scan`
+              - `infra/git/main-slots`
               - `infra/host/host-admission`
               - `infra/launcher`
               - `infra/launcher/gateway-drift`

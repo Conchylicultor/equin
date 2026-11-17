@@ -51,6 +51,15 @@ export {
   checkoutRef,
   checkoutNamespace,
 } from "./internal/checkout-ref";
+// A checkout's admin dir inside its own git dir (a main slot's lease and its
+// holder records), and the stamp that makes a linked worktree a main slot.
+export {
+  checkoutAdminDir,
+  checkoutLockPath,
+  isMainCheckoutOrSlot,
+  isMainSlotCheckout,
+  stampMainSlot,
+} from "./internal/checkout-admin-dir";
 // Who acts as a namespace: stamped by the CLI, read by the reaper.
 export {
   readCheckoutOwner,
@@ -75,6 +84,7 @@ export {
 export type {
   CheckoutDeploy,
   CheckoutDeployResolution,
+  MainNamespaceOwner,
 } from "./internal/checkout-deploys";
 
 // The declared-directory registry for the data root. `dataRoot()` is the ONLY

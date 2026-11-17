@@ -324,6 +324,16 @@ export const AgentLaunchOptionsSchema = z.preprocess(
      */
     namedBun: z.string().nullable().default(null),
     /**
+     * The shell prefix the agent hands its CLI (`CLAUDE_CODE_SHELL_PREFIX`,
+     * run for every command): a copy of `bin/background-shell`
+     * (packages/spawn-priority) in this agent's own `bin/` dir, named by its
+     * content — never the script in the backend's checkout, which a main slot
+     * may have checked out again by the time a command runs. Null where
+     * nothing demotes. Resolved at every start; defaulted (no prefix) for an
+     * options file written before it existed.
+     */
+    backgroundShell: z.string().nullable().default(null),
+    /**
      * The highest event seq the backend has applied for this conversation
      * (its row's `cursorSeq`), read at every start: the agent numbers its
      * events past both this and its events file's last line. So a relaunch
@@ -375,7 +385,12 @@ export type AgentLaunchOptions = z.infer<typeof AgentLaunchOptionsSchema>;
 
 /** The fields the backend resolves at each process start, never carried over. */
 export type AgentStartFields =
-  "claudeBin" | "disclaimExec" | "namedClaudeBin" | "namedBun" | "seqFloor";
+  | "claudeBin"
+  | "disclaimExec"
+  | "namedClaudeBin"
+  | "namedBun"
+  | "backgroundShell"
+  | "seqFloor";
 
 /** What a launch asks for — everything but the per-start fields. */
 export type AgentLaunchIntent = Omit<AgentLaunchOptions, AgentStartFields>;

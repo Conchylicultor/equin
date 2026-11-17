@@ -280,13 +280,20 @@ export async function runHermeticBuild(opts: {
       // exists only in someone's user-layer `compositions.jsonc` is deliberately not
       // releasable. The deploy posture reads the checkout's RESOLVED config instead
       // (`./build-targets.ts`) — the divergence is stated at both ends.
-      const { pass } = await prepareCompositionSources({
+      const { pass, compositionFailures } = await prepareCompositionSources({
         root,
         manifest: compositionsConfig.fields.manifests.defaultValue,
         compositions: opts.compositions,
         grant,
         hooks,
       });
+      // A release is all of its compositions or nothing.
+      if (compositionFailures.length > 0) {
+        throw new AggregateError(
+          compositionFailures.map((f) => f.error),
+          `composition registries failed: ${compositionFailures.map((f) => f.composition).join(", ")}`,
+        );
+      }
 
       // Stage 2 — migrations + manifest-level codegen + the mandatory config-override
       // seed.

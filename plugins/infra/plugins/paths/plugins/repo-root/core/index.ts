@@ -1,1 +1,7 @@
-export { REPO_ROOT } from "./internal/repo-root";
+export {
+  BUNDLE_DIR_SUFFIX,
+  bundledScriptName,
+  REPO_ROOT,
+  REPO_ROOT_MODULE,
+  scriptPath,
+} from "./internal/repo-root";

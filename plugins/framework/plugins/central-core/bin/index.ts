@@ -29,6 +29,8 @@ import {
 import { toolchainPin } from "@plugins/infra/plugins/paths/core";
 import { runtimePath } from "@plugins/infra/plugins/launcher/plugins/runtime-env/core";
 import { readServingSocket } from "@plugins/infra/plugins/runtime-identity/core";
+import { holdSlotForLife } from "@plugins/infra/plugins/git/plugins/main-slots/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import {
   centralRoutePrefixes,
   writeCentralRoutesManifest,
@@ -41,6 +43,15 @@ import {
 Object.assign(process.env, toolchainPin(), {
   PATH: runtimePath(process.env),
 });
+
+// Central runs main's code from main's SLOT (infra/git/main-slots) once main
+// is served from one: held shared for central's whole life, so no build checks
+// the slot out while central may still load code from it (a no-op from the
+// repo root). Main's build hands the slot over before restarting central.
+// At exit, the lease's end is noted (a slow drain past main's switch is
+// reported: main-slots' `main-slot-drain-slow`).
+const slotHold = await holdSlotForLife(REPO_ROOT, "central", "central");
+if (slotHold.kind === "held") process.on("exit", slotHold.releaseAtExitSync);
 
 // ── Load all central plugins (topological waves) ───────────────
 // Import in dependency-ordered waves over `dependsOn` rather than one flat

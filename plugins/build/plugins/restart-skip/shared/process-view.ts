@@ -21,10 +21,14 @@ const RUNTIME_INPUTS = [
 
 /** The running process (a backend, or central), as the judgement reads it. */
 export function currentProcessView(
-  host: Pick<ProcessView, "bootInputs" | "children" | "closureSince">,
+  host: Pick<
+    ProcessView,
+    "bootInputs" | "children" | "closureSince" | "digestNow"
+  >,
 ): ProcessView {
   return {
     startedAtMs: STARTED_AT_MS,
+    root: REPO_ROOT,
     bin: process.execPath,
     entry: Bun.main,
     // Every module this process's loader has evaluated, eager and lazy, by

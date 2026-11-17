@@ -37,8 +37,8 @@ import {
 import {
   isBrowserUnreachableDynamic,
   WORKER_LINKED_SUFFIX,
-  WORKER_TREE_PREFIX,
 } from "../constants";
+import { WORKER_TREE_PREFIX } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/plugins/served-paths/core";
 import { type ImportClause, parseImportClause } from "./import-clause";
 
 export interface StagedModuleIssue {

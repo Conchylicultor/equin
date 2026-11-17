@@ -11,7 +11,8 @@
 // child (`ensureDepViaCli`). Installer kinds implement `DepSource`; runners
 // take a `Ready`. A release seals its `bundle` dependencies for its platform
 // (`sealDep`, writing `deps.sealed.json`), and every read above resolves them
-// from that manifest when the root is such a bundle. `holdDep` keeps an install
+// from that manifest when the root is such a bundle (`linkSealedDep` seals an
+// install this host has by reference, for a bundle that runs here). `holdDep` keeps an install
 // that something outside any checkout points at (a launchd job) from the sweep
 // (`sweepUnusedDeps`, run daily by the `sweep` sub-plugin).
 export { defineDep, hostTarget } from "./internal/dep";
@@ -29,7 +30,7 @@ export type {
 export { depState, ensureDep, readyNow, removeDep } from "./internal/ensure";
 export type { EnsureOptions, ReadyNow, RemoveOutcome } from "./internal/ensure";
 export { ensureDepViaCli } from "./internal/via-cli";
-export { sealDep } from "./internal/seal";
+export { linkSealedDep, sealDep } from "./internal/seal";
 export type { SealOutcome } from "./internal/seal";
 export { SEALED_MANIFEST } from "./internal/sealed";
 export { heldDep, holdDep } from "./internal/hold";

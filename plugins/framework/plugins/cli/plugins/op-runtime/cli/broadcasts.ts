@@ -1,4 +1,8 @@
-import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import {
+  getWorktreeRoot,
+  spawnCaptured,
+} from "@plugins/infra/plugins/spawn/core";
+import { checkoutRef } from "@plugins/infra/plugins/paths/core";
 import type { OpKind } from "@plugins/infra/plugins/worktree/core";
 
 // Wedge-breaker for the local `git` metadata reads in this file — orders of
@@ -76,6 +80,9 @@ export async function checkBroadcasts(
 ): Promise<void> {
   const branch = await gitOutput(["rev-parse", "--abbrev-ref", "HEAD"]);
   if (!branch || branch === "main") return;
+  // One of main's own checkouts — a main slot sits detached at one commit, so
+  // its branch reads `HEAD` and only `checkoutRef` knows it is main.
+  if ((await checkoutRef(await getWorktreeRoot())).kind === "main") return;
 
   const raw = await gitOutput([
     "show",

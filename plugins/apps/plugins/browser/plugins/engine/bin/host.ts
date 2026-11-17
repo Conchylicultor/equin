@@ -9,8 +9,10 @@
  * (`machine/internal/host-client.ts`), finds it again by its status file, and
  * relays each client socket to it byte for byte.
  *
- * Run as `bun bin/host.ts --launched-by <namespace>` from a checkout's source.
- * Exits 30 min after its last page and socket went, on `POST /shutdown`, or on
+ * Run as a self-contained bundle of this file (`infra/spawn/daemon/bundle`:
+ * `bun <bundle>/…/bin/host.js --launched-by <namespace> --code-id <id>`), never
+ * from a checkout — main's checkouts are per-commit slots a later build may
+ * rewrite or delete under a process that outlives its backend. Exits 30 min after its last page and socket went, on `POST /shutdown`, or on
  * SIGTERM/SIGINT/SIGHUP — closing the browser first, which flushes the profile.
  *
  * Plan: research/2026-10-24-apps-browser-streamed-chromium.md
@@ -18,14 +20,11 @@
 import { renameSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { openOwnedFdSync } from "@plugins/packages/plugins/owned-fd/core";
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
-import { resolve } from "node:path";
-import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { flockTry } from "@plugins/packages/plugins/flock/core";
 import { withForegroundPriority } from "@plugins/packages/plugins/spawn-priority/core";
 import { browserDir } from "@plugins/apps/plugins/browser/data-dirs";
 import { ENGINE_PROTOCOL, ENGINE_WS_PATH } from "../core";
 import { browserEngineDir, browserEngineUploadsDir } from "../data-dirs";
-import { hostCodeId } from "../shared/code-id";
 import {
   HOST_FILES,
   HostShutdownBodySchema,
@@ -53,7 +52,9 @@ function argValue(name: string): string {
 const launchedBy = argValue("--launched-by");
 const dir = browserEngineDir.ensureSync();
 const file = (name: string) => browserEngineDir.file(name);
-const codeId = await hostCodeId(asAppPath(resolve(import.meta.dir, "..")));
+// Which code this is, as the launcher hashed it from the checkout it bundled
+// (`shared/code-id.ts`): a bundle carries no source to hash.
+const codeId = argValue("--code-id");
 const startedAt = new Date().toISOString();
 
 // The singleton: whoever holds the lock is THE host. The kernel drops it when

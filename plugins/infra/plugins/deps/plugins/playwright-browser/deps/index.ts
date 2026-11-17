@@ -7,6 +7,7 @@ export {
   connectChromium,
   launchChromium,
   launchPersistentChromium,
+  PLAYWRIGHT_BUNDLE_EXTERNAL,
   playwrightBrowser,
 } from "./internal/playwright-browser";
 export type {

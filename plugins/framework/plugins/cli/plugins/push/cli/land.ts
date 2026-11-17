@@ -8,7 +8,6 @@ import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/c
 import { inheritedGrant } from "@plugins/infra/plugins/host/plugins/host-admission/server";
 import type { Grant } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { resolvePublishTarget } from "@plugins/infra/plugins/git/plugins/remotes/core";
-import { withTreeWrite } from "@plugins/infra/plugins/git/plugins/tree-lock/core";
 import { checkoutNamespace } from "@plugins/infra/plugins/paths/server";
 import {
   exec,
@@ -177,22 +176,20 @@ async function landWorktree(
   //    step: main's own auto-build takes it from there.
   report.stepStart("ff-merge");
   console.log(`Merging ${branch} into main...`);
-  //    Under main's tree write lock (`infra/git/tree-lock`): the merge rewrites
-  //    main's files one by one, and every supervised child on main boots its
-  //    plugin graph out of this tree — one loading mid-merge reads two commits
-  //    at once (2026-11-05: `worktree.prepare` and `database.fork` died on an
-  //    export the half-written tree lacked). Remote main already moved (step 6),
-  //    so a failure here leaves local main behind it — say so, with the one
-  //    command that finishes it.
-  await withTreeWrite(mainWorktree, () =>
-    exec(["git", "merge", "--ff-only", branch], mainWorktree),
-  ).catch((err: unknown) => {
-    throw new Error(
-      `${branch} is pushed${publish.kind === "publish" ? " and remote main already points at it" : ""}, ` +
-        `but local main was not fast-forwarded. Finish it: git -C ${mainWorktree} merge --ff-only ${branch}`,
-      { cause: err },
-    );
-  });
+  //    Nothing runs from this checkout: main is built and served from its
+  //    slots (`infra/git/main-slots`), each checked out at one commit, so the
+  //    merge rewriting these files one by one tears no process's code. Remote
+  //    main already moved (step 6), so a failure here leaves local main behind
+  //    it — say so, with the one command that finishes it.
+  await exec(["git", "merge", "--ff-only", branch], mainWorktree).catch(
+    (err: unknown) => {
+      throw new Error(
+        `${branch} is pushed${publish.kind === "publish" ? " and remote main already points at it" : ""}, ` +
+          `but local main was not fast-forwarded. Finish it: git -C ${mainWorktree} merge --ff-only ${branch}`,
+        { cause: err },
+      );
+    },
+  );
   report.stepEnd("ff-merge");
 
   console.log(

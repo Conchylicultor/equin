@@ -28,10 +28,12 @@ import (
 //
 // The gateway is the one process that is up whenever anything is, so the
 // TRIGGER lives here — and only the trigger. It holds no policy: on an edge it
-// starts ONE convergence run, `./equin build --allow-main --converge` in main's
-// checkout, which decides from durable state (git, the served dist, the
-// build_runs ledger) whether anything is due and builds it — the commit being
-// deployed deciding with its own code (plugins/build/plugins/converge).
+// starts ONE convergence run, `./equin build --allow-main --converge` from the
+// code main serves — the main slot main's `current/<main namespace>` link names (-main-slots-current; the
+// repo's checkout before any slot exists, see convergeDir) — which decides
+// from durable state (git, the served dist, the build_runs ledger) whether
+// anything is due and builds it, each build in a slot of its own
+// (plugins/build/plugins/converge, plugins/infra/plugins/git/plugins/main-slots).
 //
 // The edges:
 //   - refs/heads/main advanced (loose ref or packed-refs), trailing-debounced;
@@ -112,12 +114,17 @@ type mainDeployStatus struct {
 
 // mainDeployer runs main's convergence: one child at a time, started by edges.
 type mainDeployer struct {
-	checkout  string
-	gitDir    string
-	env       ChildEnv
-	logPath   string
-	outboxDir string
-	debounce  time.Duration
+	checkout string
+	// currentSlot is main's own `current/<main namespace>` link in its slot pool
+	// (plugins/infra/plugins/git/plugins/main-slots): each run starts in the
+	// slot it names. "" (a hand-run gateway with no pool) always runs in
+	// checkout.
+	currentSlot string
+	gitDir      string
+	env         ChildEnv
+	logPath     string
+	outboxDir   string
+	debounce    time.Duration
 	// spawner starts the run as a long-lived child (spawn.go): under the
 	// keeper, a generation that replaces this one adopts it.
 	spawner spawner
@@ -147,8 +154,10 @@ type mainDeployer struct {
 
 // newMainDeployer validates main's checkout: a gateway told to deploy a
 // checkout that is not one fails at boot, naming it, rather than at the first
-// push.
-func newMainDeployer(checkout string, env ChildEnv, logDir, outboxDir string) (*mainDeployer, error) {
+// push. The checkout is the git store (its refs/heads/main is watched) and
+// the fallback a run starts in; currentSlot is where runs start once main is
+// served from a slot.
+func newMainDeployer(checkout, currentSlot string, env ChildEnv, logDir, outboxDir string) (*mainDeployer, error) {
 	gitDir := filepath.Join(checkout, ".git")
 	info, err := os.Stat(gitDir)
 	if err != nil {
@@ -162,19 +171,27 @@ func newMainDeployer(checkout string, env ChildEnv, logDir, outboxDir string) (*
 		return nil, fmt.Errorf("-main-checkout %s: no CLI at %s: %w", checkout, cli, err)
 	}
 	d := &mainDeployer{
-		spawner:   localSpawner{},
-		checkout:  checkout,
-		gitDir:    gitDir,
-		env:       env,
-		logPath:   filepath.Join(logDir, deployLogsSubdir, "main.log"),
-		outboxDir: outboxDir,
-		debounce:  mainDeployDebounce,
-		runEnded:  make(chan struct{}, 1),
+		spawner:     localSpawner{},
+		checkout:    checkout,
+		currentSlot: currentSlot,
+		gitDir:      gitDir,
+		env:         env,
+		logPath:     filepath.Join(logDir, deployLogsSubdir, "main.log"),
+		outboxDir:   outboxDir,
+		debounce:    mainDeployDebounce,
+		runEnded:    make(chan struct{}, 1),
 	}
 	d.spawn = func(logPath string, tag json.RawMessage) (*child, error) {
+		// Resolved before EVERY run: a build moves `current` to the slot it
+		// deployed, and the next run must start from that one.
+		dir, err := convergeDir(checkout, currentSlot)
+		if err != nil {
+			return nil, err
+		}
+		slog.Info("main deploy: convergence run starts", "dir", dir)
 		return d.spawner.spawn(spawnSpec{
-			Argv: []string{cli, "build", "--allow-main", "--converge"},
-			Dir:  checkout,
+			Argv: []string{filepath.Join(dir, "equin"), "build", "--allow-main", "--converge"},
+			Dir:  dir,
 			// The CLI's orphan guard exits a command whose parent dies; this run
 			// must outlive a gateway restart (see the header).
 			Env:    env.With(envPrefix + "BUILD_DETACHED=1"),
@@ -184,6 +201,30 @@ func newMainDeployer(checkout string, env ChildEnv, logDir, outboxDir string) (*
 		})
 	}
 	return d, nil
+}
+
+// convergeDir is where a convergence run starts: the slot `current` names,
+// resolved (so the run's cwd is the slot itself, not the link a later build
+// re-points), or the repo's checkout while there is no `current` — before
+// main's first slot build, or with no pool configured. A `current` that is a
+// link to a slot no longer on disk falls back too, with a warning: the run
+// from the checkout builds a slot again. Any other error is the run's
+// failure, reported like one.
+func convergeDir(checkout, current string) (string, error) {
+	if current == "" {
+		return checkout, nil
+	}
+	dir, err := filepath.EvalSymlinks(current)
+	if err == nil {
+		return dir, nil
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		return "", fmt.Errorf("resolve main's current slot %s: %w", current, err)
+	}
+	if _, lerr := os.Lstat(current); lerr == nil {
+		slog.Warn("main deploy: current names a slot that is gone; running from the checkout", "current", current, "checkout", checkout)
+	}
+	return checkout, nil
 }
 
 // Start sets up the refs/heads/main watch — an error here fails the boot — then

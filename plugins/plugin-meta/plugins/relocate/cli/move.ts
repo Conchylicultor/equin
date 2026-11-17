@@ -9,11 +9,11 @@ import {
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { configDir } from "@plugins/config_v2/data-dirs";
+import { isMainCheckoutOrSlot } from "@plugins/infra/plugins/paths/core";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
 import {
-  getMainRepoRoot,
   getWorktreeRoot,
   spawnExpectOk,
 } from "@plugins/infra/plugins/spawn/core";
@@ -176,7 +176,9 @@ const run: CliAction<[string, string], { dryRun?: boolean }> = async (
   const dryRun = opts.dryRun === true;
   const root = await getWorktreeRoot();
 
-  if (root === (await getMainRepoRoot())) {
+  // Main's own checkout or one of main's slots (infra/git/main-slots): a move
+  // is made in a worktree and lands through push, never where main runs.
+  if (await isMainCheckoutOrSlot(root)) {
     refuse(
       "refusing to run in the main checkout. Main rebuilds itself the moment its ref moves; " +
         "move the plugin in a worktree and land it with `./equin push`.",

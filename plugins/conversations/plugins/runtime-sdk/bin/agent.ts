@@ -56,10 +56,7 @@ import {
   claudeCodeBlockMessage,
   statusOfInitialize,
 } from "@plugins/infra/plugins/claude-cli/plugins/availability/core";
-import {
-  backgroundShellPrefix,
-  leaveDarwinBackground,
-} from "@plugins/packages/plugins/spawn-priority/core";
+import { leaveDarwinBackground } from "@plugins/packages/plugins/spawn-priority/core";
 import {
   AGENT_EVENTS_FILE,
   AGENT_OPTIONS_FILE,
@@ -80,6 +77,11 @@ import {
   type PartialFrame,
   type PartialMessage,
 } from "../core";
+import { releaseAgentBootLeaseSync } from "./agent-boot-lease";
+
+// Every static import above is in: the host loads no more code from its
+// checkout, so the boot hold `./agent-host.ts` took on it ends here.
+releaseAgentBootLeaseSync();
 
 const { values: args } = parseArgs({
   options: {
@@ -129,7 +131,11 @@ const options = AgentLaunchOptionsSchema.parse(
 const sandboxed =
   (options.settings.sandbox as { enabled?: boolean } | undefined)?.enabled ===
   true;
-const shellPrefix = sandboxed ? null : backgroundShellPrefix();
+// The backend's copy of `bin/background-shell` in this agent's own dir
+// (`options.backgroundShell`), never the script in the checkout the backend
+// runs from: the CLI runs it for every command, long after this process is
+// up, and a main slot that checkout is in may be checked out again by then.
+const shellPrefix = sandboxed ? null : options.backgroundShell;
 // The account's environment: this process's own (the agent session's closed
 // list) plus the account's token, fetched by the agent itself from the secrets
 // store, so it never sits in an argv, the options file or the login shell's

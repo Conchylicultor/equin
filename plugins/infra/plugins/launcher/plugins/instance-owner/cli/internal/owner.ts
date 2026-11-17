@@ -8,6 +8,7 @@ import {
   type InstallerNotice,
 } from "@plugins/infra/plugins/launcher/plugins/installer-notice/core";
 import { mainNamespaceOwner } from "@plugins/infra/plugins/paths/core";
+import { getMainRepoRoot } from "@plugins/infra/plugins/spawn/core";
 
 /**
  * One equin per account (research/2026-07-02-global-adr-single-instance-per-user.md):
@@ -20,8 +21,11 @@ import { mainNamespaceOwner } from "@plugins/infra/plugins/paths/core";
  * Two records say which checkout that is, each written by a different step,
  * and either is enough:
  *
- * - `deploy`: the checkout main's last deploy names (its `spec.json`,
- *   `mainNamespaceOwner`) — what the app is served from now;
+ * - `deploy`: the repository of the checkout main's last deploy names (its
+ *   `spec.json`, `mainNamespaceOwner`) — what the app is served from now.
+ *   The repository, not the checkout: main is built and served from
+ *   per-commit slots (`infra/git/main-slots`, linked worktrees of the repo),
+ *   so the spec names a slot while the repo's main checkout holds the account;
  * - `service`: the checkout the background service is registered to follow
  *   (`-main-checkout` in its installed job) — written by `./equin start`
  *   before the first build, so a first install that stopped before its build
@@ -79,7 +83,7 @@ export async function instanceClaims(): Promise<InstanceClaim[]> {
   const claims: InstanceClaim[] = [];
   const deployed = await mainNamespaceOwner();
   if (deployed.kind === "claimed") {
-    claims.push({ source: "deploy", checkout: deployed.checkoutRoot });
+    claims.push({ source: "deploy", checkout: deployed.repoRoot });
   }
   const service = await loginService(GATEWAY_SERVICE);
   const job = service === null ? null : await service.installedJob();
@@ -153,7 +157,13 @@ export async function assertThisInstance(
   checkout: string,
   action: InstanceAction,
 ): Promise<void> {
-  const here = (await existingPath(checkout)) ?? resolve(checkout);
+  // A main slot acts for its repository: compare the repo's main checkout
+  // (the slot's own path for a checkout that is no linked worktree).
+  const repo =
+    (await existingPath(checkout)) === null
+      ? checkout
+      : await getMainRepoRoot(checkout);
+  const here = (await existingPath(repo)) ?? resolve(repo);
   const verdict = judgeInstance(here, await instanceClaims());
   if (verdict.kind !== "other") return;
   throw new InstallerNoticeError(

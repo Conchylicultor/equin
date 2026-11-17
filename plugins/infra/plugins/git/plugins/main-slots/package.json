@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-infra-git-main-slots",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Main's per-commit slots: linked worktrees of the repo, each detached at one commit, that main is built and served from (~/.equin/services/main-slots, the `current` link naming the served one) — so a push never rewrites a directory anything runs from. Each slot is a reader/writer lease (shared while code runs from it, exclusive while a build checks out and builds into it) with holder records; acquireBuildSlot picks, creates and checks out the least recently served free slot."
+}

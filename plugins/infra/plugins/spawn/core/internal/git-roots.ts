@@ -65,6 +65,11 @@ export function getWorktreeRoot(cwd?: string): Promise<AppPath> {
  * Root of the MAIN repository checkout (the one owning `.git`), even when
  * `cwd` is inside a linked worktree — `dirname(resolve(git rev-parse
  * --git-common-dir))`. THROWS outside a git repo, like `getWorktreeRoot`.
+ *
+ * This is the git STORE — refs, worktrees, the human's checkout `./equin
+ * push` fast-forwards — never "the code main runs": main is built and served
+ * from per-commit slots, linked worktrees of this repo. Ask
+ * `servedMainRoot()` (`infra/git/main-slots`) for the served code.
  */
 export function getMainRepoRoot(cwd?: string): Promise<AppPath> {
   return memoized(mainRepoRootMemo, cwd, async (base) => {

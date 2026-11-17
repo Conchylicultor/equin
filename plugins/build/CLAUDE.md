@@ -86,8 +86,12 @@ Two things that look like omissions and are not:
   `decideConvergence` reads the compositions only on main's checkout. The
   explicit Serve / Rebuild buttons still work everywhere.
 
-Main's own build wins when both want one: one build per pass, main first, and
-the convergence run loops — the composition build is the next pass, not lost.
+When main's own app and compositions are due at the same HEAD, they are ONE
+build (`plugins/converge`'s `convergenceBuild`): one slot, one `build_runs` row
+with every target — main's decision reads that row as its attempt too
+(`lastClosedRun({ includes })`). A composition failing fails the invocation;
+main's app stays published if its own target deployed (receipts and `current`
+links are per target). Apps due at different commits are successive passes.
 
 The commit gate answers "has the tree moved", so editing a composition's own
 manifest row (contributors, entry points, `extends`) is deliberately NOT an

@@ -1,7 +1,5 @@
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { declareRuntimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
-import { holdTreeRead } from "@plugins/infra/plugins/git/plugins/tree-lock/core";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { settleDeclaredDataDirMoves } from "@plugins/infra/plugins/paths/core";
 import { recordMemoryCheckpoint } from "../core/profiler";
 import { bootPluginGraph, runShutdownHooks } from "../core/boot-stages";
@@ -147,12 +145,12 @@ export async function runExec(
   installProcessCrashListeners();
   recordMemoryCheckpoint("boot-start");
   let ordered;
-  // The plugin graph loads from the checkout's live tree, which a push's
-  // fast-forward rewrites file by file (main's children boot out of main's
-  // checkout). Held from the registry import to the end of the load waves, so
-  // every module comes from one commit — not new `runtime-sdk` beside an old
-  // `workspace` barrel (2026-11-05, `infra/git/tree-lock`).
-  const treeRead = await holdTreeRead(REPO_ROOT);
+  // The graph loads from the checkout this process runs from. On main that
+  // is a SLOT (infra/git/main-slots), held shared for this process's whole
+  // life by the CLI bootstrap (an exec child is a `./equin` process —
+  // `main-slots/boot-lease`), so no build checks it out while any module,
+  // lazy import or spawned script may still be read from it; a worktree is
+  // rewritten only by its own agent's commands. No push writes into either.
   try {
     // Dynamic on purpose. A command DECLARATION (`cli/index.ts`) is measured by
     // `cli:command-declarations-light`, which stops at dynamic-import edges — so
@@ -170,13 +168,11 @@ export async function runExec(
     declareComposedHome(serverComposition);
     ordered = await bootPluginGraph({
       mode: "exec",
-      afterLoad: treeRead.releaseNow,
       // The same graph a serving desktop backend boots: both halves.
       entries: [...serverEntries, ...machineEntries],
     });
     await body();
   } catch (err) {
-    treeRead.releaseNow(); // a boot that failed mid-load never reached afterLoad
     console.error("[exec] failed", err);
     if (ordered) await runShutdownHooks(ordered);
     process.exit(opts.exitCodeFor?.(err) ?? 1);

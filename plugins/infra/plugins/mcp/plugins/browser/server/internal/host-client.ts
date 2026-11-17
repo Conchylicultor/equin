@@ -1,9 +1,10 @@
 import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readFile } from "@plugins/packages/plugins/timed-fs/core";
-import { join } from "node:path";
 import { readyNow } from "@plugins/infra/plugins/deps/deps";
 import { requestDep } from "@plugins/infra/plugins/deps/server";
 import { chromium } from "@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/deps";
+import { PLAYWRIGHT_BUNDLE_EXTERNAL } from "@plugins/infra/plugins/deps/plugins/playwright-browser/deps";
+import { bundleDaemon } from "@plugins/infra/plugins/spawn/plugins/daemon/plugins/bundle/server";
 import {
   defineFileWatcher,
   type FileWatcher,
@@ -22,7 +23,7 @@ import {
   type AgentBrowserSession,
   type AgentBrowserStatus,
 } from "../../core";
-import { agentBrowserDir } from "../../data-dirs";
+import { agentBrowserBundlesDir, agentBrowserDir } from "../../data-dirs";
 import { hostCodeId } from "../../shared/code-id";
 import {
   HOST_FILES,
@@ -51,7 +52,8 @@ const PLUGIN_DIR = joinAppPath(
   PLUGINS_DIR,
   "infra/plugins/mcp/plugins/browser",
 );
-const HOST_ENTRY = join(PLUGIN_DIR, "bin/host.ts");
+/** The host's entry, repo-relative: what each launch bundles. */
+const HOST_ENTRY = "plugins/infra/plugins/mcp/plugins/browser/bin/host.ts";
 /** A launched host must say `ready` within this, or the launch failed. */
 const LAUNCH_MS = 30_000;
 /** Closing every session (each a context close + a revert) before an upgrade. */
@@ -310,7 +312,7 @@ async function reclaimDeadSessions(
 async function launchHost(): Promise<void> {
   if (isRelease()) {
     throw new BrowserUnavailableError(
-      "The agent browser runs its host from source, and a compiled release has none to run.",
+      "The agent browser bundles its host from source, and a compiled release has none to bundle.",
     );
   }
   // The backend never installs (a ~280 MB download on its event loop): it
@@ -334,13 +336,28 @@ async function launchHost(): Promise<void> {
     instance = null;
     await previous.stop();
   }
-  instance = agentBrowserHostDaemon.launchDetached({
-    instance: "host",
-    argv: [process.execPath, HOST_ENTRY],
-    env: process.env,
-    pidFile: agentBrowserDir.file(HOST_FILES.pid),
-  });
   const codeId = await ownCodeId();
+  // Never run from this checkout: main's is a per-commit slot a later build
+  // may rewrite or delete under a host that outlives this backend.
+  const bundle = await bundleDaemon({
+    entry: HOST_ENTRY,
+    external: PLAYWRIGHT_BUNDLE_EXTERNAL,
+    seal: [installed.ready],
+    dir: agentBrowserBundlesDir.path,
+  });
+  try {
+    instance = agentBrowserHostDaemon.launchDetached({
+      instance: "host",
+      argv: [process.execPath, bundle.entry, "--code-id", codeId],
+      env: process.env,
+      cwd: bundle.dir,
+      pidFile: agentBrowserDir.file(HOST_FILES.pid),
+      // The host holds its bundle for life: no launch reclaims it under it.
+      holdFds: [bundle.inUse],
+    });
+  } finally {
+    bundle.inUse.close();
+  }
   await waitForStatus(
     // Our host, or one a concurrent launcher (another backend) won the lock with.
     (s) =>

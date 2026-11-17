@@ -9,6 +9,13 @@ export default [
       "The hook bootstrap imports only node: builtins (guards:bootstrap-builtins-only), so a mid-edit checkout cannot break every tool call; its one existsSync runs in Claude Code's short hook process, never a process whose waits are profiled.",
   },
   {
+    rule: "owned-fd/no-raw-fd-close",
+    paths: ["bin/bootstrap.ts"],
+    kind: "sanctioned",
+    reason:
+      "The hook bootstrap imports only node: builtins (guards:bootstrap-builtins-only), so it cannot hold its main-slot lease's descriptor as an OwnedFd; it closes the one descriptor it opened, once, behind its own released flag.",
+  },
+  {
     rule: "guard-path-safety/no-adhoc-path-resolve",
     paths: ["core/guards/main-edits.ts"],
     kind: "sanctioned",

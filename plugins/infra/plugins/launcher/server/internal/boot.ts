@@ -16,6 +16,13 @@ import {
   worktreesDir,
 } from "@plugins/infra/plugins/paths/server";
 import { backendEntryFor } from "@plugins/infra/plugins/paths/core";
+// The data-dirs barrel, not core: core holds the slot leases (flock), which
+// no backend loading this module may pull in.
+import {
+  MAIN_SLOTS_CURRENT_DIR,
+  mainSlotsDataDir,
+} from "@plugins/infra/plugins/git/plugins/main-slots/data-dirs";
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import { DATABASE_CONFIG_PATH } from "@plugins/database/core";
 import {
   ensureDatabase,
@@ -628,7 +635,20 @@ export function gatewayLaunchFlags(
     ...(opts.publicHosts?.length
       ? ["-public-hosts", opts.publicHosts.join(",")]
       : []),
-    ...(opts.mainCheckout ? ["-main-checkout", opts.mainCheckout] : []),
+    // With main's checkout, where its convergence run starts: the slot main's
+    // own `current/<main namespace>` link names (infra/git/main-slots), the
+    // checkout until one does.
+    ...(opts.mainCheckout
+      ? [
+          "-main-checkout",
+          opts.mainCheckout,
+          "-main-slots-current",
+          joinAppPath(
+            mainSlotsDataDir.file(MAIN_SLOTS_CURRENT_DIR),
+            MAIN_WORKTREE_NAME,
+          ),
+        ]
+      : []),
     ...(opts.legacyPort != null
       ? [
           "-legacy-listen",

@@ -1,13 +1,13 @@
+import { scriptPath } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { mkdir } from "node:fs/promises";
 import { readFile, realpath } from "@plugins/packages/plugins/timed-fs/core";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, join } from "node:path";
 import type {
   Browser,
   BrowserContext,
   BrowserType,
   LaunchOptions,
 } from "playwright";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 import type {
   DepSource,
@@ -37,9 +37,20 @@ const INSTALL_TIMEOUT_MS = 15 * MINUTE;
  * resolved from HERE in whichever checkout is asked (`root`), because
  * `launchChromium` below imports `playwright` from here: installer, identity
  * and launcher then walk one module graph and cannot disagree about which
- * version is meant.
+ * version is meant. A literal (a path mention `./equin plugin move` rewrites),
+ * never derived from this module's own location.
  */
-const KIND_REL = relative(REPO_ROOT, resolve(import.meta.dir, "../.."));
+const KIND_REL = "plugins/infra/plugins/deps/plugins/playwright-browser";
+
+/**
+ * Why a bundle of code that launches through this kind keeps `playwright`
+ * external (`infra/spawn/daemon/bundle`'s `external`): the one place that
+ * says so, beside the `import("playwright")` calls it is about.
+ */
+export const PLAYWRIGHT_BUNDLE_EXTERNAL = {
+  playwright:
+    "reads its own package by path: inlined, Bun bakes `__dirname` as the absolute directory of the install it bundled (playwright-core's coreBundle/utilsBundle — its package.json, webp_codec.wasm, xdg-open), so the bundle would read the checkout it was made from; the browser executables are this kind's install, not the package's",
+} as const;
 
 interface ResolvedPlaywright {
   /** `playwright`'s own CLI entry point, per its `bin` field. */
@@ -135,9 +146,8 @@ export async function resolvePlaywright(
  * process: the registry fixes its browsers path when it is first loaded, and
  * this process may already have loaded it with another one.
  */
-const RECORD_EXECUTABLES = resolve(
-  import.meta.dir,
-  "../../scripts/record-executables.ts",
+const RECORD_EXECUTABLES = scriptPath(
+  "plugins/infra/plugins/deps/plugins/playwright-browser/scripts/record-executables.ts",
 );
 
 /**

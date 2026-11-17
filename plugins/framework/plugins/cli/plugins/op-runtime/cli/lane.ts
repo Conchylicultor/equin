@@ -17,7 +17,7 @@
 // `inheritedGrant()` reads the same var to reconstruct the inherited lane.
 //
 // Keyed on whether this is the human-blocking (interactive) origin, NOT on the
-// branch string — build knows it via `branch === "main"` and check via
+// branch string — build knows it via `checkoutRef` (`kind === "main"`) and check via
 // `slug === MAIN_WORKTREE_NAME`, but both collapse to the same boolean here, so
 // the two spellings can never drift on the lane decision. See
 // research/2026-07-10-global-host-admission-unified-budget.md.

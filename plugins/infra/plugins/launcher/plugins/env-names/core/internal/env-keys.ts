@@ -114,6 +114,10 @@ export const RUNTIME_WITHHELD_ENV = {
   LANE: "the admission lane of a CLI op, set by the op for the subprocesses it spawns (cli/op-runtime lane.ts)",
   BUILD_ID:
     "the build_runs row a build writes to, set for the build it spawns by whoever claimed that row: the backend (build/machine run-build.ts) or main's convergence run (cli/build converge.ts)",
+  BUILD_SLOT:
+    "the main slot a build is handed to build in, set by whoever prepared it (infra/git/main-slots runInBuildSlot) for that build: the build takes the slot's exclusive lease itself, and the CLI bootstrap takes no shared one there (main-slots/boot-lease); its descendants inherit it, covered by the build's lease",
+  BUILD_SLOT_HANDOFF:
+    "the handoff id a main slot was marked handed to, set beside BUILD_SLOT by whoever prepared it (infra/git/main-slots runInBuildSlot): the build claims the slot only if its mark names this id (claimHandedBuildSlot), so no other build can have taken it in between",
   BUILD_RELAYED:
     "marks a hand-run build re-run under its own attached supervision (transcript + exit marker), so it mints its own build_runs row; set by that build for its child (cli/build run.ts)",
   BUILD_DETACHED:

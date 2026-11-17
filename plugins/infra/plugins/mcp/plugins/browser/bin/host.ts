@@ -1,4 +1,3 @@
-import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 /**
  * The agent-browser host: ONE detached process per machine owning the headless
  * Chromium every agent conversation drives — its contexts, tabs and their
@@ -12,7 +11,10 @@ import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core
  * `defineDaemon` detached launch), finds it again after a restart by its
  * status file, and replaces it only when its own code differs.
  *
- * Run as `bun bin/host.ts` from a checkout's source. Exits 5 min after its last
+ * Run as a self-contained bundle of this file (`infra/spawn/daemon/bundle`:
+ * `bun <bundle>/…/bin/host.js --code-id <id>`), never from a checkout — main's
+ * checkouts are per-commit slots a later build may rewrite or delete under a
+ * process that outlives its backend. Exits 5 min after its last
  * session closes, on `/shutdown`, or on SIGTERM/SIGINT/SIGHUP — closing every
  * session (reverting each one's writes) and Chromium first.
  *
@@ -21,11 +23,9 @@ import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core
 import { renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { openOwnedFdSync } from "@plugins/packages/plugins/owned-fd/core";
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
-import { resolve } from "node:path";
 import { flockTry } from "@plugins/packages/plugins/flock/core";
 import type { AgentBrowserHostStatus } from "../core";
 import { agentBrowserDir } from "../data-dirs";
-import { hostCodeId } from "../shared/code-id";
 import {
   HOST_FILES,
   HOST_PROTOCOL,
@@ -46,9 +46,19 @@ import { drivesSnapshot, wireDrives } from "./host-drives";
 import { runTool } from "./host-tools";
 import { capturePair } from "./host-capture";
 
+function argValue(name: string): string {
+  const i = process.argv.indexOf(name);
+  const value = i >= 0 ? process.argv[i + 1] : undefined;
+  if (!value)
+    throw new Error(`[agent-browser] host: ${name} <value> is required`);
+  return value;
+}
+
 const dir = agentBrowserDir.ensureSync();
 const file = (name: string) => agentBrowserDir.file(name);
-const codeId = await hostCodeId(asAppPath(resolve(import.meta.dir, "..")));
+// Which code this is, as the launcher hashed it from the checkout it bundled
+// (`shared/code-id.ts`): a bundle carries no source to hash.
+const codeId = argValue("--code-id");
 const startedAt = new Date().toISOString();
 
 // The singleton: whoever holds the lock is THE host. The kernel drops it when

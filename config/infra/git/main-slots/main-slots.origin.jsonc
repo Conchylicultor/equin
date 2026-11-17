@@ -1,0 +1,5 @@
+// @hash ef9b62ad0567
+{
+  // A process still holding one of main's slots this many seconds after its app switched to a newer slot is reported (main-slot-drain-slow), naming the job — what to make faster, or stop outliving its app.
+  "drainReportAfterSec": 10
+}

@@ -15,6 +15,7 @@ import { getMainRepoRoot } from "@plugins/infra/plugins/spawn/core";
 import { comparableCheckoutPath, mainNamespaceOwner } from "./checkout-deploys";
 import { stampCheckoutOwner } from "./checkout-owner";
 import { checkoutWorktreeName } from "./paths";
+import { isMainSlotCheckout } from "./checkout-admin-dir";
 
 /**
  * A second clone's main checkout whose directory is named like the main
@@ -39,18 +40,23 @@ export class MainNamespaceCollisionError extends Error {
  * THE one place the "is this the main checkout?" comparison is made. Two
  * questions, both answered from provenance rather than from a name:
  *
- * 1. Is `root` its repository's main checkout? A git question
- *    (`getMainRepoRoot`): comparing a basename against the literal
- *    main-namespace name is only correct while the repo happens to be cloned into a
- *    directory of that name.
+ * 1. Is `root` one of its repository's main checkouts? Either the repo's own
+ *    main checkout — a git question (`getMainRepoRoot`): comparing a basename
+ *    against the literal main-namespace name is only correct while the repo
+ *    happens to be cloned into a directory of that name — or a main slot, a
+ *    linked worktree main is built and served from (`infra/git/main-slots`),
+ *    known by the stamp it was made with (`isMainSlotCheckout`). A slot sits
+ *    detached at one commit, so its branch says nothing.
  * 2. Is that repository the one this data root's main app is served from? The
  *    data root serves ONE instance (research/2026-07-02-global-adr-single-
  *    instance-per-user.md), recorded by the `spec.json` its main build wrote
- *    (`mainNamespaceOwner`). Without this, the main checkout of ANY clone on
- *    the machine — a second copy, an e2e's temp repo — minted the main namespace and
- *    ran its ops, logs and deploys as main's. Such a checkout is named like any
- *    other non-main one, by its basename, and one whose basename IS the main
- *    namespace is refused ({@link MainNamespaceCollisionError}).
+ *    (`mainNamespaceOwner`, which names the repo whether the spec points at
+ *    its root or at a slot). Without this, the main checkout of ANY clone on
+ *    the machine — a second copy, an e2e's temp repo — minted the main
+ *    namespace and ran its ops, logs and deploys as main's. Such a checkout is
+ *    named like any other non-main one, by its basename, and a repo root whose
+ *    basename IS the main namespace is refused
+ *    ({@link MainNamespaceCollisionError}).
  *
  * Async because the answer comes from git and the main spec. `getMainRepoRoot` is memoized per
  * cwd, so repeated calls cost one spawn per process.
@@ -58,14 +64,16 @@ export class MainNamespaceCollisionError extends Error {
 export async function checkoutRef(root: AppPath): Promise<CheckoutRef> {
   const mainRoot = await getMainRepoRoot(root);
   const name = checkoutWorktreeName(root);
-  if (resolve(root) !== resolve(mainRoot)) return { kind: "worktree", name };
+  const isRepoRoot = resolve(root) === resolve(mainRoot);
+  if (!isRepoRoot && !(await isMainSlotCheckout(root)))
+    return { kind: "worktree", name };
   const owner = await mainNamespaceOwner();
   if (
     owner.kind === "unclaimed" ||
-    owner.checkoutRoot === (await comparableCheckoutPath(root))
+    owner.repoRoot === (await comparableCheckoutPath(mainRoot))
   )
     return { kind: "main" };
-  if (name === MAIN_WORKTREE_NAME)
+  if (isRepoRoot && name === MAIN_WORKTREE_NAME)
     throw new MainNamespaceCollisionError(root, owner.checkoutRoot);
   return { kind: "worktree", name };
 }

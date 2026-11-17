@@ -7,6 +7,7 @@
 // See "The guard survives a broken checkout" in ../CLAUDE.md.
 import {
   assertCheckoutInstalled,
+  holdGuardLease,
   mainCheckoutFallback,
   runGuardWithFallback,
 } from "./bootstrap";
@@ -18,9 +19,18 @@ const raw = Buffer.concat(chunks).toString("utf8");
 const result = await runGuardWithFallback({
   // An uninstalled checkout is a live failure with a named reason, so main's
   // guard runs instead of this one on main's packages.
+  //
+  // Run from one of main's slots (a scratch agent's guards), the slot is held
+  // shared while the guard loads and runs (`holdGuardLease`), so no build
+  // checks it out under it; a lock that cannot be taken fails the live run.
   live: async () => {
     assertCheckoutInstalled(import.meta.path);
-    return (await import("./hook")).guardHook(raw);
+    const lease = holdGuardLease(import.meta.path);
+    try {
+      return await (await import("./hook")).guardHook(raw);
+    } finally {
+      lease.release();
+    }
   },
   fallback: () => mainCheckoutFallback(import.meta.path, raw),
 });

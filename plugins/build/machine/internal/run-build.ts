@@ -2,6 +2,7 @@ import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 import { z } from "zod";
 import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
+import { isMainSlotCheckout } from "@plugins/infra/plugins/paths/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { defineSupervisedJob } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
@@ -133,6 +134,10 @@ export const buildJob = defineSupervisedJob({
       argv.push("--composition", ...targets);
     return {
       argv,
+      // On main this is the slot main is served from: the build relays itself
+      // into another slot before it builds anything (run.ts's slot relay), so
+      // the Build button goes through the same slot path as main's
+      // convergence run, never building into the slot this backend runs.
       cwd: REPO_ROOT,
       // ADDED to this backend's environment, never a replacement for it: the
       // CLI needs the declared runtime environment the backend was started
@@ -167,7 +172,14 @@ export const buildJob = defineSupervisedJob({
  * a failure; a wedged git (no answer in a minute) throws.
  */
 export async function getHeadCommit(): Promise<string | null> {
-  const proc = await spawnCaptured(["git", "rev-parse", "HEAD"], {
+  // From one of main's slots (`infra/git/main-slots`) the build does not run
+  // where this backend runs: it relays itself into a slot at `refs/heads/main`
+  // (`framework/cli/build`'s slot relay) — the commit its row names, not the
+  // detached HEAD of the slot this backend is served from.
+  const rev = (await isMainSlotCheckout(REPO_ROOT))
+    ? "refs/heads/main"
+    : "HEAD";
+  const proc = await spawnCaptured(["git", "rev-parse", rev], {
     cwd: REPO_ROOT,
     // A wedge-breaker: rev-parse reads one ref.
     timeoutMs: 60_000,

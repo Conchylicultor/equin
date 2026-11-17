@@ -72,6 +72,8 @@ export {
 } from "./internal/worktree-op-marker";
 export {
   type WorktreeSpec,
+  type WorktreeSpecRead,
+  readWorktreeSpec,
   writeWorktreeSpec,
   removeWorktreeSpec,
   unpublishWorktreeSpec,

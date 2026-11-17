@@ -63,6 +63,8 @@ import {
   runtimeNamespace,
 } from "@plugins/infra/plugins/runtime-identity/core";
 import { recordFsWaits } from "@plugins/debug/plugins/profiling/plugins/fs-wait/server";
+import { holdSlotForLife } from "@plugins/infra/plugins/git/plugins/main-slots/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { writeBootStartEvent } from "@plugins/debug/plugins/boot-events/server";
 import { markOwnBootUnsettled } from "@plugins/debug/plugins/boot-events/machine";
 import { claimSchemaOwnerBoot } from "@plugins/database/machine";
@@ -93,6 +95,24 @@ export async function serve({
   // dispatching to `processCrashSink` (`core/process-crash-listeners.ts`). `runExec`
   // installs the same ones, so an exec child's crash is filed too.
   installProcessCrashListeners();
+
+  // ── The slot this backend runs from, held for life ──────────────
+  // Main (and a composition converge built) is served from a SLOT
+  // (infra/git/main-slots): a checkout no push rewrites, which a later build
+  // checks out again once nothing runs from it. This backend runs from it until
+  // it exits — the graph below, every lazy import after — so it holds the
+  // slot shared for its whole life (a no-op from a worktree or the repo root).
+  // A build restarting this backend handed the slot over first (it holds it
+  // shared, not exclusively, from then on), so this never waits on the build
+  // that is waiting for this backend's health. At exit, the lease's end is
+  // noted: a backend that outlived its slot's switch past the drain
+  // threshold is reported (main-slots' `main-slot-drain-slow`).
+  const slotHold = await holdSlotForLife(
+    REPO_ROOT,
+    "backend",
+    runtimeNamespace(),
+  );
+  if (slotHold.kind === "held") process.on("exit", slotHold.releaseAtExitSync);
 
   // ── Slow file calls (fs-wait) ───────────────────────────────────
   // A process root names its own fs-wait record, once: this one is a serving

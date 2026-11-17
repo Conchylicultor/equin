@@ -10,11 +10,7 @@ export default [
   },
   {
     rule: "boundaries/no-platform-api",
-    paths: [
-      "core/internal/flock.ts",
-      "core/internal/lifeline.ts",
-      "core/internal/wait.ts",
-    ],
+    paths: ["core/internal/flock.ts", "core/internal/lifeline.ts"],
     kind: "debt",
     task: "task-1792338443-riwqev",
     reason: "not yet split into server/ + machine/",

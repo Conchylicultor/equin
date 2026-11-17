@@ -157,6 +157,13 @@ defineDep({ …, source: build({ …, targets: "any" }), bundle: "required" });
   dependency would need that root forwarded to the backend too (none exists
   yet).
 
+- **Linked seals** (`linkSealedDep(ready, outDir)`): an install THIS host
+  has, sealed by reference — `deps/<id>` a symlink to the cache payload,
+  `bytes: 0`. For a bundle that only runs on the host that made it (a
+  detached daemon's, `infra/spawn/daemon/bundle`), so its `readyNow` derives
+  nothing from a checkout. A swept payload leaves the link dangling: the read
+  is `failed`.
+
 ## State
 
 `depState(dep)` reads the files above (safe on the event loop). The
@@ -390,8 +397,8 @@ torch.
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/font-family --font-mono`
-  - Imported by: 34 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra` ×12
+  - Imported by: 35 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra` ×13
     - `framework` ×6
     - `apps` ×5
     - `companions` ×2
@@ -428,6 +435,7 @@ torch.
     - `heldDep`
     - `holdDep`
     - `hostTarget`
+    - `linkSealedDep`
     - `readyNow`
     - `removeDep`
     - `sealDep`

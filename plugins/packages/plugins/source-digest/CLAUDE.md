@@ -129,12 +129,14 @@ backfill runs once per change of its derivation code: `page/links`,
 - Server:
   - Exports (values):
     - `closureChangedSince`
+    - `closureDigestNow`
     - `closureFiles`
     - `closureRefusal`
     - `sourceDigest`
 - Central:
   - Exports (values):
     - `closureChangedSince`
+    - `closureDigestNow`
     - `sourceDigest`
 - Core:
   - Exports (types):

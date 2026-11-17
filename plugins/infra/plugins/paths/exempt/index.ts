@@ -24,6 +24,7 @@ export default [
   {
     rule: "boundaries/no-platform-api",
     paths: [
+      "core/internal/checkout-admin-dir.ts",
       "core/internal/checkout-deploys.ts",
       "core/internal/checkout-minter.ts",
       "core/internal/checkout-owner.ts",
@@ -52,5 +53,12 @@ export default [
     kind: "sanctioned",
     reason:
       "A namespace's spec.json (written by `./equin build`) names the checkout that published it: a checkout of this repo, which the app runs from.",
+  },
+  {
+    rule: "user-path/no-unproven-claim",
+    paths: ["core/internal/checkout-admin-dir.ts"],
+    kind: "sanctioned",
+    reason:
+      "A linked worktree's git dir is the path its own `.git` file names (`gitdir:`) — git's admin dir for a checkout the app owns, under the main checkout's `.git/worktrees/`.",
   },
 ] satisfies Exemptions;

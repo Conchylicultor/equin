@@ -58,6 +58,7 @@ orchestrator's own peak and the build-progress log.
     - `infra/launcher/env-names.readEnv`
     - `infra/launcher/env-names.readEnvPath`
     - `infra/launcher/env-names.unsetEnv`
+    - `infra/paths/repo-root.scriptPath`
     - `packages/timed-fs.readFile`
   - Exports (types):
     - `PeakFootprint`

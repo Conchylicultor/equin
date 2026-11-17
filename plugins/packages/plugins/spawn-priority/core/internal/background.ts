@@ -1,5 +1,5 @@
+import { scriptPath } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
-import { join } from "node:path";
 
 export const TASKPOLICY = "/usr/sbin/taskpolicy";
 
@@ -51,9 +51,8 @@ export function backgroundPrefix(): string {
 }
 
 /** The `bin/background-shell` script, beside this code. */
-export const BACKGROUND_SHELL = join(
-  import.meta.dir,
-  "../../bin/background-shell",
+export const BACKGROUND_SHELL = scriptPath(
+  "plugins/packages/plugins/spawn-priority/bin/background-shell",
 );
 
 // The same demotion as a Claude Code `CLAUDE_CODE_SHELL_PREFIX`: the CLI runs

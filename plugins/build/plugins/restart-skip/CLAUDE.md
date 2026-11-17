@@ -14,7 +14,9 @@
   - Uses: `infra/endpoints.implementMachine`
   - Routes: `POST /api/build/restart-skip/adopt`
 - Central:
-  - Uses: `packages/source-digest.closureChangedSince`
+  - Uses:
+    - `packages/source-digest.closureChangedSince`
+    - `packages/source-digest.closureDigestNow`
   - Routes: `POST /api/restart-skip/central/adopt`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`

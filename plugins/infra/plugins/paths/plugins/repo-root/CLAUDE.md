@@ -40,6 +40,19 @@ repo file must; `launch.ts` points the reads a release needs elsewhere by env).
 Never imported by code that runs in a browser page: a page's module URL is not
 a checkout path, so the module throws.
 
+## A file run by path: `scriptPath`
+
+A script a module runs by path (a `bun <file>` child, a Worker, a shell
+script) is named `scriptPath("<repo-relative>")` — always a string literal —
+never built from `import.meta`. From a checkout it is that file. In a
+self-contained bundle (`infra/spawn/daemon/bundle`) it is the bundle's copy at
+the same relative path (`bundledScriptName`: `.ts` → `.js`): the bundler reads
+the literal to know what to carry, and refuses a call it cannot read.
+
+**A bundle is a root.** A module located inside a directory named `*.bundle`
+(`BUNDLE_DIR_SUFFIX`) answers that directory as `REPO_ROOT`; the bundler
+allows no other module to read its own location (`REPO_ROOT_MODULE`).
+
 A leaf (its one import is `user-path/core`'s types), so `tooling/lint/core`'s
 `lintRuleCreator` and web-folder tests can import it without reaching
 `paths/core`, which reads the home directory at module eval.
@@ -53,16 +66,23 @@ A leaf (its one import is `user-path/core`'s types), so `tooling/lint/core`'s
   - Uses:
     - `infra/host-fs/user-path.AppPath`
     - `infra/host-fs/user-path.asAppPath`
-  - Exports (values): `REPO_ROOT`
+    - `infra/host-fs/user-path.joinAppPath`
+  - Exports (values):
+    - `BUNDLE_DIR_SUFFIX`
+    - `bundledScriptName`
+    - `REPO_ROOT`
+    - `REPO_ROOT_MODULE`
+    - `scriptPath`
 - Cross-plugin:
-  - Imported by: 57 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `framework` ×15
-    - `infra` ×8
+  - Imported by: 61 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `framework` ×14
+    - `infra` ×10
     - `apps` ×7
     - `build` ×6
     - `debug` ×4
     - `plugin-meta` ×4
     - `conversations` ×3
+    - `packages` ×3
     - `reports` ×3
     - `code-explorer`
     - `config_v2`

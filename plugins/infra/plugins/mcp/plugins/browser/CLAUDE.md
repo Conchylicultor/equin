@@ -18,9 +18,14 @@ every agent's tabs. The host outlives any backend.
 
 - **Backend side** (`server/internal/host-client.ts`): `ensureHost()` reads the
   host's `status.json`; a running host with this checkout's `codeId` (a hash of
-  `bin/` + `shared/` + `core/`) and `HOST_PROTOCOL` is used as is. None → check
-  Chromium is installed (`readyNow` / `requestDep`, "not installed yet" is an
-  answer), then `defineDaemon(...).launchDetached` `bun bin/host.ts` and wait
+  `bin/` + `shared/` + `core/`, computed by the backend and passed in with
+  `--code-id` — a bundle has no source) and `HOST_PROTOCOL` is used as is.
+  None → check Chromium is installed (`readyNow` / `requestDep`, "not
+  installed yet" is an answer), bundle the host (`infra/spawn/daemon/bundle`:
+  `cache/agent-browser-bundles/<hash>.bundle`, Playwright external, Chromium
+  sealed — never run from the checkout, main's is a slot a later build
+  rewrites), then `defineDaemon(...).launchDetached` `bun <bundle>/…/bin/host.js`
+  holding the bundle for life, and wait
   for `ready` on the status file (a file watcher, no polling). Other code →
   **main** sends `/shutdown {reason: "upgrade"}` and relaunches (sessions
   close); a worktree backend uses a host of the same protocol rather than fight
@@ -237,6 +242,7 @@ nor closed under it. Bounded, because the host cannot see the script end.
     - `infra/mcp.McpCallerContext`
     - `infra/spawn/daemon.DaemonInstance`
     - `infra/spawn/daemon.defineDaemon`
+    - `infra/spawn/daemon/bundle.bundleDaemon`
     - `infra/worktree.appCheckoutOf`
     - `network/live.serveValue`
     - `tasks/tasks-core.conversationStatusChanged`

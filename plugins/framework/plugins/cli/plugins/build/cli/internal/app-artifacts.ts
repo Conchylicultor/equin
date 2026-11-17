@@ -429,7 +429,7 @@ export async function prepareCompositionSources(opts: {
    */
   grant: Grant;
   hooks: ArtifactHooks;
-}): Promise<{ pass: CodegenPass }> {
+}): Promise<PreparedSources> {
   const { root, compositions, hooks } = opts;
   const codegenStep = codegenStepFor(hooks);
 
@@ -594,6 +594,7 @@ export async function prepareCompositionSources(opts: {
     );
   }
   const filtered = plan.build;
+  const compositionFailures: PreparedSources["compositionFailures"] = [];
   if (filtered.length > 0) {
     const allManifests = opts.manifest.map(manifestItemToManifest);
     // ONE faceted tree for N compositions — the barrel-free tree the registry
@@ -603,27 +604,53 @@ export async function prepareCompositionSources(opts: {
     for (const composition of filtered) {
       // Non-null: `plan.build` holds only ids `byId.has` accepted.
       const item = byId.get(composition)!;
-      const flat = flattenManifest(manifestItemToManifest(item), allManifests);
-      const bundle = resolveComposition(tree, flat).bundle;
-      // All N registries land before stage 3 imports any of them —
-      // `compositionFleetSource` does a per-file `import(registryFile)`, so a
-      // registry written lazily per dist would be read for a composition whose
-      // turn had not come.
-      await generateCompositionRegistry({
-        ctx,
-        bundle,
-        name: composition,
-        home: item.home,
-        unlisted: item.unlisted,
-        homeAtRoot: item.homeAtRoot,
-      });
-      hooks.log(
-        `Composition "${composition}": ${bundle.size} plugins in closure.`,
-      );
+      // One composition's closure or registry failing is THAT composition's
+      // failure, returned rather than thrown: the other targets — main's own
+      // app above all, which has no filtered registry — still deploy. The
+      // caller fails the build over it either way.
+      try {
+        const flat = flattenManifest(
+          manifestItemToManifest(item),
+          allManifests,
+        );
+        const bundle = resolveComposition(tree, flat).bundle;
+        // All N registries land before stage 3 imports any of them —
+        // `compositionFleetSource` does a per-file `import(registryFile)`, so a
+        // registry written lazily per dist would be read for a composition whose
+        // turn had not come.
+        await generateCompositionRegistry({
+          ctx,
+          bundle,
+          name: composition,
+          home: item.home,
+          unlisted: item.unlisted,
+          homeAtRoot: item.homeAtRoot,
+        });
+        hooks.log(
+          `Composition "${composition}": ${bundle.size} plugins in closure.`,
+        );
+      } catch (error) {
+        hooks.log(
+          `Composition "${composition}": its registry failed — ${error instanceof Error ? (error.stack ?? error.message) : String(error)}`,
+        );
+        compositionFailures.push({ composition, error });
+      }
     }
   }
   endSpan();
-  return { pass };
+  return { pass, compositionFailures };
+}
+
+/** Stage 1's result: the build's codegen pass, and the compositions whose own registry failed. */
+export interface PreparedSources {
+  pass: CodegenPass;
+  /**
+   * Compositions whose filtered registry could not be made (its closure or
+   * its write threw): not deployable from this build. Never main's own app,
+   * which has no filtered registry. A resident composition the build did not
+   * name can be here too.
+   */
+  compositionFailures: { composition: string; error: unknown }[];
 }
 
 /**

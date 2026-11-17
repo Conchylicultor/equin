@@ -6,8 +6,7 @@ import { join } from "node:path";
 import {
   diffSnapshots,
   parsePorcelainZ,
-  planRestore,
-  restoringMainTreeOnThrow,
+  describeMainTreeWrites,
   snapshotTree,
   type TreeEntry,
 } from "./main-tree-guard";
@@ -87,61 +86,7 @@ describe("diffSnapshots", () => {
   });
 });
 
-describe("planRestore", () => {
-  const w = (path: string, status: string, wasClean: boolean) => ({
-    path,
-    status,
-    wasClean,
-  });
-
-  test("a hand-authored (non-regen) file clean before the build is restored", () => {
-    // 2026-11-04: seedAuthoredOverrides re-stamped config overrides on main.
-    const modified = w("config/apps-core/app.jsonc", " M", true);
-    expect(planRestore([modified])).toEqual({ restore: [modified], kept: [] });
-  });
-
-  test("a generated artifact clean before the build is restored", () => {
-    const doc = w("docs/plugins-details.md", " M", true);
-    expect(planRestore([doc]).restore).toEqual([doc]);
-  });
-
-  test("a tracked file the build deleted, staged or not, is restored", () => {
-    const deleted = [
-      w("a.ts", " D", true),
-      w("b.ts", "D ", true),
-      w("c.ts", "MM", true),
-      w("d.ts", " T", true),
-    ];
-    expect(planRestore(deleted)).toEqual({ restore: deleted, kept: [] });
-  });
-
-  test("a path dirty before the build is never restored", () => {
-    const edited = w("config/apps-core/app.jsonc", " M", false);
-    const reverted = w("b.ts", " D", false);
-    expect(planRestore([edited, reverted])).toEqual({
-      restore: [],
-      kept: [
-        { ...edited, reason: "dirty-before" },
-        { ...reverted, reason: "dirty-before" },
-      ],
-    });
-  });
-
-  test("a path with no HEAD version, or unmerged, is kept", () => {
-    const created = [
-      w("new.generated.ts", "??", true),
-      w("staged.ts", "A ", true),
-      w("moved.ts", "R ", true),
-      w("conflict.ts", "UU", true),
-    ];
-    expect(planRestore(created)).toEqual({
-      restore: [],
-      kept: created.map((c) => ({ ...c, reason: "not-restorable" })),
-    });
-  });
-});
-
-describe("restoringMainTreeOnThrow", () => {
+describe("describeMainTreeWrites", () => {
   const git = (cwd: string, ...args: string[]) => {
     const r = spawnSync("git", args, { cwd, encoding: "utf8" });
     if (r.status !== 0) throw new Error(`git ${args.join(" ")}: ${r.stderr}`);
@@ -169,36 +114,38 @@ describe("restoringMainTreeOnThrow", () => {
     }
   };
 
-  test("a writer that throws has its writes restored, and its error rethrown", async () => {
+  test("a build's writes are accounted for and left in place (the slot's next checkout resets them)", async () => {
     await withRepo(async (root) => {
-      // Dirty before the build: someone's edit, never touched.
-      writeFileSync(join(root, "edited.md"), "someone's edit\n");
+      writeFileSync(join(root, "edited.md"), "dirty before\n");
       const before = await snapshotTree(root);
-      const crash = new Error("codegen crashed mid-write");
-      const thrown = await restoringMainTreeOnThrow(root, before, async () => {
-        writeFileSync(join(root, "doc.md"), "half-written\n");
-        throw crash;
-      }).then(
-        () => "resolved",
-        (err: unknown) => err,
-      );
-      expect(thrown).toBe(crash);
-      expect(readFileSync(join(root, "doc.md"), "utf8")).toBe("committed\n");
-      expect(readFileSync(join(root, "edited.md"), "utf8")).toBe(
-        "someone's edit\n",
+      writeFileSync(join(root, "doc.md"), "written\n");
+      writeFileSync(join(root, "stray.ts"), "stray\n");
+      const account = await describeMainTreeWrites(root, before);
+      expect(account).not.toBeNull();
+      const text = account!.join("\n");
+      expect(text).toContain(" M doc.md");
+      expect(text).toContain("stray.ts");
+      expect(text).not.toContain("edited.md");
+      expect(readFileSync(join(root, "doc.md"), "utf8")).toBe("written\n");
+    });
+  });
+
+  test("rewriting a path already dirty before the build is a write, marked so", async () => {
+    await withRepo(async (root) => {
+      writeFileSync(join(root, "edited.md"), "dirty before\n");
+      const before = await snapshotTree(root);
+      writeFileSync(join(root, "edited.md"), "rewritten\n");
+      const account = await describeMainTreeWrites(root, before);
+      expect(account!.join("\n")).toContain(
+        "edited.md (already dirty before the build)",
       );
     });
   });
 
-  test("a writer that succeeds is returned untouched — the guard judges it", async () => {
+  test("a build that wrote nothing git sees has no account", async () => {
     await withRepo(async (root) => {
       const before = await snapshotTree(root);
-      const out = await restoringMainTreeOnThrow(root, before, async () => {
-        writeFileSync(join(root, "doc.md"), "written\n");
-        return 42;
-      });
-      expect(out).toBe(42);
-      expect(readFileSync(join(root, "doc.md"), "utf8")).toBe("written\n");
+      expect(await describeMainTreeWrites(root, before)).toBeNull();
     });
   });
 });

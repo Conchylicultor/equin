@@ -27,7 +27,7 @@ import { claudeUsageDir, sdkAgentPidsDir, sdkAgentsDir } from "../../data-dirs";
 
 /** The agent script beside THIS code — the checkout serving its backend. */
 export const AGENT_SCRIPT = asAppPath(
-  join(import.meta.dir, "../../bin/agent.ts"),
+  join(import.meta.dir, "../../bin/agent-host.ts"),
 );
 
 // macOS's sun_path is 104 bytes, NUL included.

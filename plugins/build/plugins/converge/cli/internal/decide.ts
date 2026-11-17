@@ -94,7 +94,13 @@ export async function decideConvergence(i: {
   }).autoBuild;
   const main =
     autoBuild &&
-    wantsBuild(deployment, await lastAttempt({ only: MAIN_COMPOSITION_ID }));
+    // `includes`, not `only`: main's own app is built together with the
+    // compositions due at the same HEAD (`convergenceBuild`), and that one
+    // row is main's attempt too.
+    wantsBuild(
+      deployment,
+      await lastAttempt({ includes: MAIN_COMPOSITION_ID }),
+    );
 
   const compositions: string[] = [];
   // Served compositions are main's to keep current: every checkout on the host

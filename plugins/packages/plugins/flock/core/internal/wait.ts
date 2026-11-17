@@ -1,4 +1,4 @@
-import { join } from "node:path";
+import { scriptPath } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 
 /**
  * A lock this process holds — either on one of its own fds or through a
@@ -39,12 +39,8 @@ export interface WaitForFlockOptions {
   shared?: boolean;
 }
 
-const FLOCK_WAIT_PATH = join(
-  import.meta.dir,
-  "..",
-  "..",
-  "scripts",
-  "flock-wait.ts",
+const FLOCK_WAIT_PATH = scriptPath(
+  "plugins/packages/plugins/flock/scripts/flock-wait.ts",
 );
 
 const GRANTED = "granted\n";

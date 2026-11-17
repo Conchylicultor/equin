@@ -24,7 +24,7 @@ import {
 } from "./dep";
 import { depState, ensureDep, readyNow, removeDep } from "./ensure";
 import { heldDep, holdDep } from "./hold";
-import { sealDep } from "./seal";
+import { linkSealedDep, sealDep } from "./seal";
 import { readSealedManifest, SEALED_MANIFEST } from "./sealed";
 import { identityOf, installPaths, type DepStore } from "./store";
 import { sweepDeps } from "./sweep";
@@ -385,5 +385,44 @@ describe("heldDep", () => {
     await holdDep(second, "machine-gateway", { store });
     const moved = await heldDep(dep, "machine-gateway", { store });
     expect(moved.kind === "held" && moved.ready.identity).toBe(second.identity);
+  });
+});
+
+describe("linkSealedDep", () => {
+  test("seals this host's install by reference: a bundle reads it without deriving anything", async () => {
+    const calls: Calls = { identity: 0, install: [] };
+    const dep = fakeDep(calls, "required");
+    const ready = await ensureDep(dep, exec, { root: base, store });
+    const before = { ...calls, install: [...calls.install] };
+
+    await linkSealedDep(ready, bundle);
+
+    const manifest = await readSealedManifest(join(bundle, SEALED_MANIFEST));
+    expect(manifest.target).toEqual({ ...HOST });
+    expect(manifest.deps[dep.id]).toEqual({
+      kind: "fake",
+      identity: ready.identity,
+      dir: "deps/fake-sealed",
+      bytes: 0,
+    });
+    const now = await readyNow(dep, { root: bundle, store });
+    if (now.kind !== "ready")
+      throw new Error(`expected ready, got ${now.kind}`);
+    expect(now.ready.identity).toBe(ready.identity);
+    // The link, not a copy: the payload is the cache's own.
+    expect(readFileSync(join(now.ready.dir, "payload"), "utf8")).toBe(
+      `${HOST.platform}/${HOST.arch}`,
+    );
+    expect(calls).toEqual(before);
+  });
+
+  test("a removed payload reads failed, never absent", async () => {
+    const calls: Calls = { identity: 0, install: [] };
+    const dep = fakeDep(calls, "required");
+    const ready = await ensureDep(dep, exec, { root: base, store });
+    await linkSealedDep(ready, bundle);
+    rmSync(ready.dir, { recursive: true, force: true });
+    const now = await readyNow(dep, { root: bundle, store });
+    expect(now.kind).toBe("failed");
   });
 });

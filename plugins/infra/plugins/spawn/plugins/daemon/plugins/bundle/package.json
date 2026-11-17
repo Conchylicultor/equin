@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-infra-spawn-daemon-bundle",
+  "description": "bundleDaemon: a detached daemon's entry bundled into a self-contained, content-addressed directory it runs from instead of a checkout — repo code and pure-JS packages inlined, path-run scripts bundled beside it, external packages cloned, sealed dependency installs linked — held by an in-use flock the daemon inherits, unheld bundles reclaimed by the next call.",
+  "private": true,
+  "version": "0.0.1"
+}

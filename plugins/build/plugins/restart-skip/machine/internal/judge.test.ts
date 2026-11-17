@@ -2,7 +2,10 @@ import { afterEach, beforeEach, expect, test } from "bun:test";
 import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { closureChangedSince } from "@plugins/packages/plugins/source-digest/server";
+import {
+  closureChangedSince,
+  closureDigestNow,
+} from "@plugins/packages/plugins/source-digest/server";
 import type { AdoptRequest } from "../../core";
 import { judgeAdoption, type ProcessView } from "../../shared/judge";
 
@@ -51,6 +54,7 @@ async function startProcess(loaded: string[]): Promise<ProcessView> {
   await Bun.sleep(5);
   return {
     startedAtMs,
+    root,
     bin: at("bun-clone"),
     entry: at("bin/index.ts"),
     loaded: loaded.map(at),
@@ -58,6 +62,7 @@ async function startProcess(loaded: string[]): Promise<ProcessView> {
     bootInputs: [{ what: "the migration SQL", paths: [at("migrations")] }],
     children: [],
     closureSince: closureChangedSince,
+    digestNow: closureDigestNow,
   };
 }
 
@@ -228,4 +233,79 @@ test("a lazy import only a page's import map answers (a demo's browser host): ad
   });
   const p = await startProcess(EAGER);
   expect(await judgeAdoption(p, deploy())).toEqual({ kind: "adopted" });
+});
+
+// ── Another checkout: main's slots ────────────────────────────────────────
+//
+// Each main build runs in a slot of its own (infra/git/main-slots), so the
+// deploy spawns from another checkout than the backend runs from. Adopting is
+// sound only when that checkout holds the same code, byte for byte.
+
+/** A second checkout beside `root`, written from `files`. */
+async function otherCheckout(files: Record<string, string>): Promise<string> {
+  const other = `${root}-other`;
+  for (const [rel, text] of Object.entries(files)) {
+    await mkdir(dirname(join(other, rel)), { recursive: true });
+    await writeFile(join(other, rel), text);
+  }
+  return other;
+}
+
+afterEach(async () => {
+  await rm(`${root}-other`, { recursive: true, force: true });
+});
+
+test("another checkout with the same code: adopted", async () => {
+  await write(CHECKOUT);
+  const p = await startProcess(EAGER);
+  const other = await otherCheckout({
+    ...CHECKOUT,
+    // Outside the backend's closure: no matter.
+    "web/page.tsx": `export const Page = () => "new";\n`,
+  });
+  expect(
+    await judgeAdoption(p, deploy({ entry: join(other, "bin/index.ts") })),
+  ).toEqual({ kind: "adopted" });
+});
+
+test("another checkout whose closure differs (a lazy module): restart", async () => {
+  await write(CHECKOUT);
+  const p = await startProcess(EAGER);
+  const other = await otherCheckout({
+    ...CHECKOUT,
+    "app/lazy.ts": `export const lazy = 2;\n`,
+  });
+  const v = await judgeAdoption(
+    p,
+    deploy({ entry: join(other, "bin/index.ts") }),
+  );
+  expect(v.kind === "restart" && v.reason).toContain("other code");
+});
+
+test("another checkout with a new migration: restart", async () => {
+  await write(CHECKOUT);
+  const p = await startProcess(EAGER);
+  const other = await otherCheckout({
+    ...CHECKOUT,
+    "migrations/0002.sql": `alter table t add x int;\n`,
+  });
+  const v = await judgeAdoption(
+    p,
+    deploy({ entry: join(other, "bin/index.ts") }),
+  );
+  expect(v.kind === "restart" && v.reason).toContain("migration SQL");
+});
+
+test("another checkout whose resolution input differs: restart", async () => {
+  await write(CHECKOUT);
+  const p = await startProcess(EAGER);
+  const other = await otherCheckout({
+    ...CHECKOUT,
+    "tsconfig.json": `{"compilerOptions":{}}\n`,
+  });
+  const v = await judgeAdoption(
+    p,
+    deploy({ entry: join(other, "bin/index.ts") }),
+  );
+  expect(v.kind === "restart" && v.reason).toContain("resolution inputs");
 });

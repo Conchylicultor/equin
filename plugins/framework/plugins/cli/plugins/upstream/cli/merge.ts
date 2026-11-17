@@ -1,6 +1,6 @@
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
+import { isMainCheckoutOrSlot } from "@plugins/infra/plugins/paths/core";
 import {
-  getMainRepoRoot,
   getWorktreeRoot,
   spawnCaptured,
   spawnExpectOk,
@@ -71,7 +71,10 @@ const run: CliAction<[], { continue?: boolean }> = async (opts) => {
   // moves. An update is proven in a worktree and reaches main through
   // `./equin push`, which the user runs. It covers both verbs — there is
   // no upstream merge to conclude on main either.
-  if (root === (await getMainRepoRoot()))
+  // Main's checkout — the repo root, where commits land — or one of main's
+  // slots (infra/git/main-slots), which main is built and served from: both
+  // are main, neither takes an edit.
+  if (await isMainCheckoutOrSlot(root))
     refuse(
       "Refusing to merge upstream into the main checkout. Main rebuilds itself the moment its ref moves, " +
         "so an update is merged in a worktree, built and looked at there, and lands on main through `./equin push`.",

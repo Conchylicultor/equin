@@ -37,6 +37,9 @@ const SANDBOX = {
  *   No project settings are reachable from the dir, so the launch's policy
  *   hooks (guards/agent-policy) are the agent's only guards — every one of
  *   them, `macos-automation` included — run from the code that launched it.
+ *   When that checkout is one of main's slots, the sdk runtime hands the
+ *   agent the `current` link instead (runtime-sdk's `launchGuardsRoot`): the
+ *   agent outlives the slot its backend ran from, the served code does not.
  */
 export function scratchLaunchFragment(opts: {
   mcpUrl: string;

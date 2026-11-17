@@ -45,6 +45,10 @@ type Config struct {
 	// watches to start main's convergence run (main_deploy.go). "" disables
 	// it: a release, serve-app or a hand-run gateway deploys nothing.
 	MainCheckout string
+	// MainSlotsCurrent is main's own `current` link in its slot pool
+	// (`current/<main namespace>`, one link per served app): a convergence run
+	// starts in the slot it names (main_deploy.go convergeDir).
+	MainSlotsCurrent string
 
 	// KeeperFd: the -keeper-fd value ("" in the keeper itself). NoKeeper: run
 	// without one.
@@ -213,6 +217,12 @@ func parseFlags() (Config, string) {
 	// Main's checkout: the gateway starts main's convergence run there on every
 	// advance of refs/heads/main (main_deploy.go). Only the machine's dev
 	// gateway (./equin start) passes it.
+	// The `current` link of main's slot pool (infra/git/main-slots data-dirs,
+	// `services/main-slots`): main's convergence run starts in the slot it
+	// names, the -main-checkout while it does not exist. The launcher passes
+	// it with -main-checkout.
+	defaultMainSlotsCurrent := filepath.Join(dataDir, "services", "main-slots", "current", mainNamespace)
+	flag.StringVar(&cfg.MainSlotsCurrent, "main-slots-current", defaultMainSlotsCurrent, "main's own `current` link in its slot pool (current/<main namespace>): main's convergence run starts in the slot it names (the -main-checkout while it does not exist)")
 	flag.StringVar(&cfg.MainCheckout, "main-checkout", "", "main's checkout: run `./equin build --allow-main --converge` there on every advance of refs/heads/main, at boot, and on POST /gateway/deploy/converge (empty: no auto-deploy)")
 	// The environment names every child process may receive (see env.go).
 	// Required and deliberately default-less: the declaration lives in
@@ -417,7 +427,7 @@ func main() {
 	// Postgres).
 	var deployer *mainDeployer
 	if cfg.MainCheckout != "" {
-		deployer, err = newMainDeployer(cfg.MainCheckout, cfg.ChildEnv, cfg.LogDir, cfg.ReportOutboxDir)
+		deployer, err = newMainDeployer(cfg.MainCheckout, cfg.MainSlotsCurrent, cfg.ChildEnv, cfg.LogDir, cfg.ReportOutboxDir)
 		if err != nil {
 			fatal(fmt.Sprintf("gateway: fatal: main deploy: %v", err), "main deploy: start failed", err)
 		}

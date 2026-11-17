@@ -2,8 +2,9 @@
 
 Main's deploy, decided and run from **outside main's backend**.
 
-The gateway starts `./equin build --allow-main --converge` in main's checkout
-on every advance of `refs/heads/main`, on its own boot, when a run exits with an
+The gateway starts `./equin build --allow-main --converge` from the slot main
+is served from (`infra/git/main-slots`' `current/<main namespace>`; main's
+checkout before any slot exists) on every advance of `refs/heads/main`, on its own boot, when a run exits with an
 edge pending, and when a backend asks (`POST /gateway/deploy/converge`) — see
 `gateway/CLAUDE.md` § "Main's deploy". The gateway holds no policy; this plugin
 is the policy, run by the commit being deployed:
@@ -16,6 +17,14 @@ is the policy, run by the commit being deployed:
   ledger (`run-ledger/cli`'s `lastClosedRun`) and the config files on disk. The
   loop that acts on it is the build command's own (`framework/cli/build`,
   `cli/internal/converge.ts`).
+  `convergenceBuild` turns a decision into the pass's ONE build: every app
+  due at the decided HEAD (main's own first, then the compositions) as one
+  invocation and one `build_runs` row — its `(head, targets)` key is the
+  loop-termination check. On main it runs in a slot: `runInBuildSlot`
+  (`infra/git/main-slots`) checks the decided commit (the target:
+  `refs/heads/main`) out into a free slot no push writes into, hands it to
+  `<slot>/equin build`, and that build points each target's
+  `current/<namespace>` link at the slot once that target is healthy.
 - `core/` / `server/` / `web/` — the `main-deploy-failed` report kind the
   gateway files when a run itself fails (could not decide, could not start) —
   never for a failed BUILD, which is the build's own row and bell. Its payload
@@ -94,8 +103,12 @@ proof used: a throwaway clone standing in for main
     - `MainDeployFailedPayloadSchema`
 - Cli:
   - Uses: `build/deployment.readServedDeployment`
-  - Exports (types): `ConvergenceDecision`
-  - Exports (values): `decideConvergence`
+  - Exports (types):
+    - `ConvergenceBuild`
+    - `ConvergenceDecision`
+  - Exports (values):
+    - `convergenceBuild`
+    - `decideConvergence`
 - Cross-plugin:
   - Imported by: `framework/cli/build`
 

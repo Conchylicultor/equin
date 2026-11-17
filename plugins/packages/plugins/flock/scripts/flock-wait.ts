@@ -23,11 +23,13 @@
  *  3. Hold the lock (the worker keeps its fd open) until the parent closes our stdin
  *     (EOF) or sends SIGTERM, then exit. Process exit closes the fd → flock releases.
  *
- * Imports NOTHING cross-plugin (only `node:*` + `bun:ffi` via the worker), so it
- * stays a standalone, independently-runnable script with no boundary concerns.
+ * Imports nothing cross-plugin but `repo-root` (a leaf), for the worker's path
+ * (`scriptPath`: the checkout's file, or a self-contained bundle's copy), so it
+ * stays a standalone, independently-runnable script.
  */
+import { scriptPath } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { mkdirSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname } from "node:path";
 import { Worker } from "node:worker_threads";
 
 const file = process.env.FLOCK_WAIT_FILE;
@@ -50,7 +52,9 @@ mkdirSync(dirname(file), { recursive: true });
 // The worker does the blocking flock off this main thread. `unref()` so a still-
 // blocked worker never keeps our loop alive on its own — the stdin drain below is
 // the sole thing keeping us alive, so EOF always wins.
-const worker = new Worker(join(import.meta.dir, "flock-block.ts"), {
+const worker = new Worker(
+  scriptPath("plugins/packages/plugins/flock/scripts/flock-block.ts"),
+  {
   workerData: { file, shared: mode === "shared" },
 });
 worker.unref();

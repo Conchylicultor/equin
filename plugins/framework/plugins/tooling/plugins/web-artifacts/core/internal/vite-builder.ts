@@ -33,7 +33,8 @@ import {
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import type { OrderedBabelContributions } from "@plugins/framework/plugins/web-core/core";
 import { COMPOSITION_REGISTRY_SPECIFIER } from "../composition-modules";
-import { WORKER_ASSETS_DIR, WORKER_ONLY_KINDS } from "../constants";
+import { WORKER_ONLY_KINDS } from "../constants";
+import { WORKER_ASSETS_DIR } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/plugins/served-paths/core";
 import { babelContributionsPlugin } from "./babel-transform";
 import { makeArtifactExternal } from "../externals";
 import { inlinedRootsFor } from "../own-roots";

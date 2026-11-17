@@ -38,7 +38,6 @@ import {
   ensureCommitIdentity,
   resolvePublishTarget,
 } from "@plugins/infra/plugins/git/plugins/remotes/core";
-import { withTreeWrite } from "@plugins/infra/plugins/git/plugins/tree-lock/core";
 import {
   actAsCheckoutNamespace,
   checkoutRef,
@@ -726,13 +725,11 @@ const pushAction: CliAction<
 
         if (publish.kind === "publish") {
           profiler.stepStart("ff-main");
-          // Under main's tree write lock, like step 7: a child booting out of
-          // main's checkout must not load half of this fast-forward.
-          await withTreeWrite(mainWorktree, () =>
-            exec(
-              ["git", "merge", "--ff-only", `${publish.remote}/main`],
-              mainWorktree,
-            ),
+          // Nothing runs from main's checkout (main runs from its slots), so
+          // the fast-forward needs no lock against readers.
+          await exec(
+            ["git", "merge", "--ff-only", `${publish.remote}/main`],
+            mainWorktree,
           );
           profiler.stepEnd("ff-main");
         }

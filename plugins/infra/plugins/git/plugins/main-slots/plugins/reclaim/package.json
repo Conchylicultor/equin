@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-infra-git-main-slots-reclaim",
+  "version": "0.0.1",
+  "private": true,
+  "description": "`./equin main-slots-reclaim` — reclaim main's slot pool (stamp the slots no app lives in any more, file a main-slot-drain-slow report per process that kept one busy past the threshold, remove free slots beyond the one kept ready): the body of the daily main-slots.reclaim job, and what every main build ends with."
+}

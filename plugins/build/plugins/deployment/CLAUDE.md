@@ -22,7 +22,9 @@ build.
 
 The **target** is this checkout's `HEAD`. No namespace branching: main's checkout
 is on `main` and a worktree checkout is on its own branch, so `HEAD` is the target
-in both, and git-watcher already tracks both refs.
+in both, and git-watcher already tracks both refs. The exception is a main SLOT
+(`infra/git/main-slots`), detached at the commit it serves: its target is
+`refs/heads/main` (`readTarget`).
 
 ## Everything else is derived
 

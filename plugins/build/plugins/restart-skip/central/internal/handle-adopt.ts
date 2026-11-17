@@ -1,5 +1,8 @@
 import { implement } from "@plugins/infra/plugins/endpoints/core";
-import { closureChangedSince } from "@plugins/packages/plugins/source-digest/central";
+import {
+  closureChangedSince,
+  closureDigestNow,
+} from "@plugins/packages/plugins/source-digest/central";
 import { adoptCentralDeploy } from "../../core";
 import { judgeAdoption } from "../../shared/judge";
 import { currentProcessView } from "../../shared/process-view";
@@ -18,6 +21,7 @@ export const handleCentralAdopt = implement(
         bootInputs: [],
         children: [],
         closureSince: closureChangedSince,
+        digestNow: closureDigestNow,
       }),
       body,
     );

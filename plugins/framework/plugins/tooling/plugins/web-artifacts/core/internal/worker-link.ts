@@ -48,8 +48,8 @@ import { COMPOSITION_SPECIFIERS } from "../composition-modules";
 import {
   isBrowserUnreachableDynamic,
   WORKER_LINKED_SUFFIX,
-  WORKER_TREE_PREFIX,
 } from "../constants";
+import { WORKER_TREE_PREFIX } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/plugins/served-paths/core";
 import { cobuildHostOf } from "../own-roots";
 import { HOST_SNAPSHOT_LINK_KIND } from "./host-snapshots";
 import {
