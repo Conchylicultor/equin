@@ -39,9 +39,13 @@ detached HEAD, and a dirty tree (a conflict resolution could not then be told
 apart from the agent's own edits).
 
 On conflicts it exits 1 and names the unmerged paths under
-`plugins/database/plugins/migrations/data` separately: a conflicted migration is
-the one thing to stop and report on, and `git merge`'s own output cannot say
-which of the files it listed matter.
+`plugins/database/plugins/migrations/data` separately, with their own guidance
+(`git merge`'s output cannot say which listed files are migrations): both
+sides' migrations are published and immutable, so the agent resolves the
+conflict through the schema — keep every migration, take upstream's side of a
+`meta/` file, decide the table's shape in its `schema.ts`, rebuild — never by
+editing a data file. The agent resolves every conflict itself; it asks the user
+only for a product decision it cannot infer (`upstream/shared/merge-prompt.ts`).
 
 ## Why `merge --continue` exists
 

@@ -46,15 +46,18 @@ export function upstreamMergeVariables(d: UpstreamUpdates): {
  * merged branch). The Upstream merges automation commits it as its config's
  * default `prompt`.
  *
- * Fixed text, and deliberately short on judgement calls: the mechanical half is
- * one command (`./equin upstream merge`), so the agent never re-derives
- * the fetch/merge/refspec dance from prose. What is left is the part only a
- * person present can decide — a conflicted migration — and whether it lands,
- * which the push policy says.
+ * The mechanical half is one command (`./equin upstream merge`), so the agent
+ * never re-derives the fetch/merge/refspec dance from prose. The rest is the
+ * agent's own work: it resolves every conflict itself — the user's intent and
+ * the release's behaviour both kept, a schema decided in its `schema.ts`, never
+ * in a migration file — and asks the user (its conversation then waits on
+ * them) only for a product decision it cannot infer, or for the one migration
+ * case no code edit can resolve. Whether the result lands is the push policy's
+ * call; the user lands it from the conversation.
  */
 export const UPSTREAM_MERGE_PROMPT = `{{updates}}
 
-Bring it into THIS worktree. You own proving the merged tree works.
+Bring it into THIS worktree. You own resolving the merge and proving the merged tree works.
 
 1. Run \`./equin upstream merge\` in this worktree. It fetches upstream and merges its
    newest release, the tag \`{{ref}}\`, into the branch you are on.
@@ -62,35 +65,51 @@ Bring it into THIS worktree. You own proving the merged tree works.
    upstream would replay their entire history on every update and rewrite \`main\` under
    every open worktree.
 
-2. Resolve whatever conflicts it leaves in the tree.
+2. Resolve every conflict it leaves in the tree yourself. On each side read what the change
+   was for (\`git log --merge -p -- <path>\`), and resolve it so the result keeps BOTH: the
+   user's intent (their customisations, their data, the behaviour they built) and the
+   release's behaviour (its fixes and features). Prefer the release's structure and re-apply
+   the user's change on top of it when the two reshape the same code.
    - **Generated files re-derive themselves.** The \`.gitattributes\` merge drivers take the
-     upstream side, and \`./equin push\` re-runs the generators over the merged tree.
-     Do not hand-resolve a generated artifact.
-   - **A conflicted migration is the one thing to stop on.** Two sides altering the same
-     table is a decision a person makes, not a merge you resolve. Report it and wait.
+     upstream side, and \`./equin build\` / \`./equin push\` re-run the generators over the
+     merged tree. Do not hand-resolve a generated artifact.
+   - **A schema is decided in code.** When both sides changed a table, resolve the owning
+     \`schema.ts\` to the shape that serves both, and let the build generate whatever
+     migration that shape needs. Never edit, delete or rename a file under
+     \`plugins/database/plugins/migrations/data\`: both sides' migrations are published —
+     already applied somewhere — and immutable. Keep every migration either side added; a
+     conflicted \`meta/\` file there is re-derived by the build, so take upstream's side of it
+     (\`git checkout --theirs -- <path>\`) and rebuild.
+   - **Ask the user only for a product decision you cannot infer** — the two sides want
+     incompatible behaviour, and neither the code, the commits nor the user's own tasks say
+     which they would choose. Ask one precise question: the conflict, the options, and the
+     one you recommend. Then wait for the answer; this conversation stays open for it.
+     Anything you can decide from the code, decide.
    Then \`git add\` what you resolved and run \`./equin upstream merge --continue\`, which
    concludes the merge for you.
 
 3. Run \`./equin build\` in the background, then confirm the deploy receipt at
-   \`${WORKTREES_DIR_DISPLAY}/<worktree>/build-status.json\` says \`"status": "ok"\`.
+   \`${WORKTREES_DIR_DISPLAY}/<worktree>/build-status.json\` says \`"status": "ok"\`. Fix
+   what the build or its checks report — a type error, a failing check — the same way: keep
+   both sides' intent.
 
    **Migrations.** When both sides added schema migrations, the build writes one new
    migration itself: a *merge node* (\`…__merge_snapshot.sql\`, whose SQL is only a
    \`-- ${LEGACY_IDS.migrationMarker}:snapshot id=… parents=…,…\` header, plus the new \`meta/schema.snapshot.json\`) that joins the two
-   snapshot chains. That file is expected — keep it. If the build instead stops on a
-   **snapshot merge conflict** (it lists schema paths like
-   \`tables.public.<table>.columns.<column>.type\`) or \`migration-applies-clean\` fails, stop
-   and report that output verbatim. Never delete, rename or edit a file under
-   \`plugins/database/plugins/migrations/data\` — both sides' migrations are already applied
-   somewhere and are immutable.
+   snapshot chains. That file is expected — keep it. Then drizzle-kit diffs your resolved
+   \`schema.ts\` against it and writes a migration for whatever your resolution changed.
+   One case no code edit resolves: a **snapshot merge conflict** (the build lists schema
+   paths like \`tables.public.<table>.columns.<column>.type\`), or \`migration-applies-clean\`
+   failing — one side's published migration cannot run on this database. Ask the user: quote
+   that output verbatim, say what each side meant, and recommend a shape.
 
 4. Open \`http://<worktree>.localhost:9000\` and check the app still works: it comes up, the
-   screens you can reach render, and Debug → Reports holds nothing new.
+   screens you can reach render, the features the user built still do what they did, and
+   Debug → Reports holds nothing new.
 
-5. Report what changed — what the merge brought in, what you had to resolve, and anything
-   that looked off. Then:
+5. Report what changed — what the release brought in, every conflict you resolved and how,
+   and anything that looked off. Then:
    {{pushPolicy}}
 
-If the merge cannot be completed (a conflict you cannot resolve, a build that will not come
-up, a migration clash), do NOT push: leave the tree as it is, say so, and wait for
-instructions. Do not abandon the merge to make the tree look clean.`;
+Never abandon the merge to make the tree look clean, and never resolve a conflict by
+dropping one side's work wholesale.`;

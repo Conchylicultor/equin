@@ -69,22 +69,42 @@ describe("UPSTREAM_MERGE_PROMPT", () => {
     expect(text).not.toContain("git commit");
   });
 
-  test("keeps the two conflict rules that decide whether to stop", () => {
+  test("resolves conflicts itself, keeping both sides", () => {
     const text = rendered(base);
+    expect(text).toContain(
+      "Resolve every conflict it leaves in the tree yourself",
+    );
+    expect(text).toContain("user's intent");
+    expect(text).toContain("release's behaviour");
     expect(text).toContain("Generated files re-derive themselves");
-    expect(text).toContain("conflicted migration");
+    // The old instruction to stop on any conflicted migration is gone.
+    expect(text).not.toContain("the one thing to stop on");
   });
 
-  test("explains the migration merge node, and when to stop on migrations", () => {
+  test("decides a schema in schema.ts, never in a migration file", () => {
+    const text = rendered(base);
+    expect(text).toContain("A schema is decided in code");
+    expect(text).toContain("`schema.ts`");
+    expect(text).toContain(
+      "Never edit, delete or rename a file under\n     `plugins/database/plugins/migrations/data`",
+    );
+  });
+
+  test("asks the user only for a product decision it cannot infer", () => {
+    const text = rendered(base);
+    expect(text).toContain(
+      "Ask the user only for a product decision you cannot infer",
+    );
+    expect(text).toContain("this conversation stays open");
+  });
+
+  test("explains the migration merge node, and the one case to ask about", () => {
     const text = rendered(base);
     expect(text).toContain("merge node");
     expect(text).toContain(`${LEGACY_IDS.migrationMarker}:snapshot id=`);
     expect(text).toContain("snapshot merge conflict");
     expect(text).toContain("migration-applies-clean");
     expect(text).toContain("verbatim");
-    expect(text).toContain(
-      "Never delete, rename or edit a file under\n   `plugins/database/plugins/migrations/data`",
-    );
   });
 
   test("names exactly the variables the automation fills", () => {
@@ -96,7 +116,7 @@ describe("UPSTREAM_MERGE_PROMPT", () => {
   });
 
   test("leaves landing to the push policy", () => {
-    expect(UPSTREAM_MERGE_PROMPT).not.toContain("Do not push");
+    expect(UPSTREAM_MERGE_PROMPT).not.toMatch(/do not push/i);
     expect(UPSTREAM_MERGE_PROMPT).toContain("{{pushPolicy}}");
   });
 });

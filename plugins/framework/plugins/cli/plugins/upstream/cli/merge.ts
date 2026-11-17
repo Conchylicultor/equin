@@ -22,9 +22,27 @@ const GIT_TIMEOUT_MS = 60_000;
 /**
  * Where generated migration SQL lives. Spelled here the way every other CLI
  * command spells it (`regen-migrations`, the migration checks) — a conflict
- * under this prefix is the one thing this command tells you to stop on.
+ * under this prefix is the one this command gives its own guidance for.
  */
 const MIGRATIONS_SUBDIR = "plugins/database/plugins/migrations/data";
+
+/**
+ * What to do with a conflict under MIGRATIONS_SUBDIR. Both sides' migrations
+ * are published — applied somewhere already — so they are immutable: the
+ * schema is decided in the owning `schema.ts` and the build generates the
+ * migration for it. Never "stop and report": the agent resolves it.
+ */
+function migrationGuidance(paths: readonly string[]): string[] {
+  return [
+    `${paths.length === 1 ? "One of them is a MIGRATION file" : "Some of them are MIGRATION files"}:`,
+    ...paths.map((p) => `  ${p}`),
+    `Resolve it through the schema, never by editing a data file. Both sides' migrations are`,
+    `published and immutable: keep every migration either side added, take upstream's side of a`,
+    `conflicted meta/ file (\`git checkout --theirs -- <path>\`, the build re-derives it), and`,
+    `decide the table's shape in its owning \`schema.ts\` — \`./equin build\` then generates the`,
+    `migration that shape needs.`,
+  ];
+}
 
 function refuse(message: string): never {
   console.error(message);
@@ -112,11 +130,7 @@ async function continueMerge(root: string): Promise<void> {
         ...unmerged.map((p) => `  ${p}`),
         ``,
         ...(migrations.length > 0
-          ? [
-              `One of them is a MIGRATION. Stop and report it rather than resolving it: two sides`,
-              `altering the same table is a decision a person makes.`,
-              ``,
-            ]
+          ? [...migrationGuidance(migrations), ``]
           : []),
         `Resolve each one, \`git add\` it, then re-run \`./equin upstream merge --continue\`.`,
         `To back out of the merge entirely: \`git merge --abort\`.`,
@@ -264,14 +278,7 @@ async function startMerge(root: string): Promise<void> {
       ``,
       `Generated files re-derive themselves — the .gitattributes merge drivers take the upstream`,
       `side and the generators re-run over the merged tree — so do not hand-resolve one.`,
-      ...(migrations.length > 0
-        ? [
-            ``,
-            `A MIGRATION IS CONFLICTED. Stop and report it rather than resolving it: two sides altering`,
-            `the same table is a decision a person makes.`,
-            ...migrations.map((p) => `  ${p}`),
-          ]
-        : []),
+      ...(migrations.length > 0 ? [``, ...migrationGuidance(migrations)] : []),
       ``,
       `When each one is resolved and \`git add\`ed, run \`./equin upstream merge --continue\` to`,
       `conclude the merge. To back out entirely: \`git merge --abort\`.`,
