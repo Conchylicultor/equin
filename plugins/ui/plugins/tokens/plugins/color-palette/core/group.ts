@@ -200,9 +200,13 @@ export const colorPaletteGroup = defineTokenGroup("color-palette", {
     label: "Pane title text",
   },
   // A floating panel's outline (popover / dropdown / select content, drawn as
-  // a 1px ring). Default = the 10% foreground ring it always drew.
+  // a 1px ring). Default = the 10% foreground ring it always drew on light; on
+  // dark a firmer 24% hairline — the inner, light half of the double stroke a
+  // dark menu's edge is (the dark outer half is `shadow-popover`'s), so a
+  // submenu drawn over its parent keeps a visible edge.
   popoverBorder: {
     default: "color-mix(in oklab, var(--foreground) 10%, transparent)",
+    darkDefault: "color-mix(in oklab, var(--foreground) 24%, transparent)",
     label: "Popover border",
   },
   // A highlighted row's fill INSIDE a floating panel (a menu row under the

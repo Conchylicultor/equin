@@ -37,6 +37,8 @@ import {
 } from "../internal/navigator";
 import { WithLenses, type ComposedLens } from "../internal/lenses";
 import { ExplorerControlsSlot } from "../internal/controls-slot";
+import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
+import { FILES_SCOPE } from "../internal/theme";
 
 const backIcon = symbol("chevron-left");
 const forwardIcon = symbol("chevron-right");
@@ -185,6 +187,13 @@ const HOST_PENDING: FileBrowserValue = { kind: "host-pending" };
  * and borrows the {@link FileBrowserHeader} slot. Every state (the file
  * system loading, failed, absent) keeps the provider, so the header holds its
  * place and the body says what is wrong under it.
+ *
+ * It is also the browser's theme boundary ({@link FilesBoundary}): header and
+ * body wear Files' theme together, wherever they are hosted. The boundary used
+ * to sit on the body alone, so a host whose pane is homed in another app (the
+ * conversation's Files pane, in the agent manager) drew the path bar's menus
+ * in the host's palette and the body's in Files' — two menu colours in one
+ * pane.
  */
 export function FileBrowserProvider({
   children,
@@ -197,13 +206,17 @@ export function FileBrowserProvider({
     // The cell the header publishes and the tree's portal reads: one per
     // browser, around both.
     <ExplorerControlsSlot.Provider>
-      {state.kind === "ready" ? (
-        <ReadyProvider {...props} system={state.system}>
-          {children}
-        </ReadyProvider>
-      ) : (
-        <SystemPendingProvider state={state}>{children}</SystemPendingProvider>
-      )}
+      <FilesBoundary>
+        {state.kind === "ready" ? (
+          <ReadyProvider {...props} system={state.system}>
+            {children}
+          </ReadyProvider>
+        ) : (
+          <SystemPendingProvider state={state}>
+            {children}
+          </SystemPendingProvider>
+        )}
+      </FilesBoundary>
     </ExplorerControlsSlot.Provider>
   );
 }
@@ -239,9 +252,11 @@ export function PendingFileBrowserProvider({
 }): ReactNode {
   return (
     <ExplorerControlsSlot.Provider>
-      <FileBrowserContext.Provider value={HOST_PENDING}>
-        {children}
-      </FileBrowserContext.Provider>
+      <FilesBoundary>
+        <FileBrowserContext.Provider value={HOST_PENDING}>
+          {children}
+        </FileBrowserContext.Provider>
+      </FilesBoundary>
     </ExplorerControlsSlot.Provider>
   );
 }
@@ -516,5 +531,19 @@ function LensToggle({
       variant="ghost"
       onClick={onToggle}
     />
+  );
+}
+
+/**
+ * The browser's one theme boundary: Files' theme around its header and its
+ * body alike, so every menu opened from either wears one palette. In Files
+ * itself (and in a pane homed there) it names the scope the pane already
+ * wears.
+ */
+function FilesBoundary({ children }: { children: ReactNode }): ReactNode {
+  return (
+    <Theme name={FILES_SCOPE} surface="canvas" className="h-full">
+      {children}
+    </Theme>
   );
 }

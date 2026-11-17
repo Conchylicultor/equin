@@ -44,7 +44,7 @@ describe("scrollClasses", () => {
         isolate: true,
       }),
     ).toBe(
-      "overflow-y-auto overflow-x-hidden data-scroll-x-path:overflow-x-auto data-scroll-x-path:[container-type:inline-size] no-scrollbar isolate",
+      "overflow-y-auto overflow-x-hidden data-scroll-x-path:overflow-x-auto data-scroll-x-path:[container-type:inline-size] hide-scrollbar isolate",
     );
   });
 });

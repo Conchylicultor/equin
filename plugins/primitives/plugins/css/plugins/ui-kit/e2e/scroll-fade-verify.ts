@@ -12,7 +12,7 @@
 // Two assertions are about the mechanism rather than any one state, and run
 // wherever they apply:
 //
-//  - **no scrollable extent** — the panel re-measured with `scroll-fade` off must
+//  - **no scrollable extent** — the panel re-measured with `scroll-edge-fade` off must
 //    report the same `scrollHeight`. This is what "the fade never lies" reduces
 //    to; a strip contributing even 4px makes a menu that fits paint a fade over
 //    nothing.
@@ -27,7 +27,7 @@
 //  4. The `/` slash menu filtered down until the list fits — NEITHER on.
 //
 // Usage: bun plugins/primitives/plugins/css/plugins/ui-kit/e2e/scroll-fade-verify.ts \
-//          [--url <deploy>] [--out /tmp/scroll-fade] [--headed]
+//          [--url <deploy>] [--out /tmp/scroll-edge-fade] [--headed]
 import type { Page } from "playwright";
 import {
   arg,
@@ -40,7 +40,7 @@ import {
 import { type Rgba } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { openBlankPage } from "@plugins/page/plugins/editor/e2e";
 
-const out = arg("out", "/tmp/scroll-fade");
+const out = arg("out", "/tmp/scroll-edge-fade");
 const r = report();
 
 const HANDLE = 'button[aria-label="Reorder or open block actions"]';
@@ -49,7 +49,7 @@ interface Probe {
   scrollTop: number;
   clientHeight: number;
   scrollHeight: number;
-  /** The same panel re-measured with the `scroll-fade` class off. */
+  /** The same panel re-measured with the `scroll-edge-fade` class off. */
   scrollHeightBare: number;
   /** True when the panel really does have content past that edge. */
   moreAbove: boolean;
@@ -68,9 +68,9 @@ interface Probe {
  */
 async function probe(page: Page): Promise<Probe | null> {
   return page.evaluate(() => {
-    const el = [...document.querySelectorAll<HTMLElement>(".scroll-fade")].at(
-      -1,
-    );
+    const el = [
+      ...document.querySelectorAll<HTMLElement>(".scroll-edge-fade"),
+    ].at(-1);
     if (!el) return null;
     const paintTop = getComputedStyle(el, "::before").opacity;
     const paintBottom = getComputedStyle(el, "::after").opacity;
@@ -79,9 +79,9 @@ async function probe(page: Page): Promise<Probe | null> {
     // transition — read the paint first and this stays invisible to everything
     // else. Reading `scrollHeight` forces the layout in between, which is the
     // whole point; no frame is painted inside one evaluate, so nothing flickers.
-    el.classList.remove("scroll-fade");
+    el.classList.remove("scroll-edge-fade");
     const scrollHeightBare = Math.round(el.scrollHeight);
-    el.classList.add("scroll-fade");
+    el.classList.add("scroll-edge-fade");
     return {
       scrollTop: Math.round(el.scrollTop),
       clientHeight: Math.round(el.clientHeight),
@@ -128,7 +128,7 @@ function expect(label: string, p: Probe, top: boolean, bottom: boolean): void {
  * fully opaque AND positioned outside the visible box once passed every
  * assertion in this file; only a screenshot caught it. So this reads pixels.
  *
- * It reads them TWICE — once as shipped, once with `scroll-fade` removed — and
+ * It reads them TWICE — once as shipped, once with `scroll-edge-fade` removed — and
  * reports per-distance COVERAGE: how much the strip attenuates whatever is
  * underneath, `1 - faded/bare`. The second sample is not a luxury. The obvious
  * measurement, "how far in does content first appear", conflates *masked* with
@@ -176,7 +176,7 @@ async function panelGeometry(
   page: Page,
   bg: Rgba,
 ): Promise<{ top: EdgeGeometry; bottom: EdgeGeometry }> {
-  const panel = page.locator(".scroll-fade").last();
+  const panel = page.locator(".scroll-edge-fade").last();
   const box = await panel.boundingBox();
   if (!box) throw new Error("panelGeometry: panel has no box");
   const css = await panel.evaluate((el) => {
@@ -229,7 +229,7 @@ async function panelGeometry(
   // class changes no layout (that is asserted separately), so the two grids are
   // registered pixel for pixel.
   //
-  // Held as an element HANDLE, not the locator: `.scroll-fade` is the selector
+  // Held as an element HANDLE, not the locator: `.scroll-edge-fade` is the selector
   // the locator resolves by, so the moment the class comes off it matches
   // nothing and putting it back would time out. Restored in a `finally` — a
   // throw between the two would otherwise leave the panel unmasked for every
@@ -238,10 +238,10 @@ async function panelGeometry(
   if (!handle) throw new Error("panelGeometry: panel vanished");
   let control;
   try {
-    await handle.evaluate((el) => el.classList.remove("scroll-fade"));
+    await handle.evaluate((el) => el.classList.remove("scroll-edge-fade"));
     control = await samplePixels(page, rect);
   } finally {
-    await handle.evaluate((el) => el.classList.add("scroll-fade"));
+    await handle.evaluate((el) => el.classList.add("scroll-edge-fade"));
     await handle.dispose();
   }
 
@@ -320,7 +320,7 @@ async function panelGeometry(
  * every coverage number taken against it would be quietly meaningless.
  */
 async function panelBackground(page: Page): Promise<Rgba> {
-  const panel = page.locator(".scroll-fade").last();
+  const panel = page.locator(".scroll-edge-fade").last();
   const box = await panel.boundingBox();
   if (!box) throw new Error("panelBackground: panel has no box");
   const border = await panel.evaluate(
@@ -388,7 +388,7 @@ interface FadeGate {
 
 /** Wheel over the open panel, then let the fade settle at its new offset. */
 async function wheelPanel(page: Page, dy: number): Promise<void> {
-  const panel = page.locator(".scroll-fade").last();
+  const panel = page.locator(".scroll-edge-fade").last();
   await panel.hover({ position: { x: 40, y: 40 } });
   const movedFrom = await panel.evaluate((el) => Math.round(el.scrollTop));
   await page.mouse.wheel(0, dy);
@@ -429,9 +429,9 @@ async function settleFade(page: Page, gate: FadeGate = {}): Promise<void> {
   });
   await page.waitForFunction(
     (g: FadeGate) => {
-      const el = [...document.querySelectorAll<HTMLElement>(".scroll-fade")].at(
-        -1,
-      );
+      const el = [
+        ...document.querySelectorAll<HTMLElement>(".scroll-edge-fade"),
+      ].at(-1);
       if (!el) return false;
       const scrollTop = Math.round(el.scrollTop);
       const { clientHeight, scrollHeight } = el;
@@ -478,7 +478,7 @@ await withBrowser(async (h) => {
   // ---- 1 / 2 / 3 — the "Turn into" menu -----------------------------------
   await doc.block.hover();
   await page.locator(HANDLE).first().click();
-  await page.waitForSelector(".scroll-fade", { timeout: 10_000 });
+  await page.waitForSelector(".scroll-edge-fade", { timeout: 10_000 });
   await settleFade(page, { scrollable: true });
 
   const rest = await probe(page);
@@ -526,7 +526,7 @@ await withBrowser(async (h) => {
   // ---- 4 — the `/` menu, filtered until it fits ----------------------------
   await doc.block.click();
   await page.keyboard.type("/");
-  await page.waitForSelector(".scroll-fade", { timeout: 10_000 });
+  await page.waitForSelector(".scroll-edge-fade", { timeout: 10_000 });
   await settleFade(page, { scrollable: true });
 
   const slashOpen = await probe(page);

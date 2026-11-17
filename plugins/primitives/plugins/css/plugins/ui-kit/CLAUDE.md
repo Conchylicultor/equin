@@ -299,11 +299,11 @@ one):
   width wants `width="fit"`, not a fixed width it would clip.
 - **The clamp announces itself — a measured sticky edge fade.** With macOS overlay
   scrollbars invisible at rest, a clamped panel ending in clean padding reads as a
-  *complete* list. The `scroll-fade` utility (`app.css`) fades content into
+  *complete* list. The `scroll-edge-fade` utility (`app.css`) fades content into
   `--chrome-mask` at any edge with content beyond it; `useScrollFade`
   (`web/components/use-scroll-fade.ts`) measures and stamps `data-fade-top` /
   `data-fade-bottom`. Four constraints, each with a reason it looks wrong:
-  - **Additive only — never `no-scrollbar`** (nor `scrollbar-width` /
+  - **Additive only — never `hide-scrollbar`** (nor `scrollbar-width` /
     `::-webkit-scrollbar`). The native transient scrollbar during a gesture is the
     other half of the signal; an always-on visible scrollbar was rejected.
   - **Pseudo-elements, never a wrapper div** (same percentage-chain reason as the

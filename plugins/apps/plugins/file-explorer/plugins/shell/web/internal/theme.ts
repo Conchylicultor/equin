@@ -21,7 +21,6 @@ const LIGHT = {
   sidebar: "#f3f3f5",
   surface: "#ffffff",
   popover: "#ffffff",
-  popoverBorder: "rgb(0 0 0 / 0.1)",
   line: "#e4e4e7",
   lineSoft: "#efeff1",
   hover: "rgb(0 0 0 / 0.04)",
@@ -38,10 +37,10 @@ const LIGHT = {
 const DARK: typeof LIGHT = {
   sidebar: "#111113",
   surface: "#18181b",
-  // A menu sits one step above the canvas, outlined: the same tone as the
-  // page left a breadcrumb's menu and its submenu indistinguishable from it.
+  // A menu sits one step above the canvas: the same tone as the page left a
+  // breadcrumb's menu indistinguishable from it. Its edge is the palette's
+  // default (the double stroke on dark).
   popover: "#242428",
-  popoverBorder: "rgb(255 255 255 / 0.12)",
   line: "#2a2a2e",
   lineSoft: "#222225",
   hover: "rgb(255 255 255 / 0.05)",
@@ -87,7 +86,6 @@ function palette(c: typeof LIGHT, onAccent: string) {
     input: c.line,
     outlineBorder: c.line,
     ring: c.accent,
-    popoverBorder: c.popoverBorder,
     toolbarForeground: c.muted,
   };
 }

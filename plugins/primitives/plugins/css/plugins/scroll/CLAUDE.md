@@ -54,7 +54,7 @@ className="max-h-96">` and a full-height one is `<Scroll className="h-full">`.
 
 - **`axis`** — `"y"` (default) | `"x"` | `"both"`.
 - **`fill`** — emit the flex-child fill pair. Default false.
-- **`hideScrollbar`** — `no-scrollbar` (scrollable, no chrome). Default false.
+- **`hideScrollbar`** — `hide-scrollbar` (scrollable, no chrome). Default false.
 - **`isolate`** — new stacking context (`isolate`). Default false.
 - **`as`** — host element. Default `div`. **`className`** composes last.
 

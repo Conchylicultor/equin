@@ -158,7 +158,7 @@ export const POPOVER_WIDTH: Record<PopoverWidth, string> = {
 // `p-<step> [--scroll-pad:…]` here is now a property of the shared contract rather
 // than of this file.
 //
-// The reason the value must be readable to CSS is unchanged. `scroll-fade`
+// The reason the value must be readable to CSS is unchanged. `scroll-edge-fade`
 // (app.css) is the one consumer today: its sticky edge strips resolve their insets
 // against the panel's CONTENT box, so without the value they park `padding-block`
 // short of the panel's inner edges — and scrolled content, which does pass through

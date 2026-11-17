@@ -71,7 +71,7 @@ const FOOTER_PIN_STYLE = {
  *  - **The clamp announces itself.** A panel clamped to the viewport is only
  *    honest if the user can tell there is more below: with macOS overlay
  *    scrollbars invisible at rest, eight items ending in clean padding read as a
- *    complete list of eight. The `scroll-fade` utility paints a sticky gradient at
+ *    complete list of eight. The `scroll-edge-fade` utility paints a sticky gradient at
  *    an edge that has content beyond it — bottom until the end is reached, top
  *    once scrolled — measured by {@link useScrollFade} and never merely assumed.
  *    Additive only: no scrollbar chrome is touched, so the native transient
@@ -123,7 +123,7 @@ export interface OverlayPanelProps extends Passthrough<HTMLDivElement> {
   children?: React.ReactNode;
   /** Composed with the baked-in select-scope handler (consumer runs first). */
   onKeyDown?: React.KeyboardEventHandler<HTMLDivElement>;
-  /** Composed with the baked-in scroll-fade measurement (consumer runs first). */
+  /** Composed with the baked-in scroll-edge-fade measurement (consumer runs first). */
   onScroll?: React.UIEventHandler<HTMLDivElement>;
 }
 
@@ -211,7 +211,7 @@ export function OverlayPanel({
         rows && "rail-rows",
         scroll && [
           POPOVER_MAX_HEIGHT[maxHeight],
-          "scroll-fade overflow-x-hidden overflow-y-auto",
+          "scroll-edge-fade overflow-x-hidden overflow-y-auto",
         ],
         className,
       )}

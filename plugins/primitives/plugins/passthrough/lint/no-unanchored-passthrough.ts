@@ -84,7 +84,7 @@ const createRule = lintRuleCreator(import.meta.url);
  *
  * PRESENCE of a `ref` attribute on the receiving element, never its expression.
  * `OverlayPanel` writes `ref={panelRef}` where `panelRef` is a `useCallback`
- * composing the caller's ref with the scroll-fade and rail-guard refs — that is
+ * composing the caller's ref with the scroll-edge-fade and rail-guard refs — that is
  * correct, and deciding so from the syntax alone is not possible. A rule that
  * demanded the literal destructured identifier would reject every primitive
  * that has internal refs of its own, which is most of them.

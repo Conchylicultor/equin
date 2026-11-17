@@ -57,7 +57,7 @@ below.
 | --- | --- |
 | `--rail-start` / `--rail-end` | the inset **already applied** between my content and the region edge. What a bleeder cancels. |
 | `--rail-owed-start` / `--rail-owed-end` | the inset a follower must **still apply itself**. `0` when the owner paid; the rail when it published without paying. |
-| `--rail-block-start` / `--rail-block-end` | block padding, per edge — `scroll-fade`'s strips read them |
+| `--rail-block-start` / `--rail-block-end` | block padding, per edge — `scroll-edge-fade`'s strips read them |
 | `--rail-edge` | `closed` (every region class: its content ends at a box edge — a card, a panel) or `open` (`rail-document`: a pane body that runs on). A grid table reads it to decide whether its bleeding last row keeps its closing rule |
 | `--rail-text-start` / `--rail-text-end` | where the region's TEXT starts: the rail, plus one row pad (`--pad-row-x`) in a row host. What a band or label re-applies |
 

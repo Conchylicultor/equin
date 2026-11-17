@@ -4,8 +4,10 @@
 
 Besides the `shadow-2xs … 2xl` tiers (all derived from the editor's params by
 `buildShadowTiers`), the group carries role shadows that default to a tier
-rather than being one: `shadow-popover` (`md` on light; on dark a deep drop of
-its own, since a light-tuned tier vanishes on a dark canvas), `shadow-float` (the popover's),
+rather than being one: `shadow-popover` (`md` on light; on dark the macOS
+menu edge — a dark 2px stroke outside the palette's light `popoverBorder`
+hairline, an even halo and a deep drop — since a light-tuned tier vanishes on
+a dark canvas), `shadow-float` (the popover's on light; the drop alone on dark),
 and a record's cover at rest / under the pointer, `shadow-cover` (`sm`) and
 `shadow-cover-hover` (`xl`) — utilities `shadow-cover` / `shadow-cover-hover`.
 

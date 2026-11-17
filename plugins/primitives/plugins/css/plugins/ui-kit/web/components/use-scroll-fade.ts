@@ -21,7 +21,7 @@ export interface ScrollFade<T extends HTMLElement> {
 }
 
 /**
- * The measurement half of the `scroll-fade` utility (app.css): tells a scroller
+ * The measurement half of the `scroll-edge-fade` utility (app.css): tells a scroller
  * whether there is more content above / below what it is currently showing.
  *
  * The paint is pure CSS — two sticky pseudo-elements gated on `data-fade-top` /

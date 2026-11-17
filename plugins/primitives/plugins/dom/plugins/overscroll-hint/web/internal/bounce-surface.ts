@@ -218,7 +218,7 @@ interface StickyView {
  * The rectangle a sticky descendant of `surface` pins against: the scrollport,
  * deflated by the surface's own padding — Chromium resolves a sticky inset
  * against the scroller's content box, not its scrollport (measured; see the
- * `scroll-fade` utility in ui-kit's app.css).
+ * `scroll-edge-fade` utility in ui-kit's app.css).
  */
 function stickyView(surface: HTMLElement): StickyView {
   if (surface === document.scrollingElement) {

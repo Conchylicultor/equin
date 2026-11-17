@@ -17,10 +17,10 @@ export const RAIL_START_VAR = "--rail-start";
 /** Inline end of the region. */
 export const RAIL_END_VAR = "--rail-end";
 
-/** Block start of the region — read by `scroll-fade`'s top edge strip. */
+/** Block start of the region — read by `scroll-edge-fade`'s top edge strip. */
 export const RAIL_BLOCK_START_VAR = "--rail-block-start";
 
-/** Block end of the region — read by `scroll-fade`'s bottom edge strip. */
+/** Block end of the region — read by `scroll-edge-fade`'s bottom edge strip. */
 export const RAIL_BLOCK_END_VAR = "--rail-block-end";
 
 /**

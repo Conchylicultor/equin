@@ -710,7 +710,7 @@
 /* Scrollbar-chrome hider — keeps a box scrollable while removing the visible
  * scrollbar (Firefox `scrollbar-width` + the WebKit pseudo-element). The home for
  * the `<Scroll hideScrollbar>` mechanic so call sites never hand-write it. */
-@utility no-scrollbar {
+@utility hide-scrollbar {
   /* twmerge: standalone -- Hides scrollbar chrome (scrollbar-width + ::-webkit-scrollbar); additive, no single-value built-in group to conflict with. */
   scrollbar-width: none;
   &::-webkit-scrollbar {
@@ -722,7 +722,7 @@
  * clamps its height and scrolls internally (the `OverlayPanel` case). macOS
  * overlay scrollbars are invisible at rest, so a clamped menu showing 8 items and
  * ending in clean padding reads as a COMPLETE list of 8; the gradient is the only
- * thing that says otherwise. Deliberately ADDITIVE: unlike `no-scrollbar` above,
+ * thing that says otherwise. Deliberately ADDITIVE: unlike `hide-scrollbar` above,
  * this touches no scrollbar chrome at all, so the transient native scrollbar still
  * appears during an active gesture.
  *
@@ -814,7 +814,7 @@
  *    left `scrollHeight` unchanged to the pixel), which is exactly why the
  *    padded edge below is covered by ink instead. The host measures its own
  *    chrome and publishes the two lengths; nothing here assumes a height. */
-@utility scroll-fade {
+@utility scroll-edge-fade {
   /* twmerge: standalone -- Additive ::before/::after gradient overlays gated on data-fade-*; pseudo-element paint has no single-value built-in group to conflict with. */
   /* The visible ramp, above the host's own padding. */
   --scroll-fade-h: 2.5rem;
@@ -1391,7 +1391,7 @@
 @utility rail-owe-2xl  { --rail-edge: closed; --rail-start: var(--space-2xl); --rail-end: var(--space-2xl); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad)); --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
 
 /* The block axis on its own. It is published for the same reason the inline
- * pair is — a sticky inset resolves against the CONTENT box, so `scroll-fade`'s
+ * pair is — a sticky inset resolves against the CONTENT box, so `scroll-edge-fade`'s
  * edge strips cannot reach a padded edge they are unable to measure. There is
  * no owed twin on this axis: `rail-follow` is the only reader of the owed pair
  * and it is inline-only. */
@@ -1755,7 +1755,7 @@
  *
  * Nested `& > * + *` / `&[data-span]` selectors inside `@utility` are supported
  * (verified against tailwindcss 4.2.2: both compile to the same nested rule the
- * source declares, exactly like `scroll-fade`'s `&::before`). */
+ * source declares, exactly like `scroll-edge-fade`'s `&::before`). */
 @utility cp-panel {
   /* twmerge: extend p */
   /* ── THE REGION OWNER ────────────────────────────────────────────────

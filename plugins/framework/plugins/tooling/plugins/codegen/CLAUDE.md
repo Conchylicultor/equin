@@ -306,6 +306,7 @@ wrapper fixpoint reads.
     - `WatchedSlotHit`
     - `WebSlotContribution`
   - Exports (values):
+    - `appCssPath`
     - `appDeclarationsManifestPath`
     - `assertSlotsDeclared`
     - `barrelStubsPath`
@@ -324,6 +325,7 @@ wrapper fixpoint reads.
     - `collectIconManifest`
     - `collectTokenGroups`
     - `collectTokenGroupVars`
+    - `collectUtilityDecls`
     - `collectWebSlotContributions`
     - `COLOR_TOKEN_REF_GROUPS`
     - `colorTokenRefPath`

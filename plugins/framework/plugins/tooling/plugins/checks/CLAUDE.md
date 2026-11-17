@@ -761,6 +761,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - Types: `ReadSetRepo`
 - Sub-plugins:
   - **`app-css-utilities-in-sync`**
+  - **`app-css-utilities-unshadowed`**
   - **`app-declarations-in-sync`**
   - **`barrel-stubs-in-sync`**
   - **`bun-runtime`** [exempt]

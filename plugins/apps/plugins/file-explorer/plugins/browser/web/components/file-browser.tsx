@@ -32,7 +32,6 @@ import {
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { PaneMessage } from "@plugins/primitives/plugins/pane/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
-import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import {
   beforeOpen,
   PLAIN_GESTURE,
@@ -64,7 +63,6 @@ import {
   type Listings,
 } from "../internal/listings";
 import { useMoveInto } from "../internal/move-into";
-import { FILES_SCOPE } from "../internal/theme";
 import { useViewportAtMost } from "../internal/use-viewport-at-most";
 import { FileTree } from "./file-tree";
 import { SplitPreview } from "./file-preview";
@@ -92,28 +90,26 @@ import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-rev
 export function FileBrowser(props: FileBrowserProps): ReactNode {
   return (
     <FileBrowserProvider {...props}>
-      <Theme name={FILES_SCOPE} surface="canvas" className="h-full">
-        <Column
-          fill
-          className="h-full"
-          scrollBody={false}
-          header={
-            // The mockup's tight 4px toolbar rhythm.
-            <Bar tier="subpane" className="gap-xs">
-              <FileBrowserNav />
-              {/* No pane title to size it: the crumbs read in body type. */}
-              <Fill>
-                <Text as="div" variant="body">
-                  <FileBrowserPath />
-                </Text>
-              </Fill>
-              <FileBrowserFilter />
-              <FileBrowserToggles />
-            </Bar>
-          }
-          body={<FileBrowserBodyContent />}
-        />
-      </Theme>
+      <Column
+        fill
+        className="h-full"
+        scrollBody={false}
+        header={
+          // The mockup's tight 4px toolbar rhythm.
+          <Bar tier="subpane" className="gap-xs">
+            <FileBrowserNav />
+            {/* No pane title to size it: the crumbs read in body type. */}
+            <Fill>
+              <Text as="div" variant="body">
+                <FileBrowserPath />
+              </Text>
+            </Fill>
+            <FileBrowserFilter />
+            <FileBrowserToggles />
+          </Bar>
+        }
+        body={<FileBrowserBodyContent />}
+      />
     </FileBrowserProvider>
   );
 }
@@ -121,15 +117,11 @@ export function FileBrowser(props: FileBrowserProps): ReactNode {
 /**
  * The browser's body under its host's pane header: the folder as a tree, the
  * status bar, and — with `preview: "split"` — the open file beside it; or what
- * stops the file system from being browsed. In Files' theme: hosted beside a
- * conversation or inside a folder peek, the browser IS the Files app.
+ * stops the file system from being browsed. In Files' theme — the provider's,
+ * around the host's header and this body together.
  */
 export function FileBrowserBody(): ReactNode {
-  return (
-    <Theme name={FILES_SCOPE} surface="canvas" className="h-full">
-      <FileBrowserBodyContent />
-    </Theme>
-  );
+  return <FileBrowserBodyContent />;
 }
 
 function FileBrowserBodyContent(): ReactNode {

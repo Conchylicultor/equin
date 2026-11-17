@@ -51,7 +51,7 @@ export function scrollClasses(opts: {
         ? "min-w-0 flex-1"
         : "min-h-0 flex-1"
       : null,
-    opts.hideScrollbar ? "no-scrollbar" : null,
+    opts.hideScrollbar ? "hide-scrollbar" : null,
     opts.isolate ? "isolate" : null,
   ]
     .filter(Boolean)
@@ -66,7 +66,7 @@ export interface ScrollProps extends React.HTMLAttributes<HTMLElement> {
    *  Defaults to false. */
   fill?: boolean;
   /** Hide the scrollbar chrome while keeping the content scrollable
-   *  (`no-scrollbar`). Defaults to false. */
+   *  (`hide-scrollbar`). Defaults to false. */
   hideScrollbar?: boolean;
   /** Open a new stacking context (`isolate`) so descendant z-layers can't escape
    *  the pane. Defaults to false. */

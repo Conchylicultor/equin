@@ -33028,6 +33028,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Types: `ReadSetRepo`
           - Plugins:
             - **`app-css-utilities-in-sync`**
+            - **`app-css-utilities-unshadowed`**
             - **`app-declarations-in-sync`**
             - **`barrel-stubs-in-sync`**
             - **`bun-runtime`**
@@ -33331,6 +33332,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `WatchedSlotHit`
               - `WebSlotContribution`
             - Exports (values):
+              - `appCssPath`
               - `appDeclarationsManifestPath`
               - `assertSlotsDeclared`
               - `barrelStubsPath`
@@ -33349,6 +33351,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `collectIconManifest`
               - `collectTokenGroups`
               - `collectTokenGroupVars`
+              - `collectUtilityDecls`
               - `collectWebSlotContributions`
               - `COLOR_TOKEN_REF_GROUPS`
               - `colorTokenRefPath`

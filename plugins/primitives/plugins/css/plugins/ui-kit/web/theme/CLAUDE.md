@@ -78,7 +78,7 @@ inside it to pay again, which doubles the inset. `rail-follow` reads owed → ra
 → chrome pad; `rail-bleed` reads only the applied pair, which is what makes it
 land on the region edge under either topology.
 
-The block pair exists for `scroll-fade`'s sticky edge strips: a sticky inset
+The block pair exists for `scroll-edge-fade`'s sticky edge strips: a sticky inset
 resolves against the **content** box, so a strip at `top: 0` parks the host's
 block padding short of the visible inner edge and scrolled content re-emerges
 unfaded in the last few pixels. The strip has to know a length the padding class

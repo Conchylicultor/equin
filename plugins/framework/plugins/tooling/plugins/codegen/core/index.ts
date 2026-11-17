@@ -196,6 +196,8 @@ export {
   parseCustomUtilities,
 } from "./custom-utilities-gen";
 
+export { appCssPath, collectUtilityDecls } from "./app-css-utilities";
+
 export {
   generateSpaceRamp,
   renderSpaceRamp,
