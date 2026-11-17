@@ -39,9 +39,7 @@ describe("setup steps", () => {
 
   test("the record forwards each step as it ends and sums them up in order", () => {
     const forwarded: string[] = [];
-    const steps = recordSetupSteps((s) =>
-      forwarded.push(describeSetupStep(s)),
-    );
+    const steps = recordSetupSteps((s) => forwarded.push(describeSetupStep(s)));
     steps.onStep({ step: "gate-wait", ms: 40 });
     steps.onStep({ step: "install", ms: 12_345, failed: true });
     expect(forwarded).toEqual([

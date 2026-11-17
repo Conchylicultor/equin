@@ -112,7 +112,8 @@ describe("a removed checkout's tree goes to the next checkout", () => {
       old,
       { kind: "detached", rev: "main" },
       {
-        recycle: false, onStep: noSteps,
+        recycle: false,
+        onStep: noSteps,
       },
     );
     // What its agent left: an edit, an untracked file, ignored output, the
@@ -171,7 +172,8 @@ describe("a removed checkout's tree goes to the next checkout", () => {
         wt,
         { kind: "detached", rev: "main" },
         {
-          recycle: true, onStep: noSteps,
+          recycle: true,
+          onStep: noSteps,
         },
       ),
     ).toEqual({ kind: "empty" });
@@ -215,7 +217,8 @@ describe("a removed checkout's tree goes to the next checkout", () => {
       old,
       { kind: "detached", rev: "main" },
       {
-        recycle: false, onStep: noSteps,
+        recycle: false,
+        onStep: noSteps,
       },
     );
     await git(old, "update-index", "--skip-worktree", "kept.txt");
