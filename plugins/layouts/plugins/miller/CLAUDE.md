@@ -88,7 +88,10 @@ The whole row is laid out by one pure function, `layoutColumns` in
 what it decides. Prototype: `proto-1794189254-saewzy` (`open=balanced`).
 
 - **No column is drawn before the row is measured.** The row's width is
-  `null` until its first measure (`useResizeObserver`, before paint), and
+  `null` until its first measure (read in the mounting commit's layout
+  effect — never left to the ResizeObserver alone, which delivers nothing
+  inside a view transition's update, so the pane morph would find no column
+  to grow into; `useResizeObserver` follows later resizes), and
   only then is `MillerRow` mounted with a `rowWidth: number` — so a column is
   never first laid out at a stand-in width and moved by the measure. Chrome
   counts that move as a layout shift even when the measure lands in the same

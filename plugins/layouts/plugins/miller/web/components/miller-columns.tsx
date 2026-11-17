@@ -100,6 +100,15 @@ export function MillerColumns() {
   const ref = useRef<HTMLDivElement>(null);
   // Null until measured: not known yet, never a width to lay out at.
   const [rowWidth, setRowWidth] = useState<number | null>(null);
+  // The first measure is read in the commit that mounts the row, not left to
+  // the ResizeObserver: a commit inside a view transition's update (the pane
+  // morph's Expand) runs while the browser suppresses rendering, so no
+  // observation is delivered until the transition ends — the columns would
+  // not exist yet for the morph to grow into. The observer follows resizes.
+  const hasMatch = match !== null;
+  useLayoutEffect(() => {
+    if (hasMatch && ref.current) setRowWidth(ref.current.clientWidth);
+  }, [hasMatch]);
   useResizeObserver(
     ref,
     () => {
