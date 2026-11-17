@@ -14,6 +14,13 @@ import type { People, Walker } from "../people";
 import { BUBBLE_FONT, drawBubble } from "../chatter";
 import { glowSprite, type Ctx } from "../kit";
 import {
+  paintTeleportFx,
+  TELEPORT_OUT,
+  teleportDone,
+  teleportPose,
+  type Teleport,
+} from "../teleport";
+import {
   CAVE_H,
   CRYSTAL_HUES,
   CRYSTAL_NOTES,
@@ -160,6 +167,8 @@ export class Undercroft {
   private stepAt = 0;
   private mode: Mode = { kind: "fall", vy: 0 };
   private target: { x: number; then: Thing | null } | null = null;
+  /** The hero vanishing here and landing there along the cave (a double-click). */
+  private tp: Teleport | null = null;
   private readonly held = new Set<string>();
   private camX = SHAFT_X;
   private z = 1;
@@ -393,6 +402,28 @@ export class Undercroft {
         face(MURAL_X);
         return;
     }
+  }
+
+  /** A double-click: the hero vanishes where it stands and lands under the pointer, on the floor. */
+  teleport(sx: number, sy: number): void {
+    if (this.mode.kind !== "walk" || this.tp) return;
+    const x = this.clampX(this.toWorld(sx, sy).x);
+    const h = this.hero;
+    this.target = null;
+    this.held.clear();
+    h.walking = false;
+    h.speed = 0;
+    if (this.host.reducedMotion) {
+      h.x = x;
+      h.y = floorY(x);
+      return;
+    }
+    this.tp = {
+      from: { x: h.x, y: h.y },
+      to: { x, y: floorY(x) },
+      t0: this.t,
+      landed: false,
+    };
   }
 
   private climb(): void {
@@ -631,6 +662,14 @@ export class Undercroft {
       h.speed = 80;
       h.phase += 80 * dt;
       if (h.y < SHAFT_TOP + 160) this.leave();
+    } else if (m.kind === "walk" && this.tp) {
+      const tp = this.tp;
+      if (!tp.landed && t - tp.t0 >= TELEPORT_OUT) {
+        tp.landed = true;
+        h.x = tp.to.x;
+        h.y = tp.to.y;
+      }
+      if (teleportDone(tp, t)) this.tp = null;
     } else if (m.kind === "walk") {
       let dir = 0;
       for (const c of this.held)
@@ -1064,7 +1103,20 @@ export class Undercroft {
     const h = this.hero;
     // in the air (falling, on the rope) it casts no shadow on the floor
     const grounded = this.mode.kind === "walk" || h.y >= floorY(h.x) - 1;
-    this.host.people.draw(g, h, t, grounded);
+    const tp = this.tp;
+    if (tp) {
+      const pose = teleportPose(tp, t);
+      if (pose.alpha > 0.01) {
+        g.save();
+        g.globalAlpha *= pose.alpha;
+        g.translate(h.x, h.y);
+        g.scale(pose.sx, pose.sy);
+        g.translate(-h.x, -h.y);
+        this.host.people.draw(g, h, t, grounded);
+        g.restore();
+      }
+      paintTeleportFx(g, tp, t);
+    } else this.host.people.draw(g, h, t, grounded);
     lights.push({ x: h.x, y: h.y - 30, r: 70, col: lightCol(40), a: 0.12 });
 
     // --- the pool's water, over the hero's feet

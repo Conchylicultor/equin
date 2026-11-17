@@ -1692,14 +1692,11 @@ export class IsleEngine {
       { passive: false },
     );
     this.on<MouseEvent>(c, "dblclick", (e) => {
-      if (
-        this.started &&
-        !this.moving &&
-        !this.settling &&
-        !this.below &&
-        !this.descent
-      )
-        this.teleportTo(e.offsetX, e.offsetY);
+      if (this.started && !this.moving && !this.settling && !this.descent) {
+        // down the well too: the Undercroft teleports its hero along the cave
+        if (this.below) this.undercroft?.teleport(e.offsetX, e.offsetY);
+        else this.teleportTo(e.offsetX, e.offsetY);
+      }
     });
     this.on<PointerEvent>(c, "pointerdown", (e) => this.pointerDown(e));
     this.on<PointerEvent>(c, "pointermove", (e) => this.pointerMove(e));
@@ -2014,12 +2011,6 @@ export class IsleEngine {
     this.walkTo(p.x, p.y);
   }
 
-  /**
-   * A double-click on the ground: the hero vanishes where it stands and lands
-   * there (the nearest walkable spot); the camera stays put. The first
-   * click of the pair already set a walk going, which this replaces; on a
-   * building or a lot the first click has done what it does, so nothing more.
-   */
   /** Whether world point `p` is on the hero (a click there pokes them). */
   private onHero(p: { x: number; y: number }): boolean {
     const hero = this.hero;
@@ -2033,13 +2024,22 @@ export class IsleEngine {
     );
   }
 
+  /**
+   * A double-click: the hero vanishes where it stands and lands there (the
+   * nearest walkable spot) — on the ground, an empty lot or the well (landing
+   * at its front, then climbing in); the camera stays put. The first click of
+   * the pair already set a walk going, which this replaces. On a building the
+   * first click has opened its app, so nothing more.
+   */
   private teleportTo(sx: number, sy: number): void {
     if (!this.grid || !this.hero.placed || this.teleport) return;
     const p = this.toWorld(sx, sy);
     if (this.onHero(p)) return;
-    if (this.hitBuilding(p, performance.now() / 1000) || this.lotAt(p.x, p.y))
-      return;
-    const path = findPath(this.grid, this.hero.x, this.hero.y, p.x, p.y);
+    if (this.hitBuilding(p, performance.now() / 1000)) return;
+    // on the well: land at its front, and climb in once landed
+    const well = this.wellAt(p.x, p.y);
+    const goal = well ? { x: well.x, y: well.y + WELL_FRONT } : p;
+    const path = findPath(this.grid, this.hero.x, this.hero.y, goal.x, goal.y);
     if (!path) return;
     const [x, y] = path[path.length - 1]!;
     const hero = this.hero;
@@ -2051,6 +2051,7 @@ export class IsleEngine {
     this.kbCam = false;
     this.inertia = false;
     this.follow = null;
+    this.wellBound = well;
     if (this.opts.reducedMotion) {
       hero.x = x;
       hero.y = y;
@@ -3384,12 +3385,13 @@ export class IsleEngine {
     if (
       wb &&
       !hero.path &&
+      !this.teleport &&
       Math.hypot(hero.x - wb.x, hero.y - (wb.y + WELL_FRONT)) < 40
     ) {
       this.startDescent(wb, t);
       return;
     }
-    if (wb && !hero.path) this.wellBound = null;
+    if (wb && !hero.path && !this.teleport) this.wellBound = null;
     const nb =
       this.buildings.find(
         (b) => Math.hypot(hero.x - b.door[0], (hero.y - b.door[1]) * 1.4) < 46,
