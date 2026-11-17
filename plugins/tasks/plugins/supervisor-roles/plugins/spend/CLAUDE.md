@@ -16,16 +16,15 @@
     - `Pane.Register` "supervisors-spend"
     - `SupervisorsList.Head` "Spent this week" → `SpendGlance`
     - `row-actions` "open" → `OpenConversationAction`
-  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×7
     - `network/live/live-state` ×3
+    - `primitives/breadcrumb` ×3
     - `primitives/link-gesture` ×3
     - `primitives/pane` ×3
     - `conversations/conversation-view.conversationPane`
     - `network/live.useLive`
-    - `primitives/breadcrumb.TrailSeparator`
     - `primitives/css/coords.Placed`
-    - `primitives/css/fill.Fill`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/surface.Surface`
     - `primitives/css/ui-kit.cn`

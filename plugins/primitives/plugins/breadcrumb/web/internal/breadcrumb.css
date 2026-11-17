@@ -1,0 +1,65 @@
+/*
+ * The trail's motion (`Breadcrumb motion="wipe"`): a crumb the trail goes
+ * into is wiped in at full colour — never half-transparent, so the current
+ * crumb is always the one bright name — and one it comes back out of is wiped
+ * out; the crumb that changes role fades between the leaf's colour and the
+ * ancestors'. Keyframes, so they live in CSS beside the trail.
+ */
+.breadcrumb-enter {
+  animation: breadcrumb-wipe-in 0.3s cubic-bezier(0.22, 0.8, 0.24, 1) both;
+}
+.breadcrumb-sep-enter {
+  animation: breadcrumb-fade-in 0.18s ease-out both;
+}
+.breadcrumb-leaving {
+  animation: breadcrumb-wipe-out 0.2s ease-in forwards;
+  pointer-events: none;
+}
+.breadcrumb-demoted {
+  animation: breadcrumb-dim 0.16s ease-out;
+}
+.breadcrumb-promoted {
+  animation: breadcrumb-brighten 0.16s ease-out;
+}
+/* Reduced motion: the change still lands (and the leaving crumbs still go —
+   their removal waits on the animation's end), it just does not travel. */
+@media (prefers-reduced-motion: reduce) {
+  .breadcrumb-enter,
+  .breadcrumb-sep-enter,
+  .breadcrumb-leaving,
+  .breadcrumb-demoted,
+  .breadcrumb-promoted {
+    animation-duration: 1ms;
+  }
+}
+@keyframes breadcrumb-wipe-in {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+@keyframes breadcrumb-wipe-out {
+  from {
+    clip-path: inset(0 0 0 0);
+  }
+  to {
+    clip-path: inset(0 100% 0 0);
+  }
+}
+@keyframes breadcrumb-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes breadcrumb-dim {
+  from {
+    color: var(--breadcrumb-leaf-color, var(--foreground));
+  }
+}
+@keyframes breadcrumb-brighten {
+  from {
+    color: var(--muted-foreground);
+  }
+}

@@ -22,6 +22,22 @@ with a comment saying why. The trails today:
   `null`.
 - **Plugins** (`plugin-meta/plugin-view`): the plugins beside each one, from
   the tree already loaded.
+- **Spend breakdown** (`tasks/supervisor-roles/spend`): the levels beside
+  each one. The root ("Spent this week") is `null`.
+
+## Motion (`motion="wipe"`)
+
+A trail that is its surface's navigation, moved one level at a time, opts
+into `motion="wipe"`. `trailChange` (pure, bun-tested) reads the change from
+the keys: going deeper wipes the new crumbs in with a `clip-path` reveal at full
+colour (their separator fades in) while the old leaf dims; going back up
+keeps the dropped crumbs drawn after the leaf, inert and first to shrink,
+while they wipe out and the new leaf brightens. Any other change draws as it
+lands. `useTrailMotion` derives it during render, so the first frame of the
+new trail is the first frame of the animation. The animation's own
+`animationend` ends it and drops the leaving crumbs. Under reduced motion the
+animations run for 1 ms, so they still end. The keyframes are in
+`web/internal/breadcrumb.css`.
 
 ## The fold (`use-ancestor-collapse.ts`, `fold-plan.ts`)
 
@@ -54,7 +70,7 @@ path showed `… › leaf` with hundreds of pixels standing empty.)
 
 ## Plugin reference
 
-- Description: Generic breadcrumb: muted ancestor crumbs, a themed separator between them, and the current page as the one leaf that never gives up its letters — the oldest ancestors fold one by one into an overflow menu instead, keeping as many crumbs nearest the page as fit. A crumb given its siblings lists them in a menu while the pointer rests on it (a click still goes to the crumb), each with what is inside it as a submenu.
+- Description: Generic breadcrumb: muted ancestor crumbs, a themed separator between them, and the current page as the one leaf that never gives up its letters — the oldest ancestors fold one by one into an overflow menu instead, keeping as many crumbs nearest the page as fit. A crumb given its siblings lists them in a menu while the pointer rests on it (a click still goes to the crumb), each with what is inside it as a submenu. Every crumb states its siblings (null where it has none), and motion wipe animates a drill: the crumbs gone into wipe in, the ones come back out of wipe out.
 - Web:
   - Slots: `BreadcrumbSlots.Separator`
   - Slot contributors: `BreadcrumbSlots.Separator` ← `ui.breadcrumb-separator`
@@ -72,6 +88,7 @@ path showed `… › leaf` with hundreds of pixels standing empty.)
     - `primitives/css/ui-kit.DropdownMenuSubContent`
     - `primitives/css/ui-kit.DropdownMenuSubTrigger`
     - `primitives/css/ui-kit.DropdownMenuTrigger`
+    - `primitives/css/yield.yieldClass`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/link-gesture.activationProps`
     - `primitives/loading.Loading`
@@ -88,9 +105,9 @@ path showed `… › leaf` with hundreds of pixels standing empty.)
     - `Breadcrumb`
     - `BreadcrumbPlaces`
     - `BreadcrumbSlots`
-    - `TrailSeparator`
 - Cross-plugin:
   - Uses tokens:
+    - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --strong-foreground`
     - `ui/tokens/density --space-2xs`

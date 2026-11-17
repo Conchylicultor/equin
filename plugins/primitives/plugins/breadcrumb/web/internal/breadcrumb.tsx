@@ -1,6 +1,7 @@
 import {
   Fragment,
   useRef,
+  type CSSProperties,
   type ReactElement,
   type ReactNode,
   type RefObject,
@@ -8,6 +9,7 @@ import {
 import { RowActions } from "@plugins/primitives/plugins/row-actions/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
@@ -19,6 +21,8 @@ import {
   cn,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { TrailSeparator } from "./trail-separator";
+import { useTrailMotion } from "./trail-motion";
+import "./breadcrumb.css";
 import { CrumbPlacesMenu } from "./places-menu";
 import {
   CRUMB_FOLD_ATTR,
@@ -86,6 +90,32 @@ export interface BreadcrumbProps {
    * the page's address rather than as a row of controls.
    */
   text?: "inherit" | "body";
+  /**
+   * How a change of trail is drawn. `none` (the default) draws the new trail
+   * as it lands. `wipe` animates a drill: going deeper wipes the new crumb in
+   * (and its separator fades in) while the old current crumb dims; going back
+   * up keeps the crumbs it left drawn after the current one and wipes them
+   * out while the new current one brightens. Any other change (another place
+   * altogether) is drawn as it lands. For a trail that IS the navigation of
+   * its surface, moved one level at a time (a drill-down breakdown).
+   */
+  motion?: "none" | "wipe";
+}
+
+/** The colour the dimming crumb starts from: the leaf's, per `leafTone`. */
+const LEAF_COLOR_VAR: Record<
+  NonNullable<BreadcrumbProps["leafTone"]>,
+  string | undefined
+> = {
+  inherit: undefined,
+  strong: "var(--strong-foreground)",
+};
+
+/** Ends a motion once ITS element's animation ends (not a descendant's). */
+function onOwnAnimationEnd(settle: () => void) {
+  return (e: { target: EventTarget; currentTarget: EventTarget }) => {
+    if (e.target === e.currentTarget) settle();
+  };
 }
 
 const TRAIL_TEXT: Record<NonNullable<BreadcrumbProps["text"]>, string> = {
@@ -124,6 +154,7 @@ function Crumb({
   siblings,
   textClass,
   index,
+  motion,
 }: {
   label: ReactNode;
   activation?: Activation;
@@ -131,11 +162,20 @@ function Crumb({
   textClass: string;
   /** Its place in the trail, which the fold measures it by. */
   index: number;
+  /** The trail's motion class for this crumb, and what ends it. */
+  motion?: {
+    className: string;
+    onAnimationEnd: ReturnType<typeof onOwnAnimationEnd>;
+  };
 }) {
   const marker = { [CRUMB_INDEX_ATTR]: index };
   if (!activation) {
     return (
-      <span {...marker} className="font-normal text-muted-foreground">
+      <span
+        {...marker}
+        className={cn("font-normal text-muted-foreground", motion?.className)}
+        onAnimationEnd={motion?.onAnimationEnd}
+      >
         {label}
       </span>
     );
@@ -146,9 +186,11 @@ function Crumb({
       variant="ghost"
       aspect="inline"
       {...activationProps(activation)}
+      onAnimationEnd={motion?.onAnimationEnd}
       className={cn(
         "px-2xs font-normal text-muted-foreground hover:text-strong-foreground",
         textClass,
+        motion?.className,
       )}
     >
       {label}
@@ -166,13 +208,20 @@ function Leaf({
   segment,
   className,
   leafRef,
+  onAnimationEnd,
 }: {
   segment: BreadcrumbSegment;
   className: string;
   leafRef: RefObject<HTMLSpanElement | null>;
+  onAnimationEnd?: ReturnType<typeof onOwnAnimationEnd>;
 }) {
   const leaf = (
-    <span ref={leafRef} data-breadcrumb-leaf className={className}>
+    <span
+      ref={leafRef}
+      data-breadcrumb-leaf
+      className={className}
+      onAnimationEnd={onAnimationEnd}
+    >
       {segment.label}
     </span>
   );
@@ -251,6 +300,7 @@ export function Breadcrumb({
   leafWeight = "medium",
   leafTone = "inherit",
   text = "inherit",
+  motion = "none",
 }: BreadcrumbProps) {
   const textClass = TRAIL_TEXT[text];
   const rootRef = useRef<HTMLDivElement>(null);
@@ -269,6 +319,19 @@ export function Breadcrumb({
     count: prefix.length,
   });
 
+  const { change, settle } = useTrailMotion(segments, motion === "wipe");
+  const ended = onOwnAnimationEnd(settle);
+  /** The motion class of the crumb keyed `key`, if it moves. */
+  const crumbMotion = (key: string): string | undefined =>
+    change.entering.has(key)
+      ? "breadcrumb-enter"
+      : change.demoted === key
+        ? "breadcrumb-demoted"
+        : change.promoted === key
+          ? "breadcrumb-promoted"
+          : undefined;
+  const leafColor = LEAF_COLOR_VAR[leafTone];
+
   if (active === undefined) return null;
 
   return (
@@ -283,6 +346,11 @@ export function Breadcrumb({
         "[&_svg:not([class*='size-'])]:icon-auto",
         textClass,
       )}
+      style={
+        leafColor === undefined
+          ? undefined
+          : ({ "--breadcrumb-leaf-color": leafColor } as CSSProperties)
+      }
     >
       {prefix.length > 0 && (
         // ONE box for the ancestors however many are folded, so what folds and
@@ -303,25 +371,76 @@ export function Breadcrumb({
               <TrailSeparator />
             </>
           )}
-          {prefix.slice(hidden).map((seg, i) => (
-            <Fragment key={seg.key}>
-              <Crumb
-                label={seg.label}
-                activation={seg.activation}
-                siblings={seg.siblings}
-                textClass={textClass}
-                index={hidden + i}
-              />
-              <TrailSeparator />
-            </Fragment>
-          ))}
+          {prefix.slice(hidden).map((seg, i) => {
+            const motionClass = crumbMotion(seg.key);
+            const next = segments[hidden + i + 1];
+            return (
+              <Fragment key={seg.key}>
+                <Crumb
+                  label={seg.label}
+                  activation={seg.activation}
+                  siblings={seg.siblings}
+                  textClass={textClass}
+                  index={hidden + i}
+                  motion={
+                    motionClass === undefined
+                      ? undefined
+                      : { className: motionClass, onAnimationEnd: ended }
+                  }
+                />
+                {next !== undefined && change.entering.has(next.key) ? (
+                  <Stack
+                    as="span"
+                    direction="row"
+                    align="center"
+                    gap="none"
+                    className={cn("breadcrumb-sep-enter", rigidClass())}
+                  >
+                    <TrailSeparator />
+                  </Stack>
+                ) : (
+                  <TrailSeparator />
+                )}
+              </Fragment>
+            );
+          })}
         </Stack>
       )}
       <Leaf
         segment={active}
         leafRef={leafRef}
-        className={cn("truncate", LEAF_WEIGHT[leafWeight], LEAF_TONE[leafTone])}
+        className={cn(
+          "truncate",
+          LEAF_WEIGHT[leafWeight],
+          LEAF_TONE[leafTone],
+          crumbMotion(active.key),
+        )}
+        onAnimationEnd={crumbMotion(active.key) ? ended : undefined}
       />
+      {change.leaving.length > 0 && (
+        // The crumbs the trail came back out of, still drawn after the
+        // current one while they wipe out. Decoration: inert, unread, and the
+        // first thing to give way if the row is short.
+        <Stack
+          as="span"
+          direction="row"
+          align="center"
+          gap="2xs"
+          aria-hidden
+          className={cn(
+            "breadcrumb-leaving text-muted-foreground",
+            yieldClass("x"),
+          )}
+          onAnimationEnd={ended}
+        >
+          {change.leaving.map((seg) => (
+            <Fragment key={seg.key}>
+              <TrailSeparator />
+              <span className="truncate px-2xs">{seg.label}</span>
+            </Fragment>
+          ))}
+        </Stack>
+      )}
       {actions && (
         // A trailing action cluster on a row-shaped strip is the `row-actions`
         // primitive, never raw JSX — one implementation owns the sizing, the

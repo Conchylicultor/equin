@@ -49219,7 +49219,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/pane`
       - Exemptions:
         - Exempts itself from: `pane/no-adhoc-pane-toolbar` — `web/internal/bar.tsx` (sanctioned)
-    - **`breadcrumb`** — Generic breadcrumb: muted ancestor crumbs, a themed separator between them, and the current page as the one leaf that never gives up its letters — the oldest ancestors fold one by one into an overflow menu instead, keeping as many crumbs nearest the page as fit. A crumb given its siblings lists them in a menu while the pointer rests on it (a click still goes to the crumb), each with what is inside it as a submenu.
+    - **`breadcrumb`** — Generic breadcrumb: muted ancestor crumbs, a themed separator between them, and the current page as the one leaf that never gives up its letters — the oldest ancestors fold one by one into an overflow menu instead, keeping as many crumbs nearest the page as fit. A crumb given its siblings lists them in a menu while the pointer rests on it (a click still goes to the crumb), each with what is inside it as a submenu. Every crumb states its siblings (null where it has none), and motion wipe animates a drill: the crumbs gone into wipe in, the ones come back out of wipe out.
       - Web:
         - Slots: `BreadcrumbSlots.Separator`
         - Slot contributors: `BreadcrumbSlots.Separator` ← `ui.breadcrumb-separator`
@@ -49237,6 +49237,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.DropdownMenuSubContent`
           - `primitives/css/ui-kit.DropdownMenuSubTrigger`
           - `primitives/css/ui-kit.DropdownMenuTrigger`
+          - `primitives/css/yield.yieldClass`
           - `primitives/dom/element-size.useResizeObserver`
           - `primitives/link-gesture.activationProps`
           - `primitives/loading.Loading`
@@ -49253,9 +49254,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Breadcrumb`
           - `BreadcrumbPlaces`
           - `BreadcrumbSlots`
-          - `TrailSeparator`
       - Cross-plugin:
         - Uses tokens:
+          - `ui/tokens/color-palette --foreground`
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/color-palette --strong-foreground`
           - `ui/tokens/density --space-2xs`
@@ -49940,13 +49941,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 185 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+            - Imported by: 184 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
               - `apps` ×51
               - `primitives` ×33
               - `conversations` ×27
               - `debug` ×18
               - `page` ×11
-              - `tasks` ×10
+              - `tasks` ×9
               - `ui` ×9
               - `infra` ×4
               - `plugin-meta` ×3
@@ -51326,9 +51327,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/pending-turn`
         - **`yield`** — Yielding-cell layout primitive: yieldClass(axis) is the flex child that falls below its own content width (min-w-0) but never takes slack. The half of <Fill> that gives, without the half that grows.
           - Cross-plugin:
-            - Imported by: 40 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
+            - Imported by: 41 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
               - `apps` ×11
-              - `primitives` ×9
+              - `primitives` ×10
               - `conversations` ×8
               - `debug` ×3
               - `ui` ×3
@@ -62749,16 +62750,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "supervisors-spend"
               - `SupervisorsList.Head` "Spent this week" → `SpendGlance`
               - `row-actions` "open" → `OpenConversationAction`
-            - Uses: 32 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/plugins/spend/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/plugins/spend/REFERENCE.md)
+            - Uses: 33 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/plugins/spend/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/plugins/spend/REFERENCE.md)
               - `primitives/data-view` ×7
               - `network/live/live-state` ×3
+              - `primitives/breadcrumb` ×3
               - `primitives/link-gesture` ×3
               - `primitives/pane` ×3
               - `conversations/conversation-view.conversationPane`
               - `network/live.useLive`
-              - `primitives/breadcrumb.TrailSeparator`
               - `primitives/css/coords.Placed`
-              - `primitives/css/fill.Fill`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/surface.Surface`
               - `primitives/css/ui-kit.cn`

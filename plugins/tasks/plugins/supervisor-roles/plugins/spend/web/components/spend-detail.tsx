@@ -1,11 +1,9 @@
 import {
-  Fragment,
   useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
   useState,
-  type KeyboardEvent,
   type ReactElement,
   type ReactNode,
 } from "react";
@@ -33,12 +31,12 @@ import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import {
-  activationProps,
-  gestureOf,
-  linkProps,
-} from "@plugins/primitives/plugins/link-gesture/web";
-import { TrailSeparator } from "@plugins/primitives/plugins/breadcrumb/web";
+  Breadcrumb,
+  BreadcrumbPlaces,
+  type BreadcrumbSegment,
+} from "@plugins/primitives/plugins/breadcrumb/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
 import {
@@ -47,7 +45,6 @@ import {
 } from "@plugins/primitives/plugins/link-gesture/core";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { SpendNode } from "../../core";
 import {
@@ -202,15 +199,6 @@ function subOf(part: SpendNode): string | null {
   return line.length === 0 ? null : line.join(" · ");
 }
 
-/** One segment of the title's path. */
-interface PathSegment {
-  key: string;
-  name: string;
-  path: string[];
-  enter?: boolean;
-  leaving?: boolean;
-}
-
 /** The zoom between two levels, keyed so each move runs once. */
 interface Move {
   id: number;
@@ -286,8 +274,6 @@ function SpendLevels({
     nodes,
   });
   const [move, setMove] = useState<Move | null>(null);
-  const [enterKey, setEnterKey] = useState<string | null>(null);
-  const [leaving, setLeaving] = useState<PathSegment[]>([]);
   if (shown.key !== key) {
     const before = shown.nodes.map((n) => n.id);
     const down =
@@ -310,8 +296,6 @@ function SpendLevels({
     } else {
       setMove(null);
     }
-    setEnterKey(down ? key : null);
-    setLeaving(up ? segmentsOf(shown.nodes, nameOf).slice(path.length) : []);
     setShown({ key, nodes });
   }
 
@@ -433,53 +417,16 @@ function SpendLevels({
     total: node.costUsd,
     name: nameOf(part),
   }));
-  const segments = [
-    ...segmentsOf(nodes, nameOf).map((s) => ({
-      ...s,
-      enter: s.key === enterKey,
-    })),
-    ...leaving.map((s) => ({ ...s, leaving: true })),
-  ];
+  const segments = segmentsOf(nodes, nameOf, linkTo);
 
   return (
     <div ref={rootRef} className="sp-page rail-lg">
       <div className="sp-title">
-        <div className="sp-path text-title">
-          {segments.map((s, i) => {
-            const current = !s.leaving && s.key === key;
-            return (
-              <Fragment key={s.key}>
-                {i > 0 ? (
-                  <span
-                    className={cn(
-                      "sep",
-                      s.enter && "enter",
-                      s.leaving && "leaving",
-                    )}
-                  >
-                    <TrailSeparator />
-                  </span>
-                ) : null}
-                <span
-                  className={cn(
-                    "pseg",
-                    current
-                      ? "cur text-foreground"
-                      : "text-faint-foreground hover:text-muted-foreground",
-                    s.enter && "enter",
-                    s.leaving && "leaving",
-                  )}
-                  title={s.name}
-                  onAnimationEnd={s.leaving ? () => setLeaving([]) : undefined}
-                  {...(current || s.leaving ? {} : crumbProps(linkTo(s.path)))}
-                >
-                  {s.name}
-                </span>
-              </Fragment>
-            );
-          })}
+        {/* The title is the path: the shared trail, drilled one level at a
+            time, so its crumbs wipe in and out as the levels change. */}
+        <div className="sp-path text-title text-foreground">
+          <Breadcrumb segments={segments} motion="wipe" leafWeight="semibold" />
         </div>
-        <Fill />
         <span title={read.windows.map(windowWords).join("\n")}>
           <CountTo
             value={node.costUsd}
@@ -539,25 +486,77 @@ function SpendLevels({
   );
 }
 
-/** An ancestor in the path: a link to its level, by pointer or by Enter. */
-function crumbProps(target: LinkTarget) {
-  return {
-    role: "link",
-    tabIndex: 0,
-    ...linkProps(target),
-    onKeyDown: (e: KeyboardEvent<HTMLElement>) => {
-      if (e.key === "Enter") target.open(gestureOf(e));
-    },
-  };
+/**
+ * One level of the breakdown as a crumb's menu: the parts of `parent` that
+ * open a level of their own (a conversation is a row, not a level), the one
+ * on the path first and marked, each with its own levels as a submenu. The
+ * whole tree is in hand, so a level costs no read.
+ */
+function SpendLevelPlaces({
+  parent,
+  parentPath,
+  trail,
+  nameOf,
+  linkTo,
+}: {
+  parent: SpendNode;
+  parentPath: readonly string[];
+  trail: ReadonlySet<string>;
+  nameOf: (n: SpendNode) => string;
+  linkTo: (path: readonly string[]) => LinkTarget;
+}): ReactElement {
+  return (
+    <BreadcrumbPlaces
+      places={parent.children.filter(drills).map((part) => {
+        const path = [...parentPath, part.id];
+        return {
+          key: part.id,
+          label: nameOf(part),
+          activation: linkTo(path),
+          onTrail: trail.has(path.join("/")),
+          inside: part.children.some(drills) ? (
+            <SpendLevelPlaces
+              parent={part}
+              parentPath={path}
+              trail={trail}
+              nameOf={nameOf}
+              linkTo={linkTo}
+            />
+          ) : undefined,
+        };
+      })}
+    />
+  );
 }
 
-/** The path's segments: "Spent this week", then each level's name. */
+/**
+ * The path's crumbs: "Spent this week", then each level's name — each a link
+ * to its level, and each but the first listing the levels beside it.
+ */
 function segmentsOf(
   nodes: readonly SpendNode[],
   nameOf: (n: SpendNode) => string,
-): PathSegment[] {
+  linkTo: (path: readonly string[]) => LinkTarget,
+): BreadcrumbSegment[] {
+  const paths = nodes.map((_, i) => nodes.slice(0, i + 1).map((x) => x.id));
+  const trail = new Set(paths.map((p) => p.join("/")));
   return nodes.map((n, i) => {
-    const path = nodes.slice(0, i + 1).map((x) => x.id);
-    return { key: path.join("/"), name: nameOf(n), path };
+    const parent = nodes[i - 1];
+    return {
+      key: paths[i]!.join("/"),
+      label: nameOf(n),
+      activation: linkTo(paths[i]!),
+      // The root ("Spent this week") is the only level with no parent.
+      siblings:
+        parent === undefined ? null : (
+          <SpendLevelPlaces
+            parent={parent}
+            parentPath={paths[i - 1]!}
+            trail={trail}
+            nameOf={nameOf}
+            linkTo={linkTo}
+          />
+        ),
+    };
   });
 }
