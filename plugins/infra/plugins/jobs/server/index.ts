@@ -1,4 +1,7 @@
-import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import {
+  getBootMode,
+  type ServerPluginDefinition,
+} from "@plugins/framework/plugins/server-core/core";
 import {
   handleCancelJob,
   handleListDeadJobs,
@@ -10,6 +13,7 @@ import {
   jobsServed,
 } from "./internal/resources";
 import { jobsResumeJob } from "./internal/resume-job";
+import { assertDefinedJobsRegistered } from "./internal/registry";
 import { JobQueue } from "./internal/queue";
 import { listDeadJobs, retryJob, cancelJob } from "../core";
 
@@ -118,7 +122,14 @@ export default {
   //
   // The schema's owner only (`BootHookContext.schema`): an `exec` child
   // enqueues into the queue schema its serving backend installed.
+  //
+  // First, every job a loaded module defined is registered (the register
+  // phase is over for every plugin by now). Asked in `serve` alone: the
+  // serving backend loads its composition's whole graph, while an `exec`
+  // boot is also how suites boot partial graphs, and a browser host loads a
+  // portable `server/` module whose job its `machine/` half registers.
   onReadyBlocking: async ({ schema }) => {
+    if (getBootMode() === "serve") assertDefinedJobsRegistered();
     if (schema.kind === "owner") await JobQueue.get().install(schema.owner);
   },
   onReady: async () => {

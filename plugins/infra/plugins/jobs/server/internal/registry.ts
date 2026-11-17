@@ -544,6 +544,11 @@ export interface JobFactory<
 // dispatch time so adding jobs at runtime (future) doesn't require a restart.
 export const jobRegistry = new Map<string, RegisteredJob>();
 
+// Every job a module this process evaluated defined, in definition order —
+// each with whether THIS factory is the one registered under its name. Read
+// by `assertDefinedJobsRegistered` once the register phase is over.
+const definedJobs: { name: string; registered: () => boolean }[] = [];
+
 // Internal payload shape the worker sees. `workflowRunId` is baked only where
 // the run is not the row: a keyed dedup (`${name}:${key}`) and a resume row
 // (the suspended run's id). Absent otherwise — the worker derives the run from
@@ -742,7 +747,37 @@ export function defineJob<
       });
     },
   };
+  definedJobs.push({
+    name: spec.name,
+    registered: () => jobRegistry.get(spec.name)?.enqueue === enqueue,
+  });
   return factory;
+}
+
+/**
+ * Fail when a module this process evaluated defined a job that no plugin's
+ * `register` list registered (or another factory took its name).
+ *
+ * Such a job has no runner anywhere: its first `enqueue` throws, and only then
+ * — eccdd1dfa5 defined and enqueued `task-title.generate` but never listed it,
+ * and build, check and tests all passed because nothing enqueued it before
+ * main did. Asked once the register phase is over, it fails the boot of the
+ * worktree that made the mistake instead.
+ *
+ * Sound only in a process that loaded a WHOLE host graph and nothing else: a
+ * test process accumulates every suite's fixtures (defined, registered by
+ * hand or never), and a partial graph may load a module whose job its own
+ * plugin registers elsewhere — so the caller decides when to ask.
+ */
+export function assertDefinedJobsRegistered(): void {
+  const missing = definedJobs.filter((j) => !j.registered()).map((j) => j.name);
+  if (missing.length === 0) return;
+  throw new Error(
+    `[jobs] defined but not registered: ${missing.join(", ")} — add each to ` +
+      `the \`register\` list of the plugin barrel (server/ or machine/) that ` +
+      `loads its module. No runner can run a job no plugin registered: every ` +
+      `enqueue of it throws.`,
+  );
 }
 
 // Exposed so the events plugin's dispatcher can synchronously resolve and

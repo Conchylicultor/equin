@@ -55,6 +55,17 @@ runner, so `job.enqueue` throws unless THIS factory is the one registered under
 its name — the mistake fails at the enqueue site, not as a dead row per run. A
 test that enqueues a job it defines calls `job.register()`.
 
+That refusal fires only once something enqueues — on main, for
+`task-title.generate` (2026-11-17), after build, check and tests had passed. So
+the serving backend also asks before it serves: `jobs`' `onReadyBlocking`
+calls `assertDefinedJobsRegistered()` (`server/internal/registry.ts`), which
+throws naming every job a loaded module defined (`defineJob` at module eval)
+that no `register` list registered — failing `./equin build` on the worktree
+that made the mistake. Only in `serve`: it loads its composition's whole graph,
+while `exec` is also how suites boot partial graphs, a test process holds every
+suite's fixtures, and a browser host loads `server/` modules whose jobs their
+`machine/` half registers.
+
 A runner's unknown-job path (`dispatch()`, `machine/internal/worker.ts`) stays
 fail-loud: a row whose job was removed from the code is reported once and
 dead-lettered, never retried.
