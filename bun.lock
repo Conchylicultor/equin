@@ -6623,6 +6623,10 @@
       "name": "@equin/plugin-primitives-inline-text",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/kept-state": {
+      "name": "@equin/plugin-primitives-kept-state",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/keyset": {
       "name": "@equin/plugin-primitives-keyset",
       "version": "0.0.1",
@@ -6808,10 +6812,6 @@
     },
     "plugins/primitives/plugins/perfs/plugins/task-marks": {
       "name": "@equin/plugin-primitives-perfs-task-marks",
-      "version": "0.0.1",
-    },
-    "plugins/primitives/plugins/persistent-draft": {
-      "name": "@equin/plugin-primitives-persistent-draft",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/prompt-editor": {
@@ -11301,6 +11301,8 @@
 
     "@equin/plugin-primitives-inline-text": ["@equin/plugin-primitives-inline-text@workspace:plugins/primitives/plugins/inline-text"],
 
+    "@equin/plugin-primitives-kept-state": ["@equin/plugin-primitives-kept-state@workspace:plugins/primitives/plugins/kept-state"],
+
     "@equin/plugin-primitives-keyset": ["@equin/plugin-primitives-keyset@workspace:plugins/primitives/plugins/keyset"],
 
     "@equin/plugin-primitives-latest-ref": ["@equin/plugin-primitives-latest-ref@workspace:plugins/primitives/plugins/latest-ref"],
@@ -11392,8 +11394,6 @@
     "@equin/plugin-primitives-perfs-scheduler": ["@equin/plugin-primitives-perfs-scheduler@workspace:plugins/primitives/plugins/perfs/plugins/scheduler"],
 
     "@equin/plugin-primitives-perfs-task-marks": ["@equin/plugin-primitives-perfs-task-marks@workspace:plugins/primitives/plugins/perfs/plugins/task-marks"],
-
-    "@equin/plugin-primitives-persistent-draft": ["@equin/plugin-primitives-persistent-draft@workspace:plugins/primitives/plugins/persistent-draft"],
 
     "@equin/plugin-primitives-prompt-editor": ["@equin/plugin-primitives-prompt-editor@workspace:plugins/primitives/plugins/prompt-editor"],
 

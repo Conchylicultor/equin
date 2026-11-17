@@ -4,8 +4,9 @@ import { z } from "zod";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   DEFAULT_DRAFT_TTL,
+  submitKept,
   useDraft,
-} from "@plugins/primitives/plugins/persistent-draft/web";
+} from "@plugins/primitives/plugins/kept-state/web";
 import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import {
   TaskDraftComposer,
@@ -94,8 +95,8 @@ function firstLine(text: string): string {
  * task's "Filed from".
  */
 export function WishField({ filedFrom }: { filedFrom: PluginId }) {
-  const [text, setText] = useDraft(wishTextStore, "");
-  const [choices, setChoices, clearChoices] = useDraft(
+  const [text, setText, , textKept] = useDraft(wishTextStore, "");
+  const [choices, setChoices, , choicesKept] = useDraft(
     wishChoicesStore,
     freshChoices,
   );
@@ -111,7 +112,11 @@ export function WishField({ filedFrom }: { filedFrom: PluginId }) {
     if (!trimmed || submitting) return;
     setSubmitting(true);
     try {
-      const result = await submitChain(fetchEndpoint, {
+      // Both drafts clear only once the server took the wish: a reload while
+      // it is on its way keeps them.
+      const result = await submitKept(choicesKept, () =>
+        submitKept(textKept, () =>
+          submitChain(fetchEndpoint, {
         cards: [
           {
             localId: "wish-field",
@@ -127,11 +132,11 @@ export function WishField({ filedFrom }: { filedFrom: PluginId }) {
         url: page.readUrl?.() ?? null,
         captureUrlDefault,
         options: launchOptions,
-      });
+          }),
+        ),
+      );
       if (result.ok) {
         setOutcome({ kind: "filed", summary: firstLine(trimmed) });
-        setText("");
-        clearChoices();
       } else {
         setOutcome({
           kind: "failed",

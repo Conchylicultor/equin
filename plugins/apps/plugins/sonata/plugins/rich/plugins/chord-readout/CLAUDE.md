@@ -20,9 +20,9 @@
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/dom/web-storage.defineStore`
-    - `primitives/persistent-draft.DEFAULT_DRAFT_TTL`
-    - `primitives/persistent-draft.legacyDraftKeys`
-    - `primitives/persistent-draft.useDraft`
+    - `primitives/kept-state.DEFAULT_DRAFT_TTL`
+    - `primitives/kept-state.legacyDraftKeys`
+    - `primitives/kept-state.useDraft`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --foreground`

@@ -46,7 +46,10 @@ import {
   type ToastArgs,
 } from "@plugins/shell/plugins/notifications/web";
 import { conversationName } from "@plugins/tasks/plugins/tasks-core/core";
-import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import {
+  submitKept,
+  useDraft,
+} from "@plugins/primitives/plugins/kept-state/web";
 import { combineResources } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useLive, rowOrStale } from "@plugins/network/plugins/live/web";
 import { attemptWork } from "@plugins/tasks/plugins/attempt-work/core";
@@ -175,7 +178,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   // `useConversationById` answers with the live row (its by-id read).
   const live = conversation;
 
-  const [draft, setDraft, clearDraft] = useDraft(conversationPromptDraft, "", {
+  const [draft, setDraft, , draftKept] = useDraft(conversationPromptDraft, "", {
     scope: convId,
   });
   const [busy, setBusy] = useState(false);
@@ -322,10 +325,14 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
           // agent is working so the turn is queued rather than sent immediately.
           verb: m === "queue" ? "Queue" : "Send",
           run: () => {
-            // Clear first, exactly as Enter does: the draft is spent the moment
-            // the record exists, and the record holds the text for Retry.
-            clearDraft();
-            sendConversationTurn(convId, { text: current });
+            // Exactly as Enter does: the editor empties at once (the record
+            // holds the text for Retry), the stored draft once the server
+            // recorded the turn — a reload in between keeps it.
+            void submitKept(
+              draftKept,
+              (text) => sendConversationTurn(convId, { text }).posted,
+              { shows: "at-once" },
+            );
           },
         };
       }

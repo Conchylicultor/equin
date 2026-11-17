@@ -76,10 +76,22 @@ export interface TurnSend {
   delivery?: TurnDelivery;
 }
 
+/**
+ * What a send hands back: the turn's id, and when the server took it.
+ * `posted` resolves `{ ok: true }` once a delivery of the turn (the first, or
+ * a Retry) was recorded, `{ ok: false }` once it was dismissed unsent (its
+ * text went back to the draft); it stays pending while the turn is `unsent`
+ * and may still be retried. A draft clears on it (`submitKept`).
+ */
+export interface SentTurnReceipt {
+  id: TurnId;
+  posted: Promise<{ ok: boolean }>;
+}
+
 /** One transport's sent turns, by conversation. */
 interface SentTurnStore {
   /** Mints the turn's id, records its echo and starts its delivery. */
-  send(conversationId: string, send: TurnSend): TurnId;
+  send(conversationId: string, send: TurnSend): SentTurnReceipt;
   /** Sends an `unsent` turn again, under its own id. */
   resend(conversationId: string, turnId: string): void;
   /** Forgets an `unsent` turn (its text went back to the draft). */
@@ -101,6 +113,12 @@ const EMPTY: readonly SentTurn[] = [];
 function createSentTurnStore(fetchEndpoint: FetchEndpoint): SentTurnStore {
   const sent = new Map<string, readonly SentTurn[]>();
   const listeners = new Map<string, Set<() => void>>();
+  /** Each turn's `posted` resolver, until it is posted or dismissed. */
+  const settles = new Map<string, (outcome: { ok: boolean }) => void>();
+  const settle = (turnId: string, ok: boolean): void => {
+    settles.get(turnId)?.({ ok });
+    settles.delete(turnId);
+  };
 
   const entries = (conversationId: string): readonly SentTurn[] =>
     sent.get(conversationId) ?? EMPTY;
@@ -135,7 +153,10 @@ function createSentTurnStore(fetchEndpoint: FetchEndpoint): SentTurnStore {
         AbortSignal.timeout(DELIVERY_TIMEOUT_MS),
       )
       .then(
-        () => patch(turn.conversationId, turn.id, { kind: "posted" }),
+        () => {
+          patch(turn.conversationId, turn.id, { kind: "posted" });
+          settle(turn.id, true);
+        },
         (err: unknown) =>
           patch(turn.conversationId, turn.id, {
             kind: "unsent",
@@ -157,8 +178,11 @@ function createSentTurnStore(fetchEndpoint: FetchEndpoint): SentTurnStore {
         fetchEndpoint,
       };
       commit(conversationId, [...entries(conversationId), turn]);
+      const posted = new Promise<{ ok: boolean }>((resolve) =>
+        settles.set(turn.id, resolve),
+      );
       deliver(turn);
-      return turn.id;
+      return { id: turn.id, posted };
     },
     resend(conversationId, turnId) {
       const turn = entries(conversationId).find((t) => t.id === turnId);
@@ -177,6 +201,7 @@ function createSentTurnStore(fetchEndpoint: FetchEndpoint): SentTurnStore {
         conversationId,
         current.filter((t) => t.id !== turnId),
       );
+      settle(turnId, false);
     },
     settle(conversationId, ledgerIds) {
       const current = entries(conversationId);
@@ -220,7 +245,7 @@ function useSentTurnStore(): SentTurnStore {
 export function useSendConversationTurn(): (
   conversationId: string,
   send: TurnSend,
-) => TurnId {
+) => SentTurnReceipt {
   const store = useSentTurnStore();
   return useCallback(
     (conversationId: string, send: TurnSend) =>

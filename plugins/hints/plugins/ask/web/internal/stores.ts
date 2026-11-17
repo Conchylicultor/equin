@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
-import { DEFAULT_DRAFT_TTL } from "@plugins/primitives/plugins/persistent-draft/web";
+import { DEFAULT_DRAFT_TTL } from "@plugins/primitives/plugins/kept-state/web";
 import { AskPositionSchema, type AskPosition } from "../../core";
 
 /** Where the user left the card (one entry): it opens there again after a reload. */

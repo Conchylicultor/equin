@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { writeDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import { writeDraft } from "@plugins/primitives/plugins/kept-state/web";
 import { useStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { conversationPromptDraft } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 

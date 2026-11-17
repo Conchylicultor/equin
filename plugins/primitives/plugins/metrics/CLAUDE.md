@@ -195,10 +195,10 @@ selected tile and the table toggle are device-local, never part of the spec.
     - `primitives/css/text.Text`
     - `primitives/dom/web-storage.defineStore`
     - `primitives/icon-button.IconButton`
+    - `primitives/kept-state.useDraft`
     - `primitives/link-gesture.activationProps`
     - `primitives/loading.Loading`
     - `primitives/outline/rail.OutlineRail`
-    - `primitives/persistent-draft.useDraft`
     - `ui/icons.Icon`
   - Exports (types):
     - `BoardConfig`

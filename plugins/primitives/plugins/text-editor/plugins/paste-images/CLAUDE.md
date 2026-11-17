@@ -40,12 +40,12 @@ a hook conditionally inside one component.
     - `primitives/file-type.FileTypeIcon`
     - `primitives/icon-button.IconButton`
     - `primitives/inline-text.InlineText`
+    - `primitives/kept-state.legacyDraftKeys`
+    - `primitives/kept-state.onDraftWritten`
+    - `primitives/kept-state.readDraft`
+    - `primitives/kept-state.writeDraft`
     - `primitives/link-gesture.openInBrowserTab`
     - `primitives/overlay/image-viewer.AssetThumbnail`
-    - `primitives/persistent-draft.legacyDraftKeys`
-    - `primitives/persistent-draft.onDraftWritten`
-    - `primitives/persistent-draft.readDraft`
-    - `primitives/persistent-draft.writeDraft`
     - `primitives/text-editor.registerNodeExtension`
     - `primitives/text-editor.TextEditorSlots`
     - `primitives/text-editor/token-extension/node.TokenFrame`

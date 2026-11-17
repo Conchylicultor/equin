@@ -2,7 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { dropLegacyPendingTurns } from "./internal/legacy-cleanup";
 
 export { useSendConversationTurn, useTurnSendInFlight } from "./internal/send";
-export type { TurnSend } from "./internal/send";
+export type { SentTurnReceipt, TurnSend } from "./internal/send";
 export {
   usePendingTurns,
   useOptimisticConversationStatus,

@@ -170,7 +170,7 @@ value (`band-view.ts`: `showAll` + `open`).
     - `conversations/conversation-view/jsonl-viewer/transcript-stats` ×4
     - `primitives/collapsible` ×4
     - `conversations/conversation-view/jsonl-viewer` ×3
-    - `primitives/persistent-draft` ×3
+    - `primitives/kept-state` ×3
     - `conversations/conversation-view/jsonl-viewer/subagents` ×2
     - `network/live/live-state` ×2
     - `primitives/css/fill` ×2

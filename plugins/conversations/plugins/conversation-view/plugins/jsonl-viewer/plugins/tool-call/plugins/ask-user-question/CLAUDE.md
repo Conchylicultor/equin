@@ -153,7 +153,7 @@ ordinary `MarkerAnswerForm` renders with the old answer already in its draft.
     - `JsonlViewer.EventFilter` "ask-user-question:suppress-interrupt-turn"
   - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×6
-    - `primitives/persistent-draft` ×4
+    - `primitives/kept-state` ×4
     - `conversations/conversation-view/jsonl-viewer/tool-call` ×3
     - `primitives/dom/web-storage` ×3
     - `conversations/conversation-view/jsonl-viewer/row-actions` ×2

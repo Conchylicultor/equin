@@ -26,7 +26,7 @@ export default createRule({
       raw:
         "`{{name}}` is shared by every plugin of the origin, has a hard ~10 MB quota and no owner: one plugin filling it breaks every other plugin's writes (2026-10-19, every draft lost). " +
         "Declare a store with `defineStore({ owner, label, area, cap, ttl, whenFull, schema })` from " +
-        "@plugins/primitives/plugins/dom/plugins/web-storage/web (or, for a draft the user types, persistent-draft over such a store) and read/write through it.",
+        "@plugins/primitives/plugins/dom/plugins/web-storage/web (or, for a draft the user types, kept-state over such a store) and read/write through it.",
     },
   },
   defaultOptions: [],

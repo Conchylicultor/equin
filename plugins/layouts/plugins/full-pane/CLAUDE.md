@@ -44,7 +44,7 @@ declared on the pane.**
     - `layouts/route-fallback.DeferredRouteFallback`
     - `primitives/error-boundary.PluginErrorBoundary`
     - `primitives/pane.PaneBox`
-    - `primitives/pane.PaneInstanceContext`
+    - `primitives/pane.PaneInstance`
     - `primitives/pane.PaneLayoutContext`
     - `primitives/pane.paneOwnerFor`
     - `primitives/pane.usePaneMatch`

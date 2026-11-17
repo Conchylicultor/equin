@@ -118,5 +118,10 @@
     "at": "2026-11-16T00:00:26.509Z",
     "from": "infra.claude-cli.spend-ledger",
     "to": "infra.claude-cli.usage-ledger"
+  },
+  {
+    "at": "2026-11-17T11:05:26.996Z",
+    "from": "primitives.persistent-draft",
+    "to": "primitives.kept-state"
   }
 ]

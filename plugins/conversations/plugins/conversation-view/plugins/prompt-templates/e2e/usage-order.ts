@@ -113,7 +113,7 @@ await withBrowser(async (h) => {
   await chipButtons(page)
     .first()
     .waitFor({ state: "visible", timeout: MOUNT_TIMEOUT_MS });
-  // The first paint is seeded from the persistent-draft order cache; the settled
+  // The first paint is seeded from the kept-state order cache; the settled
   // point-resource read lands a round-trip later.
   await page.waitForTimeout(SETTLE_MS);
 

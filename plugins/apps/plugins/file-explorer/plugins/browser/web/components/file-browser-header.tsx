@@ -22,7 +22,7 @@ import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import {
   legacyDraftKeys,
   useDraft,
-} from "@plugins/primitives/plugins/persistent-draft/web";
+} from "@plugins/primitives/plugins/kept-state/web";
 import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { z } from "zod";
 import { symbol } from "@plugins/ui/plugins/icons/core";

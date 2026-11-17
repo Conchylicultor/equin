@@ -35,7 +35,7 @@ memory only pays off if the strip holds still while the user works. Habits
 surface at the next `resnapshotKey` (the consumer decides what a fresh context
 is: a conversation switch, a dialog open).
 
-First paint is seeded from a `persistent-draft` cache keyed by namespace,
+First paint is seeded from a `kept-state` cache keyed by namespace,
 because an id-set read cannot be preloaded and hydrates one round-trip after
 mount — without the seed the strip would visibly re-sort on every open.
 
@@ -93,9 +93,9 @@ demo's browser host serves (and prunes) it too.
     - `primitives/dom/web-storage.defineStore`
     - `primitives/dom/web-storage.Store`
     - `primitives/dom/web-storage.useStore`
-    - `primitives/persistent-draft.legacyDraftKeys`
-    - `primitives/persistent-draft.readDraft`
-    - `primitives/persistent-draft.writeDraft`
+    - `primitives/kept-state.legacyDraftKeys`
+    - `primitives/kept-state.readDraft`
+    - `primitives/kept-state.writeDraft`
   - Exports (types): `RecordUsage`
   - Exports (values):
     - `useRecentUsage`

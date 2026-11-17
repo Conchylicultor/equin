@@ -10,8 +10,9 @@ import { useClaudeCodeLaunchBlock } from "@plugins/infra/plugins/claude-cli/plug
 import { ComposerField } from "@plugins/primitives/plugins/text-editor/plugins/composer/web";
 import {
   DEFAULT_DRAFT_TTL,
+  submitKept,
   useDraft,
-} from "@plugins/primitives/plugins/persistent-draft/web";
+} from "@plugins/primitives/plugins/kept-state/web";
 import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
@@ -73,7 +74,7 @@ const TITLE_CHARS = 80;
  */
 export function NewAppPage() {
   const openPane = useOpenPane();
-  const [draft, setDraft, clearDraft] = useDraft(newAppDraftStore, {
+  const [draft, setDraft, , draftKept] = useDraft(newAppDraftStore, {
     text: "",
     picked: {},
   });
@@ -96,15 +97,19 @@ export function NewAppPage() {
 
   const create = async () => {
     if (!canCreate) return;
-    const result = await launch(newAppPrompt(description), draft.picked, {
-      // A placeholder the title model upgrades: the description's first line.
-      title: description.split("\n")[0]!.slice(0, TITLE_CHARS),
-      categoryId: APPS_CATEGORY_ID,
-      filedFrom: asPluginId("apps.home.new-app"),
+    // The draft clears once the task is filed, so a reload while it launches
+    // keeps the description.
+    await submitKept(draftKept, async () => {
+      const result = await launch(newAppPrompt(description), draft.picked, {
+        // A placeholder the title model upgrades: the description's first line.
+        title: description.split("\n")[0]!.slice(0, TITLE_CHARS),
+        categoryId: APPS_CATEGORY_ID,
+        filedFrom: asPluginId("apps.home.new-app"),
+      });
+      // Unreachable: Create is disabled while launching is unavailable.
+      if (result.kind === "unavailable") throw new Error(result.message);
+      return { ok: true };
     });
-    // Unreachable: Create is disabled while launching is unavailable.
-    if (result.kind === "unavailable") throw new Error(result.message);
-    clearDraft();
   };
 
   return (

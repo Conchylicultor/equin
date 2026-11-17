@@ -23,8 +23,9 @@ import { useClaudeCodeLaunchBlock } from "@plugins/infra/plugins/claude-cli/plug
 import {
   DEFAULT_DRAFT_TTL,
   legacyDraftKeys,
+  submitKept,
   useDraft,
-} from "@plugins/primitives/plugins/persistent-draft/web";
+} from "@plugins/primitives/plugins/kept-state/web";
 import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { z } from "zod";
 import { useTaskLaunch } from "./use-task-launch";
@@ -175,7 +176,7 @@ export function LaunchAgentForm({
   ownedOptions,
   textRequired = false,
 }: LaunchAgentFormProps) {
-  const [draft, setDraft, clearDraft] = useDraft(
+  const [draft, setDraft, , draftKept] = useDraft(
     launchDraftStore,
     { text: "", picked: {}, toggles: {} },
     { scope: draftKey },
@@ -228,25 +229,29 @@ export function LaunchAgentForm({
     }
   };
 
+  // The draft clears once the launch is filed, so a reload while it is on its
+  // way keeps what was typed.
   const submit = async () => {
-    const req = await getRequest(text, toggleValues);
-    const result = await launch(
-      req.prompt,
-      picked,
-      "taskId" in req
-        ? { id: req.taskId, launchedFrom: req.launchedFrom }
-        : {
-            title: req.title ?? title,
-            categoryId: req.categoryId,
-            subject: req.subject,
-            filedFrom: req.filedFrom,
-          },
-    );
-    // Unreachable: Launch is disabled while launching is unavailable, and a
-    // subtree's transport is fixed.
-    if (result.kind === "unavailable") throw new Error(result.message);
-    clearDraft();
-    onSubmitted?.(result.value);
+    const { launched } = await submitKept(draftKept, async () => {
+      const req = await getRequest(text, toggleValues);
+      const result = await launch(
+        req.prompt,
+        picked,
+        "taskId" in req
+          ? { id: req.taskId, launchedFrom: req.launchedFrom }
+          : {
+              title: req.title ?? title,
+              categoryId: req.categoryId,
+              subject: req.subject,
+              filedFrom: req.filedFrom,
+            },
+      );
+      // Unreachable: Launch is disabled while launching is unavailable, and a
+      // subtree's transport is fixed.
+      if (result.kind === "unavailable") throw new Error(result.message);
+      return { ok: true, launched: result.value };
+    });
+    onSubmitted?.(launched);
   };
 
   return (

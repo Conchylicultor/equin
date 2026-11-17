@@ -2233,8 +2233,8 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `primitives/css/spacing` ×4
     - `primitives/css/ui-kit` ×4
     - `primitives/dom/dom-selection` ×4
+    - `primitives/kept-state` ×4
     - `primitives/networking` ×4
-    - `primitives/persistent-draft` ×4
     - `primitives/slot-render` ×4
     - `network/live/optimistic-mutation` ×3
     - `primitives/css/control-panel` ×3

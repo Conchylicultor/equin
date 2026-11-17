@@ -48,7 +48,7 @@ effect resetting anything.
 A comparison is a throwaway: it lives as long as the browser tab showing it,
 and no longer. The detail pane's canvas — frames, their versions and own picks,
 selection, size, zoom, Whole page, Swipe, link and spread — is saved in the
-tab's **sessionStorage** (`persistent-draft`, `storage: "session"`), keyed by
+tab's **sessionStorage** (`kept-state`, `storage: "session"`), keyed by
 the pane instance (its route-entry `uuid`, which the tab set and
 `history.state` restore on reload) and the prototype. So:
 
@@ -492,7 +492,7 @@ navigation, so it starts from nothing remembered.
     - `primitives/dom/web-storage` ×3
     - `primitives/embed/frame` ×3
     - `primitives/hover-reveal` ×3
-    - `primitives/persistent-draft` ×3
+    - `primitives/kept-state` ×3
     - `network/live/live-state` ×2
     - `primitives/action-presentation` ×2
     - `primitives/css/spacing` ×2

@@ -26,7 +26,7 @@ import {
   DEFAULT_DRAFT_TTL,
   legacyDraftKeys,
   useDraft,
-} from "@plugins/primitives/plugins/persistent-draft/web";
+} from "@plugins/primitives/plugins/kept-state/web";
 import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { z } from "zod";
 import { OverlayTextarea } from "@plugins/primitives/plugins/syntax-highlight/plugins/overlay-textarea/web";

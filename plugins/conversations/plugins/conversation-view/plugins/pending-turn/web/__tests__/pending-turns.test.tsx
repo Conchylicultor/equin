@@ -404,7 +404,7 @@ describe("send → optimistic echo → live row", () => {
 
     let turnId = "";
     act(() => {
-      turnId = turns.send(conv, { text: "fix the build" });
+      turnId = turns.send(conv, { text: "fix the build" }).id;
     });
     // The request carries the browser's id: the server writes its row under it.
     expect(sentRequests()).toEqual([
@@ -483,7 +483,7 @@ describe("send → optimistic echo → live row", () => {
     );
     let turnId = "";
     act(() => {
-      turnId = turns.send(conv, { text: "hello" });
+      turnId = turns.send(conv, { text: "hello" }).id;
     });
     await settle();
     const failed = result.current;
@@ -535,7 +535,7 @@ describe("useOptimisticConversationStatus", () => {
     const { result, rerender } = render(conv, "waiting", before);
     let turnId = "";
     act(() => {
-      turnId = turns.send(conv, { text: "go" });
+      turnId = turns.send(conv, { text: "go" }).id;
     });
     expect(result.current).toBe("working");
     await settle();

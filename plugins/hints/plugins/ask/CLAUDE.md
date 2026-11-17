@@ -168,9 +168,9 @@ portable `server/` half.
     - `ConfigV2.WebRegister` "config"
     - `DynamicEnum.Options` "Model for filed tasks"
     - `DynamicEnum.Options` "Model"
-  - Uses: 68 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 69 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/agent-thread` ×7
-    - `primitives/persistent-draft` ×3
+    - `primitives/kept-state` ×4
     - `apps-core` ×2
     - `config_v2` ×2
     - `hints/help-menu` ×2

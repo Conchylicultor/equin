@@ -10,6 +10,7 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
+import { forgetKeepScope } from "@plugins/primitives/plugins/kept-state/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   createPaneStore,
@@ -1408,6 +1409,8 @@ export function TabsProvider({
       if (idx < 0) return;
       const remaining = prev.filter((t) => t.tabId !== tabId);
       const wasFocused = focusedRef.current === tabId;
+      // A closed tab is gone for good: its view state (and its panes') goes too.
+      forgetKeepScope(tabKeepSegment(tabId));
       setTabTitle(tabId, undefined);
       claimTabTitle(tabId, undefined);
 
@@ -1912,4 +1915,12 @@ export function TabsProvider({
   ) : (
     <AppNavBoundary navigator={boundary}>{provided}</AppNavBoundary>
   );
+}
+
+/**
+ * The keep-scope segment of an in-app tab — what tab-surface opens around the
+ * tab's app, and what closing the tab forgets. Its id is kept across a reload.
+ */
+export function tabKeepSegment(tabId: string): string {
+  return `t:${tabId}`;
 }

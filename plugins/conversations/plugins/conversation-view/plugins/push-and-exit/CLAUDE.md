@@ -14,7 +14,7 @@
     - `Hints.Hint` "push-and-exit.exit"
     - `Hints.Hint` "push-and-exit.go"
     - `Hints.Hint` "push-and-exit.push-and-exit"
-  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/conversation-view/pending-turn` ×5
     - `conversations/conversation-view` ×3
     - `hints` ×3
@@ -23,6 +23,7 @@
     - `conversations` ×2
     - `network/live` ×2
     - `primitives/css/ui-kit` ×2
+    - `primitives/kept-state` ×2
     - `shell/notifications` ×2
     - `conversations/conversation-view/code.useEditedFiles`
     - `conversations/conversation-view/drop-and-exit.droppedNotification`
@@ -30,7 +31,6 @@
     - `ids.IdKinds`
     - `network/live/live-state.combineResources`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/persistent-draft.useDraft`
     - `primitives/prompt-editor.PromptEditorSlots`
     - `ui/icons.Icon`
 - Server:

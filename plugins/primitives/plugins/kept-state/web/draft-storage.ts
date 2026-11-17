@@ -1,5 +1,5 @@
 /**
- * The render-free half of persistent-draft over a web-storage `Store`: read,
+ * The render-free half of kept-state over a web-storage `Store`: read,
  * write and clear one draft, and announce every write and clear to the tab.
  *
  * `useDraft` is a `useState` drop-in, so every write re-renders its subscribers.
@@ -86,7 +86,10 @@ export function readDraft<T>(
   store: Store<T>,
   options?: DraftOptions,
 ): T | null {
-  const read = store.read(options?.scope ?? "");
+  const id = options?.scope ?? "";
+  const held = pending.get(store.key(id));
+  if (held) return held.value as T;
+  const read = store.read(id);
   return read.kind === "value" ? read.value : null;
 }
 
@@ -101,18 +104,100 @@ export function writeDraft<T>(
   options?: DraftOptions,
 ): void {
   const id = options?.scope ?? "";
+  pending.delete(store.key(id));
   const written = store.write(id, value);
   if (written.ok) announce(store, id, value);
 }
 
 export function clearDraft<T>(store: Store<T>, options?: DraftOptions): void {
   const id = options?.scope ?? "";
+  pending.delete(store.key(id));
   store.remove(id);
   announce(store, id, undefined);
 }
 
+// ---------------------------------------------------------------------------
+// Batched writes: what a reactive setter (`useDraft`, `useKept`) writes.
+// ---------------------------------------------------------------------------
+
+interface PendingWrite {
+  store: Store<unknown>;
+  id: string;
+  value: unknown;
+}
+
 /**
- * The `legacy` of a store taking over drafts persistent-draft wrote before
+ * Writes scheduled but not yet in storage, by full storage key — the newest
+ * value per entry, so a burst of keystrokes inside one frame is ONE write.
+ * `readDraft` answers from here first, so nothing reads behind a write.
+ */
+const pending = new Map<string, PendingWrite>();
+let frame: number | null = null;
+let flushOnHide = false;
+
+/**
+ * Flush when the page goes away or hides — installed with the first batched
+ * write (a page that never batches one has nothing to flush).
+ */
+function installFlushOnHide(): void {
+  if (flushOnHide) return;
+  flushOnHide = true;
+  window.addEventListener("pagehide", flushKept);
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) flushKept();
+  });
+}
+
+/**
+ * Schedule a draft write for the end of the frame (`requestAnimationFrame`).
+ * A hidden page runs no frames, so there it writes at once. `flushKept` (run
+ * on `pagehide` and when the page hides) writes whatever is still pending, so
+ * a keystroke is never lost to the batching.
+ */
+export function scheduleDraftWrite<T>(
+  store: Store<T>,
+  value: T,
+  options?: DraftOptions,
+): void {
+  const id = options?.scope ?? "";
+  if (typeof document === "undefined" || document.hidden) {
+    writeDraft(store, value, options);
+    return;
+  }
+  installFlushOnHide();
+  pending.set(store.key(id), {
+    store: store as Store<unknown>,
+    id,
+    value,
+  });
+  frame ??= requestAnimationFrame(() => {
+    frame = null;
+    flushKept();
+  });
+}
+
+/** Write one entry's pending value now, if it has one. */
+export function flushDraft<T>(store: Store<T>, options?: DraftOptions): void {
+  const held = pending.get(store.key(options?.scope ?? ""));
+  if (held) writeDraft(held.store, held.value, { scope: held.id });
+}
+
+/**
+ * Write every pending kept-state write synchronously — before the page goes
+ * away (`pagehide`, a quiet reload) or hides. Each write is the store's, so a
+ * refused one is announced as any other.
+ */
+export function flushKept(): void {
+  if (frame !== null) {
+    cancelAnimationFrame(frame);
+    frame = null;
+  }
+  for (const held of [...pending.values()])
+    writeDraft(held.store, held.value, { scope: held.id });
+}
+
+/**
+ * The `legacy` of a store taking over drafts persistent-draft (kept-state's old name) wrote before
  * web-storage (`<prefix>:draft:<key>[:<scope>]`, envelope `{v, ts}`): each
  * old entry is carried over under its scope, so no unsent text is lost.
  */

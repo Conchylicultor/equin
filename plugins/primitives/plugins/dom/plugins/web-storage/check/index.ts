@@ -22,19 +22,22 @@ function field(text: string, name: string): string | null {
  * owners whose plugin a given page never loads (the runtime assert in
  * `defineStore` sees only the loaded ones). The declaration's owner, area and
  * cap must be string literals for this to read them.
+ *
+ * kept-state's `defineKept({...})` declares a store too: its work tier is a
+ * local store of its own (`tier: "work"` → area local), its view tier none (it
+ * lives in the pool, the one `defineStore` kept-state declares).
  */
 const check: Check = {
   id: "budget-fits",
   description:
-    "Every web-storage owner (defineStore) has a unique literal owner id, and each area's caps sum within its budget",
+    "Every web-storage owner (defineStore, or a kept-state work owner) has a unique literal owner id, and each area's caps sum within its budget",
   outOfScope: ["test", "e2e", "research"],
   async run(ctx) {
     const root = await getWorktreeRoot();
     const matches = await grepCode({
       root,
-      pattern: /\bdefineStore(<[^>]*>)?\(\{/,
-      grepArg: "defineStore",
-      fixed: true,
+      pattern: /\bdefine(Store|Kept)(<[^>]*>)?\(\{/,
+      grepArg: "define(Store|Kept)",
       maskStrings: true,
     });
     const problems: string[] = [];
@@ -56,7 +59,10 @@ const check: Check = {
       const text = body.join("\n");
       const at = `${m.path}:${m.line}`;
       const owner = field(text, "owner");
-      const area = field(text, "area");
+      const kept = /\bdefineKept\b/.test(lines[m.line - 1] ?? "");
+      const tier = kept ? field(text, "tier") : null;
+      if (kept && tier === "view") continue;
+      const area = kept && tier === "work" ? "local" : field(text, "area");
       const cap = field(text, "cap");
       if (!owner || !cap || (area !== "local" && area !== "session")) {
         problems.push(`${at}: owner, area and cap must be string literals`);

@@ -11,6 +11,7 @@ import {
 import { getDeferredLoadState } from "@plugins/framework/plugins/web-sdk/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { SurfaceIdContext } from "@plugins/primitives/plugins/scope/plugins/surface-id/web";
+import { forgetKeepScope } from "@plugins/primitives/plugins/kept-state/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { defineInstallSink } from "@plugins/primitives/plugins/scope/plugins/install-sink/web";
 import { splitRoutePrefix } from "@plugins/primitives/plugins/pane/plugins/route-prefix/web";
@@ -1468,6 +1469,11 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
       : route.slice(0, idx);
     const replace = !internal.chrome.history;
     setRoute(newRoute, replace);
+    // A closed instance is gone for good (an unmount is not): its view state
+    // goes with it.
+    const kept = new Set(newRoute.map((s) => s.uuid));
+    for (const s of route)
+      if (!kept.has(s.uuid)) forgetKeepScope(paneKeepSegment(s.uuid));
   }
 
   function unwrap(instanceId: number): void {
@@ -2543,6 +2549,11 @@ export const PaneMatchContext = createContext<PaneMatch | null | undefined>(
   undefined,
 );
 export const PaneInstanceContext = createContext<number | undefined>(undefined);
+
+/** The keep-scope segment of a pane instance: its uuid, kept across a reload. */
+export function paneKeepSegment(uuid: string): string {
+  return `p:${uuid}`;
+}
 
 /**
  * The first entry for `pane` AFTER the caller's own pane in the chain — what

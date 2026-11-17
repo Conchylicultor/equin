@@ -10,6 +10,7 @@ export {
   useSurfaceMode,
   exitToPreviousMode,
   peekSurfaceEmpty,
+  tabKeepSegment,
   type TabsApi,
   type NavigateOptions,
   type EmbeddedTabSet,

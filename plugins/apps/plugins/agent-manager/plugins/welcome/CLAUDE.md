@@ -11,9 +11,9 @@
   - Contributes:
     - `Pane.Register` "welcome"
     - `Shell.Sidebar` "New conversation"
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/kept-state` ×4
     - `primitives/pane` ×3
-    - `primitives/persistent-draft` ×3
     - `network/live/live-state` ×2
     - `tasks/launch-options` ×2
     - `conversations.useConversations`

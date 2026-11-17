@@ -15,7 +15,7 @@ import {
   useFetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
-import { writeDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import { writeDraft } from "@plugins/primitives/plugins/kept-state/web";
 import { useStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { conversationPromptDraft } from "../internal/prompt-draft";
 import type { PendingTurn } from "../internal/pending";

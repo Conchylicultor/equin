@@ -2,7 +2,7 @@ import { DeferredRouteFallback } from "@plugins/layouts/plugins/route-fallback/w
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import {
   PaneBox,
-  PaneInstanceContext,
+  PaneInstance,
   PaneLayoutContext,
   paneOwnerFor,
   usePaneMatch,
@@ -41,7 +41,7 @@ export function FullPane() {
   // no-match). See route-fallback for the full rationale.
   if (!active) return <DeferredRouteFallback />;
   return (
-    <PaneInstanceContext.Provider value={active.instanceId}>
+    <PaneInstance entry={active}>
       <PaneLayoutContext.Provider value={FULL_PANE_LAYOUT_CTX}>
         {/* The active pane as a named lineage region, so a picked element
             reports the pane that contains it AND the plugin that owns it. No
@@ -69,6 +69,6 @@ export function FullPane() {
           </PluginErrorBoundary>
         </UiRegion>
       </PaneLayoutContext.Provider>
-    </PaneInstanceContext.Provider>
+    </PaneInstance>
   );
 }

@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import { useDraft } from "@plugins/primitives/plugins/kept-state/web";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";

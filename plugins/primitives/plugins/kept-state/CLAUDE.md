@@ -1,0 +1,144 @@
+# kept-state
+
+What a reload, a tab switch (tab residency unmounts hidden tabs) or an
+upgrade into a new build must give back. One invariant: **remount ≡ reload ≡
+upgrade** — a surface is a function of its place (route, pane instance),
+server data, **kept state** and transient state that may be lost. Design:
+[`research/2026-11-17-global-lossless-reload.md`](../../../../research/2026-11-17-global-lossless-reload.md).
+
+## Classify a piece of state
+
+| Class | Examples | Lives in |
+|---|---|---|
+| Place | tabs, pane routes, matrix params | tabs store, history (not here) |
+| Server truth | everything `useLive` reads | the server |
+| **Work** — made by the user, not on the server yet | composer text, form fields, chosen options | `defineKept({ tier: "work" })`: a local store of its own, `refuse` when full, 7-day TTL, one entry per **subject** |
+| **View** — where the user was looking | expanded, sub-tab, search query, selection | `defineKept({ tier: "view" })`: the one pooled session store, keyed by the ambient **KeepScope**, dropped when that place closes |
+| Transient | hover, focus ring, menus, busy flags | React state — lost by design |
+| Process | playback, recording, an upload, a drag | memory, plus a reload hold (reload-readiness, P2) |
+
+Blobs never go in browser storage (≈10 MB per origin): upload them as staged
+attachments and keep the attachment id as work.
+
+## Declare and read
+
+```ts
+// module scope; owner, cap and tier literal (web-storage's budget-fits check reads them)
+export const linkDraft = defineKept({
+  owner: "page.link-form", label: "Link drafts", tier: "work", cap: "64 KB",
+  schema: z.object({ url: z.string(), text: z.string() }),
+});
+export const pickerQuery = defineKept({ owner: "icon-picker.query", tier: "view", schema: z.string() });
+
+const [draft, setDraft, clear, kept] = useKept(linkDraft, { url: "", text: "" }, { subject: blockId });
+const [query, setQuery] = useKept(pickerQuery, "");
+```
+
+- **Work** requires `subject` (a type error without it): work belongs to what
+  it is about, not to the pane showing it — two panes on one conversation
+  share its draft.
+- **View** has no store of its own: every owner shares `kept.view` (session,
+  `evict-oldest`, one budget line), under the id `kept/<scope path>|<owner>`.
+  An entry its owner's schema no longer reads is not restored (best effort).
+  Outside every `KeepScope` (an exhibit, a test) view state is memory only.
+- `useDraft(store, initial, { scope })` is the same hook over a store the
+  caller declared with `defineStore` — the existing spelling, kept.
+
+## The KeepScope
+
+`<KeepScope segment>` nests: tab-surface opens `t:<tabId>` around a tab's
+app, the pane primitive's `<PaneInstance>` (what a layout renderer wraps each
+instance in) opens `p:<uuid>`. Both ids survive a reload (the tabs store keeps
+tab ids and slot uuids), so the path does too. `forgetKeepScope(segment)`
+drops the view state of a place gone for good and of every place nested in
+it: the pane store calls it for each instance a close removes, the tabs
+store for a closed tab. An unmount is not a close — a hidden tab comes back.
+The pool's TTL is the backstop for places that end without a close (a pane
+replaced in place).
+
+## Writes: batched, flushed on pagehide
+
+A setter updates React state and schedules the storage write at the end of
+the frame (`requestAnimationFrame`; at once in a hidden page). `flushKept()`
+writes every pending one synchronously; it runs on `pagehide` and when the
+page hides, and the quiet reload (P2) calls it. `readDraft` answers from the
+pending writes first. `readDraft` / `writeDraft` stay the render-free,
+immediate twin for callers writing at input frequency (a scroll offset, a
+caret).
+
+## Clear on ack: `submitKept`
+
+```ts
+const result = await submitKept(kept, (text) => sendIt(text));          // stays shown until ok
+void submitKept(kept, (text) => send(id, { text }).posted, { shows: "at-once" }); // composer
+```
+
+`send` resolves `{ ok }`. The entry is cleared only once it resolves `ok`,
+and only while storage still holds what was sent (text typed since is never
+cleared) — so a reload between the click and the server's answer keeps the
+work instead of losing it with the request. A rejected or `ok: false` send
+leaves it. `"at-once"` empties the field immediately (the field stays typable)
+while storage keeps the text until the ack. This is the one way to clear work
+after a send; the binding's `clear()` is for an explicit discard.
+
+## Loud refusal, legacy keys
+
+A refused write is never silent: the store announces it (a toast once per
+owner, a report, the health report's Browser storage row) and the value stays
+in memory. `legacyDraftKeys(<old key>)` is the `legacy` of a store taking over
+drafts written before web-storage (`<prefix>:draft:<key>[:<scope>]`); it
+carries them over, so no unsent text is lost — drop it once browsers migrated.
+
+<!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
+
+## Plugin reference
+
+- Description: Kept state: what a reload, a tab switch or an upgrade must give back. defineKept declares a piece of it in one of two tiers — work (what the user made and the server does not have yet: its own local store, refused when full, one entry per subject) or view (where the user was looking: one pooled session store, keyed by the ambient KeepScope — the pane instance, else the tab — and dropped when that place closes, forgetKeepScope) — and useKept reads it as a useState drop-in. useDraft is the same over a store the caller declared (defineStore). Writes are batched to the end of the frame and flushed on pagehide (flushKept). submitKept clears work only once its send is taken, so a reload between the click and the ack keeps it. readDraft/writeDraft are the render-free twin for callers writing at input frequency; onDraftWritten(scope, listener) observes every write and clear in one composition scope; legacyDraftKeys carries drafts written before web-storage into a store.
+- Web:
+  - Uses:
+    - `primitives/dom/web-storage.defineStore`
+    - `primitives/dom/web-storage.LegacyKeys`
+    - `primitives/dom/web-storage.removeEntriesWhere`
+    - `primitives/dom/web-storage.ScopedStore`
+    - `primitives/dom/web-storage.Store`
+    - `primitives/dom/web-storage.StoreSpec`
+    - `primitives/dom/web-storage.useStore`
+    - `primitives/latest-ref.useLatestRef`
+  - Exports (types):
+    - `DraftOptions`
+    - `DraftWrite`
+    - `KeptBinding`
+    - `KeptHandle`
+    - `KeptView`
+    - `KeptViewSpec`
+    - `KeptWork`
+    - `KeptWorkSpec`
+    - `SubmitShows`
+  - Exports (values):
+    - `clearDraft`
+    - `DEFAULT_DRAFT_TTL`
+    - `defineKept`
+    - `flushKept`
+    - `forgetKeepScope`
+    - `KeepScope`
+    - `legacyDraftKeys`
+    - `onDraftWritten`
+    - `readDraft`
+    - `submitKept`
+    - `useDraft`
+    - `useKeepScope`
+    - `useKept`
+    - `writeDraft`
+- Cross-plugin:
+  - Imported by: 32 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×10
+    - `primitives` ×8
+    - `conversations` ×7
+    - `apps-core` ×2
+    - `hints/ask`
+    - `map`
+    - `page/editor`
+    - `tasks/task-draft-form`
+    - `wish`
+
+<!-- AUTOGENERATED:END -->

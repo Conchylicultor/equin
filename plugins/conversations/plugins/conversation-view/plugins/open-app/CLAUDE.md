@@ -23,7 +23,7 @@
     - `hints` ×3
     - `config_v2` ×2
     - `network/live` ×2
-    - `primitives/persistent-draft` ×2
+    - `primitives/kept-state` ×2
     - `conversations/conversation-view/action-bar.Conversation`
     - `conversations/conversation-view.conversationPane`
     - `conversations.useConversationById`

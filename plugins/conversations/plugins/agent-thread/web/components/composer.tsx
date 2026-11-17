@@ -3,7 +3,10 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
-import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import {
+  submitKept,
+  useDraft,
+} from "@plugins/primitives/plugins/kept-state/web";
 import {
   useEventCallback,
   useLatestRef,
@@ -148,7 +151,7 @@ export function ThreadComposer({
   prepareTurn?: PrepareTurn | undefined;
 }) {
   const id = conversation.id;
-  const [draft, setDraft, clearDraft] = useDraft(conversationPromptDraft, "", {
+  const [draft, setDraft, , draftKept] = useDraft(conversationPromptDraft, "", {
     scope: id,
   });
   const draftRef = useLatestRef(draft);
@@ -180,22 +183,26 @@ export function ThreadComposer({
   // `onNotSent` runs when the resume failed and nothing was sent.
   // The host's additions are made here, at the moment of sending, so they
   // say how things stand when the turn leaves — never in the draft.
+  // Resolves `ok` once the server recorded the turn (`posted`), not ok when
+  // the resume failed — what `submitKept` clears the draft on.
   const deliver = useCallback(
-    (typed: string, onNotSent?: () => void) => {
+    (typed: string, onNotSent?: () => void): Promise<{ ok: boolean }> => {
       const text = prepareTurn ? prepareTurn(typed) : typed;
-      if (!ended) {
-        sendConversationTurn(id, { text });
-        return;
-      }
+      if (!ended) return sendConversationTurn(id, { text }).posted;
       // Resume needs the computer like a send does, so the gate already
       // holds whenever this is unavailable.
       if (resume.kind === "unavailable") throw new Error(resume.message);
-      resume.mutate(
-        { params: { id } },
-        {
-          onSuccess: () => sendConversationTurn(id, { text }),
-          ...(onNotSent ? { onError: onNotSent } : {}),
-        },
+      return new Promise((resolve) =>
+        resume.mutate(
+          { params: { id } },
+          {
+            onSuccess: () => resolve(sendConversationTurn(id, { text }).posted),
+            onError: () => {
+              onNotSent?.();
+              resolve({ ok: false });
+            },
+          },
+        ),
       );
     },
     [ended, id, resume, sendConversationTurn, prepareTurn],
@@ -204,12 +211,17 @@ export function ThreadComposer({
   const send = useCallback(() => {
     const text = draftRef.current;
     if (isDraftEmpty(text) || disabled) return;
-    // Spent the moment it is sent, as in the conversation's own prompt: the
-    // turn's record holds the text for Retry.
-    clearDraft();
-    // Nothing was sent: the words go back where they were typed.
-    deliver(text, () => setDraft(text));
-  }, [draftRef, disabled, clearDraft, deliver, setDraft]);
+    // Gone from the editor the moment it is sent, as in the conversation's
+    // own prompt (the turn's record holds the text for Retry); the stored
+    // draft keeps it until the server recorded the turn, so a reload in
+    // between brings it back. Nothing was sent: the words go back where they
+    // were typed.
+    void submitKept(
+      draftKept,
+      (typed) => deliver(typed, () => setDraft(typed)),
+      { shows: "at-once" },
+    );
+  }, [draftRef, disabled, draftKept, deliver, setDraft]);
 
   // A turn of its own, through the same gate as Enter; the draft is untouched.
   // A stable identity: it is published to the provider above, and `deliver`
@@ -217,7 +229,7 @@ export function ThreadComposer({
   // over it would re-register — and re-render this — forever.
   const sendText = useEventCallback((text: string) => {
     if (disabled) return;
-    deliver(text);
+    void deliver(text);
   });
   const insertRef = useRef<((text: string) => void) | null>(null);
   const insert = useCallback((text: string) => {

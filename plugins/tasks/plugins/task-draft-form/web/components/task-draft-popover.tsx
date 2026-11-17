@@ -18,8 +18,9 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   DEFAULT_DRAFT_TTL,
   legacyDraftKeys,
+  submitKept,
   useDraft,
-} from "@plugins/primitives/plugins/persistent-draft/web";
+} from "@plugins/primitives/plugins/kept-state/web";
 import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { z } from "zod";
 import {
@@ -193,6 +194,7 @@ function TaskDraftFormContent({
   setOpen,
   closeAfterSubmit,
   resetForm,
+  submitDraft,
   relate,
   hasAmbientRelate,
   activeRelate,
@@ -219,6 +221,10 @@ function TaskDraftFormContent({
   setOpen: (next: boolean) => void;
   closeAfterSubmit: () => void;
   resetForm: () => void;
+  /** Send the draft through `send`; it clears once `send` resolves ok. */
+  submitDraft: <R extends { ok: boolean }>(
+    send: () => Promise<R>,
+  ) => Promise<R>;
   relate: TaskDraftRelate | undefined;
   hasAmbientRelate: boolean;
   activeRelate: { taskId: string } | null;
@@ -315,15 +321,17 @@ function TaskDraftFormContent({
           ? { kind: "folder", folderTaskId: activeRelate!.taskId }
           : target;
 
-      const outcome = await submitChain(fetchEndpoint, {
-        cards,
-        target: effectiveTarget,
-        filedFrom,
-        relate: effectiveRelate,
-        url,
-        captureUrlDefault,
-        options: launchOptions,
-      });
+      const outcome = await submitDraft(() =>
+        submitChain(fetchEndpoint, {
+          cards,
+          target: effectiveTarget,
+          filedFrom,
+          relate: effectiveRelate,
+          url,
+          captureUrlDefault,
+          options: launchOptions,
+        }),
+      );
       if (!outcome.ok) {
         toast(submitFailed(outcome.errorMessage ?? "Submit failed"));
         return;
@@ -331,7 +339,6 @@ function TaskDraftFormContent({
       const notice = describeOutcome(outcome, cards, launchOptions);
       if (notice !== null) toast(notice);
       onSuccess?.(outcome.taskIds ?? []);
-      resetForm();
       closeAfterSubmit();
     } catch (err) {
       toast(submitFailed((err as Error).message));
@@ -405,7 +412,7 @@ export function TaskDraftPopover({
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : uncontrolledOpen;
 
-  const [draft, setDraft, clearDraft] = useDraft(
+  const [draft, setDraft, clearDraft, draftKept] = useDraft(
     taskDraftStore,
     () => freshDraft(relate),
     { scope: draftScope(target) },
@@ -535,6 +542,15 @@ export function TaskDraftPopover({
     clearDraft();
     seenIdsRef.current = new Set();
   };
+  // A submit clears the draft only once the server took it, so a reload
+  // while the chain is on its way keeps everything the user wrote.
+  const submitDraft = async <R extends { ok: boolean }>(
+    send: () => Promise<R>,
+  ): Promise<R> => {
+    const result = await submitKept(draftKept, send);
+    if (result.ok) seenIdsRef.current = new Set();
+    return result;
+  };
 
   return (
     <InlinePopover
@@ -562,6 +578,7 @@ export function TaskDraftPopover({
             setOpen={setOpen}
             closeAfterSubmit={closeAfterSubmit}
             resetForm={resetForm}
+            submitDraft={submitDraft}
             relate={relate}
             hasAmbientRelate={hasAmbientRelate}
             activeRelate={activeRelate}

@@ -104,6 +104,7 @@ export type {
 } from "./history-sink";
 export { PaneChrome, PaneEndControls } from "./components/pane-chrome";
 export { PaneMessage } from "./components/pane-message";
+export { PaneInstance } from "./components/pane-instance";
 export type { PaneExpandAction } from "./components/promote-control";
 export { PaneHeaderCell } from "./components/pane-header-item";
 export type {

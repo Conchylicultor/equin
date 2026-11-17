@@ -1,5 +1,6 @@
 import { useContext, useEffect, useState, type ReactNode } from "react";
 import { ScrollRevival } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
+import { KeepScope } from "@plugins/primitives/plugins/kept-state/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import {
@@ -24,6 +25,7 @@ import { Apps, isTabApp } from "@plugins/apps-core/web";
 import {
   appPathFor,
   loadScopePrefixFor,
+  tabKeepSegment,
   useTabs,
   type Tab,
 } from "@plugins/apps-core/plugins/tabs/web";
@@ -146,6 +148,7 @@ export function SurfaceCore({
       {reporters}
       {residency !== "unloaded" && (
         <RouteScrollRevival revived={residency === "revived"}>
+          <KeepScope segment={tabKeepSegment(surfaceId)}>
           <SyncStatusProvider>
             <UndoRedoProvider>
               {beside}
@@ -163,6 +166,7 @@ export function SurfaceCore({
               </SurfaceOverlayHost>
             </UndoRedoProvider>
           </SyncStatusProvider>
+          </KeepScope>
         </RouteScrollRevival>
       )}
     </PaneSurfaceProvider>

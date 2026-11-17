@@ -11,7 +11,7 @@
     - `primitives/css/coords` ×2
     - `primitives/css/fill` ×2
     - `primitives/css/text` ×2
-    - `primitives/persistent-draft` ×2
+    - `primitives/kept-state` ×2
     - `primitives/usage-rank` ×2
     - `network/live/live-state.ResourceView`
     - `primitives/copy-to-clipboard.CopyButton`

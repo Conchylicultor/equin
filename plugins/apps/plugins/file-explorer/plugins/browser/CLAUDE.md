@@ -54,9 +54,9 @@
     - `primitives/path-bar` ×3
     - `config_v2` ×2
     - `primitives/copy-to-clipboard` ×2
+    - `primitives/kept-state` ×2
     - `primitives/link-gesture` ×2
     - `primitives/networking` ×2
-    - `primitives/persistent-draft` ×2
     - `companions/menu-bar/app-window.useNativeFileDrag`
     - `primitives/bar.Bar`
     - `primitives/css/center.Center`

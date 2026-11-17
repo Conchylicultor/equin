@@ -3,7 +3,7 @@ import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage
 import {
   DEFAULT_DRAFT_TTL,
   legacyDraftKeys,
-} from "@plugins/primitives/plugins/persistent-draft/web";
+} from "@plugins/primitives/plugins/kept-state/web";
 
 /**
  * The store of a conversation's unsent prompt, scoped by conversation id. One

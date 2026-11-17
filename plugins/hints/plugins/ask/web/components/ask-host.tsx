@@ -6,7 +6,7 @@ import {
   type Extent,
 } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import { useDragGesture } from "@plugins/primitives/plugins/dom/plugins/movable/web";
-import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import { useDraft } from "@plugins/primitives/plugins/kept-state/web";
 import { Presence } from "@plugins/primitives/plugins/css/plugins/motion/web";
 import { chromeThemeScope } from "@plugins/apps-core/plugins/chrome-theme/web";
 import {

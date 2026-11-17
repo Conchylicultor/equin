@@ -25,7 +25,7 @@ brings the controls back. A refused request (a frame without `allowfullscreen`)
 says so in the status pill.
 
 The strip choice and the tile size are device-local preferences
-(`web/internal/view-prefs.ts`, via `persistent-draft`); the grid and the
+(`web/internal/view-prefs.ts`, via `kept-state`); the grid and the
 slideshow start fresh on every open.
 
 ## Which piece to use
@@ -131,8 +131,8 @@ handler, the `?` sheet and the button tooltips all read.
 - Web:
   - Uses: 55 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×6
+    - `primitives/kept-state` ×3
     - `primitives/networking` ×3
-    - `primitives/persistent-draft` ×3
     - `infra/endpoints` ×2
     - `primitives/css/clip` ×2
     - `primitives/css/coords` ×2

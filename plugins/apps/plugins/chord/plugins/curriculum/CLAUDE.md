@@ -147,7 +147,7 @@ useCurriculumWrites()  → { setChords(changes, onDone?), setBlanks(blanks, onDo
   the server has applied it (the section's "✓ from the next loop" flash).
 - **`<ChordsSection>`** (mockup `proto-1791276393-29e2`, data = index): a
   collapsible "Chords" section, its fold remembered per viewer
-  (`persistent-draft`, as is which tracks are open — Major by default). Header:
+  (`kept-state`, as is which tracks are open — Major by default). Header:
   the "✓ from the next loop" flash, and **Clear** (every chord on sent as off)
   → **Undo clear** for 6 s (the snapshot replayed as one `changes` call, chords
   turned on since going off again). Open, top to bottom: the **Blanks** pills
@@ -252,7 +252,7 @@ A round nothing was typed into reads exactly like the next one, so after
     - `infra/endpoints` ×2
     - `music/chord-box` ×2
     - `primitives/hover-reveal` ×2
-    - `primitives/persistent-draft` ×2
+    - `primitives/kept-state` ×2
     - `network/live.useLive`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`

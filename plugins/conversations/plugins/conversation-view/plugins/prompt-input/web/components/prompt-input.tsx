@@ -20,7 +20,10 @@ import {
   useSendConversationTurn,
   useTurnSendAvailability,
 } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
-import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import {
+  submitKept,
+  useDraft,
+} from "@plugins/primitives/plugins/kept-state/web";
 import { PromptEditor } from "@plugins/primitives/plugins/prompt-editor/web";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
 
@@ -34,7 +37,7 @@ export function PromptInput({
   const sendConversationTurn = useSendConversationTurn();
   const sendAvailability = useTurnSendAvailability();
   const toast = useToast();
-  const [draft, setDraft, clearDraft] = useDraft(conversationPromptDraft, "", {
+  const [draft, setDraft, , draftKept] = useDraft(conversationPromptDraft, "", {
     scope: conversation.id,
   });
 
@@ -70,14 +73,19 @@ export function PromptInput({
   const draftRef = useLatestRef(draft);
 
   // The pending-turn store owns the whole send lifecycle (delivery, retry,
-  // transcript confirmation); the draft is cleared synchronously so a second
-  // Enter is a no-op and the editor stays typable while the send is in flight.
+  // transcript confirmation). The editor empties at once, so a second Enter is
+  // a no-op and it stays typable while the send is in flight; the stored draft
+  // is cleared only once the server recorded the turn, so a reload before
+  // that brings the text back instead of losing it with the request.
   const send = useCallback(() => {
     const current = draftRef.current;
     if (isDraftEmpty(current) || disabled) return;
-    clearDraft();
-    sendConversationTurn(conversation.id, { text: current });
-  }, [conversation.id, disabled, clearDraft, sendConversationTurn]);
+    void submitKept(
+      draftKept,
+      (text) => sendConversationTurn(conversation.id, { text }).posted,
+      { shows: "at-once" },
+    );
+  }, [conversation.id, disabled, draftKept, sendConversationTurn]);
 
   const placeholder = !sendAvailability.available
     ? sendAvailability.message

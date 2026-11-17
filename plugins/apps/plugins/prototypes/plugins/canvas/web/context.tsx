@@ -12,7 +12,7 @@ import {
   legacyDraftKeys,
   readDraft,
   writeDraft,
-} from "@plugins/primitives/plugins/persistent-draft/web";
+} from "@plugins/primitives/plugins/kept-state/web";
 import {
   defineStore,
   useStore,

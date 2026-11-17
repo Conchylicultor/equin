@@ -19,7 +19,7 @@ import { REVEAL_BOUNDARY_ATTR } from "@plugins/primitives/plugins/dom/plugins/sc
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import {
   PaneBasePathContext,
-  PaneInstanceContext,
+  PaneInstance,
   paneOwnerFor,
   usePaneMatch,
   usePaneStore,
@@ -426,7 +426,7 @@ function MillerRow({
               }
             >
               {(state) => (
-                <PaneInstanceContext.Provider value={entry.instanceId}>
+                <PaneInstance entry={entry}>
                   {/* The column as a named lineage region, so a picked element
                         reports the pane that contains it AND the plugin that
                         owns it. Wrapped HERE rather than inside `Column`: the
@@ -477,7 +477,7 @@ function MillerRow({
                       />
                     </PluginErrorBoundary>
                   </UiRegion>
-                </PaneInstanceContext.Provider>
+                </PaneInstance>
               )}
             </SortableItem>
           );

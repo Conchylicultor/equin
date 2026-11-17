@@ -133,7 +133,7 @@ directives establish); the selected voicing strategy from the shared
     - `apps/sonata/document` ×3
     - `apps/sonata/library` ×3
     - `network/live` ×3
-    - `primitives/persistent-draft` ×3
+    - `primitives/kept-state` ×3
     - `apps/sonata/session` ×2
     - `music/chord-box` ×2
     - `primitives/collapsible` ×2

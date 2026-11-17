@@ -145,7 +145,7 @@ An **unloaded** tab keeps everything that is the tab: its entry in the set, its
 pane store (route, pane instance uuids), its container and its title reporter
 (`tab-surface`), so the tab bar keeps its name. Only the app subtree unmounts.
 Focusing it mounts the app again from its store, as a reload would: drafts come
-back through `persistent-draft`, a conversation's reading position through its
+back through `kept-state`, a conversation's reading position through its
 sticky-scroll `persist`, and every `PaneScroll` through `useScrollAcrossReload`
 — which `tab-surface` wraps in `ScrollRevival`, so an offset saved in this same
 document counts as a restoration there instead of an in-app revisit. Whatever an
@@ -233,7 +233,7 @@ Consequences worth remembering:
   full). Past it, a back/forward boots a single-tab instance from the entry's
   own snapshot, reusing its `tabId`.
 - Nothing here is a device preference. Surface mode and window geometry are
-  **instance state** and reset with the instance. (`persistent-draft` is
+  **instance state** and reset with the instance. (`kept-state` is
   deliberately the other way — it is localStorage, shared by design.)
 - An **embedded document** (`?embed=…` in either mode, see `primitives/embed`)
   neither loads nor saves the persisted tab set — it shares the host tab's
@@ -260,7 +260,7 @@ same browser tab from finding the blob. Both call sites are marked for removal.
 
 - Description: Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, which tabs stay mounted (useResidentTabs: those on screen plus the most recently focused hidden ones; the rest are unloaded), the focused tab's title as a module signal (useFocusedTabTitle, readable outside TabsProvider), and the surface-written placement-capabilities registry — one per tab set: the page's own, or an embedded one (TabsProvider embedded={{ at, onLeave, onLocationChange?, browserTabUrl? }}, an AppEmbed's: seeded, never live, persisting nothing, publishing no page-global signal, behind its own navigation boundary), found from outside React by peekFocusedTabSet().
 - Web:
-  - Uses: 50 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 51 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×21
     - `apps-core` ×9
     - `primitives/scope/app-instance` ×5
@@ -270,6 +270,7 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `primitives/scope/install-sink` ×2
     - `primitives/shortcuts` ×2
     - `primitives/dom/web-storage.defineStore`
+    - `primitives/kept-state.forgetKeepScope`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/scope/surface-id.useSurfaceTabId`
   - Exports (types):
@@ -300,6 +301,7 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `placementIsNewTabFollows`
     - `placementOwnsChrome`
     - `setSurfaceMode`
+    - `tabKeepSegment`
     - `TabsProvider`
     - `useActivateApp`
     - `useAppLink`

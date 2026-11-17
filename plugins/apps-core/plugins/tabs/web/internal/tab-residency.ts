@@ -17,7 +17,7 @@ export const KEPT_HIDDEN_TABS = 2;
  * subscriptions) while the tab itself stays: its pane store (route, pane
  * instances), its title. Focusing it mounts it again from that store, as a
  * reload would; drafts and scroll offsets come back through their own
- * persistence (`persistent-draft`, `useScrollAcrossReload` under
+ * persistence (`kept-state`, `useScrollAcrossReload` under
  * `ScrollRevival`).
  *
  * Recency is what THIS surface has seen focused, newest first. A tab set booted

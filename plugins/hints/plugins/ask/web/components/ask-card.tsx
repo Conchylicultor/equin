@@ -9,7 +9,10 @@ import { clipClasses } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
-import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import {
+  submitKept,
+  useDraft,
+} from "@plugins/primitives/plugins/kept-state/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
@@ -182,7 +185,7 @@ export function AskEmptyCard({
   card: () => Element;
 }) {
   const [suggestions] = useState(() => pickSuggestions(Math.random));
-  const [draft, setDraft, clearDraft] = useDraft(askQuestionDraft, "");
+  const [draft, setDraft, , draftKept] = useDraft(askQuestionDraft, "");
   const [pending, setPending] = useState(false);
   const { ask, blocked } = useAskQuestion();
   const busy = useRef(false);
@@ -192,8 +195,13 @@ export function AskEmptyCard({
     busy.current = true;
     setPending(true);
     try {
-      const started = await ask(question, card());
-      if (started && fromDraft) clearDraft();
+      // A question from the draft clears it only once the run started, so a
+      // reload while it starts keeps the question.
+      if (fromDraft)
+        await submitKept(draftKept, async () => ({
+          ok: await ask(question, card()),
+        }));
+      else await ask(question, card());
     } finally {
       busy.current = false;
       setPending(false);

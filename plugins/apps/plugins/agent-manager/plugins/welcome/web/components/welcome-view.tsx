@@ -20,8 +20,9 @@ import { ComposerField } from "@plugins/primitives/plugins/text-editor/plugins/c
 import {
   DEFAULT_DRAFT_TTL,
   legacyDraftKeys,
+  submitKept,
   useDraft,
-} from "@plugins/primitives/plugins/persistent-draft/web";
+} from "@plugins/primitives/plugins/kept-state/web";
 import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { z } from "zod";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
@@ -150,7 +151,7 @@ const TITLE_CHARS = 80;
  * place of the home. The unsent draft survives a reload.
  */
 function HomePrompt() {
-  const [draft, setDraft, clearDraft] = useDraft(homeDraftStore, {
+  const [draft, setDraft, , draftKept] = useDraft(homeDraftStore, {
     text: "",
     picked: {},
   });
@@ -176,15 +177,19 @@ function HomePrompt() {
     // A placeholder the title model upgrades (the server files it titleAuto):
     // the prompt's first line, so the task reads sensibly until then.
     const title = prompt.split("\n")[0]!.slice(0, TITLE_CHARS);
-    const result = await launch(prompt, draft.picked, {
-      title,
-      categoryId: CONVERSATIONS_CATEGORY_ID,
-      filedFrom: asPluginId("apps.agent-manager.welcome"),
+    // The draft clears once the task is filed, so a reload while it launches
+    // keeps the prompt.
+    await submitKept(draftKept, async () => {
+      const result = await launch(prompt, draft.picked, {
+        title,
+        categoryId: CONVERSATIONS_CATEGORY_ID,
+        filedFrom: asPluginId("apps.agent-manager.welcome"),
+      });
+      // Unreachable: the send button is disabled while launching is
+      // unavailable, and a subtree's transport is fixed.
+      if (result.kind === "unavailable") throw new Error(result.message);
+      return { ok: true };
     });
-    // Unreachable: the send button is disabled while launching is
-    // unavailable, and a subtree's transport is fixed.
-    if (result.kind === "unavailable") throw new Error(result.message);
-    clearDraft();
   };
 
   // A disabled button shows no tooltip, so a host without the computer says

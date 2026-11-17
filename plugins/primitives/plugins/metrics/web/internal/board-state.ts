@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import { useDraft } from "@plugins/primitives/plugins/kept-state/web";
 import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { z } from "zod";
 import type { Preset } from "../../core";

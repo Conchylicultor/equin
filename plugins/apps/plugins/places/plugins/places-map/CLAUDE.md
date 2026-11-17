@@ -498,7 +498,7 @@ away closes it — a click in the thread is not away (`useClickAway`'s
     - `primitives/css/layer` ×2
     - `primitives/css/rigid` ×2
     - `primitives/css/text` ×2
-    - `primitives/persistent-draft` ×2
+    - `primitives/kept-state` ×2
     - `primitives/relative-time` ×2
     - `apps-core/tabs.useAppLinkProps`
     - `apps/places/place-details.usePlaceDetails`

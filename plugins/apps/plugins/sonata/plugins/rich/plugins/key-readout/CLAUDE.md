@@ -10,7 +10,7 @@
   - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/sonata/document` ×5
     - `apps/sonata/rich/readout-keyboard` ×4
-    - `primitives/persistent-draft` ×3
+    - `primitives/kept-state` ×3
     - `apps/sonata/rich/chord-label` ×2
     - `apps/sonata/session` ×2
     - `apps/sonata/rich/key-mode.saveKeyAutoDetect`

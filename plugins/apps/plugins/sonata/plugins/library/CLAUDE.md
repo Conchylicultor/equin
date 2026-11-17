@@ -308,7 +308,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `apps/sonata/player` ×5
     - `apps/sonata/document` ×4
     - `infra/endpoints` ×3
-    - `primitives/persistent-draft` ×3
+    - `primitives/kept-state` ×3
     - `apps/sonata/view-options` ×2
     - `primitives/css/layer` ×2
     - `primitives/css/spacing` ×2

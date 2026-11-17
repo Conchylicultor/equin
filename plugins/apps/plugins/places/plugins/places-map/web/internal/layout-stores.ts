@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
-import { DEFAULT_DRAFT_TTL } from "@plugins/primitives/plugins/persistent-draft/web";
+import { DEFAULT_DRAFT_TTL } from "@plugins/primitives/plugins/kept-state/web";
 
 /**
  * The Places screen's layout, remembered per device (`useDraft`): which

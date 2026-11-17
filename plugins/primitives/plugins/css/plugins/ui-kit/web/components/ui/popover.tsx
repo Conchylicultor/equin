@@ -217,7 +217,7 @@ function PopoverContent({
      * value that may change while closed, or that runs live work (streams,
      * subscriptions) that must stop while hidden. A draft that must also
      * survive the HOST unmounting (reload, navigation) belongs in
-     * `persistent-draft`, not here.
+     * `kept-state`, not here.
      */
     resetOnClose?: boolean;
   }) {

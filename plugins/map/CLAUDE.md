@@ -86,7 +86,7 @@ Plain data, no React:
   moves custom pins with it). The overlay change a pick leads to does not
   re-frame the map: it lands where the user just clicked.
 - `cameraKey` (optional) remembers the camera on this device
-  (`persistent-draft`, no expiry): the map opens at the centre and zoom the
+  (`kept-state`, no expiry): the map opens at the centre and zoom the
   user left it at, and frames the overlays only on a first visit. The
   renderer gets it as `initialCamera` (read once, at mount; it then skips its
   one framing) and reports each resting view through `onCameraRest`; the host
@@ -226,7 +226,7 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `ThemeEngine.FixedTheme` "Map controls (dark tiles)"
     - `ThemeEngine.FixedTheme` "Map controls (light tiles)"
   - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/persistent-draft` ×3
+    - `primitives/kept-state` ×3
     - `primitives/dom/web-storage` ×2
     - `primitives/slot-render` ×2
     - `primitives/css/center.Center`

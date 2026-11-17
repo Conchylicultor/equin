@@ -26,7 +26,7 @@ Once, at module scope, with literal `owner` / `area` / `cap`. The handle
 `read(id)` → `{kind:"value", value, ts} | {kind:"none", why}`, `write(id, v)` →
 `{ok:true} | {ok:false, reason}` (never throws on a DOMException), `remove`,
 `ids()` (oldest first), `subscribe(id, fn)` (same tab and other tabs), `key(id)`.
-A draft the user types goes through `persistent-draft` over such a store.
+A draft the user types goes through `kept-state` over such a store.
 
 ## Scoped by composition
 

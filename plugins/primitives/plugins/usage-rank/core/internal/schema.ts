@@ -44,7 +44,7 @@ export type UsageStat = z.infer<typeof UsageStatSchema>;
  *
  * NOT preloaded: the server cannot know a client's id set at snapshot time,
  * and the default window (every namespace) is never what anyone reads.
- * `useUsageOrder` covers that one round-trip with its persistent-draft order
+ * `useUsageOrder` covers that one round-trip with its kept-state order
  * cache.
  */
 export const usageStats = liveCollection("usage-stats", {

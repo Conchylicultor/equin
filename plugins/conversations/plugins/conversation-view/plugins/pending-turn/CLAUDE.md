@@ -150,7 +150,7 @@ render (`reports/turn-unconfirmed`).
   - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/endpoints` ×5
     - `network/live/live-state` ×4
-    - `primitives/persistent-draft` ×3
+    - `primitives/kept-state` ×3
     - `primitives/css/ui-kit` ×2
     - `primitives/dom/web-storage` ×2
     - `primitives/networking` ×2
@@ -168,6 +168,7 @@ render (`reports/turn-unconfirmed`).
     - `PendingTurn`
     - `PendingTurnState`
     - `RenderEcho`
+    - `SentTurnReceipt`
     - `TurnDelivery`
     - `TurnSend`
   - Exports (values):
