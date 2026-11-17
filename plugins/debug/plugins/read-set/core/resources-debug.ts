@@ -5,7 +5,7 @@ import {
   wholeRecord,
 } from "@plugins/packages/plugins/list-bound/core";
 
-// The typed view of the resource runtime's debug payload (`handleResourcesDebug`
+// The typed view of the resource runtime's debug payload (`readResourcesDebug`
 // in `@plugins/network/plugins/live/plugins/resource-runtime/core`, the one authoritative
 // source; also served raw at `GET /api/resources/_debug`), as ONE live value
 // every debug pane over it reads: the read-set pane, live-state-health's

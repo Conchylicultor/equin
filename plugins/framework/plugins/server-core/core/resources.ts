@@ -760,6 +760,8 @@ export const {
   defineDeferredResource,
   notificationsWsHandler,
   handleResourceHttp,
+  // The runtime's `_debug` payload, built in-process (no request, no gate).
+  readResourcesDebug,
   withNotifyBatch,
   loadResourceByKey,
   // One tuple read fresh through its own loader span and drift guard, never

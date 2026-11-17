@@ -32453,6 +32453,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `procMemory`
           - `profilerStart`
           - `provideHostServicesUnbooted`
+          - `readResourcesDebug`
           - `recomputeResource`
           - `recordLoaderReadSet`
           - `recordMemoryCheckpoint`
@@ -42096,7 +42097,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boot-bench`
               - `live-state`
               - `live-state-stale-drop`
-              - `read-set`
               - `runtime`
           - Exemptions:
             - Exempts itself from:

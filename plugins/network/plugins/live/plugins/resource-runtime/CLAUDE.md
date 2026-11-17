@@ -864,6 +864,12 @@ through `handleSub`, like `authorize`) and HTTP read are refused
 registration or load, awaited only for a visitor on such an entry so every
 other sub keeps its synchronous step — and `visitorReadsTuple(key, params)`
 is the boot snapshot's form. A throwing rule refuses and is reported.
+**Server code never reads the runtime through a fabricated `Request`**: a
+synthetic request carries no principal, so on a gated host it reads as a
+visitor and is refused. The runtime's own diagnostics are read in-process
+with `readResourcesDebug()` (the payload `_debug` serves; the read-set
+debug value's loader), a value with `loadResourceByKey` /
+`loadResourceFresh` — none takes a caller, none meets the gate.
 **A sub awaiting an access decision is pending on its socket**
 (`SocketState.pendingSubs`, the tuple rule and `authorize` alike): `unsub`,
 `unsub-tab`, a `complete` reconciliation not restating it and the socket's

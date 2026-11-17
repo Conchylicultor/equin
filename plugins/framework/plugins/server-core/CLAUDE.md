@@ -680,6 +680,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `procMemory`
     - `profilerStart`
     - `provideHostServicesUnbooted`
+    - `readResourcesDebug`
     - `recomputeResource`
     - `recordLoaderReadSet`
     - `recordMemoryCheckpoint`

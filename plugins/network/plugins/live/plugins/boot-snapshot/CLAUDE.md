@@ -167,7 +167,6 @@ How it works:
     - `boot-bench`
     - `live-state`
     - `live-state-stale-drop`
-    - `read-set`
     - `runtime`
 - Exemptions:
   - Exempts itself from:

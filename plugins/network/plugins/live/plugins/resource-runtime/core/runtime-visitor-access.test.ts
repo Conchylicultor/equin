@@ -108,6 +108,28 @@ describe("visitor access — HTTP", () => {
     expect(r.status).toBe(403);
   });
 
+  test("the server's own in-process diagnostics read meets no gate, and matches the HTTP payload", async () => {
+    // Gated host whose every request is a visitor: the in-process reader is
+    // no request, so the gate never sees a fabricated, principal-less one.
+    const gated = createHarness({ callerOf: () => "visitor" });
+    define(gated);
+    const payload = gated.runtime.readResourcesDebug() as {
+      resources: Array<{ key: string }>;
+    };
+    expect(payload.resources.map((r) => r.key).sort()).toEqual([
+      "closed",
+      "open",
+    ]);
+    const owner = createHarness();
+    define(owner);
+    const r = await owner.runtime.handleResourceHttp(get("_debug"), {
+      key: "_debug",
+    });
+    expect(await r.json()).toEqual(
+      JSON.parse(JSON.stringify(owner.runtime.readResourcesDebug())),
+    );
+  });
+
   test("an unknown key is still 404 for a visitor", async () => {
     const h = createHarness({ callerOf: () => "visitor" });
     define(h);

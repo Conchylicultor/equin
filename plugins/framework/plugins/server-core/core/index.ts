@@ -102,6 +102,7 @@ export {
   defineExternalResource,
   onDeferredResourcesBound,
   handleResourceHttp,
+  readResourcesDebug,
   visitorReadable,
   visitorReadsTuple,
   installAsleepClock,

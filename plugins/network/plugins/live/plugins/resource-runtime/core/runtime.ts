@@ -2745,6 +2745,15 @@ export interface ResourceRuntime {
     req: Request,
     params: Record<string, string>,
   ) => Promise<Response>;
+  /**
+   * The runtime's own diagnostics payload — what `GET /api/resources/_debug`
+   * serves (the registry: subscribers, versions, read-sets, notify counters) —
+   * built in-process. For server code inspecting its own runtime (the read-set
+   * debug value): it is no request, so it never meets the HTTP access gate with
+   * a fabricated, principal-less one. Untyped: the reader parses it with its
+   * own schema (the payload's contract).
+   */
+  readResourcesDebug: () => unknown;
   withNotifyBatch: <T>(fn: () => Promise<T>) => Promise<T>;
   /**
    * Load any registered resource by key, routing through the same `timedLoad`
@@ -11144,6 +11153,12 @@ export function createResourceRuntime(
   }
 
   function handleResourcesDebug(): Response {
+    return new Response(JSON.stringify(readResourcesDebug(), null, 2), {
+      headers: { "content-type": "application/json" },
+    });
+  }
+
+  function readResourcesDebug() {
     rebuildDag();
     const now = Date.now();
     const ownerByKey = new Map<string, { pluginId?: string }>();
@@ -11395,35 +11410,25 @@ export function createResourceRuntime(
           : {}),
       });
     }
-    return new Response(
-      JSON.stringify(
-        {
-          topoOrder: topoOrder.map((e) => e.key),
-          // The epoch handoff (`EpochHandoff`): why a foreign echo loaded,
-          // and how many shadows are still waiting to be claimed.
-          resume: {
-            refusals: Object.fromEntries(resumeRefusals),
-            shadows: [...shadows.values()].reduce((n, m) => n + m.size, 0),
-          },
-          // Closed sockets whose subs still linger (`detached`), the
-          // (key, pk) records they hold, and what every linger did
-          // (`linger-ledger.ts`): how each ended, after how long awake and
-          // asleep, and the tabs that came back after theirs expired.
-          linger: {
-            sockets: detached.size,
-            records: [...detached.keys()].reduce(
-              (n, st) => n + recordCount(st),
-              0,
-            ),
-            ...lingerLedger.snapshot(),
-          },
-          resources: out,
-        },
-        null,
-        2,
-      ),
-      { headers: { "content-type": "application/json" } },
-    );
+    return {
+      topoOrder: topoOrder.map((e) => e.key),
+      // The epoch handoff (`EpochHandoff`): why a foreign echo loaded,
+      // and how many shadows are still waiting to be claimed.
+      resume: {
+        refusals: Object.fromEntries(resumeRefusals),
+        shadows: [...shadows.values()].reduce((n, m) => n + m.size, 0),
+      },
+      // Closed sockets whose subs still linger (`detached`), the
+      // (key, pk) records they hold, and what every linger did
+      // (`linger-ledger.ts`): how each ended, after how long awake and
+      // asleep, and the tabs that came back after theirs expired.
+      linger: {
+        sockets: detached.size,
+        records: [...detached.keys()].reduce((n, st) => n + recordCount(st), 0),
+        ...lingerLedger.snapshot(),
+      },
+      resources: out,
+    };
   }
 
   // Load any registered resource by key through the same `timedLoad` path
@@ -12146,6 +12151,7 @@ export function createResourceRuntime(
     bindDeferredResources,
     notificationsWsHandler,
     handleResourceHttp,
+    readResourcesDebug,
     withNotifyBatch,
     loadResourceByKey,
     loadResourceFresh,
