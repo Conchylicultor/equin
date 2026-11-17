@@ -10,6 +10,8 @@
 //!   before `main` (exit 127), so this file never runs at all;
 //! - no display, or a session the window server refuses (over ssh, a
 //!   sandboxed shell): opening the window or the webview fails;
+//! - Linux with no session D-Bus: WebKitGTK stalls ~30 s on D-Bus timeouts
+//!   (stage 0 doesn't probe there; the deadline catches it otherwise);
 //! - a webview that never runs the page (a sandbox killing WebKit's helper
 //!   processes): the deadline below.
 //!
@@ -46,11 +48,9 @@ pub fn run() -> ! {
     let builder = WindowBuilder::new().with_title("equin installer (probe)");
     // macOS loads the page in a hidden window. On Linux the window is mapped
     // where nobody sees it — 1×1, undecorated, off-screen, out of the
-    // taskbar, for under a second — so the probe exercises what the real
-    // window does: CI's first Linux probes, in a never-mapped window, saw the
-    // load never start. (That was later traced at least in part to a cold
-    // font cache — WebKit builds it on first use, on the main thread; whether
-    // a hidden window alone loads on every compositor was not settled.)
+    // taskbar, for under a second — the setup proven in release CI (inside a
+    // session bus: without one WebKitGTK stalls on D-Bus timeouts, and stage
+    // 0 does not probe there).
     #[cfg(not(target_os = "linux"))]
     let builder = builder
         .with_inner_size(LogicalSize::new(crate::WIDTH, crate::HEIGHT))

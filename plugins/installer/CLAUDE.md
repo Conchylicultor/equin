@@ -112,7 +112,8 @@ hand over to the release it installs (`stage0`):
    A mismatch or a missing entry stops the install; the file is deleted,
    never run.
 4. **Pick the view** (`choose_view`): the window unless `--terminal`, no
-   binary for this system, Linux without a display, SSH, `CI`, output not a
+   binary for this system, Linux without a display or a session D-Bus
+   (WebKitGTK stalls ~30 s without one), SSH, `CI`, output not a
    TTY, or a sandboxed shell (`CLAUDECODE`, `APP_SANDBOX_CONTAINER_ID`) —
    then the binary's own `--probe` (a hidden window loading the page; a
    missing webkit2gtk fails before `main`). `--window` skips the guesses, not

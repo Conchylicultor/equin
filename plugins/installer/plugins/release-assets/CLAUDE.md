@@ -18,11 +18,11 @@ three readers of it share. Design:
   `lipo`, then **ad-hoc signed** — lipo drops the linker's signatures and
   arm64 refuses unsigned code; `--version`, `--probe`, the x86_64 slice under
   Rosetta) and Linux (`ubuntu-22.04` x64 and `ubuntu-22.04-arm`: glibc 2.35,
-  webkit2gtk-4.1; `fc-cache` first — on a fresh runner WebKit builds the
-  font cache on first use, on the window's main thread, past the probe's
-  deadline — then `--probe` under xvfb, the real window over a dry run (must
-  reach "✓ Build equin"), and `--probe` in a bare `ubuntu:22.04` container
-  must FAIL: the loader refuses the binary, exit 127 — the no-webkit
+  webkit2gtk-4.1; inside `dbus-run-session` — without a session bus, which
+  xvfb-run does not start, WebKitGTK stalls ~30 s on D-Bus timeouts — then
+  `--probe` under xvfb, the real window over a dry run (must reach "✓ Build
+  equin"), and `--probe` in a bare `ubuntu:22.04` container must FAIL: the
+  loader refuses the binary, exit 127 — the no-webkit
   fallback) → release.
 - **Toolchain**: the exact bun and rust versions `mise.lock` records, installed
   directly (`setup-bun`, `rust-toolchain`) — `mise install` would also run the

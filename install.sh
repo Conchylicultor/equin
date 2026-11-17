@@ -260,6 +260,11 @@ choose_view() {
   elif [ "$VIEW" != window ]; then
     if [ "$OS" != Darwin ] && [ -z "${DISPLAY:-}" ] && [ -z "${WAYLAND_DISPLAY:-}" ]; then
       VIEW_WHY="there is no desktop to show a window on"
+    elif [ "$OS" != Darwin ] && [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
+      # Every desktop session has one; without it the window's web view
+      # stalls ~30 s on D-Bus timeouts (found in release CI) — past --probe's
+      # deadline, so skip the wait.
+      VIEW_WHY="there is no desktop session to show a window in"
     elif [ -n "${SSH_CONNECTION:-}${SSH_TTY:-}" ]; then
       VIEW_WHY="you are connected over SSH"
     elif [ -n "${CI:-}" ]; then
