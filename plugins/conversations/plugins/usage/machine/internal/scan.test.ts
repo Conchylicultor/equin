@@ -162,6 +162,14 @@ describe("advanceFile", () => {
     expect(totals(done).tokens).toBe(10);
   });
 
+  test("returns the same scan when only a torn line was appended", async () => {
+    const path = join(await newDir(), "s.jsonl");
+    await writeFile(path, line("m1", { output: 10 }));
+    const first = await advanceFile(path, "session", undefined);
+    await appendFile(path, line("m2", { output: 5 }).slice(0, 20));
+    expect(await advanceFile(path, "session", first!)).toBe(first!);
+  });
+
   test("starts over when the file shrank", async () => {
     const path = join(await newDir(), "s.jsonl");
     await writeFile(

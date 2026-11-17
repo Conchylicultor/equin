@@ -171,6 +171,10 @@ export async function advanceFile(
         resumed.map(({ hash, ...entry }) => [hash, entry] as const),
       );
   const read = await foldAppended(path, start, size, fold);
+  // Only a torn last line was appended (the writer is mid-line): nothing was
+  // read, so the row stays as it is — returning `prev` itself tells the sync
+  // there is nothing to write (as `scanTranscript`'s "unchanged" does).
+  if (!restart && read.offset === prev.offset) return prev;
   return {
     path,
     kind,
