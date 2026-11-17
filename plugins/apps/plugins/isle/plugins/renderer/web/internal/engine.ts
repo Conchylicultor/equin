@@ -459,6 +459,8 @@ export class IsleEngine {
     k: number;
   } | null = null;
   private follow: { x: number; y: number } | null = null;
+  /** Where the hero stood at the last camera step: which way it is walking. */
+  private readonly heroSeen = { x: 0, y: 0 };
   private hold: { b: SceneBuilding; timer: number } | null = null;
   private moving: Moving | null = null;
   private settling: Settling | null = null;
@@ -1889,6 +1891,11 @@ export class IsleEngine {
     if (!path) return;
     this.hero.path = path.slice(1);
     const end = path[path.length - 1]!;
+    // clicking again where the hero is already going (the second click of a
+    // double-click among them) keeps the marker as it is: restarting it would
+    // flash its burst ring again
+    const mk = this.marker;
+    if (mk && Math.hypot(mk.x - end[0], mk.y - end[1]) < 1) return;
     this.marker = { x: end[0], y: end[1], t0: performance.now() / 1000 };
   }
 
@@ -3150,14 +3157,31 @@ export class IsleEngine {
       !this.inertia &&
       !m
     ) {
+      // the camera makes room only on an edge the hero is heading toward: one
+      // near the left edge walking right comes into view by itself (and a walk
+      // a double-click's teleport replaces leaves the camera where it was)
       const s = this.toScreen(hero.x, hero.y - 20);
+      const vx = hero.x - this.heroSeen.x;
+      const vy = hero.y - this.heroSeen.y;
       const mx = vw * 0.14;
       const my = vh * 0.16;
-      const ox = s.x < mx ? s.x - mx : s.x > vw - mx ? s.x - (vw - mx) : 0;
-      const oy = s.y < my ? s.y - my : s.y > vh - my ? s.y - (vh - my) : 0;
+      const ox =
+        s.x < mx && vx < 0
+          ? s.x - mx
+          : s.x > vw - mx && vx > 0
+            ? s.x - (vw - mx)
+            : 0;
+      const oy =
+        s.y < my && vy < 0
+          ? s.y - my
+          : s.y > vh - my && vy > 0
+            ? s.y - (vh - my)
+            : 0;
       if (ox || oy)
         this.follow = { x: cam.x + ox / cam.z, y: cam.y + oy / cam.z };
     }
+    this.heroSeen.x = hero.x;
+    this.heroSeen.y = hero.y;
     const f = this.follow;
     if (f && !this.drag && !this.pinch) {
       const k = this.opts.reducedMotion ? 1 : 1 - Math.exp(-dt * 3);
