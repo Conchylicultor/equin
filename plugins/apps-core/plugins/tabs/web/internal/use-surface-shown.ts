@@ -1,6 +1,6 @@
 import { useSurfaceTabId } from "@plugins/primitives/plugins/scope/plugins/surface-id/web";
 import { usePlacementRegistry } from "./placement-registry";
-import { useTabs } from "./use-tabs";
+import { useTabs, useTabsIfAny } from "./use-tabs";
 
 /**
  * Whether the calling surface is on screen as an open app — the operating
@@ -22,4 +22,20 @@ export function useSurfaceShown(): boolean {
   const caps = usePlacementRegistry().useValue();
   if (tabId === undefined) return true;
   return tabId === focusedTabId || (caps?.showsUnfocused.has(mode) ?? false);
+}
+
+/**
+ * Whether the calling surface shows apps side by side — an open tab in a mode
+ * that paints unfocused tabs (the desktop's windows) — rather than one at a
+ * time. There, leaving the surface is closing its app (its window), not
+ * switching to another one: what the app played ends with it.
+ *
+ * Outside any surface or tab set the answer is `false`.
+ */
+export function useSurfaceShowsAppsSideBySide(): boolean {
+  const tabId = useSurfaceTabId();
+  const tabs = useTabsIfAny();
+  const caps = usePlacementRegistry().useValue();
+  if (tabId === undefined || tabs === null) return false;
+  return caps?.showsUnfocused.has(tabs.mode) ?? false;
 }

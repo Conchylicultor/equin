@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: The background music service: apps offer music as BackgroundMusic.Source contributions (an app, a kind, useTitle, and usePlayer — run from the page root, so the music outlives the app's views); the service plays one at a time per page and one page at a time in the browser (a BroadcastChannel claim, the playing page's state mirrored to the others' buttons and driven from them, a per-page Web Lock telling when it is gone). An app view reports itself on screen with useMusicSource(id, { shown }): when the last view leaves, its music pauses unless Keep playing across apps (config, on by default) is on; music an app plays itself (useForegroundMusic) pauses background music nobody sees. Music an app played in its view can outlive the view (useMusicSource(id).adopt(), a Sonata song whose page went away): kept across apps, it becomes what the service plays; a source carrying only such music lists itself while it has some (useAvailable) and may keep its own volume (ownVolume: no device slider, no gain). The global action bar's music button (a note, moving bars while playing) opens the panel: now playing with its app, play / pause, the device's volume and stop; every app's music; and the across-apps switch. Registers the background music config (Keep playing across apps) for Settings → Config.
+- Description: The background music service: apps offer music as BackgroundMusic.Source contributions (an app, a kind, useTitle, and usePlayer — run from the page root, so the music outlives the app's views); the service plays one at a time per page and one page at a time in the browser (a BroadcastChannel claim, the playing page's state mirrored to the others' buttons and driven from them, a per-page Web Lock telling when it is gone). An app view reports itself on screen with useMusicSource(id, { shown }): when the last view leaves, its music pauses unless Keep playing across apps (config, on by default) is on — never across a closed desktop window (useSurfaceShowsAppsSideBySide: leaving there is closing the app); music an app plays itself (useForegroundMusic) pauses background music nobody sees. Music an app played in its view can outlive the view (useMusicSource(id).adopt(), a Sonata song whose page went away): kept across apps (and not left by closing its desktop window), it becomes what the service plays; a source carrying only such music lists itself while it has some (useAvailable) and may keep its own volume (ownVolume: no device slider, no gain). The global action bar's music button (a note, moving bars while playing) opens the panel: now playing with its app, play / pause, the device's volume and stop; every app's music; and the across-apps switch. Registers the background music config (Keep playing across apps) for Settings → Config.
 - Web:
   - Slots: `BackgroundMusic.Source`
   - Slot contributors:
@@ -14,11 +14,11 @@
     - `ConfigV2.WebRegister` "config"
     - `Core.Root` → `BackgroundMusicRoot`
     - `ActionBar.Item` → `MusicButton`
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `config_v2` ×4
+    - `apps-core/tabs` ×2
     - `primitives/css/control-panel` ×2
     - `apps-core/app-icon.AppIconTile`
-    - `apps-core/tabs.useAppLinkProps`
     - `network/live/live-state.foldResource`
     - `primitives/css/fill.Fill`
     - `primitives/css/slider.Slider`
@@ -29,6 +29,7 @@
     - `primitives/dom/web-storage.defineStore`
     - `primitives/error-boundary.PluginErrorBoundary`
     - `primitives/icon-button.IconButton`
+    - `primitives/latest-ref.useEventCallback`
     - `primitives/loading.Loading`
     - `shell/action-bar.ActionBar`
     - `ui/icons.Icon`

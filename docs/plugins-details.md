@@ -14311,7 +14311,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/layout`
           - `apps-core/surface`
           - `primitives/dom/static-render`
-    - **`tabs`** — Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, which tabs stay mounted (useResidentTabs: those on screen plus the most recently focused hidden ones; the rest are unloaded), whether a surface is on screen (useSurfaceShown: the focused tab, or any open tab in a mode that paints unfocused tabs — the desktop's windows, minimized included), the focused tab's title as a module signal (useFocusedTabTitle, readable outside TabsProvider), and the surface-written placement-capabilities registry — one per tab set: the page's own, or an embedded one (TabsProvider embedded={{ at, onLeave, onLocationChange?, browserTabUrl? }}, an AppEmbed's: seeded, never live, persisting nothing, publishing no page-global signal, behind its own navigation boundary), found from outside React by peekFocusedTabSet().
+    - **`tabs`** — Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, which tabs stay mounted (useResidentTabs: those on screen plus the most recently focused hidden ones; the rest are unloaded), whether a surface is on screen (useSurfaceShown: the focused tab, or any open tab in a mode that paints unfocused tabs — the desktop's windows, minimized included) and whether it shows apps side by side (useSurfaceShowsAppsSideBySide: leaving it closes its app), the focused tab's title as a module signal (useFocusedTabTitle, readable outside TabsProvider), and the surface-written placement-capabilities registry — one per tab set: the page's own, or an embedded one (TabsProvider embedded={{ at, onLeave, onLocationChange?, browserTabUrl? }}, an AppEmbed's: seeded, never live, persisting nothing, publishing no page-global signal, behind its own navigation boundary), found from outside React by peekFocusedTabSet().
       - Web:
         - Uses: 51 symbols — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
           - `primitives/pane` ×21
@@ -14370,6 +14370,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceFocused`
           - `useSurfaceMode`
           - `useSurfaceShown`
+          - `useSurfaceShowsAppsSideBySide`
           - `useTabs`
       - Cross-plugin:
         - Imported by: 47 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
@@ -41974,7 +41975,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `createAmbient`
           - `createAmbientHost`
           - `useAmbientHost`
-    - **`background`** — The background music service: apps offer music as BackgroundMusic.Source contributions (an app, a kind, useTitle, and usePlayer — run from the page root, so the music outlives the app's views); the service plays one at a time per page and one page at a time in the browser (a BroadcastChannel claim, the playing page's state mirrored to the others' buttons and driven from them, a per-page Web Lock telling when it is gone). An app view reports itself on screen with useMusicSource(id, { shown }): when the last view leaves, its music pauses unless Keep playing across apps (config, on by default) is on; music an app plays itself (useForegroundMusic) pauses background music nobody sees. Music an app played in its view can outlive the view (useMusicSource(id).adopt(), a Sonata song whose page went away): kept across apps, it becomes what the service plays; a source carrying only such music lists itself while it has some (useAvailable) and may keep its own volume (ownVolume: no device slider, no gain). The global action bar's music button (a note, moving bars while playing) opens the panel: now playing with its app, play / pause, the device's volume and stop; every app's music; and the across-apps switch. Registers the background music config (Keep playing across apps) for Settings → Config.
+    - **`background`** — The background music service: apps offer music as BackgroundMusic.Source contributions (an app, a kind, useTitle, and usePlayer — run from the page root, so the music outlives the app's views); the service plays one at a time per page and one page at a time in the browser (a BroadcastChannel claim, the playing page's state mirrored to the others' buttons and driven from them, a per-page Web Lock telling when it is gone). An app view reports itself on screen with useMusicSource(id, { shown }): when the last view leaves, its music pauses unless Keep playing across apps (config, on by default) is on — never across a closed desktop window (useSurfaceShowsAppsSideBySide: leaving there is closing the app); music an app plays itself (useForegroundMusic) pauses background music nobody sees. Music an app played in its view can outlive the view (useMusicSource(id).adopt(), a Sonata song whose page went away): kept across apps (and not left by closing its desktop window), it becomes what the service plays; a source carrying only such music lists itself while it has some (useAvailable) and may keep its own volume (ownVolume: no device slider, no gain). The global action bar's music button (a note, moving bars while playing) opens the panel: now playing with its app, play / pause, the device's volume and stop; every app's music; and the across-apps switch. Registers the background music config (Keep playing across apps) for Settings → Config.
       - Web:
         - Slots: `BackgroundMusic.Source`
         - Slot contributors:
@@ -41984,11 +41985,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ConfigV2.WebRegister` "config"
           - `Core.Root` → `BackgroundMusicRoot`
           - `ActionBar.Item` → `MusicButton`
-        - Uses: 21 symbols — full list in [`plugins/music/plugins/background/REFERENCE.md`](../plugins/music/plugins/background/REFERENCE.md)
+        - Uses: 23 symbols — full list in [`plugins/music/plugins/background/REFERENCE.md`](../plugins/music/plugins/background/REFERENCE.md)
           - `config_v2` ×4
+          - `apps-core/tabs` ×2
           - `primitives/css/control-panel` ×2
           - `apps-core/app-icon.AppIconTile`
-          - `apps-core/tabs.useAppLinkProps`
           - `network/live/live-state.foldResource`
           - `primitives/css/fill.Fill`
           - `primitives/css/slider.Slider`
@@ -41999,6 +42000,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/dom/web-storage.defineStore`
           - `primitives/error-boundary.PluginErrorBoundary`
           - `primitives/icon-button.IconButton`
+          - `primitives/latest-ref.useEventCallback`
           - `primitives/loading.Loading`
           - `shell/action-bar.ActionBar`
           - `ui/icons.Icon`
@@ -54373,7 +54375,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `seekPredicate`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 88 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+        - Imported by: 89 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
           - `primitives` ×34
           - `apps` ×25
           - `page` ×5
@@ -54390,6 +54392,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/claude-cli/sign-in`
           - `integrations/youtube`
           - `media/player`
+          - `music/background`
           - `reorder`
           - `reports/main-thread-stall`
           - `screenshot`

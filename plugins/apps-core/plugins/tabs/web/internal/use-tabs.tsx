@@ -325,6 +325,11 @@ export function useTabs(): TabsApi {
   return ctx;
 }
 
+/** The tab set this subtree is in, or `null` outside every `TabsProvider`. */
+export function useTabsIfAny(): TabsApi | null {
+  return useContext(TabsContext);
+}
+
 type AppList = ReturnType<typeof Apps.App.useContributions>;
 
 /** Build a fresh, non-live background store bound to an app's base path. */

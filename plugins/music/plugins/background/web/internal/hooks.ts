@@ -1,4 +1,6 @@
 import { useEffect } from "react";
+import { useSurfaceShowsAppsSideBySide } from "@plugins/apps-core/plugins/tabs/web";
+import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import { busyElsewhere } from "../../shared/protocol";
 import { dispatch, peekState, useMusicSnapshot } from "./store";
 
@@ -37,7 +39,10 @@ export interface MusicSourceHandle {
  * An app view's handle on its source of background music, and its presence:
  * while `shown` (the view is on screen as an open app — `useSurfaceShown`),
  * the source counts as in front of the user. When the last view of it leaves,
- * its music pauses — unless the user keeps music across apps.
+ * its music pauses — unless the user keeps music across apps, in a surface
+ * that shows one app at a time. On the desktop (apps side by side) a view
+ * leaving is its window closing: its music ends with it, kept across apps or
+ * not.
  */
 export function useMusicSource(
   sourceId: string,
@@ -45,11 +50,17 @@ export function useMusicSource(
 ): MusicSourceHandle {
   const { state } = useMusicSnapshot();
   const { shown } = opts;
+  // Leaving closes the app when the mode the view last rendered in shows apps
+  // side by side (a desktop window closing).
+  const sideBySide = useSurfaceShowsAppsSideBySide();
+  const leave = useEventCallback((id: string) =>
+    dispatch({ kind: "shown", sourceId: id, delta: -1, closesApp: sideBySide }),
+  );
   useEffect(() => {
     if (!shown) return;
-    dispatch({ kind: "shown", sourceId, delta: 1 });
-    return () => dispatch({ kind: "shown", sourceId, delta: -1 });
-  }, [sourceId, shown]);
+    dispatch({ kind: "shown", sourceId, delta: 1, closesApp: false });
+    return () => leave(sourceId);
+  }, [sourceId, shown, leave]);
   const isCurrent = state.current?.sourceId === sourceId;
   return {
     isCurrent,
@@ -69,7 +80,7 @@ export function useMusicSource(
         dispatch({ kind: "resume" });
     },
     adopt: () => {
-      dispatch({ kind: "adopt", sourceId });
+      dispatch({ kind: "adopt", sourceId, closesApp: sideBySide });
       const now = peekState().current;
       return now?.sourceId === sourceId && now.playing;
     },

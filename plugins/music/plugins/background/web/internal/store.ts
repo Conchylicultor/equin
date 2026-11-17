@@ -157,17 +157,27 @@ export function connectPages(): () => void {
   };
 }
 
-/** An event as the service's callers spell it: the across-apps setting is the store's. */
+/**
+ * An event as the service's callers spell it: the across-apps setting is the
+ * store's. A view leaving says whether that closes its app (`closesApp`: a
+ * desktop window, apps side by side) — then its music never carries across.
+ */
 export type DispatchedEvent =
   | Exclude<MusicEvent, { kind: "shown" | "adopt" }>
-  | { kind: "shown"; sourceId: string; delta: 1 | -1 }
-  | { kind: "adopt"; sourceId: string };
+  | { kind: "shown"; sourceId: string; delta: 1 | -1; closesApp: boolean }
+  | { kind: "adopt"; sourceId: string; closesApp: boolean };
 
 export function dispatch(event: DispatchedEvent) {
-  const e: MusicEvent =
-    event.kind === "shown" || event.kind === "adopt"
-      ? { ...event, acrossApps }
-      : event;
+  let e: MusicEvent;
+  if (event.kind === "shown") {
+    const { closesApp, ...rest } = event;
+    e = { ...rest, acrossApps: acrossApps && !closesApp };
+  } else if (event.kind === "adopt") {
+    const { closesApp, ...rest } = event;
+    e = { ...rest, acrossApps: acrossApps && !closesApp };
+  } else {
+    e = event;
+  }
   const prev = snap.state;
   const next = step(prev, e);
   if (next !== prev) snap = { ...snap, state: next };

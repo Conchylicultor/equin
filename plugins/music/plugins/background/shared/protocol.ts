@@ -5,13 +5,15 @@
  *   the browser: music starting anywhere else (`remote-claim`) pauses it.
  * - A source plays on while one of its views is on screen (`shown`). When the
  *   last one leaves (the app switched away in a one-app-at-a-time surface, its
- *   window closed) it pauses — unless the user keeps music across apps.
+ *   window closed) it pauses — unless the user keeps music across apps (never
+ *   for a closed desktop window: the caller passes `acrossApps` false then).
  * - Music an app plays itself (`foreground`, a Sonata song) pauses the
  *   service's music when no view of it is on screen: real music interrupts
  *   background ambience; music beside it on the desktop mixes.
  * - Music an app played in its view outlives the view (`adopt`, a Sonata song
  *   whose page went away while it played): it becomes what the service plays
- *   — if the user keeps music across apps; otherwise it ends with the view.
+ *   — if the user keeps music across apps (and the view's leaving is not its
+ *   desktop window closing); otherwise it ends with the view.
  */
 
 export interface Current {
