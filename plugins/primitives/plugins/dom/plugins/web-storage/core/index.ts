@@ -11,3 +11,4 @@ export {
   SCOPE_SEPARATOR,
 } from "./internal/budget";
 export type { StorageArea, StorageSize, StoreKey } from "./internal/budget";
+export { schemaStamp } from "./internal/schema-stamp";

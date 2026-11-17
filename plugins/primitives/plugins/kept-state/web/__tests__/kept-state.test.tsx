@@ -7,6 +7,10 @@ import {
   QuotaStorage,
   storageScopeOf,
 } from "@plugins/primitives/plugins/dom/plugins/web-storage/web/testing";
+import {
+  ownerPrefix,
+  schemaStamp,
+} from "@plugins/primitives/plugins/dom/plugins/web-storage/core";
 import { defineKept } from "../define-kept";
 import { flushKept, readDraft } from "../draft-storage";
 import { forgetKeepScope, KeepScope } from "../keep-scope";
@@ -32,6 +36,7 @@ function work(name: string) {
     owner: owner(name),
     label: "Test drafts",
     tier: "work",
+    stamp: "test",
     cap: "8 KB",
     schema: z.string(),
   });
@@ -66,11 +71,33 @@ describe("useKept — work", () => {
     expect(other.result.current[0]).toBe("");
   });
 
+  it("reads a draft the previous build's schema wrote through its migration (an upgrade reload)", () => {
+    const prior = schemaStamp(z.string());
+    const kept = defineKept({
+      owner: owner("upgrade"),
+      label: "Test drafts",
+      tier: "work",
+      stamp: "test",
+      cap: "8 KB",
+      schema: z.object({ text: z.string() }),
+      migrate: { [prior]: (old) => ({ text: old }) },
+    });
+    local.setItem(
+      `${ownerPrefix(kept.owner)}conv-1`,
+      JSON.stringify({ v: "half-typed", ts: Date.now(), s: prior }),
+    );
+    const hook = renderHook(() =>
+      useKept(kept, { text: "" }, { subject: "conv-1" }),
+    );
+    expect(hook.result.current[0]).toEqual({ text: "half-typed" });
+  });
+
   it("keeps the identity of what is shown when its own write comes back from storage", () => {
     const kept = defineKept({
       owner: owner("identity"),
       label: "Test drafts",
       tier: "work",
+      stamp: "test",
       cap: "8 KB",
       schema: z.object({ fixed: z.array(z.number()), moving: z.number() }),
     });

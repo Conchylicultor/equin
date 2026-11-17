@@ -27,6 +27,7 @@ export const pendingText = defineKept<PendingText>({
   owner: "editable-field.pending",
   label: "Unsaved field edits",
   tier: "work",
+  stamp: "1iziujk76w1",
   cap: "64 KB",
   schema: z.object({ text: z.string(), base: z.string(), tab: z.string() }),
 });

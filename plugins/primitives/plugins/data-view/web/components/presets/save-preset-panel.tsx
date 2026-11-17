@@ -20,6 +20,7 @@ const presetNameDraft = defineKept({
   owner: "data-view.preset-name",
   label: "Preset names",
   tier: "work",
+  stamp: "nl1v68s27p",
   cap: "8 KB",
   schema: z.string(),
 });

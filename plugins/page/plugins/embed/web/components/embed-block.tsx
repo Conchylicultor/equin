@@ -34,6 +34,7 @@ const embedUrlDraft = defineKept({
   owner: "embed.url",
   label: "Embed links",
   tier: "work",
+  stamp: "nl1v68s27p",
   cap: "8 KB",
   schema: z.string(),
 });

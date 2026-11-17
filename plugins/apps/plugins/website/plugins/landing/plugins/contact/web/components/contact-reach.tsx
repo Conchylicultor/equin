@@ -50,6 +50,7 @@ const contactDraft = defineKept({
   owner: "website.contact.draft",
   label: "Contact messages",
   tier: "work",
+  stamp: "1dp5sya7nfy",
   cap: "16 KB",
   schema: z.object({ message: z.string(), email: z.string() }),
 });

@@ -34,6 +34,7 @@ const snippetDraft = defineKept({
   owner: "prompt-snippets.editor",
   label: "Snippet drafts",
   tier: "work",
+  stamp: "m456q5fkmr",
   cap: "64 KB",
   schema: z.object({ title: z.string(), prompt: z.string() }),
 });

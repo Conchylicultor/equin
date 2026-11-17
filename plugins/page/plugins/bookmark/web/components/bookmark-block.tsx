@@ -46,6 +46,7 @@ const bookmarkUrlDraft = defineKept({
   owner: "bookmark.url",
   label: "Bookmark links",
   tier: "work",
+  stamp: "nl1v68s27p",
   cap: "8 KB",
   schema: z.string(),
 });

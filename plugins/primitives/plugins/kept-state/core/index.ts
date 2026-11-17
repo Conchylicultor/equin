@@ -16,3 +16,5 @@ export type {
   TextKeep,
   Transient,
 } from "./text-keep";
+export { keptWorkDeclarations, recordKeptWork } from "./work-declarations";
+export type { KeptWorkDeclaration } from "./work-declarations";

@@ -48,6 +48,7 @@ const compactInstructionsDraft = defineKept({
   owner: "conversations.context.compact-instructions",
   label: "Compaction instructions",
   tier: "work",
+  stamp: "nl1v68s27p",
   cap: "8 KB",
   schema: z.string(),
 });

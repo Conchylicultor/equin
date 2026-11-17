@@ -12,6 +12,7 @@ const urlDraft = defineKept({
   owner: "desktop.wallpaper.from-url",
   label: "Wallpaper URL drafts",
   tier: "work",
+  stamp: "nl1v68s27p",
   cap: "8 KB",
   schema: z.string(),
 });

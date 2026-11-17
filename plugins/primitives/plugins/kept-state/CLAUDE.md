@@ -23,10 +23,11 @@ attachments and keep the attachment id as work.
 ## Declare and read
 
 ```ts
-// module scope; owner, cap and tier literal (web-storage's budget-fits check reads them)
+// module scope; owner, cap, tier and stamp literal (the budget-fits and work-schema-migrates checks read them)
 export const linkDraft = defineKept({
   owner: "page.link-form", label: "Link drafts", tier: "work", cap: "64 KB",
   schema: z.object({ url: z.string(), text: z.string() }),
+  stamp: "1x2y3z", // the check names the value
 });
 export const pickerQuery = defineKept({ owner: "icon-picker.query", tier: "view", schema: z.string() });
 
@@ -132,6 +133,42 @@ leaves it. `"at-once"` empties the field immediately (the field stays typable)
 while storage keeps the text until the ack. This is the one way to clear work
 after a send; the binding's `clear()` is for an explicit discard.
 
+## Across builds: `stamp` and `migrate`
+
+An upgrade reload reads work the previous build wrote. web-storage stamps
+every entry with the schema that wrote it (`schemaStamp`, web-storage core)
+and leaves an entry from another schema unread (`other-schema`) — for work,
+that would hide the user's draft on every upgrade that changed the schema. So
+a work owner carries:
+
+- `stamp` — its schema's stamp, as a literal. The
+  `kept-state:work-schema-migrates` check imports each declaring module,
+  computes the real stamp and names it when the literal is wrong; the literal
+  is what lets the check read **main's** stamp from main's source without
+  evaluating main.
+- `migrate` — keyed by a prior stamp: how what that schema wrote is read now
+  (the result is parsed with `schema`). The check fails when the stamp differs
+  from main's and `migrate` has no entry for main's. An added optional field
+  migrates as the identity:
+
+```ts
+schema: z.object({ text: z.string(), mode: z.enum(["a", "b"]).optional() }),
+stamp: "<new stamp>",
+migrate: { "<main's stamp>": (old) => old },
+```
+
+A migrated entry is not rewritten on read (a tab still on the old build reads
+it too); the next write stores it under the new stamp. When the schema changes
+again, the check asks only for the newest prior stamp: update or drop the
+older entries (a draft they still describe is then left unread, as before).
+A downgrade (an old tab reading a newer entry) still leaves it in place — the
+old tab is about to upgrade. **View** state needs neither: an entry its
+schema no longer reads is dropped, which is acceptable for where the user
+was looking.
+
+`useDraft` over a store declared with `defineStore` can pass the same
+`migrate` to `defineStore`; the check covers `defineKept` work owners only.
+
 ## Loud refusal, legacy keys
 
 A refused write is never silent: the store announces it (a toast once per
@@ -215,6 +252,7 @@ carries them over, so no unsent text is lost — drop it once browsers migrated.
     - `KeptSetter`
     - `KeptSource`
     - `KeptText`
+    - `KeptWorkDeclaration`
     - `TextKeep`
     - `Transient`
   - Exports (values):
@@ -222,6 +260,8 @@ carries them over, so no unsent text is lost — drop it once browsers migrated.
     - `keptField`
     - `keptItem`
     - `keptPart`
+    - `keptWorkDeclarations`
+    - `recordKeptWork`
     - `resolveTextKeep`
     - `transient`
 

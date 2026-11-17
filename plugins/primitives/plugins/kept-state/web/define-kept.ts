@@ -7,6 +7,7 @@ import {
 } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import type { StorageSize } from "@plugins/primitives/plugins/dom/plugins/web-storage/core";
 import { DEFAULT_DRAFT_TTL } from "./draft-storage";
+import { recordKeptWork } from "../core";
 
 /**
  * Work: what the user made and the server does not have yet (composer text,
@@ -22,6 +23,21 @@ export interface KeptWorkSpec<T> {
   /** A literal ("64 KB"): the budget-fits check sums it into the local area. */
   cap: StorageSize;
   schema: ZodType<T>;
+  /**
+   * `schemaStamp(schema)` (web-storage core), as a literal: the
+   * `kept-state:work-schema-migrates` check verifies it and reads main's from
+   * main's source, to tell a changed schema. When it fails, it names the value.
+   */
+  stamp: string;
+  /**
+   * How a draft an older schema wrote is read now, keyed by that schema's
+   * stamp — so an upgrade reload into a build that changed the schema gives
+   * the user's work back instead of hiding it. The result is parsed with
+   * `schema`. Changing `schema` requires an entry for main's stamp (the
+   * `work-schema-migrates` check); for an added optional field it is the
+   * identity, `(old) => old`.
+   */
+  migrate?: Readonly<Record<string, (old: unknown) => unknown>>;
   /** Drafts written before this owner existed, carried over. */
   legacy?: LegacyKeys;
 }
@@ -80,13 +96,14 @@ export function viewPoolStore(): ScopedStore<unknown> {
  * ```ts
  * export const linkDraft = defineKept({
  *   owner: "page.link-form", label: "Link drafts", tier: "work", cap: "64 KB",
- *   schema: z.object({ url: z.string(), text: z.string() }),
+ *   schema: z.object({ url: z.string(), text: z.string() }), stamp: "1x2y3z",
  * });
  * export const pickerQuery = defineKept({ owner: "icon-picker.query", tier: "view", schema: z.string() });
  * ```
  *
- * Read with `useKept`. The work tier's owner, cap and tier must be literals:
- * web-storage's `budget-fits` check reads them from the source.
+ * Read with `useKept`. The work tier's owner, cap, tier and stamp must be
+ * literals: web-storage's `budget-fits` check and kept-state's
+ * `work-schema-migrates` check read them from the source.
  */
 export function defineKept<T>(spec: KeptWorkSpec<T>): KeptWork<T>;
 export function defineKept<T>(spec: KeptViewSpec<T>): KeptView<T>;
@@ -113,8 +130,15 @@ export function defineKept<T>(
     ttl: DEFAULT_DRAFT_TTL,
     whenFull: "refuse",
     schema: spec.schema,
+    migrate: spec.migrate,
     legacy: spec.legacy,
   };
+  recordKeptWork({
+    owner: spec.owner,
+    stamp: spec.stamp,
+    schema: spec.schema,
+    migrateFrom: Object.keys(spec.migrate ?? {}),
+  });
   return {
     tier: "work",
     owner: spec.owner,

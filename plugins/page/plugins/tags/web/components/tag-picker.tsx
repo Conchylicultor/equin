@@ -45,6 +45,7 @@ const tagNameDraft = defineKept({
   owner: "page-tags.rename",
   label: "Tag renames",
   tier: "work",
+  stamp: "nl1v68s27p",
   cap: "8 KB",
   schema: z.string(),
 });

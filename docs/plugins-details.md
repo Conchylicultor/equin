@@ -52878,6 +52878,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useStorageUsage`
               - `useStore`
               - `WebStorageSlots`
+          - Core:
+            - Uses:
+              - `packages/string-hash.hash53`
+              - `packages/zod-introspect.describeSchema`
+            - Exports (types):
+              - `StorageArea`
+              - `StorageSize`
+              - `StoreKey`
+            - Exports (values):
+              - `AREA_BUDGET`
+              - `AREA_QUOTA`
+              - `entryBytes`
+              - `KEY_ROOT`
+              - `OWNER_PATTERN`
+              - `ownerPrefix`
+              - `parseStorageSize`
+              - `parseStoreKey`
+              - `schemaStamp`
+              - `SCOPE_PATTERN`
+              - `SCOPE_SEPARATOR`
           - Cross-plugin:
             - Imported by: 57 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
               - `primitives` ×16
@@ -52902,22 +52922,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Exemptions:
             - Exempts itself from: `web-storage/no-raw-web-storage` — `web/internal/store.ts` (sanctioned)
             - Exempted by: `primitives/dom/web-storage` (0 debt)
-          - Core:
-            - Exports (types):
-              - `StorageArea`
-              - `StorageSize`
-              - `StoreKey`
-            - Exports (values):
-              - `AREA_BUDGET`
-              - `AREA_QUOTA`
-              - `entryBytes`
-              - `KEY_ROOT`
-              - `OWNER_PATTERN`
-              - `ownerPrefix`
-              - `parseStorageSize`
-              - `parseStoreKey`
-              - `SCOPE_PATTERN`
-              - `SCOPE_SEPARATOR`
           - Test helpers:
             - Web: `@plugins/primitives/plugins/dom/plugins/web-storage/web/testing`
               - `installStorage` — Make `window.<area>Storage` this storage for the rest of the test file.
@@ -53729,6 +53733,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `KeptSetter`
           - `KeptSource`
           - `KeptText`
+          - `KeptWorkDeclaration`
           - `TextKeep`
           - `Transient`
         - Exports (values):
@@ -53736,6 +53741,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `keptField`
           - `keptItem`
           - `keptPart`
+          - `keptWorkDeclarations`
+          - `recordKeptWork`
           - `resolveTextKeep`
           - `transient`
     - **`keyset`** — Field-agnostic keyset pagination machinery: a null-aware keyset seek / at-or-before / order-by compiler over drizzle SQL, over keys the caller builds from declared columns. No data-view dependency, so any server-delegated windowed query can reuse it.

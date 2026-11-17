@@ -17,6 +17,7 @@ export const paneRoutes = defineStore({
   ttl: 30 * DAY,                       // ms since last write; Infinity = never
   whenFull: "evict-oldest",            // caches; "refuse" for what the user typed
   schema: savedRouteSchema,            // zod; an entry IT wrote that fails it is dropped + reported
+  migrate: { "<prior stamp>": (old) => next },  // optional: how an older schema's entry reads now (keyed by schemaStamp)
   legacy: { match: (k) => k.startsWith("route.restore."), adopt },  // pre-primitive keys
 });
 ```
@@ -143,6 +144,26 @@ for an id grammar one primitive owns the lifetime of (app-instance generations).
     - `useStorageUsage`
     - `useStore`
     - `WebStorageSlots`
+- Core:
+  - Uses:
+    - `packages/string-hash.hash53`
+    - `packages/zod-introspect.describeSchema`
+  - Exports (types):
+    - `StorageArea`
+    - `StorageSize`
+    - `StoreKey`
+  - Exports (values):
+    - `AREA_BUDGET`
+    - `AREA_QUOTA`
+    - `entryBytes`
+    - `KEY_ROOT`
+    - `OWNER_PATTERN`
+    - `ownerPrefix`
+    - `parseStorageSize`
+    - `parseStoreKey`
+    - `schemaStamp`
+    - `SCOPE_PATTERN`
+    - `SCOPE_SEPARATOR`
 - Cross-plugin:
   - Imported by: 57 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×16
@@ -167,22 +188,6 @@ for an id grammar one primitive owns the lifetime of (app-instance generations).
 - Exemptions:
   - Exempts itself from: `web-storage/no-raw-web-storage` — `web/internal/store.ts` (sanctioned)
   - Exempted by: `primitives/dom/web-storage` (0 debt)
-- Core:
-  - Exports (types):
-    - `StorageArea`
-    - `StorageSize`
-    - `StoreKey`
-  - Exports (values):
-    - `AREA_BUDGET`
-    - `AREA_QUOTA`
-    - `entryBytes`
-    - `KEY_ROOT`
-    - `OWNER_PATTERN`
-    - `ownerPrefix`
-    - `parseStorageSize`
-    - `parseStoreKey`
-    - `SCOPE_PATTERN`
-    - `SCOPE_SEPARATOR`
 - Test helpers:
   - Web: `@plugins/primitives/plugins/dom/plugins/web-storage/web/testing`
     - `installStorage` — Make `window.<area>Storage` this storage for the rest of the test file.

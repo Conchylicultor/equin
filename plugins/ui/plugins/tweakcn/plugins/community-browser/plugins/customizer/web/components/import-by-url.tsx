@@ -37,6 +37,7 @@ const importUrlDraft = defineKept({
   owner: "tweakcn.import-url",
   label: "tweakcn import URLs",
   tier: "work",
+  stamp: "nl1v68s27p",
   cap: "8 KB",
   schema: z.string(),
 });

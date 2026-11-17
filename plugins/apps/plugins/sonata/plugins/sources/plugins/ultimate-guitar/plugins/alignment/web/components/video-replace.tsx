@@ -115,6 +115,7 @@ const videoLinkDraft = defineKept({
   owner: "sonata.ug-alignment.video-link",
   label: "Song video link drafts",
   tier: "work",
+  stamp: "nl1v68s27p",
   cap: "8 KB",
   schema: z.string(),
 });

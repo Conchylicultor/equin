@@ -77,6 +77,7 @@ const noteDraft = defineKept({
   owner: "places.place-note",
   label: "Place note drafts",
   tier: "work",
+  stamp: "nl1v68s27p",
   cap: "32 KB",
   schema: z.string(),
 });
@@ -85,6 +86,7 @@ const titleDraft = defineKept({
   owner: "places.place-title",
   label: "Place name drafts",
   tier: "work",
+  stamp: "nl1v68s27p",
   cap: "8 KB",
   schema: z.string(),
 });

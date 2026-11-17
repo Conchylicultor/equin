@@ -28,6 +28,7 @@ const newServerDraft = defineKept({
   owner: "deploy.servers.new-server",
   label: "New server drafts",
   tier: "work",
+  stamp: "nl1v68s27p",
   cap: "8 KB",
   schema: z.string(),
 });

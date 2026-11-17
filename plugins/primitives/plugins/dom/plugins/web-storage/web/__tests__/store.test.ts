@@ -9,6 +9,7 @@ import {
   type StorageFailure,
 } from "../internal/store";
 import { scanArea } from "../internal/scan";
+import { schemaStamp } from "../../core";
 import { installStorage, QuotaStorage, storageScopeOf } from "../testing";
 
 /** The page's own scope: these suites test a store's behaviour, not scoping. */
@@ -258,6 +259,50 @@ describe("defineStore", () => {
       JSON.stringify({ v: "b", ts: Date.now(), s: "a-newer-schema" }),
     );
     expect(s.read("c")).toMatchObject({ kind: "value", value: "b" });
+  });
+
+  it("an entry an older schema wrote is read through the migration declared for its stamp", () => {
+    const seen = failures();
+    const o = owner("migrate");
+    const older = z.object({ text: z.string() });
+    const prior = schemaStamp(older);
+    // What the previous build wrote: { text }.
+    local.setItem(
+      `s:${o}:a`,
+      JSON.stringify({ v: { text: "hi" }, ts: 1_000, s: prior }),
+    );
+    // A migration that yields what this schema still refuses.
+    local.setItem(
+      `s:${o}:b`,
+      JSON.stringify({ v: { text: 3 }, ts: 1_000, s: prior }),
+    );
+    // A stamp no migration names.
+    local.setItem(
+      `s:${o}:c`,
+      JSON.stringify({ v: { text: "x" }, ts: 1_000, s: "unknown-stamp" }),
+    );
+    const s = defineStore({
+      owner: o,
+      label: "X",
+      area: "local",
+      cap: "1 KB",
+      ttl: Infinity,
+      whenFull: "refuse",
+      schema: z.object({ body: z.string() }),
+      migrate: {
+        [prior]: (old) => ({ body: (old as { text: unknown }).text }),
+      },
+    }).in(ROOT);
+    expect(s.read("a")).toEqual({
+      kind: "value",
+      value: { body: "hi" },
+      ts: 1_000,
+    });
+    expect(s.read("b")).toEqual({ kind: "none", why: "other-schema" });
+    expect(s.read("c")).toEqual({ kind: "none", why: "other-schema" });
+    // Never rewritten on read: a tab still on the previous build reads it too.
+    expect(JSON.parse(local.getItem(`s:${o}:a`)!).s).toBe(prior);
+    expect(seen.map((f) => f.reason)).toEqual(["other-schema", "other-schema"]);
   });
 
   it("the same schema declared twice stamps the same; a changed one does not", () => {

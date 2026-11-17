@@ -15,6 +15,7 @@ export const screenshotCapture = defineKept({
   owner: "screenshot.capture",
   label: "Captured screenshots",
   tier: "work",
+  stamp: "tyygnbn27q",
   cap: "16 KB",
   schema: z.object({ image: z.string() }).nullable(),
 });
@@ -52,6 +53,7 @@ export const screenshotEdits = defineKept({
   owner: "screenshot.edits",
   label: "Screenshot edits",
   tier: "work",
+  stamp: "ivg1sajdzi",
   cap: "512 KB",
   schema: z.object({ edits: z.array(edit), strokes: z.array(stroke) }),
 });

@@ -43,6 +43,7 @@ const promptDraft = defineKept({
   owner: "active-data.task.prompt",
   label: "Suggested task drafts",
   tier: "work",
+  stamp: "nl1v68s27p",
   cap: "32 KB",
   schema: z.string(),
 });

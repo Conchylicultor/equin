@@ -37,6 +37,7 @@ const projectIdDraft = defineKept({
   owner: "auth.google-maps.setup-project-id",
   label: "Google Maps setup project IDs",
   tier: "work",
+  stamp: "nl1v68s27p",
   cap: "8 KB",
   schema: z.string(),
 });

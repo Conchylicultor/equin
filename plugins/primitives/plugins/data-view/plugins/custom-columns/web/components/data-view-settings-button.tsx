@@ -31,6 +31,7 @@ const newColumnNameDraft = defineKept({
   owner: "custom-columns.new-name",
   label: "New field names",
   tier: "work",
+  stamp: "nl1v68s27p",
   cap: "8 KB",
   schema: z.string(),
 });
@@ -40,6 +41,7 @@ const columnRenameDraft = defineKept({
   owner: "custom-columns.rename",
   label: "Field renames",
   tier: "work",
+  stamp: "nl1v68s27p",
   cap: "8 KB",
   schema: z.string(),
 });

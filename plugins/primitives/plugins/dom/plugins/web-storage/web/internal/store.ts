@@ -1,6 +1,5 @@
 import type { z } from "zod";
 import { hash53 } from "@plugins/packages/plugins/string-hash/core";
-import { describeSchema } from "@plugins/packages/plugins/zod-introspect/core";
 import { defineReportSink } from "@plugins/primitives/plugins/report-sink/core";
 import {
   AREA_BUDGET,
@@ -9,6 +8,7 @@ import {
   ownerPrefix,
   parseStorageSize,
   parseStoreKey,
+  schemaStamp as stampOf,
   SCOPE_PATTERN,
   type StorageArea,
   type StorageSize,
@@ -57,6 +57,17 @@ export interface StoreSpec<T> {
    * judge (skew from a stale tab; an unmigrated old schema from a current one).
    */
   schema: z.ZodType<T>;
+  /**
+   * How an entry written under an older schema of this owner is read now,
+   * keyed by that schema's stamp (`schemaStamp`, web-storage core): the
+   * function's result is parsed with `schema`, and becomes the read's value.
+   * An entry whose stamp has no migration, or whose migration this schema
+   * still refuses, is left in place as `other-schema`. What a build that
+   * changed the schema needs so an upgrade reload does not hide what the
+   * previous build wrote — kept-state's work tier must declare it
+   * (`kept-state:work-schema-migrates`).
+   */
+  migrate?: Readonly<Record<string, (old: unknown) => unknown>>;
   /**
    * Set only for state about the page itself, never about what an app inside
    * it shows (the tab's id, the app tab strip, a page-level diagnostics flag):
@@ -316,17 +327,12 @@ function fail(
 type Envelope = { v: unknown; ts: number; s?: string };
 
 /**
- * A schema's identity across builds: a hash of zod-introspect's description of
- * it (what it accepts and produces, as data), so two builds whose schema for an
- * owner is the same stamp the same, and any change to what it accepts moves
- * the stamp. A change confined to a transform's body does not (describeSchema
- * cannot see into it) — such an entry is then judged corrupt, loudly, never
- * left silently.
+ * The owner's schema stamp ({@link stampOf}), computed on first need. A
+ * change confined to a transform's body does not move it — such an entry is
+ * then judged corrupt, loudly, never left silently.
  */
 function schemaStamp(state: OwnerState<unknown>): string {
-  state.stamp ??= hash53(
-    JSON.stringify(describeSchema(state.spec.schema).description),
-  ).toString(36);
+  state.stamp ??= stampOf(state.spec.schema);
   return state.stamp;
 }
 
@@ -726,6 +732,20 @@ function bind<T>(state: OwnerState<T>, scope: string | null): Store<T> {
       // what that build reads. Not ours to judge, so never ours to drop — the
       // user's value stays for every tab that can read it.
       if (env && env.s !== schemaStamp(state)) {
+        // An older schema this owner declares a migration from: what the
+        // previous build wrote is read through it, so an upgrade reload
+        // gives the user's work back.
+        const migrate =
+          env.s !== undefined &&
+          spec.migrate &&
+          Object.hasOwn(spec.migrate, env.s)
+            ? spec.migrate[env.s]
+            : undefined;
+        if (migrate) {
+          const migrated = spec.schema.safeParse(migrate(env.v));
+          if (migrated.success)
+            return { kind: "value", value: migrated.data, ts: env.ts };
+        }
         const seen = `${k}\0${hash53(raw)}`;
         if (!state.announcedOtherSchema.has(seen)) {
           state.announcedOtherSchema.add(seen);

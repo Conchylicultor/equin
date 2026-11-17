@@ -53,6 +53,7 @@ const improveDraft = defineKept<ImproveDraft>({
   owner: "website.improve.draft",
   label: "Website wishes",
   tier: "work",
+  stamp: "1grqgs420os",
   cap: "16 KB",
   schema: z.object({ text: z.string(), autoDeploy: z.boolean() }),
 });

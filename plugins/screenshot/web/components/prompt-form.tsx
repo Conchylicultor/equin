@@ -18,6 +18,7 @@ const screenshotPromptDraft = defineKept({
   owner: "screenshot.prompt",
   label: "Screenshot prompt drafts",
   tier: "work",
+  stamp: "nl1v68s27p",
   cap: "16 KB",
   schema: z.string(),
 });
