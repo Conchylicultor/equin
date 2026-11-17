@@ -31,13 +31,14 @@ launcher). Design: prototype proto-1792811301-yksedx (the `page` variant).
   - Contributes:
     - `Pane.Register` "home-new-app"
     - `ThemeEngine.SubTheme` "New app prompt"
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×3
     - `primitives/kept-state` ×3
     - `primitives/pane` ×2
     - `tasks/launch-options` ×2
     - `apps/home/shell.homeRootPane`
     - `infra/claude-cli/availability.useClaudeCodeLaunchBlock`
+    - `infra/claude-cli/sign-in.ClaudeCodeFix`
     - `primitives/css/center.Center`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/line.Line`

@@ -44,6 +44,16 @@ describe("claudeCodeVerdict", () => {
     });
   });
 
+  test("is critical when Claude refused the sign-in", () => {
+    expect(
+      claudeCodeVerdict(loaded({ kind: "sign-in-refused", version: "1" })),
+    ).toEqual({
+      state: "critical",
+      summary:
+        "Claude refused this computer's sign-in (it may have expired) — agents cannot start",
+    });
+  });
+
   test("is unknown, with why, when the check itself failed", () => {
     expect(
       claudeCodeVerdict(loaded({ kind: "unreadable", error: "timed out" })),

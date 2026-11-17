@@ -16,8 +16,11 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const refreshIcon = symbol("refresh");
 
-function recheck(fetchEndpoint: FetchEndpoint): Promise<unknown> {
-  return fetchEndpoint(recheckClaudeCode, {});
+function recheck(
+  fetchEndpoint: FetchEndpoint,
+  trigger: "user" | "returned",
+): Promise<unknown> {
+  return fetchEndpoint(recheckClaudeCode, {}, { body: { trigger } });
 }
 
 /**
@@ -31,7 +34,7 @@ export function ClaudeCodeActions() {
     <IconButton
       icon={refreshIcon}
       label="Check again"
-      onClick={() => recheck(fetchEndpoint)}
+      onClick={() => recheck(fetchEndpoint, "user")}
     />
   ) : (
     <IconButton
@@ -78,6 +81,13 @@ export function ClaudeCodeDetail() {
           Agents can't start until this computer is signed in to Claude.
         </StepNote>
       );
+    case "sign-in-refused":
+      return (
+        <StepNote>
+          Claude refused this computer's sign-in during an agent's turn — it may
+          have expired. Sign in again; agents can't start until then.
+        </StepNote>
+      );
   }
 }
 
@@ -104,7 +114,7 @@ export function RecheckOnReturn() {
   useEffect(() => {
     if (!blocked) return;
     const onFocus = () => {
-      void recheck(fetchEndpoint);
+      void recheck(fetchEndpoint, "returned");
     };
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);

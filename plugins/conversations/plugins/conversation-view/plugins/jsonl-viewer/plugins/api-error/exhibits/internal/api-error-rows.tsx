@@ -16,11 +16,19 @@ const SERVER_ERROR: JsonlEvent = {
   text: "API Error: 529 Overloaded. This is a server-side issue, usually temporary — try again in a moment. If it persists, check https://status.claude.com.",
 };
 
+const AUTH_FAILED: JsonlEvent = {
+  kind: "api-error",
+  at: "2026-10-20T16:22:00.000Z",
+  error: "authentication_failed",
+  text: "Invalid API key · Please run /login",
+};
+
 export default function ApiErrorRowsExhibit() {
   return (
     <div>
       <ApiErrorRow event={USAGE_LIMIT} />
       <ApiErrorRow event={SERVER_ERROR} />
+      <ApiErrorRow event={AUTH_FAILED} />
     </div>
   );
 }

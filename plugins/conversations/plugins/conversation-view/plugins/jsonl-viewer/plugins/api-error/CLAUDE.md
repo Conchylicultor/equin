@@ -4,15 +4,17 @@
 
 ## Plugin reference
 
-- Description: Renders the CLI's own notice of a failed model request in the JSONL viewer — a usage limit with its reset time, a server error, an expired login — as a warning line, not as the agent's words.
+- Description: Renders the CLI's own notice of a failed model request in the JSONL viewer — a usage limit with its reset time, a server error, an expired login — as a warning line, not as the agent's words. A refused sign-in (authentication_failed) is said in the app's words — never the CLI's 'run /login' — with the sign-in fix inline while the computer's sign-in is still blocked.
 - Web:
   - Contributes: `JsonlViewer.EventRenderer` "api-error" → `ApiErrorRow`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer.EventLine`
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
     - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
+    - `infra/claude-cli/sign-in.ClaudeCodeFixWhileBlocked`
     - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`
+    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `ui/icons.Icon`

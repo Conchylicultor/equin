@@ -25,7 +25,7 @@ required `draftKey`.
   - Exports (types): `InlinePopoverProps`
   - Exports (values): `InlinePopover`
 - Cross-plugin:
-  - Imported by: 34 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 35 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `page` ×7
     - `primitives` ×7
     - `apps` ×6
@@ -34,6 +34,7 @@ required `draftKey`.
     - `shell` ×2
     - `build`
     - `config_v2/settings`
+    - `infra/claude-cli/sign-in`
     - `reorder/editor`
     - `tag-tree/picker`
     - `tasks/task-draft-form`

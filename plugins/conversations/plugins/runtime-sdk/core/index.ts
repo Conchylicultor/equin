@@ -75,6 +75,7 @@ export {
   resumeStoppedConversations,
   stopErrorLabel,
   USAGE_LIMIT_ERROR,
+  AUTH_FAILED_ERROR,
 } from "./error-stopped";
 export type {
   ErrorStoppedConversation,

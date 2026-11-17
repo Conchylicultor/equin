@@ -36,6 +36,7 @@ import {
 } from "@plugins/conversations/plugins/model-provider/web";
 import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
 import { useClaudeCodeLaunchBlock } from "@plugins/infra/plugins/claude-cli/plugins/availability/web";
+import { ClaudeCodeFixButton } from "@plugins/infra/plugins/claude-cli/plugins/sign-in/web";
 import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
@@ -236,13 +237,13 @@ export function LaunchControl({
     onLaunched,
   });
   const defaultModel = useDefaultModel();
-  // No computer behind this subtree (the demo), or Claude Code missing or
-  // signed out: no agent can start, so the control says why (and how to fix
-  // it) instead of launching one that dies.
+  // No computer behind this subtree (the demo): no agent can start, so the
+  // control says why instead of launching one that dies. Claude Code signed
+  // out (or its sign-in refused): the control becomes its fix — Sign in,
+  // opening the in-app sign-in — rather than a disabled button pointing
+  // elsewhere.
   const claudeCodeBlock = useClaudeCodeLaunchBlock();
-  const claudeBlock = availability.available
-    ? claudeCodeBlock
-    : availability.message;
+  const claudeBlock = availability.available ? null : availability.message;
   const off = disabled || claudeBlock !== null;
   const launchTitle = claudeBlock ?? `Launch ${choiceLabel(defaultModel)}`;
 
@@ -254,6 +255,11 @@ export function LaunchControl({
       : "";
 
   const rows = <LaunchModelMenuContent launch={launch} />;
+
+  if (availability.available && claudeCodeBlock !== null)
+    return (
+      <ClaudeCodeFixButton block={claudeCodeBlock} className={className} />
+    );
 
   if (size === "icon") {
     return (

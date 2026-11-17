@@ -10,6 +10,14 @@ import { probeClaudeCode } from "./probe";
 
 /** The last probe's answer; null until the first lands. */
 let last: ClaudeCodeStatus | null = null;
+/**
+ * Claude refused the computer's credential mid-turn
+ * ({@link noteClaudeCodeSignInRefused}). The probe cannot see it — its
+ * `initialize` only says a credential is present — so a `ready` probe reads
+ * `sign-in-refused` until the user signs in again or asks to check again
+ * ({@link recheckClaudeCodeNow}).
+ */
+let refused = false;
 let inflight: Promise<ClaudeCodeStatus> | null = null;
 const readyListeners = new Set<() => void>();
 const probedListeners = new Set<(status: ClaudeCodeStatus) => void>();
@@ -22,7 +30,7 @@ const changedListeners = new Set<() => void>();
 function probe(): Promise<ClaudeCodeStatus> {
   inflight ??= (async () => {
     try {
-      const status = await probeClaudeCode();
+      const status = withRefusal(await probeClaudeCode());
       record(status);
       return status;
     } finally {
@@ -30,6 +38,12 @@ function probe(): Promise<ClaudeCodeStatus> {
     }
   })();
   return inflight;
+}
+
+function withRefusal(probed: ClaudeCodeStatus): ClaudeCodeStatus {
+  return refused && probed.kind === "ready"
+    ? { kind: "sign-in-refused", version: probed.version }
+    : probed;
 }
 
 function record(status: ClaudeCodeStatus): void {
@@ -131,9 +145,38 @@ export async function noteActiveAccountChanged(): Promise<void> {
   if (active !== SYSTEM_ACCOUNT_ID) for (const fn of readyListeners) fn();
 }
 
-/** Probe now, whatever the last answer was ("Check again"). */
+/**
+ * Probe now, whatever the last answer was — the user's own Check again, or a
+ * sign-in that just finished. Either is the user saying the login changed, so
+ * a refusal Claude gave earlier ({@link noteClaudeCodeSignInRefused}) is
+ * dropped: if the login is still refused, the next agent's turn says so again.
+ */
 export function recheckClaudeCodeNow(): Promise<ClaudeCodeStatus> {
+  refused = false;
   return probe();
+}
+
+/**
+ * Probe now, keeping a refusal — the user came back to the window while
+ * Claude Code is blocked ({@link recheckClaudeCodeNow} is their explicit ask).
+ * A sign-in noticed this way (signed out → ready) is seen; a refused login is
+ * not mistaken for a fixed one.
+ */
+export function recheckClaudeCodeOnReturn(): Promise<ClaudeCodeStatus> {
+  return probe();
+}
+
+/**
+ * Claude refused the computer's sign-in: an agent on the computer's own login
+ * (the system account) had a turn fail with `authentication_failed` — an
+ * expired or revoked login. Claude Code reads `sign-in-refused` at once (the
+ * health row, every launch control's fix, the launch gate) instead of the
+ * `ready` its probe would keep answering.
+ */
+export function noteClaudeCodeSignInRefused(): void {
+  refused = true;
+  if (last?.kind === "ready")
+    record({ kind: "sign-in-refused", version: last.version });
 }
 
 /**

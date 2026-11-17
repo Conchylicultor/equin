@@ -20,6 +20,7 @@ import type { LaunchOptionDef } from "@plugins/tasks/plugins/launch-options/core
 import { type LaunchTaskResponse } from "@plugins/tasks/core";
 import type { TaskSubject } from "@plugins/tasks/plugins/task-subject/core";
 import { useClaudeCodeLaunchBlock } from "@plugins/infra/plugins/claude-cli/plugins/availability/web";
+import { ClaudeCodeFix } from "@plugins/infra/plugins/claude-cli/plugins/sign-in/web";
 import {
   DEFAULT_DRAFT_TTL,
   legacyDraftKeys,
@@ -202,8 +203,8 @@ export function LaunchAgentForm({
     setDraft((d) => ({ ...d, picked: next }));
   // Stable per-instance Lexical namespace so multiple forms don't collide.
   const editorId = useId();
-  // Claude Code missing or signed out: say so, with the fix, where the Launch
-  // button is — rather than filing a launch that cannot run.
+  // Claude Code signed out: say so, with the fix inline (Sign in, Check
+  // again), where the Launch button is — rather than filing a launch that cannot run.
   const claudeBlock = useClaudeCodeLaunchBlock();
   // No computer behind this subtree (an in-browser server): launching cannot
   // be asked at all, so the form says why instead of offering it.
@@ -313,9 +314,7 @@ export function LaunchAgentForm({
           {unavailable}
         </Text>
       ) : claudeBlock !== null ? (
-        <Text as="div" variant="caption" tone="destructive">
-          {claudeBlock}
-        </Text>
+        <ClaudeCodeFix block={claudeBlock} />
       ) : null}
       <Line>
         {/* The empty flexible cell: the button sits flush right in its own

@@ -28,7 +28,10 @@ import {
   holdQuestion,
   retireQuestion,
 } from "@plugins/conversations/plugins/question-relay/machine";
+import { SYSTEM_ACCOUNT_ID } from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
+import { noteClaudeCodeSignInRefused } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
 import {
+  AUTH_FAILED_ERROR,
   DismissReplySchema,
   USAGE_LIMIT_ERROR,
   type OpenRequest,
@@ -365,6 +368,19 @@ async function applyNewLines(
     state.stoppedAt.getTime() !== projection.stoppedAt?.getTime()
   )
     await requestAutoResume();
+  // Claude refused the computer's own login mid-turn (an expired or revoked
+  // sign-in): Claude Code is marked refused at once, so every launch control
+  // and the health row offer the sign-in, instead of the next agent starting
+  // on a login its initialize still reports present. An added account's
+  // refusal is that account's, not the computer's (an agent from before agents
+  // named their account ran on the computer's).
+  if (
+    state.stopError === AUTH_FAILED_ERROR &&
+    state.stoppedAt !== null &&
+    state.stoppedAt.getTime() !== projection.stoppedAt?.getTime() &&
+    (state.account === null || state.account === SYSTEM_ACCOUNT_ID)
+  )
+    noteClaudeCodeSignInRefused();
   progress.stage = "signal";
   if (read.events.length === 0) return;
   // A (re)started agent takes `subscribe` now: a watched partial reconnects.

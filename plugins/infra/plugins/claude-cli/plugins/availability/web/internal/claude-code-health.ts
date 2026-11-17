@@ -10,7 +10,7 @@ import { claudeCodeProblem, type ClaudeCodeStatus } from "../../core";
  *
  * - still loading → `unknown`, no summary ("Checking…"), never `ok`;
  * - `ready` → `ok`, naming the account and version;
- * - `signed-out` → `critical`: the app exists to run agents, and it cannot
+ * - `signed-out` / `sign-in-refused` → `critical`: the app exists to run agents, and it cannot
  *   start one (the row offers Sign in, `claude-cli/sign-in`);
  * - `unreadable` → `unknown` with why (the check failed; Claude Code may be fine);
  * - `unavailable` (a host without the computer) → `not-applicable` with the
@@ -35,6 +35,7 @@ export function claudeCodeVerdict(
         summary: `${s.email ? `Signed in as ${s.email}` : "Signed in"} · v${s.version}`,
       };
     case "signed-out":
+    case "sign-in-refused":
       return {
         state: "critical",
         summary: `${claudeCodeProblem(s)} — agents cannot start`,

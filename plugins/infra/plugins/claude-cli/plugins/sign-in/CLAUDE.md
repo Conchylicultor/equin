@@ -120,10 +120,10 @@ report (its output length only — never the output). Adjust
 
 ## Plugin reference
 
-- Description: Signing in to Claude from the app, shown: the Claude Code row's pieces (ClaudeCodeSignInRemedy — the Sign in split button: Claude subscription / Anthropic Console / Single sign-on — ClaudeCodeSignInDetail — the run's panel: finish in your browser, Open the page again, Signing in on another device? with the copyable page and a code field, Cancel; failed: Claude Code's words, Close, Try again — and useClaudeCodeSignInHealth, 'Signing in…' while it runs), AddClaudeAccountSignIn for the Claude accounts (a name, then the same flow; the account appears once added), and, at the root, the page a run this tab started opened in the browser and its outcome toasted, once.
+- Description: Signing in to Claude from the app, shown: the Claude Code row's pieces (ClaudeCodeSignInRemedy — the Sign in split button: Claude subscription / Anthropic Console / Single sign-on — ClaudeCodeSignInDetail — the run's panel: finish in your browser, Open the page again, Signing in on another device? with the copyable page and a code field, Cancel; failed: Claude Code's words, Close, Try again — and useClaudeCodeSignInHealth, 'Signing in…' while it runs), AddClaudeAccountSignIn for the Claude accounts (a name, then the same flow; the account appears once added), ClaudeCodeFix — a Claude Code block drawn with its fix inline (what is wrong, Sign in or the open run's panel, Check again), the one way a launch surface shows one — with ClaudeCodeFixButton (a Sign in button opening it, where a launch control has no room) and ClaudeCodeFixWhileBlocked (the fix only while the computer is blocked, for a past failure's record), and, at the root, the page a run this tab started opened in the browser and its outcome toasted, once.
 - Web:
   - Contributes: `Core.Root` → `ClaudeSignInHost`
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×7
     - `infra/endpoints` ×3
     - `primitives/kept-state` ×2
@@ -141,10 +141,14 @@ report (its output length only — never the output). Adjust
     - `primitives/latest-ref.useEventCallback`
     - `primitives/link-gesture.openInBrowserTab`
     - `primitives/loading.Loading`
+    - `primitives/overlay/popover.InlinePopover`
     - `shell/toast.showToast`
     - `ui/icons.Icon`
   - Exports (values):
     - `AddClaudeAccountSignIn`
+    - `ClaudeCodeFix`
+    - `ClaudeCodeFixButton`
+    - `ClaudeCodeFixWhileBlocked`
     - `ClaudeCodeSignInDetail`
     - `ClaudeCodeSignInRemedy`
     - `useClaudeCodeSignInHealth`
@@ -181,13 +185,19 @@ report (its output length only — never the output). Adjust
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --primary-text`
+    - `ui/tokens/color-palette --warning`
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
-  - Imported by: `conversations/runtime-sdk`
+  - Imported by:
+    - `apps/agent-manager/welcome`
+    - `apps/home/new-app`
+    - `conversations/conversation-view/jsonl-viewer/api-error`
+    - `conversations/runtime-sdk`
+    - `primitives/launch`
 - Exemptions:
   - Exempts itself from:
     - `claude-sdk/no-claude-bin-spawn` — `machine/internal/run.ts` (sanctioned)

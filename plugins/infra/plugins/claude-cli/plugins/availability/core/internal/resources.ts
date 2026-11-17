@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { ClaudeCodeStatusSchema } from "./status";
@@ -19,9 +20,15 @@ export const claudeCodeStatus = liveValue("claude-code-status", {
  * from a terminal, a token that expired), which nothing on this machine
  * announces. Answers with the fresh status (also
  * pushed through {@link claudeCodeStatus}).
+ *
+ * `trigger`: `user` — the user's Check again, which also drops a refusal
+ * Claude gave the login mid-turn (`sign-in-refused`: the probe cannot see one,
+ * so asking is the user saying it is fixed); `returned` — the user came back
+ * to the window, which keeps it.
  */
 export const recheckClaudeCode = defineEndpoint({
   route: "POST /api/claude-code/recheck",
+  body: z.object({ trigger: z.enum(["user", "returned"]) }),
   response: ClaudeCodeStatusSchema,
   // It re-runs the probe on the computer.
   needsMachine: { feature: "Checking Claude Code" },

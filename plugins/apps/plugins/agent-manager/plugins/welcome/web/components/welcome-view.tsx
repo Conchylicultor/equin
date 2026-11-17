@@ -14,6 +14,8 @@ import {
   type LaunchOptionValues,
 } from "@plugins/tasks/plugins/launch-options/web";
 import { useClaudeCodeLaunchBlock } from "@plugins/infra/plugins/claude-cli/plugins/availability/web";
+import { claudeCodeProblem } from "@plugins/infra/plugins/claude-cli/plugins/availability/core";
+import { ClaudeCodeFix } from "@plugins/infra/plugins/claude-cli/plugins/sign-in/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { ComposerField } from "@plugins/primitives/plugins/text-editor/plugins/composer/web";
@@ -169,7 +171,7 @@ function HomePrompt() {
   // launch that cannot run.
   const claudeBlock = useClaudeCodeLaunchBlock();
   const blockReason = availability.available
-    ? claudeBlock
+    ? claudeBlock && claudeCodeProblem(claudeBlock)
     : availability.message;
   const prompt = draft.text.trim();
   const canSend = prompt !== "" && blockReason === null;
@@ -249,6 +251,9 @@ function HomePrompt() {
         <Text as="div" variant="caption" tone="muted" className="px-2xs">
           {unavailable}
         </Text>
+      ) : claudeBlock !== null ? (
+        // The block with its fix, under the field it holds back.
+        <ClaudeCodeFix block={claudeBlock} />
       ) : null}
     </>
   );

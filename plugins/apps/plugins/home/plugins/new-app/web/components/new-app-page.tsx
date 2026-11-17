@@ -7,6 +7,8 @@ import {
   type LaunchOptionValues,
 } from "@plugins/tasks/plugins/launch-options/web";
 import { useClaudeCodeLaunchBlock } from "@plugins/infra/plugins/claude-cli/plugins/availability/web";
+import { claudeCodeProblem } from "@plugins/infra/plugins/claude-cli/plugins/availability/core";
+import { ClaudeCodeFix } from "@plugins/infra/plugins/claude-cli/plugins/sign-in/web";
 import { ComposerField } from "@plugins/primitives/plugins/text-editor/plugins/composer/web";
 import {
   DEFAULT_DRAFT_TTL,
@@ -92,7 +94,7 @@ export function NewAppPage() {
   // Create says why rather than filing a launch that cannot run.
   const claudeBlock = useClaudeCodeLaunchBlock();
   const blockReason = availability.available
-    ? claudeBlock
+    ? claudeBlock && claudeCodeProblem(claudeBlock)
     : availability.message;
   const description = draft.text.trim();
   const canCreate = description !== "" && blockReason === null;
@@ -197,6 +199,9 @@ export function NewAppPage() {
                 >
                   {availability.message}
                 </Text>
+              ) : claudeBlock !== null ? (
+                // The block with its fix, under the field it holds back.
+                <ClaudeCodeFix block={claudeBlock} />
               ) : null}
             </Stack>
             {description === "" ? (

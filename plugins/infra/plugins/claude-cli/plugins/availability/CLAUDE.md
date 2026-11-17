@@ -8,10 +8,33 @@ the app (`claude-cli/sign-in`), never from a terminal.
 
 ## The status
 
-`ClaudeCodeStatus` (core) — `ready` / `signed-out` / `unreadable`.
+`ClaudeCodeStatus` (core) — `ready` / `signed-out` / `sign-in-refused` /
+`unreadable`.
+
 `unreadable` means the check itself failed (timeout, crash, unexpected output,
 the bundled build not installed — a broken install, not a user state): it is
 rendered as "can't tell", never as a verdict.
+
+`sign-in-refused` is evidence the probe cannot see: an agent on the computer's
+own login had a turn fail with `authentication_failed` (an expired or revoked
+login — `runtime-sdk`'s consumer calls `noteClaudeCodeSignInRefused()`).
+`initialize` only says a credential is present, so a probe would keep reading
+`ready`; the refusal holds over every probe (the launch gate's, the
+focus-return recheck — `trigger: "returned"`) until the user asks
+(`recheckClaudeCodeNow()`: Check again, `trigger: "user"`, or an in-app
+sign-in finishing). If the login is still refused, the next agent's turn says
+so again.
+
+## Every block is drawn with its fix
+
+`claudeCodeFix(block)` (core) is the fix a block carries — `sign-in` or
+`check-again`. The web never gets a sentence to show: `useClaudeCodeLaunchBlock()`
+returns the typed block, and a surface draws it through `claude-cli/sign-in`'s
+`ClaudeCodeFix` (what is wrong, Sign in — or the open run's panel — and Check
+again, inline), `ClaudeCodeFixButton` (a Sign in button opening it, where a
+launch control has no room) or `ClaudeCodeFixWhileBlocked` (a past failure's
+record — the conversation's refused-sign-in line). `claudeCodeBlockMessage` is
+the server's sentence (a 409, a failed start) and names no place elsewhere.
 
 The probe (`server/internal/probe.ts`) opens one Agent SDK session on the
 system account (the computer's own login) that reads its `initialize` answer —
@@ -40,7 +63,8 @@ the launch endpoint's own availability). It is re-asked:
 - on first read (lazy — nothing probes at boot);
 - by the launch gate, when the last answer is not `ready` (none yet, or a
   block — so a sign-in elsewhere is seen at once);
-- on `POST /api/claude-code/recheck` (the health row's Check again);
+- on `POST /api/claude-code/recheck` (Check again — the health row's and every
+  `ClaudeCodeFix`'s);
 - when the user returns to the window while it is blocked (`RecheckOnReturn` —
   the login can change outside the app);
 - when an in-app sign-in finishes (`claude-cli/sign-in` calls
@@ -136,6 +160,7 @@ computer's login — that is what they are about.
     - `checkLaunchReadiness`
     - `ClaudeCodeUnavailableError`
     - `noteClaudeCodeFailure`
+    - `noteClaudeCodeSignInRefused`
     - `onClaudeCodeProbed`
     - `onClaudeCodeReady`
     - `recheckClaudeCodeNow`
@@ -152,9 +177,11 @@ computer's login — that is what they are about.
     - `network/live.liveValue`
   - Exports (types):
     - `ClaudeCodeBlock`
+    - `ClaudeCodeFix`
     - `ClaudeCodeStatus`
   - Exports (values):
     - `claudeCodeBlockMessage`
+    - `claudeCodeFix`
     - `claudeCodeProblem`
     - `claudeCodeStatus`
     - `ClaudeCodeStatusSchema`

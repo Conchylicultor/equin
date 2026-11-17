@@ -740,13 +740,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `Pane.Register` "welcome"
               - `Shell.Sidebar` "New conversation"
-            - Uses: 27 symbols — full list in [`plugins/apps/plugins/agent-manager/plugins/welcome/REFERENCE.md`](../plugins/apps/plugins/agent-manager/plugins/welcome/REFERENCE.md)
+            - Uses: 28 symbols — full list in [`plugins/apps/plugins/agent-manager/plugins/welcome/REFERENCE.md`](../plugins/apps/plugins/agent-manager/plugins/welcome/REFERENCE.md)
               - `primitives/kept-state` ×4
               - `primitives/pane` ×3
               - `network/live/live-state` ×2
               - `tasks/launch-options` ×2
               - `conversations.useConversations`
               - `infra/claude-cli/availability.useClaudeCodeLaunchBlock`
+              - `infra/claude-cli/sign-in.ClaudeCodeFix`
               - `primitives/app-shell.opensPane`
               - `primitives/css/fill.Fill`
               - `primitives/css/line.Line`
@@ -5556,13 +5557,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `Pane.Register` "home-new-app"
               - `ThemeEngine.SubTheme` "New app prompt"
-            - Uses: 26 symbols — full list in [`plugins/apps/plugins/home/plugins/new-app/REFERENCE.md`](../plugins/apps/plugins/home/plugins/new-app/REFERENCE.md)
+            - Uses: 27 symbols — full list in [`plugins/apps/plugins/home/plugins/new-app/REFERENCE.md`](../plugins/apps/plugins/home/plugins/new-app/REFERENCE.md)
               - `primitives/css/ui-kit` ×3
               - `primitives/kept-state` ×3
               - `primitives/pane` ×2
               - `tasks/launch-options` ×2
               - `apps/home/shell.homeRootPane`
               - `infra/claude-cli/availability.useClaudeCodeLaunchBlock`
+              - `infra/claude-cli/sign-in.ClaudeCodeFix`
               - `primitives/css/center.Center`
               - `primitives/css/cluster.Cluster`
               - `primitives/css/line.Line`
@@ -19204,15 +19206,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Exemptions:
             - Exempts itself from: `no-raw-websocket` — `e2e/no-op-frames.ts` (sanctioned)
           - Plugins:
-            - **`api-error`** — Renders the CLI's own notice of a failed model request in the JSONL viewer — a usage limit with its reset time, a server error, an expired login — as a warning line, not as the agent's words.
+            - **`api-error`** — Renders the CLI's own notice of a failed model request in the JSONL viewer — a usage limit with its reset time, a server error, an expired login — as a warning line, not as the agent's words. A refused sign-in (authentication_failed) is said in the app's words — never the CLI's 'run /login' — with the sign-in fix inline while the computer's sign-in is still blocked.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "api-error" → `ApiErrorRow`
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer.EventLine`
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
                   - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
+                  - `infra/claude-cli/sign-in.ClaudeCodeFixWhileBlocked`
                   - `infra/endpoints.useFetchEndpoint`
                   - `network/live.useLive`
+                  - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.Button`
                   - `ui/icons.Icon`
@@ -23232,6 +23236,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AgentProcessesSchema`
           - `API_ERROR`
           - `applyPartialFrame`
+          - `AUTH_FAILED_ERROR`
           - `AUTO_RESUME_MARGIN_MS`
           - `AUTO_RESUME_RETRY_MS`
           - `autoResumeConfig`
@@ -35597,6 +35602,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `checkLaunchReadiness`
               - `ClaudeCodeUnavailableError`
               - `noteClaudeCodeFailure`
+              - `noteClaudeCodeSignInRefused`
               - `onClaudeCodeProbed`
               - `onClaudeCodeReady`
               - `recheckClaudeCodeNow`
@@ -35613,9 +35619,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live.liveValue`
             - Exports (types):
               - `ClaudeCodeBlock`
+              - `ClaudeCodeFix`
               - `ClaudeCodeStatus`
             - Exports (values):
               - `claudeCodeBlockMessage`
+              - `claudeCodeFix`
               - `claudeCodeProblem`
               - `claudeCodeStatus`
               - `ClaudeCodeStatusSchema`
@@ -35671,10 +35679,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `bundledClaudeBin`
               - `BundledClaudeMissingError`
-        - **`sign-in`** — Signing in to Claude from the app, shown: the Claude Code row's pieces (ClaudeCodeSignInRemedy — the Sign in split button: Claude subscription / Anthropic Console / Single sign-on — ClaudeCodeSignInDetail — the run's panel: finish in your browser, Open the page again, Signing in on another device? with the copyable page and a code field, Cancel; failed: Claude Code's words, Close, Try again — and useClaudeCodeSignInHealth, 'Signing in…' while it runs), AddClaudeAccountSignIn for the Claude accounts (a name, then the same flow; the account appears once added), and, at the root, the page a run this tab started opened in the browser and its outcome toasted, once.
+        - **`sign-in`** — Signing in to Claude from the app, shown: the Claude Code row's pieces (ClaudeCodeSignInRemedy — the Sign in split button: Claude subscription / Anthropic Console / Single sign-on — ClaudeCodeSignInDetail — the run's panel: finish in your browser, Open the page again, Signing in on another device? with the copyable page and a code field, Cancel; failed: Claude Code's words, Close, Try again — and useClaudeCodeSignInHealth, 'Signing in…' while it runs), AddClaudeAccountSignIn for the Claude accounts (a name, then the same flow; the account appears once added), ClaudeCodeFix — a Claude Code block drawn with its fix inline (what is wrong, Sign in or the open run's panel, Check again), the one way a launch surface shows one — with ClaudeCodeFixButton (a Sign in button opening it, where a launch control has no room) and ClaudeCodeFixWhileBlocked (the fix only while the computer is blocked, for a past failure's record), and, at the root, the page a run this tab started opened in the browser and its outcome toasted, once.
           - Web:
             - Contributes: `Core.Root` → `ClaudeSignInHost`
-            - Uses: 28 symbols — full list in [`plugins/infra/plugins/claude-cli/plugins/sign-in/REFERENCE.md`](../plugins/infra/plugins/claude-cli/plugins/sign-in/REFERENCE.md)
+            - Uses: 29 symbols — full list in [`plugins/infra/plugins/claude-cli/plugins/sign-in/REFERENCE.md`](../plugins/infra/plugins/claude-cli/plugins/sign-in/REFERENCE.md)
               - `primitives/css/ui-kit` ×7
               - `infra/endpoints` ×3
               - `primitives/kept-state` ×2
@@ -35692,10 +35700,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/latest-ref.useEventCallback`
               - `primitives/link-gesture.openInBrowserTab`
               - `primitives/loading.Loading`
+              - `primitives/overlay/popover.InlinePopover`
               - `shell/toast.showToast`
               - `ui/icons.Icon`
             - Exports (values):
               - `AddClaudeAccountSignIn`
+              - `ClaudeCodeFix`
+              - `ClaudeCodeFixButton`
+              - `ClaudeCodeFixWhileBlocked`
               - `ClaudeCodeSignInDetail`
               - `ClaudeCodeSignInRemedy`
               - `useClaudeCodeSignInHealth`
@@ -35732,13 +35744,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --primary-text`
+              - `ui/tokens/color-palette --warning`
               - `ui/tokens/density --space-2xs`
               - `ui/tokens/density --space-sm`
               - `ui/tokens/density --space-xs`
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Imported by: `conversations/runtime-sdk`
+            - Imported by:
+              - `apps/agent-manager/welcome`
+              - `apps/home/new-app`
+              - `conversations/conversation-view/jsonl-viewer/api-error`
+              - `conversations/runtime-sdk`
+              - `primitives/launch`
           - Exemptions:
             - Exempts itself from:
               - `claude-sdk/no-claude-bin-spawn` — `machine/internal/run.ts` (sanctioned)
@@ -50475,9 +50493,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 452 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 453 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×108
-              - `conversations` ×78
+              - `conversations` ×79
               - `primitives` ×55
               - `debug` ×39
               - `ui` ×32
@@ -53931,11 +53949,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useLatestRef`
     - **`launch`** — The standard launch-an-agent popover, and the split [model | launch] control under it.
       - Web:
-        - Uses: 38 symbols — full list in [`plugins/primitives/plugins/launch/REFERENCE.md`](../plugins/primitives/plugins/launch/REFERENCE.md)
+        - Uses: 40 symbols — full list in [`plugins/primitives/plugins/launch/REFERENCE.md`](../plugins/primitives/plugins/launch/REFERENCE.md)
           - `primitives/css/ui-kit` ×9
           - `tasks/launch-options` ×5
           - `conversations/model-provider` ×4
           - `primitives/kept-state` ×4
+          - `infra/claude-cli/sign-in` ×2
           - `infra/endpoints` ×2
           - `primitives/pane` ×2
           - `conversations/conversation-view.conversationPane`
@@ -55268,7 +55287,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlinePopoverProps`
             - Exports (values): `InlinePopover`
           - Cross-plugin:
-            - Imported by: 34 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md)
+            - Imported by: 35 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md)
               - `page` ×7
               - `primitives` ×7
               - `apps` ×6
@@ -55277,6 +55296,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `shell` ×2
               - `build`
               - `config_v2/settings`
+              - `infra/claude-cli/sign-in`
               - `reorder/editor`
               - `tag-tree/picker`
               - `tasks/task-draft-form`

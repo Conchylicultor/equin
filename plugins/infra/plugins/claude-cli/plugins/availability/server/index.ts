@@ -6,6 +6,7 @@ export {
   checkLaunchReadiness,
   ClaudeCodeUnavailableError,
   noteClaudeCodeFailure,
+  noteClaudeCodeSignInRefused,
   onClaudeCodeProbed,
   onClaudeCodeReady,
   recheckClaudeCodeNow,

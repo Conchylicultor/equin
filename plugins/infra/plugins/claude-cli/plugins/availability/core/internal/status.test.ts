@@ -2,9 +2,14 @@ import { describe, expect, test } from "bun:test";
 import { claudeCodeBlockMessage } from "./status";
 
 describe("claudeCodeBlockMessage", () => {
-  test("names the problem and where in the app to fix it — never a command", () => {
+  test("names the problem — never a command, nor a place elsewhere", () => {
     expect(claudeCodeBlockMessage({ kind: "signed-out", version: "1" })).toBe(
-      "Claude Code is not signed in, so no agent can start. Sign in from the Claude Code row of the health report.",
+      "Claude Code is not signed in, so no agent can start.",
+    );
+    expect(
+      claudeCodeBlockMessage({ kind: "sign-in-refused", version: "1" }),
+    ).toBe(
+      "Claude refused this computer's sign-in (it may have expired), so no agent can start.",
     );
     expect(claudeCodeBlockMessage({ kind: "unreadable", error: "boom" })).toBe(
       "Couldn't check Claude Code: boom, so no agent can start.",

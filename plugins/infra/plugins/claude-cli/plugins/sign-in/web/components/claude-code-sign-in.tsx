@@ -21,7 +21,8 @@ function openComputerFlow(flow: ClaudeSignInFlow): OpenSignInFlow | null {
   return flow.target.kind === "computer" ? flow : null;
 }
 
-function useOpenComputerFlow(): OpenSignInFlow | null {
+/** The computer's sign-in still open here, if any (shared with `ClaudeCodeFix`). */
+export function useOpenComputerFlow(): OpenSignInFlow | null {
   return foldResource(useClaudeSignInFlow(), {
     loading: () => null,
     error: () => null,
@@ -40,7 +41,11 @@ export function ClaudeCodeSignInRemedy() {
   const open = useOpenComputerFlow();
   const actions = useClaudeSignInActions();
   const row = useCollapsibleContext();
-  if (status.status !== "ready" || status.data.kind !== "signed-out")
+  if (
+    status.status !== "ready" ||
+    (status.data.kind !== "signed-out" &&
+      status.data.kind !== "sign-in-refused")
+  )
     return null;
   if (open) return null;
   // A status read off this computer means its endpoints answer too.

@@ -15,6 +15,14 @@ import { conversationsEntityRef } from "@plugins/tasks/plugins/tasks-core/core";
  */
 export const USAGE_LIMIT_ERROR = "rate_limit";
 
+/**
+ * The CLI's kind of failure when Claude refused the credential (an expired or
+ * revoked login). On the computer's own login it marks Claude Code
+ * `sign-in-refused` (`claude-cli/availability`), and the conversation's error
+ * line draws the sign-in fix.
+ */
+export const AUTH_FAILED_ERROR = "authentication_failed";
+
 /** A failure the CLI names no kind for, in words. */
 export const API_ERROR = "API error";
 

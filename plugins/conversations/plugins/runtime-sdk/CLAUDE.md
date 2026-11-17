@@ -488,6 +488,7 @@ Gotchas the spike hit:
     - `AgentProcessesSchema`
     - `API_ERROR`
     - `applyPartialFrame`
+    - `AUTH_FAILED_ERROR`
     - `AUTO_RESUME_MARGIN_MS`
     - `AUTO_RESUME_RETRY_MS`
     - `autoResumeConfig`

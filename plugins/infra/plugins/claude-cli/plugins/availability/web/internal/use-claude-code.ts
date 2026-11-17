@@ -6,8 +6,8 @@ import {
   SYSTEM_ACCOUNT_ID,
 } from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
 import {
-  claudeCodeBlockMessage,
   claudeCodeStatus,
+  type ClaudeCodeBlock,
   type ClaudeCodeStatus,
 } from "../../core";
 import { claudeCodeVerdict } from "./claude-code-health";
@@ -28,6 +28,10 @@ export function useClaudeCodeHealth(): HealthStatus {
 /**
  * Why a launch control should be disabled, or `null` to leave it enabled.
  *
+ * A typed block, not a sentence: the control draws it with its fix
+ * (`claude-cli/sign-in`'s `ClaudeCodeFix` — Sign in and Check again, inline),
+ * never as text pointing somewhere else.
+ *
  * Only a KNOWN block of the account the launch runs on disables. An added
  * account (a plan token or an API key) brings its own credential, so the
  * computer being signed out does not hold it back. While the status or the
@@ -38,7 +42,7 @@ export function useClaudeCodeHealth(): HealthStatus {
  * Claude Code's: there is no agent to start there, and the launch controls are
  * already gated on the launch endpoint's own availability.
  */
-export function useClaudeCodeLaunchBlock(): string | null {
+export function useClaudeCodeLaunchBlock(): ClaudeCodeBlock | null {
   const status = foldResource(useClaudeCodeStatus(), {
     loading: () => null,
     error: () => null,
@@ -58,6 +62,7 @@ export function useClaudeCodeLaunchBlock(): string | null {
   return onSystemAccount ? status : null;
 }
 
-function launchBlock(s: ClaudeCodeStatus): string | null {
-  return s.kind === "signed-out" ? claudeCodeBlockMessage(s) : null;
+/** A KNOWN block: signed out, or a sign-in Claude refused (never `unreadable`). */
+function launchBlock(s: ClaudeCodeStatus): ClaudeCodeBlock | null {
+  return s.kind === "signed-out" || s.kind === "sign-in-refused" ? s : null;
 }
