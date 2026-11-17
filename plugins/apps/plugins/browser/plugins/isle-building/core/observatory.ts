@@ -12,7 +12,6 @@ import {
   jit,
   moss,
   shrub,
-  spill,
   steps,
   stones,
   tufts,
@@ -36,6 +35,7 @@ function domePath(g: Ctx2D): void {
 }
 
 export const observatory: BuildingSpec = {
+  door: { kind: "leaf", w: 26, h: 42, arch: true, y: 8 },
   footprint: {
     w: 184,
     depth: 104,
@@ -316,6 +316,5 @@ export const observatory: BuildingSpec = {
     ink(g, 1);
     g.strokeRect(58, -8, 5, 16);
     g.restore();
-    if (s.open) spill(g, 26, 0.45);
   },
 };

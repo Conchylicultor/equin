@@ -25,7 +25,6 @@ const {
   ivy,
   mix,
   moss,
-  openDoor,
   parkMiller,
   plankDoor,
   sack,
@@ -72,6 +71,7 @@ function gear(g: Ctx2D, x: number, y: number, R: number, n: number, a: number) {
 }
 
 export const windmill: BuildingSpec = {
+  door: { kind: "leaf", w: 24, h: 42, arch: true },
   footprint: {
     w: 120,
     depth: 62,
@@ -278,6 +278,5 @@ export const windmill: BuildingSpec = {
     g.arc(0, 0, 4, 0, 7);
     g.fill();
     g.restore();
-    if (s.open) openDoor(g, 0, 0, 24, 42);
   },
 };

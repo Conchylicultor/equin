@@ -14,7 +14,6 @@ import {
   planks,
   shingles,
   shrub,
-  spill,
   stones,
   tufts,
   wash,
@@ -80,6 +79,7 @@ function automaton(g: Ctx2D, x: number, y: number, rnd: Rnd): void {
 }
 
 export const forge: BuildingSpec = {
+  door: { kind: "opening", w: 70 },
   footprint: {
     w: 214,
     depth: 84,
@@ -327,6 +327,5 @@ export const forge: BuildingSpec = {
     ink(g, 0.8);
     g.strokeRect(8, 1, 3, 9);
     g.restore();
-    if (s.open) spill(g, 70, 0.4);
   },
 };

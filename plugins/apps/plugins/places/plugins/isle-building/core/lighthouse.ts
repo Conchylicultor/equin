@@ -15,7 +15,6 @@ import {
   planks,
   poly,
   shrub,
-  spill,
   steps,
   tufts,
   wash,
@@ -83,6 +82,7 @@ function rockLump(g: Ctx2D, x: number, y: number, s: number, rnd: Rnd): void {
 }
 
 export const lighthouse: BuildingSpec = {
+  door: { kind: "leaf", w: 20, h: 34, arch: true },
   footprint: {
     w: 150,
     depth: 84,
@@ -364,6 +364,5 @@ export const lighthouse: BuildingSpec = {
       }
       g.restore();
     }
-    if (s.open) spill(g, 22, 0.45);
   },
 };

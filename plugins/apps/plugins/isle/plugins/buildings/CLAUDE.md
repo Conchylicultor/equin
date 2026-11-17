@@ -4,8 +4,10 @@ The building contract of the Isle app, the painting kit buildings are drawn
 with, and the generator that gives every app without bespoke art a building.
 
 - **`core/spec.ts`** — `BuildingSpec`: a `footprint`, the `setting` it likes,
-  `signX`, night `lights`, `paint` (the static picture, cached per time of day)
-  and `animate` (smoke, a swing, the light from an open door). Coordinates are
+  `signX`, night `lights`, `paint` (the static picture, cached per time of day),
+  `animate` (a swing, a beam) and the `door` the engine opens while the player
+  stands at it (`openDoor`: a leaf swung in, or an always-open bay lit up).
+  Coordinates are
   door-relative: (0, 0) is the middle of the threshold, y grows down.
 - **The painting kit** (`core/internal/{colour,draw,parts,props}.ts`, exported
   from the barrel) — colour helpers (`mix`, `jit`, `accent`…) and drawing
@@ -33,7 +35,7 @@ with, and the generator that gives every app without bespoke art a building.
   context (bun has no canvas) and returns the ink above/below a line;
   `boxWithin`; and `testBuildingFootprint(appId, spec)`, the one-line suite
   every bespoke building runs: painted by day, dusk and night, animated at 160
-  moments with the door shut and open, its ink must lie inside the declared
+  moments, its door opened, its ink must lie inside the declared
   footprint and no side may be looser than `FOOTPRINT_SLACK` (16 px). Glows
   (`lighter` draws: a lighthouse's beams) are light, not ink — not measured.
   A bespoke footprint is hard-coded from `measureBuilding`'s answer.
@@ -88,6 +90,7 @@ every stroke by √2 (it cannot know the join), which the declared pads allow fo
     - `BuildingSpec`
     - `Chimney`
     - `Ctx2D`
+    - `Door`
     - `DoorArchOptions`
     - `Footprint`
     - `Light`
@@ -133,6 +136,7 @@ every stroke by √2 (it cannot know the join), which the declared pads allow fo
     - `mailbox`
     - `mix`
     - `moss`
+    - `openDoor`
     - `planks`
     - `poly`
     - `polyKit`

@@ -11,6 +11,7 @@
 
 import {
   chimneySmoke,
+  openDoor,
   shade,
   type BuildingSpec,
   type PaintState,
@@ -785,12 +786,11 @@ export class IsleEngine {
 
   private paintState(
     app: IsleApp,
-  ): PaintState & { t: number; open: boolean; night: boolean; dusk: boolean } {
+  ): PaintState & { t: number; night: boolean; dusk: boolean } {
     return {
       t: 0,
       night: this.time === "night",
       dusk: this.time === "dusk",
-      open: false,
       hue: app.hue,
       shade,
       rnd: seeded(strHash(app.id)),
@@ -2471,6 +2471,9 @@ export class IsleEngine {
 
     // --- the moving things, by depth; each person cut out by whatever stands in front
     const dyn: { y: number; d: () => void }[] = [];
+    // everyone drawn this frame (filled as the people are queued, read when the queue runs): what stands in front
+    // of a hovered building cuts its glow, so the glow — laid again in the light pass — stays behind them
+    const figures: { y: number; paint: (c: Ctx) => void }[] = [];
     const tileObjsIn = (
       X0: number,
       Y0: number,
@@ -2514,7 +2517,8 @@ export class IsleEngine {
       dyn.push({
         y: b.y,
         d: () => {
-          f.L = this.hoverLayer(f, b, night || dusk, z, frontOf(b), t);
+          const people = figures.filter((p) => p.y > b.y);
+          f.L = this.hoverLayer(f, b, night || dusk, z, frontOf(b), people, t);
           this.putLayer(f.L, a);
         },
       });
@@ -2540,7 +2544,6 @@ export class IsleEngine {
         y: b.y,
         d: () => {
           b.state.t = t;
-          b.state.open = this.nearDoor === b;
           g.save();
           g.translate(b.x, b.y);
           animate(g, b.state);
@@ -2548,6 +2551,22 @@ export class IsleEngine {
         },
       });
     }
+    // the door the hero stands at, open: warm light inside, spilling out
+    const atDoor = this.nearDoor;
+    if (
+      atDoor &&
+      !this.hidden.has(atDoor.appId) &&
+      vis(atDoor.x, atDoor.y, 300)
+    )
+      dyn.push({
+        y: atDoor.y,
+        d: () => {
+          g.save();
+          g.translate(atDoor.x, atDoor.y);
+          openDoor(g, atDoor.spec.door);
+          g.restore();
+        },
+      });
     const village = layout.squares.find((q) => q.camp);
     if (village && vis(village.x, village.y)) {
       const fx = village.x;
@@ -2588,7 +2607,9 @@ export class IsleEngine {
       p: { readonly x: number; readonly y: number },
       box: readonly [number, number, number, number],
       paint: (c: Ctx) => void,
-    ) => ({
+    ) => {
+      figures.push({ y: p.y, paint });
+      return {
       y: p.y,
       d: () => {
         const front = tileObjsIn(
@@ -2629,7 +2650,8 @@ export class IsleEngine {
         g.drawImage(pc, 0, 0, W, H, sx, sy, W, H);
         world2screen();
       },
-    });
+      };
+    };
     const person = (p: Walker) =>
       figure(p, PBOX, (c) => this.people.draw(c, p, t));
     this.walkVillagers(dt, t, night);
@@ -3494,7 +3516,7 @@ export class IsleEngine {
 
   /**
    * The hover art as it shows in the scene: drawn into its own layer, then cut out wherever something standing in
-   * front of the building covers it — so nothing is drawn a second time over the scene.
+   * front of the building covers it (the scenery, and the people) — so nothing is drawn a second time over the scene.
    */
   private hoverLayer(
     f: HoverFx,
@@ -3502,6 +3524,7 @@ export class IsleEngine {
     glowOnly: boolean,
     z: number,
     front: readonly Static[],
+    people: readonly { paint: (c: Ctx) => void }[],
     t: number,
   ) {
     const { W: hw, H: hh } = this.art.hoverSize(b);
@@ -3523,9 +3546,10 @@ export class IsleEngine {
     lg.clearRect(0, 0, W, H);
     lg.setTransform(k, 0, 0, k, -X0 * k, -Y0 * k);
     this.art.drawHover(lg, b, 1, glowOnly, t);
-    if (front.length) {
+    if (front.length || people.length) {
       lg.globalCompositeOperation = "destination-out";
       for (const o of front) o.draw(lg);
+      for (const p of people) p.paint(lg);
       lg.globalCompositeOperation = "source-over";
     }
     return { c, W, H, x: X0, y: Y0, k };

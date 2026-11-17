@@ -25,7 +25,6 @@ const {
   ink,
   mix,
   moss,
-  openDoor,
   parkMiller,
   plankDoor,
   rocks,
@@ -44,6 +43,7 @@ const LEGS = [
 ] as const;
 
 export const launchTower: BuildingSpec = {
+  door: { kind: "leaf", w: 22, h: 38, arch: false },
   footprint: {
     w: 200,
     depth: 88,
@@ -341,6 +341,5 @@ export const launchTower: BuildingSpec = {
       g.fillStyle = gr;
       g.fillRect(52, -374, 36, 36);
     }
-    if (s.open) openDoor(g, 0, 0, 22, 38, false);
   },
 };

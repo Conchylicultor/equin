@@ -2,7 +2,7 @@
 // two cannot drift apart: wall heights, the lean-to, the window slots, the
 // roof's key lines, where the props and the sign stand.
 
-import type { Box } from "../spec";
+import type { Box, Door } from "../spec";
 import type { Pt } from "./draw";
 import type { Plan, RoofForm, Wall } from "./plan";
 
@@ -26,6 +26,18 @@ export const doorHeight = (p: Plan): number =>
 /** The storehouse has wide double doors instead of a door (width 0). */
 export const doorWidth = (p: Plan): number =>
   p.arch === "storehouse" ? 0 : 22;
+
+/** The storehouse's double doors, always swung back: the opening's size. */
+export const storehouseOpening = (p: Plan): { w: number; h: number } => ({
+  w: Math.min(64, p.W2),
+  h: Math.min(54, wallHeight(p) - 8),
+});
+
+/** The building's door, as the engine opens it. */
+export const doorOf = (p: Plan): Door =>
+  p.arch === "storehouse"
+    ? { kind: "opening", ...storehouseOpening(p) }
+    : { kind: "leaf", w: doorWidth(p), h: doorHeight(p), arch: p.arched };
 
 /** The soft cast shadow polygon on the ground beside the body. */
 export function shadowPts(p: Plan): Pt[] {

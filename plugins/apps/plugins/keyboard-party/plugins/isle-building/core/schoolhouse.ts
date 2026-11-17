@@ -25,7 +25,6 @@ const {
   ivy,
   mix,
   moss,
-  openDoor,
   parkMiller,
   plankDoor,
   rocks,
@@ -82,6 +81,7 @@ function block(
 }
 
 export const schoolhouse: BuildingSpec = {
+  door: { kind: "leaf", w: 24, h: 42, arch: true },
   footprint: {
     w: 176,
     depth: 74,
@@ -337,6 +337,5 @@ export const schoolhouse: BuildingSpec = {
     }
     g.restore();
     g.globalAlpha = 1;
-    if (s.open) openDoor(g, 0, 0, 24, 42);
   },
 };

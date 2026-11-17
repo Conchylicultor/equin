@@ -11,8 +11,7 @@ import {
 import type { BuildingSpec, Ctx2D, Light, PaintState, Setting } from "../spec";
 import { at } from "./colour";
 import { baseSize, footprintBoxes, signX } from "./footprint";
-import { smokeAnchor, propsAnchor } from "./layout";
-import { spill } from "./parts";
+import { doorOf, smokeAnchor, propsAnchor } from "./layout";
 import { paintBuilding } from "./paint";
 import { planBuilding, SIZE_CLASSES, type Plan } from "./plan";
 import { ink } from "./draw";
@@ -55,6 +54,7 @@ export function kitBuilding(
   const chimney = smokeAnchor(p);
   return {
     footprint: { w, depth, ground, upper },
+    door: doorOf(p),
     setting: SETTING_BY_CATEGORY[cat],
     signX: signX(p),
     lights,
@@ -96,5 +96,4 @@ function animateBuilding(g: Ctx2D, s: PaintState, p: Plan): void {
     g.strokeRect(-8, 29, 16, 3);
     g.restore();
   }
-  if (s.open) spill(g, 30, 0.45);
 }

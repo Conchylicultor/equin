@@ -661,8 +661,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes: `Isle.Building` "agent-manager"
             - Uses: `apps/isle/buildings.Isle`
           - Core:
-            - Uses: 21 symbols — full list in [`plugins/apps/plugins/agent-manager/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/agent-manager/plugins/isle-building/REFERENCE.md)
-              - `apps/isle/buildings` ×21
+            - Uses:
+              - `apps/isle/buildings.accent`
+              - `apps/isle/buildings.barrel`
+              - `apps/isle/buildings.Box`
+              - `apps/isle/buildings.BuildingSpec`
+              - `apps/isle/buildings.castShadow`
+              - `apps/isle/buildings.crate`
+              - `apps/isle/buildings.Ctx2D`
+              - `apps/isle/buildings.dark`
+              - `apps/isle/buildings.grain`
+              - `apps/isle/buildings.hline`
+              - `apps/isle/buildings.ink`
+              - `apps/isle/buildings.moss`
+              - `apps/isle/buildings.planks`
+              - `apps/isle/buildings.Rnd`
+              - `apps/isle/buildings.shingles`
+              - `apps/isle/buildings.shrub`
+              - `apps/isle/buildings.stones`
+              - `apps/isle/buildings.tufts`
+              - `apps/isle/buildings.wash`
+              - `apps/isle/buildings.windowRect`
             - Exports (values): `forge`
         - **`pages-nav`** — Pages entry point in the agent manager: a conversation-toolbar toggle that opens the Pages tree as a column beside the conversation.
           - Web:
@@ -909,7 +928,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/isle/buildings.jit`
               - `apps/isle/buildings.moss`
               - `apps/isle/buildings.shrub`
-              - `apps/isle/buildings.spill`
               - `apps/isle/buildings.steps`
               - `apps/isle/buildings.stones`
               - `apps/isle/buildings.tufts`
@@ -1352,7 +1370,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/isle/buildings.Pt`
               - `apps/isle/buildings.shingles`
               - `apps/isle/buildings.shrub`
-              - `apps/isle/buildings.spill`
               - `apps/isle/buildings.stones`
               - `apps/isle/buildings.tufts`
               - `apps/isle/buildings.wash`
@@ -5700,6 +5717,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `BuildingSpec`
               - `Chimney`
               - `Ctx2D`
+              - `Door`
               - `DoorArchOptions`
               - `Footprint`
               - `Light`
@@ -5745,6 +5763,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `mailbox`
               - `mix`
               - `moss`
+              - `openDoor`
               - `planks`
               - `poly`
               - `polyKit`
@@ -6208,8 +6227,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes: `Isle.Building` "mail"
             - Uses: `apps/isle/buildings.Isle`
           - Core:
-            - Uses: 22 symbols — full list in [`plugins/apps/plugins/mail/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/isle-building/REFERENCE.md)
-              - `apps/isle/buildings` ×22
+            - Uses: 21 symbols — full list in [`plugins/apps/plugins/mail/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/isle-building/REFERENCE.md)
+              - `apps/isle/buildings` ×21
             - Exports (values): `postOffice`
         - **`mail-core`** — Registers the mail app's own id kinds (mailacct, mailatt, maildraft, mailout) with the web id registry — the server barrel registers the same kinds. Schema + token wiring for the mail app (accounts, threads, messages, labels, attachments, drafts, sync-state, outbox), plus the shared connected-account and user-labels live values.
           - Web:
@@ -6901,8 +6920,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes: `Isle.Building` "pages"
             - Uses: `apps/isle/buildings.Isle`
           - Core:
-            - Uses: 22 symbols — full list in [`plugins/apps/plugins/pages/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/isle-building/REFERENCE.md)
-              - `apps/isle/buildings` ×22
+            - Uses: 21 symbols — full list in [`plugins/apps/plugins/pages/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/isle-building/REFERENCE.md)
+              - `apps/isle/buildings` ×21
             - Exports (values): `library`
         - **`page-author`** — Page-kind control in the page-detail header: its icon names what the open page is to agents — an ordinary page, an agent page (agents may write all of it) or an instructions page (the human's standing instructions to agents working under the parent page) — and its panel changes the kind, with a Global switch on an instructions page.
           - Web:
@@ -7403,8 +7422,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes: `Isle.Building` "places"
             - Uses: `apps/isle/buildings.Isle`
           - Core:
-            - Uses: 22 symbols — full list in [`plugins/apps/plugins/places/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/places/plugins/isle-building/REFERENCE.md)
-              - `apps/isle/buildings` ×22
+            - Uses: 21 symbols — full list in [`plugins/apps/plugins/places/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/places/plugins/isle-building/REFERENCE.md)
+              - `apps/isle/buildings` ×21
             - Exports (values): `lighthouse`
         - **`mapstr-import`** — `./equin places import-mapstr <export>` — matches a Mapstr export's places to Google places (Text Search, scored by name, distance and area extent; hand decisions via --overrides and the search-place lookup verb) into a reviewable mapstr-matches.json, then with --apply replaces every place and tag with the seed tree and the matched places (Mapstr tags mapped onto seed tags, comments as notes, original save dates), in one transaction.
           - Cli:
@@ -9112,8 +9131,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes: `Isle.Building` "sonata"
             - Uses: `apps/isle/buildings.Isle`
           - Core:
-            - Uses: 21 symbols — full list in [`plugins/apps/plugins/sonata/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/isle-building/REFERENCE.md)
-              - `apps/isle/buildings` ×21
+            - Uses:
+              - `apps/isle/buildings.accent`
+              - `apps/isle/buildings.bbox`
+              - `apps/isle/buildings.Box`
+              - `apps/isle/buildings.BuildingSpec`
+              - `apps/isle/buildings.castShadow`
+              - `apps/isle/buildings.doorArch`
+              - `apps/isle/buildings.grain`
+              - `apps/isle/buildings.hline`
+              - `apps/isle/buildings.ink`
+              - `apps/isle/buildings.lantern`
+              - `apps/isle/buildings.moss`
+              - `apps/isle/buildings.poly`
+              - `apps/isle/buildings.Pt`
+              - `apps/isle/buildings.shingles`
+              - `apps/isle/buildings.shrub`
+              - `apps/isle/buildings.steps`
+              - `apps/isle/buildings.stones`
+              - `apps/isle/buildings.tufts`
+              - `apps/isle/buildings.wash`
+              - `apps/isle/buildings.windowRect`
             - Exports (values): `musicHall`
         - **`library`** — Source-agnostic song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home) and opens a song into the player by collecting every source's raw through the Library.Source registry. Sources contribute persistence/hydration + their own add affordances. Persists source-agnostic Sonata song rows (generic metadata) and serves the `sonata.songs` live collection (sortable and filterable by every field an extension exposes on the songs entity). Per-source raw lives in each source's own entity-extension; sources create songs via the exported `createSongRow` helper.
           - Web:

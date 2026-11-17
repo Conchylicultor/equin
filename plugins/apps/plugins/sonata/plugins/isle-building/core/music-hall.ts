@@ -15,7 +15,6 @@ import {
   poly,
   shingles,
   shrub,
-  spill,
   steps,
   stones,
   tufts,
@@ -30,6 +29,7 @@ const GRAIN_BOX: Box = [-180, -290, 160, 40];
 const WALL_TOP = -132;
 
 export const musicHall: BuildingSpec = {
+  door: { kind: "leaf", w: 26, h: 38, arch: true },
   footprint: {
     w: 236,
     depth: 100,
@@ -304,6 +304,5 @@ export const musicHall: BuildingSpec = {
     g.lineTo(10, 9);
     g.fill();
     g.restore();
-    if (s.open) spill(g, 30, 0.45);
   },
 };

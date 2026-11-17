@@ -16,7 +16,6 @@ import {
   poly,
   shingles,
   shrub,
-  spill,
   steps,
   stones,
   tufts,
@@ -29,6 +28,7 @@ import {
 const GRAIN_BOX: Box = [-170, -270, 160, 40];
 
 export const library: BuildingSpec = {
+  door: { kind: "leaf", w: 34, h: 54, arch: true },
   footprint: {
     w: 232,
     depth: 96,
@@ -167,8 +167,5 @@ export const library: BuildingSpec = {
     ] as const)
       shrub(g, x, y, z, r, k);
     grain(g, GRAIN_BOX, r);
-  },
-  animate(g, s) {
-    if (s.open) spill(g, 34, 0.45);
   },
 };

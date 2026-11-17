@@ -82,8 +82,6 @@ export interface PaintState {
   readonly t: number;
   readonly night: boolean;
   readonly dusk: boolean;
-  /** The player stands at the door (animate only): door ajar, warm light spilling out. */
-  readonly open: boolean;
   /** The app's accent colour, `#rrggbb` (its tile colour). */
   readonly hue: string;
   /** `col` darkened (k < 0) or lightened (k > 0) by |k|, as `rgb(…)`. */
@@ -94,8 +92,31 @@ export interface PaintState {
   glyph(g: Ctx2D, cx: number, cy: number, size: number): void;
 }
 
+/**
+ * The front door, its threshold at the origin (or `y` below it). Data, not
+ * paint: the engine opens it while the player stands there (`openDoor`) — so
+ * every building's door opens the same way, and none can forget to.
+ *
+ * - `leaf`: a door `w` × `h` (round-headed when `arch`) that swings in on a
+ *   warm-lit inside, light spilling out over the ground.
+ * - `opening`: always open — a bay, wide doors swung back, a stand with no
+ *   door — `w` wide (`h` tall, lit warm inside, when given): only the light
+ *   spills out.
+ */
+export type Door =
+  | {
+      readonly kind: "leaf";
+      readonly w: number;
+      readonly h: number;
+      readonly arch: boolean;
+      readonly y?: number;
+    }
+  | { readonly kind: "opening"; readonly w: number; readonly h?: number };
+
 export interface BuildingSpec {
   readonly footprint: Footprint;
+  /** Its front door: the engine opens it while the player stands there. */
+  readonly door: Door;
   /** The spots it likes, first choice first (the coast, a hill…); none: anywhere. */
   readonly setting?: readonly Setting[];
   /**

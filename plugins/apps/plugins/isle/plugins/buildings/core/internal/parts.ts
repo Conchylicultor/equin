@@ -2,7 +2,7 @@
 // crates, barrels, sacks, a bench, books, a lantern, smoke, the light that
 // spills from an open door.
 
-import type { Chimney, Ctx2D } from "../spec";
+import type { Chimney, Ctx2D, Door } from "../spec";
 import { at, jit, type Rnd } from "./colour";
 import { castShadow, hline, ink, planks, wash } from "./draw";
 
@@ -450,5 +450,67 @@ export function spill(g: Ctx2D, w: number, a: number): void {
   g.lineTo(w * 1.1, 38);
   g.lineTo(-w * 1.1, 38);
   g.closePath();
+  g.fill();
+}
+
+/**
+ * A building's door, open: what the engine draws over the building while the
+ * player stands at it. A leaf swings in on a warm-lit inside, light spilling
+ * out; an opening (always open) lights up inside and spills its light.
+ */
+export function openDoor(g: Ctx2D, door: Door): void {
+  if (door.kind === "opening") {
+    if (door.h) {
+      g.fillStyle = "rgba(255,190,100,.22)";
+      g.fillRect(-door.w / 2, -door.h, door.w, door.h);
+    }
+    spill(g, door.w, 0.45);
+    return;
+  }
+  const { w, h, arch } = door;
+  const y = door.y ?? 0;
+  const L = -w / 2;
+  const T = y - h;
+  const outline = () => {
+    g.beginPath();
+    if (arch) {
+      g.moveTo(L, y);
+      g.lineTo(L, T + w / 2);
+      g.arc(0, T + w / 2, w / 2, Math.PI, 0);
+      g.lineTo(L + w, y);
+    } else g.rect(L, T, w, h);
+    g.closePath();
+  };
+  // the warm inside
+  g.save();
+  outline();
+  g.clip();
+  const gr = g.createLinearGradient(0, T, 0, y);
+  gr.addColorStop(0, "#5a3a1c");
+  gr.addColorStop(1, "#f2b860");
+  g.fillStyle = gr;
+  g.fillRect(L, T, w, h);
+  g.restore();
+  // the leaf, swung in against the jamb
+  g.fillStyle = "#4e3a26";
+  g.beginPath();
+  g.moveTo(L, y);
+  g.lineTo(L - w * 0.28, y + 3);
+  g.lineTo(L - w * 0.28, T + w * 0.35);
+  g.lineTo(L, T + (arch ? w * 0.45 : 0));
+  g.closePath();
+  g.fill();
+  ink(g, 0.9, 0.7);
+  g.stroke();
+  // the light on the ground
+  const sp = g.createLinearGradient(0, y, 0, y + 22);
+  sp.addColorStop(0, "rgba(255,200,120,.5)");
+  sp.addColorStop(1, "rgba(255,200,120,0)");
+  g.fillStyle = sp;
+  g.beginPath();
+  g.moveTo(L, y);
+  g.lineTo(L + w, y);
+  g.lineTo(L + w + 10, y + 22);
+  g.lineTo(L - 10, y + 22);
   g.fill();
 }

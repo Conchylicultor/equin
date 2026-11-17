@@ -14,7 +14,7 @@ import {
 } from "../spec";
 import { boxWithin, paintedExtent } from "../testing";
 import { categoryOfSeed, kitBuilding } from "./kit-building";
-import { chimneySmoke } from "./parts";
+import { chimneySmoke, openDoor } from "./parts";
 
 const CATEGORIES: readonly (AppCategory | undefined)[] = [
   ...APP_CATEGORIES,
@@ -33,7 +33,6 @@ function stateFor(id: string, over: Partial<PaintState> = {}): PaintState {
     t: 0,
     night: false,
     dusk: false,
-    open: false,
     hue: `#${(fnv1a32(id) & 0xffffff).toString(16).padStart(6, "0")}`,
     shade,
     rnd: mulberry32(fnv1a32(id)),
@@ -71,12 +70,11 @@ function measure(spec: BuildingSpec, id: string): Measured {
   for (const night of [false, true])
     take((g) => spec.paint(g, stateFor(id, { night })));
   for (const t of TIMES) {
-    for (const open of [false, true]) {
-      take((g) => spec.animate?.(g, stateFor(id, { t, open })));
-    }
+    take((g) => spec.animate?.(g, stateFor(id, { t })));
     const chimney = spec.chimney;
     if (chimney) take((g) => chimneySmoke(g, chimney, t, 1));
   }
+  take((g) => openDoor(g, spec.door));
   return out;
 }
 

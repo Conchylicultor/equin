@@ -17,7 +17,6 @@ import {
   sack,
   shingles,
   shrub,
-  spill,
   stones,
   tufts,
   wash,
@@ -31,6 +30,7 @@ const GRAIN_BOX: Box = [-150, -250, 180, 40];
 const FLOWERS = ["#7a8a48", "#5f6e37", "#b9895a", "#c9b27a"] as const;
 
 export const postOffice: BuildingSpec = {
+  door: { kind: "leaf", w: 26, h: 50, arch: false },
   footprint: {
     w: 206,
     depth: 84,
@@ -318,6 +318,5 @@ export const postOffice: BuildingSpec = {
       g.fill();
       g.restore();
     }
-    if (s.open) spill(g, 30, 0.45);
   },
 };

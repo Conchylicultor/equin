@@ -22,7 +22,6 @@ const {
   ivy,
   mix,
   moss,
-  openDoor,
   parkMiller,
   plankDoor,
   rocks,
@@ -38,6 +37,7 @@ const OLD_STONE = ["#8d8676", "#c9c1ad", "#7c8a5a"] as const;
 const LEAVES = ["#4f5d33", "#6b7a42", "#5c6a38"] as const;
 
 export const conservatory: BuildingSpec = {
+  door: { kind: "leaf", w: 22, h: 40, arch: true },
   footprint: {
     w: 230,
     depth: 78,
@@ -334,6 +334,5 @@ export const conservatory: BuildingSpec = {
     g.lineTo(16, -22);
     g.stroke();
     g.restore();
-    if (s.open) openDoor(g, 0, 0, 22, 40);
   },
 };

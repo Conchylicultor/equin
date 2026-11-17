@@ -16,7 +16,6 @@ import {
   poly,
   shingles,
   shrub,
-  spill,
   stones,
   tufts,
   wash,
@@ -39,6 +38,7 @@ const oct = (rx: number, ry: number, cy: number): Pt[] =>
   });
 
 export const bandstand: BuildingSpec = {
+  door: { kind: "opening", w: 34 },
   footprint: {
     w: 196,
     depth: 100,
@@ -260,6 +260,5 @@ export const bandstand: BuildingSpec = {
     g.fill();
     ink(g, 0.9);
     g.stroke();
-    if (s.open) spill(g, 34, 0.35);
   },
 };

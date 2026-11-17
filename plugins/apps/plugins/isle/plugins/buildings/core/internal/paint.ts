@@ -24,6 +24,7 @@ import {
 import {
   annexOf,
   doorHeight,
+  storehouseOpening,
   doorWidth,
   grainBox,
   propsAnchor,
@@ -429,8 +430,7 @@ export function paintBuilding(g: Ctx2D, s: PaintState, p: Plan): void {
   const dW = doorWidth(p);
   if (p.arch === "storehouse") {
     // wide double doors, ajar, X-braced
-    const w = Math.min(64, W2);
-    const h = Math.min(54, wallH - 8);
+    const { w, h } = storehouseOpening(p);
     g.fillStyle = "#211c17";
     g.fillRect(-w / 2, -h, w, h);
     if (night) {

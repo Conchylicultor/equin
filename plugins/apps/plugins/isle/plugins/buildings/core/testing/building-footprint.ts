@@ -1,5 +1,5 @@
 // The footprint test every bespoke building runs: paint it by day, at dusk and
-// at night, animate it at many moments with the door shut and open (and its
+// at night, animate it at many moments, open its door (and draw its
 // chimney's smoke), measure
 // the ink (`paintedExtent`, no canvas) and check it against the DECLARED
 // footprint — inside it, and the footprint no bigger than the ink by more than
@@ -8,7 +8,7 @@
 import { describe, expect, test } from "bun:test";
 import { mulberry32 } from "@plugins/packages/plugins/seeded-random/core";
 import { fnv1a32 } from "@plugins/packages/plugins/string-hash/core";
-import { chimneySmoke } from "../internal/parts";
+import { chimneySmoke, openDoor } from "../internal/parts";
 import { shade } from "../shade";
 import {
   GROUND_BAND,
@@ -34,7 +34,6 @@ function stateFor(appId: string, over: Partial<PaintState>): PaintState {
     t: 0,
     night: false,
     dusk: false,
-    open: false,
     hue: "#8a7a5c",
     shade,
     rnd: mulberry32(fnv1a32(appId)),
@@ -72,11 +71,10 @@ export function measureBuilding(
     take((g) => spec.paint(g, stateFor(appId, light)));
     if (spec.animate)
       for (const t of TIMES)
-        for (const open of [false, true])
-          take((g) =>
-            spec.animate?.(g, stateFor(appId, { ...light, t, open })),
-          );
+        take((g) => spec.animate?.(g, stateFor(appId, { ...light, t })));
   }
+  // the door, as the renderer opens it
+  take((g) => openDoor(g, spec.door));
   // the smoke the renderer draws from its chimney, at its thickest
   const chimney = spec.chimney;
   if (chimney)

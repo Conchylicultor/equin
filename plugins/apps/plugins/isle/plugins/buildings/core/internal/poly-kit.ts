@@ -509,54 +509,6 @@ function plankDoor(
   ink(g, 0.8, 0.6);
 }
 
-/** The open door (animate only): warm light inside, the leaf swung in, light spilling out. */
-function openDoor(
-  g: Ctx2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  arch = true,
-): void {
-  const L = x - w / 2;
-  const T = y - h;
-  g.save();
-  g.beginPath();
-  if (arch) {
-    g.moveTo(L, y);
-    g.lineTo(L, T + w / 2);
-    g.arc(x, T + w / 2, w / 2, Math.PI, 0);
-    g.lineTo(L + w, y);
-  } else g.rect(L, T, w, h);
-  g.closePath();
-  g.clip();
-  const gr = g.createLinearGradient(0, T, 0, y);
-  gr.addColorStop(0, "#5a3a1c");
-  gr.addColorStop(1, "#f2b860");
-  g.fillStyle = gr;
-  g.fillRect(L, T, w, h);
-  g.restore();
-  g.fillStyle = "#4e3a26";
-  g.beginPath();
-  g.moveTo(L, y);
-  g.lineTo(L - w * 0.28, y + 3);
-  g.lineTo(L - w * 0.28, T + w * 0.35);
-  g.lineTo(L, T + (arch ? w * 0.45 : 0));
-  g.closePath();
-  g.fill();
-  ink(g, 0.9, 0.7);
-  const sp = g.createLinearGradient(0, y, 0, y + 22);
-  sp.addColorStop(0, "rgba(255,200,120,.5)");
-  sp.addColorStop(1, "rgba(255,200,120,0)");
-  g.fillStyle = sp;
-  g.beginPath();
-  g.moveTo(L, y);
-  g.lineTo(L + w, y);
-  g.lineTo(L + w + 10, y + 22);
-  g.lineTo(L - 10, y + 22);
-  g.fill();
-}
-
 /** A crate of side `s`, its front-bottom-left at (x, y). */
 function crate(g: Ctx2D, x: number, y: number, s: number): void {
   const top: Pts = [
@@ -901,7 +853,6 @@ export const polyKit = {
   ivy,
   windowAt,
   plankDoor,
-  openDoor,
   crate,
   barrel,
   sack,

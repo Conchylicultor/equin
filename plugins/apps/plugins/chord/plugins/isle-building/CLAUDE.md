@@ -26,7 +26,6 @@
     - `apps/isle/buildings.Pt`
     - `apps/isle/buildings.shingles`
     - `apps/isle/buildings.shrub`
-    - `apps/isle/buildings.spill`
     - `apps/isle/buildings.stones`
     - `apps/isle/buildings.tufts`
     - `apps/isle/buildings.wash`

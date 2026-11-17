@@ -22,7 +22,6 @@ const {
   ivy,
   mix,
   moss,
-  openDoor,
   parkMiller,
   plankDoor,
   rocks,
@@ -40,6 +39,7 @@ const OLD_STONE = ["#8d8676", "#c9c1ad", "#7c8a5a"] as const;
 const PAPER = ["#efe4c8", "#e3d6b4", "#f4ecd6"] as const;
 
 export const clockTower: BuildingSpec = {
+  door: { kind: "leaf", w: 24, h: 40, arch: true },
   footprint: {
     w: 120,
     depth: 56,
@@ -351,6 +351,5 @@ export const clockTower: BuildingSpec = {
     g.closePath();
     g.fill();
     ink(g, 0.8, 0.7);
-    if (s.open) openDoor(g, 0, 0, 24, 40);
   },
 };

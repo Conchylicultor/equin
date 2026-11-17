@@ -36,6 +36,7 @@ const GRAIN_BOX = [-170, -215, 175, 50] as const;
 const SHELF = ["#8e7a58", "#a08a64", "#6f6048"] as const;
 
 export const archiveBarn: BuildingSpec = {
+  door: { kind: "opening", w: 62, h: 70 },
   footprint: {
     w: 210,
     depth: 80,
@@ -251,20 +252,5 @@ export const archiveBarn: BuildingSpec = {
     g.restore();
     rocks(g, 150, 40, r, 2);
     grain(g, GRAIN_BOX, parkMiller(662));
-  },
-  animate(g, s) {
-    if (!s.open) return;
-    const sp = g.createLinearGradient(0, 0, 0, 24);
-    sp.addColorStop(0, "rgba(255,200,120,.45)");
-    sp.addColorStop(1, "rgba(255,200,120,0)");
-    g.fillStyle = sp;
-    g.beginPath();
-    g.moveTo(-31, 0);
-    g.lineTo(31, 0);
-    g.lineTo(42, 24);
-    g.lineTo(-42, 24);
-    g.fill();
-    g.fillStyle = "rgba(255,190,100,.22)";
-    g.fillRect(-31, -70, 62, 70);
   },
 };

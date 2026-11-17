@@ -22,7 +22,6 @@
     - `apps/isle/buildings.jit`
     - `apps/isle/buildings.moss`
     - `apps/isle/buildings.shrub`
-    - `apps/isle/buildings.spill`
     - `apps/isle/buildings.steps`
     - `apps/isle/buildings.stones`
     - `apps/isle/buildings.tufts`

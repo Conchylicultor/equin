@@ -24,7 +24,6 @@ const {
   lantern,
   mix,
   moss,
-  openDoor,
   parkMiller,
   plankDoor,
   rocks,
@@ -56,6 +55,7 @@ function gear(g: Ctx2D, x: number, y: number, R: number, n: number): void {
 }
 
 export const inventorsCabin: BuildingSpec = {
+  door: { kind: "leaf", w: 24, h: 42, arch: false },
   footprint: {
     w: 196,
     depth: 72,
@@ -282,8 +282,5 @@ export const inventorsCabin: BuildingSpec = {
     crate(g, -150, 44, 14);
     rocks(g, 150, 46, r, 2);
     grain(g, GRAIN_BOX, parkMiller(793));
-  },
-  animate(g, s) {
-    if (s.open) openDoor(g, 0, 0, 24, 42, false);
   },
 };
