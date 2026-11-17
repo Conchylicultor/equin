@@ -57,6 +57,15 @@ pub fn run() -> ! {
                 let _ = proxy.send_event(());
             }
         })
+        // On stderr (stage 0 keeps it in probe.log): a probe that times out
+        // says whether the page never loaded or loaded and never ran.
+        .with_on_page_load_handler(|event, url| {
+            let what = match event {
+                wry::PageLoadEvent::Started => "started loading",
+                wry::PageLoadEvent::Finished => "finished loading",
+            };
+            eprintln!("equin-installer: probe: the page {what} ({url})");
+        })
         .with_url("installer://app/");
     #[cfg(target_os = "linux")]
     let webview = {

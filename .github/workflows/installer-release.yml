@@ -141,7 +141,7 @@ jobs:
   macos:
     name: macOS (universal)
     needs: [validate, page]
-    runs-on: macos-14
+    runs-on: macos-15
     env:
       ASSET: equin-installer-macos-universal
       MACOSX_DEPLOYMENT_TARGET: "11.0"
@@ -235,6 +235,20 @@ jobs:
           cargo build --manifest-path "$CRATE/Cargo.toml" --locked --release
           mkdir -p "$RUNNER_TEMP/dist"
           cp "$CRATE/target/release/equin-installer" "$RUNNER_TEMP/dist/$ASSET"
+      # TEMPORARY (removed once the Linux probe passes): which WebKit setting
+      # lets the page load under xvfb, and does the real window run a dry run.
+      - name: Probe diagnostics
+        continue-on-error: true
+        run: |
+          bin="$RUNNER_TEMP/dist/$ASSET"
+          for setting in NONE=1 WEBKIT_DISABLE_DMABUF_RENDERER=1 WEBKIT_DISABLE_COMPOSITING_MODE=1 WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1; do
+            echo "== probe with $setting"
+            env "$setting" xvfb-run -a "$bin" --probe
+            echo "== exit $?"
+          done
+          echo "== the window over a dry run (killed after 30s)"
+          EQUIN_INSTALL_DRY_RUN_PACE=0.1 timeout 30 xvfb-run -a "$bin" --script install.sh -- --dry-run
+          echo "== exit $?"
       - name: Smoke test
         run: |
           set -euo pipefail
