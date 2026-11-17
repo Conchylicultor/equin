@@ -222,10 +222,10 @@ func (k *keeper) startGeneration(l launch, mode generationMode, state json.RawMe
 		_ = theirs.Close()
 		return nil, fmt.Errorf("duplicate descriptors for the init: %w", err)
 	}
-	// fd 3: the control socket; fd keeperLockFd (4): the data-root lock, held
-	// while the generation lives (keeperMain). The generation marks both
-	// close-on-exec first thing (sealInheritedFds): exec clears the flag on
-	// every inherited descriptor.
+	// fd 3: the control socket; fd 4: the data-root lock, held while the
+	// generation lives (keeperMain). The generation marks every inherited
+	// descriptor close-on-exec first thing (sealInheritedFds): exec clears
+	// the flag on each, and nothing the generation starts may hold the lock.
 	extra := []*os.File{theirs}
 	if dataRootLock != nil {
 		extra = append(extra, dataRootLock)

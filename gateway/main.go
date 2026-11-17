@@ -281,6 +281,14 @@ func writePidFile(path string) error {
 }
 
 func main() {
+	// Before anything can start a process: no descriptor this process
+	// inherited reaches what it starts unless handed by name — a generation's
+	// data-root lock must die with the gateway, never with a log relay
+	// (datalock.go).
+	if err := sealInheritedFds(); err != nil {
+		fmt.Fprintf(os.Stderr, "gateway: fatal: %v\n", err)
+		os.Exit(2)
+	}
 	// Relay mode (logrelay.go): a detached copy of this binary that writes one
 	// supervised service's output through a rotating writer. Decided before the
 	// gateway's own flag set, which relay mode does not take.
@@ -304,14 +312,6 @@ func main() {
 		// Started by a service manager or a launcher: be the keeper, and run
 		// the gateway itself as its first generation (keeper.go).
 		os.Exit(keeperMain(cfg))
-	}
-	if keeperFd > 0 {
-		// A generation: before it starts anything, its inherited descriptors
-		// stop reaching what it starts (datalock.go, generationInheritedFds).
-		if err := sealInheritedFds(keeperFd, keeperLockFd); err != nil {
-			fmt.Fprintf(os.Stderr, "gateway: fatal: %v\n", err)
-			os.Exit(2)
-		}
 	}
 	setupLogging(cfg)
 	// Before anything that touches the data root's runtime (pid file, sockets,
