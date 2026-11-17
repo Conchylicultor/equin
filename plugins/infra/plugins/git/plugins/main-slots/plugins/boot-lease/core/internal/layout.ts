@@ -40,9 +40,21 @@ export const SLOT_UNSERVED_FILE = "main-slot-unserved";
  * The slot is handed to a build (`runInBuildSlot`, main-slots cli) between
  * the hander releasing its lease and the build child claiming it:
  * `{handoff, pid}` — the handoff id the child must present, and the hander's
- * pid (a dead one's mark is stale).
+ * pid (names it only). The mark stands while the hander holds
+ * {@link slotHandedLockFile}; unheld (or gone), it is stale.
  */
 export const SLOT_HANDED_FILE = "main-slot-handed";
+
+/**
+ * The hander's flock for one handoff, held exclusively from before it writes
+ * {@link SLOT_HANDED_FILE} until it lets the handoff go — so a SIGKILLed
+ * hander's mark goes stale with it, whatever process later reuses its pid.
+ * One file per handoff: a hander still holding its own after the build
+ * claimed the slot never blocks the next handoff.
+ */
+export function slotHandedLockFile(handoff: string): string {
+  return `main-slot-handed.${handoff}.lock`;
+}
 
 /** Drain records: one `<pid>.<n>.json` per lease released past its slot's switch. */
 export const SLOT_DRAIN_LOG_DIR = "drain-log";
@@ -162,8 +174,15 @@ export interface DrainRecord {
   slot: string;
   /** The commit the slot was checked out at (`null`: its HEAD named none). */
   commit: string | null;
-  /** ISO instant of the release. */
+  /** ISO instant of the release (found dead: when it was last seen alive). */
   releasedAt: string;
+  /**
+   * `true`: the holder was SIGKILLed while holding (no release ran) and found
+   * dead by a later reader — `heldPastSwitchMs` is then a LOWER bound: it was
+   * last seen alive that long after the switch (its record's mtime), and
+   * died some time after.
+   */
+  foundDead: boolean;
 }
 
 export function renderDrainRecord(record: DrainRecord): string {
@@ -181,11 +200,13 @@ export function parseDrainRecord(file: string, text: string): DrainRecord {
     typeof p.thresholdMs !== "number" ||
     typeof p.slot !== "string" ||
     (p.commit !== null && typeof p.commit !== "string") ||
-    typeof p.releasedAt !== "string"
+    typeof p.releasedAt !== "string" ||
+    (p.foundDead !== undefined && typeof p.foundDead !== "boolean")
   ) {
     throw new Error(`main-slots: drain record ${file} is malformed: ${text}`);
   }
-  return p as DrainRecord;
+  // A record written before `foundDead` existed was a release.
+  return { ...(p as DrainRecord), foundDead: p.foundDead ?? false };
 }
 
 /**
@@ -199,6 +220,8 @@ export function drainRecordFor(i: {
   slot: string;
   commit: string | null;
   now: Date;
+  /** The holder was found dead at `now`, not released (see {@link DrainRecord.foundDead}). */
+  foundDead?: boolean;
 }): DrainRecord | null {
   if (i.stamp === null || drainsByDesign(i.holder.kind)) return null;
   const heldPastSwitchMs = i.now.getTime() - Date.parse(i.stamp.at);
@@ -212,6 +235,7 @@ export function drainRecordFor(i: {
     slot: i.slot,
     commit: i.commit,
     releasedAt: i.now.toISOString(),
+    foundDead: i.foundDead ?? false,
   };
 }
 

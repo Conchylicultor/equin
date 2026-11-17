@@ -24,7 +24,11 @@ import {
   type OwnedFd,
 } from "@plugins/packages/plugins/owned-fd/core";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
-import { linkSealedDep, type Ready } from "@plugins/infra/plugins/deps/deps";
+import {
+  holdDep,
+  linkSealedDep,
+  type Ready,
+} from "@plugins/infra/plugins/deps/deps";
 
 /** What to bundle, and where its bundles live. */
 export interface DaemonBundleSpec {
@@ -142,6 +146,21 @@ export async function bundleDaemon(
         })) || made;
     }
     held = await tryHold(final);
+  }
+  // The seals are links into the host's install cache: hold each install
+  // for as long as anything holds this bundle (its in-use lock), so a
+  // Remove in Debug → Dependencies or a deps sweep cannot take the payload
+  // from under the daemon running from it. Taken once the lock is held —
+  // an unheld one reads as stale.
+  try {
+    for (const r of seals) {
+      await holdDep(r, `bundle-${hash}`, {
+        whileLocked: joinAppPath(final, LOCK_FILE),
+      });
+    }
+  } catch (err) {
+    held.close();
+    throw err;
   }
   const reclaimed = await reclaimBundles(spec.dir, name);
   return {

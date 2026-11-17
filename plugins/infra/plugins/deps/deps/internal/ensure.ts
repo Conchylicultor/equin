@@ -21,6 +21,7 @@ import {
   type InstallContext,
   type Ready,
 } from "./dep";
+import { liveHolders } from "./hold";
 import { releaseLock, tryLock, waitLock } from "./lock";
 import {
   logTail,
@@ -426,11 +427,17 @@ async function locate<S extends DepSource>(
 
 /** The outcome of {@link removeDep}. */
 export type RemoveOutcome =
-  { kind: "removed"; bytes: number } | { kind: "absent" } | { kind: "busy" };
+  | { kind: "removed"; bytes: number }
+  | { kind: "absent" }
+  | { kind: "busy" }
+  /** Something outside any checkout uses it (`holdDep`): a running daemon's bundle, a launchd job. */
+  | { kind: "held"; holders: string[] };
 
 /**
  * Remove `dep`'s install at its current identity, back to `absent`. Refuses
- * (`busy`) while any process holds its lock — an install, or the sweep.
+ * (`busy`) while any process holds its lock — an install, or the sweep — and
+ * (`held`) while anything holds the install (`holdDep`): a running daemon
+ * whose bundle links it would lose it under its feet.
  */
 export async function removeDep(
   dep: Dep<DepSource>,
@@ -449,12 +456,25 @@ export async function removeDep(
   const fd = await tryLock(paths.lock);
   if (fd === null) return { kind: "busy" };
   try {
+    const holders = await liveHolders(paths);
+    if (holders.length > 0) return { kind: "held", holders };
     const bytes = (await exists(paths.ready))
       ? (await readJson(paths.ready, ReadyFileSchema)).bytes
       : 0;
+    // Taken out of place first, then the holds read again: a `holdDep` that
+    // wrote its hold before the rename is seen in the moved dir (and the
+    // install put back); one after it finds no `ready.json` at its path and
+    // fails loudly (`holdDep`).
+    const moved = `${paths.root}.removing-${process.pid}-${Date.now()}`;
+    await rename(paths.root, moved);
+    const late = await liveHolders({ holds: join(moved, "holds") });
+    if (late.length > 0) {
+      await rename(moved, paths.root);
+      return { kind: "held", holders: late };
+    }
     // Async: this runs on a backend's event loop (the remove endpoint), and a
     // Python env is tens of thousands of files.
-    await rm(paths.root, { recursive: true, force: true });
+    await rm(moved, { recursive: true, force: true });
     return { kind: "removed", bytes };
   } finally {
     await releaseLock(fd);

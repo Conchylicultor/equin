@@ -7,7 +7,9 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
+import { open } from "node:fs/promises";
 import { tmpdir } from "node:os";
+import { flockTryShared } from "@plugins/packages/plugins/flock/core";
 import { join } from "node:path";
 import {
   type AppPath,
@@ -343,6 +345,76 @@ describe("holdDep", () => {
     expect((await sweep()).removed).toEqual([`held-dep/${first.identity}`]);
     expect(existsSync(installPaths(store, dep.id, second.identity).root)).toBe(
       true,
+    );
+  });
+});
+
+describe("holdDep whileLocked", () => {
+  test("holds an install while its lock is held: no remove, no sweep; stale once let go", async () => {
+    const dep = defineDep({
+      id: "locked-dep",
+      owner: "infra/deps",
+      description: "",
+      sizeHint: "",
+      source: {
+        kind: "fake",
+        label: "",
+        identityInputs: async () => ({ v: "1" }),
+        async install(ctx) {
+          mkdirSync(ctx.dir, { recursive: true });
+        },
+      } satisfies DepSource<"fake">,
+      updates: { none: "a test fixture" },
+    });
+    const ready = await ensureDep(dep, exec, { root: base, store });
+    // The running daemon's bundle lock, held (as a daemon holds its in-use lock).
+    const lockPath = join(base, "in-use.lock");
+    writeFileSync(lockPath, "");
+    const lock = await open(lockPath, "r");
+    expect(flockTryShared(lock.fd)).toBe(true);
+    await holdDep(ready, "bundle-abc", { store, whileLocked: lockPath });
+
+    const sweep = () =>
+      sweepDeps({
+        store,
+        deps: [dep],
+        checkouts: [],
+        now: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+        idleMs: 1,
+      });
+    expect(await removeDep(dep, { root: base, store })).toEqual({
+      kind: "held",
+      holders: ["bundle-abc"],
+    });
+    expect((await sweep()).removed).toEqual([]);
+    expect(existsSync(ready.dir)).toBe(true);
+
+    // The daemon died: the kernel dropped its lock, and the hold is stale.
+    await lock.close();
+    expect((await removeDep(dep, { root: base, store })).kind).toBe("removed");
+    expect(existsSync(ready.dir)).toBe(false);
+  });
+
+  test("a hold on an install removed meanwhile is refused loudly", async () => {
+    const dep = defineDep({
+      id: "gone-dep",
+      owner: "infra/deps",
+      description: "",
+      sizeHint: "",
+      source: {
+        kind: "fake",
+        label: "",
+        identityInputs: async () => ({ v: "1" }),
+        async install(ctx) {
+          mkdirSync(ctx.dir, { recursive: true });
+        },
+      } satisfies DepSource<"fake">,
+      updates: { none: "a test fixture" },
+    });
+    const ready = await ensureDep(dep, exec, { root: base, store });
+    expect((await removeDep(dep, { root: base, store })).kind).toBe("removed");
+    expect(holdDep(ready, "bundle-abc", { store })).rejects.toThrow(
+      "was removed before",
     );
   });
 });

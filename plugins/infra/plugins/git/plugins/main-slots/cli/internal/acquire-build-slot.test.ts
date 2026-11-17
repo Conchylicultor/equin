@@ -17,6 +17,7 @@ import {
   realpathSync,
   rmSync,
   symlinkSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -46,6 +47,7 @@ import {
 import {
   holdSlotLeaseSync,
   SLOT_DRAIN_LOG_DIR,
+  SLOT_HANDED_FILE,
   SLOT_LEASES_DIR,
 } from "@plugins/infra/plugins/git/plugins/main-slots/plugins/boot-lease/core";
 import {
@@ -55,7 +57,11 @@ import {
   readSlotHolders,
   tryExclusiveLease,
 } from "../../core/internal/lease";
-import { markSlotHanded } from "../../core/internal/handoff";
+import {
+  clearSlotHanded,
+  markSlotHanded,
+  readSlotHanded,
+} from "../../core/internal/handoff";
 import { withSlotPool } from "../../core/internal/pool-lock";
 import {
   currentLinkFor,
@@ -227,6 +233,39 @@ describe("slotStates", () => {
     const a = await slotAt(root, first);
     await markSlotHanded(a, "handoff-1");
     expect(await stateOf(a)).toBe("building");
+  });
+
+  test("a handoff mark whose hander lock is unheld is stale, even naming a live pid (pid reuse)", async () => {
+    const { root, first } = await repo("repo");
+    const a = await slotAt(root, first);
+    // A SIGKILLed hander whose pid now belongs to an unrelated live process:
+    // its mark is left, its lock went with it.
+    const mark = join((await checkoutAdminDir(a))!, SLOT_HANDED_FILE);
+    writeFileSync(
+      mark,
+      JSON.stringify({ handoff: "handoff-1", pid: process.ppid }),
+    );
+    expect(await stateOf(a)).toBe("free");
+    expect(existsSync(mark)).toBe(false);
+    // Released, the mark and the lock go together.
+    const hold = await markSlotHanded(a, "handoff-2");
+    expect(await stateOf(a)).toBe("building");
+    await hold.release();
+    expect(existsSync(mark)).toBe(false);
+    expect(await stateOf(a)).toBe("free");
+  });
+
+  test("a hander still holding a claimed handoff neither blocks the next one nor clears its mark", async () => {
+    const { root, first } = await repo("repo");
+    const a = await slotAt(root, first);
+    const one = await markSlotHanded(a, "handoff-1");
+    // The build claimed the slot (the mark is gone); its hander still holds.
+    await clearSlotHanded(a);
+    const two = await markSlotHanded(a, "handoff-2");
+    await one.release();
+    expect((await readSlotHanded(a))?.handoff).toBe("handoff-2");
+    await two.release();
+    expect(await readSlotHanded(a)).toBeNull();
   });
 });
 
@@ -603,6 +642,105 @@ describe("slow drains", () => {
     ]);
     expect(readdirSync(drainLog)).toEqual([]);
     await stuck.release();
+  });
+
+  test("a holder killed past the threshold is reported found dead — its pid reused or not", async () => {
+    const { root, first } = await repo("repo");
+    const a = await slotAt(root, first);
+    const leases = join((await checkoutAdminDir(a))!, SLOT_LEASES_DIR);
+    mkdirSync(leases, { recursive: true });
+    const killed = (pid: number, label: string): void =>
+      writeFileSync(
+        join(leases, `${pid}.1.json`),
+        JSON.stringify({
+          pid,
+          kind: "exec-child",
+          mode: "shared",
+          acquiredAt: new Date().toISOString(),
+          label,
+        }),
+      );
+    // SIGKILLed after the switch: records left, no release ran. One pid is
+    // now an unrelated live process's.
+    await stampUnserved(a, {
+      at: new Date(Date.now() - 20_000),
+      reportAfterMs: THRESHOLD_MS,
+    });
+    killed(process.ppid, "reused.job");
+    killed(99_999_999, "gone.job");
+    const reports = collector();
+    await reclaimSlots({
+      drainReportAfterMs: THRESHOLD_MS,
+      fileDrainSlow: reports.file,
+    });
+    expect(
+      reports.filed.map((r) => [r.label, r.foundDead, r.stillHolding]).sort(),
+    ).toEqual([
+      ["gone.job", true, false],
+      ["reused.job", true, false],
+    ]);
+    expect(readdirSync(leases).filter((n) => n.endsWith(".json"))).toEqual([]);
+  });
+
+  test("a holder last seen alive inside the threshold is not reported when found dead", async () => {
+    const { root, first } = await repo("repo");
+    const a = await slotAt(root, first);
+    const leases = join((await checkoutAdminDir(a))!, SLOT_LEASES_DIR);
+    mkdirSync(leases, { recursive: true });
+    const switchedAt = new Date(Date.now() - 60_000);
+    await stampUnserved(a, { at: switchedAt, reportAfterMs: THRESHOLD_MS });
+    const record = join(leases, "99999999.1.json");
+    writeFileSync(
+      record,
+      JSON.stringify({
+        pid: 99_999_999,
+        kind: "backend",
+        mode: "shared",
+        acquiredAt: new Date().toISOString(),
+        label: MAIN,
+      }),
+    );
+    // Last seen alive 2 s after the switch, then SIGKILLed (a shutdown grace).
+    const seen = new Date(switchedAt.getTime() + 2_000);
+    utimesSync(record, seen, seen);
+    const reports = collector();
+    await reclaimSlots({
+      drainReportAfterMs: THRESHOLD_MS,
+      fileDrainSlow: reports.file,
+    });
+    expect(reports.filed).toEqual([]);
+    expect(existsSync(record)).toBe(false);
+  });
+
+  test("a holder dead before its slot stopped serving is dropped unreported", async () => {
+    const { root, first } = await repo("repo");
+    const a = await slotAt(root, first);
+    const leases = join((await checkoutAdminDir(a))!, SLOT_LEASES_DIR);
+    mkdirSync(leases, { recursive: true });
+    writeFileSync(
+      join(leases, "99999999.1.json"),
+      JSON.stringify({
+        pid: 99_999_999,
+        kind: "exec-child",
+        mode: "shared",
+        acquiredAt: new Date().toISOString(),
+        label: "early.job",
+      }),
+    );
+    // No stamp yet: this reclaim stamps the slot, and the dead holder's
+    // record goes first.
+    const reports = collector();
+    await reclaimSlots({
+      drainReportAfterMs: THRESHOLD_MS,
+      fileDrainSlow: reports.file,
+    });
+    expect(await readUnserved(a)).not.toBeNull();
+    await reclaimSlots({
+      drainReportAfterMs: THRESHOLD_MS,
+      fileDrainSlow: reports.file,
+      now: new Date(Date.now() + 60_000),
+    });
+    expect(reports.filed).toEqual([]);
   });
 
   test("a record not written to the outbox is kept for the next reclaim", async () => {

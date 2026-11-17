@@ -21,6 +21,7 @@ export {
   claimHandedBuildSlot,
   holdSlotForLife,
   readSlotHolders,
+  reapDeadHolders,
   tryExclusiveLease,
   waitExclusiveLease,
 } from "./internal/lease";
@@ -37,7 +38,7 @@ export {
   markSlotHanded,
   readSlotHanded,
 } from "./internal/handoff";
-export type { SlotHanded } from "./internal/handoff";
+export type { SlotHanded, SlotHandoffHold } from "./internal/handoff";
 export { withServedMainRoot } from "./internal/served-hold";
 export {
   DRAIN_SLOW_REPORT_KIND,

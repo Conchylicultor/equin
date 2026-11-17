@@ -58,6 +58,12 @@ export const DrainSlowPayloadSchema = z.object({
   commit: z.string().nullable(),
   /** `true`: found still holding at reclaim; `false`: released that late. */
   stillHolding: z.boolean(),
+  /**
+   * `true`: killed while holding, found dead later — `heldPastSwitchMs` is
+   * when it was last seen alive (a lower bound). Absent on reports filed
+   * before it existed.
+   */
+  foundDead: z.boolean().default(false),
 });
 export type DrainSlowPayload = z.infer<typeof DrainSlowPayloadSchema>;
 
@@ -72,7 +78,9 @@ export function drainSlowFingerprint(
 export function drainSlowMessage(d: DrainSlowPayload): string {
   const who = `${d.kind}${d.label === null ? "" : ` ${d.label}`} (pid ${d.pid})`;
   const s = Math.round(d.heldPastSwitchMs / 1000);
-  return d.stillHolding
-    ? `${who} still holds main slot ${d.slot} ${s} s after its app switched away`
-    : `${who} held main slot ${d.slot} ${s} s after its app switched away`;
+  if (d.stillHolding)
+    return `${who} still holds main slot ${d.slot} ${s} s after its app switched away`;
+  if (d.foundDead)
+    return `${who} held main slot ${d.slot} at least ${s} s after its app switched away, then was killed while holding it`;
+  return `${who} held main slot ${d.slot} ${s} s after its app switched away`;
 }

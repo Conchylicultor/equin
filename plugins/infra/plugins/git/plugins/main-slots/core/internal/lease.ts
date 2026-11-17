@@ -1,4 +1,4 @@
-import { mkdir, rename, unlink, writeFile } from "node:fs/promises";
+import { mkdir, rename, unlink, utimes, writeFile } from "node:fs/promises";
 import {
   joinAppPath,
   type AppPath,
@@ -7,6 +7,7 @@ import {
   readdir,
   readFile,
   realpath,
+  stat,
 } from "@plugins/packages/plugins/timed-fs/core";
 import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import {
@@ -134,6 +135,10 @@ async function noteRelease(
   admin: AppPath,
   slot: AppPath,
   holder: SlotHolder,
+  found: { now: Date; foundDead: boolean } = {
+    now: new Date(),
+    foundDead: false,
+  },
 ): Promise<void> {
   const stampFile = joinAppPath(admin, SLOT_UNSERVED_FILE);
   const stampText = await readIfExists(stampFile);
@@ -144,7 +149,8 @@ async function noteRelease(
     holder,
     slot,
     commit: head === null ? null : detachedHeadOf(head),
-    now: new Date(),
+    now: found.now,
+    foundDead: found.foundDead,
   });
   if (record === null) return;
   const dir = joinAppPath(admin, SLOT_DRAIN_LOG_DIR);
@@ -398,11 +404,37 @@ export async function probeSlotLock(slot: AppPath): Promise<SlotLockProbe> {
 /**
  * The holders `slot`'s records name, live processes only. Diagnostics: the
  * flock is the truth about whether a slot is held; a record says who.
- * A record of a dead pid (a lifetime holder that exited, a SIGKILLed one) is
- * never trusted — it is deleted here, so records cannot pile up.
+ *
+ * Each live holder's record is TOUCHED (its mtime set to now): the record's
+ * mtime is when its holder was last seen alive, which bounds when a holder
+ * killed later died. A record of a dead pid (a lifetime holder that exited, a
+ * SIGKILLed one) is never trusted — it is reaped here ({@link reapRecord}:
+ * noted as a drain when it was last seen alive past its slot's switch, then
+ * deleted), so records cannot pile up and a killed holder is still reported.
  */
 export async function readSlotHolders(slot: AppPath): Promise<SlotHolder[]> {
-  const dir = joinAppPath(await adminDirOf(slot), SLOT_LEASES_DIR);
+  const admin = await adminDirOf(slot);
+  const holders: SlotHolder[] = [];
+  const now = new Date();
+  for (const { file, holder } of await readRecords(admin)) {
+    if (!isAlive(holder.pid)) {
+      await reapRecord(admin, slot, file, holder);
+      continue;
+    }
+    holders.push(holder);
+    await utimes(file, now, now).catch((err: unknown) => {
+      // Released since it was read.
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    });
+  }
+  return holders;
+}
+
+/** Every holder record of the slot whose admin dir is `admin`, as found. */
+async function readRecords(
+  admin: AppPath,
+): Promise<{ file: AppPath; holder: SlotHolder }[]> {
+  const dir = joinAppPath(admin, SLOT_LEASES_DIR);
   let names: string[];
   try {
     names = await readdir(dir);
@@ -410,25 +442,83 @@ export async function readSlotHolders(slot: AppPath): Promise<SlotHolder[]> {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
     throw err;
   }
-  const holders: SlotHolder[] = [];
+  const out: { file: AppPath; holder: SlotHolder }[] = [];
   for (const name of names.filter((n) => n.endsWith(".json")).sort()) {
     const file = joinAppPath(dir, name);
     let text: string;
     try {
       text = await readFile(file, "utf8");
     } catch (err) {
-      // Released between the listing and the read.
+      // Released (or reaped) between the listing and the read.
       if ((err as NodeJS.ErrnoException).code === "ENOENT") continue;
       throw err;
     }
-    const holder = parseHolder(file, text);
-    if (isAlive(holder.pid)) holders.push(holder);
-    else
-      await unlink(file).catch((err: unknown) => {
-        if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-      });
+    out.push({ file, holder: parseHolder(file, text) });
   }
-  return holders;
+  return out;
+}
+
+/**
+ * End a dead holder's record: claimed by a rename (so two readers never both
+ * note it, and a holder that released it meanwhile — its record gone — is
+ * skipped), noted as a drain found dead when it was last seen ALIVE (the
+ * record's mtime: written at acquire, touched by every `readSlotHolders`
+ * that saw its pid live) past its slot's threshold, then deleted. When it
+ * died is unknown — only that it held at least that long — so a holder
+ * killed inside the threshold (a backend SIGKILLed after the gateway's
+ * shutdown grace) is never reported. A SIGKILLed holder runs no release, so
+ * this is the only place its drain is seen.
+ */
+async function reapRecord(
+  admin: AppPath,
+  slot: AppPath,
+  file: AppPath,
+  holder: SlotHolder,
+): Promise<void> {
+  const claimed = `${file}.reaping-${process.pid}`;
+  try {
+    await rename(file, claimed);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return;
+    throw err;
+  }
+  try {
+    const lastSeenAlive = (await stat(claimed)).mtime;
+    await noteRelease(admin, slot, holder, {
+      now: lastSeenAlive,
+      foundDead: true,
+    });
+  } finally {
+    await unlink(claimed).catch((err: unknown) => {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    });
+  }
+}
+
+/**
+ * Reap every record of `slot` whose holder is gone, noting each that held
+ * past the slot's switch as a drain found dead. The lock decides, as for slot
+ * states: while it is unheld, EVERY record is a dead holder's (a holder
+ * removes its record before it lets the lock go, so a record read before an
+ * unheld probe outlived its holder) — a pid reused by an unrelated process
+ * keeps nothing; while it is held, a record of a dead pid is.
+ *
+ * Under the pool lock (its probe must not land in a downgrade's gap). Never
+ * on a slot handed to a build: its claim's exclusive try must not meet a
+ * probe. Called before a slot is stamped unserved (so a holder already dead
+ * at the switch is dropped unreported) and by every reclaim.
+ */
+export async function reapDeadHolders(slot: AppPath): Promise<void> {
+  await withSlotPool(async () => {
+    const admin = await adminDirOf(slot);
+    const records = await readRecords(admin);
+    if (records.length === 0) return;
+    const unheld = (await probeSlotLock(slot)) === "unheld";
+    for (const { file, holder } of records) {
+      if (unheld || !isAlive(holder.pid))
+        await reapRecord(admin, slot, file, holder);
+    }
+  });
 }
 
 /** What {@link claimHandedBuildSlot} found. */

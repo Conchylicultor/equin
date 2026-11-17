@@ -34,7 +34,7 @@ export { linkSealedDep, sealDep } from "./internal/seal";
 export type { SealOutcome } from "./internal/seal";
 export { SEALED_MANIFEST } from "./internal/sealed";
 export { heldDep, holdDep } from "./internal/hold";
-export type { HeldDep } from "./internal/hold";
+export type { HeldDep, HoldDepOptions } from "./internal/hold";
 export { sweepUnusedDeps } from "./internal/sweep";
 export type { SweepReport } from "./internal/sweep";
 export {

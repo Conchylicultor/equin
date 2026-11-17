@@ -21,7 +21,6 @@ import {
   withWorktreeMutateSlot,
 } from "@plugins/infra/plugins/worktree/server";
 import {
-  clearSlotHanded,
   clearUnserved,
   mainSlotsDir,
   markSlotHanded,
@@ -30,6 +29,7 @@ import {
   tryExclusiveLease,
   waitExclusiveLease,
   withSlotPool,
+  type SlotHandoffHold,
   type SlotLease,
   type SlotState,
 } from "../../core";
@@ -462,8 +462,8 @@ export interface RunInBuildSlotOptions extends AcquireBuildSlotOptions {
  *
  * Between this process releasing its lease and the child claiming it, the
  * slot is held by nobody — so it is first MARKED handed to one handoff id
- * (`markSlotHanded`, naming this process): `acquireBuildSlot` skips a slot
- * handed by a live hander (`slotStates`: building), and the child claims it
+ * (`markSlotHanded`, holding its hander lock): `acquireBuildSlot` skips a
+ * slot whose hander lock is held (`slotStates`: building), and the child claims it
  * only when the mark names the id it was given. The mark is cleared by the
  * claim, and here once the build is over.
  *
@@ -477,13 +477,15 @@ export async function runInBuildSlot<T>(
 ): Promise<T> {
   const acquired = await acquireBuildSlot(sha, opts);
   const handoff = randomUUID();
+  let handed: SlotHandoffHold | null = null;
   let result: { ok: true; value: T } | { ok: false; error: unknown };
   try {
     // Marked, then let go, as one step under the pool lock: no build picking
     // a slot sees it unheld and unmarked in between.
-    await withSlotPool(async () => {
-      await markSlotHanded(acquired.slot, handoff);
+    handed = await withSlotPool(async () => {
+      const hold = await markSlotHanded(acquired.slot, handoff);
       await acquired.lease.release();
+      return hold;
     });
     result = {
       ok: true,
@@ -500,7 +502,8 @@ export async function runInBuildSlot<T>(
     result = { ok: false, error };
   } finally {
     await acquired.lease.release();
-    await clearSlotHanded(acquired.slot);
+    // Never marked (the mark step threw): nothing of ours to clear.
+    if (handed !== null) await handed.release();
   }
   try {
     await reclaimSlots(opts.reclaim);

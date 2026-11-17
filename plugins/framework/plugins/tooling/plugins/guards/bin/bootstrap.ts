@@ -105,6 +105,10 @@ export const MAIN_SLOT_STAMP = "main-slot";
 export const MAIN_SLOT_SERVED_FILE = "main-slot-served";
 /** boot-lease's `O_SHLOCK_DARWIN`. */
 export const O_SHLOCK_DARWIN = 0x10;
+/** boot-lease's `SLOT_UNSERVED_FILE`. */
+export const SLOT_UNSERVED_FILE = "main-slot-unserved";
+/** boot-lease's `SLOT_DRAIN_LOG_DIR`. */
+export const SLOT_DRAIN_LOG_DIR = "drain-log";
 
 /** The admin dir (`<git dir>/<lock dir>`) of the checkout at `root`, or null for no checkout. */
 export function adminDirOf(root: string): string | null {
@@ -154,14 +158,64 @@ export function holdGuardLease(script: string): GuardLease {
     release() {
       if (released) return;
       released = true;
+      const releasedAt = new Date();
       try {
         unlinkSync(file);
       } catch (err) {
         if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
       }
       closeSync(fd); // closing the descriptor drops the lock
+      // Last: whatever it throws, the record and the lock are already gone.
+      noteGuardDrain(admin, root, releasedAt);
     },
   };
+}
+
+/**
+ * boot-lease's `noteLeaseReleaseSync` for the guard's lease: a drain record
+ * (`drain-log/<pid>.g<ms>.json`, boot-lease's `DrainRecord`) when the slot
+ * stopped serving more than its stamp's threshold before `now` — so a hook
+ * that kept an old slot busy is reported like any other holder. Whether it
+ * wrote one.
+ */
+export function noteGuardDrain(
+  admin: string,
+  root: string,
+  now: Date,
+): boolean {
+  let stampText: string;
+  try {
+    stampText = readFileSync(join(admin, SLOT_UNSERVED_FILE), "utf8");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw err;
+  }
+  const stamp = JSON.parse(stampText) as { at: string; reportAfterMs: number };
+  const heldPastSwitchMs = now.getTime() - Date.parse(stamp.at);
+  if (!(heldPastSwitchMs > stamp.reportAfterMs)) return false;
+  let commit: string | null = null;
+  try {
+    const head = readFileSync(join(dirname(admin), "HEAD"), "utf8").trim();
+    if (/^[0-9a-f]{40,64}$/.test(head)) commit = head;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+  }
+  const dir = join(admin, SLOT_DRAIN_LOG_DIR);
+  mkdirSync(dir, { recursive: true });
+  const file = join(dir, `${process.pid}.g${now.getTime()}.json`);
+  const record = {
+    kind: "guard",
+    label: null,
+    pid: process.pid,
+    heldPastSwitchMs,
+    thresholdMs: stamp.reportAfterMs,
+    slot: root,
+    commit,
+    releasedAt: now.toISOString(),
+  };
+  writeFileSync(`${file}.tmp`, `${JSON.stringify(record)}\n`);
+  renameSync(`${file}.tmp`, file);
+  return true;
 }
 
 /**

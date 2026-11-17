@@ -32,6 +32,12 @@ export const handleRemoveDep = implementMachine(
         `${body.id} is being installed (or swept) right now; remove it once that finishes.`,
       );
     }
+    if (outcome.kind === "held") {
+      throw new HttpError(
+        409,
+        `${body.id} is in use by ${outcome.holders.join(", ")} (a running process reads it); remove it once that stops.`,
+      );
+    }
     return outcome;
   },
 );

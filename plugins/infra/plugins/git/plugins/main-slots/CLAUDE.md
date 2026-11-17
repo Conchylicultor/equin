@@ -47,7 +47,7 @@ and the free one. Plans and measurements:
 | State | Defined by |
 |---|---|
 | **serving** | an app's `current` link names it, or a namespace's spec does (a deploy whose new backend took over and then failed: the gateway respawns from the spec) |
-| **building** | handed to a build by a live hander, or its lock held exclusively, or held shared with a live build among its holders (a build after its handover, until it exits) |
+| **building** | handed to a build (its hander lock held), or its lock held exclusively, or held shared with a live build among its holders (a build after its handover, until it exits) |
 | **draining** | serves no app, but its lock is held shared (old backends, their children) |
 | **free** | none of these: its lock is unheld, whatever records say |
 
@@ -56,7 +56,10 @@ non-blocking exclusive try, let go at once; refused, a shared try tells shared
 from exclusive). Records only NAME holders — a SIGKILLed holder's pid can be
 reused by an unrelated process, and a record alone would keep its slot
 draining forever. A slot handed to a build is not probed (its claim's
-exclusive try must not meet a probe).
+exclusive try must not meet a probe). The handoff mark is judged the same way:
+the hander holds `main-slot-handed.lock` exclusively from before it writes the
+mark until it lets the handoff go, and a mark whose lock is unheld is stale —
+never the hander's pid, which a SIGKILL frees for reuse.
 
 ## The pool lock
 
@@ -91,7 +94,11 @@ exits (`not-a-slot` elsewhere; its root hands `releaseAtExitSync` to its exit
 handler), `tryExclusiveLease` (non-blocking) / `waitExclusiveLease` for a build,
 and `lease.downgrade()` (exclusive → shared in place). Each lease writes a holder
 record `<admin dir>/leases/<pid>.<n>.json` (`{pid, kind, mode, acquiredAt,
-label}`); `readSlotHolders` skips — and deletes — a dead pid's. Records name;
+label}`); `readSlotHolders` touches a live pid's (last seen alive) and REAPS
+a dead pid's (claimed by a rename, noted as a drain found dead, deleted). `reapDeadHolders` (under the
+pool lock: every reclaim, and each slot just before it is stamped unserved)
+reaps by the lock — unheld, every record is a dead holder's, a reused pid
+included. Records name;
 the lock decides (`probeSlotLock`). `label` names the holder for a report: a supervised child's job name (`worktree.prepare`), a
 CLI process's verb, a backend's namespace, a build's id.
 
@@ -146,8 +153,9 @@ Who holds a slot:
   or was handed to a build meanwhile. Then the unserved stamp is cleared,
   `git checkout --force --detach <sha>` and `ensureDeps`.
 - **`runInBuildSlot(sha, opts, build)`**: `acquireBuildSlot`, MARK the slot
-  handed to a fresh handoff id (`markSlotHanded`: `{handoff, pid}` — it reads as
-  `building` while this hander lives) and release the lease (one step under the
+  handed to a fresh handoff id (`markSlotHanded`: `{handoff, pid}` and the
+  hander lock, held until the build is over — it reads as `building` while
+  that lock is held) and release the lease (one step under the
   pool lock), and hand the slot to
   `build` — the CHILD build, started with `EQUIN_BUILD_SLOT` and
   `EQUIN_BUILD_SLOT_HANDOFF`. The child claims the slot only if its mark names
@@ -187,14 +195,23 @@ a normal wait:
   (`{kind, label, pid, heldPastSwitchMs, thresholdMs, slot, commit}`) — plain
   `fs` in boot-lease (`noteLeaseReleaseSync`, and its async twin in `lease.ts`),
   on every release path: an explicit release, the CLI bootstrap's exit handler,
-  a lifetime lease's `releaseAtExitSync`.
+  a lifetime lease's `releaseAtExitSync`, the guard bootstrap's release
+  (`noteGuardDrain`, its builtins-only copy).
+- **Found dead**, for a holder SIGKILLed while holding (no release runs): the
+  reader that reaps its record (`reapDeadHolders` at every reclaim,
+  `readSlotHolders`) writes its drain record, `foundDead: true`, when the
+  holder was last SEEN ALIVE past the threshold — the record's mtime, set at
+  acquire and touched by every `readSlotHolders` (every slot-state read) that
+  finds its pid live. A lower bound: one killed inside the threshold (a
+  backend SIGKILLed after the gateway's grace) is never reported; one killed
+  past it between two looks is missed. A holder already dead when the slot
+  stopped serving is reaped before the stamp is written, unreported.
 - **Filed by `reclaimSlots`**: one `main-slot-drain-slow` report per record
   (deleted once written to the outbox, kept otherwise), and one per holder of a
   draining slot still holding past the threshold ("still holding").
   Fingerprint `(kind, label)`: one row per job, its occurrences counted. The
   report names the job — what to make faster, or stop from outliving its app.
-- `build-relay` holders are never reported (they cause the switch). A guard
-  hook's copy of the lease writes no drain note (it holds for one hook call).
+- `build-relay` holders are never reported (they cause the switch).
 
 ## The deploy across slots
 
@@ -252,10 +269,10 @@ a normal wait:
     - `reports.ReportRow`
   - Register: `defineSupervisedJob('main-slots.reclaim')`
 - Core:
-  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra/git/main-slots/boot-lease` ×18
+  - Uses: 46 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/git/main-slots/boot-lease` ×19
+    - `packages/timed-fs` ×6
     - `infra/paths` ×5
-    - `packages/timed-fs` ×5
     - `infra/namespace` ×4
     - `packages/flock` ×4
     - `infra/host-fs/user-path` ×3
@@ -268,6 +285,7 @@ a normal wait:
     - `HandedBuildSlot`
     - `MainSlot`
     - `SlotHanded`
+    - `SlotHandoffHold`
     - `SlotHold`
     - `SlotLease`
     - `SlotLockProbe`
@@ -293,6 +311,7 @@ a normal wait:
     - `markSlotHanded`
     - `readSlotHanded`
     - `readSlotHolders`
+    - `reapDeadHolders`
     - `servedMainRoot`
     - `servedSlotOf`
     - `serveSlot`

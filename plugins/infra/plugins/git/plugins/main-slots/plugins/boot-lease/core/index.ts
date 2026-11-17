@@ -20,6 +20,7 @@ export {
   SLOT_DRAIN_LOG_DIR,
   SLOT_HANDED_FILE,
   SLOT_UNSERVED_FILE,
+  slotHandedLockFile,
   MAIN_SLOT_STAMP,
   O_SHLOCK_DARWIN,
   parseHolder,

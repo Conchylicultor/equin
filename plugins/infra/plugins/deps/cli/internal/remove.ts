@@ -15,6 +15,10 @@ const run: CliAction<[string], object> = async (id) => {
       throw new Error(
         `${id} is being installed (or swept) right now; remove it once that finishes.`,
       );
+    case "held":
+      throw new Error(
+        `${id} is in use by ${outcome.holders.join(", ")} (a running process reads it); remove it once that stops.`,
+      );
   }
 };
 

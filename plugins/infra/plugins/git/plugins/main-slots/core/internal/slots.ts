@@ -43,7 +43,12 @@ import { getMainRepoRoot } from "@plugins/infra/plugins/spawn/core";
 // This plugin's own declaration — a host-only `core/` reading its own
 // `data-dirs` (a `runtimeExceptions` line in the boundary config).
 import { MAIN_SLOTS_CURRENT_DIR, mainSlotsDataDir } from "../../data-dirs";
-import { probeSlotLock, readSlotHolders, type SlotLockProbe } from "./lease";
+import {
+  probeSlotLock,
+  readSlotHolders,
+  reapDeadHolders,
+  type SlotLockProbe,
+} from "./lease";
 import { readSlotHanded, type SlotHanded } from "./handoff";
 import { withSlotPool } from "./pool-lock";
 
@@ -443,6 +448,10 @@ export async function stampUnservedSlots(
     for (const s of await slotStates()) {
       if (s.state === "serving" || s.state === "building") continue;
       if (s.unserved !== null) continue;
+      // A holder already dead when its app left never held past the switch:
+      // drop its record now, unreported, so a later reap of a record found
+      // here can say it held past it.
+      await reapDeadHolders(s.path);
       await stampUnserved(s.path, {
         at: now,
         reportAfterMs: drainReportAfterMs,

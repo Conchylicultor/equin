@@ -34,7 +34,7 @@ export const drainSlowKind = ReportKind({
         "The fix is in that job: make it faster, or stop it outliving the app that started it (a supervised child is detached on purpose — does this one need to be?).",
         "",
         `- Slot: \`${d.slot}\`${d.commit === null ? "" : ` at \`${d.commit.slice(0, 9)}\``}`,
-        `- Held past the switch: ${Math.round(d.heldPastSwitchMs / 1000)} s${d.stillHolding ? " (still holding when reclaim ran)" : ""}`,
+        `- Held past the switch: ${Math.round(d.heldPastSwitchMs / 1000)} s${d.stillHolding ? " (still holding when reclaim ran)" : d.foundDead ? " at least (last seen alive then; killed while holding)" : ""}`,
         `- Pid: ${d.pid}`,
         "",
         `**Occurrences:** ${row.count}`,

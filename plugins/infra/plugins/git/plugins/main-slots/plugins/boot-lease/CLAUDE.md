@@ -79,6 +79,7 @@ it loads code from the slot. See the parent `main-slots` for what a slot is.
     - `SLOT_LEASES_DIR`
     - `SLOT_LOCK_FILE`
     - `SLOT_UNSERVED_FILE`
+    - `slotHandedLockFile`
 - Cross-plugin:
   - Imported by:
     - `infra/git/main-slots`

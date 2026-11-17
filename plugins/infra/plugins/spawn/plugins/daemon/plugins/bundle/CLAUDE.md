@@ -46,7 +46,10 @@ Used by the two browser hosts (`infra/mcp/browser`, `apps/browser/engine`).
   (`cp -c`, APFS clones). One install per name; two needed is an error.
 - **`deps.sealed.json` + `deps/<id>`**: each `seal` install linked
   (`infra/deps`' `linkSealedDep`), so the bundled code's `readyNow(dep)`
-  answers it without resolving anything through a checkout.
+  answers it without resolving anything through a checkout — and HELD
+  (`holdDep(ready, "bundle-<hash>", { whileLocked: <in-use.lock> })`, once
+  the call holds the bundle), so a deps sweep or a Remove in Debug →
+  Dependencies cannot take Chromium from under a running host.
 - `bundle.json` (what it holds, who made it, the build time) and
   `in-use.lock`.
 

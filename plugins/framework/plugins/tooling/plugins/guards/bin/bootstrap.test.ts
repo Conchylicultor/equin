@@ -23,12 +23,15 @@ import {
   CheckoutNotInstalledError,
   GIT_LOCK_DIR,
   holdGuardLease,
+  noteGuardDrain,
   MAIN_SLOT_SERVED_FILE,
   MAIN_SLOT_STAMP,
   O_SHLOCK_DARWIN,
   servedMainRoot,
+  SLOT_DRAIN_LOG_DIR,
   SLOT_LEASES_DIR,
   SLOT_LOCK_FILE,
+  SLOT_UNSERVED_FILE,
   INSTALL_STAMP_REL,
   runGuardWithFallback,
   withNotice,
@@ -252,6 +255,41 @@ describe("the main-slot lease", () => {
     expect(MAIN_SLOT_STAMP).toBe(BOOT_LEASE.MAIN_SLOT_STAMP);
     expect(MAIN_SLOT_SERVED_FILE).toBe(BOOT_LEASE.MAIN_SLOT_SERVED_FILE);
     expect(O_SHLOCK_DARWIN).toBe(BOOT_LEASE.O_SHLOCK_DARWIN);
+    expect(SLOT_UNSERVED_FILE).toBe(BOOT_LEASE.SLOT_UNSERVED_FILE);
+    expect(SLOT_DRAIN_LOG_DIR).toBe(BOOT_LEASE.SLOT_DRAIN_LOG_DIR);
+  });
+
+  test("a guard released past its slot's switch leaves a drain record main-slots reads", () => {
+    const { slot, script } = repoWithSlot();
+    const admin = adminDirOf(slot)!;
+    const lease = holdGuardLease(script);
+    // Its app switched away a minute ago; the threshold is 10 s.
+    writeFileSync(
+      join(admin, SLOT_UNSERVED_FILE),
+      BOOT_LEASE.renderUnserved({
+        at: new Date(Date.now() - 60_000).toISOString(),
+        reportAfterMs: 10_000,
+      }),
+    );
+    lease.release();
+    const dir = join(admin, SLOT_DRAIN_LOG_DIR);
+    const names = readdirSync(dir);
+    expect(names.length).toBe(1);
+    const record = BOOT_LEASE.parseDrainRecord(
+      names[0]!,
+      readFileSync(join(dir, names[0]!), "utf8"),
+    );
+    expect([record.kind, record.label, record.pid, record.slot]).toEqual([
+      "guard",
+      null,
+      process.pid,
+      slot,
+    ]);
+    expect(record.heldPastSwitchMs).toBeGreaterThan(10_000);
+    // Within the threshold, nothing.
+    expect(noteGuardDrain(admin, slot, new Date(Date.now() - 55_000))).toBe(
+      false,
+    );
   });
 
   test("a guard in a slot holds it while it runs, recorded; outside one it holds nothing", () => {

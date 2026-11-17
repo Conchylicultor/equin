@@ -11,6 +11,7 @@ import {
   SLOT_DRAIN_LOG_DIR,
 } from "@plugins/infra/plugins/git/plugins/main-slots/plugins/boot-lease/core";
 import {
+  reapDeadHolders,
   slotStates,
   stampUnservedSlots,
   tryExclusiveLease,
@@ -122,6 +123,12 @@ async function reclaimLocked(
 
   const filed: DrainSlowPayload[] = [];
   for (const s of states) {
+    // A holder killed while holding left a record and no drain note: noted
+    // now (found dead), before the records are filed. Not a slot handed to
+    // or held by a build (a probe must not meet its claim), nor one an app
+    // lives in (no stamp: nothing to note).
+    if (s.state === "free" || s.state === "draining")
+      await reapDeadHolders(s.path);
     for (const report of await drainRecordsOf(s)) {
       if (!(await file(report.payload))) continue;
       filed.push(report.payload);
@@ -164,7 +171,17 @@ async function drainRecordsOf(
     const record = parseDrainRecord(file, await readFile(file, "utf8"));
     out.push({
       file,
-      payload: { ...record, stillHolding: false },
+      payload: {
+        kind: record.kind,
+        label: record.label,
+        pid: record.pid,
+        heldPastSwitchMs: record.heldPastSwitchMs,
+        thresholdMs: record.thresholdMs,
+        slot: record.slot,
+        commit: record.commit,
+        stillHolding: false,
+        foundDead: record.foundDead,
+      },
     });
   }
   return out;
@@ -186,6 +203,7 @@ function stillHolding(s: SlotState, now: Date): DrainSlowPayload[] {
       slot: s.path,
       commit: null,
       stillHolding: true,
+      foundDead: false,
     }));
 }
 

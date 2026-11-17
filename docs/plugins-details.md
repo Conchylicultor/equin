@@ -36135,6 +36135,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DepTarget`
           - `EnsureOptions`
           - `HeldDep`
+          - `HoldDepOptions`
           - `InstallContext`
           - `Ready`
           - `ReadyNow`
@@ -37345,10 +37346,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reports.ReportRow`
             - Register: `defineSupervisedJob('main-slots.reclaim')`
           - Core:
-            - Uses: 44 symbols — full list in [`plugins/infra/plugins/git/plugins/main-slots/REFERENCE.md`](../plugins/infra/plugins/git/plugins/main-slots/REFERENCE.md)
-              - `infra/git/main-slots/boot-lease` ×18
+            - Uses: 46 symbols — full list in [`plugins/infra/plugins/git/plugins/main-slots/REFERENCE.md`](../plugins/infra/plugins/git/plugins/main-slots/REFERENCE.md)
+              - `infra/git/main-slots/boot-lease` ×19
+              - `packages/timed-fs` ×6
               - `infra/paths` ×5
-              - `packages/timed-fs` ×5
               - `infra/namespace` ×4
               - `packages/flock` ×4
               - `infra/host-fs/user-path` ×3
@@ -37361,6 +37362,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `HandedBuildSlot`
               - `MainSlot`
               - `SlotHanded`
+              - `SlotHandoffHold`
               - `SlotHold`
               - `SlotLease`
               - `SlotLockProbe`
@@ -37386,6 +37388,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `markSlotHanded`
               - `readSlotHanded`
               - `readSlotHolders`
+              - `reapDeadHolders`
               - `servedMainRoot`
               - `servedSlotOf`
               - `serveSlot`
@@ -37464,6 +37467,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `SLOT_LEASES_DIR`
                   - `SLOT_LOCK_FILE`
                   - `SLOT_UNSERVED_FILE`
+                  - `slotHandedLockFile`
               - Cross-plugin:
                 - Imported by:
                   - `infra/git/main-slots`

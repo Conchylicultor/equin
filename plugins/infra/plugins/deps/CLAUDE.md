@@ -122,7 +122,12 @@ held), `failed.json`, `last-used`, `holds/`. The lock is `locks/deps/<id>-<ident
   gateway binary by path, which relaunches it at the next login long after main's
   source moved on. One hold per holder per dependency: holding a new identity
   releases the holder's old one to the sweep (`./equin start` holds
-  `machine-gateway`).
+  `machine-gateway`). **`whileLocked: <lock path>`** makes it a running
+  process's hold: it lasts while some process holds that kernel flock and is
+  deleted as stale by the next read once nobody does (a daemon's bundle that
+  links the install holds it by its in-use lock — `daemon/bundle`). A held
+  install is never swept, and `removeDep` refuses it (`held`, naming the
+  holders; 409 from Debug → Dependencies' Remove).
 
 ## Sealed installs (release bundles)
 
@@ -161,8 +166,9 @@ defineDep({ …, source: build({ …, targets: "any" }), bundle: "required" });
   has, sealed by reference — `deps/<id>` a symlink to the cache payload,
   `bytes: 0`. For a bundle that only runs on the host that made it (a
   detached daemon's, `infra/spawn/daemon/bundle`), so its `readyNow` derives
-  nothing from a checkout. A swept payload leaves the link dangling: the read
-  is `failed`.
+  nothing from a checkout. The daemon bundle holds each linked install
+  (`holdDep … whileLocked` its in-use lock), so neither a sweep nor a Remove
+  takes it from under a running daemon.
 
 ## State
 
@@ -418,6 +424,7 @@ torch.
     - `DepTarget`
     - `EnsureOptions`
     - `HeldDep`
+    - `HoldDepOptions`
     - `InstallContext`
     - `Ready`
     - `ReadyNow`
