@@ -438,6 +438,13 @@ const RECORDED: [name: string, run: (h: Harness) => void | Promise<void>][] = [
     "convertTo",
     (h) => h.ctx().makeBlockAPI(h.id("B")).convertTo("page/heading-1", {}),
   ],
+  [
+    // Turn into over a selection: TWO lines on purpose — one gesture is ONE
+    // entry however many lines it retypes, so a per-line write (N entries)
+    // fails the quadruple: undo would restore only the last line's type.
+    "convertBlocks",
+    (h) => h.ctx().convertBlocks([h.id("B"), h.id("C")], "page/heading-1", {}),
+  ],
   ["update", (h) => h.ctx().makeBlockAPI(h.id("B")).update({ checked: true })],
   [
     // Enter at offset 0 of a non-empty block: the identity-preserving arm, which

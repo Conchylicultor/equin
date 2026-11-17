@@ -543,6 +543,10 @@ export function useBlockSelection({
 
   // Stable across renders: every member is an event callback or a ref-only helper,
   // so deep children (every `BlockRow`) never re-render because the head moved.
+  const selectedBlockIds = useEventCallback((): readonly string[] =>
+    isActive ? [...selectedIds] : [],
+  );
+
   const control = useMemo<SelectionControl>(
     () => ({
       enterSelectionMode,
@@ -550,6 +554,7 @@ export function useBlockSelection({
       extendSpan,
       selectAll: selectEveryBlock,
       clear: clearSelection,
+      selectedBlockIds,
     }),
     [
       enterSelectionMode,
@@ -557,6 +562,7 @@ export function useBlockSelection({
       extendSpan,
       selectEveryBlock,
       clearSelection,
+      selectedBlockIds,
     ],
   );
 

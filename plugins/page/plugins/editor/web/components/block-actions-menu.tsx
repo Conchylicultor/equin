@@ -7,11 +7,17 @@ import {
   ControlPanelPopover,
   type ControlPanelPopoverProps,
 } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
-import { PAGE_BLOCK_TYPE, type Block } from "../../core";
+import {
+  PAGE_BLOCK_TYPE,
+  toNodes,
+  withContainersSelected,
+  type Block,
+} from "../../core";
 import type { BlockEditorAPI } from "../types";
 import { Editor, useBlockFrameMenus } from "../slots";
 import { useBlockHandles } from "../internal/block-handles";
 import { useBlockEditor } from "../block-editor-context";
+import { useSelectionControl } from "../selection-control";
 import { useInsertableBlocks, BlockTypeList } from "./block-type-list";
 import { blockEntries } from "../internal/block-sections";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -52,6 +58,17 @@ const unfoldMoreIcon = symbol("unfold-more");
  * is not resolved here — `RailSeat.owner` already did it, with the whole flatten
  * in view; this component only ever sees the block the rail acts on.
  *
+ * Over a BLOCK SELECTION — the menu opened from a line inside a live block
+ * range of 2+ convertible lines — the ordinary arm acts on the whole selection:
+ * a type picked in "Turn into" retypes every selected line (`convertBlocks`,
+ * one undo entry), and Delete removes the selection. The set is read once, as
+ * the menu opens (`SelectionControl.selectedBlockIds`): focus moving into the
+ * popover ends block-selection mode, and reading it on open rather than
+ * subscribing keeps a selection change from re-rendering every row's rail. The
+ * targets that are not a per-line type swap are not offered then — a
+ * `wrapOnConvert` type (one box per line is not what a selection means) and
+ * the `Editor.TurnInto` transitions (each takes one block).
+ *
  * On the ZOOM ROOT (`EditorScope.rootId`) the menu offers only what keeps the
  * root where it is: a plain type conversion keeps its id and its place, so it
  * stays, while Remove (which dissolves it), Delete (which removes the view),
@@ -85,18 +102,51 @@ export function BlockActionsMenu({
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const blocks = useInsertableBlocks();
-  const { serverSync, unwrapBlock, scope } = useBlockEditor();
-  const handle = useBlockHandles().get(block.type);
+  const { serverSync, unwrapBlock, scope, convertBlocks, bulkDelete, rowsRef } =
+    useBlockEditor();
+  const selectionControl = useSelectionControl();
+  const handles = useBlockHandles();
+  const handle = handles.get(block.type);
   const ContainerMenu = useBlockFrameMenus().get(block.type);
   const isContainer = handle?.anchor === true;
   const isScopeRoot = block.id === scope.rootId;
+  // The selection this menu acts on, captured as it opens (see the module doc):
+  // the selected lines a type swap can take, when there are 2+ of them and the
+  // menu was opened from one of them. `null` — the menu acts on `block` alone.
+  const [batch, setBatch] = useState<{
+    convertible: string[];
+    all: string[];
+  } | null>(null);
+  const captureBatch = () => {
+    const all = selectionControl?.selectedBlockIds() ?? [];
+    if (!all.includes(block.id)) return null;
+    const ids = new Set(all);
+    const convertible = rowsRef.current
+      .filter(
+        (b) =>
+          ids.has(b.id) &&
+          b.type !== PAGE_BLOCK_TYPE &&
+          handles.get(b.type)?.anchor !== true,
+      )
+      .map((b) => b.id);
+    if (convertible.length < 2) return null;
+    // Delete acts on what the selection bar's Delete does: the range closed
+    // over every container it fully covers, so a covered card goes with its
+    // lines rather than being left behind empty.
+    const deleted = withContainersSelected(
+      toNodes(rowsRef.current),
+      ids,
+      (n) => handles.get(n.type)?.anchor === true,
+    );
+    return { convertible, all: [...deleted] };
+  };
   // A `TurnInto` contribution converts a block into something the editor's own
   // pure `convertTo` cannot express — a server-backed transition (into a
   // sub-page, re-partitioning `page_id` across a page boundary). None of that
   // exists without rows, so the whole zone is gated on `serverSync` rather than
   // per-contributor, and it re-partitions the zoom root's subtree, so never
   // there.
-  const turnIntoZone = serverSync && !isScopeRoot;
+  const turnIntoZone = serverSync && !isScopeRoot && batch === null;
   // The targets written for THIS block's type — the container arm's whole
   // "Turn into", which renders only when there is one.
   const typedTurnInto = Editor.TurnInto.useContributions().some(
@@ -115,11 +165,15 @@ export function BlockActionsMenu({
           {
             // A `wrapOnConvert` target mints a container and reparents the block
             // into it — for the zoom root, a move out of its own view.
-            blocks: isScopeRoot ? list.filter((b) => !b.wrapOnConvert) : list,
+            // Over a selection likewise: a wrap is one box around ONE line.
+            blocks:
+              isScopeRoot || batch !== null
+                ? list.filter((b) => !b.wrapOnConvert)
+                : list,
           },
         ]),
       ),
-    [blocks, isScopeRoot],
+    [blocks, isScopeRoot, batch],
   );
 
   // A page row is not convertible. Converting it away from `page` would orphan
@@ -163,7 +217,9 @@ export function BlockActionsMenu({
       onSelect={({ block: target }) => {
         // Only the target's NON-text defaults: the block keeps its id,
         // hence its content doc, so `convertTo` carries its text over.
-        api.convertTo(target.type, target.emptyRowData());
+        if (batch !== null)
+          convertBlocks(batch.convertible, target.type, target.emptyRowData());
+        else api.convertTo(target.type, target.emptyRowData());
         close();
       }}
     />
@@ -173,6 +229,8 @@ export function BlockActionsMenu({
     <ControlPanelPopover
       open={open}
       onOpenChange={(next) => {
+        // Read BEFORE the popover takes focus, which ends the selection.
+        if (next) setBatch(captureBatch());
         setOpen(next);
         if (!next) setActiveIndex(-1);
       }}
@@ -257,7 +315,13 @@ export function BlockActionsMenu({
           </ControlPanel.Section>
         </>
       ) : convertible ? (
-        <ControlPanel.Section label="Turn into">
+        <ControlPanel.Section
+          label={
+            batch === null
+              ? "Turn into"
+              : `Turn ${batch.convertible.length} blocks into`
+          }
+        >
           {foldResource(sections, {
             loading: () => <Loading variant="rows" count={6} />,
             error: (error, stale) =>
@@ -307,12 +371,14 @@ export function BlockActionsMenu({
         >
           Copy block ID
         </ControlPanel.Row>
-        {!isScopeRoot && (
+        {(!isScopeRoot || batch !== null) && (
           <ControlPanel.Row
             keepFocus
             tone="danger"
             icon={<Icon icon={deleteIcon} />}
-            onSelect={commit(() => api.remove())}
+            onSelect={commit(() =>
+              batch === null ? api.remove() : bulkDelete(batch.all),
+            )}
           >
             Delete
           </ControlPanel.Row>

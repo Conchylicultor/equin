@@ -35,6 +35,13 @@ export interface SelectionControl {
   selectAll: () => void;
   /** Clear the selection. */
   clear: () => void;
+  /**
+   * The blocks the live block range covers right now (empty when there is no
+   * block range — a text span is not one), read on demand rather than
+   * subscribed to: a rail menu asks once, when it opens, so a selection change
+   * re-renders no row.
+   */
+  selectedBlockIds: () => readonly string[];
 }
 
 const SelectionControlContext = createContext<SelectionControl | null>(null);

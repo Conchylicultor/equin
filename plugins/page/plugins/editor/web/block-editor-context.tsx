@@ -48,6 +48,7 @@ import {
   hasTextKey,
   rowDataOf,
   joinAroundSpan,
+  PAGE_BLOCK_TYPE,
   type Block,
   type BlockNode,
   type BlockOp,
@@ -495,6 +496,18 @@ interface BlockEditorContextValue {
    */
   attachContainer: (el: HTMLElement | null) => void;
   makeBlockAPI: (blockId: string) => BlockEditorAPI;
+  /**
+   * Turn into, over a block selection: retype every listed line to `type` in
+   * ONE recorded write (one undo entry), each by the same swap
+   * `BlockEditorAPI.convertTo` makes for one line. Void containers and
+   * sub-page rows in the list are skipped (neither can take a type swap); a
+   * `wrapOnConvert` target throws — a selection is not wrapped line by line.
+   */
+  convertBlocks: (
+    blockIds: readonly string[],
+    type: string,
+    data: RowData,
+  ) => void;
   /**
    * "Strip then convert" — THE single primitive behind every commit that
    * consumes some of a block's own text as a command: the slash menu's
@@ -2798,6 +2811,45 @@ export function BlockEditorProviderInner({
     ],
   );
 
+  // The type swap itself, one row: the new `type`, its seed `data` with the
+  // row's text projection carried across (`preserveText`), and — for a void
+  // target with a text field of its own (`absorbText`) — the line's words
+  // taken into it: typing ``` before `foo` makes a code block holding `foo`,
+  // rather than an empty one (the row's `text` cannot survive on a void row —
+  // `conformRowText` drops it). The words are the caller's `remainingRuns`,
+  // else read LIVE from the block's editor, else the row's (lagged) projection
+  // for an unmounted one. Shared by `convertRow` and `convertBlocks`, so a
+  // single conversion and a selection's cannot drift.
+  const retypeRow = useCallback(
+    (
+      b: Block,
+      type: string,
+      data: RowData,
+      expanded?: boolean,
+      remainingRuns?: RichText,
+    ): Block => {
+      const target = blockHandles.get(type);
+      const absorb =
+        target?.absorbText && !target.acceptsText ? target.absorbText : null;
+      const liveRuns = absorb
+        ? (remainingRuns ?? authority.surgeryOf(b.id)?.readRuns?.())
+        : undefined;
+      const words =
+        absorb && blockHandles.get(b.type)?.acceptsText
+          ? plainOf(liveRuns ?? runsOfNode(b))
+          : "";
+      const seeded =
+        absorb && words.length > 0 ? { ...data, ...absorb(words) } : data;
+      return {
+        ...b,
+        type,
+        data: preserveText(b.data, seeded),
+        expanded: expanded ?? b.expanded,
+      };
+    },
+    [blockHandles, authority],
+  );
+
   // THE row-side half of a type change, shared by `BlockEditorAPI.convertTo` and
   // `convertStrippingText` so the two can never drift. Recorded (a conversion is
   // a document edit) and dispatched through the same optimistic patch pipeline
@@ -2832,37 +2884,45 @@ export function BlockEditorProviderInner({
         wrapInContainer(blockId, type, target.empty?.() ?? {});
         return;
       }
-      // A void target with a text field of its own (`absorbText`) takes the
-      // line's words into it: typing ``` before `foo` makes a code block
-      // holding `foo`, rather than an empty one (the row's `text` cannot survive
-      // on a void row — `conformRowText` drops it). The words are the caller's
-      // `remainingRuns`, else read LIVE from the block's editor, else the row's
-      // (lagged) projection for an unmounted one.
-      const absorb =
-        target?.absorbText && !target.acceptsText ? target.absorbText : null;
-      const liveRuns = absorb
-        ? (remainingRuns ?? authority.surgeryOf(blockId)?.readRuns?.())
-        : undefined;
       commitRow(
         blockId,
-        (b) => {
-          const words =
-            absorb && blockHandles.get(b.type)?.acceptsText
-              ? plainOf(liveRuns ?? runsOfNode(b))
-              : "";
-          const seeded =
-            absorb && words.length > 0 ? { ...data, ...absorb(words) } : data;
-          return {
-            ...b,
-            type,
-            data: preserveText(b.data, seeded),
-            expanded: expanded ?? b.expanded,
-          };
-        },
+        (b) => retypeRow(b, type, data, expanded, remainingRuns),
         { label: "Change block type" },
       );
     },
-    [commitRow, blockHandles, wrapInContainer, authority],
+    [commitRow, blockHandles, wrapInContainer, retypeRow],
+  );
+
+  // The many-row arm of `BlockEditorAPI.convertTo`: Turn into over a block
+  // selection retypes EVERY selected line, in ONE patch (one undo entry). Each
+  // row goes through the same `retypeRow` swap as a single conversion, so
+  // `preserveText` and `absorbText` hold per line. Lines that cannot take the
+  // conversion are left alone rather than refusing the whole gesture: a void
+  // container (it owns no text, so a type swap has nowhere to put its
+  // children) and a sub-page row (converting it away would orphan its
+  // partition). A `wrapOnConvert` target is not a per-line swap — wrapping each
+  // line in its own box is not what a selection means — so it is refused
+  // loudly; the menu does not offer one for a selection.
+  const convertBlocks = useCallback(
+    (blockIds: readonly string[], type: string, data: RowData) => {
+      if (blockHandles.get(type)?.wrapOnConvert)
+        throw new Error(
+          `convertBlocks: "${type}" wraps on convert; a selection cannot be retyped into it`,
+        );
+      const ids = new Set(blockIds);
+      const convertible = (b: Block) =>
+        ids.has(b.id) &&
+        b.type !== PAGE_BLOCK_TYPE &&
+        blockHandles.get(b.type)?.anchor !== true;
+      const first = liveRowsRef.current.find(convertible);
+      if (!first) return;
+      commitRows(
+        (rows) =>
+          rows.map((b) => (convertible(b) ? retypeRow(b, type, data) : b)),
+        { label: "Change block type", focusId: first.id },
+      );
+    },
+    [commitRows, blockHandles, retypeRow, liveRowsRef],
   );
 
   // The doc half of every text-consuming commit. `deleteRange` is DISCRETE, so
@@ -3294,6 +3354,7 @@ export function BlockEditorProviderInner({
       registerFocusHandle,
       attachContainer: authority.attachContainer,
       makeBlockAPI,
+      convertBlocks,
       convertStrippingText,
       stripText,
       setFlatOrder,
@@ -3346,6 +3407,7 @@ export function BlockEditorProviderInner({
       registerFocusHandle,
       authority,
       makeBlockAPI,
+      convertBlocks,
       convertStrippingText,
       stripText,
       setFlatOrder,
