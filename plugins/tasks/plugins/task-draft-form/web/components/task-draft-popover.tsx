@@ -21,6 +21,10 @@ import {
   submitKept,
   useDraft,
 } from "@plugins/primitives/plugins/kept-state/web";
+import {
+  keptField,
+  type KeptPart,
+} from "@plugins/primitives/plugins/kept-state/core";
 import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { z } from "zod";
 import {
@@ -185,7 +189,7 @@ function TaskDraftFormContent({
   relateCluster,
   draft,
   patchDraft,
-  setCards,
+  keptCards,
   autoFocusId,
   setAutoFocusId,
   submitting,
@@ -212,7 +216,8 @@ function TaskDraftFormContent({
   relateCluster: TaskCluster | null;
   draft: TaskDraftState;
   patchDraft: PatchDraft;
-  setCards: (next: CardDraft[]) => void;
+  /** The draft's cards, as a part of its kept binding. */
+  keptCards: KeptPart<CardDraft[]>;
   autoFocusId: string | null;
   setAutoFocusId: (id: string | null) => void;
   submitting: boolean;
@@ -349,8 +354,7 @@ function TaskDraftFormContent({
 
   return (
     <TaskDraftForm
-      cards={cards}
-      onCardsChange={setCards}
+      cards={keptCards}
       autoFocusId={autoFocusId}
       onAutoFocusHandled={() => setAutoFocusId(null)}
       submitting={submitting}
@@ -412,20 +416,16 @@ export function TaskDraftPopover({
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : uncontrolledOpen;
 
-  const [draft, setDraft, clearDraft, draftKept] = useDraft(
-    taskDraftStore,
-    () => freshDraft(relate),
-    { scope: draftScope(target) },
-  );
+  const draftBinding = useDraft(taskDraftStore, () => freshDraft(relate), {
+    scope: draftScope(target),
+  });
+  const [draft, setDraft, clearDraft, draftKept] = draftBinding;
   const patchDraft = useCallback<PatchDraft>(
     (patch) => setDraft((prev) => ({ ...prev, ...patch })),
     [setDraft],
   );
   const { cards } = draft;
-  const setCards = useCallback(
-    (next: CardDraft[]) => patchDraft({ cards: next }),
-    [patchDraft],
-  );
+  const keptCards = keptField(draftBinding, "cards");
 
   const [autoFocusId, setAutoFocusId] = useState<string | null>(null);
   // The URL of the page the draft is about, snapshotted on open; null when it
@@ -569,7 +569,7 @@ export function TaskDraftPopover({
             relateCluster={relateCluster}
             draft={draft}
             patchDraft={patchDraft}
-            setCards={setCards}
+            keptCards={keptCards}
             autoFocusId={autoFocusId}
             setAutoFocusId={setAutoFocusId}
             submitting={submitting}

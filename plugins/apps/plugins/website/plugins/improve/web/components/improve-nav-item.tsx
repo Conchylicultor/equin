@@ -4,6 +4,7 @@ import {
   defineKept,
   useKept,
 } from "@plugins/primitives/plugins/kept-state/web";
+import { keptPart } from "@plugins/primitives/plugins/kept-state/core";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useActionForm } from "@plugins/primitives/plugins/action-presentation/web";
@@ -59,9 +60,10 @@ const improveDraft = defineKept<ImproveDraft>({
 export function ImproveNavItem() {
   useActionForm({ yields: "never" });
   const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useKept(improveDraft, EMPTY_DRAFT, {
+  const draftBinding = useKept(improveDraft, EMPTY_DRAFT, {
     subject: "site",
   });
+  const setDraft = draftBinding[1];
   const [picking, setPicking] = useState(false);
   return (
     <InlinePopover
@@ -84,8 +86,7 @@ export function ImproveNavItem() {
       }
     >
       <ImprovePanel
-        draft={draft}
-        onDraftChange={setDraft}
+        draft={keptPart(draftBinding)}
         picking={picking}
         onPickingChange={setPicking}
         onFiled={() => {

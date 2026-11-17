@@ -15,7 +15,7 @@ const dragIndicatorIcon = symbol("drag-indicator");
 export interface TaskDraftCardProps {
   cardId: string;
   index: number;
-  /** The card's text, kept by the host's chain draft (`keptText`). */
+  /** The card's text, a part of the host's kept chain draft. */
   keep: KeptText;
   /** Contributed launch-option values, keyed by option id. */
   launchOptions: LaunchOptionValues;

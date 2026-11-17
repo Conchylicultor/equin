@@ -55,6 +55,7 @@ tab switch. The text-input primitives — ui-kit `Input` / `Textarea`,
 |---|---|---|
 | a `useKept` / `useDraft` binding | kept (work or view) | the binding's; no `value` prop (type error), `onChange` runs after it |
 | `keptField(binding, "text")` — one string field of a kept object | kept: typing writes into the object entry | the object's field |
+| `keptField(keptItem(cards, (c) => c.id === id), "text")` — a string part handed down by a host (`cards: KeptPart<Card[]>`, from `keptPart(binding)` / `keptField(binding, "cards")`) | kept: typing writes into the one entry the part was projected from | the part's |
 | `field.keep` of a `useEditableField` | kept by the field: pending text is work until the save is acked | the field's |
 | `transient("<why>")` | throwaway by design — a secret, a value committed on every change | the caller's own |
 
@@ -65,6 +66,13 @@ const name = useKept(renameDraft, "", { subject: pageId });
 const title = useEditableField({ value, onSave, keep: { field: "task.title", subject: taskId } });
 <Input keep={title.keep} onFocus={title.onFocus} onBlur={title.onBlur} />
 ```
+
+A host hands a leaf its piece of a kept value as a `KeptPart<T>` — never as
+a `value` / `onChange` pair. Parts are minted only by projecting a binding
+(`keptPart`, `keptField`, `keptItem`, composable), so plain `useState` has no
+spelling as kept text: there is no `keptText(value, setValue)`. The one part
+not projected from a binding is `useEditableField`'s `keep`, which keeps its
+pending text in its own work store.
 
 `Input` / `Textarea` take `bare` for a field the host styles itself (an inline
 title, a cell): no chrome, no density size — the keep decision stays. The
@@ -129,7 +137,7 @@ carries them over, so no unsent text is lost — drop it once browsers migrated.
 
 ## Plugin reference
 
-- Description: Kept state: what a reload, a tab switch or an upgrade must give back. defineKept declares a piece of it in one of two tiers — work (what the user made and the server does not have yet: its own local store, refused when full, one entry per subject) or view (where the user was looking: one pooled session store, keyed by the ambient KeepScope — the pane instance, else the tab — and dropped when that place closes, forgetKeepScope) — and useKept reads it as a useState drop-in. useDraft is the same over a store the caller declared (defineStore). Writes are batched to the end of the frame and flushed on pagehide (flushKept). submitKept clears work only once its send is taken, so a reload between the click and the ack keeps it. readDraft/writeDraft are the render-free twin for callers writing at input frequency; onDraftWritten(scope, listener) observes every write and clear in one composition scope; legacyDraftKeys carries drafts written before web-storage into a store. core/ holds the required `keep` prop of every text-input primitive (TextKeep: a kept binding, a primitive's own keptText, or transient("<why>")), and lint/ bans raw text fields (kept-state/no-raw-text-input).
+- Description: Kept state: what a reload, a tab switch or an upgrade must give back. defineKept declares a piece of it in one of two tiers — work (what the user made and the server does not have yet: its own local store, refused when full, one entry per subject) or view (where the user was looking: one pooled session store, keyed by the ambient KeepScope — the pane instance, else the tab — and dropped when that place closes, forgetKeepScope) — and useKept reads it as a useState drop-in. useDraft is the same over a store the caller declared (defineStore). Writes are batched to the end of the frame and flushed on pagehide (flushKept). submitKept clears work only once its send is taken, so a reload between the click and the ack keeps it. readDraft/writeDraft are the render-free twin for callers writing at input frequency; onDraftWritten(scope, listener) observes every write and clear in one composition scope; legacyDraftKeys carries drafts written before web-storage into a store. core/ holds the required `keep` prop of every text-input primitive (TextKeep: a kept binding, a part projected from one — keptPart / keptField / keptItem, so plain state has no spelling as kept — or transient("<why>")), and lint/ bans raw text fields (kept-state/no-raw-text-input).
 - Web:
   - Uses:
     - `primitives/dom/web-storage.defineStore`
@@ -195,14 +203,17 @@ carries them over, so no unsent text is lost — drop it once browsers migrated.
   - Exports (types):
     - `KeptBinding`
     - `KeptHandle`
+    - `KeptPart`
     - `KeptSetter`
+    - `KeptSource`
     - `KeptText`
     - `TextKeep`
     - `Transient`
   - Exports (values):
     - `isTransient`
     - `keptField`
-    - `keptText`
+    - `keptItem`
+    - `keptPart`
     - `resolveTextKeep`
     - `transient`
 

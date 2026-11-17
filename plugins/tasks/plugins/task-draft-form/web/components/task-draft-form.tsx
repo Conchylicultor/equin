@@ -1,4 +1,8 @@
-import { keptText } from "@plugins/primitives/plugins/kept-state/core";
+import {
+  keptField,
+  keptItem,
+  type KeptPart,
+} from "@plugins/primitives/plugins/kept-state/core";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Fragment, useEffect, useState } from "react";
 import {
@@ -49,8 +53,11 @@ export interface CardDraft {
 }
 
 export interface TaskDraftFormProps {
-  cards: CardDraft[];
-  onCardsChange: (next: CardDraft[]) => void;
+  /**
+   * The chain of cards — part of the host's kept draft (`keptField(draft,
+   * "cards")`), so each card's text is kept through it.
+   */
+  cards: KeptPart<CardDraft[]>;
   autoFocusId: string | null;
   onAutoFocusHandled: () => void;
   submitting: boolean;
@@ -136,8 +143,7 @@ function draftText(cards: readonly CardDraft[]): string {
 }
 
 export function TaskDraftForm({
-  cards,
-  onCardsChange,
+  cards: keptCards,
   autoFocusId,
   onAutoFocusHandled,
   submitting,
@@ -173,6 +179,8 @@ export function TaskDraftForm({
     }
   }, [autoFocusId, onAutoFocusHandled]);
 
+  const cards = keptCards.value;
+  const onCardsChange = keptCards.set;
   const isMulti = cards.length > 1;
   const hasEmpty = cards.some((c) => !c.text.trim());
   const disabled = hasEmpty || submitting;
@@ -184,9 +192,10 @@ export function TaskDraftForm({
   };
 
   const updateCard = (idx: number, patch: Partial<CardDraft>) => {
-    const next = cards.slice();
-    next[idx] = { ...next[idx]!, ...patch };
-    onCardsChange(next);
+    const id = cards[idx]!.localId;
+    onCardsChange((prev) =>
+      prev.map((c) => (c.localId === id ? { ...c, ...patch } : c)),
+    );
   };
 
   // A new card inherits the neighbour's choices — its whole launch
@@ -324,9 +333,10 @@ export function TaskDraftForm({
                   cardId={card.localId}
                   index={idx}
                   // The chain is the host's kept draft (TaskDraftPopover's
-                  // useDraft): each card's text is an entry of it.
-                  keep={keptText(card.text, (t) =>
-                    updateCard(idx, { text: t }),
+                  // useDraft): each card's text is a part of it.
+                  keep={keptField(
+                    keptItem(keptCards, (c) => c.localId === card.localId),
+                    "text",
                   )}
                   launchOptions={card.options}
                   autoFocus={autoFocusId === card.localId}

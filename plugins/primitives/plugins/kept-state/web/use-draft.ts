@@ -94,8 +94,9 @@ export function useKeptEntry<T>(
     return store.subscribe(id, () => setValueState(read()));
   }, [store, id, read]);
 
-  const handle = useMemo<KeptHandle<T>>(
-    () => ({
+  const handle = useMemo(
+    () =>
+      ({
       current: () => latest.current,
       flush: () => {
         if (store !== null) flushDraft(store, { scope: id });
@@ -109,7 +110,7 @@ export function useKeptEntry<T>(
         }
         setValueState((shown) => (same(shown, sent) ? resolvedInitial : shown));
       },
-    }),
+      }) as KeptHandle<T>,
     [store, id, resolvedInitial, latest],
   );
 

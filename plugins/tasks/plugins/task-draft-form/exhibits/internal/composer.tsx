@@ -1,8 +1,19 @@
-import { keptText } from "@plugins/primitives/plugins/kept-state/core";
+import {
+  defineKept,
+  useKept,
+} from "@plugins/primitives/plugins/kept-state/web";
 import { useState } from "react";
+import { z } from "zod";
 import type { LaunchOptionValues } from "@plugins/tasks/plugins/launch-options/web";
 import { useCaptureUrlDefault } from "../../web/use-capture-url-default";
 import { TaskDraftComposer } from "../../web/components/task-draft-composer";
+
+/** The exhibit's text: view state of the exhibit, kept like any composer's. */
+const composerExhibitText = defineKept({
+  owner: "task-draft.composer-exhibit",
+  tier: "view",
+  schema: z.string(),
+});
 
 /**
  * The Improve popover's composer, exhibited on its own (the `task-draft/composer` exhibit): the real
@@ -12,13 +23,13 @@ import { TaskDraftComposer } from "../../web/components/task-draft-composer";
  */
 export default function ComposerExhibit() {
   const captureUrlDefault = useCaptureUrlDefault();
-  const [text, setText] = useState("");
+  const text = useKept(composerExhibitText, "");
   const [launchOptions, setLaunchOptions] = useState<LaunchOptionValues>({});
   const [includeUrl, setIncludeUrl] = useState(captureUrlDefault);
   return (
     <TaskDraftComposer
       cardId="exhibit"
-      keep={keptText(text, setText)}
+      keep={text}
       launchOptions={launchOptions}
       autoFocus={false}
       disabled={false}

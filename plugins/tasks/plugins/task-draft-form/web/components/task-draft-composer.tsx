@@ -27,7 +27,7 @@ export interface TaskDraftComposerProps {
   cardId: string;
   /**
    * The task's text — always work, so always kept: the host's kept binding,
-   * or a card of its kept chain (`keptText`).
+   * or a card of its kept chain (`keptField(keptItem(…))`).
    */
   keep: KeptBinding<string> | KeptText;
   /** Contributed launch-option values, keyed by option id. */

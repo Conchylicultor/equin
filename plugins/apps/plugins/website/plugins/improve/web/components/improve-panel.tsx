@@ -14,7 +14,10 @@ import {
 import { Switch } from "@plugins/primitives/plugins/css/plugins/switch/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
-import { keptText } from "@plugins/primitives/plugins/kept-state/core";
+import {
+  keptField,
+  type KeptPart,
+} from "@plugins/primitives/plugins/kept-state/core";
 import {
   serializeUiContext,
   type UiContextMeta,
@@ -85,14 +88,13 @@ function focusOnMount(el: HTMLElement | null) {
  * visitor points at the page.
  */
 export function ImprovePanel({
-  draft,
-  onDraftChange,
+  draft: kept,
   picking,
   onPickingChange,
   onFiled,
 }: {
-  draft: ImproveDraft;
-  onDraftChange: (draft: ImproveDraft) => void;
+  /** ImproveNavItem's kept draft. */
+  draft: KeptPart<ImproveDraft>;
   /** The element picker is up, and the caller has hidden the popover for it. */
   picking: boolean;
   onPickingChange: (picking: boolean) => void;
@@ -100,6 +102,7 @@ export function ImprovePanel({
   onFiled: () => void;
 }) {
   const [view, setView] = useState<PanelView>({ kind: "compose" });
+  const draft = kept.value;
 
   const showMe = () => {
     const text = draft.text.trim();
@@ -125,8 +128,7 @@ export function ImprovePanel({
     <ControlSizeProvider size="md">
       {view.kind === "compose" ? (
         <ComposeView
-          draft={draft}
-          onDraftChange={onDraftChange}
+          draft={kept}
           picking={picking}
           onPickingChange={onPickingChange}
           onShowMe={showMe}
@@ -160,19 +162,18 @@ function appendToken(text: string, token: string): string {
 }
 
 function ComposeView({
-  draft,
-  onDraftChange,
+  draft: kept,
   picking,
   onPickingChange,
   onShowMe,
 }: {
-  draft: ImproveDraft;
-  onDraftChange: (draft: ImproveDraft) => void;
+  draft: KeptPart<ImproveDraft>;
   picking: boolean;
   onPickingChange: (picking: boolean) => void;
   onShowMe: () => void;
 }) {
   const switchId = useId();
+  const draft = kept.value;
   const insertRef = useRef<((text: string) => void) | null>(null);
   const pointRef = useRef<HTMLButtonElement>(null);
   // Set by a pick, so the end of picking can tell a pick from a cancel.
@@ -206,7 +207,7 @@ function ComposeView({
     // Lexical is code-split: a visitor fast enough to pick before it loads
     // gets the token at the end of the text instead of at a caret.
     if (insert) insert(token);
-    else onDraftChange({ ...draft, text: appendToken(draft.text, token) });
+    else kept.set((prev) => ({ ...prev, text: appendToken(prev.text, token) }));
   };
 
   return (
@@ -227,9 +228,7 @@ function ComposeView({
       <Stack gap="sm">
         <TextEditor
           // The text of ImproveNavItem's kept draft.
-          keep={keptText(draft.text, (text) =>
-            onDraftChange({ ...draft, text }),
-          )}
+          keep={keptField(kept, "text")}
           onSubmit={onShowMe}
           submitMode="cmd-enter"
           minRows={4}
@@ -265,7 +264,7 @@ function ComposeView({
               id={switchId}
               checked={draft.autoDeploy}
               onCheckedChange={(autoDeploy) =>
-                onDraftChange({ ...draft, autoDeploy })
+                kept.set((prev) => ({ ...prev, autoDeploy }))
               }
             />
             {/* A `<label for>` names the switch with BOTH lines, so a screen

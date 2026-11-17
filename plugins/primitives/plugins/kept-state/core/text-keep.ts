@@ -6,9 +6,10 @@
  * throwaway? A forgotten draft is a type error, not a missing feature.
  *
  * - a `useKept` / `useDraft` binding — the text is kept state (work or view);
- * - a field that keeps its own text (`useEditableField`'s result, minted with
- *   `keptText`) — kept, the field decided how;
- * - one string field of a kept object (`keptField(binding, "text")`) — kept;
+ * - a field that keeps its own text (`useEditableField`'s `keep`) — kept, the
+ *   field decided how;
+ * - a string part of a kept value (`keptField(binding, "text")`, through
+ *   `keptItem` for one entry of a kept list) — kept;
  * - `transient("<why>")` — throwaway by design (a password, a filter whose
  *   result is the point, a field committed on every keystroke elsewhere).
  */
@@ -17,9 +18,13 @@
  * What `submitKept` needs of one kept entry: its latest value, a way to show
  * a value without writing it, and a clear that holds only while the entry
  * still stores what was sent. Minted by `useDraft` / `useKept` (their 4th
- * element) — never built by a caller.
+ * element) — never built by a caller: the brand makes a hand-built tuple of
+ * `useState`'s pair and a fake handle no binding.
  */
+declare const keptHandleBrand: unique symbol;
+
 export interface KeptHandle<T> {
+  readonly [keptHandleBrand]: true;
   /** The latest value (as set, before its write lands). */
   current(): T;
   /** Make sure `current()` is in storage now. */
@@ -45,17 +50,30 @@ export type KeptBinding<T> = readonly [
   KeptHandle<T>,
 ];
 
-declare const keptTextBrand: unique symbol;
+declare const keptPartBrand: unique symbol;
 
 /**
- * Text a primitive keeps itself (`useEditableField`: pending text is kept as
- * work until the server acks it). Minted by `keptText` only.
+ * One part of a kept value — the whole of a `useKept` / `useDraft` binding
+ * (`keptPart`), one field of it (`keptField`) or one item of a kept list
+ * (`keptItem`), projected again as deep as needed — handed down to whoever
+ * shows and edits it. Showing it and setting it reads and writes the kept
+ * entry it was projected from, so the entry stays the one thing `submitKept`
+ * clears.
+ *
+ * Only a projection of a binding mints one: a `useState` pair has no spelling
+ * as a part, so a host cannot pass plain state off as kept to a leaf.
  */
-export interface KeptText {
-  readonly [keptTextBrand]: true;
-  readonly value: string;
-  readonly onChange: (next: string) => void;
+export interface KeptPart<T> {
+  readonly [keptPartBrand]: true;
+  readonly value: T;
+  readonly set: KeptSetter<T>;
 }
+
+/** Kept text: a part of a kept value that is a string (`keptField(draft, "text")`). */
+export type KeptText = KeptPart<string>;
+
+/** What a part is projected from: a binding, or another part. */
+export type KeptSource<T> = KeptBinding<T> | KeptPart<T>;
 
 declare const transientBrand: unique symbol;
 
@@ -81,44 +99,78 @@ export function transient(reason: string): Transient {
   return { kind: "transient", reason } as Transient;
 }
 
-/**
- * Brand text that is kept by its owner as a `keep` value: a primitive that
- * persists it itself (`useEditableField`), or a host handing a leaf one entry
- * of a kept collection (a card of a kept chain of drafts). A feature keeps its
- * own text with `useKept` / `keptField` — never by wrapping a `useState` here.
- */
-export function keptText(
-  value: string,
-  onChange: (next: string) => void,
-): KeptText {
-  return { value, onChange } as unknown as KeptText;
+function mintPart<T>(value: T, set: KeptSetter<T>): KeptPart<T> {
+  return { value, set } as unknown as KeptPart<T>;
+}
+
+function isBinding<T>(source: KeptSource<T>): source is KeptBinding<T> {
+  return Array.isArray(source);
+}
+
+/** A binding as a part, to hand down whole (`<Panel draft={keptPart(binding)} />`). */
+export function keptPart<T>(source: KeptSource<T>): KeptPart<T> {
+  if (!isBinding(source)) return source;
+  const [value, set] = source;
+  return mintPart(value, set);
 }
 
 /**
- * One text field of a kept object (a `useKept` / `useDraft` binding over
- * `{ text, picked, … }`) as a `keep` value: the field shows `value[key]`, and
- * typing writes it back into the object. The object stays the one kept entry
- * (so `submitKept` still clears it whole).
+ * One field of a kept object as a part: it shows `value[key]`, and setting it
+ * writes the field back into the object (the object stays the one kept entry,
+ * so `submitKept` still clears it whole). A string field is a `keep` value.
  *
  * ```tsx
  * const draft = useDraft(launchDraftStore, { text: "", model: null });
  * <ComposerField keep={keptField(draft, "text")} />
  * ```
  */
-export function keptField<T, K extends StringKeys<T>>(
-  binding: KeptBinding<T>,
-  key: K,
-): KeptText {
-  const [value, set] = binding;
-  return keptText(value[key] as string, (next) =>
-    set((prev) => ({ ...prev, [key]: next })),
+export function keptField<T extends object, K extends string & keyof T>(
+  source: KeptSource<T>,
+  // A list's items are `keptItem`'s: spreading a list as an object would
+  // turn it into one.
+  field: T extends readonly unknown[] ? never : K,
+): KeptPart<T[K]> {
+  const key: K = field;
+  const { value, set } = keptPart(source);
+  return mintPart(value[key], (action) =>
+    set((prev) => ({
+      ...prev,
+      [key]:
+        typeof action === "function"
+          ? (action as (p: T[K]) => T[K])(prev[key])
+          : action,
+    })),
   );
 }
 
-/** The keys of `T` whose value is a string. */
-type StringKeys<T> = {
-  [K in keyof T]-?: T[K] extends string ? K : never;
-}[keyof T];
+/**
+ * One item of a kept list as a part, found by identity (`(c) => c.id === id`),
+ * never by position — a write that lands after the list was reordered still
+ * reaches its own item. It shows the matching item, and setting it replaces
+ * that item in the list (a card of a kept chain of drafts). An item gone by
+ * the time a write lands (removed in the same frame) takes no write: there is
+ * nothing left to write into.
+ */
+export function keptItem<E>(
+  source: KeptSource<E[]>,
+  isItem: (item: E) => boolean,
+): KeptPart<E> {
+  const { value, set } = keptPart(source);
+  const index = value.findIndex(isItem);
+  if (index < 0) throw new Error("keptItem: no item of the kept list matches");
+  return mintPart(value[index] as E, (action) =>
+    set((prev) => {
+      const at = prev.findIndex(isItem);
+      if (at < 0) return prev;
+      const next = prev.slice();
+      next[at] =
+        typeof action === "function"
+          ? (action as (p: E) => E)(prev[at] as E)
+          : action;
+      return next;
+    }),
+  );
+}
 
 /** True for `transient(…)`. */
 export function isTransient(keep: unknown): keep is Transient {
@@ -143,5 +195,5 @@ export function resolveTextKeep(
     return { value: binding[0], set: (next) => binding[1](next) };
   }
   const text = keep as KeptText;
-  return { value: text.value, set: text.onChange };
+  return { value: text.value, set: (next) => text.set(next) };
 }

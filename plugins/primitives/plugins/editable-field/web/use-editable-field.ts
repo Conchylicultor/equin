@@ -443,11 +443,20 @@ export function useEditableField<T extends string>(
         : "idle";
   useReportSync({ phase, label, retry: isError ? retry : undefined, savedAt });
 
-  // The field's own kept text, as the text-input primitives' `keep`. Built
-  // as data (not through `keptText`): `onChange` touches refs, and handing it
-  // to a call during render reads as a ref read to the React Compiler.
+  // The field's own kept text, as the text-input primitives' `keep` — the one
+  // `KeptText` not projected from a binding: this field keeps its pending
+  // text itself (the `editable-field.pending` work store), so it mints it
+  // here. Built as data: `onChange` touches refs, and handing it to a call
+  // during render reads as a ref read to the React Compiler.
   const keepText = useMemo(
-    () => ({ value: draft, onChange }) as unknown as KeptText,
+    () =>
+      ({
+        value: draft,
+        set: (action: T | ((prev: T) => T)) =>
+          onChange(
+            typeof action === "function" ? action(draftRef.current) : action,
+          ),
+      }) as unknown as KeptText,
     [draft, onChange],
   );
 

@@ -1,7 +1,8 @@
 export {
   isTransient,
   keptField,
-  keptText,
+  keptItem,
+  keptPart,
   resolveTextKeep,
   transient,
 } from "./text-keep";
@@ -9,6 +10,8 @@ export type {
   KeptBinding,
   KeptHandle,
   KeptSetter,
+  KeptPart,
+  KeptSource,
   KeptText,
   TextKeep,
   Transient,
