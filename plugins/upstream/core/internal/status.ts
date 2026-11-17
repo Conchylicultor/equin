@@ -154,6 +154,23 @@ async function releaseTagsMergedInto(
     .map((l) => l.slice(namespace.length));
 }
 
+/**
+ * Is upstream's release `latest` in `commit`'s history? What "installed"
+ * means for a backend: the commit it was built from holds the release.
+ */
+export async function releaseInCommit(
+  root: string,
+  remote: string,
+  latest: string,
+  commit: string,
+): Promise<boolean> {
+  return isAncestor(
+    root,
+    `${upstreamReleaseNamespace(remote)}${latest}`,
+    commit,
+  );
+}
+
 /** Is `commit` in `ref`'s history? `merge-base --is-ancestor` is exit-code-as-answer. */
 async function isAncestor(
   root: string,

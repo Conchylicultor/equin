@@ -30,6 +30,7 @@ export const SUMMARY_CLASS: Record<RowLevel, ClassName> = {
   critical: cn("text-destructive"),
   unknown: cn("text-muted-foreground"),
   "not-applicable": cn("text-muted-foreground"),
+  absent: cn("text-muted-foreground"),
 };
 
 /**

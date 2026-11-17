@@ -31,7 +31,13 @@ describe("upstreamMergeVariables", () => {
     const text = rendered(base);
     expect(text).toContain("2026.11.14");
     expect(text).toContain("is on 2026.10.30");
-    expect(text).toContain(base.url);
+    expect(text).toContain("https://github.com/equinai/equin");
+  });
+
+  test("without the remote's URL, names the release alone", () => {
+    const text = rendered({ ...base, url: null });
+    expect(text).toContain("Upstream has released");
+    expect(text).toContain("2026.11.14");
   });
 
   test("a checkout holding no release says so", () => {

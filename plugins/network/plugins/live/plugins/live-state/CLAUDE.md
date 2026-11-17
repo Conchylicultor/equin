@@ -885,7 +885,7 @@ Details:
     - `unresolved`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/color-palette --destructive`
-  - Imported by: 315 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 316 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×85
     - `conversations` ×49
     - `debug` ×31
@@ -916,6 +916,7 @@ Details:
     - `reorder`
     - `screenshot`
     - `search/quick-find`
+    - `upstream`
 - Exemptions:
   - Exempts itself from:
     - `endpoints/no-raw-web-fetch` — `web/use-resource.ts` (sanctioned)

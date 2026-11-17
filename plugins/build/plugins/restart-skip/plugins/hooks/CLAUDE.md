@@ -13,6 +13,7 @@
     - `build/server-build-id`
     - `database/migrations`
     - `reports/engine`
+    - `upstream`
 - Server:
   - Exports (types): `AdoptHook`
   - Exports (values): `RestartSkip`

@@ -8,6 +8,11 @@ import {
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { defineAutomation } from "@plugins/tasks/plugins/automations/server";
 import {
+  findSubjectTask,
+  setTaskSubject,
+} from "@plugins/tasks/plugins/task-subject/server";
+import { upstreamReleaseSubject } from "../../shared/subject";
+import {
   UPSTREAM_CATEGORY_ID,
   upstreamMergeConfig,
   UPSTREAM_MERGE_ID,
@@ -71,10 +76,16 @@ export const upstreamMergeAutomation = defineAutomation({
     // the app's release status never disagrees with a task it just filed.
     const status = await checkUpstream();
     if (status.kind !== "behind") return null;
+    // The release is the task's subject, whoever files it: one sent from the
+    // health row is already merging it, and what this files is the task the
+    // row then follows.
+    const subject = upstreamReleaseSubject(status.latest);
+    if ((await findSubjectTask(subject)) !== null) return null;
     return {
       title: upstreamMergeTitle(status),
       variables: upstreamMergeVariables(status),
       sourceKeys: [],
+      onFiled: (taskId) => setTaskSubject(taskId, subject),
     };
   },
 });

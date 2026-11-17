@@ -1,4 +1,5 @@
 import type { MachinePluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import { RestartSkip } from "@plugins/build/plugins/restart-skip/plugins/hooks/server";
 import { checkUpstreamEndpoint } from "@plugins/upstream/plugins/release/core";
 import { detectUpstreamUpdatesJob } from "./internal/detect-job";
 import { handleCheckUpstream } from "./internal/handle-check";
@@ -11,6 +12,14 @@ export default {
   httpRoutes: {
     [checkUpstreamEndpoint.route]: handleCheckUpstream,
   },
-  contributions: [...releaseStatusServed.declare],
+  contributions: [
+    ...releaseStatusServed.declare,
+    // A deploy adopted without a restart moves the commit this backend
+    // serves: whether it holds the release (`installed`) may have changed.
+    RestartSkip.Adopted({
+      what: "whether the served build holds the newest upstream release",
+      adopt: () => releaseStatusServed.notify(),
+    }),
+  ],
   register: [detectUpstreamUpdatesJob, upstreamMergeAutomation],
 } satisfies MachinePluginDefinition;

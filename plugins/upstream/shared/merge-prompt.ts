@@ -12,8 +12,9 @@ export interface UpstreamUpdates {
   latest: string;
   /** The newest release local `main` holds, if any. */
   current: string | null;
-  /** The upstream repository's URL. */
-  url: string;
+  /** The upstream repository's URL — `null` where the caller does not hold
+   * it (the release status names the release, not the remote). */
+  url: string | null;
 }
 
 /** The task title, whoever files it. */
@@ -34,7 +35,7 @@ export function upstreamMergeVariables(d: UpstreamUpdates): {
       ? "This checkout holds no release yet."
       : `This checkout is on ${releaseVersion(d.current)}.`;
   return {
-    updates: `Upstream (${d.url}) has released ${PRODUCT_NAME} ${releaseVersion(d.latest)}. ${from}`,
+    updates: `Upstream${d.url === null ? "" : ` (${d.url})`} has released ${PRODUCT_NAME} ${releaseVersion(d.latest)}. ${from}`,
     ref: d.latest,
   };
 }

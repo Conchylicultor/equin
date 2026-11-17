@@ -610,7 +610,7 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "ui/plugins/tweakcn/plugins/community-browser", id: "ui.tweakcn.community-browser", loader: () => import("@plugins/ui/plugins/tweakcn/plugins/community-browser/server"), dependsOn: ["infra/plugins/endpoints", "network/plugins/live", "ui/plugins/theme-engine/plugins/saved-themes", "ui/plugins/tweakcn"], core: () => import("@plugins/ui/plugins/tweakcn/plugins/community-browser/core") },
   { pluginPath: "ui/plugins/tweakcn", id: "ui.tweakcn", loader: () => import("@plugins/ui/plugins/tweakcn/server"), dependsOn: ["infra/plugins/endpoints", "ui/plugins/theme-engine/plugins/saved-themes"], core: () => import("@plugins/ui/plugins/tweakcn/core") },
   { pluginPath: "ui/plugins/variant-region", id: "ui.variant-region", loader: () => import("@plugins/ui/plugins/variant-region/server"), dependsOn: ["config_v2"], core: () => import("@plugins/ui/plugins/variant-region/core") },
-  { pluginPath: "upstream", id: "upstream", loader: () => import("@plugins/upstream/server"), dependsOn: ["database/plugins/sql-column", "tasks/plugins/automations", "tasks/plugins/task-category"], core: () => import("@plugins/upstream/core") },
+  { pluginPath: "upstream", id: "upstream", loader: () => import("@plugins/upstream/server"), dependsOn: ["config_v2", "database/plugins/sql-column", "tasks/plugins/automations", "tasks/plugins/task-category"], core: () => import("@plugins/upstream/core") },
   { pluginPath: "wish", id: "wish", loader: () => import("@plugins/wish/server"), dependsOn: ["conversations/plugins/conversations-view/plugins/grouped", "database", "infra/plugins/events", "infra/plugins/jobs", "tasks/plugins/task-category", "tasks/plugins/tasks-core"], core: () => import("@plugins/wish/core") },
 ];
 

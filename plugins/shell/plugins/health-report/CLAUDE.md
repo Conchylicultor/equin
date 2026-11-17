@@ -40,7 +40,8 @@ HealthReport.Row({
 - **`useStatus` runs all the time**, report open or not — it is what colours the
   dot. Keep it a cheap read of state that is already resident. It returns
   `{ state: "ok" | "attention" | "critical", summary, transitioning? }`,
-  `{ state: "unknown", summary? }` or `{ state: "not-applicable", summary }`.
+  `{ state: "unknown", summary? }`, `{ state: "not-applicable", summary }` or
+  `{ state: "absent" }`.
 - **`unknown` is a state, not a stand-in.** Without a summary it means "not
   known yet": grey and pulsing, and the report says "Checking…". With one it
   means "known to be unreadable right now" ("Unknown while disconnected"): grey
@@ -50,6 +51,13 @@ HealthReport.Row({
   `unavailable` — return `{ state: "not-applicable", summary: result.message }`).
   The merge leaves it out, so it neither greys nor greens the dot; the row is
   listed with a hollow dot and its summary saying why.
+- **`absent` is "this row has nothing to say here"**: `{ state: "absent" }` —
+  the row is not drawn at all and the merge skips it (the updates row on the
+  repo that has nothing to update from). Use `not-applicable` when the user
+  should see that the check exists but does not apply.
+- **A row whose state is its name** returns a `title` with its known state
+  (`{ state: "attention", title: "equin is out of date", summary: "…" }`); the
+  row is drawn under that title instead of its own, and the verdict uses it.
 - **Info rows cannot move the dot.** They have no field to declare a state
   through, so this holds by construction. Their `useInfo` runs only while the
   report is open.
@@ -81,6 +89,11 @@ The verdict (`verdictOf`) is the header text, the button's tooltip and its
 accessible name: "All systems normal", "Checking…", the one non-green row's own
 summary, or "N things need attention". When every unknown row has said why it
 is unknown, the verdict gives that reason instead of "Checking…".
+
+The dot — in the action bar and in the report's header alike — is `mergeDot`:
+an ambient attention row (`ambient`, e.g. a release waiting) folds as `ok` and
+adds its marks, so being merely out of date never turns either dot orange. The
+row itself still draws attention, and the verdict still names it.
 
 **Quiet rows fold into one card** (`foldQuietRows`, pure, bun-tested): a
 status row with nothing beyond its summary (no `glance`, `component` or
@@ -155,6 +168,7 @@ probes, is mounted per page.
     - `HealthReport.Row` ← `primitives.dom.web-storage.health`
     - `HealthReport.Row` ← `reports.resource-errors`
     - `HealthReport.Row` ← `tasks.worktree-identity`
+    - `HealthReport.Row` ← `upstream`
   - Contributes: `ActionBar.Lead` → `HealthReportButton`
   - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/collapsible` ×4
@@ -212,6 +226,7 @@ probes, is mounted per page.
     - `primitives/dom/web-storage/health`
     - `reports/resource-errors`
     - `tasks/worktree-identity`
+    - `upstream`
 - Core:
   - Exports (types):
     - `DotMerge`

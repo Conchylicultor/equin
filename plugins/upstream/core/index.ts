@@ -9,6 +9,7 @@ export {
   currentRelease,
   fetchUpstreamStatus,
   OWN_RELEASE_NAMESPACE,
+  releaseInCommit,
   standingAgainst,
   upstreamReleaseNamespace,
   UPSTREAM_BRANCH,

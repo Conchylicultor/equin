@@ -13,7 +13,10 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
  *                   has none. There is nothing to update from.
  * - `no-release`  — upstream answered and has cut no release yet. A clone is
  *                   told about releases only, never about commits.
- * - `current`     — the newest release is in local `main`.
+ * - `current`     — the newest release is in local `main`. `installed`: the
+ *                   build this backend serves holds it too — false on main
+ *                   between the merge landing and main's rebuild (always
+ *                   true on any other checkout, which installs nothing).
  * - `behind`      — it is not. `current` is the newest release local `main`
  *                   holds (`null`: it holds none, e.g. a clone made before
  *                   releases existed).
@@ -33,6 +36,7 @@ export const ReleaseStatusSchema = z.discriminatedUnion("kind", [
     kind: z.literal("current"),
     current: z.string(),
     latest: z.string(),
+    installed: z.boolean(),
     checkedAt: z.string(),
   }),
   z.object({

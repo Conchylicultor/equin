@@ -3,6 +3,8 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { JsonlViewer } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { STUCK_TURN_WAITING_FOR } from "@plugins/conversations/core";
 import { StatusBadge } from "./components/status-badge";
+
+export { ConversationStatusChip } from "./components/status-badge";
 import { StuckTurnNotice } from "./components/stuck-turn-notice";
 
 export default {

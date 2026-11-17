@@ -783,7 +783,7 @@ serves them.
     - `TRAILER_LOG_FORMAT`
     - `UNATTRIBUTED_TRAILER_KEY`
 - Cross-plugin:
-  - Imported by: 126 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 127 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×50
     - `tasks` ×41
     - `debug` ×6
@@ -800,6 +800,7 @@ serves them.
     - `framework/cli/push`
     - `hints/ask`
     - `plugin-meta/plugin-health`
+    - `upstream`
     - `wish`
   - Extended by:
     - `conversations/context-usage` (table `conversations_ext_context_usage`)

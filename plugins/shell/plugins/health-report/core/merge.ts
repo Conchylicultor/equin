@@ -18,6 +18,7 @@ const RANK: Record<RowLevel, number> = {
   unknown: 2,
   ok: 3,
   "not-applicable": 4,
+  absent: 5,
 };
 
 /** `undefined` = a registered status row whose probe has not reported yet. */
@@ -46,6 +47,7 @@ export function isTransitioning(status: ReportedStatus): boolean {
     status !== undefined &&
     status.state !== "unknown" &&
     status.state !== "not-applicable" &&
+    status.state !== "absent" &&
     status.transitioning === true
   );
 }
@@ -60,7 +62,7 @@ export function isPulsing(status: ReportedStatus): boolean {
  *
  * Precedence `critical > attention > unknown > ok`. Zero rows is `ok`: with
  * nothing registered there is nothing that could be wrong, and nothing pending.
- * A `not-applicable` row is left out, as if it were not registered.
+ * A `not-applicable` or `absent` row is left out, as if it were not registered.
  */
 export function mergeHealth(
   statuses: ReadonlyArray<ReportedStatus>,
@@ -73,7 +75,8 @@ export function mergeHealth(
  * What the action bar's dot shows: `mergeHealth`, except that an ambient
  * attention row (`HealthStatus.ambient`) folds as `ok` — it neither colours
  * the dot nor counts — and contributes its marks instead. The report's own
- * header keeps `mergeHealth`: inside the report the condition is shown as it is.
+ * header's dot is this one too, so the two never disagree; the condition
+ * itself is shown as it is in its own row, and the verdict still names it.
  */
 export function mergeDot(statuses: ReadonlyArray<ReportedStatus>): DotMerge {
   return fold(statuses, true);
@@ -95,7 +98,7 @@ function fold(
       continue;
     }
     const level = levelOf(status);
-    if (level === "not-applicable") continue;
+    if (level === "not-applicable" || level === "absent") continue;
     if (RANK[level] < RANK[state]) state = level;
     if (level === "attention" || level === "critical") count++;
     if (isPending(status)) pending = true;
@@ -109,13 +112,13 @@ function fold(
  * tooltip and accessible name.
  *
  * - `ok` → "All systems normal"
- * - some row needs attention: exactly one → that row's own summary; more →
- *   "N things need attention"
+ * - some row needs attention: exactly one → that row's own summary (its
+ *   state's `title`, when it carries one); more → "N things need attention"
  * - `unknown` while some row is not known yet → "Checking…"
  * - `unknown` where every unknown row said why → its reason, or
  *   "N checks can't be read right now"
  *
- * `not-applicable` rows are left out, as in the merge.
+ * `not-applicable` and `absent` rows are left out, as in the merge.
  */
 export function verdictOf(statuses: ReadonlyArray<ReportedStatus>): string {
   const merged = mergeHealth(statuses);
@@ -137,7 +140,10 @@ export function verdictOf(statuses: ReadonlyArray<ReportedStatus>): string {
         return level === "attention" || level === "critical";
       });
       // `count === 1` guarantees a match; the fallback only satisfies the type.
-      return only?.summary ?? "1 thing needs attention";
+      if (only === undefined || only.summary === undefined)
+        return "1 thing needs attention";
+      // A row whose state names itself says it in its own words.
+      return ("title" in only ? only.title : undefined) ?? only.summary;
     }
   }
 }

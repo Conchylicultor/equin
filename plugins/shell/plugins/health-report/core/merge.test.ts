@@ -112,6 +112,12 @@ describe("mergeHealth", () => {
     expect(mergeHealth([attention(), notApplicable()]).count).toBe(1);
   });
 
+  it("leaves an absent row out, as if it were not registered", () => {
+    const absent: HealthStatus = { state: "absent" };
+    expect(mergeHealth([ok(), absent])).toEqual(mergeHealth([ok()]));
+    expect(mergeHealth([absent])).toEqual(mergeHealth([]));
+  });
+
   it("is transitioning when any row is transitioning", () => {
     expect(mergeHealth([ok(), attention("x", true)]).transitioning).toBe(true);
     expect(mergeHealth([ok(), attention("x", false)]).transitioning).toBe(
@@ -160,6 +166,15 @@ describe("verdictOf", () => {
     expect(
       verdictOf([notApplicable(), { state: "unknown", summary: "crashed" }]),
     ).toBe("crashed");
+  });
+
+  it("names the one row needing a look by its state's own title", () => {
+    expect(
+      verdictOf([
+        ok(),
+        { state: "attention", summary: "1.0 → 2.0", title: "Out of date" },
+      ]),
+    ).toBe("Out of date");
   });
 
   it("counts several non-green rows", () => {

@@ -21,16 +21,34 @@ export type HealthState = "ok" | "attention" | "critical";
  * and nothing wrong. It is left out of the merge — it neither greys nor greens
  * the dot — and its row is drawn hollow, last, with `summary` saying why.
  *
+ * `absent` says the row has nothing to say on this checkout at all, so it is
+ * not drawn (an update row on the repo that has nothing to update from): left
+ * out of the merge AND the report. Unlike `not-applicable`, which lists the
+ * row hollow with why, it is for a row whose mere presence would be noise.
+ *
  * `transitioning` marks a state that is on its way somewhere else (a socket
  * reconnecting): the dot pulses while it is set.
+ *
+ * `title` (known states only) is what the row is called in this state, for a
+ * row whose state IS its name ("equin is out of date" / "equin is up to
+ * date"); unset, the row's own `title`. It is also the report's verdict when
+ * this row is the one that needs a look.
  */
 export type HealthStatus =
   | { state: "unknown"; summary?: string }
   | { state: "not-applicable"; summary: string }
-  | { state: "ok" | "critical"; summary: string; transitioning?: boolean }
+  // `summary?: never` keeps `status.summary` readable on the whole union.
+  | { state: "absent"; summary?: never }
+  | {
+      state: "ok" | "critical";
+      summary: string;
+      title?: string;
+      transitioning?: boolean;
+    }
   | {
       state: "attention";
       summary: string;
+      title?: string;
       transitioning?: boolean;
       /**
        * Ambient attention: a condition worth seeing in the report but too
@@ -54,8 +72,8 @@ export interface HealthMark {
 /** The merged verdict: the worst known state, or `unknown` when a row cannot vouch for itself. */
 export type HealthLevel = HealthState | "unknown";
 
-/** What one row shows: a level, or `not-applicable` — which the merge never sees. */
-export type RowLevel = HealthLevel | "not-applicable";
+/** What one row shows: a level, or `not-applicable` / `absent` — which the merge never sees. */
+export type RowLevel = HealthLevel | "not-applicable" | "absent";
 
 /** What an info row shows: a title and a one-line summary, never a state. */
 export interface HealthInfo {

@@ -59,6 +59,16 @@ function prettify(status: ConversationStatus): string {
 
 export function StatusBadge() {
   const { convId } = conversationPane.useParams();
+  return <ConversationStatusChip convId={convId} />;
+}
+
+/**
+ * One conversation's status chip, by id — the same chip its own pane's
+ * toolbar shows (Working / Waiting / Stuck / Disconnected / Failed to start /
+ * Unknown), live. A surface that points at a conversation draws this rather
+ * than re-deriving a status of its own. Nothing until the row is known.
+ */
+export function ConversationStatusChip({ convId }: { convId: string }) {
   const conversation = rowOrStale(useConversationById(convId));
   if (!conversation) return null;
   return <StatusChip conversation={conversation} />;

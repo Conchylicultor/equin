@@ -8,7 +8,7 @@ local `main` only. So for someone who cloned this repo rather than authoring it,
 upstream can move for months in complete silence. This plugin is the one place
 that notices.
 
-Plan: `research/2026-11-17-global-release-updates.md` (this is its phase 1).
+Plan: `research/2026-11-17-global-release-updates.md` (phases 1 and 2).
 
 ## Releases, not commits
 
@@ -44,6 +44,7 @@ latest)` (the local half, no fetch). One definition, because the CLI
   `{{updates}}` — the release and the one this checkout is on, `{{ref}}` — the
   release tag, `{{pushPolicy}}`). No commit list: nothing lists changes.
 - `shared/config.ts`: the automation's config document.
+- `web/`: the health report's updates row (below).
 
 ## The live status: stored answer + git, re-derived
 
@@ -59,6 +60,40 @@ upstream has no change signal a clone can subscribe to.
 The old `upstream-updates-available` report kind is retired (a data migration
 deletes its rows): the status value replaces it, and the health row and the
 reminder (later phases of the plan) take over the bell and Investigate.
+
+## The updates row (health report)
+
+`web/` contributes the health report's `updates` row (phase 2 of the plan). Its
+state is derived, never stored (`web/internal/updates-view.ts`, pure and
+tested): the release status, the live task about the newest release, that
+task's latest run. Whether main serves the release is the status's own
+`installed` (machine: the backend's server pin holds the release tag; true
+off main; re-read on restart and on an adopted deploy).
+
+| State | Title | Summary | Health |
+|---|---|---|---|
+| no upstream / no release / never checked / no computer | — | — | `absent`: the row is not drawn |
+| behind, no task | equin is out of date | `2026.10.30 → 2026.11.14` | `attention`, ambient: the dot stays green |
+| behind, task about it | Update in progress | same | working → `ok` pulsing; at rest / not started → `attention` |
+| current, main's backend not built from it yet | Installing | `2026.11.14` | `ok` pulsing |
+| current | equin is up to date | `2026.11.14` | `ok` |
+
+- **Send agent to update** (the remedy, out of date only) is the standard
+  `LaunchAgentPopover`: the Upstream merges prompt (the user's edited one) with
+  the on-request push policy and the user's words, filed in the Upstream
+  category about `upstreamReleaseSubject(latest)` (`shared/subject.ts`). Never
+  automatic.
+- **One task per release, whoever files it.** A launch about a subject with a
+  live task reuses it; the automation skips a release that already has one and
+  stamps the subject on what it files (`onFiled`), so the row follows either.
+- **In progress draws the conversation's own status chip**
+  (`ConversationStatusChip` from `conversation-view/status`) beside a link to
+  it — the row never restates the agent's state.
+- **The bell** (`actions`, every state) toggles `shared/reminder-config.ts`
+  (`enabled`, `config/upstream/reminders.jsonc`). Having actions, the row never
+  folds into System checks.
+- "Never checked" is `absent` rather than "Checking…": the first check can be
+  a day away, and a grey pulsing dot for a day is a false alarm.
 
 ## Being offline is not an incident
 
@@ -102,18 +137,40 @@ that cannot run on this database).
 
 ## Plugin reference
 
-- Description: Registers the Upstream merges automation's config (schedule, push policy, model, prompt template) for the Automations pane and Settings → Config. Upstream, portable half: the Upstream merges automation's config registration, the Upstream task category, and the upstream_release_check table the desktop half records each check of upstream's releases in.
+- Description: Registers the Upstream merges automation's config (schedule, push policy, model, prompt template) for the Automations pane and Settings → Config. The health report's updates row on a clone: titled by its state — 'equin is out of date' (2026.10.30 → 2026.11.14; drawn as attention but ambient, so the dot stays green) with a Send agent to update remedy (the launch popover, filed about the release so it is never filed twice), 'Update in progress' with the merging conversation linked beside its own status chip (pulsing while it works, attention while it waits on the user), 'Installing' while main rebuilds the merged release, then 'equin is up to date'; a reminder bell in every state (the update reminders config). Absent on the canonical repo, before any check, and where upstream has cut no release. Upstream, portable half: the Upstream merges automation's config registration, the update reminders config, the Upstream task category, and the upstream_release_check table the desktop half records each check of upstream's releases in.
 - Web:
   - Contributes:
+    - `ConfigV2.WebRegister` "reminders"
     - `ConfigV2.WebRegister` "upstream-merge"
     - `Automations.Config` "upstream-merge"
-  - Uses: `tasks/automations.automationConfigContributions`
+    - `HealthReport.Row` "Updates"
+  - Uses:
+    - `apps-core/tabs.useAppLinkProps`
+    - `config_v2.ConfigV2`
+    - `config_v2.useConfigResult`
+    - `config_v2.useSetConfig`
+    - `conversations/conversation-view/status.ConversationStatusChip`
+    - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/line.Line`
+    - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.Button`
+    - `primitives/icon-button.IconButton`
+    - `primitives/launch.LaunchAgentPopover`
+    - `shell/health-report.HealthReport`
+    - `tasks/automations.automationConfigContributions`
+    - `tasks/task-subject.useSubjectTask`
+    - `ui/icons.Icon`
 - Server:
   - Contributes:
+    - `ConfigV2.Register` "reminders"
     - `ConfigV2.Register` "upstream-merge"
     - `taskCategory` "upstream"
     - `resource.declare` "upstream.release-status"
+    - `restart-skip.adopted` "whether the served build holds the newest upstream release"
   - Uses:
+    - `config_v2.ConfigV2`
     - `database/sql-column.parsedText`
     - `tasks/automations.automationConfigRegistration`
     - `tasks/task-category.TaskCategory`
@@ -143,10 +200,15 @@ that cannot run on this database).
     - `currentRelease`
     - `fetchUpstreamStatus`
     - `OWN_RELEASE_NAMESPACE`
+    - `releaseInCommit`
     - `standingAgainst`
     - `UPSTREAM_BRANCH`
     - `upstreamReleaseNamespace`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `framework/cli/upstream`
     - `framework/cli/version`

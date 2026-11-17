@@ -1,10 +1,13 @@
 import { db } from "@plugins/database/server";
 import { refHeadServed } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
+import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
+import { serverPinCommit } from "@plugins/build/plugins/server-build-id/server";
 import { serveValue } from "@plugins/network/plugins/live/machine";
 import {
   currentRelease,
   fetchUpstreamStatus,
+  releaseInCommit,
   standingAgainst,
   UPSTREAM_BRANCH,
   upstreamReleaseNamespace,
@@ -23,10 +26,11 @@ import { _upstreamReleaseCheck } from "../../server/internal/tables";
  *
  * External (git is half its truth), recomputed on exactly what can change it:
  * a check recording a new answer (a write to its row, through the change
- * feed), and a tracked ref moving (`refHeadServed`, the same edge
+ * feed), a tracked ref moving (`refHeadServed`, the same edge
  * `build.deployment` recomputes on) — so a merge that lands the release reads
- * as current as soon as `main` moves, not at the next daily check. Nothing
- * polls it.
+ * as current as soon as `main` moves, not at the next daily check — and the
+ * backend serving a new build: a restart reads it fresh, an adopted deploy
+ * notifies it (`RestartSkip.Adopted`, machine barrel). Nothing polls it.
  */
 export const releaseStatusServed = serveValue(upstreamReleaseStatus, {
   source: "external",
@@ -68,8 +72,31 @@ async function readReleaseStatus(): Promise<ReleaseStatus> {
     );
   const standing = await standingAgainst(root, remote, latest);
   return standing.kind === "current"
-    ? { kind: "current", current: latest, latest, checkedAt }
+    ? {
+        kind: "current",
+        current: latest,
+        latest,
+        installed: await servesRelease(root, remote, latest),
+        checkedAt,
+      }
     : { kind: "behind", current: standing.current, latest, checkedAt };
+}
+
+/**
+ * Does this backend serve a build holding the release? Only main installs
+ * anything (it rebuilds when `main` moves), so on any other checkout the
+ * release in local `main` is all there is to say. A backend that cannot name
+ * its commit (a mixed boot) is not serving it: main rebuilds such a backend.
+ */
+async function servesRelease(
+  root: string,
+  remote: string,
+  latest: string,
+): Promise<boolean> {
+  if (!isMain()) return true;
+  const served = serverPinCommit();
+  if (served === null) return false;
+  return releaseInCommit(root, remote, latest, served);
 }
 
 /** The stored half of an answer; `unreachable` stores nothing — it said nothing. */

@@ -12,7 +12,7 @@ import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-
 import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
 import {
   foldQuietRows,
-  mergeHealth,
+  mergeDot,
   sortRows,
   verdictOf,
   type HealthReportRow,
@@ -102,7 +102,10 @@ export function HealthReportHeader() {
       : rows.flatMap((row) =>
           row.kind === "status" ? [statuses[row.id]] : [],
         );
-  const merged = mergeHealth(statusList);
+  // The same dot as the action bar's: an ambient row (the machine busy, a
+  // release waiting) is shown as it is in its own row and named by the
+  // verdict, but never colours the dot — here or in the bar.
+  const merged = mergeDot(statusList);
   const verdict = verdictOf(statusList);
   return (
     <Line className="gap-sm">
@@ -147,7 +150,9 @@ function HealthReportPanelReady({ rows }: { rows: readonly SealedRow[] }) {
   const statuses = HealthStore.useStore();
   const statusOf = (row: SealedRow) =>
     row.kind === "status" ? statuses[row.id] : undefined;
-  const items = foldQuietRows(sortRows(rows), statusOf, isPlain);
+  // An `absent` row has nothing to say here: it is not drawn at all.
+  const shown = rows.filter((row) => statusOf(row)?.state !== "absent");
+  const items = foldQuietRows(sortRows(shown), statusOf, isPlain);
 
   return (
     <>

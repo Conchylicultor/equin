@@ -215,6 +215,18 @@ function RowGlance({
   return <Glance expanded={expanded} />;
 }
 
+/** The row's name in its current state: the state's own `title`, else the row's. */
+function titleOf(row: SealedStatusRow, status: ReportedStatus): string {
+  if (status !== undefined && "title" in status && status.title !== undefined)
+    return status.title;
+  return row.title;
+}
+
+/** The summary line; a row not reported yet (or saying nothing) is "Checking…". */
+function summaryOf(status: ReportedStatus): string {
+  return status?.summary ?? "Checking…";
+}
+
 /**
  * A status row: dot, title, summary, optional glance, optional trailing actions.
  * A row that declares a `component` is expandable — the chevron exists exactly
@@ -234,7 +246,7 @@ export function StatusRowView({
   // A check that does not apply here is hollow: no status, nothing live.
   const leading = (
     <ControlSizeProvider size="lg">
-      {level === "not-applicable" ? (
+      {level === "not-applicable" || level === "absent" ? (
         <StatusDot ringClass={cn("border-muted-foreground/50")} />
       ) : (
         <HealthDot level={level} pulsing={isPulsing(status)} />
@@ -245,8 +257,8 @@ export function StatusRowView({
   const text = (
     <RowText
       leading={leading}
-      title={row.title}
-      summary={status?.summary ?? "Checking…"}
+      title={titleOf(row, status)}
+      summary={summaryOf(status)}
       summaryClassName={SUMMARY_CLASS[level]}
       extra={
         Glance ? (

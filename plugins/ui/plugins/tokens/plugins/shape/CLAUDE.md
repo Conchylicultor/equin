@@ -23,7 +23,7 @@
   - Exports (values): `shapeGroup`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/density --radius-chip-compact`
-  - Tokens used by: 414 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Tokens used by: 415 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×97
     - `apps` ×80
     - `primitives` ×62
@@ -55,6 +55,7 @@
     - `reports/launch-fix`
     - `search/quick-find`
     - `tag-tree/picker`
+    - `upstream`
     - `wish`
   - Imported by:
     - `apps-core/chrome-theme`

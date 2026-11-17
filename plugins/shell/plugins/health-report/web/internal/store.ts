@@ -20,10 +20,20 @@ function marksKey(status: HealthStatus): string {
   return JSON.stringify(status.ambient);
 }
 
+/** A status's summary and per-state title, as one comparable pair. */
+function wordsOf(
+  status: HealthStatus,
+): [string | undefined, string | undefined] {
+  return [status.summary, "title" in status ? status.title : undefined];
+}
+
 function sameStatus(a: HealthStatus, b: HealthStatus): boolean {
+  const [aSummary, aTitle] = wordsOf(a);
+  const [bSummary, bTitle] = wordsOf(b);
   return (
     a.state === b.state &&
-    a.summary === b.summary &&
+    aSummary === bSummary &&
+    aTitle === bTitle &&
     isTransitioning(a) === isTransitioning(b) &&
     marksKey(a) === marksKey(b)
   );

@@ -721,7 +721,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `AGENT_MANAGER_READY_ATTR`
               - `agentManagerApp`
           - Cross-plugin:
-            - Imported by: 38 plugins — full list in [`plugins/apps/plugins/agent-manager/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/agent-manager/plugins/shell/REFERENCE.md)
+            - Imported by: 39 plugins — full list in [`plugins/apps/plugins/agent-manager/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/agent-manager/plugins/shell/REFERENCE.md)
               - `conversations` ×18
               - `tasks` ×8
               - `apps` ×5
@@ -732,6 +732,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `review`
               - `screenshot`
               - `stats`
+              - `upstream`
         - **`welcome`** — Landing pane (agent-manager index) shown at `/agents`, and the sidebar's New conversation entry, which opens it — its one prompt is where a conversation starts.
           - Web:
             - Slots: `welcomePane.Actions`
@@ -14328,7 +14329,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceMode`
           - `useTabs`
       - Cross-plugin:
-        - Imported by: 45 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+        - Imported by: 46 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
           - `apps` ×19
           - `apps-core` ×9
           - `debug` ×4
@@ -14341,6 +14342,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2/config-link`
           - `conversations/runtime-sdk`
           - `ui/theme-engine/quick-theme`
+          - `upstream`
     - **`theme-scope`** — Theme-scope helpers: the single definition of the focused full-surface app's theme scope, which decides the document's light/dark and canvas (never the :root tokens, always the desktop's) (useRootThemeScopeState: a state that keeps the not-registered-yet window apart from 'no app owns the surface'), and useAppSettingsScope — the app:<id> config scope per-app theme settings (variants) are read in: the nearest app theme boundary's (a pane's home app), else the focused app's.
       - Web:
         - Uses:
@@ -15740,6 +15742,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build/server-build-id`
               - `database/migrations`
               - `reports/engine`
+              - `upstream`
           - Server:
             - Exports (types): `AdoptHook`
             - Exports (values): `RestartSkip`
@@ -15916,6 +15919,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `build/deployment`
           - `reports/engine`
+          - `upstream`
       - Exemptions:
         - Exempts itself from:
           - `boundaries/no-platform-api` — `server/internal/get-server-commit.ts`, `server/internal/get-server-graph-hash.ts`, `server/internal/retired-build-file.ts` (debt)
@@ -16702,7 +16706,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 150 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+    - Imported by: 151 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×43
       - `debug` ×15
       - `conversations` ×14
@@ -16727,6 +16731,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `reorder`
       - `reports`
       - `review/code-review`
+      - `upstream`
   - Exemptions:
     - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/overrides-authored.ts` (debt)
   - Test helpers:
@@ -17247,7 +17252,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SYSTEM_CATEGORY_ID`
       - `withdrawConversationTurn`
   - Cross-plugin:
-    - Imported by: 89 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+    - Imported by: 90 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
       - `conversations` ×61
       - `tasks` ×10
       - `apps` ×6
@@ -17258,6 +17263,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `hints/ask`
       - `page/annotations/agent-notes/agent-page`
       - `primitives/launch`
+      - `upstream`
     - Endpoint callers:
       - `close`
       - `compaction-context`
@@ -22173,6 +22179,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/overlay/popover.InlinePopover`
               - `primitives/relative-time.formatRelativeTime`
               - `ui/icons.Icon`
+            - Exports (values): `ConversationStatusChip`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --border`
@@ -22183,6 +22190,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --primary-text`
               - `ui/tokens/color-palette --warning`
               - `ui/tokens/density --space-xs`
+            - Imported by: `upstream`
         - **`supervisor-done-count`** — A supervisor's done count (SupervisorDoneCount): how many tasks of its tree are done, however deep, with a ring filled by the done share of the whole tree; hover for done / open / dropped. useIsSupervisorRoot(taskId) tells whether a task states the supervisor mandate. The conversation progress chip draws it in place of its step bar on a supervisor's conversation.
           - Web:
             - Uses:
@@ -29234,7 +29242,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boolField`
               - `boolSample`
           - Cross-plugin:
-            - Imported by: 85 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
+            - Imported by: 86 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
               - `apps` ×29
               - `debug` ×13
               - `backup` ×11
@@ -29254,6 +29262,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/data-view/list`
               - `release`
               - `reports`
+              - `upstream`
         - **`data-view-codec`** — Boolean field type: data-view custom-column value codec (native boolean ↔ canonical text).
           - Web:
             - Contributes: `DataViewSlots.ValueCodec` "bool"
@@ -32123,7 +32132,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `UNDOCUMENTED_RUNTIME_FOLDERS`
           - `VERIFYING_FOLDERS`
       - Cross-plugin:
-        - Imported by: 97 plugins — full list in [`plugins/framework/plugins/plugin-id/REFERENCE.md`](../plugins/framework/plugins/plugin-id/REFERENCE.md)
+        - Imported by: 98 plugins — full list in [`plugins/framework/plugins/plugin-id/REFERENCE.md`](../plugins/framework/plugins/plugin-id/REFERENCE.md)
           - `plugin-meta` ×21
           - `apps` ×15
           - `tasks` ×12
@@ -32144,6 +32153,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports/launch-fix`
           - `runs`
           - `screenshot`
+          - `upstream`
           - `wish`
     - **`plugin-loader`** — Pure plugin-graph algorithms: topological load-wave partitioning and dependsOn topo-sort, shared by the server/central/web plugin loaders.
       - Cross-plugin:
@@ -39661,7 +39671,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runtimeNamespace`
           - `servingSocketPath`
       - Cross-plugin:
-        - Imported by: 75 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
+        - Imported by: 76 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
           - `infra` ×16
           - `debug` ×14
           - `build` ×9
@@ -39678,6 +39688,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/barrel-import`
           - `primitives/log-channels/log-files`
           - `shell/document-head`
+          - `upstream`
       - Test helpers:
         - Core: `@plugins/infra/plugins/runtime-identity/core/testing`
           - `resetRuntimeNamespaceForTest` — Drop the declaration.
@@ -42265,7 +42276,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 315 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+            - Imported by: 316 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `apps` ×85
               - `conversations` ×49
               - `debug` ×31
@@ -42296,6 +42307,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reorder`
               - `screenshot`
               - `search/quick-find`
+              - `upstream`
           - Exemptions:
             - Exempts itself from:
               - `endpoints/no-raw-web-fetch` — `web/use-resource.ts` (sanctioned)
@@ -49606,7 +49618,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 183 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+            - Imported by: 184 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
               - `apps` ×51
               - `primitives` ×33
               - `conversations` ×27
@@ -49626,6 +49638,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `auth`
               - `companions/panel`
               - `tag-tree/picker`
+              - `upstream`
         - **`grid`** — Responsive/uniform grid layout primitive: <Grid minCellWidth> lays out a wrapping, equal-width card grid via a closed prop surface — not a raw grid-template passthrough.
           - Web:
             - Uses: `primitives/css/ui-kit.cn`
@@ -49789,7 +49802,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `LineProps`
             - Exports (values): `Line`
           - Cross-plugin:
-            - Imported by: 128 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
+            - Imported by: 129 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
               - `apps` ×38
               - `primitives` ×20
               - `conversations` ×19
@@ -49809,6 +49822,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `integrations/youtube`
               - `map`
               - `tag-tree/picker`
+              - `upstream`
         - **`link-chip`** — Inline, clickable navigational chip — a clickable Badge drawn as an outlined tile (bg-muted, hairline border, hover:bg-accent) rather than as underlined link text, its label sitting on the baseline of the sentence holding it. A proportional label takes one text rung above a plain Badge so it holds up beside body copy; a monospace label keeps Badge's own rung, the size markdown gives inline code in the same prose, because the mono face already sets wider at any given rung. Its passthrough lands on the chip's own button, so it can be an overlay trigger.
           - Web:
             - Uses:
@@ -50524,7 +50538,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 431 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 432 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×111
               - `conversations` ×83
               - `primitives` ×48
@@ -50557,6 +50571,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `media/player`
               - `search/quick-find`
               - `tag-tree/picker`
+              - `upstream`
               - `wish`
           - Core:
             - Exports (types):
@@ -50849,7 +50864,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 476 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 477 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×113
               - `apps` ×110
               - `conversations` ×55
@@ -50887,6 +50902,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `search/quick-find`
               - `stats/commits`
               - `tag-tree/picker`
+              - `upstream`
           - Exemptions:
             - Exempts itself from:
               - `surface/no-adhoc-surface` — `web/components/ui` (sanctioned)
@@ -53492,7 +53508,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 139 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 140 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×46
           - `conversations` ×23
           - `primitives` ×23
@@ -53515,6 +53531,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/live-state`
           - `plugin-meta/exhibits`
           - `tag-tree/picker`
+          - `upstream`
           - `wish/element-picker`
     - **`icon-picker`** — Searchable, categorized picker over the Material Symbols set: a windowed grid of runtime-symbol cells browsing and searching Google's vendored Material Symbols metadata; onSelect hands back the picked SavedSymbolName. avatar, the page icon button and the callout panel compose it.
       - Web:
@@ -53747,7 +53764,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-sm`
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --spacing`
-        - Imported by: 21 plugins — full list in [`plugins/primitives/plugins/launch/REFERENCE.md`](../plugins/primitives/plugins/launch/REFERENCE.md)
+        - Imported by: 22 plugins — full list in [`plugins/primitives/plugins/launch/REFERENCE.md`](../plugins/primitives/plugins/launch/REFERENCE.md)
           - `apps` ×5
           - `conversations` ×4
           - `tasks` ×3
@@ -53758,6 +53775,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/launch/investigate`
           - `reports/launch-fix`
           - `screenshot`
+          - `upstream`
       - Plugins:
         - **`investigate`** — The one 'launch an agent to investigate this failure' affordance: <InvestigateAction> — a fixed icon, label and popover, briefed by the caller, filed about the failed record (tasks/task-subject) so a second launch reuses its task and the action turns into View task.
           - Web:
@@ -59756,6 +59774,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HealthReport.Row` ← `primitives.dom.web-storage.health`
           - `HealthReport.Row` ← `reports.resource-errors`
           - `HealthReport.Row` ← `tasks.worktree-identity`
+          - `HealthReport.Row` ← `upstream`
         - Contributes: `ActionBar.Lead` → `HealthReportButton`
         - Uses: 31 symbols — full list in [`plugins/shell/plugins/health-report/REFERENCE.md`](../plugins/shell/plugins/health-report/REFERENCE.md)
           - `primitives/collapsible` ×4
@@ -59813,6 +59832,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/dom/web-storage/health`
           - `reports/resource-errors`
           - `tasks/worktree-identity`
+          - `upstream`
       - Core:
         - Exports (types):
           - `DotMerge`
@@ -63165,6 +63185,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/launch/investigate`
           - `tasks`
           - `tasks/task-triage`
+          - `upstream`
     - **`task-title`** — Presents a task's Haiku-made short title (at most three words) and the full title it was made from, exposed on every list whose rows reach a task; a row's short title is current only while its source title equals the task's title (read through taskShortTitleColumns). Task titles, every host's half: the tasks_ext_short_title side-table (a ≤3-word short title per task, current while its sourceTitle equals the task's title) exposed to every list whose rows reach a task (LiveColumns.Expose), the synthesised fallback title a task is filed with, and scheduleTaskTitleUpdate over the TaskTitleGenerator host service — which upgrades that fallback in the background where a model is available (machine/).
       - Web:
         - Contributes: `FieldPresentation.Register` "exposure:tasks_ext_short_title"
@@ -63847,7 +63868,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TRAILER_LOG_FORMAT`
           - `UNATTRIBUTED_TRAILER_KEY`
       - Cross-plugin:
-        - Imported by: 126 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Imported by: 127 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations` ×50
           - `tasks` ×41
           - `debug` ×6
@@ -63864,6 +63885,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/cli/push`
           - `hints/ask`
           - `plugin-meta/plugin-health`
+          - `upstream`
           - `wish`
         - Extended by:
           - `conversations/context-usage` (table `conversations_ext_context_usage`)
@@ -65577,7 +65599,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `densityGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --radius`
-            - Tokens used by: 359 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 360 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `primitives` ×73
               - `apps` ×72
               - `conversations` ×51
@@ -65610,6 +65632,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reports/launch-fix`
               - `search/quick-find`
               - `tag-tree/picker`
+              - `upstream`
               - `wish/github-issue`
             - Imported by:
               - `apps-core/chrome-theme`
@@ -66047,7 +66070,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 414 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 415 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×97
               - `apps` ×80
               - `primitives` ×62
@@ -66079,6 +66102,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reports/launch-fix`
               - `search/quick-find`
               - `tag-tree/picker`
+              - `upstream`
               - `wish`
             - Imported by:
               - `apps-core/chrome-theme`
@@ -66506,18 +66530,40 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/sidebar-framing`
           - `ui/tree-disclosure`
 
-- **`upstream`** — Registers the Upstream merges automation's config (schedule, push policy, model, prompt template) for the Automations pane and Settings → Config. Upstream, portable half: the Upstream merges automation's config registration, the Upstream task category, and the upstream_release_check table the desktop half records each check of upstream's releases in.
+- **`upstream`** — Registers the Upstream merges automation's config (schedule, push policy, model, prompt template) for the Automations pane and Settings → Config. The health report's updates row on a clone: titled by its state — 'equin is out of date' (2026.10.30 → 2026.11.14; drawn as attention but ambient, so the dot stays green) with a Send agent to update remedy (the launch popover, filed about the release so it is never filed twice), 'Update in progress' with the merging conversation linked beside its own status chip (pulsing while it works, attention while it waits on the user), 'Installing' while main rebuilds the merged release, then 'equin is up to date'; a reminder bell in every state (the update reminders config). Absent on the canonical repo, before any check, and where upstream has cut no release. Upstream, portable half: the Upstream merges automation's config registration, the update reminders config, the Upstream task category, and the upstream_release_check table the desktop half records each check of upstream's releases in.
   - Web:
     - Contributes:
+      - `ConfigV2.WebRegister` "reminders"
       - `ConfigV2.WebRegister` "upstream-merge"
       - `Automations.Config` "upstream-merge"
-    - Uses: `tasks/automations.automationConfigContributions`
+      - `HealthReport.Row` "Updates"
+    - Uses:
+      - `apps-core/tabs.useAppLinkProps`
+      - `config_v2.ConfigV2`
+      - `config_v2.useConfigResult`
+      - `config_v2.useSetConfig`
+      - `conversations/conversation-view/status.ConversationStatusChip`
+      - `network/live.useLive`
+      - `network/live/live-state.ResourceErrorInline`
+      - `primitives/css/fill.Fill`
+      - `primitives/css/line.Line`
+      - `primitives/css/text.Text`
+      - `primitives/css/ui-kit.Button`
+      - `primitives/icon-button.IconButton`
+      - `primitives/launch.LaunchAgentPopover`
+      - `shell/health-report.HealthReport`
+      - `tasks/automations.automationConfigContributions`
+      - `tasks/task-subject.useSubjectTask`
+      - `ui/icons.Icon`
   - Server:
     - Contributes:
+      - `ConfigV2.Register` "reminders"
       - `ConfigV2.Register` "upstream-merge"
       - `taskCategory` "upstream"
       - `resource.declare` "upstream.release-status"
+      - `restart-skip.adopted` "whether the served build holds the newest upstream release"
     - Uses:
+      - `config_v2.ConfigV2`
       - `database/sql-column.parsedText`
       - `tasks/automations.automationConfigRegistration`
       - `tasks/task-category.TaskCategory`
@@ -66547,10 +66593,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `currentRelease`
       - `fetchUpstreamStatus`
       - `OWN_RELEASE_NAMESPACE`
+      - `releaseInCommit`
       - `standingAgainst`
       - `UPSTREAM_BRANCH`
       - `upstreamReleaseNamespace`
   - Cross-plugin:
+    - Uses tokens:
+      - `ui/tokens/density --space-sm`
+      - `ui/tokens/density --space-xs`
+      - `ui/tokens/shape --spacing`
     - Imported by:
       - `framework/cli/upstream`
       - `framework/cli/version`

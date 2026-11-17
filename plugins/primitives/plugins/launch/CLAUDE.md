@@ -102,7 +102,7 @@ started" notification confirms it), so its props are the form's minus
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --spacing`
-  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×5
     - `conversations` ×4
     - `tasks` ×3
@@ -113,6 +113,7 @@ started" notification confirms it), so its props are the form's minus
     - `primitives/launch/investigate`
     - `reports/launch-fix`
     - `screenshot`
+    - `upstream`
 - Sub-plugins:
   - **`investigate`** — The one 'launch an agent to investigate this failure' affordance: <InvestigateAction> — a fixed icon, label and popover, briefed by the caller, filed about the failed record (tasks/task-subject) so…
 
