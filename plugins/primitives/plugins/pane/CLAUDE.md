@@ -734,6 +734,13 @@ with an empty route.
   `studio`).
 - `useIndexMatch(basePath)` resolves it; the main renderer paints it only for
   an empty route, overlay hosts ignore it.
+- **It is never a route slot.** It has no URL part of its own, so a column of
+  it would be one the URL does not name (gone on reload, share, Back). Its
+  `useToggle` is a tsc error (`IndexPaneHasNoColumn`), an open's `mode` is
+  `"root"` only (tsc; `computeOpen` throws on the erased path), `paneTarget`
+  refuses it, and a from-scratch open skips it as a declared ancestor. To show
+  it beside another surface, define a pane of its own with a segment rendering
+  the same body (`pagesTreePane`, `prototypesGalleryColumnPane`).
 
 ### Companion panes (`companion`)
 
@@ -760,7 +767,7 @@ with an empty route.
   - Slots: `Pane.Register`
   - Slot contributors: 102 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `Pane.Register` ×102
-  - Contributes: 134 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes: 135 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `FileBrowserHeader` "title" → `PaneTitleItem`
     - `FilePreviewHeader` "title" → `PaneTitleItem`
     - `SlotRender.ListMiddleware`
@@ -853,6 +860,7 @@ with an empty route.
     - `profilingPane.Actions` "title" → `PaneTitleItem`
     - `prototypeDetailPane.Actions` "title" → `PaneTitleItem`
     - `prototypes-present.actions` "title" → `PaneTitleItem`
+    - `prototypesGalleryColumnPane.Actions` "title" → `PaneTitleItem`
     - `prototypesGalleryPane.Actions` "title" → `PaneTitleItem`
     - `queue-dead.actions` "title" → `PaneTitleItem`
     - `queue-emission.actions` "title" → `PaneTitleItem`

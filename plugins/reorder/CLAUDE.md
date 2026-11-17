@@ -137,8 +137,8 @@ Because the origin default is the materialized catalog, adding/removing a contri
 - Description: Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
 - Load-bearing: yes
 - Web:
-  - Contributes: 301 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.WebRegister` ×301
+  - Contributes: 302 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.WebRegister` ×302
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.useConfigResult`
@@ -162,8 +162,8 @@ Because the origin default is the materialized catalog, adding/removing a contri
     - `useLayoutOrder`
     - `useReorderedEntries`
 - Server:
-  - Contributes: 300 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.Register` ×300
+  - Contributes: 301 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.Register` ×301
   - Uses: `config_v2.ConfigV2`
   - Exports (values): `reorderDirectiveDescriptor`
 - Cross-plugin:

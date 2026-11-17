@@ -696,7 +696,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Contributes: `Conversation.ActionBar` → `PrototypesGalleryButton`
             - Uses:
-              - `apps/prototypes/gallery.prototypesGalleryPane`
+              - `apps/prototypes/gallery.prototypesGalleryColumnPane`
               - `conversations/conversation-view/action-bar.Conversation`
               - `primitives/icon-button.IconButton`
               - `primitives/link-gesture.linkProps`
@@ -8414,17 +8414,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Slots:
               - `prototypesGalleryPane.Actions`
+              - `prototypesGalleryColumnPane.Actions`
               - `sources`
               - `PrototypeCardActions`
               - `trash-actions`
             - Slot contributors:
               - `prototypesGalleryPane.Actions` ← `primitives.pane`
+              - `prototypesGalleryColumnPane.Actions` ← `primitives.pane`
               - `sources` ← `apps.prototypes.gallery`
               - `PrototypeCardActions` ← `apps.prototypes.gallery`
               - `PrototypeCardActions` ← `apps.prototypes.present`
               - `trash-actions` ← `apps.prototypes.gallery`
             - Contributes:
               - `Pane.Register` "prototypes-gallery"
+              - `Pane.Register` "prototypes-gallery-column"
               - `sources` "Prototypes" → `GallerySource`
               - `sources` "Trash" → `TrashSource`
               - `prototypeDetailPane.Actions` "tag" → `TagHeaderAction`
@@ -8457,6 +8460,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `PrototypeGalleryRow`
             - Exports (values):
               - `PrototypeCardActions`
+              - `prototypesGalleryColumnPane`
               - `prototypesGalleryPane`
           - Cross-plugin:
             - Uses tokens:
@@ -8552,6 +8556,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `prototypeDetailRoute`
               - `prototypesApp`
+              - `prototypesGalleryColumnRoute`
               - `prototypesGalleryRoute`
           - Cross-plugin:
             - Uses tokens:
@@ -55574,7 +55579,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots: `Pane.Register`
         - Slot contributors: 102 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `Pane.Register` ×102
-        - Contributes: 134 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Contributes: 135 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `FileBrowserHeader` "title" → `PaneTitleItem`
           - `FilePreviewHeader` "title" → `PaneTitleItem`
           - `SlotRender.ListMiddleware`
@@ -55667,6 +55672,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `profilingPane.Actions` "title" → `PaneTitleItem`
           - `prototypeDetailPane.Actions` "title" → `PaneTitleItem`
           - `prototypes-present.actions` "title" → `PaneTitleItem`
+          - `prototypesGalleryColumnPane.Actions` "title" → `PaneTitleItem`
           - `prototypesGalleryPane.Actions` "title" → `PaneTitleItem`
           - `queue-dead.actions` "title" → `PaneTitleItem`
           - `queue-emission.actions` "title" → `PaneTitleItem`
@@ -58190,8 +58196,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 301 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×301
+    - Contributes: 302 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×302
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -58215,8 +58221,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 300 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×300
+    - Contributes: 301 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×301
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:

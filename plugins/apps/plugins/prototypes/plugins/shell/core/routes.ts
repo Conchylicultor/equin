@@ -16,6 +16,16 @@ export const prototypesGalleryRoute = defineRoute({
 });
 
 /**
+ * The gallery as a column beside another surface (`…/prototypes`, e.g. next to
+ * a conversation). Not the gallery root: that is the app's index pane, which
+ * has no URL part of its own and so can only be the app's bare root.
+ */
+export const prototypesGalleryColumnRoute = defineRoute({
+  id: "prototypes-gallery-column",
+  segment: "prototypes",
+});
+
+/**
  * One prototype's canvas. The URL names the prototype and, optionally, the
  * variant frame A shows (`;variant=`, `files/core`'s `variantParam`) — a link
  * to one variant, which leaves the user's shared picks alone. The rest of the

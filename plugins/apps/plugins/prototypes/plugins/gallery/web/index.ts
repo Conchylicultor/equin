@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { prototypeDetailPane } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
-import { prototypesGalleryPane } from "./panes";
+import { prototypesGalleryColumnPane, prototypesGalleryPane } from "./panes";
 import {
   PrototypeCardActions,
   PrototypeGallerySources,
@@ -21,7 +21,7 @@ import { RestoreCardAction } from "./components/trash";
 import { TagCardAction, TagHeaderAction } from "./components/tag-chip";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
-export { prototypesGalleryPane } from "./panes";
+export { prototypesGalleryColumnPane, prototypesGalleryPane } from "./panes";
 export { PrototypeCardActions } from "./slots";
 export type { PrototypeGalleryRow } from "./slots";
 
@@ -30,6 +30,8 @@ export default {
     "Prototypes gallery list pane — one card per prototype over its rendered preview, on the prototype viewer's grid, with a Recently edited list; grouped by its tag as nested sections along the prototypes' tag tree (or by status: In progress / Done), with an Edit tag action (the shared tag picker) and a Done circle on every card and row (hover actions; the Done circle stays shown while set; both also in the detail pane's header, as the tag chip and the Done toggle), an undoable Delete on every card and in the detail header (deletedAt in the prototype's state — the folder stays), and a Trash view (its own source in the same view bar) listing the deleted ones with Restore — plus New prototype, which mints the folder before launching the agent that designs it.",
   contributions: [
     Pane.Register({ pane: prototypesGalleryPane }),
+    // The same gallery as a column beside another surface (a conversation).
+    Pane.Register({ pane: prototypesGalleryColumnPane }),
     // The view bar's two sources: the live prototypes and the deleted ones.
     PrototypeGallerySources({
       id: "gallery",
@@ -74,6 +76,7 @@ export default {
   ],
   slots: {
     "prototypes-gallery": prototypesGalleryPane,
+    "prototypes-gallery-column": prototypesGalleryColumnPane,
     sources: PrototypeGallerySources,
     "card-actions": PrototypeCardActions,
     "trash-actions": PrototypeTrashActions,

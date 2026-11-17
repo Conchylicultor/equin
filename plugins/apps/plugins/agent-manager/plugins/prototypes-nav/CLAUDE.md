@@ -4,9 +4,11 @@ The agent manager's entry point into Prototypes: a `Conversation.ActionBar`
 button, next to Pages, that opens the Prototypes gallery.
 
 **A column beside the chat.** Like `pages-nav`, the button toggles the gallery
-(`prototypesGalleryPane.useToggle({})`) as a Miller column to the right of the
-conversation, so the chat stays in view while browsing prototypes; a second
-click closes it. It is a real link: ⌘/middle-click opens it in a new browser
+(`prototypesGalleryColumnPane.useToggle({})`) as a Miller column to the right
+of the conversation, so the chat stays in view while browsing prototypes; a
+second click closes it. It toggles the gallery's column pane (`…/prototypes` in
+the URL), not the gallery root: the root is the Prototypes app's index pane,
+which has no URL part of its own and cannot be opened as a column. It is a real link: ⌘/middle-click opens it in a new browser
 tab.
 
 Lives under `apps/plugins/agent-manager/plugins/` for the same reason as
@@ -20,7 +22,7 @@ Lives under `apps/plugins/agent-manager/plugins/` for the same reason as
 - Web:
   - Contributes: `Conversation.ActionBar` → `PrototypesGalleryButton`
   - Uses:
-    - `apps/prototypes/gallery.prototypesGalleryPane`
+    - `apps/prototypes/gallery.prototypesGalleryColumnPane`
     - `conversations/conversation-view/action-bar.Conversation`
     - `primitives/icon-button.IconButton`
     - `primitives/link-gesture.linkProps`

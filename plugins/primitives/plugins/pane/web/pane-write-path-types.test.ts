@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { openPane, Pane, type } from "./pane";
+import { openPane, Pane, type, type OpenPaneFn } from "./pane";
+import { paneTarget } from "./pane-target";
 import type { ResolveResult } from "./resolve";
 import { defineApp, defineRoute } from "../core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -246,6 +247,37 @@ function typeAssertions() {
   void ownWithAncestor;
 }
 
+// ---- an app's index pane opens at its app's root only ----------------------
+// It has no URL part of its own, so as a column the URL would not name it.
+const indexPane = Pane.define({
+  route: defineRoute({ id: "wtp-index", segment: "" }),
+  app: testApp,
+  appIndex: true,
+  component: Dummy,
+});
+
+function indexAssertions(open: OpenPaneFn) {
+  open(indexPane, {}, { mode: "root" });
+  // @ts-expect-error - an index pane cannot be pushed as a column
+  open(indexPane, {}, { mode: "push" });
+  // @ts-expect-error - nor linked as one
+  open.link(indexPane, {}, { mode: "append" });
+  // @ts-expect-error - nor targeted as one
+  open.to(indexPane, {}, { mode: "swap" });
+  // @ts-expect-error - its `useToggle` is IndexPaneHasNoColumn, not a hook
+  indexPane.useToggle({});
+  // @ts-expect-error - a pane target opens as a column, so never an index pane
+  paneTarget(indexPane, {});
+  openPane(indexPane, {}, { mode: "root" });
+
+  // A non-index pane keeps every mode and its toggle.
+  open(paramless, {}, { mode: "push" });
+  paneTarget(paramless, {});
+  const useParamlessToggle: typeof paramless.useToggle = paramless.useToggle;
+  void useParamlessToggle;
+}
+
 test("pane write-path param typing guard compiles", () => {
+  expect(typeof indexAssertions).toBe("function");
   expect(typeof typeAssertions).toBe("function");
 });

@@ -40,6 +40,7 @@ documented with the mockup variable it is.
   - Exports (values):
     - `prototypeDetailRoute`
     - `prototypesApp`
+    - `prototypesGalleryColumnRoute`
     - `prototypesGalleryRoute`
 - Cross-plugin:
   - Uses tokens:

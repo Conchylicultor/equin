@@ -10,6 +10,7 @@ import {
   usePaneMatch,
 } from "@plugins/primitives/plugins/pane/web";
 import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
+import { computeOpen } from "../pane";
 import { createTestSurfaceStore, TestSurface } from "../testing";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
@@ -163,6 +164,79 @@ describe("appIndex", () => {
         </TestSurface>,
       ),
     ).toThrow(/Pane index collision/);
+  });
+});
+
+describe("an index pane is never a route slot", () => {
+  // It has no URL part of its own: as a slot it would be a column the URL does
+  // not name, gone on reload (the agent manager's Prototypes column was one).
+  const index = Pane.define({
+    route: defineRoute({ id: "nis-index", segment: "" }),
+    app: appA,
+    appIndex: true,
+    component: () => null,
+  });
+  const childRoute = defineRoute({
+    id: "nis-child",
+    segment: "item/:id",
+    parent: defineRoute({ id: "nis-index", segment: "" }),
+  });
+  const child = Pane.define({
+    route: childRoute,
+    app: appA,
+    useResolve: false,
+    component: () => null,
+  });
+  const other = Pane.define({
+    route: defineRoute({ id: "nis-other", segment: "other" }),
+    app: appA,
+    component: () => null,
+  });
+
+  for (const mode of ["push", "swap", "append"] as const) {
+    it(`refuses a "${mode}" open (only "root")`, () => {
+      store.restoreRoute([{ paneId: "nis-other", params: {} }]);
+      const route = store.getRoute();
+      expect(() =>
+        computeOpen(route, route[0]!.instanceId, index._internal, {}, { mode }),
+      ).toThrow(/index pane: it has no URL part of its own/);
+    });
+  }
+
+  it("opens at the root as the app's bare root (the empty route)", () => {
+    store.restoreRoute([{ paneId: "nis-other", params: {} }]);
+    const next = computeOpen(
+      store.getRoute(),
+      undefined,
+      index._internal,
+      {},
+      {
+        mode: "root",
+      },
+    );
+    expect(next.route).toEqual([]);
+    expect(next.landing?.pane).toBe(index._internal);
+  });
+
+  it("is skipped as the declared ancestor of a from-scratch open", () => {
+    render(
+      <TestSurface
+        store={store}
+        basePath="/app"
+        plugins={[plugin("nis-p", [index, child, other])]}
+      >
+        <MatchProbe />
+      </TestSurface>,
+    );
+    const next = computeOpen(
+      store.getRoute(),
+      undefined,
+      child._internal,
+      { id: "x" },
+      { mode: "root" },
+    );
+    expect(next.route.map((s) => s.paneId)).toEqual(["nis-child"]);
+    expect(store.routeUrl(next.route)).toBe("/app/item/x");
   });
 });
 

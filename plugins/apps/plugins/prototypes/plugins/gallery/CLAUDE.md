@@ -149,17 +149,20 @@ honest — the prototype does exist — and it self-corrects.
 - Web:
   - Slots:
     - `prototypesGalleryPane.Actions`
+    - `prototypesGalleryColumnPane.Actions`
     - `sources`
     - `PrototypeCardActions`
     - `trash-actions`
   - Slot contributors:
     - `prototypesGalleryPane.Actions` ← `primitives.pane`
+    - `prototypesGalleryColumnPane.Actions` ← `primitives.pane`
     - `sources` ← `apps.prototypes.gallery`
     - `PrototypeCardActions` ← `apps.prototypes.gallery`
     - `PrototypeCardActions` ← `apps.prototypes.present`
     - `trash-actions` ← `apps.prototypes.gallery`
   - Contributes:
     - `Pane.Register` "prototypes-gallery"
+    - `Pane.Register` "prototypes-gallery-column"
     - `sources` "Prototypes" → `GallerySource`
     - `sources` "Trash" → `TrashSource`
     - `prototypeDetailPane.Actions` "tag" → `TagHeaderAction`
@@ -192,6 +195,7 @@ honest — the prototype does exist — and it self-corrects.
   - Exports (types): `PrototypeGalleryRow`
   - Exports (values):
     - `PrototypeCardActions`
+    - `prototypesGalleryColumnPane`
     - `prototypesGalleryPane`
 - Cross-plugin:
   - Uses tokens:

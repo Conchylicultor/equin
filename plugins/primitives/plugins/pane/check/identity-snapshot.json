@@ -619,6 +619,12 @@
       "parent": null
     },
     {
+      "paneId": "prototypes-gallery-column",
+      "segment": "prototypes",
+      "appIndex": false,
+      "parent": null
+    },
+    {
       "paneId": "prototypes-present",
       "segment": "present/:name/:version/:size/:picks?",
       "appIndex": false,

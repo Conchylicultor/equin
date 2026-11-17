@@ -23,7 +23,9 @@ export interface PaneTarget {
 
 /** Name `pane` with `params` (type-checked against the pane's own params). */
 export function paneTarget<Params>(
-  pane: PaneObject<Params, any, any, any>,
+  // Never an app's index pane: a target opens as a column, which an index
+  // pane cannot be (its URL has no part of its own).
+  pane: PaneObject<Params, any, any, any, false>,
   params: NoInfer<Params>,
 ): PaneTarget {
   return { pane, params: params as Record<string, string> };

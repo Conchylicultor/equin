@@ -111,6 +111,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "apps.prototypes.canvas.prototypes-detail.actions", pluginId: "apps.prototypes.canvas", configName: "prototypes-detail.actions" },
   { slotId: "apps.prototypes.canvas.version-actions", pluginId: "apps.prototypes.canvas", configName: "version-actions" },
   { slotId: "apps.prototypes.gallery.card-actions", pluginId: "apps.prototypes.gallery", configName: "card-actions" },
+  { slotId: "apps.prototypes.gallery.prototypes-gallery-column.actions", pluginId: "apps.prototypes.gallery", configName: "prototypes-gallery-column.actions" },
   { slotId: "apps.prototypes.gallery.prototypes-gallery.actions", pluginId: "apps.prototypes.gallery", configName: "prototypes-gallery.actions" },
   { slotId: "apps.prototypes.gallery.sources", pluginId: "apps.prototypes.gallery", configName: "sources" },
   { slotId: "apps.prototypes.gallery.trash-actions", pluginId: "apps.prototypes.gallery", configName: "trash-actions" },

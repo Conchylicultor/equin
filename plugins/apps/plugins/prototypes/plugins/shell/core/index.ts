@@ -1,2 +1,6 @@
 export { prototypesApp } from "./app";
-export { prototypesGalleryRoute, prototypeDetailRoute } from "./routes";
+export {
+  prototypesGalleryColumnRoute,
+  prototypesGalleryRoute,
+  prototypeDetailRoute,
+} from "./routes";

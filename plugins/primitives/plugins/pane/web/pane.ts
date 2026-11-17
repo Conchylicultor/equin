@@ -2101,7 +2101,9 @@ function prefixHosts(
  * FROM SCRATCH (`mode: "root"`, or an open with no caller pane to be relative
  * to) there is no prefix, so the declared chain IS the route's ancestry and the
  * whole of it is materialized — including ancestors that name no param, which is
- * what puts the tasks tree beside a task detail opened from nowhere.
+ * what puts the tasks tree beside a task detail opened from nowhere. Never an
+ * app's index pane, in either mode: it has no URL part of its own, so its slot
+ * would be a column the URL does not name (the prototype canvas's gallery).
  *
  * RELATIVE (push / swap) the caller's prefix survives and already stands where
  * those ancestors would, so only the ones that CARRY SOMETHING are inserted:
@@ -2140,6 +2142,10 @@ function chainSlots(
       skippedUnregistered = true;
       continue;
     }
+    // An app's index pane is never a slot: it has no URL part of its own, so a
+    // slot for it would be a column the URL does not name — gone on reload.
+    // The route without it is exactly what the URL parses back to.
+    if (internal.appIndex) continue;
     // An optional `:name?` is never NEEDED — the ancestor has a URL without it
     // — so only the required names decide whether it can be minted; an
     // optional one the caller did supply still makes it carry something.
@@ -2318,7 +2324,11 @@ export function computeOpen(
   // carry them. Already on the bare root, its surface views stay (as
   // `setParams` keeps them); the same params there is no change at all. Only
   // the root: the landing pane has no URL part of its own to sit anywhere else
-  // in a route, so a positional open of one declaring keyed params throws.
+  // in a route — as a column its URL would be its neighbours' alone (`""`
+  // writes nothing, `";page"` has no part to ride), so the column would vanish
+  // on reload, share and Back. The `OpenPaneFn` / `useToggle` types refuse
+  // such an open; this guards the erased `AnyPane` path. A column beside
+  // another surface is a pane of its own with its own segment (`pagesTreePane`).
   if (target.appIndex) {
     if (opts.mode === "root") {
       const index = nonEmptyIndex(
@@ -2332,12 +2342,12 @@ export function computeOpen(
       }
       return { route: EMPTY, replace, changed: true, landing };
     }
-    if (isKeyedOnlySegment(target.segment)) {
-      throw new Error(
-        `Pane "${target.id}" is its app's index pane and declares keyed params ("${target.segment}"), ` +
-          `which ride the app's base path — it can only be opened with mode "root", not "${opts.mode}".`,
-      );
-    }
+    throw new Error(
+      `Pane "${target.id}" is its app's index pane: it has no URL part of its own ` +
+        `(segment "${target.segment}"), so it can only be opened with mode "root", not ` +
+        `"${opts.mode}" — as a column the URL would not name it. To show it beside another ` +
+        `surface, define a pane of its own with a segment (like pagesTreePane) rendering the same body.`,
+    );
   }
 
   // insert (⌥-click): the target goes right after the caller — after the last
@@ -2345,7 +2355,7 @@ export function computeOpen(
   // stays. A left-push already keeps them, so it is left to its own branch.
   // Where the kept prefix cannot host the target's address (another entity's
   // ancestor stands in it), the mode's own open decides, as it would anyway.
-  if (opts.insert === true && opts.side !== "left" && !target.appIndex) {
+  if (opts.insert === true && opts.side !== "left") {
     const callerAt =
       callerInstanceId === undefined
         ? -1
@@ -2963,13 +2973,32 @@ export type PaneExpandTarget =
   | { kind: "pending" }
   | { kind: "none" };
 
+/**
+ * What `useToggle` is on an app's index pane: not a function. An index pane has
+ * no URL part of its own (it IS its app's bare root), so as a column beside
+ * another surface the URL would not name it — gone on reload, share and Back.
+ * The key is the message tsc shows ("Type '{ … }' has no call signatures").
+ */
+export type IndexPaneHasNoColumn = {
+  readonly "An app's index pane (appIndex) cannot be opened as a column: its URL has no part of its own. Define a pane with its own segment (like pagesTreePane) rendering the same body, and toggle that": never;
+};
+
 export interface PaneObject<
   FullParams = {},
   OwnParams = FullParams,
   Options extends object = NoOptions,
   HintT extends object = NoHint,
+  /**
+   * Whether this is its app's index pane (`appIndex: true`) — inferred by
+   * `Pane.define` as a literal, `boolean` where unknown. An index pane only
+   * opens at its app's root: `useToggle` is {@link IndexPaneHasNoColumn} and
+   * an open's `mode` is `"root"` alone.
+   */
+  IsIndex extends boolean = boolean,
 > {
   id: string;
+  /** Whether this pane is its app's index pane. See {@link PaneInternal.appIndex}. */
+  appIndex: IsIndex;
   useParams: Hook<() => OwnParams>;
   /**
    * Read this pane's options: the opener-supplied partial merged under the
@@ -3082,12 +3111,14 @@ export interface PaneObject<
    * ⌥-click keeps the others (inserts / closes only it), ⌘/middle-click opens
    * the opened route in a new browser tab.
    */
-  useToggle: Hook<
-    (
-      params: FullParams,
-      opts?: PaneToggleOpts<Options, HintT>,
-    ) => { isOpen: boolean; toggle: LinkTarget }
-  >;
+  useToggle: IsIndex extends true
+    ? IndexPaneHasNoColumn
+    : Hook<
+        (
+          params: FullParams,
+          opts?: PaneToggleOpts<Options, HintT>,
+        ) => { isOpen: boolean; toggle: LinkTarget }
+      >;
   back(): void;
   forward(): void;
   /**
@@ -3108,7 +3139,7 @@ export interface PaneObject<
  * never silently narrows a consumer through the strict `NoOptions`/`NoHint`
  * defaults.
  */
-export type AnyPane = PaneObject<any, any, any, any>;
+export type AnyPane = PaneObject<any, any, any, any, boolean>;
 
 /**
  * The app-rooted URL for a pane's cross-app hand-off, or `null` when there is
@@ -3471,6 +3502,7 @@ function makePaneObject(
 
   const paneObject: AnyPane = {
     id: internal.id,
+    appIndex: internal.appIndex,
     useParams,
     useOptions,
     useHint,
@@ -3555,13 +3587,14 @@ type OwnRouteParams<Seg extends string> = RouteParams<Seg>;
 // The runtime throws in `useSyncPaneRegistry` stay: they still guard the
 // untyped `AnyPane` path, and the "one index per app" half of the invariant is
 // cross-file, which no type can see.
-type AppIndexField<Seg extends string> = Seg extends "" | "/" | `;${string}`
+type AppIndexField<Seg extends string, Index extends boolean> = Seg extends
+  "" | "/" | `;${string}`
   ? {
       /**
        * Marks this pane as its app's index/landing pane — what that app's bare
        * root resolves to. See {@link PaneInternal.appIndex}.
        */
-      appIndex?: boolean;
+      appIndex?: Index;
     }
   : { appIndex?: never };
 
@@ -3579,6 +3612,7 @@ type RouteDefineArgs<
   Seg extends string,
   Options extends object,
   HintT extends object,
+  Index extends boolean = false,
 > = {
   route: RouteDef<Params, Seg>;
   /** The app this pane belongs to (its official home). See {@link PaneInternal.app}. */
@@ -3639,7 +3673,7 @@ type RouteDefineArgs<
    */
   expand?: PaneExpand<Closed<OwnRouteParams<Seg>>>;
 } & RouteResolveField<Seg> &
-  AppIndexField<Seg>;
+  AppIndexField<Seg, Index>;
 
 // Identity comes from the `RouteDef`, so a pane always carries a `.link`.
 //
@@ -3651,9 +3685,17 @@ function define<
   Seg extends string = string,
   Options extends object = NoOptions,
   HintT extends object = NoHint,
+  // The `appIndex` literal, so the returned pane knows whether it is one.
+  Index extends boolean = false,
 >(
-  args: RouteDefineArgs<Params, Seg, Options, HintT>,
-): PaneObject<Closed<Params>, Closed<OwnRouteParams<Seg>>, Options, HintT>;
+  args: RouteDefineArgs<Params, Seg, Options, HintT, Index>,
+): PaneObject<
+  Closed<Params>,
+  Closed<OwnRouteParams<Seg>>,
+  Options,
+  HintT,
+  Index
+>;
 // One overload, so the signature callers see stays generic while the body works
 // on the erased shapes (`useResolve` and `appIndex` are conditional fields;
 // narrowing them under an unresolved `Seg` is not something the implementation
@@ -3666,7 +3708,13 @@ function define<
 // would forbid `appIndex` here while the overload still offers it — and TS
 // rejects the pair outright (TS2394).
 function define(
-  args: RouteDefineArgs<Record<string, string>, "", PaneOptions, PaneHintBag>,
+  args: RouteDefineArgs<
+    Record<string, string>,
+    "",
+    PaneOptions,
+    PaneHintBag,
+    boolean
+  >,
 ): AnyPane {
   const route: RouteDef<any, any> = args.route;
   const id = route.id;
@@ -4036,10 +4084,11 @@ export interface OpenPaneFn {
     Params = Record<string, string>,
     Options extends object = NoOptions,
     HintT extends object = NoHint,
+    IsIndex extends boolean = boolean,
   >(
-    target: PaneObject<Params, any, Options, HintT>,
+    target: PaneObject<Params, any, Options, HintT, IsIndex>,
     params: NoInfer<Params>,
-    opts: OpenPaneOpts<Options, HintT>,
+    opts: OpenPaneOpts<Options, HintT, IsIndex>,
   ): void;
   /**
    * The same open as a LINK: spread the result onto the control that opens it.
@@ -4059,10 +4108,11 @@ export interface OpenPaneFn {
     Params = Record<string, string>,
     Options extends object = NoOptions,
     HintT extends object = NoHint,
+    IsIndex extends boolean = boolean,
   >(
-    target: PaneObject<Params, any, Options, HintT>,
+    target: PaneObject<Params, any, Options, HintT, IsIndex>,
     params: NoInfer<Params>,
-    opts: OpenPaneOpts<Options, HintT>,
+    opts: OpenPaneOpts<Options, HintT, IsIndex>,
   ): LinkGestureProps;
   /**
    * The same open as DATA — the {@link LinkTarget} `link` spreads: `open()` is
@@ -4082,16 +4132,25 @@ export interface OpenPaneFn {
     Params = Record<string, string>,
     Options extends object = NoOptions,
     HintT extends object = NoHint,
+    IsIndex extends boolean = boolean,
   >(
-    target: PaneObject<Params, any, Options, HintT>,
+    target: PaneObject<Params, any, Options, HintT, IsIndex>,
     params: NoInfer<Params>,
-    opts: OpenPaneOpts<Options, HintT>,
+    opts: OpenPaneOpts<Options, HintT, IsIndex>,
   ): LinkTarget;
 }
 
-/** The `opts` of an {@link OpenPaneFn} open, typed against the target pane. */
-export interface OpenPaneOpts<Options extends object, HintT extends object> {
-  mode: PaneOpenMode;
+/**
+ * The `opts` of an {@link OpenPaneFn} open, typed against the target pane. An
+ * app's index pane opens at its app's root only (`mode: "root"`) — it has no
+ * URL part of its own to sit anywhere else in a route.
+ */
+export interface OpenPaneOpts<
+  Options extends object,
+  HintT extends object,
+  IsIndex extends boolean = boolean,
+> {
+  mode: IsIndex extends true ? "root" : PaneOpenMode;
   side?: "left" | "right";
   options?: Partial<Options>;
   hint?: HintT;
