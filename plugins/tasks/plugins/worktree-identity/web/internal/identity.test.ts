@@ -3,14 +3,19 @@ import {
   asNamespace,
   MAIN_WORKTREE_NAME,
 } from "@plugins/infra/plugins/namespace/core";
-import { identityInfo, placeOf, summaryOf, type LinkedTask } from "./identity";
+import { identityInfo, placeOf, type LinkedTask } from "./identity";
 
 const PENDING: LinkedTask = { kind: "pending" };
 const NONE: LinkedTask = { kind: "none" };
 const LINKED: LinkedTask = {
   kind: "linked",
   taskId: "task-1",
-  title: "Fix it",
+  shortTitle: "Health row",
+};
+const NO_SHORT: LinkedTask = {
+  kind: "linked",
+  taskId: "task-1",
+  shortTitle: null,
 };
 
 describe("placeOf", () => {
@@ -44,46 +49,44 @@ describe("placeOf", () => {
   });
 });
 
-describe("summaryOf", () => {
-  test("names what kind of place the namespace is", () => {
-    expect(summaryOf(placeOf(null))).toBe("Served outside the gateway");
-    expect(summaryOf(placeOf(MAIN_WORKTREE_NAME))).toBe(
-      "equin · main checkout",
-    );
-    expect(summaryOf(placeOf(asNamespace("att-1")))).toBe(
-      "att-1 · agent worktree",
-    );
-    expect(summaryOf(placeOf(asNamespace("sonata.att-1")))).toBe(
-      "sonata.att-1 · sonata",
-    );
-  });
-});
-
 describe("identityInfo", () => {
-  const worktree = placeOf(asNamespace("sonata.att-1"));
+  const agent = placeOf(asNamespace("att-1"));
+  const composed = placeOf(asNamespace("sonata.att-1"));
 
   test("local dev is titled as such whatever the lookup says", () => {
-    expect(identityInfo(placeOf(null), NONE).title).toBe("Local dev");
-  });
-
-  test("a linked task titles the row", () => {
-    expect(identityInfo(worktree, LINKED)).toEqual({
-      title: "Fix it",
-      summary: "sonata.att-1 · sonata",
+    expect(identityInfo(placeOf(null), LINKED)).toEqual({
+      title: "Local dev",
+      summary: "Served outside the gateway",
     });
   });
 
-  test("pending shows the namespace, exactly like no task", () => {
-    expect(identityInfo(worktree, PENDING)).toEqual(
-      identityInfo(worktree, NONE),
-    );
-    expect(identityInfo(worktree, PENDING).title).toBe("sonata.att-1");
-  });
-
-  test("the main checkout is titled by its namespace", () => {
+  test("the main checkout is titled by its kind, its namespace below", () => {
     expect(identityInfo(placeOf(MAIN_WORKTREE_NAME), NONE)).toEqual({
-      title: "equin",
-      summary: "equin · main checkout",
+      title: "Main checkout",
+      summary: "equin",
     });
+  });
+
+  test("an agent worktree: the short title, then the checkout", () => {
+    expect(identityInfo(agent, LINKED)).toEqual({
+      title: "Agent worktree",
+      summary: "Health row · att-1",
+    });
+  });
+
+  test("a composition on a worktree is titled by the composition", () => {
+    expect(identityInfo(composed, LINKED)).toEqual({
+      title: "Sonata worktree",
+      summary: "Health row · att-1",
+    });
+  });
+
+  test("without a short title the summary is the checkout alone", () => {
+    for (const task of [PENDING, NONE, NO_SHORT, { kind: "failed" } as const]) {
+      expect(identityInfo(agent, task)).toEqual({
+        title: "Agent worktree",
+        summary: "att-1",
+      });
+    }
   });
 });

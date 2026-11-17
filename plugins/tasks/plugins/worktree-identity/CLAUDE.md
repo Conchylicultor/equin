@@ -4,11 +4,15 @@ Says which checkout, and which task, the page you are looking at is served
 from. It is the health report's first row (`HealthReport.Row`, kind `info`):
 informational only, so it can never change the health dot.
 
-- **Title** — the linked task's title, else the namespace. A page served
-  outside the gateway (bare `localhost`, a dev server) is titled "Local dev".
-- **Summary** — the namespace, then what it names: "main checkout",
-  "agent worktree", or the composition id for a `<composition>.<checkout>`
-  namespace.
+- **Title** — the kind of checkout, never a task title (a long one does not
+  fit, and "equin" would read like the rows about equin itself): "Main
+  checkout", "Agent worktree", "`<Composition>` worktree" for a
+  `<composition>.<checkout>` namespace, or "Local dev" for a page served
+  outside the gateway (bare `localhost`, a dev server).
+- **Summary** — the details: on main the namespace (`equin`); on a worktree
+  the linked task's short title (`tasks/task-title`, at most three words),
+  then the checkout — the checkout alone while the lookup is pending, with no
+  task, or with no short title made from the task's current title.
 - **Actions** — copy the namespace; "Open task" (opens the task in the agent
   manager) once a task is known to be linked.
 
@@ -25,13 +29,15 @@ namespace would miss every composition served from an agent checkout
 Both reads are point reads — `useLive(attemptRows, { id: checkout })`, then
 `useLive(taskRows, { id: taskId })` — one row each. While either is still
 loading the lookup is `pending`, which renders exactly like "no task" (the
-namespace as title, no "Open task"), so nothing on screen claims an answer that
-later reverses.
+checkout alone as summary, no "Open task"), so nothing on screen claims an
+answer that later reverses. The short title needs no third read: it is an
+exposed field of the task entity, so it rides the task row's `$columns`
+(`taskShortTitleColumns.read(row)`).
 
 A lone label other than the main composition id is read as an agent checkout. It could
 also be another composition served from the main checkout (`sonata`); the name
 alone cannot say which (see the namespace plugin's CLAUDE.md), and a wrong guess
-costs only the summary word and a lookup that finds nothing.
+costs only the title word and a lookup that finds nothing.
 
 Lives under `tasks/`, not `apps/agent-manager/`, because it is global chrome:
 outside `apps/…` it loads in the eager tier, so the row is there at first paint.
@@ -40,7 +46,7 @@ outside `apps/…` it loads in the eager tier, so the row is there at first pain
 
 ## Plugin reference
 
-- Description: Which checkout and task this page is served from, as the health report's first (informational) row: the linked task's title or the namespace, the kind of place it names, a copy button, and Open task.
+- Description: Which checkout and task this page is served from, as the health report's first (informational) row: titled by the kind of checkout (Main checkout / Agent worktree / <Composition> worktree / Local dev), the namespace or the task's short title and checkout below, a copy button, and Open task.
 - Web:
   - Contributes: `HealthReport.Row` "worktree"
   - Uses:

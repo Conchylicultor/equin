@@ -68,6 +68,7 @@ task was filed with a placeholder) and a ≤3-word short title for narrow rows
     - `tasks`
     - `tasks/task-draft-form`
     - `tasks/task-title/filed-titles`
+    - `tasks/worktree-identity`
 - Machine:
   - Register:
     - `defineJob('task-title.on-conversation-created')`

@@ -54,41 +54,53 @@ export function placeOf(namespace: Namespace | null): WorktreePlace {
 /**
  * The task this checkout is working on, as a state: `pending` while the
  * attempts / tasks are still loading is its own answer, never "no task" — and
- * so is `failed`, when one of those reads failed.
+ * so is `failed`, when one of those reads failed. A linked task carries its
+ * short title (`tasks/task-title`, at most three words) only while that short
+ * title was made from the task's current title, else `null`.
  */
 export type LinkedTask =
   | { kind: "pending" }
   | { kind: "failed" }
   | { kind: "none" }
-  | { kind: "linked"; taskId: string; title: string };
+  | { kind: "linked"; taskId: string; shortTitle: string | null };
 
-/** The one-line summary: the namespace (as shown — its public label), and what
- *  kind of place it names. */
-export function summaryOf(place: WorktreePlace): string {
+/** The row's title: the kind of checkout, never a task title. */
+function titleOf(place: WorktreePlace): string {
   switch (place.kind) {
     case "local":
-      return "Served outside the gateway";
+      return "Local dev";
     case "main":
-      return `${namespaceLabel(place.namespace)} · main checkout`;
+      return "Main checkout";
     case "worktree":
-      return `${namespaceLabel(place.namespace)} · ${place.composition ?? "agent worktree"}`;
+      return place.composition === null
+        ? "Agent worktree"
+        : `${place.composition.charAt(0).toUpperCase()}${place.composition.slice(1)} worktree`;
   }
 }
 
 /**
- * The worktree row: the linked task's title, else the namespace. While the task
- * lookup is pending the title is the namespace — the same thing an unlinked
- * checkout shows, so nothing reverses once the lookup settles.
+ * The one-line summary — the details the title leaves out: the namespace (as
+ * shown — its public label) on main; on a worktree the task's short title,
+ * then the checkout. Until a short title is known (lookup pending, no task, no
+ * current short title) a worktree's summary is the checkout alone.
  */
+function summaryOf(place: WorktreePlace, task: LinkedTask): string {
+  switch (place.kind) {
+    case "local":
+      return "Served outside the gateway";
+    case "main":
+      return namespaceLabel(place.namespace);
+    case "worktree":
+      return task.kind === "linked" && task.shortTitle !== null
+        ? `${task.shortTitle} · ${place.checkout}`
+        : place.checkout;
+  }
+}
+
+/** The worktree row: titled by the kind of checkout, detailed in its summary. */
 export function identityInfo(
   place: WorktreePlace,
   task: LinkedTask,
 ): HealthInfo {
-  const summary = summaryOf(place);
-  if (place.kind === "local") return { title: "Local dev", summary };
-  return {
-    title:
-      task.kind === "linked" ? task.title : namespaceLabel(place.namespace),
-    summary,
-  };
+  return { title: titleOf(place), summary: summaryOf(place, task) };
 }

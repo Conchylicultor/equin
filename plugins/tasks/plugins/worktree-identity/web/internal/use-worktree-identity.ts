@@ -3,6 +3,7 @@ import { useBrowserValue } from "@plugins/primitives/plugins/dom/plugins/render-
 import { namespaceFromHost } from "@plugins/infra/plugins/namespace/core";
 import { rowOrStale, useLive } from "@plugins/network/plugins/live/web";
 import { attemptRows, taskRows } from "@plugins/tasks/plugins/tasks-core/core";
+import { taskShortTitleColumns } from "@plugins/tasks/plugins/task-title/core";
 import type { HealthInfo } from "@plugins/shell/plugins/health-report/web";
 import {
   identityInfo,
@@ -26,14 +27,16 @@ export function useWorktreePlace(): WorktreePlace {
  * The task this page's checkout is working on: the attempt the checkout is
  * named after — a worktree lives at `<root>/<attemptId>` (conversations/
  * workspace's `pathFor`), so the checkout IS the attempt id — then that
- * attempt's task. Two point reads, one row each. (Checkouts made before
- * 2026-05-02 were named differently and read as unlinked; none still exists.)
+ * attempt's task, with its short title (`tasks/task-title`'s exposed field,
+ * riding the task row's `$columns`). Two point reads, one row each. (Checkouts
+ * made before 2026-05-02 were named differently and read as unlinked; none
+ * still exists.)
  */
 export function useLinkedTask(place: WorktreePlace): LinkedTask {
   const checkout = place.kind === "worktree" ? place.checkout : null;
   const attempt = useLive(attemptRows, { id: checkout });
-  // The title lookup keys off the attempt's task id once it is known; until
-  // then (or when the attempt read failed) it looks nothing up, and the answer
+  // The task lookup keys off the attempt's task id once it is known; until
+  // then (or when the attempt read failed) it is skipped, and the answer
   // below comes from the attempt read's own state.
   const task = useLive(taskRows, { id: rowOrStale(attempt)?.taskId ?? null });
 
@@ -44,7 +47,15 @@ export function useLinkedTask(place: WorktreePlace): LinkedTask {
   if (task.status === "loading") return { kind: "pending" };
   if (task.status === "error") return { kind: "failed" };
   if (!task.found) return { kind: "none" };
-  return { kind: "linked", taskId: attempt.row.taskId, title: task.row.title };
+  const row = task.row;
+  // The short title stands for the task only while it was made from the
+  // task's current title (a rename makes it stale until it is regenerated).
+  const short = taskShortTitleColumns.read(row);
+  return {
+    kind: "linked",
+    taskId: row.id,
+    shortTitle: short.sourceTitle === row.title ? short.shortTitle : null,
+  };
 }
 
 /** The health report's worktree row: `{ title, summary }` for this page. */
