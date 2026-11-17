@@ -4,6 +4,7 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
   Breadcrumb,
+  BreadcrumbPlaces,
   type BreadcrumbSegment,
 } from "@plugins/primitives/plugins/breadcrumb/web";
 import {
@@ -29,6 +30,59 @@ function SegmentLabel({ page }: { page: Block }): ReactElement {
       <PageIcon icon={data.icon} className="size-[calc(13px/0.85)]" />
       {data.title || "Untitled"}
     </Inline>
+  );
+}
+
+/**
+ * One level of the page tree as a crumb's menu: the pages under `parentId`
+ * (the root pages for `null`) in document order, each with its sub-pages as a
+ * submenu read when it opens. `trail` is the chain the breadcrumb shows, so the
+ * page the trail goes through is listed first and marked.
+ */
+function PageLevel({
+  parentId,
+  trail,
+}: {
+  parentId: string | null;
+  trail: ReadonlySet<string>;
+}): ReactElement {
+  const openPane = useOpenPane();
+  const result = useLive(pagesTree, {
+    where: { pageId: parentId === null ? { isEmpty: true } : parentId },
+  });
+  if (result.status === "loading") return <BreadcrumbPlaces places="loading" />;
+  if (result.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="inline"
+        subject="these pages"
+        error={result.error}
+        refetch={result.refetch}
+      />
+    );
+  }
+  return (
+    <BreadcrumbPlaces
+      places={result.data.map((page) => ({
+        key: page.id,
+        label: <SegmentLabel page={page} />,
+        activation: openPane.to(
+          pageDetailPane,
+          { pageId: page.id },
+          { mode: "swap" },
+        ),
+        onTrail: trail.has(page.id),
+        inside:
+          page.$childCount > 0 ? (
+            <PageLevel parentId={page.id} trail={trail} />
+          ) : undefined,
+      }))}
+      more={
+        result.canGrow || result.growing
+          ? { load: result.loadMore, growing: result.growing }
+          : undefined
+      }
+    />
   );
 }
 
@@ -75,6 +129,7 @@ export function PageBreadcrumb({
   const ancestors = result.ancestors;
 
   const chain = [...ancestors, current];
+  const trail = new Set(chain.map((page) => page.id));
   const segments: BreadcrumbSegment[] = chain.map((page) => ({
     key: page.id,
     label: <SegmentLabel page={page} />,
@@ -83,6 +138,9 @@ export function PageBreadcrumb({
       { pageId: page.id },
       { mode: "swap" },
     ),
+    // Resting on a crumb lists the pages beside it — its parent's pages —
+    // each opening its own sub-pages.
+    siblings: <PageLevel parentId={page.pageId ?? null} trail={trail} />,
   }));
   if (leaf !== undefined) segments.push(leaf);
 

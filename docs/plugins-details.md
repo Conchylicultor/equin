@@ -7053,7 +7053,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PageDetail.UnderTitle` "backlinks" → `BacklinksUnderTitle`
               - `PageTree.RowActions` "delete" → `DeletePageAction`
               - `PageTree.RowActions` "add-below" → `AddPageBelowAction`
-            - Uses: 101 symbols — full list in [`plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md)
+            - Uses: 102 symbols — full list in [`plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md)
               - `primitives/pane` ×9
               - `page/editor` ×8
               - `primitives/css/ui-kit` ×8
@@ -7063,9 +7063,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/page-reference` ×4
               - `primitives/overlay/image-viewer` ×4
               - `network/live` ×3
+              - `primitives/breadcrumb` ×3
               - `apps/pages/shell` ×2
               - `page/read-only-view` ×2
-              - `primitives/breadcrumb` ×2
               - `primitives/collapsible` ×2
               - `primitives/css/control-panel` ×2
               - `primitives/css/spacing` ×2
@@ -48816,7 +48816,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/pane`
       - Exemptions:
         - Exempts itself from: `pane/no-adhoc-pane-toolbar` — `web/internal/bar.tsx` (sanctioned)
-    - **`breadcrumb`** — Generic breadcrumb: muted ancestor crumbs, a themed separator between them, and the current page as the one leaf that never gives up its letters — the oldest ancestors fold one by one into an overflow menu instead, keeping as many crumbs nearest the page as fit.
+    - **`breadcrumb`** — Generic breadcrumb: muted ancestor crumbs, a themed separator between them, and the current page as the one leaf that never gives up its letters — the oldest ancestors fold one by one into an overflow menu instead, keeping as many crumbs nearest the page as fit. A crumb given its siblings lists them in a menu while the pointer rests on it (a click still goes to the crumb), each with what is inside it as a submenu.
       - Web:
         - Slots: `BreadcrumbSlots.Separator`
         - Slot contributors: `BreadcrumbSlots.Separator` ← `ui.breadcrumb-separator`
@@ -48830,18 +48830,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.DropdownMenu`
           - `primitives/css/ui-kit.DropdownMenuContent`
           - `primitives/css/ui-kit.DropdownMenuItem`
+          - `primitives/css/ui-kit.DropdownMenuSub`
+          - `primitives/css/ui-kit.DropdownMenuSubContent`
+          - `primitives/css/ui-kit.DropdownMenuSubTrigger`
           - `primitives/css/ui-kit.DropdownMenuTrigger`
           - `primitives/dom/element-size.useResizeObserver`
           - `primitives/link-gesture.activationProps`
+          - `primitives/loading.Loading`
           - `primitives/row-actions.RowActions`
           - `primitives/slot-render.renderIsolated`
           - `ui/icons.Icon`
         - Exports (types):
+          - `BreadcrumbPlace`
+          - `BreadcrumbPlacesProps`
           - `BreadcrumbProps`
           - `BreadcrumbSegment`
           - `BreadcrumbSeparatorContribution`
         - Exports (values):
           - `Breadcrumb`
+          - `BreadcrumbPlaces`
           - `BreadcrumbSlots`
           - `TrailSeparator`
       - Cross-plugin:
@@ -53769,12 +53776,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 237 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 238 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×71
           - `conversations` ×25
           - `ui` ×24
           - `debug` ×20
-          - `primitives` ×19
+          - `primitives` ×20
           - `tasks` ×16
           - `page` ×11
           - `build` ×6

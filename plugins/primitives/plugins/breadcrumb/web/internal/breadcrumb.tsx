@@ -1,4 +1,10 @@
-import { Fragment, useRef, type ReactNode } from "react";
+import {
+  Fragment,
+  useRef,
+  type ReactElement,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import { RowActions } from "@plugins/primitives/plugins/row-actions/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -13,6 +19,7 @@ import {
   cn,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { TrailSeparator } from "./trail-separator";
+import { CrumbPlacesMenu } from "./places-menu";
 import {
   CRUMB_FOLD_ATTR,
   CRUMB_INDEX_ATTR,
@@ -40,6 +47,13 @@ export interface BreadcrumbSegment {
    * picker's browse path).
    */
   activation?: Activation;
+  /**
+   * The places beside this crumb's (its siblings), opened by resting the
+   * pointer on the crumb: the element that reads and lists them — a
+   * `<BreadcrumbPlaces>` — mounted only while the menu is open. A click on the
+   * crumb still goes to it. Omit it for a crumb with nothing to switch to.
+   */
+  siblings?: ReactElement;
 }
 
 export interface BreadcrumbProps {
@@ -102,11 +116,13 @@ const LEAF_TONE: Record<NonNullable<BreadcrumbProps["leafTone"]>, string> = {
 function Crumb({
   label,
   activation,
+  siblings,
   textClass,
   index,
 }: {
   label: ReactNode;
   activation?: Activation;
+  siblings?: ReactElement;
   textClass: string;
   /** Its place in the trail, which the fold measures it by. */
   index: number;
@@ -119,7 +135,7 @@ function Crumb({
       </span>
     );
   }
-  return (
+  const crumb = (
     <Button
       {...marker}
       variant="ghost"
@@ -132,6 +148,36 @@ function Crumb({
     >
       {label}
     </Button>
+  );
+  if (siblings === undefined) return crumb;
+  return <CrumbPlacesMenu trigger={crumb} places={siblings} navigates />;
+}
+
+/**
+ * The page you are on: inert (you are already there), but resting on it lists
+ * the pages beside it when the trail offers them.
+ */
+function Leaf({
+  segment,
+  className,
+  leafRef,
+}: {
+  segment: BreadcrumbSegment;
+  className: string;
+  leafRef: RefObject<HTMLSpanElement | null>;
+}) {
+  const leaf = (
+    <span ref={leafRef} data-breadcrumb-leaf className={className}>
+      {segment.label}
+    </span>
+  );
+  if (segment.siblings === undefined) return leaf;
+  return (
+    <CrumbPlacesMenu
+      trigger={leaf}
+      places={segment.siblings}
+      navigates={false}
+    />
   );
 }
 
@@ -257,6 +303,7 @@ export function Breadcrumb({
               <Crumb
                 label={seg.label}
                 activation={seg.activation}
+                siblings={seg.siblings}
                 textClass={textClass}
                 index={hidden + i}
               />
@@ -265,13 +312,11 @@ export function Breadcrumb({
           ))}
         </Stack>
       )}
-      <span
-        ref={leafRef}
-        data-breadcrumb-leaf
+      <Leaf
+        segment={active}
+        leafRef={leafRef}
         className={cn("truncate", LEAF_WEIGHT[leafWeight], LEAF_TONE[leafTone])}
-      >
-        {active.label}
-      </span>
+      />
       {actions && (
         // A trailing action cluster on a row-shaped strip is the `row-actions`
         // primitive, never raw JSX — one implementation owns the sizing, the

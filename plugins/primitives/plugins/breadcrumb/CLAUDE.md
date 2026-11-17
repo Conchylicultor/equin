@@ -37,7 +37,7 @@ path showed `… › leaf` with hundreds of pixels standing empty.)
 
 ## Plugin reference
 
-- Description: Generic breadcrumb: muted ancestor crumbs, a themed separator between them, and the current page as the one leaf that never gives up its letters — the oldest ancestors fold one by one into an overflow menu instead, keeping as many crumbs nearest the page as fit.
+- Description: Generic breadcrumb: muted ancestor crumbs, a themed separator between them, and the current page as the one leaf that never gives up its letters — the oldest ancestors fold one by one into an overflow menu instead, keeping as many crumbs nearest the page as fit. A crumb given its siblings lists them in a menu while the pointer rests on it (a click still goes to the crumb), each with what is inside it as a submenu.
 - Web:
   - Slots: `BreadcrumbSlots.Separator`
   - Slot contributors: `BreadcrumbSlots.Separator` ← `ui.breadcrumb-separator`
@@ -51,18 +51,25 @@ path showed `… › leaf` with hundreds of pixels standing empty.)
     - `primitives/css/ui-kit.DropdownMenu`
     - `primitives/css/ui-kit.DropdownMenuContent`
     - `primitives/css/ui-kit.DropdownMenuItem`
+    - `primitives/css/ui-kit.DropdownMenuSub`
+    - `primitives/css/ui-kit.DropdownMenuSubContent`
+    - `primitives/css/ui-kit.DropdownMenuSubTrigger`
     - `primitives/css/ui-kit.DropdownMenuTrigger`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/link-gesture.activationProps`
+    - `primitives/loading.Loading`
     - `primitives/row-actions.RowActions`
     - `primitives/slot-render.renderIsolated`
     - `ui/icons.Icon`
   - Exports (types):
+    - `BreadcrumbPlace`
+    - `BreadcrumbPlacesProps`
     - `BreadcrumbProps`
     - `BreadcrumbSegment`
     - `BreadcrumbSeparatorContribution`
   - Exports (values):
     - `Breadcrumb`
+    - `BreadcrumbPlaces`
     - `BreadcrumbSlots`
     - `TrailSeparator`
 - Cross-plugin:
