@@ -4,7 +4,6 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import {
@@ -24,6 +23,12 @@ import { useKeptMark } from "./state-marks";
 
 /** How a stored value is read back: as is (a store's own schema), or reparsed. */
 type Parse<T> = (stored: unknown) => T | null;
+
+/** A shown value and the entry it belongs to (`store.key(id)`; `null`: memory only). */
+interface Shown<T> {
+  entry: string | null;
+  value: T;
+}
 
 function same(a: unknown, b: unknown): boolean {
   return a === b || JSON.stringify(a) === JSON.stringify(b);
@@ -60,37 +65,72 @@ export function useKeptEntry<T>(
   // The value below is kept: a remount reads it back from storage, so the dev
   // unmount detector (loss-detector) must not report it as lost.
   useKeptMark();
-  const [value, setValueState] = useState<T>(read);
-  const latest = useLatestRef(value);
+  // What is shown, stamped with the entry it was read from or written to
+  // (`null`: memory only). A render whose entry differs from the stamp never
+  // returns the stamped value: it re-reads its own entry during that render,
+  // so no render (and no child effect run after it) can see another entry's
+  // value, and an updater never builds on one.
+  const entry = store === null ? null : store.key(id);
+  const [shown, setShown] = useState<Shown<T>>(() => ({
+    entry,
+    value: read(),
+  }));
+  let current = shown;
+  if (shown.entry !== entry) {
+    // The entry changed (e.g. navigating to another conversation): React
+    // discards this render's output and renders again with the new state
+    // before anything commits.
+    current = { entry, value: read() };
+    setShown(current);
+  }
+  const value = current.value;
+  const latest = useLatestRef(current);
 
-  // Re-read when the entry changes (e.g. navigating to a different conversation).
-  const sKey = store === null ? null : store.key(id);
-  const prevSKeyRef = useRef(sKey);
-  useEffect(() => {
-    if (prevSKeyRef.current !== sKey) {
-      prevSKeyRef.current = sKey;
-      setValueState(read());
-    }
-  }, [sKey, read]);
+  // A closure made for an earlier entry (a setter, handle or subscription
+  // still held after a re-key) acts on its own entry's storage but never
+  // restamps what is shown: after a commit the stamp is always the current
+  // closures' entry, so a mismatch in an updater can only be a stale closure,
+  // and a stamp mismatch in render only a real re-key.
+
+  /** Replace what is shown, only while it is this closure's entry. */
+  const showIfCurrent = useCallback(
+    (update: (shown: T) => T) =>
+      setShown((prev) => {
+        if (prev.entry !== entry) return prev;
+        const next = update(prev.value);
+        return next === prev.value ? prev : { entry, value: next };
+      }),
+    [entry],
+  );
 
   const setValue: Dispatch<SetStateAction<T>> = useCallback(
     (action) => {
-      setValueState((prev) => {
-        const next =
-          typeof action === "function"
-            ? (action as (prev: T) => T)(prev)
-            : action;
+      const apply = (base: T): T =>
+        typeof action === "function"
+          ? (action as (prev: T) => T)(base)
+          : action;
+      if (latest.current.entry !== entry) {
+        // A setter from an earlier entry: update that entry's storage once,
+        // here — not in an updater, which React may run twice (StrictMode, a
+        // rebased update) and which would then build on its own write.
+        if (store !== null)
+          scheduleDraftWrite(store, apply(read()), { scope: id });
+        return;
+      }
+      setShown((prev) => {
+        if (prev.entry !== entry) return prev;
+        const next = apply(prev.value);
         if (store !== null) scheduleDraftWrite(store, next, { scope: id });
-        return next;
+        return { entry, value: next };
       });
     },
-    [store, id],
+    [store, id, entry, read, latest],
   );
 
   const clear = useCallback(() => {
     if (store !== null) clearStoredDraft(store, { scope: id });
-    setValueState(resolvedInitial);
-  }, [store, id, resolvedInitial]);
+    showIfCurrent(() => resolvedInitial);
+  }, [store, id, resolvedInitial, showIfCurrent]);
 
   // Sync with other hooks on the same entry (same tab and other tabs). A
   // re-read equal to what is shown keeps the shown value: this hook's own
@@ -101,28 +141,31 @@ export function useKeptEntry<T>(
     if (store === null) return;
     return store.subscribe(id, () => {
       const next = read();
-      setValueState((shown) => (same(shown, next) ? shown : next));
+      showIfCurrent((shown) => (same(shown, next) ? shown : next));
     });
-  }, [store, id, read]);
+  }, [store, id, read, showIfCurrent]);
 
   const handle = useMemo(
     () =>
       ({
-      current: () => latest.current,
-      flush: () => {
-        if (store !== null) flushDraft(store, { scope: id });
-      },
-      showInitial: () => setValueState(resolvedInitial),
-      clearIfStill: (sent) => {
-        if (store !== null) {
-          const stored = readDraft(store, { scope: id });
-          if (stored !== null && same(stored, sent))
-            clearStoredDraft(store, { scope: id });
-        }
-        setValueState((shown) => (same(shown, sent) ? resolvedInitial : shown));
-      },
+        current: () =>
+          latest.current.entry === entry ? latest.current.value : read(),
+        flush: () => {
+          if (store !== null) flushDraft(store, { scope: id });
+        },
+        showInitial: () => showIfCurrent(() => resolvedInitial),
+        clearIfStill: (sent) => {
+          if (store !== null) {
+            const stored = readDraft(store, { scope: id });
+            if (stored !== null && same(stored, sent))
+              clearStoredDraft(store, { scope: id });
+          }
+          showIfCurrent((shown) =>
+            same(shown, sent) ? resolvedInitial : shown,
+          );
+        },
       }) as KeptHandle<T>,
-    [store, id, resolvedInitial, latest],
+    [store, id, entry, read, resolvedInitial, latest, showIfCurrent],
   );
 
   return [value, setValue, clear, handle];

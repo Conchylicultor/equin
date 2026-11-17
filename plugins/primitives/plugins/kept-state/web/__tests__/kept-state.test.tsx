@@ -1,5 +1,5 @@
 import { act, render, renderHook } from "@testing-library/react";
-import type { ReactNode } from "react";
+import { type ReactNode, StrictMode, useEffect } from "react";
 import { beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
@@ -111,6 +111,64 @@ describe("useKept — work", () => {
     // The flushed entry re-read from storage is equal: the shown value stays,
     // so an untouched part keeps its identity (a memo on it does not rerun).
     expect(hook.result.current[0].fixed).toBe(fixed);
+  });
+
+  it("shows the new entry in the render its subject changes, and a child effect's write builds on it", () => {
+    const kept = work("rekey");
+    const seen: string[] = [];
+    // A child keyed by subject remounts on the change, and its effect runs
+    // before the parent's: it must already see (and append to) the new entry.
+    function Appender({ append }: { append: KeptBinding<string>[1] }) {
+      useEffect(() => append((v) => `${v}+`), [append]);
+      return null;
+    }
+    function Parent({ subject }: { subject: string }) {
+      const [value, setValue] = useKept(kept, "", { subject });
+      seen.push(`${subject}:${value}`);
+      return <Appender key={subject} append={setValue} />;
+    }
+    const view = render(<Parent subject="a" />);
+    act(() => flushKept());
+    view.rerender(<Parent subject="b" />);
+    act(() => flushKept());
+    expect(Object.values(stored(local, kept.owner)).sort()).toEqual(["+", "+"]);
+    // The first render of subject b already returns b's (empty) entry, never a's.
+    expect(seen.find((s) => s.startsWith("b:"))).toBe("b:");
+    expect(seen.at(-1)).toBe("b:+");
+  });
+
+  it("a setter or handle kept from the previous subject acts on its own entry and leaves the shown one alone", () => {
+    const kept = defineKept({
+      owner: owner("stale"),
+      label: "Test drafts",
+      tier: "work",
+      stamp: "test",
+      cap: "8 KB",
+      schema: z.object({ text: z.string() }),
+    });
+    const hook = renderHook(
+      ({ subject }) => useKept(kept, { text: "" }, { subject }),
+      // StrictMode runs updaters twice: a stale write must still land once.
+      { initialProps: { subject: "a" }, wrapper: StrictMode },
+    );
+    act(() => hook.result.current[1]({ text: "sent" }));
+    const [, setA, , handleA] = hook.result.current;
+    hook.rerender({ subject: "b" });
+    act(() => hook.result.current[1]({ text: "hello" }));
+    const shownB = hook.result.current[0];
+
+    // a's send is taken after the switch; then a's setter appends to a.
+    expect(handleA.current()).toEqual({ text: "sent" });
+    act(() => handleA.clearIfStill({ text: "sent" }));
+    act(() => setA((v) => ({ text: `${v.text}!` })));
+    act(() => flushKept());
+
+    expect(hook.result.current[0]).toBe(shownB);
+    expect(
+      Object.values(stored(local, kept.owner)).sort((x, y) =>
+        JSON.stringify(x).localeCompare(JSON.stringify(y)),
+      ),
+    ).toEqual([{ text: "!" }, { text: "hello" }]);
   });
 
   it("refuses a work owner without a subject", () => {
