@@ -22,13 +22,14 @@ writeFileSync(join(dir, "a.txt"), "hello");
 writeFileSync(join(dir, "b.txt"), "world");
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-// A disk that answers every call FS_WAIT_FLOOR_MS + 20 ms late. The call's own
-// promise is handled at once (allSettled): a rejection left unhandled while the
-// sleep runs is an unhandled rejection, which bun charges to the running test.
-const stall = <T>(p: Promise<T>): Promise<T> =>
-  Promise.allSettled([p, sleep(FS_WAIT_FLOOR_MS + 20)]).then(([r]) =>
-    r!.status === "fulfilled" ? r!.value : Promise.reject(r!.reason as Error),
-  );
+// A disk that answers every call FS_WAIT_FLOOR_MS + 20 ms late: the installed
+// await runs as the call is issued, and blocking the thread there keeps node's
+// answer from reaching the caller until then. (A delay added AFTER the call
+// answered is the await's own wait, never the disk's — see the take-back test.)
+const stall = <T>(p: Promise<T>): Promise<T> => {
+  Bun.sleepSync(FS_WAIT_FLOOR_MS + 20);
+  return p;
+};
 
 const seen: SlowFsCall[] = [];
 const off = onSlowFsCall((c) => seen.push(c));
@@ -121,9 +122,6 @@ test("an installed call guard sees every call first, and its throw refuses the c
 
 test("the wait meter sees every call while it runs: started before the disk answers, ended after", async () => {
   const log: string[] = [];
-  let release!: () => void;
-  const held = new Promise<void>((r) => (release = r));
-  installFsAwait((p) => held.then(() => p));
   installFsWaitMeter((layer) => {
     log.push(`start ${layer}`);
     return () => log.push(`end ${layer}`);
@@ -132,7 +130,6 @@ test("the wait meter sees every call while it runs: started before the disk answ
     const pending = stat(join(dir, "a.txt"));
     // In progress: started, not ended — what a hung call looks like.
     expect(log).toEqual(["start fs-stat"]);
-    release();
     await pending;
     statSync(join(dir, "a.txt"));
     const hits: string[] = [];
@@ -164,6 +161,41 @@ test("a file call the meter's own end makes is not metered again", () => {
   try {
     statSync(join(dir, "b.txt"));
     expect(starts).toBe(1);
+  } finally {
+    installFsWaitMeter(null);
+  }
+});
+
+test("a call that returned is over, even while the await still holds its caller (a slot take-back)", async () => {
+  const log: string[] = [];
+  let returned!: () => void;
+  const callReturned = new Promise<void>((r) => (returned = r));
+  // The backend's await: node answered, then the caller waits to take its
+  // read-admit slot back — here for longer than the floor.
+  installFsAwait((p) =>
+    p.then(async (v) => {
+      await sleep(FS_WAIT_FLOOR_MS + 50);
+      log.push("slot taken back");
+      return v;
+    }),
+  );
+  installFsWaitMeter((layer) => {
+    log.push(`start ${layer}`);
+    return () => {
+      log.push(`end ${layer}`);
+      returned();
+    };
+  });
+  try {
+    const pending = stat(join(dir, "a.txt"));
+    await callReturned;
+    // The file call is over before the slot is back: a wait still running
+    // here is the take-back's, not "the file call has not returned".
+    expect(log).toEqual(["start fs-stat", "end fs-stat"]);
+    expect((await pending).isFile()).toBe(true);
+    expect(log).toEqual(["start fs-stat", "end fs-stat", "slot taken back"]);
+    // Nor is the take-back's time booked as a slow file call.
+    expect(seen).toEqual([]);
   } finally {
     installFsWaitMeter(null);
   }

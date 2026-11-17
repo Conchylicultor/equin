@@ -221,18 +221,63 @@ export function installFsCallGuard(guard: FsCallGuard | null): void {
 
 type AnyFn = (...args: any[]) => any;
 
+/**
+ * `start()`'s promise, with `onReturned` run the moment it settles (or at once
+ * when `start` throws) — BEFORE the installed `fsAwait` resumes the caller.
+ * The file call is metered and timed up to here and no further: what the
+ * await does after the call returned (a backend's `whileWaiting` taking its
+ * read-admit slot back, at the head of that gate's queue) is not the disk's
+ * time. That take-back is its own wait, on the gate's layer (the gate's
+ * `onQueued`), so a stuck one reads as a read-admit wait and never as "the
+ * file call has not returned" (main, 2026-11-17: a readdir that answered in
+ * ~200 ms was reported stuck for a minute while its loader could not retake
+ * its slot).
+ */
+function untilReturned<T>(
+  start: () => Promise<T>,
+  onReturned: () => void,
+): Promise<T> {
+  let pending: Promise<T>;
+  try {
+    pending = start();
+  } catch (err) {
+    onReturned();
+    throw err;
+  }
+  return pending.then(
+    (value) => {
+      onReturned();
+      return value;
+    },
+    (err: unknown) => {
+      onReturned();
+      throw err;
+    },
+  );
+}
+
 function timedAsync<F extends AnyFn>(layer: FsWaitLayer, op: string, fn: F): F {
   const timed = async (...args: Parameters<F>) => {
     const end = meterStart(layer);
     const concurrent = ++inFlight;
     const t0 = performance.now();
-    try {
-      return await fsAwait(fn(...args) as Promise<unknown>);
-    } finally {
-      inFlight--;
-      meterEnd(end);
-      observe(layer, op, performance.now() - t0, targetOf(args[0]), concurrent);
-    }
+    // The call ends when node answers — not when the installed await resumes
+    // the caller (see `untilReturned`).
+    const returned = untilReturned(
+      () => fn(...args) as Promise<unknown>,
+      () => {
+        inFlight--;
+        meterEnd(end);
+        observe(
+          layer,
+          op,
+          performance.now() - t0,
+          targetOf(args[0]),
+          concurrent,
+        );
+      },
+    );
+    return await fsAwait(returned);
   };
   // The guard runs before the async body, so a refusal throws at the call.
   return ((...args: Parameters<F>) => {
@@ -391,14 +436,16 @@ export async function* scanGlob(
       const end = meterStart("fs-glob");
       concurrent = Math.max(concurrent, ++inFlight);
       const t0 = performance.now();
-      let step: IteratorResult<string>;
-      try {
-        step = await fsAwait(it.next());
-      } finally {
-        inFlight--;
-        meterEnd(end);
-        inScan += performance.now() - t0;
-      }
+      const step = await fsAwait(
+        untilReturned(
+          () => it.next(),
+          () => {
+            inFlight--;
+            meterEnd(end);
+            inScan += performance.now() - t0;
+          },
+        ),
+      );
       if (step.done) return;
       yield step.value;
     }

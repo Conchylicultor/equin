@@ -58,7 +58,12 @@ own time, and each needed a manual investigation to blame the filesystem.
   gives its read-admit slot back while the call is pending and takes it back
   at the head of the queue. `network/live/resource-runtime/scripts/fs-yield-bench.ts` measured it: behind
   six reads stalled 2 s, unrelated reads answered in 33–49 ms instead of
-  ~2 s, and a herd of fs-heavy reads showed no thrash.
+  ~2 s, and a herd of fs-heavy reads showed no thrash. **The call ends when
+  node answers, not when the await resumes the caller**: the meter's end and
+  the `onSlowFsCall` time are taken as the call's own promise settles, before
+  the installed await's tail — so a slot take-back that queues is the read
+  gate's own wait (its `onQueued`, a `read-admit` gate wait), never an
+  `fs-<op>` wait "that has not returned".
 - **The call guard.** `installFsCallGuard(guard | null)` installs one guard
   every timed call (and glob scan) passes first, synchronously, before it
   touches the disk; a guard that throws refuses the call at the call site
