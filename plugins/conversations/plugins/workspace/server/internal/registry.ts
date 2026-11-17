@@ -48,7 +48,8 @@ export interface LaunchFragment {
  *   carries the policy, its hooks running the scripts under `root` — the
  *   launching backend's checkout, the same code that spelled them.
  */
-export type LaunchGuards = { from: "checkout" } | { from: "launch"; root: string };
+export type LaunchGuards =
+  { from: "checkout" } | { from: "launch"; root: string };
 
 /** Claude Code permission rules a launch adds. */
 export interface LaunchPermissions {

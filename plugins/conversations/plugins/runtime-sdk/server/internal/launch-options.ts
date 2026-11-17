@@ -54,8 +54,13 @@ export interface SdkLaunchInput {
  */
 export function sdkLaunchOptions(input: SdkLaunchInput): AgentLaunchIntent {
   const { launch } = input;
-  const settingSources = [...(launch.settingSources ?? DEFAULT_SETTING_SOURCES)];
-  if (launch.guards.from === "checkout" && !settingSources.includes("project")) {
+  const settingSources = [
+    ...(launch.settingSources ?? DEFAULT_SETTING_SOURCES),
+  ];
+  if (
+    launch.guards.from === "checkout" &&
+    !settingSources.includes("project")
+  ) {
     throw new Error(
       `launch in ${input.cwd}: guards come from the checkout's project settings, but the launch does not load them (setting sources: ${settingSources.join(", ")}) — the agent would run unguarded`,
     );

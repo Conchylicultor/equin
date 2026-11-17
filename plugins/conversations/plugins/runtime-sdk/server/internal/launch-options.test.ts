@@ -107,8 +107,7 @@ describe("sdkLaunchOptions", () => {
       appendSystemPrompt: "be terse",
     });
     expect(
-      sdkLaunchOptions({ ...base, launch: CHECKOUT })
-        .appendSystemPrompt,
+      sdkLaunchOptions({ ...base, launch: CHECKOUT }).appendSystemPrompt,
     ).toBeNull();
   });
 
