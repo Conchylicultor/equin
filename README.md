@@ -6,13 +6,13 @@
 
 <p>
 <a href="https://equin.ai"><b>equin.ai</b></a> &nbsp;·&nbsp;
-<a href="https://equin.ai/about">▶ Watch the film</a> &nbsp;·&nbsp;
-<a href="https://equin.ai/about/vision">Vision</a> &nbsp;·&nbsp;
-<a href="https://equin.ai/about/apps">Apps</a> &nbsp;·&nbsp;
+<a href="https://equin.ai/">▶ Watch the film</a> &nbsp;·&nbsp;
+<a href="https://equin.ai/vision">Vision</a> &nbsp;·&nbsp;
+<a href="https://equin.ai/apps">Apps</a> &nbsp;·&nbsp;
 <a href="#-install">Install</a>
 </p>
 
-<a href="https://equin.ai/about/apps">
+<a href="https://equin.ai/apps">
 <img alt="The apps equin ships" src="docs/readme/apps.svg" width="100%" />
 </a>
 
@@ -22,7 +22,7 @@
 
 equin is an agentic platform for building large apps at scale: hundreds of features,
 maintained autonomously, built to last for years.
-It adds [hundreds of improvements](https://equin.ai/about/foundations) on top of raw Claude:
+It adds [hundreds of improvements](https://equin.ai/foundations) on top of raw Claude:
 
 - an **agent manager** designed to monitor dozens of sessions in parallel
 - **background agents** that fix, push and update the app on their own
@@ -36,7 +36,7 @@ It adds [hundreds of improvements](https://equin.ai/about/foundations) on top of
 
 ### Apps for a team or an organization
 
-Production-grade apps that can be deployed standalone. Use the platform to develop the app from within. equin provides the harness, agent-friendly primitives, an automated reporting system for bugs and performance issues, and [much more](https://equin.ai/about/foundations).
+Production-grade apps that can be deployed standalone. Use the platform to develop the app from within. equin provides the harness, agent-friendly primitives, an automated reporting system for bugs and performance issues, and [much more](https://equin.ai/foundations).
 
 </td>
 <td width="50%" valign="top">
@@ -60,7 +60,7 @@ to each other in one app:
 
 ## ▶ Try it
 
-<a href="https://equin.ai/about/demo">
+<a href="https://equin.ai/demo">
 <img alt="Try the demo online — equin, running entirely in your browser" src="docs/readme/demo.svg" width="100%" />
 </a>
 
