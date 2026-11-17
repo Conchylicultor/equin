@@ -147,9 +147,18 @@ const actionsPlugin = {
     Notifications.Action({
       kind: "own-control",
       label: "Fix",
-      Control: ({ payload, label }) => (
-        <button type="button">{`${label} ${String(payload.runId)}`}</button>
+      Control: ({ payload, label, done }) => (
+        <button type="button" onClick={done}>
+          {`${label} ${String(payload.runId)}`}
+        </button>
       ),
+    }),
+    // A control drawn on its own line under the text.
+    Notifications.Action({
+      kind: "wide-control",
+      label: "Choose",
+      placement: "below",
+      Control: ({ label }) => <button type="button">{label}</button>,
     }),
   ],
 } as unknown as LoadedPlugin;
@@ -583,18 +592,52 @@ describe("NotificationView — what a notification says", () => {
     expect(screen.queryByText(/build/)).toBeNull();
   });
 
+  /** `node` under the live harness (a control may call an endpoint). */
+  const renderLive = (node: ReactElement) => {
+    const live = harness();
+    return render(withActions(<live.Wrapper>{node}</live.Wrapper>));
+  };
+
   it("an action kind may draw its own control", () => {
-    render(
-      withActions(
-        <NotificationView
-          surface="bell"
-          n={note({
-            action: { kind: "own-control", payload: { runId: "b1" } },
-          })}
-        />,
-      ),
+    renderLive(
+      <NotificationView
+        surface="bell"
+        n={note({
+          action: { kind: "own-control", payload: { runId: "b1" } },
+        })}
+      />,
     );
     expect(screen.getByRole("button", { name: "Fix b1" })).toBeTruthy();
+  });
+
+  it("a control that settles its notification dismisses the row and closes the surface", async () => {
+    const acted = vi.fn();
+    renderLive(
+      <NotificationView
+        surface="toast"
+        onActed={acted}
+        n={note({
+          action: { kind: "own-control", payload: { runId: "b1" } },
+        })}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Fix b1" }));
+    expect(acted).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(fetched()).toEqual(["POST /api/notifications/:id/dismiss"]);
+    });
+  });
+
+  it("a control placed below is drawn under the text, outside the row", () => {
+    renderLive(
+      <NotificationView
+        surface="bell"
+        n={note({ action: { kind: "wide-control", payload: {} } })}
+      />,
+    );
+    const choose = screen.getByRole("button", { name: "Choose" });
+    const row = document.querySelector("[data-notification-view]");
+    expect(row?.contains(choose)).toBe(false);
   });
 
   it("recurrence: nothing once, ×N after, capped at 99+", () => {

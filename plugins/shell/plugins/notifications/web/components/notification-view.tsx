@@ -45,6 +45,8 @@ import type {
   NotificationCategory,
   NotificationState,
 } from "../../core";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import { dismissNotification } from "../../shared/endpoints";
 import {
   Notifications,
   resolveActionKind,
@@ -73,7 +75,10 @@ export type NotificationContent = Pick<
   | "linkTo"
   | "metadata"
   | "count"
->;
+> & {
+  /** The stored row's id — `null` for a toast written nowhere (the demo). */
+  id: Notification["id"] | null;
+};
 
 const CATEGORY_ICON: Record<NotificationCategory, IconRef> = {
   conversations: symbol("forum"),
@@ -306,7 +311,13 @@ function ControlView({
 }: ViewProps & { kind: ControlKind; payload: Payload }): ReactElement {
   const { Control } = kind;
   const appLink = useAppLink();
+  const dismiss = useEndpointMutation(dismissNotification);
   const { onActed } = view;
+  const id = view.n.id;
+  const done = () => {
+    if (id !== null) dismiss.mutate({ params: { id } });
+    onActed?.();
+  };
   const linkTo = view.n.linkTo;
   const activation =
     view.surface === "bell" && linkTo?.startsWith("/") === true
@@ -314,16 +325,20 @@ function ControlView({
           onActed?.();
         })
       : undefined;
-  return (
+  const control = (
+    <ControlSizeProvider size="xs">
+      <Control payload={payload} label={kind.label} done={done} />
+    </ControlSizeProvider>
+  );
+  return kind.placement === "below" ? (
     <NotificationLayout
       {...view}
       activation={activation}
-      button={
-        <ControlSizeProvider size="xs">
-          <Control payload={payload} label={kind.label} />
-        </ControlSizeProvider>
-      }
+      button={null}
+      footer={control}
     />
+  ) : (
+    <NotificationLayout {...view} activation={activation} button={control} />
   );
 }
 
@@ -450,9 +465,15 @@ function NotificationLayout({
   className,
   activation,
   button,
+  footer = null,
 }: ViewProps & {
   activation: Activation | undefined;
   button: ReactElement | null;
+  /**
+   * A control on its own line under the text (a `Control` kind placed
+   * `below`), lined up with the text — never inside the row's activation.
+   */
+  footer?: ReactElement | null;
 }): ReactElement {
   const audience = useAudience();
   const developer =
@@ -567,7 +588,7 @@ function NotificationLayout({
       </ControlSizeProvider>
     ) : null;
 
-  return (
+  const row = (
     <Stack
       direction="row"
       gap="sm"
@@ -576,7 +597,7 @@ function NotificationLayout({
       className={cn(
         "relative isolate",
         activation !== undefined && "focus-ring-from",
-        className,
+        footer === null && className,
       )}
     >
       {activation === undefined ? (
@@ -621,6 +642,25 @@ function NotificationLayout({
           </Center>
         )
       )}
+    </Stack>
+  );
+  if (footer === null) return row;
+  return (
+    <Stack gap="xs" className={className}>
+      {row}
+      {/* Collapsed when the control draws nothing (its state has passed). */}
+      <Stack
+        direction="row"
+        gap="sm"
+        align="start"
+        className="has-[[data-notification-footer]:empty]:hidden"
+      >
+        {/* The glyph's cell, invisible: the footer lines up with the text. */}
+        <span aria-hidden className={cn(rigidClass(), "invisible")}>
+          <Icon icon={icon} className="icon-auto" />
+        </span>
+        <Fill data-notification-footer="">{footer}</Fill>
+      </Stack>
     </Stack>
   );
 }

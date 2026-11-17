@@ -27,7 +27,10 @@ type Payload = NotificationAction["payload"];
  * - `Control` — the action needs its own UI before it does anything (a
  *   launch popover asking for extra context): the kind draws its own control
  *   from the payload, at the compact control size the view provides, labelled
- *   with `label`. Clicking the notification itself does nothing.
+ *   with `label`. Clicking the notification itself does nothing. A control
+ *   that settles the notification (a choice made, a launch filed) calls
+ *   `done()`. One wider than a button (two choices side by side) declares
+ *   `placement: "below"`: the view draws it on its own line under the text.
  */
 export type NotificationActionKind = {
   kind: string;
@@ -46,6 +49,12 @@ export type NotificationActionKind = {
     }
   | {
       Control: ComponentType<NotificationActionControlProps>;
+      /**
+       * Where the view draws the control: at the trailing edge like every
+       * action button (the default), or `below` — its own line under the
+       * text, for a control wider than one button.
+       */
+      placement?: "trailing" | "below";
       useLink?: never;
       useRun?: never;
     }
@@ -56,6 +65,12 @@ export interface NotificationActionControlProps {
   payload: Payload;
   /** The kind's own `label`, for the control's face. */
   label: string;
+  /**
+   * The control has settled this notification: dismisses it — its stored row
+   * (gone from the bell) and the surface showing it (the toast, the bell's
+   * popover).
+   */
+  done: () => void;
 }
 
 export const Notifications = {

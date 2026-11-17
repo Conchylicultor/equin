@@ -8,7 +8,7 @@ local `main` only. So for someone who cloned this repo rather than authoring it,
 upstream can move for months in complete silence. This plugin is the one place
 that notices.
 
-Plan: `research/2026-11-17-global-release-updates.md` (phases 1 and 2).
+Plan: `research/2026-11-17-global-release-updates.md` (phases 1–3).
 
 ## Releases, not commits
 
@@ -44,7 +44,9 @@ latest)` (the local half, no fetch). One definition, because the CLI
   `{{updates}}` — the release and the one this checkout is on, `{{ref}}` — the
   release tag, `{{pushPolicy}}`). No commit list: nothing lists changes.
 - `shared/config.ts`: the automation's config document.
-- `web/`: the health report's updates row (below).
+- `shared/reminder-config.ts` / `shared/reminder.ts`: the update reminder's
+  settings and its pure decision (below).
+- `web/`: the health report's updates row and the reminder's action (below).
 
 ## The live status: stored answer + git, re-derived
 
@@ -59,7 +61,7 @@ upstream has no change signal a clone can subscribe to.
 
 The old `upstream-updates-available` report kind is retired (a data migration
 deletes its rows): the status value replaces it, and the health row and the
-reminder (later phases of the plan) take over the bell and Investigate.
+reminder take over the bell and Investigate.
 
 ## The updates row (health report)
 
@@ -94,6 +96,43 @@ off main; re-read on restart and on an adopted deploy).
   folds into System checks.
 - "Never checked" is `absent` rather than "Checking…": the first check can be
   a day away, and a grey pulsing dot for a day is a false alarm.
+
+## The update reminder (a notification the user controls)
+
+The user must never be spammed, but hears — rarely — that a release is out.
+The daily job, on `behind`, calls `remindOfRelease` (`machine/internal/reminder.ts`),
+which writes ONE user notification "equin is out of date" (`2026.10.30 →
+2026.11.14`, category Updates) only when `reminderDecision`
+(`shared/reminder.ts`, pure and tested) says it is due:
+
+- reminders are `enabled` (the row's bell and the menu's Never share it);
+- the release is not the `skippedRelease`;
+- no task about the release exists (an update is under way — the row shows it);
+- now is past `snoozedUntil`;
+- and the release was never brought up, or its last reminder is 30 days old,
+  or the user snoozed it after that reminder (the snooze replaces the cadence,
+  so "Tomorrow" is tomorrow's check, not a month away). A snooze ends at the
+  start of the UTC day it lands on, so the daily 05:00 UTC check of that day
+  picks it up whatever hour the user clicked.
+
+"Its last reminder" is read from the notifications table (the newest row of
+type `upstream-release-reminder` whose metadata names the release, dismissed or
+not). Each reminder is its own row; the day in its dedupe key only keeps two
+runs of one day's job from writing twice. On `current`, the job settles every
+reminder (that release's and every earlier one's) in place (state resolved,
+"Updated to …"). The reminder is `info`: it toasts if a page is on screen and
+waits in the bell under Updates, never in the unread badge — rare and quiet by
+design.
+
+Its action, `equin-update` (`web/components/reminder-action.tsx`, a
+`Notifications.Action` `Control` placed `below`), draws — only while that
+release is still the update to make — "Send agent to update" (the row's own
+launch popover, `SendAgentButton`) and "Remind me later ▾": Tomorrow / In a week
+/ In a month write `snoozedUntil`, Skip this release writes `skippedRelease`,
+Never turns `enabled` off (`laterWrite`). Each, and a filed launch, calls the
+control's `done()`, dismissing the notification — a choice only once its write
+was accepted (a refused one, e.g. a config conflict, is announced and the
+reminder stays). Audience `user`.
 
 ## Being offline is not an incident
 
@@ -137,28 +176,28 @@ that cannot run on this database).
 
 ## Plugin reference
 
-- Description: Registers the Upstream merges automation's config (schedule, push policy, model, prompt template) for the Automations pane and Settings → Config. The health report's updates row on a clone: titled by its state — 'equin is out of date' (2026.10.30 → 2026.11.14; drawn as attention but ambient, so the dot stays green) with a Send agent to update remedy (the launch popover, filed about the release so it is never filed twice), 'Update in progress' with the merging conversation linked beside its own status chip (pulsing while it works, attention while it waits on the user), 'Installing' while main rebuilds the merged release, then 'equin is up to date'; a reminder bell in every state (the update reminders config). Absent on the canonical repo, before any check, and where upstream has cut no release. Upstream, portable half: the Upstream merges automation's config registration, the update reminders config, the Upstream task category, and the upstream_release_check table the desktop half records each check of upstream's releases in.
+- Description: Registers the Upstream merges automation's config (schedule, push policy, model, prompt template) for the Automations pane and Settings → Config. The health report's updates row on a clone: titled by its state — 'equin is out of date' (2026.10.30 → 2026.11.14; drawn as attention but ambient, so the dot stays green) with a Send agent to update remedy (the launch popover, filed about the release so it is never filed twice), 'Update in progress' with the merging conversation linked beside its own status chip (pulsing while it works, attention while it waits on the user), 'Installing' while main rebuilds the merged release, then 'equin is up to date'; a reminder bell in every state (the update reminders config). The update reminder's action (equin-update) on the 'equin is out of date' notification the daily check writes: Send agent to update (the row's launch popover) and Remind me later (Tomorrow / In a week / In a month / Skip this release / Never), each settling the notification. Absent on the canonical repo, before any check, and where upstream has cut no release. Upstream, portable half: the Upstream merges automation's config registration, the update reminders config, the Upstream task category, and the upstream_release_check table the desktop half records each check of upstream's releases in.
 - Web:
   - Contributes:
     - `ConfigV2.WebRegister` "reminders"
     - `ConfigV2.WebRegister` "upstream-merge"
     - `Automations.Config` "upstream-merge"
     - `HealthReport.Row` "Updates"
-  - Uses:
+    - `Notifications.Action` "equin-update"
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×6
+    - `config_v2` ×3
     - `apps-core/tabs.useAppLinkProps`
-    - `config_v2.ConfigV2`
-    - `config_v2.useConfigResult`
-    - `config_v2.useSetConfig`
     - `conversations/conversation-view/status.ConversationStatusChip`
-    - `network/live.useLive`
     - `network/live/live-state.ResourceErrorInline`
+    - `network/live.useLive`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
     - `primitives/icon-button.IconButton`
     - `primitives/launch.LaunchAgentPopover`
     - `shell/health-report.HealthReport`
+    - `shell/notifications.Notifications`
     - `tasks/automations.automationConfigContributions`
     - `tasks/task-subject.useSubjectTask`
     - `ui/icons.Icon`
@@ -206,6 +245,7 @@ that cannot run on this database).
     - `upstreamReleaseNamespace`
 - Cross-plugin:
   - Uses tokens:
+    - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --spacing`

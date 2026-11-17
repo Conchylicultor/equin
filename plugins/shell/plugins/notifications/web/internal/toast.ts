@@ -77,9 +77,12 @@ export function useToast(): Toast {
         clientUrl: window.location.href,
       };
 
+      // Minted first, so the toast's action can dismiss the row it becomes.
+      const id = persist ? notificationIdKind.mint() : null;
       // The same view the bell's row draws, from the same fields.
       toastNotification(
         {
+          id,
           type: args.type,
           title: args.title,
           description: args.description,
@@ -99,9 +102,8 @@ export function useToast(): Toast {
         },
         "reply",
       );
-      if (!persist) return;
+      if (id === null) return;
 
-      const id = notificationIdKind.mint();
       recentClientIds.add(id);
       setTimeout(() => recentClientIds.delete(id), 30_000);
 

@@ -234,6 +234,7 @@ Design: `research/2026-08-25-database-mapped-sql-projections.md`.
     - `page/links`
     - `release/runs-arm`
     - `tasks/tasks-core`
+    - `upstream`
 - Exemptions:
   - Exempts itself from: `sql-projection/no-asserted-sql-type` — `.` (sanctioned)
   - Exempted by: `database/sql-projection` (0 debt)

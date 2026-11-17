@@ -90,7 +90,12 @@ beside the action, never around it, with ⌘ / middle-click gestures), `useRun` 
 runs it) or `Control` (the action needs its own UI first — build-fix's Fix opens
 its investigate popover: the kind draws its control from the payload, at the
 compact size, labelled with its `label`; in the bell, a row that also carries an
-in-app `linkTo` still opens it from the row, the control its sibling). A popover
+in-app `linkTo` still opens it from the row, the control its sibling). A
+`Control` is handed `done()`: the control settled the notification (a choice
+made, a launch filed) — it dismisses the stored row (by the content's `id`,
+`null` for a toast written nowhere) and closes the surface. A control wider than
+one button declares `placement: "below"` and is drawn on its own line under the
+text, lined up with it (the update reminder's Send agent + Remind me later). A popover
 a `Control` opens from a toast draws above the toast stack: the toast host is a
 `PortalHost` on the toasts' own layer (`shell/toast`). This plugin contributes `open` (`payload.to`, an in-app route, via
 `useAppLink`; a link) and `reload` (a run); a row written before actions
@@ -99,7 +104,8 @@ closes the popover / dismisses the toast; a toast with no action shows a quiet
 × instead. A kind's owner contributes its own (never a `switch` here): `resume`
 (Retry — `conversation-view/resume`), `fix-build` (Fix — `build/build-fix`), `fix-report` (Fix on every
 report, crashes included — `debug/reports`),
-`review-automation` (Review — `tasks/automations`).
+`review-automation` (Review — `tasks/automations`), `equin-update` (Send agent to
+update + Remind me later — `upstream`).
 
 **What a click does depends on the surface** (`NotificationView`'s required
 `surface: "bell" | "toast"`): in the **bell**, clicking a linked row opens its
@@ -230,6 +236,7 @@ DataView (`web/components/notifications-view.tsx`):
     - `Notifications.Action` ← `debug.reports`
     - `Notifications.Action` ← `shell.notifications`
     - `Notifications.Action` ← `tasks.automations`
+    - `Notifications.Action` ← `upstream`
   - Contributes:
     - `IdKinds.Kind` "notif"
     - `ActionBar.Item` → `BellButton`
@@ -379,7 +386,7 @@ DataView (`web/components/notifications-view.tsx`):
     - `ui/tokens/type-scale` ×10
     - `ui/tokens/density` ×6
     - `ui/tokens/shape` ×2
-  - Imported by: 39 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 40 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×15
     - `tasks` ×8
     - `apps` ×2
@@ -393,6 +400,7 @@ DataView (`web/components/notifications-view.tsx`):
     - `network/live`
     - `page/inline-date`
     - `shell/notifications/native`
+    - `upstream`
 - Exemptions:
   - Exempts itself from: `endpoints/no-void-fetch-endpoint` — `web/internal/toast.ts` (sanctioned)
 - Shared:

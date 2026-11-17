@@ -25122,6 +25122,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/links`
           - `release/runs-arm`
           - `tasks/tasks-core`
+          - `upstream`
       - Exemptions:
         - Exempts itself from: `sql-projection/no-asserted-sql-type` — `.` (sanctioned)
         - Exempted by: `database/sql-projection` (0 debt)
@@ -29486,7 +29487,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `DateFieldDef`
             - Exports (values): `dateField`
           - Cross-plugin:
-            - Imported by: 66 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
+            - Imported by: 67 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
               - `apps` ×17
               - `conversations` ×11
               - `infra` ×7
@@ -29505,6 +29506,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `runs`
               - `shell/notifications`
               - `tag-tree/engine`
+              - `upstream`
         - **`data-view-codec`** — Date field type: data-view custom-column value codec (native Date ↔ canonical ISO text).
           - Web:
             - Contributes: `DataViewSlots.ValueCodec` "date"
@@ -31127,7 +31129,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 115 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+            - Imported by: 116 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
               - `apps` ×32
               - `conversations` ×21
               - `tasks` ×16
@@ -31151,6 +31153,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `shell/notifications`
               - `stats/commits`
               - `tag-tree/engine`
+              - `upstream`
         - **`filter`** — Text field type: data-view filter operator set (contains / is / is-empty …).
           - Web:
             - Contributes: `DataViewSlots.Filter` "text"
@@ -59867,6 +59870,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Notifications.Action` ← `debug.reports`
           - `Notifications.Action` ← `shell.notifications`
           - `Notifications.Action` ← `tasks.automations`
+          - `Notifications.Action` ← `upstream`
         - Contributes:
           - `IdKinds.Kind` "notif"
           - `ActionBar.Item` → `BellButton`
@@ -60016,7 +60020,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×10
           - `ui/tokens/density` ×6
           - `ui/tokens/shape` ×2
-        - Imported by: 39 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
+        - Imported by: 40 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
           - `conversations` ×15
           - `tasks` ×8
           - `apps` ×2
@@ -60030,6 +60034,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live`
           - `page/inline-date`
           - `shell/notifications/native`
+          - `upstream`
       - Exemptions:
         - Exempts itself from: `endpoints/no-void-fetch-endpoint` — `web/internal/toast.ts` (sanctioned)
       - Shared:
@@ -66526,28 +66531,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/sidebar-framing`
           - `ui/tree-disclosure`
 
-- **`upstream`** — Registers the Upstream merges automation's config (schedule, push policy, model, prompt template) for the Automations pane and Settings → Config. The health report's updates row on a clone: titled by its state — 'equin is out of date' (2026.10.30 → 2026.11.14; drawn as attention but ambient, so the dot stays green) with a Send agent to update remedy (the launch popover, filed about the release so it is never filed twice), 'Update in progress' with the merging conversation linked beside its own status chip (pulsing while it works, attention while it waits on the user), 'Installing' while main rebuilds the merged release, then 'equin is up to date'; a reminder bell in every state (the update reminders config). Absent on the canonical repo, before any check, and where upstream has cut no release. Upstream, portable half: the Upstream merges automation's config registration, the update reminders config, the Upstream task category, and the upstream_release_check table the desktop half records each check of upstream's releases in.
+- **`upstream`** — Registers the Upstream merges automation's config (schedule, push policy, model, prompt template) for the Automations pane and Settings → Config. The health report's updates row on a clone: titled by its state — 'equin is out of date' (2026.10.30 → 2026.11.14; drawn as attention but ambient, so the dot stays green) with a Send agent to update remedy (the launch popover, filed about the release so it is never filed twice), 'Update in progress' with the merging conversation linked beside its own status chip (pulsing while it works, attention while it waits on the user), 'Installing' while main rebuilds the merged release, then 'equin is up to date'; a reminder bell in every state (the update reminders config). The update reminder's action (equin-update) on the 'equin is out of date' notification the daily check writes: Send agent to update (the row's launch popover) and Remind me later (Tomorrow / In a week / In a month / Skip this release / Never), each settling the notification. Absent on the canonical repo, before any check, and where upstream has cut no release. Upstream, portable half: the Upstream merges automation's config registration, the update reminders config, the Upstream task category, and the upstream_release_check table the desktop half records each check of upstream's releases in.
   - Web:
     - Contributes:
       - `ConfigV2.WebRegister` "reminders"
       - `ConfigV2.WebRegister` "upstream-merge"
       - `Automations.Config` "upstream-merge"
       - `HealthReport.Row` "Updates"
-    - Uses:
+      - `Notifications.Action` "equin-update"
+    - Uses: 23 symbols — full list in [`plugins/upstream/REFERENCE.md`](../plugins/upstream/REFERENCE.md)
+      - `primitives/css/ui-kit` ×6
+      - `config_v2` ×3
       - `apps-core/tabs.useAppLinkProps`
-      - `config_v2.ConfigV2`
-      - `config_v2.useConfigResult`
-      - `config_v2.useSetConfig`
       - `conversations/conversation-view/status.ConversationStatusChip`
-      - `network/live.useLive`
       - `network/live/live-state.ResourceErrorInline`
+      - `network/live.useLive`
       - `primitives/css/fill.Fill`
       - `primitives/css/line.Line`
       - `primitives/css/text.Text`
-      - `primitives/css/ui-kit.Button`
       - `primitives/icon-button.IconButton`
       - `primitives/launch.LaunchAgentPopover`
       - `shell/health-report.HealthReport`
+      - `shell/notifications.Notifications`
       - `tasks/automations.automationConfigContributions`
       - `tasks/task-subject.useSubjectTask`
       - `ui/icons.Icon`
@@ -66595,6 +66600,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `upstreamReleaseNamespace`
   - Cross-plugin:
     - Uses tokens:
+      - `ui/tokens/density --space-2xs`
       - `ui/tokens/density --space-sm`
       - `ui/tokens/density --space-xs`
       - `ui/tokens/shape --spacing`

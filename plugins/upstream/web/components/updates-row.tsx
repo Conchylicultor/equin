@@ -25,7 +25,7 @@ import {
 import { upstreamReminderConfig } from "../../shared/reminder-config";
 import { upstreamReleaseSubject } from "../../shared/subject";
 import { useUpdatesView } from "../internal/use-updates";
-import { updateSpan } from "../internal/updates-view";
+import { updateSpan } from "../../shared/update-words";
 
 const conversationIcon = symbol("chat-bubble");
 const remindersOnIcon = symbol("notifications-active");
@@ -46,12 +46,37 @@ const SEND_TOOLTIP =
  */
 export function SendAgentToUpdate() {
   const view = useUpdatesView();
-  const merge = useConfigResult(upstreamMergeConfig);
   if (view.kind !== "out-of-date") return null;
+  return (
+    <SendAgentButton
+      current={view.current}
+      latest={view.latest}
+      variant="secondary"
+    />
+  );
+}
+
+/**
+ * "Send agent to update" for one release: the launch popover once the
+ * Upstream merges prompt is read. The health row's remedy and the reminder
+ * notification's action both draw it; `onSubmitted` says the launch was filed.
+ */
+export function SendAgentButton({
+  current,
+  latest,
+  variant,
+  onSubmitted,
+}: {
+  current: string | null;
+  latest: string;
+  variant: "default" | "secondary";
+  onSubmitted?: () => void;
+}) {
+  const merge = useConfigResult(upstreamMergeConfig);
   switch (merge.status) {
     case "loading":
       return (
-        <Button variant="secondary" disabled>
+        <Button variant={variant} disabled>
           {SEND_LABEL}
         </Button>
       );
@@ -67,9 +92,11 @@ export function SendAgentToUpdate() {
     case "ready":
       return (
         <SendPopover
-          current={view.current}
-          latest={view.latest}
+          current={current}
+          latest={latest}
           template={merge.data.prompt}
+          variant={variant}
+          onSubmitted={onSubmitted}
         />
       );
   }
@@ -79,10 +106,14 @@ function SendPopover({
   current,
   latest,
   template,
+  variant,
+  onSubmitted,
 }: {
   current: string | null;
   latest: string;
   template: string;
+  variant: "default" | "secondary";
+  onSubmitted: (() => void) | undefined;
 }) {
   const updates = { current, latest, url: null };
   return (
@@ -90,10 +121,11 @@ function SendPopover({
       draftKey={`upstream-update:${latest}`}
       align="end"
       trigger={
-        <Button variant="secondary" tooltip={SEND_TOOLTIP}>
+        <Button variant={variant} tooltip={SEND_TOOLTIP}>
           {SEND_LABEL}
         </Button>
       }
+      onSubmitted={() => onSubmitted?.()}
       title={`Update ${PRODUCT_NAME} ${updateSpan(current, latest)}`}
       description={`The agent merges ${PRODUCT_NAME} ${releaseVersion(latest)} into a new worktree, resolves any conflict with your changes, builds and checks the app. You land it from its conversation.`}
       placeholder="Add instructions for the agent…"

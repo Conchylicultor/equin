@@ -9,6 +9,7 @@ import {
   releaseVersion,
   type ReleaseStatus,
 } from "@plugins/upstream/plugins/release/core";
+import { OUT_OF_DATE_TITLE, updateSpan } from "../../shared/update-words";
 
 /** One read as `useLive` hands it back — a value read may be `unavailable`. */
 export type Read<T> = ResourceResult<T> | ResourceUnavailable;
@@ -97,14 +98,6 @@ export function deriveUpdatesView({
   }
 }
 
-/** "2026.10.30 → 2026.11.14", or the new release alone when none is held. */
-export function updateSpan(current: string | null, latest: string): string {
-  return current === null
-    ? `${releaseVersion(latest)} available`
-    : `${releaseVersion(current)} → ${releaseVersion(latest)}`;
-}
-
-export const OUT_OF_DATE_TITLE = `${PRODUCT_NAME} is out of date`;
 const IN_PROGRESS_TITLE = "Update in progress";
 const INSTALLING_TITLE = "Installing";
 const UP_TO_DATE_TITLE = `${PRODUCT_NAME} is up to date`;

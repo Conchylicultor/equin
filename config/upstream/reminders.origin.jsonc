@@ -1,5 +1,9 @@
-// @hash 293a7e80a4ef
+// @hash f218be8019fd
 {
   // Remind me when a new equin release is out. The bell on the health report's update row turns this on and off.
-  "enabled": true
+  "enabled": true,
+  // No update reminder before this instant — set by the reminder's Remind me later (Tomorrow / In a week / In a month).
+  "snoozedUntil": "1970-01-01T00:00:00.000Z",
+  // The release tag the user chose to skip (Remind me later → Skip this release): no reminder about it. A newer release reminds again.
+  "skippedRelease": ""
 }
