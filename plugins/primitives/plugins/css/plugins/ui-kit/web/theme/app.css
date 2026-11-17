@@ -26,6 +26,13 @@
     }
 }
 
+/* `disabled:` styles a control that is disabled either way: natively, or by
+   `aria-disabled` — how a Button with a tooltip is disabled (base-ui's
+   focusableWhenDisabled), so it still takes hover and focus and its tooltip can
+   say what it is. A rule that must see the native attribute alone (the
+   pointer-events cut-off) writes `[&:disabled]:`. */
+@custom-variant disabled (&:disabled, &[aria-disabled="true"]);
+
 @theme {
     --font-sans: 'Inter Variable', sans-serif;
     --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;

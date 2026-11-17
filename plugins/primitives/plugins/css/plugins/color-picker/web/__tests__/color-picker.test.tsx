@@ -215,12 +215,10 @@ describe("ColorPicker", () => {
     expect(hexOf(onChange.mock.lastCall?.[0])).toBe("#7c5cff");
     expect(onCommit).toHaveBeenCalledTimes(1);
     expect(
-      (
-        screen.getByRole("button", {
-          name: "Reset to default",
-        }) as HTMLButtonElement
-      ).disabled,
-    ).toBe(true);
+      screen
+        .getByRole("button", { name: "Reset to default" })
+        .getAttribute("aria-disabled"),
+    ).toBe("true");
   });
 
   it("the before swatch reverts to the color the picker opened with", () => {

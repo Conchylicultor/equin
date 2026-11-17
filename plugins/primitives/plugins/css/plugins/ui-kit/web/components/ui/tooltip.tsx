@@ -218,7 +218,7 @@ export interface Tooltipped {
 }
 
 /** Whether a `tooltip` value draws anything. */
-function hasTooltip(content: ReactNode): boolean {
+export function hasTooltip(content: ReactNode): boolean {
   return (
     content !== undefined &&
     content !== null &&

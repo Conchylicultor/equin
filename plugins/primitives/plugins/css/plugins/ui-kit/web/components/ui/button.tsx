@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils";
 import {
   WithTooltip,
+  hasTooltip,
   type Tooltipped,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/ui/tooltip";
 import {
@@ -26,7 +27,7 @@ const refreshIcon = symbol("refresh");
 // whatever the Shape preset says (the same clamp `select.tsx` documents).
 // eslint-disable-next-line radius/no-adhoc-radius -- intentional min() clamps pin the small sizes' corners below the Shape preset's radius
 const buttonVariants = cva(
-  "group/button focus-ring inline-flex shrink-0 items-center justify-center rounded-control border border-transparent bg-clip-padding font-control whitespace-nowrap transition-[color,background-color,border-color,outline-color,box-shadow,opacity,translate,scale,transform] select-none active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "group/button focus-ring inline-flex shrink-0 items-center justify-center rounded-control border border-transparent bg-clip-padding font-control whitespace-nowrap transition-[color,background-color,border-color,outline-color,box-shadow,opacity,translate,scale,transform] select-none active:not-aria-[haspopup]:translate-y-px [&:disabled]:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -143,6 +144,12 @@ const buttonVariants = cva(
  * tooltip, never the native `title`, which the props reject. An icon-shaped
  * button with a plain-string tooltip and no `aria-label` takes the tooltip as
  * its accessible name, as the native `title` used to give it.
+ *
+ * A disabled button with a tooltip keeps it: it is disabled through
+ * `aria-disabled` (base-ui's `focusableWhenDisabled` — clicks and key presses
+ * are still refused) instead of the native attribute, which swallows every
+ * pointer event, so hovering or focusing it still says what it is and why it
+ * cannot be used.
  */
 type ButtonOwnProps = Omit<ButtonPrimitive.Props, "title"> &
   Omit<VariantProps<typeof buttonVariants>, "size"> &
@@ -223,6 +230,7 @@ function Button({
           className,
         )}
         disabled={disabled || isLoading}
+        focusableWhenDisabled={hasTooltip(tooltip)}
         data-loading={isLoading || undefined}
         onClick={onClick ? handleClick : undefined}
         {...props}

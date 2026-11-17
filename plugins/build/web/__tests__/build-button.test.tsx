@@ -66,7 +66,7 @@ describe("BuildButton without history", () => {
     const buttons = getAllByRole("button");
     expect(buttons).toHaveLength(1);
     expect(buttons[0]!.getAttribute("aria-label")).toBe("Builds");
-    expect((buttons[0] as HTMLButtonElement).disabled).toBe(true);
+    expect(buttons[0]!.getAttribute("aria-disabled")).toBe("true");
   });
 
   it("loading + stale tab: the Reload pill still shows", () => {

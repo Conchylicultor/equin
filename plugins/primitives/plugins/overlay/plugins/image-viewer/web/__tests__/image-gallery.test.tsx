@@ -71,8 +71,10 @@ describe("ImageGallery", () => {
     press("ArrowLeft");
     showing("a");
     expect(
-      screen.getByRole("button", { name: "Previous image" }),
-    ).toHaveProperty("disabled", true);
+      screen
+        .getByRole("button", { name: "Previous image" })
+        .getAttribute("aria-disabled"),
+    ).toBe("true");
   });
 
   it("keeps the keys working once a step disables the focused arrow", () => {
@@ -95,20 +97,22 @@ describe("ImageGallery", () => {
     const { rerender } = render(<Transcript names={["a", "c"]} />);
     open("c");
     showing("c");
-    expect(screen.getByRole("button", { name: "Next image" })).toHaveProperty(
-      "disabled",
-      true,
-    );
+    expect(
+      screen
+        .getByRole("button", { name: "Next image" })
+        .getAttribute("aria-disabled"),
+    ).toBe("true");
 
     rerender(<Transcript names={["a", "b", "c"]} />);
 
     // Still "c" — the open image is tracked by key, not by its old index 1,
     // which now belongs to "b".
     showing("c");
-    expect(screen.getByRole("button", { name: "Next image" })).toHaveProperty(
-      "disabled",
-      true,
-    );
+    expect(
+      screen
+        .getByRole("button", { name: "Next image" })
+        .getAttribute("aria-disabled"),
+    ).toBe("true");
     press("ArrowLeft");
     showing("b");
   });

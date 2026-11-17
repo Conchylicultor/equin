@@ -84,7 +84,7 @@ describe("BookmarkStar", () => {
   it("reads nothing and is disabled on the start page", () => {
     render(<BookmarkStar />);
     const star = screen.getByRole("button", { name: "Add bookmark" });
-    expect(star).toHaveProperty("disabled", true);
+    expect(star.getAttribute("aria-disabled")).toBe("true");
     expect(state.queries).toEqual([]);
   });
 
@@ -93,7 +93,7 @@ describe("BookmarkStar", () => {
     render(<BookmarkStar />);
     expect(state.queries.at(-1)).toEqual({ where: { url: URL_A }, limit: 1 });
     const star = screen.getByRole("button", { name: "Add bookmark" });
-    expect(star).toHaveProperty("disabled", true);
+    expect(star.getAttribute("aria-disabled")).toBe("true");
     fireEvent.click(star);
     expect(state.calls).toEqual([]);
   });

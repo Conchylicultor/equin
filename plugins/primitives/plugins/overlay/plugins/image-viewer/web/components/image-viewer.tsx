@@ -177,11 +177,16 @@ function writeImage(img: HTMLImageElement, s: ViewState, animate: boolean) {
   img.style.opacity = s.imageVisible ? "1" : "0";
 }
 
+/** A disabled control: natively, or by `aria-disabled` (a Button with a tooltip stays focusable). */
+const DISABLED = ':disabled, [aria-disabled="true"]';
+const DISABLED_EXCLUDED_BUTTONS =
+  'button:not(:disabled):not([aria-disabled="true"])';
+
 /** Tab and Shift+Tab cycle through the viewer's own buttons only. */
 function cycleFocus(e: ReactKeyboardEvent, root: HTMLElement) {
   e.preventDefault();
   const items = [
-    ...root.querySelectorAll<HTMLElement>("button:not(:disabled)"),
+    ...root.querySelectorAll<HTMLElement>(DISABLED_EXCLUDED_BUTTONS),
   ];
   if (items.length === 0) return;
   const at = items.indexOf(document.activeElement as HTMLElement);
@@ -766,7 +771,7 @@ function ViewerFrame({
     if (
       root &&
       (!root.contains(active) ||
-        (active instanceof HTMLButtonElement && active.disabled))
+        (active instanceof HTMLButtonElement && active.matches(DISABLED)))
     )
       focusElement(root, { reveal: false });
   }, [layout, stripShown, slideshow, index]);

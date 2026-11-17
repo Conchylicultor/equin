@@ -128,7 +128,7 @@ describe("PromoteControl with expand", () => {
     answers.b = { kind: "pending" };
     const view = renderPeek("b");
     const button = view.getByRole("button", { name: "Open in Other" });
-    expect(button.hasAttribute("disabled")).toBe(true);
+    expect(button.getAttribute("aria-disabled")).toBe("true");
   });
 
   it("falls back to the default promote on none", () => {
