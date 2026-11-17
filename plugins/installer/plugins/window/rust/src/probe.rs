@@ -2,7 +2,7 @@
 //!
 //! The curl install's stage 0 runs it before choosing the window over the
 //! terminal view (install.sh, `choose_view`). It does what the window does
-//! up to its first frame — opens a real (hidden) window and webview and loads
+//! up to its first frame — opens a real window nobody sees and a webview, loads
 //! the page — and exits 0 once the page says it is ready. Anything short of
 //! that exits non-zero, which stage 0 reads as "use the terminal":
 //!
@@ -43,10 +43,26 @@ pub fn run() -> ! {
         event_loop.set_activation_policy(ActivationPolicy::Accessory);
     }
     let proxy = event_loop.create_proxy();
-    let window = WindowBuilder::new()
-        .with_title("equin installer (probe)")
+    let builder = WindowBuilder::new().with_title("equin installer (probe)");
+    // macOS loads the page in a hidden window. WebKitGTK does not start
+    // loading in a window that is never mapped (the CI probe never saw the
+    // load start), so on Linux the window is mapped where nobody sees it:
+    // 1×1, undecorated, off-screen, out of the taskbar, for under a second.
+    #[cfg(not(target_os = "linux"))]
+    let builder = builder
         .with_inner_size(LogicalSize::new(crate::WIDTH, crate::HEIGHT))
-        .with_visible(false)
+        .with_visible(false);
+    #[cfg(target_os = "linux")]
+    let builder = {
+        use tao::platform::unix::WindowBuilderExtUnix;
+        builder
+            .with_inner_size(LogicalSize::new(1.0, 1.0))
+            .with_position(tao::dpi::LogicalPosition::new(-10_000.0, -10_000.0))
+            .with_decorations(false)
+            .with_focused(false)
+            .with_skip_taskbar(true)
+    };
+    let window = builder
         .build(&event_loop)
         .unwrap_or_else(|e| fail(&format!("could not open a window: {e}")));
     let webview = WebViewBuilder::new()

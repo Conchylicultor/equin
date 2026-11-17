@@ -240,6 +240,7 @@ jobs:
       - name: Probe diagnostics
         continue-on-error: true
         run: |
+          set +e
           bin="$RUNNER_TEMP/dist/$ASSET"
           for setting in NONE=1 WEBKIT_DISABLE_DMABUF_RENDERER=1 WEBKIT_DISABLE_COMPOSITING_MODE=1 WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1; do
             echo "== probe with $setting"
