@@ -63,7 +63,11 @@ extracted, so the gap is ~2 s rather than the ~6 s an extract-after-stop cost.
 A failed swap changes nothing; a swapped release failing the gate is swapped
 back to the previous release's extraction (`<release>/extract-dir`), falling
 back to a host restart on it. Extractions no process of the unit runs from are
-pruned after the gate. Design:
+pruned after the gate — safe for open tabs, because a release is served from
+a dist of its own in the data root, never from its extraction: the release's
+`launch` prepares it before its backend boots, beside one address dir that
+keeps every address a tab used within a day (web-artifacts'
+`served-addresses`). Design:
 `research/2026-11-14-global-zero-wait-site-deploys.md`.
 
 **A restart never answers a visitor with a 502.** Every restart of the unit (a

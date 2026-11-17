@@ -26,6 +26,8 @@ export {
 export type { GatewayLaunchOptions } from "./internal/boot";
 export {
   releaseBackendSpec,
+  releaseServedDist,
+  releaseServedNow,
   releaseHostGeneration,
   swapReleaseBackend,
   writeHostGeneration,

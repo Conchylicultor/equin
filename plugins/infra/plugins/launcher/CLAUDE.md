@@ -196,7 +196,7 @@ design `research/2026-11-14-global-zero-wait-site-deploys.md`):
   host restart.
 
 So **what one backend reads of its own bundle never travels through the
-gateway's environment**: the vendored migrations, web tree, workers, pg client
+gateway's environment**: the vendored migrations, the served dist's path, workers, pg client
 tools, config tree and the release identity are per-release names
 (`RUNTIME_WITHHELD_ENV`), delivered in that backend's spec as
 `WorktreeSpec.env` (`releaseBackendSpec`). Inherited, they would run the next
@@ -205,6 +205,16 @@ ordered (`KillMode=mixed`): the launcher stops the gateway (which drains and
 stops the backend), then PgBouncer, then Postgres with a FAST shutdown it waits
 out (`teardownSelfContainedApp({ postgres: "fast" })`); only a preview's
 throwaway cluster gets the immediate one.
+
+**A release's frontend is served from a dist of its own in the data root**
+(`web.live.<runId>` beside `releaseServedDist` — the spec's `web` and the
+backend's `WEB_DIST`), never from its extraction, which a later ship prunes
+under the tabs still running it. `launch` prepares it before the backend boots
+(both verbs) through web-artifacts' `publishReleaseDist`, given what the
+gateway serves now (`releaseServedNow`, the spec on disk): the dev host's
+address dir and retention, so a tab keeps loading the release it booted from
+for a day after it was last used. The gateway still switches frontend and
+backend in one spec commit; a swap that fails serves exactly what it served.
 
 ## What the runtime tree carries
 
@@ -397,6 +407,8 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `readPid`
     - `releaseBackendSpec`
     - `releaseHostGeneration`
+    - `releaseServedDist`
+    - `releaseServedNow`
     - `resolveListenAddress`
     - `seedReleaseAssetMirror`
     - `spawnGatewayDaemon`

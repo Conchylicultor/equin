@@ -495,9 +495,9 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `worktreeDataDir`
     - `worktreesDir`
 - Cross-plugin:
-  - Imported by: 134 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 135 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×33
-    - `framework` ×20
+    - `framework` ×21
     - `apps` ×18
     - `debug` ×15
     - `build` ×7

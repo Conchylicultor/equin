@@ -29,7 +29,10 @@ import {
   envName,
   readEnv,
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
-import { releaseIdentityEnv } from "@plugins/infra/plugins/paths/server";
+import {
+  releaseIdentityEnv,
+  worktreeArtifacts,
+} from "@plugins/infra/plugins/paths/server";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import type { WorktreeSpec } from "@plugins/infra/plugins/worktree/server";
 import { gatewayState } from "../../data-dirs";
@@ -68,6 +71,7 @@ export function releaseBackendEnv(
   bundleRoot: string,
   manifest: ReleaseManifest,
   name: Namespace,
+  webDist: string,
 ): Record<string, string> {
   return {
     // pg_dump / pg_restore for DB forks and backups: a compiled backend's
@@ -91,11 +95,40 @@ export function releaseBackendEnv(
     ),
     // The raw git-layer config tree (Settings "View raw", per-app un-fork).
     [envName("REPO_CONFIG_DIR")]: join(bundleRoot, "config"),
-    // The served frontend's build pins (stale-tab graph, build commit, run).
-    [envName("WEB_DIST")]: join(bundleRoot, "web"),
+    // The served frontend's build pins (stale-tab graph, build commit, run):
+    // this release's dist in the data root (`releaseServedDist`), never the
+    // bundle's own `web/`.
+    [envName("WEB_DIST")]: webDist,
     // Which build is serving, for /api/health — what ship's gate proves.
     ...releaseIdentityEnv({ runId: manifest.runId ?? null, composition: name }),
   };
+}
+
+/**
+ * Where a release host serves `name`'s frontend from: beside the namespace's
+ * served-dist path in the data root (the path a dev build publishes), never
+ * the release's own `web/`. A release's extraction is pruned once a later ship
+ * passes its gate, and every tab still running it then lost every file it had
+ * not fetched yet. The launcher publishes each release there before its
+ * backend boots (web-artifacts' `publishReleaseDist`: a dist per release, one
+ * address dir every release links, kept by the same graph retention as a dev
+ * host), and the spec names that release's dist — so the gateway still
+ * switches frontend and backend in one spec commit.
+ */
+export function releaseServedDist(name: Namespace): string {
+  return worktreeArtifacts.webDist(name);
+}
+
+/** The dist the gateway serves `name` from right now (its spec's `web`), or null. */
+export async function releaseServedNow(
+  name: Namespace,
+): Promise<string | null> {
+  const file = worktreeArtifacts.spec(name);
+  if (!(await exists(file))) return null;
+  const spec = z
+    .object({ web: z.string().optional() })
+    .parse(JSON.parse(await readFile(file, "utf8")));
+  return spec.web ?? null;
 }
 
 /** The spec the gateway spawns this bundle's backend from. */
@@ -103,18 +136,19 @@ export function releaseBackendSpec(
   bundleRoot: string,
   manifest: ReleaseManifest,
   name: Namespace,
+  webDist: string,
 ): WorktreeSpec {
   return {
     name,
     // The binary is self-contained (closure bundled by `bun --compile`), so cwd
     // is not load-bearing — the bundle root is a stable existing dir.
     server: bundleRoot,
-    web: join(bundleRoot, "web"),
+    web: webDist,
     // The gateway spawns the compiled backend via this argv instead of its
     // `bun bin/index.ts` convention.
     command: [join(bundleRoot, "server")],
     composition: name,
-    env: releaseBackendEnv(bundleRoot, manifest, name),
+    env: releaseBackendEnv(bundleRoot, manifest, name, webDist),
   };
 }
 

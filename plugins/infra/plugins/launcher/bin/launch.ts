@@ -24,6 +24,9 @@ import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core
  * load-bearing, so keep the dynamic import until that family is lazy too.
  */
 import { dirname, join } from "node:path";
+// Path-independent: every path it touches is passed in, read after the env
+// below is in place.
+import { publishReleaseDist } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/plugins/served-addresses/cli";
 import {
   readEnv,
   setEnvDefault,
@@ -71,7 +74,7 @@ setEnvDefault(
   "PGBOUNCER_BIN",
   join(bundleRoot, "pgbouncer", "native", "bin", "pgbouncer"),
 );
-// What ONE backend reads of its own bundle — the vendored migrations, web tree,
+// What ONE backend reads of its own bundle — the vendored migrations, served dist,
 // workers, pg client tools and config tree, and which release it is — is NOT set
 // here: the gateway outlives a backend swap, so a value inherited through it
 // would run the next release's backend against this release's files. It travels
@@ -125,6 +128,8 @@ async function main(): Promise<void> {
     propagateReleaseConfig,
     resolveListenAddress,
     releaseBackendSpec,
+    releaseServedDist,
+    releaseServedNow,
     releaseHostGeneration,
     writeHostGeneration,
     swapReleaseBackend,
@@ -170,7 +175,32 @@ async function main(): Promise<void> {
       listen,
       publicHosts,
     });
-  const backendSpec = releaseBackendSpec(bundleRoot, manifest, name);
+  // Serve this release's frontend from a dist of its own in the data root,
+  // never from its extraction, which a later ship prunes under the tabs still
+  // running it. Its addresses join the ones every release a tab used recently
+  // left there (and the served release's, when it predates this layout).
+  // Prepared before anything serves it: the spec below names it, so the
+  // gateway switches frontend and backend in one commit, and a release that
+  // never takes over leaves what is served untouched.
+  const published = publishReleaseDist({
+    bundleWeb: join(bundleRoot, "web"),
+    servedDist: releaseServedDist(name),
+    runId: manifest.runId,
+    servedNow: await releaseServedNow(name),
+  });
+  {
+    const r = published.retained;
+    console.log(
+      `Web: ${published.dist} — ${published.added} addresses added; ${r.kept} kept, ` +
+        `${r.removed} removed, ${r.graphs} graphs retained${r.migrated ? " (first trim)" : ""}.`,
+    );
+  }
+  const backendSpec = releaseBackendSpec(
+    bundleRoot,
+    manifest,
+    name,
+    published.dist,
+  );
 
   if (verb === "swap") {
     // The per-release boot steps a running host still needs from this bundle,

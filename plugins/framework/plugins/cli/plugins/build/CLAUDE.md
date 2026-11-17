@@ -82,11 +82,12 @@ through `EQUIN_BUILD_DETACHED` instead.
 
 - Description: `./equin build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
 - Cli:
-  - Uses: 58 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 59 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework/cli/op-runtime` ×31
-    - `framework/tooling/web-artifacts` ×6
     - `framework/cli/bootstrap` ×4
+    - `framework/tooling/web-artifacts` ×4
     - `framework/cli/migrations` ×3
+    - `framework/tooling/web-artifacts/served-addresses` ×3
     - `plugin-meta/plugin-records` ×3
     - `debug/profiling/op-log` ×2
     - `build/central-build-id.centralBuildOf`

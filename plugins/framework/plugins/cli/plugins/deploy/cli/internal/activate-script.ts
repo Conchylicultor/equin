@@ -421,7 +421,10 @@ if [ "$MODE" = swap ]; then flip_current; fi
 # Kept: this release's, and every one a process of the unit still executes
 # from — the host generation's gateway and Postgres, a previous backend still
 # draining. On a box nobody SSHes into, disk-fill is the failure that takes the
-# site down silently.
+# site down silently. No tab loses a file here: a release is served from a
+# dist of its own in the data root, whose address dir keeps every address a
+# tab used within a day (publishReleaseDist in the release's launch, web-artifacts'
+# served-addresses) — never from an extraction.
 in_use=" $EXTRACT "
 cgroup="$(systemctl show -p ControlGroup --value "$UNIT" 2>/dev/null || true)"
 if [ -n "$cgroup" ] && [ -r "/sys/fs/cgroup$cgroup/cgroup.procs" ]; then

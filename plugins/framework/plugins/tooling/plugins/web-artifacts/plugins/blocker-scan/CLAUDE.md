@@ -61,7 +61,7 @@ commit of ours, and builds must not depend on GitHub being up.
   - Register: `defineSupervisedJob('web-artifacts.blocker-scan')`
 - Cli:
   - Uses:
-    - `framework/tooling/web-artifacts.servedGraphOf`
+    - `framework/tooling/web-artifacts/served-addresses.servedGraphOf`
     - `infra/jobs/supervised-job.cliExecContext`
 - Deps:
   - Uses:

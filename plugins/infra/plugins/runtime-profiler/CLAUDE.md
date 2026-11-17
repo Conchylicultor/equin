@@ -649,15 +649,16 @@ remaining allocations are one flat band array per completed entry span, and what
     - `debug` ×21
     - `apps` ×7
     - `conversations` ×6
-    - `build` ×3
     - `database` ×3
     - `packages` ×3
     - `tasks` ×3
+    - `build` ×2
     - `primitives` ×2
     - `reports` ×2
     - `auth`
     - `companions/browser-extension`
     - `config_v2`
+    - `framework/tooling/web-artifacts/served-addresses`
     - `integrations/google-maps/browser-config`
     - `network/live/change-feed`
     - `plugin-meta/plugin-tree`

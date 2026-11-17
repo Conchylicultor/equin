@@ -884,6 +884,12 @@ export const compositionsConfig = defineConfig({
         //   deferred plugins load, so they download from t0. Left out, the
         //   page fetches its app's code only once the eager tier has run —
         //   equin.ai drew its header without its nav for ~1 s that way.
+        // - an open tab's bundle kept served (web-artifacts' served-addresses,
+        //   its machine half): the backend touches the graph record of every
+        //   graph a tab names, so the next deploy's address retention keeps
+        //   that bundle's files. Left out, a tab of a replaced release keeps
+        //   its files only for a day after the deploy that replaced it,
+        //   however recently it was used.
         //
         // What a CAPABILITY needs at runtime is never listed here: it is a
         // derived edge. A plugin that paints with a token group's var gets a hard
@@ -909,6 +915,7 @@ export const compositionsConfig = defineConfig({
             "primitives.dom.overscroll-hint.**",
             "network.live.boot-snapshot.**",
             "apps-core.app-preload.**",
+            "framework.tooling.web-artifacts.served-addresses",
           ],
         }),
 

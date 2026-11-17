@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-framework-tooling-web-artifacts-served-addresses",
+  "description": "A served dist's address dir and its bound: retainAddresses (an address stays while a graph needing it — composed, served or named by an open tab — was needed within a day), servedGraphOf, publishReleaseDist — a release host served from the same per-namespace layout (web.live.<run>, web-addresses, web-graphs), so a ship never deletes what an open tab still loads — and the backend's touch of every graph an open tab names.",
+  "version": "0.0.1",
+  "private": true
+}

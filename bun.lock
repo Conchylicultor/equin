@@ -4469,6 +4469,10 @@
       "name": "@equin/plugin-framework-tooling-web-artifacts-prune",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/web-artifacts/plugins/served-addresses": {
+      "name": "@equin/plugin-framework-tooling-web-artifacts-served-addresses",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/web-core": {
       "name": "@equin/web",
       "version": "0.0.1",
@@ -10296,6 +10300,8 @@
     "@equin/plugin-framework-tooling-web-artifacts-blocker-scan": ["@equin/plugin-framework-tooling-web-artifacts-blocker-scan@workspace:plugins/framework/plugins/tooling/plugins/web-artifacts/plugins/blocker-scan"],
 
     "@equin/plugin-framework-tooling-web-artifacts-prune": ["@equin/plugin-framework-tooling-web-artifacts-prune@workspace:plugins/framework/plugins/tooling/plugins/web-artifacts/plugins/prune"],
+
+    "@equin/plugin-framework-tooling-web-artifacts-served-addresses": ["@equin/plugin-framework-tooling-web-artifacts-served-addresses@workspace:plugins/framework/plugins/tooling/plugins/web-artifacts/plugins/served-addresses"],
 
     "@equin/plugin-framework-web-sdk": ["@equin/plugin-framework-web-sdk@workspace:plugins/framework/plugins/web-sdk"],
 

@@ -29,6 +29,7 @@ import {
   readlink,
 } from "@plugins/packages/plugins/timed-fs/core";
 import { mkdir, rename, rm, symlink, unlink } from "fs/promises";
+import { addressDirOf } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/plugins/served-addresses/cli";
 import { basename, dirname, join } from "path";
 
 export interface DistNames {
@@ -67,7 +68,7 @@ export function distNames(dir: string, pid: number = process.pid): DistNames {
     releaseName,
     releasePath: join(parent, releaseName),
     swapPath: join(parent, `${prefixes.swap}${pid}`),
-    addressesPath: join(parent, `${base}-addresses`),
+    addressesPath: addressDirOf(dir),
     prefixes,
   };
 }

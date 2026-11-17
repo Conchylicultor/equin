@@ -10,7 +10,7 @@
 // The rule now: a graph (one composed bundle, `.build-graph`) is NEEDED while
 // it is composed or served by a build of the namespace, or named by an open
 // tab (the backend touches its record when a tab's subscription names it —
-// `build/server-build-id`). An address stays while some graph needing it was
+// this plugin's `machine/` half). An address stays while some graph needing it was
 // needed within {@link ADDRESS_RETENTION_MS}; the graph this build composed
 // and the graph still being served always stay. A tab whose graph aged out
 // asks for an address that is gone: its load fails, and the app says so (the
@@ -25,7 +25,8 @@
 //
 // Runs inside the build, before the publish, under the checkout's `.build.lock`
 // — the only writer of this namespace's address dir — so nothing can add a
-// link it is about to remove. The prune job never edits an address dir; a link
+// link it is about to remove. On a release host it runs in the release's
+// `launch` (`publishReleaseDist`), once per ship or boot, the only writer there. The prune job never edits an address dir; a link
 // removed here only makes its store entry unreferenced, and the store's own
 // rules (age, count cap) then reclaim it.
 
@@ -133,7 +134,10 @@ export function retainAddresses(opts: {
       // link from after `now` means `now` is not the filesystem's clock: every
       // age below would compare two clocks (a fixed test instant against a
       // link's real mtime kept a link a day past its window).
-      if (st.mtimeMs > now) {
+      // Floored: an mtime carries sub-millisecond precision `Date.now()`
+      // drops, so a link made in the same millisecond as `now` is not after it
+      // (a release's first publish links and trims within one).
+      if (Math.floor(st.mtimeMs) > now) {
         throw new Error(
           `retainAddresses: ${name} was linked at ${new Date(st.mtimeMs).toISOString()}, ` +
             `after now (${new Date(now).toISOString()}) — the clock passed is not the filesystem's`,
@@ -186,17 +190,15 @@ export function retainAddresses(opts: {
   for (const name of opts.names) names[name] ??= now;
   for (const name of opts.live?.names ?? []) names[name] ??= now;
 
-  // 5. Unlink what is no longer kept. Every entry here is a symlink compose
-  // made (or seeded); removing one never touches the store entry behind it.
+  // 5. Remove what is no longer kept. On a dev host every entry is a symlink
+  // compose made (or seeded) — removing one never touches the store entry
+  // behind it. On a release host an entry is the artifact's own files
+  // (`publishReleaseDist`): moved aside first, so a crash mid-delete leaves a
+  // leftover the next run removes, never a half-deleted address served.
   let removed = 0;
   for (const name of readdirSync(opts.addressDir)) {
     if (name in names) continue;
-    try {
-      unlinkSync(join(opts.addressDir, name));
-      removed++;
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-    }
+    if (removeEntry(join(opts.addressDir, name))) removed++;
   }
 
   writeAtomic(indexPath, JSON.stringify({ v: 1, graphs, names }));
@@ -207,6 +209,25 @@ export function retainAddresses(opts: {
     recordsRead,
     migrated,
   };
+}
+
+/** Remove one address-dir entry (a link, or a release's real dir); false when already gone. */
+function removeEntry(path: string): boolean {
+  const st = lstatSync(path, { throwIfNoEntry: false });
+  if (!st) return false;
+  if (!st.isDirectory()) {
+    try {
+      unlinkSync(path);
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+      return false;
+    }
+    return true;
+  }
+  const aside = `${path}.tmp.${process.pid}`;
+  renameSync(path, aside);
+  rmSync(aside, { recursive: true, force: true });
+  return true;
 }
 
 /** Write `graph`'s record (once: a graph's names never change), stamped `at`. */

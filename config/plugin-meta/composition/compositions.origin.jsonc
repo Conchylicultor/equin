@@ -1,4 +1,4 @@
-// @hash 5286890c1e36
+// @hash c7cdb87f88c1
 {
   "manifests": [
     {
@@ -741,7 +741,8 @@
         "ui.theme-engine.**",
         "primitives.dom.overscroll-hint.**",
         "network.live.boot-snapshot.**",
-        "apps-core.app-preload.**"
+        "apps-core.app-preload.**",
+        "framework.tooling.web-artifacts.served-addresses"
       ],
       "selectedContributors": [],
       "extends": [],

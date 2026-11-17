@@ -31538,11 +31538,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `takeReexecBudget`
         - **`build`** — `./equin build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
           - Cli:
-            - Uses: 58 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
+            - Uses: 59 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
               - `framework/cli/op-runtime` ×31
-              - `framework/tooling/web-artifacts` ×6
               - `framework/cli/bootstrap` ×4
+              - `framework/tooling/web-artifacts` ×4
               - `framework/cli/migrations` ×3
+              - `framework/tooling/web-artifacts/served-addresses` ×3
               - `plugin-meta/plugin-records` ×3
               - `debug/profiling/op-log` ×2
               - `build/central-build-id.centralBuildOf`
@@ -32350,7 +32351,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withNotifyBatch`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 122 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
+        - Imported by: 123 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
           - `infra` ×29
           - `conversations` ×14
           - `debug` ×14
@@ -32359,10 +32360,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps` ×8
           - `network` ×5
           - `reports` ×5
+          - `framework` ×3
           - `page` ×3
           - `primitives` ×3
           - `build` ×2
-          - `framework` ×2
           - `integrations` ×2
           - `ui` ×2
           - `apps-core`
@@ -34050,16 +34051,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `carryForwardServedEntries`
               - `createPooledArtifactBuilder`
               - `idealArtifactBuildThreads`
-              - `retainAddresses`
               - `seedAddressDir`
-              - `servedGraphOf`
           - Cross-plugin:
             - Imported by:
               - `apps/website/landing/screenshot`
               - `framework/cli/build`
               - `framework/tooling/codegen`
               - `framework/tooling/e2e-harness/page-ready`
-              - `framework/tooling/web-artifacts/blocker-scan`
               - `framework/tooling/web-artifacts/prune`
           - Exemptions:
             - Exempts itself from:
@@ -34082,7 +34080,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Register: `defineSupervisedJob('web-artifacts.blocker-scan')`
               - Cli:
                 - Uses:
-                  - `framework/tooling/web-artifacts.servedGraphOf`
+                  - `framework/tooling/web-artifacts/served-addresses.servedGraphOf`
                   - `infra/jobs/supervised-job.cliExecContext`
               - Deps:
                 - Uses:
@@ -34121,6 +34119,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/jobs/supervised-job.defineSupervisedJob`
                   - `primitives/log-channels.defineLogSink`
                 - Register: `defineSupervisedJob('web-artifacts.prune')`
+            - **`served-addresses`** — Keeps an open tab's bundle served: touches the graph record (beside the served dist) of every build graph a tab's subscription or resource read names, at most hourly per graph, so address retention — a dev build's, or a release's launch — keeps that graph's addresses. In every served composition through the served-baseline row.
+              - Cross-plugin:
+                - Imported by:
+                  - `framework/cli/build`
+                  - `framework/tooling/web-artifacts/blocker-scan`
+              - Cli:
+                - Exports (values):
+                  - `addressDirOf`
+                  - `publishReleaseDist`
+                  - `retainAddresses`
+                  - `servedGraphOf`
     - **`web-core`**
       - Web:
         - Uses:
@@ -38390,6 +38399,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readPid`
           - `releaseBackendSpec`
           - `releaseHostGeneration`
+          - `releaseServedDist`
+          - `releaseServedNow`
           - `resolveListenAddress`
           - `seedReleaseAssetMirror`
           - `spawnGatewayDaemon`
@@ -39006,9 +39017,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 134 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 135 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `infra` ×33
-          - `framework` ×20
+          - `framework` ×21
           - `apps` ×18
           - `debug` ×15
           - `build` ×7
@@ -39572,7 +39583,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runtimeNamespace`
           - `servingSocketPath`
       - Cross-plugin:
-        - Imported by: 74 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
+        - Imported by: 75 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
           - `infra` ×16
           - `debug` ×14
           - `build` ×9
@@ -39580,8 +39591,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps` ×5
           - `database` ×4
           - `tasks` ×4
+          - `framework` ×3
           - `backup` ×2
-          - `framework` ×2
           - `release` ×2
           - `reports` ×2
           - `companions/browser-extension`
@@ -39669,15 +39680,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug` ×21
           - `apps` ×7
           - `conversations` ×6
-          - `build` ×3
           - `database` ×3
           - `packages` ×3
           - `tasks` ×3
+          - `build` ×2
           - `primitives` ×2
           - `reports` ×2
           - `auth`
           - `companions/browser-extension`
           - `config_v2`
+          - `framework/tooling/web-artifacts/served-addresses`
           - `integrations/google-maps/browser-config`
           - `network/live/change-feed`
           - `plugin-meta/plugin-tree`
@@ -43490,9 +43502,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TIMED_FS_CALLS`
           - `withFsCallTally`
       - Cross-plugin:
-        - Imported by: 178 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+        - Imported by: 179 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
           - `infra` ×53
-          - `framework` ×26
+          - `framework` ×27
           - `apps` ×16
           - `debug` ×15
           - `conversations` ×13

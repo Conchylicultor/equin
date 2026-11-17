@@ -1,7 +1,10 @@
 import { utimes } from "node:fs/promises";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
-import { webDistDir } from "@plugins/infra/plugins/paths/server";
-import { webGraphRecordPath } from "@plugins/infra/plugins/paths/core";
+import {
+  webGraphRecordPath,
+  worktreeArtifacts,
+} from "@plugins/infra/plugins/paths/core";
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import {
   setClientBuildObserver,
   type Registration,
@@ -9,7 +12,10 @@ import {
 
 // An open tab keeps its own bundle loadable: when a tab's subscription names
 // the build graph it runs, this backend touches that graph's record beside the
-// served dist (`webGraphRecordPath`). The record's mtime is when the graph was
+// namespace's served-dist path (`webGraphRecordPath`) — the namespace's, not
+// `webDistDir()`'s: a release backend's WEB_DIST is its own release's dist,
+// while the records are one set per namespace, read by the next release's
+// publish (`publishReleaseDist`) as by the next dev build. The record's mtime is when the graph was
 // last needed, and the build keeps every address a recently needed graph links
 // (web-artifacts' address retention) — so a tab used within the window keeps
 // loading its lazy plugins, however many builds ago it booted. A tab named by
@@ -31,14 +37,16 @@ function noteClientGraph(graph: string): void {
   lastTouched.set(graph, now);
   const t = new Date(now);
   void runTracked("build.graph-record-touch", () =>
-    utimes(webGraphRecordPath(webDistDir(), graph), t, t).catch(
-      (err: unknown) => {
-        // No record: the graph aged out already (its tab will fail to load
-        // what it lacks and offer a reload), or this dist keeps none (a release).
-        if ((err as NodeJS.ErrnoException).code === "ENOENT") return;
-        throw err;
-      },
-    ),
+    utimes(
+      webGraphRecordPath(worktreeArtifacts.webDist(runtimeNamespace()), graph),
+      t,
+      t,
+    ).catch((err: unknown) => {
+      // No record: the graph aged out already (its tab will fail to load
+      // what it lacks and offer a reload), or the namespace keeps none.
+      if ((err as NodeJS.ErrnoException).code === "ENOENT") return;
+      throw err;
+    }),
   );
 }
 

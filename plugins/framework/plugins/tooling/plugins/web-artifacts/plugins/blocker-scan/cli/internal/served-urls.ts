@@ -18,7 +18,7 @@ import {
 } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { z } from "zod";
-import { servedGraphOf } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/cli";
+import { servedGraphOf } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/plugins/served-addresses/cli";
 import { webGraphRecordsDir } from "@plugins/infra/plugins/paths/core";
 
 /** Precompressed sidecars and sourcemaps: never requested by a page as a URL of their own. */

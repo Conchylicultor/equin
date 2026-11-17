@@ -164,7 +164,7 @@ export const RUNTIME_WITHHELD_ENV = {
   REPO_CONFIG_DIR:
     "per release, delivered by the backend's spec env: the vendored git-layer config tree for a compiled backend (paths/core repoConfigDir())",
   WEB_DIST:
-    "per release, delivered by the backend's spec env: the release's vendored web bundle, which the backend reads its build pins from (paths/core webDistDir())",
+    "per release, delivered by the backend's spec env: the namespace's served dist the launcher published the release's web bundle into, which the backend reads its build pins from and touches an open tab's graph record beside (paths/core webDistDir())",
 } as const satisfies Record<string, string>;
 
 type ForwardedKey = keyof typeof RUNTIME_FORWARDED_ENV;

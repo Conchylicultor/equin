@@ -39,10 +39,13 @@ const gone = "/artifacts/gone.web.ccc/index.js";
 describe("isRetiredBuildFileIn", () => {
   test("a missing file of a retired graph is proven", async () => {
     expect(
-      await isRetiredBuildFileIn(dist, "served", { graph: "old", path: gone }),
+      await isRetiredBuildFileIn(dist, dist, "served", {
+        graph: "old",
+        path: gone,
+      }),
     ).toBe(true);
     expect(
-      await isRetiredBuildFileIn(dist, "served", {
+      await isRetiredBuildFileIn(dist, dist, "served", {
         graph: "old",
         path: "/artifacts/dangling.web.bbb/index.js",
       }),
@@ -51,7 +54,7 @@ describe("isRetiredBuildFileIn", () => {
 
   test("a file still served proves nothing (the load failed for another reason)", async () => {
     expect(
-      await isRetiredBuildFileIn(dist, "served", {
+      await isRetiredBuildFileIn(dist, dist, "served", {
         graph: "old",
         path: "/artifacts/kept.web.aaa/index.js",
       }),
@@ -61,7 +64,7 @@ describe("isRetiredBuildFileIn", () => {
   test("a graph still retained, or the served one, is never retired", async () => {
     for (const graph of ["retained", "served"]) {
       expect(
-        await isRetiredBuildFileIn(dist, "served", { graph, path: gone }),
+        await isRetiredBuildFileIn(dist, dist, "served", { graph, path: gone }),
       ).toBe(false);
     }
   });
@@ -73,18 +76,45 @@ describe("isRetiredBuildFileIn", () => {
       { graph: "old", path: "/index.html" },
       { graph: "old", path: "/artifacts/../x" },
     ]) {
-      expect(await isRetiredBuildFileIn(dist, "served", occurrence)).toBe(
+      expect(await isRetiredBuildFileIn(dist, dist, "served", occurrence)).toBe(
         false,
       );
     }
   });
 
-  test("a dist that keeps no graph records (a release) retires nothing", async () => {
+  test("a release's dist reads the namespace's records, not its own", async () => {
+    // Release layout: the backend serves `web.live.<run>`, the records sit
+    // beside the namespace's served-dist path (`<ns>/web` → `<ns>/web-graphs`).
+    const ns = join(root, "ns");
+    const release = join(ns, "web.live.run");
+    mkdirSync(release, { recursive: true });
+    symlinkSync(join(root, "web-addresses"), join(release, "artifacts"));
+    mkdirSync(join(ns, "web-graphs"));
+    writeFileSync(join(ns, "web-graphs", "retained.names"), "kept.web.aaa\n");
+    const anchor = join(ns, "web");
+    expect(
+      await isRetiredBuildFileIn(release, anchor, "served", {
+        graph: "old",
+        path: gone,
+      }),
+    ).toBe(true);
+    expect(
+      await isRetiredBuildFileIn(release, anchor, "served", {
+        graph: "retained",
+        path: gone,
+      }),
+    ).toBe(false);
+  });
+
+  test("a namespace that keeps no graph records retires nothing", async () => {
     const bare = join(root, "bare");
     mkdirSync(bare);
     symlinkSync(join(root, "web-addresses"), join(bare, "artifacts"));
     expect(
-      await isRetiredBuildFileIn(bare, "served", { graph: "old", path: gone }),
+      await isRetiredBuildFileIn(bare, bare, "served", {
+        graph: "old",
+        path: gone,
+      }),
     ).toBe(false);
   });
 });

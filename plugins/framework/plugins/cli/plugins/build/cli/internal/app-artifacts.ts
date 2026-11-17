@@ -37,12 +37,14 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/core";
 import {
   carryForwardServedEntries,
-  retainAddresses,
-  servedGraphOf,
   createPooledArtifactBuilder,
   idealArtifactBuildThreads,
   seedAddressDir,
 } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/cli";
+import {
+  retainAddresses,
+  servedGraphOf,
+} from "@plugins/framework/plugins/tooling/plugins/web-artifacts/plugins/served-addresses/cli";
 import {
   installRepoView,
   openRepoView,

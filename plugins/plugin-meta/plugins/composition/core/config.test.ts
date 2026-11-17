@@ -129,12 +129,14 @@ test("served-baseline lists only what BEING SERVED needs", () => {
   // theme engine, and the rubber-band that keeps the near-black `html` floor
   // from showing above the page (equin.ai shipped that way), the boot
   // snapshot that makes config (slot layouts) known on the first frame, and
-  // the head's per-app code preloads (the app's code downloads from t0).
+  // the head's per-app code preloads (the app's code downloads from t0), and
+  // the graph-record touch that keeps an open tab's bundle served.
   const baseline = byName("served-baseline");
   expect([...baseline.entryPoints].map(String).sort()).toEqual(
     [
       "apps-core.layout.**",
       "apps-core.app-preload.**",
+      "framework.tooling.web-artifacts.served-addresses",
       "network.live.boot-snapshot.**",
       "infra.health.**",
       "primitives.dom.overscroll-hint.**",

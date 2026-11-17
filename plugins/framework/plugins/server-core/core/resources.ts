@@ -402,7 +402,7 @@ export function setServedCentralBuild(fn: () => string | null): void {
 }
 
 // Told every build graph a tab names (`ResourceRuntimeOptions.onClientBuild`):
-// boot-injected by `build/server-build-id`, which marks the graph as still
+// boot-injected by web-artifacts' `served-addresses` (machine), which marks the graph as still
 // needed so the next build keeps serving that bundle's addresses. No-op before
 // injection, and on central / a browser host (no served dist to keep).
 let clientBuildObserver: (build: string) => void = () => {};

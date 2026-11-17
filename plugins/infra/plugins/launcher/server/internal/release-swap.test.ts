@@ -20,15 +20,18 @@ describe("releaseBackendSpec", () => {
     "/srv/equin/website/runtime/equin-release/website-abc",
     manifest,
     asNamespace("website"),
+    "/srv/equin/website/data/worktrees/website/web.live.run-2",
   );
 
-  test("runs the bundle's own server, web tree and identity", () => {
+  test("runs the bundle's own server and identity, served from the namespace's dist", () => {
     expect(spec.command).toEqual([
       "/srv/equin/website/runtime/equin-release/website-abc/server",
     ]);
+    // Never the extraction's own web/: a later ship prunes it under open tabs.
     expect(spec.web).toBe(
-      "/srv/equin/website/runtime/equin-release/website-abc/web",
+      "/srv/equin/website/data/worktrees/website/web.live.run-2",
     );
+    expect(spec.env?.[envName("WEB_DIST")]).toBe(spec.web);
     expect(spec.env?.[envName("MIGRATIONS_DIR")]).toBe(
       "/srv/equin/website/runtime/equin-release/website-abc/migrations/data",
     );
@@ -48,7 +51,9 @@ describe("releaseBackendSpec", () => {
     for (const name of Object.keys(spec.env ?? {})) {
       expect(forwarded.has(name)).toBe(false);
       expect(
-        spec.env?.[name]?.includes("website-abc") || name.includes("RELEASE_"),
+        spec.env?.[name]?.includes("website-abc") ||
+          name.includes("RELEASE_") ||
+          name === envName("WEB_DIST"),
       ).toBe(true);
     }
   });
