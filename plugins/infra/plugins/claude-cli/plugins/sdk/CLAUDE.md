@@ -50,8 +50,10 @@ in, which has no SDK form, is the sign-in plugin's sanctioned exemption).
 - Server:
   - Uses: `infra/claude-cli/accounts.claudeAccountCredential`
   - Exports (types):
+    - `ClaudeApiError`
     - `ClaudeQueryInput`
     - `ClaudeSessionEnv`
+    - `ClaudeTurn`
     - `ClaudeTurnResult`
   - Exports (values):
     - `ClaudeInitializeTimeoutError`

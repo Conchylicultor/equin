@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { and, eq, exists, sql } from "drizzle-orm";
 import { db, type DbExecutor } from "@plugins/database/server";
-import { defineJob } from "@plugins/infra/plugins/jobs/server";
+import { defineJob, type JobCtx } from "@plugins/infra/plugins/jobs/server";
+import { heldAtClaudeLimit } from "@plugins/conversations/plugins/runtime-sdk/machine";
 import { _tasks } from "@plugins/tasks/plugins/tasks-core/server";
 import { generateTitles } from "./generate-title";
 import { alreadyShort, type ShortTitleResult } from "./title-parse";
@@ -32,7 +33,7 @@ export const shortTitleJob = defineJob({
   dedup: { key: ({ taskId }) => taskId },
   serial: true,
   maxAttempts: 2,
-  run: async ({ input: { taskId } }) => {
+  run: async ({ input: { taskId }, ctx }) => {
     const [task] = await db
       .select({ title: _tasks.title, description: _tasks.description })
       .from(_tasks)
@@ -43,7 +44,12 @@ export const shortTitleJob = defineJob({
     const existing = await tasksShortTitle.get(taskId);
     if (existing?.sourceTitle === title) return; // already fresh
 
-    const result = await shortTitleFor(title, task.description ?? "", taskId);
+    const result = await shortTitleFor(
+      ctx,
+      title,
+      task.description ?? "",
+      taskId,
+    );
     if (!result.ok) {
       // An unusable answer writes nothing: the full title keeps showing.
       console.warn(
@@ -86,9 +92,11 @@ export async function storeIfTitleUnchanged(
 }
 
 // A title already that short is its own short title (no model call); otherwise
-// the model shortens it knowing what the task is about. A failed call throws
-// (the job retries).
+// the model shortens it knowing what the task is about — the run waiting out
+// the Claude account's usage limit first. A failed call throws (the job
+// retries).
 async function shortTitleFor(
+  ctx: JobCtx,
   title: string,
   description: string,
   taskId: string,
@@ -96,7 +104,9 @@ async function shortTitleFor(
   const short = alreadyShort(title);
   if (short !== undefined) return { ok: true, shortTitle: short };
   if (!title.trim()) return { ok: false, reason: "empty title" };
-  const answer = await generateTitles(description, { title, taskId });
+  const answer = await heldAtClaudeLimit(ctx, () =>
+    generateTitles(description, { title, taskId }),
+  );
   return answer.short;
 }
 

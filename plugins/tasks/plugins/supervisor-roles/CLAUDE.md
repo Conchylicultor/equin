@@ -210,7 +210,9 @@ tools — are `plugins/sessions`.
     - `DELETE /api/supervisor-roles/:id`
     - `PUT /api/tasks/:taskId/supervisor`
 - Machine:
-  - Uses: `tasks/orchestration/watch.watchSource`
+  - Uses:
+    - `conversations/runtime-sdk.heldAtClaudeLimit`
+    - `tasks/orchestration/watch.watchSource`
   - Register: `defineJob('supervisor-roles.icon')`
 - Core:
   - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)

@@ -47,6 +47,15 @@ task was filed with a placeholder) and a ≤3-word short title for narrow rows
     - `scheduleTaskTitleUpdate`
     - `tasksShortTitle`
     - `TaskTitleGenerator`
+- Machine:
+  - Uses: `conversations/runtime-sdk.heldAtClaudeLimit`
+  - Register:
+    - `defineJob('task-title.on-conversation-created')`
+    - `defineJob('task-title.on-user-turn-sent')`
+    - `defineJob('task-title.short')`
+    - `defineJob('task-title.short-on-title-changed')`
+    - `defineJob('task-title.short-backfill')`
+    - `defineWarmup('task-title.short-backfill')`
 - Core:
   - Uses:
     - `fields/text/config.textField`
@@ -69,14 +78,6 @@ task was filed with a placeholder) and a ≤3-word short title for narrow rows
     - `tasks/task-draft-form`
     - `tasks/task-title/filed-titles`
     - `tasks/worktree-identity`
-- Machine:
-  - Register:
-    - `defineJob('task-title.on-conversation-created')`
-    - `defineJob('task-title.on-user-turn-sent')`
-    - `defineJob('task-title.short')`
-    - `defineJob('task-title.short-on-title-changed')`
-    - `defineJob('task-title.short-backfill')`
-    - `defineWarmup('task-title.short-backfill')`
 - Sub-plugins:
   - **`filed-titles`** (excluded) — The task titles of a host without a model: provides the TaskTitleGenerator host service as nothing to do — there is no Claude CLI to ask, so every task keeps the title it was filed with, the same…
 

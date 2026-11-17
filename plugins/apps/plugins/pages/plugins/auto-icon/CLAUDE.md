@@ -85,7 +85,9 @@ without the computer (the demo) boots it and runs none of this.
     - `ui/icons.Icon`
   - Exports (values): `RegenerateIconAction`
 - Machine:
-  - Uses: `infra/endpoints.implementMachine`
+  - Uses:
+    - `conversations/runtime-sdk.heldAtClaudeLimit`
+    - `infra/endpoints.implementMachine`
   - Register:
     - `defineJob('pages.auto-icon.generate')`
     - `defineJob('pages.auto-icon.backfill')`

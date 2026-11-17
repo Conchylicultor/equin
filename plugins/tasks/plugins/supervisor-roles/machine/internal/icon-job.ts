@@ -6,6 +6,7 @@ import {
   runClaudePrint,
 } from "@plugins/infra/plugins/claude-cli/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
+import { heldAtClaudeLimit } from "@plugins/conversations/plugins/runtime-sdk/machine";
 import { _supervisorRoles, getSupervisorRole } from "../../server";
 import {
   buildIconPrompt,
@@ -35,22 +36,26 @@ export const supervisorRoleIconJob = defineJob({
   },
   serial: true,
   maxAttempts: 2,
-  run: async ({ input: { roleId } }) => {
+  run: async ({ input: { roleId }, ctx }) => {
     const role = await getSupervisorRole(roleId);
     if (!role || role.iconByUser) return;
     let out: string;
     try {
-      out = await runClaudePrint({
-        tier: "haiku",
-        prompt: buildIconPrompt(role),
-        system: ICON_SYSTEM_PROMPT,
-        timeoutMs: 30_000,
-        source: {
-          name: "supervisor-role-icon",
-          context: { roleId },
-          correlationId: roleId,
-        },
-      });
+      // Held while the Claude account is at its usage limit: the run sleeps
+      // until the reset instead of failing.
+      out = await heldAtClaudeLimit(ctx, () =>
+        runClaudePrint({
+          tier: "haiku",
+          prompt: buildIconPrompt(role),
+          system: ICON_SYSTEM_PROMPT,
+          timeoutMs: 30_000,
+          source: {
+            name: "supervisor-role-icon",
+            context: { roleId },
+            correlationId: roleId,
+          },
+        }),
+      );
     } catch (err) {
       // A failed model call is filed as a report by claude-cli; the role
       // keeps the icon it has.

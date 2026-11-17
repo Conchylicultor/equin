@@ -144,7 +144,12 @@ A job row has two identities (`server/internal/run-identity.ts`):
   - **everything else** — singleton, none, cron ticks — is `${name}:job:${jobId}`.
     The row id survives retries, sweeper reclaims, and an enqueue or tick
     collapsing onto the pending row;
-  - **resume rows** carry the suspended run's id explicitly.
+  - **resume rows** carry the suspended run's id explicitly — and its `input`
+    and trigger `event` (`RESUME_KEYS.input` / `.event`), so a resumed run is
+    handed exactly what the suspended one was. Before, the event was dropped:
+    an event-triggered job (turn-summary, conversation-category) woke from
+    `ctx.sleep` / `ctx.waitFor` with `event: undefined` and quietly did
+    nothing.
 
 ## Settled keys: one run per settled change
 

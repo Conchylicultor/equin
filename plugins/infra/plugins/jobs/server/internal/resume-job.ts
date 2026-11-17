@@ -92,6 +92,7 @@ export const jobsResumeJob = defineJob({
     const waitName = input[RESUME_KEYS.waitName];
     const targetJobName = input[RESUME_KEYS.jobName];
     const originalInput = input[RESUME_KEYS.input];
+    const originalEvent = input[RESUME_KEYS.event];
     const isTimeout = input[RESUME_KEYS.timeout] === true;
 
     // The event payload (when present) is what gets stored for the awaiting
@@ -177,6 +178,10 @@ export const jobsResumeJob = defineJob({
           jobName: targetJobName,
           workflowRunId,
           input: originalInput,
+          // The suspended run's own trigger event, so the resumed run reads
+          // what the first one did (an event-triggered job resumed without
+          // it would wake to nothing).
+          ...(originalEvent === undefined ? {} : { event: originalEvent }),
         } satisfies JobTaskPayload,
         { jobKey: workflowRunId, maxAttempts: target.maxAttempts, tx },
       );

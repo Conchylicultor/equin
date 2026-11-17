@@ -128,6 +128,8 @@ export interface DurableCtxInit {
   workflowRunId: string;
   jobName: string;
   originalInput: unknown;
+  /** The event the run was triggered with, handed back on resume. */
+  originalEvent: unknown;
   /**
    * Aborted when this dispatch's execution budget expires. One controller per
    * dispatch, owned by `dispatch()` in worker.ts. Surfaced to handlers as
@@ -340,6 +342,7 @@ export function makeDurableCtx(init: DurableCtxInit): DurableCtx {
           [RESUME_KEYS.waitName]: waitName,
           [RESUME_KEYS.jobName]: init.jobName,
           [RESUME_KEYS.input]: init.originalInput,
+          [RESUME_KEYS.event]: init.originalEvent,
         },
         where: mergedFilter,
         oneShot: true,
@@ -355,6 +358,7 @@ export function makeDurableCtx(init: DurableCtxInit): DurableCtx {
             [RESUME_KEYS.waitName]: waitName,
             [RESUME_KEYS.jobName]: init.jobName,
             [RESUME_KEYS.input]: init.originalInput,
+            [RESUME_KEYS.event]: init.originalEvent,
             [RESUME_KEYS.timeout]: true,
           },
           {
@@ -403,6 +407,7 @@ export function makeDurableCtx(init: DurableCtxInit): DurableCtx {
           [RESUME_KEYS.waitName]: waitName,
           [RESUME_KEYS.jobName]: init.jobName,
           [RESUME_KEYS.input]: init.originalInput,
+          [RESUME_KEYS.event]: init.originalEvent,
           [RESUME_KEYS.timeout]: true,
         },
         {

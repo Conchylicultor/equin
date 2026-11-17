@@ -10,7 +10,11 @@ import { writeRingHorizon } from "./internal/record-call";
 import { _claudeCliCallHorizon, _claudeCliCalls } from "./internal/tables";
 import { db } from "@plugins/database/server";
 
-export { runClaudePrint, ClaudeCliError } from "./internal/run-claude-print";
+export {
+  runClaudePrint,
+  ClaudeCliError,
+  ClaudeUsageLimitError,
+} from "./internal/run-claude-print";
 export type { RunClaudePrintInput } from "./internal/run-claude-print";
 export {
   runClaudeReadOnly,

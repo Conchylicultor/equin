@@ -6789,7 +6789,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons.Icon`
             - Exports (values): `RegenerateIconAction`
           - Machine:
-            - Uses: `infra/endpoints.implementMachine`
+            - Uses:
+              - `conversations/runtime-sdk.heldAtClaudeLimit`
+              - `infra/endpoints.implementMachine`
             - Register:
               - `defineJob('pages.auto-icon.generate')`
               - `defineJob('pages.auto-icon.backfill')`
@@ -23123,6 +23125,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/process-name.isCurrentCloneOf`
           - `packages/process-name.sharedBunDir`
           - `packages/process-name.sharedBunsNamed`
+        - Exports (values): `heldAtClaudeLimit`
         - Register:
           - `defineFileWatcher('runtime-sdk.events')`
           - `defineDaemon('runtime-sdk.agent')`
@@ -23234,9 +23237,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
         - Imported by:
+          - `apps/pages/auto-icon`
           - `conversations/conversation-view/jsonl-viewer/api-error`
           - `infra/paths/root-migration`
+          - `tasks/supervisor-roles`
           - `tasks/supervisor-roles/spend`
+          - `tasks/task-title`
     - **`self-compact`** — An agent compacting its own context: the compact_context MCP tool (granted by context.compact) records the request in conversation_compactions; when the agent can take an automatic turn, self-compact.send types `/compact <keep>` then the continuation as an event turn. A pending request is a PendingTurn (every other automatic sender holds until it went out) and waives the stop gate; the capability's describe joins the Mandate section.
       - Server:
         - Contributes:
@@ -35269,8 +35275,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "claude-cli.calls-for"
           - `fork-data-exclusion` "claude_cli_call_horizon"
           - `fork-data-exclusion` "claude_cli_calls"
-        - Uses: 23 symbols — full list in [`plugins/infra/plugins/claude-cli/REFERENCE.md`](../plugins/infra/plugins/claude-cli/REFERENCE.md)
-          - `infra/claude-cli/sdk` ×5
+        - Uses: 24 symbols — full list in [`plugins/infra/plugins/claude-cli/REFERENCE.md`](../plugins/infra/plugins/claude-cli/REFERENCE.md)
+          - `infra/claude-cli/sdk` ×6
           - `database` ×4
           - `infra/entities` ×3
           - `database/sql-projection` ×2
@@ -35289,6 +35295,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `_claudeCliCalls`
           - `ClaudeCliError`
+          - `ClaudeUsageLimitError`
           - `READ_ONLY_TOOLS`
           - `recordClaudeCliCall`
           - `runClaudePrint`
@@ -35390,6 +35397,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/places/places-core`
           - `conversations/conversation-category`
           - `conversations/conversation-view/turn-summary`
+          - `conversations/runtime-sdk`
           - `debug/claude-cli-calls`
           - `debug/read-set`
           - `tasks/supervisor-roles`
@@ -35543,8 +35551,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Server:
             - Uses: `infra/claude-cli/accounts.claudeAccountCredential`
             - Exports (types):
+              - `ClaudeApiError`
               - `ClaudeQueryInput`
               - `ClaudeSessionEnv`
+              - `ClaudeTurn`
               - `ClaudeTurnResult`
             - Exports (values):
               - `ClaudeInitializeTimeoutError`
@@ -61958,7 +61968,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DELETE /api/supervisor-roles/:id`
           - `PUT /api/tasks/:taskId/supervisor`
       - Machine:
-        - Uses: `tasks/orchestration/watch.watchSource`
+        - Uses:
+          - `conversations/runtime-sdk.heldAtClaudeLimit`
+          - `tasks/orchestration/watch.watchSource`
         - Register: `defineJob('supervisor-roles.icon')`
       - Core:
         - Uses: 28 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/REFERENCE.md)
@@ -63208,6 +63220,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `scheduleTaskTitleUpdate`
           - `tasksShortTitle`
           - `TaskTitleGenerator`
+      - Machine:
+        - Uses: `conversations/runtime-sdk.heldAtClaudeLimit`
+        - Register:
+          - `defineJob('task-title.on-conversation-created')`
+          - `defineJob('task-title.on-user-turn-sent')`
+          - `defineJob('task-title.short')`
+          - `defineJob('task-title.short-on-title-changed')`
+          - `defineJob('task-title.short-backfill')`
+          - `defineWarmup('task-title.short-backfill')`
       - Core:
         - Uses:
           - `fields/text/config.textField`
@@ -63230,14 +63251,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-draft-form`
           - `tasks/task-title/filed-titles`
           - `tasks/worktree-identity`
-      - Machine:
-        - Register:
-          - `defineJob('task-title.on-conversation-created')`
-          - `defineJob('task-title.on-user-turn-sent')`
-          - `defineJob('task-title.short')`
-          - `defineJob('task-title.short-on-title-changed')`
-          - `defineJob('task-title.short-backfill')`
-          - `defineWarmup('task-title.short-backfill')`
       - Plugins:
         - **`filed-titles`** (excluded) — The task titles of a host without a model: provides the TaskTitleGenerator host service as nothing to do — there is no Claude CLI to ask, so every task keeps the title it was filed with, the same title the desktop keeps when a generation fails (the browser composition, the portable boot test). Never booted by the desktop.
           - Server:

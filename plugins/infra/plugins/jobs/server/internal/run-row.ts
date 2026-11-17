@@ -62,6 +62,7 @@ export async function UNSAFE_runJobRow(
     signal: abort.signal,
     jobName: payload.jobName,
     originalInput: payload.input,
+    originalEvent: payload.event,
     scheduleResume,
   });
 

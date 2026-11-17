@@ -28,8 +28,27 @@ const title = await runClaudePrint({
 });
 ```
 
-Throws `ClaudeCliError` on an error result (a usage limit, in Claude Code's own
-words), a CLI that died, or a timeout.
+Throws `ClaudeCliError` on an error result (in Claude Code's own words), a CLI
+that died, or a timeout — each filed as a crash report.
+
+### A usage limit is a state, not a fault: `ClaudeUsageLimitError`
+
+When the account is at a plan usage limit, Claude Code names the turn's failure
+`rate_limit` on its synthetic assistant message (`runClaudeTurn`'s `apiError`)
+— never matched from the text. The call then throws `ClaudeUsageLimitError`
+(a `ClaudeCliError`, carrying the `accountId`), recorded in the call log but
+**not** filed as a crash: the account's limits say when it resets.
+
+**A background job never lets it fail the run.** It wraps its call in
+`heldAtClaudeLimit(ctx, () => runClaudePrint(…))`
+(`conversations/runtime-sdk/machine`): while the active account's limit is
+known reached (the usage its agents report), the run `ctx.sleep`s until the
+reset — no call, no attempt spent, no report — and resumes on its own; a limit
+the call itself hits is re-read (`get_usage`, no model call) and waited out
+the same way; a limit no reading confirms throws `UnplacedClaudeLimitError`,
+loudly. Before (2026-11-16 → 17): the weekly limit hit at 18:47 UTC made every
+Haiku job (page icons, short titles) call, fail, retry and dead-letter until
+the 04:00 UTC reset — 198 failed calls, ~510 report occurrences.
 
 ### Read-only structured runs
 
@@ -129,8 +148,8 @@ block keep taking a plain `ClaudeCliCall`.
     - `resource.declare` "claude-cli.calls-for"
     - `fork-data-exclusion` "claude_cli_call_horizon"
     - `fork-data-exclusion` "claude_cli_calls"
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra/claude-cli/sdk` ×5
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/claude-cli/sdk` ×6
     - `database` ×4
     - `infra/entities` ×3
     - `database/sql-projection` ×2
@@ -149,6 +168,7 @@ block keep taking a plain `ClaudeCliCall`.
   - Exports (values):
     - `_claudeCliCalls`
     - `ClaudeCliError`
+    - `ClaudeUsageLimitError`
     - `READ_ONLY_TOOLS`
     - `recordClaudeCliCall`
     - `runClaudePrint`
@@ -250,6 +270,7 @@ block keep taking a plain `ClaudeCliCall`.
     - `apps/places/places-core`
     - `conversations/conversation-category`
     - `conversations/conversation-view/turn-summary`
+    - `conversations/runtime-sdk`
     - `debug/claude-cli-calls`
     - `debug/read-set`
     - `tasks/supervisor-roles`

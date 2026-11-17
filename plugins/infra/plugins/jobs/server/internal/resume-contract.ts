@@ -24,6 +24,10 @@ export const RESUME_KEYS = {
   waitName: "__resume_waitName",
   jobName: "__resume_jobName",
   input: "__resume_input",
+  // The event the suspended run was triggered with (absent for a direct
+  // enqueue): a resumed run is handed the same `event` as the run that
+  // suspended, or an event-triggered job would wake to nothing.
+  event: "__resume_event",
   timeout: "__resume_timeout",
 } as const;
 
@@ -35,6 +39,7 @@ export const ResumeInputSchema = z.object({
   [RESUME_KEYS.waitName]: z.string(),
   [RESUME_KEYS.jobName]: z.string(),
   [RESUME_KEYS.input]: z.unknown(),
+  [RESUME_KEYS.event]: z.unknown().optional(),
   [RESUME_KEYS.timeout]: z.boolean().optional(),
 });
 

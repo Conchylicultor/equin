@@ -7,6 +7,7 @@ import {
   claudeSessionEnv,
   runClaudeTurn,
   type ClaudeQueryInput,
+  type ClaudeTurn,
   type ClaudeTurnResult,
 } from "@plugins/infra/plugins/claude-cli/plugins/sdk/server";
 import {
@@ -55,6 +56,24 @@ export class ClaudeCliError extends Error {
   }
 }
 
+/**
+ * The account the call ran on is at a plan usage limit (Claude Code named the
+ * turn's failure `rate_limit`). Not a fault: the account's limits say when it
+ * resets (runtime-sdk's usage reading), and a background job waits for that
+ * instead of failing (`heldAtClaudeLimit`, runtime-sdk/machine). So it is not
+ * filed as a crash report — a caller that cannot wait decides what it means.
+ */
+export class ClaudeUsageLimitError extends ClaudeCliError {
+  constructor(
+    message: string,
+    /** The Claude account whose limit was reached. */
+    readonly accountId: string,
+  ) {
+    super(message);
+    this.name = "ClaudeUsageLimitError";
+  }
+}
+
 export async function runClaudePrint(
   input: RunClaudePrintInput,
 ): Promise<string> {
@@ -85,8 +104,10 @@ export async function runClaudePrint(
 /**
  * Run `input.prompt` as one turn with `options` on the active account and
  * return `answerOf` its successful result — recording the call in the log
- * either way. An error result (a usage limit, max turns), a timeout or a CLI
- * that died throws {@link ClaudeCliError} with Claude Code's own words.
+ * either way. An error result (max turns), a timeout or a CLI that died throws
+ * {@link ClaudeCliError} with Claude Code's own words, filed as a crash report;
+ * an account at its usage limit throws {@link ClaudeUsageLimitError}, not
+ * filed (the limit is a known state with a known reset, not a fault).
  */
 export async function invokeClaude<T>({
   options,
@@ -111,9 +132,9 @@ export async function invokeClaude<T>({
   let accountId: string | null = null;
   try {
     accountId = await activeClaudeAccountId();
-    let result: ClaudeTurnResult;
+    let turn: ClaudeTurn;
     try {
-      result = await runClaudeTurn({
+      turn = await runClaudeTurn({
         env: await claudeSessionEnv(accountId),
         prompt: input.prompt,
         options: {
@@ -143,6 +164,7 @@ export async function invokeClaude<T>({
         err instanceof Error ? err.message : String(err),
       );
     }
+    const { result, apiError } = turn;
     // What the turn cost, at API prices — an error result's too: the tokens
     // it spent were drawn from the account all the same.
     costUsd = result.total_cost_usd;
@@ -154,9 +176,10 @@ export async function invokeClaude<T>({
         result.subtype === "success"
           ? result.result
           : result.errors.join("; ") || result.subtype;
-      throw new ClaudeCliError(
-        `Claude Code answered an error (${result.subtype}): ${detail.trim() || "<no output>"}`,
-      );
+      const message = `Claude Code answered an error (${apiError ?? result.subtype}): ${detail.trim() || "<no output>"}`;
+      if (apiError === "rate_limit")
+        throw new ClaudeUsageLimitError(message, accountId);
+      throw new ClaudeCliError(message);
     }
     output = result.result;
     return answerOf(result);
@@ -165,7 +188,7 @@ export async function invokeClaude<T>({
     throw err;
   } finally {
     const durationMs = Math.round(performance.now() - startedAt);
-    if (caughtError) {
+    if (caughtError && !(caughtError instanceof ClaudeUsageLimitError)) {
       reportServerError({
         message: `[claude-cli] ${input.source.name}: ${caughtError.message}`,
         ...crashFieldsOf(caughtError),

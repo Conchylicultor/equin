@@ -27,8 +27,10 @@ export const autoIconJob = defineJob({
   },
   serial: true,
   maxAttempts: 2,
-  run: async ({ input: { pageId } }) => {
-    const result = await generatePageIcon(pageId);
+  run: async ({ input: { pageId }, ctx }) => {
+    // Held while the Claude account is at its usage limit: the run sleeps
+    // until the reset instead of failing.
+    const result = await generatePageIcon(pageId, { heldBy: ctx });
     if (result.kind === "rejected") {
       // Nothing written, no provenance row: a later edit retries.
       console.warn(

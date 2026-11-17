@@ -110,8 +110,9 @@ async function generateAndStore(
   try {
     answer = await generateTitles(description, { taskId });
   } catch (err) {
-    // A failed model call (a timeout, a usage limit, a dead CLI) is already
-    // filed as a report by claude-cli, which knows Claude Code's own words; the
+    // A failed model call (a timeout, a dead CLI) is already filed as a
+    // report by claude-cli, which knows Claude Code's own words; a usage limit
+    // is a known state the health report shows, not a report. Either way the
     // task keeps its fallback title. Anything else is a bug here and throws.
     if (!(err instanceof ClaudeCliError)) throw err;
   }

@@ -3,7 +3,11 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 export { claudeQuery, claudeSessionEnv } from "./internal/session";
 export type { ClaudeQueryInput, ClaudeSessionEnv } from "./internal/session";
 export { ClaudeTurnError, runClaudeTurn } from "./internal/turn";
-export type { ClaudeTurnResult } from "./internal/turn";
+export type {
+  ClaudeApiError,
+  ClaudeTurn,
+  ClaudeTurnResult,
+} from "./internal/turn";
 export {
   ClaudeInitializeTimeoutError,
   readClaudeInitialize,

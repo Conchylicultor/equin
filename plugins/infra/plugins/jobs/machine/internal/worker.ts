@@ -782,6 +782,7 @@ async function dispatch(
     signal: abort.signal,
     jobName: payload.jobName,
     originalInput: payload.input,
+    originalEvent: payload.event,
     scheduleResume,
   });
 

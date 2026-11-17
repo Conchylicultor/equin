@@ -1,6 +1,8 @@
 import { and, asc, eq, isNull, ne } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { runClaudePrint } from "@plugins/infra/plugins/claude-cli/server";
+import type { JobCtx } from "@plugins/infra/plugins/jobs/server";
+import { heldAtClaudeLimit } from "@plugins/conversations/plugins/runtime-sdk/machine";
 import {
   liveBlocks,
   PAGE_BLOCK_TYPE,
@@ -37,10 +39,17 @@ export type GenerateIconResult =
  * starts (it re-emits `blocksChanged`). `force` (Regenerate) runs regardless and
  * overwrites the current icon; otherwise the write is `onlyIfUnset`, judged under
  * the page's lock, so an icon the user picked meanwhile is never replaced.
+ *
+ * `heldBy` (the job's run) waits out the Claude account's usage limit before
+ * the call (`heldAtClaudeLimit`); the in-request Regenerate has no run to
+ * hold, so a limit fails it at once.
  */
 export async function generatePageIcon(
   pageId: string,
-  { force = false }: { force?: boolean } = {},
+  {
+    force = false,
+    heldBy,
+  }: { force?: boolean; heldBy?: Pick<JobCtx, "sleep"> } = {},
 ): Promise<GenerateIconResult> {
   const [page] = await db
     .select({ data: liveBlocks.data, pageId: liveBlocks.pageId })
@@ -80,17 +89,19 @@ export async function generatePageIcon(
   // A regenerate should come back with something new.
   if (force && data.icon) avoid.add(data.icon);
 
-  const out = await runClaudePrint({
-    tier: "haiku",
-    prompt: buildIconPrompt({
-      title: title || "Untitled",
-      content,
-      avoid: [...avoid],
-    }),
-    system: SYSTEM_PROMPT,
-    timeoutMs: 30_000,
-    source: { name: "page-auto-icon", context: { pageId } },
-  });
+  const call = () =>
+    runClaudePrint({
+      tier: "haiku",
+      prompt: buildIconPrompt({
+        title: title || "Untitled",
+        content,
+        avoid: [...avoid],
+      }),
+      system: SYSTEM_PROMPT,
+      timeoutMs: 30_000,
+      source: { name: "page-auto-icon", context: { pageId } },
+    });
+  const out = heldBy ? await heldAtClaudeLimit(heldBy, call) : await call();
   const answer = parseIconAnswer(out, avoid);
   if (!answer.ok) return { kind: "rejected", reason: answer.reason };
 
