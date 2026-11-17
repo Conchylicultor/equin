@@ -137,25 +137,31 @@ function NowPlayingCard({
           label={now.playing ? "Pause" : "Play"}
           onClick={() => control(now, now.playing ? "pause" : "resume")}
         />
-        <Icon
-          icon={
-            volume === 0
-              ? volumeOffIcon
-              : volume < 0.5
-                ? volumeDownIcon
-                : volumeUpIcon
-          }
-        />
-        <Fill>
-          <Slider
-            value={volume}
-            min={0}
-            max={1}
-            step={0.01}
-            onValueChange={setVolume}
-            aria-label="Volume"
-          />
-        </Fill>
+        {source.ownVolume ? (
+          <Fill />
+        ) : (
+          <>
+            <Icon
+              icon={
+                volume === 0
+                  ? volumeOffIcon
+                  : volume < 0.5
+                    ? volumeDownIcon
+                    : volumeUpIcon
+              }
+            />
+            <Fill>
+              <Slider
+                value={volume}
+                min={0}
+                max={1}
+                step={0.01}
+                onValueChange={setVolume}
+                aria-label="Volume"
+              />
+            </Fill>
+          </>
+        )}
         <IconButton
           icon={stopIcon}
           label="Stop"
@@ -168,6 +174,23 @@ function NowPlayingCard({
 
 /** One app's music: click to play it here (taking over), or to pause it. */
 function SourceRow({
+  source,
+  playing,
+}: {
+  source: BackgroundMusicSource;
+  playing: boolean;
+}) {
+  const useAvailable = source.useAvailable ?? useAlwaysAvailable;
+  return useAvailable() ? (
+    <AvailableSourceRow source={source} playing={playing} />
+  ) : null;
+}
+
+function useAlwaysAvailable(): boolean {
+  return true;
+}
+
+function AvailableSourceRow({
   source,
   playing,
 }: {

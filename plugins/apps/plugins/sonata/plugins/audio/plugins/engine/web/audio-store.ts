@@ -60,6 +60,7 @@ const audioStore = defineScopedStore<AudioState>({
 });
 
 export const AudioStoreProvider = audioStore.Provider;
+export const audioStoreRelay = audioStore.relay;
 
 /** Reactive read of the full audio state. */
 export function useAudioState(): AudioState {

@@ -218,7 +218,7 @@ reported) — the kind worth surfacing as crash tasks, not just toasts.
   in-player editor, gated to UG songs, writing the loader's raw into the
   context.
 - `web/components/ug-persist-observer.tsx` — `UltimateGuitarPersistObserver`
-  (`Sonata.Effect`): persists edits via the `PUT` endpoint through the
+  (`Sonata.PlaybackEffect`): persists edits via the `PUT` endpoint through the
   document's `usePersistSourceEdit` (debounced; a pending edit is saved at once
   under its own song on a song switch or unmount) (whose
   `title: songName` is the one place a UG song's title is written — the toolbar
@@ -254,7 +254,7 @@ reported) — the kind worth surfacing as crash tasks, not just toasts.
     - `SonataDocument.Source` "Ultimate Guitar"
     - `Library.Source` "ultimate-guitar"
     - `Sonata.Section` "Ultimate Guitar" → `UltimateGuitarEditorSection`
-    - `Sonata.Effect` "ultimate-guitar-persist" → `UltimateGuitarPersistObserver`
+    - `Sonata.PlaybackEffect` "ultimate-guitar-persist" → `UltimateGuitarPersistObserver`
     - `FieldPresentation.Register` "exposure:sonata_songs_ext_ultimate_guitar"
     - `Library.Cover` "ultimate-guitar"
   - Uses: 46 symbols — full list in [REFERENCE.md](./REFERENCE.md)

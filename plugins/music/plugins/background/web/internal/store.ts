@@ -148,11 +148,17 @@ export function connectPages(): () => void {
   };
 }
 
-export function dispatch(
-  event: MusicEvent | { kind: "shown"; sourceId: string; delta: 1 | -1 },
-) {
+/** An event as the service's callers spell it: the across-apps setting is the store's. */
+export type DispatchedEvent =
+  | Exclude<MusicEvent, { kind: "shown" | "adopt" }>
+  | { kind: "shown"; sourceId: string; delta: 1 | -1 }
+  | { kind: "adopt"; sourceId: string };
+
+export function dispatch(event: DispatchedEvent) {
   const e: MusicEvent =
-    event.kind === "shown" ? { ...event, acrossApps } : event;
+    event.kind === "shown" || event.kind === "adopt"
+      ? { ...event, acrossApps }
+      : event;
   const prev = snap.state;
   const next = step(prev, e);
   if (next !== prev) snap = { ...snap, state: next };

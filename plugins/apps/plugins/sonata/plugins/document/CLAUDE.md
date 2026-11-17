@@ -117,6 +117,8 @@ availability gates over the composed score.
     - `SonataDocument.SongSetting` ← `apps.sonata.transpose`
   - Uses:
     - `primitives/latest-ref.useLatestRef`
+    - `primitives/scope/context-relay.Relayed`
+    - `primitives/scope/context-relay.relayOf`
     - `primitives/scope/scoped-store.defineScopedStore`
     - `primitives/slot-render.defineMountSlot`
   - Exports (types):
@@ -134,6 +136,7 @@ availability gates over the composed score.
     - `chordModeSetting`
     - `defaultGroove`
     - `defineSongSetting`
+    - `documentRelays`
     - `grooveSetting`
     - `keyAutoDetectSetting`
     - `sameIdentity`

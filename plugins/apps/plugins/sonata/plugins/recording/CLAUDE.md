@@ -109,7 +109,7 @@ the refusal.
     - `ConfigV2.WebRegister` "sonata.recording"
     - `ConfigV2.WebRegister` "sonata.recording-video"
     - `SonataSession.Provider` → `RecordingProvider`
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `integrations/youtube` ×5
     - `config_v2` ×3
     - `apps/sonata/session` ×2
@@ -126,6 +126,7 @@ the refusal.
     - `primitives/dom/render-mode.useOwnedElement`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
+    - `primitives/scope/context-relay.relayOf`
     - `primitives/slot-render.defineMountSlot`
   - Exports (types): `MediaRefusal`
   - Exports (values):

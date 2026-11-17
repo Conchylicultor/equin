@@ -6,7 +6,7 @@ import { recordPlay } from "../../shared/endpoints";
 
 /**
  * Headless: records a play when the loaded song's playback first starts.
- * Mounted via `Sonata.Effect` (inside the app's player scope).
+ * Mounted via `Sonata.PlaybackEffect` (with the app's playback instance).
  *
  * Counts once per *load* (the song and its load read as one value): pause→resume
  * within one load does not re-count, nor does leaving the player and coming back

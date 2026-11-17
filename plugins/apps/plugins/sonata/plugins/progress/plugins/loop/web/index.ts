@@ -32,6 +32,6 @@ export default {
     // The repeat options (show ahead, rest before repeat): persisted prefs,
     // pushed into the session.
     ConfigV2.WebRegister({ descriptor: loopConfig }),
-    Sonata.Effect({ id: "loop-options", component: LoopOptionsSync }),
+    Sonata.PlaybackEffect({ id: "loop-options", component: LoopOptionsSync }),
   ],
 } satisfies PluginDefinition;

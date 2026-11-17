@@ -8,6 +8,10 @@ import {
 } from "react";
 import type { DependencyList, ReactNode } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import {
+  relayOf,
+  type Relayed,
+} from "@plugins/primitives/plugins/scope/plugins/context-relay/web";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
 /**
@@ -64,6 +68,12 @@ export interface ScopedStoreHandle<S> {
    * For selectors that build a FRESH object each call (so `Object.is` can never
    * match), pass an `isEqual` that compares by value.
    */
+  /**
+   * The store's context as a relay token (`context-relay`): a host that keeps
+   * the store away from its view (a raised playback instance) relays it to
+   * the view, so the view's hooks read the same store.
+   */
+  relay: Relayed;
   useSelector: Hook<
     <T>(
       selector: (state: S) => T,
@@ -187,5 +197,11 @@ export function defineScopedStore<S>(
     return useSyncExternalStore(store.subscribe, getSnapshot, getSnapshot);
   }
 
-  return { Provider, useStoreApi, useStore, useSelector };
+  return {
+    Provider,
+    useStoreApi,
+    useStore,
+    useSelector,
+    relay: relayOf(Ctx),
+  };
 }

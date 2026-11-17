@@ -269,6 +269,7 @@ export const staticHosts: Record<string, StaticHost> = {
       "primitives/plugins/report-sink",
       "primitives/plugins/row-actions",
       "primitives/plugins/scope/plugins/app-instance",
+      "primitives/plugins/scope/plugins/context-relay",
       "primitives/plugins/scope/plugins/install-sink",
       "primitives/plugins/scope/plugins/render-origin",
       "primitives/plugins/scope/plugins/scoped-store",

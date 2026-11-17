@@ -1,6 +1,7 @@
 import { FullPane } from "@plugins/layouts/plugins/full-pane/web";
 import { AppShellLayout } from "@plugins/primitives/plugins/app-shell/web";
 import { SonataPlayerScope } from "@plugins/apps/plugins/sonata/plugins/player/web";
+import { useSurfaceTabId } from "@plugins/primitives/plugins/scope/plugins/surface-id/web";
 import { Sonata } from "../slots";
 
 /**
@@ -15,14 +16,20 @@ import { Sonata } from "../slots";
  * loaded song document, the playback session, the player view, the per-session
  * effects and the per-song setting observers), so each Sonata surface (desktop
  * window / keep-alive tab) gets its own isolated playback state, and a song
- * played from the library keeps playing whichever pane is active. Inside it,
- * the app-only providers (`Sonata.Provider`: the library's background play)
- * around everything, and the app-only effects (`Sonata.Effect`: shortcuts,
- * play history, source persistence).
+ * played from the library keeps playing whichever pane is active. Its playback
+ * is the tab's playback INSTANCE (keyed by the tab id): it outlives this
+ * surface — a song playing when the app is switched away plays on in the
+ * background (music button) if the user keeps music across apps, and the
+ * surface coming back to the tab finds it as it is. The app effects that must
+ * follow the song (`Sonata.PlaybackEffect`: play history, the recording video,
+ * source persistence, the title) run with the instance. Inside the view, the
+ * app-only providers (`Sonata.Provider`: the library's background play) around
+ * everything, and the view's app effects (`Sonata.Effect`: shortcuts).
  */
 export function SonataLayout() {
+  const key = useSurfaceTabId();
   return (
-    <SonataPlayerScope>
+    <SonataPlayerScope instance={key} effects={<Sonata.PlaybackEffect.Mount />}>
       <Sonata.Provider.Wrap>
         <div className="h-full min-h-0">
           <AppShellLayout>

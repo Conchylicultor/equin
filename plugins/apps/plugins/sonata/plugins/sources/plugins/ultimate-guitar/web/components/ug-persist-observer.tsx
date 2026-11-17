@@ -11,7 +11,7 @@ import { useSaveUltimateGuitar } from "../actions";
 
 /**
  * Headless, always-mounted persistence observer for the Ultimate Guitar source,
- * contributed to `Sonata.Effect`. Treats the loaded document as the source of
+ * contributed to `Sonata.PlaybackEffect`. Treats the loaded document as the source of
  * truth and persists a full `UgTab` snapshot (plus derived duration / end beat)
  * to the server whenever an edit changes the raw's `tab` — never the raw a load
  * handed it, and never when only `raw.alignment` changes (an alignment landing
@@ -22,7 +22,7 @@ import { useSaveUltimateGuitar } from "../actions";
  *
  * This lives OUTSIDE the editor section deliberately: a section body is unmounted
  * while its card is collapsed, so an in-body save would stop observing the moment
- * the card is collapsed. A `Sonata.Effect` is mounted for the whole open song
+ * the card is collapsed. A `Sonata.PlaybackEffect` is mounted for the whole open song
  * regardless of card state. A song of any other source never edits the
  * `UG_SOURCE_ID` raw, so it stays `unedited` and nothing is saved.
  *

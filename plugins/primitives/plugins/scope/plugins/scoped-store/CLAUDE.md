@@ -77,7 +77,10 @@ sink*, and it belongs in [`primitives/scope/install-sink`](../install-sink/CLAUD
 
 - Description: Per-Provider-instance external store primitive: defineScopedStore. Module-level factory, per-mount isolated state, with imperative reads, reactive whole-state, and selector subscriptions with re-render bailout.
 - Web:
-  - Uses: `primitives/latest-ref.useLatestRef`
+  - Uses:
+    - `primitives/latest-ref.useLatestRef`
+    - `primitives/scope/context-relay.Relayed`
+    - `primitives/scope/context-relay.relayOf`
   - Exports (types):
     - `ScopedStore`
     - `ScopedStoreHandle`

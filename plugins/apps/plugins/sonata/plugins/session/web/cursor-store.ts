@@ -46,6 +46,7 @@ type CursorState = PlayPosition;
 const cursorStore = defineScopedStore<CursorState>(songPosition(0));
 
 export const CursorStoreProvider = cursorStore.Provider;
+export const cursorStoreRelay = cursorStore.relay;
 export type CursorStore = ScopedStore<CursorState>;
 
 /**

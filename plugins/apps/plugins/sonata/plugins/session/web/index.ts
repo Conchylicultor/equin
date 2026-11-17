@@ -6,6 +6,7 @@ export {
   PlaybackSession,
   useSession,
   TEMPO_MATH_FLOOR,
+  sessionRelays,
   type SessionContent,
   type SessionValue,
   type TransportClock,

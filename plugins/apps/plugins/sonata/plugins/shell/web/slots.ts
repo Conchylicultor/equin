@@ -155,10 +155,11 @@ export const Sonata = {
     docLabel: (p) => p.id,
   }),
 
-  // EFFECT — headless, always-mounted APP-scoped side effects. Components
-  // contributed here render nothing; they observe the open song and the
-  // playback state and run effects (keyboard shortcuts, recording a play,
-  // persisting a source's edits). Mounted once inside the app provider and the
+  // EFFECT — headless, always-mounted APP-scoped side effects of the VIEW.
+  // Components contributed here render nothing; they observe the open song and
+  // the playback state and run effects (keyboard shortcuts). Effects that must
+  // follow the song when the view goes are `PlaybackEffect`s. Mounted once
+  // inside the app provider and the
   // player scope, so contributors may `useSonataApp()` and `useSession()`. An
   // effect that must run wherever a song plays (audio) is a
   // `SonataSession.Effect` instead, and one that runs wherever a player is
@@ -174,6 +175,18 @@ export const Sonata = {
   Provider: defineWrapperSlot(),
 
   Effect: defineMountSlot({
+    docLabel: (p) => p.id,
+  }),
+
+  // PLAYBACK EFFECT — headless APP-scoped effects that follow the song, not the
+  // view: mounted with the app's playback instance (`SonataPlayerScope`'s
+  // `instance.effects`), so they keep running while the song plays on after
+  // the Sonata page went away (recording a play, the recording video that
+  // drives the transport, saving a source's pending edit, the song's title for
+  // the music button). They may read the session and the song document —
+  // never the view (its panes, its keyboard shortcuts, `useSonataApp` is fine:
+  // it reads the document). An effect that needs the view stays an `Effect`.
+  PlaybackEffect: defineMountSlot({
     docLabel: (p) => p.id,
   }),
 

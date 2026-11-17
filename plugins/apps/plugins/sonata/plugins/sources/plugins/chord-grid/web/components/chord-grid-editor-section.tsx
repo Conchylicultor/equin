@@ -26,7 +26,7 @@ function usePlayheadSlot(slots: readonly GridSlot[]): GridSlot | null {
  *
  * This component no longer persists or gates:
  * - **Persistence** lives in the headless, always-mounted
- *   `ChordGridPersistObserver` (`Sonata.Effect`). It must stay outside this body
+ *   `ChordGridPersistObserver` (`Sonata.PlaybackEffect`). It must stay outside this body
  *   because the section body is unmounted while its card is collapsed, so an
  *   in-body debounced save would be dropped on collapse.
  * - **Visibility** is the contribution's `useAvailable` gate (raw defined ⇒ this

@@ -146,12 +146,11 @@ notes through the same scheduler against the same store.
 
 ## Plugin reference
 
-- Description: Sonata audio engine: schedules the Score's notes against the Web Audio clock on play, routing each note to its track's resolved instrument, with master volume in the player pane's header (and the song peek's); a song starting pauses the background music service's music nobody sees.
+- Description: Sonata audio engine: schedules the Score's notes against the Web Audio clock on play, routing each note to its track's resolved instrument, with master volume in the player pane's header (and the song peek's).
 - Web:
   - Contributes:
     - `SonataSession.Provider` → `AudioProvider`
     - `SonataSession.Effect` "audio-engine" → `AudioEngine`
-    - `SonataSession.Effect` "background-music-yield" → `BackgroundMusicYield`
     - `sonataPlayerPane.Actions` "volume" → `VolumeControl`
     - `songPeekPane.Actions` "volume" → `VolumeControl`
   - Uses:
@@ -167,7 +166,6 @@ notes through the same scheduler against the same store.
     - `apps/sonata/track-mixer.useMutedTrackIds`
     - `apps/sonata/track-mixer.useTrackInstrumentMap`
     - `apps/sonata/track-mixer.useTrackVolumeMap`
-    - `music/background.useForegroundMusic`
     - `primitives/css/slider.Slider`
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`

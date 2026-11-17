@@ -30,6 +30,7 @@ interface LiveState {
 const store = defineScopedStore<LiveState>({ api: null });
 
 export const LivePlayStoreProvider = store.Provider;
+export const livePlayStoreRelay = store.relay;
 
 /** Reactive read of the live player's API, or null until the engine mounts it. */
 export function useLivePlay(): LivePlayApi | null {

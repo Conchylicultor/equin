@@ -240,6 +240,7 @@ processes, writes). What is left is work held in ordinary component state, and
     - `flushKept`
     - `forgetKeepScope`
     - `KeepScope`
+    - `KeepScopeAt`
     - `legacyDraftKeys`
     - `onDraftWritten`
     - `onKeepScopeUnmount`
@@ -253,8 +254,8 @@ processes, writes). What is left is work held in ordinary component state, and
     - `writeDraft`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/color-palette --input`
-  - Imported by: 128 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×37
+  - Imported by: 129 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×38
     - `primitives` ×27
     - `conversations` ×12
     - `fields` ×11

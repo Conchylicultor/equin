@@ -12,6 +12,7 @@ export type {
 export {
   forgetKeepScope,
   KeepScope,
+  KeepScopeAt,
   onKeepScopeUnmount,
   useKeepScope,
 } from "./keep-scope";

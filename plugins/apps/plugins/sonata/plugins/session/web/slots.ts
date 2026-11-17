@@ -2,6 +2,7 @@ import {
   defineMountSlot,
   defineWrapperSlot,
 } from "@plugins/primitives/plugins/slot-render/web";
+import type { Relayed } from "@plugins/primitives/plugins/scope/plugins/context-relay/web";
 
 /**
  * The playback session's extension points — scoped to ONE session (a Sonata
@@ -19,14 +20,21 @@ export const SonataSession = {
   // branches (an audio engine and its volume control) share one per-session
   // store, and two sessions stay independent. Contributions nest outside-in in
   // contribution order; the slot paints nothing itself.
-  Provider: defineWrapperSlot(),
+  //
+  // `relays` are the contexts the wrapper provides, as relay tokens
+  // (`context-relay`): a player whose session lives away from its view (a
+  // playback instance outliving the Sonata page) provides them again around
+  // the view — required, so a wrapper cannot leave its readers in the view
+  // without its store.
+  Provider: defineWrapperSlot<{ relays: readonly Relayed[] }>(),
 
   // EFFECT — headless, always-mounted per-session side effects that render
   // nothing (the audio engine, the live player, the metronome). Mounted once
   // inside the session's providers, so they observe the transport whatever
   // the host shows. Effects that should run only while a player is on screen
   // (the keyboard transport) are the player's `SonataPlayer.Effect`; app-only
-  // effects (play history, tempo keys) belong in the shell's `Sonata.Effect`.
+  // effects belong in the shell's `Sonata.Effect` (the view's: tempo keys) or
+  // `Sonata.PlaybackEffect` (following the song: play history).
   Effect: defineMountSlot({
     docLabel: (p) => p.id,
   }),

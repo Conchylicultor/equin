@@ -70,6 +70,9 @@ const PENDING: { kind: "pending" } = { kind: "pending" };
  * ABOVE the component that composes the document's content (a component
  * cannot use a store its own JSX provides).
  */
+/** The loaded-song store as a relay token (`context-relay`). */
+export const loadedSongRelay = loadedSongStore.relay;
+
 export function LoadedSongProvider({ children }: { children: ReactNode }) {
   return <loadedSongStore.Provider>{children}</loadedSongStore.Provider>;
 }

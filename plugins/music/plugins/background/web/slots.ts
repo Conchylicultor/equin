@@ -25,11 +25,23 @@ export interface BackgroundMusicSource {
    * button's panel is open, so the audio is ready before the click.
    */
   readonly usePlayer: Hook<(props: BackgroundMusicPlayerProps) => void>;
+  /**
+   * Whether the source has music to offer now (default: always). A source
+   * that only carries music an app handed it (a Sonata song playing on after
+   * its page went away) is listed only while it has some.
+   */
+  readonly useAvailable?: Hook<() => boolean>;
+  /**
+   * The source keeps its own volume (a Sonata song, at the level its player
+   * set): the panel shows no device slider for it, and `gain` is not applied.
+   */
+  readonly ownVolume?: boolean;
 }
 
 export const BackgroundMusic = {
   /**
-   * A source of background music an app offers: Isle's ambience. The music
+   * A source of background music an app offers: Isle's ambience, a Sonata
+   * song playing on after its page went away. The music
    * button lists every source; the service plays one at a time.
    *
    * ```ts

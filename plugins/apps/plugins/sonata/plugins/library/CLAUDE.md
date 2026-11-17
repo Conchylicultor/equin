@@ -439,8 +439,8 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `ui/tokens/color-palette` ×5
     - `ui/tokens/shape` ×2
     - `ui/tokens/shadow --shadow-cover`
-  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×20
+  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×21
     - `active-data/song`
   - Extended by:
     - `apps/sonata/sources/chord-grid` (table `sonata_songs_ext_chord_grid`)

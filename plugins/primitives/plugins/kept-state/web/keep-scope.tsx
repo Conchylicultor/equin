@@ -95,6 +95,27 @@ class KeepScopeProbe extends Component<{ path: string; children: ReactNode }> {
 const FORGOTTEN_MAX = 64;
 const forgotten = new Set<string>();
 
+/**
+ * Render `children` in the place `path` names — a path captured elsewhere with
+ * {@link useKeepScope} (`null`: no place). For state raised away from where it
+ * belongs (a playback instance hosted at the page's render origin, outliving
+ * its tab's view): it keeps its view state under its own place, so a reload
+ * still gives it back, and closing that place still forgets it.
+ */
+export function KeepScopeAt({
+  path,
+  children,
+}: {
+  path: string | null;
+  children: ReactNode;
+}) {
+  return (
+    <KeepScopeContext.Provider value={path}>
+      {children}
+    </KeepScopeContext.Provider>
+  );
+}
+
 /** The keep-scope path the caller renders in, or `null` outside every scope. */
 export function useKeepScope(): string | null {
   return useContext(KeepScopeContext);

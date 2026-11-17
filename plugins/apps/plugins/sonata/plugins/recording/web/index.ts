@@ -2,7 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { SonataSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import { recordingConfig, recordingVideoConfig } from "../shared/config";
-import { RecordingProvider } from "./internal/recording-store";
+import { RecordingProvider, recordingRelay } from "./internal/recording-store";
 import { SonataRecording } from "./slots";
 
 export { SonataRecording } from "./slots";
@@ -22,6 +22,10 @@ export default {
   contributions: [
     ConfigV2.WebRegister({ descriptor: recordingConfig }),
     ConfigV2.WebRegister({ descriptor: recordingVideoConfig }),
-    SonataSession.Provider({ id: "recording", component: RecordingProvider }),
+    SonataSession.Provider({
+      id: "recording",
+      component: RecordingProvider,
+      relays: [recordingRelay],
+    }),
   ],
 } satisfies PluginDefinition;

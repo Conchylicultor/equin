@@ -23,10 +23,10 @@ tuples that read the join.
 
 ## Plugin reference
 
-- Description: Per-song play count + last-played: records a play on playback start (Sonata.Effect), and presents the Plays / Last-played fields its extension exposes on every list of songs — on the library card, in the DataView's sort and filter pills, and as table columns. Owns the sonata_songs_ext_playback side-table: per-song play count + last-played. Records a play on playback start and exposes both to every list of songs (LiveColumns.Expose).
+- Description: Per-song play count + last-played: records a play on playback start (Sonata.PlaybackEffect, so a song playing on after the page went away is still counted once), and presents the Plays / Last-played fields its extension exposes on every list of songs — on the library card, in the DataView's sort and filter pills, and as table columns. Owns the sonata_songs_ext_playback side-table: per-song play count + last-played. Records a play on playback start and exposes both to every list of songs (LiveColumns.Expose).
 - Web:
   - Contributes:
-    - `Sonata.Effect` "record-play" → `RecordPlayObserver`
+    - `Sonata.PlaybackEffect` "record-play" → `RecordPlayObserver`
     - `FieldPresentation.Register` "exposure:sonata_songs_ext_playback"
   - Uses:
     - `apps/sonata/document.useLibrarySongLoad`

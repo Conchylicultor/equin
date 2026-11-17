@@ -135,7 +135,7 @@ reason: it names the alignment record.
    - UG's `useHydration` reads the tab and the alignment row live
      (`ugAlignmentRows`) together and applies that rule, so an aligned song
      opens aligned.
-   - The `ug-alignment-sync` `Sonata.Effect` (`web/components/alignment-sync.tsx`)
+   - The `ug-alignment-sync` `Sonata.PlaybackEffect` (`web/components/alignment-sync.tsx`)
      follows the live row and writes the same rule's result into the raw,
      compared by value, so playback resets at most once per finished job (and
      not at all right after `hydrate`).
@@ -221,8 +221,8 @@ The job's transcript goes to the `sonata-ug-alignment` log channel.
 - Web:
   - Contributes:
     - `Sonata.Section` "Recording" → `RecordingSection`
-    - `Sonata.Effect` "ug-alignment-sync" → `UgAlignmentSync`
-    - `Sonata.Effect` "ug-recording-video" → `UgRecordingVideo`
+    - `Sonata.PlaybackEffect` "ug-alignment-sync" → `UgAlignmentSync`
+    - `Sonata.PlaybackEffect` "ug-recording-video" → `UgRecordingVideo`
     - `SonataRecording.Refused` "ug-video-refused" → `ReportVideoRefused`
     - `FieldPresentation.Register` "exposure:sonata_songs_ext_ug_alignment"
   - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)

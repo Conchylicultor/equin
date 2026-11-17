@@ -25,7 +25,12 @@ import {
 import { SonataDocument } from "./slots";
 import type { SongIdentity } from "./identity";
 import {
+  relayOf,
+  type Relayed,
+} from "@plugins/primitives/plugins/scope/plugins/context-relay/web";
+import {
   LoadedSongProvider,
+  loadedSongRelay,
   useEditSourceRaw,
   useLoadedDocument,
   useLoadedRaw,
@@ -78,6 +83,16 @@ export interface SongDocumentValue {
 }
 
 const SongDocumentContext = createContext<SongDocumentValue | null>(null);
+
+/**
+ * The document's contexts as relay tokens (`context-relay`) — the loaded song
+ * and the composed document — for a host that keeps the document away from
+ * its view.
+ */
+export const documentRelays: readonly Relayed[] = [
+  loadedSongRelay,
+  relayOf(SongDocumentContext),
+];
 
 /** Read the loaded song document. Throws outside `<SongDocumentProvider>`. */
 export function useSongDocument(): SongDocumentValue {

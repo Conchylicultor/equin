@@ -5,6 +5,7 @@ export { SonataDocument } from "./slots";
 export { sameIdentity, songIdentityKey, type SongIdentity } from "./identity";
 export {
   SongDocumentProvider,
+  documentRelays,
   useSongDocument,
   type DocumentContent,
   type SongDocumentValue,

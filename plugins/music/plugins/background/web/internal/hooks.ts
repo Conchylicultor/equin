@@ -17,6 +17,20 @@ export interface MusicSourceHandle {
   playUnlessBusy(): void;
   /** Pauses this source, if it is what plays. */
   pause(): void;
+  /** Resumes this source, if it is what the service holds paused. */
+  resume(): void;
+  /**
+   * This source's music, playing in its app's view, outlives the view (the
+   * view went away while it played): it becomes what the service plays — if
+   * the user keeps music across apps. Answers whether it did; when not, the
+   * music ends with its view.
+   */
+  adopt(): boolean;
+  /**
+   * This source leaves the service without being paused — its app plays it in
+   * front again (a view of it came back). A no-op unless it is current.
+   */
+  release(): void;
 }
 
 /**
@@ -49,6 +63,19 @@ export function useMusicSource(
     pause: () => {
       if (peekState().current?.sourceId === sourceId)
         dispatch({ kind: "pause" });
+    },
+    resume: () => {
+      if (peekState().current?.sourceId === sourceId)
+        dispatch({ kind: "resume" });
+    },
+    adopt: () => {
+      dispatch({ kind: "adopt", sourceId });
+      const now = peekState().current;
+      return now?.sourceId === sourceId && now.playing;
+    },
+    release: () => {
+      if (peekState().current?.sourceId === sourceId)
+        dispatch({ kind: "stop" });
     },
   };
 }

@@ -13,6 +13,7 @@ import {
   useYouTubePlayer,
   type YouTubePlayerController,
 } from "@plugins/integrations/plugins/youtube/web";
+import { relayOf } from "@plugins/primitives/plugins/scope/plugins/context-relay/web";
 import { RecordingPlayer } from "../components/recording-player";
 
 /**
@@ -45,6 +46,9 @@ export interface RecordingStore {
 }
 
 const RecordingContext = createContext<RecordingStore | null>(null);
+
+/** The recording store's context as a relay token (`context-relay`). */
+export const recordingRelay = relayOf(RecordingContext);
 
 /** The session's recording store. Throws outside a Sonata playback session. */
 export function useRecordingStore(): RecordingStore {

@@ -1092,6 +1092,10 @@
         "smplr": "^1.2.0",
       },
     },
+    "plugins/apps/plugins/sonata/plugins/background-music": {
+      "name": "@equin/plugin-apps-sonata-background-music",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/sonata/plugins/chord-chart": {
       "name": "@equin/plugin-apps-sonata-chord-chart",
       "version": "0.0.1",
@@ -6878,6 +6882,10 @@
       "name": "@equin/plugin-primitives-scope-automation",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/scope/plugins/context-relay": {
+      "name": "@equin/plugin-primitives-scope-context-relay",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/scope/plugins/dom-scope": {
       "name": "@equin/plugin-primitives-scope-dom-scope",
       "version": "0.0.1",
@@ -8692,6 +8700,8 @@
     "@equin/plugin-apps-sonata-audio-sample-loader": ["@equin/plugin-apps-sonata-audio-sample-loader@workspace:plugins/apps/plugins/sonata/plugins/audio/plugins/sample-loader"],
 
     "@equin/plugin-apps-sonata-audio-soundfont": ["@equin/plugin-apps-sonata-audio-soundfont@workspace:plugins/apps/plugins/sonata/plugins/audio/plugins/soundfont"],
+
+    "@equin/plugin-apps-sonata-background-music": ["@equin/plugin-apps-sonata-background-music@workspace:plugins/apps/plugins/sonata/plugins/background-music"],
 
     "@equin/plugin-apps-sonata-chord-chart": ["@equin/plugin-apps-sonata-chord-chart@workspace:plugins/apps/plugins/sonata/plugins/chord-chart"],
 
@@ -11452,6 +11462,8 @@
     "@equin/plugin-primitives-scope-app-instance": ["@equin/plugin-primitives-scope-app-instance@workspace:plugins/primitives/plugins/scope/plugins/app-instance"],
 
     "@equin/plugin-primitives-scope-automation": ["@equin/plugin-primitives-scope-automation@workspace:plugins/primitives/plugins/scope/plugins/automation"],
+
+    "@equin/plugin-primitives-scope-context-relay": ["@equin/plugin-primitives-scope-context-relay@workspace:plugins/primitives/plugins/scope/plugins/context-relay"],
 
     "@equin/plugin-primitives-scope-dom-scope": ["@equin/plugin-primitives-scope-dom-scope@workspace:plugins/primitives/plugins/scope/plugins/dom-scope"],
 

@@ -36,7 +36,11 @@ import {
 import { useKept } from "@plugins/primitives/plugins/kept-state/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { holdPlayback } from "@plugins/reports/plugins/render-loop/core";
-import { useCursorApi } from "./cursor-store";
+import {
+  relayOf,
+  type Relayed,
+} from "@plugins/primitives/plugins/scope/plugins/context-relay/web";
+import { cursorStoreRelay, useCursorApi } from "./cursor-store";
 import { keptPlayhead, keptTempo, type KeptPlayhead } from "./kept-transport";
 import { SonataSession } from "./slots";
 import { createTimelineStore, type TimelineStore } from "./timeline-store";
@@ -447,6 +451,15 @@ export interface SessionValue {
 }
 
 const SessionContext = createContext<SessionValue | null>(null);
+
+/**
+ * The session's contexts as relay tokens (`context-relay`) — the session and
+ * its cursor — for a host that keeps the session away from its view.
+ */
+export const sessionRelays: readonly Relayed[] = [
+  cursorStoreRelay,
+  relayOf(SessionContext),
+];
 
 /** Read the playback session. Throws outside `<PlaybackSession>`. */
 export function useSession(): SessionValue {

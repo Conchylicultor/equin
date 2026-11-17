@@ -8822,12 +8822,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`audio`** — Audio playback umbrella for Sonata: engine + instruments.
           - Plugins:
-            - **`engine`** — Sonata audio engine: schedules the Score's notes against the Web Audio clock on play, routing each note to its track's resolved instrument, with master volume in the player pane's header (and the song peek's); a song starting pauses the background music service's music nobody sees.
+            - **`engine`** — Sonata audio engine: schedules the Score's notes against the Web Audio clock on play, routing each note to its track's resolved instrument, with master volume in the player pane's header (and the song peek's).
               - Web:
                 - Contributes:
                   - `SonataSession.Provider` → `AudioProvider`
                   - `SonataSession.Effect` "audio-engine" → `AudioEngine`
-                  - `SonataSession.Effect` "background-music-yield" → `BackgroundMusicYield`
                   - `sonataPlayerPane.Actions` "volume" → `VolumeControl`
                   - `songPeekPane.Actions` "volume" → `VolumeControl`
                 - Uses:
@@ -8843,7 +8842,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/sonata/track-mixer.useMutedTrackIds`
                   - `apps/sonata/track-mixer.useTrackInstrumentMap`
                   - `apps/sonata/track-mixer.useTrackVolumeMap`
-                  - `music/background.useForegroundMusic`
                   - `primitives/css/slider.Slider`
                   - `primitives/css/spacing.Inset`
                   - `primitives/css/spacing.Stack`
@@ -8969,6 +8967,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `framework/browser-server.ExternalHosts`
               - Server:
                 - Uses: `infra/asset-mirror.defineAssetMirror`
+        - **`background-music`** — Sonata in the background music service (music/background): a song still playing when the Sonata page went away (Keep playing across apps on) is the service's Sonata source — listed only while there is one, titled with the song (published by a Sonata.PlaybackEffect), paused, resumed and stopped from the music button, at the player's own volume.
+          - Web:
+            - Contributes:
+              - `BackgroundMusic.Source` "sonata"
+              - `Sonata.PlaybackEffect` "music-title" → `PublishSongTitle`
+            - Uses:
+              - `apps/sonata/library.useCurrentSong`
+              - `apps/sonata/player.SONATA_MUSIC_SOURCE`
+              - `apps/sonata/player.useBackgroundPlaybackPlayer`
+              - `apps/sonata/player.useBackgroundPlaybackTitle`
+              - `apps/sonata/player.useHasBackgroundPlayback`
+              - `apps/sonata/player.usePlaybackInstanceKey`
+              - `apps/sonata/player.usePublishPlaybackTitle`
+              - `apps/sonata/shell.Sonata`
+              - `music/background.BackgroundMusic`
+              - `network/live.rowOrStale`
         - **`chord-chart`** — Sonata Display: the chord grid. Lays the song's chords out as bars in rows of four under their section headers, each bar split by beats into chord boxes painted in the root's degree colour (held chords drawn as ties), labelled by the shared chord-label mode, optionally with the songsheet lines sung in each row printed under it (the Lyrics under bars view option), following playback with the active bar washed, the sounding chord ringed and a beat line through the bar. A reading view (no time-axis / pitch-plane capabilities); click a chord to seek. Server registration of the Sonata chord grid config (lyrics under bars).
           - Web:
             - Contributes:
@@ -9077,6 +9091,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SonataDocument.SongSetting` ← `apps.sonata.transpose`
             - Uses:
               - `primitives/latest-ref.useLatestRef`
+              - `primitives/scope/context-relay.Relayed`
+              - `primitives/scope/context-relay.relayOf`
               - `primitives/scope/scoped-store.defineScopedStore`
               - `primitives/slot-render.defineMountSlot`
             - Exports (types):
@@ -9094,6 +9110,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `chordModeSetting`
               - `defaultGroove`
               - `defineSongSetting`
+              - `documentRelays`
               - `grooveSetting`
               - `keyAutoDetectSetting`
               - `sameIdentity`
@@ -9333,8 +9350,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×5
               - `ui/tokens/shape` ×2
               - `ui/tokens/shadow --shadow-cover`
-            - Imported by: 21 plugins — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
-              - `apps` ×20
+            - Imported by: 22 plugins — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
+              - `apps` ×21
               - `active-data/song`
             - Extended by:
               - `apps/sonata/sources/chord-grid` (table `sonata_songs_ext_chord_grid`)
@@ -9731,10 +9748,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/covers`
               - `apps/sonata/piano-roll`
               - `apps/sonata/rich/readout-keyboard`
-        - **`playback-history`** — Per-song play count + last-played: records a play on playback start (Sonata.Effect), and presents the Plays / Last-played fields its extension exposes on every list of songs — on the library card, in the DataView's sort and filter pills, and as table columns. Owns the sonata_songs_ext_playback side-table: per-song play count + last-played. Records a play on playback start and exposes both to every list of songs (LiveColumns.Expose).
+        - **`playback-history`** — Per-song play count + last-played: records a play on playback start (Sonata.PlaybackEffect, so a song playing on after the page went away is still counted once), and presents the Plays / Last-played fields its extension exposes on every list of songs — on the library card, in the DataView's sort and filter pills, and as table columns. Owns the sonata_songs_ext_playback side-table: per-song play count + last-played. Records a play on playback start and exposes both to every list of songs (LiveColumns.Expose).
           - Web:
             - Contributes:
-              - `Sonata.Effect` "record-play" → `RecordPlayObserver`
+              - `Sonata.PlaybackEffect` "record-play" → `RecordPlayObserver`
               - `FieldPresentation.Register` "exposure:sonata_songs_ext_playback"
             - Uses:
               - `apps/sonata/document.useLibrarySongLoad`
@@ -9763,7 +9780,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens: `ui/tokens/shape --spacing`
           - Exemptions:
             - Exempts itself from: `endpoints/no-void-fetch-endpoint` — `web/components/record-play-observer.tsx` (sanctioned)
-        - **`player`** — Sonata player: SonataPlayerScope, the one composition root of a player (cursor store > song document > playback session > player view, with the per-session effects and a library song's setting observers), and the parts a host composes inside it — PlayerDisplay, PlayerTransport (the strip row of every Transport contribution: play, scrubber, loop), PlayerTime. Owns the SonataPlayer.{Display,Transport,Effect} slots — Effect mounting once per player while a PlayerDisplay shows it (the keyboard transport) — and the per-player view state (display lens, piano-roll spread, shown, drawn — each display reports when it has drawn with useMarkDisplayDrawn), whose display pick a host can bind to its own value (a URL param) with PlayerDisplayBinding.
+        - **`player`** — Sonata player: SonataPlayerScope, the one composition root of a player (cursor store > song document > playback session > player view, with the per-session effects and a library song's setting observers) — local (the song ends with the scope: a file preview), or, given an instance key (the Sonata app: its tab), a page-level playback instance raised at the view's render origin that the view attaches to through relayed contexts, so the song outlives the view: leaving while it plays hands it to the background music service (kept across apps, it plays on as the page's one background instance, driven from the music button; otherwise it ends), and a view coming back finds it where it is. and the parts a host composes inside it — PlayerDisplay, PlayerTransport (the strip row of every Transport contribution: play, scrubber, loop), PlayerTime. Owns the SonataPlayer.{Display,Transport,Effect} slots — Effect mounting once per player while a PlayerDisplay shows it (the keyboard transport) — and the per-player view state (display lens, piano-roll spread, shown, drawn — each display reports when it has drawn with useMarkDisplayDrawn), whose display pick a host can bind to its own value (a URL param) with PlayerDisplayBinding.
           - Web:
             - Slots:
               - `SonataPlayer.Display`
@@ -9778,27 +9795,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SonataPlayer.Transport` ← `apps.sonata.progress.scrubber`
               - `SonataPlayer.Transport` ← `apps.sonata.transport-bar`
               - `SonataPlayer.Effect` ← `apps.sonata.controls`
-            - Uses:
-              - `apps/sonata/document.SongDocumentProvider`
-              - `apps/sonata/document.songIdentityKey`
-              - `apps/sonata/document.SongSettingsMount`
-              - `apps/sonata/document.useSongDocument`
-              - `apps/sonata/session.CursorStoreProvider`
-              - `apps/sonata/session.PlaybackSession`
-              - `apps/sonata/session.SonataSession`
-              - `apps/sonata/session.TEMPO_MATH_FLOOR`
-              - `apps/sonata/session.useCursorSelector`
-              - `apps/sonata/session.useSession`
+            - Uses: 32 symbols — full list in [`plugins/apps/plugins/sonata/plugins/player/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/player/REFERENCE.md)
+              - `apps/sonata/session` ×7
+              - `apps/sonata/document` ×5
+              - `primitives/scope/context-relay` ×4
+              - `primitives/slot-render` ×3
+              - `music/background` ×2
+              - `primitives/kept-state` ×2
               - `primitives/css/center.Center`
               - `primitives/css/clip.Clip`
               - `primitives/css/coords.Placed`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/latest-ref.useLatestRef`
+              - `primitives/loading.Loading`
               - `primitives/relative-time.formatElapsed`
-              - `primitives/slot-render.defineDispatchSlot`
-              - `primitives/slot-render.defineMountSlot`
-              - `primitives/slot-render.defineRenderSlot`
+              - `primitives/scope/render-origin.useRenderOrigin`
             - Exports (types):
               - `DisplayCover`
               - `PlayerView`
@@ -9807,11 +9819,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PlayerDisplayBinding`
               - `PlayerTime`
               - `PlayerTransport`
+              - `SONATA_MUSIC_SOURCE`
               - `SonataPlayer`
               - `SonataPlayerScope`
+              - `useBackgroundPlaybackPlayer`
+              - `useBackgroundPlaybackTitle`
               - `useDisplayCover`
+              - `useHasBackgroundPlayback`
               - `useMarkDisplayDrawn`
+              - `usePlaybackInstanceKey`
               - `usePlayerView`
+              - `usePublishPlaybackTitle`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --border`
@@ -9821,6 +9839,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-xl`
               - `ui/tokens/density --space-xs`
             - Imported by:
+              - `apps/sonata/background-music`
               - `apps/sonata/chord-chart`
               - `apps/sonata/controls`
               - `apps/sonata/library`
@@ -10042,8 +10061,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `Sonata.TransportEdge` "loop" → `LoopRollEdge`
                   - `SonataPlayer.Transport` "loop-toggle" → `LoopToggle`
                   - `Sonata.Effect` "loop-shortcuts" → `LoopShortcuts`
-                  - `Sonata.Effect` "loop-options" → `LoopOptionsSync`
                   - `ConfigV2.WebRegister` "config"
+                  - `Sonata.PlaybackEffect` "loop-options" → `LoopOptionsSync`
                 - Uses: 30 symbols — full list in [`plugins/apps/plugins/sonata/plugins/progress/plugins/loop/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/progress/plugins/loop/REFERENCE.md)
                   - `apps/sonata/session` ×3
                   - `config_v2` ×3
@@ -10189,7 +10208,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ConfigV2.WebRegister` "sonata.recording"
               - `ConfigV2.WebRegister` "sonata.recording-video"
               - `SonataSession.Provider` → `RecordingProvider`
-            - Uses: 24 symbols — full list in [`plugins/apps/plugins/sonata/plugins/recording/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/recording/REFERENCE.md)
+            - Uses: 25 symbols — full list in [`plugins/apps/plugins/sonata/plugins/recording/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/recording/REFERENCE.md)
               - `integrations/youtube` ×5
               - `config_v2` ×3
               - `apps/sonata/session` ×2
@@ -10206,6 +10225,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/dom/render-mode.useOwnedElement`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useLatestRef`
+              - `primitives/scope/context-relay.relayOf`
               - `primitives/slot-render.defineMountSlot`
             - Exports (types): `MediaRefusal`
             - Exports (values):
@@ -10794,6 +10814,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/kept-state.defineKept`
               - `primitives/kept-state.useKept`
               - `primitives/latest-ref.useLatestRef`
+              - `primitives/scope/context-relay.Relayed`
+              - `primitives/scope/context-relay.relayOf`
               - `primitives/scope/scoped-store.defineScopedStore`
               - `primitives/scope/scoped-store.ScopedStore`
               - `primitives/slot-render.defineMountSlot`
@@ -10815,6 +10837,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `cursorApiFor`
               - `CursorStoreProvider`
               - `PlaybackSession`
+              - `sessionRelays`
               - `SonataSession`
               - `TEMPO_MATH_FLOOR`
               - `useCursorApi`
@@ -10823,7 +10846,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by: 34 plugins — full list in [`plugins/apps/plugins/sonata/plugins/session/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/session/REFERENCE.md)
               - `apps` ×34
-        - **`shell`** — App shell for Sonata. Registers the /sonata app entry (SonataLayout: one SonataPlayerScope around the pane router), derives the app's song — the one loaded in the player (useSonataApp) — and defines the app-level Sonata.{Overlay,TransportOverlay,TransportEdge,PitchAxis,Home,Provider,Effect,Hud,ViewOption,Section} slots, and the app's own dark-only theme (the immersive player's blue-black night, sky accent, the chord colours, Manrope), which the sonata app selects.
+        - **`shell`** — App shell for Sonata. Registers the /sonata app entry (SonataLayout: one SonataPlayerScope around the pane router), derives the app's song — the one loaded in the player (useSonataApp) — and defines the app-level Sonata.{Overlay,TransportOverlay,TransportEdge,PitchAxis,Home,Provider,Effect,PlaybackEffect,Hud,ViewOption,Section} slots, and the app's own dark-only theme (the immersive player's blue-black night, sky accent, the chord colours, Manrope), which the sonata app selects.
           - Web:
             - Slots:
               - `Sonata.Overlay`
@@ -10833,15 +10856,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Sonata.Home`
               - `Sonata.Provider`
               - `Sonata.Effect`
+              - `Sonata.PlaybackEffect`
               - `Sonata.Hud`
               - `Sonata.ViewOption`
               - `Sonata.ViewSection`
               - `Sonata.Section`
-            - Slot contributors: 39 contributors — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
+            - Slot contributors: 41 contributors — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
               - `Sonata.Section` ×12
               - `Sonata.ViewOption` ×8
-              - `Sonata.Effect` ×6
+              - `Sonata.PlaybackEffect` ×6
               - `Sonata.Hud` ×5
+              - `Sonata.Effect` ×2
               - `Sonata.TransportOverlay` ×2
               - `Sonata.Home` ← `apps.sonata.library`
               - `Sonata.Overlay` ← `apps.sonata.rich.chord-overlay`
@@ -10860,6 +10885,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/app-shell.AppShellLayout`
               - `primitives/detail-sections.defineDetailSections`
               - `primitives/detail-sections.DetailSection`
+              - `primitives/scope/surface-id.useSurfaceTabId`
               - `primitives/slot-render.defineMountSlot`
               - `primitives/slot-render.defineRenderSlot`
               - `primitives/slot-render.defineWrapperSlot`
@@ -10892,8 +10918,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shadow --shadow-cover-hover`
               - `ui/tokens/shadow --shadow-float`
               - `ui/tokens/shadow --shadow-popover`
-            - Imported by: 33 plugins — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
-              - `apps` ×33
+            - Imported by: 34 plugins — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
+              - `apps` ×34
         - **`songsheet`** — Sonata Display: a chord-over-lyrics songsheet. Renders the score's lyric lines with chords printed over each column, grouped by section, highlighting and auto-scrolling the line under the playback cursor. A reading view (no time-axis / pitch-plane capabilities); click a line to seek.
           - Web:
             - Contributes: `SonataPlayer.Display` "Songsheet" → `Songsheet`
@@ -10932,7 +10958,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `SonataDocument.Source` "Chord Grid"
                   - `Library.Source` "chord-grid"
                   - `Sonata.Section` "Chord Grid" → `ChordGridEditorSection`
-                  - `Sonata.Effect` "chord-grid-persist" → `ChordGridPersistObserver`
+                  - `Sonata.PlaybackEffect` "chord-grid-persist" → `ChordGridPersistObserver`
                   - `FieldPresentation.Register` "exposure:sonata_songs_ext_chord_grid"
                   - `Library.Cover` "chord-grid"
                 - Uses: 29 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/REFERENCE.md)
@@ -11262,7 +11288,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `SonataDocument.Source` "Ultimate Guitar"
                   - `Library.Source` "ultimate-guitar"
                   - `Sonata.Section` "Ultimate Guitar" → `UltimateGuitarEditorSection`
-                  - `Sonata.Effect` "ultimate-guitar-persist" → `UltimateGuitarPersistObserver`
+                  - `Sonata.PlaybackEffect` "ultimate-guitar-persist" → `UltimateGuitarPersistObserver`
                   - `FieldPresentation.Register` "exposure:sonata_songs_ext_ultimate_guitar"
                   - `Library.Cover` "ultimate-guitar"
                 - Uses: 46 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/REFERENCE.md)
@@ -11357,8 +11383,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - Web:
                     - Contributes:
                       - `Sonata.Section` "Recording" → `RecordingSection`
-                      - `Sonata.Effect` "ug-alignment-sync" → `UgAlignmentSync`
-                      - `Sonata.Effect` "ug-recording-video" → `UgRecordingVideo`
+                      - `Sonata.PlaybackEffect` "ug-alignment-sync" → `UgAlignmentSync`
+                      - `Sonata.PlaybackEffect` "ug-recording-video" → `UgRecordingVideo`
                       - `SonataRecording.Refused` "ug-video-refused" → `ReportVideoRefused`
                       - `FieldPresentation.Register` "exposure:sonata_songs_ext_ug_alignment"
                     - Uses: 39 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/REFERENCE.md)
@@ -41497,10 +41523,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `createAmbient`
           - `createAmbientHost`
           - `useAmbientHost`
-    - **`background`** — The background music service: apps offer music as BackgroundMusic.Source contributions (an app, a kind, useTitle, and usePlayer — run from the page root, so the music outlives the app's views); the service plays one at a time per page and one page at a time in the browser (a BroadcastChannel claim, the playing page's state mirrored to the others' buttons and driven from them, a per-page Web Lock telling when it is gone). An app view reports itself on screen with useMusicSource(id, { shown }): when the last view leaves, its music pauses unless Keep playing across apps (config, on by default) is on; music an app plays itself (useForegroundMusic) pauses background music nobody sees. The global action bar's music button (a note, moving bars while playing) opens the panel: now playing with its app, play / pause, the device's volume and stop; every app's music; and the across-apps switch. Registers the background music config (Keep playing across apps) for Settings → Config.
+    - **`background`** — The background music service: apps offer music as BackgroundMusic.Source contributions (an app, a kind, useTitle, and usePlayer — run from the page root, so the music outlives the app's views); the service plays one at a time per page and one page at a time in the browser (a BroadcastChannel claim, the playing page's state mirrored to the others' buttons and driven from them, a per-page Web Lock telling when it is gone). An app view reports itself on screen with useMusicSource(id, { shown }): when the last view leaves, its music pauses unless Keep playing across apps (config, on by default) is on; music an app plays itself (useForegroundMusic) pauses background music nobody sees. Music an app played in its view can outlive the view (useMusicSource(id).adopt(), a Sonata song whose page went away): kept across apps, it becomes what the service plays; a source carrying only such music lists itself while it has some (useAvailable) and may keep its own volume (ownVolume: no device slider, no gain). The global action bar's music button (a note, moving bars while playing) opens the panel: now playing with its app, play / pause, the device's volume and stop; every app's music; and the across-apps switch. Registers the background music config (Keep playing across apps) for Settings → Config.
       - Web:
         - Slots: `BackgroundMusic.Source`
-        - Slot contributors: `BackgroundMusic.Source` ← `apps.isle.world-view`
+        - Slot contributors:
+          - `BackgroundMusic.Source` ← `apps.isle.world-view`
+          - `BackgroundMusic.Source` ← `apps.sonata.background-music`
         - Contributes:
           - `ConfigV2.WebRegister` "config"
           - `Core.Root` → `BackgroundMusicRoot`
@@ -41538,7 +41566,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `apps/isle/world-view`
-          - `apps/sonata/audio/engine`
+          - `apps/sonata/background-music`
+          - `apps/sonata/player`
       - Exemptions:
         - Exempts itself from: `page-hosts-on-demand` — `web/index.ts` (sanctioned)
     - **`chord-box`** — The chord box: <ChordBox> (a frame painted in the colour of its numeral's number — filled tile, given or empty — holding its numeral and name, with a full-bleed hit button behind the content and now / selected states), <ChordNumeral> (the Roman numeral in the display serif, its mark raised in the sans), chordToneStyle / chordColour (the degree's --chord-N colour and tile depth as the --fn custom properties the .chord-tone paint reads), and chordPaint — the four named paints (tile, tint, tint-quiet, ghost) every chord surface applies by name instead of re-stating a chord colour, with .chord-caption for a reading under a numeral (V/V, I/3) in the paint's own ink. Knows degrees and strings only, so any app can draw a chord the same way.
@@ -41984,8 +42013,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 357 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `apps` ×89
+        - Imported by: 358 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `apps` ×90
           - `conversations` ×73
           - `debug` ×36
           - `tasks` ×32
@@ -53780,6 +53809,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `flushKept`
           - `forgetKeepScope`
           - `KeepScope`
+          - `KeepScopeAt`
           - `legacyDraftKeys`
           - `onDraftWritten`
           - `onKeepScopeUnmount`
@@ -53793,8 +53823,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `writeDraft`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/color-palette --input`
-        - Imported by: 128 plugins — full list in [`plugins/primitives/plugins/kept-state/REFERENCE.md`](../plugins/primitives/plugins/kept-state/REFERENCE.md)
-          - `apps` ×37
+        - Imported by: 129 plugins — full list in [`plugins/primitives/plugins/kept-state/REFERENCE.md`](../plugins/primitives/plugins/kept-state/REFERENCE.md)
+          - `apps` ×38
           - `primitives` ×27
           - `conversations` ×12
           - `fields` ×11
@@ -54112,8 +54142,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 239 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
-          - `apps` ×71
+        - Imported by: 240 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+          - `apps` ×72
           - `conversations` ×25
           - `ui` ×24
           - `debug` ×20
@@ -56162,6 +56192,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/slow-ops`
           - Web:
             - Exports (values): `AUTOMATED_BROWSER`
+        - **`context-relay`** — Re-provides React contexts captured in one place of the tree in another: the bridge between state hosted away from its view (a playback instance raised at the page's render origin, outliving the view) and the view that attaches to it. An owner mints a Relayed token for its context (relayOf — the context object itself stays private); <RelayCapture link relays> reads each where the state lives and publishes the values to a RelayLink (createRelayLink); <RelayProvide link fallback> provides them again around the view, following every change, and shows `fallback` until the first capture.
+          - Cross-plugin:
+            - Imported by:
+              - `apps/sonata/document`
+              - `apps/sonata/player`
+              - `apps/sonata/recording`
+              - `apps/sonata/session`
+              - `primitives/scope/scoped-store`
+          - Web:
+            - Exports (types):
+              - `Relayed`
+              - `RelayLink`
+            - Exports (values):
+              - `createRelayLink`
+              - `RelayCapture`
+              - `relayOf`
+              - `RelayProvide`
         - **`dom-scope`** — The DOM node that belongs to ONE mounted instance: defineDomScope declares a scope a descendant publishes its element into and a sibling reads, so a lookup never reaches past its own instance into another mounted copy of the same surface. A scoped store holding one element — install-sink's discipline (named throws, subscription-only render reads, peek… naming) with scoped-store's per-Provider lifetime. Readers get a { attached } union, never a nullable root, so 'not mounted yet' cannot be absorbed into 'no matches'; the declared bounds derive the check that bans document-wide lookups of those attributes.
           - Web:
             - Uses: `primitives/scope/scoped-store.defineScopedStore`
@@ -56203,12 +56250,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps-core/app-embed`
+              - `apps/sonata/player`
               - `framework/browser-server/demo/scope`
               - `primitives/overlay/imperative-dialog`
               - `shell/toast`
         - **`scoped-store`** — Per-Provider-instance external store primitive: defineScopedStore. Module-level factory, per-mount isolated state, with imperative reads, reactive whole-state, and selector subscriptions with re-render bailout.
           - Web:
-            - Uses: `primitives/latest-ref.useLatestRef`
+            - Uses:
+              - `primitives/latest-ref.useLatestRef`
+              - `primitives/scope/context-relay.Relayed`
+              - `primitives/scope/context-relay.relayOf`
             - Exports (types):
               - `ScopedStore`
               - `ScopedStoreHandle`
@@ -56234,6 +56285,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core/tabs`
               - `apps/file-explorer/browser`
               - `apps/sonata/controls`
+              - `apps/sonata/shell`
               - `conversations/conversation-view/jsonl-viewer`
               - `layouts/miller`
               - `media/player`

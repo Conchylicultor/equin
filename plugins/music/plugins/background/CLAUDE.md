@@ -4,10 +4,12 @@
 
 ## Plugin reference
 
-- Description: The background music service: apps offer music as BackgroundMusic.Source contributions (an app, a kind, useTitle, and usePlayer — run from the page root, so the music outlives the app's views); the service plays one at a time per page and one page at a time in the browser (a BroadcastChannel claim, the playing page's state mirrored to the others' buttons and driven from them, a per-page Web Lock telling when it is gone). An app view reports itself on screen with useMusicSource(id, { shown }): when the last view leaves, its music pauses unless Keep playing across apps (config, on by default) is on; music an app plays itself (useForegroundMusic) pauses background music nobody sees. The global action bar's music button (a note, moving bars while playing) opens the panel: now playing with its app, play / pause, the device's volume and stop; every app's music; and the across-apps switch. Registers the background music config (Keep playing across apps) for Settings → Config.
+- Description: The background music service: apps offer music as BackgroundMusic.Source contributions (an app, a kind, useTitle, and usePlayer — run from the page root, so the music outlives the app's views); the service plays one at a time per page and one page at a time in the browser (a BroadcastChannel claim, the playing page's state mirrored to the others' buttons and driven from them, a per-page Web Lock telling when it is gone). An app view reports itself on screen with useMusicSource(id, { shown }): when the last view leaves, its music pauses unless Keep playing across apps (config, on by default) is on; music an app plays itself (useForegroundMusic) pauses background music nobody sees. Music an app played in its view can outlive the view (useMusicSource(id).adopt(), a Sonata song whose page went away): kept across apps, it becomes what the service plays; a source carrying only such music lists itself while it has some (useAvailable) and may keep its own volume (ownVolume: no device slider, no gain). The global action bar's music button (a note, moving bars while playing) opens the panel: now playing with its app, play / pause, the device's volume and stop; every app's music; and the across-apps switch. Registers the background music config (Keep playing across apps) for Settings → Config.
 - Web:
   - Slots: `BackgroundMusic.Source`
-  - Slot contributors: `BackgroundMusic.Source` ← `apps.isle.world-view`
+  - Slot contributors:
+    - `BackgroundMusic.Source` ← `apps.isle.world-view`
+    - `BackgroundMusic.Source` ← `apps.sonata.background-music`
   - Contributes:
     - `ConfigV2.WebRegister` "config"
     - `Core.Root` → `BackgroundMusicRoot`
@@ -45,7 +47,8 @@
   - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/isle/world-view`
-    - `apps/sonata/audio/engine`
+    - `apps/sonata/background-music`
+    - `apps/sonata/player`
 - Exemptions:
   - Exempts itself from: `page-hosts-on-demand` — `web/index.ts` (sanctioned)
 

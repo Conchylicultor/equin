@@ -9,6 +9,9 @@
  * - Music an app plays itself (`foreground`, a Sonata song) pauses the
  *   service's music when no view of it is on screen: real music interrupts
  *   background ambience; music beside it on the desktop mixes.
+ * - Music an app played in its view outlives the view (`adopt`, a Sonata song
+ *   whose page went away while it played): it becomes what the service plays
+ *   — if the user keeps music across apps; otherwise it ends with the view.
  */
 
 export interface Current {
@@ -49,6 +52,11 @@ export type MusicEvent =
       readonly acrossApps: boolean;
     }
   | { readonly kind: "foreground" }
+  | {
+      readonly kind: "adopt";
+      readonly sourceId: string;
+      readonly acrossApps: boolean;
+    }
   | { readonly kind: "remote-claim" }
   | {
       readonly kind: "remote-state";
@@ -94,6 +102,10 @@ export function step(s: MusicState, e: MusicEvent): MusicState {
     case "foreground":
       return s.current && shownCount(s, s.current.sourceId) === 0
         ? paused(s)
+        : s;
+    case "adopt":
+      return e.acrossApps
+        ? { ...s, current: { sourceId: e.sourceId, playing: true } }
         : s;
     case "remote-claim":
       return paused(s);

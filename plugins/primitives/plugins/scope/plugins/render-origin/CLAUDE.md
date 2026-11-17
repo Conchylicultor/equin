@@ -53,6 +53,7 @@ Users: `shell/toast`'s `useShowCustomToast` (a notification's body),
 - Cross-plugin:
   - Imported by:
     - `apps-core/app-embed`
+    - `apps/sonata/player`
     - `framework/browser-server/demo/scope`
     - `primitives/overlay/imperative-dialog`
     - `shell/toast`

@@ -126,7 +126,7 @@ directives establish); the selected voicing strategy from the shared
     - `SonataDocument.Source` "Chord Grid"
     - `Library.Source` "chord-grid"
     - `Sonata.Section` "Chord Grid" → `ChordGridEditorSection`
-    - `Sonata.Effect` "chord-grid-persist" → `ChordGridPersistObserver`
+    - `Sonata.PlaybackEffect` "chord-grid-persist" → `ChordGridPersistObserver`
     - `FieldPresentation.Register` "exposure:sonata_songs_ext_chord_grid"
     - `Library.Cover` "chord-grid"
   - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)

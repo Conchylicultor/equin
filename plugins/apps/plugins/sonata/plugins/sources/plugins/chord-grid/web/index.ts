@@ -42,7 +42,7 @@ export default {
       useAvailable: () =>
         useSongDocument().sourceRaw(CHORD_GRID_SOURCE_ID) !== undefined,
     }),
-    Sonata.Effect({
+    Sonata.PlaybackEffect({
       id: "chord-grid-persist",
       component: ChordGridPersistObserver,
     }),

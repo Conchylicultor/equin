@@ -42,7 +42,7 @@ export default {
       useAvailable: () =>
         useSongDocument().sourceRaw(UG_SOURCE_ID) !== undefined,
     }),
-    Sonata.Effect({
+    Sonata.PlaybackEffect({
       id: "ultimate-guitar-persist",
       component: UltimateGuitarPersistObserver,
     }),

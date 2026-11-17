@@ -30,10 +30,16 @@ export default {
       useDefaultOpen: () =>
         (useUgLibrarySong()?.raw.alignment ?? null) !== null,
     }),
-    Sonata.Effect({ id: "ug-alignment-sync", component: UgAlignmentSync }),
+    Sonata.PlaybackEffect({
+      id: "ug-alignment-sync",
+      component: UgAlignmentSync,
+    }),
     // Declares the song's recording to the session's player, so the video
     // plays (and drives the transport) whether the section is open or not.
-    Sonata.Effect({ id: "ug-recording-video", component: UgRecordingVideo }),
+    Sonata.PlaybackEffect({
+      id: "ug-recording-video",
+      component: UgRecordingVideo,
+    }),
     // The player refused the video: mark the candidate, and re-pick if ours.
     SonataRecording.Refused({
       id: "ug-video-refused",

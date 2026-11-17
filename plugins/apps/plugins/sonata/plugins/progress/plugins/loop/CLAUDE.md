@@ -80,8 +80,8 @@ the rest — never on a plain wrap; tempo changes follow the existing loop-aware
     - `Sonata.TransportEdge` "loop" → `LoopRollEdge`
     - `SonataPlayer.Transport` "loop-toggle" → `LoopToggle`
     - `Sonata.Effect` "loop-shortcuts" → `LoopShortcuts`
-    - `Sonata.Effect` "loop-options" → `LoopOptionsSync`
     - `ConfigV2.WebRegister` "config"
+    - `Sonata.PlaybackEffect` "loop-options" → `LoopOptionsSync`
   - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/sonata/session` ×3
     - `config_v2` ×3

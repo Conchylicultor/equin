@@ -39,6 +39,38 @@ and the piano roll's spread (`spread`, `spreadMin`, `spreadMax`, `setSpread`,
 `shown` — whether any `PlayerDisplay` of this player is mounted — and `drawn`
 — whether a mounted display has drawn.
 
+## Playback that outlives its view (`instance`)
+
+The scope has two halves: the **playback** (cursor > document > session with
+its wrappers, the session effects, the setting observers, the host's
+`effects`) and the **view** (`PlayerViewProvider`, its shown effects, the
+host's children). Without `instance` (a file preview) both live in the scope
+and the song ends with it. With `instance={key}` (the Sonata app: its tab id)
+the playback is a page-level **instance** (`web/internal/instances.ts`):
+
+- raised at the view's render origin (`render-origin` — the page's `Core.Root`,
+  or an embed's own) under the view's keep scope (`KeepScopeAt`), so its kept
+  playhead and tempo stay the tab's;
+- read by the view through relayed contexts (`context-relay`: the session's
+  `sessionRelays`, the document's `documentRelays`, and every
+  `SonataSession.Provider`'s required `relays`) — a loading state until the
+  instance first captured them;
+- when the last view detaches (a microtask later, so a remount finds it
+  untouched): playing, it is offered to the background music service
+  (`useMusicSource("sonata").adopt()`) — kept (*Keep playing across apps*), it
+  plays on as the page's ONE background instance (a previous one pauses and
+  goes); otherwise it goes, and the kept playhead gives the position back
+  paused next time;
+- a background instance is driven by the service (`useBackgroundPlaybackPlayer`,
+  the `apps/sonata/background-music` source), tells it when it stops or starts
+  on its own, and goes when the service lets go of it (stopped, another source
+  played) unless a view shows it; a view coming back takes it out of the
+  service (`release`) — it plays in front again.
+
+`MusicLink` (per playback) is the playback's place in the service: in front, a
+song starting is foreground music (`useForegroundMusic`); in the background, it
+is the service's Sonata source.
+
 ## Drawn (`useMarkDisplayDrawn`)
 
 Every `SonataPlayer.Display` calls `useMarkDisplayDrawn(drawn)` at its top:
@@ -71,7 +103,7 @@ the scope, so the player cannot import the shell).
 
 ## Plugin reference
 
-- Description: Sonata player: SonataPlayerScope, the one composition root of a player (cursor store > song document > playback session > player view, with the per-session effects and a library song's setting observers), and the parts a host composes inside it — PlayerDisplay, PlayerTransport (the strip row of every Transport contribution: play, scrubber, loop), PlayerTime. Owns the SonataPlayer.{Display,Transport,Effect} slots — Effect mounting once per player while a PlayerDisplay shows it (the keyboard transport) — and the per-player view state (display lens, piano-roll spread, shown, drawn — each display reports when it has drawn with useMarkDisplayDrawn), whose display pick a host can bind to its own value (a URL param) with PlayerDisplayBinding.
+- Description: Sonata player: SonataPlayerScope, the one composition root of a player (cursor store > song document > playback session > player view, with the per-session effects and a library song's setting observers) — local (the song ends with the scope: a file preview), or, given an instance key (the Sonata app: its tab), a page-level playback instance raised at the view's render origin that the view attaches to through relayed contexts, so the song outlives the view: leaving while it plays hands it to the background music service (kept across apps, it plays on as the page's one background instance, driven from the music button; otherwise it ends), and a view coming back finds it where it is. and the parts a host composes inside it — PlayerDisplay, PlayerTransport (the strip row of every Transport contribution: play, scrubber, loop), PlayerTime. Owns the SonataPlayer.{Display,Transport,Effect} slots — Effect mounting once per player while a PlayerDisplay shows it (the keyboard transport) — and the per-player view state (display lens, piano-roll spread, shown, drawn — each display reports when it has drawn with useMarkDisplayDrawn), whose display pick a host can bind to its own value (a URL param) with PlayerDisplayBinding.
 - Web:
   - Slots:
     - `SonataPlayer.Display`
@@ -86,27 +118,22 @@ the scope, so the player cannot import the shell).
     - `SonataPlayer.Transport` ← `apps.sonata.progress.scrubber`
     - `SonataPlayer.Transport` ← `apps.sonata.transport-bar`
     - `SonataPlayer.Effect` ← `apps.sonata.controls`
-  - Uses:
-    - `apps/sonata/document.SongDocumentProvider`
-    - `apps/sonata/document.songIdentityKey`
-    - `apps/sonata/document.SongSettingsMount`
-    - `apps/sonata/document.useSongDocument`
-    - `apps/sonata/session.CursorStoreProvider`
-    - `apps/sonata/session.PlaybackSession`
-    - `apps/sonata/session.SonataSession`
-    - `apps/sonata/session.TEMPO_MATH_FLOOR`
-    - `apps/sonata/session.useCursorSelector`
-    - `apps/sonata/session.useSession`
+  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/sonata/session` ×7
+    - `apps/sonata/document` ×5
+    - `primitives/scope/context-relay` ×4
+    - `primitives/slot-render` ×3
+    - `music/background` ×2
+    - `primitives/kept-state` ×2
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
     - `primitives/css/coords.Placed`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/latest-ref.useLatestRef`
+    - `primitives/loading.Loading`
     - `primitives/relative-time.formatElapsed`
-    - `primitives/slot-render.defineDispatchSlot`
-    - `primitives/slot-render.defineMountSlot`
-    - `primitives/slot-render.defineRenderSlot`
+    - `primitives/scope/render-origin.useRenderOrigin`
   - Exports (types):
     - `DisplayCover`
     - `PlayerView`
@@ -115,11 +142,17 @@ the scope, so the player cannot import the shell).
     - `PlayerDisplayBinding`
     - `PlayerTime`
     - `PlayerTransport`
+    - `SONATA_MUSIC_SOURCE`
     - `SonataPlayer`
     - `SonataPlayerScope`
+    - `useBackgroundPlaybackPlayer`
+    - `useBackgroundPlaybackTitle`
     - `useDisplayCover`
+    - `useHasBackgroundPlayback`
     - `useMarkDisplayDrawn`
+    - `usePlaybackInstanceKey`
     - `usePlayerView`
+    - `usePublishPlaybackTitle`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`
@@ -129,6 +162,7 @@ the scope, so the player cannot import the shell).
     - `ui/tokens/density --space-xl`
     - `ui/tokens/density --space-xs`
   - Imported by:
+    - `apps/sonata/background-music`
     - `apps/sonata/chord-chart`
     - `apps/sonata/controls`
     - `apps/sonata/library`

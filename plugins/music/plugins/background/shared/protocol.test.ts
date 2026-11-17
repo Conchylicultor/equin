@@ -154,3 +154,34 @@ test("startedPlaying: a new play or a resume is a claim, a pause is not", () => 
   expect(startedPlaying(a, b)).toBe(false);
   expect(startedPlaying(b, step(b, { kind: "resume" }))).toBe(true);
 });
+
+describe("music adopted from an app's view", () => {
+  test("becomes what plays, replacing the current music, when kept across apps", () => {
+    const prev = run([{ kind: "play", sourceId: "isle" }]);
+    const s = step(prev, {
+      kind: "adopt",
+      sourceId: "sonata",
+      acrossApps: true,
+    });
+    expect(s.current).toEqual({ sourceId: "sonata", playing: true });
+    expect(startedPlaying(prev, s)).toBe(true);
+  });
+
+  test("ends with its view when not kept across apps", () => {
+    const prev = run([{ kind: "play", sourceId: "isle" }]);
+    const s = step(prev, {
+      kind: "adopt",
+      sourceId: "sonata",
+      acrossApps: false,
+    });
+    expect(s).toBe(prev);
+  });
+
+  test("pauses when another browser tab starts music", () => {
+    const s = run([
+      { kind: "adopt", sourceId: "sonata", acrossApps: true },
+      { kind: "remote-claim" },
+    ]);
+    expect(s.current).toEqual({ sourceId: "sonata", playing: false });
+  });
+});
