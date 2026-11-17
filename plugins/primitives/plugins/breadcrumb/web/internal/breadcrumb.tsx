@@ -12,18 +12,15 @@ import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import {
-  Button,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  cn,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { TrailSeparator } from "./trail-separator";
 import { useTrailMotion } from "./trail-motion";
 import "./breadcrumb.css";
-import { CrumbPlacesMenu } from "./places-menu";
+import {
+  BreadcrumbPlaces,
+  CrumbPlacesMenu,
+  type BreadcrumbPlace,
+} from "./places-menu";
 import {
   CRUMB_FOLD_ATTR,
   CRUMB_INDEX_ATTR,
@@ -197,7 +194,14 @@ function Crumb({
     </Button>
   );
   if (siblings === null) return crumb;
-  return <CrumbPlacesMenu trigger={crumb} places={siblings} navigates />;
+  return (
+    <CrumbPlacesMenu
+      trigger={crumb}
+      places={siblings}
+      press="navigate"
+      nativeButton
+    />
+  );
 }
 
 /**
@@ -230,7 +234,8 @@ function Leaf({
     <CrumbPlacesMenu
       trigger={leaf}
       places={segment.siblings}
-      navigates={false}
+      press="open"
+      nativeButton={false}
     />
   );
 }
@@ -240,35 +245,36 @@ function Leaf({
  *
  * Folding is what a breadcrumb does INSTEAD of taking letters off the page's
  * name — the ancestors are one click from being read in full, the name is not.
+ *
+ * A folded crumb keeps what its crumb offered: it opens on hover like every
+ * other crumb, a click on a row still goes to that ancestor, and resting on a
+ * row lists the places beside it (its `siblings`) as a submenu — the same
+ * quick switch the crumb gave before it folded.
  */
 function FoldedCrumbs({ segments }: { segments: BreadcrumbSegment[] }) {
+  const places: BreadcrumbPlace[] = segments.map((seg) => ({
+    key: seg.key,
+    label: seg.label,
+    activation: seg.activation,
+    inside: seg.siblings ?? undefined,
+  }));
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button
-            {...{ [CRUMB_FOLD_ATTR]: "" }}
-            variant="ghost"
-            aspect="inline"
-            aria-label={`Show the ${segments.length} levels above this one`}
-            className="px-2xs text-muted-foreground hover:text-strong-foreground"
-          >
-            <Icon icon={moreHorizIcon} />
-          </Button>
-        }
-      />
-      <DropdownMenuContent align="start">
-        {segments.map((seg) => (
-          <DropdownMenuItem
-            key={seg.key}
-            disabled={seg.activation === undefined}
-            {...activationProps(seg.activation)}
-          >
-            {seg.label}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <CrumbPlacesMenu
+      press="open"
+      nativeButton
+      trigger={
+        <Button
+          {...{ [CRUMB_FOLD_ATTR]: "" }}
+          variant="ghost"
+          aspect="inline"
+          aria-label={`Show the ${segments.length} levels above this one`}
+          className="px-2xs text-muted-foreground hover:text-strong-foreground"
+        >
+          <Icon icon={moreHorizIcon} />
+        </Button>
+      }
+      places={<BreadcrumbPlaces places={places} />}
+    />
   );
 }
 

@@ -84,11 +84,12 @@ function widthOf(el: Element): number {
 }
 
 /** Every live fake observer, with the elements it watches. */
-const observers = new Set<{ cb: () => void; targets: Set<Element> }>();
+type ResizeCallback = (entries: { target: Element }[]) => void;
+const observers = new Set<{ cb: ResizeCallback; targets: Set<Element> }>();
 
 class FakeResizeObserver {
-  private entry: { cb: () => void; targets: Set<Element> };
-  constructor(cb: () => void) {
+  private entry: { cb: ResizeCallback; targets: Set<Element> };
+  constructor(cb: ResizeCallback) {
     this.entry = { cb, targets: new Set() };
     observers.add(this.entry);
   }
@@ -103,9 +104,9 @@ class FakeResizeObserver {
   }
 }
 
-/** The browser reporting that `el` changed size. */
+/** The browser reporting that `el` changed size: one entry, its target. */
 function resized(el: Element) {
-  for (const o of observers) if (o.targets.has(el)) o.cb();
+  for (const o of observers) if (o.targets.has(el)) o.cb([{ target: el }]);
 }
 
 // `scrollWidth` / `clientWidth` live on Element.prototype, `offsetWidth` on

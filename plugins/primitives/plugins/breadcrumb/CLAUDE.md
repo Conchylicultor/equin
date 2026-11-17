@@ -25,6 +25,10 @@ with a comment saying why. The trails today:
 - **Spend breakdown** (`tasks/supervisor-roles/spend`): the levels beside
   each one. The root ("Spent this week") is `null`.
 
+A folded crumb keeps its menu: the `…` overflow crumb opens on hover too, a
+click on one of its rows still goes to that ancestor, and resting on a row
+opens its siblings as a submenu.
+
 ## Motion (`motion="wipe"`)
 
 A trail that is its surface's navigation, moved one level at a time, opts

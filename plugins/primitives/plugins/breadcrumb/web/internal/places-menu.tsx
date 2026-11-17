@@ -81,17 +81,21 @@ const CLOSE_DELAY_MS = 220;
 export function CrumbPlacesMenu({
   trigger,
   places,
-  navigates,
+  press,
+  nativeButton,
 }: {
   /** The crumb itself, rendered as the menu's trigger. */
   trigger: ReactElement;
   /** The crumb's menu content (a `<BreadcrumbPlaces>`), mounted while open. */
   places: ReactElement;
   /**
-   * Whether a press on the crumb goes somewhere (an ancestor, drawn as a
-   * button) or not (the leaf, drawn as text).
+   * What a press on the crumb does: `navigate` goes to the crumb's own page
+   * (an ancestor), so only hover opens the menu; `open` opens it too (the
+   * leaf, which goes nowhere; the overflow crumb, whose press is its menu).
    */
-  navigates: boolean;
+  press: "navigate" | "open";
+  /** Whether the trigger is a `<button>` (an ancestor, the overflow crumb) or text (the leaf). */
+  nativeButton: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const close = useCallback(() => setOpen(false), []);
@@ -99,7 +103,8 @@ export function CrumbPlacesMenu({
     <DropdownMenu
       open={open}
       onOpenChange={(next, details) => {
-        if (next && navigates && details.reason === "trigger-press") return;
+        if (next && press === "navigate" && details.reason === "trigger-press")
+          return;
         setOpen(next);
       }}
     >
@@ -107,7 +112,7 @@ export function CrumbPlacesMenu({
         openOnHover
         delay={OPEN_DELAY_MS}
         closeDelay={CLOSE_DELAY_MS}
-        nativeButton={navigates}
+        nativeButton={nativeButton}
         render={trigger}
       />
       <DropdownMenuContent align="start" maxHeight="xl">
