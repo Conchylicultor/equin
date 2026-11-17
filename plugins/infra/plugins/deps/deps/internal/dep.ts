@@ -91,7 +91,7 @@ export interface DepSource<K extends string = string> {
   isIntact?(dir: AppPath): boolean | Promise<boolean>;
   /**
    * How the install is admitted to the host. Omitted: under the caller's
-   * `exec.admit` (one background unit of `withHostGrant`), so a big install
+   * `exec.admit` (one unit of `withHostGrant` in its lane), so a big install
    * yields host CPU to builds and interactive work.
    *
    * `{ none: "<why>" }`: the install runs at once, taking no grant — only for

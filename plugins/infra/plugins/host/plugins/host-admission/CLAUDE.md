@@ -155,7 +155,16 @@ window  = clamp(heldUnits + floor((allowed − charged) / PER_UNIT_BYTES), 1, B)
   would have admitted two ops onto room measured for one; so under that
   pressure agents wait for memory and the bound is unchanged. Every window
   thus keeps ≥ 1 slot background cannot take. The exception is a host whose
-  whole pool is one slot (`B = 1`): it is unlaned, so background shares it.
+  static background window is one slot (`B ≤ 2`: a small VPS, an 8 or 16 GB
+  Mac — `cpuBudget().backgroundSharesLastSlot`): there a one-slot window is the
+  steady state (a 16 GB Mac with a browser and an editor open measures under
+  two quanta free for hours), so background kept off it never ran — every
+  agent build, check and test, and every job's dependency install, waited for
+  ever (2026-11-16 onboarding audit). Background shares that slot, and every
+  background acquire there is admitted `low` (`grantPriority`, applied in
+  `withHostGrant`): a freed slot goes to a waiting interactive op first. The
+  accepted cost: an interactive op can queue behind ONE running background
+  op. From `B = 3` (24 GB) up, a one-slot window stays interactive-only.
   What the reservation cannot do is evict: a background holder admitted while
   the window was wider, then grown past its quantum, can shrink the window
   onto its own slot, and an interactive op then waits for memory it really
@@ -540,6 +549,7 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
     - `fleetMemoryUnmeasuredMessage`
     - `FleetMemoryUnmeasuredPayloadSchema`
     - `fleetWindow`
+    - `grantPriority`
     - `HOLDER_PEAK_WINDOW_MS`
     - `HolderPeakRecordSchema`
     - `holderReserve`

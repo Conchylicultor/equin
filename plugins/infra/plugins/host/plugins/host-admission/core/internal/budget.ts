@@ -264,6 +264,31 @@ export interface CpuBudget {
   backgroundLimit: number;
 }
 
+/** The static pool's split, plus what it decides for every measured window of it. */
+export interface CpuPoolBudget extends CpuBudget {
+  /**
+   * Whether the background lane shares the reserved interactive slot of a
+   * one-slot measured window (`laneCapacity`), admitted at `low` priority
+   * there (`grantPriority`). True exactly when the static background window is
+   * a single slot (`B ≤ 2`: an 8 or 16 GB Mac):
+   *
+   * - background can never hold more than that one slot on such a host, so
+   *   sharing admits at most one background op beside interactive work;
+   * - and a one-slot window is the host's steady state, not a passing squeeze.
+   *   A 16 GB Mac (`B = 2`) running macOS, a browser, an editor and equin
+   *   measures under two quanta left for the fleet — the window sits at 1 for
+   *   hours, and a background lane kept off it never ran: every agent build,
+   *   check and test, and every dependency install inside a job, waited for
+   *   ever (2026-11-16 onboarding audit).
+   *
+   * The cost, accepted: there, an interactive op can queue behind ONE running
+   * background op. It never queues behind a waiting one (`low` yields to it).
+   * From `B = 3` (24 GB) up the window widens with ordinary use, and a one-slot
+   * window stays the interactive lane's alone.
+   */
+  backgroundSharesLastSlot: boolean;
+}
+
 /**
  * The CPU pool size `B` is the whole elastic fleet: `B = max(1,
  * min(hostCpuCeiling, floor(hostRamCeiling / PER_UNIT_BYTES)))`. The reserved
@@ -278,10 +303,30 @@ export interface CpuBudget {
  * unbootable on such a host rather than merely slow. With a single slot there is
  * nothing to partition: the honest degenerate is one shared slot, so the
  * background window floors to 1 and the pool behaves as unlaned. The reserved
- * interactive floor only becomes meaningful again at `B >= 2`.
+ * interactive floor only becomes meaningful again at `B >= 2`, and a measured
+ * window's only from `B >= 3` (`backgroundSharesLastSlot`).
  */
-export function cpuBudget(host: HostFacts = thisHost()): CpuBudget {
-  return laneSplit(Math.max(1, rawFleetCeiling(host)));
+export function cpuBudget(host: HostFacts = thisHost()): CpuPoolBudget {
+  const split = laneSplit(Math.max(1, rawFleetCeiling(host)));
+  return { ...split, backgroundSharesLastSlot: split.backgroundLimit === 1 };
+}
+
+/**
+ * The priority a `cpu` acquire is admitted at: the caller's own, except a
+ * background acquire on a host whose background lane shares the last slot
+ * (`backgroundSharesLastSlot`), which is `low` — so a slot freed while an
+ * interactive op waits goes to that op, never to the agent fleet. (Every
+ * background acquire there is `low`, so the sidequest track's `low` keeps
+ * FIFO order with the main track's on such a host.)
+ */
+export function grantPriority(
+  lane: Lane,
+  priority: Priority,
+  host: HostFacts = thisHost(),
+): Priority {
+  return lane === "background" && cpuBudget(host).backgroundSharesLastSlot
+    ? "low"
+    : priority;
 }
 
 /**

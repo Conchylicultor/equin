@@ -37566,6 +37566,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fleetMemoryUnmeasuredMessage`
               - `FleetMemoryUnmeasuredPayloadSchema`
               - `fleetWindow`
+              - `grantPriority`
               - `HOLDER_PEAK_WINDOW_MS`
               - `HolderPeakRecordSchema`
               - `holderReserve`
@@ -38686,9 +38687,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `setEnvDefault`
               - `unsetEnv`
           - Cross-plugin:
-            - Imported by: 51 plugins — full list in [`plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md)
+            - Imported by: 52 plugins — full list in [`plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md)
               - `framework` ×18
-              - `infra` ×13
+              - `infra` ×14
               - `debug` ×5
               - `packages` ×5
               - `database` ×4

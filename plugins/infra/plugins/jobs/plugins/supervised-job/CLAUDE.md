@@ -42,7 +42,8 @@ the `@ts-expect-error` for each.
   long or heavy work demands (`infra/deps`' `ensureDep`). Only this run body
   and a CLI command (`cliExecContext`, exported from the `cli` barrel so no
   `server/` file can reach it) mint one. Both fill `exec.admit` — one
-  background unit of `withHostGrant` — so host-only code below `server/` (the
+  unit of `withHostGrant`, background for a run body, the caller's lane for a
+  CLI command (interactive when a person runs it on the main checkout: `admitForCaller`) — so host-only code below `server/` (the
   `infra/deps` engine) is admitted to the host without importing a `server`
   barrel. With the built-in ledger a throw records
   `error_message` and `retryable = !isNonRetryableError(err)` on the row, then

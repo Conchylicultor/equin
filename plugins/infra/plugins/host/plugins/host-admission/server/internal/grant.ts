@@ -8,6 +8,7 @@ import {
   describeHolders,
   FLEET_MEMORY_UNMEASURED_KIND,
   fleetMemoryUnmeasuredMessage,
+  grantPriority,
   HOST_POOLS,
   laneCapacity,
   type FleetAdmission,
@@ -155,7 +156,10 @@ export async function withHostGrant<T>(
   try {
     result = await withPoolGrant(
       cpuPool,
-      { ...opts, capacity },
+      // A background acquire on a host whose background lane shares the
+      // last slot is `low` there (`grantPriority`), so it never takes the
+      // slot an interactive op is waiting for.
+      { ...opts, priority: grantPriority(opts.lane, opts.priority), capacity },
       async (grant) => {
         // Published once the slots are held and removed before they are
         // released, so a marker never claims slots nobody holds; between the
@@ -220,10 +224,13 @@ function describeAdmission(admission: FleetAdmission, lane: Lane): string {
   const { window, reading } = admission;
   // A lane the window leaves no slot (background, at a one-slot window) waits
   // for memory, not for a holder: say so, or its wait reads as a stuck line.
+  const capacity = laneCapacity(window.slots, lane);
   const none =
-    laneCapacity(window.slots, lane) === 0
+    capacity === 0
       ? `no ${lane} slot until it widens (its one slot is kept for interactive ops) — `
-      : "";
+      : lane === "background" && capacity >= window.slots
+        ? `its one slot shared with interactive ops, which go first — `
+        : "";
   return (
     `memory window ${window.slots} of ${cpuBudget().B} slots: ${none}` +
     `${gb(window.allowedBytes)} left for agent ops beside the rest of the machine ` +

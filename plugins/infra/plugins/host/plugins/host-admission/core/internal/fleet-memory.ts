@@ -51,7 +51,8 @@ import { HolderReadingSchema, type HolderReading } from "./holders";
 // The window is then the slots already held plus as many more quanta as fit in
 // what is left — never above `B`, never below 1 (one op can always run, so the
 // line always moves: the same floor `cpuBudget` keeps on a small host). At 1,
-// that op is an interactive one (`laneCapacity`).
+// that op is an interactive one (`laneCapacity`) — bar on a host of `B ≤ 2`,
+// where background shares it at low priority.
 
 /**
  * One reading of the fleet's memory, published by main's owner sampler (see
@@ -196,18 +197,21 @@ export function describeHolders(holders: readonly HolderReading[]): string {
  * that pressure agents wait for memory, the waiter's words say so, and the
  * memory bound is unchanged.
  *
- * The one exception is a host whose whole pool is one slot (`B === 1`, a small
- * VPS): there the window can never widen, nothing is partitioned (the pool is
- * unlaned, `cpuBudget`), and background shares the slot — else it would never
- * run.
+ * The exception is a host whose static background window is one slot
+ * (`B ≤ 2`: a small VPS, an 8 or 16 GB Mac — `backgroundSharesLastSlot`):
+ * there a one-slot window is the steady state, not a squeeze, and background
+ * kept off it would never run. So background shares it, at `low` priority
+ * (`grantPriority`): it never takes the slot while an interactive op waits,
+ * and an interactive op can queue behind at most one running background op.
  */
 export function laneCapacity(
   slots: number,
   lane: Lane,
   host: HostFacts = thisHost(),
 ): number {
-  if (lane === "interactive" || cpuBudget(host).B === 1) return slots;
-  return slots - laneSplit(slots).reservedInteractive;
+  if (lane === "interactive") return slots;
+  const own = slots - laneSplit(slots).reservedInteractive;
+  return cpuBudget(host).backgroundSharesLastSlot ? Math.max(1, own) : own;
 }
 
 /**

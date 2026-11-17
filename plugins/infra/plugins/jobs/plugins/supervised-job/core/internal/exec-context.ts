@@ -29,9 +29,10 @@ export interface ExecContext {
   /** Which out-of-process context minted it — for logs and error messages. */
   readonly origin: "supervised-run" | "cli";
   /**
-   * Run `fn` under ONE background unit of host admission
-   * (`withHostGrant({ lane: "background", max: 1 })`), so a big install or
-   * download yields to builds and interactive work.
+   * Run `fn` under ONE unit of host admission (`withHostGrant({ lane, max:
+   * 1 })`), so a big install or download is bounded with the fleet: in the
+   * background lane for a supervised job, in the caller's lane for a CLI
+   * command (`admitForCaller` — interactive when a person runs it on main).
    *
    * Carried by the context rather than imported by the work that needs it:
    * `withHostGrant` is a `server` barrel, which host-only code below `server/`

@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { PER_UNIT_BYTES, type HostFacts } from "./budget";
+import {
+  cpuBudget,
+  grantPriority,
+  PER_UNIT_BYTES,
+  type HostFacts,
+} from "./budget";
 import { holderReserve, peaksByWork, type HolderReading } from "./holders";
 import {
   fleetAdmission,
@@ -265,6 +270,84 @@ describe("laneCapacity", () => {
   test("a host whose whole pool is one slot shares it: nothing to partition", () => {
     const small: HostFacts = { cpus: 2, ramBytes: 8e9 };
     expect(laneCapacity(1, "background", small)).toBe(1);
+  });
+
+  // The Macs people install on. RAM in binary GB (what `os.totalmem()` reads);
+  // B = floor(RAM / 2 / 3.6 GB): 8 GB → 1, 16 GB → 2, 24 GB → 3.
+  const GIB = 2 ** 30;
+  const mac = (gb: number, cpus: number): HostFacts => ({
+    cpus,
+    ramBytes: gb * GIB,
+  });
+
+  test("a 16 GB Mac: background shares the one-slot window it lives in", () => {
+    // 2026-11-16 audit: B = 2, and macOS + a browser + an editor + equin leave
+    // under two quanta for the fleet, so the measured window sits at 1. Kept
+    // off it, background (every agent build, check, test and job install)
+    // waited for ever.
+    const host = mac(16, 10);
+    expect(cpuBudget(host).B).toBe(2);
+    expect(cpuBudget(host).backgroundSharesLastSlot).toBe(true);
+    // The measured window a busy 16 GB desktop gives: 17.18 − 2.5 wired − 11
+    // other = 3.68 GB left → one quantum.
+    const busy = fleetWindow(
+      {
+        sampledAt: 0,
+        ramBytes: host.ramBytes,
+        wiredBytes: 2.5 * GB,
+        otherBytes: 11 * GB,
+        opsBytes: 0,
+        heldUnits: 0,
+        holders: [],
+      },
+      host,
+    );
+    expect(busy.slots).toBe(1);
+    expect(laneCapacity(busy.slots, "background", host)).toBe(1);
+    expect(laneCapacity(busy.slots, "interactive", host)).toBe(1);
+    // A wider window still keeps the reserved floor: background one, interactive both.
+    expect(laneCapacity(2, "background", host)).toBe(1);
+    expect(laneCapacity(2, "interactive", host)).toBe(2);
+    // The unmeasured floor already gave background its slot.
+    expect(laneCapacity(unmeasuredWindow(host), "background", host)).toBe(1);
+  });
+
+  test("an 8 GB Mac: one slot, shared", () => {
+    const host = mac(8, 8);
+    expect(cpuBudget(host).B).toBe(1);
+    expect(cpuBudget(host).backgroundSharesLastSlot).toBe(true);
+    expect(laneCapacity(1, "background", host)).toBe(1);
+  });
+
+  test("a 24 GB Mac: a one-slot window stays the interactive lane's", () => {
+    // B = 3: its background window is two slots, and ordinary use leaves the
+    // measured window at 2+ — a one-slot window there is real memory pressure.
+    const host = mac(24, 12);
+    expect(cpuBudget(host).B).toBe(3);
+    expect(cpuBudget(host).backgroundSharesLastSlot).toBe(false);
+    expect(laneCapacity(1, "background", host)).toBe(0);
+    expect(laneCapacity(2, "background", host)).toBe(1);
+    expect(laneCapacity(3, "background", host)).toBe(2);
+  });
+});
+
+describe("grantPriority", () => {
+  const GIB = 2 ** 30;
+  const mac16: HostFacts = { cpus: 10, ramBytes: 16 * GIB };
+  const mac24: HostFacts = { cpus: 12, ramBytes: 24 * GIB };
+
+  test("background on a host that shares the last slot is low: interactive goes first", () => {
+    expect(grantPriority("background", "normal", mac16)).toBe("low");
+    expect(grantPriority("background", "low", mac16)).toBe("low");
+    expect(grantPriority("interactive", "normal", mac16)).toBe("normal");
+  });
+
+  test("elsewhere the caller's own priority stands", () => {
+    for (const host of [mac24, BOX]) {
+      expect(grantPriority("background", "normal", host)).toBe("normal");
+      expect(grantPriority("background", "low", host)).toBe("low");
+      expect(grantPriority("interactive", "normal", host)).toBe("normal");
+    }
   });
 });
 

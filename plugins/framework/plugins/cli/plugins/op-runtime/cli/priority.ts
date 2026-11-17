@@ -43,7 +43,7 @@ export async function opPriority(
     case "track":
       if (found.track !== "sidequest") return "normal";
       log(
-        `Sidequest task — the ${kind} queues at low priority: it takes a host slot only while no main-track op is waiting for one.`,
+        `Sidequest task — the ${kind} queues at low priority: it takes a host slot only while no main-track op is waiting for one (on a host of two CPU slots or fewer every background op queues low, so there they share one line in arrival order).`,
       );
       return "low";
   }

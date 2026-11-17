@@ -14,6 +14,7 @@ export {
   hostPoolsFor,
   rawFleetCeiling,
   cpuBudget,
+  grantPriority,
 } from "./internal/budget";
 export type { Grant, GrantHooks } from "./internal/grant";
 export {

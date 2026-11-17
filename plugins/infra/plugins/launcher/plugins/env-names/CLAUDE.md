@@ -27,9 +27,9 @@
     - `setEnvDefault`
     - `unsetEnv`
 - Cross-plugin:
-  - Imported by: 51 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 52 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework` ×18
-    - `infra` ×13
+    - `infra` ×14
     - `debug` ×5
     - `packages` ×5
     - `database` ×4

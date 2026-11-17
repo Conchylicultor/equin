@@ -58,7 +58,7 @@ export interface EnsureOptions {
  * Fast path: `ready.json` present → touch `last-used`, return. Slow path: take
  * the host flock of `(id, identity)` (waiting for another installer), re-check,
  * then install into the identity's dir under the caller's host admission
- * (`exec.admit`, one background unit — unless the source declares
+ * (`exec.admit`, one unit in its lane — unless the source declares
  * `admission: { none }`), writing `ready.json` last.
  */
 export async function ensureDep<S extends DepSource>(
