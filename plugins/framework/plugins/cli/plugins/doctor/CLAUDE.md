@@ -22,7 +22,13 @@ shim resolving (a symlink loop or a missing target is named with
 locked toolchain installed (`mise install --dry-run-code`, tools named by
 `mise ls --missing`; when every release is on disk but the dry run still fails — a tool
 mise could not run, e.g. endpoint security holding `~/.cargo/bin/rustup` on a prompt — it
-prints what mise said instead). Every one is a `miss` and fails the run.
+prints what mise said instead); and, inside a Claude Code shell only
+(`CLAUDECODE` set), that the data root and `~/.cargo` take a file create and
+rename — Claude Code's sandbox refuses writes outside the project, and a build
+killed there part-way is how the 2026-11 install report got a half-written
+cargo cache. `install.sh` runs the same probe before it changes anything
+(`refused_write_dir`) and stops with the same advice: run it from the Terminal
+app. Every one is a `miss` and fails the run.
 
 Claude Code is **not** checked: the app runs the build the Agent SDK ships
 (installed with the dependencies, after the doctor runs), and the user signs in

@@ -12,7 +12,7 @@ import {
   type BuildContext,
   type BuildSource,
 } from "@plugins/infra/plugins/deps/plugins/build/deps";
-import { cargoTargetDir } from "../../data-dirs";
+import { withStagedTargetDir } from "./target-dir";
 
 const MINUTE = 60_000;
 /** A cold release build of a Tauri-sized crate is minutes of CPU. */
@@ -49,9 +49,9 @@ export type CargoBuildSpec =
       /** `env/`-relative path of the binary inside `output` (`equin.app/Contents/MacOS/equin`). */
       readonly binary: string;
       /**
-       * Assemble `ctx.output` from `built` — the binary in the SHARED cargo
-       * target dir, which the next build of the crate overwrites: copy it,
-       * never move or link it.
+       * Assemble `ctx.output` from `built` — the binary in this build's own
+       * copy of the crate's target dir, which becomes the shared warm dir (and
+       * is replaced by the next build): copy it, never move or link it.
        */
       readonly then: (ctx: BuildContext, built: string) => Promise<void>;
     };
@@ -86,11 +86,6 @@ export function cargoCommand(args: readonly string[]): {
   return { argv: ["cargo", ...args], env: cargoEnv() };
 }
 
-/** The cargo `target/` dir of one crate, inside the shared `cargo-target` cache. */
-export async function crateTargetDir(crate: string): Promise<string> {
-  return join(await cargoTargetDir.ensure(), crate.replaceAll("/", "__"));
-}
-
 /** The argv `cargoBuild` runs to build `bin` of the crate at `crate` under `root`. */
 export function cargoBuildArgv(
   root: string,
@@ -121,9 +116,11 @@ export function cargoBuildArgv(
  *   not an input.
  * - **Install**: `cargo build --release --locked --bin <bin>` from the repo
  *   root (so the root's `mise.toml` picks the toolchain, never a crate-level
- *   `rust-toolchain.toml`), with `CARGO_TARGET_DIR` the crate's dir in the
- *   shared `cargo-target` cache; then the binary is copied into `env/`, or
- *   handed to `then`.
+ *   `rust-toolchain.toml`), with `CARGO_TARGET_DIR` a private clone of the
+ *   crate's warm dir in the shared `cargo-target` cache, which replaces the
+ *   warm dir only if the whole run succeeds (`withStagedTargetDir`) — so a
+ *   killed or failed compile can never leave a half-written dir for the next
+ *   build; then the binary is copied into `env/`, or handed to `then`.
  * - **Targets**: this host only. Cross-compiling needs a rustup target and a
  *   foreign linker, which nothing provides yet.
  * - **Staying current**: the source moves with the repo (`updates: { none:
@@ -141,31 +138,31 @@ export function cargoBuild(spec: CargoBuildSpec): CargoSource {
     inputs: [`${crate}/**`, `${crate}/Cargo.toml`, `${crate}/Cargo.lock`],
     tool: { versionArgv: ["rustc", "-vV"], env: () => cargoEnv() },
     output,
-    async run(ctx) {
-      const targetDir = await crateTargetDir(crate);
-      await ctx.run(cargoBuildArgv(ctx.root, crate, bin), {
-        cwd: ctx.root,
-        env: cargoEnv({ targetDir }),
-        timeoutMs: BUILD_TIMEOUT_MS,
-      });
-      const built = join(targetDir, "release", bin);
-      if (!(await exists(built))) {
-        throw new Error(
-          `cargo build finished without producing ${built} — is \`${bin}\` a binary target of ${crate}/Cargo.toml?`,
-        );
-      }
-      if (assembled === null) {
-        await copyFile(built, ctx.output);
-        await chmod(ctx.output, 0o755);
-        return;
-      }
-      await assembled.then(ctx, built);
-      if (!(await exists(join(ctx.dir, binary)))) {
-        throw new Error(
-          `cargoBuild ${crate}: \`then\` finished without leaving the binary at env/${binary}`,
-        );
-      }
-    },
+    run: (ctx) =>
+      withStagedTargetDir(ctx, crate, async (targetDir) => {
+        await ctx.run(cargoBuildArgv(ctx.root, crate, bin), {
+          cwd: ctx.root,
+          env: cargoEnv({ targetDir }),
+          timeoutMs: BUILD_TIMEOUT_MS,
+        });
+        const built = join(targetDir, "release", bin);
+        if (!(await exists(built))) {
+          throw new Error(
+            `cargo build finished without producing ${built} — is \`${bin}\` a binary target of ${crate}/Cargo.toml?`,
+          );
+        }
+        if (assembled === null) {
+          await copyFile(built, ctx.output);
+          await chmod(ctx.output, 0o755);
+          return;
+        }
+        await assembled.then(ctx, built);
+        if (!(await exists(join(ctx.dir, binary)))) {
+          throw new Error(
+            `cargoBuild ${crate}: \`then\` finished without leaving the binary at env/${binary}`,
+          );
+        }
+      }),
   });
   return {
     ...source,

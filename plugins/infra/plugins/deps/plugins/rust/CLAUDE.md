@@ -29,10 +29,33 @@ const path = cargoBinary(ready);
 - **Install**: `cargo build --release --locked --bin <bin> --manifest-path
   <crate>/Cargo.toml` from the repo root (so the root's `mise.toml` picks the
   toolchain — the `rust` entry, moved by the mise updater — never rustup's
-  default or a crate's `rust-toolchain.toml`), with `CARGO_TARGET_DIR` the
-  crate's own dir in the shared `cargo-target` cache (`data-dirs/`), so every
-  checkout compiles incrementally. The binary is then copied into `env/` (or
-  handed to `then`, which must leave `output` and the declared `binary`).
+  default or a crate's `rust-toolchain.toml`), so every checkout compiles
+  incrementally from the crate's warm dir in the shared `cargo-target` cache
+  (`data-dirs/`). The binary is then copied into `env/` (or handed to `then`,
+  which must leave `output` and the declared `binary`).
+- **A failed build never poisons the next one** (`deps/internal/target-dir.ts`).
+  The warm dir (`cargo-target/crates/<key>`) is never built in: each build's
+  `CARGO_TARGET_DIR` is its own copy-on-write clone
+  (`cargo-target/staging/<key>.<pid>.<nonce>`, `cp -c` on APFS, mtimes kept so
+  cargo still sees it fresh), renamed over the warm dir only once the whole run
+  succeeded. A compile that fails or is killed (SIGKILL, a sandbox refusing a
+  rename) leaves the warm dir as it was; its copy is deleted, or swept by the
+  next build once its pid is gone. Before this, builds wrote straight into
+  `cargo-target/<key>` and a killed rustc left it half-written, failing every
+  later build until someone deleted it by hand; the `crates/` name is new so
+  such a dir is never read again (it is deleted when the crate's first build
+  under the new layout publishes). Clone and publish hold the crate's flock
+  (`cargo-target/locks/<key>.lock`; cargo itself runs outside it), so a clone
+  never reads a warm dir another checkout's build is replacing. The crate's
+  OWN units are always rebuilt (their fingerprints removed from the clone —
+  `release/build/<pkg>/` on cargo ≥ 1.100, `release/.fingerprint/<pkg>-*`
+  before): cargo judges a path crate fresh by mtimes, and a warm dir built
+  from another checkout's newer-but-different sources would otherwise hand
+  this checkout that checkout's binary. `crateTargetDir(crate)` is the warm
+  dir; the cargo updater's `cargo check` smoke uses `crateCheckTargetDir`
+  (`cargo-target/checks/<key>`), apart from it. `~/.cargo/registry` needs none of this:
+  cargo checks every download's checksum and marks an unpacked source
+  complete (`.cargo-ok`) only after it is fully written.
 - **Host only**: no `targets` (cross-compiling needs a rustup target and a
   foreign linker), so a cargo build cannot be `bundle`d yet.
 - **`rust/no-bare-cargo`** (`lint/`): TypeScript spawns cargo only through this
@@ -67,6 +90,7 @@ CLI in `framework/cli/release`), and the toolchain updater's `cargo check
     - `cargoBuildArgv`
     - `cargoCommand`
     - `cargoEnv`
+    - `crateCheckTargetDir`
     - `crateTargetDir`
 - Cross-plugin:
   - Imported by:

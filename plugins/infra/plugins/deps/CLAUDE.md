@@ -265,8 +265,9 @@ module eval).
 - `rust` — the `rust` kind (`cargoBuild`, `cargoBinary`, `cargoCommand`, its
   `deps/` barrel), ON the `build` kind: `cargoBuild({ crate, bin })` builds a
   plugin's `rust/` folder (`cargo build --release --locked` under the
-  mise-pinned toolchain, `CARGO_TARGET_DIR` in the shared `cargo-target`
-  cache) and copies the binary into `env/` — or hands it to `then` to assemble
+  mise-pinned toolchain, in a private clone of the crate's warm target dir in
+  the shared `cargo-target` cache that replaces it only on success, so a killed
+  compile never poisons the next build) and copies the binary into `env/` — or hands it to `then` to assemble
   an `output` around it. `rust/no-bare-cargo` bans spawning cargo anywhere
   else. Its `cargo-updater` sub-plugin moves every `rust/` crate's
   `Cargo.lock` (crates.io, 3-day cooldown, `deps-cargo:holds`).

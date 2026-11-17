@@ -30,11 +30,31 @@ data_root() {
   fi
 }
 
+# The first folder the install must write to that refuses a write or a
+# rename, or nothing when every one takes them. Probed only inside a Claude
+# Code shell (CLAUDECODE is set): its sandbox lets commands write only inside
+# the project, so a compile killed mid-rename there left a half-written build
+# behind (the 2026-11 install report). Same probe as the doctor's
+# (plugins/framework/plugins/cli/plugins/doctor/doctor.sh) — keep them alike.
+refused_write_dir() {
+  for dir in "$(data_root)" "${CARGO_HOME:-$HOME/.cargo}"; do
+    [ -d "$dir" ] || dir="$HOME"
+    probe="$dir/.equin-write-probe.$$"
+    if ! { : > "$probe" && mv "$probe" "$probe.moved" && rm -f "$probe.moved"; } 2>/dev/null; then
+      rm -f "$probe" "$probe.moved" 2>/dev/null || true
+      printf '%s\n' "$dir"
+      return
+    fi
+  done
+}
+
 # Everything is inside main(), called on the last line: under `curl | bash`,
 # bash reads the script from the same pipe the commands below inherit as stdin,
 # so a command that reads stdin could otherwise swallow the rest of the script.
 # Parsing main() whole first leaves nothing for them to eat.
 main() {
+  # As typed, for the command a refusal asks the user to run again.
+  ARGS="$*"
 
   REPO_URL="https://github.com/equinai/equin"
   INSTALL_DIR="$HOME/equin"
@@ -71,6 +91,38 @@ main() {
   # ── 0. Say what will happen, before anything does ──────────────────────────
   if [ "$(id -u)" = "0" ]; then
     die "do not run as root: Postgres' initdb refuses to, so the app cannot start. Run as a normal user (on a server: adduser --disabled-password --gecos '' equin && su - equin)."
+  fi
+
+  # ── Not from inside Claude Code's protected shell ──────────────────────────
+  if [ -n "${CLAUDECODE:-}" ]; then
+    refused="$(refused_write_dir)"
+    if [ -n "$refused" ]; then
+      if [ -n "$SELF_DIR" ]; then
+        again="cd '$INSTALL_DIR' && ./install.sh"
+      else
+        again="curl -fsSL https://raw.githubusercontent.com/equinai/equin/main/install.sh | bash -s -- $ARGS"
+      fi
+      cat >&2 <<EOF
+
+  equin can't be installed from this window.
+
+  equin installs its app, its database and the tools it builds with in your
+  home folder, so it keeps running after this window closes.
+  This window is Claude Code, which runs commands in a protected mode that
+  can't save files outside the current project, so the install would stop
+  part-way through.
+
+  What to do: open the Terminal app and run the same command there:
+
+      $again
+
+  Nothing has been changed on your machine yet. This step can't be skipped:
+  equin can't run without those files.
+
+  Details: CLAUDECODE is set; creating and renaming a file in $refused was refused.
+EOF
+      exit 1
+    fi
   fi
 
   cat <<EOF

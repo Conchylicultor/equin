@@ -26,7 +26,7 @@ import {
 import {
   cargoCommand,
   cargoEnv,
-  crateTargetDir,
+  crateCheckTargetDir,
 } from "@plugins/infra/plugins/deps/plugins/rust/deps";
 
 const MINUTE = 60_000;
@@ -695,7 +695,7 @@ export const cargoUpdater: Updater = {
           "--manifest-path",
           join(c.dir, "Cargo.toml"),
         ]);
-        const env = cargoEnv({ targetDir: await crateTargetDir(c.dir) });
+        const env = cargoEnv({ targetDir: await crateCheckTargetDir(c.dir) });
         return {
           name: `cargo check (${c.label})`,
           argv,

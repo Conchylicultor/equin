@@ -3,6 +3,7 @@ import {
   chmodSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -51,10 +52,14 @@ function healthy(m: Machine): void {
   stub(m.bin, "mise", "exit 0");
 }
 
-async function doctor(m: Machine, path: string[] = [m.bin, m.shims]) {
+async function doctor(
+  m: Machine,
+  path: string[] = [m.bin, m.shims],
+  extraEnv: Record<string, string> = {},
+) {
   const result = await spawnCaptured(["/bin/sh", DOCTOR], {
     cwd: m.home,
-    env: { HOME: m.home, PATH: path.join(":"), SHELL: "/bin/zsh" },
+    env: { HOME: m.home, PATH: path.join(":"), SHELL: "/bin/zsh", ...extraEnv },
     timeoutMs: 30_000,
   });
   return { code: result.exitCode, out: result.stdout + result.stderr };
@@ -195,5 +200,30 @@ describe("doctor.sh", () => {
     const off = await doctor(m);
     expect(off.out).toContain("all present");
     expect(off.code).toBe(0);
+  });
+
+  test("inside Claude Code: a home that refuses writes is named, with the Terminal fix", async () => {
+    const m = machine();
+    healthy(m);
+    // mv / rm: the write probe's only non-builtins, from the system.
+    const path = [m.bin, m.shims, "/bin"];
+    const writable = await doctor(m, path, { CLAUDECODE: "1" });
+    expect(writable.out).toContain("all present");
+    expect(writable.code).toBe(0);
+    expect(readdirSync(m.home).filter((n) => n.includes("probe"))).toEqual([]);
+
+    chmodSync(m.home, 0o555);
+    try {
+      const refused = await doctor(m, path, { CLAUDECODE: "1" });
+      expect(refused.code).toBe(1);
+      expect(refused.out).toContain("1 missing");
+      expect(refused.out).toContain("This window can't save equin's files");
+      expect(refused.out).toContain("in the Terminal app");
+      // Outside Claude Code the same home is not probed.
+      const outside = await doctor(m, path);
+      expect(outside.code).toBe(0);
+    } finally {
+      chmodSync(m.home, 0o755);
+    }
   });
 });

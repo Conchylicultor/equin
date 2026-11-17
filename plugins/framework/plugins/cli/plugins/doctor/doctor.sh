@@ -17,7 +17,8 @@
 # mise.lock through mise, so adding a tool there needs no change here.
 #
 # Probes are builtins plus the tools being checked (id, uname, xcode-select,
-# git, mise), so the test can stub every one of them on PATH.
+# git, mise), so the test can stub every one of them on PATH — and, inside a
+# Claude Code shell only, mv and rm for the write probe.
 
 missing=0
 report=""
@@ -41,6 +42,33 @@ if [ "$(id -u)" = "0" ]; then
   miss "Running as root" \
     "Postgres' initdb refuses to run as root, so the embedded cluster (and every backend) cannot start. Run as a non-root user." \
     "adduser --disabled-password --gecos '' equin && su - equin"
+fi
+
+# ── Not inside Claude Code's protected shell ────────────────────────────────
+# Claude Code's sandbox lets commands write only inside the project. equin's
+# data root and cargo's home are outside it, so a build there dies part-way —
+# a rustc killed mid-rename once left a half-written cargo cache behind (the
+# 2026-11 install report). Probed only when CLAUDECODE is set; the same probe
+# as install.sh's refused_write_dir — keep them alike.
+if [ -n "$CLAUDECODE" ]; then
+  if [ -n "$EQUIN_DIR" ]; then
+    data_root="$EQUIN_DIR"
+  elif { [ -e "$HOME/.singularity" ] || [ -L "$HOME/.singularity" ]; } && ! [ "$HOME/.singularity" -ef "$HOME/.equin" ]; then
+    data_root="$HOME/.singularity"
+  else
+    data_root="$HOME/.equin"
+  fi
+  for dir in "$data_root" "${CARGO_HOME:-$HOME/.cargo}"; do
+    [ -d "$dir" ] || dir="$HOME"
+    probe="$dir/.equin-write-probe.$$"
+    if ! { : > "$probe" && mv "$probe" "$probe.moved" && rm -f "$probe.moved"; } 2>/dev/null; then
+      rm -f "$probe" "$probe.moved" 2>/dev/null
+      miss "This window can't save equin's files" \
+        "It is Claude Code, which runs commands in a protected mode that can't save files outside the current project. equin keeps its app, its database and its build tools in your home folder, so installing or starting it from here stops part-way. Run it from the Terminal app instead: nothing is lost, it picks up where it stopped. (Details: CLAUDECODE is set; creating and renaming a file in $dir was refused.)" \
+        "cd '$PWD' && ./install.sh   # in the Terminal app"
+      break
+    fi
+  done
 fi
 
 # ── Xcode command-line tools (macOS) and a working git ──────────────────────

@@ -9,6 +9,6 @@ export {
   cargoBuildArgv,
   cargoCommand,
   cargoEnv,
-  crateTargetDir,
 } from "./internal/cargo";
+export { crateCheckTargetDir, crateTargetDir } from "./internal/target-dir";
 export type { CargoBuildSpec, CargoSource } from "./internal/cargo";

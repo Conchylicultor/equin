@@ -5,7 +5,10 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
+  readFileSync,
   rmSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -28,8 +31,8 @@ import {
   cargoBuildArgv,
   cargoCommand,
   cargoEnv,
-  crateTargetDir,
 } from "./cargo";
+import { crateTargetDir } from "./target-dir";
 
 const exec = execContextForTests();
 let base: AppPath;
@@ -169,7 +172,7 @@ describe("cargoBuild", () => {
       ),
     });
     expect(env.CARGO_TARGET_DIR).toEndWith(
-      "/cargo-target/plugins__infra__plugins__deps__plugins__rust__rust",
+      "/cargo-target/crates/plugins__infra__plugins__deps__plugins__rust__rust",
     );
     expect(env.PATH?.split(":")[0]).toEndWith("/mise/shims");
     expect(cargoEnv().CARGO_TARGET_DIR).toBe(process.env.CARGO_TARGET_DIR);
@@ -247,5 +250,83 @@ describe("cargoBuild", () => {
       (e: unknown) => e,
     );
     expect((err as Error).message).toContain("without leaving the binary");
+  }, 300_000);
+
+  test("a failed build leaves the warm target dir as it was, and no copy behind", async () => {
+    const warm = await crateTargetDir(crate);
+    const staging = join(warm, "..", "..", "staging");
+    const key = crate.replaceAll("/", "__");
+    // A dir of the pre-`crates/` layout, as a killed compile may have left it.
+    const legacy = join(warm, "..", "..", key);
+    mkdirSync(join(legacy, "release"), { recursive: true });
+    // A copy whose build process is gone (pid 2^22 - 1 is never handed out on macOS/Linux defaults).
+    const abandoned = join(staging, `${key}.4194303.deadbeef`);
+    mkdirSync(abandoned, { recursive: true });
+
+    await ensureDep(dep(cargoBuild({ crate, bin: "hello" })), exec, {
+      store,
+      root,
+    });
+    const built = join(warm, "release", "hello");
+    const before = readFileSync(built);
+    expect(existsSync(legacy)).toBe(false);
+    expect(existsSync(abandoned)).toBe(false);
+
+    writeFileSync(join(root, crate, "src", "main.rs"), "fn main() { nope }\n");
+    const err = await ensureDep(
+      dep(cargoBuild({ crate, bin: "hello" })),
+      exec,
+      {
+        store,
+        root,
+      },
+    ).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(Error);
+    expect(readFileSync(built).equals(before)).toBe(true);
+    expect(readdirSync(staging).filter((n) => n.startsWith(`${key}.`))).toEqual(
+      [],
+    );
+
+    // Fixed again: builds from the warm dir and publishes the new binary.
+    writeFileSync(
+      join(root, crate, "src", "main.rs"),
+      'fn main() { println!("hello again"); }\n',
+    );
+    const ready = await ensureDep(
+      dep(cargoBuild({ crate, bin: "hello" })),
+      exec,
+      {
+        store,
+        root,
+      },
+    );
+    expect(spawnSync(cargoBinary(ready), []).stdout.toString()).toBe(
+      "hello again\n",
+    );
+    expect(readFileSync(built).equals(before)).toBe(false);
+  }, 300_000);
+
+  test("a warm dir built from NEWER sources never hands this checkout its binary", async () => {
+    await ensureDep(dep(cargoBuild({ crate, bin: "hello" })), exec, {
+      store,
+      root,
+    });
+    // Another checkout's sources: different, and older than the warm dir's
+    // fingerprints — cargo alone would call the crate fresh.
+    const main = join(root, crate, "src", "main.rs");
+    writeFileSync(main, 'fn main() { println!("older but different"); }\n');
+    const past = new Date("2001-01-01T00:00:00Z");
+    utimesSync(main, past, past);
+    const ready = await ensureDep(
+      dep(cargoBuild({ crate, bin: "hello" })),
+      exec,
+      {
+        store,
+        root,
+      },
+    );
+    expect(spawnSync(cargoBinary(ready), []).stdout.toString()).toBe(
+      "older but different\n",
+    );
   }, 300_000);
 });

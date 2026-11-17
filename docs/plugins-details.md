@@ -36340,6 +36340,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `cargoBuildArgv`
               - `cargoCommand`
               - `cargoEnv`
+              - `crateCheckTargetDir`
               - `crateTargetDir`
           - Cross-plugin:
             - Imported by:
@@ -43079,8 +43080,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `holdParentLifeline`
           - `waitForFlock`
       - Cross-plugin:
-        - Imported by: 27 plugins — full list in [`plugins/packages/plugins/flock/REFERENCE.md`](../plugins/packages/plugins/flock/REFERENCE.md)
-          - `infra` ×10
+        - Imported by: 28 plugins — full list in [`plugins/packages/plugins/flock/REFERENCE.md`](../plugins/packages/plugins/flock/REFERENCE.md)
+          - `infra` ×11
           - `framework` ×7
           - `packages` ×4
           - `apps/chord/song-index`
