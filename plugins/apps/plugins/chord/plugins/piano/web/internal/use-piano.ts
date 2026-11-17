@@ -5,6 +5,7 @@ import {
   type InstrumentVoices,
 } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/instruments/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import { holdReload } from "@plugins/primitives/plugins/dom/plugins/reload-readiness/web";
 
 /** How long a struck chord rings, in seconds. */
 const RING_SECONDS = 1.4;
@@ -71,6 +72,19 @@ export function usePiano(volume: number): Piano {
   const assetsRef = useLatestRef(useInstrumentAssets());
   const graphRef = useRef<PianoGraph | null>(null);
   const volumeRef = useLatestRef(volume);
+  // The page's reload hold while a struck chord rings (a reload cuts it), and
+  // the deadline that releases it when the ring ends.
+  const ringingRef = useRef<{
+    release: () => void;
+    timer: ReturnType<typeof setTimeout>;
+  } | null>(null);
+  const stopRinging = useCallback(() => {
+    const ringing = ringingRef.current;
+    if (ringing === null) return;
+    ringingRef.current = null;
+    clearTimeout(ringing.timer);
+    ringing.release();
+  }, []);
 
   // The level (0–1) follows the setting, gliding rather than jumping.
   useEffect(() => {
@@ -85,13 +99,14 @@ export function usePiano(volume: number): Piano {
 
   useEffect(
     () => () => {
+      stopRinging();
       const graph = graphRef.current;
       graphRef.current = null;
       if (graph === null) return;
       graph.voices.dispose();
       if (graph.ctx.state !== "closed") void graph.ctx.close();
     },
-    [],
+    [stopRinging],
   );
 
   const play = useCallback(
@@ -122,18 +137,30 @@ export function usePiano(volume: number): Piano {
       // Unmounted while the samples loaded: nothing left to play into.
       if (graphRef.current !== graph) return;
       voices.allOff();
+      stopRinging();
+      const ringSeconds = opts?.ringSeconds ?? RING_SECONDS;
+      ringingRef.current = {
+        release: holdReload("Playback"),
+        timer: setTimeout(
+          stopRinging,
+          (LEAD_SECONDS + pitches.length * STRUM_SECONDS + ringSeconds) * 1000,
+        ),
+      };
       const start = ctx.currentTime + LEAD_SECONDS;
       pitches.forEach((pitch, i) => {
         voices.schedule({
           pitch,
           velocity: i === 0 ? BASS_VELOCITY : UPPER_VELOCITY,
           when: start + i * STRUM_SECONDS,
-          duration: opts?.ringSeconds ?? RING_SECONDS,
+          duration: ringSeconds,
         });
       });
     },
-    [instrumentsRef, volumeRef],
+    [instrumentsRef, volumeRef, stopRinging],
   );
-  const silence = useCallback(() => graphRef.current?.voices.allOff(), []);
+  const silence = useCallback(() => {
+    stopRinging();
+    graphRef.current?.voices.allOff();
+  }, [stopRinging]);
   return useMemo(() => ({ play, silence }), [play, silence]);
 }

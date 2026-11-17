@@ -6492,6 +6492,10 @@
       "name": "@equin/plugin-primitives-dom-overscroll-hint",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/dom/plugins/reload-readiness": {
+      "name": "@equin/plugin-primitives-dom-reload-readiness",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/dom/plugins/render-mode": {
       "name": "@equin/plugin-primitives-dom-render-mode",
       "version": "0.0.1",
@@ -11238,6 +11242,8 @@
     "@equin/plugin-primitives-dom-movable": ["@equin/plugin-primitives-dom-movable@workspace:plugins/primitives/plugins/dom/plugins/movable"],
 
     "@equin/plugin-primitives-dom-overscroll-hint": ["@equin/plugin-primitives-dom-overscroll-hint@workspace:plugins/primitives/plugins/dom/plugins/overscroll-hint"],
+
+    "@equin/plugin-primitives-dom-reload-readiness": ["@equin/plugin-primitives-dom-reload-readiness@workspace:plugins/primitives/plugins/dom/plugins/reload-readiness"],
 
     "@equin/plugin-primitives-dom-render-mode": ["@equin/plugin-primitives-dom-render-mode@workspace:plugins/primitives/plugins/dom/plugins/render-mode"],
 

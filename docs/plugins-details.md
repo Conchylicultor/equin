@@ -1385,16 +1385,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`piano`** — The Chord app's piano: usePiano (one AudioContext and one voice set per screen, striking a chord or a single note on Sonata's default instrument), <PianoCard> — the four-octave keyboard drawing the chord on show, its doubled bass greyed beside it, playable key by key — and the sound mix: the song and the piano as two channels, each on or off at its own level (useSoundMix, <SoundChannelControl channel/>), the piano following the song's playhead when on. The Chord app's piano, server side: registers the chord-sound config (the song and the piano, each on or off at its own level) so the learner's mix persists and shows in Settings.
           - Web:
             - Contributes: `ConfigV2.WebRegister` "config"
-            - Uses:
-              - `apps/chord/vocabulary.ChordNumeral`
-              - `apps/chord/vocabulary.chordToneStyle`
-              - `apps/sonata/audio/instruments.InstrumentVoices`
-              - `apps/sonata/audio/instruments.SonataAudio`
-              - `apps/sonata/audio/instruments.useInstrumentAssets`
+            - Uses: 21 symbols — full list in [`plugins/apps/plugins/chord/plugins/piano/REFERENCE.md`](../plugins/apps/plugins/chord/plugins/piano/REFERENCE.md)
+              - `apps/sonata/audio/instruments` ×3
+              - `config_v2` ×3
+              - `apps/chord/vocabulary` ×2
+              - `primitives/latest-ref` ×2
               - `apps/sonata/primitives/keyboard.Keyboard`
-              - `config_v2.ConfigV2`
-              - `config_v2.useConfig`
-              - `config_v2.useSetConfig`
               - `primitives/css/card.Card`
               - `primitives/css/fill.Fill`
               - `primitives/css/line.Line`
@@ -1403,9 +1399,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
+              - `primitives/dom/reload-readiness.holdReload`
               - `primitives/icon-button.IconButton`
-              - `primitives/latest-ref.useEventCallback`
-              - `primitives/latest-ref.useLatestRef`
             - Exports (types): `Piano`
             - Exports (values):
               - `PianoCard`
@@ -6120,6 +6115,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2/fields.FieldRenderer`
               - `primitives/app-shell.AppShellBrand`
               - `primitives/css/control-panel.ControlPanelPopover`
+              - `primitives/dom/reload-readiness.holdReload`
               - `primitives/dom/scroll-reveal.focusElement`
               - `primitives/icon-button.IconButton`
             - Exports (values): `PartyStage`
@@ -8853,6 +8849,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/slider.Slider`
                   - `primitives/css/spacing.Inset`
                   - `primitives/css/spacing.Stack`
+                  - `primitives/dom/reload-readiness.useReloadHold`
                   - `primitives/icon-button.IconButton`
                   - `primitives/latest-ref.useLatestRef`
                   - `primitives/scope/scoped-store.defineScopedStore`
@@ -34201,8 +34198,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `Core.Root`
           - `Core.Boot`
-        - Slot contributors: 40 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
-          - `Core.Root` ×38
+        - Slot contributors: 41 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+          - `Core.Root` ×39
           - `Core.Boot` ×2
       - Core:
         - Uses:
@@ -34274,8 +34271,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `webCollectedDir`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 109 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
-          - `primitives` ×24
+        - Imported by: 110 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+          - `primitives` ×25
           - `apps` ×19
           - `ui` ×8
           - `apps-core` ×6
@@ -34933,6 +34930,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `GET /api/attachments/:id`
           - `DELETE /api/attachments/:id`
           - `PUT /api/attachments/holds`
+      - Web:
+        - Uses: `primitives/dom/reload-readiness.holdReload`
+        - Exports (types): `UploadedAttachment`
+        - Exports (values):
+          - `holdAttachments`
+          - `uploadAttachment`
       - Core:
         - Uses:
           - `fields/date/config.dateField`
@@ -34977,11 +34980,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `no-db-backed-notify` — `server/internal/bytes.ts` (sanctioned)
           - `paths:no-hardcoded-paths` — `server/index.ts` (sanctioned)
           - `ids:pk-declared` — `server/internal/tables.ts` (debt)
-      - Web:
-        - Exports (types): `UploadedAttachment`
-        - Exports (values):
-          - `holdAttachments`
-          - `uploadAttachment`
       - Plugins:
         - **`memory-blobs`** (excluded) — Attachment bytes in memory: provides the AttachmentBlobs host service for a host without a filesystem (the browser composition, the portable boot test), written through to the host's declared storage (kept across reloads when it is persistent). Never booted by the desktop.
           - Server:
@@ -40774,6 +40772,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/line.Line`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
+          - `primitives/dom/reload-readiness.useReloadHold`
           - `primitives/hover-reveal.hoverRevealGroup`
           - `primitives/hover-reveal.hoverRevealTargetWithGroupFocus`
           - `primitives/latest-ref.useLatestRef`
@@ -41306,6 +41305,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`music`** — Umbrella for music building blocks shared across apps, knowing pitch classes, strings and sound only: the chord box (a chord's degree colour, numeral and tile) and the ambient engine (generative WebAudio music and sound effects).
   - Plugins:
     - **`ambient`** — Generative ambient music in WebAudio, no samples: createAmbient(ctx, { mood }) plays a mood (lofi — a swung 72 bpm Rhodes loop with drums and vinyl crackle; bossa — an 84 bpm nylon guitar over shaker and rim clave; nocturne — a rolled piano in 3/4 with crickets and music-box fireflies; ambient — slow pads, bells, surf and birds), each an endless procedural form rather than a loop — core's createComposer walks sections (intro, verse, chorus, bridge, break) over the mood's progressions, moves key now and then, and gives each section a melodic motif stated, answered and varied, fresh from a new seed every start — written bar by bar a little ahead of the audio clock, its look-ahead pump woken by the audio clock itself (a silent source's onended, never an interval), with start / stop / setMood / duck and sound effects (step, blip, enter, whoosh, chime); useAmbient({ mood, on }) owns its own AudioContext, built suspended when it mounts (constructing one blocks the main thread while the browser opens the audio output, so never inside a gesture), resumed by unlock() from a user gesture and closed on unmount.
+      - Web:
+        - Uses: `primitives/dom/reload-readiness.useReloadHold`
+        - Exports (types):
+          - `Ambient`
+          - `AmbientHandle`
+          - `AmbientSfx`
+          - `AmbientStatus`
+        - Exports (values):
+          - `createAmbient`
+          - `useAmbient`
       - Core:
         - Uses: `packages/seeded-random.mulberry32`
         - Exports (types):
@@ -41328,15 +41337,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SECTION_KINDS`
       - Cross-plugin:
         - Imported by: `apps/isle/world-view`
-      - Web:
-        - Exports (types):
-          - `Ambient`
-          - `AmbientHandle`
-          - `AmbientSfx`
-          - `AmbientStatus`
-        - Exports (values):
-          - `createAmbient`
-          - `useAmbient`
     - **`chord-box`** — The chord box: <ChordBox> (a frame painted in the colour of its numeral's number — filled tile, given or empty — holding its numeral and name, with a full-bleed hit button behind the content and now / selected states), <ChordNumeral> (the Roman numeral in the display serif, its mark raised in the sans), chordToneStyle / chordColour (the degree's --chord-N colour and tile depth as the --fn custom properties the .chord-tone paint reads), and chordPaint — the four named paints (tile, tint, tint-quiet, ghost) every chord surface applies by name instead of re-stating a chord colour, with .chord-caption for a reading under a numeral (V/V, I/3) in the paint's own ink. Knows degrees and strings only, so any app can draw a chord the same way.
       - Web:
         - Uses:
@@ -41407,6 +41407,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/live-state.useNotificationsClient`
           - `network/live/live-state.useResource`
           - `network/live/live-state.useResources`
+          - `primitives/dom/reload-readiness.holdReload`
           - `primitives/loading.Loading`
           - `primitives/log-channels.clientLog`
           - `primitives/networking.useTransport`
@@ -52572,6 +52573,32 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --primary-foreground`
               - `ui/tokens/color-palette --primary-text`
               - `ui/tokens/shadow --shadow-md`
+        - **`reload-readiness`** — Whether the tab may reload now, for the reload policy: holdReload(label) / useReloadHold(active, { label }) — a running process a reload would stop (playback, an upload in flight, a write not yet acked, a drag), taken inside the primitive that runs it; useReloadReadiness() → { holds, engaged, hidden } (engaged: a popup open, focus in an editable, a pressed pointer, or input in the last 10 s); quietReload() — flushKept, wait until no hold is left, flushKept again, reload. A page-wide gesture watcher (Core.Root) feeds engagement and visibility, and holds every drag (a pressed pointer that moved, a native drag) and every playing <video>/<audio> itself, so no library or feature can start one without its hold.
+          - Web:
+            - Contributes: `Core.Root` → `GestureWatcherRoot`
+            - Uses:
+              - `primitives/kept-state.flushKept`
+              - `primitives/overlay/popup-open.anyPopupOpen`
+              - `primitives/overlay/popup-open.subscribeOpenPopups`
+            - Exports (types):
+              - `ReloadHold`
+              - `ReloadReadiness`
+            - Exports (values):
+              - `holdReload`
+              - `quietReload`
+              - `readReloadReadiness`
+              - `subscribeReloadReadiness`
+              - `useReloadHold`
+              - `useReloadReadiness`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/chord/piano`
+              - `apps/keyboard-party/party`
+              - `apps/sonata/audio/engine`
+              - `infra/attachments`
+              - `integrations/youtube`
+              - `music/ambient`
+              - `network/live`
         - **`render-mode`** — Reading the browser while rendering, safely in both modes: useBrowserValue({ name, read, subscribe?, staticValue? }) (live: useSyncExternalStore, re-read on every change; static: staticValue, or a loud NoStaticValueError), useMediaQuery(query, staticValue), useViewportSize(staticValue), and useOwnedElement(name, create) — a DOM node a component mints once, which has no static form. The one place a render-time read of window / document / navigator / matchMedia happens (dom-access-safety/no-render-time-dom).
           - Cross-plugin:
             - Imported by: 24 plugins — full list in [`plugins/primitives/plugins/dom/plugins/render-mode/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/render-mode/REFERENCE.md)
@@ -53508,9 +53535,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useKept`
           - `writeDraft`
       - Cross-plugin:
-        - Imported by: 32 plugins — full list in [`plugins/primitives/plugins/kept-state/REFERENCE.md`](../plugins/primitives/plugins/kept-state/REFERENCE.md)
+        - Imported by: 33 plugins — full list in [`plugins/primitives/plugins/kept-state/REFERENCE.md`](../plugins/primitives/plugins/kept-state/REFERENCE.md)
           - `apps` ×10
-          - `primitives` ×8
+          - `primitives` ×9
           - `conversations` ×7
           - `apps-core` ×2
           - `hints/ask`
@@ -54913,6 +54940,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/adaptive-bar`
               - `primitives/css/ui-kit`
               - `primitives/data-view/view-core`
+              - `primitives/dom/reload-readiness`
               - `primitives/overlay/floating-action`
               - `primitives/row-actions`
           - Web:

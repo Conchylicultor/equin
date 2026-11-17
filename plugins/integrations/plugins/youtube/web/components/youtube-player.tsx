@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import { useReloadHold } from "@plugins/primitives/plugins/dom/plugins/reload-readiness/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import {
   Layer,
@@ -130,6 +131,10 @@ export function YouTubePlayer({
       host.replaceChildren();
     };
   }, [impl, callbacks, controls]);
+
+  // A playing video stops with the page: hold a reload until it pauses.
+  const state = useYouTubePlayerState(impl);
+  useReloadHold(state.kind === "ready" && state.playing, { label: "Playback" });
 
   if (loadError !== null) throw loadError;
 

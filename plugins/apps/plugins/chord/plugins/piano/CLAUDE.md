@@ -175,16 +175,12 @@ one held down — the one thing a value check cannot tell you.
 - Description: The Chord app's piano: usePiano (one AudioContext and one voice set per screen, striking a chord or a single note on Sonata's default instrument), <PianoCard> — the four-octave keyboard drawing the chord on show, its doubled bass greyed beside it, playable key by key — and the sound mix: the song and the piano as two channels, each on or off at its own level (useSoundMix, <SoundChannelControl channel/>), the piano following the song's playhead when on. The Chord app's piano, server side: registers the chord-sound config (the song and the piano, each on or off at its own level) so the learner's mix persists and shows in Settings.
 - Web:
   - Contributes: `ConfigV2.WebRegister` "config"
-  - Uses:
-    - `apps/chord/vocabulary.ChordNumeral`
-    - `apps/chord/vocabulary.chordToneStyle`
-    - `apps/sonata/audio/instruments.InstrumentVoices`
-    - `apps/sonata/audio/instruments.SonataAudio`
-    - `apps/sonata/audio/instruments.useInstrumentAssets`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/sonata/audio/instruments` ×3
+    - `config_v2` ×3
+    - `apps/chord/vocabulary` ×2
+    - `primitives/latest-ref` ×2
     - `apps/sonata/primitives/keyboard.Keyboard`
-    - `config_v2.ConfigV2`
-    - `config_v2.useConfig`
-    - `config_v2.useSetConfig`
     - `primitives/css/card.Card`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
@@ -193,9 +189,8 @@ one held down — the one thing a value check cannot tell you.
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
+    - `primitives/dom/reload-readiness.holdReload`
     - `primitives/icon-button.IconButton`
-    - `primitives/latest-ref.useEventCallback`
-    - `primitives/latest-ref.useLatestRef`
   - Exports (types): `Piano`
   - Exports (values):
     - `PianoCard`

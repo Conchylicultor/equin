@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-primitives-dom-reload-readiness",
+  "description": "Whether the tab may reload now: reload holds (running processes), engagement and visibility, and quietReload().",
+  "private": true,
+  "version": "0.0.1"
+}

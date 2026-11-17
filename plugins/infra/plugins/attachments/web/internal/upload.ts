@@ -1,5 +1,6 @@
 import type { z } from "zod";
 import type { FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { holdReload } from "@plugins/primitives/plugins/dom/plugins/reload-readiness/web";
 import {
   uploadAttachment as uploadAttachmentEndpoint,
   type UploadedAttachmentSchema,
@@ -21,5 +22,11 @@ export async function uploadAttachment(
   const form = new FormData();
   const fileObj = file instanceof File ? file : new File([file], filename, { type: mime });
   form.append("file", fileObj, filename);
-  return fetchEndpoint(uploadAttachmentEndpoint, {}, { body: form });
+  // A reload would cut the request: the page is held until it settles.
+  const release = holdReload("Upload");
+  try {
+    return await fetchEndpoint(uploadAttachmentEndpoint, {}, { body: form });
+  } finally {
+    release();
+  }
 }

@@ -169,6 +169,7 @@ notes through the same scheduler against the same store.
     - `primitives/css/slider.Slider`
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
+    - `primitives/dom/reload-readiness.useReloadHold`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/scope/scoped-store.defineScopedStore`

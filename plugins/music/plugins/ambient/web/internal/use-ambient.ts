@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useReloadHold } from "@plugins/primitives/plugins/dom/plugins/reload-readiness/web";
 import type { AmbientMood } from "../../core";
 import { createAmbient, type Ambient, type AmbientSfx } from "./ambient";
 
@@ -104,5 +105,7 @@ export function useAmbient(opts: {
     : running && on
       ? "playing"
       : "off";
+  // The music stops with the page (and needs a gesture to start again).
+  useReloadHold(status === "playing", { label: "Playback" });
   return { ...handle, status, contextState: unlocked ? ctxState : null };
 }

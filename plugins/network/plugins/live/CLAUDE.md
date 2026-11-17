@@ -1560,6 +1560,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `network/live/live-state.useNotificationsClient`
     - `network/live/live-state.useResource`
     - `network/live/live-state.useResources`
+    - `primitives/dom/reload-readiness.holdReload`
     - `primitives/loading.Loading`
     - `primitives/log-channels.clientLog`
     - `primitives/networking.useTransport`

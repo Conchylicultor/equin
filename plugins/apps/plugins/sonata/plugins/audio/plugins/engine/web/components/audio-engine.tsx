@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import { useReloadHold } from "@plugins/primitives/plugins/dom/plugins/reload-readiness/web";
 import { createSmoothClockModel } from "@plugins/packages/plugins/smooth-clock/core";
 import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import type { SongSetting } from "@plugins/apps/plugins/sonata/plugins/document/web";
@@ -140,6 +141,8 @@ function parseChannelKey(key: string): Map<string, string> {
  */
 export function AudioEngine() {
   const { score, isPlaying, timeline, registerClock } = useSession();
+  // Playback stops with the page: hold a reload while the transport plays.
+  useReloadHold(isPlaying, { label: "Playback" });
 
   // The latest (tempo-scaled) score, read by the scheduling effect for its
   // pedal lane without listing `score` (which changes on every tempo frame).

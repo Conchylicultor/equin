@@ -19,6 +19,8 @@
 // writes — shares ONE registry: writes to the same lane key are ordered against
 // each other whoever issued them.
 
+import { holdReload } from "@plugins/primitives/plugins/dom/plugins/reload-readiness/web";
+
 declare const sendLaneKeyBrand: unique symbol;
 
 /**
@@ -35,6 +37,13 @@ interface Lane {
 }
 
 const lanes = new Map<SendLaneKey, Lane>();
+
+/**
+ * The page's reload hold while any lane has an unsettled send: a write not yet
+ * acked dies with the page, and acks take milliseconds, so a quiet reload
+ * waits for the lanes to drain instead of keeping an outbox.
+ */
+let releaseReloadHold: (() => void) | null = null;
 
 /**
  * The lane of a resource TUPLE `(resource.key, params)`. Canonical (sorted-key
@@ -77,6 +86,7 @@ export function enqueueOnSendLane<T>(
     const run = send();
     const lane: Lane = { tail: run, depth: 1 };
     lanes.set(laneKey, lane);
+    releaseReloadHold ??= holdReload("Saving");
     trackSettle(laneKey, lane, run);
     return run;
   }
@@ -105,6 +115,10 @@ function trackSettle(
   const done = (): void => {
     lane.depth -= 1;
     if (lane.depth === 0 && lanes.get(laneKey) === lane) lanes.delete(laneKey);
+    if (lanes.size === 0 && releaseReloadHold !== null) {
+      releaseReloadHold();
+      releaseReloadHold = null;
+    }
   };
   void run.then(done, done);
 }

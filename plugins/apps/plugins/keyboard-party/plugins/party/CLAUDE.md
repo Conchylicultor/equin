@@ -14,6 +14,7 @@
     - `config_v2/fields.FieldRenderer`
     - `primitives/app-shell.AppShellBrand`
     - `primitives/css/control-panel.ControlPanelPopover`
+    - `primitives/dom/reload-readiness.holdReload`
     - `primitives/dom/scroll-reveal.focusElement`
     - `primitives/icon-button.IconButton`
   - Exports (values): `PartyStage`

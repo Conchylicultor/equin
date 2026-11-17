@@ -172,6 +172,7 @@ calls the controller makes; `@types/youtube` is not a dependency.
     - `primitives/css/line.Line`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
+    - `primitives/dom/reload-readiness.useReloadHold`
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/hover-reveal.hoverRevealTargetWithGroupFocus`
     - `primitives/latest-ref.useLatestRef`

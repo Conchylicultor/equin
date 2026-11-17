@@ -1,3 +1,4 @@
+import { holdReload } from "@plugins/primitives/plugins/dom/plugins/reload-readiness/web";
 import type { Instrument } from "../../core";
 
 /**
@@ -10,6 +11,26 @@ import type { Instrument } from "../../core";
 export class PartyAudio {
   private ctx: AudioContext | null = null;
   private out: AudioNode | null = null;
+  /** Sounds started and not ended yet, and the page's reload hold while any rings. */
+  private sounding = 0;
+  private releaseHold: (() => void) | null = null;
+
+  /** Holds a reload until `node` ends: a reload would cut it. */
+  private track(node: AudioScheduledSourceNode): void {
+    this.sounding += 1;
+    this.releaseHold ??= holdReload("Playback");
+    node.onended = () => {
+      if (this.sounding === 0) return; // disposed while it rang
+      this.sounding -= 1;
+      if (this.sounding === 0) this.endHold();
+    };
+  }
+
+  private endHold(): void {
+    if (this.releaseHold === null) return;
+    this.releaseHold();
+    this.releaseHold = null;
+  }
 
   private context(): { ctx: AudioContext; out: AudioNode } {
     if (!this.ctx || !this.out) {
@@ -54,6 +75,7 @@ export class PartyAudio {
     osc.connect(gain).connect(out);
     osc.start(t);
     osc.stop(t + dur + 0.05);
+    this.track(osc);
   }
 
   noise({
@@ -92,6 +114,7 @@ export class PartyAudio {
     gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     src.connect(biquad).connect(gain).connect(out);
     src.start(t);
+    this.track(src);
   }
 
   /** One note on one of the letter instruments. */
@@ -118,6 +141,8 @@ export class PartyAudio {
   }
 
   dispose(): void {
+    this.sounding = 0;
+    this.endHold();
     void this.ctx?.close();
     this.ctx = null;
     this.out = null;

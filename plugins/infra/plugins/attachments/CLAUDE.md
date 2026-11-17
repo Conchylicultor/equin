@@ -130,6 +130,12 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
     - `GET /api/attachments/:id`
     - `DELETE /api/attachments/:id`
     - `PUT /api/attachments/holds`
+- Web:
+  - Uses: `primitives/dom/reload-readiness.holdReload`
+  - Exports (types): `UploadedAttachment`
+  - Exports (values):
+    - `holdAttachments`
+    - `uploadAttachment`
 - Core:
   - Uses:
     - `fields/date/config.dateField`
@@ -174,11 +180,6 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
     - `no-db-backed-notify` — `server/internal/bytes.ts` (sanctioned)
     - `paths:no-hardcoded-paths` — `server/index.ts` (sanctioned)
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)
-- Web:
-  - Exports (types): `UploadedAttachment`
-  - Exports (values):
-    - `holdAttachments`
-    - `uploadAttachment`
 - Sub-plugins:
   - **`memory-blobs`** (excluded) — Attachment bytes in memory: provides the AttachmentBlobs host service for a host without a filesystem (the browser composition, the portable boot test), written through to the host's declared…
 
