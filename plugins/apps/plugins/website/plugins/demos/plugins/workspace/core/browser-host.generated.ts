@@ -53,6 +53,7 @@ export const browserHost = {
     "apps.agent-manager.icons",
     "apps.agent-manager.isle-building",
     "apps.agent-manager.pages-nav",
+    "apps.agent-manager.prototypes-nav",
     "apps.agent-manager.shell",
     "apps.agent-manager.welcome",
     "apps.debug.shell",

@@ -253,6 +253,10 @@
       "name": "@equin/plugin-apps-agent-manager-pages-nav",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/agent-manager/plugins/prototypes-nav": {
+      "name": "@equin/plugin-apps-agent-manager-prototypes-nav",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/agent-manager/plugins/shell": {
       "name": "@equin/plugin-apps-agent-manager-shell",
       "version": "0.0.1",
@@ -4213,10 +4217,6 @@
       "name": "@equin/plugin-framework-tooling-codegen-composition-registries",
       "version": "0.0.1",
     },
-    "plugins/framework/plugins/tooling/plugins/generated-artifacts": {
-      "name": "@equin/plugin-framework-tooling-generated-artifacts",
-      "version": "0.0.1",
-    },
     "plugins/framework/plugins/tooling/plugins/collected-dir": {
       "name": "@equin/plugin-framework-tooling-collected-dir",
       "version": "0.0.1",
@@ -4239,6 +4239,10 @@
     },
     "plugins/framework/plugins/tooling/plugins/format": {
       "name": "@equin/plugin-framework-tooling-format",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/tooling/plugins/generated-artifacts": {
+      "name": "@equin/plugin-framework-tooling-generated-artifacts",
       "version": "0.0.1",
     },
     "plugins/framework/plugins/tooling/plugins/guards": {
@@ -8207,6 +8211,8 @@
 
     "@equin/plugin-apps-agent-manager-pages-nav": ["@equin/plugin-apps-agent-manager-pages-nav@workspace:plugins/apps/plugins/agent-manager/plugins/pages-nav"],
 
+    "@equin/plugin-apps-agent-manager-prototypes-nav": ["@equin/plugin-apps-agent-manager-prototypes-nav@workspace:plugins/apps/plugins/agent-manager/plugins/prototypes-nav"],
+
     "@equin/plugin-apps-agent-manager-shell": ["@equin/plugin-apps-agent-manager-shell@workspace:plugins/apps/plugins/agent-manager/plugins/shell"],
 
     "@equin/plugin-apps-agent-manager-welcome": ["@equin/plugin-apps-agent-manager-welcome@workspace:plugins/apps/plugins/agent-manager/plugins/welcome"],
@@ -10175,8 +10181,6 @@
 
     "@equin/plugin-framework-tooling-codegen-composition-registries": ["@equin/plugin-framework-tooling-codegen-composition-registries@workspace:plugins/framework/plugins/tooling/plugins/codegen/plugins/composition-registries"],
 
-    "@equin/plugin-framework-tooling-generated-artifacts": ["@equin/plugin-framework-tooling-generated-artifacts@workspace:plugins/framework/plugins/tooling/plugins/generated-artifacts"],
-
     "@equin/plugin-framework-tooling-collected-dir": ["@equin/plugin-framework-tooling-collected-dir@workspace:plugins/framework/plugins/tooling/plugins/collected-dir"],
 
     "@equin/plugin-framework-tooling-collected-dir-discovery": ["@equin/plugin-framework-tooling-collected-dir-discovery@workspace:plugins/framework/plugins/tooling/plugins/collected-dir/plugins/discovery"],
@@ -10188,6 +10192,8 @@
     "@equin/plugin-framework-tooling-exempt": ["@equin/plugin-framework-tooling-exempt@workspace:plugins/framework/plugins/tooling/plugins/exempt"],
 
     "@equin/plugin-framework-tooling-format": ["@equin/plugin-framework-tooling-format@workspace:plugins/framework/plugins/tooling/plugins/format"],
+
+    "@equin/plugin-framework-tooling-generated-artifacts": ["@equin/plugin-framework-tooling-generated-artifacts@workspace:plugins/framework/plugins/tooling/plugins/generated-artifacts"],
 
     "@equin/plugin-framework-tooling-guards": ["@equin/plugin-framework-tooling-guards@workspace:plugins/framework/plugins/tooling/plugins/guards"],
 

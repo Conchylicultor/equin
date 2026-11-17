@@ -691,6 +691,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/action-bar.Conversation`
               - `primitives/icon-button.IconButton`
               - `primitives/link-gesture.linkProps`
+        - **`prototypes-nav`** — Prototypes entry point in the agent manager: a conversation-toolbar button that opens the Prototypes gallery (the Prototypes app; ⌘/middle-click for a new browser tab).
+          - Web:
+            - Contributes: `Conversation.ActionBar` → `PrototypesGalleryButton`
+            - Uses:
+              - `apps/prototypes/gallery.prototypesGalleryPane`
+              - `conversations/conversation-view/action-bar.Conversation`
+              - `primitives/pane.PaneIconAction`
+              - `primitives/pane.useOpenPane`
         - **`shell`** — App shell for the agent manager. Registers the /agents app entry, renders the main Shell layout, and contributes the app's own theme (Mist), which the agent manager selects.
           - Web:
             - Contributes:
@@ -8459,7 +8467,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/color-palette --accent`
               - `ui/tokens/color-palette --primary-text`
-            - Imported by: `apps/prototypes/present`
+            - Imported by:
+              - `apps/agent-manager/prototypes-nav`
+              - `apps/prototypes/present`
         - **`icons`** — Contributes the prototypes icon family (prototypesIcons) to Icons.Family, so a scope whose iconFamily is prototypes — the Prototypes theme's — draws its glyphs.
           - Web:
             - Contributes: `Icons.Family` "Prototypes"
@@ -8562,6 +8572,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shadow --shadow-popover`
               - `ui/tokens/shadow --shadow-xl`
             - Imported by:
+              - `apps/agent-manager/prototypes-nav`
               - `apps/prototypes`
               - `apps/prototypes/canvas`
               - `apps/prototypes/files`
@@ -18353,6 +18364,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Slots: `Conversation.ActionBar`
             - Slot contributors:
               - `Conversation.ActionBar` ← `apps.agent-manager.pages-nav`
+              - `Conversation.ActionBar` ← `apps.agent-manager.prototypes-nav`
               - `Conversation.ActionBar` ← `conversations.conversation-view.artifacts`
               - `Conversation.ActionBar` ← `conversations.conversation-view.commits-graph`
               - `Conversation.ActionBar` ← `conversations.conversation-view.explorer`
@@ -18372,6 +18384,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps/agent-manager/pages-nav`
+              - `apps/agent-manager/prototypes-nav`
               - `conversations/conversation-view`
               - `conversations/conversation-view/artifacts`
               - `conversations/conversation-view/commits-graph`
@@ -55190,8 +55203,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --spacing`
-        - Imported by: 218 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `apps` ×79
+        - Imported by: 219 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `apps` ×80
           - `conversations` ×33
           - `debug` ×29
           - `active-data` ×14

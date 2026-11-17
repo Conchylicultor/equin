@@ -48,6 +48,7 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/agent-manager/plugins/icons",
   "apps/plugins/agent-manager/plugins/isle-building",
   "apps/plugins/agent-manager/plugins/pages-nav",
+  "apps/plugins/agent-manager/plugins/prototypes-nav",
   "apps/plugins/browser/plugins/bookmarks",
   "apps/plugins/browser/plugins/history",
   "apps/plugins/browser/plugins/isle-building",

@@ -1,4 +1,4 @@
-// @hash 5e5ff89278c4
+// @hash 993f1e954356
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -8,6 +8,7 @@
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
     "apps.agent-manager.pages-nav:pages",
+    "apps.agent-manager.prototypes-nav:prototypes",
     "conversations.conversation-view.artifacts:artifacts",
     "conversations.conversation-view.commits-graph:commits-graph",
     "conversations.conversation-view.explorer:explorer",
