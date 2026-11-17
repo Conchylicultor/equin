@@ -3,6 +3,62 @@
 The equin installer: `install.sh` (repo root — its URL is the documented
 entry point) emits ONE structured event stream, and renderers draw it. Design:
 [`research/2026-11-17-global-installer-window.md`](../../research/2026-11-17-global-installer-window.md).
+User-facing summary: [`docs/setup.md`](../../docs/setup.md) § Quick install.
+
+## Running it
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/equinai/equin/main/install.sh | bash          # newest release
+curl -fsSL …/install.sh | bash -s -- --terminal --ref main                                   # piped: options after `bash -s --`
+./install.sh                                                                                 # from a clone: installs THAT checkout
+```
+
+| Flag | What it does |
+| --- | --- |
+| `--dir <path>` | Where the clone goes (default `~/equin`). |
+| `--repo <url>` | Clone a fork; checks out its `main` (forks have no releases). |
+| `--no-shell-rc` | Don't add mise's activation to the shell's rc file. |
+| `--ref <tag\|main>` | Install that release tag, or `main`'s tip; default the newest release. |
+| `--terminal` | Draw the install in the terminal; no window is downloaded. |
+| `--window` | Open the window even where stage 0 would guess terminal (SSH, `CI`, no TTY…); still probed, and stops loudly when the probe fails. |
+| `--dry-run` | Emit every event type, touching nothing but its run dir (§ The dry run). |
+| `--fix [--yes]` | Start Claude Code on the problem the last install stopped on (`--yes`: without asking before each command). |
+| `--report` | Print (and open) the GitHub issue link for that problem. |
+
+Internal (passed between the install's own processes, never typed):
+`--release`, `--checkout` (stage 0 → the release's script), `--events-fd`,
+`--control-fd` (the window → its child), `--stage0-only` (the stage-0 test).
+
+**The views.** The window (`equin-installer`, [`window`](plugins/window/CLAUDE.md))
+by default on a desktop; the **interactive terminal** view (a redrawn status
+block) over SSH, with `--terminal`, or where no window can open; the **plain**
+view (append-only lines) under `CI` or into a pipe. All three draw the same
+stream, so they say the same words. Which one, and why: § Stage 0, step 4.
+
+## The five message rules
+
+Every installer message — whatever stops the install, asks for a permission,
+pauses it or leaves something out — keeps the user's five rules (decided
+2026-11-17; owner and enforcement:
+[`infra/launcher/installer-notice`](../infra/plugins/launcher/plugins/installer-notice/CLAUDE.md)):
+
+1. **No internal names** (gateway, menu-bar helper, crate, TCC, sandbox,
+   build slot, launchd, PID, bundle…): say what the user gets — "an icon in
+   your menu bar", "equin's own database".
+2. **Say what equin was trying to do, and why it helps the user.**
+3. **Say why it was blocked, in the user's terms.**
+4. **Say what the user can do now, and what happens if they skip or say no**
+   — optional or not, what still works, how to add it later.
+5. **Raw technical lines** (error output, permission ids, paths, labels,
+   PIDs) **go in the log or the evidence area, never in the message.**
+
+Where they are held: in TypeScript, `InstallerNotice` (one field per rule)
+built through `defineNotice`, which refuses an internal name, a path or a
+label; in `install.sh`, the split is the signature — `fail <message>
+<details>`, `pause <step> <kind> <title> <text> <optional> <manual> <evidence…>`
+(evidence is its own argument list, the `pause` event's `evidence`), and the
+plan's `label` / `doing` per step. A renderer never writes a message of its
+own (next section): fix wording in the step engine, and every view changes.
 
 ## The event stream (protocol v1)
 
@@ -26,6 +82,29 @@ entry point) emits ONE structured event stream, and renderers draw it. Design:
 - **Messages live in the events**: labels and text come from the step engine,
   never from a renderer — the installer message rules
   (`infra/launcher/installer-notice`) are applied in one place.
+- **Transport**: install.sh writes every event to its run dir's FIFO; a hub
+  appends it to `events.jsonl` and hands it on to the window (`--events-fd`,
+  the child's fd 3) or to the terminal view (§ install.sh: the hub).
+  `parseInstallEventLine` reads one line (`{ok, event}` / `{ok:false,
+  error}`); a renderer treats a line outside the schema as a loud protocol
+  error, never skips it.
+- **Decisions go the other way, as words**, one per line on `control.fifo`
+  (the window's fd 4 forwarded there, a key in the interactive terminal, or
+  Claude's `resume`): `retry`, `skip` (only when the pause says `optional`),
+  `quit` (`eof` = the window closed); `fix-app` / `fix-cli` / `show-claude`
+  are carried out by the forwarder itself. The window's full command set is
+  in [`window`](plugins/window/CLAUDE.md) § the page.
+- **Versioning**: `v` is the protocol's major version
+  (`INSTALL_PROTOCOL_VERSION`); a renderer refuses any other. Every event is
+  a `strictObject`, so even a new field breaks an older reader — which is
+  safe only because a release's window binary reads that release's own
+  `install.sh` and `./equin` (stage 0 fetches both from one tag). Bump `v`
+  when that stops holding (a window reading another release's stream).
+- **Changing the stream**: edit `core/internal/events.ts`, the bash emitter
+  (`ev` / `ev_*` in install.sh — hand-written JSON, escaped by `json_str`),
+  the dry run (it must emit every type), and the renderers (the window's
+  `model.ts`, install.sh's `render`). The dry-run stream test fails until the
+  bash side matches the schema.
 
 ## install.sh: the hub and the run dir
 

@@ -48,12 +48,16 @@ const AUDIENCES = [
   { id: "agent", label: "For your agent" },
 ] as const;
 
-/** What the installer does, in the order it does it — `install.sh`'s steps. */
+/**
+ * What the installer does, in the order it does it — `install.sh`'s stage 0,
+ * then its steps (its plan's groups), then how it shows them.
+ */
 const INSTALLER_STEPS = [
-  "Installs the Xcode Command Line Tools and mise",
-  "Clones equin and installs its pinned toolchain",
-  "Offers to install Claude Code, which agents need to run",
-  "Starts equin as a background service and runs the first build",
+  "Downloads the newest equin release and checks it against the release's published checksums",
+  "Installs Apple's developer tools and mise, the tool manager",
+  "Clones equin and installs its pinned Bun, Go and Rust",
+  "Starts equin's services in the background and builds every app",
+  "Shows its progress in a small window (in the terminal over SSH, or with --terminal). If a step fails, it pauses and offers Try again, Fix with Claude or Report issue",
 ];
 
 /** The same install, said to an agent: run the command, repair, report back. */

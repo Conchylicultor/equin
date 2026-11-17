@@ -8,11 +8,48 @@ One-time environment setup for developing equin.
 curl -fsSL https://raw.githubusercontent.com/equinai/equin/main/install.sh | bash
 ```
 
-Or `./install.sh` from inside a clone or fork you already have. Options:
-`--dir <path>` (default `~/equin`), `--repo <url>` (your fork),
-`--no-shell-rc`; piped, pass them after `bash -s --`. It runs the steps
-below, skipping whatever is already done, so re-running it resumes
-where it stopped. It lists what it will change before changing anything.
+It installs the **newest release** (a tag on `main`: the script, and the
+installer window, are downloaded from that release and checked against its
+`SHA256SUMS` before anything runs; with no release published yet, `main`'s
+tip, saying so). Or `./install.sh` from inside a clone or
+fork you already have, which installs that checkout. It runs the steps
+below, skipping whatever is already done, so re-running it resumes where it
+stopped. It lists what it will change before changing anything.
+
+**Where it shows.** On a Mac or Linux desktop, a small **installer window**
+opens: each step, a progress bar, the time left once one is known, and the
+log behind "Show log". Over SSH, in CI, piped, inside a sandboxed shell, or
+where no window can open (Linux without WebKitGTK or a desktop session), it
+runs **in the terminal** instead: a status block redrawn in place, or plain
+lines when the output is not a terminal. The window and both terminal views
+show the same steps and the same messages.
+
+**When something goes wrong** the install pauses rather than stopping with a
+bare error: it says what it was doing, what blocked it, and what you can do —
+**Try again**, **Fix with Claude** (Claude Code, or the Claude app, opened
+with the problem and the log; it asks before each command, and the install
+carries on once it is fixed), **Report issue** (a prefilled GitHub issue, your
+account and machine names removed; nothing is sent until you submit it), and
+**Skip** when the step is optional. In the terminal they are keys; in plain
+mode it prints the next commands and exits.
+
+Options (piped, pass them after `bash -s --`, e.g. `curl … | bash -s --
+--terminal`):
+
+| Option | |
+| --- | --- |
+| `--dir <path>` | Where equin goes (default `~/equin`). |
+| `--repo <url>` | Install your fork (its `main`). |
+| `--no-shell-rc` | Don't edit your shell's rc file. |
+| `--ref <tag\|main>` | Install that release, or the latest `main`. |
+| `--terminal` / `--window` | Force the terminal view, or the window. |
+| `--dry-run` | Walk through every screen without installing anything. |
+| `--fix [--yes]` | Start Claude Code on the problem the last install stopped on. |
+| `--report` | Print (and open) the issue link for that problem. |
+
+Every run keeps its record in `~/.equin/logs/install/<run>/` (`latest` is the
+newest): the full log, the events, and after a pause what Fix with Claude and
+Report issue use. How it works: [`plugins/installer`](../plugins/installer/CLAUDE.md).
 
 ## Install, step by step
 
