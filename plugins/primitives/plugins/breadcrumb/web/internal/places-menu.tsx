@@ -51,6 +51,12 @@ export interface BreadcrumbPlacesProps {
    * `growing` while that read is in flight.
    */
   more?: { load: () => void; growing: boolean };
+  /**
+   * What the menu says when the level holds no places (none loaded and no
+   * more to read). Default "Nothing inside"; a level that lists only some
+   * kind of place says which ("No folders" — the folder may hold files).
+   */
+  empty?: ReactNode;
 }
 
 /** Closes the whole menu tree once a place is chosen. */
@@ -129,13 +135,19 @@ function onTrailFirst(
  * marked; a place with something inside opens it as a submenu on hover, while
  * a click on it still goes there. The menu scrolls past its height cap.
  */
-export function BreadcrumbPlaces({ places, more }: BreadcrumbPlacesProps) {
+export function BreadcrumbPlaces({
+  places,
+  more,
+  empty = "Nothing inside",
+}: BreadcrumbPlacesProps) {
   const close = useContext(CloseMenu);
   if (places === "loading") return <Loading variant="rows" count={3} />;
-  if (places.length === 0) {
+  // Empty only when nothing is left to read: a window with no places yet but
+  // more past it (a page of files before the next folder) offers its More.
+  if (places.length === 0 && more === undefined) {
     return (
       <DropdownMenuItem disabled className="text-muted-foreground">
-        Nothing inside
+        {empty}
       </DropdownMenuItem>
     );
   }

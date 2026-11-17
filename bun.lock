@@ -6834,6 +6834,10 @@
       "name": "@equin/plugin-primitives-path-bar",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/path-bar/plugins/folder-places": {
+      "name": "@equin/plugin-primitives-path-bar-folder-places",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/perfs": {
       "name": "@equin/plugin-primitives-perfs",
       "version": "0.0.1",
@@ -11458,6 +11462,8 @@
     "@equin/plugin-primitives-passthrough": ["@equin/plugin-primitives-passthrough@workspace:plugins/primitives/plugins/passthrough"],
 
     "@equin/plugin-primitives-path-bar": ["@equin/plugin-primitives-path-bar@workspace:plugins/primitives/plugins/path-bar"],
+
+    "@equin/plugin-primitives-path-bar-folder-places": ["@equin/plugin-primitives-path-bar-folder-places@workspace:plugins/primitives/plugins/path-bar/plugins/folder-places"],
 
     "@equin/plugin-primitives-perfs": ["@equin/plugin-primitives-perfs@workspace:plugins/primitives/plugins/perfs"],
 

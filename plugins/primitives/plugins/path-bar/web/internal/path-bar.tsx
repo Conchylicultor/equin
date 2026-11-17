@@ -129,6 +129,22 @@ export function PathBar({
   const density = useControlSize();
 
   const segments = useMemo(() => source.segments(path), [source, path]);
+  const crumbs = useMemo(() => {
+    const at = {
+      trail: new Set(segments.map((seg) => seg.path)),
+      activationFor: (dir: string) => activationFor({ kind: "dir", path: dir }),
+    };
+    return segments.map((seg, i) => {
+      const parent = segments[i - 1];
+      return {
+        ...seg,
+        activation: activationFor({ kind: "dir", path: seg.path }),
+        // Resting on a crumb lists the places beside it — its parent's.
+        siblings:
+          parent === undefined ? undefined : source.places(parent.path, at),
+      };
+    });
+  }, [segments, source, activationFor]);
 
   const start = useEventCallback(() => {
     session.current += 1;
@@ -264,10 +280,7 @@ export function PathBar({
         )}
       >
         <Breadcrumb
-          segments={segments.map((seg) => ({
-            ...seg,
-            activation: activationFor({ kind: "dir", path: seg.path }),
-          }))}
+          segments={crumbs}
           text={trailText}
           leafWeight={leafWeight}
           actions={actions}

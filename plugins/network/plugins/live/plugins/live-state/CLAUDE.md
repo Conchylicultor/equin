@@ -902,14 +902,14 @@ Details:
     - `unresolved`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/color-palette --destructive`
-  - Imported by: 318 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 319 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×85
     - `conversations` ×49
     - `debug` ×31
     - `ui` ×26
     - `tasks` ×25
     - `page` ×16
-    - `primitives` ×15
+    - `primitives` ×16
     - `infra` ×10
     - `build` ×9
     - `active-data` ×5

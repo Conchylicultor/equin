@@ -1,5 +1,6 @@
-import type { ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
+import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
 
 /** One crumb of a path: what it says, and the path it stands for. */
 export interface PathSegment {
@@ -8,6 +9,27 @@ export interface PathSegment {
   /** The path this crumb navigates to. */
   path: string;
 }
+
+/** Where a crumb's menu is opened from: the trail it sits on, and where a place goes. */
+export interface PathPlacesAt {
+  /**
+   * Every path the trail goes through, spelled as its crumbs spell them: the
+   * place on it is listed first and marked.
+   */
+  trail: ReadonlySet<string>;
+  /** Where choosing a place goes — `undefined` for a trail that goes nowhere. */
+  activationFor: (path: string) => Activation | undefined;
+}
+
+/**
+ * The places inside `parent` as a crumb's menu: the element that reads them
+ * and draws them with `<BreadcrumbPlaces>` (each with what is inside it as a
+ * submenu), mounted only while the menu is open — so a level is read when it
+ * opens, never ahead. A crumb's siblings are the places inside its parent
+ * crumb's path. Children are spelled `parent` + separator + name, the way the
+ * crumbs spell them, so the trail marks the right one.
+ */
+export type PathPlaces = (parent: string, at: PathPlacesAt) => ReactElement;
 
 /** What a typed path turned out to be. */
 export type PathResolution =
@@ -54,6 +76,13 @@ export interface PathBarSource {
    * Default: `path` itself.
    */
   fieldText?: (path: string) => string;
+  /**
+   * The places beside each crumb: resting the pointer on a crumb lists its
+   * parent's places (a click still goes to the crumb). Required — a path
+   * space the bar can walk is one whose levels it can list; the first crumb
+   * has no parent on the trail, so it has no menu.
+   */
+  places: PathPlaces;
   /** Resolve a typed path before navigating to it. */
   validate: (path: string) => Promise<PathResolution>;
   /** The path separator. Default `"/"`. */

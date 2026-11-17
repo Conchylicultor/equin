@@ -5178,7 +5178,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ConfigV2.WebRegister` "files"
               - `FileBrowserSlots.RowActions` "extract" → `ExtractAction`
               - `FileBrowserSlots.RowActions` "copy-path" → `CopyPathAction`
-            - Uses: 85 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
+            - Uses: 86 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
               - `primitives/data-view` ×10
               - `primitives/pane` ×8
               - `primitives/file-viewer` ×7
@@ -5212,6 +5212,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/icon-button.IconButton`
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog.useOpenDialog`
+              - `primitives/path-bar/folder-places.folderPlaces`
               - `primitives/scope/dom-scope.defineDomScope`
               - `primitives/scope/surface-id.useSurfaceTabId`
               - `primitives/search.SearchInput`
@@ -39686,8 +39687,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `snapEdge`
               - `writeFileLocations`
           - Cross-plugin:
-            - Imported by: 24 plugins — full list in [`plugins/infra/plugins/paths/plugins/file-systems/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/file-systems/REFERENCE.md)
-              - `primitives` ×9
+            - Imported by: 25 plugins — full list in [`plugins/infra/plugins/paths/plugins/file-systems/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/file-systems/REFERENCE.md)
+              - `primitives` ×10
               - `apps` ×5
               - `conversations` ×4
               - `infra` ×3
@@ -42587,14 +42588,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 318 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+            - Imported by: 319 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `apps` ×85
               - `conversations` ×49
               - `debug` ×31
               - `ui` ×26
               - `tasks` ×25
               - `page` ×16
-              - `primitives` ×15
+              - `primitives` ×16
               - `infra` ×10
               - `build` ×9
               - `active-data` ×5
@@ -49269,6 +49270,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/plugin-view`
           - `primitives/filepath-breadcrumb`
           - `primitives/path-bar`
+          - `primitives/path-bar/folder-places`
           - `tasks/supervisor-roles/spend`
           - `ui/breadcrumb-separator`
       - Core:
@@ -51189,8 +51191,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 478 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
-              - `primitives` ×113
+            - Imported by: 479 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+              - `primitives` ×114
               - `apps` ×110
               - `conversations` ×55
               - `page` ×27
@@ -53740,6 +53742,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/icon-button.IconButton`
           - `primitives/loading.Loading`
           - `primitives/overlay/popover.InlinePopover`
+          - `primitives/path-bar/folder-places.folderPlaces`
           - `ui/icons.Icon`
         - Exports (types):
           - `FolderPickerPopoverProps`
@@ -55966,6 +55969,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `PathBarProps`
           - `PathBarSource`
+          - `PathPlaces`
+          - `PathPlacesAt`
           - `PathResolution`
           - `PathSegment`
           - `PathTarget`
@@ -55994,6 +55999,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/file-explorer/browser`
           - `conversations/conversation-view/code/file-pane`
+      - Plugins:
+        - **`folder-places`** — A file system's folders as a path crumb's menu: folderPlaces(fs) is the PathPlaces a path bar source or a FilepathBreadcrumb hands its crumbs — each level the folders inside one folder (hidden ones only when on the trail), read with useFolderListing when its menu opens, sorted as people sort, the one on the trail first and marked, each folder's own folders a submenu read when it opens; the loading and failure states drawn in the menu, and a bounded window with More for a very large folder.
+          - Web:
+            - Uses:
+              - `infra/paths/file-systems.useFolderListing`
+              - `network/live/live-state.ResourceErrorInline`
+              - `primitives/breadcrumb.BreadcrumbPlaces`
+              - `primitives/css/ui-kit.DropdownMenuItem`
+            - Exports (values):
+              - `folderPlaces`
+              - `FolderPlaces`
+          - Cross-plugin:
+            - Uses tokens: `ui/tokens/color-palette --destructive`
+            - Imported by:
+              - `apps/file-explorer/browser`
+              - `primitives/folder-picker`
     - **`perfs`** — Umbrella for client-side performance primitives.
       - Plugins:
         - **`boot-trace`** — Module-level boot-span store imported eagerly by the framework boot path. Captures one-clock boot spans (startBootSpan/markBootInstant/recordBootSpan) and folds in Navigation/Paint Timing plus the first React commit; getBootTrace() assembles the trace. Every span / instant is mirrored as a User Timing measure / mark named boot:<id>, so an outside reader (a Playwright script) reads it with performance.getEntriesByType.
@@ -65871,10 +65892,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ColorPaletteTokenValues`
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
-            - Tokens used by: 559 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 560 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×123
               - `conversations` ×97
-              - `primitives` ×78
+              - `primitives` ×79
               - `debug` ×42
               - `page` ×34
               - `plugin-meta` ×28

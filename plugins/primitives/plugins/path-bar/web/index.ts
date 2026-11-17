@@ -3,6 +3,8 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 export { PathBar, type PathBarProps } from "./internal/path-bar";
 export type {
   PathBarSource,
+  PathPlaces,
+  PathPlacesAt,
   PathResolution,
   PathSegment,
   PathTarget,

@@ -83,7 +83,8 @@ export function FilePeekTitle() {
     case "pending":
       return <Loading variant="block" className="h-4 w-48" />;
     case "none":
-      return <FilepathBreadcrumb path={path} />;
+      // No browsable place: nothing to list beside the crumbs.
+      return <FilepathBreadcrumb path={path} places={null} />;
     case "ready":
       // A folder crumb opens the folder pane in the place's own system.
       return (

@@ -72,10 +72,18 @@ function fakeSource(): PathBarSource & {
   /** Every prefix the bar's render read completions for (`null`: none). */
   asked: ReturnType<typeof vi.fn>;
   validate: ReturnType<typeof vi.fn>;
+  /** Every level a crumb's menu was built for: its parent and the trail. */
+  placesFor: ReturnType<typeof vi.fn>;
 } {
   const asked = vi.fn();
+  const placesFor = vi.fn();
   return {
     asked,
+    placesFor,
+    places: (parent, at) => {
+      placesFor(parent, [...at.trail], at.activationFor(parent));
+      return <span data-places-of={parent} />;
+    },
     segments: (path) => {
       const parts = path.split("/").filter(Boolean);
       return [
@@ -130,6 +138,20 @@ describe("PathBar", () => {
     expect(bar().dataset.pathBar).toBe("crumbs");
     fireEvent.click(screen.getByRole("button", { name: "vol" }));
     expect(onNavigate).toHaveBeenCalledWith({ kind: "dir", path: "/vol" });
+  });
+
+  it("gives every crumb but the first its parent's places, with the trail", () => {
+    const { source } = setup("/vol/me/code");
+    // "/" has no parent on the trail; "vol", "me" and "code" each list theirs.
+    expect(source.placesFor.mock.calls.map((c) => c[0])).toEqual([
+      "/",
+      "/vol",
+      "/vol/me",
+    ]);
+    const [, trail, activation] = source.placesFor.mock.calls[0]!;
+    expect(trail).toEqual(["/", "/vol", "/vol/me", "/vol/me/code"]);
+    // A place goes where the bar sends a folder.
+    expect(activation).toMatchObject({ open: expect.any(Function) });
   });
 
   it("a middle-click on a crumb opens its href in a new browser tab, staying put", () => {

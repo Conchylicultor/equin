@@ -261,8 +261,8 @@ file viewer all name a file system and read through here.
     - `snapEdge`
     - `writeFileLocations`
 - Cross-plugin:
-  - Imported by: 24 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives` ×9
+  - Imported by: 25 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives` ×10
     - `apps` ×5
     - `conversations` ×4
     - `infra` ×3

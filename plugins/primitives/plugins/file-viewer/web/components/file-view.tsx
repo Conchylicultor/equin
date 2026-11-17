@@ -38,7 +38,12 @@ export function FileView({
         // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
         <Text as={Line} variant="body" className="gap-sm border-b px-sm py-xs">
           <Fill>
-            <FilepathBreadcrumb path={file.path} />
+            <FilepathBreadcrumb
+              path={file.path}
+              // The crumbs name the file's place and go nowhere (no
+              // navigation here), so there are no places to switch to.
+              places={null}
+            />
           </Fill>
           <FileExpandButton renderers={renderers} />
           <FileTabs {...renderers} />

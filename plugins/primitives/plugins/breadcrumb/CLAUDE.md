@@ -88,6 +88,7 @@ path showed `… › leaf` with hundreds of pixels standing empty.)
     - `plugin-meta/plugin-view`
     - `primitives/filepath-breadcrumb`
     - `primitives/path-bar`
+    - `primitives/path-bar/folder-places`
     - `tasks/supervisor-roles/spend`
     - `ui/breadcrumb-separator`
 - Core:

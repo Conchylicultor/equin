@@ -27,6 +27,7 @@ import type {
   PathResolution,
   Suggestions,
 } from "@plugins/primitives/plugins/path-bar/web";
+import { folderPlaces } from "@plugins/primitives/plugins/path-bar/plugins/folder-places/web";
 import { baseName, isWithin, pathChain } from "../../core";
 
 /**
@@ -137,7 +138,8 @@ function splitPrefix(
 }
 
 /**
- * A file system as a path-bar source: crumbs from the path itself, folder
+ * A file system as a path-bar source: crumbs from the path itself, each
+ * crumb's sibling folders as its hover menu (`folderPlaces`), folder
  * completions read live (the system's own completions where it has them —
  * the computer's `files.computer.complete` — else the typed folder's listing,
  * its folders matched by name), and validation one stat answer to the commit
@@ -172,6 +174,9 @@ export function folderPathSource(
           path: p,
         })),
     fieldText: (path) => absolutePath(path, home),
+    // A crumb's siblings are its parent's folders — spelled as the crumbs
+    // are (`~/…`), so the folder on the trail is the one marked.
+    places: folderPlaces(fs),
     useComplete: (prefix): Suggestions => {
       const answer = useLive(
         computerFileCompletions,

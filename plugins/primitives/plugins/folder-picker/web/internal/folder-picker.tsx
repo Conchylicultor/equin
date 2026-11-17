@@ -9,6 +9,7 @@ import { useFolderListing } from "@plugins/infra/plugins/paths/plugins/file-syst
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { FilepathBreadcrumb } from "@plugins/primitives/plugins/filepath-breadcrumb/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { folderPlaces } from "@plugins/primitives/plugins/path-bar/plugins/folder-places/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
@@ -150,6 +151,8 @@ export function FolderPicker({ fs, value, onSelect }: FolderPickerProps) {
             path={crumbPath}
             showCopy={false}
             onNavigate={(dir) => setBrowsePath(dir)}
+            // Resting on a crumb lists the folders beside it, to jump across.
+            places={folderPlaces(fs)}
           />
         ) : meta.status === "loading" ? (
           <Loading />

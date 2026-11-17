@@ -52,6 +52,7 @@ wraps `FolderPickerPopover`, not the other way around.
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`
+    - `primitives/path-bar/folder-places.folderPlaces`
     - `ui/icons.Icon`
   - Exports (types):
     - `FolderPickerPopoverProps`

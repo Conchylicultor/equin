@@ -41,7 +41,7 @@
     - `ConfigV2.WebRegister` "files"
     - `FileBrowserSlots.RowActions` "extract" → `ExtractAction`
     - `FileBrowserSlots.RowActions` "copy-path" → `CopyPathAction`
-  - Uses: 85 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 86 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×10
     - `primitives/pane` ×8
     - `primitives/file-viewer` ×7
@@ -75,6 +75,7 @@
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog.useOpenDialog`
+    - `primitives/path-bar/folder-places.folderPlaces`
     - `primitives/scope/dom-scope.defineDomScope`
     - `primitives/scope/surface-id.useSurfaceTabId`
     - `primitives/search.SearchInput`

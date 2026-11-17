@@ -731,6 +731,7 @@ export const browserHost = {
     "primitives.pane",
     "primitives.pane.route-prefix",
     "primitives.path-bar",
+    "primitives.path-bar.folder-places",
     "primitives.perfs.boot-trace",
     "primitives.prompt-editor",
     "primitives.prompt-editor.voice-input",
