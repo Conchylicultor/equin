@@ -8,9 +8,19 @@
          desktop's `data-color-scheme`) in at the end of the head — see
          shell/document-head and theme-engine/server — so nothing here reads
          browser storage. This only covers a shell served without that
-         fragment (a backend that has never booted): it paints the neutral
-         loading floor (app.css: html { background: Canvas }) dark — the
-         configured color mode's default — until ThemeInjector mounts. -->
+         fragment (a backend that has never booted, e.g. a first launch): the
+         canvas must be dark — the configured color mode's default — until
+         ThemeInjector mounts, with nothing but this file. The global
+         stylesheet (app.css: `html { background: Canvas }` under
+         `[data-color-scheme] { color-scheme }`) does NOT block the first paint
+         (web-artifacts compose), so it cannot be what makes it dark: the
+         `color-scheme` meta does, as the UA's own default canvas. A meta, not
+         a style rule, so it never enters the cascade app.css and the theme
+         own once they apply (an explicit `color-scheme` wins over it; with the
+         theme fragment the canvas is painted explicitly anyway). The script
+         gives app.css the same scheme to key on; the two must agree
+         (web/__tests__/first-paint-floor.test.ts). -->
+    <meta name="color-scheme" content="dark" />
     <script>
       document.documentElement.setAttribute("data-color-scheme", "dark");
     </script>
