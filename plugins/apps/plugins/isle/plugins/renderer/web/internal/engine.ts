@@ -92,6 +92,20 @@ import {
 } from "./chatter";
 import { PBOX, People, type Hero, type Villager, type Walker } from "./people";
 import { drawBats, Werewolf, WOLF_BOX } from "./easter-eggs";
+import {
+  CheatCode,
+  drawSerpent,
+  drawSnow,
+  Fireworks,
+  isNewYear,
+  isSnowSeason,
+  Pokes,
+  SERPENT_REACH,
+  serpentGone,
+  serpentWait,
+  surfaceSerpent,
+  type Serpent,
+} from "./surprises";
 import { realizeScene, TILE, type Scene, type Static } from "./scene";
 import {
   paintTeleportFx,
@@ -333,6 +347,14 @@ export class IsleEngine {
   private readonly oceanPat: CanvasPattern;
   private readonly people = new People();
   private readonly wolf = new Werewolf(this.rnd);
+  private readonly fireworks = new Fireworks(this.rnd);
+  private readonly cheat = new CheatCode();
+  private readonly pokes = new Pokes();
+  private serpent: Serpent | null = null;
+  /** Engine clock (s) of the serpent's next try; set on the first frame. */
+  private serpentAt = -1;
+  /** Engine clock (s) of the next New Year's night volley. */
+  private newYearAt = 0;
   private raf = 0;
   private disposed = false;
 
@@ -1636,6 +1658,20 @@ export class IsleEngine {
         this.drop(false);
         return;
       }
+      if (
+        !e.repeat &&
+        this.started &&
+        this.hero.placed &&
+        this.cheat.push(e.code)
+      ) {
+        const t = performance.now() / 1000;
+        this.fireworks.volley(this.hero.x, this.hero.y - 40, t, 7);
+        this.pokes.line = {
+          line: "★ You found a secret! ★",
+          t0: t,
+          until: t + 3,
+        };
+      }
       const d = KEY_DIR[e.code];
       if (
         !d ||
@@ -1855,6 +1891,10 @@ export class IsleEngine {
       );
       return;
     }
+    if (this.onHero(p)) {
+      this.pokes.poke(performance.now() / 1000);
+      return;
+    }
     // the desktop way: a click on an empty lot gives it back to nature right there, no walk
     const lot = this.lotAt(p.x, p.y);
     if (lot) {
@@ -1870,9 +1910,23 @@ export class IsleEngine {
    * click of the pair already set a walk going, which this replaces; on a
    * building or a lot the first click has done what it does, so nothing more.
    */
+  /** Whether world point `p` is on the hero (a click there pokes them). */
+  private onHero(p: { x: number; y: number }): boolean {
+    const hero = this.hero;
+    return (
+      hero.placed &&
+      !this.teleport &&
+      p.x > hero.x + PBOX[0] * 0.6 &&
+      p.x < hero.x + PBOX[2] * 0.6 &&
+      p.y > hero.y + PBOX[1] &&
+      p.y < hero.y + PBOX[3]
+    );
+  }
+
   private teleportTo(sx: number, sy: number): void {
     if (!this.grid || !this.hero.placed || this.teleport) return;
     const p = this.toWorld(sx, sy);
+    if (this.onHero(p)) return;
     if (this.hitBuilding(p, performance.now() / 1000) || this.lotAt(p.x, p.y))
       return;
     const path = findPath(this.grid, this.hero.x, this.hero.y, p.x, p.y);
@@ -2603,6 +2657,34 @@ export class IsleEngine {
     if (night && this.hero.placed) wolf.step(dt, t, this.hero);
     if (night && wolf.present && vis(wolf.x, wolf.y))
       dyn.push(figure(wolf, WOLF_BOX, (c) => wolf.draw(c, t)));
+    // now and then something surfaces on the open water in view
+    if (this.serpentAt < 0) this.serpentAt = t + serpentWait(this.rnd) * 0.4;
+    if (this.serpent && serpentGone(this.serpent, t)) this.serpent = null;
+    if (!this.serpent && t > this.serpentAt && !this.opts.reducedMotion) {
+      this.serpentAt = t + serpentWait(this.rnd);
+      if (z > 0.35)
+        this.serpent = surfaceSerpent(
+          this.glints,
+          (x, y) => vis(x, y, -SERPENT_REACH),
+          t,
+          this.rnd,
+        );
+    }
+    const serpent = this.serpent;
+    if (serpent && vis(serpent.x, serpent.y, SERPENT_REACH))
+      dyn.push({ y: serpent.y, d: () => drawSerpent(g, serpent, t) });
+    // New Year's night: volleys over the campfire
+    if (
+      night &&
+      village &&
+      t > this.newYearAt &&
+      !this.opts.reducedMotion &&
+      isNewYear(new Date())
+    ) {
+      this.newYearAt = t + 6 + this.rnd() * 6;
+      if (vis(village.x, village.y, 400))
+        this.fireworks.volley(village.x, village.y - 30, t, 4);
+    }
     // a building landing on its new plot (and waiting there for the write to come back)
     const st = this.settling;
     if (st) {
@@ -2815,6 +2897,11 @@ export class IsleEngine {
       };
     };
     world2screen();
+    if (this.fireworks.active) {
+      g.globalCompositeOperation = "lighter";
+      this.fireworks.draw(g, t);
+      g.globalCompositeOperation = "source-over";
+    }
     const focused: SceneBuilding[] = [];
     for (const b of this.buildings) {
       if (!vis(b.x + b.signX, b.y, 120)) continue;
@@ -2841,6 +2928,8 @@ export class IsleEngine {
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.drawChatter(t, z);
     this.drawLabels(dt, z, night);
+    if (!this.opts.reducedMotion && isSnowSeason(new Date()))
+      drawSnow(g, vw, vh, t, cam.x * z, cam.y * z);
     const vg = g.createRadialGradient(
       vw / 2,
       vh / 2,
@@ -2884,6 +2973,8 @@ export class IsleEngine {
 
   private walk(dt: number, t: number): void {
     const hero = this.hero;
+    // poked once too often: a spin on the spot
+    if (t < this.pokes.spinUntil && !hero.walking) hero.facing += dt * 14;
     const tp = this.teleport;
     if (tp) {
       if (!tp.landed && t - tp.t0 >= TELEPORT_OUT) {
@@ -3121,6 +3212,16 @@ export class IsleEngine {
       if (s.x < -200 || s.x > this.vw + 200 || s.y < -40 || s.y > this.vh + 200)
         continue;
       drawBubble(g, s.x, s.y, c.line, a * zoomA);
+    }
+    const said = this.pokes.line;
+    if (said) {
+      const a =
+        Math.min(1, (t - said.t0) / 0.2) *
+        Math.max(0, Math.min(1, 1 - (t - said.until) / 0.35));
+      if (a > 0) {
+        const s = this.toScreen(this.hero.x, this.hero.y + PBOX[1] + 4);
+        drawBubble(g, s.x, s.y, said.line, a * zoomA);
+      } else if (t > said.until) this.pokes.line = null;
     }
     const cry = this.wolf.cry;
     if (cry && this.time === "night" && this.wolf.present) {
