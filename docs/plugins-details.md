@@ -42917,6 +42917,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/plugin-tree`
           - `tasks/orchestration/mandate`
     - **`keyed-mutex`** — Keyed FIFO mutex: createKeyedMutex().run(key, fn) runs fn once every earlier run for the same key has settled, in arrival order, while different keys run concurrently; a key's entry is dropped the moment its queue drains.
+      - Core:
+        - Uses: `packages/semaphore.whileWaiting`
+        - Exports (types): `KeyedMutex`
+        - Exports (values): `createKeyedMutex`
       - Cross-plugin:
         - Imported by: 22 plugins — full list in [`plugins/packages/plugins/keyed-mutex/REFERENCE.md`](../plugins/packages/plugins/keyed-mutex/REFERENCE.md)
           - `infra` ×11
@@ -42926,9 +42930,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/sentinel/status-file`
           - `plugin-meta/plugin-records`
           - `reports/engine`
-      - Core:
-        - Exports (types): `KeyedMutex`
-        - Exports (values): `createKeyedMutex`
     - **`list-bound`** — A list's bound, declared in its zod schema: cappedList / cappedRecord (a checked max) and wholeList / wholeRecord (loaded whole, with a written reason), tagged on the schema itself (zod-introspect's defineSchemaTag, stamped by clone) so the tag survives zod's clones and wrappers; listShapeOf walks (over zod-introspect's SchemaNode) every array, record, map and set a schema reaches and reports each one's bound and the bare ones, listBoundsOf refuses a bare one.
       - Core:
         - Uses:
@@ -43153,14 +43154,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `mulberry32`
     - **`semaphore`**
       - Cross-plugin:
-        - Imported by: 31 plugins — full list in [`plugins/packages/plugins/semaphore/REFERENCE.md`](../plugins/packages/plugins/semaphore/REFERENCE.md)
+        - Imported by: 32 plugins — full list in [`plugins/packages/plugins/semaphore/REFERENCE.md`](../plugins/packages/plugins/semaphore/REFERENCE.md)
           - `infra` ×9
           - `apps` ×6
           - `debug` ×3
           - `framework` ×3
+          - `packages` ×3
           - `conversations` ×2
           - `database` ×2
-          - `packages` ×2
           - `config_v2`
           - `integrations/youtube/song-videos`
           - `network/live/resource-runtime`

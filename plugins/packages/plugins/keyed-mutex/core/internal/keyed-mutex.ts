@@ -1,3 +1,5 @@
+import { whileWaiting } from "@plugins/packages/plugins/semaphore/core";
+
 /**
  * A per-key FIFO mutex: `run(key, fn)` starts `fn` only once every earlier
  * `run` for the same key has settled, in the order the calls arrived. Different
@@ -41,7 +43,7 @@ export function createKeyedMutex(): KeyedMutex {
       opts?: { signal?: AbortSignal },
     ): Promise<T> {
       const signal = opts?.signal;
-      const previous = tails.get(key) ?? Promise.resolve();
+      const previous = tails.get(key);
       let release!: () => void;
       const tail = new Promise<void>((resolve) => {
         release = resolve;
@@ -61,7 +63,20 @@ export function createKeyedMutex(): KeyedMutex {
         // chain is ordering only: fn's own outcome goes to its caller alone.
         // Our turn is released only once the runs ahead of us settled — an
         // aborted waiter included — so the queue's order holds either way.
-        void previous.then(() => {
+        //
+        // Waiting for our turn is waiting on work OTHER callers are doing, so
+        // it gives back the caller's yieldable gate slot (`whileWaiting`) and
+        // takes it back at the head of its gate's queue. Holding it instead is
+        // a lock-order inversion: the run ahead of us yields ITS slot for a file
+        // call (timed-fs awaits through `whileWaiting`), queued callers of the
+        // same lock take the freed slots and block here holding them, and the
+        // run ahead can never take its slot back — so it never releases the
+        // lock (main, 2026-11-17 11:17Z: three `conversations.usage.cost-at`
+        // loads of one conversation held the read gate's per-key share for
+        // good). An uncontended run waits on nothing and yields nothing.
+        const turn =
+          previous === undefined ? Promise.resolve() : whileWaiting(previous);
+        void turn.then(() => {
           signal?.removeEventListener("abort", onAbort);
           if (signal?.aborted) {
             settle();

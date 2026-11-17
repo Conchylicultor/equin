@@ -118,14 +118,14 @@ query never wait.) See
 ## Plugin reference
 
 - Cross-plugin:
-  - Imported by: 31 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 32 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×9
     - `apps` ×6
     - `debug` ×3
     - `framework` ×3
+    - `packages` ×3
     - `conversations` ×2
     - `database` ×2
-    - `packages` ×2
     - `config_v2`
     - `integrations/youtube/song-videos`
     - `network/live/resource-runtime`
