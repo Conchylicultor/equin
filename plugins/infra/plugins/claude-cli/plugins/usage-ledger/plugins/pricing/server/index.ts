@@ -7,6 +7,11 @@ import { claudeSpendHoursView } from "./internal/views";
 export { _claudeModelRates, _claudePriceVersions } from "./internal/tables";
 export { claudeSpendHoursView } from "./internal/views";
 export {
+  priceWithRates,
+  ratesInForceAt,
+  type RatesInForce,
+} from "./internal/rates-at";
+export {
   ensureModelRates,
   recordPriceVersion,
   type RecordedPriceVersion,

@@ -76,6 +76,20 @@ in force then. Design:
   per change of that module's code), is the repair. The `conversations.usage`
   lookup reads the same row.
 
+- **The cost by an instant** (`conversations.usage.cost-at`, machine half
+  `machine/internal/cost-at.ts`): the transcript's cost stat while the reader
+  is scrolled back. The priced ledger's hours before `hour(at)` (read from
+  `claude_spend_hours_v`), plus the stretch `[hour(at), at]` folded from the
+  conversation's transcripts — session chain then sub-agents, through one
+  seen-set, with the ledger's own `foldUsageEntry` (`cost-stretch.ts`) — and
+  priced with the rates in force at that hour (pricing's `ratesInForceAt` /
+  `priceWithRates`, the view's version rule and dot product). Each file's
+  usage lines are held per conversation (16 at most) and read incrementally.
+  It follows the conversation's usage row (moved by every ledger write for it
+  and every re-price) and its transcript chain. A worktree's fork reads its
+  own, possibly stale, ledger for the whole hours and the live files for the
+  stretch, so there it can read above the fork's total.
+
 - **Usage is filed under the account that spent it, when it is counted.** A
   live pass (`requestUsageSync` with written sessions) files under the account
   the conversation's runtime runs its agent on now
@@ -168,6 +182,7 @@ in force then. Design:
     - `live.columns.expose` "conversations ← conversations_ext_usage"
     - `db-trigger` "conversations.usage.cost"
     - `resource.declare` "conversations.usage.account-spend"
+    - `resource.declare` "conversations.usage.cost-at"
     - `resource.declare` "conversations.usage:rows"
     - `change-feed-exclusion` "claude_transcript_scans"
     - `change-feed-exclusion` "conversation_usage_files"
@@ -198,10 +213,12 @@ in force then. Design:
   - Resources:
     - `conversations.usage:rows` (keyed, point)
     - `conversations.usage.account-spend` (push, capped: 31)
+    - `conversations.usage.cost-at` (push, notified, capped: 64)
 - Machine:
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/subagents.listSubagentEntries`
     - `conversations/conversation-view/jsonl-viewer/subagents.subagentDirOf`
+    - `network/live.serveValue`
   - Register:
     - `defineJob('conversations.usage.sync')`
     - `defineJob('conversations.usage.backfill')`
@@ -225,6 +242,7 @@ in force then. Design:
   - Exports (values):
     - `ACCOUNT_SPEND_MONTH`
     - `claudeAccountSpend`
+    - `conversationCostAt`
     - `conversationUsageById`
     - `conversationUsageShape`
 - Cross-plugin:

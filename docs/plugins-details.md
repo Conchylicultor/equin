@@ -21261,7 +21261,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/density --space-xs`
                       - `ui/tokens/shape --radius`
                       - `ui/tokens/shape --spacing`
-                - **`cost`** — The session's API cost as a transcript stat: what the whole conversation has cost at API prices — its own transcripts and every sub-agent it launched, workflow agents included — read live from the conversation's usage totals (conversations.usage), with the tokens behind it on hover.
+                - **`cost`** — The session's API cost as a transcript stat, up to the reading position: what the conversation had cost at API prices by the last row on screen — its own transcripts and every sub-agent it launched, workflow agents included, a sub-agent's spend counted when it happened. At the end it reads the live usage totals (conversations.usage, with the tokens behind it on hover); scrolled back, the cost at that row's instant (conversations.usage.cost-at), keeping the last priced reading while the next one loads.
                   - Web:
                     - Contributes: `TranscriptStats.Item` "cost" → `CostStat`
                     - Uses:
@@ -21269,6 +21269,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `conversations/conversation-view/jsonl-viewer.useTranscriptSubject`
                       - `conversations/conversation-view/jsonl-viewer/transcript-stats.StatBadge`
                       - `conversations/conversation-view/jsonl-viewer/transcript-stats.TranscriptStats`
+                      - `conversations/conversation-view/jsonl-viewer/transcript-stats.useTranscriptRead`
                       - `network/live.useLive`
                 - **`token-budget`** — The agent's work allowance as a transcript stat: how many tokens the harness has charged against it up to the reading position, summed across the re-anchor it performs on every new request. Reports the total spent rather than the number the harness prints, which is a padded per-request allowance handed to the model and so reads as a constant. Owns both halves of the move — the stat, and the filter that takes the harness's repeated reminder rows out of the transcript flow they were cluttering. Serves the token-budget stat's fold of a conversation's transcript before the page's window.
                   - Web:
@@ -23616,6 +23617,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/system-prompt/composer`
           - `conversations/transcript-source/memory`
           - `conversations/transcript-watcher`
+          - `conversations/usage`
       - Plugins:
         - **`memory`** (excluded) — Transcripts in memory: provides the TranscriptSource host service for a host without Claude Code's session files (the browser composition), from JSONL text written to it — written through to the host's declared storage, so a persistent host keeps them. Never booted by the desktop.
           - Server:
@@ -23806,6 +23808,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `live.columns.expose` "conversations ← conversations_ext_usage"
           - `db-trigger` "conversations.usage.cost"
           - `resource.declare` "conversations.usage.account-spend"
+          - `resource.declare` "conversations.usage.cost-at"
           - `resource.declare` "conversations.usage:rows"
           - `change-feed-exclusion` "claude_transcript_scans"
           - `change-feed-exclusion` "conversation_usage_files"
@@ -23836,10 +23839,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Resources:
           - `conversations.usage:rows` (keyed, point)
           - `conversations.usage.account-spend` (push, capped: 31)
+          - `conversations.usage.cost-at` (push, notified, capped: 64)
       - Machine:
         - Uses:
           - `conversations/conversation-view/jsonl-viewer/subagents.listSubagentEntries`
           - `conversations/conversation-view/jsonl-viewer/subagents.subagentDirOf`
+          - `network/live.serveValue`
         - Register:
           - `defineJob('conversations.usage.sync')`
           - `defineJob('conversations.usage.backfill')`
@@ -23863,6 +23868,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `ACCOUNT_SPEND_MONTH`
           - `claudeAccountSpend`
+          - `conversationCostAt`
           - `conversationUsageById`
           - `conversationUsageShape`
       - Cross-plugin:
@@ -35633,12 +35639,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - DB schema:
                   - `plugins/infra/plugins/claude-cli/plugins/usage-ledger/plugins/pricing/server/internal/tables.ts`
                   - `plugins/infra/plugins/claude-cli/plugins/usage-ledger/plugins/pricing/server/internal/views.ts`
-                - Exports (types): `RecordedPriceVersion`
+                - Exports (types):
+                  - `RatesInForce`
+                  - `RecordedPriceVersion`
                 - Exports (values):
                   - `_claudeModelRates`
                   - `_claudePriceVersions`
                   - `claudeSpendHoursView`
                   - `ensureModelRates`
+                  - `priceWithRates`
+                  - `ratesInForceAt`
                   - `recordPriceVersion`
               - Core:
                 - Uses:

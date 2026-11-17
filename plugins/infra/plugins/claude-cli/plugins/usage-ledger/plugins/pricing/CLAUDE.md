@@ -64,12 +64,16 @@ column, Stats → Cost) are re-aggregated by their triggers on
   - DB schema:
     - `plugins/infra/plugins/claude-cli/plugins/usage-ledger/plugins/pricing/server/internal/tables.ts`
     - `plugins/infra/plugins/claude-cli/plugins/usage-ledger/plugins/pricing/server/internal/views.ts`
-  - Exports (types): `RecordedPriceVersion`
+  - Exports (types):
+    - `RatesInForce`
+    - `RecordedPriceVersion`
   - Exports (values):
     - `_claudeModelRates`
     - `_claudePriceVersions`
     - `claudeSpendHoursView`
     - `ensureModelRates`
+    - `priceWithRates`
+    - `ratesInForceAt`
     - `recordPriceVersion`
 - Core:
   - Uses:

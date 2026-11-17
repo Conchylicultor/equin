@@ -1,17 +1,27 @@
-import { conversationUsageById } from "@plugins/conversations/plugins/usage/core";
+import { useState } from "react";
+import {
+  conversationCostAt,
+  conversationUsageById,
+} from "@plugins/conversations/plugins/usage/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import {
   useJsonlConversationId,
   useTranscriptSubject,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
-import { StatBadge } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/web";
+import {
+  StatBadge,
+  useTranscriptRead,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { formatUsd } from "./format-usd";
 
 /**
- * What the session has cost so far at API prices: the conversation's own
- * transcripts plus every sub-agent it launched, as the usage sync last counted
- * them — the whole session, not the transcript up to the reading position
- * (the totals have only a present).
+ * What the session had cost at API prices by the row the reader is on: the
+ * conversation's own transcripts plus every sub-agent it launched, a
+ * sub-agent's spend counted when it happened. At the end of the transcript it
+ * is the totals the usage sync last counted; scrolled back, the cost at the
+ * last visible row's instant (`conversationCostAt`) — so scrolling walks the
+ * number back with the other readings.
  *
  * Only in the conversation's own transcript: a sub-agent's pane would name the
  * parent's total.
@@ -24,6 +34,27 @@ export function CostStat() {
 }
 
 function CostStatFor({ conversationId }: { conversationId: string }) {
+  const { events, atEnd } = useTranscriptRead();
+  if (atEnd) return <TotalCost conversationId={conversationId} />;
+  const at = readingInstant(events);
+  // Scrolled back past every timestamped row: no reading position to price.
+  if (at === null) return null;
+  return <CostAt conversationId={conversationId} at={at} />;
+}
+
+/** The instant of the last visible row that has one (a synthetic row may not). */
+function readingInstant(events: readonly JsonlEvent[]): string | null {
+  for (let i = events.length - 1; i >= 0; i--) {
+    const at = events[i]!.at;
+    if (at !== "" && !Number.isNaN(Date.parse(at))) return at;
+  }
+  return null;
+}
+
+const HINT =
+  "At API prices — this conversation and every sub-agent it launched. Tokens are input, output and cache writes.";
+
+function TotalCost({ conversationId }: { conversationId: string }) {
   const read = useLive(conversationUsageById, { id: conversationId });
   // A reading in the strip: nothing until it is known.
   if (read.status === "loading") return null;
@@ -52,10 +83,80 @@ function CostStatFor({ conversationId }: { conversationId: string }) {
             },
           ],
         },
-        hint: "The whole session at API prices — this conversation and every sub-agent it launched. Tokens are input, output and cache writes.",
+        hint: `The whole session so far. ${HINT}`,
       }}
     >
       {formatUsd(costUsd, "short")}
+    </StatBadge>
+  );
+}
+
+interface Shown {
+  at: string;
+  costUsd: number;
+  unpricedModels: readonly string[];
+}
+
+function CostAt({
+  conversationId,
+  at,
+}: {
+  conversationId: string;
+  at: string;
+}) {
+  const read = useLive(conversationCostAt, { id: conversationId, at });
+  // While a new position loads, the strip keeps the last one it priced — the
+  // reading moves as the reader scrolls, so blanking it between rows would
+  // flicker on every step. Before any is known it shows nothing.
+  const [shown, setShown] = useState<Shown | null>(null);
+  if (
+    read.status === "ready" &&
+    (shown === null ||
+      shown.at !== at ||
+      shown.costUsd !== read.data.costUsd ||
+      shown.unpricedModels.join() !== read.data.unpricedModels.join())
+  ) {
+    setShown({ at, ...read.data });
+  }
+  // The demo's in-browser server has no transcripts on disk to read.
+  if (read.status === "unavailable") return null;
+  if (read.status === "error")
+    return (
+      <StatBadge tone="alert" tooltip={read.error.message}>
+        cost unavailable
+      </StatBadge>
+    );
+  if (shown === null) return null;
+  const unpriced = shown.unpricedModels.length > 0;
+  return (
+    <StatBadge
+      tone={unpriced ? "attention" : "muted"}
+      card={{
+        title: "API cost",
+        figures: {
+          rows: [
+            { label: "Cost", value: formatUsd(shown.costUsd, "exact") },
+            {
+              label: "By",
+              value: new Date(shown.at).toLocaleString(undefined, {
+                dateStyle: "medium",
+                timeStyle: "short",
+              }),
+            },
+            ...(unpriced
+              ? [
+                  {
+                    label: "No price for",
+                    value: shown.unpricedModels.join(", "),
+                  },
+                ]
+              : []),
+          ],
+        },
+        hint: `Up to the last row on screen. ${HINT}`,
+      }}
+    >
+      {formatUsd(shown.costUsd, "short")}
     </StatBadge>
   );
 }

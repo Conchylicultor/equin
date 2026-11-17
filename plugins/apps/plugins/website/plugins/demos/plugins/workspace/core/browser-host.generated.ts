@@ -1043,6 +1043,7 @@ export const hostReads: readonly {
   { key: "conversations.system-prompt", needsMachine: false },
   { key: "conversations.usage", needsMachine: false },
   { key: "conversations.usage.account-spend", needsMachine: false },
+  { key: "conversations.usage.cost-at", needsMachine: true },
   { key: "data-view-custom-values.v2", needsMachine: false },
   { key: "data-view-row-order.v2", needsMachine: false },
   { key: "deps.states", needsMachine: true },
