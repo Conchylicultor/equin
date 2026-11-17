@@ -14,12 +14,16 @@ three readers of it share. Design:
   binaries as run artifacts only (how to try a build without releasing).
 - **Jobs**: validate (which ref, is it a release, does it have the window's
   crate, is it the newest release) → page (the installer page bundled once,
-  `window/scripts/bundle-page.ts`) → macOS (`macos-14`: both architectures,
+  `window/scripts/bundle-page.ts`) → macOS (`macos-15`: both architectures,
   `lipo`, then **ad-hoc signed** — lipo drops the linker's signatures and
   arm64 refuses unsigned code; `--version`, `--probe`, the x86_64 slice under
   Rosetta) and Linux (`ubuntu-22.04` x64 and `ubuntu-22.04-arm`: glibc 2.35,
-  webkit2gtk-4.1; `--probe` under xvfb, and `--probe` in a bare
-  `ubuntu:22.04` container must FAIL — the no-webkit fallback) → release.
+  webkit2gtk-4.1; `fc-cache` first — on a fresh runner WebKit builds the
+  font cache on first use, on the window's main thread, past the probe's
+  deadline — then `--probe` under xvfb, the real window over a dry run (must
+  reach "✓ Build equin"), and `--probe` in a bare `ubuntu:22.04` container
+  must FAIL: the loader refuses the binary, exit 127 — the no-webkit
+  fallback) → release.
 - **Toolchain**: the exact bun and rust versions `mise.lock` records, installed
   directly (`setup-bun`, `rust-toolchain`) — `mise install` would also run the
   repo's postinstall hooks, meant for a developer's machine.

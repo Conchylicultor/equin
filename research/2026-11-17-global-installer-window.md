@@ -482,4 +482,8 @@ Landed as `.github/workflows/installer-release.yml`, the `installer/release-asse
 - `git clone` then `git checkout -B main <tag>` leaves `main` at the tag, tracking `origin/main`.
 - `actionlint` passes on the workflow.
 
-**Not yet proven:** the workflow itself (it can only run once it is on main), and a real `curl | bash` on a clean Mac and a Linux VM. See the task's report.
+**Proven on GitHub Actions (after landing):**
+
+- A manual run on `v2026.11.17` published its Release: `install.sh`, `release.json` (`handoff: null`, no binaries — the tag predates the window), `SHA256SUMS`, `provenance.intoto.jsonl`. `releases/latest/download/release.json` resolves to it; `shasum -c` and `gh attestation verify install.sh -R equinai/equin` pass; a real `curl …/main/install.sh | bash -s -- --stage0-only` reads it and falls back to main's steps on that tag.
+- Build-only runs on main: the universal macOS binary builds (`macos-14` is retired; `macos-15`), lipo + ad-hoc sign, `--probe` on the runner's GUI session. Linux x64 / arm64 build; in a bare `ubuntu:22.04` container the binary is refused by the loader (exit 127, "libwebkit2gtk-4.1.so.0: cannot open shared object file"), which is the fallback stage 0 relies on.
+- **Found on Linux: a cold font cache.** On a fresh runner the first several WebKit starts never began loading the page (each probe timed out at 20 s, and the real window drew nothing for 30 s: its main thread was blocked), then a probe on the same runner passed. WebKit builds the fontconfig cache on first use, on the UI thread. CI now runs `fc-cache` first. A desktop has a cache already; a machine without one gets the terminal view on its first install (the probe's deadline), with the reason in `probe.log`. The probe's Linux window is also mapped off-screen rather than hidden, since the first diagnosis pointed at the unmapped window and it was never settled whether that alone loads everywhere.

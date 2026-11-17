@@ -44,10 +44,13 @@ pub fn run() -> ! {
     }
     let proxy = event_loop.create_proxy();
     let builder = WindowBuilder::new().with_title("equin installer (probe)");
-    // macOS loads the page in a hidden window. WebKitGTK does not start
-    // loading in a window that is never mapped (the CI probe never saw the
-    // load start), so on Linux the window is mapped where nobody sees it:
-    // 1×1, undecorated, off-screen, out of the taskbar, for under a second.
+    // macOS loads the page in a hidden window. On Linux the window is mapped
+    // where nobody sees it — 1×1, undecorated, off-screen, out of the
+    // taskbar, for under a second — so the probe exercises what the real
+    // window does: CI's first Linux probes, in a never-mapped window, saw the
+    // load never start. (That was later traced at least in part to a cold
+    // font cache — WebKit builds it on first use, on the main thread; whether
+    // a hidden window alone loads on every compositor was not settled.)
     #[cfg(not(target_os = "linux"))]
     let builder = builder
         .with_inner_size(LogicalSize::new(crate::WIDTH, crate::HEIGHT))
