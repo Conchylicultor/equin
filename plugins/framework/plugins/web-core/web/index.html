@@ -100,7 +100,15 @@
          Not for lazy plugin imports: App.tsx catches those (loadPlugins).
          The global stylesheet too: compose loads it without blocking render
          and keeps the page hidden until it applies, so a stylesheet that
-         fails to load would otherwise leave the themed canvas up forever. -->
+         fails to load would otherwise leave the themed canvas up forever.
+         A page of an OLDER build fails the same way once that build's files
+         are gone (a site ship deletes the previous release; a tab restored or
+         opened in the background holds the shell it fetched before): before
+         showing anything, the shell is fetched again and its import map
+         compared with this page's. A different one means a newer build is
+         served, so the page reloads into it; the same one means the served
+         build itself is missing files, and the screen says so. A reload can
+         only follow a change of the served shell, so it cannot loop. -->
     <script id="boot-failure">
       (function () {
         var shown = false;
@@ -160,27 +168,59 @@
             if (shown || !bootFile) return;
             shown = true;
             var urls = failedUrls(t);
-            console.error("[boot] boot files failed to load:", urls);
-            show(urls);
-            // Same alert funnel as plugin-load failures (reports/plugin-load-errors).
-            fetch("/api/reports", {
-              method: "POST",
-              headers: { "content-type": "application/json" },
-              keepalive: true,
-              body: JSON.stringify({
-                kind: "crash",
-                source: "plugin-load",
-                message: "boot: " + urls.length + " file(s) failed to load: " + urls.slice(0, 5).join(", "),
-                url: location.href,
-                userAgent: navigator.userAgent,
-                data: { errorType: "BootModuleLoadFailed", stack: null, urls: urls.slice(0, 50) },
-              }),
-            }).catch(function (err) {
-              console.warn("[boot] failure report not delivered:", err);
-            });
+            servedNewerBuild().then(
+              function (newer) {
+                if (newer) {
+                  console.info("[boot] this page's build is no longer served; reloading into the current one:", urls);
+                  location.reload();
+                  return;
+                }
+                fail(urls);
+              },
+              function (err) {
+                console.error("[boot] could not fetch the served shell to compare builds:", err);
+                fail(urls);
+              },
+            );
           },
           true,
         );
+        function importMapOf(doc) {
+          var s = doc.querySelector('script[type="importmap"]');
+          return s ? s.textContent : null;
+        }
+        // Whether the server now answers this URL with a shell of another
+        // build: its import map (the build's content-addressed module URLs)
+        // differs from the one this page booted with.
+        function servedNewerBuild() {
+          return fetch(location.href, { cache: "no-store", credentials: "same-origin" }).then(function (res) {
+            if (!res.ok) throw new Error("the shell answered " + res.status);
+            return res.text().then(function (text) {
+              var served = importMapOf(new DOMParser().parseFromString(text, "text/html"));
+              return served !== null && served !== importMapOf(document);
+            });
+          });
+        }
+        function fail(urls) {
+          console.error("[boot] boot files failed to load:", urls);
+          show(urls);
+          // Same alert funnel as plugin-load failures (reports/plugin-load-errors).
+          fetch("/api/reports", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            keepalive: true,
+            body: JSON.stringify({
+              kind: "crash",
+              source: "plugin-load",
+              message: "boot: " + urls.length + " file(s) failed to load: " + urls.slice(0, 5).join(", "),
+              url: location.href,
+              userAgent: navigator.userAgent,
+              data: { errorType: "BootModuleLoadFailed", stack: null, urls: urls.slice(0, 50) },
+            }),
+          }).catch(function (err) {
+            console.warn("[boot] failure report not delivered:", err);
+          });
+        }
       })();
     </script>
     <link rel="icon" type="image/svg+xml" href="/icon-small.svg" />
