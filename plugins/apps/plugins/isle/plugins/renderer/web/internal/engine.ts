@@ -273,6 +273,8 @@ const SIGN_FULL_Z = 0.6;
 const STEP_PX = 30;
 /** Seconds a building's life takes to fade in. */
 const LIFE_FADE = 1.6;
+/** Seconds the old light takes to dissolve into the new one when the time of day changes. */
+const TIME_FADE = 2.4;
 /** How close (px, y squashed ×1.4) the hero must come for a villager to stop and talk, and leave for it to go on. */
 const TALK_NEAR = 70;
 const TALK_LEAVE = 120;
@@ -316,6 +318,15 @@ export class IsleEngine {
   private readonly fxc = canvas(1, 1);
   private readonly fg = ctx2d(this.fxc);
   private readonly personC = canvas(1, 1);
+  /**
+   * The last frame drawn in the previous light, laid over the new one and fading out
+   * (`at`: the camera it was drawn from, so it stays on the world while the view moves).
+   */
+  private timeFade: {
+    readonly c: HTMLCanvasElement;
+    readonly t0: number;
+    readonly at: { x: number; y: number; z: number; vw: number; vh: number };
+  } | null = null;
   private readonly sprites: SpriteSet = makeSprites();
   private readonly rnd = this.sprites.rnd;
   private readonly oceanPat: CanvasPattern;
@@ -672,6 +683,20 @@ export class IsleEngine {
 
   setTime(time: TimeOfDay): void {
     if (time === this.time) return;
+    // the world already shown cross-fades from its old light (the painted art and tiles re-bake under it);
+    // a first light set before anything showed is simply the light it opens in
+    if (this.readySent && !this.opts.reducedMotion && this.vw > 0) {
+      const c = this.timeFade?.c ?? canvas(1, 1);
+      c.width = this.canvas.width;
+      c.height = this.canvas.height;
+      ctx2d(c).drawImage(this.canvas, 0, 0);
+      const { x, y, z } = this.cam;
+      this.timeFade = {
+        c,
+        t0: performance.now(),
+        at: { x, y, z, vw: this.vw, vh: this.vh },
+      };
+    }
     this.time = time;
     if (time === "night") this.wolf.nightfall();
     // every painted building and every tile's object layer (lamps, buildings) is per time of day
@@ -2827,6 +2852,33 @@ export class IsleEngine {
     vg.addColorStop(1, "rgba(28,24,16,.32)");
     g.fillStyle = vg;
     g.fillRect(0, 0, vw, vh);
+    this.drawTimeFade(now);
+  }
+
+  /** The previous light's last frame over this one, mapped onto the current camera, fading out. */
+  private drawTimeFade(now: number): void {
+    const f = this.timeFade;
+    if (!f) return;
+    const p = (now - f.t0) / 1000 / TIME_FADE;
+    if (p >= 1) {
+      this.timeFade = null;
+      return;
+    }
+    const { g, cam, dpr, vw, vh } = this;
+    const a = f.at;
+    const k = cam.z / a.z;
+    g.setTransform(
+      dpr * k,
+      0,
+      0,
+      dpr * k,
+      dpr * ((a.x - cam.x) * cam.z + vw / 2 - (a.vw / 2) * k),
+      dpr * ((a.y - cam.y) * cam.z + vh / 2 - (a.vh / 2) * k),
+    );
+    g.globalAlpha = 1 - easeIO(Math.max(0, p));
+    g.drawImage(f.c, 0, 0, a.vw, a.vh);
+    g.globalAlpha = 1;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
   private walk(dt: number, t: number): void {
