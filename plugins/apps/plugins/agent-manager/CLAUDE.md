@@ -9,7 +9,7 @@
   - **`icons`** — Contributes the agent icon family (agentIcons) to Icons.Family, so a scope whose iconFamily is agent — the Mist theme's — draws its glyphs.
   - **`isle-building`** — The Agent Manager's building on Isle: the workshop forge, a brass automaton hammering at its bench.
   - **`pages-nav`** — Pages entry point in the agent manager: a conversation-toolbar toggle that opens the Pages tree as a column beside the conversation.
-  - **`prototypes-nav`** — Prototypes entry point in the agent manager: a conversation-toolbar button that opens the Prototypes gallery (the Prototypes app; ⌘/middle-click for a new browser tab).
+  - **`prototypes-nav`** — Prototypes entry point in the agent manager: a conversation-toolbar button that toggles the Prototypes gallery as a column beside the conversation (⌘/middle-click for a new browser tab).
   - **`shell`** — App shell for the agent manager. Registers the /agents app entry, renders the main Shell layout, and contributes the app's own theme (Mist), which the agent manager selects.
   - **`welcome`** — Landing pane (agent-manager index) shown at `/agents`, and the sidebar's New conversation entry, which opens it — its one prompt is where a conversation starts.
 

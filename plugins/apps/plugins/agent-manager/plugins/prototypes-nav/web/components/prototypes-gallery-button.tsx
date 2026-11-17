@@ -1,21 +1,22 @@
-import {
-  PaneIconAction,
-  useOpenPane,
-} from "@plugins/primitives/plugins/pane/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { linkProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { prototypesGalleryPane } from "@plugins/apps/plugins/prototypes/plugins/gallery/web";
 import { prototypesApp } from "@plugins/apps/plugins/prototypes/plugins/shell/core";
 
 export function PrototypesGalleryButton() {
-  const openPane = useOpenPane();
-  // The gallery is a full-surface app index (a grid of cards over the canvas
-  // ground), too wide to sit as a Miller column beside the chat — so it opens
-  // as its own app: the gallery pane rooted, which the pane router hands to
-  // the cross-app navigator. A real link, so ⌘/middle-click opens a new tab.
+  // Like the Pages button: rendered inside the conversation pane, so
+  // `useToggle`'s default push has a caller position — the gallery opens as a
+  // column to the RIGHT of the conversation (the chat stays in view), and a
+  // second click closes it. A real link: ⌘/middle-click opens a browser tab.
+  const { isOpen, toggle } = prototypesGalleryPane.useToggle({});
+
   return (
-    <PaneIconAction
-      label="Prototypes"
+    <IconButton
       icon={prototypesApp.icon}
-      {...openPane.link(prototypesGalleryPane, {}, { mode: "root" })}
+      label="Prototypes"
+      variant={isOpen ? "secondary" : "ghost"}
+      aria-pressed={isOpen}
+      {...linkProps(toggle)}
     />
   );
 }

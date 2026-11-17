@@ -692,14 +692,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/action-bar.Conversation`
               - `primitives/icon-button.IconButton`
               - `primitives/link-gesture.linkProps`
-        - **`prototypes-nav`** — Prototypes entry point in the agent manager: a conversation-toolbar button that opens the Prototypes gallery (the Prototypes app; ⌘/middle-click for a new browser tab).
+        - **`prototypes-nav`** — Prototypes entry point in the agent manager: a conversation-toolbar button that toggles the Prototypes gallery as a column beside the conversation (⌘/middle-click for a new browser tab).
           - Web:
             - Contributes: `Conversation.ActionBar` → `PrototypesGalleryButton`
             - Uses:
               - `apps/prototypes/gallery.prototypesGalleryPane`
               - `conversations/conversation-view/action-bar.Conversation`
-              - `primitives/pane.PaneIconAction`
-              - `primitives/pane.useOpenPane`
+              - `primitives/icon-button.IconButton`
+              - `primitives/link-gesture.linkProps`
         - **`shell`** — App shell for the agent manager. Registers the /agents app entry, renders the main Shell layout, and contributes the app's own theme (Mist), which the agent manager selects.
           - Web:
             - Contributes:
@@ -53561,8 +53561,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 140 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
-          - `apps` ×46
+        - Imported by: 141 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+          - `apps` ×47
           - `conversations` ×23
           - `primitives` ×23
           - `tasks` ×9
@@ -53912,10 +53912,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `linkProps`
           - `openInBrowserTab`
       - Cross-plugin:
-        - Imported by: 82 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
+        - Imported by: 83 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
           - `conversations` ×22
           - `primitives` ×19
-          - `apps` ×13
+          - `apps` ×14
           - `tasks` ×6
           - `page` ×4
           - `apps-core` ×3
@@ -55513,8 +55513,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --spacing`
-        - Imported by: 219 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `apps` ×80
+        - Imported by: 218 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `apps` ×79
           - `conversations` ×33
           - `debug` ×29
           - `active-data` ×14
