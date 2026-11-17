@@ -409,14 +409,31 @@ Same version guard as WS frames; returns the effective cached value. Pinned by
   | ------------------ | ----------------------------------------- | -------------------------------------------------------------------------------------------------------- |
   | 1 same boot        | `body.epoch === entry.epoch`              | drop only if strictly `<` (a GET reports without bumping; `<=` would drop the normal invalidate refetch) |
   | 2 entry stale-boot | `body.epoch === channel.serverEpoch`      | ADOPT, set `entry.version = body.version`                                                                |
-  | 3 body stale-boot  | `entry.epoch === channel.serverEpoch`     | DROP (`stale-epoch`)                                                                                     |
+  | 3 body stale-boot  | `entry.epoch === channel.serverEpoch`     | DROP (`stale-epoch`) — never-applied: APPLY as `foreign`, then `forceFullResub` (see below) |
   | 4 no arbiter       | `serverEpoch` matches neither / undefined | ADOPT (the WS-down window this path exists for)                                                          |
 
 - **Never settle unvouched.** On a drop or `304`:
   - already applied (`hasAppliedValue`) ⇒ return the cached value;
   - never applied ⇒ throw `ResourceStaleReadError` (drives `retry: 1`, then
     `q.error`).
-  - Never return an unvouched value, never apply the stale body.
+  - Never return an unvouched value, never apply a body over newer applied
+    state.
+- **Two live backends** (the socket on one, reads answered by another — a
+  socket outliving its backend's swap). `channel.serverEpoch` is read both
+  when the request goes out and when the answer lands (the cases arbitrate
+  with the latter); a never-applied case 3 whose socket named the entry's
+  boot at both is exactly that — if it moved boots meanwhile, the body is
+  the boot it left and is dropped. Nothing is newer
+  than the body, so it is applied as `foreign` (the entry keeps the socket's
+  stream; the body's boot and version are kept as `ActiveSub.httpBody`) and
+  the tuple re-anchored on the socket by `forceFullResub` (only if the tuple
+  is still that sub). While the cache holds such a body (`!socketValue`),
+  that backend's next answer is compared with it, strict `<` — a bytes value
+  (no socket value ever) keeps following it instead of freezing. Else a
+  socket left on an old backend wedges the read (2026-11-17, sonata's
+  `attachments.bytes`). Not covered: an on-demand NON-bytes value, once the
+  socket's sub-ack applied, drops the other backend's refetches (`stale-epoch`,
+  applied) and keeps the socket's value until the two agree.
 - **Stale-drop sink**: every drop emits `HttpStaleDropReport` (with
   `consecutiveDrops`, reset in `markApplied`) to `httpStaleDropReportSink`.
   - Policy lives in `reports/live-state-stale-drop`. live-state must never

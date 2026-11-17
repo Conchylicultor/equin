@@ -15,7 +15,7 @@
  *   5. Same-epoch stale drop, never-applied → throws `ResourceStaleReadError`.
  *   6. Equal-version same-epoch → applies (strict-`<` regression pin).
  *   7. Cross-epoch adopt (case 2) → applies, version+epoch adopted.
- *   8. Cross-epoch drop (case 3) → cached / throw; trace `stale-epoch`.
+ *   8. Cross-epoch drop (case 3) → cached; never-applied → applied + full resub.
  *   9. Case 4 (no arbiter) → adopts.
  *  10. Consecutive-drop counter resets on apply; sink payload correct.
  *  11. Epoch-less body → today's strict-`<` behavior byte-for-byte.
@@ -497,12 +497,99 @@ describe("NotificationsClient — HTTP fetch path", () => {
     });
   });
 
-  test("8b: cross-epoch drop (case 3) never-applied → throws with reason stale-epoch", async () => {
+  test("8b: case 3 never-applied → applies the body (no drop) and re-anchors the tuple with a full resub", async () => {
     const { client, qc, socket, fetchQueue } = await setup();
     client.observe("k", {}, undefined, { schema: pushSchema });
     // Same gc'd-cache vehicle as case 5: the sub-ack stamps entry.epoch=b1=
-    // serverEpoch and version 5, then the query is reset to a never-applied
-    // value. (An `up-to-date` can no longer stamp a never-applied entry.)
+    // serverEpoch and version 4655, then the query is reset to a never-applied
+    // value. The HTTP read is answered by ANOTHER live backend (b2, its own
+    // counter far lower) — the 2026-11-17 sonata wedge: the socket stayed on
+    // the old backend while reads reached the new one.
+    socket.serverSend({
+      kind: "sub-ack",
+      key: "k",
+      params: {},
+      value: { status: "gc'd" },
+      version: 4655,
+      epoch: "b1",
+    });
+    await flush();
+    qc.setQueryData(
+      queryKeyFor("k", {}),
+      { status: "unvouched" },
+      { updatedAt: 0 },
+    );
+    const subsBefore = socket
+      .sentJson()
+      .filter((m) => m.op === "sub" && m.key === "k").length;
+
+    fetchQueue.push(
+      makeResponse({
+        body: { value: { status: "other-backend" }, version: 410, epoch: "b2" },
+      }),
+    );
+    const out = await client.fetchOverHttp(
+      "k",
+      {},
+      undefined,
+      { schema: pushSchema },
+      "fallback",
+    );
+    expect(out).toEqual({ status: "other-backend" });
+    expect(qc.getQueryData(queryKeyFor("k", {}))).toEqual({
+      status: "other-backend",
+    });
+    expect(qc.getQueryState(queryKeyFor("k", {}))?.dataUpdatedAt).not.toBe(0);
+    expect(drops).toEqual([]);
+    // Re-anchored: a version-less full sub goes out, so the socket's answer —
+    // whatever its version — applies and restamps the entry.
+    await flush();
+    const subs = socket
+      .sentJson()
+      .filter((m) => m.op === "sub" && m.key === "k");
+    expect(subs.length).toBe(subsBefore + 1);
+    expect(subs.at(-1)!.etag).toBeUndefined();
+    socket.serverSend({
+      kind: "sub-ack",
+      key: "k",
+      params: {},
+      value: { status: "socket-truth" },
+      version: 3,
+      epoch: "b1",
+    });
+    await flush();
+    expect(qc.getQueryData(queryKeyFor("k", {}))).toEqual({
+      status: "socket-truth",
+    });
+    // Once applied, case 3 protects again: an other-boot body is dropped and
+    // the cached socket truth returned.
+    fetchQueue.push(
+      makeResponse({
+        body: {
+          value: { status: "other-backend-2" },
+          version: 411,
+          epoch: "b2",
+        },
+      }),
+    );
+    await expect(
+      client.fetchOverHttp(
+        "k",
+        {},
+        undefined,
+        { schema: pushSchema },
+        "fallback",
+      ),
+    ).resolves.toEqual({ status: "socket-truth" });
+    expect(drops[0]).toMatchObject({
+      reason: "stale-epoch",
+      neverApplied: false,
+    });
+  });
+
+  test("8c: case 3 never-applied answered after the tuple was let go → applies, sends no resub", async () => {
+    const { client, qc, socket, fetchQueue } = await setup();
+    client.observe("k", {}, undefined, { schema: pushSchema });
     socket.serverSend({
       kind: "sub-ack",
       key: "k",
@@ -517,26 +604,85 @@ describe("NotificationsClient — HTTP fetch path", () => {
       { status: "unvouched" },
       { updatedAt: 0 },
     );
-
+    const subsBefore = socket
+      .sentJson()
+      .filter((m) => m.op === "sub" && m.key === "k").length;
     fetchQueue.push(
       makeResponse({
-        body: { value: { status: "old-boot" }, version: 9, epoch: "b0" },
+        body: { value: { status: "other-backend" }, version: 1, epoch: "b2" },
       }),
     );
-    await expect(
-      client.fetchOverHttp(
-        "k",
-        {},
-        undefined,
-        { schema: pushSchema },
-        "fallback",
-      ),
-    ).rejects.toMatchObject({
-      reason: "stale-epoch",
+    const read = client.fetchOverHttp(
+      "k",
+      {},
+      undefined,
+      { schema: pushSchema },
+      "fallback",
+    );
+    // The fetch is in flight; the tab lets the tuple go at once.
+    client.unobserve("k", {}, undefined, "now");
+    await expect(read).resolves.toEqual({ status: "other-backend" });
+    await flush();
+    expect(
+      socket.sentJson().filter((m) => m.op === "sub" && m.key === "k").length,
+    ).toBe(subsBefore);
+  });
+
+  test("8d: a late answer of the boot the socket left during the read is dropped, never adopted", async () => {
+    const { client, qc, socket, fetchQueue } = await setup();
+    client.observe("k", {}, undefined, { schema: pushSchema });
+    socket.serverSend({
+      kind: "sub-ack",
+      key: "k",
+      params: {},
+      value: { status: "b0-value" },
+      version: 900,
+      epoch: "b0",
     });
-    expect(drops[0]).toMatchObject({
-      reason: "stale-epoch",
-      neverApplied: true,
+    await flush();
+    // The read goes out while the socket names b0, and is held in flight.
+    let answer!: (r: Response) => void;
+    fetchQueue.push(
+      new Promise<Response>((r) => (answer = r)) as unknown as Response,
+    );
+    const read = client.fetchOverHttp(
+      "k",
+      {},
+      undefined,
+      { schema: pushSchema },
+      "fallback",
+    );
+    // The backend restarts: the socket's replay is answered by b1.
+    socket.serverSend({
+      kind: "sub-ack",
+      key: "k",
+      params: {},
+      value: { status: "b1-value" },
+      version: 950,
+      epoch: "b1",
+    });
+    await flush();
+    answer(
+      makeResponse({
+        body: { value: { status: "b0-late" }, version: 901, epoch: "b0" },
+      }),
+    );
+    await expect(read).resolves.toEqual({ status: "b1-value" });
+    expect(qc.getQueryData(queryKeyFor("k", {}))).toEqual({
+      status: "b1-value",
+    });
+    expect(drops[0]).toMatchObject({ reason: "stale-epoch" });
+    // The entry stayed on b1's stream: b1's next update applies.
+    socket.serverSend({
+      kind: "update",
+      key: "k",
+      params: {},
+      value: { status: "b1-next" },
+      version: 951,
+    });
+    await flush();
+    expect(qc.getQueryData(queryKeyFor("k", {}))).toEqual({
+      status: "b1-next",
     });
   });
 
@@ -1054,6 +1200,64 @@ describe("NotificationsClient — HTTP fetch path", () => {
         "fallback",
       );
       expect([...new Uint8Array(out)]).toEqual([2]);
+    });
+
+    test("a never-applied read answered by another backend than the socket's applies (no stale-epoch wedge)", async () => {
+      const { client, qc, socket, fetchQueue } = await setup();
+      client.observe("b", {}, undefined, bytesRead);
+      // The socket's backend (b1) opens the span at a high version; the read
+      // reaches another live backend (b2) whose counter is far lower.
+      socket.serverSend({
+        kind: "sub-ack",
+        key: "b",
+        params: {},
+        version: 4655,
+        epoch: "b1",
+      });
+      await flush();
+      fetchQueue.push(bytesResponse([7, 8], 410, "b2"));
+      const out = await client.fetchOverHttp(
+        "b",
+        {},
+        undefined,
+        bytesRead,
+        "fallback",
+      );
+      expect([...new Uint8Array(out)]).toEqual([7, 8]);
+      expect(qc.getQueryData(queryKeyFor("b", {}))).toBe(out);
+      expect(drops).toEqual([]);
+      // The re-anchoring resub's value-less sub-ack restamps the entry to the
+      // socket's boot (a bytes value never gets a socket value); the next
+      // change is read from the other backend again and still follows it —
+      // compared against that backend's own last answer, not frozen.
+      socket.serverSend({
+        kind: "sub-ack",
+        key: "b",
+        params: {},
+        version: 4656,
+        epoch: "b1",
+      });
+      await flush();
+      fetchQueue.push(bytesResponse([9], 411, "b2"));
+      const next = await client.fetchOverHttp(
+        "b",
+        {},
+        undefined,
+        bytesRead,
+        "fallback",
+      );
+      expect([...new Uint8Array(next)]).toEqual([9]);
+      // An older answer of that backend is still dropped (cached returned).
+      fetchQueue.push(bytesResponse([1], 400, "b2"));
+      const kept = await client.fetchOverHttp(
+        "b",
+        {},
+        undefined,
+        bytesRead,
+        "fallback",
+      );
+      expect(kept).toBe(next);
+      expect(drops.map((d) => d.reason)).toEqual(["stale-version"]);
     });
 
     test("a value-less sub-ack invalidates the tuple (its value is read over HTTP)", async () => {

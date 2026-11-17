@@ -601,6 +601,14 @@ interface ActiveSub {
    */
   socketValue: boolean;
   /**
+   * The HTTP body the cached value came from (its backend's boot and version),
+   * read only while `socketValue` is false: when a backend other than the
+   * socket's answers this tab's reads, its next answer is compared against its
+   * own earlier one — never against the socket's counter, which is another
+   * boot's and incomparable (`fetchOverHttp`).
+   */
+  httpBody?: { epoch: string; version: number };
+  /**
    * A PATCHED read's base (`ResourceDescriptor.patches`): the value exactly as
    * the server sent it — before the schema parse — of the last `sub-ack`,
    * `update` or `patch` applied, at `version`. A `patch` frame applies to it
@@ -1935,7 +1943,18 @@ export class NotificationsClient {
    *   - `entry` is a stale boot but the body matches the live WS server identity:
    *     ADOPT (the live response beats a cached memory of an older boot);
    *   - the body is a stale boot while `entry` matches the live server: DROP
-   *     (`stale-epoch`);
+   *     (`stale-epoch`) — unless nothing was ever applied: then there is no
+   *     newer state to protect, and the disagreement means two live backends
+   *     answer this tab (the socket named the entry's boot when the request
+   *     went out — if it moved boots meanwhile, the body is the boot it left
+   *     and is dropped), so the
+   *     body is applied as `foreign` (the entry keeps the socket's stream; the
+   *     body is recorded as `httpBody`) and the tuple re-anchored on the
+   *     socket by a full resubscribe — never a read left failed while they
+   *     disagree. While the cache still holds such a body (no socket frame
+   *     built a value since), that backend's next answer is compared against
+   *     it, strict `<` — so a bytes value (no socket value ever) keeps
+   *     following it instead of freezing;
    *   - neither matches the live server (the WS-down fallback window): ADOPT — a
    *     live response beats a memory of unknown vintage, and dropping would starve
    *     the fallback this function exists to serve.
@@ -1945,7 +1964,7 @@ export class NotificationsClient {
    * monotonic bump.
    *
    * On a DROP: if a server-vouched value was ever applied, the cache holds newer
-   * truth — return it. Otherwise throw `ResourceStaleReadError` — NEVER settle the
+   * truth — return it. Otherwise (a same-boot `stale-version` drop) throw `ResourceStaleReadError` — NEVER settle the
    * query on a value the server never vouched for (the "Close (state unknown)"
    * wedge) nor apply the stale body (old-boot data under destructive buttons). Every drop
    * also feeds the stale-drop report sink with the running consecutive count.
@@ -1964,7 +1983,9 @@ export class NotificationsClient {
     const { schema } = read;
     const channel = this.channels[socketKindFor(origin)];
     const entry = channel?.subs.get(`${key}\0${paramsKey(params)}`);
-    const serverEpoch = channel?.serverEpoch;
+    // The socket's server identity when the request goes out; the guard below
+    // arbitrates with the one it names when the answer is read (`serverEpoch`).
+    const requestEpoch = channel?.serverEpoch;
     const url = resourceUrl(key, params, origin);
     const etag = this.etagFor(key, params, origin);
     const build = buildHeader(socketKindFor(origin));
@@ -2003,8 +2024,21 @@ export class NotificationsClient {
     // Epoch-aware version guard (see doc comment). Compute the adopt/drop decision
     // only when we hold a sub `entry` to compare against; with no entry there is
     // nothing to guard, so apply straight through.
+    // The live WS server identity NOW: a socket that moved to another boot
+    // while this read was in flight arbitrates with the boot it moved to.
+    const serverEpoch = channel?.serverEpoch;
     let drop: "stale-version" | "stale-epoch" | null = null;
-    let crossEpochAdopt = false;
+    // How an applied body relates to the entry: `same` (its boot, or legacy —
+    // the version advances monotonically), `adopt` (the entry is re-stamped
+    // to the body's boot), or `foreign` — a backend other than the socket's
+    // answered (two live backends: a socket outliving its backend's swap): the
+    // entry keeps the socket's stream, the body is recorded as `httpBody`.
+    let mode: "same" | "adopt" | "foreign" = "same";
+    let reanchor = false;
+    // The cached value is an earlier body of THIS answer's backend (no socket
+    // frame built anything since): versions compare within that boot.
+    const heldBody =
+      entry !== undefined && !entry.socketValue ? entry.httpBody : undefined;
     if (entry) {
       if (
         body.epoch === undefined ||
@@ -2015,13 +2049,40 @@ export class NotificationsClient {
         if (body.version < entry.version) drop = "stale-version";
       } else if (body.epoch === serverEpoch) {
         // Entry is a stale boot; body matches the live WS server identity → adopt.
-        crossEpochAdopt = true;
+        mode = "adopt";
+      } else if (
+        heldBody !== undefined &&
+        heldBody.epoch === body.epoch &&
+        this.hasAppliedValue(key, params)
+      ) {
+        // The other backend again, over a value it answered before: strict `<`
+        // against that answer, never against the socket's incomparable counter.
+        if (body.version < heldBody.version) drop = "stale-version";
+        else mode = "foreign";
       } else if (entry.epoch === serverEpoch) {
-        // Body is a stale boot while the entry matches the live server → drop.
-        drop = "stale-epoch";
+        if (this.hasAppliedValue(key, params) || requestEpoch !== serverEpoch) {
+          // Body is another boot while the entry matches the live server, and
+          // either the cache holds its newer truth, or the socket moved boots
+          // while this read was in flight (the body is the boot it left — the
+          // new boot's sub-ack brings the value) → drop.
+          drop = "stale-epoch";
+        } else {
+          // Nothing applied yet, so nothing newer to protect; and the socket
+          // already named this boot when the request went out, yet another
+          // backend answered it: two live backends, neither known to be the
+          // current one. Dropping would fail the read for as long as they
+          // disagree (every read of a bytes value — HTTP-only). Apply it, and
+          // re-anchor the tuple on the socket with a full resub so a
+          // socket-carried value replaces it.
+          trace(
+            `http foreign-epoch never-applied key=${key} params=${paramsKey(params)} bodyEpoch=${body.epoch} entryEpoch=${entry.epoch} msgVersion=${body.version} haveVersion=${entry.version} source=${source} → apply + resub`,
+          );
+          mode = "foreign";
+          reanchor = true;
+        }
       } else {
         // No arbiter (WS-down fallback window): adopt the live response.
-        crossEpochAdopt = true;
+        mode = "adopt";
       }
     }
 
@@ -2081,7 +2142,13 @@ export class NotificationsClient {
       // be cut from it (see `ActiveSub.socketValue`).
       entry.socketValue = false;
       entry.wire = undefined;
-      if (crossEpochAdopt) {
+      entry.httpBody =
+        body.epoch !== undefined
+          ? { epoch: body.epoch, version: body.version }
+          : undefined;
+      if (mode === "foreign") {
+        // Another backend's counter: never mixed into the socket's stream.
+      } else if (mode === "adopt") {
         // Cross-epoch adopt: the old-boot version number is meaningless, so take
         // the body's version UNCONDITIONALLY and re-stamp the entry's boot
         // identity (body.epoch is defined on every cross-epoch adopt path).
@@ -2094,6 +2161,14 @@ export class NotificationsClient {
         entry.version = body.version;
       }
       this.markApplied(entry, key); // stamps lastAppliedAt + resets drop count + emitDebug + verbose trace
+      // Only while the tuple is still this sub (an unobserve, or a teardown,
+      // during the fetch must not resubscribe what the tab let go).
+      if (
+        reanchor &&
+        channel !== undefined &&
+        channel.subs.get(`${key}\0${paramsKey(params)}`) === entry
+      )
+        this.forceFullResub(channel, entry, key, params);
     }
     trace(
       `http key=${key} params=${paramsKey(params)} version=${body.version} source=${source}`,
