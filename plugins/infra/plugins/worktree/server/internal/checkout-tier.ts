@@ -15,7 +15,9 @@ import type { CheckoutTier } from "@plugins/infra/plugins/git/plugins/index-refr
  * bursts). Under host load — a darwinbg process queues behind every agent's
  * background build — the gap is wider.
  *
- * A spare refill and a release checkout pass `background` (nobody waits on
- * them); a removal's deletes and prunes are background by construction.
+ * A spare refill's install and a release checkout pass `background` (nobody
+ * waits on them); a spare's tree write is foreground, since it holds a
+ * `worktree-mutate` slot launches queue on (spare.ts). A removal's deletes and
+ * prunes are background by construction.
  */
 export const LAUNCH_TIER: CheckoutTier = "foreground";

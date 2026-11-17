@@ -51,33 +51,43 @@ const SPARE_MAX_AGE_MS = 24 * 60 * 60_000;
  * `.claude/worktrees/spare-<ms>-<rand>`, `install` it, then lock it with
  * `SPARE_LOCK_REASON` — the readiness marker, so it is claimable only once fully
  * written AND installed. Shares `addCheckout` (one `checkout.workers=0`, one
- * timeout, one partial-tree cleanup) with the cold path. Call inside a
- * mutate-gate hold.
+ * timeout, one partial-tree cleanup) with the cold path.
  *
+ * @param gate holds a host-wide `worktree-mutate` slot around the tree write
+ * ONLY (`withWorktreeMutateSlot` in production). The install runs after `gate`
+ * returns, so a refill cannot hold the slot every launch's cold add needs for
+ * its install: the gate exists for the git write, as on the launch path.
  * @param install `installCheckout` in production; required so no caller can
  * make a ready spare that is not installed. Tests pass their own.
  */
 export async function createSpareIn(
   repoRoot: AppPath,
+  gate: <T>(fn: () => Promise<T>) => Promise<T>,
   install: (path: string, signal?: AbortSignal) => Promise<void>,
   onStep: OnSetupStep,
   signal?: AbortSignal,
 ): Promise<{ path: string; tree: TreeStart }> {
   const path = joinAppPath(gitWorktreesDir(repoRoot), newSpareName());
   // `add` spans the whole add; its `tree-write` is reported inside it.
-  const tree = await timeStep(onStep, "add", () =>
-    addCheckout(
-      basename(path),
-      repoRoot,
-      path,
-      { kind: "detached", rev: "main" },
-      // Prework nobody waits on (checkout-tier.ts).
-      { recycle: true, onStep, tier: "background" },
-      signal,
+  const tree = await gate(() =>
+    timeStep(onStep, "add", () =>
+      addCheckout(
+        basename(path),
+        repoRoot,
+        path,
+        { kind: "detached", rev: "main" },
+        // Foreground although nobody waits on the spare itself: the write holds
+        // a scarce host-wide slot every launch's cold add queues on, and a
+        // slot's holder runs in the foreground
+        // (research/2026-10-16-global-scarce-slot-holders-run-foreground.md).
+        { recycle: true, onStep, tier: "foreground" },
+        signal,
+      ),
     ),
   );
-  // Before the lock, so ready == installed. A failed install throws and leaves
-  // an unlocked spare: not ready, and the prune reclaims it.
+  // Out of the gate, and before the lock, so ready == installed: until the
+  // lock the spare is not ready, and no claim takes it. A failed install throws
+  // and leaves an unlocked spare: not ready, and the prune reclaims it.
   await install(path, signal);
   // Thrown, unlike an agent checkout's lock: an unlocked spare is not ready,
   // and the prune reclaims it.
@@ -89,30 +99,30 @@ export async function createSpareIn(
   return { path, tree };
 }
 
-/** Write one ready spare under the host-wide `worktree-mutate` gate. */
+/**
+ * Write one ready spare, its tree write under the host-wide `worktree-mutate`
+ * gate. Its install runs outside the gate, at background tier: nobody waits on
+ * it (checkout-tier.ts).
+ */
 export async function createSpareWorktree(
   onStep: OnSetupStep,
   signal?: AbortSignal,
 ): Promise<{ path: string; tree: TreeStart; depStore: AdoptResult }> {
   const repoRoot = await ensureMainWorktreeRoot(signal);
   let depStore: AdoptResult = { kind: "none" };
-  const { path, tree } = await withWorktreeMutateSlot(
-    () =>
-      createSpareIn(
+  const { path, tree } = await createSpareIn(
+    repoRoot,
+    (fn) => withWorktreeMutateSlot(fn, signal, onStep),
+    async (path, sig) => {
+      depStore = await installCheckout(
         repoRoot,
-        async (path, sig) => {
-          depStore = await installCheckout(
-            repoRoot,
-            path,
-            { frozen: true, onStep, tier: "background" },
-            sig,
-          );
-        },
-        onStep,
-        signal,
-      ),
-    signal,
+        path,
+        { frozen: true, onStep, tier: "background" },
+        sig,
+      );
+    },
     onStep,
+    signal,
   );
   return { path, tree, depStore };
 }

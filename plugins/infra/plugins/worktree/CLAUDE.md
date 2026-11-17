@@ -123,8 +123,9 @@ store into a checkout that has no `node_modules` (below), then runs the checkout
 install`, with `EQUIN_FROZEN_LOCKFILE=1` (so creation never rewrites `bun.lock`),
 at the caller's tier (below), output captured into the thrown error. Its own CLI because
 `server` may not import `cli`, and the checkout's copy is the install code and
-lock that belong to it. `createSpareIn` runs it before the lock (the installer is
-a required parameter, so a test passes its own); `setupWorktree` runs it after
+lock that belong to it. `createSpareIn` runs it before the lock and after its
+gate returns (the gate and the installer are required parameters, so a test
+passes its own, and no slot holder can run the install); `setupWorktree` runs it after
 every path settles (fresh add, claimed spare — whose switch may move `bun.lock`
 — and `existing`: a resume's checkout, or a retry whose install failed), outside the mutate
 gate. Without it, a checkout's first program (the guard hook, not `./equin`)
@@ -144,8 +145,10 @@ The heavy children of a checkout — tree write, switch, seed copy, install,
 index refresh — run at the tier of whoever waits on it, a required `tier` on
 `addCheckout`, `installCheckout` (and its `adoptDepStore`) and
 `refreshCheckoutIndex`: `setupWorktree` (a launch — a person waits on the
-agent) uses `LAUNCH_TIER` = `foreground`; a spare refill and a release checkout
-pass `background`; a removal's deletes and prunes are background as before. At darwinbg every step of a
+agent) uses `LAUNCH_TIER` = `foreground`; a spare refill's tree write is
+`foreground` too (it holds a `worktree-mutate` slot launches queue on —
+research/2026-10-16-global-scarce-slot-holders-run-foreground.md), its install
+(outside the gate) and a release checkout `background`; a removal's deletes and prunes are background as before. At darwinbg every step of a
 cold checkout ran ~2× slower (burst of 3: 9.5–10.9 s → 5.1–5.6 s), with main's
 `/api/search` p95 unchanged (84 ms). Measurements: `checkout-tier.ts`.
 
