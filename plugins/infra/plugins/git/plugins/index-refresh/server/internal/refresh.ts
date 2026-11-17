@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { rm } from "node:fs/promises";
+import type { SpawnTier } from "@plugins/packages/plugins/spawn-priority/core";
 import {
   copyIndex,
   publishRefreshedIndex,
@@ -16,6 +17,13 @@ import { GIT } from "@plugins/infra/plugins/paths/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { countRacyEntries } from "../../core";
 
+/**
+ * The tier a checkout's heavy children run at — never `inherit`: whoever waits
+ * on the checkout decides it (a launch: `foreground`; prework and maintenance:
+ * `background`).
+ */
+export type CheckoutTier = Exclude<SpawnTier, "inherit">;
+
 // A status is a read: well past a fresh checkout's ~1 s walk, short of hiding a wedge.
 const REFRESH_TIMEOUT_MS = 120_000;
 
@@ -26,14 +34,14 @@ const WITH_UNTRACKED_CACHE = ["-c", "core.untrackedCache=true"];
 async function git(
   wtPath: string,
   args: string[],
-  opts: { indexFile?: string; signal?: AbortSignal },
+  opts: { indexFile?: string; signal?: AbortSignal; tier: CheckoutTier },
 ): Promise<string> {
   // Never an inherited GIT_INDEX_FILE: the index read here is the checkout's
   // own, or the private copy named.
   const { GIT_INDEX_FILE: _inherited, ...env } = process.env;
   const argv = [GIT, "-C", wtPath, ...args];
   const r = await spawnCaptured(argv, {
-    tier: "background",
+    tier: opts.tier,
     timeoutMs: REFRESH_TIMEOUT_MS,
     ...(opts.signal ? { signal: opts.signal } : {}),
     ...(opts.indexFile
@@ -55,13 +63,14 @@ async function git(
 /** This checkout's own index, as git names it. */
 async function indexPathOf(
   wtPath: string,
+  tier: CheckoutTier,
   signal?: AbortSignal,
 ): Promise<AppPath> {
   return asAppPath(
     await git(
       wtPath,
       ["rev-parse", "--path-format=absolute", "--git-path", "index"],
-      { signal },
+      { signal, tier },
     ),
   );
 }
@@ -95,9 +104,12 @@ async function indexPathOf(
  */
 export async function refreshCheckoutIndex(
   wtPath: string,
+  // Who waits on it: `foreground` for a checkout a person is waiting on (an
+  // agent's launch), `background` for prework and maintenance.
+  tier: CheckoutTier,
   signal?: AbortSignal,
 ): Promise<IndexPublish> {
-  const realIndex = await indexPathOf(wtPath, signal);
+  const realIndex = await indexPathOf(wtPath, tier, signal);
   const seen = await stat(realIndex, { bigint: true });
   const scratch = joinAppPath(
     appPathParent(realIndex),
@@ -117,7 +129,7 @@ export async function refreshCheckoutIndex(
         // not used by them.
         "--untracked-files=normal",
       ],
-      { indexFile: scratch, signal },
+      { indexFile: scratch, signal, tier },
     );
     return await publishRefreshedIndex(realIndex, scratch, seen);
   } finally {
@@ -143,7 +155,8 @@ export type IndexTrust =
  * delay set by git's whole-second rule, not a poll.
  */
 export async function refreshIndexIfRacy(wtPath: string): Promise<IndexTrust> {
-  const realIndex = await indexPathOf(wtPath);
+  // Heard on an index write a watch saw: maintenance, nobody waits on it.
+  const realIndex = await indexPathOf(wtPath, "background");
   let bytes: Uint8Array;
   let mtimeMs: number;
   try {
@@ -166,6 +179,7 @@ export async function refreshIndexIfRacy(wtPath: string): Promise<IndexTrust> {
     kind: "refreshed",
     entries,
     racy,
-    publish: await refreshCheckoutIndex(wtPath),
+    // Heard on an index write a watch saw: maintenance, nobody waits on it.
+    publish: await refreshCheckoutIndex(wtPath, "background"),
   };
 }

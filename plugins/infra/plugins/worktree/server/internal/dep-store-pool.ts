@@ -6,6 +6,7 @@ import { mkdir, rename, rm } from "node:fs/promises";
 import { lstat, readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, join } from "node:path";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import type { CheckoutTier } from "@plugins/infra/plugins/git/plugins/index-refresh/server";
 import {
   holdSeed,
   type HeldTransient,
@@ -274,6 +275,8 @@ export async function adoptDepStore(
   repoRoot: AppPath,
   checkout: string,
   now: number,
+  // The seed copy's tier: whoever waits on the checkout (checkout-tier.ts).
+  tier: CheckoutTier,
 ): Promise<AdoptResult> {
   if (await exists(join(checkout, NODE_MODULES))) return { kind: "present" };
   const pool = depStorePool(repoRoot);
@@ -282,7 +285,7 @@ export async function adoptDepStore(
   // No lock-free copy (off macOS): the pool keeps no seed, and the last
   // store is handed away like any other.
   if (FILE_CLONE_ARGV === null) return { kind: "none" };
-  return cloneSeed(pool, FILE_CLONE_ARGV, checkout, now);
+  return cloneSeed(pool, FILE_CLONE_ARGV, checkout, now, tier);
 }
 
 async function moveIn(
@@ -316,6 +319,7 @@ async function cloneSeed(
   argv: readonly string[],
   checkout: string,
   now: number,
+  tier: CheckoutTier,
 ): Promise<AdoptResult> {
   const seed = await holdSeed(pool);
   if (seed === null) return { kind: "none" };
@@ -331,7 +335,7 @@ async function cloneSeed(
     let r;
     try {
       r = await spawnCaptured([...argv, join(seed.path, STORE_DIR), copied], {
-        tier: "background",
+        tier,
         timeoutMs: CLONE_TIMEOUT_MS,
       });
     } finally {

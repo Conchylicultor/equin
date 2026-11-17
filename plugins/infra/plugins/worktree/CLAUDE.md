@@ -121,7 +121,7 @@ signals the backend's whole process group (see
 `installCheckout(repoRoot, path, opts, signal?)` adopts a waiting dependency
 store into a checkout that has no `node_modules` (below), then runs the checkout's OWN CLI, `<path>/equin
 install`, with `EQUIN_FROZEN_LOCKFILE=1` (so creation never rewrites `bun.lock`),
-background tier, output captured into the thrown error. Its own CLI because
+at the caller's tier (below), output captured into the thrown error. Its own CLI because
 `server` may not import `cli`, and the checkout's copy is the install code and
 lock that belong to it. `createSpareIn` runs it before the lock (the installer is
 a required parameter, so a test passes its own); `setupWorktree` runs it after
@@ -137,6 +137,17 @@ step ends (also when it throws): `gate-wait`, `claim`, `switch`, `add` (with
 `tree-write` nested inside it), `lock`, `dep-store`, `install`, `index-refresh`.
 The prepare job and the spare refill log each step as it ends and the split on
 their result line (`worktree-prepare`, `worktree-spare-refill` channels).
+
+## A launch's checkout runs in the foreground (`server/internal/checkout-tier.ts`)
+
+The heavy children of a checkout — tree write, switch, seed copy, install,
+index refresh — run at the tier of whoever waits on it, a required `tier` on
+`addCheckout`, `installCheckout` (and its `adoptDepStore`) and
+`refreshCheckoutIndex`: `setupWorktree` (a launch — a person waits on the
+agent) uses `LAUNCH_TIER` = `foreground`; a spare refill and a release checkout
+pass `background`; a removal's deletes and prunes are background as before. At darwinbg every step of a
+cold checkout ran ~2× slower (burst of 3: 9.5–10.9 s → 5.1–5.6 s), with main's
+`/api/search` p95 unchanged (84 ms). Measurements: `checkout-tier.ts`.
 
 ## Every new checkout starts with a refreshed index (`infra/git/index-refresh`)
 
@@ -361,6 +372,7 @@ pid liveness.
 
 - Server:
   - Uses:
+    - `infra/git/index-refresh.CheckoutTier`
     - `infra/git/index-refresh.refreshCheckoutIndex`
     - `infra/host/host-admission.defineHostPool`
     - `infra/paths.GIT`

@@ -4,6 +4,7 @@ export {
   refreshCheckoutIndex,
   refreshIndexIfRacy,
   type IndexTrust,
+  type CheckoutTier,
 } from "./internal/refresh";
 
 export default {

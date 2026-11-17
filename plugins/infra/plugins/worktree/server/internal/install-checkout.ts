@@ -5,6 +5,7 @@ import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/co
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { type AdoptResult, adoptDepStore } from "./dep-store-pool";
 import { type OnSetupStep, timeStep } from "./setup-steps";
+import type { CheckoutTier } from "@plugins/infra/plugins/git/plugins/index-refresh/server";
 
 /**
  * A cold `bun install` of this repo plus its postinstall provisions. Like the
@@ -43,22 +44,21 @@ const OUTPUT_TAIL_CHARS = 8000;
 export async function installCheckout(
   repoRoot: AppPath,
   path: string,
-  opts: { frozen: boolean; onStep: OnSetupStep },
+  opts: { frozen: boolean; onStep: OnSetupStep; tier: CheckoutTier },
   signal?: AbortSignal,
 ): Promise<AdoptResult> {
   const depStore = await timeStep(opts.onStep, "dep-store", () =>
-    adoptDepStore(repoRoot, path, Date.now()),
+    adoptDepStore(repoRoot, path, Date.now(), opts.tier),
   );
   const argv = [join(path, CLI_NAME), "install"];
-  // Demoted like the checkout itself: background work relative to the
-  // interactive backends.
+  // At the tier of whoever waits on the checkout (checkout-tier.ts).
   const r = await timeStep(opts.onStep, "install", () =>
     spawnCaptured(argv, {
     cwd: path,
     env: opts.frozen
       ? { ...process.env, ...envEntries({ FROZEN_LOCKFILE: "1" }) }
       : process.env,
-    tier: "background",
+      tier: opts.tier,
     mergeStderr: true,
       timeoutMs: INSTALL_TIMEOUT_MS,
       signal,

@@ -190,7 +190,7 @@ describe("adoptDepStore", () => {
     await harvestAt(installedCheckout("att-2", "b@1.0.0"), 2000);
     await harvestAt(installedCheckout("att-3", "c@1.0.0"), 3000);
     const fresh = emptyCheckout("fresh");
-    expect(await adoptDepStore(repo, fresh, 3500)).toEqual({
+    expect(await adoptDepStore(repo, fresh, 3500, "background")).toEqual({
       kind: "adopted",
       entry: "3000-att-3",
       ageMs: 500,
@@ -210,7 +210,7 @@ describe("adoptDepStore", () => {
     await harvestAt(installedCheckout("att-1"), 1000);
     const claimed = emptyCheckout("claimed");
     mkdirSync(join(claimed, "node_modules"));
-    expect(await adoptDepStore(repo, claimed, 2000)).toEqual({
+    expect(await adoptDepStore(repo, claimed, 2000, "background")).toEqual({
       kind: "present",
     });
     expect(poolNames()).toEqual(["seed"]);
@@ -219,7 +219,7 @@ describe("adoptDepStore", () => {
   test("with no entry left, the checkout gets a file-by-file copy of the seed", async () => {
     await harvestAt(installedCheckout("att-1", "a@1.0.0"), 1000);
     const fresh = emptyCheckout("fresh");
-    expect(await adoptDepStore(repo, fresh, 2000)).toEqual({
+    expect(await adoptDepStore(repo, fresh, 2000, "background")).toEqual({
       kind: "cloned",
       entry: "1000-att-1",
       ageMs: 1000,
@@ -232,7 +232,9 @@ describe("adoptDepStore", () => {
     // A copy, not a link: editing it leaves the seed as it was.
     writeFileSync(file, "// edited\n");
     const second = emptyCheckout("second");
-    expect((await adoptDepStore(repo, second, 3000)).kind).toBe("cloned");
+    expect((await adoptDepStore(repo, second, 3000, "background")).kind).toBe(
+      "cloned",
+    );
     expect(
       readFileSync(
         join(second, "node_modules", ".bun", "a@1.0.0", "index.js"),
@@ -249,7 +251,7 @@ describe("adoptDepStore", () => {
     );
     await harvestAt(checkout, 1000);
     const fresh = emptyCheckout("fresh");
-    await adoptDepStore(repo, fresh, 2000);
+    await adoptDepStore(repo, fresh, 2000, "background");
     expect(readlinkSync(join(fresh, "node_modules", ".bun", "link-to-a"))).toBe(
       "../a@1.0.0",
     );
@@ -259,7 +261,7 @@ describe("adoptDepStore", () => {
     await harvestAt(installedCheckout("att-1"), 1000);
     const checkouts = ["a", "b", "c", "d"].map(emptyCheckout);
     const results = await Promise.all(
-      checkouts.map((c) => adoptDepStore(repo, c, 2000)),
+      checkouts.map((c) => adoptDepStore(repo, c, 2000, "background")),
     );
     for (const [i, r] of results.entries()) {
       expect(r.kind).toBe("cloned");
@@ -283,7 +285,9 @@ describe("adoptDepStore", () => {
     });
     // One takes the entry, the others copy the seed.
     await Promise.all(
-      ["x", "y", "z"].map((c) => adoptDepStore(repo, emptyCheckout(c), 2500)),
+      ["x", "y", "z"].map((c) =>
+        adoptDepStore(repo, emptyCheckout(c), 2500, "background"),
+      ),
     );
     await Bun.sleep(50);
     watcher.close();
@@ -299,8 +303,8 @@ describe("adoptDepStore", () => {
     await harvestAt(installedCheckout("att-2", "b@1.0.0"), 2000);
     const late = 1000 + 7 * DAY + 500; // the seed is past the bound by this clock
     const [x, y] = await Promise.all([
-      adoptDepStore(repo, emptyCheckout("x"), late),
-      adoptDepStore(repo, emptyCheckout("y"), 2500),
+      adoptDepStore(repo, emptyCheckout("x"), late, "background"),
+      adoptDepStore(repo, emptyCheckout("y"), 2500, "background"),
     ]);
     const byKind = Object.fromEntries([x, y].map((r) => [r.kind, r]));
     expect(Object.keys(byKind).sort()).toEqual(["adopted", "cloned"]);
@@ -309,7 +313,12 @@ describe("adoptDepStore", () => {
     // And an adopter whose clock counts every entry expired still copies the
     // seed: only the sweep's one clock retires it.
     expect(
-      await adoptDepStore(repo, emptyCheckout("z"), 2000 + 8 * DAY),
+      await adoptDepStore(
+        repo,
+        emptyCheckout("z"),
+        2000 + 8 * DAY,
+        "background",
+      ),
     ).toMatchObject({ kind: "cloned", entry: "1000-att-1" });
     expect(poolNames()).toEqual(["seed"]);
   });
@@ -320,11 +329,15 @@ describe("adoptDepStore", () => {
     // an entry.
     await harvestAt(installedCheckout("att-1", "a@1.0.0"), 1000); // the seed
     await harvestAt(installedCheckout("att-2", "b@1.0.0"), 500);
-    expect(await adoptDepStore(repo, emptyCheckout("x"), 2000)).toMatchObject({
+    expect(
+      await adoptDepStore(repo, emptyCheckout("x"), 2000, "background"),
+    ).toMatchObject({
       kind: "adopted",
       entry: "500-att-2",
     });
-    expect(await adoptDepStore(repo, emptyCheckout("y"), 2000)).toMatchObject({
+    expect(
+      await adoptDepStore(repo, emptyCheckout("y"), 2000, "background"),
+    ).toMatchObject({
       kind: "cloned",
       entry: "1000-att-1",
     });
@@ -339,7 +352,9 @@ describe("adoptDepStore", () => {
       join(pool, "2000-att-2"),
       join(pool, ".claimed-2500-2000-att-2-x"),
     );
-    expect(await adoptDepStore(repo, emptyCheckout("fresh"), 3000)).toEqual({
+    expect(
+      await adoptDepStore(repo, emptyCheckout("fresh"), 3000, "background"),
+    ).toEqual({
       kind: "cloned",
       entry: "1000-att-1",
       ageMs: 2000,
@@ -350,7 +365,9 @@ describe("adoptDepStore", () => {
     await harvestAt(installedCheckout("att-1"), 1000); // the seed
     await harvestAt(installedCheckout("att-2"), 2000);
     const gone = join(base, "gone"); // never created: mkdir of its node_modules fails
-    expect(adoptDepStore(repo, gone, 2500)).rejects.toThrow("ENOENT");
+    expect(adoptDepStore(repo, gone, 2500, "background")).rejects.toThrow(
+      "ENOENT",
+    );
     await Bun.sleep(50);
     expect(poolNames()).toEqual(["2000-att-2", "seed"]);
   });
@@ -367,7 +384,7 @@ describe("adoptDepStore", () => {
     );
     chmodSync(file, 0o000);
     const fresh = emptyCheckout("fresh");
-    expect(adoptDepStore(repo, fresh, 2000)).rejects.toThrow(
+    expect(adoptDepStore(repo, fresh, 2000, "background")).rejects.toThrow(
       "copying the pool's seed",
     );
     await Bun.sleep(200);
@@ -380,13 +397,15 @@ describe("adoptDepStore", () => {
     await harvestAt(installedCheckout("att-1"), 8 * DAY); // the seed
     await harvestAt(installedCheckout("att-2"), 1000);
     expect(
-      await adoptDepStore(repo, emptyCheckout("fresh"), 9 * DAY),
+      await adoptDepStore(repo, emptyCheckout("fresh"), 9 * DAY, "background"),
     ).toMatchObject({ kind: "cloned", entry: `${8 * DAY}-att-1` });
     expect(poolNames()).toEqual(["1000-att-2", "seed"]);
   });
 
   test("an empty pool is a cold install", async () => {
-    expect(await adoptDepStore(repo, emptyCheckout("fresh"), 1000)).toEqual({
+    expect(
+      await adoptDepStore(repo, emptyCheckout("fresh"), 1000, "background"),
+    ).toEqual({
       kind: "none",
     });
   });

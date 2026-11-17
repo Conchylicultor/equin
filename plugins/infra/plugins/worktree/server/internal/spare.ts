@@ -71,7 +71,8 @@ export async function createSpareIn(
       repoRoot,
       path,
       { kind: "detached", rev: "main" },
-      { recycle: true, onStep },
+      // Prework nobody waits on (checkout-tier.ts).
+      { recycle: true, onStep, tier: "background" },
       signal,
     ),
   );
@@ -103,7 +104,7 @@ export async function createSpareWorktree(
           depStore = await installCheckout(
             repoRoot,
             path,
-            { frozen: true, onStep },
+            { frozen: true, onStep, tier: "background" },
             sig,
           );
         },

@@ -39,7 +39,10 @@ import {
 } from "./dep-store-pool";
 import { installCheckout } from "./install-checkout";
 import type { IndexPublish } from "@plugins/infra/plugins/git/plugins/private-index/core";
-import { refreshCheckoutIndex } from "@plugins/infra/plugins/git/plugins/index-refresh/server";
+import {
+  type CheckoutTier,
+  refreshCheckoutIndex,
+} from "@plugins/infra/plugins/git/plugins/index-refresh/server";
 import {
   emptyTreePool,
   harvestTree,
@@ -51,6 +54,7 @@ import {
 } from "./tree-pool";
 import { withWorktreeMutateSlot } from "./mutate-gate";
 import { type OnSetupStep, timeStep } from "./setup-steps";
+import { LAUNCH_TIER } from "./checkout-tier";
 import { isSpareName, SPARE_LOCK_REASON } from "./spare-name";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
@@ -878,8 +882,9 @@ export async function addCheckout(
   repoRoot: AppPath,
   wtPath: string,
   head: CheckoutHead,
-  // `onStep` hears the tree write (`tree-write`, setup-steps.ts).
-  opts: { recycle: boolean; onStep: OnSetupStep },
+  // `onStep` hears the tree write (`tree-write`, setup-steps.ts); `tier` is
+  // who waits on it (checkout-tier.ts).
+  opts: { recycle: boolean; onStep: OnSetupStep; tier: CheckoutTier },
   signal?: AbortSignal,
 ): Promise<TreeStart> {
   // Never written into: an existing dir is someone's checkout (or a retry's
@@ -957,6 +962,7 @@ export async function addCheckout(
           headText,
           taken,
           opts.onStep,
+          opts.tier,
           signal,
         );
         return { kind: "recycled", entry: taken.entry, ageMs: taken.ageMs };
@@ -977,6 +983,7 @@ export async function addCheckout(
           headText,
           null,
           opts.onStep,
+          opts.tier,
           signal,
         );
         return { kind: "empty", recycleFailed: err.message };
@@ -990,6 +997,7 @@ export async function addCheckout(
       headText,
       null,
       opts.onStep,
+      opts.tier,
       signal,
     );
     return { kind: "empty" };
@@ -1002,6 +1010,7 @@ export async function addCheckout(
     headText,
     null,
     opts.onStep,
+    opts.tier,
     signal,
   );
   return { kind: "not-asked" };
@@ -1020,6 +1029,7 @@ async function writeCheckout(
   headText: string,
   recycled: TakenTree | null,
   onStep: OnSetupStep,
+  tier: CheckoutTier,
   signal?: AbortSignal,
 ): Promise<void> {
   // Staged beside `worktrees/`, not in it: nothing enumerates it there, and a
@@ -1084,9 +1094,6 @@ async function writeCheckout(
     // checkout of ours sets either; one that does is not recycled.
     if (recycled !== null) await assertNoTrustFlags(label, wtPath, signal);
     const writeTree = async () => {
-      // Demoted (`tier: "background"` applies backgroundArgv/darwinbg): a
-      // checkout runs in a deferred job — always background work relative to
-      // the interactive backends.
       await runCheckoutWrite(
         label,
         wtPath,
@@ -1097,6 +1104,7 @@ async function writeCheckout(
           "--quiet",
           "--no-recurse-submodules",
         ],
+        tier,
         signal,
       );
       // A recycled tree still holds whatever its last agent left untracked or
@@ -1108,6 +1116,7 @@ async function writeCheckout(
           label,
           wtPath,
           [GIT, "-C", wtPath, "clean", "-ffdxq"],
+          tier,
           signal,
         );
       }
@@ -1159,10 +1168,11 @@ async function runCheckoutWrite(
   label: string,
   wtPath: string,
   argv: string[],
+  tier: CheckoutTier,
   signal?: AbortSignal,
 ): Promise<void> {
   const r = await spawnCaptured(argv, {
-    tier: "background",
+    tier,
     timeoutMs: ADD_TIMEOUT_MS,
     signal,
   });
@@ -1262,8 +1272,9 @@ async function switchToAttemptBranch(
     const commit = await resolveCommit(repoRoot, "main", signal);
     argv = [...sw, "-c", branch, commit];
   }
+  // Only a launch claims a spare: someone is waiting on it.
   const r = await spawnCaptured(argv, {
-    tier: "background",
+    tier: LAUNCH_TIER,
     timeoutMs: ADD_TIMEOUT_MS,
     signal,
   });
@@ -1466,7 +1477,7 @@ export async function checkoutAttempt(
         repoRoot,
         wtPath,
         head,
-        { recycle: true, onStep },
+        { recycle: true, onStep, tier: LAUNCH_TIER },
         signal,
       ),
     );
@@ -1600,7 +1611,7 @@ export async function setupWorktree(
     const depStore = await installCheckout(
       repoRoot,
       wtPath,
-      { frozen: false, onStep },
+      { frozen: false, onStep, tier: LAUNCH_TIER },
       signal,
     );
     // A checkout discarded and written again here is a new one: fill its
@@ -1609,7 +1620,7 @@ export async function setupWorktree(
       source === "existing"
         ? "not-primed"
         : await timeStep(onStep, "index-refresh", () =>
-            refreshCheckoutIndex(wtPath, signal),
+            refreshCheckoutIndex(wtPath, LAUNCH_TIER, signal),
           );
     await stampMinter(id, minter);
     return { source, tree, depStore, untrackedCache };
@@ -1650,13 +1661,13 @@ export async function setupWorktree(
   const depStore = await installCheckout(
     repoRoot,
     wtPath,
-    { frozen: true, onStep },
+    { frozen: true, onStep, tier: LAUNCH_TIER },
     signal,
   );
   // Installed, at its final path, and nobody works in it yet — the one moment
   // its untracked cache can be filled (see refreshCheckoutIndex).
   const untrackedCache = await timeStep(onStep, "index-refresh", () =>
-    refreshCheckoutIndex(wtPath, signal),
+    refreshCheckoutIndex(wtPath, LAUNCH_TIER, signal),
   );
   await stampMinter(id, minter);
   return { source, tree, depStore, untrackedCache };

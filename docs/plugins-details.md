@@ -37277,7 +37277,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`index-refresh`** — Keep a checkout's index able to vouch for its files: refreshCheckoutIndex (git status on a private copy of the index — stat data refreshed, untracked cache filled — published by private-index's compare-and-swap) and refreshIndexIfRacy (the same, only when the index holds racily-clean entries: countRacyEntries, core, reads the index file — entries whose mtime is not older in whole seconds than the index, which every git status / git diff <rev> otherwise re-hashes on every read, since no read of ours may write the index).
           - Server:
             - Uses: `infra/paths.GIT`
-            - Exports (types): `IndexTrust`
+            - Exports (types):
+              - `CheckoutTier`
+              - `IndexTrust`
             - Exports (values):
               - `refreshCheckoutIndex`
               - `refreshIndexIfRacy`
@@ -40531,6 +40533,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`worktree`**
       - Server:
         - Uses:
+          - `infra/git/index-refresh.CheckoutTier`
           - `infra/git/index-refresh.refreshCheckoutIndex`
           - `infra/host/host-admission.defineHostPool`
           - `infra/paths.GIT`

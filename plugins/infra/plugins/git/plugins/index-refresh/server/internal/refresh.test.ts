@@ -84,7 +84,7 @@ test("primed, a read-only status opens only the directories that changed", async
   await Bun.sleep(1100);
   // Under GIT_OPTIONAL_LOCKS=0, as every child of ours runs: the primer's
   // status writes a private index, never the checkout's own.
-  expect(await refreshCheckoutIndex(repo)).toBe("published");
+  expect(await refreshCheckoutIndex(repo, "background")).toBe("published");
   expect(await opendirsOfReadOnlyStatus()).toBe(0);
   writeFileSync(join(repo, "b", "x", "new"), "n\n");
   // The changed directory only (its new file is untracked).
@@ -94,7 +94,7 @@ test("primed, a read-only status opens only the directories that changed", async
 test("a git writer holding index.lock keeps the real index untouched", async () => {
   await Bun.sleep(1100);
   writeFileSync(join(repo, ".git", "index.lock"), "");
-  expect(await refreshCheckoutIndex(repo)).toBe("index-busy");
+  expect(await refreshCheckoutIndex(repo, "background")).toBe("index-busy");
   rmSync(join(repo, ".git", "index.lock"));
   expect(await opendirsOfReadOnlyStatus()).toBeGreaterThanOrEqual(11);
 });
