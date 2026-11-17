@@ -53,6 +53,21 @@ once and defers the reset until it composes. Two one-shot load intents ride the
 reset: `requestPlayOnLoad()` (start playing) and `requestSeekOnLoad(beat)` (park
 at `beat`, clamped to the new timeline, instead of the lead-in).
 
+## The kept playhead
+
+The playhead, the A–B loop and the tempo are kept view state
+(`kept-transport.ts`, `defineKept` tier `view`: `sonata.session.playhead`,
+`sonata.session.tempo`), keyed by the ambient `KeepScope` — so a reload or a
+tab remount gives them back, **paused** (playback is a process; it never
+resumes playing). `keepAs` names the loaded song (the player passes
+`songIdentityKey(identity)`); the playhead record carries it and is restored
+only into that song, by the first reset of ready content in the mount — not
+with play-on-load armed, and not past a seek intent naming another beat than
+the one the record was opened at (a reload re-arming the same deep link keeps
+where the user was; a new link wins). The tempo is per place, not per song.
+Writes are never per frame: a seek, a pause and a loop edit write the exact
+place; while playing, once per bar entered.
+
 ## The playback timeline
 
 `timeline` (a `TimelineStore`: `get()` + `subscribe()`, not React state) holds
@@ -132,6 +147,8 @@ clock, without stopping.
     - `SonataSession.Effect` ← `apps.sonata.audio.live-play`
     - `SonataSession.Effect` ← `apps.sonata.audio.metronome`
   - Uses:
+    - `primitives/kept-state.defineKept`
+    - `primitives/kept-state.useKept`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/scope/scoped-store.defineScopedStore`
     - `primitives/scope/scoped-store.ScopedStore`

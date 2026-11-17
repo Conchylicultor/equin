@@ -11,6 +11,8 @@
     - `primitives/css/spacing.Stack`
     - `primitives/css/sticky.Sticky`
     - `primitives/css/ui-kit.cn`
+    - `primitives/kept-state.defineKept`
+    - `primitives/kept-state.useKept`
   - Exports (types):
     - `MultiSelectHandle`
     - `MultiSelectItemHandle`

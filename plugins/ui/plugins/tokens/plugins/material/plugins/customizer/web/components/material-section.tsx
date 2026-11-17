@@ -34,7 +34,7 @@ export function MaterialSection({ search }: { search: string }) {
 
   return (
     <Stack gap="xs">
-      <Collapsible defaultOpen>
+      <Collapsible defaultOpen keep="material.tokens">
         <SectionHeaderRow variant="eyebrow">Tokens</SectionHeaderRow>
         <CollapsibleContent className="pl-sm">
           <TokenRows

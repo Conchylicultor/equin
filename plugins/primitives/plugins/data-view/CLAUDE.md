@@ -2845,6 +2845,7 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `ValueCodec`
     - `ViewExpandAll`
     - `ViewRowDropConfig`
+    - `ViewSelection`
     - `ViewSlots`
     - `ViewState`
   - Exports (values):

@@ -24,7 +24,9 @@ The floating tools chrome (color swatches, width slider, Undo/Clear, Cancel/Done
     - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/css/z-layers/stack.defineZLayer`
     - `primitives/dom/render-mode.useViewportSize`
+    - `primitives/dom/web-storage.defineStore`
     - `primitives/icon-button.IconButton`
+    - `primitives/kept-state.useDraft`
     - `primitives/text-editor/paste-images.attachmentMarkdown`
     - `screenshot.captureApp`
     - `screenshot/draw-canvas.DrawCanvas`

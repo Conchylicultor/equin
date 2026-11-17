@@ -1605,7 +1605,12 @@ function DataViewBodyInner<TRow>(
           attach: (activeAttaches
             ? attach
             : undefined) as DataViewRenderProps<unknown>["attach"],
-          selection,
+          // Kept per surface and view instance (multi-select keeps it as
+          // view state of the place this renders in).
+          selection: selection && {
+            ...selection,
+            keep: `${storageKey}/${activeViewId}`,
+          },
           rowSelection,
           rowDrag: rowDrag as DataViewRenderProps<unknown>["rowDrag"],
           rowDrop: viewRowDrop as DataViewRenderProps<unknown>["rowDrop"],

@@ -56,7 +56,8 @@ export interface SectionCardProps {
   /** Controlled open state. Pair with `onOpenChange`. */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
-  /** Uncontrolled initial state. Default: collapsed. */
+  /** Uncontrolled initial state. Default: collapsed. Uncontrolled, the open
+   *  state is kept per title (view state of the place: survives a reload). */
   defaultOpen?: boolean;
   className?: string;
   /**
@@ -167,6 +168,7 @@ export function SectionCard({
       open={open}
       onOpenChange={onOpenChange}
       defaultOpen={defaultOpen}
+      keep={`section-card:${title}`}
     >
       {header}
       {/* The body OPENS a rail region rather than merely padding: `rail-x-lg`

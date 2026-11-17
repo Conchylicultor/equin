@@ -874,7 +874,7 @@ function WithSelection({
   children: ReactNode;
 }): ReactNode {
   return (
-    <MultiSelectProvider orderedIds={orderedIds}>
+    <MultiSelectProvider keep={selection.keep} orderedIds={orderedIds}>
       <SelectionBar actions={selection.actions} />
       {children}
     </MultiSelectProvider>

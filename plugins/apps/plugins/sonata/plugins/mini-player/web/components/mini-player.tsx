@@ -6,6 +6,7 @@ import {
   usePlayerView,
 } from "@plugins/apps/plugins/sonata/plugins/player/web";
 import {
+  songIdentityKey,
   useLoadDocument,
   useSongDocument,
   type SongIdentity,
@@ -57,10 +58,7 @@ export function SonataMiniPlayer({
   header?: ReactNode;
   children?: ReactNode;
 }): ReactNode {
-  const key =
-    identity.kind === "library"
-      ? `library:${identity.songId}`
-      : `file:${identity.key}`;
+  const key = songIdentityKey(identity);
   return (
     <Theme
       name={appThemeScope(sonataApp.id)}

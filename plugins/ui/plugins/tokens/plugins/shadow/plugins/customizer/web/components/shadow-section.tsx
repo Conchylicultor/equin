@@ -224,7 +224,7 @@ export function ShadowSection() {
       />
 
       {/* Parameters editor */}
-      <Collapsible defaultOpen>
+      <Collapsible defaultOpen keep="shadow.parameters">
         <SectionHeaderRow variant="eyebrow">Parameters</SectionHeaderRow>
         <CollapsibleContent className="pl-sm pt-xs">
           <Stack gap="xs">
@@ -307,7 +307,7 @@ export function ShadowSection() {
       </Collapsible>
 
       {/* Token previews */}
-      <Collapsible>
+      <Collapsible keep="shadow.preview">
         <SectionHeaderRow variant="eyebrow">Preview</SectionHeaderRow>
         <CollapsibleContent className="pl-sm pt-xs">
           <Cluster gap="md" className="p-sm">

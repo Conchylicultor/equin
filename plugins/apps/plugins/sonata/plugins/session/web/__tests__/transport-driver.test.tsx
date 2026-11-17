@@ -131,7 +131,7 @@ function renderSession(score: Score) {
   render(
     <PluginProvider plugins={sessionPlugin}>
       <CursorStoreProvider>
-        <PlaybackSession content={content}>
+        <PlaybackSession content={content} keepAs={null}>
           <Probe />
         </PlaybackSession>
       </CursorStoreProvider>

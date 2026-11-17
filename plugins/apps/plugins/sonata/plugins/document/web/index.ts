@@ -2,7 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { SonataDocument } from "./slots";
 
 export { SonataDocument } from "./slots";
-export { sameIdentity, type SongIdentity } from "./identity";
+export { sameIdentity, songIdentityKey, type SongIdentity } from "./identity";
 export {
   SongDocumentProvider,
   useSongDocument,

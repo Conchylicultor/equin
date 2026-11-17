@@ -73,6 +73,8 @@ when `overflowing || expanded`.
     - `primitives/css/ui-kit.cn`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/icon-button.IconButton`
+    - `primitives/kept-state.defineKept`
+    - `primitives/kept-state.useKept`
   - Exports (types): `CollapsibleWrapProps`
   - Exports (values): `CollapsibleWrap`
 

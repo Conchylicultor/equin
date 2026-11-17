@@ -299,7 +299,6 @@ export const hostEntries: ServerRegistryEntry[] = [
   { pluginPath: "reports/plugins/tool-input-drift", id: "reports.tool-input-drift", loader: () => import("@plugins/reports/plugins/tool-input-drift/server"), dependsOn: ["reports"], core: null },
   { pluginPath: "reports/plugins/viewport-escape", id: "reports.viewport-escape", loader: () => import("@plugins/reports/plugins/viewport-escape/server"), dependsOn: ["reports"], core: null },
   { pluginPath: "runs", id: "runs", loader: () => import("@plugins/runs/server"), dependsOn: ["network/plugins/live"], core: null },
-  { pluginPath: "screenshot", id: "screenshot", loader: () => import("@plugins/screenshot/server"), dependsOn: ["infra/plugins/endpoints","network/plugins/live"], core: null },
   { pluginPath: "search/plugins/engine", id: "search.engine", loader: () => import("@plugins/search/plugins/engine/server"), dependsOn: ["database","database/plugins/sql-column","infra/plugins/endpoints","network/plugins/live"], core: null },
   { pluginPath: "shell/plugins/document-head", id: "shell.document-head", loader: () => import("@plugins/shell/plugins/document-head/server"), dependsOn: [], core: null },
   { pluginPath: "shell/plugins/global-action-bar", id: "shell.global-action-bar", loader: () => import("@plugins/shell/plugins/global-action-bar/server"), dependsOn: ["config_v2"], core: null },

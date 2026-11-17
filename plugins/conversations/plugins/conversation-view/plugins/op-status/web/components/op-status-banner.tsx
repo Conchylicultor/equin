@@ -1,4 +1,9 @@
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useMemo } from "react";
+import { z } from "zod";
+import {
+  defineKept,
+  useKept,
+} from "@plugins/primitives/plugins/kept-state/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -420,6 +425,13 @@ function sectionFields(
  * in a wait" — before the grant or after it. Expanded, it lists every
  * in-flight op on the host as a grouped compact table (a DataView).
  */
+/** Whether the banner lists every in-flight op: view state of its pane. */
+const keptExpanded = defineKept({
+  owner: "op-status.expanded",
+  tier: "view",
+  schema: z.boolean(),
+});
+
 export function OpStatusBanner({
   conversation,
 }: {
@@ -433,7 +445,7 @@ export function OpStatusBanner({
   const now = useNow(1000);
   const sleepNow = useSleepNowForFold();
   const clocks = useMemo<Clocks>(() => ({ now, sleepNow }), [now, sleepNow]);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useKept(keptExpanded, false);
 
   const selfSlug = slugOf(conversation.worktreePath);
   const data = result.status === "ready" ? result.data : null;
@@ -451,7 +463,7 @@ export function OpStatusBanner({
             toggle: () => setExpanded((v) => !v),
           }
         : null,
-    [op, data, clocks, expanded],
+    [op, data, clocks, expanded, setExpanded],
   );
 
   // buildSections is the order authority (self section first, global push

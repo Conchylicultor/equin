@@ -188,6 +188,9 @@ export interface DataTableSelection {
   /** Bulk-action buttons in the `SelectionBar` (rendered inside the provider,
    *  so they may call `useMultiSelect()`). */
   actions?: ReactNode;
+  /** What the selection is kept under — stable across a reload, unique
+   *  among the tables of one place (`MultiSelectProvider`'s `keep`). */
+  keep: string;
 }
 
 export interface DataTableProps<TRow> {

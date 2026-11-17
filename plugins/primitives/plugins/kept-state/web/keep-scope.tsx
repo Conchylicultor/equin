@@ -44,12 +44,19 @@ export function useKeepScope(): string | null {
   return useContext(KeepScopeContext);
 }
 
-/** Prefix of every pooled view-state id: `kept/<scope path>|<owner>`. */
+/**
+ * Prefix of every pooled view-state id: `kept/<scope path>|<owner>`, or
+ * `kept/<scope path>|<owner>#<key>` for one keyed instance of the owner.
+ */
 export const VIEW_ID_PREFIX = "kept/";
 
-/** The pooled id of `owner`'s view state under the scope `path`. */
-export function viewEntryId(path: string, owner: string): string {
-  return `${VIEW_ID_PREFIX}${path}|${owner}`;
+/**
+ * The pooled id of `owner`'s view state under the scope `path` — of its
+ * instance `key` when the owner has several in one place.
+ */
+export function viewEntryId(path: string, owner: string, key?: string): string {
+  const base = `${VIEW_ID_PREFIX}${path}|${owner}`;
+  return key === undefined ? base : `${base}#${key}`;
 }
 
 /**

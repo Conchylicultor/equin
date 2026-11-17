@@ -33,9 +33,11 @@ import {
   type Score,
   type TimelineTakeover,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import { useKept } from "@plugins/primitives/plugins/kept-state/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { holdPlayback } from "@plugins/reports/plugins/render-loop/core";
 import { useCursorApi } from "./cursor-store";
+import { keptPlayhead, keptTempo, type KeptPlayhead } from "./kept-transport";
 import { SonataSession } from "./slots";
 import { createTimelineStore, type TimelineStore } from "./timeline-store";
 
@@ -64,6 +66,21 @@ export const TEMPO_MATH_FLOOR = 0.05;
  * well-behaved.
  */
 const LOOP_MIN_GAP = 1;
+
+/** Below this two beats are one (a deep link's bar resolved twice over one score). */
+const SAME_BEAT_EPS = 1e-6;
+
+/**
+ * `next` fitted into a score ending at `end`: both edges clamped into
+ * `[0, end]` with `LOOP_MIN_GAP` between them, so the handles never cross or
+ * collapse — or `null` when the score is empty and cannot host a loop.
+ */
+function fitLoop(next: LoopRange, end: number): LoopRange | null {
+  if (end <= 0) return null;
+  const start = Math.max(0, Math.min(next.start, end - LOOP_MIN_GAP));
+  const stop = Math.max(start + LOOP_MIN_GAP, Math.min(next.end, end));
+  return { start, end: stop, enabled: next.enabled };
+}
 
 /**
  * How finely the seek grid subdivides a bar at a given playback tempo: a whole
@@ -456,12 +473,20 @@ const wallClock: TransportClock = {
  *
  * Folds every `SonataSession.Provider` contribution around its children, inside
  * the session context so a wrapper may `useSession()`.
+ *
+ * The playhead, the A–B loop and the tempo are kept view state (see
+ * `kept-transport.ts`): a reload or a remount in the same place gives them
+ * back, paused. `keepAs` names what `content` is — a stable string the host
+ * derives from the loaded song (`null` while nothing is) — so a kept playhead
+ * is restored only into the song it was kept for.
  */
 export function PlaybackSession({
   content,
+  keepAs,
   children,
 }: {
   content: SessionContent;
+  keepAs: string | null;
   children: ReactNode;
 }) {
   // The per-surface cursor store's imperative facade. Memoized on the stable
@@ -473,6 +498,7 @@ export function PlaybackSession({
   const contentKey = content.contentKey;
   const contentPending = content.kind === "pending";
   const contentEmpty = content.kind === "empty";
+  const contentReady = content.kind === "ready";
   // The composed score before tempo scaling — empty unless the content is ready.
   const readyScore = content.kind === "ready" ? content.score : null;
   // Memoized so a not-ready session keeps one empty score identity (no spurious
@@ -485,7 +511,15 @@ export function PlaybackSession({
   // The playhead lives in the per-surface cursor store (not React state) so the
   // ~60fps transport advance doesn't re-render every `useSession()` consumer.
   const [isPlaying, setIsPlaying] = useState(false);
-  const [tempoScale, setTempoScaleState] = useState(1);
+  const [tempoScale, setTempoScaleState] = useKept(keptTempo, 1);
+  // Where the playhead stood when this place last showed a song (kept view
+  // state): read once, by the first reset of real content in this mount.
+  const [keptPlace, setKeptPlace] = useKept<KeptPlayhead | null>(
+    keptPlayhead,
+    null,
+  );
+  const keptPlaceRef = useLatestRef(keptPlace);
+  const keepAsRef = useLatestRef(keepAs);
   // The playback timeline every follower reads (the cursor below, the audio
   // schedulers). The session is its only writer.
   const [timelineStore] = useState(createTimelineStore);
@@ -837,6 +871,55 @@ export function PlaybackSession({
     seekOnLoadRef.current = target;
   }, []);
 
+  // The kept playhead (see `kept-transport.ts`) waits for the first reset of
+  // ready content in this mount — the remount's reload of the song — and is
+  // given back then or never: a later load is a new song (or an edit, which
+  // rewinds), not a return to the place.
+  const restorePendingRef = useRef(true);
+  // The song the playhead is kept for: `keepAs` of the ready content the last
+  // reset ran for, `null` before one (so nothing a mount does before its
+  // restore overwrites the kept record) and for empty / failed content.
+  const keptSongRef = useRef<string | null>(null);
+  // The beat the load's seek intent resolved to (see `KeptPlayhead.openedAt`).
+  const openedAtRef = useRef<number | null>(null);
+
+  // --- The kept playhead. ---------------------------------------------------
+  // Where the playhead and the loop stand, written as kept view state so a
+  // reload or a remount restores them (paused; see the content reset below).
+  // Never per frame: a seek, a pause and a loop edit write the exact place;
+  // while it plays, the playhead is written once per bar it enters — a reload
+  // resumes in the bar it was in. `withLoop` is the loop being set, when a write
+  // lands before it renders.
+  const loopRef = useLatestRef(loop);
+  const keepPlace = useCallback(
+    (withLoop: LoopRange | null = loopRef.current) => {
+      const song = keptSongRef.current;
+      if (song === null) return;
+      setKeptPlace({
+        song,
+        beat: cursor.getBeat(),
+        loop: withLoop,
+        openedAt: openedAtRef.current,
+      });
+    },
+    [cursor, setKeptPlace],
+  );
+  // Bar lines are tempo-free: read off the unscaled score.
+  const barLines = useMemo(() => subdivideBars(baseScore, 1), [baseScore]);
+  const barLinesRef = useLatestRef(barLines);
+  useEffect(() => {
+    // The bar the playhead was last written in, `[lo, hi)`; none at first.
+    let lo = Infinity;
+    let hi = -Infinity;
+    return cursor.subscribe((seek) => {
+      const beat = cursor.getBeat();
+      if (!seek && isPlayingRef.current && beat >= lo && beat < hi) return;
+      lo = currentLine(barLinesRef.current, beat, -Infinity);
+      hi = nextLine(barLinesRef.current, beat, Infinity);
+      keepPlace();
+    });
+  }, [cursor, keepPlace]);
+
   // Reset the transport whenever the loaded CONTENT changes (new/changed song).
   //
   // The trigger is `contentKey` — the identity of the loaded TIMELINE — NOT the
@@ -878,6 +961,7 @@ export function PlaybackSession({
     // its mount effect runs before this (ancestor) effect's first run, which
     // sees the session's initial empty content.
     if (contentEmpty) {
+      keptSongRef.current = null;
       cursor.setBeat(startBeatRef.current, { seek: true });
       setLoopState(null);
       setCountIn(null);
@@ -894,21 +978,39 @@ export function PlaybackSession({
     const requested = seekOnLoadRef.current;
     seekOnLoadRef.current = null;
     const origin = startBeatRef.current;
+    const end = scoreEndBeat(scoreRef.current);
+    const fit = (beat: number) => Math.max(origin, Math.min(end, beat));
+    const requestedBeat =
+      requested === null ? null : fit(requested(scoreRef.current));
+    // A remount gives back the kept playhead and loop of the song it reloads —
+    // paused: never with play-on-load armed (that is a fresh open asking to
+    // play), and not past a seek intent naming another beat than the one
+    // already honoured here (a new deep link outranks where the user was).
+    const kept =
+      contentReady && restorePendingRef.current && !playOnLoadRef.current
+        ? keptPlaceRef.current
+        : null;
+    if (contentReady) restorePendingRef.current = false;
+    const restore =
+      kept !== null &&
+      kept.song === keepAsRef.current &&
+      (requestedBeat === null ||
+        (kept.openedAt !== null &&
+          Math.abs(kept.openedAt - requestedBeat) < SAME_BEAT_EPS))
+        ? kept
+        : null;
     const start =
-      requested === null
-        ? origin
-        : Math.max(
-            origin,
-            Math.min(
-              scoreEndBeat(scoreRef.current),
-              requested(scoreRef.current),
-            ),
-          );
+      restore !== null ? fit(restore.beat) : (requestedBeat ?? origin);
+    openedAtRef.current = restore !== null ? restore.openedAt : requestedBeat;
+    keptSongRef.current = contentReady ? keepAsRef.current : null;
     cursor.setBeat(start, { seek: true });
     // Drop any A–B loop: it belongs to the previous content's beat span. Cleared
     // unconditionally (even when auto-playing) so a freshly loaded song never
-    // inherits a stale practice loop.
-    setLoopState(null);
+    // inherits a stale practice loop — unless this is the remount restoring
+    // this song's own.
+    const loopNow = restore?.loop ? fitLoop(restore.loop, end) : null;
+    setLoopState(loopNow);
+    keepPlace(loopNow);
     // A freshly loaded song never inherits a stale count-in (its lead-in belonged
     // to the previous content). Paired with the imperative cursor rewind above.
     setCountIn(null);
@@ -932,7 +1034,16 @@ export function PlaybackSession({
     // voicing / key view-transforms layered over the same timeline don't rewind
     // or stop playback (they apply live). `play`/`startAt` are stable.
     // `contentPending` only defers the reset of new content until it composes.
-  }, [contentKey, contentPending, contentEmpty, cursor, play, startAt]);
+  }, [
+    contentKey,
+    contentPending,
+    contentEmpty,
+    contentReady,
+    cursor,
+    play,
+    startAt,
+    keepPlace,
+  ]);
 
   // Absolute seek — the primitive the progression bar drives. Clamps to the
   // score span and, while playing, starts a new path there (sound and cursor
@@ -1094,20 +1205,14 @@ export function PlaybackSession({
   // stable. `null` clears; an empty score (`scoreEndBeat <= 0`) can't host a
   // loop, so it clears too. Otherwise clamp both edges into [0, end] and keep a
   // `LOOP_MIN_GAP` between them so the handles can never cross or collapse.
-  const setLoop = useCallback((next: LoopRange | null) => {
-    if (!next) {
-      setLoopState(null);
-      return;
-    }
-    const end = scoreEndBeat(scoreRef.current);
-    if (end <= 0) {
-      setLoopState(null);
-      return;
-    }
-    const start = Math.max(0, Math.min(next.start, end - LOOP_MIN_GAP));
-    const stop = Math.max(start + LOOP_MIN_GAP, Math.min(next.end, end));
-    setLoopState({ start, end: stop, enabled: next.enabled });
-  }, []);
+  const setLoop = useCallback(
+    (next: LoopRange | null) => {
+      const fitted = next && fitLoop(next, scoreEndBeat(scoreRef.current));
+      setLoopState(fitted);
+      keepPlace(fitted);
+    },
+    [keepPlace],
+  );
 
   // Continuous (clamp only, no grid) so a jog-wheel / pinch drag scrubs smoothly
   // with fine-grained control and a clean release fling. The tidy 0.05 grid
@@ -1119,21 +1224,28 @@ export function PlaybackSession({
   // Only the latest request is adopted (a jog-wheel drag sends many). 0 is the
   // session's freeze, not a rate: it pauses the driver like any stop.
   const rateRequestRef = useRef(0);
-  const setTempoScale = useCallback((scale: number) => {
-    const clamped = Math.max(MIN_TEMPO_SCALE, Math.min(MAX_TEMPO_SCALE, scale));
-    const d = driverRef.current;
-    const request = ++rateRequestRef.current;
-    if (d === null || clamped === 0) {
-      setTempoScaleState(clamped);
-      return;
-    }
-    void d.setRate(clamped).then((taken) => {
-      if (request !== rateRequestRef.current || driverRef.current !== d) return;
-      setTempoScaleState(
-        Math.max(MIN_TEMPO_SCALE, Math.min(MAX_TEMPO_SCALE, taken)),
+  const setTempoScale = useCallback(
+    (scale: number) => {
+      const clamped = Math.max(
+        MIN_TEMPO_SCALE,
+        Math.min(MAX_TEMPO_SCALE, scale),
       );
-    });
-  }, []);
+      const d = driverRef.current;
+      const request = ++rateRequestRef.current;
+      if (d === null || clamped === 0) {
+        setTempoScaleState(clamped);
+        return;
+      }
+      void d.setRate(clamped).then((taken) => {
+        if (request !== rateRequestRef.current || driverRef.current !== d)
+          return;
+        setTempoScaleState(
+          Math.max(MIN_TEMPO_SCALE, Math.min(MAX_TEMPO_SCALE, taken)),
+        );
+      });
+    },
+    [setTempoScaleState],
+  );
 
   // A tempo change (the speed wheel, a driver's rate) re-times the running
   // timeline from NOW: what sounds at this instant keeps sounding, everything
@@ -1293,6 +1405,8 @@ export function PlaybackSession({
         cancelAnimationFrame(rafRef.current);
         rafRef.current = null;
       }
+      // Paused: keep the playhead's exact beat, not the bar it was last kept in.
+      keepPlace();
     };
     // Runs only on play/stop transitions — the loop owns the cursor while
     // playing. Every other dependency is stable (memoized callbacks, the
@@ -1308,6 +1422,7 @@ export function PlaybackSession({
     heardNow,
     setIdle,
     setRunning,
+    keepPlace,
   ]);
 
   // While it plays, the session renders on its clock (the playhead, the keys

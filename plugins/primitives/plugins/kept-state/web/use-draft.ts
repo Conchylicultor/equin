@@ -88,10 +88,17 @@ export function useKeptEntry<T>(
     setValueState(resolvedInitial);
   }, [store, id, resolvedInitial]);
 
-  // Sync with other hooks on the same entry (same tab and other tabs).
+  // Sync with other hooks on the same entry (same tab and other tabs). A
+  // re-read equal to what is shown keeps the shown value: this hook's own
+  // flushed write comes back here parsed from storage, and swapping in that
+  // copy would give every array and object in it a new identity on each write
+  // (a memo or effect keyed on one would rerun for nothing).
   useEffect(() => {
     if (store === null) return;
-    return store.subscribe(id, () => setValueState(read()));
+    return store.subscribe(id, () => {
+      const next = read();
+      setValueState((shown) => (same(shown, next) ? shown : next));
+    });
   }, [store, id, read]);
 
   const handle = useMemo(

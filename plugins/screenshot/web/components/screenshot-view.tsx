@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, use, useEffect, useMemo, useRef, useState } from "react";
 import {
   DrawCanvas,
   applyStrokes,
@@ -7,65 +7,118 @@ import {
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
   foldResource,
-  mapResource,
   ResourceErrorInline,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
+import { attachmentBytes } from "@plugins/infra/plugins/attachments/core";
+import { extractAttachmentIds } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/core";
+import { useKept } from "@plugins/primitives/plugins/kept-state/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
-import { screenshotImage } from "../../shared/image";
+import {
+  screenshotCapture,
+  screenshotEdits,
+  screenshotTools,
+  type ScreenshotEdit,
+  type ScreenshotTools,
+} from "../kept";
 import { ToolsPane, type Tool, type DrawSettings } from "./tools-pane";
 import { CropOverlay, type CropRect } from "./crop-overlay";
 import { PromptForm } from "./prompt-form";
 
 /**
- * How long a `missing` screenshot reads as "still uploading" before the pane
- * says it is not there. The capturing tab opens this one before its upload
- * lands, so a short wait is normal; past this, the id names nothing (expired,
- * or lost to a server restart). Only the copy changes: the read stays live, so
- * a late upload still shows.
+ * How long a screenshot whose capture is not recorded yet reads as "still
+ * uploading". The capturing tab opens this one before its upload lands, so a
+ * short wait is normal; past this, the id names nothing (never uploaded, or
+ * its record expired). Only the copy changes: the record is read live, so a
+ * late upload still shows.
  */
 const UPLOAD_GRACE_MS = 30_000;
 
+const DEFAULT_TOOLS: ScreenshotTools = {
+  tool: "none",
+  color: "#ef4444",
+  width: 4,
+};
+
+const NO_EDITS: { edits: ScreenshotEdit[]; strokes: Stroke[] } = {
+  edits: [],
+  strokes: [],
+};
+
+/**
+ * The screenshot editor. Everything a reload must give back is kept
+ * (`../kept`): the capture (a staged attachment, by id), the committed edits
+ * and the strokes not applied yet (work), the tool and pen (view). The image
+ * shown is DERIVED — the capture with its edits replayed — never held.
+ */
 export function ScreenshotView({ id }: { id: string }) {
-  // The capture handed over by the capturing tab (BroadcastChannel), when it
-  // arrives before the server's copy.
+  // The capture handed over by the capturing tab (BroadcastChannel) before
+  // its upload lands — paints at once. A transient copy only: the staged
+  // attachment recorded in `screenshotCapture` is the one a reload reads.
+  // eslint-disable-next-line kept-state/no-blob-in-state -- transient handoff; the staged attachment (kept) is the durable copy
   const [broadcast, setBroadcast] = useState<Blob | null>(null);
-  // The image after a committed crop / applied drawing; null = the original.
-  const [edited, setEdited] = useState<Blob | null>(null);
   const [uploadOverdue, setUploadOverdue] = useState(false);
-  const [tool, setTool] = useState<Tool>("none");
-  const [strokes, setStrokes] = useState<Stroke[]>([]);
-  const [draw, setDraw] = useState<DrawSettings>({
-    color: "#ef4444",
-    width: 4,
-  });
-
-  function resetEdits() {
+  const [capture] = useKept(screenshotCapture, null, { subject: id });
+  const [work, setWork] = useKept(screenshotEdits, NO_EDITS, { subject: id });
+  const [tools, setTools] = useKept(screenshotTools, DEFAULT_TOOLS);
+  const { edits, strokes } = work;
+  const tool = tools.tool;
+  const setTool = (next: Tool) => setTools((t) => ({ ...t, tool: next }));
+  const setStrokes = (next: Stroke[] | ((prev: Stroke[]) => Stroke[])) =>
+    setWork((w) => ({
+      ...w,
+      strokes: typeof next === "function" ? next(w.strokes) : next,
+    }));
+  /** Commits the pending strokes (then `then`, if any) as edits. */
+  const commit = (then?: ScreenshotEdit) => {
+    setWork((w) => ({
+      edits: [
+        ...w.edits,
+        ...(w.strokes.length > 0
+          ? [{ kind: "draw" as const, strokes: w.strokes }]
+          : []),
+        ...(then ? [then] : []),
+      ],
+      strokes: [],
+    }));
     setTool("none");
-    setStrokes([]);
-  }
+  };
 
-  // The server's copy, live: refused `missing` until the capturing tab's
-  // upload lands, which notifies this tuple. Not read once the broadcast
-  // delivered the same image.
-  const stored = useLive(screenshotImage, broadcast === null ? { id } : null);
+  // The staged attachment, once the capturing tab recorded it.
+  const attachmentId =
+    capture === null ? null : (extractAttachmentIds(capture.image)[0] ?? null);
+  const stored = useLive(
+    attachmentBytes,
+    broadcast === null && attachmentId !== null ? { id: attachmentId } : null,
+  );
+  // The stored bytes — a failed re-read keeps the copy it last read (the
+  // read's `stale`) — as one Blob per bytes value: a re-emitted read of the
+  // same bytes must not mint a new image (the edited image is derived from
+  // it, and re-deriving remounts the stage, cutting a stroke in progress).
+  const storedBytes = foldResource(stored, {
+    loading: () => null,
+    error: (_error, stale) => stale ?? null,
+    ready: (bytes) => bytes,
+  });
   const storedBlob = useMemo(
     () =>
-      mapResource(stored, (bytes) => new Blob([bytes], { type: "image/png" })),
-    [stored],
+      storedBytes === null
+        ? null
+        : new Blob([storedBytes], { type: "image/png" }),
+    [storedBytes],
   );
-  const storedReady = stored.status === "ready";
 
   // Fast path: the capturing tab broadcasts the blob the instant domToBlob
   // finishes — no server round trip. The "ready" ping makes it re-send when it
-  // broadcast before this listener was up. Whichever copy lands first wins:
-  // the channel closes once the server's copy is here.
+  // broadcast before this listener was up. Not listened for once the capture
+  // is recorded: a reload reads the attachment.
+  const recorded = attachmentId !== null;
   useEffect(() => {
-    if (storedReady) return;
+    if (recorded) return;
     const ch = new BroadcastChannel(`screenshot:${id}`);
     ch.onmessage = (e: MessageEvent) => {
       if (e.data instanceof Blob) {
@@ -75,44 +128,52 @@ export function ScreenshotView({ id }: { id: string }) {
     };
     ch.postMessage("ready");
     return () => ch.close();
-  }, [id, storedReady]);
+  }, [id, recorded]);
 
   useEffect(() => {
     const timer = setTimeout(() => setUploadOverdue(true), UPLOAD_GRACE_MS);
     return () => clearTimeout(timer);
   }, [id]);
 
-  // The image the tools act on (copy, download, apply, the prompt's
-  // attachment): the edit, else whichever original copy is here. Absent while
-  // neither has arrived — every tool then does nothing.
-  // A failed re-read (the server lost the image to a restart) keeps the copy
-  // it last read: the read's `stale`, drawn and acted on as before.
-  const shown = edited ?? broadcast;
-  const imageBlob: Blob | null =
-    shown ??
-    foldResource(storedBlob, {
-      loading: () => null,
-      error: (_error, stale) => stale ?? null,
-      ready: (blob) => blob,
-    });
+  // The captured image: the broadcast copy, else the stored one.
+  const source: Blob | null = broadcast ?? storedBlob;
+  // The capture with its committed edits replayed — derived, never held.
+  const edited = useMemo(
+    () => (source === null ? null : renderEdits(source, edits)),
+    [source, edits],
+  );
 
-  function stage(blob: Blob) {
+  // The image the tools act on (copy, download, the prompt's attachment):
+  // the edited image with the pending strokes baked in. Null while the
+  // capture has not arrived — every tool then does nothing.
+  async function finalBlob(): Promise<Blob | null> {
+    if (edited === null) return null;
+    const base = await edited;
+    return strokes.length > 0 ? await applyStrokes(base, strokes) : base;
+  }
+
+  function stage(promise: Promise<Blob>) {
     return (
-      <ImageStage
-        blob={blob}
-        tool={tool}
-        onCropCommit={async (rect) => {
-          const base =
-            strokes.length > 0 ? await applyStrokes(blob, strokes) : blob;
-          setEdited(await applyCrop(base, rect));
-          resetEdits();
-        }}
-        strokes={strokes}
-        onStrokesChange={setStrokes}
-        drawSettings={draw}
-      />
+      <Suspense fallback={<Loading />}>
+        <ResolvedStage
+          promise={promise}
+          tool={tool}
+          onCropCommit={(rect) => commit({ kind: "crop", rect })}
+          strokes={strokes}
+          onStrokesChange={setStrokes}
+          drawSettings={tools}
+        />
+      </Suspense>
     );
   }
+
+  const missing = uploadOverdue ? (
+    <Text as="div" variant="body" tone="muted">
+      Screenshot not found
+    </Text>
+  ) : (
+    <Loading />
+  );
 
   return (
     // eslint-disable-next-line layout/no-adhoc-layout -- full-surface split row that also clips (flex-row + overflow-hidden, no single primitive)
@@ -121,74 +182,57 @@ export function ScreenshotView({ id }: { id: string }) {
       <div className="flex min-h-0 flex-1 flex-col">
         <Clip fill>
           <Center className="relative h-full w-full bg-muted/40">
-            {shown !== null
-              ? stage(shown)
-              : foldResource(storedBlob, {
-                  loading: () => <Loading />,
-                  error: (error, stale) =>
-                    stale !== undefined ? (
-                      stage(stale)
-                    ) : error.kind === "refused" && error.code === "missing" ? (
-                      uploadOverdue ? (
+            {edited !== null
+              ? stage(edited)
+              : attachmentId === null
+                ? missing
+                : foldResource(stored, {
+                    loading: () => <Loading />,
+                    error: (error) =>
+                      error.kind === "refused" && error.code === "missing" ? (
                         <Text as="div" variant="body" tone="muted">
                           Screenshot not found
                         </Text>
                       ) : (
-                        <Loading />
-                      )
-                    ) : (
-                      <ResourceErrorInline
-                        error={error}
-                        refetch={stored.refetch}
-                        variant="block"
-                        subject="the screenshot"
-                      />
-                    ),
-                  ready: stage,
-                })}
+                        <ResourceErrorInline
+                          error={error}
+                          refetch={stored.refetch}
+                          variant="block"
+                          subject="the screenshot"
+                        />
+                      ),
+                    // Unreachable: a ready read makes `edited` non-null.
+                    ready: () => <Loading />,
+                  })}
           </Center>
         </Clip>
-        <PromptForm
-          id={id}
-          getBlob={async () => {
-            if (!imageBlob) return null;
-            return strokes.length > 0
-              ? await applyStrokes(imageBlob, strokes)
-              : imageBlob;
-          }}
-        />
+        <PromptForm id={id} getBlob={finalBlob} />
       </div>
       {/* eslint-disable-next-line layout/no-adhoc-layout -- rigid fixed-width sidebar leaf of the split row */}
       <div className="w-72 shrink-0 border-l bg-background">
         <ToolsPane
           tool={tool}
           onToolChange={setTool}
-          drawSettings={draw}
-          onDrawSettingsChange={setDraw}
+          drawSettings={tools}
+          onDrawSettingsChange={(s) =>
+            setTools((t) => ({ ...t, color: s.color, width: s.width }))
+          }
           hasStrokes={strokes.length > 0}
-          onApplyDraw={async () => {
-            if (!imageBlob || strokes.length === 0) return;
-            setEdited(await applyStrokes(imageBlob, strokes));
-            resetEdits();
+          onApplyDraw={() => {
+            if (strokes.length > 0) commit();
           }}
           onClearStrokes={() => setStrokes([])}
           onUndoStroke={() => setStrokes((s) => s.slice(0, -1))}
           onCopy={async () => {
-            if (!imageBlob) return;
-            const blob =
-              strokes.length > 0
-                ? await applyStrokes(imageBlob, strokes)
-                : imageBlob;
+            const blob = await finalBlob();
+            if (!blob) return;
             await navigator.clipboard.write([
               new ClipboardItem({ "image/png": blob }),
             ]);
           }}
           onDownload={async () => {
-            if (!imageBlob) return;
-            const blob =
-              strokes.length > 0
-                ? await applyStrokes(imageBlob, strokes)
-                : imageBlob;
+            const blob = await finalBlob();
+            if (!blob) return;
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = url;
@@ -197,13 +241,35 @@ export function ScreenshotView({ id }: { id: string }) {
             URL.revokeObjectURL(url);
           }}
           onReset={() => {
-            setEdited(null);
-            resetEdits();
+            setWork(NO_EDITS);
+            setTool("none");
           }}
         />
       </div>
     </Stack>
   );
+}
+
+/** The stage once the edited image is rendered (suspends until then). */
+function ResolvedStage({
+  promise,
+  ...props
+}: Omit<ImageStageProps, "blob"> & { promise: Promise<Blob> }) {
+  return <ImageStage blob={use(promise)} {...props} />;
+}
+
+/** The capture with `edits` replayed in order: each a draw or a crop over the last. */
+async function renderEdits(
+  source: Blob,
+  edits: readonly ScreenshotEdit[],
+): Promise<Blob> {
+  let image = source;
+  for (const edit of edits)
+    image =
+      edit.kind === "draw"
+        ? await applyStrokes(image, edit.strokes)
+        : await applyCrop(image, edit.rect);
+  return image;
 }
 
 interface ImageStageProps {

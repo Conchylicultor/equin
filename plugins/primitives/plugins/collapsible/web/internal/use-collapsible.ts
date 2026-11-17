@@ -2,12 +2,32 @@ import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/c
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { createHoverIntent } from "@plugins/primitives/plugins/overlay/plugins/hover-popover/core";
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { z } from "zod";
+import {
+  defineKept,
+  useKept,
+} from "@plugins/primitives/plugins/kept-state/web";
 
 export interface UseCollapsibleOptions {
   defaultOpen?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /**
+   * Keep the uncontrolled open state as view state of the place this renders
+   * in (kept-state's `KeepScope`), so a remount, a tab switch or a reload
+   * gives it back: an id stable across a reload and unique among the kept
+   * collapsibles of one place (a section's name, a row's id). Absent, the
+   * state lives as long as the component. Ignored when `open` is controlled
+   * (the owner of `open` keeps it).
+   */
+  keep?: string;
 }
+
+const keptOpen = defineKept({
+  owner: "collapsible.open",
+  tier: "view",
+  schema: z.boolean(),
+});
 
 /**
  * What makes something the collapsible's trigger, WITHOUT saying what element it
@@ -88,10 +108,13 @@ export function useCollapsible({
   defaultOpen = false,
   open: controlledOpen,
   onOpenChange,
+  keep,
 }: UseCollapsibleOptions = {}): UseCollapsibleReturn {
   const contentId = useId();
   const isControlled = controlledOpen !== undefined;
-  const [internalOpen, setInternalOpen] = useState(defaultOpen);
+  const [internalOpen, setInternalOpen] = useKept(keptOpen, defaultOpen, {
+    key: isControlled ? null : (keep ?? null),
+  });
   const open = isControlled ? controlledOpen : internalOpen;
 
   const [hovered, setHovered] = useState(false);
@@ -122,7 +145,7 @@ export function useCollapsible({
     const next = !open;
     if (!isControlled) setInternalOpen(next);
     onOpenChange?.(next);
-  }, [open, isControlled, onOpenChange]);
+  }, [open, isControlled, onOpenChange, setInternalOpen]);
 
   return useMemo(() => {
     const triggerControlProps = {

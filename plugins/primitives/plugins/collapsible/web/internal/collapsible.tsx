@@ -77,12 +77,14 @@ export function CollapsibleProvider({
   defaultOpen,
   open: controlledOpen,
   onOpenChange,
+  keep,
   children,
 }: CollapsibleProviderProps) {
   const { open, toggle, warm, warmHandlers, contentId } = useCollapsible({
     defaultOpen,
     open: controlledOpen,
     onOpenChange,
+    keep,
   });
 
   const ctxValue = useMemo(

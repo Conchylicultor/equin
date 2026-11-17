@@ -30,7 +30,7 @@ export function SystemFolder({
   if (descriptors.length === 0) return null;
 
   return (
-    <Collapsible defaultOpen>
+    <Collapsible defaultOpen keep="agents.system-folder">
       <CollapsibleTrigger className="hover:bg-accent gap-xs rounded-md px-xs py-xs text-body">
         <Center as="span" className="size-5">
           <CollapsibleChevron className="size-4" />

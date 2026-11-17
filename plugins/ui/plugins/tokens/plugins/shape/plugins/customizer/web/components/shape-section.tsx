@@ -40,7 +40,7 @@ export function ShapeSection({ search }: { search: string }) {
         shortcuts={shapeShortcuts}
         onFill={(shortcut) => editor.fillFrom(shortcut.fragment)}
       />
-      <Collapsible defaultOpen>
+      <Collapsible defaultOpen keep="shape.tokens">
         <SectionHeaderRow variant="eyebrow">Tokens</SectionHeaderRow>
         <CollapsibleContent className="pl-sm">
           <TokenRows

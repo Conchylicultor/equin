@@ -8,6 +8,7 @@
 - Web:
   - Uses:
     - `apps/sonata/document.SongIdentity`
+    - `apps/sonata/document.songIdentityKey`
     - `apps/sonata/document.useLoadDocument`
     - `apps/sonata/document.useSongDocument`
     - `apps/sonata/player.PlayerDisplay`

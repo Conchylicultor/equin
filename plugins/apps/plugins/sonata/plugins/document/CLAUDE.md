@@ -139,6 +139,7 @@ availability gates over the composed score.
     - `sameIdentity`
     - `SonataDocument`
     - `SongDocumentProvider`
+    - `songIdentityKey`
     - `SongSettingsMount`
     - `swingSetting`
     - `transposeSetting`

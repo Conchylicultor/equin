@@ -74,7 +74,7 @@ function renderSession(initial: SessionContent) {
     const [content, set] = useState(initial);
     setContent = set;
     return (
-      <PlaybackSession content={content}>
+      <PlaybackSession content={content} keepAs={null}>
         <Probe />
       </PlaybackSession>
     );
@@ -188,7 +188,7 @@ describe("playback session: the load intents", () => {
       });
       setContent = set;
       return (
-        <PlaybackSession content={content}>
+        <PlaybackSession content={content} keepAs={null}>
           <ArmOnMount />
         </PlaybackSession>
       );

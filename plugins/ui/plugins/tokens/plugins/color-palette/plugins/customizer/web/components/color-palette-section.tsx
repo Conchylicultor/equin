@@ -92,7 +92,7 @@ export function ColorPaletteSection({ search }: { search: string }) {
         if (visibleKeys.length === 0) return null;
 
         return (
-          <Collapsible key={group.label}>
+          <Collapsible key={group.label} keep={`color-palette.${group.label}`}>
             <SectionHeaderRow
               variant="eyebrow"
               actions={group.keys.map((key) => (

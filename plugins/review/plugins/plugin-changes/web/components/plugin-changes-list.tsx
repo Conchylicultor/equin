@@ -25,7 +25,7 @@ export function PluginChangesList({
     allExpanded,
     toggleAll,
     toggle,
-  } = useExpandAll(allPaths);
+  } = useExpandAll(allPaths, { keep: "review.plugin-changes" });
 
   if (isPending) {
     return <Loading label="Loading plugins…" />;

@@ -17,9 +17,11 @@ import { ResourceView } from "@plugins/network/plugins/live/plugins/live-state/w
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   DEFAULT_DRAFT_TTL,
+  defineKept,
   legacyDraftKeys,
   submitKept,
   useDraft,
+  useKept,
 } from "@plugins/primitives/plugins/kept-state/web";
 import {
   keptField,
@@ -63,7 +65,8 @@ import { appendSnippet, type TaskDraftInsert } from "../insert-request";
  * draft after the context that produced it changed.
  *
  * What is NOT here is transient by nature: the submitting flag, the card to
- * auto-focus, the URL snapshotted on open.
+ * auto-focus, the URL snapshotted on open. Whether the popover is open is not
+ * work but view state (`draftOpen` below).
  */
 interface TaskDraftState {
   cards: CardDraft[];
@@ -133,6 +136,37 @@ function draftScope(target: TaskChainTarget): string {
     case "root":
       return "root";
   }
+}
+
+/**
+ * Whether a draft popover is open — view state, kept because the popover is a
+ * work surface: a forced reload or a tab remount reopens the draft the user
+ * was writing (its content is `taskDraftStore`'s), rather than leaving it
+ * behind a button. Kept in the view pool (session area: this browser tab
+ * only, never another one), under the place the popover renders in — the pane
+ * instance, or the global action bar's own scope for Wish — and dropped when
+ * that place closes. Outside every `KeepScope` (an exhibit) it is memory
+ * only. Closing the popover clears it.
+ */
+const draftOpen = defineKept({
+  owner: "task-draft-form.open",
+  tier: "view",
+  schema: z.boolean(),
+});
+
+/**
+ * Which popover of a place the open flag is: one place can hold several (a
+ * task's + Prerequisite and + Follow-up share a target, hence a draft), so the
+ * key is the draft's scope plus the surface filing it and the relation it
+ * drafts — only the one that was open reopens.
+ */
+function openKey(
+  filedFrom: PluginId,
+  target: TaskChainTarget,
+  relate: TaskDraftRelate | undefined,
+): string {
+  const relation = relate ? `${relate.defaultMode}:${relate.taskId}` : "none";
+  return `${filedFrom},${draftScope(target)},${relation}`;
 }
 
 export interface TaskDraftRelate {
@@ -412,9 +446,20 @@ export function TaskDraftPopover({
   onSuccess,
   hintAnchors,
 }: TaskDraftPopoverProps) {
-  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  // Uncontrolled, the kept flag IS the open state; controlled, the host owns
+  // it and the flag mirrors it (see the restore effect below).
+  const [keptOpen, setKeptOpen, clearKeptOpen] = useKept(draftOpen, false, {
+    key: openKey(filedFrom, target, relate),
+  });
+  const keepOpen = useCallback(
+    (next: boolean) => {
+      if (next) setKeptOpen(true);
+      else clearKeptOpen();
+    },
+    [setKeptOpen, clearKeptOpen],
+  );
   const isControlled = controlledOpen !== undefined;
-  const open = isControlled ? controlledOpen : uncontrolledOpen;
+  const open = isControlled ? controlledOpen : keptOpen;
 
   const draftBinding = useDraft(taskDraftStore, () => freshDraft(relate), {
     scope: draftScope(target),
@@ -530,13 +575,26 @@ export function TaskDraftPopover({
   }, [open, cards, page]);
 
   const setOpen = (next: boolean) => {
-    if (isControlled) {
-      onOpenChange?.(next);
-    } else {
-      setUncontrolledOpen(next);
-      onOpenChange?.(next);
-    }
+    if (!isControlled) keepOpen(next);
+    onOpenChange?.(next);
   };
+
+  // Controlled (Wish: its open state is a store any caller can open), the
+  // flag follows the host's `open` whoever changed it — and on mount a kept
+  // open is handed back to the host first, so a reload reopens it. The
+  // popover renders with its trigger, so the anchor is there when it opens.
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (controlledOpen === undefined) return;
+    if (!restoredRef.current) {
+      restoredRef.current = true;
+      if (keptOpen && !controlledOpen && onOpenChange) {
+        onOpenChange(true);
+        return;
+      }
+    }
+    if (controlledOpen !== keptOpen) keepOpen(controlledOpen);
+  }, [controlledOpen, keptOpen, keepOpen, onOpenChange]);
 
   const resetForm = () => {
     clearDraft();

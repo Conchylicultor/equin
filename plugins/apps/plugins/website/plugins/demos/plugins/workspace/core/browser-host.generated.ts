@@ -1131,7 +1131,6 @@ export const hostReads: readonly {
   { key: "runtime-sdk.claude-usage", needsMachine: true },
   { key: "runtime-sdk.error-stopped", needsMachine: false },
   { key: "saved-themes.list", needsMachine: false },
-  { key: "screenshot.image", needsMachine: false },
   { key: "search.results", needsMachine: false },
   { key: "sonata-chord-mode", needsMachine: false },
   { key: "sonata-key-auto-detect", needsMachine: false },

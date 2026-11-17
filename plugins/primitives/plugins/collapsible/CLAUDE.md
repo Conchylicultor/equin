@@ -24,6 +24,15 @@ Both take the same `UseCollapsibleOptions` (`open` / `defaultOpen` /
 element to put it on. `CollapsibleTrigger` / `CollapsibleContent` /
 `CollapsibleChevron` read the context and work identically under either.
 
+## Open state survives a reload: `keep`
+
+Open / closed is view state (kept-state's view tier, keyed by the pane or
+tab it renders in). Give an uncontrolled collapsible `keep="<id>"` — stable
+across a reload, unique among the kept collapsibles of one place — and a
+remount, tab switch or reload gives its state back. Without `keep` the state
+lives as long as the component; a controlled one (`open`) is its owner's to
+keep. `useExpandAll(ids, { keep })` requires it.
+
 ## The content is never `{open && …}`
 
 A disclosure's content folds with motion — through `CollapsibleContent`, or
@@ -163,6 +172,8 @@ the scroll plugin's CLAUDE.md and the `css:no-unanchored-has` check).
     - `primitives/css/motion.prefersReducedMotion`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.SingleLineProvider`
+    - `primitives/kept-state.defineKept`
+    - `primitives/kept-state.useKept`
     - `primitives/latest-ref.useLatestRef`
     - `ui/icons.Icon`
   - Exports (types):

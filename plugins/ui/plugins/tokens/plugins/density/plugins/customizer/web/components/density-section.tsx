@@ -53,7 +53,7 @@ export function DensitySection({ search }: { search: string }) {
         shortcuts={densityShortcuts}
         onFill={(shortcut) => editor.fillFrom(shortcut.fragment)}
       />
-      <Collapsible defaultOpen>
+      <Collapsible defaultOpen keep="density.tokens">
         <SectionHeaderRow variant="eyebrow">Tokens</SectionHeaderRow>
         <CollapsibleContent className="pl-sm">
           <TokenRows

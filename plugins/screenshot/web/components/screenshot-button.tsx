@@ -7,8 +7,17 @@ import {
   useFetchEndpoint,
   type FetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
-import { createScreenshot } from "../../shared/endpoints";
+import { uploadAttachment } from "@plugins/infra/plugins/attachments/web";
+import { attachmentMarkdown } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/core";
+import { writeDraft } from "@plugins/primitives/plugins/kept-state/web";
+import {
+  useStore,
+  type Store,
+} from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { captureApp } from "../capture";
+import { screenshotPane } from "../panes";
+import { screenshotCapture } from "../kept";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const photoCameraIcon = symbol("photo-camera");
@@ -16,6 +25,8 @@ const photoCameraIcon = symbol("photo-camera");
 export function ScreenshotButton() {
   const fetchEndpoint = useFetchEndpoint();
   const toast = useToast();
+  const captures = useStore(screenshotCapture.store);
+  const openPane = useOpenPane();
   const [busy, setBusy] = useState(false);
 
   async function handleClick() {
@@ -46,7 +57,12 @@ export function ScreenshotButton() {
 
       // Open the tab after capture — typically < 2 s after the click,
       // well within Chrome's 5-second user-activation window.
-      window.open(`/screenshot/${id}`, "_blank", "noopener");
+      // The editor pane's own URL (its app's base path included), alone.
+      window.open(
+        openPane.to(screenshotPane, { id }, { mode: "root" }).href(),
+        "_blank",
+        "noopener",
+      );
 
       // Deliver blob directly via BroadcastChannel so the new tab
       // displays the screenshot without waiting for the server roundtrip.
@@ -60,7 +76,7 @@ export function ScreenshotButton() {
       // Stop listening after the tab has had time to receive the blob.
       setTimeout(() => ch.close(), 15_000);
 
-      void upload(fetchEndpoint, toast, id, blob);
+      void upload(fetchEndpoint, toast, captures, id, blob);
     } catch (err) {
       toast({
         type: "screenshot",
@@ -84,9 +100,16 @@ export function ScreenshotButton() {
   );
 }
 
+/**
+ * Stages the capture as an attachment and records it as the screenshot's kept
+ * work (`screenshotCapture`, by id): the editor tab — and every reload of it —
+ * reads the image back from there. The record is written from this tab; local
+ * storage hands it to the editor tab (the store's cross-tab subscription).
+ */
 async function upload(
   fetchEndpoint: FetchEndpoint,
   toast: Toast,
+  captures: Store<{ image: string } | null>,
   id: string,
   blob: Blob,
 ): Promise<void> {
@@ -106,7 +129,17 @@ async function upload(
     });
 
   try {
-    await fetchEndpoint(createScreenshot, { id }, { body: blob });
+    const uploaded = await uploadAttachment(
+      fetchEndpoint,
+      blob,
+      "screenshot.png",
+      "image/png",
+    );
+    writeDraft(
+      captures,
+      { image: attachmentMarkdown(uploaded.id, "screenshot.png") },
+      { scope: id },
+    );
   } catch (err) {
     if (err instanceof EndpointError) {
       toast({

@@ -6,14 +6,36 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/ui/button";
 import { usePortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-forward";
 import { OverlayPanel } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/overlay-panel";
+import { usePopupOpenMirror } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/popup-open-mirror";
 import { usePortalContainer } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const closeIcon = symbol("close");
 
-function Dialog({ ...props }: DialogPrimitive.Root.Props) {
-  return <DialogPrimitive.Root data-slot="dialog" {...props} />;
+function Dialog({
+  open,
+  defaultOpen,
+  onOpenChange,
+  ...props
+}: DialogPrimitive.Root.Props) {
+  // See `usePopupOpenMirror`: an open dialog is an open popup — the enclosing
+  // PopupOpenScope and the page-wide signal (the reload policy's "engaged")
+  // read it.
+  const { onOpenChange: handleOpenChange } = usePopupOpenMirror({
+    open,
+    defaultOpen,
+    onOpenChange,
+  });
+  return (
+    <DialogPrimitive.Root
+      data-slot="dialog"
+      open={open}
+      defaultOpen={defaultOpen}
+      onOpenChange={handleOpenChange}
+      {...props}
+    />
+  );
 }
 
 function DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {

@@ -211,7 +211,7 @@ function FileList({
     allExpanded,
     toggleAll,
     toggle: toggleOne,
-  } = useExpandAll(sortedPaths);
+  } = useExpandAll(sortedPaths, { keep: "review.code-review" });
 
   const sections = useMemo((): FileSection[] | null => {
     if (!sorted) return null;

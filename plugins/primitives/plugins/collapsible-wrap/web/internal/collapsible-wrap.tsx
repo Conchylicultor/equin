@@ -8,7 +8,12 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react";
+import { z } from "zod";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
+import {
+  defineKept,
+  useKept,
+} from "@plugins/primitives/plugins/kept-state/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
@@ -23,7 +28,19 @@ export interface CollapsibleWrapProps {
   /** Gap between chips in pixels; default 4 (= gap-1). */
   gap?: number;
   className?: string;
+  /**
+   * What the expanded state is kept under: stable across a reload, unique
+   * among the wraps of one place. Expanded is view state of the place this
+   * renders in (kept-state), so a remount or a reload gives it back.
+   */
+  keep: string;
 }
+
+const keptExpanded = defineKept({
+  owner: "collapsible-wrap.expanded",
+  tier: "view",
+  schema: z.boolean(),
+});
 
 /** Popover panel inset (px) around the spilled rows in the expanded state. */
 const PANEL_PAD = 6;
@@ -65,13 +82,14 @@ export function CollapsibleWrap({
   rows = 1,
   gap = 4,
   className,
+  keep,
 }: CollapsibleWrapProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
 
   const [overflowing, setOverflowing] = useState(false);
   const [clampHeight, setClampHeight] = useState<number | null>(null);
   const [contentHeight, setContentHeight] = useState(0);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useKept(keptExpanded, false, { key: keep });
 
   // --- Overflow + clamp-height detection ------------------------------------
   // Mirror adaptive-bar: ResizeObserver on the wrap box, deferred via
@@ -101,8 +119,8 @@ export function CollapsibleWrap({
     { deps: [rows, gap, expanded] },
   );
 
-  const collapse = useCallback(() => setExpanded(false), []);
-  const expand = useCallback(() => setExpanded(true), []);
+  const collapse = useCallback(() => setExpanded(false), [setExpanded]);
+  const expand = useCallback(() => setExpanded(true), [setExpanded]);
 
   // --- Layout: in-flow in both states, row 1 never moves --------------------
   // The box's LAYOUT height is `clampHeight` (one row) in BOTH collapsed and

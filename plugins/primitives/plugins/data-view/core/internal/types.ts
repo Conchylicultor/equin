@@ -349,6 +349,16 @@ export interface SelectionConfig {
 }
 
 /**
+ * A view's {@link SelectionConfig} as the host hands it down: plus the key
+ * the selection is kept under (`MultiSelectProvider`'s `keep`) — the surface
+ * and view instance, so a remount or reload of the same place gives the
+ * selection back, and two views never share one.
+ */
+export interface ViewSelection extends SelectionConfig {
+  keep: string;
+}
+
+/**
  * Finder-style row selection — a SET of rows plus the anchor a range grows
  * from — controlled by the consumer. A separate thing from the checkbox
  * {@link SelectionConfig}: no checkboxes, no bar; the rows themselves are the
@@ -1538,7 +1548,7 @@ export interface DataViewRenderProps<TRow> {
    */
   attach?: DataViewAttachConfig<TRow>;
   /** Present → the view enables checkbox multi-select (currently the tree). */
-  selection?: SelectionConfig;
+  selection?: ViewSelection;
   /** Finder-style row selection (see {@link RowSelectionConfig}). */
   rowSelection?: RowSelectionConfig;
   /** Rows are native drag sources (see {@link RowDragConfig}). */

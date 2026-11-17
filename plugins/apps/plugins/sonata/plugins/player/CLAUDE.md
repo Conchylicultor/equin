@@ -88,6 +88,7 @@ the scope, so the player cannot import the shell).
     - `SonataPlayer.Effect` ← `apps.sonata.controls`
   - Uses:
     - `apps/sonata/document.SongDocumentProvider`
+    - `apps/sonata/document.songIdentityKey`
     - `apps/sonata/document.SongSettingsMount`
     - `apps/sonata/document.useSongDocument`
     - `apps/sonata/session.CursorStoreProvider`

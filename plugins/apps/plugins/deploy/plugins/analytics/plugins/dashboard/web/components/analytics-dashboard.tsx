@@ -1,4 +1,9 @@
 import { useId, useState, type ReactNode } from "react";
+import { z } from "zod";
+import {
+  defineKept,
+  useKept,
+} from "@plugins/primitives/plugins/kept-state/web";
 import {
   ANALYTICS_MIRROR_SET_ID,
   AUDIENCE_OPTIONS,
@@ -52,6 +57,13 @@ const SOURCE_DIMENSIONS: ReadonlySet<Dimension> = new Set([
  * with each page the copy syncs, and the freshness line above it says when
  * that was (Sync now asks the box for what is new).
  */
+/** Each panel's open sub-tab, per deployment: view state of the place. */
+const keptTabs = defineKept({
+  owner: "deploy.analytics.tabs",
+  tier: "view",
+  schema: z.record(z.string(), z.string()),
+});
+
 export function AnalyticsDashboard({
   deploymentId,
 }: {
@@ -64,7 +76,13 @@ export function AnalyticsDashboard({
   // own site never inflates it (collect's `audience.ts`).
   const [audience, setAudience] = useState<Audience>("visitors");
   const [metric, setMetric] = useState<KpiId>("visits");
-  const [tabs, setTabs] = useState<Record<string, string>>({});
+  const [tabs, setTabs] = useKept<Record<string, string>>(
+    keptTabs,
+    {},
+    {
+      key: deploymentId,
+    },
+  );
   const compareLabelId = useId();
 
   const query: AnalyticsQuery = { range, compare, filters, audience };

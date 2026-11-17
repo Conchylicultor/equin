@@ -492,7 +492,7 @@ own `requestfailed` listener calls it too. Diagnosis:
   - Uses: `framework/tooling/guards/module-extension.MODULE_EXTENSION`
   - Exports (values): `isE2eScriptPath`
 - Cross-plugin:
-  - Imported by: 197 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 198 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×60
     - `primitives` ×29
     - `page` ×26
@@ -518,6 +518,7 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `release`
     - `reorder/node-types`
     - `runs`
+    - `screenshot`
     - `wish/element-picker`
 - Exemptions:
   - Exempts itself from: `agent-origin-safety/no-unmarked-app-fetch` — `e2e/app-fetch.ts`, `e2e/deploy-identity.ts` (sanctioned)

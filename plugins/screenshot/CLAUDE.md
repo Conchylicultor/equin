@@ -4,22 +4,24 @@
 
 ## Plugin reference
 
-- Description: Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots (in memory) so a freshly opened tab can read them. Writing one to a file for an agent is the machine half's.
+- Description: Capture the current page and edit it (crop, draw) in a new tab. The capture is staged as an attachment at once and recorded as kept work, with the committed edits, the strokes not applied yet and the prompt, so a reload of the editor loses nothing (the edited image is derived, never held). Bottom prompt form launches a conversation with the edited screenshot attached.
 - Web:
   - Slots: `screenshotPane.Actions`
   - Slot contributors: `screenshotPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "screenshot"
     - `ActionBar.Item` → `ScreenshotButton`
-  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×4
     - `infra/endpoints` ×3
-    - `network/live/live-state` ×3
-    - `primitives/pane` ×3
+    - `primitives/kept-state` ×3
     - `screenshot/draw-canvas` ×3
+    - `network/live/live-state` ×2
     - `primitives/css/ui-kit` ×2
-    - `primitives/kept-state` ×2
+    - `primitives/dom/web-storage` ×2
     - `primitives/launch` ×2
     - `shell/notifications` ×2
+    - `infra/attachments.uploadAttachment`
     - `network/live.useLive`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
@@ -37,14 +39,6 @@
   - Exports (values):
     - `captureApp`
     - `screenshotPane`
-- Server:
-  - Contributes: `resource.declare` "screenshot.image"
-  - Uses:
-    - `infra/endpoints.HttpError`
-    - `infra/endpoints.implement`
-    - `network/live.serveValue`
-  - Resources: `screenshot.image` (invalidate, notified)
-  - Routes: `POST /api/screenshots/:id`
 - Machine:
   - Uses: `infra/endpoints.implementMachine`
   - Routes: `POST /api/screenshots/:id/file`
@@ -64,10 +58,7 @@
     - `ui/tokens/type-scale --line-height-3xs`
   - Imported by: `screenshot/draw-on-app`
 - Shared:
-  - Exports (values):
-    - `createScreenshot`
-    - `saveScreenshotFile`
-    - `screenshotImage`
+  - Exports (values): `saveScreenshotFile`
 - Sub-plugins:
   - **`draw-canvas`** — Reusable freehand draw canvas (color/width strokes). Used by the screenshot editor and draw-on-app.
   - **`draw-on-app`** — Toolbar button to draw freehand on the live app, capture as a screenshot with strokes baked in, and pre-attach to +improve.

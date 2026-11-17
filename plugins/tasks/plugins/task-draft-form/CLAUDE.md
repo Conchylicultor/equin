@@ -148,9 +148,9 @@ it is handed and knows no tour.
   - Slots: `TaskDraftFormSlots.Action`
   - Slot contributors: `TaskDraftFormSlots.Action` ← `wish.element-picker`
   - Contributes: `ConfigV2.WebRegister` "config"
-  - Uses: 49 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 51 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/kept-state` ×6
     - `tasks/launch-options` ×5
-    - `primitives/kept-state` ×4
     - `infra/endpoints` ×3
     - `primitives/css/ui-kit` ×3
     - `primitives/shortcuts` ×3

@@ -665,7 +665,11 @@ function BlockEditorInner({
     // The rows' menus (`/`, gutter `+`, the rail's Turn into) all offer the
     // same insertable types: derived here once for the surface, not per row.
     <InsertableBlocksProvider enabledBlockTypes={enabledBlockTypes}>
-      <MultiSelectProvider orderedIds={orderedIds}>
+      {/* Not kept: block selection is a mode bound to the container's focus
+          and the range's anchor / head (use-block-selection's refs), which a
+          remount cannot give back — a restored band the keyboard cannot act
+          on is worse than none. */}
+      <MultiSelectProvider keep={null} orderedIds={orderedIds}>
         <SelectionLayer
           rows={rows}
           flat={flat}

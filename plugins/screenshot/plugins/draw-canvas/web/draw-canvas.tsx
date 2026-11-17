@@ -65,9 +65,10 @@ export function DrawCanvas({
     }
   }, [strokes, displayed.width, displayed.height, scaleX, scaleY]);
 
-  function localPoint(e: React.PointerEvent): { x: number; y: number } {
+  /** The event's point in image pixels; `null` once the canvas is gone (never a made-up corner point). */
+  function localPoint(e: React.PointerEvent): { x: number; y: number } | null {
     const el = canvasRef.current;
-    if (!el) return { x: 0, y: 0 };
+    if (!el) return null;
     const r = el.getBoundingClientRect();
     return {
       x: (e.clientX - r.left) * scaleX,
@@ -93,11 +94,13 @@ export function DrawCanvas({
         e.currentTarget.setPointerCapture(e.pointerId);
         setDrawing(true);
         const p = localPoint(e);
+        if (p === null) return;
         onStrokesChange((prev) => [...prev, { color, width, points: [p] }]);
       }}
       onPointerMove={(e) => {
         if (!drawing) return;
         const p = localPoint(e);
+        if (p === null) return;
         onStrokesChange((prev) => {
           if (prev.length === 0) return prev;
           const last = prev[prev.length - 1]!;

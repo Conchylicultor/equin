@@ -34,7 +34,7 @@ export function SidebarMetricsSection({ search }: { search: string }) {
 
   return (
     <Stack gap="xs">
-      <Collapsible defaultOpen>
+      <Collapsible defaultOpen keep="sidebar-metrics.tokens">
         <SectionHeaderRow variant="eyebrow">Tokens</SectionHeaderRow>
         <CollapsibleContent className="pl-sm">
           <TokenRows

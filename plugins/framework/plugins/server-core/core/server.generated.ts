@@ -553,7 +553,6 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "reports", id: "reports", loader: () => import("@plugins/reports/server"), dependsOn: ["config_v2", "database", "ids", "infra/plugins/entities", "network/plugins/live", "shell/plugins/notifications"], core: () => import("@plugins/reports/core") },
   { pluginPath: "review/plugins/code-review", id: "review.code-review", loader: () => import("@plugins/review/plugins/code-review/server"), dependsOn: ["config_v2"], core: null },
   { pluginPath: "runs", id: "runs", loader: () => import("@plugins/runs/server"), dependsOn: ["network/plugins/live"], core: () => import("@plugins/runs/core") },
-  { pluginPath: "screenshot", id: "screenshot", loader: () => import("@plugins/screenshot/server"), dependsOn: ["infra/plugins/endpoints", "network/plugins/live"], core: null },
   { pluginPath: "search/plugins/engine", id: "search.engine", loader: () => import("@plugins/search/plugins/engine/server"), dependsOn: ["database", "database/plugins/sql-column", "infra/plugins/endpoints", "network/plugins/live"], core: () => import("@plugins/search/plugins/engine/core") },
   { pluginPath: "shell/plugins/document-head", id: "shell.document-head", loader: () => import("@plugins/shell/plugins/document-head/server"), dependsOn: [], core: null },
   { pluginPath: "shell/plugins/global-action-bar", id: "shell.global-action-bar", loader: () => import("@plugins/shell/plugins/global-action-bar/server"), dependsOn: ["config_v2"], core: () => import("@plugins/shell/plugins/global-action-bar/core") },

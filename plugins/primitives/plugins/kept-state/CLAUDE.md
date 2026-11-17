@@ -40,6 +40,13 @@ const [query, setQuery] = useKept(pickerQuery, "");
 - **View** has no store of its own: every owner shares `kept.view` (session,
   `evict-oldest`, one budget line), under the id `kept/<scope path>|<owner>`.
   An entry its owner's schema no longer reads is not restored (best effort).
+  Several instances of one owner in the same place (two lists, each with its
+  own selection) pass `{ key }` — stable across a reload, unique among the
+  owner's instances there — and get one entry each (`…|<owner>#<key>`);
+  `{ key: null }` holds that instance in memory only. Primitives that hold
+  view state take the key from their caller — required where every caller has
+  one (`MultiSelectProvider`'s and `useExpandAll`'s `keep`), optional where
+  not (`useCollapsible` / `<Collapsible keep>`).
   Outside every `KeepScope` (an exhibit, a test) view state is memory only.
 - `useDraft(store, initial, { scope })` is the same hook over a store the
   caller declared with `defineStore` — the existing spelling, kept.
@@ -173,10 +180,10 @@ carries them over, so no unsent text is lost — drop it once browsers migrated.
     - `writeDraft`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/color-palette --input`
-  - Imported by: 118 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×35
-    - `primitives` ×22
-    - `conversations` ×11
+  - Imported by: 126 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×37
+    - `primitives` ×25
+    - `conversations` ×12
     - `fields` ×11
     - `page` ×9
     - `ui` ×5
@@ -185,14 +192,15 @@ carries them over, so no unsent text is lost — drop it once browsers migrated.
     - `debug` ×3
     - `apps-core` ×2
     - `infra` ×2
+    - `screenshot` ×2
     - `active-data/task`
     - `build`
     - `hints/ask`
     - `integrations/google-maps`
     - `map`
     - `reorder/editor`
-    - `screenshot`
     - `search/quick-find`
+    - `shell/global-action-bar`
     - `tag-tree/picker`
     - `wish`
 - Exemptions:

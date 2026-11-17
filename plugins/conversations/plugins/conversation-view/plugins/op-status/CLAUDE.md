@@ -118,7 +118,7 @@ spawn / control-file / banner helpers both scripts share are `e2e/synthetic.ts`.
     - `Item.Chips` → `OpStatusChip`
     - `FieldPresentation.Register` "collection:op-status.queue-row"
     - `queue-actions` "open-conversation" → `OpenConversationAction`
-  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×6
     - `network/live/live-state` ×5
     - `conversations/conversation-view` ×2
@@ -126,6 +126,7 @@ spawn / control-file / banner helpers both scripts share are `e2e/synthetic.ts`.
     - `network/live` ×2
     - `primitives/css/fill` ×2
     - `primitives/css/ui-kit` ×2
+    - `primitives/kept-state` ×2
     - `primitives/relative-time` ×2
     - `conversations/conversation-ui/item.Item`
     - `debug/profiling/ops.opDetailPane`

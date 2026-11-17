@@ -12,6 +12,17 @@
 export type SongIdentity =
   { kind: "library"; songId: string } | { kind: "file"; key: string };
 
+/**
+ * `identity` as one stable string (`library:<songId>` / `file:<key>`) — what
+ * keys per-song state that outlives the identity object: a player remounted
+ * per song, a playhead kept across a reload.
+ */
+export function songIdentityKey(identity: SongIdentity): string {
+  return identity.kind === "library"
+    ? `library:${identity.songId}`
+    : `file:${identity.key}`;
+}
+
 /** Whether `a` and `b` name the same document. */
 export function sameIdentity(a: SongIdentity, b: SongIdentity): boolean {
   switch (a.kind) {

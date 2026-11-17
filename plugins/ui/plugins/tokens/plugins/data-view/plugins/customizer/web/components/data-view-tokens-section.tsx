@@ -34,7 +34,7 @@ export function DataViewTokensSection({ search }: { search: string }) {
 
   return (
     <Stack gap="xs">
-      <Collapsible defaultOpen>
+      <Collapsible defaultOpen keep="data-view.tokens">
         <SectionHeaderRow variant="eyebrow">Tokens</SectionHeaderRow>
         <CollapsibleContent className="pl-sm">
           <TokenRows

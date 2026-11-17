@@ -66,6 +66,26 @@ describe("useKept — work", () => {
     expect(other.result.current[0]).toBe("");
   });
 
+  it("keeps the identity of what is shown when its own write comes back from storage", () => {
+    const kept = defineKept({
+      owner: owner("identity"),
+      label: "Test drafts",
+      tier: "work",
+      cap: "8 KB",
+      schema: z.object({ fixed: z.array(z.number()), moving: z.number() }),
+    });
+    const hook = renderHook(() =>
+      useKept(kept, { fixed: [1, 2], moving: 0 }, { subject: "s" }),
+    );
+    const fixed = hook.result.current[0].fixed;
+    act(() => hook.result.current[1]((v) => ({ ...v, moving: 1 })));
+    act(() => flushKept());
+    expect(hook.result.current[0].moving).toBe(1);
+    // The flushed entry re-read from storage is equal: the shown value stays,
+    // so an untouched part keeps its identity (a memo on it does not rerun).
+    expect(hook.result.current[0].fixed).toBe(fixed);
+  });
+
   it("refuses a work owner without a subject", () => {
     const kept = work("nosubject");
     expect(() =>
@@ -106,6 +126,43 @@ describe("useKept — view", () => {
       wrapper: inPane("tab1", "pane2"),
     });
     expect(otherPane.result.current[0]).toBe("");
+  });
+
+  it("keeps one entry per key for several instances of an owner in one place", () => {
+    const open = view("keyed");
+    const wrapper = inPane("tabK", "paneK");
+    const a = renderHook(() => useKept(open, "", { key: "list-a" }), {
+      wrapper,
+    });
+    const b = renderHook(() => useKept(open, "", { key: "list-b" }), {
+      wrapper,
+    });
+    act(() => a.result.current[1]("A"));
+    act(() => b.result.current[1]("B"));
+    a.unmount();
+    b.unmount();
+    flushKept();
+
+    const a2 = renderHook(() => useKept(open, "", { key: "list-a" }), {
+      wrapper,
+    });
+    const b2 = renderHook(() => useKept(open, "", { key: "list-b" }), {
+      wrapper,
+    });
+    expect(a2.result.current[0]).toBe("A");
+    expect(b2.result.current[0]).toBe("B");
+
+    forgetKeepScope("p:paneK");
+    expect(stored(session, open.owner)).toEqual({});
+
+    // A null key: this instance is not kept.
+    const unkept = renderHook(() => useKept(open, "", { key: null }), {
+      wrapper,
+    });
+    act(() => unkept.result.current[1]("lost"));
+    unkept.unmount();
+    flushKept();
+    expect(stored(session, open.owner)).toEqual({});
   });
 
   it("is memory only outside every KeepScope", () => {

@@ -129,6 +129,7 @@ export type {
   LiveHierarchyConfig,
   LiveTreeAliases,
   SelectionConfig,
+  ViewSelection,
   RowDragConfig,
   RowDropConfig,
   RowDropContext,

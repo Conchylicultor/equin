@@ -21,7 +21,7 @@ export function SubHeading({
   children: React.ReactNode;
 }) {
   return (
-    <Collapsible defaultOpen>
+    <Collapsible defaultOpen keep={`plugin-view.sub-heading:${label}`}>
       <CollapsibleTrigger className="gap-xs py-2xs text-caption">
         <CollapsibleChevron className="size-3.5 text-muted-foreground" />
         <span className="font-medium text-muted-foreground">{label}</span>

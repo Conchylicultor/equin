@@ -2266,12 +2266,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `SiteOverview.Card` "traffic" → `TrafficCard`
                   - `SiteOverview.Card` "top" → `TopCards`
                   - `SiteOverview.Card` "owner-devices" → `OwnerDevicesCard`
-                - Uses: 40 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md)
+                - Uses: 42 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md)
                   - `apps/deploy/deployments` ×6
                   - `apps/deploy/host-query` ×4
                   - `primitives/css/coords` ×2
                   - `primitives/css/text` ×2
                   - `primitives/css/ui-kit` ×2
+                  - `primitives/kept-state` ×2
                   - `primitives/link-gesture` ×2
                   - `apps/deploy/site-mirror/pull.MirrorFreshness`
                   - `network/live/live-state.ResourceErrorInline`
@@ -9093,6 +9094,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `sameIdentity`
               - `SonataDocument`
               - `SongDocumentProvider`
+              - `songIdentityKey`
               - `SongSettingsMount`
               - `swingSetting`
               - `transposeSetting`
@@ -9457,6 +9459,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Uses:
               - `apps/sonata/document.SongIdentity`
+              - `apps/sonata/document.songIdentityKey`
               - `apps/sonata/document.useLoadDocument`
               - `apps/sonata/document.useSongDocument`
               - `apps/sonata/player.PlayerDisplay`
@@ -9772,6 +9775,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SonataPlayer.Effect` ← `apps.sonata.controls`
             - Uses:
               - `apps/sonata/document.SongDocumentProvider`
+              - `apps/sonata/document.songIdentityKey`
               - `apps/sonata/document.SongSettingsMount`
               - `apps/sonata/document.useSongDocument`
               - `apps/sonata/session.CursorStoreProvider`
@@ -10782,6 +10786,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SonataSession.Effect` ← `apps.sonata.audio.live-play`
               - `SonataSession.Effect` ← `apps.sonata.audio.metronome`
             - Uses:
+              - `primitives/kept-state.defineKept`
+              - `primitives/kept-state.useKept`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/scope/scoped-store.defineScopedStore`
               - `primitives/scope/scoped-store.ScopedStore`
@@ -21576,7 +21582,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Item.Chips` → `OpStatusChip`
               - `FieldPresentation.Register` "collection:op-status.queue-row"
               - `queue-actions` "open-conversation" → `OpenConversationAction`
-            - Uses: 38 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/op-status/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/op-status/REFERENCE.md)
+            - Uses: 40 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/op-status/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/op-status/REFERENCE.md)
               - `primitives/data-view` ×6
               - `network/live/live-state` ×5
               - `conversations/conversation-view` ×2
@@ -21584,6 +21590,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live` ×2
               - `primitives/css/fill` ×2
               - `primitives/css/ui-kit` ×2
+              - `primitives/kept-state` ×2
               - `primitives/relative-time` ×2
               - `conversations/conversation-ui/item.Item`
               - `debug/profiling/ops.opDetailPane`
@@ -33496,7 +33503,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards/module-extension.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 197 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 198 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×60
               - `primitives` ×29
               - `page` ×26
@@ -33522,6 +33529,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `release`
               - `reorder/node-types`
               - `runs`
+              - `screenshot`
               - `wish/element-picker`
           - Exemptions:
             - Exempts itself from: `agent-origin-safety/no-unmarked-app-fetch` — `e2e/app-fetch.ts`, `e2e/deploy-identity.ts` (sanctioned)
@@ -35070,16 +35078,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `attachmentsEntityRef`
           - `getAttachmentFile`
       - Cross-plugin:
-        - Imported by: 25 plugins — full list in [`plugins/infra/plugins/attachments/REFERENCE.md`](../plugins/infra/plugins/attachments/REFERENCE.md)
+        - Imported by: 26 plugins — full list in [`plugins/infra/plugins/attachments/REFERENCE.md`](../plugins/infra/plugins/attachments/REFERENCE.md)
           - `apps` ×8
           - `page` ×6
           - `conversations` ×3
           - `tasks` ×3
+          - `screenshot` ×2
           - `backup/sources/attachments`
           - `debug/read-set`
           - `infra/attachments/memory-blobs`
           - `primitives/text-editor/paste-images`
-          - `screenshot/draw-on-app`
       - Exemptions:
         - Exempts itself from:
           - `no-db-backed-notify` — `server/internal/bytes.ts` (sanctioned)
@@ -49016,6 +49024,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/motion.prefersReducedMotion`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.SingleLineProvider`
+          - `primitives/kept-state.defineKept`
+          - `primitives/kept-state.useKept`
           - `primitives/latest-ref.useLatestRef`
           - `ui/icons.Icon`
         - Exports (types):
@@ -49084,6 +49094,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.cn`
           - `primitives/dom/element-size.useResizeObserver`
           - `primitives/icon-button.IconButton`
+          - `primitives/kept-state.defineKept`
+          - `primitives/kept-state.useKept`
         - Exports (types): `CollapsibleWrapProps`
         - Exports (values): `CollapsibleWrap`
     - **`command-palette`** — Cmd+K command palette primitive. Plugins contribute commands via CommandPalette.Item; the dialog renders them with fuzzy search and keyboard navigation.
@@ -51651,6 +51663,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ValueCodec`
           - `ViewExpandAll`
           - `ViewRowDropConfig`
+          - `ViewSelection`
           - `ViewSlots`
           - `ViewState`
         - Exports (values):
@@ -52865,12 +52878,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useStore`
               - `WebStorageSlots`
           - Cross-plugin:
-            - Imported by: 55 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
+            - Imported by: 57 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
               - `primitives` ×16
               - `apps` ×14
               - `conversations` ×6
               - `apps-core` ×3
               - `reports` ×2
+              - `screenshot` ×2
               - `ui` ×2
               - `build`
               - `companions/browser-extension`
@@ -53679,10 +53693,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `writeDraft`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/color-palette --input`
-        - Imported by: 118 plugins — full list in [`plugins/primitives/plugins/kept-state/REFERENCE.md`](../plugins/primitives/plugins/kept-state/REFERENCE.md)
-          - `apps` ×35
-          - `primitives` ×22
-          - `conversations` ×11
+        - Imported by: 126 plugins — full list in [`plugins/primitives/plugins/kept-state/REFERENCE.md`](../plugins/primitives/plugins/kept-state/REFERENCE.md)
+          - `apps` ×37
+          - `primitives` ×25
+          - `conversations` ×12
           - `fields` ×11
           - `page` ×9
           - `ui` ×5
@@ -53691,14 +53705,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug` ×3
           - `apps-core` ×2
           - `infra` ×2
+          - `screenshot` ×2
           - `active-data/task`
           - `build`
           - `hints/ask`
           - `integrations/google-maps`
           - `map`
           - `reorder/editor`
-          - `screenshot`
           - `search/quick-find`
+          - `shell/global-action-bar`
           - `tag-tree/picker`
           - `wish`
       - Exemptions:
@@ -54492,6 +54507,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/spacing.Stack`
           - `primitives/css/sticky.Sticky`
           - `primitives/css/ui-kit.cn`
+          - `primitives/kept-state.defineKept`
+          - `primitives/kept-state.useKept`
         - Exports (types):
           - `MultiSelectHandle`
           - `MultiSelectItemHandle`
@@ -57015,13 +57032,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `splitAttachmentRefs`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --space-2xs`
-            - Imported by: 21 plugins — full list in [`plugins/primitives/plugins/text-editor/plugins/paste-images/REFERENCE.md`](../plugins/primitives/plugins/text-editor/plugins/paste-images/REFERENCE.md)
+            - Imported by: 22 plugins — full list in [`plugins/primitives/plugins/text-editor/plugins/paste-images/REFERENCE.md`](../plugins/primitives/plugins/text-editor/plugins/paste-images/REFERENCE.md)
               - `conversations` ×6
               - `page` ×6
               - `apps` ×3
               - `tasks` ×3
               - `primitives` ×2
-              - `screenshot/draw-on-app`
+              - `screenshot` ×2
         - **`token-extension`** — The inline-token primitive's synchronously-loadable half: the declaration TYPES of a token family, the tokenExtension pairing of pattern and node, THE line scan, and the lazy-source host registry. Imports lexical for types only — the class factory lives in the `node` sub-plugin.
           - Cross-plugin:
             - Imported by:
@@ -59449,22 +59466,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `release/runs-arm`
           - `runs`
 
-- **`screenshot`** — Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots (in memory) so a freshly opened tab can read them. Writing one to a file for an agent is the machine half's.
+- **`screenshot`** — Capture the current page and edit it (crop, draw) in a new tab. The capture is staged as an attachment at once and recorded as kept work, with the committed edits, the strokes not applied yet and the prompt, so a reload of the editor loses nothing (the edited image is derived, never held). Bottom prompt form launches a conversation with the edited screenshot attached.
   - Web:
     - Slots: `screenshotPane.Actions`
     - Slot contributors: `screenshotPane.Actions` ← `primitives.pane`
     - Contributes:
       - `Pane.Register` "screenshot"
       - `ActionBar.Item` → `ScreenshotButton`
-    - Uses: 34 symbols — full list in [`plugins/screenshot/REFERENCE.md`](../plugins/screenshot/REFERENCE.md)
+    - Uses: 38 symbols — full list in [`plugins/screenshot/REFERENCE.md`](../plugins/screenshot/REFERENCE.md)
+      - `primitives/pane` ×4
       - `infra/endpoints` ×3
-      - `network/live/live-state` ×3
-      - `primitives/pane` ×3
+      - `primitives/kept-state` ×3
       - `screenshot/draw-canvas` ×3
+      - `network/live/live-state` ×2
       - `primitives/css/ui-kit` ×2
-      - `primitives/kept-state` ×2
+      - `primitives/dom/web-storage` ×2
       - `primitives/launch` ×2
       - `shell/notifications` ×2
+      - `infra/attachments.uploadAttachment`
       - `network/live.useLive`
       - `primitives/css/center.Center`
       - `primitives/css/clip.Clip`
@@ -59482,14 +59501,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Exports (values):
       - `captureApp`
       - `screenshotPane`
-  - Server:
-    - Contributes: `resource.declare` "screenshot.image"
-    - Uses:
-      - `infra/endpoints.HttpError`
-      - `infra/endpoints.implement`
-      - `network/live.serveValue`
-    - Resources: `screenshot.image` (invalidate, notified)
-    - Routes: `POST /api/screenshots/:id`
   - Machine:
     - Uses: `infra/endpoints.implementMachine`
     - Routes: `POST /api/screenshots/:id/file`
@@ -59509,10 +59520,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ui/tokens/type-scale --line-height-3xs`
     - Imported by: `screenshot/draw-on-app`
   - Shared:
-    - Exports (values):
-      - `createScreenshot`
-      - `saveScreenshotFile`
-      - `screenshotImage`
+    - Exports (values): `saveScreenshotFile`
   - Plugins:
     - **`draw-canvas`** — Reusable freehand draw canvas (color/width strokes). Used by the screenshot editor and draw-on-app.
       - Web:
@@ -59543,7 +59551,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/viewport-overlay.ViewportOverlay`
           - `primitives/css/z-layers/stack.defineZLayer`
           - `primitives/dom/render-mode.useViewportSize`
+          - `primitives/dom/web-storage.defineStore`
           - `primitives/icon-button.IconButton`
+          - `primitives/kept-state.useDraft`
           - `primitives/text-editor/paste-images.attachmentMarkdown`
           - `screenshot.captureApp`
           - `screenshot/draw-canvas.DrawCanvas`
@@ -59754,7 +59764,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Apps.TabBarActions` "Tab bar actions" → `DockedActionBarHost`
           - `ActionBar.Item` → `ViewOptionsButton`
           - `ConfigV2.WebRegister` "config"
-        - Uses: 26 symbols — full list in [`plugins/shell/plugins/global-action-bar/REFERENCE.md`](../plugins/shell/plugins/global-action-bar/REFERENCE.md)
+        - Uses: 27 symbols — full list in [`plugins/shell/plugins/global-action-bar/REFERENCE.md`](../plugins/shell/plugins/global-action-bar/REFERENCE.md)
           - `apps-core/tabs` ×3
           - `audience/developer-mark` ×2
           - `config_v2` ×2
@@ -59772,6 +59782,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/embed.isChromelessDocument`
           - `primitives/error-boundary.PluginErrorBoundary`
           - `primitives/icon-button.IconButton`
+          - `primitives/kept-state.KeepScope`
           - `primitives/loading.Loading`
           - `primitives/slot-render.SlotItemLayout`
           - `shell/action-bar.ActionBar`
@@ -62687,9 +62698,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots: `TaskDraftFormSlots.Action`
         - Slot contributors: `TaskDraftFormSlots.Action` ← `wish.element-picker`
         - Contributes: `ConfigV2.WebRegister` "config"
-        - Uses: 49 symbols — full list in [`plugins/tasks/plugins/task-draft-form/REFERENCE.md`](../plugins/tasks/plugins/task-draft-form/REFERENCE.md)
+        - Uses: 51 symbols — full list in [`plugins/tasks/plugins/task-draft-form/REFERENCE.md`](../plugins/tasks/plugins/task-draft-form/REFERENCE.md)
+          - `primitives/kept-state` ×6
           - `tasks/launch-options` ×5
-          - `primitives/kept-state` ×4
           - `infra/endpoints` ×3
           - `primitives/css/ui-kit` ×3
           - `primitives/shortcuts` ×3

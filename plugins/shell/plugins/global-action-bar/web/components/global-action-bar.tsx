@@ -11,6 +11,7 @@ import {
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { SlotItemLayout } from "@plugins/primitives/plugins/slot-render/web";
 import { useConfig } from "@plugins/config_v2/web";
+import { KeepScope } from "@plugins/primitives/plugins/kept-state/web";
 import { useRef, useState, type ReactNode } from "react";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { useDragGesture } from "@plugins/primitives/plugins/dom/plugins/movable/web";
@@ -47,6 +48,17 @@ const DOCKED_SIZE: ControlSize = "sm";
 const BAR_TONE = "text-muted-foreground";
 
 const NO_ACTIVITIES: readonly Activity[] = [];
+
+/**
+ * The bar's items render in a place of their own, outside every tab's
+ * `KeepScope` (the bar is page chrome, mounted once per page in one of its two
+ * hosts): the view state an item keeps — the Wish popover's open flag — is
+ * kept under it, so a reload gives it back in this browser tab. The bar never
+ * closes, so nothing forgets it; the view pool's TTL is the backstop. Both
+ * hosts open the same segment: they are mutually exclusive, and an item keeps
+ * its state across a switch between them.
+ */
+const BAR_KEEP_SEGMENT = "bar:global-action-bar";
 
 /**
  * The always-visible leading item (`ActionBar.Lead` — the health report's dot),
@@ -398,9 +410,11 @@ export function FloatingActionBarHost() {
           >
             {/* eslint-disable-next-line layout/no-adhoc-layout -- animated max-width hover-reveal strip (clipped while collapsed) */}
             <FloatingActionFadeIn className="flex max-w-0 items-center gap-2xs overflow-hidden group-data-open/fa:pl-2xs whitespace-nowrap transition-[max-width] duration-200 group-data-open/fa:max-w-[80rem]">
-              <ActionBar.Item.Render controlSize={FLOATING_SIZE}>
-                {renderItemForAudience}
-              </ActionBar.Item.Render>
+              <KeepScope segment={BAR_KEEP_SEGMENT}>
+                <ActionBar.Item.Render controlSize={FLOATING_SIZE}>
+                  {renderItemForAudience}
+                </ActionBar.Item.Render>
+              </KeepScope>
             </FloatingActionFadeIn>
           </FloatingAction>
         )}
@@ -431,9 +445,11 @@ export function DockedActionBarHost() {
       className={`shrink-0 pl-sm ${BAR_TONE}`}
     >
       <LeadItem size={DOCKED_SIZE} />
-      <ActionBar.Item.Render controlSize={DOCKED_SIZE}>
-        {renderItemForAudience}
-      </ActionBar.Item.Render>
+      <KeepScope segment={BAR_KEEP_SEGMENT}>
+        <ActionBar.Item.Render controlSize={DOCKED_SIZE}>
+          {renderItemForAudience}
+        </ActionBar.Item.Render>
+      </KeepScope>
     </Stack>
   );
 }

@@ -1,12 +1,19 @@
 import { describe, expect, it } from "bun:test";
 import {
+  initialMultiSelectState,
   multiSelectReducer,
   type MultiSelectState,
 } from "./multi-select-context";
 
 function seeded(ids: readonly string[]): MultiSelectState {
   return multiSelectReducer(
-    { orderedIds: [], selectedIds: new Set(), anchorId: null, isActive: false },
+    {
+      orderedIds: [],
+      selectedIds: new Set(),
+      anchorId: null,
+      isActive: false,
+      restoring: null,
+    },
     { type: "SET_ORDERED_IDS", ids },
   );
 }
@@ -113,5 +120,71 @@ describe("multiSelectReducer CLEAR_ALL", () => {
     expect(cleared.selectedIds.size).toBe(0);
     expect(cleared.anchorId).toBeNull();
     expect(cleared.isActive).toBe(false);
+  });
+});
+
+describe("a kept selection", () => {
+  const kept = { selected: ["b", "gone"], anchor: "b" };
+
+  it("is applied at mount for the rows already there; an absent row's id keeps waiting", () => {
+    const state = initialMultiSelectState({ kept, orderedIds: ["a", "b"] });
+    expect([...state.selectedIds]).toEqual(["b"]);
+    expect(state.anchorId).toBe("b");
+    expect(state.isActive).toBe(true);
+    // Not in this list (yet, or ever): it never shows, and is dropped by the
+    // next gesture on the selection.
+    expect(state.restoring).toEqual({ selected: ["gone"], anchor: null });
+  });
+
+  it("waits through an empty (loading) list for its rows", () => {
+    const loading = initialMultiSelectState({ kept, orderedIds: [] });
+    expect(loading.selectedIds.size).toBe(0);
+    expect(loading.restoring).toBe(kept);
+    const loaded = multiSelectReducer(loading, {
+      type: "SET_ORDERED_IDS",
+      ids: ["a", "b", "c"],
+    });
+    expect([...loaded.selectedIds]).toEqual(["b"]);
+    expect(loaded.restoring).toEqual({ selected: ["gone"], anchor: null });
+  });
+});
+
+describe("multiSelectReducer — a kept selection arriving with its rows", () => {
+  const kept = { selected: ["root", "child-1", "child-2"], anchor: "child-1" };
+
+  it("adds each kept id when its row arrives, never pruning one that has not yet", () => {
+    // The root level lands first; the open parent's children later.
+    let state = initialMultiSelectState({
+      kept,
+      orderedIds: ["root", "other"],
+    });
+    expect([...state.selectedIds]).toEqual(["root"]);
+    expect(state.restoring).toEqual({
+      selected: ["child-1", "child-2"],
+      anchor: "child-1",
+    });
+
+    state = multiSelectReducer(state, {
+      type: "SET_ORDERED_IDS",
+      ids: ["root", "child-1", "child-2", "other"],
+    });
+    expect([...state.selectedIds].sort()).toEqual([
+      "child-1",
+      "child-2",
+      "root",
+    ]);
+    expect(state.anchorId).toBe("child-1");
+    expect(state.restoring).toBeNull();
+  });
+
+  it("ends the restore on a clear made before the kept rows landed", () => {
+    let state = initialMultiSelectState({ kept, orderedIds: [] });
+    state = multiSelectReducer(state, { type: "CLEAR_ALL" });
+    expect(state.restoring).toBeNull();
+    state = multiSelectReducer(state, {
+      type: "SET_ORDERED_IDS",
+      ids: ["root", "child-1", "child-2"],
+    });
+    expect(state.selectedIds.size).toBe(0);
   });
 });

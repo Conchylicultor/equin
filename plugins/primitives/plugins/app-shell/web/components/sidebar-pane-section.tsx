@@ -27,6 +27,8 @@ export function SidebarPaneSection({
 }) {
   const { open, triggerControlProps, contentProps } = useCollapsible({
     defaultOpen,
+    // A sidebar's sections have distinct titles: the title names the fold.
+    keep: `sidebar-section:${title}`,
   });
   return (
     // eslint-disable-next-line layout/no-adhoc-layout -- shadcn SidebarGroup is the flex-column clip container for a collapsible section; flex/min-h-0/overflow-hidden configure the third-party component's own box, not a primitive boundary

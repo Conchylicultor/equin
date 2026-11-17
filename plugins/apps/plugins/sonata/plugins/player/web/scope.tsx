@@ -7,6 +7,7 @@ import {
 import {
   SongDocumentProvider,
   SongSettingsMount,
+  songIdentityKey,
   useSongDocument,
 } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import { SonataPlayer } from "./slots";
@@ -47,10 +48,20 @@ export function SonataPlayerScope({ children }: { children: ReactNode }) {
   );
 }
 
-/** The playback session over the loaded document's content. */
+/**
+ * The playback session over the loaded document's content, its playhead kept
+ * under the loaded song's identity (restored only into that song).
+ */
 function DocumentSession({ children }: { children: ReactNode }) {
-  const { content } = useSongDocument();
-  return <PlaybackSession content={content}>{children}</PlaybackSession>;
+  const { identity, content } = useSongDocument();
+  return (
+    <PlaybackSession
+      content={content}
+      keepAs={identity === null ? null : songIdentityKey(identity)}
+    >
+      {children}
+    </PlaybackSession>
+  );
 }
 
 /** The per-player effects, mounted once while the player is shown. */

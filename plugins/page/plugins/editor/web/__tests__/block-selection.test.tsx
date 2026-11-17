@@ -270,7 +270,7 @@ function setup(visible: VisibleBlock[] = FLAT) {
     deleteSpan: vi.fn(),
   };
   const view = render(
-    <MultiSelectProvider orderedIds={visible.map((v) => v.id)}>
+    <MultiSelectProvider keep={null} orderedIds={visible.map((v) => v.id)}>
       <Surface actions={actions} visible={visible} />
     </MultiSelectProvider>,
   );

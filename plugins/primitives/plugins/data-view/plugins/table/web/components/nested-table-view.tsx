@@ -760,7 +760,7 @@ export function NestedTableView(
     header: tableHeaderOption(options),
     tree,
     selection: props.selection
-      ? { actions: props.selection.bulkActions }
+      ? { actions: props.selection.bulkActions, keep: props.selection.keep }
       : undefined,
   };
 

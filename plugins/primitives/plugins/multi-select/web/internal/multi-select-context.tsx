@@ -1,14 +1,29 @@
-import { createContext, useContext, useReducer, type Dispatch } from "react";
+import { createContext, useContext, type Dispatch } from "react";
 import {
   nextRowSelection,
   type RowSelectionGesture,
 } from "@plugins/primitives/plugins/tree/core";
+
+/** A selection as it is kept across a remount / reload (JSON, view tier). */
+export type KeptSelection = {
+  selected: string[];
+  anchor: string | null;
+};
 
 export type MultiSelectState = {
   orderedIds: readonly string[];
   selectedIds: Set<string>;
   anchorId: string | null;
   isActive: boolean;
+  /**
+   * What of the kept selection still waits for its rows: a remount reads it
+   * before the list has (fully) loaded — a tree's child rows, a later page —
+   * so each kept id is added to the selection when its row arrives, never
+   * pruned for not being there yet. Nothing is written back meanwhile. Any
+   * gesture that touches the selection (clear included) ends it. `null` once
+   * every kept id has arrived.
+   */
+  restoring: KeptSelection | null;
 };
 
 export type MultiSelectAction =
@@ -57,12 +72,16 @@ function withSelection(
 ): MultiSelectState {
   const prev = { selected: state.selectedIds, anchor: state.anchorId };
   const next = nextRowSelection(prev, gesture, state.orderedIds);
-  if (next === prev) return state;
+  // A gesture ends a restore even when it changes nothing shown (a clear
+  // before the kept rows landed must not let them come back).
+  if (next === prev)
+    return state.restoring === null ? state : { ...state, restoring: null };
   return {
     ...state,
     selectedIds: new Set(next.selected),
     anchorId: next.anchor,
     isActive: next.selected.size > 0,
+    restoring: null,
   };
 }
 
@@ -114,31 +133,59 @@ export function multiSelectReducer(
 
     case "SET_ORDERED_IDS": {
       if (shallowEqual(state.orderedIds, action.ids)) return state;
-      // Prune selected IDs that are no longer in the ordered set
+      // Prune selected IDs that are no longer in the ordered set.
       const idSet = new Set(action.ids);
-      const pruned = new Set<string>();
-      for (const id of state.selectedIds) {
-        if (idSet.has(id)) pruned.add(id);
-      }
-      const anchorId =
+      const selected = new Set<string>();
+      for (const id of state.selectedIds) if (idSet.has(id)) selected.add(id);
+      let anchorId =
         state.anchorId && idSet.has(state.anchorId) ? state.anchorId : null;
+      // Kept ids whose rows are here now join the selection; the rest wait.
+      let restoring = state.restoring;
+      if (restoring !== null) {
+        const waiting: string[] = [];
+        for (const id of restoring.selected)
+          if (idSet.has(id)) selected.add(id);
+          else waiting.push(id);
+        let waitingAnchor = restoring.anchor;
+        if (waitingAnchor !== null && idSet.has(waitingAnchor)) {
+          anchorId = waitingAnchor;
+          waitingAnchor = null;
+        }
+        restoring =
+          waiting.length === 0
+            ? null
+            : { selected: waiting, anchor: waitingAnchor };
+      }
       return {
         orderedIds: action.ids,
-        selectedIds: pruned,
+        selectedIds: selected,
         anchorId,
-        isActive: pruned.size > 0,
+        isActive: selected.size > 0,
+        restoring,
       };
     }
   }
 }
 
-const initialState: MultiSelectState = {
-  orderedIds: [],
-  selectedIds: new Set(),
-  anchorId: null,
-  isActive: false,
-};
-
-export function useMultiSelectReducer() {
-  return useReducer(multiSelectReducer, initialState);
+/**
+ * The state a provider mounts with: the kept selection waiting for its rows,
+ * applied at once when they are already here (no empty first frame).
+ */
+export function initialMultiSelectState({
+  kept,
+  orderedIds,
+}: {
+  kept: KeptSelection;
+  orderedIds: readonly string[];
+}): MultiSelectState {
+  return multiSelectReducer(
+    {
+      orderedIds: [],
+      selectedIds: new Set(),
+      anchorId: null,
+      isActive: false,
+      restoring: kept.selected.length > 0 ? kept : null,
+    },
+    { type: "SET_ORDERED_IDS", ids: orderedIds },
+  );
 }

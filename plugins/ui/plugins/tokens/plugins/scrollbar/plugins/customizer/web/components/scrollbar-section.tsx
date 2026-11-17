@@ -34,7 +34,7 @@ export function ScrollbarSection({ search }: { search: string }) {
 
   return (
     <Stack gap="xs">
-      <Collapsible defaultOpen>
+      <Collapsible defaultOpen keep="scrollbar.tokens">
         <SectionHeaderRow variant="eyebrow">Tokens</SectionHeaderRow>
         <CollapsibleContent className="pl-sm">
           <TokenRows
