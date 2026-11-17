@@ -16,6 +16,10 @@ export {
   lintDataKey,
   readDeclaredUtilities,
 } from "./declared-utilities";
+export type {
+  DeclaredUtilities,
+  DeclaredUtility,
+} from "./declared-utility-types";
 export {
   LINT_SCOPE_EXCLUDE_GLOBS,
   isLintScopeExcluded,

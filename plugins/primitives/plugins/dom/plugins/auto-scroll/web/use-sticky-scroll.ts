@@ -19,7 +19,7 @@ import { useInView } from "@plugins/primitives/plugins/dom/plugins/in-view/web";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { BottomSentinel } from "./internal/bottom-sentinel";
 import { scrollChildIntoView } from "./scroll-child-into-view";
-import { FOLLOW_MOTION_ATTR } from "./follow-motion";
+import { FOLLOW_MOTION_ATTR } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/plugins/follow-motion/core";
 import { findViewAnchor } from "./internal/view-anchor";
 import { claimBottomPin, releaseBottomPin } from "./internal/bottom-pin";
 import { listenForNavigation } from "./announce-navigation";

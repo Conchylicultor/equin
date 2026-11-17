@@ -3,6 +3,10 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
+import type {
+  DeclaredUtilities,
+  DeclaredUtility,
+} from "./declared-utility-types";
 
 /**
  * Which custom `@utility` classes exist — the one stylesheet fact a class rule
@@ -37,17 +41,39 @@ export const APP_CSS_REL_PATH =
  */
 export const LINT_DATA_FILES: readonly string[] = [APP_CSS_REL_PATH];
 
+/** A declaration that makes a utility move: `transition` / `transition-property`
+ *  / `animation` / `animation-name`, at the start of a declaration. */
+const MOTION_DECLARATION =
+  /(?:^|[\s;{])(?:transition|transition-property|animation|animation-name)\s*:/;
+
+/** The body of the block whose `{` sits just before `start`, braces balanced
+ *  (a utility nests `&:hover { … }` and `@media { … }` blocks). */
+function blockBody(code: string, start: number): string {
+  let depth = 1;
+  let i = start;
+  while (depth > 0 && i < code.length) {
+    const c = code[i];
+    if (c === "{") depth++;
+    else if (c === "}") depth--;
+    i++;
+  }
+  return code.slice(start, i - 1);
+}
+
 /**
  * Every real `@utility <name>` in app.css. Comments are stripped first, so a
  * prose mention inside one is not mistaken for a declaration — the same rule
  * as codegen's `collectUtilityDecls` (`codegen/core/app-css-utilities.ts`),
  * which this file cannot import: lint core loads under jiti.
  */
-export function readDeclaredUtilities(root: AppPath): ReadonlySet<string> {
+export function readDeclaredUtilities(root: AppPath): DeclaredUtilities {
   const css = readFileSync(joinAppPath(root, APP_CSS_REL_PATH), "utf8");
   const code = css.replace(/\/\*[\s\S]*?\*\//g, "");
-  const names = new Set<string>();
-  for (const m of code.matchAll(/@utility\s+([\w-]+)/g)) names.add(m[1]!);
+  const names = new Map<string, DeclaredUtility>();
+  for (const m of code.matchAll(/@utility\s+([\w-]+)\s*\{/g)) {
+    const body = blockBody(code, m.index + m[0].length);
+    names.set(m[1]!, { animates: MOTION_DECLARATION.test(body) });
+  }
   if (names.size === 0) {
     throw new Error(
       `${APP_CSS_REL_PATH} declares no @utility — the stylesheet moved or the scan broke; ` +
@@ -59,11 +85,14 @@ export function readDeclaredUtilities(root: AppPath): ReadonlySet<string> {
 
 /**
  * What lint rules read from {@link LINT_DATA_FILES}, as one stable string: the
- * sorted declared `@utility` names. A cache keyed on this, rather than on the
+ * sorted declared `@utility` names, each marked when it animates. A cache keyed on this, rather than on the
  * stylesheet's bytes, survives the edits to app.css that cannot change a lint
  * result — 6 of its 11 changes on main in the week to 2026-10-15 left the set
  * alone.
  */
 export function lintDataKey(root: AppPath): string {
-  return [...readDeclaredUtilities(root)].sort().join("\n");
+  return [...readDeclaredUtilities(root)]
+    .map(([name, facts]) => (facts.animates ? `${name} ~` : name))
+    .sort()
+    .join("\n");
 }

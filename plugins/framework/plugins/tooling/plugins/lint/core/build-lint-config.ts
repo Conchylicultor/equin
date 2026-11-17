@@ -40,6 +40,7 @@ import {
 import type { CollectedEntry } from "./lint.generated";
 import { LINT_SCOPE_EXCLUDE_GLOBS } from "./lint-scope-exceptions";
 import { createLintToolkit, type LintToolkit } from "./class-token-walk";
+import type { DeclaredUtilities } from "./declared-utility-types";
 import { scopeDeclarationError } from "./scope-declaration";
 
 // Loaded lazily: importing anything from this module's barrel
@@ -240,7 +241,7 @@ function buildClassRules(
  * by `lintDataKey`.
  */
 export async function loadLintContributions(
-  declaredUtilities: ReadonlySet<string>,
+  declaredUtilities: DeclaredUtilities,
 ): Promise<LoadedLintContribution[]> {
   const toolkit = createLintToolkit(declaredUtilities);
   const lintEntries = await loadLintEntries();
@@ -506,7 +507,7 @@ export interface BuildLintConfigOptions {
   typeSource: ParserTypeSource;
   exemptions: LintExemptions;
   /** The stylesheet's `@utility` set, `readDeclaredUtilities(root)` (see `loadLintContributions`). */
-  declaredUtilities: ReadonlySet<string>;
+  declaredUtilities: DeclaredUtilities;
   /**
    * Enable only these rules (default: all). The type-check worker re-runs only
    * the rule groups whose cached result is stale for a file; a contribution
@@ -882,7 +883,7 @@ function isRuleEntryOff(entry: Linter.RuleEntry): boolean {
  * `kind: "type-aware"` selection registers a rule.
  */
 export async function typeAwareLintGroups(
-  declaredUtilities: ReadonlySet<string>,
+  declaredUtilities: DeclaredUtilities,
 ): Promise<{ base: boolean; contributions: Set<string> }> {
   const [contributions, tsPlugin, reactHooks, builtinRules] = await Promise.all(
     [

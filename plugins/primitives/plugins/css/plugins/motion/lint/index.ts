@@ -1,3 +1,4 @@
+import buildNoDeadTiming from "./no-dead-timing";
 import noTransitionAll from "./no-transition-all";
 import noUnanimatedSurfaceExit from "./no-unanimated-surface-exit";
 import type { LintContribution } from "@plugins/framework/plugins/tooling/plugins/lint/core";
@@ -15,11 +16,20 @@ import type { LintContribution } from "@plugins/framework/plugins/tooling/plugin
  * `no-transition-all` rejects a `transition-all` class: it animates layout
  * properties, so a box its host measures is read mid-transition and
  * re-decided every frame — name the properties that move.
+ *
+ * `no-dead-timing` rejects a `duration-*` / `ease-*` / `delay-*` on an element
+ * with nothing that transitions or animates: nothing transitions unless it
+ * names what (app.css's base layer), so the class times nothing.
  */
 export default {
   name: "motion",
   rules: {
     "no-transition-all": noTransitionAll,
     "no-unanimated-surface-exit": noUnanimatedSurfaceExit,
+  },
+  // Class rules are FACTORIES taking the shared class-token walk and the
+  // stylesheet facts (which @utility animates) from `buildLintConfig`.
+  classRules: {
+    "no-dead-timing": buildNoDeadTiming,
   },
 } satisfies LintContribution;

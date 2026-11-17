@@ -30,7 +30,10 @@ import {
   buildLintConfig,
   loadLintContributions,
 } from "@plugins/framework/plugins/tooling/plugins/lint/core";
-import type { ReplayedProblem } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import type {
+  DeclaredUtilities,
+  ReplayedProblem,
+} from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import { LINT_GROUP_BASE, type RawLintMessage } from "../core";
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
@@ -101,7 +104,7 @@ function isOff(entry: Linter.RuleEntry): boolean {
  */
 export function createLintEngine(
   root: AppPath,
-  declaredUtilities: ReadonlySet<string>,
+  declaredUtilities: DeclaredUtilities,
 ): LintEngine {
   // A rule id's namespace is its contribution's `name`; anything else (the
   // config builder's own typescript-eslint / react-hooks / core rules) and a

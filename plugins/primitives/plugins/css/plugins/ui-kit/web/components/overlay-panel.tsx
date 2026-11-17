@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import type * as React from "react";
 
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils";
@@ -20,6 +20,7 @@ import { useScrollFade } from "@plugins/primitives/plugins/css/plugins/ui-kit/we
 import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
 import { IconScopeProvider } from "@plugins/ui/plugins/icons/web";
 import { usePortalThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-theme-scope";
+import { useSizeMotion } from "@plugins/primitives/plugins/css/plugins/motion/web";
 
 /**
  * The floating panel an element sits in, or null when it is in none — for
@@ -118,6 +119,14 @@ export interface OverlayPanelProps extends Passthrough<HTMLDivElement> {
    * Default false: the text rail is the rail.
    */
   rows?: boolean;
+  /**
+   * Whether the panel tweens its own size when its content changes it — a
+   * control panel pushing a wider page (Filter → the filter builder), a menu
+   * filtering down, a list growing (`useSizeMotion`, the motion `Surface`'s
+   * floating levels have). Default `true`; `false` for a panel whose geometry
+   * something else already animates (`FloatingAction`'s morph).
+   */
+  motion?: boolean;
   /** Landing spot for a consumer override — always the LAST `cn()` argument. */
   className?: string;
   children?: React.ReactNode;
@@ -135,6 +144,7 @@ export function OverlayPanel({
   header,
   footer,
   rows = false,
+  motion = true,
   className,
   children,
   ref,
@@ -157,10 +167,15 @@ export function OverlayPanel({
   // belongs on its own box — the rail is measured from the publisher's PADDING
   // box, which for this bordered surface is one pixel inside its border box.
   const railRef = useRailGuard<HTMLDivElement>("OverlayPanel");
+  // The node, for the size watch, beside the fade's, the rail's and the
+  // caller's refs.
+  const node = useRef<HTMLDivElement | null>(null);
+  useSizeMotion(node, motion);
   const panelRef = useCallback(
     (el: HTMLDivElement | null) => {
       measureRef(el);
       railRef.current = el;
+      node.current = el;
       if (typeof ref === "function") ref(el);
       else if (ref) ref.current = el;
     },
@@ -203,9 +218,10 @@ export function OverlayPanel({
         // easing / offset / scale, off under reduced motion). base-ui marks
         // a closing popup `data-ending-style` and waits for its animations
         // before it unmounts or hides it. `data-closed:overflow-hidden`
-        // suppresses a scrollbar flash while it goes; `duration-100` times a
-        // consumer's own `transition-*` (it arms nothing by itself).
-        "z-popover origin-(--transform-origin) duration-100 outline-none data-open:overlay-enter data-ending-style:overlay-exit data-closed:overflow-hidden",
+        // suppresses a scrollbar flash while it goes. A size change is
+        // `useSizeMotion`'s (above), never a timing class: nothing
+        // transitions unless it names what (`motion/no-dead-timing`).
+        "z-popover origin-(--transform-origin) outline-none data-open:overlay-enter data-ending-style:overlay-exit data-closed:overflow-hidden",
         POPOVER_WIDTH[width],
         POPOVER_PADDING[padding],
         rows && "rail-rows",

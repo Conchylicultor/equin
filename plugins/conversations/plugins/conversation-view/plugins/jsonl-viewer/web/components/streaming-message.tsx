@@ -1,6 +1,6 @@
 import { useRef, type ReactNode } from "react";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
-import { FOLLOW_MOTION_ATTR } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
+import { FOLLOW_MOTION_ATTR } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/plugins/follow-motion/core";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useStreamingStandIns } from "../use-streaming-stand-ins";

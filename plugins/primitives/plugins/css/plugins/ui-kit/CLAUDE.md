@@ -268,7 +268,10 @@ structurally unrepresentable.
 cycle), the entry and exit animations (`data-open:overlay-enter` /
 `data-ending-style:overlay-exit` — the `overlay` token group's duration /
 easing / offset / scale, off under reduced motion; base-ui waits for the exit
-before it unmounts or hides the popup), the width/padding/max-height roles (padding
+before it unmounts or hides the popup), the size tween when its content changes
+its size (`useSizeMotion` from `css/motion` — a control panel pushing a wider
+page, a menu filtering down; `motion={false}` for a panel whose geometry
+something else animates, `FloatingAction`'s morph), the width/padding/max-height roles (padding
 defaults to `panel`, the theme's `popoverPad`), the sticky
 `header`, and the content-context resets (`SingleLineProvider value={false}` +
 `OverlayBoundary`). `PopoverContent`, `DropdownMenuContent`, `SelectContent`,
@@ -450,6 +453,7 @@ yes/no guard: `useConfirmDialog` (`imperative-dialog/plugins/confirm`); native
 - Web:
   - Contributes: `Core.Root` → `InputModalityTracker`
   - Uses:
+    - `primitives/css/motion.useSizeMotion`
     - `primitives/css/rail.useRailGuard`
     - `primitives/dom/after-layout.afterLayout`
     - `primitives/dom/element-size.useResizeObserver`

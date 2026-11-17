@@ -72,7 +72,7 @@ export function spacingClassExists(
   cls: string,
   family: SpacingFamily,
   value: string,
-  declaredUtilities: ReadonlySet<string>,
+  declaredUtilities: { has(name: string): boolean },
 ): boolean {
   return builtinWords(family).includes(value) || declaredUtilities.has(cls);
 }

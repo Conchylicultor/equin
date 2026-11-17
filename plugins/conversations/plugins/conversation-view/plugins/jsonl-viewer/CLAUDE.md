@@ -180,10 +180,10 @@ back.
   - Contributes:
     - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
     - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
-  - Uses: 52 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 51 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/live-state` ×9
     - `conversations/conversation-view/pending-turn` ×6
-    - `primitives/dom/auto-scroll` ×5
+    - `primitives/dom/auto-scroll` ×4
     - `conversations/conversation-view/jsonl-viewer/collapsible-card` ×2
     - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
     - `primitives/css/working-dots` ×2

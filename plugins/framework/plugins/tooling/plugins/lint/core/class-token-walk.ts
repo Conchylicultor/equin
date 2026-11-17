@@ -1,4 +1,5 @@
 import type { TSESLint, TSESTree } from "@typescript-eslint/utils";
+import type { DeclaredUtilities } from "./declared-utility-types";
 
 /**
  * The ONE class-token walk, shared by every `no-adhoc-*` class rule.
@@ -385,14 +386,15 @@ export interface LintToolkit {
   /**
    * Every custom `@utility` class app.css declares, read when the lint config
    * is built (see `declared-utilities.ts`) — so a rule can tell a class that
-   * exists from one Tailwind would accept and compile to nothing.
+   * exists from one Tailwind would accept and compile to nothing, and which of
+   * them animate.
    */
-  declaredUtilities: ReadonlySet<string>;
+  declaredUtilities: DeclaredUtilities;
 }
 
 /** The toolkit handed to every class-rule factory, over the given stylesheet facts. */
 export function createLintToolkit(
-  declaredUtilities: ReadonlySet<string>,
+  declaredUtilities: DeclaredUtilities,
 ): LintToolkit {
   return {
     collectTokens,

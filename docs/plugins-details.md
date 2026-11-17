@@ -19058,10 +19058,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
               - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
-            - Uses: 52 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Uses: 51 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `network/live/live-state` ×9
               - `conversations/conversation-view/pending-turn` ×6
-              - `primitives/dom/auto-scroll` ×5
+              - `primitives/dom/auto-scroll` ×4
               - `conversations/conversation-view/jsonl-viewer/collapsible-card` ×2
               - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
               - `primitives/css/working-dots` ×2
@@ -33913,6 +33913,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types):
               - `BuildLintConfigOptions`
               - `ClassRuleFactory`
+              - `DeclaredUtilities`
+              - `DeclaredUtility`
               - `LintContribution`
               - `LintExemptions`
               - `LintRuleDocs`
@@ -50220,7 +50222,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`motion`** — How floating surfaces move: <Presence> keeps a leaving surface drawn until its exit has run (and cross-fades a keyed swap), useSizeMotion tweens a surface's size when its content changes, useFlowMotion fades a newly shown in-flow item in and glides the siblings it displaces, useEnterMotion fades in an element its owner places itself (a canvas frame) when it arrives, prefersReducedMotion, <Arrival> eases a row that arrives while the reader watches into a flow of rows (slot opens, row fades in), useTransitionHold / openTransitionHolds (a view transition's new picture waits, bounded, until a surface mounted in its update has painted — a map's tiles), <Reveal> eases content that appears in a drawn surface open with a fade and an accent wash — plus the no-unanimated-surface-exit lint rule.
           - Web:
             - Uses:
-              - `primitives/dom/auto-scroll.FOLLOW_MOTION_ATTR`
               - `primitives/dom/element-size.useResizeObserver`
               - `primitives/dom/element-size.useResizeObserverSet`
             - Exports (types):
@@ -50242,8 +50243,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useTransitionHold`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --primary`
-            - Imported by: 23 plugins — full list in [`plugins/primitives/plugins/css/plugins/motion/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/motion/REFERENCE.md)
-              - `primitives` ×8
+            - Imported by: 24 plugins — full list in [`plugins/primitives/plugins/css/plugins/motion/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/motion/REFERENCE.md)
+              - `primitives` ×9
               - `apps` ×6
               - `map` ×2
               - `page` ×2
@@ -51020,6 +51021,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Contributes: `Core.Root` → `InputModalityTracker`
             - Uses:
+              - `primitives/css/motion.useSizeMotion`
               - `primitives/css/rail.useRailGuard`
               - `primitives/dom/after-layout.afterLayout`
               - `primitives/dom/element-size.useResizeObserver`
@@ -52789,7 +52791,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `announceNavigation`
               - `cloneWithScroll`
               - `findScrollParent`
-              - `FOLLOW_MOTION_ATTR`
               - `glideScroll`
               - `JumpToBottomButton`
               - `KeepAnchorAcross`
@@ -52807,15 +52808,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-xs`
               - `ui/tokens/shape --spacing`
-            - Imported by: 23 plugins — full list in [`plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md)
+            - Imported by: 22 plugins — full list in [`plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md)
               - `apps` ×8
-              - `primitives` ×8
+              - `primitives` ×7
               - `conversations` ×4
               - `apps-core/tab-surface`
               - `layouts/miller`
               - `page/editor`
           - Exemptions:
             - Exempts itself from: `scroll-safety/no-adhoc-scroll-write` — `web` (sanctioned)
+          - Plugins:
+            - **`follow-motion`** — FOLLOW_MOTION_ATTR: the attribute an element whose animation grows a stick-to-bottom surface's content carries, so the surface follows it frame by frame. A leaf with no imports, so an animator (css/motion, which ui-kit's OverlayPanel imports) stamps it without reaching auto-scroll, which imports ui-kit.
+              - Cross-plugin:
+                - Imported by:
+                  - `conversations/conversation-view/jsonl-viewer`
+                  - `primitives/css/motion`
+                  - `primitives/dom/auto-scroll`
+              - Core:
+                - Exports (values): `FOLLOW_MOTION_ATTR`
         - **`copy-source-text`** — Copy what an element STANDS FOR, not only what it shows: an element declares its source text via copiesAsText() / copiesAsOwnText — exported beside the handler, so importing them ships it — and one Core.Root-mounted document copy handler swaps every declaring element in the selection for that text before re-serializing the clipboard through the browser's own block-aware serializer. Restores the characters a rendering replaced (an active-data chip's `token`), and removes the newlines a chip's blockified label box injects mid-sentence. Yields to any handler that already prevented the default, and never acts inside a contenteditable. A substituting element also SELECTS as one unit: its letters take no highlight, and a selectionchange listener rings the whole element while the selection overlaps it — so the selection shows exactly what the copy will carry.
           - Web:
             - Contributes: `Core.Root` → `CopySourceTextHost`

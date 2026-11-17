@@ -6,7 +6,7 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react";
-import { FOLLOW_MOTION_ATTR } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
+import { FOLLOW_MOTION_ATTR } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/plugins/follow-motion/core";
 import { prefersReducedMotion } from "./reduced-motion";
 import { arrivalDelayMs } from "./arrival-timing";
 import "./arrival.css";

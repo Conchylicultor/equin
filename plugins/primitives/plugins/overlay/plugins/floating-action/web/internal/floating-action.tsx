@@ -318,6 +318,9 @@ function FloatingActionPanel({
           // a lookalike of it. It is not a scroller here (`scroll={false}`): the
           // panel owns its overflow, clipping the morph below.
           scroll={false}
+          // The morph below animates the panel's size itself; a size tween
+          // of the same box would fight it.
+          motion={false}
           padding={pad}
           // Content is inert until it is revealed (open AND at rest): closed,
           // invisible (FadeIn) panel items must not be pointer- or

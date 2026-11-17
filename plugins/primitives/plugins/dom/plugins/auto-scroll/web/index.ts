@@ -1,7 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { useStickyScroll } from "./use-sticky-scroll";
-export { FOLLOW_MOTION_ATTR } from "./follow-motion";
 export type {
   StickyScrollHandle,
   StickyScrollPersist,

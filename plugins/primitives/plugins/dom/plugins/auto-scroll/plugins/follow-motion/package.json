@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-primitives-dom-auto-scroll-follow-motion",
+  "version": "0.0.1",
+  "private": true,
+  "description": "FOLLOW_MOTION_ATTR: the attribute an element whose animation grows a stick-to-bottom surface's content carries, so the surface follows it frame by frame. A leaf with no imports, so an animator (css/motion, which ui-kit's OverlayPanel imports) stamps it without reaching auto-scroll, which imports ui-kit."
+}

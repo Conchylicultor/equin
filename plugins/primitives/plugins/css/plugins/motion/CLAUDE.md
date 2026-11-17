@@ -6,7 +6,7 @@ one. Six mechanisms, each owned where it can be automatic:
 | Moment | Who owns it | How |
 |---|---|---|
 | **Enter** | the surface | `Surface` levels `overlay` / `float` wear `surface-enter` (ui-kit `app.css`): a fade and scale from the overlay token group (`--overlay-enter-duration` / `-easing` / `-scale`). Never `translate` — `Pin` / `Placed` centre with it. Popovers (`OverlayPanel`) keep their own `overlay-enter`. |
-| **Size** | the surface | `useSizeMotion` (attached by `Surface` overlay / float): when the surface's **content** changes its size — a card becoming a pill, a list drilling into a detail, a thread growing — it tweens width / height / corner radius instead of jumping. |
+| **Size** | the surface | `useSizeMotion` (attached by `Surface` overlay / float, and by `OverlayPanel` — every popover, menu, select and dialog; `motion={false}` opts one out): when the surface's **content** changes its size — a card becoming a pill, a list drilling into a detail, a thread growing — it tweens width / height / corner radius instead of jumping. |
 | **Arrive** | `<Arrival>` | A row added to a flow of rows while the reader watches (a transcript line written live, a block another writer added to an open page) eases in: its slot opens from zero height while the row fades in, so the rows after it glide instead of jumping; the rows of one write arrive as one staged gesture (one push, content cascading in). In-flow, unlike Enter. |
 | **In-flow change** | the container | `useFlowMotion` (attached by `detail-sections`' `SectionStack` and the `data-view` icons grid): when the SET of a container's laid-out children changes — a section shown, a tile added, one removed or moved — a new child fades and scales in and every displaced sibling glides from its old place (FLIP). |
 | **Placed enter** | `useEnterMotion` | An element its owner places itself (absolutely, by runtime numbers: a prototype canvas frame), which `useFlowMotion` cannot see, plays the same fade-and-scale when the owner says it arrived. |
@@ -14,6 +14,22 @@ one. Six mechanisms, each owned where it can be automatic:
 
 `Surface motion={false}` opts a surface out of enter and size motion, for one
 whose geometry something else already animates.
+
+## Lint: `motion/no-dead-timing`
+
+A `duration-*` / `ease-*` / `delay-*` times a transition or an animation; it
+moves nothing by itself, and app.css's base layer sets `transition-property:
+none` everywhere (nothing transitions unless it names what). So on an
+intrinsic element with no `transition-*`, `animate-*` or animating `@utility`
+(one whose body declares a `transition` / `animation` — the lint toolkit's
+`declaredUtilities` says which), the class is dead and is flagged. It exists
+because a dead one hid a lost motion: `OverlayPanel`'s `duration-100` used to
+transition every property under CSS's initial `transition-property: all` — the
+control panel's width glided when a page needed a wider bucket (Filter → the
+filter builder) — and when the base rule landed, the glide went with no signal,
+since the class still read as timing something. The panel's size now moves
+through `useSizeMotion`. A component's `className` is not judged: the
+component may carry the transition itself (`SheetContent`).
 
 ## `<Presence>`
 
@@ -97,7 +113,7 @@ whose geometry something else already animates.
     as one, whatever the content's delays.
 - Nothing in it scrolls, focuses or reads the scroller: the camera is the
   viewer's.
-- While entering it carries `FOLLOW_MOTION_ATTR` (`dom/auto-scroll`), so a
+- While entering it carries `FOLLOW_MOTION_ATTR` (`dom/auto-scroll/follow-motion`), so a
   stick-to-bottom surface glides with the opening.
 - Never under reduced motion.
 ## `useFlowMotion`
@@ -191,7 +207,6 @@ Design: [`research/2026-10-25-global-surface-motion.md`](../../../../../../resea
 - Description: How floating surfaces move: <Presence> keeps a leaving surface drawn until its exit has run (and cross-fades a keyed swap), useSizeMotion tweens a surface's size when its content changes, useFlowMotion fades a newly shown in-flow item in and glides the siblings it displaces, useEnterMotion fades in an element its owner places itself (a canvas frame) when it arrives, prefersReducedMotion, <Arrival> eases a row that arrives while the reader watches into a flow of rows (slot opens, row fades in), useTransitionHold / openTransitionHolds (a view transition's new picture waits, bounded, until a surface mounted in its update has painted — a map's tiles), <Reveal> eases content that appears in a drawn surface open with a fade and an accent wash — plus the no-unanimated-surface-exit lint rule.
 - Web:
   - Uses:
-    - `primitives/dom/auto-scroll.FOLLOW_MOTION_ATTR`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/dom/element-size.useResizeObserverSet`
   - Exports (types):
@@ -213,8 +228,8 @@ Design: [`research/2026-10-25-global-surface-motion.md`](../../../../../../resea
     - `useTransitionHold`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/color-palette --primary`
-  - Imported by: 23 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives` ×8
+  - Imported by: 24 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives` ×9
     - `apps` ×6
     - `map` ×2
     - `page` ×2

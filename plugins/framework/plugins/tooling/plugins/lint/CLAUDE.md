@@ -206,6 +206,8 @@ its disable does not cover. Parameters and imports have no in-file value.
   - Exports (types):
     - `BuildLintConfigOptions`
     - `ClassRuleFactory`
+    - `DeclaredUtilities`
+    - `DeclaredUtility`
     - `LintContribution`
     - `LintExemptions`
     - `LintRuleDocs`
