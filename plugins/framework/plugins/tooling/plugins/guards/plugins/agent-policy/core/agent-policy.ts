@@ -1,21 +1,19 @@
 // The protections every agent runs with — hooks and deny rules — declared once.
 //
-// Two places hand them to Claude Code, and both read THIS:
-//   - the repo's `.claude/settings.json`, for a session a human starts in a
-//     checkout (its `hooks` and `permissions.deny` are generated from here by
-//     `./equin build`; `guards:claude-settings-in-sync` fails on drift), and
-//   - every app launch, whatever its workspace (agent-launch's
-//     `agentLaunchPolicy`), so an agent whose cwd is outside the repo — a
-//     scratch workspace — is guarded too.
+// Two places hand them to Claude Code, and both read THIS — one per session,
+// never both:
+//   - the repo's `.claude/settings.json`, for any session in a checkout — a
+//     human's, or an app-launched worktree agent's (its `hooks` and
+//     `permissions.deny` are generated from here by `./equin build`;
+//     `guards:claude-settings-in-sync` fails on drift), so the hooks and the
+//     scripts they run come from the same commit, and
+//   - an app launch whose workspace has no project settings — a scratch dir
+//     outside the repo (agent-launch's `agentLaunchPolicy`, `guards: "launch"`).
 //
-// Each command is ONE string, spelled the same in both places, rooted at the
-// GUARDS_ROOT variable or else `$CLAUDE_PROJECT_DIR`. A human session has no
-// GUARDS_ROOT, so its guards come from the project; an app launch sets it to
-// the checkout its workspace runs the guards of (a worktree: its own, so an
-// agent can edit and test them; scratch: the launching backend's). In a
-// worktree both copies are loaded, and Claude Code runs
-// identical hook commands once (measured 2026-10-24: identical strings ran
-// once, differing ones twice) — keep them byte-identical.
+// Each command is rooted at the GUARDS_ROOT variable or else
+// `$CLAUDE_PROJECT_DIR`: a checkout session's guards come from the checkout
+// itself (a worktree's own, so an agent can edit and test them); a scratch
+// launch sets GUARDS_ROOT to the launching backend's checkout.
 //
 // The workspace an app-launched agent runs in (the WORKSPACE_ROOT variable) is
 // the boundary `main-edits` / `main-writes` allow writes under; absent in a

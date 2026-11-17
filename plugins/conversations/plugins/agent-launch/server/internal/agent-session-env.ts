@@ -52,9 +52,9 @@ import { agentScratchDir } from "@plugins/infra/plugins/launcher/plugins/agent-s
  *   process, so it can never migrate into Claude Code's background daemon and
  *   inherit whichever process first spawned that daemon (the Sep 9 misattributed
  *   push).
- * - `EQUIN_GUARDS_ROOT` — the checkout whose guard scripts the launch's
- *   policy hooks run (guards/agent-policy): the workspace's own for a worktree,
- *   the launching backend's for scratch.
+ * - `EQUIN_GUARDS_ROOT` — the checkout whose guard scripts the agent's hooks
+ *   run (guards/agent-policy): the workspace's own for a worktree (whose own
+ *   settings carry the hooks), the launching backend's for scratch.
  * - `EQUIN_WORKSPACE_ROOT` — the workspace the agent runs in, the
  *   boundary the write guards allow (any workspace kind, so a scratch dir is
  *   bounded too).

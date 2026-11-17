@@ -30,8 +30,8 @@ describe("scratchLaunchFragment", () => {
     // Every guard — macos-automation included — rides the launch's agent
     // policy, so the fragment needs no deny-list copy of any of them.
     expect(
-      scratchLaunchFragment({ mcpUrl: URL, guardsRoot: ROOT }).guardsRoot,
-    ).toBe(ROOT);
+      scratchLaunchFragment({ mcpUrl: URL, guardsRoot: ROOT }).guards,
+    ).toEqual({ from: "launch", root: ROOT });
   });
 
   test("a sandboxed profile's Bash cannot leave the sandbox", () => {

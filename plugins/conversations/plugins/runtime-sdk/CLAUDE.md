@@ -388,6 +388,7 @@ Gotchas the spike hit:
     - `report-kind` "turn-without-id"
   - Uses:
     - `config_v2.ConfigV2`
+    - `conversations/agent-launch.agentLaunchPolicy`
     - `conversations/agent-launch.LAUNCH_CLI_SETTINGS`
     - `conversations/agent-launch.mergeLaunchSettings`
     - `database.db`

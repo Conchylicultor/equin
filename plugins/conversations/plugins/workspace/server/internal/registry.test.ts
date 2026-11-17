@@ -16,7 +16,7 @@ function fakeImpl<K extends "worktree" | "scratch">(
     prepare: async () => {},
     onFinish: async () => {},
     onResume: async () => {},
-    launch: () => ({ guardsRoot: root, settings: {} }),
+    launch: () => ({ guards: { from: "launch", root }, settings: {} }),
     checkResumable: async () => ({ kind: "ok" }),
   };
 }

@@ -7,17 +7,23 @@ copy:
 - `.claude/settings.json`: its `hooks` and `permissions.deny` are generated from
   it by `./equin build` (codegen `claude-settings-gen.ts`);
   `guards:claude-settings-in-sync` fails on a hand edit.
-- every app launch (`conversations/agent-launch`'s `agentLaunchPolicy`),
-  whatever the workspace — a scratch dir outside the repo loads no project
-  settings, so this is its only source.
+- an app launch whose workspace has no project settings — a scratch dir
+  outside the repo (`conversations/agent-launch`'s `agentLaunchPolicy`, when
+  the workspace's `LaunchGuards` is `launch`). A worktree launch carries none of
+  it: the checkout's own generated settings guard it (`LaunchGuards`
+  `checkout`).
+
+Exactly one source per session, always the same commit as the scripts it runs.
+A launch spelling a worktree's hooks from the launching backend's code broke
+every resumed worktree branched before a hook change: main's spelling named
+`bin/run-hook.sh`, the checkout had no such file, and — the two spellings
+differing, so Claude Code ran both — every tool call was refused.
 
 Each hook command reads `${EQUIN_GUARDS_ROOT:-$CLAUDE_PROJECT_DIR}`
-(the `GUARDS_ROOT` key, `envName` in `infra/launcher/env-names`): a human session
-uses its project; an app launch names the workspace's guards
-checkout (a worktree's own, so an agent can edit and test its guards; scratch:
-the launching backend's). A worktree loads both copies, and Claude Code runs
-byte-identical hook commands once (measured) — so never make the two spellings
-differ.
+(the `GUARDS_ROOT` key, `envName` in `infra/launcher/env-names`): a human or
+worktree session runs its own project's scripts (a worktree's own, so an agent
+can edit and test its guards); a scratch launch names the launching backend's
+checkout — the code that spelled the hooks.
 
 ## Every hook runs through one launcher
 

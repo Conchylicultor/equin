@@ -33,10 +33,10 @@ const SANDBOX = {
  *   (`Mcp.scope`).
  * - the profile's `permissions`, unioned by the runtime with the agent
  *   policy's deny rules, and its `sandbox` ({@link SANDBOX}) in the settings.
- * - `guardsRoot`: the launching backend's checkout. No project settings are
- *   reachable from the dir, so the launch's policy hooks (guards/agent-policy)
- *   are the agent's only guards — every one of them, `macos-automation`
- *   included — run from the code that launched it.
+ * - guards carried by the launch, rooted at the launching backend's checkout.
+ *   No project settings are reachable from the dir, so the launch's policy
+ *   hooks (guards/agent-policy) are the agent's only guards — every one of
+ *   them, `macos-automation` included — run from the code that launched it.
  */
 export function scratchLaunchFragment(opts: {
   mcpUrl: string;
@@ -49,7 +49,7 @@ export function scratchLaunchFragment(opts: {
     mcpServers: { equin: { type: "http", url: opts.mcpUrl } },
     strictMcpConfig: true,
     ...(opts.permissions ? { permissions: opts.permissions } : {}),
-    guardsRoot: opts.guardsRoot,
+    guards: { from: "launch", root: opts.guardsRoot },
     settings: opts.sandbox ? { sandbox: SANDBOX } : {},
   };
 }

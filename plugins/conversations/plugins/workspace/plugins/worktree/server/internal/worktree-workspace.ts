@@ -84,10 +84,11 @@ export const worktreeWorkspace: WorkspaceImpl<"worktree"> = {
 
   // The checkout carries the repo's own `.claude/settings.json` and
   // `.mcp.json`. Its agent runs its OWN checkout's guards, so it can edit and
-  // test them; the launch's policy hooks are byte-identical to the project's,
-  // which Claude Code runs once.
-  launch({ path }) {
-    return { guardsRoot: path, settings: {} };
+  // test them — from its own settings, never from hooks the launching backend
+  // spells: those name the backend's scripts, which a checkout branched
+  // earlier may not have.
+  launch() {
+    return { guards: { from: "checkout" }, settings: {} };
   },
 
   // A conversation's checkout can be reclaimed underneath it while its branch

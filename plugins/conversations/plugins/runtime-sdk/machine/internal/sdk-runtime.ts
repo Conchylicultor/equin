@@ -8,7 +8,6 @@ import type {
 import type { LaunchFragment } from "@plugins/conversations/plugins/workspace/server";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 import type { EffortLevel } from "@plugins/conversations/plugins/effort-provider/core";
-import { agentLaunchPolicy } from "@plugins/conversations/plugins/agent-launch/server";
 import { compactionHookEntry } from "@plugins/conversations/plugins/compaction-context/machine";
 import { stopGateHookEntry } from "@plugins/conversations/plugins/stop-gate/machine";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
@@ -593,10 +592,10 @@ export const sdkRuntime: ConversationRuntime = {
     const options = sdkLaunchOptions({
       cwd,
       launch,
-      policy: agentLaunchPolicy({
+      hookEntries: {
         compaction: await compactionHookEntry(),
         stopGate: await stopGateHookEntry(),
-      }),
+      },
       model: opts?.model,
       effort: opts?.effort,
       resumeSessionId: opts?.resumeSessionId,

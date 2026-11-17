@@ -23136,6 +23136,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `report-kind` "turn-without-id"
         - Uses:
           - `config_v2.ConfigV2`
+          - `conversations/agent-launch.agentLaunchPolicy`
           - `conversations/agent-launch.LAUNCH_CLI_SETTINGS`
           - `conversations/agent-launch.mergeLaunchSettings`
           - `database.db`
@@ -24000,6 +24001,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `LaunchContext`
           - `LaunchFragment`
+          - `LaunchGuards`
           - `LaunchMcpServer`
           - `LaunchPermissions`
           - `Resumability`

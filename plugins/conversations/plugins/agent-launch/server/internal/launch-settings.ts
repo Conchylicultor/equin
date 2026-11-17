@@ -50,8 +50,11 @@ export interface LaunchPolicy {
  *
  * - The agent policy (guards/agent-policy): the guard and stop-guard hooks and
  *   the deny rules, the same declaration `.claude/settings.json` is generated
- *   from. A scratch workspace sits outside the repo and loads no project
- *   settings, so this is what guards it.
+ *   from — carried only when `guards` is `launch` (a scratch workspace: it
+ *   sits outside the repo and loads no project settings, so this is what
+ *   guards it). A checkout (`checkout`) runs its own generated settings
+ *   instead: hooks spelled by THIS code name scripts an older checkout may
+ *   not have, and two differing spellings of one hook both run.
  * - The compaction hook (conversations/compaction-context) rides `SessionStart`
  *   on the `compact` source: right after the CLI compacts the agent's context,
  *   it hands back what plugins had given the agent through tool results and
@@ -67,8 +70,13 @@ export interface LaunchPolicy {
 export function agentLaunchPolicy(entries: {
   compaction: CompactionHookEntry;
   stopGate: StopGateHookEntry;
+  /** Where the agent's guards come from (the workspace's `LaunchGuards.from`). */
+  guards: "checkout" | "launch";
 }): LaunchPolicy {
-  const policy = agentPolicySettings();
+  const policy: LaunchPolicy =
+    entries.guards === "launch"
+      ? agentPolicySettings()
+      : { hooks: {}, permissions: { deny: [] } };
   if ("SessionStart" in policy.hooks) {
     throw new Error(
       "agent policy and the compaction hook both set SessionStart — merge them explicitly",

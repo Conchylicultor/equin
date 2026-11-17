@@ -30,7 +30,11 @@ const STOP_GATE: StopGateHookEntry = {
   }),
   timeout: 30,
 };
-const ENTRIES = { compaction: COMPACTION, stopGate: STOP_GATE };
+const ENTRIES = {
+  compaction: COMPACTION,
+  stopGate: STOP_GATE,
+  guards: "launch",
+} as const;
 
 describe("launch settings", () => {
   test("disables prompt suggestions, whose side query can call AskUserQuestion", () => {
@@ -76,12 +80,26 @@ describe("agentLaunchPolicy", () => {
     ]);
   });
 
-  test("every launch carries the agent policy's hooks and deny rules", () => {
+  test("a launch-guarded workspace carries the agent policy's hooks and deny rules", () => {
     const policy = agentPolicySettings();
     const launch = agentLaunchPolicy(ENTRIES);
     for (const [event, groups] of Object.entries(policy.hooks)) {
       expect(launch.hooks[event]).toEqual(groups);
     }
     expect(launch.permissions).toEqual(policy.permissions);
+  });
+
+  test("a checkout's launch carries none of the agent policy: its own settings do", () => {
+    const launch = agentLaunchPolicy({ ...ENTRIES, guards: "checkout" });
+    expect(Object.keys(launch.hooks).sort()).toEqual(["SessionStart", "Stop"]);
+    expect(launch.permissions).toEqual({ deny: [] });
+  });
+
+  test("the compaction hook and stop gate ride a checkout's launch too", () => {
+    const launch = agentLaunchPolicy({ ...ENTRIES, guards: "checkout" });
+    expect(launch.hooks.Stop).toEqual([{ hooks: [STOP_GATE] }]);
+    expect(launch.hooks.SessionStart).toEqual([
+      { matcher: "compact", hooks: [COMPACTION] },
+    ]);
   });
 });

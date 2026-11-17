@@ -282,8 +282,9 @@ export const AgentLaunchOptionsSchema = z.preprocess(
   z.object({
     cwd: z.string(),
     /**
-     * The checkout whose guard scripts the launch's policy hooks run (the
-     * workspace's `LaunchFragment.guardsRoot`), delivered to the agent's
+     * The checkout whose guard scripts the agent's hooks run (the workspace's
+     * `LaunchFragment.guards`: a checkout's own path, or a scratch launch's
+     * named root), delivered to the agent's
      * environment as `EQUIN_GUARDS_ROOT`. Defaulted to `cwd` for an
      * options file written before launches named it (Oct 2026): its settings
      * carry no policy hooks, so the root only bounds the write guards, and its

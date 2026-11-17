@@ -84,6 +84,7 @@ Orthogonal to the runtime (tmux | sdk): a runtime sees only the cwd and the
   - Exports (types):
     - `LaunchContext`
     - `LaunchFragment`
+    - `LaunchGuards`
     - `LaunchMcpServer`
     - `LaunchPermissions`
     - `Resumability`

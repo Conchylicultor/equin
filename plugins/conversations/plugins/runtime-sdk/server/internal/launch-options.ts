@@ -4,9 +4,12 @@ import type {
 } from "@plugins/conversations/plugins/workspace/server";
 import type { LaunchPolicy } from "@plugins/conversations/plugins/agent-launch/server";
 import {
+  agentLaunchPolicy,
   LAUNCH_CLI_SETTINGS,
   mergeLaunchSettings,
 } from "@plugins/conversations/plugins/agent-launch/server";
+import type { CompactionHookEntry } from "@plugins/conversations/plugins/compaction-context/core";
+import type { StopGateHookEntry } from "@plugins/conversations/plugins/stop-gate/core";
 import {
   cliFlagFor,
   type ConversationModel,
@@ -24,8 +27,12 @@ const DEFAULT_SETTING_SOURCES = ["user", "project", "local"] as const;
 export interface SdkLaunchInput {
   cwd: string;
   launch: LaunchFragment;
-  /** What every runtime launches with (`agentLaunchPolicy()`). */
-  policy: LaunchPolicy;
+  /**
+   * The launch's own hook entries; the policy every runtime launches with
+   * (`agentLaunchPolicy()`) is built from them and the fragment's `guards`
+   * here, so the two cannot disagree.
+   */
+  hookEntries: { compaction: CompactionHookEntry; stopGate: StopGateHookEntry };
   model?: ConversationModel;
   effort?: EffortLevel;
   resumeSessionId?: string;
@@ -47,21 +54,34 @@ export interface SdkLaunchInput {
  */
 export function sdkLaunchOptions(input: SdkLaunchInput): AgentLaunchIntent {
   const { launch } = input;
+  const settingSources = [...(launch.settingSources ?? DEFAULT_SETTING_SOURCES)];
+  if (launch.guards.from === "checkout" && !settingSources.includes("project")) {
+    throw new Error(
+      `launch in ${input.cwd}: guards come from the checkout's project settings, but the launch does not load them (setting sources: ${settingSources.join(", ")}) — the agent would run unguarded`,
+    );
+  }
+  const policy = agentLaunchPolicy({
+    ...input.hookEntries,
+    guards: launch.guards.from,
+  });
   return {
     cwd: input.cwd,
-    guardsRoot: launch.guardsRoot,
+    // A checkout's hooks read `${GUARDS_ROOT:-$CLAUDE_PROJECT_DIR}`: the
+    // checkout itself either way.
+    guardsRoot:
+      launch.guards.from === "checkout" ? input.cwd : launch.guards.root,
     model: input.model ? cliFlagFor(input.model) : null,
     effort: (input.effort && resolveEffortFlag(input.effort)) ?? null,
     settings: mergeLaunchSettings(
       input.effort ? resolveEffortSettings(input.effort) : undefined,
       LAUNCH_CLI_SETTINGS,
       {
-        hooks: input.policy.hooks,
-        permissions: launchPermissions(input.policy, launch.permissions),
+        hooks: policy.hooks,
+        permissions: launchPermissions(policy, launch.permissions),
       },
       launch.settings,
     ),
-    settingSources: [...(launch.settingSources ?? DEFAULT_SETTING_SOURCES)],
+    settingSources,
     mcpServers: launch.mcpServers ? { ...launch.mcpServers } : null,
     strictMcpConfig: launch.strictMcpConfig ?? false,
     resume: input.resumeSessionId ?? null,

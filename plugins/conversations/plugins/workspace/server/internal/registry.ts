@@ -21,9 +21,8 @@ export interface LaunchMcpServer {
  * - `strictMcpConfig` — only `mcpServers`, none from the agent's own config.
  * - `permissions` — allow / deny rules, unioned with the agent policy's deny
  *   rules into the launch's one `permissions` key (so never under `settings`).
- * - `guardsRoot` — the checkout whose guard scripts the launch's policy hooks
- *   run (guards/agent-policy). Required: every kind answers where its agents'
- *   guards come from, so none can launch unguarded.
+ * - `guards` — where the agent's guards (guards/agent-policy) come from.
+ *   Required: every kind answers it, so none can launch unguarded.
  * - `settings` — merged into the runtime's one settings object (a key both
  *   set throws).
  */
@@ -32,9 +31,24 @@ export interface LaunchFragment {
   mcpServers?: Readonly<Record<string, LaunchMcpServer>>;
   strictMcpConfig?: boolean;
   permissions?: LaunchPermissions;
-  guardsRoot: string;
+  guards: LaunchGuards;
   settings: Record<string, unknown>;
 }
+
+/**
+ * Where an agent's guards (the agent policy's hooks and deny rules) come from:
+ *
+ * - `checkout` — the workspace IS a repo checkout: its own generated
+ *   `.claude/settings.json` (the `project` setting source) carries the policy,
+ *   and the launch adds none of it. The hook commands and the scripts they run
+ *   then come from the same commit — a launch spelling them from the
+ *   launching backend's code ran scripts an older checkout does not have (a
+ *   resumed worktree branched before `run-hook.sh` refused every tool call).
+ * - `launch` — the workspace has no project settings (scratch): the launch
+ *   carries the policy, its hooks running the scripts under `root` — the
+ *   launching backend's checkout, the same code that spelled them.
+ */
+export type LaunchGuards = { from: "checkout" } | { from: "launch"; root: string };
 
 /** Claude Code permission rules a launch adds. */
 export interface LaunchPermissions {
