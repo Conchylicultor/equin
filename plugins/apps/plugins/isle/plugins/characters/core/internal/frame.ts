@@ -5,8 +5,24 @@
 import { LOOKS, type Look, type LookName } from "./looks";
 import type { View } from "./figure";
 
-/** World px walked per full walk cycle (two steps) at height 1. */
+/** World px walked per full walk cycle (two steps) at height 1, at the stroll pace. */
 export const STRIDE = 30;
+/**
+ * The pace (world px / s) STRIDE is drawn for: a villager's stroll. Faster,
+ * the stride lengthens (and the cadence rises only a little) — as a person
+ * walking faster takes longer steps, not just quicker ones. Keeping the stroll's
+ * stride at the hero's pace (~2.6x) spun the legs ~4 cycles a second.
+ */
+export const STROLL_SPEED = 46;
+/** How much of a faster pace goes into a longer stride (the rest into cadence). */
+const STRIDE_SHARE = 0.8;
+
+/** World px one full walk cycle (two steps) covers, for a look walking at `speed` px/s. */
+export function walkCycle(look: LookName, speed: number | undefined): number {
+  const L: Look = LOOKS[look];
+  const pace = Math.max(1, (speed ?? STROLL_SPEED) / STROLL_SPEED);
+  return STRIDE * L.h * (L.stride ?? 1) * Math.pow(pace, STRIDE_SHARE);
+}
 export const WALK_FRAMES = 16;
 export const IDLE_FRAMES = 8;
 /** The sprite box in world px; the origin (0, 0) of a pose is the feet. */
@@ -33,7 +49,7 @@ export interface CharacterState {
   /** Radians; 0 faces right, π/2 faces the viewer. Default π/2. */
   readonly facing?: number;
   readonly walking: boolean;
-  /** Carried for callers; the pose does not depend on it. */
+  /** World px / s while walking: a faster pace takes longer strides (walkCycle). Default STROLL_SPEED. */
   readonly speed?: number;
   /** The engine's clock, seconds. */
   readonly t: number;
@@ -92,13 +108,11 @@ export function poseKey(p: CharacterPose): string {
 
 export function characterFrame(s: CharacterState): CharacterFrame {
   const look = s.look;
-  const L: Look = LOOKS[look];
   const seed = hashStr(look);
   const v = viewOf(s.facing ?? DEFAULT_FACING);
   let pick: (view: CharacterView) => CharacterPose;
   if (s.walking) {
-    const cyc =
-      ((((s.phase ?? 0) / (STRIDE * L.h * (L.stride ?? 1))) % 1) + 1) % 1;
+    const cyc = ((((s.phase ?? 0) / walkCycle(look, s.speed)) % 1) + 1) % 1;
     const frame = Math.floor(cyc * WALK_FRAMES) % WALK_FRAMES;
     pick = (view) => ({
       look,

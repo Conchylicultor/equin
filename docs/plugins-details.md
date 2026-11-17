@@ -5822,9 +5822,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `paintCharacterShadow`
               - `poseKey`
               - `STRIDE`
+              - `STROLL_SPEED`
               - `TURN_SECONDS`
               - `viewOf`
               - `WALK_FRAMES`
+              - `walkCycle`
         - **`dev`** — Isle's dev tools, never part of the app: the growth exhibit (isle/growth) — the world drawn with N made-up apps (14…142; ±1, add to a category, remove one at random, another seed), placed in memory, never the real plots, with its stats (islands, districts, buildings, empty lots, rebuild time), a switch between baking in workers and on the page, and a fingerprint of what was baked to compare the two.
         - **`plots`** — Isle's plots table (isle_plots: one row per plot of a world, keyed (world, plotId), its occupant unique per world, the geometry as jsonb) served as the isle.plots live collection, and the claim / move / restore endpoints: one compare-and-set transaction per batch, answered stale when what the writer read no longer holds.
           - Server:

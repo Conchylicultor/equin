@@ -15,7 +15,10 @@ import {
   type BuildingSpec,
   type PaintState,
 } from "@plugins/apps/plugins/isle/plugins/buildings/core";
-import type { LookName } from "@plugins/apps/plugins/isle/plugins/characters/core";
+import {
+  walkCycle,
+  type LookName,
+} from "@plugins/apps/plugins/isle/plugins/characters/core";
 import {
   districtLabels,
   findPath,
@@ -269,8 +272,6 @@ const Z_MAX = 2.6;
 /** Signs fade in from SIGN_FADE_Z0 and are fully shown from SIGN_FULL_Z; below it a focused building's sign is drawn at this zoom's size. */
 const SIGN_FADE_Z0 = 0.36;
 const SIGN_FULL_Z = 0.6;
-/** World px the hero walks between two footsteps. */
-const STEP_PX = 30;
 /** Seconds a building's life takes to fade in. */
 const LIFE_FADE = 1.6;
 /** Seconds the old light takes to dissolve into the new one when the time of day changes. */
@@ -2929,7 +2930,8 @@ export class IsleEngine {
         this.marker = null;
       }
     }
-    if (hero.phase - hero.stepAt > STEP_PX) {
+    // two footfalls per walk cycle, so the sound lands with the drawn feet
+    if (hero.phase - hero.stepAt > walkCycle(hero.look, hero.speed) / 2) {
       hero.stepAt = hero.phase;
       this.hooks.onStep();
     }

@@ -7,8 +7,10 @@ import {
   CHARACTER_BOX,
   IDLE_FRAMES,
   STRIDE,
+  STROLL_SPEED,
   WALK_FRAMES,
   characterFrame,
+  walkCycle,
   createTurnTracker,
   poseKey,
   type CharacterPose,
@@ -65,6 +67,26 @@ describe("characterFrame", () => {
       walking: true,
       t: 0,
       phase: cycle / 2,
+    });
+    expect(f.to.pose.frame).toBe(WALK_FRAMES / 2);
+  });
+
+  test("a faster pace lengthens the stride, keeping the cadence near a stroll's", () => {
+    const stroll = walkCycle("hero", STROLL_SPEED);
+    expect(stroll).toBeCloseTo(STRIDE * 0.9);
+    // never shorter than the stroll's, however slow
+    expect(walkCycle("hero", 10)).toBe(stroll);
+    // the hero's 120 px/s: cycles a second stay within a brisk walk's
+    const hz = (sp: number) => sp / walkCycle("hero", sp);
+    expect(hz(120)).toBeGreaterThan(hz(STROLL_SPEED));
+    expect(hz(120)).toBeLessThan(2.5);
+    const f = characterFrame({
+      look: "hero",
+      facing: 0,
+      walking: true,
+      t: 0,
+      speed: 120,
+      phase: walkCycle("hero", 120) / 2,
     });
     expect(f.to.pose.frame).toBe(WALK_FRAMES / 2);
   });

@@ -4,12 +4,14 @@ export {
   CHARACTER_BOX,
   IDLE_FRAMES,
   STRIDE,
+  STROLL_SPEED,
   TURN_SECONDS,
   WALK_FRAMES,
   characterFrame,
   createTurnTracker,
   poseKey,
   viewOf,
+  walkCycle,
 } from "./internal/frame";
 export type {
   CharacterFrame,
