@@ -32,7 +32,12 @@ export function PlayButton() {
     // The transport's one big control: a round, text-coloured disc lifted off
     // the bar, the stage's ink for its glyph; while playing it wears a soft
     // ring of the accent. The disc is the button's backdrop — the button keeps
-    // the toolbar's own density inside it.
+    // the toolbar's own density for its glyph.
+    //
+    // The button FILLS the disc (`size-full`): the whole disc is the target.
+    // Left at its density box (32px in the 48px disc), a click on the disc's
+    // outer ring — over 40% of it — did nothing, and Play seemed to need a
+    // second click.
     <Center
       className={cn(
         "size-12 rounded-full bg-foreground text-background transition-[transform,box-shadow] duration-300 hover:scale-105 active:scale-95",
@@ -47,7 +52,7 @@ export function PlayButton() {
         shortcut="space"
         disabled={!active && !canPlay}
         onClick={togglePlay}
-        className="rounded-full hover:bg-transparent hover:text-background"
+        className="size-full rounded-full hover:bg-transparent hover:text-background"
       />
     </Center>
   );
