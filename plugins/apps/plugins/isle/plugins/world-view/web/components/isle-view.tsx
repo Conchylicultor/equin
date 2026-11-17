@@ -117,6 +117,8 @@ export function IsleView() {
     district: string | null;
   } | null>(null);
   const [entering, setEntering] = useState<Entering | null>(null);
+  /** The hero is down the well, in the Undercroft. */
+  const [below, setBelow] = useState(false);
   const [stationsOpen, setStationsOpen] = useState(false);
   const radioRef = useRef<HTMLDivElement | null>(null);
   const activate = useActivateApp();
@@ -255,6 +257,12 @@ export function IsleView() {
         onEnter: (id, at, click) => enter(id, at, click),
         onMove: (id, target) => onMove(id, target),
         onWhere: (island, district) => setWhere({ island, district }),
+        onSound: (cue) => {
+          if (cue.kind === "chime") sfx.chime(cue.midi);
+          else if (cue.kind === "whoosh") sfx.whoosh();
+          else sfx.blip(cue.high);
+        },
+        onBelow: (b) => setBelow(b),
       },
       {
         reducedMotion: prefersReducedMotion(),
@@ -294,9 +302,12 @@ export function IsleView() {
       usageRows ? lifeOfSummary(usageRows, new Date()) : null,
     );
   }, [usageRows]);
-  // the music ducks under an app opening
+  // the music ducks under an app opening, and down the well (the crystals sing there)
   const isEntering = entering !== null;
-  useEffect(() => ambient.duck(isEntering), [ambient, isEntering]);
+  useEffect(
+    () => ambient.duck(isEntering || below),
+    [ambient, isEntering, below],
+  );
   useEffect(() => engineRef.current?.resize(size.width, size.height), [size]);
 
   useEffect(() => {

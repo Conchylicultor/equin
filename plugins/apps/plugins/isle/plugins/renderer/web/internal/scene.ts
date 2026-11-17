@@ -20,6 +20,20 @@ import { DOCK_LEN, type SpriteSet } from "./sprites";
 
 export const TILE = 512;
 
+/** A well on the map: its ground anchor (the front of its base), keyed by its square. */
+export interface WellSpot {
+  readonly key: string;
+  readonly x: number;
+  readonly y: number;
+}
+
+/** Every well: one on each square busy enough for one, set off its centre. */
+export function wellsOf(layout: Layout): WellSpot[] {
+  return layout.squares
+    .filter((q) => q.well)
+    .map((q) => ({ key: q.key, x: q.x + q.r * 0.55, y: q.y - q.r * 0.25 }));
+}
+
 /** Something drawn into a tile's object layer, and re-drawn as a cut-out over a person behind it. */
 export interface Static {
   readonly key: string;
@@ -190,13 +204,12 @@ export function realizeScene(
         solids.push([x, y, 10]);
       });
     }
-    if (!q.well) continue;
-    const wx = q.x + q.r * 0.55;
-    const wy = q.y - q.r * 0.25;
-    stat(`well:${q.key}`, wy, box(wx, wy, SP.props.well), (g, solid) =>
-      put(g, SP.props.well, wx, wy, 1, solid),
+  }
+  for (const w of wellsOf(layout)) {
+    stat(`well:${w.key}`, w.y, box(w.x, w.y, SP.props.well), (g, solid) =>
+      put(g, SP.props.well, w.x, w.y, 1, solid),
     );
-    solids.push([wx, wy, 20]);
+    solids.push([w.x, w.y - 4, 24]);
   }
   for (const b of buildings) {
     const [x0, y0, x1, y1] = b.bounds;

@@ -107,7 +107,17 @@ import {
   surfaceSerpent,
   type Serpent,
 } from "./surprises";
-import { realizeScene, TILE, type Scene, type Static } from "./scene";
+import {
+  realizeScene,
+  TILE,
+  wellsOf,
+  type Scene,
+  type Static,
+  type WellSpot,
+} from "./scene";
+import { WELL_MOUTH } from "./well";
+import { Undercroft } from "./undercroft/undercroft";
+import { paintIris } from "./undercroft/paint";
 import {
   paintTeleportFx,
   TELEPORT_BOX,
@@ -165,7 +175,17 @@ export interface EngineHooks {
   onStep(): void;
   /** The pointer is (no longer) over a building. */
   onHover(appId: string | null): void;
+  /** A sound the world makes beyond footsteps and hovers (the Undercroft's). */
+  onSound(cue: IsleSound): void;
+  /** The hero went down the well (the Undercroft owns the canvas) or came back up. */
+  onBelow(below: boolean): void;
 }
+
+/** A sound cue: a crystal's note (MIDI), a rush of air, a soft key. */
+export type IsleSound =
+  | { readonly kind: "chime"; readonly midi: number }
+  | { readonly kind: "whoosh" }
+  | { readonly kind: "blip"; readonly high: boolean };
 
 /**
  * How lived-in each app's building is, 0 (never opened: quiet) … 1 (opened
@@ -207,6 +227,8 @@ export interface IsleViewState {
    * afar).
    */
   readonly inside?: string;
+  /** Down the well: where the hero stood in the Undercroft (cave x). */
+  readonly below?: { readonly x: number } | null;
 }
 
 interface Tile {
@@ -249,6 +271,11 @@ interface Moving {
 const MOVE_SNAP = 90;
 /** The cell (world px) a drop point is rounded to before a new plot is looked for. */
 const MOVE_CELL = 12;
+/** Where the hero stands to climb into a well: this far in front of its anchor. */
+const WELL_FRONT = 30;
+/** The hop into the well, then the iris closing on it (s). */
+const HOP_S = 0.55;
+const IRIS_S = 0.7;
 
 interface Settling {
   readonly b: SceneBuilding;
@@ -458,6 +485,23 @@ export class IsleEngine {
   private dust: { x: number; y: number; t0: number } | null = null;
   /** The hero vanishing here and landing there (a double-click on the ground). */
   private teleport: Teleport | null = null;
+  /** The wells on the map (from the layout). */
+  private wells: WellSpot[] = [];
+  /** The well the hero is walking to, to climb in. */
+  private wellBound: WellSpot | null = null;
+  /** The hero hopping into a well, then the iris closing on it. */
+  private descent: { readonly well: WellSpot; readonly t0: number } | null =
+    null;
+  /** The iris opening on a well the hero just climbed out of. */
+  private emerge: { readonly well: WellSpot; readonly t0: number } | null =
+    null;
+  /** The world inside the well, kept between visits; `below` while the hero is in it. */
+  private undercroft: Undercroft | null = null;
+  private below = false;
+  /** A press down there, to tell a click from a slip. */
+  private belowPress: { id: number; x: number; y: number } | null = null;
+  /** Coming back from an app opened down there: go straight back down, to this cave x. */
+  private resumeBelow: number | null = null;
   private nearDoor: SceneBuilding | null = null;
   private nearLot: string | null = null;
   /** The empty lot under the resting mouse (null over a building or anywhere else). */
@@ -584,6 +628,7 @@ export class IsleEngine {
       lastLine: null,
     }));
     this.resume = opts.resume ?? null;
+    this.resumeBelow = opts.resume?.below?.x ?? null;
     if (this.resume) {
       this.cam.x = this.resume.cam.x;
       this.cam.y = this.resume.cam.y;
@@ -620,7 +665,12 @@ export class IsleEngine {
   viewState(): IsleViewState | null {
     if (!this.hero.placed) return null;
     const { x, y, facing } = this.hero;
-    return { hero: { x, y, facing }, cam: { ...this.cam } };
+    return {
+      hero: { x, y, facing },
+      cam: { ...this.cam },
+      below:
+        this.below && this.undercroft ? { x: this.undercroft.heroX } : null,
+    };
   }
 
   /**
@@ -871,6 +921,7 @@ export class IsleEngine {
     this.invalidate(dirty);
     this.layout = layout;
     this.scene = scene;
+    this.wells = wellsOf(layout);
     this.buildings = buildings;
     if (this.nearDoor)
       this.nearDoor =
@@ -1060,7 +1111,8 @@ export class IsleEngine {
     });
     const back = this.resume;
     const outOf =
-      !this.hero.placed && back?.inside !== undefined
+      // (an app opened from down the well: the hero goes back down, not out of a door)
+      !this.hero.placed && back?.inside !== undefined && !back.below
         ? this.buildings.find((b) => b.appId === back.inside)
         : undefined;
     const doorstep = outOf && { x: outOf.door[0], y: outOf.door[1] + 30 };
@@ -1625,7 +1677,7 @@ export class IsleEngine {
       "wheel",
       (e) => {
         e.preventDefault();
-        if (!this.started) return;
+        if (!this.started || this.below || this.descent) return;
         const unit = e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? this.vh : 1;
         const dy = e.deltaY * unit;
         const factor = Math.exp(-dy * (e.ctrlKey ? 0.012 : 0.0016));
@@ -1640,7 +1692,13 @@ export class IsleEngine {
       { passive: false },
     );
     this.on<MouseEvent>(c, "dblclick", (e) => {
-      if (this.started && !this.moving && !this.settling)
+      if (
+        this.started &&
+        !this.moving &&
+        !this.settling &&
+        !this.below &&
+        !this.descent
+      )
         this.teleportTo(e.offsetX, e.offsetY);
     });
     this.on<PointerEvent>(c, "pointerdown", (e) => this.pointerDown(e));
@@ -1649,10 +1707,22 @@ export class IsleEngine {
     this.on<PointerEvent>(c, "pointercancel", (e) => this.endPointer(e));
     this.on<PointerEvent>(c, "pointerleave", () => {
       this.ptr = null;
+      this.undercroft?.pointerLeft();
       if (!this.pointers.size) this.hovered = null;
     });
     // keys: the stage is focusable; walking keys are taken only while it has focus
     this.on<KeyboardEvent>(this.stage, "keydown", (e) => {
+      if (this.descent) return;
+      if (this.below) {
+        if (
+          !e.metaKey &&
+          !e.ctrlKey &&
+          !e.altKey &&
+          this.undercroft?.key(e.code, true)
+        )
+          e.preventDefault();
+        return;
+      }
       if (e.key === "Escape" && this.moving) {
         e.stopPropagation();
         this.drop(false);
@@ -1691,12 +1761,18 @@ export class IsleEngine {
       this.inertia = false;
       this.hero.path = null;
       this.marker = null;
+      this.wellBound = null;
     });
-    this.on<KeyboardEvent>(this.stage, "keyup", (e) =>
-      this.held.delete(e.code),
-    );
-    this.on(this.stage, "focusout", () => this.held.clear());
-    this.on(window, "blur", () => this.held.clear());
+    this.on<KeyboardEvent>(this.stage, "keyup", (e) => {
+      this.held.delete(e.code);
+      if (this.below) this.undercroft?.key(e.code, false);
+    });
+    const letGo = () => {
+      this.held.clear();
+      this.undercroft?.release();
+    };
+    this.on(this.stage, "focusout", letGo);
+    this.on(window, "blur", letGo);
   }
 
   private cancelHold(): void {
@@ -1707,6 +1783,12 @@ export class IsleEngine {
   }
 
   private pointerDown(e: PointerEvent): void {
+    if (this.below) {
+      if (e.button === 0)
+        this.belowPress = { id: e.pointerId, x: e.offsetX, y: e.offsetY };
+      return;
+    }
+    if (this.descent) return;
     if (!this.started || this.settling?.awaiting === null) return;
     this.canvas.setPointerCapture(e.pointerId);
     this.pointers.set(e.pointerId, { x: e.offsetX, y: e.offsetY });
@@ -1760,6 +1842,12 @@ export class IsleEngine {
   }
 
   private pointerMove(e: PointerEvent): void {
+    if (this.below) {
+      if (e.pointerType === "touch") return;
+      const cur = this.undercroft?.pointer(e.offsetX, e.offsetY) ?? "default";
+      if (this.canvas.style.cursor !== cur) this.canvas.style.cursor = cur;
+      return;
+    }
     const p = this.pointers.get(e.pointerId);
     if (e.pointerType !== "touch") this.ptr = { x: e.offsetX, y: e.offsetY };
     if (!p) return;
@@ -1823,6 +1911,21 @@ export class IsleEngine {
   }
 
   private endPointer(e: PointerEvent): void {
+    if (this.below) {
+      const bp = this.belowPress;
+      this.belowPress = null;
+      if (
+        bp &&
+        bp.id === e.pointerId &&
+        e.type === "pointerup" &&
+        Math.hypot(e.offsetX - bp.x, e.offsetY - bp.y) < 10
+      )
+        this.undercroft?.click(e.offsetX, e.offsetY, {
+          elsewhere: e.metaKey || e.ctrlKey,
+          keepOthers: e.altKey,
+        });
+      return;
+    }
     if (!this.pointers.has(e.pointerId)) return;
     this.pointers.delete(e.pointerId);
     this.cancelHold();
@@ -1895,6 +1998,13 @@ export class IsleEngine {
       this.pokes.poke(performance.now() / 1000);
       return;
     }
+    // the well: the hero walks to it and climbs in
+    const well = this.wellAt(p.x, p.y);
+    if (well) {
+      this.walkTo(well.x, well.y + WELL_FRONT);
+      this.wellBound = well;
+      return;
+    }
     // the desktop way: a click on an empty lot gives it back to nature right there, no walk
     const lot = this.lotAt(p.x, p.y);
     if (lot) {
@@ -1965,8 +2075,113 @@ export class IsleEngine {
     );
   }
 
+  /** The well whose drawing covers world point (x, y), if any. */
+  private wellAt(x: number, y: number): WellSpot | null {
+    return (
+      this.wells.find(
+        (w) => Math.abs(x - w.x) < 38 && y > w.y - 96 && y < w.y + 12,
+      ) ?? null
+    );
+  }
+
+  /** At the well's front: the hero hops in, and the iris closes on its mouth. */
+  private startDescent(well: WellSpot, t: number): void {
+    const hero = this.hero;
+    this.wellBound = null;
+    hero.path = null;
+    hero.walking = false;
+    hero.speed = 0;
+    hero.facing = -Math.PI / 2;
+    this.marker = null;
+    this.held.clear();
+    this.follow = { x: well.x, y: well.y - 30 };
+    this.descent = { well, t0: t };
+    this.hooks.onSound({ kind: "whoosh" });
+    if (this.nearDoor) {
+      this.nearDoor = null;
+      this.hooks.onNear(null);
+    }
+    if (this.nearLot) {
+      this.nearLot = null;
+      this.hooks.onNearLot(null);
+    }
+  }
+
+  /** The iris has closed on the well: the Undercroft takes the canvas (`at`: a cave x to stand at, no fall). */
+  private goBelow(t: number, at: number | null): void {
+    this.descent = null;
+    this.below = true;
+    this.cancelHold();
+    this.drag = null;
+    this.pinch = null;
+    this.pointers.clear();
+    this.held.clear();
+    this.canvas.style.cursor = "default";
+    this.canvas.title = "";
+    if (this.hoverId !== null) {
+      this.hoverId = null;
+      this.hooks.onHover(null);
+    }
+    const uc = (this.undercroft ??= new Undercroft({
+      people: this.people,
+      reducedMotion: this.opts.reducedMotion,
+      apps: () =>
+        [...this.apps.values()].map((a) => ({
+          id: a.id,
+          name: a.name,
+          hue: a.hue,
+          glyph: this.tintedGlyph(a, "#fff6e0"),
+        })),
+      life: (id) => (this.life ? (this.life.get(id) ?? 0) : null),
+      hour: () => this.time,
+      step: () => this.hooks.onStep(),
+      chime: (midi) => this.hooks.onSound({ kind: "chime", midi }),
+      whoosh: () => this.hooks.onSound({ kind: "whoosh" }),
+      blip: (high) => this.hooks.onSound({ kind: "blip", high }),
+      where: (zone) => this.hooks.onWhere("Beneath the well", zone),
+      open: (appId, at, click) => this.hooks.onEnter(appId, at, click),
+      leave: () => this.comeUp(performance.now() / 1000),
+    }));
+    uc.enter(t, at);
+    this.hooks.onBelow(true);
+  }
+
+  /** Out of the well: the hero stands at its front, the iris opening on it. */
+  private comeUp(t: number): void {
+    this.below = false;
+    this.held.clear();
+    this.pointers.clear();
+    this.drag = null;
+    const well = this.nearestWell(this.hero.x, this.hero.y);
+    if (well) {
+      this.hero.x = well.x;
+      this.hero.y = well.y + WELL_FRONT;
+      this.emerge = { well, t0: t };
+      this.follow = { x: well.x, y: well.y - 30 };
+    }
+    this.hero.facing = Math.PI / 2;
+    this.canvas.style.cursor = "grab";
+    this.where = "";
+    this.hooks.onBelow(false);
+    this.reportWhere();
+  }
+
+  private nearestWell(x: number, y: number): WellSpot | null {
+    let best: WellSpot | null = null;
+    let bd = Infinity;
+    for (const w of this.wells) {
+      const d = Math.hypot(w.x - x, w.y - y);
+      if (d < bd) {
+        bd = d;
+        best = w;
+      }
+    }
+    return best;
+  }
+
   private walkTo(x: number, y: number): void {
     if (!this.grid || this.teleport) return;
+    this.wellBound = null;
     const path = findPath(this.grid, this.hero.x, this.hero.y, x, y);
     if (!path) return;
     this.hero.path = path.slice(1);
@@ -2153,6 +2368,26 @@ export class IsleEngine {
     this.last = now;
     const cam = this.cam;
     const { vw, vh, dpr } = this;
+    // down the well: the Undercroft draws the whole frame
+    if (
+      this.resumeBelow !== null &&
+      this.started &&
+      this.hero.placed &&
+      this.wells.length
+    ) {
+      const x = this.resumeBelow;
+      this.resumeBelow = null;
+      this.goBelow(t, x);
+    }
+    if (
+      this.descent &&
+      (this.opts.reducedMotion || t - this.descent.t0 > HOP_S + IRIS_S)
+    )
+      this.goBelow(t, null);
+    if (this.below && this.undercroft) {
+      this.undercroft.frame(this.g, dt, t, vw, vh, dpr);
+      return;
+    }
     const layout = this.layout;
     const scene = this.scene;
     const night = this.time === "night";
@@ -2202,7 +2437,9 @@ export class IsleEngine {
           const w = this.toWorld(this.ptr.x, this.ptr.y);
           this.hoveredLot = this.hovered ? null : this.lotAt(w.x, w.y);
           const onLot = this.hoveredLot !== null;
-          const cur = this.hovered || onLot ? "pointer" : "grab";
+          const onWell =
+            !this.hovered && !onLot && this.wellAt(w.x, w.y) !== null;
+          const cur = this.hovered || onLot || onWell ? "pointer" : "grab";
           if (this.canvas.style.cursor !== cur) this.canvas.style.cursor = cur;
           const tip = onLot ? "Empty lot — click to restore nature" : "";
           if (this.canvas.title !== tip) this.canvas.title = tip;
@@ -2673,6 +2910,38 @@ export class IsleEngine {
             c.restore();
           }),
         );
+    } else if (this.descent) {
+      const ds = this.descent;
+      const w = ds.well;
+      const hero = this.hero;
+      const k = Math.min(1, (t - ds.t0) / HOP_S);
+      const rim = w.y + WELL_MOUTH.dy + WELL_MOUTH.ry;
+      // up from the front onto the mouth, then down into it, below the rim's front edge
+      const hop =
+        k < 0.5
+          ? {
+              x: w.x,
+              y:
+                w.y +
+                WELL_FRONT +
+                (WELL_MOUTH.dy + 6 - WELL_FRONT) * easeIO(k * 2) -
+                Math.sin(k * 2 * Math.PI) * 30,
+            }
+          : { x: w.x, y: w.y + WELL_MOUTH.dy + 6 + (k - 0.5) * 2 * 64 };
+      if (k < 1)
+        dyn.push(
+          figure({ x: w.x, y: w.y + 1 }, [-40, -170, 40, 50], (c) => {
+            c.save();
+            if (k >= 0.5) {
+              c.beginPath();
+              c.rect(w.x - 100, rim - 300, 200, 300);
+              c.clip();
+            }
+            c.globalAlpha *= k < 0.8 ? 1 : 1 - (k - 0.8) / 0.2;
+            this.people.draw(c, { ...hero, x: hop.x, y: hop.y }, t, false);
+            c.restore();
+          }),
+        );
     } else dyn.push(person(this.hero));
     // the werewolf, out only at night
     const wolf = this.wolf;
@@ -2723,6 +2992,7 @@ export class IsleEngine {
         this.dust = { x: st.to.x, y: st.to.y, t0: t };
       }
     }
+    this.paintWellShimmer(g, t, night, vis);
     dyn.sort((a, b) => a.y - b.y).forEach((o) => o.d());
     if (tp) paintTeleportFx(g, tp, t);
     if (this.dust) {
@@ -2964,6 +3234,23 @@ export class IsleEngine {
     vg.addColorStop(1, "rgba(28,24,16,.32)");
     g.fillStyle = vg;
     g.fillRect(0, 0, vw, vh);
+    // the iris: closing on the well the hero dropped into, opening on the one it climbed out of
+    const full = Math.hypot(vw, vh);
+    const ds = this.descent;
+    if (ds && t - ds.t0 > HOP_S) {
+      const k = Math.min(1, (t - ds.t0 - HOP_S) / IRIS_S);
+      const c = this.toScreen(ds.well.x, ds.well.y + WELL_MOUTH.dy);
+      paintIris(g, vw, vh, c.x, c.y, full * (1 - easeIO(k)));
+    }
+    const em = this.emerge;
+    if (em) {
+      const k = this.opts.reducedMotion ? 1 : (t - em.t0) / IRIS_S;
+      if (k >= 1) this.emerge = null;
+      else {
+        const c = this.toScreen(em.well.x, em.well.y + WELL_MOUTH.dy);
+        paintIris(g, vw, vh, c.x, c.y, full * easeIO(k));
+      }
+    }
     this.drawTimeFade(now);
   }
 
@@ -2993,8 +3280,53 @@ export class IsleEngine {
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
+  /**
+   * The give-away: the water in a well's mouth glows faintly teal, and a few
+   * motes rise from it — always at night, by day only when the hero is close.
+   */
+  private paintWellShimmer(
+    g: Ctx,
+    t: number,
+    night: boolean,
+    vis: (x: number, y: number, pad?: number) => boolean,
+  ): void {
+    for (const w of this.wells) {
+      if (!vis(w.x, w.y, 100)) continue;
+      const d = Math.hypot(this.hero.x - w.x, this.hero.y - w.y);
+      const a = Math.max(night ? 0.55 : 0, 1 - d / 220);
+      if (a <= 0.01) continue;
+      const mx = w.x + WELL_MOUTH.dx;
+      const my = w.y + WELL_MOUTH.dy + 1.5;
+      g.save();
+      g.globalCompositeOperation = "lighter";
+      g.globalAlpha = a * (0.3 + 0.12 * Math.sin(t * 1.7));
+      g.beginPath();
+      g.ellipse(mx, my, WELL_MOUTH.rx, WELL_MOUTH.ry, 0, 0, 7);
+      g.clip();
+      g.drawImage(glowSprite("rgba(90,255,220,1)"), mx - 22, my - 14, 44, 28);
+      g.restore();
+      g.save();
+      g.globalCompositeOperation = "lighter";
+      for (let i = 0; i < 5; i++) {
+        const k = (t * 0.25 + i / 5) % 1;
+        g.fillStyle = `rgba(150,255,230,${a * 0.7 * Math.sin(k * Math.PI)})`;
+        g.beginPath();
+        g.arc(
+          mx + Math.sin(i * 2.4 + t * 0.8) * WELL_MOUTH.rx * 0.6,
+          my - k * 38,
+          0.9,
+          0,
+          7,
+        );
+        g.fill();
+      }
+      g.restore();
+    }
+  }
+
   private walk(dt: number, t: number): void {
     const hero = this.hero;
+    if (this.descent) return;
     // poked once too often: a spin on the spot
     if (t < this.pokes.spinUntil && !hero.walking) hero.facing += dt * 14;
     const tp = this.teleport;
@@ -3048,6 +3380,16 @@ export class IsleEngine {
       hero.stepAt = hero.phase;
       this.hooks.onStep();
     }
+    const wb = this.wellBound;
+    if (
+      wb &&
+      !hero.path &&
+      Math.hypot(hero.x - wb.x, hero.y - (wb.y + WELL_FRONT)) < 40
+    ) {
+      this.startDescent(wb, t);
+      return;
+    }
+    if (wb && !hero.path) this.wellBound = null;
     const nb =
       this.buildings.find(
         (b) => Math.hypot(hero.x - b.door[0], (hero.y - b.door[1]) * 1.4) < 46,

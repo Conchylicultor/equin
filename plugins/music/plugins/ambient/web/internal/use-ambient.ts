@@ -81,6 +81,7 @@ export function useAmbient(opts: {
       blip: (high) => ref.current?.ambient.sfx.blip(high),
       enter: () => ref.current?.ambient.sfx.enter(),
       whoosh: () => ref.current?.ambient.sfx.whoosh(),
+      chime: (note) => ref.current?.ambient.sfx.chime(note),
     };
     return {
       unlock() {

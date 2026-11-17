@@ -307,6 +307,8 @@ function GrowthCanvas(props: {
         onWhere: () => {},
         onStep: () => {},
         onHover: () => {},
+        onSound: () => {},
+        onBelow: () => {},
       },
       { reducedMotion: false, workers },
     );

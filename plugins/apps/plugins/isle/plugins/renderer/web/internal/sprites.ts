@@ -16,6 +16,7 @@ import {
   type Sprite,
 } from "./kit";
 import { ROCK_COUNT, rockSize } from "./kit";
+import { wellSprite } from "./well";
 
 type Palette = readonly [string, string, string, string, string];
 
@@ -524,86 +525,9 @@ function makeProps(rnd: Rnd): Props {
       g.fill();
     }
   });
-  const well = sprite(80, 90, 40, 80, (g) => {
-    shadowEllipse(g, 6, 32, 10);
-    g.fillStyle = "#9b968a";
-    g.beginPath();
-    g.ellipse(0, -14, 26, 11, 0, 0, Math.PI);
-    g.lineTo(-26, -14);
-    g.closePath();
-    g.fillRect(-26, -14, 52, 14);
-    g.beginPath();
-    g.ellipse(0, 0, 26, 9, 0, 0, Math.PI);
-    g.fill();
-    for (let r = 0; r < 2; r++)
-      for (let i = 0; i < 7; i++) {
-        const x = -26 + i * 7.5 + (r ? 3.5 : 0);
-        g.fillStyle = rnd() < 0.5 ? "#aaa598" : "#8e897d";
-        g.fillRect(x, -13 + r * 6.5, 7, 6);
-        g.strokeStyle = "rgba(50,48,44,.6)";
-        g.lineWidth = 0.7;
-        g.strokeRect(x, -13 + r * 6.5, 7, 6);
-      }
-    g.fillStyle = "#b5b0a3";
-    g.beginPath();
-    g.ellipse(0, -14, 26, 10, 0, 0, 7);
-    g.fill();
-    g.strokeStyle = INK;
-    g.lineWidth = 1;
-    g.stroke();
-    g.fillStyle = "#24343e";
-    g.beginPath();
-    g.ellipse(0, -14, 19, 7, 0, 0, 7);
-    g.fill();
-    g.fillStyle = "#5e4a34";
-    g.fillRect(-23, -60, 4, 46);
-    g.fillRect(19, -60, 4, 46);
-    g.strokeStyle = INK;
-    g.strokeRect(-23, -60, 4, 46);
-    g.strokeRect(19, -60, 4, 46);
-    g.fillStyle = "#7b6549";
-    poly(g, [
-      [-32, -56],
-      [0, -76],
-      [32, -56],
-      [28, -52],
-      [0, -70],
-      [-28, -52],
-    ]);
-    g.fill();
-    g.stroke();
-    for (let i = 0; i < 8; i++)
-      inkLine(
-        g,
-        [
-          [-28 + i * 7, -54],
-          [-26 + i * 7 + (i < 4 ? 3 : -3), -66 + Math.abs(i - 4) * 2.5],
-        ],
-        0.6,
-        "rgba(50,40,28,.55)",
-      );
-    inkLine(
-      g,
-      [
-        [-20, -48],
-        [20, -48],
-      ],
-      2,
-      "#6d5638",
-    );
-    inkLine(
-      g,
-      [
-        [0, -48],
-        [0, -30],
-      ],
-      0.8,
-      "#4a3b2a",
-    );
-    g.fillStyle = "#6d5638";
-    g.fillRect(-4, -31, 8, 7);
-    g.strokeRect(-4, -31, 8, 7);
-  });
+  // the old well drew 14 times from the stream; the sprites after it still expect it there
+  for (let i = 0; i < 14; i++) rnd();
+  const well = wellSprite();
   const haystack = sprite(70, 60, 34, 54, (g) => {
     shadowEllipse(g, 8, 30, 8);
     g.fillStyle = "#bba566";

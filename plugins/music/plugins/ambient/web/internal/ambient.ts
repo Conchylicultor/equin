@@ -27,6 +27,8 @@ export interface AmbientSfx {
   enter(): void;
   /** A rush of air: a scene changes. */
   whoosh(): void;
+  /** One struck bell at a MIDI note (a crystal singing). */
+  chime(note: number): void;
 }
 
 export interface Ambient {
@@ -176,6 +178,9 @@ export function createAmbient(
       },
       whoosh() {
         if (playing) whoosh(rig, ctx.currentTime);
+      },
+      chime(note) {
+        if (playing) bell(rig, midi(note), ctx.currentTime, 0.09, sfxBus);
       },
     },
     dispose() {

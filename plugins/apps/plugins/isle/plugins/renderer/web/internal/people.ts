@@ -80,12 +80,15 @@ export class People {
     g.restore();
   }
 
-  draw(g: Ctx, p: Walker, t: number): void {
+  /** Draws someone where they stand; `shadow: false` off the ground (falling, climbing). */
+  draw(g: Ctx, p: Walker, t: number, shadow = true): void {
     const turn = this.turns.observe(p.look, p.facing, t);
-    g.save();
-    g.translate(p.x, p.y);
-    paintCharacterShadow(g, p.look);
-    g.restore();
+    if (shadow) {
+      g.save();
+      g.translate(p.x, p.y);
+      paintCharacterShadow(g, p.look);
+      g.restore();
+    }
     const f = characterFrame({
       look: p.look,
       facing: p.facing,
