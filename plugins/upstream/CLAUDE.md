@@ -109,9 +109,9 @@ normal). Its truth is the `upstream.publisher-status` live value
 (`machine/internal/publisher-status.ts`, main's backend only; `not-publisher`
 everywhere else): git, the served dist's `.build-commit` and main's own
 `build_runs` (`inflightRunOn` / `lastClosedRunOn`, the run ledger's reads the
-cut runs too). It recomputes on `main` moving, a `build_runs` write, an
-adopted deploy and a cut through the endpoint — a tag cut from a terminal is
-heard at the next of those.
+cut runs too). It recomputes on `main` moving, a tag created or deleted
+(git-watcher's `git-watcher.tags`: a cut through the button or from a
+terminal alike), a `build_runs` write and an adopted deploy.
 
 **The button runs the CLI.** `POST /api/upstream/release` spawns `./equin
 version cut` in the backend's checkout: one implementation, every refusal its

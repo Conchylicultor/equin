@@ -11,7 +11,7 @@ export default [
   },
   {
     rule: "boundaries/no-platform-api",
-    paths: ["server/internal/is-dir.ts"],
+    paths: ["server/internal/is-dir.ts", "server/internal/tags-dir.ts"],
     kind: "debt",
     task: "task-1792338443-riwqev",
     reason: "not yet split into server/ + machine/",

@@ -3,7 +3,6 @@ import { implementMachine } from "@plugins/infra/plugins/endpoints/machine";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { cutReleaseEndpoint } from "@plugins/upstream/plugins/release/core";
-import { publisherStatusServed } from "./publisher-status";
 
 /**
  * One fetch of the publish remote and one tag push, the cut's own bounds
@@ -29,8 +28,6 @@ export const handleCutRelease = implementMachine(
       cwd: REPO_ROOT,
       timeoutMs: CUT_TIMEOUT_MS,
     });
-    // Whatever the outcome, the tags may have moved.
-    publisherStatusServed.notify();
     if (r.timedOut)
       throw new Error(
         `\`${argv.join(" ")}\` did not finish in ${CUT_TIMEOUT_MS / 60_000} min.\n${r.stderr.trim()}`,

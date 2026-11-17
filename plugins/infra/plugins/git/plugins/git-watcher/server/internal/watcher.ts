@@ -1,5 +1,6 @@
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import {
+  acquireDirWatch,
   defineFileWatcher,
   WatchedDirGoneError,
   type FileWatcher,
@@ -13,6 +14,8 @@ import { isDirOnDisk as isDir } from "./is-dir";
 import { planRefFollow, samePlan, type RefFollowPlan } from "./ref-files";
 import { refAdvanced } from "./tables-ref-advanced";
 import { refHeadServed } from "./ref-head-resource";
+import { gitTagsServed } from "./tags-resource";
+import { ensureTagsDir } from "./tags-dir";
 import { runRefReactions } from "./reactions";
 
 // Refs whose movement we surface via refHeadServed. Always `refs/heads/main`
@@ -53,6 +56,8 @@ let followed: {
   gone: boolean;
 } | null = null;
 let started = false;
+// The children watch of `<common>/refs/tags` (see startTagsWatch).
+let releaseTagsWatch: (() => void) | null = null;
 
 // One recompute at a time — a change, a re-plan and a lost-events report
 // included — with the triggers landing mid-run folded into one trailing run.
@@ -118,10 +123,17 @@ function openFollow(plan: RefFollowPlan): Promise<FileWatcher> {
     files: [...plan.files],
     // A structural entry appearing (a branch's nesting dir created) re-plans;
     // a ref file or packed-refs changing re-reads the shas.
-    onChange: (events) =>
-      recomputes.run(
+    onChange: (events) => {
+      // A packed tag deleted, or `pack-refs` folding loose tags in, rewrites
+      // packed-refs alone: nothing under refs/tags/ is left to hear it.
+      // (A reopen hands an update for every followed file: a no-op notify.)
+      if (events.some((e) => e.path === `${commonDir}/packed-refs`)) {
+        gitTagsServed.notify();
+      }
+      return recomputes.run(
         events.some((e) => plan.structural.has(e.path)) ? ["replan"] : [],
-      ),
+      );
+    },
     // A followed dir going (a nesting dir removed once its last loose ref was
     // packed) re-plans from the dirs that are left; any other loss re-reads.
     onLost: async (_dir, err) => {
@@ -162,11 +174,45 @@ export async function startGitWatcher(): Promise<void> {
   // is re-read and announced. Through the coalescer, like every re-plan, so no
   // two follow() runs ever overlap (one would overwrite the other's plan).
   await recomputes.run(["replan"]);
+  // Keeping a status row fresh is not worth failing boot over: like the
+  // common dir above, a watch that cannot open is reported, not fatal.
+  try {
+    await startTagsWatch(commonDir);
+    // eslint-disable-next-line promise-safety/no-bare-catch
+  } catch (err) {
+    console.error("[git-watcher] cannot watch refs/tags", err);
+  }
+}
+
+/**
+ * Tags are not followed as refs (there is no fixed set of them to name): a tag
+ * created, moved or deleted is an entry of `refs/tags/` added, rewritten
+ * (lockfile renamed over it) or removed, heard by a depth-1 watch of that dir
+ * (kqueue on macOS: a descriptor per entry, few — `pack-refs` folds them into
+ * packed-refs, which the ref follow hears). A nested tag name's own write is
+ * below the depth, but its directory appearing is not. Each change notifies
+ * the git-watcher.tags value, whose readers recompute on it.
+ */
+async function startTagsWatch(dir: string): Promise<void> {
+  const release = await acquireDirWatch({
+    dir: await ensureTagsDir(dir),
+    scope: "children",
+    onChange: () => gitTagsServed.notify(),
+    onLost: () => gitTagsServed.notify(),
+  });
+  if (!started) {
+    release(); // stopped while it opened
+    return;
+  }
+  releaseTagsWatch?.(); // a restart raced this open: keep only the newest
+  releaseTagsWatch = release;
 }
 
 export async function stopGitWatcher(): Promise<void> {
   if (!started) return;
   started = false;
+  releaseTagsWatch?.();
+  releaseTagsWatch = null;
   const current = followed;
   followed = null;
   await current?.watcher.stop();

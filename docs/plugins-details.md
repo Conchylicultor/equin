@@ -32796,7 +32796,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/file-watcher` (5 debt)
               - `infra/file-watcher/background-arm` (1 debt)
               - `infra/git/checkout-watch` (1 debt)
-              - `infra/git/git-watcher` (1 debt)
+              - `infra/git/git-watcher` (2 debt)
               - `infra/git/index-refresh` (1 debt)
               - `infra/git/private-index` (1 debt)
               - `infra/git/remotes` (2 debt)
@@ -37125,11 +37125,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `createGitStateMemo`
               - `createSignedMemo`
-        - **`git-watcher`** — Watches local git refs (refs/heads/main plus the current worktree's own branch) via @parcel/watcher. On every advance it notifies the git-watcher.refHead live value, runs the registered in-process ref reactions (every backend, nothing queued in between), and emits the durable git.refAdvanced trigger event (main only).
+        - **`git-watcher`** — Watches local git refs (refs/heads/main plus the current worktree's own branch) via @parcel/watcher, and the repo's tags (a depth-1 watch of refs/tags plus packed-refs), notifying the git-watcher.tags live value when one is created, moved or deleted. On every ref advance it notifies the git-watcher.refHead live value, runs the registered in-process ref reactions (every backend, nothing queued in between), and emits the durable git.refAdvanced trigger event (main only).
           - Server:
-            - Contributes: `resource.declare` "git-watcher.refHead"
+            - Contributes:
+              - `resource.declare` "git-watcher.refHead"
+              - `resource.declare` "git-watcher.tags"
             - Uses:
               - `infra/events.defineTriggerEvent`
+              - `infra/file-watcher.acquireDirWatch`
               - `infra/file-watcher.defineFileWatcher`
               - `infra/file-watcher.FileWatcher`
               - `infra/file-watcher.WatchedDirGoneError`
@@ -37137,6 +37140,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/worktree.ensureMainWorktreeRoot`
               - `network/live.serveValue`
               - `primitives/commit-list.GitError`
+              - `primitives/commit-list.runGit`
               - `primitives/commit-list.tryRunGit`
             - DB schema: `plugins/infra/plugins/git/plugins/git-watcher/server/internal/tables-ref-advanced.ts`
             - Exports (types):
@@ -37145,17 +37149,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `_refAdvancedTriggers`
               - `defineRefReaction`
+              - `gitTagsServed`
               - `lastKnownMainSha`
               - `refAdvanced`
               - `refHeadServed`
             - Register:
               - `defineTriggerEvent('git.refAdvanced')`
               - `defineFileWatcher('git-watcher.refs')`
-            - Resources: `git-watcher.refHead` (push, notified)
+            - Resources:
+              - `git-watcher.refHead` (push, notified)
+              - `git-watcher.tags` (push, notified)
           - Core:
             - Uses: `network/live.liveValue`
-            - Exports (types): `RefHead`
+            - Exports (types):
+              - `GitTags`
+              - `RefHead`
             - Exports (values):
+              - `gitTags`
+              - `GitTagsSchema`
               - `refHead`
               - `RefHeadSchema`
           - Cross-plugin:
@@ -37178,7 +37189,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Exemptions:
             - Exempts itself from:
               - `ids:pk-declared` — `server/internal/tables-ref-advanced.ts` (debt)
-              - `boundaries/no-platform-api` — `server/internal/is-dir.ts` (debt)
+              - `boundaries/no-platform-api` — `server/internal/is-dir.ts`, `server/internal/tags-dir.ts` (debt)
         - **`index-refresh`** — Keep a checkout's index able to vouch for its files: refreshCheckoutIndex (git status on a private copy of the index — stat data refreshed, untracked cache filled — published by private-index's compare-and-swap) and refreshIndexIfRacy (the same, only when the index holds racily-clean entries: countRacyEntries, core, reads the index file — entries whose mtime is not older in whole seconds than the index, which every git status / git diff <rev> otherwise re-hashes on every read, since no read of ours may write the index).
           - Server:
             - Uses: `infra/paths.GIT`
@@ -43601,16 +43612,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withForegroundPriority`
     - **`string-hash`** — Portable string hashes in plain JS (no node:crypto, no Bun.hash), so every host — the Bun server, central and a browser page — computes the same value: hash53 (cyrb53, a 53-bit number, optionally seeded), hashHex (two seeded cyrb53s, ~106 bits as hex), hash64 (a 64-bit bigint), fnv1a32 (32-bit FNV-1a, for seeding), sha256Hex (a synchronous SHA-256, identical to node:crypto's hex digest), createSha256 (the same SHA-256, incremental over strings and bytes) and sha1Hex (SHA-1 for values already stored as one).
       - Cross-plugin:
-        - Imported by: 53 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
+        - Imported by: 54 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
           - `apps` ×17
           - `database` ×6
           - `network` ×5
           - `framework` ×4
           - `debug` ×3
+          - `infra` ×3
           - `reports` ×3
           - `ui` ×3
           - `companions` ×2
-          - `infra` ×2
           - `page` ×2
           - `plugin-meta` ×2
           - `conversations/prompt-snippets`

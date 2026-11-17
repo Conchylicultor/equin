@@ -1,5 +1,8 @@
 import { db } from "@plugins/database/server";
-import { refHeadServed } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
+import {
+  gitTagsServed,
+  refHeadServed,
+} from "@plugins/infra/plugins/git/plugins/git-watcher/server";
 import { resolveUpstreamRemote } from "@plugins/infra/plugins/git/plugins/remotes/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import {
@@ -28,11 +31,11 @@ import {
  * release is cut from main's checkout only).
  *
  * External (git and the served dist are most of its truth), recomputed on
- * what can change it: `main` moving (the unreleased count), a write to
- * `build_runs` (a build starting or ending), the backend serving a new build
- * (a restart reads it fresh; an adopted deploy notifies, machine barrel), and
- * a cut through the endpoint (it notifies). A tag cut from a terminal is heard
- * at the next of those.
+ * what can change it: `main` moving (the unreleased count), a tag created
+ * or deleted (a cut, from the endpoint or `./equin version cut` in a
+ * terminal: the latest release and the unreleased count), a write to
+ * `build_runs` (a build starting or ending), and the backend serving a new
+ * build (a restart reads it fresh; an adopted deploy notifies, machine barrel).
  */
 export const publisherStatusServed = serveValue(upstreamPublisherStatus, {
   source: "external",
@@ -42,7 +45,7 @@ export const publisherStatusServed = serveValue(upstreamPublisherStatus, {
     reason:
       "a build starting or ending changes whether the served commit can be released",
   },
-  recomputeOn: [refHeadServed],
+  recomputeOn: [refHeadServed, gitTagsServed],
   loader: () => readPublisherStatus(),
 });
 
