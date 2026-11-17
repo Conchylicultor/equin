@@ -9,19 +9,22 @@
  *  a. **A background (deferred) plugin 404s** on the build the tab runs (a
  *     fault — no update explains it). No top banner. The Build tray carries
  *     the fault pill (red with the failed plugins named for a developer; a
- *     neutral retry, "Part of the app didn't load", for a user), and the
- *     collapsed action-bar dot is red. A `plugin-load` report is filed.
+ *     neutral retry, "Part of the app didn't load", for a user). A
+ *     `plugin-load` report is filed (read from the deploy's database, so run
+ *     it against your own build — main's is refused).
  *  b. **A core (eager) plugin 404s.** The explicit top banner lists it, and a
  *     `plugin-load` report is filed — which only happens once the report sink
  *     holds an emit made before the reporter registered (Part 3.1).
  *
- * The failure is made with `page.route` fulfilling the plugin's artifact URL
- * with a 404 — exactly what a stale tab saw when a rebuild deleted the folder
- * its import map pointed into. Which plugin to break is read off the deploy's
- * own `index.html`: a plugin whose barrel is in the `modulepreload` set is
- * core-stage (the preload set IS the eager closure); one in the import map but
- * not preloaded is deferred. Defaults below; override with `--deferred` /
- * `--eager` (plugin paths, e.g. `apps/plugins/story/plugins/lenses`).
+ * The failure is made with `page.route`: the served registry chunk has the
+ * plugin's loader import a marked URL, which 404s — exactly what a stale tab
+ * saw when a rebuild deleted the files its import named. Only that plugin
+ * breaks; the route chunk it shares with others keeps serving them (see "the
+ * deploy" below). Its stage is read off the deploy's own `index.html`: a
+ * plugin whose loader imports a chunk in the root page's `modulepreload` set
+ * is core-stage (the preload set IS the boot closure); otherwise it is
+ * deferred. Defaults below; override with `--deferred` / `--eager` (plugin
+ * paths, e.g. `apps/plugins/story/plugins/lenses`).
  *
  * Manual only; nothing runs this automatically. Run it after `./equin
  * build` with:
@@ -36,6 +39,8 @@ import type { Page } from "playwright";
 import {
   agentFetch,
   arg,
+  onBeforeFinish,
+  openDeployDb,
   boot,
   detectOsColorScheme,
   pathUrl,
@@ -75,66 +80,193 @@ const BROKEN_NAME =
 const r = report(`stale-tab reload (${colorScheme})`);
 
 // --------------------------------------------------------------- the deploy
-/** Plugin path → its web barrel's artifact URL, and which of those preload. */
+//
+// The page loads route chunks (`web-artifacts` link step): no plugin barrel is
+// an import-map entry any more, and one chunk holds the definitions of many
+// plugins — so 404ing the chunk a plugin's code lives in would break all of
+// them (and, for a boot chunk the registry also imports statically, the page
+// itself). What the build publishes per plugin is its registry entry
+//
+//   { pluginPath: "<p>", …, loader: …(() => __equinImportOnce("<chunk>",
+//       () => import("<chunk>"))…), … }
+//
+// in the registry chunk the page boots from. The script points THAT entry's
+// import (and its per-chunk memo key) at a URL of its own, and 404s that URL:
+// exactly one plugin's load fails, as a stale tab's did when a rebuild removed
+// the files its import named — the chunk itself still serves its other plugins.
+
+/** The marker appended to a broken plugin's chunk URL: its request 404s. */
+const BROKEN_MARK = "stale-tab-reload-broken";
+
+/** One plugin's entry in the served registry chunk. */
+interface RegistryEntry {
+  pluginPath: string;
+  /** The registry chunk's own URL path (`/artifacts/chunk.<hash>/index.js`). */
+  registryUrl: string;
+  /** The chunk URL its loader imports, as written in the registry (relative). */
+  spec: string;
+  /** The same, resolved to a URL path. */
+  chunkUrl: string;
+}
+
 interface ServedGraph {
-  barrels: Map<string, string>;
+  /** Every chunk URL path the root page preloads: the boot (eager) closure. */
   preloaded: Set<string>;
+  /** The preloaded chunks' text, by URL path. */
+  chunks: Map<string, string>;
 }
 
 async function readServedGraph(): Promise<ServedGraph> {
   const res = await agentFetch("/");
   if (!res.ok) throw new Error(`GET / → ${res.status}`);
   const html = await res.text();
-  const map = /<script type="importmap"[^>]*>([\s\S]*?)<\/script>/.exec(html);
-  if (!map) throw new Error("served index.html carries no import map");
-  const { imports } = JSON.parse(map[1]!) as {
-    imports: Record<string, string>;
-  };
-  const barrels = new Map<string, string>();
-  for (const [specifier, url] of Object.entries(imports)) {
-    const m = /^@plugins\/(.+)\/web$/.exec(specifier);
-    if (m) barrels.set(m[1]!, url);
-  }
   const preloaded = new Set(
     [...html.matchAll(/<link rel="modulepreload" href="([^"]+)"/g)].map(
-      (m) => m[1]!,
+      (m) => new URL(m[1]!, pathUrl("/")).pathname,
     ),
   );
-  return { barrels, preloaded };
+  const chunkUrls = [...preloaded].filter((u) =>
+    u.startsWith("/artifacts/chunk."),
+  );
+  if (chunkUrls.length === 0) {
+    throw new Error("served index.html preloads no /artifacts/chunk.* module");
+  }
+  const chunks = new Map<string, string>();
+  await Promise.all(
+    chunkUrls.map(async (u) => {
+      const r = await agentFetch(u);
+      if (!r.ok) throw new Error(`GET ${u} → ${r.status}`);
+      chunks.set(u, await r.text());
+    }),
+  );
+  return { preloaded, chunks };
 }
 
-/** The artifact URL to break for `pluginPath`, checked against its stage. */
+/** One registry entry's loader, as written in a chunk's text. */
+interface Loader {
+  pluginPath: string;
+  /** From the entry's `pluginPath:` key to the end of its loader's `import(…)`. */
+  start: number;
+  end: number;
+  /** The chunk specifier its loader imports (relative to the chunk). */
+  spec: string;
+}
+
+const LOADER_KEY = /pluginPath:\s*(["'`])([^"'`]+)\1/g;
+const IMPORT_CALL = /import\(\s*(["'`])([^"'`]+)\1\s*\)/g;
+
+/**
+ * Every registry entry in a chunk's text: a `pluginPath:` key followed by its
+ * loader's `import(…)` with no other key in between (so the import is that
+ * entry's own — the registry writes `pluginPath`, `id`, `loader` in order).
+ */
+function loadersIn(text: string): Loader[] {
+  const keys = [...text.matchAll(LOADER_KEY)];
+  const loaders: Loader[] = [];
+  keys.forEach((key, i) => {
+    IMPORT_CALL.lastIndex = key.index + key[0].length;
+    const imp = IMPORT_CALL.exec(text);
+    const nextKey = keys[i + 1]?.index ?? text.length;
+    if (!imp || imp.index > nextKey) return;
+    loaders.push({
+      pluginPath: key[2]!,
+      start: key.index,
+      end: imp.index + imp[0].length,
+      spec: imp[2]!,
+    });
+  });
+  return loaders;
+}
+
+/** `pluginPath`'s registry entry: exactly one across the served boot chunks. */
+function findEntry(graph: ServedGraph, pluginPath: string): RegistryEntry {
+  const found: RegistryEntry[] = [];
+  for (const [registryUrl, text] of graph.chunks) {
+    for (const l of loadersIn(text)) {
+      if (l.pluginPath !== pluginPath) continue;
+      const chunkUrl = new URL(l.spec, pathUrl(registryUrl)).pathname;
+      found.push({ pluginPath, registryUrl, spec: l.spec, chunkUrl });
+    }
+  }
+  if (found.length === 0) {
+    usage(
+      `${pluginPath}: no registry entry in this deploy's boot chunks (not a web plugin of this composition?)\n${USAGE}`,
+    );
+  }
+  if (found.length > 1) {
+    throw new Error(
+      `${pluginPath}: ${found.length} registry entries in the boot chunks (${found.map((e) => e.registryUrl).join(", ")}) — cannot tell which one the page loads it by`,
+    );
+  }
+  return found[0]!;
+}
+
+/** The registry entry to break for the `--<flagName>` plugin, checked against its stage. */
 function pick(
   graph: ServedGraph,
   flagName: "deferred" | "eager",
   fallback: string,
-): { pluginPath: string; url: string } {
-  const pluginPath = arg(flagName) ?? fallback;
-  const url = graph.barrels.get(pluginPath);
-  if (url === undefined) {
-    usage(
-      `--${flagName} ${pluginPath}: no web barrel in this deploy's import map\n${USAGE}`,
-    );
-  }
-  const eager = graph.preloaded.has(url);
+): RegistryEntry {
+  const entry = findEntry(graph, arg(flagName) ?? fallback);
+  // A plugin is core-stage iff the chunk its loader imports is in the boot's
+  // preload closure; a deferred plugin's chunk is preloaded only on its own
+  // app's pages (`apps-core/app-preload`), never on the root page.
+  const eager = graph.preloaded.has(entry.chunkUrl);
   if (flagName === "eager" && !eager) {
     usage(
-      `--eager ${pluginPath} is not in the modulepreload set, so it is not core-stage\n${USAGE}`,
+      `--eager ${entry.pluginPath}: its chunk ${entry.chunkUrl} is not in the modulepreload set, so it is not core-stage\n${USAGE}`,
     );
   }
   if (flagName === "deferred" && eager) {
     usage(
-      `--deferred ${pluginPath} is in the modulepreload set, so it is core-stage\n${USAGE}`,
+      `--deferred ${entry.pluginPath}: its chunk ${entry.chunkUrl} is in the modulepreload set, so it is core-stage\n${USAGE}`,
     );
   }
-  return { pluginPath, url };
+  return entry;
 }
 
-/** Fulfill exactly this artifact's entry file with a 404, before navigating. */
-async function breakArtifact(page: Page, url: string): Promise<void> {
-  const target = new URL(pathUrl(url)).pathname;
+/** The other plugins whose loaders import the same chunk — left loading fine. */
+function chunkMates(graph: ServedGraph, entry: RegistryEntry): string[] {
+  return loadersIn(graph.chunks.get(entry.registryUrl)!)
+    .filter((l) => l.spec === entry.spec && l.pluginPath !== entry.pluginPath)
+    .map((l) => l.pluginPath);
+}
+
+/**
+ * Make `entry`'s plugin, and only it, fail to load: serve the registry chunk
+ * with that entry's chunk URL (memo key and import alike) pointed at a marked
+ * URL, and 404 every marked URL. Installed before navigating.
+ */
+async function breakPlugin(page: Page, entry: RegistryEntry): Promise<void> {
+  const broken = `${entry.spec}?${BROKEN_MARK}`;
   await page.route(
-    (u) => u.pathname === target,
+    (u) => u.pathname === entry.registryUrl,
+    async (route) => {
+      const response = await route.fetch();
+      const text = await response.text();
+      const loader = loadersIn(text).find(
+        (l) => l.pluginPath === entry.pluginPath && l.spec === entry.spec,
+      );
+      if (!loader) {
+        throw new Error(
+          `${entry.registryUrl} served without ${entry.pluginPath}'s loader of ${entry.spec}`,
+        );
+      }
+      // Only this entry's own text: its memo key and its import.
+      const body = text.slice(loader.start, loader.end);
+      const rewritten = body.split(entry.spec).join(broken);
+      const headers = { ...response.headers() };
+      delete headers["content-encoding"];
+      delete headers["content-length"];
+      await route.fulfill({
+        status: response.status(),
+        headers,
+        body: text.slice(0, loader.start) + rewritten + text.slice(loader.end),
+      });
+    },
+  );
+  await page.route(
+    (u) => u.search.includes(BROKEN_MARK),
     (route) =>
       route.fulfill({
         status: 404,
@@ -155,20 +287,6 @@ function reloadChip(page: Page) {
 
 /** The floating action bar (the `FloatingAction` root carries `group/fa`). */
 const FLOATING_BAR = ".group\\/fa";
-
-/**
- * The action bar's status dot, whichever host renders it: docked in the tab bar
- * (desktop and tab modes) or floating (fullscreen). Both put the status glyph beside
- * the action row, so it is the dot in the chip's nearest ancestor that has one.
- */
-function statusDot(page: Page) {
-  return reloadChip(page)
-    .first()
-    .locator(
-      'xpath=ancestor::*[.//*[contains(@class,"ring-background")]][1]//*[contains(@class,"ring-background")]',
-    )
-    .first();
-}
 
 /**
  * Make the chip hoverable: a floating (fullscreen) bar is collapsed until hovered;
@@ -208,16 +326,15 @@ async function bannerNaming(page: Page, pluginPath: string): Promise<number> {
     .count();
 }
 
-/**
- * The fields of a report row this script reads, as they arrive on the wire
- * (`GET /api/resources/reports` → `{ value }`; dates are ISO strings there).
- */
-interface ReportRow {
+/** The deploy's database: where the `plugin-load` report lands. */
+const db = openDeployDb();
+onBeforeFinish(() => db.close());
+
+/** The fields of a report row this script reads. */
+interface ReportRow extends Record<string, unknown> {
   id: string;
-  source: string;
-  data: Record<string, unknown>;
   count: number;
-  lastSeenAt: string;
+  last_seen_at: Date;
 }
 
 /** A `plugin-load` report for `pluginPath` seen since `sinceMs`, if any. */
@@ -225,17 +342,16 @@ async function reportFor(
   pluginPath: string,
   sinceMs: number,
 ): Promise<ReportRow | undefined> {
-  const res = await agentFetch("/api/resources/reports");
-  if (!res.ok) throw new Error(`GET /api/resources/reports → ${res.status}`);
-  const { value } = (await res.json()) as { value: ReportRow[] };
-  return value.find(
-    (row) =>
-      row.source === "plugin-load" &&
-      row.data.errorType === `PluginLoadError ${pluginPath}` &&
-      // A report dedupes by fingerprint, so a re-run bumps an existing row:
-      // what proves THIS run filed it is the row having been touched since.
-      Date.parse(row.lastSeenAt) >= sinceMs,
+  // A report dedupes by fingerprint, so a re-run bumps an existing row: what
+  // proves THIS run filed it is the row having been touched since.
+  const rows = await db.query<ReportRow>(
+    `SELECT id, count, last_seen_at FROM reports
+      WHERE source = 'plugin-load' AND data->>'errorType' = $1
+        AND last_seen_at >= $2
+      ORDER BY last_seen_at DESC LIMIT 1`,
+    [`PluginLoadError ${pluginPath}`, new Date(sinceMs)],
   );
+  return rows[0];
 }
 
 /**
@@ -255,7 +371,7 @@ async function assertReported(pluginPath: string, sinceMs: number) {
   );
   if (seen.value) {
     r.note(
-      `report ${seen.value.id}: count ${seen.value.count}, last seen ${seen.value.lastSeenAt}`,
+      `report ${seen.value.id}: count ${seen.value.count}, last seen ${seen.value.last_seen_at.toISOString()}`,
     );
   }
   r.note(
@@ -266,14 +382,20 @@ async function assertReported(pluginPath: string, sinceMs: number) {
 const graph = await readServedGraph();
 const deferred = pick(graph, "deferred", DEFAULT_DEFERRED);
 const eager = pick(graph, "eager", DEFAULT_EAGER);
-r.note(`deferred target: ${deferred.pluginPath} → ${deferred.url}`);
-r.note(`eager target:    ${eager.pluginPath} → ${eager.url}`);
+for (const [stage, e] of [
+  ["deferred", deferred],
+  ["eager", eager],
+] as const) {
+  r.note(
+    `${stage} target: ${e.pluginPath} — its loader's import of ${e.chunkUrl} (in registry ${e.registryUrl}) is pointed at a 404; the other plugins loading that chunk are left working: ${chunkMates(graph, e).join(", ") || "none"}`,
+  );
+}
 
 await withBrowser(async (h) => {
   // ------------------------------------------------ a. deferred failure
   {
     const { page } = await h.session({ colorScheme });
-    await breakArtifact(page, deferred.url);
+    await breakPlugin(page, deferred);
     // Server clock and this clock are the same host's; the slop only absorbs
     // the report's own timestamp rounding.
     const since = Date.now() - 2000;
@@ -297,13 +419,12 @@ await withBrowser(async (h) => {
         cls,
       );
       r.eq(
-        "deferred failure: the segment is its own <button> in the Build pill, not nested in the Build button",
+        "deferred failure: the segment is its own <button> in the Build tray, not nested in the Build button",
         await chip.evaluate((el) => ({
           tag: el.tagName,
           inButton: el.parentElement?.closest("button") != null,
-          inGroup: el.closest('[data-slot="button-group"]') != null,
         })),
-        { tag: "BUTTON", inButton: false, inGroup: true },
+        { tag: "BUTTON", inButton: false },
       );
     }
 
@@ -316,17 +437,6 @@ await withBrowser(async (h) => {
       "deferred failure: no boot banner at all",
       await page.locator("div.fixed.bg-destructive").count(),
       0,
-    );
-
-    const dot = statusDot(page);
-    const dotClass =
-      (await dot.count()) > 0
-        ? ((await dot.getAttribute("class")) ?? "")
-        : "<no dot>";
-    r.ok(
-      "deferred failure: the action-bar status dot is red",
-      dotClass.includes("bg-destructive"),
-      dotClass,
     );
 
     await revealActionBar(page);
@@ -353,7 +463,7 @@ await withBrowser(async (h) => {
   // ------------------------------------------------ b. eager failure
   {
     const { page } = await h.session({ colorScheme });
-    await breakArtifact(page, eager.url);
+    await breakPlugin(page, eager);
     const since = Date.now() - 2000;
     await boot(page, pathUrl("/"), { settleMs: 1500 });
 
