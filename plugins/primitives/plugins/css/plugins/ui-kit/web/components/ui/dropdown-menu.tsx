@@ -439,11 +439,12 @@ function DropdownMenuSubContent({
     <DropdownMenuContent
       data-slot="dropdown-menu-sub-content"
       width={width}
-      // Only the shadow step differs from the shared panel — a submenu floats one
-      // level above the menu it opened from. Everything else (surface bundle,
-      // animation, padding) comes from `OverlayPanel`; re-declaring it here was a
-      // second copy of the same bundle layered on the first.
-      className={cn("shadow-lg", className)}
+      // The surface bundle (fill, ring, the theme's `shadow-popover`,
+      // animation, padding) is the shared panel's: a submenu is a menu. A
+      // `shadow-lg` override here once replaced the popover role with a
+      // light-tuned tier, which on a dark theme left the submenu no visible
+      // edge against the menu it opened from.
+      className={className}
       align={align}
       alignOffset={alignOffset}
       side={side}
