@@ -949,19 +949,22 @@ function SelectionLayer({
     },
     [flat, anchorTypes],
   );
+  // The lines a span touches, even partially, in document order — the span
+  // read as a block selection, for whatever acts on whole blocks.
+  const spanBlocks = useCallback(
+    (span: TextSpan): string[] => [...(spanCoveredLines(span)?.covered ?? [])],
+    [spanCoveredLines],
+  );
   // What Tab / Shift+Tab over a span act on: the roots of the lines it
   // touches, even partially — the roots a block selection of them would have.
   const spanRoots = useCallback(
-    (span: TextSpan): string[] => {
-      const lines = spanCoveredLines(span);
-      if (lines === null) return [];
-      return blockSelectionRoots(
+    (span: TextSpan): string[] =>
+      blockSelectionRoots(
         toNodes(rowsRef.current),
-        lines.covered,
+        new Set(spanBlocks(span)),
         isAnchorNodeRef.current,
-      );
-    },
-    [spanCoveredLines, rowsRef, isAnchorNodeRef],
+      ),
+    [spanBlocks, rowsRef, isAnchorNodeRef],
   );
 
   // ---- Block-selection mode (range state, container focus + keyboard) -------
@@ -970,6 +973,7 @@ function SelectionLayer({
     () => ({
       indent: indentBlocks,
       outdent: outdentBlocks,
+      spanBlocks,
       spanRoots,
       remove: bulkDelete,
       duplicate: bulkDuplicate,
@@ -981,6 +985,7 @@ function SelectionLayer({
     [
       indentBlocks,
       outdentBlocks,
+      spanBlocks,
       spanRoots,
       bulkDelete,
       bulkDuplicate,

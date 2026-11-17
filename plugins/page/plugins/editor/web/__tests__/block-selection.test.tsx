@@ -61,6 +61,8 @@ const NESTED: VisibleBlock[] = [
 
 /** What the last `extendSpan` click answered (the executor's "claimed?"). */
 let extendResult: boolean | undefined;
+/** What the last `read-selected` press read off `SelectionControl.selectedBlockIds`. */
+let selectedRead: readonly string[] | null = null;
 
 /** What the harness's blocks are called when the selection speaks their name. */
 const describeBlock = (id: string) => `Text: ${id} body`;
@@ -182,6 +184,15 @@ function Surface({
           extendResult = control.extendSpan("b1", 0, "up", 0);
         }}
       />
+      {/* Stands in for a rail menu opening: it asks the control which blocks
+          the live selection covers, once. */}
+      <button
+        data-testid="read-selected"
+        type="button"
+        onClick={() => {
+          selectedRead = control.selectedBlockIds();
+        }}
+      />
       {/* Stands in for the pointer gesture that builds a span (block-editor's
           promotion); the span itself is what `normalizeSpan` would hand it. */}
       <button
@@ -262,6 +273,7 @@ function setup(visible: VisibleBlock[] = FLAT) {
     spanMotion: fakeSpanMotion,
     indent: vi.fn(),
     outdent: vi.fn(),
+    spanBlocks: vi.fn(() => ["b2", "b3"]),
     spanRoots: vi.fn(() => ["b2", "b3"]),
     remove: vi.fn(),
     duplicate: vi.fn(),
@@ -651,6 +663,17 @@ describe("the selection union: a text span", () => {
 
     expect(t.span()).toBe("b2:1-b3:2");
     expect(document.activeElement).toBe(t.container);
+  });
+
+  it("selectedBlockIds reads a span as the lines it touches, so whole-block actions need not know it is one", () => {
+    const t = setup();
+    t.makeSpan();
+
+    fireEvent.click(t.view.getByTestId("read-selected"));
+
+    expect(t.actions.spanBlocks).toHaveBeenCalledWith(SPAN);
+    expect(selectedRead).toEqual(["b2", "b3"]);
+    expect(t.span()).toBe("b2:1-b3:2");
   });
 
   it("Ctrl+Tab over a span is the browser's", () => {

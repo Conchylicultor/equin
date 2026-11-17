@@ -37,6 +37,12 @@ export interface BlockSelectionActions {
   /** Outdent the selection's subtree roots one level. */
   outdent: (roots: string[]) => void;
   /**
+   * The lines a text span touches, even partially, in document order — the
+   * span read as a block selection of its lines. What every consumer that acts
+   * on whole blocks reads for a span (`SelectionControl.selectedBlockIds`).
+   */
+  spanBlocks: (span: TextSpan) => string[];
+  /**
    * The subtree roots of the lines a text span touches — what Tab /
    * Shift+Tab over a span indents, the same roots a block selection of those
    * lines would resolve to (`blockSelectionRoots`).
@@ -543,11 +549,22 @@ export function useBlockSelection({
 
   // Stable across renders: every member is an event callback or a ref-only helper,
   // so deep children (every `BlockRow`) never re-render because the head moved.
-  const selectedBlockIds = useEventCallback((): readonly string[] =>
-    isActive ? [...selectedIds] : [],
-  );
+  // The selection is a UNION, and this reads BOTH arms: a block range's
+  // blocks, or the lines a text span touches. A consumer acting on whole
+  // blocks (the rail menu's Turn into / Delete) must not have to know a span
+  // exists — reading only the range arm is how a drag-selected run of lines
+  // once converted only the line the menu was opened from.
+  const selectedBlockIds = useEventCallback((): readonly string[] => {
+    if (isActive) return [...selectedIds];
+    const span = textSpanRef.current;
+    return span === null ? [] : actions.spanBlocks(span);
+  });
   const resume = useEventCallback((): boolean => {
-    if (!isActive || containerRef.current === null) return false;
+    if (
+      !(isActive || textSpanRef.current !== null) ||
+      containerRef.current === null
+    )
+      return false;
     focusContainer();
     return true;
   });

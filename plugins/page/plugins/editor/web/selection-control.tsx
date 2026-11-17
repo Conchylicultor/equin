@@ -36,16 +36,18 @@ export interface SelectionControl {
   /** Clear the selection. */
   clear: () => void;
   /**
-   * The blocks the live block range covers right now (empty when there is no
-   * block range — a text span is not one), read on demand rather than
-   * subscribed to: a rail menu asks once, when it opens, so a selection change
-   * re-renders no row.
+   * The blocks the live selection covers right now, WHICHEVER arm of the
+   * union it is: a block range's blocks, or every line a text span touches
+   * (even partially). Empty with nothing selected. A consumer acting on whole
+   * blocks reads this and never asks which kind of selection it was. Read on
+   * demand rather than subscribed to: a rail menu asks once, when it opens, so
+   * a selection change re-renders no row.
    */
   selectedBlockIds: () => readonly string[];
   /**
-   * Hand the keyboard back to the live block range — focus the selection
-   * container again — after a menu the range outlived (a rail popover acting on
-   * it) closes; a no-op with no block range. False when it moved nothing, so a
+   * Hand the keyboard back to the live selection (block range or text span)
+   * — focus the selection container again — after a menu it outlived (a rail
+   * popover acting on it) closes; a no-op with nothing selected. False when it moved nothing, so a
    * popover's `finalFocus` can fall back to its own default.
    */
   resume: () => boolean;

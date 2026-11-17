@@ -60,8 +60,9 @@ const unfoldMoreIcon = symbol("unfold-more");
  * is not resolved here — `RailSeat.owner` already did it, with the whole flatten
  * in view; this component only ever sees the block the rail acts on.
  *
- * Over a BLOCK SELECTION — the menu opened from a line inside a live block
- * range of 2+ convertible lines — the ordinary arm acts on the whole selection:
+ * Over a SELECTION — the menu opened from a line inside a live block range,
+ * or a text span (read as the lines it touches), of 2+ convertible lines —
+ * the ordinary arm acts on the whole selection:
  * a type picked in "Turn into" retypes every selected line (`convertBlocks`,
  * one undo entry), a `wrapOnConvert` type (callout, quote) puts the whole
  * selection in ONE box — offered only when its roots share a parent — and
