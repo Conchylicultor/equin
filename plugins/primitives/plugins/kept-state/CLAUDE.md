@@ -173,8 +173,8 @@ carries them over, so no unsent text is lost — drop it once browsers migrated.
     - `writeDraft`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/color-palette --input`
-  - Imported by: 117 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×34
+  - Imported by: 118 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×35
     - `primitives` ×22
     - `conversations` ×11
     - `fields` ×11

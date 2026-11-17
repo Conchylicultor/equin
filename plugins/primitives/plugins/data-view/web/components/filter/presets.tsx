@@ -74,6 +74,7 @@ export function FilterSavePresetPanel(): ReactNode {
   const presets = useFilterPresets(storageKey);
   return (
     <SavePresetPanel
+      kind="filter"
       onSave={(label) => {
         if (filter.filter) presets.savePreset(label, filter.filter);
       }}

@@ -11908,13 +11908,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "compositions"
               - `item-actions` "delete" → `DeleteAction`
               - `Studio.Sidebar` "Compositions"
-            - Uses: 35 symbols — full list in [`plugins/apps/plugins/studio/plugins/compositions/REFERENCE.md`](../plugins/apps/plugins/studio/plugins/compositions/REFERENCE.md)
+            - Uses: 38 symbols — full list in [`plugins/apps/plugins/studio/plugins/compositions/REFERENCE.md`](../plugins/apps/plugins/studio/plugins/compositions/REFERENCE.md)
               - `plugin-meta/composition` ×8
               - `primitives/pane` ×5
               - `primitives/data-view` ×3
               - `build/serve-composition` ×2
               - `primitives/css/text` ×2
               - `primitives/css/ui-kit` ×2
+              - `primitives/kept-state` ×2
               - `apps/studio/explorer/membership.DIFF_LEGEND`
               - `apps/studio/shell.Studio`
               - `network/live/live-state.ResourceErrorInline`
@@ -11925,6 +11926,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/spacing.Stack`
               - `primitives/css/toggle-chip.ToggleChip`
               - `primitives/detail-sections.defineDetailSections`
+              - `primitives/dom/web-storage.useStore`
               - `primitives/icon-button.IconButton`
               - `primitives/loading.Loading`
               - `ui/icons.Icon`
@@ -11932,6 +11934,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `comparePane`
               - `CompositionDetail`
               - `compositionDetailPane`
+              - `compositionNameDraft`
               - `compositionsPane`
           - Core:
             - Uses: `primitives/pane.defineRoute`
@@ -11988,6 +11991,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/text.SectionLabel`
                   - `primitives/css/text.Text`
                   - `primitives/css/toggle-chip.ToggleChip`
+                  - `primitives/kept-state.defineKept`
+                  - `primitives/kept-state.useKept`
                   - `primitives/search.SearchInput`
               - Cross-plugin:
                 - Uses tokens: `ui/tokens/font-family --font-mono`
@@ -11997,15 +12002,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses:
                   - `apps/studio/compositions.CompositionDetail`
                   - `apps/studio/compositions.compositionDetailPane`
+                  - `apps/studio/compositions.compositionNameDraft`
                   - `apps/studio/compositions.compositionsPane`
                   - `build/serve-composition.useDeleteComposition`
                   - `plugin-meta/composition.clearActive`
                   - `plugin-meta/composition.updateActiveDraft`
                   - `plugin-meta/composition.useActiveComposition`
                   - `plugin-meta/composition.useManifestActions`
+                  - `plugin-meta/composition.useManifestItems`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/ui-kit.Button`
                   - `primitives/css/ui-kit.Input`
+                  - `primitives/kept-state.useKept`
                   - `primitives/loading.Loading`
                   - `primitives/pane.openPane`
                   - `ui/icons.Icon`
@@ -13026,11 +13034,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `WebsiteHeader` "apps" → `AppsNavItem`
                   - `ThemeEngine.SubTheme` "equin closing"
                   - `ThemeEngine.SubTheme` "equin gallery"
-                - Uses: 36 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/apps/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/apps/REFERENCE.md)
+                - Uses: 38 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/apps/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/apps/REFERENCE.md)
                   - `apps/website/shell` ×6
                   - `primitives/css/ui-kit` ×4
                   - `primitives/pane` ×4
                   - `primitives/dom/scroll-reveal` ×2
+                  - `primitives/kept-state` ×2
                   - `apps-core/tabs.useAppLinkProps`
                   - `apps/deploy/analytics/collect.track`
                   - `apps/website/app-tiles.WebsiteAppTile`
@@ -22853,6 +22862,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.Input`
           - `primitives/css/ui-kit.Textarea`
           - `primitives/dom/scroll-reveal.focusElement`
+          - `primitives/kept-state.defineKept`
+          - `primitives/kept-state.useKept`
           - `primitives/overlay/popup-open.useReportPopupOpen`
         - Exports (types):
           - `OpenSnippetEditor`
@@ -43512,7 +43523,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withForegroundPriority`
     - **`string-hash`** — Portable string hashes in plain JS (no node:crypto, no Bun.hash), so every host — the Bun server, central and a browser page — computes the same value: hash53 (cyrb53, a 53-bit number, optionally seeded), hashHex (two seeded cyrb53s, ~106 bits as hex), hash64 (a 64-bit bigint), fnv1a32 (32-bit FNV-1a, for seeding), sha256Hex (a synchronous SHA-256, identical to node:crypto's hex digest), createSha256 (the same SHA-256, incremental over strings and bytes) and sha1Hex (SHA-1 for values already stored as one).
       - Cross-plugin:
-        - Imported by: 52 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
+        - Imported by: 53 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
           - `apps` ×17
           - `database` ×6
           - `network` ×5
@@ -43524,6 +43535,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra` ×2
           - `page` ×2
           - `plugin-meta` ×2
+          - `conversations/prompt-snippets`
           - `map`
           - `primitives/dom/web-storage`
           - `tasks/orchestration/watch`
@@ -52853,9 +52865,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useStore`
               - `WebStorageSlots`
           - Cross-plugin:
-            - Imported by: 54 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
+            - Imported by: 55 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
               - `primitives` ×16
-              - `apps` ×13
+              - `apps` ×14
               - `conversations` ×6
               - `apps-core` ×3
               - `reports` ×2
@@ -53667,8 +53679,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `writeDraft`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/color-palette --input`
-        - Imported by: 117 plugins — full list in [`plugins/primitives/plugins/kept-state/REFERENCE.md`](../plugins/primitives/plugins/kept-state/REFERENCE.md)
-          - `apps` ×34
+        - Imported by: 118 plugins — full list in [`plugins/primitives/plugins/kept-state/REFERENCE.md`](../plugins/primitives/plugins/kept-state/REFERENCE.md)
+          - `apps` ×35
           - `primitives` ×22
           - `conversations` ×11
           - `fields` ×11

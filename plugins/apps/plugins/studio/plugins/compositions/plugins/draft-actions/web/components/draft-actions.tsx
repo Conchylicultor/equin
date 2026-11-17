@@ -1,6 +1,7 @@
 import { PLAIN_GESTURE } from "@plugins/primitives/plugins/link-gesture/core";
 import type { ReactElement } from "react";
-import { transient } from "@plugins/primitives/plugins/kept-state/core";
+import { useKept } from "@plugins/primitives/plugins/kept-state/web";
+import type { CompositionManifest } from "@plugins/plugin-meta/plugins/closure/core";
 import {
   Button,
   Input,
@@ -11,10 +12,12 @@ import { openPane } from "@plugins/primitives/plugins/pane/web";
 import {
   compositionsPane,
   compositionDetailPane,
+  compositionNameDraft,
 } from "@plugins/apps/plugins/studio/plugins/compositions/web";
 import {
   useActiveComposition,
   useManifestActions,
+  useManifestItems,
   updateActiveDraft,
   clearActive,
 } from "@plugins/plugin-meta/plugins/composition/web";
@@ -46,9 +49,44 @@ const saveIcon = symbol("save");
  * reach a generated file. Changing them is an edit to
  * `plugins/plugin-meta/plugins/composition/core/config.ts` plus a build; the
  * `save` call underneath throws if this button is ever reached.
+ *
+ * An unsaved rename is kept work (`compositionNameDraft`, per id): the seed lays
+ * it over the saved manifest after a reload, and Save / Clear / Delete drop it.
  */
 export function DraftActions({ id }: { id: string }): ReactElement {
   const draft = useActiveComposition();
+  const item = useManifestItems().find((it) => it.id === id);
+
+  // The seed effect populates the store one frame after mount; Loading's built-in
+  // delay means that gap never flashes.
+  if (!draft || !item) return <Loading variant="text" />;
+  // Keyed by the stored name too: a kept entry's fallback is read once, so a
+  // save (which drops the kept rename) remounts on the name it stored.
+  return (
+    <DraftActionsBody
+      key={`${id}|${item.name}`}
+      id={id}
+      draft={draft}
+      savedName={item.name}
+    />
+  );
+}
+
+function DraftActionsBody({
+  id,
+  draft,
+  savedName,
+}: {
+  id: string;
+  draft: CompositionManifest;
+  /** The stored name: what the field shows when no rename is kept. */
+  savedName: string;
+}): ReactElement {
+  const nameKept = useKept(compositionNameDraft, savedName, { subject: id });
+  // The field's kept name is this pane's one name: Save, the Save gate and the
+  // delete dialog read it, so a rename typed in another tab (which reaches
+  // this field through the kept entry, not this tab's draft) is what is saved.
+  const [name, , discardName] = nameKept;
   const { save } = useManifestActions();
   const { deleteComposition } = useDeleteComposition();
   // Null only for a root pane; `compositionDetailPane` always has ancestors, so
@@ -57,19 +95,15 @@ export function DraftActions({ id }: { id: string }): ReactElement {
     compositionDetailPane.useClose() ??
     (() => openPane(compositionsPane, {}, { mode: "root" }));
 
-  // The seed effect populates the store one frame after mount; Loading's built-in
-  // delay means that gap never flashes.
-  if (!draft) return <Loading variant="text" />;
-
   // The same predicate the `save` guard and the read-only entry-point surface
   // read, so the disabled button and the throw beneath it cannot disagree about
   // which rows they mean.
   const committedSource = isCommittedSourceComposition(id);
-  const canSave = draft.name.trim().length > 0 && !committedSource;
+  const canSave = name.trim().length > 0 && !committedSource;
   // The draft's name is what the person is looking at while they edit; an unsaved
   // rename is still how they think of this composition, so it is what the delete
   // dialog names.
-  const draftName = draft.name;
+  const draftName = name;
 
   // Returned to the Button so it auto-pends for the inventory read; the dialog
   // owns everything after that, and the draft is only cleared once the row is
@@ -79,6 +113,7 @@ export function DraftActions({ id }: { id: string }): ReactElement {
       id,
       name: draftName,
       onDeleted: () => {
+        discardName();
         clearActive();
         close(PLAIN_GESTURE);
       },
@@ -88,10 +123,7 @@ export function DraftActions({ id }: { id: string }): ReactElement {
   return (
     <Stack gap="sm">
       <Input
-        keep={transient(
-          "controlled by the active-composition store: the whole unsaved draft lives there",
-        )}
-        value={draft.name}
+        keep={nameKept}
         onChange={(e) => updateActiveDraft({ name: e.target.value })}
         placeholder="Composition name"
         aria-label="Composition name"
@@ -114,7 +146,10 @@ export function DraftActions({ id }: { id: string }): ReactElement {
               ? "This composition is committed source — edit core/config.ts and rebuild."
               : undefined
           }
-          onClick={() => save(draft, id)}
+          onClick={() => {
+            save({ ...draft, name }, id);
+            discardName();
+          }}
         >
           <Icon icon={saveIcon} />
           Save
@@ -125,7 +160,13 @@ export function DraftActions({ id }: { id: string }): ReactElement {
             Delete
           </Button>
         )}
-        <Button variant="ghost" onClick={() => clearActive()}>
+        <Button
+          variant="ghost"
+          onClick={() => {
+            discardName();
+            clearActive();
+          }}
+        >
           Clear
         </Button>
       </Stack>

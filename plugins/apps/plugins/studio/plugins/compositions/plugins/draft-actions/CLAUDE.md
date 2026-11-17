@@ -30,15 +30,18 @@ Closure) update as you type — before anything is saved.
   - Uses:
     - `apps/studio/compositions.CompositionDetail`
     - `apps/studio/compositions.compositionDetailPane`
+    - `apps/studio/compositions.compositionNameDraft`
     - `apps/studio/compositions.compositionsPane`
     - `build/serve-composition.useDeleteComposition`
     - `plugin-meta/composition.clearActive`
     - `plugin-meta/composition.updateActiveDraft`
     - `plugin-meta/composition.useActiveComposition`
     - `plugin-meta/composition.useManifestActions`
+    - `plugin-meta/composition.useManifestItems`
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.Input`
+    - `primitives/kept-state.useKept`
     - `primitives/loading.Loading`
     - `primitives/pane.openPane`
     - `ui/icons.Icon`

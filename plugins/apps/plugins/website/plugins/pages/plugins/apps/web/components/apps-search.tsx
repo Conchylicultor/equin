@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef } from "react";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
-import { transient } from "@plugins/primitives/plugins/kept-state/core";
+import type { KeptText } from "@plugins/primitives/plugins/kept-state/core";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
@@ -11,13 +11,7 @@ import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-rev
  * The gallery's search: one field under the heading, focused by `/`. It filters
  * by an app's name and what it does.
  */
-export function AppsSearch({
-  query,
-  onQueryChange,
-}: {
-  query: string;
-  onQueryChange: (query: string) => void;
-}) {
+export function AppsSearch({ query }: { query: KeptText }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const focusSearch = useCallback(
     () => focusElement(inputRef.current, { reveal: true }),
@@ -48,9 +42,7 @@ export function AppsSearch({
         wrapperClassName={cn("website-apps-search-line")}
         placeholder="Search apps"
         aria-label="Search apps"
-        keep={transient("controlled by AppsBody: the owner keeps it")}
-        value={query}
-        onChange={(e) => onQueryChange(e.target.value)}
+        keep={query}
       />
     </Surface>
   );

@@ -32,6 +32,8 @@ Resolving the unflattened draft would silently under-report the frontier.
     - `primitives/css/text.SectionLabel`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
+    - `primitives/kept-state.defineKept`
+    - `primitives/kept-state.useKept`
     - `primitives/search.SearchInput`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/font-family --font-mono`

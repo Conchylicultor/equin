@@ -4,7 +4,7 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
-import { transient } from "@plugins/primitives/plugins/kept-state/core";
+import type { KeptText } from "@plugins/primitives/plugins/kept-state/core";
 import {
   updateActiveDraft,
   useGraph,
@@ -36,14 +36,14 @@ function shortName(id: PluginId): string {
 export function ContributorEditor({
   draft,
   resolved,
-  query,
-  onQueryChange,
+  query: queryPart,
 }: {
   draft: CompositionManifest;
   resolved: Composition;
-  query: string;
-  onQueryChange: (q: string) => void;
+  /** The filter, kept by the host. */
+  query: KeptText;
 }) {
+  const query = queryPart.value;
   const graph = useGraph();
   const host = useViewHost() ?? undefined;
   const selected = useMemo(
@@ -79,14 +79,7 @@ export function ContributorEditor({
           {selected.size} selected · {candidates.length} options
         </Text>
       </Stack>
-      <SearchInput
-        keep={transient(
-          "controlled by ContributorsSection: the owner keeps it",
-        )}
-        value={query}
-        onChange={(e) => onQueryChange(e.target.value)}
-        placeholder="Filter contributors…"
-      />
+      <SearchInput keep={queryPart} placeholder="Filter contributors…" />
       {!graph ? null : filtered.length === 0 ? (
         <Text variant="caption" tone="muted">
           No reviewable contributor options.

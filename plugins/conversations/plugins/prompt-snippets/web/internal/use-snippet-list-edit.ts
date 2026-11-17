@@ -85,12 +85,14 @@ export function useSnippetListEdit<T extends Snippet>({
       key: "new",
       props: {
         mode: "new",
+        subject: "new",
         initial: { title: "", prompt: editing.prompt },
         onSave: (d) => {
           const item = create({ id: crypto.randomUUID(), ...d });
-          if (!onChange([...items, item])) return;
+          if (!onChange([...items, item])) return false;
           close();
           onAdded?.(item);
+          return true;
         },
         onClose: close,
       },
@@ -104,15 +106,19 @@ export function useSnippetListEdit<T extends Snippet>({
         key: id,
         props: {
           mode: "edit",
+          subject: id,
           initial: { title: current.title, prompt: current.prompt },
           onSave: (d) => {
-            if (onChange(items.map((t) => (t.id === id ? { ...t, ...d } : t))))
-              close();
+            if (!onChange(items.map((t) => (t.id === id ? { ...t, ...d } : t))))
+              return false;
+            close();
+            return true;
           },
           onDelete: () => {
-            if (!onChange(items.filter((t) => t.id !== id))) return;
+            if (!onChange(items.filter((t) => t.id !== id))) return false;
             close();
             onRemoved?.(id);
+            return true;
           },
           onClose: close,
         },

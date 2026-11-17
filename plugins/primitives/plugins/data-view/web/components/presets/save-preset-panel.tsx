@@ -15,7 +15,7 @@ import { useDataViewControls } from "../controls/controls-context";
 
 const bookmarkAddIcon = symbol("bookmark-add");
 
-/** A preset name typed and not yet saved, per DataView. */
+/** A preset name typed and not yet saved, per DataView and preset kind. */
 const presetNameDraft = defineKept({
   owner: "data-view.preset-name",
   label: "Preset names",
@@ -38,13 +38,18 @@ const presetNameDraft = defineKept({
  * snapshot taken when the row was clicked.
  */
 export function SavePresetPanel({
+  kind,
   onSave,
 }: {
+  /** Which presets it names: the filter and sort name drafts are kept apart. */
+  kind: "filter" | "sort";
   onSave: (label: string) => void;
 }): ReactNode {
   const { pop } = usePanelStack();
   const { storageKey } = useDataViewControls();
-  const nameKept = useKept(presetNameDraft, "", { subject: storageKey });
+  const nameKept = useKept(presetNameDraft, "", {
+    subject: `${storageKey}|${kind}`,
+  });
   const [name, , clearName] = nameKept;
 
   const submit = () => {

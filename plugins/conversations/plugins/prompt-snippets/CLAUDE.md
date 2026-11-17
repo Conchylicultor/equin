@@ -12,6 +12,8 @@
     - `primitives/css/ui-kit.Input`
     - `primitives/css/ui-kit.Textarea`
     - `primitives/dom/scroll-reveal.focusElement`
+    - `primitives/kept-state.defineKept`
+    - `primitives/kept-state.useKept`
     - `primitives/overlay/popup-open.useReportPopupOpen`
   - Exports (types):
     - `OpenSnippetEditor`

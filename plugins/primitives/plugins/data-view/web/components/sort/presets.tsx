@@ -90,6 +90,7 @@ export function SortSavePresetPanel(): ReactNode {
   const presets = useSortPresets(storageKey);
   return (
     <SavePresetPanel
+      kind="sort"
       onSave={(label) => presets.savePreset(label, sort.rules)}
     />
   );

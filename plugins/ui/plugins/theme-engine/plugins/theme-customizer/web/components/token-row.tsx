@@ -45,7 +45,11 @@ export function TokenRow({
   onReset,
   search,
 }: TokenRowProps): React.ReactElement | null {
-  const [textValue, setTextValue] = useState(value);
+  // The text being typed, held only between the first keystroke and the
+  // commit (blur / Enter); otherwise the field shows the token's value, so an
+  // outside change (reset, a theme switch) shows through without a sync.
+  const [edit, setEdit] = useState<string | null>(null);
+  const textValue = edit ?? value;
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Search filtering
@@ -64,9 +68,8 @@ export function TokenRow({
   };
 
   const handleTextBlur = () => {
-    if (textValue !== value) {
-      onValueChange(textValue);
-    }
+    if (edit !== null && edit !== value) onValueChange(edit);
+    setEdit(null);
   };
 
   const handleTextKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -74,11 +77,6 @@ export function TokenRow({
       inputRef.current?.blur();
     }
   };
-
-  // Keep local text state in sync with external value changes
-  if (!isColor && options === undefined && textValue !== value) {
-    setTextValue(value);
-  }
 
   return (
     <Row className="gap-sm">
@@ -131,7 +129,7 @@ export function TokenRow({
           type="text"
           className="text-caption font-mono bg-transparent border border-transparent rounded-md px-xs py-2xs text-right max-w-[160px] focus:border-border focus:bg-background focus:outline-none"
           value={textValue}
-          onChange={(e) => setTextValue(e.target.value)}
+          onChange={(e) => setEdit(e.target.value)}
           onBlur={handleTextBlur}
           onKeyDown={handleTextKeyDown}
         />

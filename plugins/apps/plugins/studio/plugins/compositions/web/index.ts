@@ -11,6 +11,7 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { CompositionDetail } from "./slots";
 export { compositionsPane, compositionDetailPane, comparePane } from "./panes";
+export { compositionNameDraft } from "./internal/composition-name-draft";
 
 export default {
   description:

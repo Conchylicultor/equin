@@ -79,11 +79,12 @@ shell never names this page. The homepage's applications layer opens it.
     - `WebsiteHeader` "apps" → `AppsNavItem`
     - `ThemeEngine.SubTheme` "equin closing"
     - `ThemeEngine.SubTheme` "equin gallery"
-  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/website/shell` ×6
     - `primitives/css/ui-kit` ×4
     - `primitives/pane` ×4
     - `primitives/dom/scroll-reveal` ×2
+    - `primitives/kept-state` ×2
     - `apps-core/tabs.useAppLinkProps`
     - `apps/deploy/analytics/collect.track`
     - `apps/website/app-tiles.WebsiteAppTile`

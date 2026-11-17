@@ -119,13 +119,14 @@ are no per-interaction round-trips.
     - `Pane.Register` "compositions"
     - `item-actions` "delete" → `DeleteAction`
     - `Studio.Sidebar` "Compositions"
-  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `plugin-meta/composition` ×8
     - `primitives/pane` ×5
     - `primitives/data-view` ×3
     - `build/serve-composition` ×2
     - `primitives/css/text` ×2
     - `primitives/css/ui-kit` ×2
+    - `primitives/kept-state` ×2
     - `apps/studio/explorer/membership.DIFF_LEGEND`
     - `apps/studio/shell.Studio`
     - `network/live/live-state.ResourceErrorInline`
@@ -136,6 +137,7 @@ are no per-interaction round-trips.
     - `primitives/css/spacing.Stack`
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/detail-sections.defineDetailSections`
+    - `primitives/dom/web-storage.useStore`
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
@@ -143,6 +145,7 @@ are no per-interaction round-trips.
     - `comparePane`
     - `CompositionDetail`
     - `compositionDetailPane`
+    - `compositionNameDraft`
     - `compositionsPane`
 - Core:
   - Uses: `primitives/pane.defineRoute`
