@@ -1,12 +1,16 @@
-// The MCP SDK, loaded on first use rather than with the plugin.
+// The MCP SDK, loaded once per process rather than with the plugin.
 //
 // The SDK's server and client modules import its ajv validator statically
-// (`validation/ajv-provider.js` → ajv + ajv-formats), and evaluating them cost
-// ~0.28 s of CPU on the main thread before a backend could serve — every boot,
-// for a route only an agent calls and a catalog only the MCP settings pane
-// reads. Nothing a tab waits on at boot needs it, so it loads the first time a
-// request or the catalog does, once per process; later callers share the same
-// promise. The specifiers are literal, so a source digest still follows them.
+// (`validation/ajv-provider.js` → ajv + ajv-formats), and evaluating them is
+// one synchronous block of the JS thread: ~0.28 s of CPU warm, 1–3 s from a
+// checkout whose files are cold (a fresh main slot). An `exec` child and a
+// worktree backend never answer an agent (agents' MCP points at main), so for
+// them it loads the first time a request or the catalog does. Main's serving
+// backend is asked by every running agent within seconds of a restart — right
+// inside the window where every tab replays its subs — so it loads it before
+// readiness instead (the machine barrel's `onReadyBlocking`), while
+// the old backend still serves. Later callers share the same promise. The
+// specifiers are literal, so a source digest still follows them.
 
 let loaded: Promise<McpSdk> | null = null;
 

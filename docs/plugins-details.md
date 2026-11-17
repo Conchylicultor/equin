@@ -40116,8 +40116,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runtimeNamespace`
           - `servingSocketPath`
       - Cross-plugin:
-        - Imported by: 77 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
-          - `infra` ×16
+        - Imported by: 78 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
+          - `infra` ×17
           - `debug` ×15
           - `build` ×9
           - `conversations` ×9

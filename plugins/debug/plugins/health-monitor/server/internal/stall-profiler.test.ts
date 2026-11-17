@@ -6,6 +6,7 @@ import {
 import {
   aggregateTraces,
   freezeEvidence,
+  registeredStallPath,
   samplesInStall,
 } from "./stall-profiler";
 
@@ -283,5 +284,27 @@ describe("freezeEvidence", () => {
     expect(section.scope).toBe("window");
     expect(section.nSamples).toBe(3);
     expect(section.spanMs).toBe(10_000);
+  });
+});
+
+describe("registeredStallPath", () => {
+  const period = 100;
+  test("below the evidence bar: nothing to file", () => {
+    expect(registeredStallPath(499, period)).toBe("none");
+  });
+  test("a short block: its own trace", () => {
+    expect(registeredStallPath(500, period)).toBe("short");
+    expect(registeredStallPath(2_900, period)).toBe("short");
+  });
+  test("within one probe period of the threshold: deferred to the tick, never dropped", () => {
+    // 2026-11-17 23:13 on main: a 2.97 s block, histogram max 2,971 ms — the
+    // freeze path (> 3,000) never took it, so the probe must not drop it.
+    expect(registeredStallPath(2_901, period)).toBe("deferred");
+    expect(registeredStallPath(2_971, period)).toBe("deferred");
+    expect(registeredStallPath(3_000, period)).toBe("deferred");
+  });
+  test("past the threshold: the histogram's freeze, not a short stall", () => {
+    expect(registeredStallPath(3_001, period)).toBe("none");
+    expect(registeredStallPath(12_000, period)).toBe("none");
   });
 });

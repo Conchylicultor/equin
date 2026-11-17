@@ -226,6 +226,8 @@ export function stopStallProfiler(): void {
   sampler = null;
   pending = [];
   previousWindow = [];
+  deferred = [];
+  lastFreezeBlock = null;
 }
 
 /**
@@ -317,21 +319,70 @@ export function noteRegisteredStall(
   probePeriodMs: number,
 ): void {
   if (!sampler) return;
+  switch (registeredStallPath(stall.t1 - stall.t0, probePeriodMs)) {
+    case "none":
+      return;
+    case "short":
+      collect();
+      fileShortStall(stall, probePeriodMs, previousWindow.concat(pending));
+      return;
+    case "deferred":
+      deferred.push({ stall, probePeriodMs });
+      return;
+  }
+}
+
+/**
+ * Who files a block the probe registered `lateMs` late:
+ *
+ * - `none` — below STALL_EVIDENCE_MS (too short to trace), or past the freeze
+ *   threshold: the block was longer still, so the 10 s histogram reads it as a
+ *   freeze — unless the tick reset it for a machine sleep, no stall at all.
+ * - `short` — its own `stall` trace, now.
+ * - `deferred` — within one probe period of the threshold. The histogram reads
+ *   the same block up to one probe period longer than this lateness, so it may
+ *   be the freeze path's — never filed by both. The sampler tick decides: a
+ *   freeze when its histogram crosses the threshold, else this short-stall
+ *   evidence (`fileDeferredStalls`). Dropping it instead lost every block in
+ *   this band whose histogram read at most the threshold — main's 2.97 s
+ *   post-restart block on 2026-11-17 23:13 was filed by neither path.
+ */
+export function registeredStallPath(
+  lateMs: number,
+  probePeriodMs: number,
+): "none" | "short" | "deferred" {
+  if (lateMs < STALL_EVIDENCE_MS || lateMs > STALL_THRESHOLD_MS) return "none";
+  if (lateMs > STALL_THRESHOLD_MS - probePeriodMs) return "deferred";
+  return "short";
+}
+
+// Registered stalls near the freeze threshold, waiting for the sampler tick
+// to decide which path files them (see `noteRegisteredStall`).
+let deferred: { stall: LoopStall; probePeriodMs: number }[] = [];
+
+/** The deferred near-threshold stalls the window's histogram did not make a freeze. */
+function fileDeferredStalls(samples: readonly StackSample[]): void {
+  const due = deferred;
+  deferred = [];
+  for (const { stall, probePeriodMs } of due) {
+    // A tick that ran before the probe registered the block already filed it
+    // as a freeze (`freezeEvidence` registers an overdue probe itself).
+    if (lastFreezeBlock !== null && lastFreezeBlock.t0 === stall.t0) continue;
+    fileShortStall(stall, probePeriodMs, samples);
+  }
+}
+
+// The block the last freeze was attributed to, so the probe deferring the same
+// block afterwards does not file it a second time.
+let lastFreezeBlock: LoopStall | null = null;
+
+function fileShortStall(
+  stall: LoopStall,
+  probePeriodMs: number,
+  samples: readonly StackSample[],
+): void {
   const durationMs = stall.t1 - stall.t0;
-  // The 10 s window's eventLoopMaxMs reads the same block up to one probe
-  // period longer than this lateness, so a block near the threshold belongs to
-  // the freeze path — never filed by both.
-  if (
-    durationMs < STALL_EVIDENCE_MS ||
-    durationMs > STALL_THRESHOLD_MS - probePeriodMs
-  )
-    return;
-  collect();
-  const inStall = samplesInStall(
-    previousWindow.concat(pending),
-    stall,
-    probePeriodMs,
-  );
+  const inStall = samplesInStall(samples, stall, probePeriodMs);
   const { topLeaves, topStacks } = aggregateTraces(inStall);
   // No sample in the block: the thread was not running JS (descheduled on a
   // loaded host, or native work the sampler cannot see). Still evidence — a
@@ -373,7 +424,15 @@ export function drainAndMaybeDump(
     for (const observer of stackSampleObservers) observer(traces, windowMs);
   }
 
-  if (eventLoopMaxMs <= STALL_THRESHOLD_MS) return; // not a stall — discard
+  if (eventLoopMaxMs <= STALL_THRESHOLD_MS) {
+    // Not a freeze: a near-threshold block the probe deferred is short-stall
+    // evidence after all, attributed from the samples around it.
+    fileDeferredStalls(before.concat(traces));
+    return;
+  }
+  // A freeze: `freezeEvidence` below places the block among the registered
+  // stalls, a deferred one included.
+  deferred = [];
 
   const windowStartMs = profilerNowMs() - windowMs;
   const { section, block } = freezeEvidence(
@@ -383,6 +442,8 @@ export function drainAndMaybeDump(
     windowMs,
     PROBE_PERIOD_MS,
   );
+
+  if (block) lastFreezeBlock = block;
 
   // Hand the evidence to the alert plugin, which owns both the trace (critical,
   // stable-labelled) and the deduped `event-loop-stall` report. The span it
