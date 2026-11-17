@@ -53,6 +53,7 @@ task was filed with a placeholder) and a ≤3-word short title for narrow rows
 - Machine:
   - Uses: `conversations/runtime-sdk.heldAtClaudeLimit`
   - Register:
+    - `defineJob('task-title.generate')`
     - `defineJob('task-title.on-conversation-created')`
     - `defineJob('task-title.on-user-turn-sent')`
     - `defineJob('task-title.short')`

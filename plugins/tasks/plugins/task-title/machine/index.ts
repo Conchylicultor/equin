@@ -6,7 +6,7 @@ import {
   taskTitleChanged,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { TaskTitleGenerator } from "../server/internal/generator";
-import { haikuTaskTitles } from "./internal/generate-title";
+import { generateTitleJob, haikuTaskTitles } from "./internal/generate-title";
 import {
   titleOnConversationCreatedJob,
   titleOnUserTurnSentJob,
@@ -24,6 +24,7 @@ export default {
   description:
     "Haiku-backed task title generation, desktop-only half: provides the TaskTitleGenerator host service and upgrades uninformative titles asynchronously via event subscribers, so task/conversation creation never blocks on the Claude CLI round-trip. One Haiku call reads the full description and makes both the title and a ≤3-word short title; a title set by hand gets its short title from the same call on tasks.titleChanged, and recently active tasks are backfilled.",
   register: [
+    generateTitleJob,
     titleOnConversationCreatedJob,
     titleOnUserTurnSentJob,
     shortTitleJob,

@@ -63257,6 +63257,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Machine:
         - Uses: `conversations/runtime-sdk.heldAtClaudeLimit`
         - Register:
+          - `defineJob('task-title.generate')`
           - `defineJob('task-title.on-conversation-created')`
           - `defineJob('task-title.on-user-turn-sent')`
           - `defineJob('task-title.short')`
