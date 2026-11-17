@@ -29,6 +29,8 @@ const oldestFirst = (a: BatchCandidate, b: BatchCandidate): number =>
 /**
  * The next files an idle run should take, most useful first:
  *
+ * 0. `confirm` — files of main that failed once after passing, run again so a
+ *    failure is believed only once a second run repeats it (failing-report);
  * 1. stale and last failing — the likeliest to have been fixed (or to still
  *    be broken) on the current code;
  * 2. never run;
@@ -45,11 +47,13 @@ const oldestFirst = (a: BatchCandidate, b: BatchCandidate): number =>
 export function selectIdleBatch(
   candidates: readonly BatchCandidate[],
   now: number,
+  confirm: readonly BatchCandidate[] = [],
 ): string[] {
   const stale = candidates.filter((c) => c.status === "stale");
   const lastFailing = (c: BatchCandidate) =>
     c.lastOutcome !== null && c.lastOutcome !== "passed";
   const ordered = [
+    ...[...confirm].sort(oldestFirst),
     ...stale.filter(lastFailing).sort(oldestFirst),
     ...candidates
       .filter((c) => c.status === "never")

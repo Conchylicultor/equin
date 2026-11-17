@@ -141,7 +141,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`replica`** [exempt] — The table mirror's replica half: one Postgres schema per replica (tm_<set>_<hash>) holding tables LIKE the local install's own (unique constraints relaxed, no foreign keys), filled by pullReplica…
         - **`source`** [test helpers] [exempt] — The table mirror's source half: defineMirrorSet / MirrorSet (tables mirrored together) and NeverMirrored (tables whose rows never leave, refused at module eval and at boot); generated…
 
-- **`debug`** [exempt] [74 sub-plugins] — Debug tools umbrella plugin.
+- **`debug`** [exempt] [75 sub-plugins] — Debug tools umbrella plugin.
 
 - **`fields`** [test helpers] [127 sub-plugins] — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
 

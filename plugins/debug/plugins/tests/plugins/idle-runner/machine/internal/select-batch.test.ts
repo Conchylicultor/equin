@@ -26,6 +26,22 @@ function c(
 }
 
 describe("selectIdleBatch", () => {
+  test("files to confirm come before everything else", () => {
+    const batch = selectIdleBatch(
+      [
+        c("stale-failed.test.ts", "stale", { lastOutcome: "failed" }),
+        c("never.test.ts", "never"),
+      ],
+      NOW,
+      [c("once.test.ts", "failing", { lastOutcome: "failed" })],
+    );
+    expect(batch).toEqual([
+      "once.test.ts",
+      "stale-failed.test.ts",
+      "never.test.ts",
+    ]);
+  });
+
   test("stale-and-last-failing, then never run, then stale oldest first", () => {
     const batch = selectIdleBatch(
       [

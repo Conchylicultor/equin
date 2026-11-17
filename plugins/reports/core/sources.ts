@@ -67,6 +67,10 @@ export const SERVER_REPORT_SOURCES = [
   // backend from the run's ledger row and transcript. Not an error anyone
   // caught in this process — the build is another process's verdict.
   "server-build",
+  // A test file of main went from passing to failing, confirmed by a second
+  // failing run (debug/tests/failing-report): told by main's backend from the
+  // idle test runner's verdicts. The tests' verdict, not an error anyone caught.
+  "server-idle-tests",
   // A report a backend filed synchronously on its way out of a DELIBERATE
   // `process.exit()` — not a crash (nothing threw) and not a caught error
   // (nobody is still running to catch it). Its own source because that

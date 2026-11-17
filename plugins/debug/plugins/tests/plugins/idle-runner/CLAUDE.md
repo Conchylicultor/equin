@@ -14,9 +14,15 @@ Fills Debug → Tests in while the host is idle (`infra/host/idle`):
   `EQUIN_OP_OPPORTUNISTIC=1` (background lane, low priority, ignored by the
   ops blocker), `EQUIN_TEST_ORIGIN=idle`, `verdictExits: [TESTS_FAILED_EXIT]`
   (failing tests are data, never a dead-lettered job). Its `onEnded` ingests
-  the record, then asks for the next batch.
+  the record, hands the batch's files to `failing-report`'s
+  `fileTestFailingReports` (main only: a file that went from passing to
+  failing, confirmed by a second run, becomes a `test-failing` report; one
+  that failed once after passing is queued to confirm, `toConfirm`), then
+  asks for the next batch — in a `finally`, so a filing error is loud but
+  never stops the chain.
 - `host.idleEnded` → `cancelSupervisedJobByLock` (one batch lost at most).
-- Files a batch of this idle period already took are not picked again (process
+- Files a batch of this idle period already took are not picked again —
+  except once more for a confirmation run (`toConfirm`) — (process
   memory, reset on `idleBegan`), so a file whose run yields no record cannot
   loop.
 
@@ -34,6 +40,7 @@ Fills Debug → Tests in while the host is idle (`infra/host/idle`):
   - Uses:
     - `debug/tests.ingestRunRecordsNow`
     - `debug/tests.requestCheckoutDigests`
+    - `debug/tests/failing-report.fileTestFailingReports`
   - Register:
     - `defineSupervisedJob('tests.idle-batch')`
     - `defineJob('tests.idle-next')`

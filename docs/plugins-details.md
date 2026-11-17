@@ -24176,13 +24176,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadedDatabaseConfig`
       - `readDatabaseConfigSync`
   - Cross-plugin:
-    - Imported by: 178 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 179 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×48
       - `conversations` ×21
       - `tasks` ×20
       - `infra` ×18
       - `page` ×14
-      - `debug` ×10
+      - `debug` ×11
       - `active-data` ×8
       - `database` ×7
       - `primitives` ×4
@@ -28468,10 +28468,43 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --warning`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: `debug/tests/idle-runner`
+        - Imported by:
+          - `debug/tests/failing-report`
+          - `debug/tests/idle-runner`
       - Exemptions:
         - Exempts itself from: `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
       - Plugins:
+        - **`failing-report`** — Test-failing report kind's Debug → Reports summary view: one line naming the test file that started failing on main, and the commits it last passed and first failed at. The test-failing report kind: one row per test file of main that went from passing to failing (fingerprint = file path), filed by main's idle test runner once a second run on the same code confirmed the failure. Category error, so the Error reports supervisor stream carries it; its task names the failing cases and the commit range where they started failing.
+          - Web:
+            - Contributes: `Reports.KindView` → `TestFailingSummary`
+            - Uses: `reports.Reports`
+          - Server:
+            - Contributes: `report-kind` "test-failing"
+            - Uses:
+              - `reports.ReportKind`
+              - `reports.ReportRow`
+          - Core:
+            - Uses: `packages/list-bound.cappedList`
+            - Exports (types):
+              - `FailingVerdict`
+              - `JudgedResult`
+              - `JudgedRun`
+              - `KnownBreak`
+              - `TestFailingPayload`
+              - `TestRunRef`
+            - Exports (values):
+              - `CONFIRMING_FAILURES`
+              - `judgeFailingFile`
+              - `shortCommit`
+              - `TEST_FAILING_KIND`
+              - `TEST_FAILING_MAX_CASES`
+              - `testFailingFingerprint`
+              - `testFailingMessage`
+              - `TestFailingPayloadSchema`
+          - Cross-plugin:
+            - Imported by: `debug/tests/idle-runner`
+          - Machine:
+            - Exports (values): `fileTestFailingReports`
         - **`idle-runner`** — Runs stale and never-run test files while the host is idle: on host.idleBegan it brings the checkout's test digests current; each tests.digestsSettled (and each batch's end, after its record is ingested) starts the next tests.idle-batch — `./equin test` on files chosen by selectIdleBatch, opportunistic, origin idle — while the host is still idle; host.idleEnded cancels the running batch.
           - Server:
             - Contributes:
@@ -28482,6 +28515,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `debug/tests.ingestRunRecordsNow`
               - `debug/tests.requestCheckoutDigests`
+              - `debug/tests/failing-report.fileTestFailingReports`
             - Register:
               - `defineSupervisedJob('tests.idle-batch')`
               - `defineJob('tests.idle-next')`
@@ -39523,13 +39557,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/host-fs/user-path.asAppPath`
             - Exports (values): `REPO_ROOT`
           - Cross-plugin:
-            - Imported by: 52 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
+            - Imported by: 53 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
               - `framework` ×15
               - `infra` ×8
               - `apps` ×7
               - `build` ×6
+              - `debug` ×4
               - `plugin-meta` ×4
-              - `debug` ×3
               - `reports` ×3
               - `code-explorer`
               - `config_v2`
@@ -39664,9 +39698,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runtimeNamespace`
           - `servingSocketPath`
       - Cross-plugin:
-        - Imported by: 76 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
+        - Imported by: 77 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
           - `infra` ×16
-          - `debug` ×14
+          - `debug` ×15
           - `build` ×9
           - `conversations` ×9
           - `apps` ×5
@@ -43025,9 +43059,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wholeRecord`
           - `wholeTuple`
       - Cross-plugin:
-        - Imported by: 134 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
+        - Imported by: 135 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
           - `apps` ×30
-          - `debug` ×20
+          - `debug` ×21
           - `conversations` ×16
           - `infra` ×16
           - `tasks` ×10
@@ -57972,8 +58006,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).
   - Web:
     - Slots: `Reports.KindView`
-    - Slot contributors: 48 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `Reports.KindView` ×48
+    - Slot contributors: 49 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `Reports.KindView` ×49
     - Contributes:
       - `IdKinds.Kind` "report|crash"
       - `ConfigV2.WebRegister` "reports"
@@ -58116,9 +58150,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `versionSkewCode`
       - `versionSkewExplains`
   - Cross-plugin:
-    - Imported by: 87 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 88 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×33
-      - `debug` ×20
+      - `debug` ×21
       - `conversations` ×7
       - `infra` ×5
       - `build` ×4
@@ -58382,8 +58416,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Machine:
         - Uses: `infra/endpoints.implementMachine`
       - Cross-plugin:
-        - Imported by: 34 plugins — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
-          - `debug` ×13
+        - Imported by: 35 plugins — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
+          - `debug` ×14
           - `conversations` ×5
           - `infra` ×4
           - `database` ×3

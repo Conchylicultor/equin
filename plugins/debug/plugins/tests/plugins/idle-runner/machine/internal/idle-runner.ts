@@ -17,6 +17,7 @@ import {
   ingestRunRecordsNow,
   requestCheckoutDigests,
 } from "@plugins/debug/plugins/tests/machine";
+import { fileTestFailingReports } from "@plugins/debug/plugins/tests/plugins/failing-report/machine";
 import { selectIdleBatch } from "./select-batch";
 
 // The idle runner: while the host is idle (infra/host/idle — no agent working,
@@ -45,12 +46,19 @@ const IDLE_LOCK = "idle";
 /** Names the batch lock to the by-lock verbs — `lock` ignores the paths. */
 const ANY_BATCH = { paths: [IDLE_LOCK] };
 
-// The files a batch of THIS idle period already took. A file a run cannot
-// give a verdict (its record skipped: the tree moved mid-run) keeps its
-// status, and would otherwise be picked again and again while idle. Process
-// memory on purpose: a restart starts a fresh chain, and a new idle period a
-// fresh set.
-const triedThisIdle = new Set<string>();
+// How many batches of THIS idle period already took each file. A file a run
+// cannot give a verdict (its record skipped: the tree moved mid-run) keeps its
+// status, and would otherwise be picked again and again while idle — so a
+// file is taken once, twice only for its confirmation run (`toConfirm`).
+// Process memory on purpose: a restart starts a fresh chain, and a new idle
+// period a fresh count.
+const takenThisIdle = new Map<string, number>();
+
+// Files of main that failed once after passing (`fileTestFailingReports`'s
+// `confirm`): the next batch runs them again first, so a failure is believed
+// only once a second run on the same code repeats it. Process memory: a
+// restart forgets them, and they are judged again on their next run.
+const toConfirm = new Set<string>();
 
 export const idleBatchJob = defineSupervisedJob({
   name: "tests.idle-batch",
@@ -72,7 +80,15 @@ export const idleBatchJob = defineSupervisedJob({
     if (meta.cancelled) return;
     // Its verdicts must be in the statuses the next selection reads.
     await ingestRunRecordsNow();
-    await idleNextJob.enqueue({});
+    try {
+      // A file of main that went from passing to failing (confirmed) is
+      // filed; one that failed once is run again first.
+      const { confirm } = await fileTestFailingReports(meta.input.paths);
+      for (const p of confirm) toConfirm.add(p);
+    } finally {
+      // A filing error stays loud, but never stops the idle chain.
+      await idleNextJob.enqueue({});
+    }
   },
 });
 
@@ -91,12 +107,17 @@ export async function startNextIdleBatch(
       durationMs: _testFileStatus.durationMs,
     })
     .from(_testFileStatus);
+  const confirming = rows.filter(
+    (r) => toConfirm.has(r.path) && (takenThisIdle.get(r.path) ?? 0) < 2,
+  );
   const paths = selectIdleBatch(
-    rows.filter((r) => !triedThisIdle.has(r.path)),
+    rows.filter((r) => !takenThisIdle.has(r.path)),
     now,
+    confirming,
   );
   if (paths.length === 0) return;
-  for (const p of paths) triedThisIdle.add(p);
+  for (const p of paths) toConfirm.delete(p);
+  for (const p of paths) takenThisIdle.set(p, (takenThisIdle.get(p) ?? 0) + 1);
   await idleBatchJob.enqueue({ paths });
 }
 
@@ -124,7 +145,7 @@ export const idleBeganJob = defineJob({
   event: z.unknown(),
   dedup: "singleton",
   run: async () => {
-    triedThisIdle.clear();
+    takenThisIdle.clear();
     // Its end (tests.digestsSettled) starts the first batch.
     await requestCheckoutDigests();
   },

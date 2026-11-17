@@ -3168,6 +3168,10 @@
       "name": "@equin/plugin-debug-tests",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/tests/plugins/failing-report": {
+      "name": "@equin/plugin-debug-tests-failing-report",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/tests/plugins/idle-runner": {
       "name": "@equin/plugin-debug-tests-idle-runner",
       "version": "0.0.1",
@@ -9684,6 +9688,8 @@
     "@equin/plugin-debug-stuck-spans": ["@equin/plugin-debug-stuck-spans@workspace:plugins/debug/plugins/stuck-spans"],
 
     "@equin/plugin-debug-tests": ["@equin/plugin-debug-tests@workspace:plugins/debug/plugins/tests"],
+
+    "@equin/plugin-debug-tests-failing-report": ["@equin/plugin-debug-tests-failing-report@workspace:plugins/debug/plugins/tests/plugins/failing-report"],
 
     "@equin/plugin-debug-tests-idle-runner": ["@equin/plugin-debug-tests-idle-runner@workspace:plugins/debug/plugins/tests/plugins/idle-runner"],
 
