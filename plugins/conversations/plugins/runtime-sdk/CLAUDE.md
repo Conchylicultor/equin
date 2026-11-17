@@ -537,7 +537,9 @@ Gotchas the spike hit:
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
   - Imported by:
+    - `apps/events/sources/url-extract`
     - `apps/pages/auto-icon`
+    - `apps/places/places-core`
     - `conversations/conversation-view/jsonl-viewer/api-error`
     - `infra/paths/root-migration`
     - `tasks/supervisor-roles`

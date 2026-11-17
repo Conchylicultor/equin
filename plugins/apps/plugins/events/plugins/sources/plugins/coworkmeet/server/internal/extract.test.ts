@@ -27,7 +27,12 @@ const ALL: CoworkmeetSourceConfig = {
 function extract(rows: SessionRow[], config: CoworkmeetSourceConfig = ALL) {
   return extractCoworkmeetSessions(
     { rows },
-    { sourceId: "evs-test", config, runId: "run-test" },
+    {
+      sourceId: "evs-test",
+      config,
+      runId: "run-test",
+      job: { sleep: () => Promise.resolve() },
+    },
   );
 }
 

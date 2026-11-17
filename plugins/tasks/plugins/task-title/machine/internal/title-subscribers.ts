@@ -6,8 +6,8 @@ export const titleOnConversationCreatedJob = defineJob({
   name: "task-title.on-conversation-created",
   description:
     "Improves a task's title from the first prompt of a newly created conversation.",
-  // instant: `scheduleTaskTitleUpgrade` is fire-and-forget — the Haiku call it
-  // starts runs detached, so it never holds this slot.
+  // instant: `scheduleTaskTitleUpgrade` only enqueues `task-title.generate`,
+  // which makes the Haiku call in its own run.
   hold: "instant",
   input: z.object({}).passthrough(),
   dedup: "none",
@@ -21,14 +21,14 @@ export const titleOnConversationCreatedJob = defineJob({
   maxAttempts: 2,
   run: async ({ event }) => {
     if (!event?.prompt || event.kind === "system") return;
-    scheduleTaskTitleUpgrade(event.taskId, event.prompt);
+    await scheduleTaskTitleUpgrade(event.taskId, event.prompt);
   },
 });
 
 export const titleOnUserTurnSentJob = defineJob({
   name: "task-title.on-user-turn-sent",
   description: "Improves a task's title from the user's latest message.",
-  // instant: same fire-and-forget schedule as the job above.
+  // instant: the same enqueue as the job above.
   hold: "instant",
   input: z.object({}).passthrough(),
   dedup: "none",
@@ -41,6 +41,6 @@ export const titleOnUserTurnSentJob = defineJob({
   maxAttempts: 2,
   run: async ({ event }) => {
     if (!event?.text) return;
-    scheduleTaskTitleUpgrade(event.taskId, event.text);
+    await scheduleTaskTitleUpgrade(event.taskId, event.text);
   },
 });

@@ -1,8 +1,10 @@
+import { z } from "zod";
 import {
   ClaudeCliError,
   runClaudePrint,
 } from "@plugins/infra/plugins/claude-cli/server";
-import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import { defineJob, type JobCtx } from "@plugins/infra/plugins/jobs/server";
+import { heldAtClaudeLimit } from "@plugins/conversations/plugins/runtime-sdk/machine";
 import { expandInlineTokenReferents } from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/server";
 import {
   getTask,
@@ -63,11 +65,6 @@ ${title}
 // The title model call's give-up point: past it the call is a failure
 // (claude-cli files it as a report), not a slow success.
 const TITLE_TIMEOUT_MS = 30_000;
-// How long a title run is EXPECTED to take — a budget, not the give-up point,
-// so the slow-op monitor sees a run drifting towards the timeout. A Haiku title
-// call took 2.8 s median, 5.3 s p99, never over 10 s (467 successful calls on
-// main, 2026-10-17 → 31); the run around it adds a task read and two writes.
-const TITLE_SPAN = { budgetMs: 8_000 };
 
 /**
  * Both titles of a task, from one model call. `title`, when given, is the
@@ -101,19 +98,27 @@ export async function generateTitles(
 // the write, so the `tasks.titleChanged` run it triggers finds it fresh and
 // makes no second call. If the write then loses its CAS (the user renamed the
 // task meanwhile), the row is merely stale and the rename's own run replaces it.
+//
+// The call waits out the Claude account's usage limit (`heldAtClaudeLimit`):
+// the run sleeps until the reset and calls then, so a task filed during a limit
+// still gets its title — it does not keep the fallback for good.
 async function generateAndStore(
+  ctx: JobCtx,
   taskId: string,
   description: string,
   fallback: string,
 ): Promise<string> {
   let answer: TitlesAnswer | undefined;
   try {
-    answer = await generateTitles(description, { taskId });
+    answer = await heldAtClaudeLimit(ctx, () =>
+      generateTitles(description, { taskId }),
+    );
   } catch (err) {
     // A failed model call (a timeout, a dead CLI) is already filed as a
-    // report by claude-cli, which knows Claude Code's own words; a usage limit
-    // is a known state the health report shows, not a report. Either way the
-    // task keeps its fallback title. Anything else is a bug here and throws.
+    // report by claude-cli, which knows Claude Code's own words; the task
+    // keeps its fallback title. A usage limit never reaches here (the hold
+    // sleeps it out, and throws a limit it cannot place as no
+    // ClaudeCliError). Anything else is a bug here and throws.
     if (!(err instanceof ClaudeCliError)) throw err;
   }
   const title = answer?.title ?? fallback;
@@ -131,63 +136,106 @@ async function generateAndStore(
   return title;
 }
 
-// Fire-and-forget Haiku title generation (the desktop's TaskTitleGenerator,
-// reached through `scheduleTaskTitleUpdate` in server/). Callers create the task with
-// `synthesiseTitleFallback(description)` so launching is instant; this then
-// upgrades the title in the background. The `onlyIfTitleIn` guard ensures we
-// never clobber a user edit that landed before Haiku returned. Nobody awaits
-// the run, so a throw is an unhandled rejection — filed as a report by the
-// reports engine's process hook, never swallowed here.
-export function scheduleTaskTitleUpdate(
+// The titles a generation may replace: a placeholder, never one the user (or
+// an earlier generation) set. A task just filed carries its synthesised
+// fallback; a task created without a description carries one of these.
+const UNINFORMATIVE_TITLES = ["Untitled", "Untitled conversation"];
+
+/**
+ * One task's generated title, as a job so a Claude usage limit is waited out
+ * (the run sleeps until the reset) rather than leaving the placeholder for
+ * good. Two kinds, keyed apart so neither replaces the other's pending row:
+ *
+ * - `filed` — the task was just filed with `fallbackTitle`, synthesised from
+ *   `description` (`scheduleTaskTitleUpdate`);
+ * - `untitled` — the task is still "Untitled" and `text` (a first prompt or a
+ *   user turn) says what it is about; skipped once the task has a real title.
+ *   Keyed per task, so a burst of turns collapses onto one pending run (the
+ *   latest text).
+ *
+ * Every write is a CAS on the titles the run may replace, so a user edit
+ * landing mid-call is never clobbered.
+ */
+export const generateTitleJob = defineJob({
+  name: "task-title.generate",
+  description:
+    "Generates a task's title (and its short title) from its description or first prompt, replacing the placeholder it was filed with.",
+  // seconds: one Haiku call bounded by its own 30 s timeout; a usage limit is
+  // waited out by `ctx.sleep`, which frees the slot.
+  hold: "seconds",
+  input: z.discriminatedUnion("kind", [
+    z.object({
+      kind: z.literal("filed"),
+      taskId: z.string(),
+      description: z.string(),
+      fallbackTitle: z.string(),
+    }),
+    z.object({
+      kind: z.literal("untitled"),
+      taskId: z.string(),
+      text: z.string(),
+    }),
+  ]),
+  event: z.never(),
+  dedup: { key: (input) => `${input.kind}:${input.taskId}` },
+  maxAttempts: 2,
+  run: async ({ input, ctx }) => {
+    const replaces =
+      input.kind === "filed" ? [input.fallbackTitle] : UNINFORMATIVE_TITLES;
+    if (input.kind === "untitled") {
+      const task = await getTask(input.taskId);
+      if (!task || !replaces.includes(task.title)) return;
+    }
+
+    const generated =
+      input.kind === "filed"
+        ? await generateAndStore(
+            ctx,
+            input.taskId,
+            input.description,
+            input.fallbackTitle,
+          )
+        : await generateAndStore(
+            ctx,
+            input.taskId,
+            input.text,
+            synthesiseTitleFallback(input.text),
+          );
+    if (!replaces.includes(generated)) {
+      await updateTaskTitle(input.taskId, generated, replaces);
+    }
+    await updateConversationsTitleForTask(input.taskId, generated, replaces);
+  },
+});
+
+// Background Haiku title generation (the desktop's TaskTitleGenerator, reached
+// through `scheduleTaskTitleUpdate` in server/). Callers create the task with
+// `synthesiseTitleFallback(description)` so launching is instant; the job then
+// upgrades the title. Awaiting this awaits the enqueue only, never the call.
+export async function scheduleTaskTitleUpdate(
   taskId: string,
   description: string,
   fallbackTitle: string,
-): void {
+): Promise<void> {
   if (!description.trim()) return;
-  void runTracked(
-    "task-title:generate",
-    async () => {
-      const generated = await generateAndStore(
-        taskId,
-        description,
-        fallbackTitle,
-      );
-      if (generated !== fallbackTitle) {
-        await updateTaskTitle(taskId, generated, [fallbackTitle]);
-      }
-      await updateConversationsTitleForTask(taskId, generated, [fallbackTitle]);
-    },
-    TITLE_SPAN,
-  );
+  await generateTitleJob.enqueue({
+    kind: "filed",
+    taskId,
+    description,
+    fallbackTitle,
+  });
 }
 
-const UNINFORMATIVE_TITLES = ["Untitled", "Untitled conversation"];
-
-export function scheduleTaskTitleUpgrade(taskId: string, text: string): void {
+/** Title a still-"Untitled" task from `text` (a first prompt, a user turn). */
+export async function scheduleTaskTitleUpgrade(
+  taskId: string,
+  text: string,
+): Promise<void> {
   if (!text.trim()) return;
-  void runTracked(
-    "task-title:generate",
-    async () => {
-      const task = await getTask(taskId);
-      if (!task || !UNINFORMATIVE_TITLES.includes(task.title)) return;
-
-      const generated = await generateAndStore(
-        taskId,
-        text,
-        synthesiseTitleFallback(text),
-      );
-      await updateTaskTitle(taskId, generated, UNINFORMATIVE_TITLES);
-      await updateConversationsTitleForTask(
-        taskId,
-        generated,
-        UNINFORMATIVE_TITLES,
-      );
-    },
-    TITLE_SPAN,
-  );
+  await generateTitleJob.enqueue({ kind: "untitled", taskId, text });
 }
 
-/** The desktop's title generator: one Haiku call per title, in the background. */
+/** The desktop's title generator: one Haiku call per title, in a job. */
 export const haikuTaskTitles: TaskTitleGeneratorImpl = {
   scheduleUpdate: scheduleTaskTitleUpdate,
 };

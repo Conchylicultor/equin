@@ -2,7 +2,7 @@ import { z } from "zod";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { defineHostService } from "@plugins/framework/plugins/server-core/core";
-import { defineJob } from "@plugins/infra/plugins/jobs/server";
+import { defineJob, type JobCtx } from "@plugins/infra/plugins/jobs/server";
 import type { SavedSymbolName } from "@plugins/ui/plugins/icons/core";
 import { placeIdKind, placeName } from "../../core";
 import { _places } from "./tables";
@@ -33,7 +33,17 @@ export type PlaceIconPick =
  * icon — the same pin the desktop draws before its pick lands.
  */
 export interface PlaceIconPickerImpl {
-  pick(place: PlaceIconSubject, placeId: string): Promise<PlaceIconPick>;
+  /**
+   * `job` is the run the pick is made in, when it is one (the save-triggered
+   * job): a model at its usage limit is then waited out by sleeping the run
+   * until the reset. Without it (Regenerate, awaited in its request) the limit
+   * fails the pick, visibly.
+   */
+  pick(
+    place: PlaceIconSubject,
+    placeId: string,
+    job: Pick<JobCtx, "sleep"> | null,
+  ): Promise<PlaceIconPick>;
 }
 
 export const PlaceIconPicker =
@@ -55,7 +65,10 @@ export type GeneratePlaceIconResult =
  */
 export async function generatePlaceIcon(
   rawPlaceId: string,
-  { force = false }: { force?: boolean } = {},
+  {
+    force = false,
+    job = null,
+  }: { force?: boolean; job?: Pick<JobCtx, "sleep"> | null } = {},
 ): Promise<GeneratePlaceIconResult> {
   const placeId = placeIdKind.key(rawPlaceId);
   const [place] = await db
@@ -83,6 +96,7 @@ export async function generatePlaceIcon(
       address: place.address,
     },
     placeId,
+    job,
   );
   if (pick.kind === "no-picker")
     return { kind: "skipped", reason: pick.reason };
@@ -102,7 +116,8 @@ export async function generatePlaceIcon(
 /**
  * The save-triggered run of `generatePlaceIcon`. Keyed on the place, serial (one
  * model call at a time), always unforced — Regenerate awaits the pick in its
- * request instead.
+ * request instead. The pick is made in this run, so a Claude usage limit sleeps
+ * the run until the reset instead of leaving the place without an icon.
  */
 export const placeIconJob = defineJob({
   name: "places.icon.generate",
@@ -115,8 +130,8 @@ export const placeIconJob = defineJob({
   dedup: { key: ({ placeId }) => placeId },
   serial: true,
   maxAttempts: 2,
-  run: async ({ input: { placeId } }) => {
-    const result = await generatePlaceIcon(placeId);
+  run: async ({ input: { placeId }, ctx }) => {
+    const result = await generatePlaceIcon(placeId, { job: ctx });
     if (result.kind === "rejected") {
       console.warn(
         `[places-icon] icon for place ${placeId} rejected: ${result.reason}`,

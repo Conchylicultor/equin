@@ -7,9 +7,10 @@ import { defineHostService } from "@plugins/framework/plugins/server-core/core";
  * nothing to do (`task-title/plugins/filed-titles`): every task keeps the title
  * it was filed with, exactly what the desktop shows when a generation fails.
  *
- * Fire-and-forget by contract: a task is filed with
+ * Background by contract: a task is filed with
  * `synthesiseTitleFallback(description)` first, so creating one never waits on
- * the model, and a generation that fails leaves that title standing.
+ * the model — `scheduleUpdate` resolves once the work is queued — and a
+ * generation that fails leaves that title standing.
  */
 export interface TaskTitleGeneratorImpl {
   /**
@@ -20,7 +21,7 @@ export interface TaskTitleGeneratorImpl {
     taskId: string,
     description: string,
     fallbackTitle: string,
-  ): void;
+  ): Promise<void>;
 }
 
 export const TaskTitleGenerator = defineHostService<TaskTitleGeneratorImpl>(
@@ -32,6 +33,10 @@ export function scheduleTaskTitleUpdate(
   taskId: string,
   description: string,
   fallbackTitle: string,
-): void {
-  TaskTitleGenerator.get().scheduleUpdate(taskId, description, fallbackTitle);
+): Promise<void> {
+  return TaskTitleGenerator.get().scheduleUpdate(
+    taskId,
+    description,
+    fallbackTitle,
+  );
 }

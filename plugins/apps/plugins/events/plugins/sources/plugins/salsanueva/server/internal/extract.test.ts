@@ -35,7 +35,12 @@ function row(over: Partial<CourseRow> = {}): CourseRow {
 function extract(rows: CourseRow[], config: SalsanuevaSourceConfig = ALL) {
   return extractSalsanuevaCourses(
     { series: buildCourseSeries(rows) },
-    { sourceId: "evs-test", config, runId: "run-test" },
+    {
+      sourceId: "evs-test",
+      config,
+      runId: "run-test",
+      job: { sleep: () => Promise.resolve() },
+    },
   );
 }
 

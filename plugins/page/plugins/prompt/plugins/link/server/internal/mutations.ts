@@ -37,7 +37,7 @@ export async function createTaskFromPromptBlock(
     },
     mandate: interactiveMandate,
   });
-  scheduleTaskTitleUpdate(task.id, body.prompt, fallbackTitle);
+  await scheduleTaskTitleUpdate(task.id, body.prompt, fallbackTitle);
   await setTaskCategory(task.id, PAGES_CATEGORY_ID);
   await promptBlock.upsert(task.id, { pageId: body.pageId, blockId: body.blockId });
   return { taskId: task.id };

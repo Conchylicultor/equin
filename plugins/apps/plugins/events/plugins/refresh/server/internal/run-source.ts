@@ -1,6 +1,10 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { NonRetryableError } from "@plugins/infra/plugins/jobs/server";
+import {
+  isSuspendSignal,
+  NonRetryableError,
+  type JobCtx,
+} from "@plugins/infra/plugins/jobs/server";
 import type { EventSource } from "@plugins/apps/plugins/events/plugins/events-core/core";
 import {
   _eventSources,
@@ -18,6 +22,7 @@ import {
   finishFailed,
   finishUnchanged,
   markSourceRunning,
+  releaseSuspendedSource,
 } from "./run-ledger";
 import { refreshLog } from "./sink";
 import {
@@ -70,8 +75,9 @@ function requireSourceType(source: EventSource): EventSourceType {
 function probeContext(
   source: EventSource,
   runId: string,
+  job: Pick<JobCtx, "sleep">,
 ): ProbeContext<unknown> {
-  return { sourceId: source.id, config: source.config, runId };
+  return { sourceId: source.id, config: source.config, runId, job };
 }
 
 /**
@@ -91,7 +97,10 @@ function probeContext(
  *   inside the `try` after `extract`, so a failure exits before it and a flaky
  *   scrape can never mark the user's whole list gone.
  */
-export async function runSource(sourceId: string): Promise<void> {
+export async function runSource(
+  sourceId: string,
+  job: Pick<JobCtx, "sleep">,
+): Promise<void> {
   const lookup = await loadSource(sourceId);
   if (lookup.kind === "gone") {
     refreshLog.publish(`source ${sourceId} was deleted before its run started`);
@@ -118,7 +127,7 @@ export async function runSource(sourceId: string): Promise<void> {
     // row's classified error like any other terminal failure — not vanish as a
     // bare throw with nothing on screen to explain it.
     const sourceType = requireSourceType(source);
-    const probed = await sourceType.probe(probeContext(source, runId));
+    const probed = await sourceType.probe(probeContext(source, runId, job));
     // Keyed on the config too: `extract` may apply it (filters), so an edited
     // config must re-extract even when the material did not move.
     const fingerprint = extractionCacheKey(source.config, probed.fingerprint);
@@ -134,7 +143,7 @@ export async function runSource(sourceId: string): Promise<void> {
 
     const { events, flags } = await sourceType.extract(
       probed.payload,
-      probeContext(source, runId),
+      probeContext(source, runId, job),
     );
     // The clock the plan is normalized against, read ONCE and passed in: the
     // anchor of every event in this run is then resolved against the same
@@ -163,6 +172,14 @@ export async function runSource(sourceId: string): Promise<void> {
       touched: [...touched, ...disappeared],
     });
   } catch (err) {
+    // A phase slept the run (a model call waiting out the Claude account's
+    // usage limit): nothing failed. The run ends with no ledger row — it never
+    // completed — and the source drops its `running` flag until the run
+    // resumes, from the top, at the wake-up.
+    if (isSuspendSignal(err)) {
+      await releaseSuspendedSource(source);
+      throw err;
+    }
     const failure = classifyRefreshError(err);
     await finishFailed(source, { runId, startedAt, failure });
     // Record first, then rethrow: the job must still FAIL (loudly, into the

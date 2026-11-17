@@ -158,25 +158,11 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
 
 - Description: Events refresh engine: the main-only cadence tick and the per-source refresh job, the probe/extract runSource pipeline (fingerprint cache → upsert diff → soft disappearance), the run ledger, terminal/transient error classification onto the source row, and the retention sweeps for events + runs.
 - Server:
-  - Uses:
-    - `apps/events/events-core._eventSourceRunEvents`
-    - `apps/events/events-core._eventSourceRuns`
-    - `apps/events/events-core._eventSources`
-    - `apps/events/events-core.EventSourceType`
-    - `apps/events/events-core.eventsTable`
-    - `apps/events/events-core.getEventSourceType`
-    - `apps/events/events-core.markEventsDisappeared`
-    - `apps/events/events-core.ProbeContext`
-    - `apps/events/events-core.registerRefreshRunner`
-    - `apps/events/events-core.requireSource`
-    - `apps/events/events-core.TouchedEvent`
-    - `apps/events/events-core.upsertEvents`
-    - `database.db`
-    - `database.writeAtomically`
-    - `infra/jobs.defineJob`
-    - `infra/jobs.NonRetryableError`
-    - `infra/retention.defineRetention`
-    - `infra/retention.markCascadeBounded`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/events/events-core` ×12
+    - `infra/jobs` ×4
+    - `database` ×2
+    - `infra/retention` ×2
     - `primitives/log-channels.defineLogSink`
   - Exports (values):
     - `requestRefresh`

@@ -17,7 +17,10 @@ task was filed with a placeholder) and a ≤3-word short title for narrow rows
 - `machine/` (desktop) — the Haiku call and everything that makes it: the
   generator provider, the `conversationCreated` / `userTurnSent` /
   `tasks.titleChanged` subscribers, the keyed short-title job, and the backfill
-  with its warm-up.
+  with its warm-up. Every call runs in a job (`task-title.generate` for the full
+  title, `task-title.short` for the short one), held at the Claude account's
+  usage limit (`heldAtClaudeLimit`): a task filed during a limit is titled after
+  the reset, never left on its fallback for good.
 - `plugins/filed-titles` — the generator of a host without a model (the
   browser composition): nothing to do, every task keeps its filed title.
 

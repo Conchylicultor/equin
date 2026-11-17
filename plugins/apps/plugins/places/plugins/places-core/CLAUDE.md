@@ -101,6 +101,7 @@ its own.
     - `infra/entities.defaultNow`
     - `infra/entities.defineEntity`
     - `infra/jobs.defineJob`
+    - `infra/jobs.JobCtx`
     - `infra/warmup.defineWarmup`
     - `network/live.serveCollection`
     - `tag-tree/engine.defineTagTreeTable`
@@ -135,6 +136,7 @@ its own.
     - `DELETE /api/places/places/:id`
 - Machine:
   - Uses:
+    - `conversations/runtime-sdk.heldAtClaudeLimit`
     - `infra/endpoints.implementMachine`
     - `integrations/google-maps.getPlacesClient`
     - `integrations/google-maps/places-api.autocomplete`

@@ -43,8 +43,8 @@ export const refreshSourceJob = defineJob({
   // A URL source pays for a page fetch plus a one-shot model call; seconds is
   // normal and must not file slow-op noise.
   slowThresholdMs: 180_000,
-  run: async ({ input }) => {
-    await runSource(input.sourceId);
+  run: async ({ input, ctx }) => {
+    await runSource(input.sourceId, ctx);
   },
 });
 

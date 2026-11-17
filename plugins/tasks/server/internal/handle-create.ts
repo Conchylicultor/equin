@@ -64,7 +64,7 @@ export const handleCreate = implement(createTaskEndpoint, async ({ body }) => {
   });
 
   if (!explicitTitle && description && fallbackTitle) {
-    scheduleTaskTitleUpdate(row.id, description, fallbackTitle);
+    await scheduleTaskTitleUpdate(row.id, description, fallbackTitle);
   }
 
   if (Array.isArray(body.attachmentIds) && body.attachmentIds.length > 0) {

@@ -116,7 +116,7 @@ export const handleCreateChain = implement(
             filedFrom: asPluginId(body.filedFrom),
           },
         });
-        scheduleTaskTitleUpdate(newTask.id, card.text, fallbackTitle);
+        await scheduleTaskTitleUpdate(newTask.id, card.text, fallbackTitle);
         taskIds.push(newTask.id);
 
         if (categoryId) {

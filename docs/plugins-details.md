@@ -4686,25 +4686,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Register: `defineJob('events.reanchor')`
         - **`refresh`** — Events refresh engine: the main-only cadence tick and the per-source refresh job, the probe/extract runSource pipeline (fingerprint cache → upsert diff → soft disappearance), the run ledger, terminal/transient error classification onto the source row, and the retention sweeps for events + runs.
           - Server:
-            - Uses:
-              - `apps/events/events-core._eventSourceRunEvents`
-              - `apps/events/events-core._eventSourceRuns`
-              - `apps/events/events-core._eventSources`
-              - `apps/events/events-core.EventSourceType`
-              - `apps/events/events-core.eventsTable`
-              - `apps/events/events-core.getEventSourceType`
-              - `apps/events/events-core.markEventsDisappeared`
-              - `apps/events/events-core.ProbeContext`
-              - `apps/events/events-core.registerRefreshRunner`
-              - `apps/events/events-core.requireSource`
-              - `apps/events/events-core.TouchedEvent`
-              - `apps/events/events-core.upsertEvents`
-              - `database.db`
-              - `database.writeAtomically`
-              - `infra/jobs.defineJob`
-              - `infra/jobs.NonRetryableError`
-              - `infra/retention.defineRetention`
-              - `infra/retention.markCascadeBounded`
+            - Uses: 21 symbols — full list in [`plugins/apps/plugins/events/plugins/refresh/REFERENCE.md`](../plugins/apps/plugins/events/plugins/refresh/REFERENCE.md)
+              - `apps/events/events-core` ×12
+              - `infra/jobs` ×4
+              - `database` ×2
+              - `infra/retention` ×2
               - `primitives/log-channels.defineLogSink`
             - Exports (values):
               - `requestRefresh`
@@ -5106,19 +5092,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `network/live.LiveFieldOptionsRead`
                   - `network/live.useLive`
                   - `network/live/live-state.mapResource`
-            - **`url-extract`** — Web-page source type in the Events `+` menu: contributes the `url` type with its generic URL + extraction-hint form. Web-page event source type: probe reads the URL through one transport-blind pipeline (SSRF-guarded plain fetch, or a real browser when the source's Fetch mode says so or the site answers a bot challenge), refuses a page it cannot read whole or that has no readable text at all, and fingerprints its normalized visible text; extract turns that text into structured events with a one-shot Sonnet call, validated against ExtractedEventSchema.
+            - **`url-extract`** — Web-page source type in the Events `+` menu: contributes the `url` type with its generic URL + extraction-hint form.
               - Web:
                 - Contributes: `EventSources.Type` "Web page"
                 - Uses: `apps/events/events-core.EventSources`
-              - Server:
-                - Uses:
-                  - `apps/events/events-core.defineEventSourceType`
-                  - `infra/claude-cli.runClaudePrint`
-                  - `infra/jobs.NonRetryableError`
-                  - `infra/safe-fetch.assertResolvesPublic`
-                  - `infra/safe-fetch.parsePublicUrl`
-                  - `infra/safe-fetch.safeFetch`
-                  - `infra/safe-fetch/browser-fetch.browserFetch`
+              - Machine:
+                - Uses: `conversations/runtime-sdk.heldAtClaudeLimit`
                 - Register: `defineEventSourceType('url')`
               - Core:
                 - Uses:
@@ -5132,8 +5111,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `URL_FETCH_MODES`
                   - `URL_SOURCE_TYPE_ID`
                   - `urlSourceConfigFields`
-              - Exemptions:
-                - Exempts itself from: `boundaries/no-platform-api` — `server/internal/page-text.ts` (debt)
     - **`file-explorer`** — File explorer app.
       - Plugins:
         - **`attachment-preview`** — An attachment previewed as a side pane through the Files preview (every file-viewer tab, Open with default app, size and age): the attachment/:id pane, homed in Files and opened beside any surface, and the file chip's opener, so clicking an attached file in a prompt opens it there.
@@ -7577,6 +7554,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/entities.defaultNow`
               - `infra/entities.defineEntity`
               - `infra/jobs.defineJob`
+              - `infra/jobs.JobCtx`
               - `infra/warmup.defineWarmup`
               - `network/live.serveCollection`
               - `tag-tree/engine.defineTagTreeTable`
@@ -7611,6 +7589,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DELETE /api/places/places/:id`
           - Machine:
             - Uses:
+              - `conversations/runtime-sdk.heldAtClaudeLimit`
               - `infra/endpoints.implementMachine`
               - `integrations/google-maps.getPlacesClient`
               - `integrations/google-maps/places-api.autocomplete`
@@ -23237,7 +23216,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
         - Imported by:
+          - `apps/events/sources/url-extract`
           - `apps/pages/auto-icon`
+          - `apps/places/places-core`
           - `conversations/conversation-view/jsonl-viewer/api-error`
           - `infra/paths/root-migration`
           - `tasks/supervisor-roles`
@@ -32656,7 +32637,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/events/sources/coworkmeet` (1 debt)
               - `apps/events/sources/dmda` (1 debt)
               - `apps/events/sources/salsanueva` (2 debt)
-              - `apps/events/sources/url-extract` (1 debt)
               - `apps/sonata/transcription` (5 debt)
               - `auth/apple-signing` (1 debt)
               - `backup` (2 debt)
@@ -39774,17 +39754,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SPAN_MEASURES`
           - `waitSplit`
       - Cross-plugin:
-        - Imported by: 79 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
+        - Imported by: 78 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
           - `infra` ×23
           - `debug` ×21
           - `apps` ×7
           - `conversations` ×6
           - `database` ×3
           - `packages` ×3
-          - `tasks` ×3
           - `build` ×2
           - `primitives` ×2
           - `reports` ×2
+          - `tasks` ×2
           - `auth`
           - `companions/browser-extension`
           - `config_v2`

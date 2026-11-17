@@ -142,7 +142,7 @@ export async function ensureTodoTask(
     },
     mandate: interactiveMandate,
   });
-  scheduleTaskTitleUpdate(task.id, seed, fallbackTitle);
+  await scheduleTaskTitleUpdate(task.id, seed, fallbackTitle);
   // The SAME category `/prompt`-launched tasks get, from the plugin that owns
   // the one `TaskCategory({ id: "pages" })` registration. One category, one
   // registration — a second one here would be a duplicate id, not a new lane.

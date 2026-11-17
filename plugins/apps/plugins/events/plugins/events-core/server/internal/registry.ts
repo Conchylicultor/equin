@@ -1,5 +1,6 @@
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import type { FieldsRecord } from "@plugins/fields/core";
+import type { JobCtx } from "@plugins/infra/plugins/jobs/server";
 import type { ExtractionResult } from "../../core";
 
 /** What a source type is handed on every phase: its own row's validated config. */
@@ -17,6 +18,13 @@ export interface ProbeContext<TConfig> {
    * which is what lets in-flight work name a row that is written at the end.
    */
   runId: string;
+  /**
+   * The job run this phase is part of (every refresh runs in one). A phase that
+   * must wait — a model call at the Claude account's usage limit — sleeps the
+   * run with `job.sleep` (it frees the worker and resumes the run, from the top,
+   * once the time is up) rather than failing it.
+   */
+  job: Pick<JobCtx, "sleep">;
 }
 
 /** What `probe` reports back to the engine. */

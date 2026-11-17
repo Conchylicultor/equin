@@ -68,6 +68,25 @@ export async function markSourceRunning(sourceId: string): Promise<void> {
 }
 
 /**
+ * Undo {@link markSourceRunning} for a run that suspended (`ctx.sleep`) rather
+ * than ended: the row shows what it showed before the run, not a `running` that
+ * would last until the run resumes — hours, for a usage limit. Its next run is
+ * pushed a cadence out as an ended run's is, or every cadence tick would
+ * re-enqueue it, re-probe the page and suspend again.
+ */
+export async function releaseSuspendedSource(
+  source: EventSource,
+): Promise<void> {
+  await db
+    .update(_eventSources)
+    .set({
+      status: source.status === "running" ? "idle" : source.status,
+      nextRunAt: computeNextRunAt(source.refresh, new Date()),
+    })
+    .where(eq(_eventSources.id, eventSourceIdKind.key(source.id)));
+}
+
+/**
  * Write the ledger row and the source row together. `finishedAt` is the single
  * clock read both derive from, so `durationMs` and `lastRunAt` can never
  * disagree.
