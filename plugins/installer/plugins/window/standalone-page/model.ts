@@ -1,8 +1,12 @@
 import {
   parseInstallEventLine,
+  type FixTarget,
   type InstallEvent,
   type InstallGroupId,
   type InstallStepId,
+  type NoticeState,
+  type PauseKind,
+  type PauseManualId,
   type ProgressUnit,
   type WaitHolder,
   type WaitOn,
@@ -64,12 +68,39 @@ export interface Wait {
   readonly since: number;
 }
 
+/** A pause the step engine diagnosed (the `pause` event). */
+export interface Pause {
+  readonly step: InstallStepId | null;
+  readonly kind: PauseKind;
+  readonly title: string;
+  readonly text: string;
+  readonly evidence: readonly string[];
+  /** The step stopped and the script waits for a decision; else it goes on (a stall). */
+  readonly blocking: boolean;
+  readonly optional: boolean;
+  readonly manual: {
+    readonly id: PauseManualId;
+    readonly label: string;
+  } | null;
+}
+
+/** An optional part the install went on without, and where it stands now. */
+export interface Notice {
+  readonly id: string;
+  readonly state: NoticeState;
+  readonly title: string;
+  readonly text: string;
+  readonly without: string;
+}
+
 export type Phase =
   /** No plan yet. */
   | "waiting"
   | "running"
-  /** A step failed and the script waits for a decision (retry / quit). */
+  /** A step failed with no diagnosis: the script waits for retry / quit. */
   | "failed"
+  /** A diagnosed pause is open (`view.pause`): blocking, or a stall the install waits through. */
+  | "paused"
   /** The script ended without finishing. */
   | "stopped"
   | "done"
@@ -90,6 +121,15 @@ export interface InstallView {
   doneUrl: string | null;
   exitCode: number | null;
   protocolError: string | null;
+  /** The pause open now, if any. */
+  pause: Pause | null;
+  /** Fix with Claude was started for the open pause: where, and whether the prompt is on the clipboard. */
+  fixing: { readonly target: FixTarget; readonly clipboard: boolean } | null;
+  /** The latest notice of a part left out, if any. */
+  notice: Notice | null;
+  /** From the plan, for a report: the release installed (null: main / a checkout), and `<os>-<arch>`. */
+  release: string | null;
+  platform: string;
 }
 
 export function emptyView(): InstallView {
@@ -104,6 +144,11 @@ export function emptyView(): InstallView {
     doneUrl: null,
     exitCode: null,
     protocolError: null,
+    pause: null,
+    fixing: null,
+    notice: null,
+    release: null,
+    platform: "",
   };
 }
 
@@ -175,6 +220,8 @@ export function applyEvent(view: InstallView, event: InstallEvent): void {
         );
         return;
       }
+      view.release = event.release;
+      view.platform = event.platform;
       view.phase = "running";
       return;
     case "step": {
@@ -191,6 +238,8 @@ export function applyEvent(view: InstallView, event: InstallEvent): void {
         leaf.tookMs = null;
         view.progress.delete(leaf.id);
         view.phase = "running";
+        view.pause = null;
+        view.fixing = null;
         // A step run again (Try again) runs its sub-steps again.
         if (parent === null)
           for (const sub of (leaf as ViewStep).substeps) {
@@ -222,6 +271,39 @@ export function applyEvent(view: InstallView, event: InstallEvent): void {
       if (event.state === "failed") view.phase = "failed";
       return;
     }
+    case "pause":
+      view.pause = {
+        step: event.step,
+        kind: event.kind,
+        title: event.title,
+        text: event.text,
+        evidence: event.evidence,
+        blocking: event.blocking,
+        optional: event.optional,
+        manual: event.manual,
+      };
+      view.fixing = null;
+      view.phase = "paused";
+      return;
+    case "resolved":
+      view.pause = null;
+      view.fixing = null;
+      // Retry: its step's start follows; quit: the exit does. A stall's
+      // step simply goes on.
+      if (view.phase === "paused") view.phase = "running";
+      return;
+    case "fixing":
+      view.fixing = { target: event.target, clipboard: event.clipboard };
+      return;
+    case "notice":
+      view.notice = {
+        id: event.id,
+        state: event.state,
+        title: event.title,
+        text: event.text,
+        without: event.without,
+      };
+      return;
     case "progress":
       view.progress.set(event.id, {
         done: event.done,
@@ -256,6 +338,8 @@ export function applyEvent(view: InstallView, event: InstallEvent): void {
       return;
     case "exit":
       view.exitCode = event.code;
+      view.pause = null;
+      view.fixing = null;
       if (view.phase !== "done") view.phase = "stopped";
       return;
   }
@@ -376,8 +460,10 @@ export function remainingSeconds(
   for (const leaf of timedLeaves(view)) {
     if (leaf.state === "done" || leaf.state === "skipped") continue;
     if (leaf.est === null) return null;
+    // The running step — or the one paused on — counts what is left of it:
+    // the bar of a paused install stays where the install stopped.
     left +=
-      leaf.state === "active"
+      leaf.state === "active" || leaf.state === "failed"
         ? Math.max(0, leaf.est * p - workedSeconds(view, leaf, now))
         : leaf.est * p;
   }
@@ -442,7 +528,7 @@ function waitText(wait: Wait, now: number): string {
     case "lock":
       return "Waiting for another run of this step to finish…";
     case "apple-installer":
-      return "Waiting for Apple's installer to finish…";
+      return "Installing Apple's developer tools: click Install in Apple's window…";
     case "password":
       return "Waiting for your password…";
   }
@@ -481,7 +567,7 @@ export function captionParts(view: InstallView, now: number): string[] {
   const group = currentGroup(view);
   if (group === null) return [];
   const parts = [`Step ${group.index + 1} of ${group.count}`];
-  if (view.phase === "failed") parts.push("Paused");
+  if (view.phase === "failed" || view.phase === "paused") parts.push("Paused");
   else {
     const left = remainingSeconds(view, now);
     if (left !== null) parts.push(remainingText(left));

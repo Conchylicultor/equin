@@ -60,6 +60,7 @@ remote pages, which can import no app module.
 - Exemptions:
   - Exempted by:
     - `apps/browser/engine` (0 debt)
+    - `installer/window` (0 debt)
     - `primitives/dom/auto-scroll` (0 debt)
     - `primitives/dom/scroll-reveal` (0 debt)
     - `primitives/embed/frame/agent` (0 debt)

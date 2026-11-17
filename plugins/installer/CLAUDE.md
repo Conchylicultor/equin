@@ -12,8 +12,11 @@ entry point) emits ONE structured event stream, and renderers draw it. Design:
   the build with its `substeps`), `step` (`start | done | skipped | failed`,
   `ms`), `progress` (`done` / `total` in `crates | plugins | packages | %`),
   `wait` (`start | end`, what on, who holds it), `log` (a step's output, or
-  the script's own with `step: null`), `done` (`url`) and `exit` (`code`,
-  always the last line).
+  the script's own with `step: null`), `pause` (a diagnosis: kind, title,
+  text, evidence, blocking, optional, manual), `resolved` (how a pause
+  ended), `fixing` (Fix with Claude opened: where), `notice` (a part left
+  out, and where it stands), `done` (`url`) and `exit` (`code`, always the
+  last line).
 - **Step ids are a closed set** (`InstallStepId`: tools, mise, clone,
   toolchain, start, build, and the build's sub-steps `build.database`,
   `build.deps`, `build.codegen`, `build.interface`, `build.deploy`).
@@ -134,12 +137,87 @@ hand-off (`release.json` `handoff: null`: its tag). Run from a checkout
 server via `EQUIN_RELEASES_URL`). Release side:
 [`release-assets`](plugins/release-assets/CLAUDE.md).
 
-## Decisions (fd 4)
+## Failures: diagnosis, pause, decisions
 
-With `--control-fd`, a failed step waits for one line: `retry` runs it again
-(every step checks before it acts), `quit` returns its status to the caller,
-which explains the failure and exits 1. EOF (the window closed) is `quit`; an
-unknown line is ignored with a stderr note.
+A failed step is never a bare error. `run_step` diagnoses it, pauses it (a
+`pause` event) and waits for a decision; every message follows the five
+installer message rules (`infra/launcher/installer-notice`): no internal
+names, what equin was doing and why, why it was blocked, what to do now and
+what skipping costs — raw lines only in `evidence` and the log.
+
+- **Diagnosis rules** (`diagnose`, install.sh): each is a symptom AND a fact
+  checked on the machine; one alone is never enough.
+  - **sandbox** — killed outright (exit 137 / SIGKILL in its last lines) AND
+    this shell is protected: on macOS a sandboxed process may not run a setuid
+    program, so `/bin/ps` is refused (`sandbox-exec` execs what it protects:
+    there is NO sandbox-exec parent to find); an App Sandbox container; a
+    bubblewrap / firejail parent on Linux. The same fact is checked **before
+    any step** (`sandbox_check`, with Claude Code's refused-write probe): a
+    refused write can't be skipped, a protected shell may allow the install
+    (Skip tries anyway). Manual: Continue in Terminal.
+  - **security** — a path under equin's folders "No such file or directory" /
+    "Operation not permitted" in the last lines AND an endpoint-security
+    product running (`security_agent`: Jamf Protect, CrowdStrike Falcon,
+    SentinelOne, Microsoft Defender, Sophos, WithSecure — by process name; a
+    Mac's MDM enrollment). Names the product. Manual: Copy request for IT.
+  - **stall** — never stops the step (`blocking: false`, ended by `resolved
+    progress`). The **watchdog** (`ev_lines`): no output for STALL_S
+    (10 min, or 3 × the step's median) and events.jsonl as old, no wait open.
+    The **build slot** (build's `install-waits.ts`, `judgeHolder`): waited past
+    2 min AND the holder (the op log's oldest working op) showed no progress
+    for 10 min — a deadline re-armed only when the holder moved.
+  - **unknown** — anything else: "<doing> didn't finish", the step's last 20
+    lines; it never guesses. Tools on macOS in the window: "Apple's developer
+    tools weren't installed" (Try again opens Apple's dialog again).
+- **The run dir after a pause**: `diagnosis.json`, `fix-prompt.md` (the
+  problem, system, the log's last 150 lines, the rules: explain first, ask
+  before each command, never touch security software, run the resume command
+  once fixed), `fix.command` (Claude Code started with it — installed first
+  with Anthropic's installer when missing), `report-url`, and `install.log`
+  (every log line, whole). `~/.equin/logs/install/resume` (a dry run: its run
+  dir's) writes `retry` to the waiting install, else runs the install again.
+- **Decisions arrive on ONE FIFO** (`control.fifo`, held read-write by the
+  script so a writer by path never blocks): bash waits on one fd, and the
+  decisions have several sources — the window's fd 4 (a forwarder process,
+  which also carries out Fix with Claude / Show Claude itself, so a stall's
+  Fix works while the step still runs), a key in the interactive terminal
+  (`start_keys`), and Claude's `resume`. `retry` runs the step again, `skip`
+  only when the pause says `optional`, `quit` (or `eof`: the window closed)
+  stops with exit 1 — the pause already said everything, so no second message.
+- **Per view**: the window draws the pause (`installer/window`); the
+  interactive terminal draws the block's last frame, the box and a menu
+  (`[t]` Try again, `[f]` Fix with Claude — Claude Code in this terminal,
+  `[m]` the manual action, `[s]` Skip, `[r]` Report, `[l]` the log, `[q]`
+  Quit); plain mode prints the box and the next commands and exits 1.
+- **Fix with Claude**: the Claude app — the prompt on the clipboard (`pbcopy`,
+  `wl-copy`, `xclip`, `xsel`), then the app (claude.ai in the browser on
+  Linux): it has no supported prefilled-prompt link. Claude Code in Terminal —
+  `open fix.command` (no Automation permission), a terminal emulator on
+  Linux. `--fix` / `--report` act on the last stopped install (`--fix --yes`
+  without a terminal: Claude Code acting without asking).
+- **Report issue**: the window builds it with `installIssueUrl` (core:
+  `buildIssueUrl` + `redactPaths`), the terminal with `report_url` (bash, the
+  same fields); evidence is written with `$HOME` as `~` and the account and
+  machine names removed. Nothing is sent until the person submits it.
+- **A part left out** (`notice`): `./equin start` reports the login services
+  macOS refused (App Management). The install goes on: a banner while it
+  runs (Open App Management, Skip), "Installed without … Add it now" on the
+  done screen — the script waits after `done` (window only): Add it now opens
+  the setting, then runs `./equin start --only <ids>`; closing the window is
+  `quit`, exit 0.
+- **First-time macOS setup in the window**: Apple's own dialog
+  (`xcode-select --install`, waited out every 5 s — an OS dialog has no
+  change signal), never `sudo softwareupdate`. **Linux in the window**: `sudo
+  -A` with an askpass wrapper running the window's binary (`--askpass`), which
+  asks the window over its socket for a password sheet.
+- **Reproducing each on purpose** (dry run): `EQUIN_INSTALL_DRY_RUN_FAIL=
+  <step>[:sigkill|:vanish|:quiet]` — sigkill under `sandbox-exec -p '(version
+  1)(allow default)'` is the sandbox rule, vanish (a program deleted right
+  after it was made) with a process named `JamfProtect` running is the
+  security rule (`cc` a sleeping C program named so), quiet with
+  `EQUIN_INSTALL_STALL_S=1` the watchdog; `EQUIN_INSTALL_DRY_RUN_OPTIONAL=
+  <step>` offers Skip, `EQUIN_INSTALL_DRY_RUN_NOTICE=1` the part left out.
+  The stream test runs all but security (it needs the fake product).
 
 ## `./equin` as an install step (`cli/`, `bin/`)
 
@@ -186,6 +264,45 @@ install is measured every value is null, and no renderer shows a time.
 ## Plugin reference
 
 - Description: The equin installer: install.sh's structured event stream (protocol v1 — plan, step, log, done and exit events, one zod schema in core) and the renderers that draw it. Its window sub-plugin is the native installer window.
+- Core:
+  - Uses:
+    - `framework/product-name.SOURCE_REPO_URL`
+    - `integrations/github-issues.buildIssueUrl`
+  - Exports (types):
+    - `InstallEventBody`
+    - `InstallReport`
+  - Exports (values):
+    - `BUILD_SUB_STEP_IDS`
+    - `BuildSubStepId`
+    - `ESTIMATES_BEGIN`
+    - `ESTIMATES_END`
+    - `estimatesFrom`
+    - `findEstimatesBlock`
+    - `FixTarget`
+    - `INSTALL_ESTIMATES`
+    - `INSTALL_PROTOCOL_VERSION`
+    - `INSTALL_STEP_IDS`
+    - `InstallEstimates`
+    - `InstallEvent`
+    - `InstallGroupId`
+    - `installIssueUrl`
+    - `InstallMode`
+    - `InstallStepId`
+    - `InstallTiming`
+    - `InstallTopStepId`
+    - `NoticeState`
+    - `parseInstallEventLine`
+    - `PauseKind`
+    - `PauseManualId`
+    - `PauseResolution`
+    - `PlanGroup`
+    - `PlanStep`
+    - `PlanSubStep`
+    - `ProgressUnit`
+    - `redactPaths`
+    - `renderEstimatesBlock`
+    - `WaitHolder`
+    - `WaitOn`
 - Cross-plugin:
   - Imported by:
     - `framework/cli/bootstrap`
@@ -194,40 +311,18 @@ install is measured every value is null, and no renderer shows a time.
     - `framework/cli/start`
     - `installer/release-assets`
     - `installer/window`
-- Core:
-  - Exports (types): `InstallEventBody`
-  - Exports (values):
-    - `BUILD_SUB_STEP_IDS`
-    - `BuildSubStepId`
-    - `ESTIMATES_BEGIN`
-    - `ESTIMATES_END`
-    - `estimatesFrom`
-    - `findEstimatesBlock`
-    - `INSTALL_ESTIMATES`
-    - `INSTALL_PROTOCOL_VERSION`
-    - `INSTALL_STEP_IDS`
-    - `InstallEstimates`
-    - `InstallEvent`
-    - `InstallGroupId`
-    - `InstallMode`
-    - `InstallStepId`
-    - `InstallTiming`
-    - `InstallTopStepId`
-    - `parseInstallEventLine`
-    - `PlanGroup`
-    - `PlanStep`
-    - `PlanSubStep`
-    - `ProgressUnit`
-    - `renderEstimatesBlock`
-    - `WaitHolder`
-    - `WaitOn`
+- Exemptions:
+  - Exempts itself from: `paths:no-hardcoded-paths` — `core/internal/report.test.ts` (sanctioned)
 - Cli:
   - Exports (values):
     - `emitInstallEvent`
     - `enterBuildSubStep`
     - `finishBuildSubSteps`
     - `installEventsOn`
+    - `reportInstallNotice`
     - `reportInstallProgress`
+    - `reportInstallResolved`
+    - `reportInstallStall`
     - `reportInstallWait`
 - Sub-plugins:
   - **`release-assets`** — What a release tag publishes for the curl install: the GitHub Actions workflow (.github/workflows/installer-release.yml) that builds the installer window per release tag, the asset names and…

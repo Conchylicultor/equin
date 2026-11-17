@@ -12,6 +12,7 @@ import type {
   InstallEventBody,
   InstallStepId,
   InstallTopStepId,
+  NoticeState,
   ProgressUnit,
   WaitHolder,
   WaitOn,
@@ -209,4 +210,50 @@ export function reportInstallWait(
     on,
     ...(holder === undefined ? {} : { holder }),
   });
+}
+
+// ── Pauses and notices ───────────────────────────────────────────────────────
+
+/**
+ * Something is wrong but the step goes on (a stall): the install's views show
+ * it, with Fix with Claude and Report issue, until `reportInstallResolved`.
+ * One event under PIPE_BUF, so keep the words short.
+ */
+export function reportInstallStall(pause: {
+  title: string;
+  text: string;
+  evidence: string[];
+}): void {
+  const step = reportingStep();
+  if (step === null) return;
+  emitInstallEvent({
+    type: "pause",
+    step,
+    kind: "stall",
+    ...pause,
+    blocking: false,
+    optional: false,
+    manual: null,
+  });
+}
+
+/** The stall reported last is over: the step is moving again. */
+export function reportInstallResolved(): void {
+  if (reportingStep() === null) return;
+  emitInstallEvent({ type: "resolved", how: "progress" });
+}
+
+/**
+ * An optional part the install went on without (or what became of it): the
+ * window's banner while the install runs, and its done screen's Add it now.
+ */
+export function reportInstallNotice(notice: {
+  id: string;
+  state: NoticeState;
+  title: string;
+  text: string;
+  without: string;
+}): void {
+  if (reportingStep() === null) return;
+  emitInstallEvent({ type: "notice", ...notice });
 }

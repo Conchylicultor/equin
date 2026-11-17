@@ -1,6 +1,7 @@
 export {
   BUILD_SUB_STEP_IDS,
   BuildSubStepId,
+  FixTarget,
   INSTALL_PROTOCOL_VERSION,
   INSTALL_STEP_IDS,
   InstallEvent,
@@ -8,6 +9,10 @@ export {
   InstallMode,
   InstallStepId,
   InstallTopStepId,
+  NoticeState,
+  PauseKind,
+  PauseManualId,
+  PauseResolution,
   PlanGroup,
   PlanStep,
   PlanSubStep,
@@ -29,3 +34,5 @@ export {
   findEstimatesBlock,
   renderEstimatesBlock,
 } from "./internal/estimates-block";
+export { installIssueUrl, redactPaths } from "./internal/report";
+export type { InstallReport } from "./internal/report";

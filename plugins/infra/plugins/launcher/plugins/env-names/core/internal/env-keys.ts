@@ -67,6 +67,16 @@ export const RUNTIME_WITHHELD_ENV = {
     "seconds between the lines of `install.sh --dry-run` (installer), set by `./equin installer window` for that one run",
   INSTALL_DRY_RUN_FAIL:
     "the step `install.sh --dry-run` fails once (installer), set by `./equin installer window --fail` and the stream test for that one run",
+  INSTALL_DRY_RUN_OPTIONAL:
+    "the step `install.sh --dry-run` treats as optional, so a pause on it offers Skip (installer), set by the stream test for that one run",
+  INSTALL_DRY_RUN_NOTICE:
+    "makes `install.sh --dry-run`'s start step report a part left out (the login services macOS refused), as `./equin start` does (installer), set by the stream test and `./equin installer window` for that one run",
+  INSTALL_STALL_S:
+    "seconds without output or progress before install.sh's watchdog says a step is stuck (installer; default 10 minutes, or 3 × the step's median), set by the stream test to reproduce a stall",
+  INSTALLER_ASKPASS:
+    "the installer window's password socket (installer/window askpass.rs), set by the window for its install so sudo's askpass reaches it",
+  INSTALLER_BIN:
+    "the installer window's own binary (installer/window), set by the window for its install: install.sh's askpass wrapper runs it as `--askpass`",
   RELEASES_URL:
     "where install.sh's stage 0 and the installer window's self-bootstrap download releases from (installer/release-assets; default the canonical repo's GitHub Releases), set by the stage-0 test to a local server for that one run",
   INSTALL_EVENTS:

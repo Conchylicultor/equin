@@ -8,7 +8,10 @@ import { cargoBinary } from "@plugins/infra/plugins/deps/plugins/rust/deps";
 import { cliExecContext } from "@plugins/infra/plugins/jobs/plugins/supervised-job/cli";
 import { installerWindow } from "../../deps";
 
-const run: CliAction<[], { pace?: string; fail?: string }> = async (opts) => {
+const run: CliAction<
+  [],
+  { pace?: string; fail?: string; notice?: boolean }
+> = async (opts) => {
   const ready = await ensureDep(installerWindow, cliExecContext(), {
     log: (line) => console.error(line),
   });
@@ -28,6 +31,7 @@ const run: CliAction<[], { pace?: string; fail?: string }> = async (opts) => {
         ...envEntries({
           INSTALL_DRY_RUN_PACE: opts.pace ?? "0.4",
           INSTALL_DRY_RUN_FAIL: opts.fail,
+          INSTALL_DRY_RUN_NOTICE: opts.notice === true ? "1" : undefined,
         }),
       },
     },

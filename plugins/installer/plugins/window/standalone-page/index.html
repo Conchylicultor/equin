@@ -37,7 +37,7 @@
     filter: blur(40px); pointer-events: none; transition: opacity 1.2s ease;
   }
   .iw.running::before { animation: breathe 7s ease-in-out infinite; }
-  .iw.failed::before { opacity: .38; }
+  .iw.failed::before, .iw.fixing::before { opacity: .38; }
   .iw.done::before { opacity: 1.15; }
   @keyframes breathe { 0%,100% { opacity: .75 } 50% { opacity: 1 } }
 
@@ -45,12 +45,13 @@
   .iw-mark { font-weight: 700; font-size: 76px; letter-spacing: -.05em; line-height: 1; }
   .iw-mark span { color: var(--accent-2); }
   .iw-body { margin-top: 48px; width: 100%; display: flex; flex-direction: column; align-items: center; min-height: 150px; }
-  .iw.running .iw-mark, .iw.failed .iw-mark { font-size: 54px; }
-  .iw.running .iw-body, .iw.failed .iw-body { margin-top: 26px; min-height: 0; }
+  .iw.running .iw-mark, .iw.failed .iw-mark, .iw.fixing .iw-mark { font-size: 54px; }
+  .iw.running .iw-body, .iw.failed .iw-body, .iw.fixing .iw-body { margin-top: 26px; min-height: 0; }
 
   .iw-status { font-size: 15px; color: var(--fg2); height: 22px; }
   .iw-progress { width: 100%; display: flex; flex-direction: column; align-items: center; }
-  .iw.failed .iw-progress { margin-top: 24px; }
+  /* The bar under a pause's actions (the mockup's wrapper). */
+  .iw-barwrap { margin-top: 24px; width: 100%; display: flex; flex-direction: column; align-items: center; }
   .iw-bar { width: min(320px, 100%); height: 4px; border-radius: 99px; background: rgba(255,255,255,.08); margin-top: 18px; overflow: hidden; }
   .iw-bar > i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--accent), var(--cyan)); box-shadow: 0 0 14px var(--glow1); transition: width .3s linear; }
   .iw-bar.paused > i { background: #f5a524; box-shadow: none; }
@@ -74,14 +75,46 @@
   .linkbtn:hover { color: var(--fg2); }
 
   .iw-log { margin-top: 24px; width: min(640px, 100%); height: 250px; overflow-y: auto; text-align: left; background: rgba(14,18,25,.75); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font: 12px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--fg3); white-space: pre-wrap; word-break: break-word; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.15) transparent; display: flex; flex-direction: column-reverse; -webkit-user-select: text; user-select: text; cursor: text; }
-  .iw.failed .iw-log { height: 200px; margin-top: 20px; }
+  .iw.failed .iw-log, .iw.fixing .iw-log { height: 200px; margin-top: 20px; }
   .iw-log[hidden] { display: none; }
   /* The log follows its end (column-reverse); a short one still starts at the top, as the mockup's does. */
-  #log-lines { margin-bottom: auto; }
-  /* The last row is the mockup's `.hi`: what is happening now. */
-  #log-lines > div:last-child { color: var(--fg2); }
-  .iw-log .err { color: #fca5a5; } .iw-log .sec { color: var(--fg2); margin-top: 8px; } .iw-log .sec:first-child { margin-top: 0; }
+  #log-inner { margin-bottom: auto; }
+  /* The last row is the mockup's `.hi`: what is happening now — unless a pause's evidence ends the log. */
+  #log:not(.has-extra) #log-lines > div:last-child { color: var(--fg2); }
+  .iw-log .hi { color: var(--fg2); } .iw-log .err { color: #fca5a5; } .iw-log .sec { color: var(--fg2); margin-top: 8px; } .iw-log .sec:first-child { margin-top: 0; }
   .iw-evidence { margin: 16px 0 0; max-width: 560px; max-height: 160px; overflow: auto; text-align: left; font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; color: #fca5a5; white-space: pre-wrap; -webkit-user-select: text; user-select: text; }
+  /* Fix with Claude's split button and its menu; tooltips on the actions. */
+  .split { position: relative; display: inline-flex; }
+  .split .seg-l { border-radius: 999px 0 0 999px; padding-right: 14px; }
+  .split .seg-r { border-radius: 0 999px 999px 0; padding: 10px 12px 10px 10px; border-left: 1px solid rgba(0,0,0,.12); }
+  .split.ghost .seg-r { border-left-color: rgba(255,255,255,.16); }
+  .split.ghost .seg-l { border-right: 0; }
+  .pill.icon { padding: 10px 12px; }
+  .iw-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 6; min-width: 100%; background: #141923; border: 1px solid var(--line); border-radius: 12px; padding: 4px; box-shadow: 0 20px 40px -12px #000; text-align: left; animation: fin .15s both; }
+  .iw-menu button { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 10px; border-radius: 8px; font-size: 13.5px; color: var(--fg); cursor: pointer; white-space: nowrap; }
+  .iw-menu button:hover { background: rgba(255,255,255,.06); }
+  .iw-menu .ck { width: 14px; color: var(--accent-2); display: grid; place-items: center; }
+  .tip { position: relative; }
+  .tip:hover::after { content: attr(data-tip); position: absolute; top: calc(100% + 10px); left: 50%; transform: translateX(-50%); width: 270px; white-space: normal; text-align: left; font-size: 12.5px; font-weight: 400; line-height: 1.5; color: var(--fg2); background: #141923; border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; box-shadow: 0 20px 40px -12px #000; pointer-events: none; z-index: 5; animation: fin .15s .35s both; }
+
+  /* After Fix with Claude: the hand-off card. */
+  .iw-handoff { margin-top: 22px; width: min(480px, 100%); display: flex; align-items: center; gap: 12px; text-align: left; background: rgba(14,18,25,.85); border: 1px solid var(--line); border-radius: 14px; padding: 12px 12px 12px 14px; }
+  .iw-handoff .cl { width: 28px; height: 28px; border-radius: 8px; background: #d97757; display: grid; place-items: center; flex: none; }
+  .iw-handoff .tx { flex: 1; min-width: 0; } .iw-handoff .tx b { display: block; font-size: 14px; font-weight: 600; } .iw-handoff .tx span { font-size: 12.5px; color: var(--fg2); }
+  .iw-handoff .row { display: flex; gap: 6px; }
+
+  /* The diagnosis (the mockup's ErrorBox), amber for a stall or a part left out. */
+  .iw-err { margin-top: 20px; width: min(640px, 100%); text-align: left; border-radius: 12px; padding: 14px 16px; background: rgba(239,68,68,.05); border: 1px solid rgba(248,113,113,.28); -webkit-user-select: text; user-select: text; cursor: text; }
+  .iw-err.amber { background: rgba(245,165,36,.05); border-color: rgba(245,165,36,.3); }
+  .iw-err .h { display: flex; align-items: center; gap: 8px; color: #fca5a5; font-size: 14px; }
+  .iw-err.amber .h { color: #f5c04f; }
+  .iw-err .h b { color: var(--fg); font-weight: 600; }
+  .iw-err p { margin: 6px 0 0; font-size: 13.5px; line-height: 1.55; color: var(--fg2); }
+  .iw-err .ev { margin-top: 10px; font: 12px/1.65 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--fg3); white-space: pre-wrap; word-break: break-word; background: rgba(0,0,0,.25); border-radius: 8px; padding: 9px 11px; max-height: 150px; overflow: auto; }
+
+  /* Done: what the install went on without, and Add it now. */
+  .iw-later { margin-top: 18px; font-size: 13px; color: var(--fg3); } .iw-later .linkbtn { color: var(--fg2); margin-left: 6px; text-decoration: underline; text-underline-offset: 3px; }
+
   .iw-foot { position: absolute; left: 0; right: 0; bottom: 18px; display: flex; justify-content: center; }
   .iw-foot[hidden] { display: none; }
 
@@ -90,6 +123,8 @@
   .iw-sheet h3 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -.01em; }
   .iw-sheet p { margin: 8px 0 0; font-size: 14px; color: var(--fg2); line-height: 1.55; }
   .iw-sheet .row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+  .iw-input { margin-top: 16px; width: 100%; background: rgba(255,255,255,.03); border: 1px solid var(--line); border-radius: 10px; color: var(--fg); font: inherit; font-size: 14px; padding: 10px 12px; outline: none; -webkit-user-select: text; user-select: text; }
+  .iw-input:focus { border-color: color-mix(in oklab, var(--accent) 70%, transparent); box-shadow: 0 0 0 3px var(--glow1); }
 </style>
 </head>
 <body>
@@ -98,7 +133,7 @@
   <div class="iw-col">
     <div class="iw-mark">equin<span>.</span></div>
     <div class="iw-body" id="body"></div>
-    <div class="iw-log" id="log"><div id="log-lines"></div></div>
+    <div class="iw-log" id="log"><div id="log-inner"><div id="log-lines"></div><div id="log-extra"></div></div></div>
   </div>
   <div class="iw-foot" id="foot"><button class="linkbtn" id="toggle-log">Hide log</button></div>
 </div>

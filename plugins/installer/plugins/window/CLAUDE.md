@@ -6,7 +6,7 @@ releases as the menu-bar helper) that runs `install.sh` as its child and draws
 its event stream ([`../../CLAUDE.md`](../../CLAUDE.md)).
 
 ```bash
-./equin installer window [--pace 0.4] [--fail clone]   # build it, open it over a DRY RUN
+./equin installer window [--pace 0.4] [--fail clone[:sigkill|:vanish|:quiet]] [--notice]   # over a DRY RUN
 ./equin deps install installer-window --json          # just build it; prints where
 <dir>/equin-installer --script <install.sh> [-- <install.sh args…>]
 <dir>/equin-installer [--ref <tag>] [-- <install.sh args…>]  # self-bootstrap
@@ -83,9 +83,29 @@ binary through the curl stage 0 (`install.sh`), or directly.
   line (parsed against the schema — a line outside it is a loud
   protocol-error screen, never skipped); every time-dependent read takes
   `now`, so a reload asks for the backlog (`ready`) and lands on the same
-  screen. Commands back are a closed set (`ready retry quit stop open-equin
-  close drag`), refused by Rust otherwise. Open equin opens only the `done`
-  event's URL.
+  screen. Commands back are a closed set (`ready retry quit skip fix-app
+  fix-cli show-claude add-services stop open-equin open-url password
+  password-cancel close drag`), refused by Rust otherwise; the decisions are
+  written to fd 4. Open equin opens only the `done` event's URL; `open-url`
+  only a `https://github.com/` link (Report issue) or App Management.
+- **Paused / fixing / done** (the mockup's, pixel for pixel — `moment.ts`
+  writes each mockup moment; 0 differing pixels for the failed states and
+  done, the fixing card differs only in its sentence, which says the prompt
+  is on the clipboard): "Installation paused" (a stall: "Still waiting"),
+  Fix with Claude (split button; where it opens is the page's choice, else
+  the last `fixing` event's — the page stores nothing), Report issue
+  (`installIssueUrl`), the bar paused, and the diagnosis box until Show log.
+  An `unknown` pause leads with Try again. Fixing: "Claude is working on it",
+  Show Claude, Try again (not for a stall: its step still runs). A `notice`
+  is a banner while the install runs (Open App Management, Skip) and "Add it
+  now" on the done screen.
+- **Closing after the done** writes `quit` (the script may wait on Add it
+  now) and exits 0.
+- **sudo's password** (`rust/src/askpass.rs`, Linux): the window listens on a
+  socket in a 0700 temp dir (`EQUIN_INSTALLER_ASKPASS`, with its own path in
+  `EQUIN_INSTALLER_BIN`); `equin-installer --askpass <prompt>` connects,
+  sends the prompt, prints the answer for sudo. The page's password sheet
+  answers (`password` / `password-cancel`); nothing is written anywhere.
 - **Running state** (the mockup's, pixel for pixel): the status line is what
   runs now — the running sub-step, else its step — as `<doing> · <done> of
   <total>` when the tool gave a count (`progress`), else `<doing>…`; an open
@@ -106,24 +126,28 @@ binary through the curl stage 0 (`install.sh`), or directly.
 - **Font: the system's** (SF Pro on macOS). No web font to embed or fetch; the
   mockup's Inter falls back to the system font wherever Inter isn't installed.
 - Ported from the approved mockup's window view (`proto-1794832268-wlybzk`):
-  running, paused (Try again / Quit), stopped, done (Open equin), and the stop
-  sheet; only the running state is held to the mockup pixel for pixel so far.
+  running, paused, fixing, stopped, done (Open equin), and the stop sheet.
 
 ## Replaying a stream (`e2e/`)
 
 ```bash
-./equin run plugins/installer/plugins/window/e2e/running-moment.ts --out "$EQUIN_SCRATCH/running.jsonl"
+./equin run plugins/installer/plugins/window/e2e/moment.ts --out "$EQUIN_SCRATCH/m.jsonl" \
+  [--state running|failed|fixing|done] [--failure sandbox|security|stall] [--claude app|cli]
 ./equin run plugins/installer/plugins/window/e2e/replay.ts --url http://equin.localhost:9000 \
-  --events "$EQUIN_SCRATCH/running.jsonl" --now <iso it printed> --out "$EQUIN_SCRATCH/replay" \
-  [--mockup "<prototype url>?view=window&state=running"] [--threshold 0.1] [--mockup-own-font]
+  --events "$EQUIN_SCRATCH/m.jsonl" --now <iso it printed> --out "$EQUIN_SCRATCH/replay" \
+  [--mockup "<prototype url>?view=window&state=failed&failure=security"] [--threshold 0.1] [--mockup-own-font]
+./equin run plugins/installer/plugins/window/e2e/password-sheet.ts --url http://equin.localhost:9000 --out "$EQUIN_SCRATCH/password"
 ```
+
+The prototype URL is its content host's:
+`http://proto-1794832268-wlybzk.content.localhost:9000/equin/api/prototypes/proto-1794832268-wlybzk/index.html`.
 
 `replay.ts` bundles the page (`deps`' `bundlePage`), draws any recorded
 stream at 760 × 640 with its clock pinned to `--now`, and screenshots it; with
 `--mockup` it also captures the mockup's window (its fake traffic lights,
 corners and shadow hidden; its font set to the page's) and diffs the two.
-`running-moment.ts` writes the mockup's running moment as events (the
-mockup's own strings, medians and log lines).
+`moment.ts` writes one of the mockup's moments as events (the mockup's own
+strings, medians, failures and log lines).
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
 
@@ -139,5 +163,9 @@ mockup's own strings, medians and log lines).
   - Exports (values):
     - `bundlePage`
     - `installerWindow`
+- Exemptions:
+  - Exempts itself from:
+    - `scroll-safety/no-scrolling-focus` — `standalone-page/main.ts` (sanctioned)
+    - `paths:no-hardcoded-paths` — `e2e/moment.ts` (sanctioned)
 
 <!-- AUTOGENERATED:END -->

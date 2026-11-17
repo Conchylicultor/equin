@@ -12,7 +12,7 @@ export default defineCliCommand({
   name: "installer",
   description: "The equin installer: its window, and its time estimates",
   subcommands: [
-    defineCliCommand<[], { pace?: string; fail?: string }>({
+    defineCliCommand<[], { pace?: string; fail?: string; notice?: boolean }>({
       name: "window",
       description:
         "Build the installer window and open it over a dry run of this checkout's install.sh (nothing is installed)",
@@ -23,9 +23,14 @@ export default defineCliCommand({
           defaultValue: "0.4",
         },
         {
-          flags: "--fail <step>",
+          flags: "--fail <step[:how]>",
           description:
-            "Fail that step's first attempt (tools, mise, clone, toolchain, start, build), to try Try again / Quit",
+            "Fail that step's first attempt (mise, clone, toolchain, start, build), to try the pause: plain (unknown), :sigkill (the sandbox rule, under sandbox-exec), :vanish (the security rule, with a security product running) or :quiet (a stall, past the watchdog's deadline)",
+        },
+        {
+          flags: "--notice",
+          description:
+            "Have the start step report a part left out (the login services), to try the banner and Add it now",
         },
       ],
       run: () => import("./internal/window"),

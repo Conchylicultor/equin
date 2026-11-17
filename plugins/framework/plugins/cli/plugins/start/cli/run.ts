@@ -1,4 +1,8 @@
-import { installEventsOn, reportInstallProgress } from "@plugins/installer/cli";
+import {
+  installEventsOn,
+  reportInstallNotice,
+  reportInstallProgress,
+} from "@plugins/installer/cli";
 import { writeFileSync } from "node:fs";
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { defineFileSink } from "@plugins/infra/plugins/file-sink/core";
@@ -445,6 +449,15 @@ async function startDeclaredLoginServices(
         ),
       ),
     );
+    // Run by an install: its window shows it while the build goes on, and
+    // offers to add them back once it is done (Add it now).
+    reportInstallNotice({
+      id: ids,
+      state: "skipped",
+      title: "macOS blocked equin from adding its apps",
+      text: "With them, equin's apps open in their own windows and get a menu-bar icon. To allow it, turn on Terminal in Privacy & Security, App Management. It's optional: skip it and use equin in your browser.",
+      without: "the menu-bar icon and app shortcuts",
+    });
   }
 }
 

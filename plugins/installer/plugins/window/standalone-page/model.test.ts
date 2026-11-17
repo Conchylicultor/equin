@@ -346,3 +346,96 @@ describe("installer page model", () => {
     expect(view.phase).toBe("protocol-error");
   });
 });
+
+const ev = (s: number, body: object): string =>
+  JSON.stringify({ v: 1, t: at(s), ...body });
+const pauseEv = (s: number, blocking: boolean, kind = "unknown"): string =>
+  ev(s, {
+    type: "pause",
+    step: "clone",
+    kind,
+    title: "Downloading equin didn't finish",
+    text: "equin stopped while downloading equin.",
+    evidence: ["fatal: unable to access", "step exit 128"],
+    blocking,
+    optional: false,
+    manual: null,
+  });
+
+describe("installer page model: pauses, Fix with Claude, notices", () => {
+  test("a blocking pause pauses the view; retry resolves it and the step runs again", () => {
+    const view = fold([
+      plan(),
+      step(1, "clone", "start"),
+      step(5, "clone", "failed", 4000),
+      pauseEv(5, true),
+    ]);
+    expect(view.phase).toBe("paused");
+    expect(view.pause).toMatchObject({
+      kind: "unknown",
+      blocking: true,
+      evidence: ["fatal: unable to access", "step exit 128"],
+    });
+    expect(captionParts(view, now(6))).toEqual(["Step 2 of 3", "Paused"]);
+    applyLine(view, ev(7, { type: "fixing", target: "cli", clipboard: false }));
+    expect(view.fixing).toEqual({ target: "cli", clipboard: false });
+    applyLine(view, ev(9, { type: "resolved", how: "retry" }));
+    applyLine(view, step(9, "clone", "start"));
+    expect(view.phase).toBe("running");
+    expect(view.pause).toBeNull();
+    expect(view.fixing).toBeNull();
+  });
+
+  test("a stall does not stop the step: it ends when the step moves again", () => {
+    const view = fold([
+      plan(),
+      step(1, "clone", "start"),
+      pauseEv(700, false, "stall"),
+    ]);
+    expect(view.phase).toBe("paused");
+    expect(view.pause?.blocking).toBe(false);
+    applyLine(view, ev(720, { type: "resolved", how: "progress" }));
+    expect(view.phase).toBe("running");
+    expect(currentStep(view)?.step.id).toBe("clone");
+  });
+
+  test("quit ends in the stopped screen", () => {
+    const view = fold([
+      plan(),
+      step(1, "clone", "start"),
+      step(2, "clone", "failed"),
+      pauseEv(2, true),
+      ev(3, { type: "resolved", how: "quit" }),
+      ev(3, { type: "exit", code: 1 }),
+    ]);
+    expect(view.phase).toBe("stopped");
+    expect(view.pause).toBeNull();
+  });
+
+  test("a notice keeps its latest state, through the done", () => {
+    const notice = (state: string): string =>
+      ev(1, {
+        type: "notice",
+        id: "dev.equin.menu-bar",
+        state,
+        title: "macOS blocked equin from adding its apps",
+        text: "Turn it on.",
+        without: "the menu-bar icon and app shortcuts",
+      });
+    const view = fold([
+      plan(),
+      notice("skipped"),
+      ev(2, { type: "done", url: "http://equin.localhost:9000", ms: 2000 }),
+    ]);
+    expect(view.phase).toBe("done");
+    expect(view.notice?.state).toBe("skipped");
+    applyLine(view, notice("added"));
+    expect(view.notice?.state).toBe("added");
+  });
+
+  test("the plan's release and platform are kept for a report", () => {
+    const view = fold([plan()]);
+    expect(view.release).toBeNull();
+    expect(view.platform).toBe("darwin-arm64");
+  });
+});

@@ -271,7 +271,7 @@ choose_view() {
       VIEW_WHY="this is an automated run (CI)"
     elif ! [ -t 1 ]; then
       VIEW_WHY="its output is not going to a terminal"
-    elif [ -n "${CLAUDECODE:-}${APP_SANDBOX_CONTAINER_ID:-}" ]; then
+    elif [ -n "${CLAUDECODE:-}${APP_SANDBOX_CONTAINER_ID:-}$(sandboxed)" ]; then
       VIEW_WHY="this shell runs inside another app's protected mode"
     fi
   fi
@@ -304,6 +304,8 @@ main() {
   RELEASE=""
   CHECKOUT=main
   STAGE0_ONLY=0
+  AFTER=""
+  YES=0
   # What the release's script is handed on: the install's own options.
   INSTALL_ARGS=()
 
@@ -319,14 +321,20 @@ main() {
       --checkout) CHECKOUT="$2"; shift 2 ;;
       --stage0-only) STAGE0_ONLY=1; shift ;;
       --dry-run) DRY_RUN=1; shift ;;
+      --fix) AFTER=fix; shift ;;
+      --report) AFTER=report; shift ;;
+      --yes) YES=1; shift ;;
       --events-fd) EV_FD="$2"; shift 2 ;;
       --control-fd) CTL_FD="$2"; shift 2 ;;
-      -h|--help) echo "usage: install.sh [--dir <path>] [--repo <url>] [--no-shell-rc] [--ref <tag|main>] [--terminal | --window] [--dry-run]"; exit 0 ;;
+      -h|--help) echo "usage: install.sh [--dir <path>] [--repo <url>] [--no-shell-rc] [--ref <tag|main>] [--terminal | --window] [--dry-run]"
+        echo "       install.sh --fix [--yes]   start Claude Code on the problem the last install stopped on"
+        echo "       install.sh --report        print (and open) the GitHub issue link for it"; exit 0 ;;
       *) echo "install.sh: unknown option '$1' (see --help)" >&2; exit 2 ;;
     esac
   done
 
   OS="$(uname -s)"
+  [ -z "$AFTER" ] || after_pause "$AFTER"
   open_streams
 
   if [ "$DRY_RUN" = "1" ]; then
@@ -354,38 +362,6 @@ main() {
   if [ "$(id -u)" = "0" ]; then
     fail "equin can't be installed from the administrator (root) account: its database refuses to run as root, so equin could never start. Run the installer from your normal account. On a server with only root, create one first: adduser --disabled-password --gecos '' equin && su - equin" \
       "id -u = 0; initdb refuses to run as root"
-  fi
-
-  # ── Not from inside Claude Code's protected shell ──────────────────────────
-  if [ -n "${CLAUDECODE:-}" ]; then
-    refused="$(refused_write_dir)"
-    if [ -n "$refused" ]; then
-      if [ -n "$SELF_DIR" ]; then
-        again="cd '$INSTALL_DIR' && ./install.sh"
-      else
-        again="curl -fsSL https://raw.githubusercontent.com/equinai/equin/main/install.sh | bash -s -- $ARGS"
-      fi
-      cat >&2 <<EOF
-
-  equin can't be installed from this window.
-
-  equin installs its app, its database and the tools it builds with in your
-  home folder, so it keeps running after this window closes.
-  This window is Claude Code, which runs commands in a protected mode that
-  can't save files outside the current project, so the install would stop
-  part-way through.
-
-  What to do: open the Terminal app and run the same command there:
-
-      $again
-
-  Nothing has been changed on your machine yet. This step can't be skipped:
-  equin can't run without those files.
-
-  Details: CLAUDECODE is set; creating and renaming a file in $refused was refused.
-EOF
-      exit 1
-    fi
   fi
 
   # ── Stage 0: piped from main → the release's own script takes over ─────────
@@ -429,6 +405,13 @@ EOF
   plan_data "$( [ -n "$SELF_DIR" ] && echo "Use your copy of equin" || echo "Download equin" )"
   start_hub
   ev_plan
+
+  # ── Not from inside another app's protected mode ──────────────────────────
+  # Checked before any step, so it never fails six minutes in: a coding tool's
+  # protected shell (Claude Code's: its writes outside the project refused;
+  # sandbox-exec, which other tools run commands under) stops the install
+  # part-way, compilers first.
+  sandbox_check
 
   # ── 1. Xcode command-line tools / git ──────────────────────────────────────
   if [ "$OS" = "Darwin" ]; then
@@ -546,6 +529,7 @@ EOF
 
   # ── 7. Done ────────────────────────────────────────────────────────────────
   ev_done
+  done_wait
   # Without a window the terminal view draws the same in its done state.
   if [ "$MODE" = "window" ]; then
     say "equin is running: $APP_URL"
@@ -562,6 +546,12 @@ EOF
 # install needs (PATH, the current directory) is set by main(), never here.
 
 install_xcode_tools() {
+  # In the window: Apple's own dialog, which asks for whatever it needs
+  # itself — the window never asks for an administrator password.
+  if [ "$MODE" = "window" ]; then
+    xcode_dialog
+    return 0
+  fi
   say "Installing Apple's command-line tools, which equin needs to download its code and build parts of itself"
   # The headless route (the one Homebrew's installer uses): the marker file
   # makes softwareupdate list the tools, so this works over ssh too, where
@@ -576,21 +566,44 @@ install_xcode_tools() {
   else
     sudo rm -f "$marker"
     echo "macOS's software update did not offer the tools, so Apple's installer opens instead."
-    xcode-select --install || true
-    echo "Click Install in the window that opened; the install continues once it finishes."
-    step_ev "\"type\":\"wait\",\"step\":\"tools\",\"state\":\"start\",\"on\":\"apple-installer\""
-    until xcode-select -p >/dev/null 2>&1; do sleep 5; done
-    step_ev "\"type\":\"wait\",\"step\":\"tools\",\"state\":\"end\",\"on\":\"apple-installer\""
+    xcode_dialog
   fi
+}
+
+# xcode_dialog: Apple's "Install Command Line Developer Tools" dialog, waited
+# out: until the tools are there, or the dialog is gone without them (the step
+# then fails, and Try again opens it again). Checked every 5 s — an OS dialog
+# has no change signal to wait on (a documented exception to "no polling").
+xcode_dialog() {
+  local seen=0 n=0
+  echo "Installing Apple's developer tools: click Install in Apple's window. It can take 5 to 20 minutes."
+  xcode-select --install 2>&1 || true
+  step_ev "\"type\":\"wait\",\"step\":\"tools\",\"state\":\"start\",\"on\":\"apple-installer\""
+  until xcode-select -p >/dev/null 2>&1; do
+    sleep 5
+    n=$((n + 1))
+    if pgrep -f "Install Command Line Developer Tools" >/dev/null 2>&1; then seen=1
+    elif [ "$seen" = 1 ] || [ "$n" -ge 12 ]; then break; fi # gone, or never came in a minute
+  done
+  step_ev "\"type\":\"wait\",\"step\":\"tools\",\"state\":\"end\",\"on\":\"apple-installer\""
+  xcode-select -p >/dev/null 2>&1 || { echo "Apple's installer closed without installing the developer tools."; exit 1; }
 }
 
 # sudo_once: ask for the password now, as a wait the terminal view stops
 # redrawing for (the prompt is on the terminal, below its status block); the
-# step's later sudo calls reuse it.
+# step's later sudo calls reuse it. In the window on Linux the window asks
+# (sudo's askpass: the window's own binary, `--askpass`, which asks the window
+# over its socket to show a password sheet) — the password goes to sudo only.
 sudo_once() {
   if sudo -n true 2>/dev/null; then return 0; fi
   step_ev "\"type\":\"wait\",\"step\":\"$EQUIN_INSTALL_STEP\",\"state\":\"start\",\"on\":\"password\""
-  sudo -v
+  if [ "$MODE" = "window" ] && [ -n "${EQUIN_INSTALLER_BIN:-}" ] && [ -n "${EQUIN_INSTALLER_ASKPASS:-}" ]; then
+    printf '#!/bin/sh\nexec %s --askpass "$@"\n' "$(q "$EQUIN_INSTALLER_BIN")" >"$RUN_DIR/askpass"
+    chmod +x "$RUN_DIR/askpass"
+    SUDO_ASKPASS="$RUN_DIR/askpass" sudo -A -p "equin needs your password to install git and a C compiler, and to keep running while nobody is logged in. It is used for this only and never stored." -v
+  else
+    sudo -v
+  fi
   step_ev "\"type\":\"wait\",\"step\":\"$EQUIN_INSTALL_STEP\",\"state\":\"end\",\"on\":\"password\""
 }
 
@@ -665,8 +678,14 @@ STEP_RC=0
 MODE=""
 HUB_PID=""
 HUB_FD=""
+CF_FD=""
+LOG_FD=""
+FWD_PID=""
+KEYS_PID=""
 RUN_DIR=""
 FIFO=""
+CFIFO=""
+PAUSE_QUIT=0
 DONE_SENT=0
 FAIL_MSG=""
 FAIL_DETAILS=""
@@ -744,8 +763,13 @@ on_exit() {
     eval "exec $HUB_FD>&-"
     EV_OUT=""
     wait "$HUB_PID"
-    rm -f "$FIFO"
-    [ "$DONE_SENT" = "1" ] && write_timing
+    rm -f "$FIFO" "$CFIFO" "$RUN_DIR/pid"
+    stop_keys
+    [ -z "$FWD_PID" ] || kill "$FWD_PID" 2>/dev/null
+    if [ "$DONE_SENT" = "1" ]; then
+      write_timing
+      rm -f "$RUN_DIR/diagnosis.json"
+    fi
   else
     ev exit "\"code\":$rc"
   fi
@@ -755,29 +779,42 @@ on_exit() {
   exit "$rc"
 }
 
-# The first fd from 9 down the window did not hand over.
-free_fd() {
-  local fd
+# free_fds: HUB_FD (this script's write end of the event FIFO), CF_FD (the
+# control FIFO, held read-write) and LOG_FD (install.log): the first fds from 9
+# down the window did not hand over.
+free_fds() {
+  local fd picked=""
   for fd in 9 8 7 6 5; do
     if [ "$fd" != "$EV_FD" ] && [ "$fd" != "$CTL_FD" ]; then
-      HUB_FD=$fd
-      return 0
+      picked="$picked $fd"
     fi
   done
+  set -- $picked
+  HUB_FD=$1 CF_FD=$2 LOG_FD=$3
 }
 
 # start_hub: this run's dir and FIFO, the hub reading it, and this script's
 # write end (HUB_FD). Needs plan_data first (the terminal view draws its rows).
+#
+# Beside the events, the run dir holds what a pause needs: install.log (every
+# log line, whole — events.jsonl cuts the long ones), control.fifo (where every
+# decision arrives: the window's, a key in the terminal, Claude's `resume`) and
+# pid. Decisions come from several writers, and a bash `read` waits on one fd,
+# so each source is a forwarder into the one FIFO; this script holds it open
+# read-write for its whole life, so a writer opening it by path never blocks.
 start_hub() {
   local root run_id
   root="$(data_root)/logs/install"
   run_id="$(date -u +%Y%m%dT%H%M%SZ)-$$"
   RUN_DIR="$root/$run_id"
   FIFO="$RUN_DIR/events.fifo"
+  CFIFO="$RUN_DIR/control.fifo"
   mkdir -p "$RUN_DIR"
   mkfifo -m 600 "$FIFO"
+  mkfifo -m 600 "$CFIFO"
+  printf '%s\n' "$$" >"$RUN_DIR/pid"
   ln -sfn "$run_id" "$root/latest"
-  free_fd
+  free_fds
   # The hub ignores the signals that stop the install: it drains what the
   # writers wrote and ends at EOF, after the exit event.
   if [ "$MODE" = "window" ]; then
@@ -790,10 +827,36 @@ start_hub() {
     ( trap '' INT TERM HUP; tee -a "$RUN_DIR/events.jsonl" <"$FIFO" | render ) &
   fi
   HUB_PID=$!
+  eval "exec $CF_FD<>\"\$CFIFO\""
+  eval "exec $LOG_FD>>\"\$RUN_DIR/install.log\""
+  # The window's decisions (fd 4) into the control FIFO; the window closing
+  # (EOF) is `eof`, read as quit. Fix with Claude (and Show Claude) it carries
+  # out itself, from the files the pause left in the run dir: a stall pause
+  # offers it while the step still runs and this script cannot read a
+  # decision. It holds no end of the event stream (its events are written by
+  # path), so a killed install still ends the window's stream.
+  if [ -n "$CTL_FD" ]; then
+    (
+      trap '' INT TERM HUP
+      eval "exec $EV_FD>&-"
+      EV_OUT="" EV_BY_PATH=1
+      while IFS= read -r line <&"$CTL_FD"; do
+        case "$line" in
+          fix-app) fix_app ;;
+          fix-cli) fix_cli ;;
+          show-claude) show_claude ;;
+          *) printf '%s\n' "$line" >&"$CF_FD" ;;
+        esac
+      done
+      printf 'eof\n' >&"$CF_FD"
+    ) &
+    FWD_PID=$!
+  fi
   # Blocks until the hub has the read end open.
   eval "exec $HUB_FD>\"\$FIFO\""
   EV_OUT=$HUB_FD
-  CLOSE_FDS="$CLOSE_FDS $HUB_FD>&-"
+  CLOSE_FDS="$CLOSE_FDS $HUB_FD>&- $CF_FD<&- $LOG_FD>&-"
+  write_resume
 }
 
 # The event's timestamp, re-read from `date` at most once a second (a fork per
@@ -826,6 +889,11 @@ byte_len() {
 
 # ev <type> [<fields, without braces>]: write one event.
 ev() {
+  if [ -n "${EV_BY_PATH:-}" ]; then # a helper process: the FIFO by path, one write
+    ev_now
+    printf '{"v":1,"t":"%s","type":"%s"%s}\n' "$EV_T" "$1" "${2:+,$2}" >"$FIFO"
+    return 0
+  fi
   [ -n "$EV_OUT" ] || return 0
   ev_now
   printf '{"v":1,"t":"%s","type":"%s"%s}\n' "$EV_T" "$1" "${2:+,$2}" >&"$EV_OUT"
@@ -855,6 +923,7 @@ step_ev() {
 # that long is not one a person reads in the view.
 log_line() {
   local text=$2 n=380
+  [ -z "$LOG_FD" ] || printf '%s\n' "$text" >&"$LOG_FD"
   if [ "${#text}" -le 60 ]; then
     json_str "$text" # 60 characters escape to at most 362 bytes
   else
@@ -870,12 +939,56 @@ log_line() {
   ev log "\"step\":$step,\"stream\":\"out\",\"line\":$JSON_STR"
 }
 
-# ev_lines <step id>: each line of stdin, as a log event of that step.
+# ev_lines <step id>: each line of stdin, as a log event of that step — with
+# the no-progress watchdog. A step that prints nothing and reports nothing
+# (no event reached events.jsonl) for STALL_S seconds (10 min, or 3 × its
+# median when that is longer; EQUIN_INSTALL_STALL_S overrides it to reproduce
+# one) gets a stall pause that does not stop it: the person sees it is stuck
+# and can Fix with Claude, and the pause ends (`resolved progress`) with the
+# next line. A deadline on work this script cannot otherwise observe, re-armed
+# on every line — not polling. An open wait (a password, Apple's installer,
+# the machine's build slot, which has its own rule) is not a stall.
 ev_lines() {
-  local line
-  while IFS= read -r line || [ -n "$line" ]; do
-    log_line "$1" "$line"
+  local line tick=$'\001' quiet stalled=0 age est
+  est="$(est_s "$1")"
+  quiet=600
+  [ "$est" = "null" ] || [ $((est * 3)) -le "$quiet" ] || quiet=$((est * 3))
+  quiet=${EQUIN_INSTALL_STALL_S:-$quiet}
+  while :; do
+    line=$tick
+    if IFS= read -r -t "$quiet" line; then
+      [ "$stalled" = 0 ] || { ev resolved '"how":"progress"'; stalled=0; }
+      log_line "$1" "$line"
+    elif [ "$line" != "$tick" ]; then
+      [ -z "$line" ] || log_line "$1" "$line"
+      break
+    else
+      # Quiet here, but the step's own `./equin` may have reported (its
+      # events skip this reader): stalled only when events.jsonl is as old.
+      age=$(($(date +%s) - $(stat -f %m "$RUN_DIR/events.jsonl" 2>/dev/null || stat -c %Y "$RUN_DIR/events.jsonl")))
+      if [ "$stalled" = 0 ] && [ "$age" -ge "$quiet" ] && ! tail -n 1 "$RUN_DIR/events.jsonl" | grep -q '"type":"wait","step":"[^"]*","state":"start"'; then
+        stall_pause "$1" "$quiet"
+        stalled=1
+      fi
+    fi
   done
+  [ "$stalled" = 0 ] || ev resolved '"how":"progress"'
+  return 0
+}
+
+# stall_pause <step id> <seconds quiet>: the watchdog's pause — what is known
+# and nothing more. Written while the step runs, so one event under PIPE_BUF.
+stall_pause() {
+  local mins=$(($2 / 60)) doing quiet title text
+  r_idx_plan "$1"; doing=$PD_DOING
+  if [ "$mins" -ge 2 ]; then quiet="$mins minutes"; elif [ "$mins" = 1 ]; then quiet="a minute"; else quiet="$2 seconds"; fi
+  P_STEP=$1 P_KIND=stall P_TITLE="No progress for $quiet" P_OPT=0 P_MANUAL=""
+  P_TEXT="equin is ${doing:-working} and hasn't shown any progress for $quiet. It may still finish, so the install keeps waiting. If it stays stuck, Fix with Claude can look at what it is doing."
+  P_EV=("no output and no progress for ${2}s")
+  write_pause_files
+  json_str "$P_TITLE"; title=$JSON_STR
+  json_str "$P_TEXT"; text=$JSON_STR
+  ev pause "\"step\":\"$1\",\"kind\":\"stall\",\"title\":$title,\"text\":$text,\"evidence\":[\"no output and no progress for ${2}s\"],\"blocking\":false,\"optional\":false,\"manual\":null"
 }
 
 # ev_frames <step id>: ev_lines for a tool that redraws a progress line with
@@ -1042,25 +1155,12 @@ write_timing() {
     "$dry" "$PLATFORM" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$steps" >"$RUN_DIR/timing.json"
 }
 
-# read_decision: DECISION = the window's answer to a failed step, read from the
-# control fd — retry or quit. The window closing (EOF) is quit.
-read_decision() {
-  local line
-  DECISION=quit
-  while IFS= read -r -u "$CTL_FD" line; do
-    case "$line" in
-      retry|quit) DECISION=$line; return 0 ;;
-      *) echo "install.sh: ignored an unknown decision from the window: $line" >&2 ;;
-    esac
-  done
-  return 0
-}
-
 # run_step <id> <command…>: one top-level step. Emits its start, its output as
-# log lines, then done or failed with how long it ran. In the window, a failed
-# step waits for a decision: retry runs it again (every step checks before it
-# acts), quit gives up. The command's own `./equin` reports (sub-steps,
-# progress, waits) reach the hub through EQUIN_INSTALL_EVENTS.
+# log lines, then done or failed with how long it ran. A failed step is
+# diagnosed and paused (`pause`): the person decides — retry runs it again
+# (every step checks before it acts), quit gives up, skip leaves out an
+# optional step (STEP_OPTIONAL=1). The command's own `./equin` reports
+# (sub-steps, progress, waits) reach the hub through EQUIN_INSTALL_EVENTS.
 #
 # Its status is STEP_RC, and run_step itself always returns 0: NEVER call it
 # as a condition (`run_step … || fail`, `if run_step …`). There bash ignores
@@ -1077,6 +1177,7 @@ run_step() {
   while :; do
     STEP_ATTEMPT=$((STEP_ATTEMPT + 1))
     ev_step "$id" start
+    STEP_LOG0=$(wc -l <"$RUN_DIR/install.log")
     t0=$SECONDS
     set +e
     (
@@ -1089,12 +1190,602 @@ run_step() {
     set -e
     if [ "$STEP_RC" = "0" ]; then
       ev_step "$id" done "$(((SECONDS - t0) * 1000))"
+      STEP_OPTIONAL=0
       return 0
     fi
     ev_step "$id" failed "$(((SECONDS - t0) * 1000))"
-    [ -n "$CTL_FD" ] || return 0
-    read_decision
-    [ "$DECISION" = "retry" ] || return 0
+    diagnose "$id" "$STEP_RC"
+    pause "$id" "$D_KIND" "$D_TITLE" "$D_TEXT" "${STEP_OPTIONAL:-0}" "$D_MANUAL" ${D_EV[@]+"${D_EV[@]}"}
+    case "$DECISION" in
+      retry) continue ;;
+      skip) ev_step "$id" skipped; STEP_RC=0 ;;
+      *) PAUSE_QUIT=1 ;;
+    esac
+    STEP_OPTIONAL=0
+    return 0
+  done
+}
+
+# ── Diagnosis ────────────────────────────────────────────────────────────────
+# What stopped a step, in the person's words. Each rule needs a symptom (in the
+# step's exit or its last lines) AND a fact that confirms it, checked on the
+# machine — one symptom alone gives confident wrong messages. No rule
+# confirmed: `unknown`, which says only what is known. A stall is diagnosed
+# while the step runs (ev_lines' watchdog; the build's wait reporting for the
+# machine's build slot), never here.
+
+# step_tail <n>: the last n lines this step wrote (install.log from its start).
+step_tail() {
+  tail -n "+$((STEP_LOG0 + 1))" "$RUN_DIR/install.log" | tail -n "$1" | sed $'s/\033\\[[0-9;?]*[a-zA-Z]//g'
+}
+
+# sandboxed: how this script can tell it runs in another app's protected
+# mode, or nothing. macOS: a sandboxed process may not run a setuid program, so
+# `ps` (setuid root) is refused — sandbox-exec execs the command it protects,
+# leaving no parent to find, and this refusal is what the sandbox itself shows.
+# An App Sandbox names its container. Linux: a bubblewrap or firejail parent.
+sandboxed() {
+  local out pid=$$ comm n=0
+  if [ -n "${APP_SANDBOX_CONTAINER_ID:-}" ]; then
+    echo "APP_SANDBOX_CONTAINER_ID=$APP_SANDBOX_CONTAINER_ID"; return 0
+  fi
+  if [ "$OS" = "Darwin" ]; then
+    out="$(/bin/ps -o pid= -p $$ 2>&1 || true)"
+    case "$out" in
+      *"Operation not permitted"*) echo "/bin/ps: Operation not permitted (a protected shell refuses setuid programs)" ;;
+    esac
+    return 0
+  fi
+  while [ "$pid" -gt 1 ] && [ "$n" -lt 40 ] && [ -r "/proc/$pid/stat" ]; do
+    comm="$(cat "/proc/$pid/comm" 2>/dev/null || true)"
+    case "$comm" in bwrap|firejail) echo "a parent process is $comm"; return 0 ;; esac
+    pid="$(awk '{print $4}' "/proc/$pid/stat" 2>/dev/null || echo 1)"
+    n=$((n + 1))
+  done
+}
+
+# security_agent: the name of the endpoint-security product running on this
+# machine, as its maker calls it, or nothing. Read from the process list (no
+# root needed); on a Mac, an enrolled device-management profile counts too.
+security_agent() {
+  local procs
+  procs="$(ps -axo comm= 2>/dev/null | sed 's#.*/##')"
+  case "$procs" in
+    *JamfProtect*) echo "Jamf Protect" ;;
+    *falcond*|*falcon-sensor*|*com.crowdstrike*) echo "CrowdStrike Falcon" ;;
+    *SentinelAgent*|*sentineld*) echo "SentinelOne" ;;
+    *wdavdaemon*|*mdatp*) echo "Microsoft Defender" ;;
+    *SophosScan*|*SophosAntiVirus*|*sophos*) echo "Sophos" ;;
+    *fsaua*|*fshoster*|*WithSecure*|*F-Secure*) echo "WithSecure" ;;
+    *)
+      if [ "$OS" = "Darwin" ] && profiles status -type enrollment 2>/dev/null | grep -q 'MDM enrollment: Yes'; then
+        echo "the software your organisation manages this Mac with"
+      fi ;;
+  esac
+}
+
+# diagnose <step> <exit status>: D_KIND, D_TITLE, D_TEXT, D_MANUAL
+# ("<id>|<label>" or empty) and D_EV (the evidence lines, `~` for the home
+# folder) for a failed step.
+diagnose() {
+  local step=$1 rc=$2 tail who agent doing
+  tail="$(step_tail 20)"
+  r_idx_plan "$step"; doing=$PD_DOING
+  D_MANUAL=""
+  D_EV=()
+  # Apple's installer closed without installing the tools (window mode).
+  if [ "$step" = "tools" ] && [ "$OS" = "Darwin" ] && ! xcode-select -p >/dev/null 2>&1; then
+    D_KIND=unknown
+    D_TITLE="Apple's developer tools weren't installed"
+    D_TEXT="equin needs Apple's developer tools to download its code and build parts of itself, and Apple's installer closed before installing them. Try again opens it again: click Install and wait until it finishes (5 to 20 minutes). equin can't be installed without them."
+    evidence_lines "$tail" 8
+    D_EV+=("xcode-select -p: no developer tools found (step exit $rc)")
+    return 0
+  fi
+  # sandbox: killed outright (SIGKILL), under a sandboxing parent.
+  if [ "$rc" = 137 ] || [ "$rc" = 9 ] || printf '%s\n' "$tail" | grep -qE 'SIGKILL|signal: 9|Killed: 9'; then
+    who="$(sandboxed)"
+    if [ -n "$who" ]; then
+      sandbox_message
+      evidence_lines "$(printf '%s\n' "$tail" | grep -E 'SIGKILL|signal: 9|Killed: 9|error' | tail -n 3 || true)" 3
+      D_EV+=("step exit $rc (killed)" "$who")
+      return 0
+    fi
+  fi
+  # security: one of equin's own programs vanished or was refused right after
+  # it was made, with a security product running.
+  if printf '%s\n' "$tail" | grep -qE '(\.equin|/equin)[^ ]*.*(no such file or directory|No such file or directory|Operation not permitted|ENOENT|EPERM)'; then
+    agent="$(security_agent)"
+    if [ -n "$agent" ]; then
+      D_KIND=security
+      D_TITLE="Your company's security software removed part of equin"
+      D_TEXT="equin builds small programs on this computer to run itself, and $agent, which your organisation runs here, removed or blocked one right after it was made, so equin can't start. Your IT team can allow equin's folders: Copy request for IT gives you a message to send them. Until then equin can't be installed."
+      D_MANUAL="copy-it-request|Copy request for IT"
+      evidence_lines "$(printf '%s\n' "$tail" | grep -E 'no such file or directory|No such file or directory|Operation not permitted|ENOENT|EPERM' | tail -n 3 || true)" 3
+      D_EV+=("security software running: $agent")
+      return 0
+    fi
+  fi
+  D_KIND=unknown
+  r_idx_plan "$step"
+  D_TITLE="${PD_DOING_CAP:-$PD_LABEL} didn't finish"
+  D_TEXT="equin stopped while ${doing:-working}: the last lines it printed are below. Fix with Claude reads the whole log and explains what went wrong before changing anything. Trying again picks up where it stopped."
+  evidence_lines "$tail" 20
+  D_EV+=("step exit $rc")
+}
+
+# sandbox_check: before any step, the sandbox rule's fact on its own — a
+# sandboxing parent, or (inside Claude Code) a write outside the project
+# refused. A refused write is certain to stop the install, so it can't be
+# skipped; a sandboxing parent may allow what the install does, so Skip tries
+# anyway.
+sandbox_check() {
+  local refused who opt
+  while :; do
+    refused=""
+    who="$(sandboxed)"
+    [ -z "${CLAUDECODE:-}" ] || refused="$(refused_write_dir)"
+    [ -n "$who$refused" ] || return 0
+    sandbox_message
+    D_EV=()
+    if [ -n "$refused" ]; then
+      redact "creating and renaming a file in $refused was refused (CLAUDECODE is set)"; D_EV+=("$RD")
+    fi
+    [ -z "$who" ] || D_EV+=("$who")
+    opt=1
+    [ -z "$refused" ] || opt=0
+    pause "" sandbox "$D_TITLE" "$D_TEXT" "$opt" "$D_MANUAL" "${D_EV[@]}"
+    case "$DECISION" in
+      retry) continue ;;
+      skip) return 0 ;;
+      *) PAUSE_QUIT=1; exit 1 ;;
+    esac
+  done
+}
+
+# after_pause <fix|report>: --fix / --report, on the last install's pause.
+after_pause() {
+  local run url dir="$HOME"
+  run="$(data_root)/logs/install/latest"
+  if [ ! -f "$run/diagnosis.json" ]; then
+    echo "The last equin install didn't stop on a problem, so there is nothing to $1. To install equin, run the installer again." >&2
+    exit 1
+  fi
+  if [ "$1" = report ]; then
+    url="$(cat "$run/report-url")"
+    printf '\n  Report this issue: this link opens a new GitHub issue with what happened filled in\n  (your home folder shown as ~, your account and computer names removed).\n  Nothing is sent until you submit it there.\n\n  %s\n\n' "$url"
+    if [ "$OS" = "Darwin" ] || [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then open_thing "$url" 2>/dev/null || true; fi
+    exit 0
+  fi
+  if [ -t 0 ] && [ -t 1 ]; then exec bash "$run/fix.command"; fi
+  if [ "$YES" != "1" ]; then
+    echo "install.sh --fix: there is no terminal here, so Claude could not ask before each command it runs. Run it in a terminal, or add --yes to let Claude act without asking (it is told never to touch security software)." >&2
+    exit 2
+  fi
+  export PATH="$HOME/.local/bin:$PATH"
+  command -v claude >/dev/null 2>&1 || curl -fsSL https://claude.ai/install.sh | bash
+  [ ! -d "$INSTALL_DIR" ] || dir=$INSTALL_DIR
+  cd "$dir"
+  exec claude -p --permission-mode bypassPermissions "$(cat "$run/fix-prompt.md")"
+}
+
+# sandbox_message: the sandbox diagnosis's words (a failed step and the check
+# before any step say the same).
+sandbox_message() {
+  D_KIND=sandbox
+  D_TITLE="Blocked by the app you started it from"
+  D_TEXT="The install builds parts of equin on your computer, and the app you ran it from runs commands in a protected mode that doesn't allow that, so it would stop part-way. Run it from the Terminal app instead: Continue in Terminal does it for you, and the install picks up where it stopped."
+  D_MANUAL="continue-in-terminal|Continue in Terminal"
+}
+
+# evidence_lines <text> <max>: append up to max of its non-empty lines to
+# D_EV, the home folder as `~` and the account and machine names removed.
+evidence_lines() {
+  local line n=0
+  while IFS= read -r line; do
+    [ -n "${line//[[:space:]]/}" ] || continue
+    redact "$line"
+    D_EV+=("${RD:0:300}")
+    n=$((n + 1))
+    [ "$n" -lt "$2" ] || break
+  done <<EOF_LINES
+$1
+EOF_LINES
+}
+
+# redact <text>: RD = the text with $HOME as ~, the account and host names out.
+redact() {
+  local user host
+  RD=$1
+  RD=${RD//"$HOME"/\~}
+  user="$(id -un 2>/dev/null || true)"
+  host="$(hostname -s 2>/dev/null || true)"
+  [ -z "$user" ] || [ "${#user}" -lt 3 ] || RD=${RD//"$user"/<user>}
+  [ -z "$host" ] || [ "${#host}" -lt 3 ] || RD=${RD//"$host"/<host>}
+}
+
+# r_idx_plan <step id>: PD_LABEL / PD_DOING (lower-cased) from the plan.
+r_idx_plan() {
+  local i
+  PD_LABEL=$1; PD_DOING=""; PD_DOING_CAP=""
+  for ((i = 0; i < ${P_N:-0}; i++)); do
+    if [ "${P_ID[i]}" = "$1" ]; then
+      PD_LABEL=${P_LABEL[i]}
+      PD_DOING_CAP=${P_DOING[i]}
+      PD_DOING="$(printf '%s' "${P_DOING[i]:0:1}" | tr '[:upper:]' '[:lower:]')${P_DOING[i]:1}"
+      return 0
+    fi
+  done
+}
+
+# ── Pause, and the decisions that answer it ──────────────────────────────────
+# pause <step|""> <kind> <title> <text> <optional 0|1> <manual "id|label"|"">
+# [evidence…]: tell the views (a `pause` event), leave what Fix with Claude and
+# Report issue need beside the log, and wait for a decision. Sets DECISION:
+# retry, skip (only when optional) or quit. In the window the decisions come on
+# fd 4; in an interactive terminal from keys; in plain mode there is no one to
+# ask: the view prints the next commands and the install stops (quit).
+# Claude's `resume` (and Try again) write `retry` to the control FIFO.
+pause() {
+  P_STEP=$1 P_KIND=$2 P_TITLE=$3 P_TEXT=$4 P_OPT=$5 P_MANUAL=$6
+  shift 6
+  P_EV=(${@+"$@"})
+  write_pause_files
+  ev_pause
+  if [ "$MODE" = "plain" ]; then DECISION=quit; return 0; fi
+  # The window's Fix with Claude never reaches here (its forwarder does it).
+  local allowed="retry quit"
+  [ "$P_OPT" != "1" ] || allowed="$allowed skip"
+  [ "$MODE" != "interactive" ] || allowed="$allowed fix-cli report log${P_MANUAL:+ manual}"
+  while :; do
+    [ "$MODE" != "interactive" ] || start_keys
+    read_decision $allowed
+    case "$DECISION" in
+      retry|quit|skip)
+        stop_keys
+        ev resolved "\"how\":\"$DECISION\""
+        return 0 ;;
+      fix-cli) # the terminal: Claude Code runs right here
+        stop_keys
+        ev fixing '"target":"cli","clipboard":false'
+        bash "$RUN_DIR/fix.command" </dev/tty >/dev/tty 2>&1 || true
+        ev_pause ;; # back to the choice, unless Claude said to resume (read next)
+      manual) stop_keys; do_manual ;;
+      report) stop_keys; term_report ;;
+      log) stop_keys; term_log ;;
+    esac
+  done
+}
+
+# read_decision <word…>: DECISION = the next decision on the control FIFO that
+# is one of the words. `eof` (the window closed) is quit.
+read_decision() {
+  local line w
+  DECISION=quit
+  while IFS= read -r -u "$CF_FD" line; do
+    [ "$line" != "eof" ] || return 0
+    for w in "$@"; do
+      if [ "$line" = "$w" ]; then DECISION=$line; return 0; fi
+    done
+    echo "install.sh: ignored a decision it does not take now: $line" >&2
+  done
+  return 0
+}
+
+# ev_pause: the pause event, from P_*.
+ev_pause() {
+  local ev_json="" e step=null manual=null
+  for e in ${P_EV[@]+"${P_EV[@]}"}; do
+    json_str "$e"; ev_json="$ev_json${ev_json:+,}$JSON_STR"
+  done
+  [ -z "$P_STEP" ] || step="\"$P_STEP\""
+  if [ -n "$P_MANUAL" ]; then
+    json_str "${P_MANUAL#*|}"
+    manual="{\"id\":\"${P_MANUAL%%|*}\",\"label\":$JSON_STR}"
+  fi
+  local title text opt=false
+  json_str "$P_TITLE"; title=$JSON_STR
+  json_str "$P_TEXT"; text=$JSON_STR
+  [ "$P_OPT" != "1" ] || opt=true
+  ev pause "\"step\":$step,\"kind\":\"$P_KIND\",\"title\":$title,\"text\":$text,\"evidence\":[$ev_json],\"blocking\":true,\"optional\":$opt,\"manual\":$manual"
+}
+
+# write_pause_files: beside the log, what acting on the pause needs —
+# diagnosis.json (the pause), fix-prompt.md (the problem, the system and the
+# log's last 150 lines, for Claude), fix.command (opens Claude Code with it,
+# installing Claude Code first when it is missing) and report-url (the issue
+# link `--report` and the terminal print).
+write_pause_files() {
+  local e label=$P_STEP doing="" ev_md="" again
+  r_idx_plan "$P_STEP"; [ -z "$P_STEP" ] || { label=$PD_LABEL; doing=$PD_DOING; }
+  for e in ${P_EV[@]+"${P_EV[@]}"}; do ev_md="$ev_md$e"$'\n'; done
+  {
+    printf '{"kind":"%s","step":"%s","title":' "$P_KIND" "$P_STEP"
+    json_str "$P_TITLE"; printf '%s,"text":' "$JSON_STR"
+    json_str "$P_TEXT"; printf '%s,"evidence":[' "$JSON_STR"
+    local first=1
+    for e in ${P_EV[@]+"${P_EV[@]}"}; do
+      json_str "$e"; [ "$first" = 1 ] || printf ','; printf '%s' "$JSON_STR"; first=0
+    done
+    printf ']}\n'
+  } >"$RUN_DIR/diagnosis.json"
+  {
+    echo "# Help me finish installing equin"
+    echo
+    echo "I was installing equin ($CANONICAL_REPO_URL), an app that runs on my computer, and its installer stopped."
+    echo
+    echo "## What the installer says"
+    echo
+    echo "**$P_TITLE**"
+    echo
+    echo "$P_TEXT"
+    echo
+    echo '```'
+    printf '%s' "$ev_md"
+    echo '```'
+    echo
+    echo "## Where it stopped"
+    echo
+    if [ -n "$P_STEP" ]; then echo "- Step: $label ($doing)"; else echo "- Before the first step"; fi
+    echo "- System: ${SYS_DESC:-$OS}; installing ${WHAT:-equin} into ${INSTALL_DIR:-~/equin}"
+    echo "- The full log: $RUN_DIR/install.log (every install event: $RUN_DIR/events.jsonl). Its last 150 lines:"
+    echo
+    echo '```'
+    tail -n 150 "$RUN_DIR/install.log"
+    echo '```'
+    echo
+    echo "## How to help"
+    echo
+    echo "- First explain what went wrong, in plain words, before changing anything."
+    echo "- Ask me before each command that changes my computer."
+    echo "- Never disable, remove or get around security software. If the fix needs me (a setting only I can change) or my IT team, say so plainly and stop there."
+    echo "- Once it is fixed, run \`$RESUME\`: the installer is waiting and carries on from where it stopped (if it has stopped waiting, the same command starts it again)."
+  } >"$RUN_DIR/fix-prompt.md"
+  local dir="$HOME"
+  [ ! -d "${INSTALL_DIR:-}" ] || dir=$INSTALL_DIR
+  {
+    echo '#!/bin/bash'
+    echo "# Fix with Claude: Claude Code, started with what stopped the equin install."
+    echo "cd $(q "$dir") || exit 1"
+    echo 'export PATH="$HOME/.local/bin:$PATH"'
+    echo 'if ! command -v claude >/dev/null 2>&1; then'
+    echo '  echo "Installing Claude Code (Anthropic'"'"'s official installer)…"'
+    echo '  curl -fsSL https://claude.ai/install.sh | bash || exit 1'
+    echo 'fi'
+    echo "exec claude \"\$(cat $(q "$RUN_DIR/fix-prompt.md"))\""
+  } >"$RUN_DIR/fix.command"
+  chmod +x "$RUN_DIR/fix.command"
+  report_url
+  printf '%s\n' "$RU" >"$RUN_DIR/report-url"
+}
+
+# q <text>: the text single-quoted for a shell.
+q() { printf "'%s'" "${1//\'/\'\\\'\'}"; }
+
+# write_resume: ~/.equin/logs/install/resume — what Claude runs once it fixed
+# the problem: `retry` to the install waiting now, or the install run again
+# when none is (it resumes where the last one stopped).
+write_resume() {
+  local root again
+  root="$(data_root)/logs/install"
+  RESUME="$root/resume"
+  # A dry run touches nothing but its own run dir.
+  [ "$DRY_RUN" != "1" ] || RESUME="$RUN_DIR/resume"
+  if [ -n "${SELF_DIR:-}" ] || [ -d "${INSTALL_DIR:-/nonexistent}/.git" ]; then
+    again="cd $(q "$INSTALL_DIR") && exec ./install.sh"
+  else
+    again="curl -fsSL https://raw.githubusercontent.com/equinai/equin/main/install.sh | bash"
+  fi
+  cat >"$RESUME" <<EOF_RESUME
+#!/bin/bash
+# Continue the equin install: tell the one waiting to try again, or run it again.
+run=$(q "$root")/latest
+pid="\$(cat "\$run/pid" 2>/dev/null)"
+if [ -n "\$pid" ] && kill -0 "\$pid" 2>/dev/null && [ -p "\$run/control.fifo" ]; then
+  printf 'retry\n' >"\$run/control.fifo"
+  echo "The equin installer is trying again; its window (or terminal) shows how it goes."
+else
+  echo "The equin installer isn't running: starting it again. It picks up where it stopped."
+  $again
+fi
+EOF_RESUME
+  chmod +x "$RESUME"
+}
+
+# clipboard_put: stdin onto the clipboard; fails when there is no way to.
+clipboard_put() {
+  if command -v pbcopy >/dev/null 2>&1; then pbcopy
+  elif [ -n "${WAYLAND_DISPLAY:-}" ] && command -v wl-copy >/dev/null 2>&1; then wl-copy
+  elif command -v xclip >/dev/null 2>&1; then xclip -selection clipboard
+  elif command -v xsel >/dev/null 2>&1; then xsel -b -i
+  else return 1; fi
+}
+
+# open_thing <file|url>: open it as a double-click would.
+open_thing() {
+  if [ "$OS" = "Darwin" ]; then open "$1"
+  elif command -v xdg-open >/dev/null 2>&1; then xdg-open "$1"
+  else return 1; fi
+}
+
+# fix_app: the prompt on the clipboard, then the Claude app (on Linux, where
+# there is none, claude.ai in the browser). The app has no supported way to
+# open with a prompt filled in, so the person pastes it.
+fix_app() {
+  local copied=false
+  if clipboard_put <"$RUN_DIR/fix-prompt.md" 2>/dev/null; then copied=true; fi
+  if [ "$OS" = "Darwin" ] && open -a Claude 2>/dev/null; then :
+  else open_thing "https://claude.ai/new" 2>/dev/null || true; fi
+  ev fixing "\"target\":\"app\",\"clipboard\":$copied"
+  [ "$copied" = true ] || log_line "" "Fix with Claude: there is no clipboard tool here (pbcopy, wl-copy, xclip or xsel): paste the contents of $RUN_DIR/fix-prompt.md into Claude."
+}
+
+# fix_cli: fix.command in a new terminal window. On macOS `open` on a
+# .command file opens it in Terminal without asking for any permission
+# (scripting Terminal would).
+fix_cli() {
+  local term found=""
+  if [ "$OS" = "Darwin" ]; then
+    open "$RUN_DIR/fix.command" || { log_line "" "Fix with Claude: Terminal did not open; run $RUN_DIR/fix.command in a terminal."; return 0; }
+  else
+    for term in "${TERMINAL:-}" x-terminal-emulator gnome-terminal konsole xterm; do
+      [ -n "$term" ] && command -v "$term" >/dev/null 2>&1 || continue
+      if [ "$term" = gnome-terminal ]; then "$term" -- bash "$RUN_DIR/fix.command" & else "$term" -e bash "$RUN_DIR/fix.command" & fi
+      found=$term
+      break
+    done
+    if [ -z "$found" ]; then log_line "" "Fix with Claude: no terminal app found; run $RUN_DIR/fix.command in one."; return 0; fi
+  fi
+  ev fixing "\"target\":\"cli\",\"clipboard\":false"
+}
+
+# show_claude: bring Claude back to the front.
+show_claude() {
+  [ "$OS" = "Darwin" ] || return 0
+  open -a Claude 2>/dev/null || open -a Terminal 2>/dev/null || true
+}
+
+# do_manual: the pause's own action (P_MANUAL).
+do_manual() {
+  case "${P_MANUAL%%|*}" in
+    continue-in-terminal)
+      local again
+      if [ -n "${SELF_DIR:-}" ]; then again="cd $(q "$INSTALL_DIR") && ./install.sh"
+      else again="curl -fsSL https://raw.githubusercontent.com/equinai/equin/main/install.sh | bash"; fi
+      printf '#!/bin/bash\n%s\n' "$again" >"$RUN_DIR/continue.command"
+      chmod +x "$RUN_DIR/continue.command"
+      if [ "$OS" = "Darwin" ] && open "$RUN_DIR/continue.command" 2>/dev/null; then
+        tty_say "The install continues in a new Terminal window. You can close this one."
+      else
+        tty_say "Open the Terminal app and run:" "" "    $again"
+      fi ;;
+    copy-it-request)
+      local msg
+      msg="Hi, I'm installing equin (an open-source app that runs on my computer, $CANONICAL_REPO_URL). Our security software removes the programs it builds on my machine. Could you allow the folders $(data_root) and ${INSTALL_DIR:-~/equin} for my account? System: ${SYS_DESC:-$OS}. What the installer saw: ${P_EV[*]:-}"
+      redact "$msg"; msg=$RD
+      printf '%s\n' "$msg" >"$RUN_DIR/it-request.txt"
+      if printf '%s\n' "$msg" | clipboard_put 2>/dev/null; then
+        tty_say "A message for your IT team is on your clipboard (also saved as $RUN_DIR/it-request.txt):" "" "$msg"
+      else
+        tty_say "A message for your IT team, saved as $RUN_DIR/it-request.txt:" "" "$msg"
+      fi ;;
+  esac
+}
+
+# tty_say <line…>: lines for the person at the terminal, below the paused view.
+tty_say() {
+  local l
+  printf '\n' >/dev/tty
+  for l in "$@"; do printf '  %s\n' "$l" >/dev/tty; done
+}
+
+# term_report: the issue link, printed (and opened when there is a screen).
+term_report() {
+  tty_say "Report this issue: this link opens a new GitHub issue with what happened filled in (your home folder shown as ~, your account and computer names removed). Nothing is sent until you submit it there." "" "$(cat "$RUN_DIR/report-url")"
+  if [ "$OS" = "Darwin" ] || [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then open_thing "$(cat "$RUN_DIR/report-url")" 2>/dev/null || true; fi
+}
+
+term_log() {
+  local l
+  printf '\n' >/dev/tty
+  tail -n 40 "$RUN_DIR/install.log" | while IFS= read -r l; do printf '  \033[2m│ %s\033[0m\n' "$l" >/dev/tty; done
+  printf '  \033[2mlog: %s\033[0m\n' "$RUN_DIR/install.log" >/dev/tty
+}
+
+# start_keys / stop_keys: in an interactive terminal, a key read from the
+# terminal becomes a decision on the control FIFO.
+start_keys() {
+  [ -z "$KEYS_PID" ] || return 0
+  (
+    trap 'exit 0' TERM
+    while IFS= read -r -s -n 1 k </dev/tty; do
+      case "$k" in
+        t) w=retry ;; f) w=fix-cli ;; r) w=report ;; l) w=log ;;
+        q) w=quit ;; s) w=skip ;; m) w=manual ;; *) continue ;;
+      esac
+      printf '%s\n' "$w" >&"$CF_FD"
+    done
+  ) &
+  KEYS_PID=$!
+}
+
+stop_keys() {
+  [ -n "$KEYS_PID" ] || return 0
+  kill "$KEYS_PID" 2>/dev/null || true
+  wait "$KEYS_PID" 2>/dev/null || true
+  KEYS_PID=""
+  # A raw-mode read cut short leaves the terminal as it was set: restore it.
+  stty sane </dev/tty 2>/dev/null || true
+}
+
+# report_url: RU = the GitHub new-issue link for the pause (P_*), built here
+# for the terminal and `--report` (the window builds its own from the same
+# event, with installer/core's installIssueUrl). Labelled install; the body
+# is cut to stay well under GitHub's link limit.
+report_url() {
+  local body e
+  body="$P_TEXT"$'\n\n```\n'
+  for e in ${P_EV[@]+"${P_EV[@]}"}; do body="$body$e"$'\n'; done
+  body="$body"$'```\n\n'"System: ${SYS_DESC:-$OS} · release ${RELEASE:-main}"$'\n'"The full log is at ~/.equin/logs/install/latest/install.log: drag it here to attach it."
+  redact "$body"; body=${RD:0:2500}
+  urlencode "Install: $P_TITLE"; local t=$UE
+  urlencode "$body"
+  RU="$CANONICAL_REPO_URL/issues/new?labels=install&title=$t&body=$UE"
+}
+
+# urlencode <text>: UE = the text percent-encoded, byte by byte.
+urlencode() {
+  local LC_ALL=C s=$1 i c hex n
+  UE=""
+  for ((i = 0; i < ${#s}; i++)); do
+    c=${s:i:1}
+    case "$c" in
+      [a-zA-Z0-9.~_-]) UE="$UE$c" ;;
+      *) # a byte's value; bash reads one above 127 as negative
+        printf -v n '%d' "'$c"
+        [ "$n" -ge 0 ] || n=$((n + 256))
+        printf -v hex '%%%02X' "$n"; UE="$UE$hex" ;;
+    esac
+  done
+}
+
+# done_wait: in the window, after done, while an optional part the install
+# went on without (a `notice`, from `./equin start`) is still left out: Add it
+# now opens the setting that allows it, then adds it (`./equin start --only
+# <id>`). Closing the window (quit) ends the install, which is done anyway.
+done_wait() {
+  [ "$MODE" = "window" ] || return 0
+  local line id opened=0 before
+  line="$(grep '"type":"notice"' "$RUN_DIR/events.jsonl" | tail -n 1 || true)"
+  case "$line" in '' | *'"state":"added"'*) return 0 ;; esac
+  id=${line#*\"id\":\"}; id=${id%%\"*}
+  while :; do
+    read_decision add-services quit
+    [ "$DECISION" = "add-services" ] || return 0
+    if [ "$opened" = 0 ]; then
+      if [ "$DRY_RUN" = "1" ]; then dry_notice settings-opened
+      else
+        open_thing "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_AppBundles" 2>/dev/null || true
+        ev notice "\"id\":\"$id\",\"state\":\"settings-opened\",\"title\":\"macOS blocked equin from adding its apps\",\"text\":\"Turn on Terminal in Privacy & Security, App Management, then click Add them.\",\"without\":\"the menu-bar icon and app shortcuts\""
+      fi
+      opened=1
+      continue
+    fi
+    if [ "$DRY_RUN" = "1" ]; then dry_notice added; return 0; fi
+    before=$(grep -c '"type":"notice"' "$RUN_DIR/events.jsonl" || true)
+    set +e
+    (
+      eval "exec $CLOSE_FDS"
+      export EQUIN_INSTALL_EVENTS="$FIFO" EQUIN_INSTALL_STEP=start
+      ./equin start --only "$id"
+    ) 2>&1 | while IFS= read -r line; do log_line "" "$line"; done
+    set -e
+    # Refused again: start said so with a new notice (skipped); else it's in.
+    if [ "$(grep -c '"type":"notice"' "$RUN_DIR/events.jsonl" || true)" = "$before" ]; then
+      ev notice "\"id\":\"$id\",\"state\":\"added\",\"title\":\"macOS blocked equin from adding its apps\",\"text\":\"Added after all.\",\"without\":\"the menu-bar icon and app shortcuts\""
+      return 0
+    fi
+    opened=0
   done
 }
 
@@ -1149,6 +1840,10 @@ r_init() {
   R_LOGS=(); R_LOGN=0; R_STEP_LOG0=0
   R_LAST_DRAW=-1; R_FORCE=0; R_H=0; R_TICK=0; R_PAUSED=0; R_STARTED=0
   R_DONE_URL=""; R_DONE_MS=""; R_EXIT=""; R_ENDED=0
+  R_P_OPEN=0; R_N_STATE=""
+  # What the person runs to act on a stop: the checkout's script, or the curl.
+  if [ -n "${SELF_DIR:-}" ]; then R_AGAIN="./install.sh"
+  else R_AGAIN="curl -fsSL https://raw.githubusercontent.com/equinai/equin/main/install.sh | bash -s --"; fi
   r_tilde "$(data_root)"; R_DATA=$TL
   R_LOGPATH="$R_DATA/logs/install/latest/events.jsonl"
   r_tilde "$INSTALL_DIR"; R_DIR=$TL
@@ -1195,9 +1890,175 @@ r_event() {
       r_num ms "$l"; R_DONE_MS=$F; r_str url "$l"; R_DONE_URL=$F; R_FORCE=1
       if [ "$MODE" = "plain" ]; then
         r_fmt $((R_DONE_MS / 1000)); r_plain "equin is ready · installed in $FM · $R_DONE_URL"
+        [ "$R_N_STATE" != "skipped" ] || r_plain "installed without $R_N_WITHOUT · once Terminal is allowed in App Management: ./equin start --only $R_N_ID"
       fi ;;
     exit) r_num code "$l"; R_EXIT=$F ;;
+    pause) r_on_pause "$l" ;;
+    resolved) r_str how "$l"; r_on_resolved "$F" ;;
+    fixing) r_on_fixing ;;
+    notice) r_on_notice "$l" ;;
   esac
+}
+
+# r_jstr <key> <event>: JS = the key's JSON string value, unescaped (the
+# escapes json_str and JSON.stringify write: \" \\ \t \n \r \uXXXX for ESC).
+r_jstr() {
+  local rest=${2#*\"$1\":\"}
+  JS=""
+  [ "$rest" != "$2" ] || return 1
+  r_jtake "$rest"
+}
+
+# r_jtake <text after an opening quote>: JS = the string up to its closing
+# quote, unescaped; JREST = what follows it.
+r_jtake() {
+  local t=$1 c out="" i=0 n=${#1}
+  while [ "$i" -lt "$n" ]; do
+    c=${t:i:1}
+    if [ "$c" = '"' ]; then break; fi
+    if [ "$c" = "\\" ]; then
+      i=$((i + 1)); c=${t:i:1}
+      case "$c" in
+        n) c=" " ;; t) c=" " ;; r) c="" ;;
+        u) c=""; i=$((i + 4)) ;;
+      esac
+    fi
+    out="$out$c"
+    i=$((i + 1))
+  done
+  JS=$out
+  JREST=${t:i+1}
+}
+
+# r_jarr <key> <event>: JA = the key's array of JSON strings.
+r_jarr() {
+  local rest=${2#*\"$1\":[}
+  JA=()
+  [ "$rest" != "$2" ] || return 0
+  while [ "${rest:0:1}" = '"' ]; do
+    r_jtake "${rest:1}"
+    JA[${#JA[@]}]=$JS
+    rest=$JREST
+    [ "${rest:0:1}" = "," ] || break
+    rest=${rest:1}
+  done
+}
+
+# r_wrap <text> <width>: WR = the text in lines of at most width characters.
+r_wrap() {
+  local w word line=""
+  WR=()
+  for word in $1; do
+    if [ -n "$line" ] && [ $((${#line} + 1 + ${#word})) -gt "$2" ]; then
+      WR[${#WR[@]}]=$line; line=$word
+    else
+      line="${line:+$line }$word"
+    fi
+  done
+  [ -z "$line" ] || WR[${#WR[@]}]=$line
+}
+
+r_on_pause() {
+  local l=$1
+  r_jstr title "$l"; R_P_TITLE=$JS
+  r_jstr text "$l"; R_P_TEXT=$JS
+  r_str kind "$l"; R_P_KIND=$F
+  r_jarr evidence "$l"; R_P_EV=(${JA[@]+"${JA[@]}"})
+  R_P_MANUAL=""
+  case "$l" in *'"manual":{'*) r_jstr label "${l#*\"manual\":}"; R_P_MANUAL=$JS ;; esac
+  R_P_OPT=0
+  case "$l" in *'"optional":true'*) R_P_OPT=1 ;; esac
+  R_P_BLOCK=1
+  case "$l" in *'"blocking":false'*) R_P_BLOCK=0 ;; esac
+  R_P_OPEN=1
+  R_FORCE=1
+  if [ "$MODE" = "plain" ]; then
+    local k word=FAILED
+    [ "$R_P_BLOCK" = 1 ] || word=PAUSED
+    r_plain "$word: $R_P_TITLE"
+    r_wrap "$R_P_TEXT" 96; for k in ${WR[@]+"${WR[@]}"}; do r_plain "  $k"; done
+    for k in ${R_P_EV[@]+"${R_P_EV[@]}"}; do r_plain "  > $k"; done
+    if [ "$R_P_BLOCK" = 1 ]; then
+      r_plain "next:"
+      r_plain "  $R_AGAIN --fix      Claude Code reads the log and helps fix it, asking before each command (--yes: without asking)"
+      r_plain "  $R_AGAIN --report   a GitHub issue with what happened (nothing is sent until you submit it)"
+      r_plain "  $R_AGAIN            try again: it picks up where it stopped"
+      r_plain "diagnosis: $R_DATA/logs/install/latest/diagnosis.json ($R_P_KIND)"
+    fi
+    return 0
+  fi
+  [ "$R_P_BLOCK" = 1 ] || return 0 # drawn inside the block, which keeps redrawing
+  # Blocking: the block's last frame, then the box and the choices below it;
+  # no redraw until it is answered (keys, and Claude, print below it).
+  R_PAUSED=0; r_draw; R_PAUSED=1
+  r_box
+  local out="" line
+  for line in ${R_BOX[@]+"${R_BOX[@]}"}; do out="$out$line"$'\n'; done
+  out="$out"$'\n'"${C_B}  What now?${C_0}"$'\n'
+  out="$out  ${C_B}[t]${C_0} Try again            ${C_D}picks up where it stopped${C_0}"$'\n'
+  out="$out  ${C_B}[f]${C_0} Fix with Claude      ${C_D}Claude Code reads the log and helps, asking before each command${C_0}"$'\n'
+  [ -z "$R_P_MANUAL" ] || out="$out  ${C_B}[m]${C_0} $(printf '%-20s' "$R_P_MANUAL") ${C_D}$(r_manual_hint)${C_0}"$'\n'
+  [ "$R_P_OPT" != 1 ] || out="$out  ${C_B}[s]${C_0} Skip                 ${C_D}go on without it${C_0}"$'\n'
+  out="$out  ${C_B}[r]${C_0} Report this issue    ${C_D}a GitHub issue with what happened; nothing is sent until you submit it${C_0}"$'\n'
+  out="$out  ${C_B}[l]${C_0} Show the full log"$'\n'
+  out="$out  ${C_B}[q]${C_0} Quit                 ${C_D}running the installer again picks up where it stopped${C_0}"$'\n'
+  printf '%s' "$out"
+}
+
+r_manual_hint() {
+  case "$R_P_MANUAL" in
+    "Continue in Terminal") printf 'runs the install again in the Terminal app' ;;
+    "Copy request for IT") printf 'a message for your IT team, on your clipboard' ;;
+  esac
+}
+
+# r_box: R_BOX = the pause's box lines (red, amber for a stall), its text
+# wrapped and its evidence dimmed.
+r_box() {
+  local w=$((R_COLS - 6)) c=$C_R k top
+  [ "$w" -le 76 ] || w=76
+  [ "$w" -ge 30 ] || w=30
+  [ "$R_P_KIND" != "stall" ] || c=$C_Y
+  R_BOX=()
+  top="╭─ $R_P_TITLE "
+  while [ "${#top}" -lt $((w - 1)) ]; do top="${top}─"; done
+  R_BOX[${#R_BOX[@]}]="  ${c}${top}╮${C_0}"
+  r_wrap "$R_P_TEXT" $((w - 4))
+  for k in ${WR[@]+"${WR[@]}"}; do r_pad "$k" $((w - 4)); R_BOX[${#R_BOX[@]}]="  ${c}│${C_0} $PD ${c}│${C_0}"; done
+  r_pad "" $((w - 4)); R_BOX[${#R_BOX[@]}]="  ${c}│${C_0} $PD ${c}│${C_0}"
+  for k in ${R_P_EV[@]+"${R_P_EV[@]}"}; do
+    r_pad "$(r_cut "$k" $((w - 4)))" $((w - 4)); R_BOX[${#R_BOX[@]}]="  ${c}│${C_0} ${C_D}$PD${C_0} ${c}│${C_0}"
+  done
+  top=""; while [ "${#top}" -lt $((w - 2)) ]; do top="${top}─"; done
+  R_BOX[${#R_BOX[@]}]="  ${c}╰${top}╯${C_0}"
+}
+
+r_on_resolved() {
+  R_P_OPEN=0
+  R_FORCE=1
+  if [ "$MODE" = "plain" ]; then
+    [ "$1" != "progress" ] || r_plain "moving again"
+    return 0
+  fi
+  if [ "$R_PAUSED" = "1" ]; then R_PAUSED=0; R_H=0; printf '\n'; fi
+}
+
+r_on_fixing() {
+  [ "$MODE" = "interactive" ] || { r_plain "Fix with Claude: Claude opened with what went wrong"; return 0; }
+  printf '\n  %s●%s %sClaude Code%s %sstarts here with what went wrong and the log. It asks before each command; once it is fixed, the install carries on.%s\n\n' \
+    "$C_A" "$C_0" "$C_B" "$C_0" "$C_D" "$C_0"
+}
+
+r_on_notice() {
+  r_jstr state "$1"; R_N_STATE=$JS
+  r_jstr title "$1"; R_N_TITLE=$JS
+  r_jstr text "$1"; R_N_TEXT=$JS
+  r_jstr without "$1"; R_N_WITHOUT=$JS
+  r_jstr id "$1"; R_N_ID=$JS
+  R_FORCE=1
+  if [ "$MODE" = "plain" ] && [ "$R_N_STATE" = "skipped" ]; then
+    r_plain "note: $R_N_TITLE. $R_N_TEXT"
+  fi
 }
 
 r_is_leaf() { [ -n "${P_PARENT[$1]}" ] || [ "${P_ID[$1]}" != "build" ]; }
@@ -1612,6 +2473,11 @@ r_draw() {
     r_ln "    data      $R_DATA"
     if [ "$OS" = "Darwin" ]; then r_ln "    starts    at every login"; else r_ln "    starts    at every boot"; fi
     r_ln ""
+    if [ "$R_N_STATE" = "skipped" ]; then
+      r_ln "  ${C_Y}!${C_0} Installed without $R_N_WITHOUT. To add them once Terminal is allowed in"
+      r_ln "    Privacy & Security, App Management: ${C_B}./equin start --only $R_N_ID${C_0}"
+      r_ln ""
+    fi
     if [ "$DRY_RUN" = "1" ]; then r_ln "${C_D}  Dry run: nothing on this machine was changed.${C_0}"
     elif [ "$EDIT_RC" = "1" ]; then r_ln "${C_D}  Open a new terminal to use ./equin.${C_0}"; fi
   elif [ -n "$R_EXIT" ] || [ "$R_ENDED" = "1" ]; then
@@ -1634,6 +2500,16 @@ r_draw() {
     else r_step_n; tail="step $SN of $G_N"; fi
     r_ln "  $BAR  ${C_B}$pct%${C_0}${C_D}  ·  $FM elapsed  ·  ${C_0}${C_B}$tail${C_0}"
     r_ln ""
+    if [ "$R_P_OPEN" = "1" ] && [ "$R_P_BLOCK" = "0" ]; then # a stall: the install keeps going
+      r_box
+      for k in "${R_BOX[@]}"; do r_ln "$k"; done
+      r_ln "${C_D}  Fix with Claude: run ${R_AGAIN} --fix in another terminal.${C_0}"
+      r_ln ""
+    fi
+    if [ "$R_N_STATE" = "skipped" ]; then
+      r_ln "  ${C_Y}!${C_0} $(r_cut "$R_N_TITLE: $R_N_TEXT" $((R_COLS - 6)))"
+      r_ln ""
+    fi
     local k
     for ((k = R_LOGN - 2; k < R_LOGN; k++)); do
       [ "$k" -ge 0 ] || continue
@@ -1752,9 +2628,27 @@ dry_step() {
     echo >&2
     echo "this line went to stderr" >&2
   fi
-  if [ "$1" = "${EQUIN_INSTALL_DRY_RUN_FAIL:-}" ] && [ "$STEP_ATTEMPT" = "1" ]; then
-    echo "$1: failed (dry run, first attempt)" >&2
-    false # mid-body: only `set -e` ends the step here (see run_step)
+  if [ "$1" = "start" ] && [ -n "${EQUIN_INSTALL_DRY_RUN_NOTICE:-}" ]; then
+    dry_notice skipped
+  fi
+  local fail=${EQUIN_INSTALL_DRY_RUN_FAIL:-}
+  if [ "$1" = "${fail%%:*}" ] && [ "$STEP_ATTEMPT" = "1" ]; then
+    case "$fail" in
+      *:sigkill) # killed outright, as a protected shell kills a compiler
+        echo "$1: error: could not compile \`ring\` (build script)"
+        exec sh -c 'kill -9 $$' ;; # bash 3.2 has no BASHPID: the step's own process dies
+      *:vanish) # one of equin's programs removed right after it was made
+        mkdir -p "$RUN_DIR/bin"
+        printf '#!/bin/sh\n' >"$RUN_DIR/bin/gateway"
+        chmod +x "$RUN_DIR/bin/gateway"
+        rm -f "$RUN_DIR/bin/gateway"
+        "$RUN_DIR/bin/gateway" ;;
+      *:quiet) # stuck: no output, no progress, past the watchdog's deadline
+        sleep $((${EQUIN_INSTALL_STALL_S:-600} * 2 + 1)) ;;
+      *)
+        echo "$1: failed (dry run, first attempt)" >&2
+        false ;; # mid-body: only `set -e` ends the step here (see run_step)
+    esac
   fi
   echo "$1: finished"
 }
@@ -1807,13 +2701,28 @@ dry_run() {
   plan_data "Download equin"
   start_hub
   ev_plan
+  sandbox_check
   ev_step tools skipped
   local id
   for id in mise clone toolchain start build; do
+    [ "$id" != "${EQUIN_INSTALL_DRY_RUN_OPTIONAL:-}" ] || STEP_OPTIONAL=1
     run_step "$id" dry_step "$id"
     [ "$STEP_RC" = "0" ] || fail "The $id step of the dry run failed." "dry run, $id"
   done
   ev_done
+  done_wait
+}
+
+# dry_notice <state>: the notice `./equin start` writes when macOS refused to
+# add the login services (its words), through the FIFO by path as start does.
+dry_notice() {
+  local text
+  case "$1" in
+    settings-opened) text="Turn on Terminal in Privacy & Security, App Management, then click Add them." ;;
+    *) text="With them, equin's apps open in their own windows and get a menu-bar icon. To allow it, turn on Terminal in Privacy & Security, App Management. It's optional: skip it and use equin in your browser." ;;
+  esac
+  printf '{"v":1,"t":"%s","type":"notice","id":"dev.equin.menu-bar","state":"%s","title":"macOS blocked equin from adding its apps","text":"%s","without":"the menu-bar icon and app shortcuts"}\n' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$1" "$text" >"$FIFO"
 }
 
 # say <message>: one of the script's own progress lines. On the terminal
@@ -1834,6 +2743,8 @@ say() {
 # tool output) go in <details>, printed apart and dimmed. While the terminal
 # view draws, it is printed by the EXIT trap, under the view's last frame.
 fail() {
+  # The pause before it already said what happened and what to do.
+  [ "$PAUSE_QUIT" != "1" ] || exit 1
   if [ -n "$HUB_PID" ] && [ "$MODE" != "window" ]; then
     FAIL_MSG=$1
     FAIL_DETAILS=${2:-}

@@ -5,12 +5,13 @@
 //
 //   ./equin run plugins/installer/plugins/window/e2e/replay.ts --url http://equin.localhost:9000 \
 //     --events <events.jsonl> --out "$EQUIN_SCRATCH/replay" [--now <iso>] [--scale 1] \
-//     [--mockup "<prototype url>?view=window&state=running"] [--threshold 0.1] [--mockup-own-font]
+//     [--mockup "<prototype url>?view=window&state=running"] [--threshold 0.1] [--mockup-own-font] \
+//     [--mockup-claude app|cli]
 //
 // `--url` names no deploy this script uses (it loads the bundled page itself);
 // it is the harness's way to say "not this checkout's build". `--events` is
 // any recorded stream (`~/.equin/install/<run>/events.jsonl`, or
-// `running-moment.ts`'s fixture). `--now` is the instant to draw it at
+// `moment.ts`'s fixtures). `--now` is the instant to draw it at
 // (default: the last event's); the page's clock is pinned to it.
 //
 // Writes `<out>.png`. With `--mockup`: `<out>-mockup.png` (the mockup's `.iw`
@@ -41,6 +42,8 @@ const scale = numArg("scale", 1);
 const threshold = numArg("threshold", 0.1);
 /** Leave the mockup in its own font (Inter where it loads) to measure the typeface residue. */
 const ownFont = flag("mockup-own-font");
+/** Where the mockup's Fix with Claude remembers opening (its localStorage), to match the stream's. */
+const mockupClaude = arg("mockup-claude");
 
 /** The window's fixed size, in points. */
 const WINDOW = { width: 760, height: 640 };
@@ -114,9 +117,10 @@ await withBrowser(async (h) => {
     colorScheme: "dark",
   });
   // Freeze the mockup's simulation at its first frame (it advances on an interval).
-  await m.page.addInitScript(() => {
+  await m.page.addInitScript((target) => {
     window.setInterval = (() => 0) as unknown as typeof window.setInterval;
-  });
+    if (target !== null) localStorage.setItem("installer.claude", target);
+  }, mockupClaude ?? null);
   await m.page.goto(mockup);
   await m.page.locator(".iw").waitFor();
   await m.page.evaluate(() => document.fonts.ready);

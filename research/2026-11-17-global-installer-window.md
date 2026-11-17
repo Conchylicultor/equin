@@ -487,3 +487,28 @@ Landed as `.github/workflows/installer-release.yml`, the `installer/release-asse
 - A manual run on `v2026.11.17` published its Release: `install.sh`, `release.json` (`handoff: null`, no binaries — the tag predates the window), `SHA256SUMS`, `provenance.intoto.jsonl`. `releases/latest/download/release.json` resolves to it; `shasum -c` and `gh attestation verify install.sh -R equinai/equin` pass; a real `curl …/main/install.sh | bash -s -- --stage0-only` reads it and falls back to main's steps on that tag.
 - Build-only runs on main: the universal macOS binary builds (`macos-14` is retired; `macos-15`), lipo + ad-hoc sign, `--probe` on the runner's GUI session. Linux x64 / arm64 build; in a bare `ubuntu:22.04` container the binary is refused by the loader (exit 127, "libwebkit2gtk-4.1.so.0: cannot open shared object file"), which is the fallback stage 0 relies on.
 - **Found on Linux: no session D-Bus, no page.** Under xvfb with no session bus, WebKitGTK blocked the window's main thread on D-Bus timeouts (~30 s): every probe timed out at 20 s without the page even starting to load, and the real window drew nothing for 30 s. (A font-cache theory, then the probe's unmapped window, were tried and ruled out.) Inside `dbus-run-session` the cold probe passes in under a second. Every desktop session has a bus, so CI runs its smoke tests in one, and stage 0 picks the terminal on Linux when `DBUS_SESSION_BUS_ADDRESS` is unset rather than waiting out the probe. The probe's Linux window stays mapped off-screen (1×1, undecorated, out of the taskbar): that is the setup proven in CI.
+
+## Failures and actions results (task 3, 2026-11-17)
+
+Landed in `install.sh` (diagnosis, pause, decisions, Fix with Claude, Report, `--fix` / `--report`, the Apple dialog, askpass), `installer/core` (the `pause`, `resolved`, `fixing`, `notice` events; `installIssueUrl`), the build's wait reporting (the build-slot stall rule), `./equin start` (the notice), and the window (page states, commands, `askpass.rs`). Docs: `plugins/installer/CLAUDE.md` § Failures, `plugins/installer/plugins/window/CLAUDE.md`.
+
+**Changed from §3–5, found while building it:**
+
+- **No `sandbox-exec` parent exists.** `sandbox-exec` execs the command it protects, and inside it `ps` (setuid) is refused, so walking ancestors finds nothing. The fact is that refusal itself: a sandboxed process may not run a setuid program. (App Sandbox: its container variable; Linux: a bubblewrap / firejail parent.)
+- **One control FIFO, not fd 4 alone.** Decisions come from the window, a key in the terminal and Claude's `resume`; bash waits on one fd, so each source is a forwarder into `control.fifo`, which the script holds open read-write (a writer by path never blocks). The window's forwarder also carries out Fix with Claude itself, so it works during a stall, while the step still runs.
+- **The watchdog reads events.jsonl's age**, not only the step's output: the `./equin` commands' events skip the line reader.
+- **The build-slot stall uses the op log's step times** as the holder's "last progress" (the op log records no output time); the deadline is re-armed only when the holder moved.
+- **The window shows no manual-action pill**, as in the mockup (Fix with Claude covers it); the terminal menu has it (`[m]`). An `unknown` pause, which the mockup does not draw, leads with Try again in the mockup's primary slot.
+- **The fixing card's sentence** says where the prompt is ("Paste it into the Claude app, from your clipboard." / "In Terminal. …"), kept to the mockup's two lines.
+- **The page stores nothing** (no localStorage: the lint rule, and a page that imports `core` only): Fix with Claude's target is the page's choice, else the last `fixing` event's.
+- **The permission notice** is a banner with Open App Management (the window opens only that settings link and GitHub links), Skip and Report; after `done` the script waits (window only) for Add it now, which opens the setting, then runs `./equin start --only <ids>`.
+
+**Proven locally:**
+
+- The stream test (`window/cli/internal/dry-run-stream.test.ts`): a pause with its diagnosis and files, retry / skip (optional only) / quit / EOF, the `resume` script answering the waiting install, the sandbox rule under a real `sandbox-exec` (and the same kill outside it is `unknown`), a vanished program with no security product (`unknown`), the watchdog's stall and its end, the notice and Add it now, closing after the done; the plain view's diagnosis and next commands.
+- The security rule by hand: a vanished program with a compiled process named `JamfProtect` running is `security`, naming "Jamf Protect".
+- The interactive terminal in a pty: the box, the menu, `[r]` (the link, decoded right), `[t]` (retry, the run finishes).
+- The window page against the mockup (`moment.ts` + `replay.ts`): failed security, sandbox, stall and done: 0 differing pixels (sandbox: 6 pixels); fixing: only the card's sentence differs.
+- The askpass client against a socket, the password sheet in the page (`password-sheet.ts`); the window crate builds.
+
+**Not yet proven:** the real window clicked through a pause (no GUI driver for the native window), the askpass flow in a Linux desktop session, a real security product, and the build-slot stall on a real stuck op (its rule is unit-tested).

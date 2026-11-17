@@ -99,6 +99,68 @@ export const WaitOn = z.enum([
 ]);
 export type WaitOn = z.infer<typeof WaitOn>;
 
+/**
+ * What a pause is, as the step engine diagnosed it (install.sh's `diagnose`,
+ * the build's wait reporting). Each kind is a symptom confirmed by a fact; a
+ * failure no rule confirms is `unknown`, and its message never guesses.
+ */
+export const PauseKind = z.enum([
+  /** The app the install was started from runs it in a protected mode that stopped it. */
+  "sandbox",
+  /** Security software the organisation runs removed or blocked part of equin. */
+  "security",
+  /** The install is waiting on something that stopped making progress. */
+  "stall",
+  /** A step failed and no rule recognised why. */
+  "unknown",
+]);
+export type PauseKind = z.infer<typeof PauseKind>;
+
+/**
+ * What the person can do about a pause besides Fix with Claude and Report
+ * issue — a closed set, each one the step engine knows how to carry out.
+ */
+export const PauseManualId = z.enum([
+  /** Write a `.command` that runs the install again, and open it in Terminal. */
+  "continue-in-terminal",
+  /** A ready-made message for the IT team, copied and saved beside the log. */
+  "copy-it-request",
+]);
+export type PauseManualId = z.infer<typeof PauseManualId>;
+
+/** How a decision answers a pause: what the person (or Claude) chose. */
+export const PauseResolution = z.enum([
+  /** The step runs again. */
+  "retry",
+  /** An optional step is left out. */
+  "skip",
+  /** The install gives up; running it again resumes. */
+  "quit",
+  /** A pause that did not stop the step (a stall) ended: the step is moving again. */
+  "progress",
+]);
+export type PauseResolution = z.infer<typeof PauseResolution>;
+
+/** Where Fix with Claude opened Claude. */
+export const FixTarget = z.enum([
+  /** The Claude app: the prompt is on the clipboard, to paste. */
+  "app",
+  /** Claude Code in a terminal, started with the prompt. */
+  "cli",
+]);
+export type FixTarget = z.infer<typeof FixTarget>;
+
+/** Where an optional part left out of the install stands. */
+export const NoticeState = z.enum([
+  /** Left out: the install went on without it. */
+  "skipped",
+  /** The setting that allows it is open; adding it again is the next click. */
+  "settings-opened",
+  /** Added after all. */
+  "added",
+]);
+export type NoticeState = z.infer<typeof NoticeState>;
+
 const base = {
   v: z.literal(INSTALL_PROTOCOL_VERSION),
   /** When the event was written: an ISO-8601 UTC instant. */
@@ -208,6 +270,63 @@ export const InstallEvent = z.discriminatedUnion("type", [
     step: InstallStepId.nullable(),
     stream: z.enum(["out", "err"]),
     line: z.string(),
+  }),
+  /**
+   * The install stopped on a problem it diagnosed (`blocking`: the step
+   * failed and the script waits for a decision), or keeps going while it
+   * says something is wrong (not blocking: a stall, which ends with
+   * `resolved` once the step moves again). Every string follows the
+   * installer message rules; `evidence` holds the raw lines (paths already
+   * shown as `~`). A blocking pause, like the plan, is written while no step
+   * runs, so it may exceed one atomic write.
+   */
+  z.strictObject({
+    ...base,
+    type: z.literal("pause"),
+    /** The step it is about; null before any step runs (a check up front). */
+    step: InstallStepId.nullable(),
+    kind: PauseKind,
+    title: z.string().min(1),
+    text: z.string().min(1),
+    evidence: z.array(z.string()),
+    blocking: z.boolean(),
+    /** Whether Skip is offered: the step can be left out. */
+    optional: z.boolean(),
+    manual: z
+      .strictObject({ id: PauseManualId, label: z.string().min(1) })
+      .nullable(),
+  }),
+  /** The pause open now ended, and how. */
+  z.strictObject({
+    ...base,
+    type: z.literal("resolved"),
+    how: PauseResolution,
+  }),
+  /**
+   * Fix with Claude: Claude was opened with the problem and the log. The
+   * install waits on, and goes on when Claude (or Try again) says so.
+   */
+  z.strictObject({
+    ...base,
+    type: z.literal("fixing"),
+    target: FixTarget,
+    /** The prompt is on the clipboard (the Claude app's way in). */
+    clipboard: z.boolean(),
+  }),
+  /**
+   * An optional part the install went on without (the login services macOS
+   * refused to add), and later what became of it. `id` names what `./equin
+   * start --only` adds back; `title` / `text` follow the message rules.
+   */
+  z.strictObject({
+    ...base,
+    type: z.literal("notice"),
+    id: z.string().min(1),
+    state: NoticeState,
+    title: z.string().min(1),
+    text: z.string().min(1),
+    /** What the install went on without, as a person knows it ("the menu-bar icon and app shortcuts"). */
+    without: z.string().min(1),
   }),
   /** The install finished: equin is running at `url`. */
   z.strictObject({

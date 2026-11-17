@@ -15,6 +15,7 @@
 //!
 //! Design: research/2026-11-17-global-installer-window.md §2.
 
+mod askpass;
 mod bootstrap;
 mod child;
 mod clock;
@@ -51,6 +52,8 @@ enum UserEvent {
     Ipc(String),
     /// A signal sent to this process.
     Signal(libc::c_int),
+    /// sudo asks for the password (askpass.rs): show the sheet, answer on the stream.
+    Password { prompt: String, stream: std::os::unix::net::UnixStream },
 }
 
 /// What the page may ask for — a closed set; anything else is refused.
@@ -59,17 +62,41 @@ enum UserEvent {
 enum PageCommand {
     /// The page loaded: send it every event so far.
     Ready,
-    /// A failed step: run it again / give up.
+    /// A paused step: run it again / give up / leave it out (optional only).
     Retry,
     Quit,
+    Skip,
+    /// Fix with Claude: the Claude app (prompt on the clipboard) or Claude Code in Terminal.
+    FixApp,
+    FixCli,
+    /// Bring Claude back to the front.
+    ShowClaude,
+    /// Done screen: add what the install went on without (Add it now).
+    AddServices,
     /// The user confirmed stopping the install.
     Stop,
     /// Open the installed app in the browser, then close.
     OpenEquin,
+    /// Open a link in the browser: a GitHub issue (Report issue), or the
+    /// App Management settings — nothing else.
+    OpenUrl { url: String },
+    /// The password sheet's answer for sudo (askpass.rs).
+    Password { value: String },
+    PasswordCancel,
     /// Close the window after the install ended.
     Close,
     /// The mouse went down on the page's title-bar strip: move the window.
     Drag,
+}
+
+/// The settings pane that allows equin to add its apps (Privacy & Security → App Management).
+const APP_MANAGEMENT_URL: &str =
+    "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_AppBundles";
+
+/// Whether the page may open `url`: a GitHub link (Report issue opens a new
+/// issue there, nothing sent until the user submits it) or App Management.
+fn openable(url: &str) -> bool {
+    url.starts_with("https://github.com/") || url == APP_MANAGEMENT_URL
 }
 
 fn usage() -> ! {
@@ -94,6 +121,7 @@ fn main() {
                 return;
             }
             "--probe" => probe::run(),
+            "--askpass" => askpass::run_client(&args.collect::<Vec<_>>().join(" ")),
             "--script" => script = Some(args.next().unwrap_or_else(|| usage())),
             "--ref" => release_ref = Some(args.next().unwrap_or_else(|| usage())),
             "--" => {
@@ -135,6 +163,18 @@ fn main() {
     let event_loop = EventLoopBuilder::<UserEvent>::with_user_event().build();
     let proxy = event_loop.create_proxy();
 
+    // sudo asks for its password through the window (askpass.rs); the
+    // install's askpass wrapper finds this binary and the socket by these.
+    let (askpass_listener, askpass_path) = askpass::listen().unwrap_or_else(|e| {
+        eprintln!("equin-installer: could not open the password socket: {e}");
+        std::process::exit(1);
+    });
+    // Single-threaded still: nothing else reads the environment now.
+    std::env::set_var(askpass::SOCKET_ENV, &askpass_path);
+    if let Ok(exe) = std::env::current_exe() {
+        std::env::set_var(askpass::BIN_ENV, exe);
+    }
+    ASKPASS_PATH.set(askpass_path).expect("set once");
     let install = child::spawn(&script, &rest).unwrap_or_else(|e| {
         eprintln!("equin-installer: could not start {script}: {e}");
         std::process::exit(1);
@@ -179,6 +219,17 @@ fn main() {
             // Every event the script wrote is read before its exit is told.
             let _ = events_reader.join();
             send(&proxy, UserEvent::Exited(code));
+        });
+    }
+    {
+        let proxy = proxy.clone();
+        std::thread::spawn(move || {
+            for stream in askpass_listener.incoming() {
+                match stream.and_then(|s| askpass::read_prompt(&s).map(|p| (p, s))) {
+                    Ok((prompt, stream)) => send(&proxy, UserEvent::Password { prompt, stream }),
+                    Err(e) => eprintln!("equin-installer: a password request failed: {e}"),
+                }
+            }
         });
     }
     {
@@ -246,6 +297,7 @@ fn main() {
         exit_code: None,
         stopping: false,
         control: Some(install.control),
+        password: None,
     };
 
     event_loop.run(move |event, _, control_flow| {
@@ -278,13 +330,48 @@ fn main() {
                     None => child::signal_group(child_pid, if sig == libc::SIGHUP { libc::SIGHUP } else { libc::SIGINT }),
                 }
             }
+            Event::UserEvent(UserEvent::Password { prompt, stream }) => {
+                if let Some((_, old)) = state.password.take() {
+                    let _ = askpass::answer(old, None);
+                }
+                ask_password(&webview, &prompt);
+                state.password = Some((prompt, stream));
+            }
             Event::UserEvent(UserEvent::Ipc(body)) => match serde_json::from_str::<PageCommand>(&body) {
                 Ok(PageCommand::Ready) => {
                     state.page_ready = true;
                     state.sent = 0;
+                    if let Some((prompt, _)) = &state.password {
+                        ask_password(&webview, prompt);
+                    }
                 }
                 Ok(PageCommand::Retry) => state.decide("retry"),
                 Ok(PageCommand::Quit) => state.decide("quit"),
+                Ok(PageCommand::Skip) => state.decide("skip"),
+                Ok(PageCommand::FixApp) => state.decide("fix-app"),
+                Ok(PageCommand::FixCli) => state.decide("fix-cli"),
+                Ok(PageCommand::ShowClaude) => state.decide("show-claude"),
+                Ok(PageCommand::AddServices) => state.decide("add-services"),
+                Ok(PageCommand::OpenUrl { url }) => {
+                    if openable(&url) {
+                        open_url(&url);
+                    } else {
+                        eprintln!("equin-installer: refused to open a link the page may not open: {url}");
+                    }
+                }
+                Ok(PageCommand::Password { value }) => match state.password.take() {
+                    Some((_, stream)) => {
+                        if let Err(e) = askpass::answer(stream, Some(&value)) {
+                            eprintln!("equin-installer: could not hand the password to sudo: {e}");
+                        }
+                    }
+                    None => eprintln!("equin-installer: a password came with no request waiting; dropped"),
+                },
+                Ok(PageCommand::PasswordCancel) => {
+                    if let Some((_, stream)) = state.password.take() {
+                        let _ = askpass::answer(stream, None);
+                    }
+                }
                 Ok(PageCommand::Stop) => {
                     state.stopping = true;
                     match state.exit_code {
@@ -296,7 +383,7 @@ fn main() {
                     if let Some(url) = &state.done_url {
                         open_url(url);
                     }
-                    finish(state.exit_code.unwrap_or(0));
+                    state.close_done();
                 }
                 Ok(PageCommand::Drag) => {
                     if let Err(e) = window.drag_window() {
@@ -305,12 +392,15 @@ fn main() {
                 }
                 Ok(PageCommand::Close) => match state.exit_code {
                     Some(code) => finish(code),
+                    None if state.done_url.is_some() => state.close_done(),
                     None => eprintln!("equin-installer: the page asked to close while the install runs; ignored"),
                 },
                 Err(e) => eprintln!("equin-installer: refused a message from the page ({e}): {body}"),
             },
             Event::WindowEvent { event: WindowEvent::CloseRequested, .. } => match state.exit_code {
                 Some(code) => finish(code),
+                // Installed; the script only waits on Add it now.
+                None if state.done_url.is_some() => state.close_done(),
                 None => {
                     if let Err(e) = webview.evaluate_script("window.installer.confirmStop()") {
                         eprintln!("equin-installer: could not ask the page to confirm: {e}");
@@ -349,6 +439,8 @@ struct State {
     exit_code: Option<i32>,
     stopping: bool,
     control: Option<std::fs::File>,
+    /// sudo's open password request: its prompt and where the answer goes.
+    password: Option<(String, std::os::unix::net::UnixStream)>,
 }
 
 impl State {
@@ -393,6 +485,14 @@ impl State {
                 };
                 println!("{line}");
             }
+            Some("pause") => {
+                let title = text(event, "title");
+                if event.get("blocking").and_then(Value::as_bool) == Some(true) {
+                    println!("  ! Paused: {title}. The window says what to do.");
+                } else {
+                    println!("  ! {title}. The install keeps waiting; the window says more.");
+                }
+            }
             Some("done") => {
                 let url = text(event, "url");
                 println!("\n  equin is running: {url}\n");
@@ -402,6 +502,13 @@ impl State {
             _ => {}
         }
         let _ = std::io::stdout().flush();
+    }
+
+    /// The install is done and the window closes: the script, still waiting
+    /// on Add it now, is told to end (quit), and the window exits 0.
+    fn close_done(&mut self) -> ! {
+        self.decide("quit");
+        finish(self.exit_code.unwrap_or(0));
     }
 
     fn decide(&mut self, decision: &str) {
@@ -440,8 +547,25 @@ fn open_url(url: &str) {
     }
 }
 
+/// The password socket, removed on the way out.
+static ASKPASS_PATH: std::sync::OnceLock<std::path::PathBuf> = std::sync::OnceLock::new();
+
+/// Show the page's password sheet.
+fn ask_password(webview: &wry::WebView, prompt: &str) {
+    let js = format!(
+        "window.installer.askPassword({})",
+        serde_json::to_string(prompt).expect("a string serializes")
+    );
+    if let Err(e) = webview.evaluate_script(&js) {
+        eprintln!("equin-installer: could not ask the page for the password: {e}");
+    }
+}
+
 /// Exit with the install's code.
 fn finish(code: i32) -> ! {
+    if let Some(path) = ASKPASS_PATH.get() {
+        askpass::remove(path);
+    }
     let _ = std::io::stdout().flush();
     std::process::exit(code);
 }

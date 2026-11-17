@@ -31706,12 +31706,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `repo-walk-safety/no-adhoc-repo-walk` — `cli/ensure-deps.ts` (sanctioned)
         - **`build`** — `./equin build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
           - Cli:
-            - Uses: 66 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
+            - Uses: 68 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
               - `framework/cli/op-runtime` ×32
+              - `installer` ×6
               - `debug/profiling/op-log` ×4
               - `framework/cli/bootstrap` ×4
               - `framework/tooling/web-artifacts` ×4
-              - `installer` ×4
               - `framework/cli/migrations` ×3
               - `framework/tooling/web-artifacts/served-addresses` ×3
               - `plugin-meta/plugin-records` ×3
@@ -32038,6 +32038,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/launcher/gateway-drift.prepareMainGateway`
               - `infra/launcher/gateway-drift.withGatewayFollowLock`
               - `installer.installEventsOn`
+              - `installer.reportInstallNotice`
               - `installer.reportInstallProgress`
         - **`stop`** — `./equin stop` — stop the gateway daemon (and with it every backend); `--disable` also stops it starting at login.
         - **`test`** — `./equin test` — the ONLY way to run tests: both runners (bun:test for co-located logic suites, vitest for jsdom suites), with a summary naming both buckets so a green-but-partial result is impossible.
@@ -32310,7 +32311,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/boot-snapshot`
     - **`product-name`** — The product's own name, as data: PRODUCT_NAME (`equin`, always lowercase — what every person and agent reads) and LEGACY_PRODUCT_NAMES (the names it went by before, never written again), enforced by the product-name:legacy check over every tracked file; and LEGACY_IDS, the identifiers built from the old name that are kept for good (stored state, cross-version contracts), the one place they are spelled — enforced by product-name:legacy-id (and its mirrors by product-name:legacy-ids-in-sync). A dependency-free leaf, so a browser bundle, a server or a script can import it.
       - Cross-plugin:
-        - Imported by: 69 plugins — full list in [`plugins/framework/plugins/product-name/REFERENCE.md`](../plugins/framework/plugins/product-name/REFERENCE.md)
+        - Imported by: 70 plugins — full list in [`plugins/framework/plugins/product-name/REFERENCE.md`](../plugins/framework/plugins/product-name/REFERENCE.md)
           - `infra` ×16
           - `framework` ×12
           - `apps` ×10
@@ -32325,6 +32326,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `upstream` ×2
           - `auth`
           - `debug/sentinel/machine-usage`
+          - `installer`
           - `network/live/resource-protocol`
           - `screenshot`
           - `stats/commits`
@@ -34079,6 +34081,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Exemptions:
                 - Exempted by:
                   - `apps/browser/engine` (0 debt)
+                  - `installer/window` (0 debt)
                   - `primitives/dom/auto-scroll` (0 debt)
                   - `primitives/dom/scroll-reveal` (0 debt)
                   - `primitives/embed/frame/agent` (0 debt)
@@ -40595,6 +40598,45 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by: `conversations/workspace/worktree`
 
 - **`installer`** — The equin installer: install.sh's structured event stream (protocol v1 — plan, step, log, done and exit events, one zod schema in core) and the renderers that draw it. Its window sub-plugin is the native installer window.
+  - Core:
+    - Uses:
+      - `framework/product-name.SOURCE_REPO_URL`
+      - `integrations/github-issues.buildIssueUrl`
+    - Exports (types):
+      - `InstallEventBody`
+      - `InstallReport`
+    - Exports (values):
+      - `BUILD_SUB_STEP_IDS`
+      - `BuildSubStepId`
+      - `ESTIMATES_BEGIN`
+      - `ESTIMATES_END`
+      - `estimatesFrom`
+      - `findEstimatesBlock`
+      - `FixTarget`
+      - `INSTALL_ESTIMATES`
+      - `INSTALL_PROTOCOL_VERSION`
+      - `INSTALL_STEP_IDS`
+      - `InstallEstimates`
+      - `InstallEvent`
+      - `InstallGroupId`
+      - `installIssueUrl`
+      - `InstallMode`
+      - `InstallStepId`
+      - `InstallTiming`
+      - `InstallTopStepId`
+      - `NoticeState`
+      - `parseInstallEventLine`
+      - `PauseKind`
+      - `PauseManualId`
+      - `PauseResolution`
+      - `PlanGroup`
+      - `PlanStep`
+      - `PlanSubStep`
+      - `ProgressUnit`
+      - `redactPaths`
+      - `renderEstimatesBlock`
+      - `WaitHolder`
+      - `WaitOn`
   - Cross-plugin:
     - Imported by:
       - `framework/cli/bootstrap`
@@ -40603,40 +40645,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `framework/cli/start`
       - `installer/release-assets`
       - `installer/window`
-  - Core:
-    - Exports (types): `InstallEventBody`
-    - Exports (values):
-      - `BUILD_SUB_STEP_IDS`
-      - `BuildSubStepId`
-      - `ESTIMATES_BEGIN`
-      - `ESTIMATES_END`
-      - `estimatesFrom`
-      - `findEstimatesBlock`
-      - `INSTALL_ESTIMATES`
-      - `INSTALL_PROTOCOL_VERSION`
-      - `INSTALL_STEP_IDS`
-      - `InstallEstimates`
-      - `InstallEvent`
-      - `InstallGroupId`
-      - `InstallMode`
-      - `InstallStepId`
-      - `InstallTiming`
-      - `InstallTopStepId`
-      - `parseInstallEventLine`
-      - `PlanGroup`
-      - `PlanStep`
-      - `PlanSubStep`
-      - `ProgressUnit`
-      - `renderEstimatesBlock`
-      - `WaitHolder`
-      - `WaitOn`
+  - Exemptions:
+    - Exempts itself from: `paths:no-hardcoded-paths` — `core/internal/report.test.ts` (sanctioned)
   - Cli:
     - Exports (values):
       - `emitInstallEvent`
       - `enterBuildSubStep`
       - `finishBuildSubSteps`
       - `installEventsOn`
+      - `reportInstallNotice`
       - `reportInstallProgress`
+      - `reportInstallResolved`
+      - `reportInstallStall`
       - `reportInstallWait`
   - Plugins:
     - **`release-assets`** — What a release tag publishes for the curl install: the GitHub Actions workflow (.github/workflows/installer-release.yml) that builds the installer window per release tag, the asset names and release.json it attaches, and the check holding the workflow's tag regex to the release tag grammar.
@@ -40661,6 +40681,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `bundlePage`
           - `installerWindow`
+      - Exemptions:
+        - Exempts itself from:
+          - `scroll-safety/no-scrolling-focus` — `standalone-page/main.ts` (sanctioned)
+          - `paths:no-hardcoded-paths` — `e2e/moment.ts` (sanctioned)
 
 - **`integrations`** — Umbrella for third-party service integrations that consume an auth connection (Gmail, …).
   - Plugins:
@@ -40679,6 +40703,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `apps/website/improve`
+          - `installer`
           - `wish/github-issue`
     - **`gmail`** — Gmail access toggle, Google scope requirement, and the shared 'fix my Gmail connection' affordance (and the empty state around it) consumers render in place of routing the user to Settings. Surfaces the Gmail access toggle in Settings.
       - Web:

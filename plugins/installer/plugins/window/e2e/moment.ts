@@ -1,20 +1,37 @@
-// Writes an event stream that reproduces the approved mockup's running moment
-// (proto-1794832268-wlybzk, `view=window state=running`): the build group
-// active, a sub-step at 137 of 312, About 7 minutes remaining, the mockup's
-// log lines — for `replay.ts` to draw and compare against the mockup.
+// Writes an event stream that reproduces one moment of the approved mockup's
+// window view (proto-1794832268-wlybzk), for `replay.ts` to draw and compare
+// against the mockup at the same options:
 //
-//   ./equin run plugins/installer/plugins/window/e2e/running-moment.ts --out "$EQUIN_SCRATCH/running.jsonl"
+//   ./equin run plugins/installer/plugins/window/e2e/moment.ts --out "$EQUIN_SCRATCH/m.jsonl" \
+//     [--state running|failed|fixing|done] [--failure sandbox|security|stall] [--claude app|cli]
+//
+// running: the build group active, a sub-step at 137 of 312, About 7 minutes
+// remaining. failed / fixing: the mockup's failure (`failure=`) at its own
+// place in the install, as the step engine would pause it (sandbox and
+// security stop their step; a stall does not), and Fix with Claude started
+// (`--claude`, the mockup's remembered target). done: every step finished.
 //
 // Prints the instant to replay it at (`--now`). The plan's words and medians
 // are the mockup's, not install.sh's: the mockup draws "Compiling native
 // modules", its own leaves' medians and a machine 7% slower than them, so the
 // fixture names the same strings and times to make the two comparable. The
-// mockup's log text is its own simulation (`logLines`), ported here verbatim.
+// mockup's log text and failures are its own simulation, ported verbatim.
 import { writeFileSync } from "node:fs";
 import { InstallEvent, type InstallEventBody } from "@plugins/installer/core";
-import { requireArg } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
+  arg,
+  requireArg,
+} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
-const out = requireArg("out", "running-moment.ts --out <events.jsonl>");
+const out = requireArg(
+  "out",
+  "moment.ts --out <events.jsonl> [--state running|failed|fixing|done] [--failure sandbox|security|stall] [--claude app|cli]",
+);
+const state = arg("state") ?? "running";
+const failureName = arg("failure") ?? "sandbox";
+const claude = arg("claude") === "cli" ? "cli" : "app";
+if (!["running", "failed", "fixing", "done"].includes(state))
+  throw new Error(`--state ${state}: running, failed, fixing or done`);
 
 const T0 = Date.parse("2026-11-17T15:00:00Z");
 const iso = (s: number): string =>
@@ -215,41 +232,148 @@ emit({
 });
 emit({ type: "step", id: "tools", state: "skipped" });
 
-const run = (
-  id: "mise" | "clone" | "toolchain" | "start" | "build.deps",
-  mockId: string,
-  est: number,
-): void => {
-  emit({ type: "step", id, state: "start" });
-  for (const line of logLines(mockId, 1, 4))
-    emit({ type: "log", step: id, stream: "out", line });
-  clock += dur(est);
-  emit({ type: "step", id, state: "done", ms: dur(est) * 1000 });
-};
-run("mise", "mise", 8);
-run("clone", "clone", 40);
-run("toolchain", "toolchain", 110);
-run("start", "services", 35);
-emit({ type: "step", id: "build", state: "start" });
-emit({ type: "step", id: "build.database", state: "skipped" });
-run("build.deps", "deps", 55);
+// ── The mockup's failures (FAILURES), verbatim ─────────────────────────────
+const FAILURES = {
+  sandbox: {
+    leaf: "native",
+    frac: 0.46,
+    kind: "sandbox",
+    title: "Blocked by the app you started it from",
+    plain:
+      "The install builds parts of equin on your Mac, and the coding tool you ran it from doesn't allow that. Run it from the Terminal app instead.",
+    evidence: [
+      "error: could not compile `ring` (build script)",
+      "process didn't exit successfully: signal 9, SIGKILL",
+      "parent process: sandbox-exec (started by another coding tool)",
+    ],
+  },
+  security: {
+    leaf: "services",
+    frac: 0.3,
+    kind: "security",
+    title: "Your company's security software removed part of equin",
+    plain:
+      "Jamf Protect deletes programs it hasn't seen before, including the one that connects equin to your browser. Your IT team can allow it.",
+    evidence: [
+      "./equin start: exec ~/.equin/bin/gateway: no such file or directory",
+      "JamfProtect: quarantined ~/.equin/bin/gateway (unsigned, first seen)",
+    ],
+  },
+  stall: {
+    leaf: "frontend",
+    frac: 0.31,
+    kind: "stall",
+    title: "The install is waiting for an older task",
+    plain:
+      "equin builds one thing at a time. A test started 3 hours ago stopped responding and is holding the turn. Stopping it lets the install continue.",
+    evidence: [
+      "waiting for host grant · holder op-48211 (test, pid 48211)",
+      "holder's last output: 3h 9m ago",
+    ],
+  },
+} as const;
+const failure = FAILURES[failureName as keyof typeof FAILURES];
+if (failure === undefined)
+  throw new Error(`--failure ${failureName}: sandbox, security or stall`);
 
-const FRAC = 0.44;
-emit({ type: "step", id: "build.codegen", state: "start" });
-const codegenAt = clock;
-const worked = dur(190) * FRAC;
-for (const line of logLines("native", FRAC, 40))
-  emit({ type: "log", step: "build.codegen", stream: "out", line });
-clock = codegenAt + Math.floor(worked);
-emit({
-  type: "progress",
-  id: "build.codegen",
-  done: Math.floor(FRAC * 312),
-  total: 312,
-  unit: "crates",
-});
+/** The install's steps, as the mockup's leaves (with their medians) make them up. */
+type StepId =
+  | "mise"
+  | "clone"
+  | "toolchain"
+  | "start"
+  | "build.deps"
+  | "build.codegen"
+  | "build.interface"
+  | "build.deploy";
+const SEQ: Array<{ id: StepId; mock: Array<[string, number]> }> = [
+  { id: "mise", mock: [["mise", 8]] },
+  { id: "clone", mock: [["clone", 40]] },
+  { id: "toolchain", mock: [["toolchain", 110]] },
+  { id: "start", mock: [["services", 35]] },
+  { id: "build.deps", mock: [["deps", 55]] },
+  { id: "build.codegen", mock: [["native", 190]] },
+  {
+    id: "build.interface",
+    mock: [
+      ["codegen", 25],
+      ["db", 15],
+      ["frontend", 210],
+    ],
+  },
+  { id: "build.deploy", mock: [["deploy", 25]] },
+];
+
+/** Where the moment is: a mockup leaf and how far into it (null: all done). */
+const at: { leaf: string; frac: number } | null =
+  state === "done"
+    ? null
+    : state === "running"
+      ? { leaf: "native", frac: 0.44 }
+      : { leaf: failure.leaf, frac: failure.frac };
+
+let now = clock;
+for (const { id, mock } of SEQ) {
+  if (id === "build.deps") {
+    emit({ type: "step", id: "build", state: "start" });
+    emit({ type: "step", id: "build.database", state: "skipped" });
+  }
+  const here = at === null ? -1 : mock.findIndex(([m]) => m === at.leaf);
+  emit({ type: "step", id, state: "start" });
+  if (here < 0) {
+    for (const [m] of mock)
+      for (const line of logLines(m, 1, 4))
+        emit({ type: "log", step: id, stream: "out", line });
+    const took = mock.reduce((sum, [, est]) => sum + dur(est), 0);
+    clock += took;
+    emit({ type: "step", id, state: "done", ms: took * 1000 });
+    continue;
+  }
+  // The moment's step: worked up to the leaf, then its fraction of it.
+  if (at === null) throw new Error("unreachable: no moment while one is found");
+  const before = mock
+    .slice(0, here)
+    .reduce((sum, [, est]) => sum + dur(est), 0);
+  const [leafId, leafEst] = mock[here]!;
+  const worked = before + dur(leafEst) * at.frac;
+  for (const line of logLines(leafId, at.frac, 40))
+    emit({ type: "log", step: id, stream: "out", line });
+  now = clock + worked;
+  clock += Math.floor(worked);
+  if (state === "running") {
+    emit({
+      type: "progress",
+      id,
+      done: Math.floor(at.frac * 312),
+      total: 312,
+      unit: "crates",
+    });
+    break;
+  }
+  const blocking = failure.kind !== "stall";
+  if (blocking)
+    emit({ type: "step", id, state: "failed", ms: Math.round(worked * 1000) });
+  emit({
+    type: "pause",
+    step: id,
+    kind: failure.kind,
+    title: failure.title,
+    text: failure.plain,
+    evidence: [...failure.evidence],
+    blocking,
+    optional: false,
+    manual: null,
+  });
+  if (state === "fixing")
+    emit({ type: "fixing", target: claude, clipboard: claude === "app" });
+  break;
+}
+if (at === null) {
+  emit({ type: "step", id: "build", state: "done", ms: 0 });
+  emit({ type: "done", url: "http://equin.localhost:9000", ms: clock * 1000 });
+  now = clock;
+}
 
 writeFileSync(out, `${stamped.join("\n")}\n`);
-const now = new Date(T0 + (codegenAt + worked) * 1000).toISOString();
 console.log(`wrote ${stamped.length} events to ${out}`);
-console.log(`replay at --now ${now}`);
+console.log(`replay at --now ${new Date(T0 + now * 1000).toISOString()}`);
