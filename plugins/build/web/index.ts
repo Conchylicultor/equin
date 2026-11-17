@@ -1,11 +1,15 @@
-import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import {
+  Core,
+  type PluginDefinition,
+} from "@plugins/framework/plugins/web-sdk/core";
 import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { buildConfig } from "../core";
 import { BuildButton } from "./components/build-button";
-import { ReloadGlance } from "./components/reload-button";
+import { UpdateGlance } from "./components/update-button";
+import { UpdatePolicyRoot } from "./components/update-policy-root";
 import { useBuildActivity } from "./hooks/use-build-activity";
 import { buildPane, buildDetailPane } from "./panes";
 import { BuildDetail } from "./slots";
@@ -16,12 +20,11 @@ import { buildRunIdKind } from "@plugins/build/plugins/run-ledger/core";
 export { BuildDetail as BuildDetailSlots } from "./slots";
 export { buildPane, buildDetailPane } from "./panes";
 export { useStaleFrontend } from "./hooks/use-stale-frontend";
-export { useReloadAdvice } from "./hooks/use-reload-advice";
-export type { ReloadAdvice } from "./hooks/use-reload-advice";
 
 export default {
   collapsed: true,
-  description: "Trigger `./equin build` from the toolbar.",
+  description:
+    "Trigger `./equin build` from the toolbar. Tabs on an older build update themselves: useTabUpdate() is the one verdict (current / available / required / fault) of the build this tab runs against the build served, and the page's UpdatePolicyRoot (Core.Root) reloads into the served build at a safe moment through reload-readiness's quietReload — hidden, or visible and idle, or at once when the old build already fails here — with a neutral Update pill only for what the user can act on (an update a process holds, an overdue one) and a red fault, for developers only, when plugins fail on the served build itself.",
   contributions: [
     IdKinds.Kind({ kind: buildRunIdKind }),
     ActionBar.Item({
@@ -29,10 +32,14 @@ export default {
       component: BuildButton,
     }),
     // The collapsed floating bar hides the Build button; these keep a running /
-    // failed build (a ring around the health dot) and a due reload (the Build
-    // tray holding only its Reload pill, beside it) visible anyway.
+    // failed build (a ring around the health dot) and an update the user can
+    // act on (the Build tray holding only its Update pill, beside it) visible
+    // anyway.
     ActionBar.Activity({ id: "build", useActivity: useBuildActivity }),
-    ActionBar.Glance({ id: "reload", component: ReloadGlance }),
+    ActionBar.Glance({ id: "reload", component: UpdateGlance }),
+    // The reload policy: a tab on an older build updates itself at a safe
+    // moment, once per page.
+    Core.Root({ component: UpdatePolicyRoot, scope: "page" }),
     Pane.Register({ pane: buildPane }),
     Pane.Register({ pane: buildDetailPane }),
     // Build panes live in the Debug app (`/debug/build`), alongside the other

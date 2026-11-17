@@ -2,7 +2,6 @@ import { CompanionPanel } from "@plugins/companions/plugins/panel/web";
 import { MenuBar } from "../slots";
 import { useNativeHost } from "../native-host";
 import { useWindowMaterial } from "../internal/window-material";
-import { StaleReload } from "../internal/stale-reload";
 import "../internal/window-material.css";
 
 /**
@@ -15,8 +14,9 @@ import "../internal/window-material.css";
  * The companions' panel over the `MenuBar.Section` slot, plus what only the
  * helper does: the window material's corners, the window following the
  * content's height, the status line's attention as the menu-bar icon's dot,
- * the `MenuBar.Mount` work, and reloading itself while hidden once main serves
- * a newer web bundle (`StaleReload`).
+ * and the `MenuBar.Mount` work. Updating into a newer web bundle is the
+ * app-wide reload policy's (build's `UpdatePolicyRoot`): the panel, kept alive
+ * hidden for days, reloads itself while hidden like every other page.
  */
 export function MenuBarPanel() {
   // On a transparent helper window the panel is the material's rounded fill.
@@ -37,7 +37,6 @@ export function MenuBarPanel() {
       onAttention={setAttention === null ? null : (on) => void setAttention(on)}
     >
       <MenuBar.Mount.Mount />
-      <StaleReload />
     </CompanionPanel>
   );
 }

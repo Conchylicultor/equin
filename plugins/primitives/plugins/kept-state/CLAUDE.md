@@ -130,11 +130,12 @@ carries them over, so no unsent text is lost — drop it once browsers migrated.
     - `useKept`
     - `writeDraft`
 - Cross-plugin:
-  - Imported by: 33 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 34 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×10
     - `primitives` ×9
     - `conversations` ×7
     - `apps-core` ×2
+    - `build`
     - `hints/ask`
     - `map`
     - `page/editor`

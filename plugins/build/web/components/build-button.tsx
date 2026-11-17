@@ -22,13 +22,13 @@ import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { buildHistory, buildRoute } from "@plugins/build/core";
 import { isMainCompositionBuild, type BuildRun } from "../../core";
 import {
-  useReloadAdvice,
   useServerBehind,
-  type ReloadAdvice,
   type ServerBehind,
-} from "../hooks/use-reload-advice";
-import { serverBehindMessage } from "../internal/reload-copy";
-import { ReloadButton } from "./reload-button";
+  type TabUpdate,
+} from "../hooks/use-tab-update";
+import type { UpdateAffordance } from "../internal/update-policy";
+import { serverBehindMessage } from "../internal/update-copy";
+import { UpdateButton, useUpdateAffordance } from "./update-button";
 import { BuildTray } from "./build-tray";
 import { latestRunState } from "../internal/latest-run-state";
 import { BuildPopoverContent } from "./build-popover-content";
@@ -43,14 +43,16 @@ const buildIcon = symbol("build");
 function BuildButtonInner({
   open,
   setOpen,
-  advice,
+  update,
+  affordance,
   serverBehind,
   wsStatus,
   historyData,
 }: {
   open: boolean;
   setOpen: (v: boolean) => void;
-  advice: ReloadAdvice;
+  update: TabUpdate;
+  affordance: UpdateAffordance;
   serverBehind: ServerBehind;
   wsStatus: string;
   historyData: BuildRun[];
@@ -62,36 +64,27 @@ function BuildButtonInner({
   const runState = latestRunState(latestRun);
   const building = runState === "running";
   const failed = runState === "failed";
-  const staleTab =
-    advice.kind === "stale" ||
-    advice.kind === "outdated" ||
-    (advice.kind === "broken" && advice.stale);
 
-  // The label and the Reload pill answer different questions. The label is
+  // The label and the Update pill answer different questions. The label is
   // about the SERVER (what the build is doing); the pill is about THIS TAB
-  // (whether it needs a reload), so a plugin that failed to load mid-build still
-  // shows the red Reload beside "Building".
+  // (an update the user can act on), so both can show side by side.
   //
-  // Priority: an active build wins the label, since the Reload pill already
-  // says the tab is stale — so a stale tab mid-build shows the spinner AND the
-  // Reload pill side by side. With no build running, a server whose code is
-  // behind the bundle it serves says so first — it is the one state where
-  // something fails and no reload fixes it (the last build, if it failed, is
-  // usually why: the popover shows it). Then a stale tab reads "Server
-  // updated"; otherwise the last outcome.
-  const status:
-    "idle" | "building" | "restarting" | "behind" | "updated" | "failed" =
+  // A tab on an older build says nothing here: it updates itself at a safe
+  // moment (`UpdatePolicyRoot`), and the pill appears only when the user can
+  // act. Priority: an active build wins the label; with none running, a
+  // server whose code is behind the bundle it serves says so first — the one
+  // state where something fails and no reload fixes it (the last build, if it
+  // failed, is usually why: the popover shows it); otherwise the last outcome.
+  const status: "idle" | "building" | "restarting" | "behind" | "failed" =
     building && wsStatus !== "open"
       ? "restarting"
       : building
         ? "building"
         : serverBehind.behind
           ? "behind"
-          : staleTab
-            ? "updated"
-            : failed
-              ? "failed"
-              : "idle";
+          : failed
+            ? "failed"
+            : "idle";
 
   // A composition build names what it is building: "Building sonata…", or
   // "Building sonata, website…" for a multi-target invocation. A plain build of
@@ -106,7 +99,6 @@ function BuildButtonInner({
     building: buildingComposition ? `Building ${targetsLabel}` : "Building",
     restarting: "Server restarting…",
     behind: "Server out of date",
-    updated: "Server updated",
     failed: "Build failed",
   }[status];
   const spinning = status === "building" || status === "restarting";
@@ -121,8 +113,8 @@ function BuildButtonInner({
         status,
         building,
         wsStatus,
-        staleTab,
-        advice: advice.kind,
+        update: update.kind,
+        affordance: affordance.kind,
         serverBehind: serverBehind.behind,
         targets: targetsLabel,
         finishedAt: latestRun?.finishedAt,
@@ -132,8 +124,8 @@ function BuildButtonInner({
     status,
     building,
     wsStatus,
-    staleTab,
-    advice.kind,
+    update.kind,
+    affordance.kind,
     serverBehind.behind,
     targetsLabel,
     latestRun?.finishedAt,
@@ -141,11 +133,11 @@ function BuildButtonInner({
 
   // The look IS the state. At rest, with nothing to say, the control is one
   // quiet icon like the bar's other utilities. Anything to report — a build
-  // running, the server updated under this tab, a failed build, a tab that
-  // needs a reload — turns it into the tray: the status in words as a ghost
-  // button, and a due reload nested at its end as the filled Reload pill.
-  const quiet = status === "idle" && advice.kind === "none";
-  const reloadDue = advice.kind !== "none";
+  // running, a failed build, an update the user can act on — turns it into
+  // the tray: the status in words as a ghost button, and the Update pill
+  // nested at its end.
+  const quiet = status === "idle" && affordance.kind === "none";
+  const reloadDue = affordance.kind !== "none";
   const trigger = quiet ? (
     <IconButton icon={buildIcon} label="Builds" />
   ) : (
@@ -226,7 +218,7 @@ function BuildButtonInner({
   return (
     <BuildTray failed={status === "failed" || status === "behind"}>
       {popover}
-      <ReloadButton advice={advice} />
+      <UpdateButton update={update} affordance={affordance} />
     </BuildTray>
   );
 }
@@ -234,8 +226,8 @@ function BuildButtonInner({
 export function BuildButton() {
   const [open, setOpen] = useState(false);
 
-  // --- Does this tab need a reload? (stale bundle, or a plugin failed to load) ---
-  const advice = useReloadAdvice();
+  // --- An update (or a failed load) the user can act on? ---
+  const { update, affordance } = useUpdateAffordance();
   // --- Is the server's code behind the bundle it serves? (no reload fixes it) ---
   const serverBehind = useServerBehind();
 
@@ -253,9 +245,8 @@ export function BuildButton() {
   // Two states, never one: still LOADING is the neutral wrench, inert; a read
   // that FAILED is the live error wrench whose click retries (or reloads, when
   // this tab is out of date) — a disabled wrench would read as "loading"
-  // forever. Either way the Reload pill stays: whether this tab needs a
-  // reload is independent of the history read (and an out-of-date tab is
-  // exactly when that read fails).
+  // forever. Either way the Update pill stays: it is independent of the
+  // history read (and an out-of-date tab is exactly when that read fails).
   let wrench: ReactNode;
   switch (historyResult.status) {
     case "ready":
@@ -263,7 +254,8 @@ export function BuildButton() {
         <BuildButtonInner
           open={open}
           setOpen={setOpen}
-          advice={advice}
+          update={update}
+          affordance={affordance}
           serverBehind={serverBehind}
           wsStatus={wsStatus}
           historyData={historyResult.data}
@@ -284,11 +276,11 @@ export function BuildButton() {
       );
       break;
   }
-  if (advice.kind === "none") return wrench;
+  if (affordance.kind === "none") return wrench;
   return (
     <BuildTray>
       {wrench}
-      <ReloadButton advice={advice} />
+      <UpdateButton update={update} affordance={affordance} />
     </BuildTray>
   );
 }

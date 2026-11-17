@@ -6,8 +6,10 @@
  * module import for the life of the page, so one scenario's failure must not
  * leak into the other:
  *
- *  a. **A background (deferred) plugin 404s.** No top banner. The Build
- *     pill's Reload segment is red, named "Part of the app didn't load", and the
+ *  a. **A background (deferred) plugin 404s** on the build the tab runs (a
+ *     fault — no update explains it). No top banner. The Build tray carries
+ *     the fault pill (red with the failed plugins named for a developer; a
+ *     neutral retry, "Part of the app didn't load", for a user), and the
  *     collapsed action-bar dot is red. A `plugin-load` report is filed.
  *  b. **A core (eager) plugin 404s.** The explicit top banner lists it, and a
  *     `plugin-load` report is filed — which only happens once the report sink
@@ -64,7 +66,11 @@ const out = arg("out", "/tmp/stale-tab-reload");
 const DEFAULT_DEFERRED = "apps/plugins/website/plugins/landing/plugins/contact";
 const DEFAULT_EAGER = "fullscreen";
 
-const BROKEN_NAME = /part of the app didn't load/i;
+// The fault pill's name: a user's neutral retry, or a developer's red detail
+// (`build/web` update-copy) — a plugin failing on the served build is a fault,
+// not an update.
+const BROKEN_NAME =
+  /part of the app didn't load|failed to load on the build this tab runs/i;
 
 const r = report(`stale-tab reload (${colorScheme})`);
 
@@ -287,7 +293,7 @@ await withBrowser(async (h) => {
       const cls = (await chip.getAttribute("class")) ?? "";
       r.ok(
         "deferred failure: the segment is destructive",
-        cls.includes("text-destructive"),
+        cls.includes("destructive"),
         cls,
       );
       r.eq(

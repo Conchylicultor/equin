@@ -35,6 +35,7 @@
     - `apps-core/app-launcher`
     - `audience/developer-mark`
     - `audience/view-option`
+    - `build`
     - `shell/notifications`
     - `shell/toast`
 - Sub-plugins:

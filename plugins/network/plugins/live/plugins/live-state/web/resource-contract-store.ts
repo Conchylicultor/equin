@@ -11,10 +11,10 @@ import type {
 // schema rejects against a server on another build (a `ResourceDecodeError`
 // judged `skew`, recorded as `contract-mismatch`: the same fact, seen from the
 // tab's side). With a `skew` verdict the tab's bundle
-// and the server's code come from different builds, so the app-wide advice
-// reads it (build's `useReloadAdvice`): one surface for every resource, instead
+// and the server's code come from different builds, so the app-wide update
+// verdict reads it (build's `useTabUpdate`): one surface for every resource, instead
 // of each read rendering its own permanent failure. WHICH side is behind is
-// not this store's question — the advice answers it from the deployment.
+// not this store's question — the verdict answers it from the deployment.
 //
 // A refusal stands per TUPLE until that tuple is answered: the transport clears
 // it on every applied value (`clearResourceContractMismatch`). A tab that is

@@ -255,47 +255,79 @@ wire.
 The list of runs is NOT this collection: it is the merged `runs` surface, which
 pages every ledger off its own keyset query (`runs-arm`).
 
-## The toolbar control — wrench, tray, Reload pill
+## The toolbar control — wrench, tray, Update pill
 
 `BuildButton` (`ActionBar.Item`) is one quiet ghost wrench while there is
-nothing to say: no build running, no failure, no reload due. Anything to report
-turns it into the **tray** (`components/build-tray.tsx`): one faint pill (the
-`sunken` surface role, which also re-publishes `--hover-fill` a step further so
-the ghost status inside still hovers) holding the status as a ghost text button
-— a ring spinner (`Spinner shape="ring"`) and "Building" + elapsed time, "Server restarting…", "Server
-updated", or "Build failed" with a solid-destructive dot — and, when a reload
-is due, the **Reload pill** nested at its end. A failed build rings the tray in
+nothing to say: no build running, no failure, nothing the user can act on.
+Anything to report turns it into the **tray** (`components/build-tray.tsx`):
+one faint pill (the `sunken` surface role, which also re-publishes
+`--hover-fill` a step further so the ghost status inside still hovers) holding
+the status as a ghost text button — a ring spinner (`Spinner shape="ring"`) and
+"Building" + elapsed time, "Server restarting…", "Server out of date", or
+"Build failed" with a solid-destructive dot — and, when there is one, the
+**Update pill** nested at its end. A failed build rings the tray in
 `destructive-solid` at 45%.
 
-**A reload is advised only when a reload can help.** `useReloadAdvice` and
-`useServerBehind` (`hooks/use-reload-advice.ts`) read the same two facts — the
-server's `skew` refusals of this tab's live reads, and whether this tab runs
-exactly the served bundle (`useStaleFrontend().current`). A tab that does not
-(or is not known to) is out of date: Reload. A tab that does is current, so the
-refusals mean the backend's own code is behind the bundle it serves — a deploy
-that published the frontend and never got its backend up — and a reload would
-fetch the same bundle into the same refusals. The tray then says **Server out
-of date** (red ring, no Reload pill; the collapsed bar's activity ring says the
-same), and it clears on its own once the backend catches up: live-state drops a
-tuple's refusal the moment that tuple is answered. The deploy now rolls the
-frontend back when its backend fails to come up (`cli/plugins/build`'s
-`deploy-namespace.ts`), so this is the backstop, not the common case.
+## Tabs on an older build update themselves
 
-`ReloadButton` (`components/reload-button.tsx`) is the ONE Reload control: a
-filled pill at the control height in the solid fills (`info-solid` when the tab
-is only stale, `destructive-solid` when something already fails), named by its
-full `reload-copy.ts` message. Its label is the solid foreground with 18% of
-the fill mixed back in (a tinted light, not stark white); its glyph end keeps
-the plain control padding and only the label end takes the pill's extra. The collapsed bar's `ActionBar.Glance` is
-`ReloadGlance`: the same tray holding only `ReloadButton`, so Reload is the same
-control whether the bar is open or closed. The chrome theme deepens the solid
-fills to navy and oxblood — see `apps-core/chrome-theme`.
+A newer build served is an **update, not a fault**: no red state, no click.
+Design: `research/2026-11-17-global-lossless-reload.md` ("The policy").
+
+**One verdict** — `useTabUpdate()` (`hooks/use-tab-update.ts`): the version
+this tab runs against the version served, from the deployment's web graph
+(`useStaleFrontend`), the server's `skew` refusals of this tab's live reads, and
+the plugins that failed to load:
+
+| Verdict | When | Policy |
+|---|---|---|
+| `current` | runs the served build, or the served build is not known yet | nothing |
+| `available` | a newer build is served, nothing fails | reload at a safe moment |
+| `required` | the old build already fails here and the version change explains it (`outdated`: skew refusals; `missing-plugins`: plugins failed in a tab on an older build) | reload as soon as no process holds the page |
+| `fault` | plugins failed to load and no version change explains it | never auto-reload: a real bug, reported by the loader (`plugin-load`) |
+
+**The policy** — `UpdatePolicyRoot` (`Core.Root`, once per page; decisions pure
+in `internal/update-policy.ts`) reads the verdict and P2's
+`useReloadReadiness()` (`primitives/dom/reload-readiness`): an `available`
+update reloads at once while the page is hidden, or once the user has been idle
+(`engaged` false for `IDLE_BEFORE_UPDATE_MS` beyond its own 10 s), and waits
+while any process holds the page; a `required` one calls `quietReload` at once,
+which waits out the holds itself. Every reload is `quietReload` (kept state
+flushed), so no branch loses what the user made. A visible update leaves a quiet
+"Updated to the latest version" toast on the page it loads. This is also the
+menu-bar panel's update (it used to carry its own hidden-reload).
+
+**The loop guard** — an update reload records its target graph in session
+storage (`internal/update-state.ts`); a page that loads from it and is still
+behind on the SAME target is `blocked` (logged on the `tab-update` channel):
+it never reloads on its own again, and the pill offers the update instead.
+
+**The Update pill** (`components/update-button.tsx`) shows only what the user
+can act on, in a NEUTRAL fill: an update a running process holds ("Update
+waits for: Playback"), an available one that found no moment within
+`UPDATE_OVERDUE_MS` (ambient music can hold a page for hours), or a blocked
+one. Pressing it updates at once, over the holds — the user chose to stop
+them. A `fault` is the one red state, and only for a developer
+(`ForAudience`, the developer mark), naming the failed plugins; a user sees
+the neutral "Reload" retry. The collapsed bar's `ActionBar.Glance` is
+`UpdateGlance`: the same tray holding only the pill.
+
+**A skew refusal of a tab that runs exactly the served bundle is not an
+update.** The tab is current, so the backend's own code is behind the bundle
+it serves — a deploy that published the frontend and never got its backend up
+— and a reload would fetch the same bundle into the same refusals.
+`useServerBehind` reads it from the same facts as the verdict; the tray then
+says **Server out of date** (red ring, no pill; the collapsed bar's activity
+ring says the same), and it clears on its own once the backend catches up:
+live-state drops a tuple's refusal the moment that tuple is answered. The
+deploy rolls the frontend back when its backend fails to come up
+(`cli/plugins/build`'s `deploy-namespace.ts`), so this is the backstop, not
+the common case.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
 
 ## Plugin reference
 
-- Description: Trigger `./equin build` from the toolbar. Build, portable half: the build-run id kind, the build config, the Build task category and the build.history collection over build_runs — what a host without the computer serves too. Running builds (the jobs, the routes, the auto-build reconcile) is build/machine.
+- Description: Trigger `./equin build` from the toolbar. Tabs on an older build update themselves: useTabUpdate() is the one verdict (current / available / required / fault) of the build this tab runs against the build served, and the page's UpdatePolicyRoot (Core.Root) reloads into the served build at a safe moment through reload-readiness's quietReload — hidden, or visible and idle, or at once when the old build already fails here — with a neutral Update pill only for what the user can act on (an update a process holds, an overdue one) and a red fault, for developers only, when plugins fail on the served build itself. Build, portable half: the build-run id kind, the build config, the Build task category and the build.history collection over build_runs — what a host without the computer serves too. Running builds (the jobs, the routes, the auto-build reconcile) is build/machine.
 - Web:
   - Slots:
     - `BuildDetailSlots.Section`
@@ -313,19 +345,23 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
     - `IdKinds.Kind` "build"
     - `ActionBar.Item` → `BuildButton`
     - `ActionBar.Activity` "build"
-    - `ActionBar.Glance` → `ReloadGlance`
+    - `ActionBar.Glance` → `UpdateGlance`
+    - `Core.Root` → `UpdatePolicyRoot`
     - `Pane.Register` "build"
     - `Pane.Register` "build-detail"
     - `DebugApp.Sidebar` "Builds"
     - `ConfigV2.WebRegister` "config"
-  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/live-state` ×4
     - `primitives/css/ui-kit` ×4
     - `infra/endpoints` ×3
+    - `primitives/dom/reload-readiness` ×2
     - `primitives/log-channels` ×2
     - `primitives/pane` ×2
     - `apps-core/tabs.useAppLink`
     - `apps/debug/shell.DebugApp`
+    - `audience/developer-mark.ForAudience`
+    - `audience.useAudience`
     - `build/deployment.DeploymentChain`
     - `config_v2.ConfigV2`
     - `ids.IdKinds`
@@ -337,7 +373,9 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
     - `primitives/detail-sections.defineDetailSections`
+    - `primitives/dom/web-storage.defineStore`
     - `primitives/icon-button.IconButton`
+    - `primitives/kept-state.flushKept`
     - `primitives/link-gesture.activationProps`
     - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`
@@ -345,13 +383,12 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
     - `runs.RunsDataView`
     - `shell/action-bar.ActionBar`
     - `shell/notifications.useToast`
+    - `shell/toast.showToast`
     - `ui/icons.Icon`
-  - Exports (types): `ReloadAdvice`
   - Exports (values):
     - `buildDetailPane`
     - `BuildDetailSlots`
     - `buildPane`
-    - `useReloadAdvice`
     - `useStaleFrontend`
 - Server:
   - Contributes:
@@ -414,8 +451,6 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
     - `ui/tokens/color-palette --destructive-solid`
     - `ui/tokens/color-palette --destructive-solid-foreground`
     - `ui/tokens/color-palette --foreground`
-    - `ui/tokens/color-palette --info-solid`
-    - `ui/tokens/color-palette --info-solid-foreground`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/density --chrome-pad-x`
     - `ui/tokens/density --control-gap-sm`
@@ -435,9 +470,10 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
     - `build/converge`
     - `build/runs-arm`
     - `build/serve-composition`
-    - `companions/menu-bar`
     - `debug/reports`
   - Endpoint callers: `restart-skip`
+- Exemptions:
+  - Exempts itself from: `page-hosts-on-demand` — `web/index.ts` (sanctioned)
 - Sub-plugins:
   - **`build-commits`** — Commits included since the previous build, shown in the build detail pane.
   - **`build-fix`** — Launch-agent button in the build detail pane for failed builds, and the same launch as a Build failed notification's Fix (the fix-build notification action).

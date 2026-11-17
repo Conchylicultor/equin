@@ -81,6 +81,7 @@ forced) is the policy's, read from `useReloadReadiness()`.
     - `apps/chord/piano`
     - `apps/keyboard-party/party`
     - `apps/sonata/audio/engine`
+    - `build`
     - `infra/attachments`
     - `integrations/youtube`
     - `music/ambient`

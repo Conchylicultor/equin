@@ -234,7 +234,7 @@ frames, which still reach **all** tabs — hence the gates below.
 - **Contract refusals are version skew, surfaced once.**
   - `contract-mismatch` / `unknown-key` (from `sub-error` or HTTP) land in
     `resource-contract-store.ts` (`useResourceContractMismatches()`, one entry
-    per key); build's `useReloadAdvice` / `useServerBehind` read it.
+    per key); build's `useTabUpdate` / `useServerBehind` read it.
   - A refusal stands per TUPLE until that tuple is answered (`markApplied`, an
     unobserved read's success): an out-of-date tab is never answered, while a
     backend that was behind and restarted answers the replayed subs.

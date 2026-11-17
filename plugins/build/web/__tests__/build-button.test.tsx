@@ -9,19 +9,27 @@ vi.mock(
 );
 
 // The two reads the button branches on, driven directly: the build history
-// (`useLive`) and the reload advice. Nothing here needs a server.
+// (`useLive`) and the update affordance. Nothing here needs a server.
 const state = vi.hoisted(() => ({
   history: {} as Record<string, unknown>,
-  advice: { kind: "none" } as { kind: string; [k: string]: unknown },
+  update: { kind: "current" } as { kind: string; [k: string]: unknown },
+  affordance: { kind: "none" } as { kind: string; [k: string]: unknown },
   serverBehind: { behind: false } as { behind: boolean; count?: number },
 }));
 vi.mock("@plugins/network/plugins/live/web", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   useLive: () => state.history,
 }));
-vi.mock("../hooks/use-reload-advice", () => ({
-  useReloadAdvice: () => state.advice,
+vi.mock("../hooks/use-tab-update", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   useServerBehind: () => state.serverBehind,
+}));
+vi.mock("../components/update-button", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  useUpdateAffordance: () => ({
+    update: state.update,
+    affordance: state.affordance,
+  }),
 }));
 vi.mock(
   "@plugins/network/plugins/live/plugins/live-state/web",
@@ -46,13 +54,14 @@ import { BuildButton } from "../components/build-button";
  * pill the tab needed.
  */
 
-const STALE = "Server was rebuilt — click to reload this tab";
-const OUTDATED =
-  "This tab is out of date and can't load some data — reload to fix";
+const READY = "A new version is ready — click to update";
+const WAITING =
+  "A new version is ready. Update waits for: Playback — click to update now";
 
 afterEach(() => {
   cleanup();
-  state.advice = { kind: "none" };
+  state.update = { kind: "current" };
+  state.affordance = { kind: "none" };
   state.serverBehind = { behind: false };
 });
 
@@ -69,17 +78,18 @@ describe("BuildButton without history", () => {
     expect(buttons[0]!.getAttribute("aria-disabled")).toBe("true");
   });
 
-  it("loading + stale tab: the Reload pill still shows", () => {
+  it("loading + an overdue update: the Update pill still shows", () => {
     state.history = {
       status: "loading",
       refetch: vi.fn(),
     };
-    state.advice = { kind: "stale" };
+    state.update = { kind: "available", target: "g2" };
+    state.affordance = { kind: "ready" };
     const { getByRole } = render(<BuildButton />);
-    expect(getByRole("button", { name: STALE })).not.toBeNull();
+    expect(getByRole("button", { name: READY })).not.toBeNull();
   });
 
-  it("failed: a live wrench saying so, whose click retries — plus Reload", () => {
+  it("failed: a live wrench saying so, whose click retries — plus Update", () => {
     const refetch = vi.fn(() => Promise.resolve());
     state.history = {
       status: "error",
@@ -90,7 +100,13 @@ describe("BuildButton without history", () => {
       ),
       refetch,
     };
-    state.advice = { kind: "outdated", stale: false, count: 1 };
+    state.update = {
+      kind: "required",
+      why: "outdated",
+      count: 1,
+      target: null,
+    };
+    state.affordance = { kind: "waiting", waitsFor: ["Playback"] };
     const { getByRole } = render(<BuildButton />);
     const wrench = getByRole("button", {
       name: /couldn't load the build history.*Click to retry/i,
@@ -98,7 +114,7 @@ describe("BuildButton without history", () => {
     expect(wrench.disabled).toBe(false);
     fireEvent.click(wrench);
     expect(refetch).toHaveBeenCalledTimes(1);
-    expect(getByRole("button", { name: OUTDATED })).not.toBeNull();
+    expect(getByRole("button", { name: WAITING })).not.toBeNull();
   });
 
   it("failed because the tab is out of date: the wrench offers the reload", () => {
@@ -121,8 +137,9 @@ describe("BuildButton without history", () => {
 
 /**
  * The Builds control with history: one quiet wrench at rest, otherwise the
- * tray — the status as a ghost button, a due reload nested at its end as the
- * filled Reload pill, and a failed build ringed in the solid destructive fill.
+ * tray — the status as a ghost button, an update the user can act on nested
+ * at its end as the Update pill, and a failed build ringed in the solid
+ * destructive fill.
  */
 describe("BuildButton with history", () => {
   const run = (over: Record<string, unknown>) => ({
@@ -146,15 +163,29 @@ describe("BuildButton with history", () => {
     expect(trayOf(buttons[0]!)).toBeNull();
   });
 
-  it("server updated under a stale tab: status and Reload share one tray", () => {
+  it("a stale tab whose update has not come due: the bare wrench, nothing to say", () => {
     state.history = { status: "ready", data: [run({})] };
-    state.advice = { kind: "stale" };
+    state.update = { kind: "available", target: "g2" };
+    const { getAllByRole } = render(<BuildButton />);
+    const buttons = getAllByRole("button");
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0]!.getAttribute("aria-label")).toBe("Builds");
+  });
+
+  it("a build running beside an overdue update: status and Update share one tray", () => {
+    state.history = {
+      status: "ready",
+      data: [run({ finishedAt: null, exitCode: null })],
+    };
+    state.update = { kind: "available", target: "g2" };
+    state.affordance = { kind: "ready" };
     const { getByRole } = render(<BuildButton />);
-    const status = getByRole("button", { name: "Server updated" });
-    const reload = getByRole("button", { name: STALE });
+    const status = getByRole("button", { name: /Building/ });
+    const update = getByRole("button", { name: READY });
     expect(trayOf(status)).not.toBeNull();
-    expect(trayOf(status)).toBe(trayOf(reload));
-    expect(reload.className).toContain("bg-info-solid");
+    expect(trayOf(status)).toBe(trayOf(update));
+    // An update is not a fault: never the destructive fill.
+    expect(update.className).not.toContain("bg-destructive-solid");
   });
 
   it("failed: the tray is ringed in the solid destructive fill", () => {

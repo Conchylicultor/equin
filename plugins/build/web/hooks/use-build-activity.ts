@@ -4,7 +4,7 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import { buildHistory } from "@plugins/build/core";
 import { isMainCompositionBuild } from "../../core";
 import { latestRunState } from "../internal/latest-run-state";
-import { useServerBehind } from "./use-reload-advice";
+import { useServerBehind } from "./use-tab-update";
 
 /**
  * The build as background work, for the collapsed floating bar's ring

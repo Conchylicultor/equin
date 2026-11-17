@@ -14375,6 +14375,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `apps-core/app-launcher`
       - `audience/developer-mark`
       - `audience/view-option`
+      - `build`
       - `shell/notifications`
       - `shell/toast`
   - Plugins:
@@ -14401,6 +14402,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape --spacing`
         - Imported by:
           - `apps-core/app-launcher`
+          - `build`
           - `config_v2/git-defaults-preview`
           - `hints/ask`
           - `primitives/ui-context/element-picker`
@@ -15162,7 +15164,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/run-local-target.ts` (debt)
 
-- **`build`** — Trigger `./equin build` from the toolbar. Build, portable half: the build-run id kind, the build config, the Build task category and the build.history collection over build_runs — what a host without the computer serves too. Running builds (the jobs, the routes, the auto-build reconcile) is build/machine.
+- **`build`** — Trigger `./equin build` from the toolbar. Tabs on an older build update themselves: useTabUpdate() is the one verdict (current / available / required / fault) of the build this tab runs against the build served, and the page's UpdatePolicyRoot (Core.Root) reloads into the served build at a safe moment through reload-readiness's quietReload — hidden, or visible and idle, or at once when the old build already fails here — with a neutral Update pill only for what the user can act on (an update a process holds, an overdue one) and a red fault, for developers only, when plugins fail on the served build itself. Build, portable half: the build-run id kind, the build config, the Build task category and the build.history collection over build_runs — what a host without the computer serves too. Running builds (the jobs, the routes, the auto-build reconcile) is build/machine.
   - Web:
     - Slots:
       - `BuildDetailSlots.Section`
@@ -15180,19 +15182,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `IdKinds.Kind` "build"
       - `ActionBar.Item` → `BuildButton`
       - `ActionBar.Activity` "build"
-      - `ActionBar.Glance` → `ReloadGlance`
+      - `ActionBar.Glance` → `UpdateGlance`
+      - `Core.Root` → `UpdatePolicyRoot`
       - `Pane.Register` "build"
       - `Pane.Register` "build-detail"
       - `DebugApp.Sidebar` "Builds"
       - `ConfigV2.WebRegister` "config"
-    - Uses: 37 symbols — full list in [`plugins/build/REFERENCE.md`](../plugins/build/REFERENCE.md)
+    - Uses: 44 symbols — full list in [`plugins/build/REFERENCE.md`](../plugins/build/REFERENCE.md)
       - `network/live/live-state` ×4
       - `primitives/css/ui-kit` ×4
       - `infra/endpoints` ×3
+      - `primitives/dom/reload-readiness` ×2
       - `primitives/log-channels` ×2
       - `primitives/pane` ×2
       - `apps-core/tabs.useAppLink`
       - `apps/debug/shell.DebugApp`
+      - `audience/developer-mark.ForAudience`
+      - `audience.useAudience`
       - `build/deployment.DeploymentChain`
       - `config_v2.ConfigV2`
       - `ids.IdKinds`
@@ -15204,7 +15210,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/css/status-dot.StatusDot`
       - `primitives/css/text.Text`
       - `primitives/detail-sections.defineDetailSections`
+      - `primitives/dom/web-storage.defineStore`
       - `primitives/icon-button.IconButton`
+      - `primitives/kept-state.flushKept`
       - `primitives/link-gesture.activationProps`
       - `primitives/loading.Loading`
       - `primitives/overlay/popover.InlinePopover`
@@ -15212,13 +15220,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `runs.RunsDataView`
       - `shell/action-bar.ActionBar`
       - `shell/notifications.useToast`
+      - `shell/toast.showToast`
       - `ui/icons.Icon`
-    - Exports (types): `ReloadAdvice`
     - Exports (values):
       - `buildDetailPane`
       - `BuildDetailSlots`
       - `buildPane`
-      - `useReloadAdvice`
       - `useStaleFrontend`
   - Server:
     - Contributes:
@@ -15281,8 +15288,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ui/tokens/color-palette --destructive-solid`
       - `ui/tokens/color-palette --destructive-solid-foreground`
       - `ui/tokens/color-palette --foreground`
-      - `ui/tokens/color-palette --info-solid`
-      - `ui/tokens/color-palette --info-solid-foreground`
       - `ui/tokens/color-palette --muted-foreground`
       - `ui/tokens/density --chrome-pad-x`
       - `ui/tokens/density --control-gap-sm`
@@ -15302,9 +15307,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `build/converge`
       - `build/runs-arm`
       - `build/serve-composition`
-      - `companions/menu-bar`
       - `debug/reports`
     - Endpoint callers: `restart-skip`
+  - Exemptions:
+    - Exempts itself from: `page-hosts-on-demand` — `web/index.ts` (sanctioned)
   - Plugins:
     - **`build-commits`** — Commits included since the previous build, shown in the build detail pane.
       - Web:
@@ -16273,7 +16279,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/task-draft-form.DraftPage`
               - `tasks/task-draft-form.DraftPageProvider`
               - `wish.WishField`
-    - **`menu-bar`** — The menu-bar panel the native helper opens: the menu-bar app (unlisted, colorMode system — light or dark with the OS, in the companions' `companion` theme) mounted at /home/menu-bar, whose whole layout is the companions' panel (no pane; chromeless under ?embed=1) over the MenuBar.Section slot, with the companions' header (whose Companion.Status attention lights the menu-bar icon's dot) and footer ('Running · <host>', opening equin in the default browser through the helper). useNativeHost() reads the helper's bridge (window.equinNative): pending, absent (a plain browser), or present with its platform, capabilities and methods — a capability the host lacks has no method. useNativeApps() reads the device's installed and pinned apps from the helper that keeps them (pending / unavailable / ready / error), re-read on panel focus and after a pin. MenuBar.Mount runs headless work while the panel page is alive; the panel reports its content height to the helper, shows no toasts, and reloads itself while hidden once main serves a newer web bundle.
+    - **`menu-bar`** — The menu-bar panel the native helper opens: the menu-bar app (unlisted, colorMode system — light or dark with the OS, in the companions' `companion` theme) mounted at /home/menu-bar, whose whole layout is the companions' panel (no pane; chromeless under ?embed=1) over the MenuBar.Section slot, with the companions' header (whose Companion.Status attention lights the menu-bar icon's dot) and footer ('Running · <host>', opening equin in the default browser through the helper). useNativeHost() reads the helper's bridge (window.equinNative): pending, absent (a plain browser), or present with its platform, capabilities and methods — a capability the host lacks has no method. useNativeApps() reads the device's installed and pinned apps from the helper that keeps them (pending / unavailable / ready / error), re-read on panel focus and after a pin. MenuBar.Mount runs headless work while the panel page is alive; the panel reports its content height to the helper, shows no toasts, and — like every page, through build's update policy — reloads itself while hidden once main serves a newer web bundle.
       - Web:
         - Slots:
           - `MenuBar.Section`
@@ -16290,12 +16296,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `MenuBar.Section` "Footer" → `PanelFooter`
         - Uses:
           - `apps-core.Apps`
-          - `build.useStaleFrontend`
           - `companions/panel.CompanionFooter`
           - `companions/panel.CompanionHeader`
           - `companions/panel.CompanionPanel`
           - `primitives/loading.Loading`
-          - `primitives/log-channels.clientLog`
           - `primitives/slot-render.defineMountSlot`
           - `primitives/slot-render.defineRenderSlot`
         - Exports (types):
@@ -34223,8 +34227,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `Core.Root`
           - `Core.Boot`
-        - Slot contributors: 41 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
-          - `Core.Root` ×39
+        - Slot contributors: 42 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+          - `Core.Root` ×40
           - `Core.Boot` ×2
       - Core:
         - Uses:
@@ -52625,6 +52629,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/chord/piano`
               - `apps/keyboard-party/party`
               - `apps/sonata/audio/engine`
+              - `build`
               - `infra/attachments`
               - `integrations/youtube`
               - `music/ambient`
@@ -52761,13 +52766,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useStore`
               - `WebStorageSlots`
           - Cross-plugin:
-            - Imported by: 52 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
+            - Imported by: 53 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
               - `primitives` ×15
               - `apps` ×13
               - `conversations` ×6
               - `apps-core` ×3
               - `reports` ×2
               - `ui` ×2
+              - `build`
               - `companions/browser-extension`
               - `config_v2`
               - `framework/browser-server/demo/scope`
@@ -53566,11 +53572,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useKept`
           - `writeDraft`
       - Cross-plugin:
-        - Imported by: 33 plugins — full list in [`plugins/primitives/plugins/kept-state/REFERENCE.md`](../plugins/primitives/plugins/kept-state/REFERENCE.md)
+        - Imported by: 34 plugins — full list in [`plugins/primitives/plugins/kept-state/REFERENCE.md`](../plugins/primitives/plugins/kept-state/REFERENCE.md)
           - `apps` ×10
           - `primitives` ×9
           - `conversations` ×7
           - `apps-core` ×2
+          - `build`
           - `hints/ask`
           - `map`
           - `page/editor`
@@ -53936,7 +53943,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 79 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+        - Imported by: 78 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `apps` ×14
           - `debug` ×14
           - `infra` ×11
@@ -53946,12 +53953,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network` ×4
           - `plugin-meta` ×3
           - `build` ×2
-          - `companions` ×2
           - `reports` ×2
           - `tasks` ×2
           - `active-data/show-me`
           - `apps-core/app-preload`
           - `backup`
+          - `companions/browser-extension`
           - `integrations/youtube/audio-fetch`
           - `primitives/log-channels/memory-persistence`
           - `release`
@@ -59999,18 +60006,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --popover`
           - `ui/tokens/color-palette --popover-foreground`
           - `ui/tokens/shape --radius`
-        - Imported by: 35 plugins — full list in [`plugins/shell/plugins/toast/REFERENCE.md`](../plugins/shell/plugins/toast/REFERENCE.md)
+        - Imported by: 36 plugins — full list in [`plugins/shell/plugins/toast/REFERENCE.md`](../plugins/shell/plugins/toast/REFERENCE.md)
           - `apps` ×11
           - `config_v2` ×3
           - `conversations` ×3
           - `debug` ×3
           - `primitives` ×3
+          - `build` ×2
           - `hints` ×2
           - `infra` ×2
           - `page` ×2
           - `active-data/show-me`
           - `apps-core/app-embed`
-          - `build/serve-composition`
           - `companions/panel`
           - `reports/optimistic-rejection`
           - `shell/notifications`

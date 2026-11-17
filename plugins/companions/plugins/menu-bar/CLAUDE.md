@@ -258,7 +258,7 @@ helper build and reloads the tray onto it
 
 ## Plugin reference
 
-- Description: The menu-bar panel the native helper opens: the menu-bar app (unlisted, colorMode system — light or dark with the OS, in the companions' `companion` theme) mounted at /home/menu-bar, whose whole layout is the companions' panel (no pane; chromeless under ?embed=1) over the MenuBar.Section slot, with the companions' header (whose Companion.Status attention lights the menu-bar icon's dot) and footer ('Running · <host>', opening equin in the default browser through the helper). useNativeHost() reads the helper's bridge (window.equinNative): pending, absent (a plain browser), or present with its platform, capabilities and methods — a capability the host lacks has no method. useNativeApps() reads the device's installed and pinned apps from the helper that keeps them (pending / unavailable / ready / error), re-read on panel focus and after a pin. MenuBar.Mount runs headless work while the panel page is alive; the panel reports its content height to the helper, shows no toasts, and reloads itself while hidden once main serves a newer web bundle.
+- Description: The menu-bar panel the native helper opens: the menu-bar app (unlisted, colorMode system — light or dark with the OS, in the companions' `companion` theme) mounted at /home/menu-bar, whose whole layout is the companions' panel (no pane; chromeless under ?embed=1) over the MenuBar.Section slot, with the companions' header (whose Companion.Status attention lights the menu-bar icon's dot) and footer ('Running · <host>', opening equin in the default browser through the helper). useNativeHost() reads the helper's bridge (window.equinNative): pending, absent (a plain browser), or present with its platform, capabilities and methods — a capability the host lacks has no method. useNativeApps() reads the device's installed and pinned apps from the helper that keeps them (pending / unavailable / ready / error), re-read on panel focus and after a pin. MenuBar.Mount runs headless work while the panel page is alive; the panel reports its content height to the helper, shows no toasts, and — like every page, through build's update policy — reloads itself while hidden once main serves a newer web bundle.
 - Web:
   - Slots:
     - `MenuBar.Section`
@@ -275,12 +275,10 @@ helper build and reloads the tray onto it
     - `MenuBar.Section` "Footer" → `PanelFooter`
   - Uses:
     - `apps-core.Apps`
-    - `build.useStaleFrontend`
     - `companions/panel.CompanionFooter`
     - `companions/panel.CompanionHeader`
     - `companions/panel.CompanionPanel`
     - `primitives/loading.Loading`
-    - `primitives/log-channels.clientLog`
     - `primitives/slot-render.defineMountSlot`
     - `primitives/slot-render.defineRenderSlot`
   - Exports (types):
