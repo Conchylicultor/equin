@@ -136,6 +136,7 @@ the scope, so the player cannot import the shell).
     - `primitives/scope/render-origin.useRenderOrigin`
   - Exports (types):
     - `DisplayCover`
+    - `PlaybackLabel`
     - `PlayerView`
   - Exports (values):
     - `PlayerDisplay`
@@ -145,14 +146,14 @@ the scope, so the player cannot import the shell).
     - `SONATA_MUSIC_SOURCE`
     - `SonataPlayer`
     - `SonataPlayerScope`
+    - `useBackgroundPlaybackLabel`
     - `useBackgroundPlaybackPlayer`
-    - `useBackgroundPlaybackTitle`
     - `useDisplayCover`
     - `useHasBackgroundPlayback`
     - `useMarkDisplayDrawn`
     - `usePlaybackInstanceKey`
     - `usePlayerView`
-    - `usePublishPlaybackTitle`
+    - `usePublishPlaybackLabel`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`

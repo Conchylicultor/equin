@@ -57,14 +57,20 @@ interface Instance {
 export interface InstancesSnapshot {
   /** The instance playing on with no view, held by the music service. */
   readonly background: string | null;
-  /** Per instance, the title of its song, as its app published it. */
-  readonly titles: ReadonlyMap<string, string>;
+  /** Per instance, its song (title, page), as its app published it. */
+  readonly labels: ReadonlyMap<string, PlaybackLabel>;
+}
+
+/** What an instance plays, as its app names it: the song's title and the route of its page. */
+export interface PlaybackLabel {
+  readonly title: string;
+  readonly href: string;
 }
 
 // Page-global on purpose: an instance OUTLIVES every view and scope that could
 // hold it (that is its point), so the page holds them, keyed by place.
 const instances = new Map<string, Instance>();
-let snap: InstancesSnapshot = { background: null, titles: new Map() };
+let snap: InstancesSnapshot = { background: null, labels: new Map() };
 const listeners = new Set<() => void>();
 
 function setSnap(next: InstancesSnapshot): void {
@@ -108,11 +114,11 @@ function dispose(inst: Instance): void {
   instances.delete(inst.key);
   inst.raised?.remove();
   inst.raised = null;
-  const titles = new Map(snap.titles);
-  titles.delete(inst.key);
+  const labels = new Map(snap.labels);
+  labels.delete(inst.key);
   setSnap({
     background: snap.background === inst.key ? null : snap.background,
-    titles,
+    labels,
   });
 }
 
@@ -205,8 +211,10 @@ export function registerControls(
   };
 }
 
-/** Instance `key`'s app publishes the title of its song. */
-export function publishTitle(key: string, title: string): void {
-  if (!instances.has(key) || snap.titles.get(key) === title) return;
-  setSnap({ ...snap, titles: new Map(snap.titles).set(key, title) });
+/** Instance `key`'s app publishes its song: its title and its page. */
+export function publishLabel(key: string, label: PlaybackLabel): void {
+  if (!instances.has(key)) return;
+  const prev = snap.labels.get(key);
+  if (prev?.title === label.title && prev.href === label.href) return;
+  setSnap({ ...snap, labels: new Map(snap.labels).set(key, label) });
 }

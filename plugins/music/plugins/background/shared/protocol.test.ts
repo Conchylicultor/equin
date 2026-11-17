@@ -104,13 +104,14 @@ describe("other pages", () => {
     const remote = {
       kind: "remote-state",
       pageId: "p2",
-      now: { sourceId: "isle", title: "Lo-fi", playing: true },
+      now: { sourceId: "isle", title: "Lo-fi", href: "/isle", playing: true },
     } as const;
     expect(nowPlaying(run([remote]))).toEqual({
       where: "remote",
       pageId: "p2",
       sourceId: "isle",
       title: "Lo-fi",
+      href: "/isle",
       playing: true,
     });
     const here = run([remote, { kind: "play", sourceId: "isle" }]);
@@ -126,7 +127,7 @@ describe("other pages", () => {
       {
         kind: "remote-state",
         pageId: "p2",
-        now: { sourceId: "isle", title: "Lo-fi", playing: true },
+        now: { sourceId: "isle", title: "Lo-fi", href: "/isle", playing: true },
       },
       { kind: "remote-gone", pageId: "p3" },
     ]);
@@ -139,7 +140,7 @@ describe("other pages", () => {
       {
         kind: "remote-state",
         pageId: "p2",
-        now: { sourceId: "isle", title: "Lo-fi", playing: true },
+        now: { sourceId: "isle", title: "Lo-fi", href: "/isle", playing: true },
       },
     ]);
     expect(busyElsewhere(s, "isle")).toBe(true);

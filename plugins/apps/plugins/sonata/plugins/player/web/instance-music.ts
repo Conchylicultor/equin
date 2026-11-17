@@ -1,10 +1,11 @@
 import { useEffect, useSyncExternalStore } from "react";
 import {
   instancesSnapshot,
-  publishTitle,
+  publishLabel,
   setBackgroundPlaying,
   subscribeInstances,
   type InstancesSnapshot,
+  type PlaybackLabel,
 } from "./internal/instances";
 
 function useInstances(): InstancesSnapshot {
@@ -26,10 +27,10 @@ export function useHasBackgroundPlayback(): boolean {
   return useInstances().background !== null;
 }
 
-/** The title of the song playing on in the background ("" while none, or before its app named it). */
-export function useBackgroundPlaybackTitle(): string {
-  const { background, titles } = useInstances();
-  return background === null ? "" : (titles.get(background) ?? "");
+/** The song playing on in the background, as its app named it (undefined while none, or before its app named it). */
+export function useBackgroundPlaybackLabel(): PlaybackLabel | undefined {
+  const { background, labels } = useInstances();
+  return background === null ? undefined : labels.get(background);
 }
 
 /**
@@ -44,14 +45,15 @@ export function useBackgroundPlaybackPlayer(playing: boolean): void {
 
 /**
  * Names the song of the playback instance the caller runs in (an app's
- * `effects`, `usePlaybackInstanceKey`) for the music button. A no-op in a
- * local scope.
+ * `effects`, `usePlaybackInstanceKey`) for the music button: its title and
+ * the route of its page. A no-op in a local scope.
  */
-export function usePublishPlaybackTitle(
+export function usePublishPlaybackLabel(
   key: string | null,
   title: string,
+  href: string,
 ): void {
   useEffect(() => {
-    if (key !== null) publishTitle(key, title);
-  }, [key, title]);
+    if (key !== null) publishLabel(key, { title, href });
+  }, [key, title, href]);
 }

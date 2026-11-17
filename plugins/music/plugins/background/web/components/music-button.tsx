@@ -4,7 +4,7 @@ import { ControlPanelPopover } from "@plugins/primitives/plugins/css/plugins/con
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { nowPlaying } from "../../shared/protocol";
-import { setWarm, useMusicSnapshot } from "../internal/store";
+import { labelOf, setWarm, useMusicSnapshot } from "../internal/store";
 import { BackgroundMusic } from "../slots";
 import { Equalizer } from "./equalizer";
 import { MusicPanel } from "./music-panel";
@@ -23,17 +23,12 @@ export function MusicButton() {
     setWarm(open);
     return () => setWarm(false);
   }, [open]);
-  const { state, titles } = useMusicSnapshot();
+  const { state, labels } = useMusicSnapshot();
   const sources = BackgroundMusic.Source.useContributions();
   const now = nowPlaying(state);
   const playing = now?.playing ?? false;
   const source = now ? sources.find((s) => s.id === now.sourceId) : undefined;
-  const title =
-    now?.where === "remote"
-      ? now.title
-      : now
-        ? titles.get(now.sourceId)
-        : undefined;
+  const title = now ? labelOf(now, labels)?.title : undefined;
   const label =
     playing && source
       ? `${title ?? source.kind} — ${source.app.name}`

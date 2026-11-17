@@ -15,7 +15,12 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { backgroundMusicConfig } from "../../shared/config";
 import { nowPlaying, type NowPlaying } from "../../shared/protocol";
 import { BackgroundMusic, type BackgroundMusicSource } from "../slots";
-import { command, dispatch, useMusicSnapshot } from "../internal/store";
+import {
+  command,
+  dispatch,
+  labelOf,
+  useMusicSnapshot,
+} from "../internal/store";
 import { setVolume, useVolume } from "../internal/volume";
 import { Equalizer } from "./equalizer";
 
@@ -42,16 +47,11 @@ function control(now: NowPlaying, cmd: "pause" | "resume" | "stop") {
  * across apps.
  */
 export function MusicPanel({ onLeave }: { onLeave: () => void }) {
-  const { state, titles } = useMusicSnapshot();
+  const { state, labels } = useMusicSnapshot();
   const sources = BackgroundMusic.Source.useContributions();
   const now = nowPlaying(state);
   const source = now ? sources.find((s) => s.id === now.sourceId) : undefined;
-  const title =
-    now?.where === "remote"
-      ? now.title
-      : now
-        ? titles.get(now.sourceId)
-        : undefined;
+  const label = now ? labelOf(now, labels) : undefined;
 
   return (
     <ControlPanel aria-label="Background music">
@@ -60,7 +60,8 @@ export function MusicPanel({ onLeave }: { onLeave: () => void }) {
           <NowPlayingCard
             now={now}
             source={source}
-            title={title ?? ""}
+            title={label?.title ?? ""}
+            href={label?.href || source.app.basePath}
             onLeave={onLeave}
           />
         ) : (
@@ -91,24 +92,39 @@ function NowPlayingCard({
   now,
   source,
   title,
+  href,
   onLeave,
 }: {
   now: NowPlaying;
   source: BackgroundMusicSource;
   title: string;
+  /** The page of what plays (a song's), the tile's link. */
+  href: string;
   onLeave: () => void;
 }) {
   const appLinkProps = useAppLinkProps();
   const volume = useVolume();
   const link = appLinkProps(source.app.basePath);
+  const pageLink = appLinkProps(href);
   return (
     <Stack gap="sm">
       <Stack direction="row" gap="md" align="center">
-        <AppIconTile
-          icon={tileOf(source)}
-          appId={source.app.id}
-          className="size-12"
-        />
+        <a
+          {...pageLink}
+          onClick={(e) => {
+            pageLink.onClick?.(e);
+            onLeave();
+          }}
+          aria-label={title ? `Open ${title}` : `Open ${source.app.name}`}
+          title={title ? `Open ${title}` : `Open ${source.app.name}`}
+          className="rounded-md transition-transform hover:scale-105 focus-visible:outline-2"
+        >
+          <AppIconTile
+            icon={tileOf(source)}
+            appId={source.app.id}
+            className="size-12"
+          />
+        </a>
         <Fill>
           <Stack gap="none">
             <Text variant="label" tone="strong">

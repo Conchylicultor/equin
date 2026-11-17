@@ -9,10 +9,11 @@ export {
 } from "./scope";
 export {
   useBackgroundPlaybackPlayer,
-  useBackgroundPlaybackTitle,
+  useBackgroundPlaybackLabel,
   useHasBackgroundPlayback,
-  usePublishPlaybackTitle,
+  usePublishPlaybackLabel,
 } from "./instance-music";
+export type { PlaybackLabel } from "./internal/instances";
 export {
   PlayerDisplayBinding,
   useMarkDisplayDrawn,

@@ -6,6 +6,7 @@ import {
   step,
   type MusicEvent,
   type MusicState,
+  type NowPlaying,
 } from "../../shared/protocol";
 
 /**
@@ -31,6 +32,7 @@ const nowSchema = z
   .object({
     sourceId: z.string(),
     title: z.string(),
+    href: z.string(),
     playing: z.boolean(),
   })
   .nullable();
@@ -55,15 +57,21 @@ export interface MusicSnapshot {
   readonly state: MusicState;
   /** The panel is open: every source's player mounts, idle, to be ready. */
   readonly warm: boolean;
-  /** Per source, its title in words, as its probe last read it. */
-  readonly titles: ReadonlyMap<string, string>;
+  /** Per source, what plays now (its title, its page), as its probe last read it. */
+  readonly labels: ReadonlyMap<string, SourceLabel>;
+}
+
+/** What a source plays now: its title in words, and the route of its page. */
+export interface SourceLabel {
+  readonly title: string;
+  readonly href: string;
 }
 
 // eslint-disable-next-line scoped-store/no-module-mutable-store -- intentionally page-global: ONE background music per page, shared by every surface and window of it (the service's whole point), as one immutable snapshot
 let snap: MusicSnapshot = {
   state: INITIAL_MUSIC_STATE,
   warm: false,
-  titles: new Map(),
+  labels: new Map(),
 };
 let acrossApps = false;
 let channel: BroadcastChannel | null = null;
@@ -84,7 +92,8 @@ function announceState() {
   const now = current
     ? {
         sourceId: current.sourceId,
-        title: snap.titles.get(current.sourceId) ?? "",
+        title: snap.labels.get(current.sourceId)?.title ?? "",
+        href: snap.labels.get(current.sourceId)?.href ?? "",
         playing: current.playing,
       }
     : null;
@@ -180,9 +189,10 @@ export function setAcrossApps(next: boolean) {
   acrossApps = next;
 }
 
-export function setTitle(sourceId: string, title: string) {
-  if (snap.titles.get(sourceId) === title) return;
-  snap = { ...snap, titles: new Map(snap.titles).set(sourceId, title) };
+export function setLabel(sourceId: string, label: SourceLabel) {
+  const prev = snap.labels.get(sourceId);
+  if (prev?.title === label.title && prev.href === label.href) return;
+  snap = { ...snap, labels: new Map(snap.labels).set(sourceId, label) };
   announceState();
   emit();
 }
@@ -204,6 +214,19 @@ function subscribe(listener: () => void): () => void {
 
 export function useMusicSnapshot(): MusicSnapshot {
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+}
+
+/**
+ * What `now` plays, as its probe read it: another page's as it said, this
+ * page's from its probe (undefined until the probe first read it).
+ */
+export function labelOf(
+  now: NowPlaying,
+  labels: ReadonlyMap<string, SourceLabel>,
+): SourceLabel | undefined {
+  return now.where === "remote"
+    ? { title: now.title, href: now.href }
+    : labels.get(now.sourceId);
 }
 
 export function peekState(): MusicState {

@@ -24,6 +24,8 @@ export interface Remote {
   readonly pageId: string;
   readonly sourceId: string;
   readonly title: string;
+  /** The route of what it plays (a song's page), empty until that page named it. */
+  readonly href: string;
   readonly playing: boolean;
 }
 

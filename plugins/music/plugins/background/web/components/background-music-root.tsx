@@ -7,7 +7,7 @@ import { BackgroundMusic, type BackgroundMusicSource } from "../slots";
 import {
   connectPages,
   setAcrossApps,
-  setTitle,
+  setLabel,
   useMusicSnapshot,
 } from "../internal/store";
 import { gainOf, useVolume } from "../internal/volume";
@@ -44,7 +44,7 @@ export function BackgroundMusicRoot(): ReactNode {
           playing={isCurrent && (current?.playing ?? false)}
           gain={gain}
         />
-        {isCurrent ? <TitleProbe source={source} /> : null}
+        {isCurrent ? <LabelProbe source={source} /> : null}
       </PluginErrorBoundary>
     );
   });
@@ -65,10 +65,19 @@ function SourcePlayer({
   return null;
 }
 
-/** Reads the current source's title for this page's button and the other pages'. */
-function TitleProbe({ source }: { source: BackgroundMusicSource }): ReactNode {
+/** Reads what the current source plays (its title, its page) for this page's button and the other pages'. */
+function LabelProbe({ source }: { source: BackgroundMusicSource }): ReactNode {
   const useTitle = source.useTitle;
+  const useHref = source.useHref ?? useNoHref;
   const title = useTitle();
-  useEffect(() => setTitle(source.id, title), [source.id, title]);
+  const href = useHref() ?? source.app.basePath;
+  useEffect(
+    () => setLabel(source.id, { title, href }),
+    [source.id, title, href],
+  );
   return null;
+}
+
+function useNoHref(): string | undefined {
+  return undefined;
 }

@@ -19,6 +19,11 @@ export interface BackgroundMusicSource {
   /** What plays now, in words (a mood's track name). */
   readonly useTitle: Hook<() => string>;
   /**
+   * Where what plays now lives, as a route (a Sonata song's page): the music
+   * button's now-playing card opens it. Default: the app's base path.
+   */
+  readonly useHref?: Hook<() => string>;
+  /**
    * Plays the source's music while `playing`. Called from the page root by
    * the service — never inside the app — so the music outlives the app's
    * views; called while the source is current, and (idle) while the music

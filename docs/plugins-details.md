@@ -8972,20 +8972,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `framework/browser-server.ExternalHosts`
               - Server:
                 - Uses: `infra/asset-mirror.defineAssetMirror`
-        - **`background-music`** — Sonata in the background music service (music/background): a song still playing when the Sonata page went away (Keep playing across apps on) is the service's Sonata source — listed only while there is one, titled with the song (published by a Sonata.PlaybackEffect), paused, resumed and stopped from the music button, at the player's own volume.
+        - **`background-music`** — Sonata in the background music service (music/background): a song still playing when the Sonata page went away (Keep playing across apps on) is the service's Sonata source — listed only while there is one, titled with the song and linked to its player page (both published by a Sonata.PlaybackEffect), paused, resumed and stopped from the music button, at the player's own volume.
           - Web:
             - Contributes:
               - `BackgroundMusic.Source` "sonata"
-              - `Sonata.PlaybackEffect` "music-title" → `PublishSongTitle`
+              - `Sonata.PlaybackEffect` "music-title" → `PublishSongLabel`
             - Uses:
+              - `apps/sonata/library.sonataSongLink`
               - `apps/sonata/library.useCurrentSong`
               - `apps/sonata/player.SONATA_MUSIC_SOURCE`
+              - `apps/sonata/player.useBackgroundPlaybackLabel`
               - `apps/sonata/player.useBackgroundPlaybackPlayer`
-              - `apps/sonata/player.useBackgroundPlaybackTitle`
               - `apps/sonata/player.useHasBackgroundPlayback`
               - `apps/sonata/player.usePlaybackInstanceKey`
-              - `apps/sonata/player.usePublishPlaybackTitle`
+              - `apps/sonata/player.usePublishPlaybackLabel`
               - `apps/sonata/shell.Sonata`
+              - `apps/sonata/shell.useSonataApp`
               - `music/background.BackgroundMusic`
               - `network/live.rowOrStale`
         - **`chord-chart`** — Sonata Display: the chord grid. Lays the song's chords out as bars in rows of four under their section headers, each bar split by beats into chord boxes painted in the root's degree colour (held chords drawn as ties), labelled by the shared chord-label mode, optionally with the songsheet lines sung in each row printed under it (the Lyrics under bars view option), following playback with the active bar washed, the sounding chord ringed and a beat line through the bar. A reading view (no time-axis / pitch-plane capabilities); click a chord to seek. Server registration of the Sonata chord grid config (lyrics under bars).
@@ -9818,6 +9820,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/scope/render-origin.useRenderOrigin`
             - Exports (types):
               - `DisplayCover`
+              - `PlaybackLabel`
               - `PlayerView`
             - Exports (values):
               - `PlayerDisplay`
@@ -9827,14 +9830,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SONATA_MUSIC_SOURCE`
               - `SonataPlayer`
               - `SonataPlayerScope`
+              - `useBackgroundPlaybackLabel`
               - `useBackgroundPlaybackPlayer`
-              - `useBackgroundPlaybackTitle`
               - `useDisplayCover`
               - `useHasBackgroundPlayback`
               - `useMarkDisplayDrawn`
               - `usePlaybackInstanceKey`
               - `usePlayerView`
-              - `usePublishPlaybackTitle`
+              - `usePublishPlaybackLabel`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --border`
@@ -42011,7 +42014,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes: `ConfigV2.Register` "config"
         - Uses: `config_v2.ConfigV2`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
+        - Uses tokens:
+          - `ui/tokens/shape --radius`
+          - `ui/tokens/shape --spacing`
         - Imported by:
           - `apps/isle/world-view`
           - `apps/sonata/background-music`

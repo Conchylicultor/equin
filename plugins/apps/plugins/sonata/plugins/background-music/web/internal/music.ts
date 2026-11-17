@@ -1,12 +1,17 @@
 import { rowOrStale } from "@plugins/network/plugins/live/web";
 import type { BackgroundMusicPlayerProps } from "@plugins/music/plugins/background/web";
-import { useCurrentSong } from "@plugins/apps/plugins/sonata/plugins/library/web";
+import {
+  sonataSongLink,
+  useCurrentSong,
+} from "@plugins/apps/plugins/sonata/plugins/library/web";
+import { sonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/core";
+import { useSonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import {
   useBackgroundPlaybackPlayer,
-  useBackgroundPlaybackTitle,
+  useBackgroundPlaybackLabel,
   useHasBackgroundPlayback,
   usePlaybackInstanceKey,
-  usePublishPlaybackTitle,
+  usePublishPlaybackLabel,
 } from "@plugins/apps/plugins/sonata/plugins/player/web";
 
 /**
@@ -23,7 +28,12 @@ export function useSonataBackgroundPlayer({
 
 /** The background song's title, for the music button. */
 export function useSonataBackgroundTitle(): string {
-  return useBackgroundPlaybackTitle();
+  return useBackgroundPlaybackLabel()?.title ?? "";
+}
+
+/** The background song's page — the player pane — for the music button's now-playing tile. */
+export function useSonataBackgroundHref(): string {
+  return useBackgroundPlaybackLabel()?.href ?? sonataApp.basePath;
 }
 
 /** Sonata has music to offer only while a song plays on in the background. */
@@ -33,12 +43,18 @@ export function useSonataBackgroundAvailable(): boolean {
 
 /**
  * Names the playback instance's song for the music button — a
- * `Sonata.PlaybackEffect`, so it follows the song when the page is gone. The
- * title as last seen while its row reloads; empty while none was ever read.
+ * `Sonata.PlaybackEffect`, so it follows the song when the page is gone: its
+ * title (as last seen while its row reloads; empty while none was ever read)
+ * and its page, the player pane.
  */
-export function PublishSongTitle(): null {
+export function PublishSongLabel(): null {
   const key = usePlaybackInstanceKey();
   const song = useCurrentSong();
-  usePublishPlaybackTitle(key, rowOrStale(song)?.title ?? "");
+  const { currentSongId } = useSonataApp();
+  usePublishPlaybackLabel(
+    key,
+    rowOrStale(song)?.title ?? "",
+    currentSongId === null ? sonataApp.basePath : sonataSongLink(currentSongId),
+  );
   return null;
 }

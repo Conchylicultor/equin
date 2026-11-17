@@ -4,7 +4,7 @@ import {
   detachInstance,
   dropBackground,
   instancesSnapshot,
-  publishTitle,
+  publishLabel,
   registerControls,
   setBackgroundPlaying,
   type MusicHand,
@@ -113,12 +113,15 @@ describe("playback instances", () => {
     attachInstance(k, origin.raise, music);
     const { t, controls } = transport(true);
     registerControls(k, controls);
-    publishTitle(k, "Clair de lune");
+    publishLabel(k, { title: "Clair de lune", href: "/sonata/song/s1" });
     detachInstance(k, music);
     await flush();
     expect(origin.removed).toBe(0);
     expect(instancesSnapshot().background).toBe(k);
-    expect(instancesSnapshot().titles.get(k)).toBe("Clair de lune");
+    expect(instancesSnapshot().labels.get(k)).toEqual({
+      title: "Clair de lune",
+      href: "/sonata/song/s1",
+    });
 
     setBackgroundPlaying(false);
     expect(t.playing).toBe(false);

@@ -4,20 +4,22 @@
 
 ## Plugin reference
 
-- Description: Sonata in the background music service (music/background): a song still playing when the Sonata page went away (Keep playing across apps on) is the service's Sonata source — listed only while there is one, titled with the song (published by a Sonata.PlaybackEffect), paused, resumed and stopped from the music button, at the player's own volume.
+- Description: Sonata in the background music service (music/background): a song still playing when the Sonata page went away (Keep playing across apps on) is the service's Sonata source — listed only while there is one, titled with the song and linked to its player page (both published by a Sonata.PlaybackEffect), paused, resumed and stopped from the music button, at the player's own volume.
 - Web:
   - Contributes:
     - `BackgroundMusic.Source` "sonata"
-    - `Sonata.PlaybackEffect` "music-title" → `PublishSongTitle`
+    - `Sonata.PlaybackEffect` "music-title" → `PublishSongLabel`
   - Uses:
+    - `apps/sonata/library.sonataSongLink`
     - `apps/sonata/library.useCurrentSong`
     - `apps/sonata/player.SONATA_MUSIC_SOURCE`
+    - `apps/sonata/player.useBackgroundPlaybackLabel`
     - `apps/sonata/player.useBackgroundPlaybackPlayer`
-    - `apps/sonata/player.useBackgroundPlaybackTitle`
     - `apps/sonata/player.useHasBackgroundPlayback`
     - `apps/sonata/player.usePlaybackInstanceKey`
-    - `apps/sonata/player.usePublishPlaybackTitle`
+    - `apps/sonata/player.usePublishPlaybackLabel`
     - `apps/sonata/shell.Sonata`
+    - `apps/sonata/shell.useSonataApp`
     - `music/background.BackgroundMusic`
     - `network/live.rowOrStale`
 
