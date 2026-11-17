@@ -47,7 +47,7 @@ import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-rev
  *   source, a `Row`'s synthesized inner control). It takes a focus
  *   **capability** rather than a node, which is exactly what lets one hook serve
  *   all of them without knowing about any of them.
- * - {@link useCaretEscape} — the ↑/↓ escape on its own, for those same types.
+ * - {@link useCaretEscape} — the ↑/↓ escape and the Tab ladder, for those same types.
  *   "The caret can always leave a void block" is the EDITOR's invariant, so it
  *   is spelled once here rather than re-derived by each block that needs it. It
  *   is a separate export rather than a field on {@link useVoidCaret}'s result
@@ -142,18 +142,68 @@ export function useVoidCaret({
 }
 
 /**
- * The ↑/↓ escape, for a `caret: "renderer"` block whose own focus target is not
- * a text control (sub-page's `Row`).
+ * Tab / Shift+Tab on a void block: the text blocks' Tab ladder (`resolveTab`),
+ * resolved for this block — indent, outdent, or expand a collapsed container
+ * above. A void block has no caret position, and Tab never needed one.
+ *
+ * Returns whether it consumed the key. A plain Tab is ALWAYS consumed, so it
+ * never walks DOM focus out of the block onto its own action buttons or out of
+ * the block list — on a page, Tab means structure, as it does in text. Callers
+ * only hand it keys that originated on the block's own caret target (never an
+ * inner input, link or button, where Tab keeps its native meaning).
+ *
+ * One spelling for both caret owners: {@link BlockCaretHost} and
+ * {@link useCaretEscape} (a `caret: "renderer"` block's own control).
+ */
+function useVoidTab(
+  blockId: string,
+  editor: BlockEditorAPI,
+): (e: React.KeyboardEvent) => boolean {
+  const { rowsRef, scope, makeBlockAPI } = useBlockEditor();
+  const anchorTypes = useAnchorTypes();
+  return useEventCallback((e: React.KeyboardEvent) => {
+    if (e.key !== "Tab" || e.metaKey || e.ctrlKey || e.altKey) return false;
+    e.preventDefault();
+    const all = toNodes(rowsRef.current);
+    const intent = resolveTab(
+      { shift: e.shiftKey },
+      {
+        nodes: scope.rootId === null ? all : scopeNodes(all, scope.rootId),
+        scopeRootId: scope.rootId,
+        blockId,
+        isAnchor: (n) => anchorTypes.has(n.type),
+      },
+    );
+    if (intent.type === "indent") editor.indent();
+    else if (intent.type === "outdent") editor.outdent();
+    else if (intent.type === "expand")
+      makeBlockAPI(intent.blockId).setExpanded(true);
+    return true;
+  });
+}
+
+/**
+ * The editor's own keys for a `caret: "renderer"` block whose focus target is
+ * not a text control (sub-page's `Row`): the ↑/↓ escape and the Tab ladder.
  *
  * A block that swallowed the arrows would strand the user on a line they cannot
  * leave, which makes "the caret can always leave a void block" the EDITOR's
  * invariant rather than each block's promise — and an invariant belongs to
- * whoever owns it. Everything else (what Backspace means here, what Enter seeds)
- * is the block's own meaning and stays with the block.
+ * whoever owns it. Tab is the same kind of fact: on a page it indents the line
+ * the caret is on, whatever that line holds, so a void line answers it exactly
+ * as {@link BlockCaretHost} does (`useVoidTab`) instead of letting the browser
+ * walk focus onto the row's action buttons. Everything else (what Backspace
+ * means here, what Enter seeds) is the block's own meaning and stays with the
+ * block.
+ *
+ * Spread onto the block's caret target itself: Tab is taken only when it
+ * originated there, so an inner control keeps its native Tab.
  */
 export function useCaretEscape(
   editor: BlockEditorAPI,
+  blockId: string,
 ): (e: React.KeyboardEvent) => void {
+  const onTab = useVoidTab(blockId, editor);
   return useEventCallback((e: React.KeyboardEvent) => {
     if (e.defaultPrevented) return;
     if (e.key === "ArrowUp") {
@@ -162,6 +212,8 @@ export function useCaretEscape(
     } else if (e.key === "ArrowDown") {
       e.preventDefault();
       editor.navigate("down");
+    } else if (e.target === e.currentTarget) {
+      onTab(e);
     }
   });
 }
@@ -399,8 +451,7 @@ export function BlockCaretHost({
   }, [isFocused]);
   const insertParagraphBelow = useInsertParagraphBelow();
   const selection = useSelectionControl();
-  const { rowsRef, scope, makeBlockAPI } = useBlockEditor();
-  const anchorTypes = useAnchorTypes();
+  const onTab = useVoidTab(blockId, editor);
   // How many boxes inside paint the cue in the host's place (`useCaretCueTarget`).
   const [cueClaims, setCueClaims] = useState(0);
   const claimCue = useCallback<ClaimCaretCue>(() => {
@@ -497,27 +548,8 @@ export function BlockCaretHost({
       editor.remove(); // …then delete this one
       return;
     }
-    if (e.key === "Tab" && !e.metaKey && !e.ctrlKey && !e.altKey) {
-      // The text block's Tab ladder, resolved for this block: the void block
-      // has no caret position, and Tab never needed one. Always consumed, so
-      // Tab never walks DOM focus out of the block list.
-      e.preventDefault();
-      const all = toNodes(rowsRef.current);
-      const intent = resolveTab(
-        { shift: e.shiftKey },
-        {
-          nodes: scope.rootId === null ? all : scopeNodes(all, scope.rootId),
-          scopeRootId: scope.rootId,
-          blockId,
-          isAnchor: (n) => anchorTypes.has(n.type),
-        },
-      );
-      if (intent.type === "indent") editor.indent();
-      else if (intent.type === "outdent") editor.outdent();
-      else if (intent.type === "expand")
-        makeBlockAPI(intent.blockId).setExpanded(true);
-      return;
-    }
+    // The text block's Tab ladder, resolved for this block (`useVoidTab`).
+    if (onTab(e)) return;
     const activate = activateRef.current;
     if (e.key === "Enter") {
       e.preventDefault();

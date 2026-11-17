@@ -556,8 +556,12 @@ No third "nowhere" value. A type with no registration (`unknown`) falls into
   An origin guard here would trap the caret inside inner controls.
 - **Backspace/Delete/Enter/Space are origin-guarded**.
 
-`useCaretEscape(editor)` is the ↑/↓ half alone, for `"renderer"` blocks; a separate
-hook (not a field on `useVoidCaret`) because textarea types must NOT take it.
+`useCaretEscape(editor, blockId)` is the ↑/↓ escape plus the Tab ladder, for
+`"renderer"` blocks whose caret target is not a text control (sub-page's `Row`);
+a separate hook (not a field on `useVoidCaret`) because textarea types must NOT
+take it. **Tab on a void line indents it**, whichever caret owner holds it (both
+go through one `useVoidTab`): it never walks DOM focus onto the row's own action
+buttons.
 
 ### Focus: three rules, three different questions
 

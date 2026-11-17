@@ -45,13 +45,13 @@ export function SubPageBlock({ block, isFocused, editor }: BlockRendererProps) {
     focus: (opts) => focusRef.current?.focus({ reveal: opts?.scroll ?? false }),
   });
 
-  // "The caret can always leave a void block" is the EDITOR's invariant, spelled
-  // once — `useCaretEscape`. What stays local is what only a sub-page can
+  // "The caret can always leave a void block", and Tab indents the line the
+  // caret is on, are the EDITOR's invariants, spelled once — `useCaretEscape`. What stays local is what only a sub-page can
   // decide: Enter/Space fall through to the row's native button activation (open
   // the page), and Backspace is deliberately NOT handled, because deleting a
   // sub-page destroys a whole content partition — every block under another
   // `page_id` — which is far too much to hang off one keystroke.
-  const onKeyDown = useCaretEscape(editor);
+  const onKeyDown = useCaretEscape(editor, block.id);
 
   // The row itself — icon, title, the page kind's decoration, trailing facts,
   // actions — is THE page-reference row, shared with the link-to-page block so
