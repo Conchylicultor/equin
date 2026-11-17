@@ -8,13 +8,9 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import {
-  LOCAL_APP_HOST,
-  LOCAL_APP_URL,
-} from "@plugins/apps/plugins/website/plugins/shell/core";
 import { WebsiteArrow } from "@plugins/apps/plugins/website/plugins/shell/web";
 import { guidePane } from "@plugins/apps/plugins/website/plugins/pages/plugins/guide/web";
-import { DownloadLink } from "./download-link";
+import { DownloadLink, LocalAppLink } from "./download-link";
 
 /**
  * "Once it is running": the three things to do after the install, as one
@@ -35,9 +31,8 @@ export function DownloadNextSteps() {
       </Text>
       <Grid as="ol" minCellWidth="14rem" mode="fit" gap="2xl" align="start">
         <Step n={1} title="Open it">
-          equin lives at{" "}
-          <DownloadLink href={LOCAL_APP_URL}>{LOCAL_APP_HOST}</DownloadLink>,
-          and comes back on its own after a restart.
+          equin lives at <LocalAppLink />, and comes back on its own after a
+          restart.
         </Step>
         <Step
           n={2}

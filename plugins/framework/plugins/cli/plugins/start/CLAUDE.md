@@ -113,15 +113,27 @@ named — and with `--force` restarts just them:
 backend) alone. An unknown id fails before anything runs, listing the known
 ones.
 
+## The port
+
+The account's gateway port (`launcher/gateway-port`): kept once recorded; on
+the first start (or an install still on the old port 9000) the first free one
+of 8700–8709, probed on both loopbacks, said in plain words ("equin chose port
+8701: 8700 (php-fpm, pid 412) is taken"). It is recorded only once the gateway
+answers on it. A move off 9000 keeps 9000 answering (`-legacy-listen`, which
+redirects page loads). `--port <n>` moves it by hand (a restart). A recorded
+port held by anything else — another account's equin included, told apart by
+`GET /gateway/identity` — is a loud refusal naming the holder, never a silent
+move: bookmarks and OAuth redirect URIs name the port.
+
 ## Bind address
 
-Loopback only by default: the gateway's `-listen loopback:9000` binds
-`127.0.0.1:9000` and `[::1]:9000` (a host without IPv6 gets the first alone, with
+Loopback only by default: the gateway's `-listen loopback:<port>` binds
+`127.0.0.1` and `[::1]` (a host without IPv6 gets the first alone, with
 a warning; `[::1]` held by someone else is fatal). So the agent manager is
 unreachable off-box, and macOS never asks to "accept incoming network
-connections", unless someone asked for it: `EQUIN_LISTEN=:9000 ./equin start`
-binds every interface, and `EQUIN_LISTEN=<host>:9000` one address. Only the
-host may change; the port stays 9000. The bind is baked into the plist, so a
+connections", unless someone asked for it: `EQUIN_LISTEN=:<port> ./equin start`
+binds every interface, and `EQUIN_LISTEN=<host>:<port>` one address. Only the
+host may change; the port stays the account's. The bind is baked into the plist, so a
 change reaches the running gateway on `./equin start --force`.
 
 ## Other hosts: a detached spawn

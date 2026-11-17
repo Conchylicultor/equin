@@ -237,7 +237,7 @@ honour both:
 The child is spawned with `cwd` at this backend's own checkout, which is what
 makes the CLI act on the same namespace as the app you clicked in: a CLI process
 mints its namespace from the checkout it stands in (`checkoutNamespace(root)`),
-and reads the deployment record over HTTP from `<worktree>.localhost:9000` and
+and reads the deployment record over HTTP from `<worktree>.localhost:<port>` and
 the server row from that worktree's DB fork with it. Nothing rides in the
 environment.
 

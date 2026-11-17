@@ -1,6 +1,6 @@
 // Reset a served composition to its genuine first-launch state — a NARROWER
 // `reapAttempt` (cf. debug/worktree-cleanup/server/internal/reap.ts). A served
-// composition is live at http://<namespace>.localhost:9000 with its own DB and
+// composition is live at http://<namespace>.localhost:<port> with its own DB and
 // config dir, both named by that namespace. This keeps the spec + dist + code
 // (so it stays served) and wipes ONLY that one namespace's DB + config back to
 // exactly what a serve build provisions on a fresh serve, then restarts the
@@ -81,6 +81,10 @@ export class CompositionResetError extends Error {
  */
 export async function resetCompositionData(
   id: string,
+  // The port of the gateway serving the namespace (`servedGatewayPort()` from
+  // a backend, `gatewayPort()` from a CLI): the hold must reach the gateway
+  // that runs its backend.
+  gatewayPort: number,
   manifestNamespace: Namespace = runtimeNamespace(),
 ): Promise<void> {
   // Guard 1 — the explicit "never main/central" gate (rejects the reserved
@@ -159,7 +163,7 @@ export async function resetCompositionData(
   // HELD (no request may cold-start one onto the database mid-replace), replace
   // the data, then cold-start it — a backend booted on the new database only.
   // Throws `BackendHoldError` (nothing touched) unless the gateway confirms.
-  const held = await holdBackendDown(ns);
+  const held = await holdBackendDown(ns, gatewayPort);
 
   // Drop + recreate the DB (fresh empty; the backend's boot migrator rebuilds
   // the schema on the cold start below).

@@ -84,7 +84,7 @@ always-on cost is one empty-`Set` check per commit.
   screen, read the ranked initiators (with mount/update split) and the
   **Remounts** section below them; auto-stops after 30s.
 - **Headless** (agents):
-  `./equin run plugins/debug/plugins/render-profiler/e2e/render-profile.ts --url http://<wt>.localhost:9000/<route> --seconds 8`
+  `./equin run plugins/debug/plugins/render-profiler/e2e/render-profile.ts --url http://<wt>.localhost:<port>/<route> --seconds 8`
 - **What one action mounts** (agents): `mount-cost.ts` boots a page, then
   profiles ONE in-app navigation or click and prints commits, fibers mounted
   (every kind — components, providers, fragments, host elements; a fiber is

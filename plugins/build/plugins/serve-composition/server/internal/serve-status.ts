@@ -1,3 +1,4 @@
+import { servedGatewayPort } from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import { checkoutRef } from "@plugins/infra/plugins/paths/server";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
@@ -76,7 +77,7 @@ export async function readServeStatus(
   ]);
   return {
     namespace: ns,
-    url: namespaceUrl(ns),
+    url: namespaceUrl(ns, "", servedGatewayPort()),
     liveness:
       marker === null || !registered
         ? ({ served: false } as const)

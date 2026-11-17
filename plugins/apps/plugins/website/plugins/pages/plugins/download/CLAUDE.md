@@ -31,7 +31,7 @@ installer beside another's source. The installer's steps are written out in
     - `ThemeEngine.SubTheme` "equin download note"
     - `ThemeEngine.SubTheme` "equin download tabs"
     - `ThemeEngine.SubTheme` "equin download"
-  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/website/shell` ×7
     - `primitives/collapsible` ×4
     - `primitives/css/spacing` ×3
@@ -50,6 +50,7 @@ installer beside another's source. The installer's steps are written out in
     - `primitives/css/text.Text`
     - `primitives/css/theme-boundary.Theme`
     - `primitives/css/toggle-chip.SegmentedControl`
+    - `primitives/dom/render-mode.useBrowserValue`
     - `ui/icons.Icon`
     - `ui/theme-engine.ThemeEngine`
   - Exports (values): `downloadPane`

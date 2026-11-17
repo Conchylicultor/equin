@@ -195,9 +195,9 @@ function describeFollow(o: GatewayFollowOutcome): string {
     case "already-attempted":
       return `out of date, this launch already attempted at ${o.at} (${o.outcome})`;
     case "restarted":
-      return o.via === "handover"
-        ? `handed over to main's (gateway PID ${o.pid}; no backend restarted)`
-        : `restarted onto main's (PID ${o.pid})`;
+      return `handed over to main's (gateway PID ${o.pid}; no backend restarted)`;
+    case "switching":
+      return `restarting the service onto main's in a helper of its own (PID ${o.helperPid}) — this run may end with the old gateway`;
     case "refused":
       return `not restarted — ${o.reason}`;
     case "failed":

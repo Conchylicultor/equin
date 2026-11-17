@@ -21,13 +21,11 @@
  * Manual only — nothing runs this automatically.
  *   ./equin run plugins/companions/plugins/menu-bar/e2e/bridge-probe.ts
  */
-import { namespaceUrl } from "@plugins/infra/plugins/namespace/core";
+import { pathUrl } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { runHelperProbe } from "./helper-probe";
 
 await runHelperProbe({
   title: "menu-bar: native bridge probe",
   mode: "probe",
-  notes: (namespace) => [
-    `panel on ${namespaceUrl(namespace, "/home/menu-bar")}`,
-  ],
+  notes: () => [`panel on ${pathUrl("/home/menu-bar")}`],
 });

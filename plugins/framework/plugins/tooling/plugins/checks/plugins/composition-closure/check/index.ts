@@ -99,7 +99,7 @@ const check: Check = {
       } catch (err) {
         return fail(
           `composition "${item.name}" has an unusable id "${item.id}": ${err instanceof Error ? err.message : String(err)}`,
-          "Composition ids double as gateway namespaces (http://<id>.localhost:9000). Rename the composition.",
+          "Composition ids double as gateway namespaces (http://<id>.localhost:<port>). Rename the composition.",
         );
       }
     }
@@ -116,7 +116,7 @@ const check: Check = {
       if (seenIds.has(item.id)) {
         return fail(
           `duplicate composition id "${item.id}"`,
-          "Composition ids are namespaces (http://<id>.localhost:9000), registry file segments and DB names — two rows cannot share one. Give the duplicate its own id.",
+          "Composition ids are namespaces (http://<id>.localhost:<port>), registry file segments and DB names — two rows cannot share one. Give the duplicate its own id.",
         );
       }
       seenIds.add(item.id);

@@ -8,12 +8,15 @@ import {
   routePathOf,
 } from "@plugins/primitives/plugins/pane/plugins/route-prefix/core";
 import {
-  GATEWAY_PORT,
+  GATEWAY_PORT_RANGE,
+  isGatewayPort,
+  LEGACY_GATEWAY_PORT,
   MAIN_WORKTREE_NAME,
   namespaceFromHost,
   namespaceHost,
   namespaceUrl,
 } from "@plugins/infra/plugins/namespace/core";
+import { pagePort } from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
 
 /**
  * The one address the site publishes. Every reach-out on the site goes here —
@@ -39,11 +42,32 @@ export const ISSUES_URL = `${SOURCE_REPO_URL}/issues/new`;
 export const INSTALL_COMMAND = `curl -fsSL https://raw.githubusercontent.com/${SOURCE_REPO}/main/install.sh | bash`;
 
 /**
- * Where an installed equin answers: the main namespace behind the local gateway.
- * Every copy lives at the same address, so the site can name it.
+ * Where an installed equin answers on `port`: the main namespace behind the
+ * local gateway. Each account's gateway has its own port (the first free one of
+ * 8700…8709), so the address is a function of the port.
  */
-export const LOCAL_APP_HOST = namespaceHost(MAIN_WORKTREE_NAME);
-export const LOCAL_APP_URL = namespaceUrl(MAIN_WORKTREE_NAME);
+export function localAppHost(port: number): string {
+  return namespaceHost(MAIN_WORKTREE_NAME, port);
+}
+export function localAppUrl(port: number): string {
+  return namespaceUrl(MAIN_WORKTREE_NAME, "", port);
+}
+
+/**
+ * The port to name a local install by, from a page at `loc`: the page's own
+ * when it is itself a page of a local instance (it was served by that
+ * gateway), else — on equin.ai, which cannot know a visitor's port — the
+ * default a fresh install takes.
+ */
+export function localAppPortFor(loc: {
+  href: string;
+  port: string;
+  protocol: string;
+}): number {
+  return isLocalAppUrl(new URL(loc.href))
+    ? pagePort(loc)
+    : GATEWAY_PORT_RANGE.first;
+}
 
 /**
  * Where the site is published: the `website` composition, which serves the
@@ -81,22 +105,28 @@ function isSitePath(url: URL): boolean {
 }
 
 /**
- * Whether `url` is any page of a local equin instance: a namespace host of
- * this machine's gateway (main or a worktree), whatever the app.
+ * Whether `url` is any page of a local equin instance: a namespace host (main
+ * or a worktree, whatever the app) on a port an equin gateway listens on — one
+ * of the per-account range, or the port every install used before it, which a
+ * moved install keeps answering on for a while.
  */
 export function isLocalAppUrl(url: URL): boolean {
+  const port = Number(url.port);
   return (
     url.protocol === "http:" &&
-    url.port === String(GATEWAY_PORT) &&
+    (isGatewayPort(port) || port === LEGACY_GATEWAY_PORT) &&
     namespaceFromHost(url.host) !== null
   );
 }
 
-/** A published page, on the local instance: the base path put back. */
-export function localSiteUrl(url: URL): string {
+/**
+ * A published page, on the local instance whose gateway listens on `port`: the
+ * base path put back.
+ */
+export function localSiteUrl(url: URL, port: number): string {
   if (!isPublicSiteUrl(url))
     throw new Error(`${url.href} is not a page of ${PUBLIC_SITE_ORIGIN}`);
-  return `${new URL(LOCAL_APP_URL).origin}${routePathOf(url.pathname, PUBLIC_SITE_ROOT)}${url.search}${url.hash}`;
+  return `${localAppUrl(port)}${routePathOf(url.pathname, PUBLIC_SITE_ROOT)}${url.search}${url.hash}`;
 }
 
 /**

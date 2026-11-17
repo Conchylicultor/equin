@@ -28,7 +28,7 @@
  *
  * Manual only. Run after `./equin build`:
  *   ./equin run plugins/primitives/plugins/tree/e2e/subtree-fold.ts \
- *     --url http://<worktree>.localhost:9000 [--headed]
+ *     --url http://<worktree>.localhost:<port> [--headed]
  *
  * Pass `--url` explicitly: the harness derives its default from
  * `$WORKTREE`, which in an agent shell read the main namespace,

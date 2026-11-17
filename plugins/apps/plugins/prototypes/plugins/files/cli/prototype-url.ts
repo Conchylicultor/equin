@@ -1,3 +1,4 @@
+import { gatewayPortSync } from "@plugins/infra/plugins/launcher/plugins/gateway-port/data-dirs";
 import {
   contentUrl,
   namespaceUrl,
@@ -19,7 +20,7 @@ import {
 // Where a minted prototype can be LOOKED AT, which is the only thing a
 // prototype is for — so both verbs print it.
 //
-// Derived, never literal. `namespaceUrl` owns `.localhost:9000`
+// Derived, never literal. `namespaceUrl` owns `.localhost:<port>`
 // (`no-hand-built-namespace-url` enforces that), and `prototypeDetailRoute`
 // (declared in `shell/core`, which a CLI process may import — no React) owns
 // `/prototypes/proto/:name/:layout?`. No `layout` is filled, so the URL is the
@@ -27,7 +28,7 @@ import {
 
 /**
  * Resolve this checkout's namespace ONCE, and hand back the formatter —
- * `prototypeUrl(id)` → `http://<ns>.localhost:9000/prototypes/proto/<id>`.
+ * `prototypeUrl(id)` → `http://<ns>.localhost:<port>/prototypes/proto/<id>`.
  *
  * A factory rather than a per-id function because resolving the namespace shells
  * out to git, and `prototype list` formats a URL for every prototype on disk.
@@ -39,7 +40,7 @@ export async function prototypeUrlFormatter(): Promise<(id: string) => string> {
 
 /**
  * The raw DOCUMENT of one variant of a prototype, on this checkout's content
- * host — `http://<id>.content.localhost:9000/<ns>/api/prototypes/<id>/index.html?palette=azure`
+ * host — `http://<id>.content.localhost:<port>/<ns>/api/prototypes/<id>/index.html?palette=azure`
  * (a prototype is untrusted content: it is never served on an app origin).
  * Spelled from the route the frames load (`getPrototypeFile`) with the query
  * they are asked for with (`prototypeDocumentQuery`), so the terminal's link
@@ -59,13 +60,13 @@ export async function prototypeDocumentUrlFormatter(): Promise<{
       name: id,
       file: PROTOTYPE_ENTRY_FILE,
     });
-    return `${contentUrl(id, ns, path)}${query}`;
+    return `${contentUrl(id, ns, path, gatewayPortSync())}${query}`;
   };
   return { url };
 }
 
 /**
- * `path` → `http://<ns>.localhost:9000<path>`, on this checkout's namespace.
+ * `path` → `http://<ns>.localhost:<port><path>` (this account's port), on this checkout's namespace.
  *
  * The namespace is minted from the CHECKOUT the command runs in, never from a
  * RUNTIME namespace: a CLI process declares none, and asking for one throws.
@@ -75,5 +76,6 @@ export async function prototypeDocumentUrlFormatter(): Promise<{
  */
 async function checkoutUrl(): Promise<(path: string) => string> {
   const ns = await checkoutNamespace(await getWorktreeRoot());
-  return (path) => namespaceUrl(ns, path);
+  const port = gatewayPortSync();
+  return (path) => namespaceUrl(ns, path, port);
 }

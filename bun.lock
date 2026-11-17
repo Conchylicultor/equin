@@ -4907,6 +4907,10 @@
       "name": "@equin/plugin-infra-launcher-gateway-logs",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/launcher/plugins/gateway-port": {
+      "name": "@equin/plugin-infra-launcher-gateway-port",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/launcher/plugins/installer-notice": {
       "name": "@equin/plugin-infra-launcher-installer-notice",
       "version": "0.0.1",
@@ -10570,6 +10574,8 @@
     "@equin/plugin-infra-launcher-gateway-drift": ["@equin/plugin-infra-launcher-gateway-drift@workspace:plugins/infra/plugins/launcher/plugins/gateway-drift"],
 
     "@equin/plugin-infra-launcher-gateway-logs": ["@equin/plugin-infra-launcher-gateway-logs@workspace:plugins/infra/plugins/launcher/plugins/gateway-logs"],
+
+    "@equin/plugin-infra-launcher-gateway-port": ["@equin/plugin-infra-launcher-gateway-port@workspace:plugins/infra/plugins/launcher/plugins/gateway-port"],
 
     "@equin/plugin-infra-launcher-installer-notice": ["@equin/plugin-infra-launcher-installer-notice@workspace:plugins/infra/plugins/launcher/plugins/installer-notice"],
 

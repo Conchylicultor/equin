@@ -15,7 +15,7 @@ use std::process::Command;
 
 use url::Url;
 
-use crate::instance;
+use crate::{gateway, instance};
 
 /// An installed app: its id, display name, URL (the app's base path on its
 /// origin) and where its shim lives.
@@ -100,6 +100,43 @@ pub fn in_scope(base: &Url, url: &Url) -> bool {
     root.is_empty() || url.path() == root || url.path().starts_with(&format!("{root}/"))
 }
 
+/// `url` on the gateway's current `port`, when it names the gateway (`http`,
+/// `localhost` or a `*.localhost` host) on another one — a shim written, or a
+/// link made, before the port moved. The path, query and fragment are kept.
+/// `None` when it is already on `port`, or is not the gateway's.
+pub fn rebased(url: &Url, port: u16) -> Option<Url> {
+    let host = url.host_str()?;
+    if url.scheme() != "http" || !(host == "localhost" || host.ends_with(".localhost")) {
+        return None;
+    }
+    if url.port_or_known_default() == Some(port) {
+        return None;
+    }
+    let mut out = url.clone();
+    out.set_port(Some(port)).ok()?;
+    Some(out)
+}
+
+/// `url` as the gateway serves it now (on `port`).
+pub fn on_port(url: &Url, port: u16) -> Url {
+    rebased(url, port).unwrap_or_else(|| url.clone())
+}
+
+/// `url` on the gateway's port, when this process KNOWS it (the port file
+/// names one, `Port::known`); otherwise `url` as written — an app window
+/// launched from its shim has no `EQUIN_GATEWAY_PORT_FILE`, and its shim's URL
+/// (rewritten by the tray after a move) is the best port it has. An unreadable
+/// port file is logged and leaves `url` as written too.
+pub fn on_current_port(url: &Url) -> Url {
+    match gateway::port() {
+        Ok(port) => port.known().map_or_else(|| url.clone(), |port| on_port(url, port)),
+        Err(e) => {
+            eprintln!("equin-desktop: {e}; {url} is used as written");
+            url.clone()
+        }
+    }
+}
+
 /// `url` as the window loads it: the app's own document, so any `embed` flag
 /// is dropped — an embedded document (`primitives/embed`) keeps no tab set
 /// and draws no global action bar, and the window is not hosted by anything.
@@ -180,9 +217,23 @@ pub fn hand_off(url: &Url) {
     }
 }
 
-/// Every equin shim under the user's home.
+/// Every equin shim under the user's home, as routing reads them: each URL on
+/// the gateway's port when this process knows it (`Port::known`), so a shim
+/// written before the port moved still owns its app's pages (the keeper's next
+/// sync rewrites it on disk — `apps::sync` compares the URL as written,
+/// `installed_in`); as written when it does not.
 pub fn installed() -> Vec<Shim> {
-    Roots::user().map(|r| installed_in(&r)).unwrap_or_default()
+    let shims = Roots::user().map(|r| installed_in(&r)).unwrap_or_default();
+    match gateway::port() {
+        Ok(port) => match port.known() {
+            Some(port) => shims.into_iter().map(|s| Shim { url: on_port(&s.url, port), ..s }).collect(),
+            None => shims,
+        },
+        Err(e) => {
+            eprintln!("equin-desktop: {e}; the installed apps are routed on the ports they were written with");
+            shims
+        }
+    }
 }
 
 pub use platform::installed_in;
@@ -386,6 +437,22 @@ mod tests {
 
     fn u(s: &str) -> Url {
         Url::parse(s).unwrap()
+    }
+
+    #[test]
+    fn a_shim_written_on_another_port_moves_to_the_current_one() {
+        assert_eq!(
+            rebased(&u("http://equin.localhost:9000/mail/t/1?q=1#x"), 8700).map(|u| u.to_string()),
+            Some("http://equin.localhost:8700/mail/t/1?q=1#x".to_string())
+        );
+        assert_eq!(rebased(&u("http://localhost:9000/"), 8701).map(|u| u.to_string()), Some("http://localhost:8701/".into()));
+        // Already there.
+        assert_eq!(rebased(&u("http://equin.localhost:8700/mail"), 8700), None);
+        // Not the gateway's: another host, or https (a hosted instance).
+        assert_eq!(rebased(&u("http://example.com:9000/mail"), 8700), None);
+        assert_eq!(rebased(&u("https://equin.localhost:9000/mail"), 8700), None);
+        assert_eq!(on_port(&u("http://example.com:9000/mail"), 8700).as_str(), "http://example.com:9000/mail");
+        assert_eq!(on_port(&u("http://a.localhost:9000/mail"), 8700).as_str(), "http://a.localhost:8700/mail");
     }
 
     #[test]

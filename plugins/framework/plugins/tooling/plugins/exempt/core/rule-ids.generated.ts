@@ -68,6 +68,7 @@ export type ExemptableRuleId =
   | "exempt/no-path-allowlist"
   | "format-safety/no-adhoc-prettier"
   | "frame/no-raw-frame"
+  | "gateway-port:no-port-literal"
   | "git-grep-safety/no-adhoc-git-grep"
   | "guard-path-safety/no-adhoc-path-resolve"
   | "hook-value/hook-binding-name"

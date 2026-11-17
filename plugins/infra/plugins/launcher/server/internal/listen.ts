@@ -20,7 +20,7 @@ import {
  *
  * Unset, the gateway binds loopback only — both `127.0.0.1` and `[::1]`, via
  * the host keyword {@link LOOPBACK_BIND} that the gateway's `-listen` expands.
- * Every interface is an explicit opt-in (`:9000`), so the agent manager is
+ * Every interface is an explicit opt-in (`:<port>`), so the agent manager is
  * never reachable off-box (and never trips the macOS "accept incoming network
  * connections" prompt) unless someone asked for it.
  */

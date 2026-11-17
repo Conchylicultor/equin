@@ -14,5 +14,7 @@ declare const heldBrand: unique symbol;
  */
 export type HeldBackend = {
   readonly namespace: Namespace;
+  /** The port of the gateway holding it — the one `startBackend` releases it on. */
+  readonly gatewayPort: number;
   readonly [heldBrand]: true;
 };

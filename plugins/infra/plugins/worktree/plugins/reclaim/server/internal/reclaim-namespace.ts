@@ -1,3 +1,4 @@
+import { servedGatewayPort } from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 // Reclaiming ONE namespace: the second half of what `reapAttempt` used to do
 // inline, split out so it can be asked for by name.
@@ -137,7 +138,7 @@ export async function reclaimNamespace(
   // namespace being torn down. The hold lasts until the spec removal ends the
   // namespace; a reclaim that fails in between leaves it held (a deploy start
   // releases it), never serving on half its data.
-  const held = await holdBackendDown(ns);
+  const held = await holdBackendDown(ns, servedGatewayPort());
   // The database may already be gone — an earlier reclaim dropped it, or a
   // legacy registry-only entry never had one — so the drop runs only when it
   // exists.

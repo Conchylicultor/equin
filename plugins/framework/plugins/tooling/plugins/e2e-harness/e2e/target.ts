@@ -6,7 +6,7 @@
  * A run has exactly ONE target URL, and it has two halves that go to two
  * different consumers:
  *
- *     --url http://wt.localhost:9000/deploy/server/3/dep/91
+ *     --url http://wt.localhost:<port>/deploy/server/3/dep/91
  *           └────── origin ────────┘└────── path ────────┘
  *           which deploy?            which screen?
  *                   ↓                       ↓
@@ -16,7 +16,7 @@
  * The origin is not a second input — it is the target URL with the path cut
  * off, which is why there is ONE flag rather than one per half. The one place
  * the two differ is a page on a CONTENT host
- * (`http://<item>.content.localhost:9000/<ns>/api/…`): the page opens there,
+ * (`http://<item>.content.localhost:<port>/<ns>/api/…`): the page opens there,
  * and the origin is DERIVED from it — the app of the namespace its first path
  * segment names — because the content host serves content routes only.
  *
@@ -40,7 +40,7 @@
  *
  * This exists to kill a whole class of rot by construction. Before the
  * per-plugin move, four scripts carried a *literal* ephemeral worktree host as
- * their default (`att-1781283277-ilxk.localhost:9000`, …). Those worktrees are
+ * their default (`att-1781283277-ilxk.localhost:<port>`, …). Those worktrees are
  * long gone, so the scripts could not run as written and nobody noticed,
  * because a default that is a dead string fails at the browser, not at the type
  * checker.
@@ -94,6 +94,7 @@ import {
 } from "@plugins/infra/plugins/namespace/core";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { arg, flag, harnessArg, usage, wasReadByScript } from "./args";
+import { harnessGatewayPort } from "./gateway-port";
 
 /**
  * The resolved target, carrying HOW it was resolved.
@@ -190,7 +191,7 @@ function rawTarget(): RawTarget {
   const { deploy } = resolution;
   return {
     kind: "derived",
-    raw: namespaceUrl(deploy.namespace),
+    raw: namespaceUrl(deploy.namespace, "", harnessGatewayPort()),
     flag: "<this checkout's deploy>",
     deploy,
   };
@@ -233,7 +234,7 @@ function noDeploy(
         `checkout's backend, so \`./equin build\` has never published a deploy from\n` +
         `here. Run it, then re-run this script.\n` +
         `To drive a deploy this checkout did not build, name it:\n` +
-        `  --url http://<namespace>.localhost:9000`,
+        `  --url http://<namespace>.localhost:<port>`,
     );
   }
 
@@ -261,10 +262,10 @@ function noDeploy(
  *
  * Deliberately NOT a bare `try { new URL(raw) }`. `new URL` only throws on
  * input it cannot parse AT ALL, and a bare host:port parses fine — it just
- * parses as something else entirely: `att-wt.localhost:9000` is read as the
- * scheme `att-wt.localhost:` with the opaque path `9000`, whose `.origin` is
+ * parses as something else entirely: `att-wt.localhost:<port>` is read as the
+ * scheme `att-wt.localhost:` with the opaque path `<port>`, whose `.origin` is
  * the STRING "null". So the missing-scheme case, the one a human actually
- * types, sails through the throw-check and degrades to `null/9000` at the first
+ * types, sails through the throw-check and degrades to `null/<port>` at the first
  * fetch — the same class of late, unattributable failure this module exists to
  * end. The real requirement is a scheme the browser and `fetch` can dial and a
  * host to dial it at, so that is what gets asserted.
@@ -426,7 +427,7 @@ function target(): Target {
   }
 
   const page = fromUrl ?? fromFlag;
-  // A page on a CONTENT host (`http://<item>.content.localhost:9000/<ns>/api/…`,
+  // A page on a CONTENT host (`http://<item>.content.localhost:<port>/<ns>/api/…`,
   // what `prototype options` prints) lives on another origin than the app that
   // serves it: the content host answers content routes only, so every control
   // call (the agent-write revert, the build-id probe, `agentFetch`) would be
@@ -502,7 +503,7 @@ export function targetNamespace(): Namespace {
     usage(
       `${t.flag} names ${t.origin}, whose host is not a gateway namespace, so there is\n` +
         `  no per-namespace directory under ${worktreesDir()} for this script to read.\n` +
-        `  Point it at a deploy (http://<namespace>.localhost:9000), or drop the flag to\n` +
+        `  Point it at a deploy (http://<namespace>.localhost:<port>), or drop the flag to\n` +
         `  use the deploy this checkout published.`,
     );
   }
@@ -513,7 +514,7 @@ export function targetNamespace(): Namespace {
  * `pageUrl()` was called, so a page path in the target was actually honoured.
  *
  * Tracked because the alternative is silence: a per-plugin script drives its
- * own screen, so `tabs-verify.ts --url http://wt:9000/pages` would run against
+ * own screen, so `tabs-verify.ts --url http://wt:<port>/pages` would run against
  * `/agents` and pass, having tested a screen the caller did not ask for. See
  * `unconsumedPage()`.
  */

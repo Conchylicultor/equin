@@ -13,7 +13,7 @@ import { showToast } from "@plugins/shell/plugins/toast/web";
  *
  * Both actions POST the same endpoint, which runs
  * `./equin build --composition <id>` in the checkout this backend belongs
- * to — so the live URL is `<id>.<checkout>.localhost:9000` and it is ready when
+ * to — so the live URL is `<id>.<checkout>.localhost:<port>` and it is ready when
  * that build ends. `useEndpointMutation` auto-toasts endpoint errors (e.g. the
  * server's 400 for a composition that can never be served), so there is no
  * `onError`.

@@ -2,6 +2,7 @@ import type { ParsedPrototypeTree } from "@plugins/apps/plugins/prototypes/plugi
 import {
   asNamespace,
   contentUrl,
+  GATEWAY_PORT_RANGE,
   MAIN_WORKTREE_NAME,
   namespaceUrl,
 } from "@plugins/infra/plugins/namespace/core";
@@ -103,9 +104,16 @@ export interface SessionContext {
   beforeAfters: BeforeAfterRegistrations;
 }
 
+/**
+ * The gateway port the demo's transcripts show: the port a fresh install
+ * takes. Text in a transcript, never dialled — Demo's equin is an invented
+ * install, so it gets the default.
+ */
+const DEMO_GATEWAY_PORT = GATEWAY_PORT_RANGE.first;
+
 /** The preview a story's agent built, at its worktree's namespace (its attempt id). */
 const previewUrl = (story: Story, path = "") =>
-  namespaceUrl(asNamespace(attemptId(story)), path);
+  namespaceUrl(asNamespace(attemptId(story)), path, DEMO_GATEWAY_PORT);
 
 /**
  * One variant of a prototype as a document on the story's preview — what
@@ -122,7 +130,7 @@ function prototypeVariantUrl(
     .replace(":name", id)
     .replace(":file", PROTOTYPE_ENTRY_FILE);
   const query = new URLSearchParams(prototypeDocumentQuery({ picks }));
-  return `${contentUrl(id, asNamespace(attemptId(story)), path)}?${query.toString()}`;
+  return `${contentUrl(id, asNamespace(attemptId(story)), path, DEMO_GATEWAY_PORT)}?${query.toString()}`;
 }
 
 /** The page tools as Claude Code names an MCP tool: `mcp__<server>__<tool>`. */
@@ -830,7 +838,7 @@ function libraryBeforeAfter(story: Story, ctx: SessionContext): Turn[] {
   const { width, height } = pair.viewport;
   const shots = [
     {
-      url: namespaceUrl(MAIN_WORKTREE_NAME, "/sonata"),
+      url: namespaceUrl(MAIN_WORKTREE_NAME, "/sonata", DEMO_GATEWAY_PORT),
       out: `${scratch}/library-main`,
     },
     { url: previewUrl(story, "/sonata"), out: `${scratch}/library-preview` },

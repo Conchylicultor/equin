@@ -15,6 +15,7 @@
 // lives in the shared `~/.equin/` tree, so one backend reclaims namespaces
 // composed by other checkouts.
 
+import { servedGatewayPort } from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
 import { databaseExists } from "@plugins/database/plugins/admin/server";
 import {
   namespaceHost,
@@ -58,8 +59,8 @@ export async function ownedNamespacesFor(
   return Promise.all(
     owned.map(async (o) => ({
       namespace: o.ns,
-      host: namespaceHost(o.ns),
-      url: namespaceUrl(o.ns),
+      host: namespaceHost(o.ns, servedGatewayPort()),
+      url: namespaceUrl(o.ns, "", servedGatewayPort()),
       hasDatabase: await databaseExists(o.ns),
       builtBy: builtBy(o),
     })),

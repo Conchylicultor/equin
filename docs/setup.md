@@ -94,7 +94,12 @@ release other than the locked one.
 
 Postgres needs no install. `bun install` brings the server (`embedded-postgres` ships `postgres` / `initdb` / `pg_ctl`) and the client tools the app uses to fork and back up databases (`pg_dump` / `pg_restore`, from [`client-tools`](../plugins/database/plugins/client-tools/CLAUDE.md)). Both come from the same Postgres release.
 
-The app is then at <http://equin.localhost:9000>. `start` is a one-time,
+The app is then at `http://equin.localhost:<port>` — `start` prints it, and
+`./equin url` prints it again. The port is this account's: 8700 by default,
+the first free one of 8700–8709, chosen once by the first `start` and kept
+(`./equin start --port <n>` moves it by hand); installs from before 2026-11
+also answer on 9000 for a while, redirecting navigations to the new port.
+`start` is a one-time,
 system-level step. On macOS it registers the gateway with launchd
 (`~/Library/LaunchAgents/<gateway-label>.plist`), so it comes back on
 its own at every login — after a reboot too — and is relaunched if it crashes;
@@ -104,7 +109,7 @@ starting at login. On Linux it is a systemd user unit
 (`~/.config/systemd/user/<gateway-label>.service`) that starts at boot,
 nobody logged in — it needs lingering (`sudo loginctl enable-linger $USER`,
 which `install.sh` enables). The gateway listens on loopback only
-(`127.0.0.1` and `::1`); `EQUIN_LISTEN=:9000 ./equin start` opens it on
+(`127.0.0.1` and `::1`); `EQUIN_LISTEN=:<port> ./equin start` opens it on
 every interface. Elsewhere (no launchd, no systemd)
 the gateway does not survive a reboot: run `./equin start` again after one.
 

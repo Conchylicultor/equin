@@ -33,6 +33,9 @@ import {
   type CheckoutRef,
   namespaceLabel,
   resolveNamespaceAlias,
+  GATEWAY_PORT_RANGE,
+  LEGACY_GATEWAY_PORT,
+  isGatewayPort,
 } from "./namespace";
 
 const MAIN: CheckoutRef = { kind: "main" };
@@ -151,7 +154,7 @@ test("namespaceFor refuses a composed namespace over the 63-byte cap", () => {
 
 test("namespaceFromHost round-trips namespaceHost and rejects the loopback hosts", () => {
   for (const ns of [MAIN_WORKTREE_NAME, "att-x", "sonata.att-x"] as const) {
-    expect(namespaceFromHost(namespaceHost(asNamespace(ns)))).toBe(
+    expect(namespaceFromHost(namespaceHost(asNamespace(ns), 8700))).toBe(
       asNamespace(ns),
     );
   }
@@ -190,7 +193,7 @@ test("namespaceFromHost round-trips namespaceHost and rejects the loopback hosts
 });
 
 test("a namespace URL handed over as text reads back as its origin", () => {
-  const main = namespaceUrl(MAIN_WORKTREE_NAME);
+  const main = namespaceUrl(MAIN_WORKTREE_NAME, "", 8700);
   expect(asNamespaceOrigin(main)).toBe(main);
   expect(asNamespaceOrigin(`${main}/`)).toBe(main);
   expect(asNamespaceOrigin("http://att-x.localhost:9000")).toBe(
@@ -217,19 +220,25 @@ test("a namespace is shown by its label and typed back by it", () => {
 });
 
 test("main is handed out under its public host label; others under their own name", () => {
-  expect(namespaceUrl(MAIN_WORKTREE_NAME)).toBe("http://equin.localhost:9000");
+  expect(namespaceUrl(MAIN_WORKTREE_NAME, "", 8700)).toBe(
+    "http://equin.localhost:8700",
+  );
   expect(namespaceHost(MAIN_WORKTREE_NAME, 9100)).toBe("equin.localhost:9100");
-  expect(namespaceHost(asNamespace("att-x"))).toBe("att-x.localhost:9000");
+  expect(namespaceHost(asNamespace("att-x"), 8700)).toBe(
+    "att-x.localhost:8700",
+  );
   expect(NAMESPACE_HOST_ALIASES).toEqual({ equin: MAIN_WORKTREE_NAME });
 });
 
 test("namespaceUrl builds an origin, and refuses a path that would double the slash", () => {
   const ns = asNamespace("sonata.att-x");
-  expect(namespaceUrl(ns)).toBe("http://sonata.att-x.localhost:9000");
-  expect(namespaceUrl(ns, "/api/health")).toBe(
-    "http://sonata.att-x.localhost:9000/api/health",
+  expect(namespaceUrl(ns, "", 8700)).toBe("http://sonata.att-x.localhost:8700");
+  expect(namespaceUrl(ns, "/api/health", 8700)).toBe(
+    "http://sonata.att-x.localhost:8700/api/health",
   );
-  expect(() => namespaceUrl(ns, "api/health")).toThrow('must start with "/"');
+  expect(() => namespaceUrl(ns, "api/health", 8700)).toThrow(
+    'must start with "/"',
+  );
 });
 
 test("namespaceParts reads back the pair only where the name fixes it", () => {
@@ -259,15 +268,16 @@ test("contentUrl puts the item in the host and the namespace label in the path",
       "proto-1",
       MAIN_WORKTREE_NAME,
       "/api/prototypes/proto-1/index.html",
+      8700,
     ),
   ).toBe(
-    "http://proto-1.content.localhost:9000/equin/api/prototypes/proto-1/index.html",
+    "http://proto-1.content.localhost:8700/equin/api/prototypes/proto-1/index.html",
   );
   expect(contentUrl("p", asNamespace("sonata.att-x"), "/api/x", 8080)).toBe(
     "http://p.content.localhost:8080/sonata.att-x/api/x",
   );
-  expect(() => contentUrl("a.b", MAIN_WORKTREE_NAME, "/api/x")).toThrow();
-  expect(() => contentUrl("p", MAIN_WORKTREE_NAME, "/tasks")).toThrow();
+  expect(() => contentUrl("a.b", MAIN_WORKTREE_NAME, "/api/x", 8700)).toThrow();
+  expect(() => contentUrl("p", MAIN_WORKTREE_NAME, "/tasks", 8700)).toThrow();
 });
 
 test("contentUrlParts reads contentUrl back", () => {
@@ -301,4 +311,12 @@ test("a content host is never read as a namespace, and its names are reserved", 
   expect(isContentReservedNamespace("content")).toBe(true);
   expect(isContentReservedNamespace("sonata.content")).toBe(true);
   expect(isContentReservedNamespace("content-x")).toBe(false);
+});
+
+test("the gateway port range is 8700…8709, and 9000 is the legacy port outside it", () => {
+  expect(isGatewayPort(GATEWAY_PORT_RANGE.first)).toBe(true);
+  expect(isGatewayPort(GATEWAY_PORT_RANGE.last)).toBe(true);
+  expect(isGatewayPort(GATEWAY_PORT_RANGE.last + 1)).toBe(false);
+  expect(isGatewayPort(LEGACY_GATEWAY_PORT)).toBe(false);
+  expect(isGatewayPort(8700.5)).toBe(false);
 });

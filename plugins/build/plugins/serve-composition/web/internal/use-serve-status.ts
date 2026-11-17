@@ -1,9 +1,5 @@
 import { useMemo } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
-import {
-  asNamespace,
-  namespaceHost,
-} from "@plugins/infra/plugins/namespace/core";
 import { buildHistory } from "@plugins/build/core";
 import { serveStatus } from "../../shared/serve-status";
 
@@ -22,11 +18,11 @@ export type ServeStatus =
        * Where this composition is — or would be — served from the backend that
        * answered. Resolved SERVER-side (`namespaceFor(id, its own checkout)`):
        * a composition served from a worktree lives at
-       * `<id>.<checkout>.localhost:9000`, and the browser cannot work that out
+       * `<id>.<checkout>.localhost:<port>`, and the browser cannot work that out
        * from the namespace it is talking to.
        */
       namespace: string;
-      /** `<namespace>.localhost:9000` — the display form of the same fact. */
+      /** `<namespace>.localhost:<port>` — the display form of the same fact. */
       host: string;
       /** The full origin, as the server named it. */
       url: string;
@@ -100,10 +96,9 @@ export function useServeStatus(composition: string): ServeStatus {
     return {
       kind: "ready",
       namespace,
-      // The one cast, at the wire boundary, on a value the SERVER resolved —
-      // not a namespace this hook composed. `namespaceHost` is what turns it
-      // into the string a chip shows; the origin comes back as `url`.
-      host: namespaceHost(asNamespace(namespace)),
+      // The display form of the origin the SERVER resolved — not a
+      // namespace this hook composed: `url`'s host (label and port).
+      host: new URL(url).host,
       url,
       autoTriggersHere,
       head,

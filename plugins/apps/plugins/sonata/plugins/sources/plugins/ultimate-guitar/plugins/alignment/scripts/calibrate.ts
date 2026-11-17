@@ -2,7 +2,7 @@
 //
 //   ./equin run plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/scripts/calibrate.ts \
 //     <features.json>... <ug-tab.json>... [--chords | --bars]
-//   ./equin run …/calibrate.ts --set [--fetch http://<namespace>.localhost:9000]
+//   ./equin run …/calibrate.ts --set [--fetch http://<namespace>.localhost:<port>]
 //
 // <features.json>: a cached BeatFeatures file
 //   (~/.equin/cache/beat-features/v<N>/<settingsKey>/<videoId>.json).
@@ -212,7 +212,7 @@ async function loadTab(url: string, fetchFrom: string | null): Promise<UgTab> {
     return UgTabSchema.parse(JSON.parse(readFileSync(path, "utf8")));
   if (fetchFrom === null)
     throw new Error(
-      `Tab ${id} is not cached in ${dir}: pass --fetch http://<namespace>.localhost:9000 to fetch it.`,
+      `Tab ${id} is not cached in ${dir}: pass --fetch http://<namespace>.localhost:<port> to fetch it.`,
     );
   // The live value's HTTP read: the body is `{ value, version, epoch }`; a
   // refused URL (not a tab, no such tab) answers 422 with its reason.

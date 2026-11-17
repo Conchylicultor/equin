@@ -2,7 +2,7 @@
 
 The showcase film's data, as code: one curated, made-up session written into
 the **`promo-film` composition** — the whole app (`**`, like main) served at
-`http://promo-film.<checkout>.localhost:9000` with its own empty database —
+`http://promo-film.<checkout>.localhost:<port>` with its own empty database —
 so anyone can `./equin build --composition promo-film` → `./equin promo-film
 seed` → record, and get the same state. Design:
 `research/2026-10-29-apps-promo-film-seed.md`.

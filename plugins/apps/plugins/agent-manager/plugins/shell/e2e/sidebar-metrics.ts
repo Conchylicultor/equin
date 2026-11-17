@@ -4,7 +4,7 @@
 // and colour. Read-only.
 //
 //   ./equin run plugins/apps/plugins/agent-manager/plugins/shell/e2e/sidebar-metrics.ts \
-//     [--path /agents] [--url http://<ns>.localhost:9000/agents] [--color-scheme dark]
+//     [--path /agents] [--url http://<ns>.localhost:<port>/agents] [--color-scheme dark]
 
 import {
   arg,

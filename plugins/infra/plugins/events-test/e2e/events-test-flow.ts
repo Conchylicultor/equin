@@ -6,7 +6,7 @@
 // before it starts.
 //
 // Usage:
-//   ./equin run plugins/infra/plugins/events-test/e2e/events-test-flow.ts [--url http://<worktree>.localhost:9000]
+//   ./equin run plugins/infra/plugins/events-test/e2e/events-test-flow.ts [--url http://<worktree>.localhost:<port>]
 
 import {
   pathUrl,

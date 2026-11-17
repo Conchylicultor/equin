@@ -66,7 +66,7 @@ host answers too: its worker entry declares its composition as its namespace
 
 ## The composition arm of the same loop
 
-A served composition drifts: `sonata.localhost:9000` keeps running the dist and
+A served composition drifts: `sonata.localhost:<port>` keeps running the dist and
 the server tree of whatever commit last happened to build it. So the loop covers
 it too, by the same mechanism rather than a new one — the manifest row's `serve`
 mode contributes exactly ONE clause, a rate limit, and everything else is the
@@ -110,7 +110,7 @@ breaks the CLI's write — see `run-ledger/CLAUDE.md`.
 
 `buildJob.enqueue({ trigger, compositions })` is what the Build and Serve buttons reach:
 it claims the same single in-flight slot and spawns `build --composition a b c`,
-which publishes each `<id>.<checkout>.localhost:9000` from THIS checkout. The
+which publishes each `<id>.<checkout>.localhost:<port>` from THIS checkout. The
 field is a SET so N drifted compositions are one shared invocation, not N runs
 queued behind each other's `.build.lock`; an empty set is rejected by the input
 schema at the enqueue rather than quietly meaning "the main app".

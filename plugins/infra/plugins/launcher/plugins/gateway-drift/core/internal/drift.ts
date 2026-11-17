@@ -10,7 +10,7 @@ export const GATEWAY_REFRESH_COMMAND = "./equin start --force";
  * - `current`        — the installed definition and the running gateway match
  *                      main's launch (argv, cwd, signature);
  * - `stale`          — they do not; `differences` says how, one short phrase
- *                      each ("-listen :9000 → loopback:9000");
+ *                      each ("-listen :8700 → loopback:8700");
  * - `not-applicable` — there is no login-service gateway this backend runs
  *                      behind (no service manager, a release, another data
  *                      root): nothing to compare;

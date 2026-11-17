@@ -10,7 +10,7 @@ import { GATEWAY_PID_FILENAME, gatewayLocks } from "../../data-dirs";
 export const gatewayDaemon = defineDaemon({
   name: "launcher.gateway",
   description:
-    "The Go gateway every browser request goes through: it routes *.localhost:9000 to each backend's socket, and starts and watches the backends, Postgres and PgBouncer. Started by ./equin start, launchd or the release launcher, not by this backend.",
+    "The Go gateway every browser request goes through: it routes *.localhost:<port> to each backend's socket, and starts and watches the backends, Postgres and PgBouncer. Started by ./equin start, launchd or the release launcher, not by this backend.",
   startedBy: "boot",
   where: "every-worktree",
   restart: { kind: "never" },

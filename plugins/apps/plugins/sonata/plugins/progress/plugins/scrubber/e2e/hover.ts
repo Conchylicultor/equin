@@ -9,7 +9,7 @@
 //
 // Usage:
 //   ./equin run plugins/apps/plugins/sonata/plugins/progress/plugins/scrubber/e2e/hover.ts \
-//     --song <songId> [--url http://<namespace>.localhost:9000] [--headed]
+//     --song <songId> [--url http://<namespace>.localhost:<port>] [--headed]
 
 import {
   pathUrl,

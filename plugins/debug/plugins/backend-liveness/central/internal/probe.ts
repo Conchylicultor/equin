@@ -1,7 +1,10 @@
+import {
+  gatewayOriginFor,
+  servedGatewayPort,
+} from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
 import { access, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { z } from "zod";
 import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/central";
-import { GATEWAY_PORT } from "@plugins/infra/plugins/namespace/core";
 import { PRINCIPAL_HEADER } from "@plugins/framework/plugins/principal/core";
 import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/plugins/file/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
@@ -20,7 +23,10 @@ import { createLivenessDetector, type Observation } from "./detect";
 // pure detector returns through the report outbox — central has no reports
 // table; main drains the outbox on the file change.
 
-const GATEWAY_WORKTREES_URL = `http://localhost:${GATEWAY_PORT}/gateway/worktrees`;
+/** The gateway's worktree registry, on the gateway this process runs under. */
+function gatewayWorktreesUrl(): string {
+  return `${gatewayOriginFor(servedGatewayPort())}/gateway/worktrees`;
+}
 /** Central itself: the observer cannot judge its own freeze. */
 const SELF = "central";
 /**
@@ -89,7 +95,7 @@ async function readFleet(): Promise<
   { ok: true; fleet: Fleet } | { ok: false; error: string }
 > {
   try {
-    const res = await fetch(GATEWAY_WORKTREES_URL, {
+    const res = await fetch(gatewayWorktreesUrl(), {
       signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
     });
     if (!res.ok) return { ok: false, error: `gateway responded ${res.status}` };

@@ -47,7 +47,7 @@ export const ServeStatusResponseSchema = z.object({
    * itself would name `sonata` from every worktree and link at main's namespace.
    */
   namespace: z.string().refine(isNamespace, "not a valid namespace"),
-  /** `http://<namespace>.localhost:9000` — resolved beside the namespace it belongs to. */
+  /** `http://<namespace>.localhost:<port>` — resolved beside the namespace it belongs to. */
   url: z.string(),
   liveness: ServeLivenessSchema,
   /**
@@ -113,9 +113,9 @@ export const serveStatusEndpoint = defineEndpoint({
  */
 export const OwnedNamespaceSchema = z.object({
   namespace: z.string().refine(isNamespace, "not a valid namespace"),
-  /** `<namespace>.localhost:9000` — the display form. */
+  /** `<namespace>.localhost:<port>` — the display form. */
   host: z.string(),
-  /** `http://<namespace>.localhost:9000` — the full origin. */
+  /** `http://<namespace>.localhost:<port>` — the full origin. */
   url: z.string(),
   /**
    * Whether a Postgres database of that name exists RIGHT NOW. Read rather than

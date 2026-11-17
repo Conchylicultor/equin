@@ -1,3 +1,4 @@
+import { gatewayPortSync } from "@plugins/infra/plugins/launcher/plugins/gateway-port/data-dirs";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
@@ -102,7 +103,7 @@ const run: CliAction<[string | undefined], { replace?: boolean }> = async (
   // database that is not there.
   const held =
     opts.replace === true && (await databaseExists(name))
-      ? await holdBackendDown(asNamespace(name))
+      ? await holdBackendDown(asNamespace(name), gatewayPortSync())
       : null;
   if (held !== null) {
     console.log(

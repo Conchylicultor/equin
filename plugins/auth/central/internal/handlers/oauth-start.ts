@@ -8,10 +8,13 @@ import {
   generateCodeVerifier,
   generateNonce,
   recordPendingState,
-  redirectUriFor,
   resolveOpenerOrigin,
 } from "../oauth-flow";
-import { AuthCredentialsMissingError } from "@plugins/auth/core";
+import {
+  AuthCredentialsMissingError,
+  oauthRedirectUri,
+} from "@plugins/auth/core";
+import { servedGatewayPort } from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
 import {
   asNamespace,
   isNamespace,
@@ -66,6 +69,7 @@ export const handleOAuthStart: HttpHandler = async (req, params) => {
   const openerOrigin = resolveOpenerOrigin(
     url.searchParams.get("origin"),
     worktree,
+    servedGatewayPort(),
   );
   if (openerOrigin.kind === "invalid") {
     return new Response(openerOrigin.message, { status: 400 });
@@ -104,7 +108,7 @@ export const handleOAuthStart: HttpHandler = async (req, params) => {
 
   const authorizeUrl = buildAuthorizeUrl(descriptor.oauth, {
     clientId: creds.clientId,
-    redirectUri: redirectUriFor(providerId),
+    redirectUri: oauthRedirectUri(providerId, servedGatewayPort()),
     scopes,
     state: nonce,
     codeChallenge,

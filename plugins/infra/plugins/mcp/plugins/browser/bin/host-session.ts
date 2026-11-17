@@ -9,7 +9,8 @@ import {
   ORIGIN_SOURCE_HEADER,
 } from "@plugins/infra/plugins/request-origin/core";
 import {
-  GATEWAY_PORT,
+  isGatewayPort,
+  LEGACY_GATEWAY_PORT,
   namespaceFromHost,
 } from "@plugins/infra/plugins/namespace/core";
 import {
@@ -331,15 +332,21 @@ function touch(session: Session): void {
 }
 
 /**
- * A request to a deploy behind the gateway (`http://<namespace>.localhost:9000`)
+ * A request to a deploy behind the gateway (`http://<namespace>.localhost:<port>`)
  * — this checkout's build, main, any other worktree. Those, and only those,
  * read the agent-origin headers and keep a write ledger to revert; anything
  * else (a CDN, a public website) never sees the headers.
+ *
+ * The port is any an equin gateway listens on — the per-account range, or the
+ * legacy port a moved install still answers on — not one read port: the host
+ * is one process per machine, started by whichever backend came first, and a
+ * deploy origin is a property of the URL, not of who launched the host.
  */
 function isDeployOrigin(url: URL): boolean {
+  const port = Number(url.port);
   return (
     url.protocol === "http:" &&
-    url.port === String(GATEWAY_PORT) &&
+    (isGatewayPort(port) || port === LEGACY_GATEWAY_PORT) &&
     namespaceFromHost(url.host) !== null
   );
 }

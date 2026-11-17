@@ -1,8 +1,10 @@
 <!doctype html>
 <!--
   The panel's offline page, bundled into equin-desktop: shown instead of
-  http://<namespace>.localhost:9000/home/menu-bar when nothing answers on the
-  gateway's port (only an outside process can say the gateway is absent).
+  http://<namespace>.localhost:<port>/home/menu-bar when nothing answers on the
+  gateway's port (only an outside process can say the gateway is absent). The
+  helper tells it the port (?port=<n>) or why it does not know it (?error=…,
+  an unreadable port file); it names no port of its own.
   Start asks the helper to start the gateway's login service; the helper loads
   the panel once the gateway answers. Standalone — no class attributes (it is
   not part of the Tailwind frontend; tailwind-scan-covers-classes).
@@ -89,13 +91,24 @@
         />
       </svg>
       <h1>equin isn't running</h1>
-      <p>Nothing answers on localhost:9000.</p>
+      <p id="why">equin's gateway does not answer.</p>
       <button id="start" type="button">Start</button>
       <p id="error" hidden></p>
     </main>
     <script>
       const start = document.getElementById("start");
       const error = document.getElementById("error");
+      const params = new URLSearchParams(location.search);
+      const port = params.get("port");
+      const why = params.get("error");
+      if (port) {
+        document.getElementById("why").textContent = `equin's gateway does not answer on localhost:${port}.`;
+      }
+      if (why) {
+        document.getElementById("why").textContent = "equin cannot tell which port its gateway is on.";
+        error.textContent = why;
+        error.hidden = false;
+      }
       start.addEventListener("click", async () => {
         start.disabled = true;
         start.textContent = "Starting…";

@@ -14,13 +14,14 @@ import {
   type SecretScope,
 } from "@plugins/infra/plugins/secrets/core";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
+// Central's routes are served by the gateway on every host name: this
+// account's gateway (the one that started this process, else the recorded port).
+import { resolveGatewayOrigin } from "@plugins/infra/plugins/launcher/plugins/gateway-port/machine";
 import {
   hasRuntimeNamespace,
   runtimeNamespace,
 } from "@plugins/infra/plugins/runtime-identity/core";
 
-/** Central's routes are served by the gateway on every host name. */
-const CENTRAL_ORIGIN = "http://localhost:9000";
 const RETRY_DELAY_MS = 250;
 
 /**
@@ -83,67 +84,62 @@ function refBody(ref: SecretRef): {
  * refuses its writes to an instance namespace.
  */
 function centralStoreAs(caller: () => Namespace | null): SecretStoreImpl {
-  const send = <T>(call: (headers: Record<string, string>) => Promise<T>) => {
+  // Central answers on this account's gateway port, resolved per request: a
+  // backend reads the gateway that started it, a CLI the account's record.
+  const send = <T>(
+    call: (headers: Record<string, string>, origin: string) => Promise<T>,
+  ) => {
     const ns = caller();
-    return toCentral(() =>
-      call(ns === null ? {} : { [SECRETS_CALLER_HEADER]: ns }),
+    return toCentral(async () =>
+      call(
+        ns === null ? {} : { [SECRETS_CALLER_HEADER]: ns },
+        await resolveGatewayOrigin(),
+      ),
     );
   };
   return {
     async get(ref) {
-      const { value } = await send((headers) =>
-        callEndpoint(
-          secretsGet,
-          {},
-          { origin: CENTRAL_ORIGIN, headers, body: refBody(ref) },
-        ),
+      const { value } = await send((headers, origin) =>
+        callEndpoint(secretsGet, {}, { origin, headers, body: refBody(ref) }),
       );
       return value ?? undefined;
     },
     async set(ref, value) {
-      await send((headers) =>
+      await send((headers, origin) =>
         callEndpoint(
           secretsSet,
           {},
-          { origin: CENTRAL_ORIGIN, headers, body: { ...refBody(ref), value } },
+          { origin, headers, body: { ...refBody(ref), value } },
         ),
       );
     },
     async delete(ref) {
-      await send((headers) =>
+      await send((headers, origin) =>
         callEndpoint(
           secretsDelete,
           {},
-          { origin: CENTRAL_ORIGIN, headers, body: refBody(ref) },
+          { origin, headers, body: refBody(ref) },
         ),
       );
     },
     async has(ref) {
-      const { has } = await send((headers) =>
-        callEndpoint(
-          secretsHas,
-          {},
-          { origin: CENTRAL_ORIGIN, headers, body: refBody(ref) },
-        ),
+      const { has } = await send((headers, origin) =>
+        callEndpoint(secretsHas, {}, { origin, headers, body: refBody(ref) }),
       );
       return has;
     },
     metadata(ref) {
-      return send((headers) =>
-        callEndpoint(
-          secretsMeta,
-          {},
-          { origin: CENTRAL_ORIGIN, headers, body: refBody(ref) },
-        ),
+      return send((headers, origin) =>
+        callEndpoint(secretsMeta, {}, { origin, headers, body: refBody(ref) }),
       );
     },
     async listKeys(namespace) {
-      const { keys } = await send((headers) =>
+      const { keys } = await send((headers, origin) =>
         callEndpoint(
           secretsList,
           {},
           {
-            origin: CENTRAL_ORIGIN,
+            origin,
             headers,
             body: { namespace: namespace.id, scope: namespace.scope },
           },

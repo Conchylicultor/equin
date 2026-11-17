@@ -54,7 +54,7 @@ build's eight-file pipeline is build-private, and `converge-script` is deploy's.
 
 | command | what it does |
 |---|---|
-| `build` | **Deploy this checkout into the live dev cluster** — its own app, or the compositions named by `--composition <name…>`, each at `http://<composition>.<checkout>.localhost:9000` — *or* — `--hermetic --composition <name…>` — **produce those compositions' artifact sets on a bare host from a fresh `git clone`.** The deploy posture is the inner loop: artifacts + Postgres readiness, the DB (the worktree fork for the checkout's own app, an empty one per composition), the `build_runs` ledger, gateway spec/restart/health probe; it needs a provisioned dev box. The hermetic posture is filtered registries + generated migration SQL + the web dist, as a function of (source tree, compositions) only — no cluster, no gateway, no ledger. |
+| `build` | **Deploy this checkout into the live dev cluster** — its own app, or the compositions named by `--composition <name…>`, each at `http://<composition>.<checkout>.localhost:<port>` — *or* — `--hermetic --composition <name…>` — **produce those compositions' artifact sets on a bare host from a fresh `git clone`.** The deploy posture is the inner loop: artifacts + Postgres readiness, the DB (the worktree fork for the checkout's own app, an empty one per composition), the `build_runs` ledger, gateway spec/restart/health probe; it needs a provisioned dev box. The hermetic posture is filtered registries + generated migration SQL + the web dist, as a function of (source tree, compositions) only — no cluster, no gateway, no ledger. |
 | `release` | Wraps `build --hermetic` and packs its output into a portable self-contained app (`--target web` / `tauri`). |
 | `check` | Run the repo validation checks. **The only in-process caller of `runChecks()`** — `build` and `push` both SPAWN this command via [`plugins/op-runtime/cli/check-subprocess.ts`](plugins/op-runtime/cli/check-subprocess.ts) (read its docblock), so their two `checks ✓` are one claim and the global cache stays honest. |
 | `test` | Run tests under the given paths (default: whole `plugins` tree) through **both** runners sequentially (`bun test`, then `vitest run`), then summarize both buckets — an empty one is stated, not implied, because either runner alone is green-but-partial. Paths only; no flag forwarding. |
@@ -250,7 +250,7 @@ rather than a second command: `build --hermetic --composition <name…>` is the
 artifact half (bare host, fresh clone, no cluster contact, N compositions per
 invocation), plain `build --composition <name…>` is the deploy half — it builds
 those compositions AND serves them into the dev cluster from whatever checkout
-you are standing in, at `http://<composition>.<checkout>.localhost:9000`, each
+you are standing in, at `http://<composition>.<checkout>.localhost:<port>`, each
 with its own dist and its own empty database.
 
 The two postures read DIFFERENT manifest documents, and that divergence is
@@ -467,9 +467,9 @@ ui-kit's `theme/app.css` (JS-sets / CSS-styles split, as with `.dark`).
     - `readMergeMarkers`
     - `resolveGitDir`
 - Cross-plugin:
-  - Imported by: 41 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 42 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework` ×29
-    - `infra` ×5
+    - `infra` ×6
     - `apps` ×3
     - `plugin-meta` ×2
     - `installer/window`

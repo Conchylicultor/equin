@@ -4,7 +4,7 @@ equin is a self-evolving app for the agentic era. The goal is to have an app whi
 
 - At first, the app itself is an Agent manager app whose goal is to fix todos faster than they are created. The app will be used to improve itself.
 
-  The app is a nested todo list of tasks agents need to execute. Each agent executes in its own isolated `worktree` (including this current session) and deploys to `http://<worktree>.localhost:9000`. The UI allows seamless switching between namespaces to inspect agent work.
+  The app is a nested todo list of tasks agents need to execute. Each agent executes in its own isolated `worktree` (including this current session) and deploys to `http://<worktree>.localhost:<port>` (`<port>` is this account's gateway port — see Ports). The UI allows seamless switching between namespaces to inspect agent work.
 
 - The app evolves into a Notion-like WeChat: a single unified surface where agents compose user-tailored apps on the fly from plugin building blocks. Notion gives users composable blocks (databases, pages, views) to fit their workflow; equin does the same at the *app* level, with agents doing the composing. The agent manager becomes one such composition among many, sharing the same plugins and primitives.
 
@@ -23,7 +23,7 @@ Agents work in isolated, auto-created git worktrees:
 
    **`./equin check` / `./equin test` run in the FOREGROUND** (usually seconds to a few minutes). Near the cap they hand themselves off: the op keeps running detached and the call exits 70 with `./equin await <op>` as the next step — call it, never end your turn waiting (`plugins/framework/plugins/cli/plugins/foreground-handoff`).
 
-3. The app is served at `http://<worktree>.localhost:9000` (always write `http://` so it's clickable).
+3. The app is served at `http://<worktree>.localhost:<port>` (always write `http://` so it's clickable; `./equin url` prints main's address with the real port).
 
 4. Once reviewed, `./equin push -m "…"` merges to main (pulls main, merges, pushes).
 
@@ -116,7 +116,7 @@ The CLI is `./equin <verb>`. Its old name is still a shim at the repo root (`LEG
 
 ### Deploy
 
-Always deploy after changes: `./equin build`, from the worktree directory (not the main repo root). It regenerates DB migrations from `schema.ts` (applied on server restart), builds frontend and server, restarts the server and registers the worktree with the gateway (`http://<worktree>.localhost:9000`).
+Always deploy after changes: `./equin build`, from the worktree directory (not the main repo root). It regenerates DB migrations from `schema.ts` (applied on server restart), builds frontend and server, restarts the server and registers the worktree with the gateway (`http://<worktree>.localhost:<port>`).
 
 > **NEVER run `./equin start` / `stop`** (install / stop the gateway as the machine's launchd service) unless the user explicitly asks. A pushed gateway change needs neither: main's deploy rebuilds and restarts the gateway itself once the change lands (rolling back if the new one does not come up), and the health report's Gateway row says when it is still out of date (`gateway/CLAUDE.md` § "The gateway follows main").
 
@@ -163,12 +163,12 @@ For a checkout cloned from someone else's repo, that repo is **upstream** (read-
 
 ## Ports
 
-- The gateway listens on **port 9000** for all browser traffic, routed by subdomain (`<name>.localhost:9000`). The main namespace (agent manager app, served from `main`) is always at `equin.localhost:9000` — its public host label (`NAMESPACE_HOST_LABELS` in `plugins/infra/plugins/namespace`); the namespace itself keeps its internal name (`MAIN_WORKTREE_NAME`), and its old address keeps answering as an alias.
+- The gateway listens on **this account's port** for all browser traffic, routed by subdomain (`<name>.localhost:<port>`). The port is 8700 by default — the first free one of 8700–8709, chosen once by `./equin start` and printed by `./equin url`; installs from before 2026-11 also answer on 9000 for a while (navigations there are redirected to the new port). Code never spells a port: a page reads its own (`pagePort` / `usePagePort`), a backend the gateway that started it (`servedGatewayPort`), the CLI and scripts the port file (`gatewayPort`) — `plugins/infra/plugins/launcher/plugins/gateway-port`. The main namespace (agent manager app, served from `main`) is always at `equin.localhost:<port>` — its public host label (`NAMESPACE_HOST_LABELS` in `plugins/infra/plugins/namespace`); the namespace itself keeps its internal name (`MAIN_WORKTREE_NAME`), and its old address keeps answering as an alias.
 - Backends do **not** listen on TCP. The gateway hands each backend a per-worktree Unix domain socket at `~/.equin/sockets/<name>.sock` and dials it directly. There is no backend port range to allocate.
 
 ## Driving the app (screenshots & E2E)
 
-`./equin build` first: every script resolves its target from the deploy registry THIS checkout's build wrote, and refuses when there is none. Never hand-write `http://<worktree>.localhost:9000` — in an agent session the name comes out as the main namespace and the run drives main. Chromium is an on-demand dependency (`infra/deps`), installed on the first browser run (~280 MB).
+`./equin build` first: every script resolves its target from the deploy registry THIS checkout's build wrote, and refuses when there is none. Never hand-write `http://<worktree>.localhost:<port>` — in an agent session the name comes out as the main namespace and the run drives main. Chromium is an on-demand dependency (`infra/deps`), installed on the first browser run (~280 MB).
 
 **Main is read-only for agent sessions**: on main, a write from the agent browser or an e2e run is refused with a 403 (telemetry excepted) — to exercise a write, drive your own build.
 
@@ -188,7 +188,7 @@ For a checkout cloned from someone else's repo, that repo is **upstream** (read-
 
 **One component on its own** (an exhibit — `plugins/plugin-meta/plugins/exhibits`): `./equin run plugins/plugin-meta/plugins/exhibits/e2e/exhibit-shot.ts --id <group/name> [--width <px>] [--theme <app-id>|chrome]`. With `browser_*`: `/debug/exhibit-stage/<group>/<name>;width=<px>?embed=1` is the component alone (viewport = width); `/debug/exhibit/<group>/<name>` shows every width.
 
-Flags: `--path <route>`, `--viewport 1280x900`, `--wait <ms>`, `--color-scheme dark|light`, `--composition <id>` (a composition this checkout built), `--url http://<namespace>.localhost:9000` (escape hatch for a deploy you didn't build — skips the is-this-my-build check).
+Flags: `--path <route>`, `--viewport 1280x900`, `--wait <ms>`, `--color-scheme dark|light`, `--composition <id>` (a composition this checkout built), `--url http://<namespace>.localhost:<port>` (escape hatch for a deploy you didn't build — skips the is-this-my-build check).
 
 **Compare a prototype against the real app** it mocks (`<meta name="mocks">`: a route, the whole app, or `exhibit:<id>`) with [`compare-diff.ts`](plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts): captures both frames at one size and 100% zoom, writes a red-on-grey diff and side-by-side sheet, logs the differing-pixel ratio, a per-cell heatmap and a colour report (dominant colours, region means, luminance profiles):
 
@@ -230,7 +230,7 @@ Independent projects that live in `sidequests/`, not directly related to equin. 
 - New features are plugins in `plugins/` — see [`plugins/framework/plugins/web-sdk/CLAUDE.md`](plugins/framework/plugins/web-sdk/CLAUDE.md).
 - Read the matching SKILL first: `create-app` (new top-level app), `debug` (before debugging — logs, profiling, crashes, DB, queues), `theme` (tokens, tweakcn, per-app config, typography/radius/z-index), `css` (layout mental model — containers share space, leaves truncate — and the layout-primitive index).
 - **When the user asks for a new app, always start with a new prototype** (see [`prototypes/CLAUDE.md`](prototypes/CLAUDE.md)) — implement the app only once the prototype is reviewed.
-- Before writing or editing a prototype, or implementing one in the app (the default is pixel-perfect), read [`prototypes/CLAUDE.md`](prototypes/CLAUDE.md). Prototypes live outside the repo in `~/.equin/apps/prototypes/<name>/`, shared by every worktree and live at `http://equin.localhost:9000` with no build or commit. Design from the blank `_template/`. Do not open other prototypes for inspiration.
+- Before writing or editing a prototype, or implementing one in the app (the default is pixel-perfect), read [`prototypes/CLAUDE.md`](prototypes/CLAUDE.md). Prototypes live outside the repo in `~/.equin/apps/prototypes/<name>/`, shared by every worktree and live at `http://equin.localhost:<port>` with no build or commit. Design from the blank `_template/`. Do not open other prototypes for inspiration.
 - Always edit files in your worktree, not the main branch.
 - **No unbounded `find`** — it has crashed macOS (65k DIR FDs via the bfs shim). Use `rg --files -g '<glob>'` or `fd '<regex>'`; `find` only with `-maxdepth` / `-prune`.
 - **`rg` is already recursive — never pass `-r`** (it means `--replace`, and the `rg-replace` guard blocks it).

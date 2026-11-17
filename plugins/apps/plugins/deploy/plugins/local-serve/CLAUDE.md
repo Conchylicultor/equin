@@ -58,7 +58,7 @@ This section used to lead with "serve builds run on the main instance only",
 because serving was a tail stage of MAIN's build reading MAIN's config, and every
 other backend could only observe. Serving is now an ordinary
 `./equin build --composition <id>` of whichever checkout you are looking
-at, publishing `<id>.<checkout>.localhost:9000` with its own database — so the
+at, publishing `<id>.<checkout>.localhost:<port>` with its own database — so the
 sentence would be false in exactly the case it was written for, and the
 `canServe` field it was rendered from is deleted.
 

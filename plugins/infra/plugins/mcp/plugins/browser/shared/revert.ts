@@ -18,7 +18,7 @@ const REVERT_MS = 30_000;
  * in each target's on-disk ledger, and nothing else will ever revert them.
  */
 export async function revertSessionWrites(
-  /** A deploy the session stamped: `http://<namespace>.localhost:9000`. */
+  /** A deploy the session stamped: `http://<namespace>.localhost:<port>`. */
   origin: string,
   conversationId: string,
 ): Promise<void> {

@@ -1,4 +1,5 @@
 export { defineAuthProvider } from "./internal/lib";
+export { oauthRedirectUri } from "./internal/redirect-uri";
 export {
   oauthStart,
   oauthCallback,

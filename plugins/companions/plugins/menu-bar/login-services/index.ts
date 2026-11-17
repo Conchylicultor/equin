@@ -6,6 +6,7 @@ import { userInfo } from "node:os";
 import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import { defineLoginService } from "@plugins/infra/plugins/launcher/plugins/login-services/machine";
 import { GATEWAY_SERVICE } from "@plugins/infra/plugins/launcher/core";
+import { gatewayPortFile } from "@plugins/infra/plugins/launcher/plugins/gateway-port/data-dirs";
 import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { cargoBinary } from "@plugins/infra/plugins/deps/plugins/rust/deps";
 import { componentIdentity } from "@plugins/infra/plugins/launcher/plugins/login-services/core";
@@ -35,6 +36,9 @@ function trayEnv(
     // the old one until `./equin data-dir migrate` relabels it — so a
     // relabel rewrites (and reloads) this job too.
     ...envEntries({ GATEWAY_LABEL: gatewayLabel }),
+    // Where this account's gateway port is recorded: the helper reads it at
+    // every show, so a port move reaches the running tray with no restart.
+    ...envEntries({ GATEWAY_PORT_FILE: gatewayPortFile() }),
     ...(signer === null
       ? {}
       : envEntries({

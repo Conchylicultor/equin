@@ -7,7 +7,7 @@
 // a memory-infra dump every `--every` seconds, per renderer process.
 //
 //   ./equin run plugins/debug/plugins/profiling/plugins/tab-memory/e2e/clean-soak.ts \
-//     --urls http://equin.localhost:9000/agents,http://equin.localhost:9000/agents/c/<id> \
+//     --urls http://equin.localhost:<port>/agents,http://equin.localhost:<port>/agents/c/<id> \
 //     [--minutes 30] [--every 120] [--out "$EQUIN_SCRATCH/clean"]
 //
 // With `--paths p1,p2,…` it drives the in-app session instead: `--rounds` times,

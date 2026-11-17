@@ -71,7 +71,7 @@ fn new_window_url() -> String {
 
 fn on_loaded(window: &WebviewWindow, url: &Url) {
     let app = window.app_handle();
-    let pin = app.state::<panel::Panel>().pin().clone();
+    let pin = app.state::<panel::Panel>().pin().expect("the probe's panel is built on a pin");
     if !pin.admits(url) {
         seen(|s| s.loaded_off_pin.push(url.to_string()));
         // The panel was moved: its page (and the probe in it) is gone — judge now.
@@ -110,7 +110,8 @@ fn on_title(window: &WebviewWindow, title: String) {
             finish(window.app_handle(), Err(format!("the probe script threw: {message}")))
         }
         Report::Stayed { href } => {
-            let verdict = judge(window.app_handle().state::<panel::Panel>().pin(), &href);
+            let pin = window.app_handle().state::<panel::Panel>().pin().expect("the probe's panel is built on a pin");
+            let verdict = judge(&pin, &href);
             finish(window.app_handle(), Ok(verdict));
         }
     }
@@ -192,24 +193,25 @@ fn finish(app: &AppHandle, result: Result<Vec<Verdict>, String>) {
 
 pub fn run(namespace: String, other: String) {
     eprintln!("equin-desktop: probe mode, panel on {namespace}, elsewhere {other}");
-    let other_origin = panel::Pin::for_namespace(&other).origin();
+    let port = crate::gateway::listening_port().unwrap_or_else(|e| {
+        eprintln!("equin-desktop: probe: {e}");
+        std::process::exit(1);
+    });
+    let other_origin = panel::Pin::new(&other, port).origin();
     *OTHER.lock().unwrap() = Some(other_origin);
+    let observer = panel::Observer { loaded: on_loaded, refused: record_refused, title: on_title };
     let app = tauri::Builder::default()
-        .manage(panel::Panel::new(panel::Pin::for_namespace(&namespace), record_hand_off))
+        .manage(panel::Panel::new(namespace, record_hand_off, Some(observer)))
         .invoke_handler(commands::handler())
-        .setup(|app| {
+        .setup(move |app| {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             let handle: AppHandle = app.handle().clone();
-            app.add_capability(handle.state::<panel::Panel>().pin().capability())?;
-            if !crate::gateway::up() {
-                eprintln!("equin-desktop: probe: nothing answers on port {}", crate::gateway::PORT);
+            if !crate::gateway::up(port) {
+                eprintln!("equin-desktop: probe: nothing answers on port {port}");
                 std::process::exit(1);
             }
-            panel::create(
-                &handle,
-                Some(panel::Observer { loaded: on_loaded, refused: record_refused, title: on_title }),
-            )?;
+            panel::create(&handle)?;
             let deadline = handle.clone();
             std::thread::spawn(move || {
                 std::thread::sleep(DEADLINE);

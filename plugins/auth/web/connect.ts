@@ -18,6 +18,10 @@ import {
   MAIN_COMPOSITION_ID,
   namespaceFromHost,
 } from "@plugins/infra/plugins/namespace/core";
+import {
+  gatewayOriginFor,
+  pagePort,
+} from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
 
 /**
  * Open the OAuth popup. Returns a promise that resolves on the auth-complete
@@ -55,9 +59,12 @@ const POPUP_FEATURES = "width=600,height=720";
 const POPUP_NAME = LEGACY_IDS.authPopupName;
 /**
  * The callback page's origin — the registered `redirect_uri`'s host (auth
- * central's `REDIRECT_HOST`), where the popup ends and posts from.
+ * central's `redirectUriFor`): the loopback origin of the gateway this page was
+ * served by, where the popup ends and posts from.
  */
-const CALLBACK_ORIGIN = "http://localhost:9000";
+function callbackOrigin(): string {
+  return gatewayOriginFor(pagePort(window.location));
+}
 const POPUP_TIMEOUT_MS = 5 * 60 * 1000;
 
 export function startConnectFlow(
@@ -105,7 +112,7 @@ export function startConnectFlow(
     };
 
     function onMessage(event: MessageEvent) {
-      if (event.origin !== CALLBACK_ORIGIN) return;
+      if (event.origin !== callbackOrigin()) return;
       const data = event.data as {
         type?: string;
         ok?: boolean;
@@ -184,7 +191,7 @@ export function notGrantedWarning(
 }
 
 export function currentWorktreeName(): string {
-  // The web app is served from `<namespace>.localhost:9000`. Off such a host
+  // The web app is served from `<namespace>.localhost:<port>`. Off such a host
   // (no window, bare localhost) the main app is the right default.
   if (typeof window === "undefined") return MAIN_COMPOSITION_ID;
   return namespaceFromHost(window.location.host) ?? MAIN_COMPOSITION_ID;

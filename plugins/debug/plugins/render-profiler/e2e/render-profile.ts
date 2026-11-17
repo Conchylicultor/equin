@@ -10,7 +10,7 @@
 //
 // Example:
 //   ./equin run plugins/debug/plugins/render-profiler/e2e/render-profile.ts \
-//     --url http://<worktree>.localhost:9000/agents/c/<id> \
+//     --url http://<worktree>.localhost:<port>/agents/c/<id> \
 //     --seconds 8
 
 import {

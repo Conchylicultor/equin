@@ -62,13 +62,14 @@ step_03_new_terminal_TAG="from-docs"
 
 step_04_app_answers() {
   cat <<'CMD'
-code=$(curl -sS -o /dev/null -w '%{http_code}' http://equin.localhost:9000/)
+APP=$(zsh -l -i -c 'cd ~/equin && ./equin url')   # this account's gateway port, as equin recorded it
+code=$(curl -sS -o /dev/null -w '%{http_code}' "$APP/")
 echo "http $code"
 cat ~/.equin/worktrees/singularity/build-status.json
 [ "$code" = 200 ] && grep -q '"status": *"ok"' ~/.equin/worktrees/singularity/build-status.json
 CMD
 }
-step_04_app_answers_DOC="README.md: the app is left at http://equin.localhost:9000."
+step_04_app_answers_DOC="README.md: the app is left at the address the installer prints (./equin url)."
 step_04_app_answers_TAG="from-docs"
 
 step_05_screenshot() {
@@ -90,8 +91,9 @@ step_07_app_after_reboot() {
   cat <<'CMD'
 # Nothing is run by hand: only wait for what launchd brings back at login
 # (gateway → Postgres → backend), up to 5 minutes.
+APP=$(zsh -l -i -c 'cd ~/equin && ./equin url')   # this account's gateway port, as equin recorded it
 for i in $(seq 1 100); do
-  code=$(curl -sS -o /dev/null -m 5 -w '%{http_code}' http://equin.localhost:9000/ 2>/dev/null || true)
+  code=$(curl -sS -o /dev/null -m 5 -w '%{http_code}' "$APP/" 2>/dev/null || true)
   [ "$code" = 200 ] && { echo "http 200 after ~$((i * 3))s"; exit 0; }
   sleep 3
 done

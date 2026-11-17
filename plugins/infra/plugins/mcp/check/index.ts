@@ -4,6 +4,7 @@ import type { Check } from "@plugins/framework/plugins/tooling/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import {
+  GATEWAY_PORT_RANGE,
   MAIN_WORKTREE_NAME,
   namespaceUrl,
 } from "@plugins/infra/plugins/namespace/core";
@@ -17,10 +18,15 @@ const MCP_JSON = ".mcp.json";
  * carries both variables (conversations/agent-launch); one it did not — a
  * `claude` started in a terminal to recover a broken main — falls back to
  * main's gateway origin and the unattached route.
+ *
+ * The fallback names the DEFAULT port (the first of the range, what a fresh
+ * install takes): `.mcp.json` is committed JSON, read by Claude Code, and
+ * cannot read this account's port. An account on another port reaches main
+ * through `EQUIN_PARENT_URL`, which every equin-launched session carries.
  */
 function expectedMcpUrl(): string {
   return (
-    `\${${envName("PARENT_URL")}:-${namespaceUrl(MAIN_WORKTREE_NAME)}}` +
+    `\${${envName("PARENT_URL")}:-${namespaceUrl(MAIN_WORKTREE_NAME, "", GATEWAY_PORT_RANGE.first)}}` +
     `/api/mcp/\${${envName("CONVERSATION_ID")}:-${MCP_UNATTACHED_ID}}`
   );
 }
@@ -45,7 +51,7 @@ const mcpJsonInSync: Check = {
     return {
       ok: false,
       message: `${MCP_JSON}'s "${MCP_SERVER_NAME}" server url is ${url === null ? "missing" : `"${url}"`}, expected "${expected}"`,
-      hint: `Set mcpServers.${MCP_SERVER_NAME}.url in ${MCP_JSON} to the expected string. Its defaults are main's origin (namespaceUrl(MAIN_WORKTREE_NAME)) and MCP_UNATTACHED_ID (plugins/infra/plugins/mcp/core), so a claude equin did not launch still reaches the unattached tools.`,
+      hint: `Set mcpServers.${MCP_SERVER_NAME}.url in ${MCP_JSON} to the expected string. Its defaults are main's origin on the default port (namespaceUrl(MAIN_WORKTREE_NAME, "", GATEWAY_PORT_RANGE.first)) and MCP_UNATTACHED_ID (plugins/infra/plugins/mcp/core), so a claude equin did not launch still reaches the unattached tools.`,
     };
   },
 };

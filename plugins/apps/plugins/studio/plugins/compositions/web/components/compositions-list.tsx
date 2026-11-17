@@ -1,4 +1,5 @@
 import { useMemo, type ReactElement } from "react";
+import { usePagePort } from "@plugins/infra/plugins/launcher/plugins/gateway-port/web";
 import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -146,6 +147,8 @@ function CompositionsDataView({
   linkTo: (item: CompositionManifestItem) => LinkTarget;
   onSetMode: (id: string, mode: string) => void;
 }) {
+  // Every namespace here is served by the gateway this page was served by.
+  const port = usePagePort();
   const fields = useMemo<FieldDef<CompositionManifestItem>[]>(
     () => [
       {
@@ -263,7 +266,7 @@ function CompositionsDataView({
                   ? "The main app is built by ./equin build — it is never served as a composition."
                   : served
                     ? `${serveModeLabel(it.serve)} — click to stop serving`
-                    : `Click to build & serve this composition at ${namespaceUrl(asNamespace(it.id))}`
+                    : `Click to build & serve this composition at ${namespaceUrl(asNamespace(it.id), "", port)}`
               }
               onClick={(e: { stopPropagation: () => void }) => {
                 e.stopPropagation();
@@ -288,9 +291,9 @@ function CompositionsDataView({
         id: "serveUrl",
         label: "Serve URL",
         type: "text",
-        value: (it) => serveHost(it) ?? "",
+        value: (it) => serveHost(it, port) ?? "",
         cell: (it) => {
-          const host = serveHost(it);
+          const host = serveHost(it, port);
           return host ? (
             <LinkChip
               mono
@@ -305,7 +308,7 @@ function CompositionsDataView({
         },
       },
     ],
-    [onSetMode],
+    [onSetMode, port],
   );
 
   return (
@@ -338,7 +341,7 @@ function CompositionsDataView({
  * composition's own Serve panel reads the `composition.json` marker for the
  * honest answer.
  */
-function serveHost(it: CompositionManifestItem): string | null {
+function serveHost(it: CompositionManifestItem, port: number): string | null {
   // THE MAIN-CHECKOUT SPELLING, and knowingly so. A composition is served from
   // whichever checkout built it, so its real namespace is
   // `<id>.<checkout>` — which only the SERVER can resolve (the browser knows the
@@ -349,6 +352,6 @@ function serveHost(it: CompositionManifestItem): string | null {
   // host, which is the surface to trust. Giving this column the true answer means a batched resolve — filed
   // as its own change rather than faked here.
   if (it.id === MAIN_COMPOSITION_ID)
-    return namespaceHost(asNamespace(MAIN_COMPOSITION_ID));
-  return isServed(it.serve) ? namespaceHost(asNamespace(it.id)) : null;
+    return namespaceHost(asNamespace(MAIN_COMPOSITION_ID), port);
+  return isServed(it.serve) ? namespaceHost(asNamespace(it.id), port) : null;
 }

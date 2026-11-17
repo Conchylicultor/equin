@@ -499,6 +499,7 @@ export const browserHost = {
     "infra.host-account",
     "infra.host.duress",
     "infra.host.machine-sleep",
+    "infra.launcher.gateway-port",
     "infra.paths.file-systems",
     "infra.trash",
     "integrations.google-maps",

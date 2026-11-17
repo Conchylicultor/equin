@@ -17,13 +17,42 @@ namespaces and URLs, never an app.
   Linux a StatusNotifierItem through `ksni` (left click = `Activate` = the
   panel; no SNI watcher → `tray: unavailable`, exit 1). A click toggles the
   hidden `panel` window (360 × 560, borderless, always on top, hides on blur,
-  kept alive while hidden) on `http://<ns>.localhost:9000/home/menu-bar?embed=1`,
-  under the icon on macOS, top-right on Linux. When nothing answers on :9000
+  kept alive while hidden) on `http://<ns>.localhost:<port>/home/menu-bar?embed=1`,
+  under the icon on macOS, top-right on Linux. When nothing answers on the port
   (probed at start and on every show) it shows the bundled `frontend/index.html`
-  instead, whose Start runs `launchctl kickstart -k gui/$UID/<gateway-label>`
+  instead (told the port, `?port=<n>`, or the port file's error, `?error=…`;
+  the page names no port of its own), whose Start runs `launchctl kickstart -k gui/$UID/<gateway-label>`
   / `systemctl --user start <gateway-label>.service` (the label its job carries in
   `EQUIN_GATEWAY_LABEL`, written by `login-services/index.ts` from the bound
   gateway service) and loads the panel once the port answers.
+- **The gateway's port** (`rust/src/gateway.rs`, `gateway::port()`): this
+  account's, read from the port file `~/.equin/state/gateway-port/port.json`
+  (`{"port": <u16>, "legacy": <u16|null>}`, written by `./equin start` once a
+  gateway listens there) that the tray's job names in
+  `EQUIN_GATEWAY_PORT_FILE` (`login-services/index.ts`; TS owns the layout).
+  Read again at every probe and show — it moves under a running tray when an
+  install migrates. `gateway::port()` is a `Port`: `Known(n)` (the file names
+  it), `Unrecorded` (the variable names a file and there is none) or
+  `NotProvided` (no variable — an app window launched from its shim by macOS
+  or the desktop, or a job written before it). A caller that must dial now
+  (`listening_port()`: the panel, the probes, Start) uses `LEGACY_PORT` (9000,
+  the one port literal outside tests) for the last two — an install with no
+  file has not moved. Moving a URL onto the port takes `Known` only
+  (`Port::known`): a process that does not know the port keeps a URL's own. An unreadable file or another shape is
+  an error — logged, the panel shows the offline page with it — never a
+  default. **Panel rebuild**: the panel's grant, navigation pin and bridge
+  script are fixed when its window is built, so a show (or Start) that finds
+  the port moved destroys the window and builds it again on the new origin
+  (`panel::destroyed`, on the run loop's `Destroyed`), shown where the last
+  show put it; the old origin's ACL grant cannot be withdrawn, and the command
+  gate (the current pin) refuses it. **Shims follow**: the rebuilt panel's
+  load starts the keeper's sync, which reads the origin on the current port,
+  so every shim baked on another port is rewritten (same path, re-signed —
+  `sync`'s URL staleness, below), at the tray's start and after each move.
+  Until then routing reads each shim's URL on the current port
+  (`shim::installed`, `shim::rebased`), and window mode does the same with its
+  own bundle's URL and its `--url` — when it knows the port (`Known`); a
+  window launched from its shim does not, and keeps the URL the tray baked.
 - **Window mode** — an installed app's process (`rust/src/window.rs`): on macOS
   the binary inside a shim bundle whose Info.plist has `EquinAppId` (its
   arguments then only carry an optional in-scope `--url`, a hand-off); on
@@ -115,7 +144,7 @@ namespaces and URLs, never an app.
   device's installed apps, below — capabilities `apps` / `pin`).
   **The bridge answers ONE page: the pin** (`panel::Pin`, `rust/src/panel.rs`
   — the panel app's route `/home/menu-bar` at the configured instance's exact
-  origin, `http://<ns>.localhost:9000`). Tauri's ACL sees only the caller's
+  origin, `http://<ns>.localhost:<port>`). Tauri's ACL sees only the caller's
   origin (the IPC fetch's `Origin` header), and a same-origin frame calling
   `top`'s `invoke` is indistinguishable from the page, so the pin is held at
   three native points, all reading the pin:
@@ -334,6 +363,8 @@ helper build and reloads the tray onto it
     - `companions/menu-bar/open-in-window`
     - `companions/menu-bar/wish`
     - `shell/notifications/native`
+- Exemptions:
+  - Exempts itself from: `gateway-port:no-port-literal` — `rust/src/gateway.rs` (sanctioned)
 - Sub-plugins:
   - **`app-grid`** — The menu-bar panel's app grid (MenuBar.Section 'apps'): every Apps.App but the current app and the home app (the desktop included: its URL is its base path as a route prefix) — as the icons DataView…
   - **`app-window`** — An installed app window's bridge to the native helper (window.equinWindow), read once per document: useNativeFileDrag() is the window's native file drag — drag host paths out as real files, the drag…

@@ -15,7 +15,7 @@
 //
 // To reach a deploy that is not this checkout's own app:
 //   --composition sonata                  a composition this checkout published
-//   --url http://<ns>.localhost:9000/…    any deploy, path included (its origin
+//   --url http://<ns>.localhost:<port>/…    any deploy, path included (its origin
 //                                         says which deploy, its path which
 //                                         screen; --base / --origin are aliases)
 //

@@ -10,12 +10,6 @@ import type {
   ParsedTokenResponse,
 } from "@plugins/auth/core";
 
-const REDIRECT_HOST = "http://localhost:9000";
-
-export function redirectUriFor(providerId: string): string {
-  return `${REDIRECT_HOST}/api/auth/callback/${providerId}`;
-}
-
 export function generateNonce(bytes = 32): string {
   return randomBytes(bytes).toString("hex");
 }
@@ -228,8 +222,11 @@ export async function fetchIdentity(
 export function resolveOpenerOrigin(
   raw: string | null,
   worktree: Namespace,
+  port: number,
 ): { kind: "ok"; origin: string } | { kind: "invalid"; message: string } {
-  if (raw === null) return { kind: "ok", origin: namespaceUrl(worktree) };
+  if (raw === null) {
+    return { kind: "ok", origin: namespaceUrl(worktree, "", port) };
+  }
   if (!URL.canParse(raw)) {
     return { kind: "invalid", message: `invalid origin query param: ${raw}` };
   }

@@ -473,6 +473,14 @@ export interface GatewayLaunchOptions {
    */
   mainCheckout?: string;
   /**
+   * The port this account moved off, passed as `-legacy-listen` on the same
+   * bind host: the gateway keeps serving there and redirects a document
+   * navigation to `port`, so bookmarks, open tabs and running agent sessions
+   * follow (`launcher/gateway-port`, the port record's `legacy`). Omitted for
+   * an install that never listened anywhere else.
+   */
+  legacyPort?: number | null;
+  /**
    * Hostnames a deployed site is served under, passed as `-public-hosts` so the
    * gateway treats them as its own (a reverse proxy forwards the visitor's Host
    * unchanged). Omitted for a deployment with none.
@@ -621,6 +629,12 @@ export function gatewayLaunchFlags(
       ? ["-public-hosts", opts.publicHosts.join(",")]
       : []),
     ...(opts.mainCheckout ? ["-main-checkout", opts.mainCheckout] : []),
+    ...(opts.legacyPort != null
+      ? [
+          "-legacy-listen",
+          listenFlag({ host: opts.bindHost, port: opts.legacyPort }),
+        ]
+      : []),
     // Which of its own variables the gateway may hand its children. Required
     // by the gateway, and the same declaration as `env` below, so the two
     // boundaries (us → gateway, gateway → child) cannot disagree.

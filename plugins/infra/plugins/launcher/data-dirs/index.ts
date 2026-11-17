@@ -36,7 +36,7 @@ export const gatewayState = defineDataDir({
  * running?" probe.
  *
  * `locks` rather than `state`: the file is not durable app state, it is how one
- * process claims host-singleton ownership of port 9000 for another process to
+ * process claims host-singleton ownership of the account's gateway port for another process to
  * discover — the same reclaim class as the flock slot dirs beside it.
  */
 export const gatewayLocks = defineDataDir({

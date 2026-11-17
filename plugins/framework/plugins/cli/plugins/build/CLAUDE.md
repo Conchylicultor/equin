@@ -1,7 +1,7 @@
 # build
 
 `./equin build` — the command the agent workflow runs on. It takes this
-checkout from source to a running app at `http://<worktree>.localhost:9000`.
+checkout from source to a running app at `http://<worktree>.localhost:<port>`.
 
 ## The two postures
 

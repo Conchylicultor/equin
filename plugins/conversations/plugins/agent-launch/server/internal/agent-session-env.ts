@@ -1,3 +1,4 @@
+import { servedGatewayPort } from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
 import { runtimeShimsDir } from "@plugins/infra/plugins/launcher/plugins/runtime-env/core";
 import {
   envEntries,
@@ -46,7 +47,7 @@ import { agentScratchDir } from "@plugins/infra/plugins/launcher/plugins/agent-s
  * - `EQUIN_PARENT_HOST` — TEMPORARY: the same backend's host LABEL
  *   (`namespaceLabel`, main → `equin`), for a worktree branched before
  *   `EQUIN_PARENT_URL` whose `.mcp.json` still builds
- *   `http://${EQUIN_PARENT_HOST}.localhost:9000`. Delete with its env-names key
+ *   `http://${EQUIN_PARENT_HOST}.localhost:<port>`. Delete with its env-names key
  *   once no checkout's `.mcp.json` names it (rename track, Step 9).
  * - `CLAUDE_CODE_DISABLE_AGENT_VIEW` — pins the Claude session to this agent
  *   process, so it can never migrate into Claude Code's background daemon and
@@ -100,7 +101,7 @@ export function agentSessionEnv(
   return {
     ...envEntries({
       CONVERSATION_ID: conversationId,
-      PARENT_URL: namespaceUrl(runtimeNamespace()),
+      PARENT_URL: namespaceUrl(runtimeNamespace(), "", servedGatewayPort()),
       PARENT_HOST: namespaceLabel(runtimeNamespace()),
       GUARDS_ROOT: roots.guardsRoot,
       WORKSPACE_ROOT: roots.workspaceRoot,

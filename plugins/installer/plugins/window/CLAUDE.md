@@ -133,14 +133,14 @@ binary through the curl stage 0 (`install.sh`), or directly.
 ```bash
 ./equin run plugins/installer/plugins/window/e2e/moment.ts --out "$EQUIN_SCRATCH/m.jsonl" \
   [--state running|failed|fixing|done] [--failure sandbox|security|stall] [--claude app|cli]
-./equin run plugins/installer/plugins/window/e2e/replay.ts --url http://equin.localhost:9000 \
+./equin run plugins/installer/plugins/window/e2e/replay.ts --url http://equin.localhost:<port> \
   --events "$EQUIN_SCRATCH/m.jsonl" --now <iso it printed> --out "$EQUIN_SCRATCH/replay" \
   [--mockup "<prototype url>?view=window&state=failed&failure=security"] [--threshold 0.1] [--mockup-own-font]
-./equin run plugins/installer/plugins/window/e2e/password-sheet.ts --url http://equin.localhost:9000 --out "$EQUIN_SCRATCH/password"
+./equin run plugins/installer/plugins/window/e2e/password-sheet.ts --url http://equin.localhost:<port> --out "$EQUIN_SCRATCH/password"
 ```
 
 The prototype URL is its content host's:
-`http://proto-1794832268-wlybzk.content.localhost:9000/equin/api/prototypes/proto-1794832268-wlybzk/index.html`.
+`http://proto-1794832268-wlybzk.content.localhost:<port>/equin/api/prototypes/proto-1794832268-wlybzk/index.html`.
 
 `replay.ts` bundles the page (`deps`' `bundlePage`), draws any recorded
 stream at 760 × 640 with its clock pinned to `--now`, and screenshots it; with

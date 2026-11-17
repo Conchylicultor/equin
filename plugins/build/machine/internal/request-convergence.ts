@@ -1,3 +1,7 @@
+import {
+  gatewayOriginFor,
+  servedGatewayPort,
+} from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 
 /**
@@ -21,13 +25,16 @@ import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
  */
 export async function requestConvergence(cause: string): Promise<void> {
   if (!isMain()) return;
-  const resp = await fetch("http://localhost:9000/gateway/deploy/converge", {
+  const resp = await fetch(
+    `${gatewayOriginFor(servedGatewayPort())}/gateway/deploy/converge`,
+    {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ cause }),
     // A wedge-breaker: the gateway answers before it spawns anything.
     signal: AbortSignal.timeout(30_000),
-  });
+    },
+  );
   if (resp.status !== 202) {
     throw new Error(
       `[build] the gateway refused main's convergence request (${cause}): ` +

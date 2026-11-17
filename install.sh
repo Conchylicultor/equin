@@ -546,6 +546,10 @@ EOF
     fail "equin could not start; what stopped it is just above. Once that is sorted, run the installer again: it picks up where it stopped (cd $INSTALL_DIR && ./install.sh)." \
       "./equin start exited non-zero"
   fi
+  # The port is chosen by the start just above; never spelled here.
+  APP_URL="$(./equin url)"
+  [ -n "$APP_URL" ] || fail "equin started but could not say where it answers. Run the installer again (cd $INSTALL_DIR && ./install.sh)." \
+    "./equin url printed nothing"
 
   STATUS="$(data_root)/worktrees/singularity/build-status.json"
   before="$(grep -o '"buildId": *"[^"]*"' "$STATUS" 2>/dev/null || true)"
@@ -706,7 +710,10 @@ install_toolchain() {
 # (on_exit) writes `exit`, closes this script's write end and waits for the
 # hub to drain, so `exit` is always the last line a reader sees.
 
-APP_URL="http://equin.localhost:9000"
+# Where equin answers once it runs: main's address on this account's gateway
+# port, read from `./equin url` after the start step chose and recorded it
+# (the first free port of the range). Empty until then.
+APP_URL=""
 EV_FD=""
 CTL_FD=""
 EV_OUT=""
@@ -2748,6 +2755,13 @@ dry_run() {
     run_step "$id" dry_step "$id"
     [ "$STEP_RC" = "0" ] || fail "The $id step of the dry run failed." "dry run, $id"
   done
+  # Nothing started here, so the address is the one this account's equin has
+  # (or, never started, would get first): asked of the checkout the dry run
+  # is played from, never spelled in this script.
+  local here
+  here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  [ -x "$here/equin" ] || fail "The dry run plays from a checkout, which names the address." "no ./equin beside install.sh"
+  APP_URL="$(cd "$here" && ./equin url)"
   ev_done
   done_wait
 }

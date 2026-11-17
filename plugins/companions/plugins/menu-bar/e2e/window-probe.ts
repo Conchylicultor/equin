@@ -21,11 +21,11 @@
  * Manual only — nothing runs this automatically.
  *   ./equin run plugins/companions/plugins/menu-bar/e2e/window-probe.ts
  */
-import { namespaceUrl } from "@plugins/infra/plugins/namespace/core";
+import { pathUrl } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { runHelperProbe } from "./helper-probe";
 
 await runHelperProbe({
   title: "menu-bar: app window scope probe",
   mode: "probe-window",
-  notes: (namespace) => [`window on ${namespaceUrl(namespace, "/home")}`],
+  notes: () => [`window on ${pathUrl("/home")}`],
 });

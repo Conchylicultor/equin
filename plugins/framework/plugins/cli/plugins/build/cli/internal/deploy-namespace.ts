@@ -1,4 +1,8 @@
 import {
+  gatewayOriginSync,
+  gatewayPortSync,
+} from "@plugins/infra/plugins/launcher/plugins/gateway-port/data-dirs";
+import {
   asAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
@@ -139,7 +143,7 @@ async function getWorktreeState(
   name: Namespace,
 ): Promise<{ state: string; lastSpawnErr: string } | null> {
   try {
-    const resp = await fetch("http://localhost:9000/gateway/worktrees", {
+    const resp = await fetch(`${gatewayOriginSync()}/gateway/worktrees`, {
       signal: AbortSignal.timeout(5_000),
     });
     if (!resp.ok) return null;
@@ -172,7 +176,10 @@ async function readHealthStartedAt(name: Namespace): Promise<number | null> {
     const { startedAt } = await callEndpoint(
       getHealth,
       {},
-      { origin: namespaceUrl(name), signal: AbortSignal.timeout(5_000) },
+      {
+        origin: namespaceUrl(name, "", gatewayPortSync()),
+        signal: AbortSignal.timeout(5_000),
+      },
     );
     return startedAt;
   } catch (err) {
@@ -237,7 +244,7 @@ async function probeHealth(
   console.log(
     `Probing /api/health... (deadline ${Math.round(deadline / 1000)}s)`,
   );
-  const site = namespaceUrl(name);
+  const site = namespaceUrl(name, "", gatewayPortSync());
   let lastStatus: number | string = "no response";
   type TakeOver = { kind: "took-over"; startedAt: number; boot: Boot };
   const result = await retryUntil<TakeOver, Promise<HealthOutcome>>(
@@ -375,7 +382,7 @@ async function awaitSettled(
   firstBoot: Boot,
 ): Promise<HealthOutcome> {
   if (firstBoot === "settled") return { kind: "ok", note: null };
-  const site = namespaceUrl(name);
+  const site = namespaceUrl(name, "", gatewayPortSync());
   const deadline = adaptiveTimeoutMs(60_000, 180_000);
   const tookOverAt = Date.now();
   console.log(
@@ -482,7 +489,7 @@ async function restartBackend(
   let restartError: string | null = null;
   try {
     const resp = await fetch(
-      `http://localhost:9000/gateway/worktrees/${ns}/restart`,
+      `${gatewayOriginSync()}/gateway/worktrees/${ns}/restart`,
       {
         method: "POST",
         signal: AbortSignal.timeout(adaptiveTimeoutMs(30_000, 130_000)),
@@ -528,7 +535,7 @@ export async function deployNamespace(
 ): Promise<DeployNamespaceResult> {
   const { target, root, hooks } = opts;
   const ns = target.namespace;
-  const site = namespaceUrl(ns);
+  const site = namespaceUrl(ns, "", gatewayPortSync());
   const notes: string[] = [];
 
   const span = async <T>(

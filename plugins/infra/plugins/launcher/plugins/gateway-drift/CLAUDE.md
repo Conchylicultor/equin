@@ -39,11 +39,30 @@ main — and when it is not, make it so. Two halves over one comparison
    the job, then **hand over** (`handOverGateway`, `launcher/server`): the
    gateway's keeper replaces the gateway process with the job's binary, argv,
    environment and cwd over the same sockets and backends — no backend stops
-   (`gateway/CLAUDE.md` § The keeper). Only a gateway from before the keeper
-   (`404`) is restarted instead: `reloadService`, `awaitGatewayReady`. Then,
-   outside the rollback's reach, the attempt is recorded and
-   `holdGatewayBuild` moves the hold to the new build.
-7. Any failure → `restorePrevious`: reinstall the held build, restore the
+   (`gateway/CLAUDE.md` § The keeper). The running gateway is dialled at the
+   address its installed definition's `-listen` names (none: `9000`, the old
+   default), never at a constant. Then, outside the rollback's reach, the
+   attempt is recorded and `holdGatewayBuild` moves the hold to the new build.
+   **A restart instead of a handover** — the listen set changes (`-listen`,
+   `-legacy-listen`: the keeper holds the sockets, and a generation refuses
+   one it does not hold), or a gateway from before the keeper (`404`) — is
+   handed to the **switch helper** (`bin/switch.ts`, `completeGatewaySwitch`):
+   this run is main's deploy run, a child the keeper spawned, and unloading the
+   service stops the keeper, which signals every child's process group
+   (`stopChildren`) — the run would die between the unload and the load, with
+   nothing left to load the new job or roll back. The helper is spawned
+   detached (its own session), reads `state/gateway-follow/switch-plan.json`,
+   takes the follow lock (so it starts once this follow returned), reloads,
+   awaits the new gateway on its new port, records the port
+   (`launcher/gateway-port`, only now — a rolled-back move leaves none) and the
+   attempt — or rolls back, awaited on the old port, and files the failure.
+   Its log: `state/gateway-follow/switch.log`. The follow returns `switching`.
+7. **The port.** The account's recorded port (`launcher/gateway-port`). An
+   install with none whose job still listens on `9000` is moved: the first
+   free port of 8700–8709 (`chooseGatewayPort`, nothing written), with
+   `-legacy-listen` on `9000` so bookmarks, open tabs and running agents
+   follow. The health row says "still on port 9000" until then.
+8. Any failure → `restorePrevious`: reinstall the held build, restore the
    definition, and (once the swap had unloaded the old one) reload and await
    it. A failed handover unloaded nothing: the old gateway kept serving. A refusal or a failure files a `gateway-restart-failed` report through
    the outbox (`core/internal/restart-failed.ts`, kind in `server/`, summary in
@@ -135,6 +154,7 @@ ok, so the row still folds into the quiet card while current.
   - Resources: `gateway-drift` (push, notified, whole: one phrase per kind of difference (binary, each changed flag, cwd, signature, running vs installed) — a fixed handful)
 - Machine:
   - Uses:
+    - `infra/launcher/gateway-port.loadGatewayPortRecord`
     - `infra/launcher/login-services.APP_BUNDLE_ID`
     - `infra/launcher/login-services.bundleOfExecutable`
     - `infra/launcher/login-services.installedAppComponents`
@@ -146,7 +166,11 @@ ok, so the row still folds into the quiet card while current.
     - `infra/launcher/login-services.plannedServiceExecutable`
     - `network/live.serveValue`
   - Exports (types): `GatewayLaunchComparison`
-  - Exports (values): `compareGatewayLaunch`
+  - Exports (values):
+    - `compareGatewayLaunch`
+    - `dialAddressOf`
+    - `flagValue`
+    - `listenPortOf`
   - Register: `defineRefReaction('launcher.gateway-drift (refs/heads/main)')`
 - Core:
   - Uses:
@@ -169,6 +193,7 @@ ok, so the row still folds into the quiet card while current.
     - `PreparedGateway`
   - Exports (values):
     - `adoptGatewayLaunch`
+    - `completeGatewaySwitch`
     - `followMainGateway`
     - `holdGatewayBuild`
     - `prepareMainGateway`

@@ -21,7 +21,7 @@ sleepers (default: the class's slots + 1, so one waits), `sleepMs` (90 s, max
   deadline only, so without it a restart waits out every sleeper.
 
 ```bash
-curl -sX POST http://<ns>.localhost:9000/api/events-test/queue-saturate \
+curl -sX POST http://<ns>.localhost:<port>/api/events-test/queue-saturate \
   -H 'content-type: application/json' -d '{"backdateMs": 660000}'
 ```
 

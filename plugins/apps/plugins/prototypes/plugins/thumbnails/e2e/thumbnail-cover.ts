@@ -5,7 +5,7 @@
 //
 // Usage:
 //   ./equin run plugins/apps/plugins/prototypes/plugins/thumbnails/e2e/thumbnail-cover.ts \
-//     [--url http://<worktree>.localhost:9000]
+//     [--url http://<worktree>.localhost:<port>]
 
 import {
   pathUrl,

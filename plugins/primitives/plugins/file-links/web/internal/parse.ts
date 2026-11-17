@@ -7,7 +7,7 @@
 //                    file peek reads an absolute one from the host)
 // Final segment must either contain a dot (xx.yy, .zshrc, .tmux.conf) or be a
 // well-known extensionless name (Makefile, Dockerfile, …).
-// The : and \w in the lookbehind keep URL paths out (localhost:9000/plugins/..., example.com/a/b.png)
+// The : and \w in the lookbehind keep URL paths out (localhost:<port>/plugins/..., example.com/a/b.png)
 // Optional (?::(\d+)(?!\w))? captures a trailing :N line number (e.g. foo.ts:148).
 export const FILE_PATH_RE =
   /(?<![\w./~:-])((?:~\/(?:[\w.\-]+\/)*|\/?(?:[\w.\-]+\/)+)(?:[\w\-]*(?:\.[\w\-]+)+|Makefile|Dockerfile|Gemfile|Rakefile|Procfile|Brewfile))(?::(\d+)(?!\w))?(?![\w/-])/g;

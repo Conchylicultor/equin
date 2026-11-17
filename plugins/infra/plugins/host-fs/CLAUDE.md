@@ -178,7 +178,7 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
   `POST move` renames paths the user dragged; it overwrites only on an explicit
   per-source `replace`.
 - **The exposure is other web pages in the user's browser, not the user.** A
-  site must not be able to read `~/.ssh` through `localhost:9000`:
+  site must not be able to read `~/.ssh` through `localhost:<port>`:
   - Every host-fs route is owner-only (none declares `access: { public }`),
     so the socket host's principal gate refuses an anonymous caller — another
     site, a sibling namespace, an opaque origin, a DNS-rebound Host, as the

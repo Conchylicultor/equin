@@ -11,7 +11,7 @@
 // Usage:
 //   bun plugins/active-data/plugins/prototype/e2e/prototype-chip-verify.ts \
 //     --conv <conversationId> --proto proto-1786877040-w2vi \
-//     [--url http://<worktree>.localhost:9000] [--headed]
+//     [--url http://<worktree>.localhost:<port>] [--headed]
 
 import {
   numArg,

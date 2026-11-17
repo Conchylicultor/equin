@@ -82,7 +82,7 @@ export function asDeployLeg(step: string): DeployLeg {
  *
  * `./equin` from the checkout this backend was built from (the caller's
  * `cwd` is `REPO_ROOT`), so the CLI resolves the SAME namespace: it reads its
- * deployment record over HTTP from `<worktree>.localhost:9000` and its server
+ * deployment record over HTTP from `<worktree>.localhost:<port>` and its server
  * row from that worktree's DB fork.
  *
  * Nothing is passed to say which namespace that is, and nothing needs to be. The

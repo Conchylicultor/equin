@@ -95,6 +95,7 @@ must be the new one (`./equin start --force`).
     - `infra/endpoints.contentUrlOver`
     - `infra/endpoints.ReadyContentUrl`
     - `infra/endpoints.useAssetSrc`
+    - `infra/launcher/gateway-port.usePagePort`
     - `primitives/networking.useTransport`
   - Exports (types):
     - `FrameChannel`

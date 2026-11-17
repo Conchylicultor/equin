@@ -1,3 +1,4 @@
+import { servedGatewayPort } from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
 import { appCheckoutOf } from "@plugins/infra/plugins/worktree/server";
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { lookupCheckoutDeploy } from "@plugins/infra/plugins/paths/core";
@@ -24,7 +25,7 @@ export async function resolveTarget(
   if (conversationId === null) {
     return {
       kind: "deploy",
-      origin: namespaceUrl(MAIN_WORKTREE_NAME),
+      origin: namespaceUrl(MAIN_WORKTREE_NAME, "", servedGatewayPort()),
       namespace: MAIN_WORKTREE_NAME,
     };
   }
@@ -42,5 +43,9 @@ export async function resolveTarget(
     return { kind: "unbuilt", checkout: conv.worktreePath };
   }
   const { namespace } = resolution.deploy;
-  return { kind: "deploy", origin: namespaceUrl(namespace), namespace };
+  return {
+    kind: "deploy",
+    origin: namespaceUrl(namespace, "", servedGatewayPort()),
+    namespace,
+  };
 }

@@ -1,3 +1,7 @@
+import {
+  gatewayOriginFor,
+  servedGatewayPort,
+} from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { z } from "zod";
 import { defineTraceEventClass } from "@plugins/debug/plugins/trace/plugins/engine/server";
@@ -24,7 +28,10 @@ import {
 // (gateway/proxy.go handleHTTP → wt.Ensure), and spawning the whole fleet
 // mid-incident would amplify the incident being recorded.
 
-const GATEWAY_WORKTREES_URL = "http://localhost:9000/gateway/worktrees";
+/** The gateway's worktree registry, on the gateway this process runs under. */
+function gatewayWorktreesUrl(): string {
+  return `${gatewayOriginFor(servedGatewayPort())}/gateway/worktrees`;
+}
 const FANOUT_CONCURRENCY = 4;
 /** Per-backend budget: a wedged backend yields an error cell, never a stall. */
 const PER_BACKEND_TIMEOUT_MS = 3_000;
@@ -58,7 +65,7 @@ async function fetchFlightWindow(name: Namespace): Promise<FleetFlightCell> {
       getFlightWindow,
       {},
       {
-        origin: namespaceUrl(name),
+        origin: namespaceUrl(name, "", servedGatewayPort()),
         query: {
           windowMs: FLIGHT_WINDOW_MS,
           maxCompleted: FLIGHT_WINDOW_COMPLETED_DEFAULT,
@@ -82,7 +89,7 @@ export const fleetFlightsClass = defineTraceEventClass({
   enrich: async (ctx) => {
     if (ctx.trigger.kind !== "cluster-onset") return undefined;
 
-    const res = await fetch(GATEWAY_WORKTREES_URL, {
+    const res = await fetch(gatewayWorktreesUrl(), {
       signal: AbortSignal.timeout(2_000),
     });
     if (!res.ok) throw new Error(`gateway worktrees responded ${res.status}`);

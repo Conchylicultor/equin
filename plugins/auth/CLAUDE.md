@@ -16,7 +16,7 @@ The closed list is `AUTH_PROVIDER_KINDS` in `core/internal/lib.ts`; everything t
 
 - **Auth runs on the central runtime.** The OAuth flow handlers, token store, refresh loop, provider registry, and `authStateServed` (the central `serveValue` of `core`'s `authState` live value, declared `origin: "central"`) all live under `plugins/auth/central/`. There is one auth process for the user, shared across every worktree.
 - **Tokens persist via the central secrets store.** Encrypted blob at `~/.equin/state/secrets/secrets.json.enc`, keyed `{ namespace: "auth-tokens", key: "blob-v1" }`. Auth/central calls into secrets/central directly (same process; no HTTP round-trip). See [`plugins/infra/plugins/secrets/CLAUDE.md`](../infra/plugins/secrets/CLAUDE.md).
-- **Browsers reach auth through the gateway's central-routes manifest.** `/api/auth/*` and the live-state WebSocket `/ws/central-notifications` are listed in `~/.equin/state/gateway/central-routes.json` and forwarded to the central backend regardless of which subdomain the request arrived on. The popup opens `/api/auth/start/<provider>` on the page's own origin (`connect.ts`), so the gateway reads it as the owner (same-origin) — `oauthStart` is owner-only like every route. The OAuth redirect URI stays at bare `http://localhost:9000/api/auth/callback/<provider>` (host-independent; the manifest covers it); the provider's redirect there is a cross-site navigation, so `oauthCallback` declares `access: { public }` — it acts only on a state nonce an owner request minted — and is served through `rawEndpointHandler` so the declaration rides on its handler (`framework/principal`).
+- **Browsers reach auth through the gateway's central-routes manifest.** `/api/auth/*` and the live-state WebSocket `/ws/central-notifications` are listed in `~/.equin/state/gateway/central-routes.json` and forwarded to the central backend regardless of which subdomain the request arrived on. The popup opens `/api/auth/start/<provider>` on the page's own origin (`connect.ts`), so the gateway reads it as the owner (same-origin) — `oauthStart` is owner-only like every route. The OAuth redirect URI stays at bare `http://localhost:<port>/api/auth/callback/<provider>` (host-independent; the manifest covers it); the provider's redirect there is a cross-site navigation, so `oauthCallback` declares `access: { public }` — it acts only on a state nonce an owner request minted — and is served through `rawEndpointHandler` so the declaration rides on its handler (`framework/principal`).
 - **A provider added on a branch reads "Unavailable" in its own worktree's Accounts pane.** Central runs main's code, so it knows the provider only once the branch is merged; the row says so instead of offering a Connect that central would reject.
 - **Cross-worktree sync is automatic.** When central mutates auth state (connect, disconnect, refresh) it calls `authStateServed.notify()` and central pushes updates to every browser tab subscribed to `/ws/central-notifications`. No fanout, no `~/.equin/worktrees/*.json` enumeration.
 
@@ -54,7 +54,7 @@ try {
 }
 ```
 
-A worktree backend that needs a token currently has no in-process helper — it would `fetch("http://localhost:9000/api/auth/token", …)` against central via the gateway. No such consumer exists yet; we add the helper when one does.
+A worktree backend that needs a token currently has no in-process helper — it would `fetch("http://localhost:<port>/api/auth/token", …)` against central via the gateway. No such consumer exists yet; we add the helper when one does.
 
 ## How a provider sub-plugin is structured
 
@@ -134,7 +134,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `Auth.ScopeRequirement` ← `integrations.gmail`
     - `accountsPane.Actions` ← `primitives.pane`
     - `accountPane.Actions` ← `primitives.pane`
-  - Uses: 48 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 49 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×7
     - `infra/endpoints` ×6
     - `network/live/live-state` ×6
@@ -143,6 +143,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `primitives/css/ui-kit` ×3
     - `primitives/data-view` ×3
     - `config_v2.useConfigRegistrations`
+    - `infra/launcher/gateway-port.usePagePort`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
@@ -242,6 +243,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
+    - `infra/launcher/gateway-port.gatewayOriginFor`
     - `network/live.liveValue`
     - `packages/list-bound.wholeList`
     - `packages/list-bound.wholeRecord`
@@ -290,6 +292,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `humanDuration`
     - `lostScopes`
     - `oauthCallback`
+    - `oauthRedirectUri`
     - `oauthStart`
     - `RefreshFailureKindSchema`
     - `scopeLabel`
@@ -332,7 +335,6 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `integrations/google-maps`
     - `integrations/google-maps/usage`
     - `integrations/hooktheory`
-  - Endpoint callers: `setup-wizard`
 - Exemptions:
   - Exempts itself from:
     - `timer/no-unlisted-timer` — `central/internal/refresh-loop.ts` (sanctioned)

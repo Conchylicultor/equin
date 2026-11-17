@@ -92,13 +92,15 @@ fn on_loaded(window: &WebviewWindow, url: &Url) {
     if !app.state::<GateInstalled>().0.load(Ordering::SeqCst) {
         return finish(app, Err("the page loaded before the main-frame gate was installed".into()));
     }
-    let (_, namespace) = scope();
+    let (base, namespace) = scope();
+    // The port the window was built on (read once, at the probe's start).
+    let port = base.port_or_known_default().expect("an http base has a port");
     let mut home = origin.join("/home").expect("a path joins");
     home.set_query(Some(HOME_MARKER));
     let params = json!({
         "foreign": FOREIGN,
-        "other": format!("http://{}.localhost:{}", crate::cli::PROBE_OTHER, crate::gateway::PORT),
-        "content": format!("http://equin-probe.content.localhost:{}/{namespace}", crate::gateway::PORT),
+        "other": format!("http://{}.localhost:{port}", crate::cli::PROBE_OTHER),
+        "content": format!("http://equin-probe.content.localhost:{port}/{namespace}"),
         "home": home.as_str(),
     });
     let script = PROBE_JS.replace("__EQUIN_PROBE__", &params.to_string());
@@ -220,8 +222,11 @@ fn finish(app: &AppHandle, result: Result<Vec<Verdict>, String>) {
 }
 
 pub fn run(namespace: String) {
-    let base = Url::parse(&format!("http://{namespace}.localhost:{}/home", crate::gateway::PORT))
-        .expect("a namespace makes a URL");
+    let port = crate::gateway::listening_port().unwrap_or_else(|e| {
+        eprintln!("equin-desktop: probe: {e}");
+        std::process::exit(1);
+    });
+    let base = Url::parse(&format!("http://{namespace}.localhost:{port}/home")).expect("a namespace makes a URL");
     eprintln!("equin-desktop: window probe on {base}");
     *SCOPE.lock().unwrap() = Some((base.clone(), namespace));
     let launch = Launch { app_id: "equin-probe".into(), name: "equin probe".into(), base: base.clone(), url: base };
@@ -230,8 +235,8 @@ pub fn run(namespace: String) {
         .setup(move |app| {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
-            if !crate::gateway::up() {
-                eprintln!("equin-desktop: probe: nothing answers on port {}", crate::gateway::PORT);
+            if !crate::gateway::up(port) {
+                eprintln!("equin-desktop: probe: nothing answers on port {port}");
                 std::process::exit(1);
             }
             let handle: AppHandle = app.handle().clone();

@@ -1,3 +1,4 @@
+import { gatewayPortSync } from "@plugins/infra/plugins/launcher/plugins/gateway-port/data-dirs";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import {
@@ -36,12 +37,13 @@ const run: CliAction<[], Record<string, never>> = async () => {
     PROMO_FILM_COMPOSITION_ID,
     await checkoutRef(root),
   );
-  const origin = namespaceUrl(namespace);
+  const origin = namespaceUrl(namespace, "", gatewayPortSync());
   console.log(`Resetting ${namespace} to first launch…`);
   try {
     await resetServedComposition(
       PROMO_FILM_COMPOSITION_ID,
       await checkoutNamespace(root),
+      gatewayPortSync(),
     );
   } finally {
     await closeAdminPool();

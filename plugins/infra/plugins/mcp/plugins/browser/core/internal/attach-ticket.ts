@@ -20,7 +20,7 @@ export interface AttachTicket {
   marker: string;
   /** The session's tab id (`t3`), named back to the agent at teardown. */
   tab: string;
-  /** The deploy the session drives, `http://<namespace>.localhost:9000`. */
+  /** The deploy the session drives, `http://<namespace>.localhost:<port>`. */
   origin: string;
   /** The backend's Playwright version: a client must match it to connect. */
   playwright: string;

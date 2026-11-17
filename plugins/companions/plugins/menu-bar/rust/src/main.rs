@@ -35,12 +35,16 @@ fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     #[cfg(target_os = "macos")]
     if let Some(own) = shim::own_bundle() {
-        let url = cli::shim_url(&args, &own.url);
-        return window::run(window::Launch { app_id: own.app_id, name: own.name, base: own.url, url });
+        // A shim written before the gateway's port moved still opens its app on
+        // the new port — when this process knows it (`shim::on_current_port`;
+        // launched from the shim it does not, and keeps the URL the tray baked).
+        let base = shim::on_current_port(&own.url);
+        let url = cli::shim_url(&args, &base);
+        return window::run(window::Launch { app_id: own.app_id, name: own.name, base, url });
     }
     match cli::parse(&args) {
         Ok(cli::Mode::Tray { namespace }) => tray::run(namespace),
-        Ok(cli::Mode::Window { app, url }) => window::run(window_launch(app, url)),
+        Ok(cli::Mode::Window { app, url }) => window::run(window_launch(app, shim::on_current_port(&url))),
         Ok(cli::Mode::Probe { namespace, other }) => probe::run(namespace, other),
         Ok(cli::Mode::ProbeWindow { namespace }) => probe_window::run(namespace),
         Ok(cli::Mode::SyncApps { namespace }) => sync_apps(&namespace),
@@ -52,7 +56,8 @@ fn main() {
     }
 }
 
-/// `window --app <id> --url <url>`: the app's installed shim, when there is one
+/// `window --app <id> --url <url>` (`url` on the gateway's current port — a
+/// `.desktop` entry written before the port moved names the old one): the app's installed shim, when there is one
 /// and `url` is inside it, gives the name and the scope; otherwise the URL is
 /// its own scope and the id its name.
 fn window_launch(app_id: String, url: url::Url) -> window::Launch {
@@ -88,8 +93,8 @@ fn open_link_once(link: &url::Url) {
 /// `$HOME` (a scratch home in verification), printed as JSON. The tray's
 /// keeper runs the same sync on every panel load.
 fn sync_apps(namespace: &str) {
-    let origin = panel::Pin::for_namespace(namespace).origin_url();
     let result = (|| {
+        let origin = panel::Pin::current(namespace)?.origin_url();
         let host = apps::Device { origin: origin.clone() };
         let roots = shim::Roots::user().ok_or("$HOME is not set")?;
         let catalog = apps::fetch_catalog(&host)?;

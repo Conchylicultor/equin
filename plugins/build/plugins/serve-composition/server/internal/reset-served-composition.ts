@@ -13,7 +13,9 @@ import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 export async function resetServedComposition(
   id: string,
   manifestNamespace: Namespace,
+  /** This account's gateway port, as the CLI reads it (`gatewayPort()`). */
+  gatewayPort: number,
 ): Promise<void> {
   const { resetCompositionData } = await import("./reset");
-  await resetCompositionData(id, manifestNamespace);
+  await resetCompositionData(id, gatewayPort, manifestNamespace);
 }

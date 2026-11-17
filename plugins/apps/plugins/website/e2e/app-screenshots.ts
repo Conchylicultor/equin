@@ -19,11 +19,11 @@
 // Toasts never reach the image (snap's hideToasts); what each one said is
 // logged as TOAST-HIDDEN, since an error toast is still a bug worth reading.
 //
-// Shoot main (`--url http://equin.localhost:9000`): the demo is the same there.
+// Shoot main (`--url http://equin.localhost:<port>`): the demo is the same there.
 //
 // Usage:
 //   ./equin run plugins/apps/plugins/website/e2e/app-screenshots.ts \
-//     --out <dir> [--url http://equin.localhost:9000] [--only sonata,maps] \
+//     --out <dir> [--url http://equin.localhost:<port>] [--only sonata,maps] \
 //     [--viewport 1440x900] [--color-scheme dark|light] [--wait 8000]
 //
 // Writes `<dir>/app-<gallery id>.png` (the catalog's ids). Look at every image

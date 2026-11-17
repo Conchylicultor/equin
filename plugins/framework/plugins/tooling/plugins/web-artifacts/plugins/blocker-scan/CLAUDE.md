@@ -29,7 +29,7 @@ in a supervised child) runs `./equin web-artifacts-blocker-scan`:
    served graph's names (`servedGraphOf`, the record address retention keeps)
    walked under `/artifacts/`, plus the dist's own files — and each release
    dist under `<main>/release-web/` (what ships to equin.ai), walked whole. Each
-   path is tested from `https://equin.ai` and `http://equin.localhost:9000`,
+   path is tested from `https://equin.ai` and `http://equin.localhost:<port>`,
    against the resource types its extension can be fetched as.
 4. **Hits** file a `blocked-artifact-url` report (`server/`'s kind, error) per
    (source file, rule) through the report outbox, the source found from the

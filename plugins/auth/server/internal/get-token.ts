@@ -5,9 +5,11 @@ import type {
 import { getToken } from "@plugins/auth/core";
 import { callEndpoint } from "@plugins/infra/plugins/endpoints/server";
 import { EndpointError } from "@plugins/infra/plugins/endpoints/core";
+import {
+  gatewayOriginFor,
+  servedGatewayPort,
+} from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
 
-/** Central's routes are served by the gateway on every host name. */
-const CENTRAL_ORIGIN = "http://localhost:9000";
 const RETRY_DELAY_MS = 250;
 
 export class AuthCentralOfflineError extends Error {
@@ -21,7 +23,16 @@ export async function getTokenFromCentral(
   args: GetAccessTokenArgs,
 ): Promise<TokenResponse> {
   const send = () =>
-    callEndpoint(getToken, {}, { origin: CENTRAL_ORIGIN, body: args });
+    callEndpoint(
+      getToken,
+      {},
+      {
+        // Central's routes are served by the gateway on every host name; this
+        // backend's own gateway is the one to ask.
+        origin: gatewayOriginFor(servedGatewayPort()),
+        body: args,
+      },
+    );
   try {
     try {
       return await send();

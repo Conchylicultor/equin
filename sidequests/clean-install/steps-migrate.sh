@@ -38,6 +38,7 @@ fail() { echo "FAIL: $*"; exit 1; }
 test -d "$LEGACY" && ! test -L "$LEGACY" || fail "no legacy data dir"
 test -e "$HOME/.equin" && fail "a current data dir already exists"
 launchctl print "gui/$(id -u)/dev.singularity.gateway" >/dev/null || fail "old label not loaded"
+# The pre-move tree predates the per-account port (and `./equin url`): it listens on 9000.
 code=$(curl -sS -o /dev/null -w '%{http_code}' http://equin.localhost:9000/); echo "http $code"
 [ "$code" = 200 ] || fail "the app does not answer"
 echo "legacy layout, old label, app answers"
@@ -95,7 +96,8 @@ test -d "$HOME/.equin" || fail "no ~/.equin"
 launchctl print "gui/$(id -u)/dev.equin.gateway" >/dev/null || fail "dev.equin.gateway not loaded"
 launchctl print "gui/$(id -u)/dev.singularity.gateway" >/dev/null 2>&1 && fail "the old label is still loaded"
 ls ~/Library/LaunchAgents/ | grep -q "dev\.singularity\." && fail "the old label's plist is still installed"
-code=$(curl -sS -o /dev/null -w '%{http_code}' http://equin.localhost:9000/); echo "http $code"
+APP=$( (cd ~/singularity 2>/dev/null || cd ~/equin; zsh -l -i -c './equin url') )   # the tree under test names its gateway port
+code=$(curl -sS -o /dev/null -w '%{http_code}' "$APP/"); echo "http $code"
 [ "$code" = 200 ] || fail "the app does not answer"
 grep -q "$HOME/.equin/state/workspaces/att-seed" "$HOME/.equin/state/config/seed-path.json" || fail "stored path not rewritten"
 ls "$HOME/.claude/projects" | grep -q -- "-equin-state-workspaces-att-seed" || fail "transcript dir not renamed"
@@ -118,8 +120,9 @@ step_07_reboot_REBOOT=1
 
 step_08_after_reboot() {
   cat <<'CMD'
+APP=$( (cd ~/singularity 2>/dev/null || cd ~/equin; zsh -l -i -c './equin url') )   # the tree under test names its gateway port
 for i in $(seq 1 100); do
-  code=$(curl -sS -o /dev/null -m 5 -w '%{http_code}' http://equin.localhost:9000/ 2>/dev/null || true)
+  code=$(curl -sS -o /dev/null -m 5 -w '%{http_code}' "$APP/" 2>/dev/null || true)
   [ "$code" = 200 ] && { echo "http 200 after ~$((i * 3))s"; exit 0; }
   sleep 3
 done

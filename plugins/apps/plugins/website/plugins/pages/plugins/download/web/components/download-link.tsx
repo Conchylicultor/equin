@@ -1,5 +1,12 @@
 import type { ComponentProps, ReactNode } from "react";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { useBrowserValue } from "@plugins/primitives/plugins/dom/plugins/render-mode/web";
+import { GATEWAY_PORT_RANGE } from "@plugins/infra/plugins/namespace/core";
+import {
+  localAppHost,
+  localAppPortFor,
+  localAppUrl,
+} from "@plugins/apps/plugins/website/plugins/shell/core";
 import "./download.css";
 
 /**
@@ -37,5 +44,24 @@ export function DownloadLink({
     >
       {children}
     </Button>
+  );
+}
+
+/** The page's own location, when it is a page of a local instance; read live. */
+const readLocalAppPort = (): number => localAppPortFor(window.location);
+
+/**
+ * The local app's address as a {@link DownloadLink}: on a local instance, the
+ * port this page was served on; on equin.ai (and in the static render robots
+ * read), the port a fresh install takes — the site cannot know a visitor's.
+ */
+export function LocalAppLink() {
+  const port = useBrowserValue({
+    name: "local app port",
+    read: readLocalAppPort,
+    staticValue: GATEWAY_PORT_RANGE.first,
+  });
+  return (
+    <DownloadLink href={localAppUrl(port)}>{localAppHost(port)}</DownloadLink>
   );
 }

@@ -97,7 +97,7 @@ const NON_V8_FRAME = /^[^@\s]*@\S+$/;
 // location also carries what varies between occurrences of ONE bug, each
 // stripped below:
 //  - line:col, cache-busters (`?v=`, `?t=`, `?import`) — every edit/dev reload;
-//  - the origin (`http://<namespace>.localhost:9000`, `file://`) — the
+//  - the origin (`http://<namespace>.localhost:<port>`, `file://`) — the
 //    namespace serving the page differs per worktree, main answers on its
 //    alias, and a product rename moved every host;
 //  - a content hash in a path (`/artifacts/network.live.web.<16 hex>/`, a

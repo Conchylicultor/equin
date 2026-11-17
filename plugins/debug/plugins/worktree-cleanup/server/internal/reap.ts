@@ -1,3 +1,4 @@
+import { servedGatewayPort } from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
 import { rm } from "node:fs/promises";
 import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import { configDir } from "@plugins/config_v2/data-dirs";
@@ -101,7 +102,7 @@ export async function reapAttempt(
   // is stopped and held down first, else the drop cuts its sessions and it
   // exits on a database that no longer exists (a backend-exit report for a
   // checkout being reaped).
-  const held = await holdBackendDown(asNamespace(id));
+  const held = await holdBackendDown(asNamespace(id), servedGatewayPort());
   // The fork DB may already be gone — an earlier reap dropped it, or a legacy
   // registry-only entry never had one — so the drop runs only when it exists.
   if (await databaseExists(id)) {
@@ -159,7 +160,7 @@ export async function reapAttempt(
 // that would boot onto no database. A resume forks a fresh one and the next
 // build publishes the spec again (`WorkspaceImpl.onResume`, worktree kind).
 export async function reclaimFinishedDatabase(id: string): Promise<void> {
-  const held = await holdBackendDown(asNamespace(id));
+  const held = await holdBackendDown(asNamespace(id), servedGatewayPort());
   if (await databaseExists(id)) {
     await dropDatabase(held);
   }

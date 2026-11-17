@@ -78,4 +78,4 @@ curl -fsSL https://raw.githubusercontent.com/equinai/equin/main/install.sh | bas
 If a step fails, fix it and run the installer again. When it is done, give me the link to the app.
 ```
 
-Then open **<http://equin.localhost:9000>**. And start your first wish.
+Then open the address the installer prints — `http://equin.localhost:<port>`, where the port is 8700 unless something else holds it (then the next free one up to 8709); `./equin url` prints it again. And start your first wish.

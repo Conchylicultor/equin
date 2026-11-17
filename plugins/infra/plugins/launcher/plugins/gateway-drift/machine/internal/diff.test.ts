@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { binaryIdentity, diffGatewayFlags, flagValue } from "./diff";
+import {
+  binaryIdentity,
+  dialAddressOf,
+  diffGatewayFlags,
+  flagValue,
+  listenPortOf,
+} from "./diff";
 
 describe("diffGatewayFlags", () => {
   test("the same flags in another order are no difference", () => {
@@ -56,4 +62,14 @@ test("binaryIdentity", () => {
     binaryIdentity("/h/cache/deps/gateway-binary/a6922f99527e4bbb/env/gateway"),
   ).toBe("a6922f99527e4bbb");
   expect(binaryIdentity("/tmp/gateway")).toBeNull();
+});
+
+test("a launch's port is its -listen's; none is the old default, 9000", () => {
+  expect(listenPortOf(["-listen", "loopback:8701", "-log-level", "info"])).toBe(
+    8701,
+  );
+  expect(listenPortOf(["-listen", ":8700"])).toBe(8700);
+  expect(listenPortOf(["-log-level", "info"])).toBe(9000);
+  expect(dialAddressOf(["-listen", "loopback:8702"])).toBe("127.0.0.1:8702");
+  expect(() => listenPortOf(["-listen", "loopback:"])).toThrow(/names no port/);
 });

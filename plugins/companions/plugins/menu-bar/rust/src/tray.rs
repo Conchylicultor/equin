@@ -136,10 +136,9 @@ pub use platform::Icon;
 
 pub fn run(namespace: String) {
     eprintln!("equin-desktop: tray mode, namespace {namespace}");
-    let pin = panel::Pin::for_namespace(&namespace);
     // The device's installed apps are the main instance's: a tray on another
     // namespace (a dev tray) never writes a shim.
-    let keeper = (namespace == cli::MAIN_NAMESPACE).then(|| apps::Keeper::new(pin.origin_url()));
+    let keeper = (namespace == cli::MAIN_NAMESPACE).then(|| apps::Keeper::new(namespace.clone()));
     let builder = tauri::Builder::default();
     let builder = match keeper {
         Some(k) => builder.manage(k),
@@ -150,7 +149,7 @@ pub fn run(namespace: String) {
     };
     let app = builder
         .plugin(tauri_plugin_notification::init())
-        .manage(panel::Panel::new(pin, panel::open_in_browser))
+        .manage(panel::Panel::new(namespace, panel::open_in_browser, None))
         .invoke_handler(commands::handler())
         .setup(|app| {
             #[cfg(target_os = "macos")]
@@ -166,14 +165,18 @@ pub fn run(namespace: String) {
                 }
             };
             app.manage(icon);
-            app.add_capability(handle.state::<panel::Panel>().pin().capability())?;
-            panel::create(&handle, None)?;
-            eprintln!("equin-desktop: tray ready; panel {}", handle.state::<panel::Panel>().url());
+            panel::create(&handle)?;
+            eprintln!("equin-desktop: tray ready");
             Ok(())
         })
         .build(crate::context())
         .expect("equin-desktop: cannot build the Tauri app");
-    app.run(|_, event| match event {
+    app.run(|app, event| match event {
+        // A show found the gateway's port moved and destroyed the panel: build
+        // it again on the new origin (its label is free by now).
+        tauri::RunEvent::WindowEvent { label, event: tauri::WindowEvent::Destroyed, .. } if label == panel::LABEL => {
+            panel::destroyed(app)
+        }
         // The panel's hide keeps the app alive: no window is ever "the last".
         tauri::RunEvent::ExitRequested { api, code: None, .. } => api.prevent_exit(),
         // A link to the app (`equin://open?url=…`, CFBundleURLTypes): a

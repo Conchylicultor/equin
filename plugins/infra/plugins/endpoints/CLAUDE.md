@@ -107,7 +107,7 @@ const fetchEndpoint = fetchEndpointOver(pageTransport);
 import { callEndpoint } from "@plugins/infra/plugins/endpoints/server";
 import { EndpointError } from "@plugins/infra/plugins/endpoints/core";
 
-const { has } = await callEndpoint(secretsHas, {}, { origin: "http://localhost:9000", body: ref });
+const { has } = await callEndpoint(secretsHas, {}, { origin: "http://localhost:<port>", body: ref });
 await callEndpoint(secretsSet, {}, { origin, body });          // void endpoint → void answer (204)
 const s = await callEndpoint(queueHealthSummaryEndpoint, {}, { origin: namespaceUrl(ns) });
 ```

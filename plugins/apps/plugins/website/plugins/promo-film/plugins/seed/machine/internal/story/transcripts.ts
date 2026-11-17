@@ -1,3 +1,4 @@
+import { GATEWAY_PORT_RANGE } from "@plugins/infra/plugins/namespace/core";
 import { CIRCLE_PROTOTYPE } from "@plugins/apps/plugins/website/plugins/promo-film/plugins/circle/core";
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 import { PIECE } from "./piece";
@@ -150,6 +151,12 @@ const PROTOTYPES_GUIDE = [
 ].join("\n");
 
 /**
+ * The port the film's transcript shows: the one a fresh install takes. Text on
+ * screen, never dialled.
+ */
+const FILM_GATEWAY_PORT = GATEWAY_PORT_RANGE.first;
+
+/**
  * The prototype session the film's "I'd like a P2P messaging app" Wish ran:
  * shaped like the real session that made Circle (read the guide, mint the
  * prototype, write its one file, look at it in a headless browser, fix two
@@ -161,7 +168,7 @@ export function prototypeTurns(
 ): Turn[] {
   const folder = prototypesDir.file(CIRCLE_PROTOTYPE);
   const index = `${folder}/index.html`;
-  const page = `http://promo-film.localhost:9000/api/prototypes/${CIRCLE_PROTOTYPE}/index.html`;
+  const page = `http://promo-film.localhost:${FILM_GATEWAY_PORT}/api/prototypes/${CIRCLE_PROTOTYPE}/index.html`;
   return [
     { kind: "user", text: prompt },
     {
@@ -187,7 +194,7 @@ export function prototypeTurns(
       result: [
         CIRCLE_PROTOTYPE,
         `  folder: ${folder}`,
-        `  url:    http://promo-film.localhost:9000/prototypes/proto/${CIRCLE_PROTOTYPE}`,
+        `  url:    http://promo-film.localhost:${FILM_GATEWAY_PORT}/prototypes/proto/${CIRCLE_PROTOTYPE}`,
       ].join("\n"),
     },
     {

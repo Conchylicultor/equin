@@ -6,7 +6,7 @@
 // vendor set, and the HTML and import-map sizes.
 //
 //   ./equin run plugins/framework/plugins/tooling/plugins/web-artifacts/scripts/measure-route-set.ts \
-//     --url http://<namespace>.localhost:9000/agents [--json out.json]
+//     --url http://<namespace>.localhost:<port>/agents [--json out.json]
 //
 // Chromium gets gzip, not br, over plain http://localhost — the wire bytes a
 // local page load reports are gzip. br is what a deployed (https) page gets,

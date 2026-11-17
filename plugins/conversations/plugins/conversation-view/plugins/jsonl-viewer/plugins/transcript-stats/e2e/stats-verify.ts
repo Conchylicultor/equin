@@ -6,7 +6,7 @@
 //
 // Usage:
 //   ./equin run plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/e2e/stats-verify.ts \
-//     --conv <conversationId> [--url http://<worktree>.localhost:9000] [--headed]
+//     --conv <conversationId> [--url http://<worktree>.localhost:<port>] [--headed]
 
 import {
   arg,

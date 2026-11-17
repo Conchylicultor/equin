@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Opens the conversation's namespace (`http://<id>.localhost:9000`) on the page its task was filed from when one was attached (else `/`) — in a new browser tab by default, or framed in a pane beside the chat when the Open app in setting says so (⌘/middle-click takes the other way). The pane's header actions reload the frame, show or hide the framed app's own chrome, and open it in a browser tab. Disabled until the worktree has a successful build (op-store build history). Server registration of the Open app config (new tab or pane on plain click).
+- Description: Opens the conversation's namespace (`http://<id>.localhost:<port>`) on the page its task was filed from when one was attached (else `/`) — in a new browser tab by default, or framed in a pane beside the chat when the Open app in setting says so (⌘/middle-click takes the other way). The pane's header actions reload the frame, show or hide the framed app's own chrome, and open it in a browser tab. Disabled until the worktree has a successful build (op-store build history). Server registration of the Open app config (new tab or pane on plain click).
 - Web:
   - Slots: `app-preview.actions`
   - Slot contributors:
@@ -18,7 +18,7 @@
     - `app-preview.actions` "reload" → `ReloadAction`
     - `app-preview.actions` "toggle-chrome" → `ToggleChromeAction`
     - `app-preview.actions` "open-in-new-tab" → `OpenInNewTabAction`
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×5
     - `hints` ×3
     - `config_v2` ×2
@@ -27,6 +27,7 @@
     - `conversations/conversation-view/action-bar.Conversation`
     - `conversations/conversation-view.conversationPane`
     - `conversations.useConversationById`
+    - `infra/launcher/gateway-port.usePagePort`
     - `primitives/dom/web-storage.defineStore`
     - `primitives/embed/frame.AppFrame`
     - `primitives/link-gesture/new-tab.NewTabButton`

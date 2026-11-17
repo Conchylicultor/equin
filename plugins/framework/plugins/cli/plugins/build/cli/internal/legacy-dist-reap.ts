@@ -37,15 +37,13 @@
 // permanently, which costs nothing: a host with no gateway has no legacy served
 // dist to reclaim either.
 
+import { gatewayOriginSync } from "@plugins/infra/plugins/launcher/plugins/gateway-port/data-dirs";
 import { existsSync, readdir } from "@plugins/packages/plugins/timed-fs/core";
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
 import { distNames } from "./dist-publish";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
-
-/** Where the gateway's own API lives, same origin `build` POSTs its restart to. */
-const GATEWAY_ORIGIN = "http://localhost:9000";
 
 /**
  * Short on purpose. A `--hermetic` build must stay hermetic: on a bare release
@@ -77,7 +75,9 @@ export type GatewayWebPath =
  */
 export async function readGatewayWebPath(
   namespace: string,
-  origin: string = GATEWAY_ORIGIN,
+  // Where the gateway's own API lives: this account's gateway, the same origin
+  // `build` POSTs its restart to.
+  origin: string = gatewayOriginSync(),
 ): Promise<GatewayWebPath> {
   let resp: Response;
   try {

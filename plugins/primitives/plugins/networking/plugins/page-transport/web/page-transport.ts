@@ -1,3 +1,4 @@
+import { pagePort } from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
 import {
   SharedWebSocket,
   type Transport,
@@ -5,7 +6,6 @@ import {
 import { nativeFetch } from "@plugins/primitives/plugins/networking/plugins/request-guard/web";
 import {
   contentUrl,
-  GATEWAY_PORT,
   namespaceFromHost,
 } from "@plugins/infra/plugins/namespace/core";
 import {
@@ -23,7 +23,7 @@ function pageContentServing(): ContentServing | null {
   if (typeof location === "undefined") return null;
   const ns = namespaceFromHost(location.host);
   if (ns === null) return null;
-  const port = location.port === "" ? GATEWAY_PORT : Number(location.port);
+  const port = pagePort(location);
   return {
     kind: "content-host",
     url: (item, path) => contentUrl(item, ns, path, port),

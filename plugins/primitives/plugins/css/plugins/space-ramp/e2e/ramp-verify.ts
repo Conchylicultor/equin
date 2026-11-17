@@ -13,7 +13,7 @@
 //
 // Usage:
 //   ./equin run plugins/primitives/plugins/css/plugins/space-ramp/e2e/ramp-verify.ts \
-//     [--url http://<worktree>.localhost:9000] [--headed]
+//     [--url http://<worktree>.localhost:<port>] [--headed]
 
 import {
   pathUrl,

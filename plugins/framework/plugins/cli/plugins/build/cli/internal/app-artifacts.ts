@@ -947,7 +947,7 @@ export interface ReleaseDistTarget {
 
 export type WebDistTarget =
   /**
-   * The dist the gateway SERVES at `<name>.localhost:9000`. `name` is a
+   * The dist the gateway SERVES at `<name>.localhost:<port>`. `name` is a
    * *namespace*: a worktree slug or an auto-served composition id. Published
    * atomically because a live reader exists.
    */

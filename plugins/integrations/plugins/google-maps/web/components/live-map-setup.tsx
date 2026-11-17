@@ -39,11 +39,17 @@ import {
   useMapsBrowserConfig,
   type MapsBrowserConfigState,
 } from "@plugins/integrations/plugins/google-maps/plugins/browser-config/web";
+import { usePagePort } from "@plugins/infra/plugins/launcher/plugins/gateway-port/web";
 import { LiveMapSetup, type MapIdPreviewResult } from "../slots";
 
 const CONSOLE = "https://console.cloud.google.com";
-/** The referrer every local checkout is served from, via the gateway. */
-const LOCAL_REFERRER = "http://*.localhost:9000/*";
+/**
+ * The referrer every local checkout is served from, via this account's
+ * gateway: every namespace host on the port this page was served on.
+ */
+function localReferrer(port: number): string {
+  return `http://*.localhost:${port}/*`;
+}
 
 /**
  * Guided setup for the live map's public browser key (Maps JavaScript API),
@@ -85,6 +91,7 @@ function LiveMapSetupSteps({
   config: Exclude<MapsBrowserConfigState, { kind: "loading" | "error" }>;
 }) {
   const fetchEndpoint = useFetchEndpoint();
+  const pagePort = usePagePort();
   const saved = config.kind === "set";
   // A draft only exists once the user types; until then the inputs show what is
   // stored (the key is public config, so showing it back is fine).
@@ -159,7 +166,10 @@ function LiveMapSetupSteps({
                 Create credentials → API key, then edit it. Under Application
                 restrictions choose Websites and add this referrer:
               </StepNote>
-              <StepCommand text={LOCAL_REFERRER} title="Copy referrer" />
+              <StepCommand
+                text={localReferrer(pagePort)}
+                title="Copy referrer"
+              />
               <StepNote>
                 Also add every domain you publish pages on (for example
                 https://your-domain/*). Under API restrictions, restrict the key

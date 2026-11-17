@@ -1,6 +1,14 @@
-const GATEWAY_WORKTREES_URL = "http://localhost:9000/gateway/worktrees";
+import {
+  gatewayOriginFor,
+  servedGatewayPort,
+} from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
 
 import type { FleetEntry } from "./classify-wedge";
+
+/** The gateway's worktree registry, on the gateway this backend runs under. */
+function gatewayWorktreesUrl(): string {
+  return `${gatewayOriginFor(servedGatewayPort())}/gateway/worktrees`;
+}
 
 interface GatewayWorktree {
   name: string;
@@ -33,7 +41,7 @@ interface GatewayWorktree {
 // this tick") so the job can skip open-wedge evaluation rather than misjudge it.
 export async function readFleet(): Promise<Map<string, FleetEntry> | null> {
   try {
-    const res = await fetch(GATEWAY_WORKTREES_URL, {
+    const res = await fetch(gatewayWorktreesUrl(), {
       signal: AbortSignal.timeout(2_000),
     });
     if (!res.ok) throw new Error(`gateway responded ${res.status}`);

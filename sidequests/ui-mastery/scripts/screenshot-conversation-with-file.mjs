@@ -7,7 +7,7 @@
 //
 // Example:
 //   ./equin run sidequests/ui-mastery/scripts/screenshot-conversation-with-file.mjs \
-//     http://equin.localhost:9000/c/claude-1776191308 /tmp/out.png
+//     http://equin.localhost:<port>/c/claude-1776191308 /tmp/out.png   (<port>: ./equin url)
 
 import { chromium } from 'playwright';
 

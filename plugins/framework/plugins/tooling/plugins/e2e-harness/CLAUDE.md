@@ -18,7 +18,7 @@ naming the path you gave — it would otherwise pass, having tested a screen you
 did not ask for. And a helper never takes a `base` parameter: `openBlankPage`
 and `support/runs.ts` resolve their own target.
 
-A `--url` on a CONTENT host (`http://<item>.content.localhost:9000/<ns>/api/…`,
+A `--url` on a CONTENT host (`http://<item>.content.localhost:<port>/<ns>/api/…`,
 the document URL `./equin prototype options` prints) opens the page there,
 but the deploy is the namespace its first path segment names: `pathUrl` — and
 so every control call the harness makes (the agent-write revert, the build-id
@@ -70,7 +70,7 @@ resolution rather than from a call site — 134 of the 165 scripts never bind
 which is why a fleet of green runs against main left no trace in any transcript:
 
 ```
-target: http://att-….localhost:9000  (this checkout's deploy, build-…-kb3y1y, built 4m ago)
+target: http://att-….localhost:<port>  (this checkout's deploy, build-…-kb3y1y, built 4m ago)
 ```
 
 `targetNamespace()` is for a script that must read or assert on a per-namespace
@@ -162,7 +162,7 @@ Node-side `fetch` (→ `agentFetch`) and a relative in-page one (→ `pageFetch`
 
 ## Main is read-only for a run
 
-A run against main (`--url http://equin.localhost:9000`) can read and
+A run against main (`--url http://equin.localhost:<port>`) can read and
 screenshot, but every write it causes is refused by main's backend with a `403`
 (agent-origin headers → main's agent-write gate; telemetry endpoints excepted),
 so a script that clicks a write there fails loudly instead of mutating the

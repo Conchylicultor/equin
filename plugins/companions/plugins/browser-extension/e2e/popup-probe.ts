@@ -16,9 +16,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   flag,
+  pathUrl,
   report,
   targetNamespace,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
+  MAIN_WORKTREE_NAME,
+  namespaceUrl,
+} from "@plugins/infra/plugins/namespace/core";
 import { ensureDepViaCli } from "@plugins/infra/plugins/deps/deps";
 import { launchPersistentChromium } from "@plugins/infra/plugins/deps/plugins/playwright-browser/deps";
 import { chromium } from "@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/deps";
@@ -34,7 +39,15 @@ import {
 } from "@plugins/companions/plugins/browser-extension/data-dirs";
 
 const PUBLIC_PAGE = "https://equin.ai/about/guide";
-const LOCAL_PAGE = "http://equin.localhost:9000/about/guide";
+/**
+ * Where Open locally lands: the guide on main's namespace, on the port of the
+ * gateway the popup's panel was framed from (this deploy's).
+ */
+const LOCAL_PAGE = namespaceUrl(
+  MAIN_WORKTREE_NAME,
+  "/about/guide",
+  Number(new URL(pathUrl("/")).port),
+);
 const TIMEOUT_MS = 60_000;
 
 const r = report("browser extension popup");

@@ -15,7 +15,6 @@ import {
 } from "@plugins/infra/plugins/launcher/deps";
 import {
   DEV_GATEWAY_LOG_LEVEL,
-  DEV_GATEWAY_PORT,
   devGatewayLaunchOptions,
   gatewayLaunchFlags,
   isRunning,
@@ -37,7 +36,18 @@ import {
   type MacosAppHost,
 } from "@plugins/infra/plugins/launcher/plugins/login-services/machine";
 import type { GatewayDrift } from "../../core";
-import { binaryIdentity, diffGatewayFlags, flagValue } from "./diff";
+import {
+  GATEWAY_PORT_RANGE,
+  LEGACY_GATEWAY_PORT,
+} from "@plugins/infra/plugins/namespace/core";
+import { loadGatewayPortRecord } from "@plugins/infra/plugins/launcher/plugins/gateway-port/machine";
+import {
+  binaryIdentity,
+  dialAddressOf,
+  diffGatewayFlags,
+  flagValue,
+  listenPortOf,
+} from "./diff";
 
 const PS_TIMEOUT_MS = 10_000;
 
@@ -121,8 +131,18 @@ export async function compareGatewayLaunch(): Promise<GatewayLaunchComparison> {
   const [installedBinary = "", ...installedFlags] = installed.argv;
   const logLevel =
     flagValue(installedFlags, "-log-level") ?? DEV_GATEWAY_LOG_LEVEL;
+  // The port the account recorded. None yet: an install that has not moved
+  // off 9000 — expected to keep its installed port until main's follow moves it
+  // (a difference of its own below), so the flags compare like for like.
+  const portRecord = await loadGatewayPortRecord();
+  const installedPort = listenPortOf(installedFlags);
   const expectedFlags = gatewayLaunchFlags(
-    devGatewayLaunchOptions({ repoRoot, logLevel }),
+    devGatewayLaunchOptions({
+      repoRoot,
+      logLevel,
+      port: portRecord.kind === "set" ? portRecord.record.port : installedPort,
+      legacyPort: portRecord.kind === "set" ? portRecord.record.legacy : null,
+    }),
   );
   // A definition naming another data root's pidfile is not the gateway this
   // process runs beside (a preview under its own EQUIN_DIR).
@@ -148,9 +168,14 @@ export async function compareGatewayLaunch(): Promise<GatewayLaunchComparison> {
     bundle === null
       ? gatewaySignature(installedBinary)
       : codeSignature(bundle, APP_BUNDLE_ID),
-    runningCommand(),
+    runningCommand(dialAddressOf(installedFlags)),
   ]);
   const differences: string[] = [];
+  if (portRecord.kind === "unset" && installedPort === LEGACY_GATEWAY_PORT) {
+    differences.push(
+      `still on port ${LEGACY_GATEWAY_PORT}: main's next deploy moves it to the first free one of ${GATEWAY_PORT_RANGE.first}–${GATEWAY_PORT_RANGE.last}`,
+    );
+  }
   if (binary !== null) differences.push(binary);
   differences.push(...diffGatewayFlags(installedFlags, expectedFlags));
   if (installed.cwd !== repoRoot) {
@@ -255,8 +280,8 @@ function short(identity: string): string {
  * generation's launch (the last handover's), not the keeper's own command
  * line — the keeper keeps the one its service manager started it with.
  */
-async function runningCommand(): Promise<string | null> {
-  const gen = await readGatewayGeneration(`127.0.0.1:${DEV_GATEWAY_PORT}`);
+async function runningCommand(dialAddress: string): Promise<string | null> {
+  const gen = await readGatewayGeneration(dialAddress);
   if (gen.kind === "generation") {
     return [gen.generation.binary, ...gen.generation.args].join(" ");
   }

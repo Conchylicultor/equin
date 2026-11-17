@@ -16,7 +16,7 @@ import { HOST_ONLY_PREFIX } from "../../core";
  * So a public request reaches the backend with exactly two hops
  * (`<visitor>, 127.0.0.1`), while a request made on the box straight to the
  * gateway's loopback port (an SSH `curl`, the activate script's health gate,
- * or local dev through `*.localhost:9000`) carries exactly one.
+ * or local dev through `*.localhost:<port>`) carries exactly one.
  */
 
 /** The `X-Forwarded-For` entries, outermost first. Empty when the header is absent. */

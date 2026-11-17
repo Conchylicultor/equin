@@ -47,7 +47,7 @@ export function mainComponent(
  *   window, and the menu-bar helper's status item is its only presence.
  * - The ATS exception for `localhost` and its subdomains — inside a bundle,
  *   App Transport Security blocks the helper's webview loading
- *   `http://<ns>.localhost:9000` otherwise (`NSAllowsLocalNetworking` does not
+ *   `http://<ns>.localhost:<port>` otherwise (`NSAllowsLocalNetworking` does not
  *   cover `*.localhost`).
  * - `CFBundleURLTypes` — every component's URL schemes, when one declares
  *   any: LaunchServices hands such a link to the running app.

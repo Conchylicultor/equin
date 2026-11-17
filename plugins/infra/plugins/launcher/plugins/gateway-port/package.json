@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-infra-launcher-gateway-port",
+  "private": true,
+  "version": "0.0.1",
+  "description": "This account's gateway port: the first free one of 8700…8709, chosen once by `./equin start` (or the main follow that moves an install off 9000) and recorded in state/gateway-port/port.json only once a gateway answers on it. Read three ways, each the authority for its process: a gateway's child reads EQUIN_GATEWAY_PORT (servedGatewayPort — the gateway sets it from its own -listen), the CLI and tooling read the file (gatewayPort / gatewayOrigin), a page reads its own location (pagePort). `./equin url` prints main's URL. The gateway-port:no-port-literal check keeps a port number from being spelled anywhere else."
+}

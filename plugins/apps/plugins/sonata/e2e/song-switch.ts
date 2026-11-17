@@ -39,7 +39,7 @@
 //
 // Usage:
 //   ./equin run plugins/apps/plugins/sonata/e2e/song-switch.ts \
-//     --song-a <songId> --song-b <songId> [--url http://<namespace>.localhost:9000] [--headed]
+//     --song-a <songId> --song-b <songId> [--url http://<namespace>.localhost:<port>] [--headed]
 
 import type { TrackViewRow } from "@plugins/apps/plugins/sonata/plugins/track-mixer/core";
 import { reachInBar } from "@plugins/primitives/plugins/adaptive-bar/e2e";

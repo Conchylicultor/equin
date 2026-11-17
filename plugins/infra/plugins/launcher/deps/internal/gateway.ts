@@ -95,7 +95,7 @@ export const gatewayBinary = defineDep({
   id: "gateway-binary",
   owner: "infra/launcher",
   description:
-    "The Go gateway: the front door on port 9000 that routes every namespace and supervises Postgres, PgBouncer and the backends",
+    "The Go gateway: the front door on the account's port (8700 by default) that routes every namespace and supervises Postgres, PgBouncer and the backends",
   sizeHint: "≈15 MB",
   source: build({
     inputs: ["gateway/**/*.go", "gateway/go.mod", "gateway/go.sum"],

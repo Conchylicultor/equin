@@ -281,7 +281,7 @@ func (h *handover) openConns() int {
 // connection ends after it and the client reconnects to the successor; one
 // that stays idle is closed by the client's own idle timeout (Go's 90 s,
 // Caddy's 2 min). Past budget the rest are closed.
-func (h *handover) drain(ctx context.Context, srv *http.Server, budget time.Duration) {
+func (h *handover) drain(ctx context.Context, srv serverSet, budget time.Duration) {
 	for _, l := range h.listeners {
 		_ = l.Close()
 	}

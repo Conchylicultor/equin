@@ -596,7 +596,7 @@ export const worktreeArtifacts = {
     joinAppPath(runsDirFor(name), `${kindId}-${runId}${RUN_ERROR_SUFFIX}`),
   /**
    * DIRECTORY. The web dist SERVED for namespace `name` — the tree the gateway
-   * points at for `<name>.localhost:9000`. `name` is a *namespace*: a worktree
+   * points at for `<name>.localhost:<port>`. `name` is a *namespace*: a worktree
    * slug (the main namespace, an agent branch) or an auto-served composition id.
    */
   webDist: (name: Namespace): AppPath =>

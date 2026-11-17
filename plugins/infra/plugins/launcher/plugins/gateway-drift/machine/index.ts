@@ -3,6 +3,7 @@ import { gatewayDriftServed } from "./internal/served";
 import { gatewayDriftReaction } from "./internal/reaction";
 
 export { compareGatewayLaunch } from "./internal/check";
+export { dialAddressOf, flagValue, listenPortOf } from "./internal/diff";
 export type { GatewayLaunchComparison } from "./internal/check";
 
 export default {

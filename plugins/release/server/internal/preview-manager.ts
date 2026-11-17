@@ -12,6 +12,8 @@ import {
 import { defineDaemon } from "@plugins/infra/plugins/spawn/plugins/daemon/server";
 import {
   asNamespace,
+  isGatewayPort,
+  LEGACY_GATEWAY_PORT,
   namespaceUrl,
 } from "@plugins/infra/plugins/namespace/core";
 import { _releaseRuns } from "./tables";
@@ -38,7 +40,8 @@ export const releasePreviewDaemon = defineDaemon({
   restart: { kind: "never" },
 });
 
-// Never collide with the dev gateway (9000) or the baked release port (9100).
+// Never collide with a dev gateway (this account's 8700–8709, or the legacy
+// 9000 a moved install still answers on) or the baked release port (9100).
 const PREVIEW_PORT_FLOOR = 9101;
 // Per-instance embedded-PG port floor. PG binds no TCP listener, but the port
 // still names its Unix socket file and defaults to the dev cluster's 5433, so
@@ -55,11 +58,13 @@ const PREVIEW_PARENT_DIR = asAppPath("/tmp/sgp");
 
 /**
  * Probe upward from `from` for a free TCP port. Uses a connect attempt: a refused
- * connection means nothing is listening, so the port is free. Skips 9000/9100.
+ * connection means nothing is listening, so the port is free. Skips every
+ * dev-gateway port and the baked release port.
  */
 async function pickFreePort(from: number): Promise<number> {
   for (let port = from; port < from + 500; port++) {
-    if (port === 9000 || port === 9100) continue;
+    if (isGatewayPort(port) || port === LEGACY_GATEWAY_PORT || port === 9100)
+      continue;
     const free = await new Promise<boolean>((resolve) => {
       const sock = connect({ host: "127.0.0.1", port });
       sock.once("connect", () => {

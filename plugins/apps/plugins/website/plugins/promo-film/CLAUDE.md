@@ -11,7 +11,7 @@ On this checkout's **`promo-film` composition**, never on main: the whole app
 on its own empty database, holding the curated story of `plugins/seed`.
 
 ```bash
-./equin build --composition promo-film   # http://promo-film.<checkout>.localhost:9000
+./equin build --composition promo-film   # http://promo-film.<checkout>.localhost:<port>
 ./equin promo-film seed                  # reset it to first launch, write the story
 ```
 

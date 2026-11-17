@@ -23,18 +23,11 @@ import {
   StepNote,
   StepCommand,
 } from "@plugins/primitives/plugins/setup-steps/web";
-import type { AuthAccountState } from "@plugins/auth/core";
+import { oauthRedirectUri, type AuthAccountState } from "@plugins/auth/core";
+import { usePagePort } from "@plugins/infra/plugins/launcher/plugins/gateway-port/web";
 import type { ProviderSetup } from "../slots";
 import { currentWorktreeName, startConnectFlow } from "../connect";
 import { useTransport } from "@plugins/primitives/plugins/networking/web";
-
-/**
- * Bare localhost, not the worktree subdomain: the gateway forwards
- * `/api/auth/callback/*` to central from there (see the auth CLAUDE.md).
- */
-function redirectUri(providerId: string): string {
-  return `http://localhost:9000/api/auth/callback/${providerId}`;
-}
 
 /**
  * The generic setup of an OAuth provider whose client the user registers
@@ -55,6 +48,10 @@ export function OAuthClientSetup({
 }) {
   const fetchEndpoint = useFetchEndpoint();
   const transport = useTransport();
+  // Bare localhost on this page's own port, not the worktree subdomain: the
+  // gateway forwards `/api/auth/callback/*` to central from there (see the
+  // auth CLAUDE.md).
+  const redirectUri = oauthRedirectUri(providerId, usePagePort());
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
   const [saving, setSaving] = useState(false);
@@ -141,10 +138,7 @@ export function OAuthClientSetup({
         state={credentialsSaved ? "done" : "active"}
       >
         <Stack gap="sm">
-          <StepCommand
-            text={redirectUri(providerId)}
-            title="Copy redirect URI"
-          />
+          <StepCommand text={redirectUri} title="Copy redirect URI" />
           <StepNote>Paste it as the {appNoun}&apos;s redirect URI.</StepNote>
         </Stack>
       </Step>

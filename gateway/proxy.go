@@ -40,6 +40,8 @@ type Proxy struct {
 	// handover replaces this generation by a successor (handover.go); nil
 	// when this gateway runs with no keeper.
 	handover *handover
+	// identity is what GET /gateway/identity answers (identity.go).
+	identity *gatewayIdentity
 }
 
 func NewProxy(reg *Registry, routes *CentralRoutesStore, sup *Supervisor, defaultNamespace string, panics *panicReporter) *Proxy {
@@ -527,6 +529,10 @@ func (p wsPair) Close() error {
 func (p *Proxy) handleGatewayAPI(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/gateway/handover" {
 		p.handover.serve(w, r)
+		return
+	}
+	if r.URL.Path == "/gateway/identity" {
+		p.serveIdentity(w, r)
 		return
 	}
 	if r.URL.Path == "/gateway/services" && r.Method == http.MethodGet {

@@ -1,4 +1,8 @@
 import {
+  gatewayOriginFor,
+  servedGatewayPort,
+} from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
+import {
   asAppPath,
   joinAppPath,
   type AppPath,
@@ -37,7 +41,10 @@ const PS_TIMEOUT_MS = 5_000;
 // preserved: every sub-read fails into null fields plus a log line, never the
 // whole tick — the sample schema marks the corresponding fields nullable.
 
-const GATEWAY_WORKTREES_URL = "http://localhost:9000/gateway/worktrees";
+/** The gateway's worktree registry, on the gateway this process runs under. */
+function gatewayWorktreesUrl(): string {
+  return `${gatewayOriginFor(servedGatewayPort())}/gateway/worktrees`;
+}
 /** Health rollup (a disk scan) runs every Nth tick; other ticks reuse it. */
 const ROLLUP_EVERY_N_TICKS = 3;
 /** A health.jsonl untouched for this long belongs to a stopped backend. */
@@ -62,7 +69,7 @@ async function readFleetFromGateway(log: Logger): Promise<{
   totalActiveConns: number;
 } | null> {
   try {
-    const res = await fetch(GATEWAY_WORKTREES_URL, {
+    const res = await fetch(gatewayWorktreesUrl(), {
       signal: AbortSignal.timeout(2_000),
     });
     if (!res.ok) throw new Error(`gateway responded ${res.status}`);

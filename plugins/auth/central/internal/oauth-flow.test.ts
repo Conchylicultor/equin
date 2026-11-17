@@ -10,13 +10,17 @@ test("the opener's origin is kept as given when it is a host of the claimed name
     "http://equin.localhost:9000",
     "http://singularity.localhost:9000",
   ]) {
-    expect(resolveOpenerOrigin(origin, MAIN_WORKTREE_NAME)).toEqual({
+    expect(resolveOpenerOrigin(origin, MAIN_WORKTREE_NAME, 8700)).toEqual({
       kind: "ok",
       origin,
     });
   }
   expect(
-    resolveOpenerOrigin("http://att-x.localhost:9000/", asNamespace("att-x")),
+    resolveOpenerOrigin(
+      "http://att-x.localhost:9000/",
+      asNamespace("att-x"),
+      8700,
+    ),
   ).toEqual({ kind: "ok", origin: "http://att-x.localhost:9000" });
 });
 
@@ -27,15 +31,15 @@ test("an origin that is not a host of the claimed namespace is refused", () => {
     "http://localhost:9000",
     "not a url",
   ]) {
-    expect(resolveOpenerOrigin(origin, MAIN_WORKTREE_NAME).kind).toBe(
+    expect(resolveOpenerOrigin(origin, MAIN_WORKTREE_NAME, 8700).kind).toBe(
       "invalid",
     );
   }
 });
 
 test("a bundle that sends no origin gets the namespace's handed-out address", () => {
-  expect(resolveOpenerOrigin(null, MAIN_WORKTREE_NAME)).toEqual({
+  expect(resolveOpenerOrigin(null, MAIN_WORKTREE_NAME, 8700)).toEqual({
     kind: "ok",
-    origin: "http://equin.localhost:9000",
+    origin: "http://equin.localhost:8700",
   });
 });

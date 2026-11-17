@@ -11953,7 +11953,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "compositions"
               - `item-actions` "delete" → `DeleteAction`
               - `Studio.Sidebar` "Compositions"
-            - Uses: 38 symbols — full list in [`plugins/apps/plugins/studio/plugins/compositions/REFERENCE.md`](../plugins/apps/plugins/studio/plugins/compositions/REFERENCE.md)
+            - Uses: 39 symbols — full list in [`plugins/apps/plugins/studio/plugins/compositions/REFERENCE.md`](../plugins/apps/plugins/studio/plugins/compositions/REFERENCE.md)
               - `plugin-meta/composition` ×8
               - `primitives/pane` ×5
               - `primitives/data-view` ×3
@@ -11963,6 +11963,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/kept-state` ×2
               - `apps/studio/explorer/membership.DIFF_LEGEND`
               - `apps/studio/shell.Studio`
+              - `infra/launcher/gateway-port.usePagePort`
               - `network/live/live-state.ResourceErrorInline`
               - `primitives/css/badge.Badge`
               - `primitives/css/cluster.Cluster`
@@ -12752,9 +12753,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Plugins:
                 - **`story`** — The workspace demo's story, as data: the agents' stories and transcripts, Demo's pages, prototypes' tags, songs and places — what the demo's build-time seed writes through each app's fixture writer, kept apart from the demo's scenario so the page that embeds the demo never bundles the apps this data names.
                   - Core:
-                    - Uses: 23 symbols — full list in [`plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/REFERENCE.md`](../plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/REFERENCE.md)
+                    - Uses: 24 symbols — full list in [`plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/REFERENCE.md`](../plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/REFERENCE.md)
+                      - `infra/namespace` ×5
                       - `apps/prototypes/files` ×4
-                      - `infra/namespace` ×4
                       - `conversations/before-after` ×3
                       - `conversations/agents` ×2
                       - `conversations/model-provider.ConversationModelSchema`
@@ -13153,7 +13154,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ThemeEngine.SubTheme` "equin download note"
                   - `ThemeEngine.SubTheme` "equin download tabs"
                   - `ThemeEngine.SubTheme` "equin download"
-                - Uses: 34 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/download/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/download/REFERENCE.md)
+                - Uses: 35 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/download/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/download/REFERENCE.md)
                   - `apps/website/shell` ×7
                   - `primitives/collapsible` ×4
                   - `primitives/css/spacing` ×3
@@ -13172,6 +13173,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/text.Text`
                   - `primitives/css/theme-boundary.Theme`
                   - `primitives/css/toggle-chip.SegmentedControl`
+                  - `primitives/dom/render-mode.useBrowserValue`
                   - `ui/icons.Icon`
                   - `ui/theme-engine.ThemeEngine`
                 - Exports (values): `downloadPane`
@@ -13628,7 +13630,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/crawlable.WEBSITE_BASE_PATH`
               - `framework/product-name.SOURCE_REPO`
               - `framework/product-name.SOURCE_REPO_URL`
-              - `infra/namespace.GATEWAY_PORT`
+              - `infra/launcher/gateway-port.pagePort`
+              - `infra/namespace.GATEWAY_PORT_RANGE`
+              - `infra/namespace.isGatewayPort`
+              - `infra/namespace.LEGACY_GATEWAY_PORT`
               - `infra/namespace.MAIN_WORKTREE_NAME`
               - `infra/namespace.namespaceFromHost`
               - `infra/namespace.namespaceHost`
@@ -13645,8 +13650,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `isPublicSiteUrl`
               - `ISSUES_URL`
               - `landingPage`
-              - `LOCAL_APP_HOST`
-              - `LOCAL_APP_URL`
+              - `localAppHost`
+              - `localAppPortFor`
+              - `localAppUrl`
               - `localSiteUrl`
               - `PUBLIC_SITE_ORIGIN`
               - `publicSitePageUrl`
@@ -14498,7 +14504,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Auth.ScopeRequirement` ← `integrations.gmail`
       - `accountsPane.Actions` ← `primitives.pane`
       - `accountPane.Actions` ← `primitives.pane`
-    - Uses: 48 symbols — full list in [`plugins/auth/REFERENCE.md`](../plugins/auth/REFERENCE.md)
+    - Uses: 49 symbols — full list in [`plugins/auth/REFERENCE.md`](../plugins/auth/REFERENCE.md)
       - `primitives/pane` ×7
       - `infra/endpoints` ×6
       - `network/live/live-state` ×6
@@ -14507,6 +14513,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/css/ui-kit` ×3
       - `primitives/data-view` ×3
       - `config_v2.useConfigRegistrations`
+      - `infra/launcher/gateway-port.usePagePort`
       - `network/live.useLive`
       - `primitives/css/badge.Badge`
       - `primitives/css/fill.Fill`
@@ -14606,6 +14613,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Core:
     - Uses:
       - `infra/endpoints.defineEndpoint`
+      - `infra/launcher/gateway-port.gatewayOriginFor`
       - `network/live.liveValue`
       - `packages/list-bound.wholeList`
       - `packages/list-bound.wholeRecord`
@@ -14654,6 +14662,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `humanDuration`
       - `lostScopes`
       - `oauthCallback`
+      - `oauthRedirectUri`
       - `oauthStart`
       - `RefreshFailureKindSchema`
       - `scopeLabel`
@@ -14696,7 +14705,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `integrations/google-maps`
       - `integrations/google-maps/usage`
       - `integrations/hooktheory`
-    - Endpoint callers: `setup-wizard`
   - Exemptions:
     - Exempts itself from:
       - `timer/no-unlisted-timer` — `central/internal/refresh-loop.ts` (sanctioned)
@@ -14787,7 +14795,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`setup-wizard`** — Guided setup steps for Google OAuth credentials (project → Drive API → consent screen → OAuth client → paste → connect), rendered inline in the Google Accounts pane.
           - Web:
-            - Uses: 23 symbols — full list in [`plugins/auth/plugins/google/plugins/setup-wizard/REFERENCE.md`](../plugins/auth/plugins/google/plugins/setup-wizard/REFERENCE.md)
+            - Uses: 24 symbols — full list in [`plugins/auth/plugins/google/plugins/setup-wizard/REFERENCE.md`](../plugins/auth/plugins/google/plugins/setup-wizard/REFERENCE.md)
               - `primitives/setup-steps` ×6
               - `auth` ×3
               - `network/live/live-state` ×2
@@ -14795,6 +14803,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/kept-state` ×2
               - `config_v2.useConfigRegistrations`
               - `infra/endpoints.useFetchEndpoint`
+              - `infra/launcher/gateway-port.usePagePort`
               - `network/live.useLive`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/spacing.Stack`
@@ -16435,6 +16444,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `companions/menu-bar/open-in-window`
           - `companions/menu-bar/wish`
           - `shell/notifications/native`
+      - Exemptions:
+        - Exempts itself from: `gateway-port:no-port-literal` — `rust/src/gateway.rs` (sanctioned)
       - Plugins:
         - **`app-grid`** — The menu-bar panel's app grid (MenuBar.Section 'apps'): every Apps.App but the current app and the home app (the desktop included: its URL is its base path as a route prefix) — as the icons DataView over the installedApp row kind, laid out as a menu's grid (viewOptions.icons.menu: four cells sharing the panel's width) (the tile and name Home and the launcher draw), each tile wearing its app's badge. Scrolling past four rows; drag reorders it, persisted per view (defineDataView('menu-bar.apps')). A tile opens its app in its own OS window through the helper (launchApp) — every app has its shim, kept by the helper ahead of any click (useNativeApps, the helper's installed set); in the default browser (openUrl) only for an app with no shim (a helper that keeps no apps); in this tab when the panel is not inside the helper. On hover a tile offers a pin (AppGridActions 'pin'): keeps the app in the Dock / GNOME dash through the helper's bridge (pinApp — a device power, never the server's) — hidden once pinned (re-read on each panel open, so it follows the Dock itself) or where the helper cannot pin, a spinner while pending, an error mark when the pin failed.
           - Web:
@@ -21694,7 +21705,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-weight-medium`
               - `ui/tokens/type-scale --font-weight-normal`
-        - **`open-app`** — Opens the conversation's namespace (`http://<id>.localhost:9000`) on the page its task was filed from when one was attached (else `/`) — in a new browser tab by default, or framed in a pane beside the chat when the Open app in setting says so (⌘/middle-click takes the other way). The pane's header actions reload the frame, show or hide the framed app's own chrome, and open it in a browser tab. Disabled until the worktree has a successful build (op-store build history). Server registration of the Open app config (new tab or pane on plain click).
+        - **`open-app`** — Opens the conversation's namespace (`http://<id>.localhost:<port>`) on the page its task was filed from when one was attached (else `/`) — in a new browser tab by default, or framed in a pane beside the chat when the Open app in setting says so (⌘/middle-click takes the other way). The pane's header actions reload the frame, show or hide the framed app's own chrome, and open it in a browser tab. Disabled until the worktree has a successful build (op-store build history). Server registration of the Open app config (new tab or pane on plain click).
           - Web:
             - Slots: `app-preview.actions`
             - Slot contributors:
@@ -21708,7 +21719,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `app-preview.actions` "reload" → `ReloadAction`
               - `app-preview.actions` "toggle-chrome" → `ToggleChromeAction`
               - `app-preview.actions` "open-in-new-tab" → `OpenInNewTabAction`
-            - Uses: 22 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/open-app/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/open-app/REFERENCE.md)
+            - Uses: 23 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/open-app/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/open-app/REFERENCE.md)
               - `primitives/pane` ×5
               - `hints` ×3
               - `config_v2` ×2
@@ -21717,6 +21728,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/action-bar.Conversation`
               - `conversations/conversation-view.conversationPane`
               - `conversations.useConversationById`
+              - `infra/launcher/gateway-port.usePagePort`
               - `primitives/dom/web-storage.defineStore`
               - `primitives/embed/frame.AppFrame`
               - `primitives/link-gesture/new-tab.NewTabButton`
@@ -31649,9 +31661,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readMergeMarkers`
           - `resolveGitDir`
       - Cross-plugin:
-        - Imported by: 41 plugins — full list in [`plugins/framework/plugins/cli/REFERENCE.md`](../plugins/framework/plugins/cli/REFERENCE.md)
+        - Imported by: 42 plugins — full list in [`plugins/framework/plugins/cli/REFERENCE.md`](../plugins/framework/plugins/cli/REFERENCE.md)
           - `framework` ×29
-          - `infra` ×5
+          - `infra` ×6
           - `apps` ×3
           - `plugin-meta` ×2
           - `installer/window`
@@ -38630,7 +38642,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `bootSelfContainedApp`
           - `bundledGateway`
           - `DEV_GATEWAY_LOG_LEVEL`
-          - `DEV_GATEWAY_PORT`
           - `devGatewayLaunchOptions`
           - `ensureDatabaseConfig`
           - `gatewayLaunchFlags`
@@ -38739,9 +38750,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `setEnvDefault`
               - `unsetEnv`
           - Cross-plugin:
-            - Imported by: 54 plugins — full list in [`plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md)
+            - Imported by: 55 plugins — full list in [`plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md)
               - `framework` ×18
-              - `infra` ×14
+              - `infra` ×15
               - `debug` ×5
               - `packages` ×5
               - `database` ×4
@@ -38781,6 +38792,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Resources: `gateway-drift` (push, notified, whole: one phrase per kind of difference (binary, each changed flag, cwd, signature, running vs installed) — a fixed handful)
           - Machine:
             - Uses:
+              - `infra/launcher/gateway-port.loadGatewayPortRecord`
               - `infra/launcher/login-services.APP_BUNDLE_ID`
               - `infra/launcher/login-services.bundleOfExecutable`
               - `infra/launcher/login-services.installedAppComponents`
@@ -38792,7 +38804,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/launcher/login-services.plannedServiceExecutable`
               - `network/live.serveValue`
             - Exports (types): `GatewayLaunchComparison`
-            - Exports (values): `compareGatewayLaunch`
+            - Exports (values):
+              - `compareGatewayLaunch`
+              - `dialAddressOf`
+              - `flagValue`
+              - `listenPortOf`
             - Register: `defineRefReaction('launcher.gateway-drift (refs/heads/main)')`
           - Core:
             - Uses:
@@ -38815,6 +38831,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PreparedGateway`
             - Exports (values):
               - `adoptGatewayLaunch`
+              - `completeGatewaySwitch`
               - `followMainGateway`
               - `holdGatewayBuild`
               - `prepareMainGateway`
@@ -38840,6 +38857,56 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `SERVICE_LOG_FD_FLAG`
               - `serviceLogTarget`
+        - **`gateway-port`** — This account's gateway port — the first free one of 8700…8709, chosen once and kept (8700 by default; 9000 before), recorded in state/gateway-port/port.json once a gateway answers on it. Web half: usePagePort() — the page's own port (it is always served by the gateway it talks to), read while rendering through render-mode. Every runtime reads its own authority: servedGatewayPort (core, a process a gateway started), gatewayPortSync (data-dirs, the CLI), resolveGatewayPort (machine), `./equin url` (shell).
+          - Web:
+            - Uses: `primitives/dom/render-mode.useBrowserValue`
+            - Exports (values): `usePagePort`
+          - Core:
+            - Uses:
+              - `infra/launcher/env-names.envName`
+              - `infra/launcher/env-names.readEnv`
+              - `infra/namespace.GATEWAY_PORT_RANGE`
+              - `infra/namespace.isGatewayPort`
+              - `infra/namespace.LEGACY_GATEWAY_PORT`
+            - Exports (types): `GatewayPortRecord`
+            - Exports (values):
+              - `GATEWAY_PORT_FILENAME`
+              - `gatewayOriginFor`
+              - `GatewayPortRecordSchema`
+              - `legacyListenOf`
+              - `pagePort`
+              - `parseGatewayPortRecord`
+              - `renderGatewayPortRecord`
+              - `servedGatewayPort`
+          - Cross-plugin:
+            - Imported by: 37 plugins — full list in [`plugins/infra/plugins/launcher/plugins/gateway-port/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/gateway-port/REFERENCE.md)
+              - `debug` ×7
+              - `framework` ×6
+              - `apps` ×5
+              - `infra` ×5
+              - `conversations` ×3
+              - `auth` ×2
+              - `build` ×2
+              - `companions` ×2
+              - `primitives` ×2
+              - `integrations/google-maps`
+              - `map/google`
+              - `reports/live-state-stale-drop`
+          - Machine:
+            - Exports (types):
+              - `GatewayProbe`
+              - `SkippedPort`
+            - Exports (values):
+              - `chooseGatewayPort`
+              - `describeChoice`
+              - `loadGatewayPortRecord`
+              - `NoFreeGatewayPortError`
+              - `portHolder`
+              - `portIsFree`
+              - `probeGateway`
+              - `resolveGatewayOrigin`
+              - `resolveGatewayPort`
+              - `writeGatewayPortRecord`
         - **`installer-notice`** — The installer's message shape: InstallerNotice ({ title, doing, blocked, now, ifSkipped, evidence }) — every message that stops the install, asks for a permission or leaves something out is built as one, so each of the five installer message rules is a field to fill. defineNotice refuses one whose user-facing text names an internal part (gateway, helper, launchd…), a path or a label; renderNotice prints the message with the raw evidence apart under Details.
           - Cross-plugin:
             - Imported by:
@@ -39164,11 +39231,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CONTENT_ITEM_RE`
           - `contentUrl`
           - `contentUrlParts`
-          - `GATEWAY_PORT`
+          - `GATEWAY_PORT_RANGE`
           - `isContentHost`
           - `isContentReservedNamespace`
+          - `isGatewayPort`
           - `isNamespace`
           - `isNamespaceHostAlias`
+          - `LEGACY_GATEWAY_PORT`
           - `MAIN_COMPOSITION_ID`
           - `MAIN_WORKTREE_NAME`
           - `NAMESPACE_HOST_ALIASES`
@@ -39184,22 +39253,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `namespaceUrl`
           - `resolveNamespaceAlias`
       - Cross-plugin:
-        - Imported by: 83 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
+        - Imported by: 84 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
           - `framework` ×15
-          - `apps` ×12
-          - `debug` ×12
-          - `infra` ×10
+          - `apps` ×13
+          - `debug` ×11
+          - `infra` ×11
           - `conversations` ×7
           - `build` ×6
           - `database` ×3
           - `plugin-meta` ×3
           - `primitives` ×3
           - `tasks` ×3
-          - `companions` ×2
           - `release` ×2
           - `reports` ×2
           - `auth`
           - `backup`
+          - `companions/browser-extension`
+          - `installer/window`
           - `upstream`
       - Exemptions:
         - Exempts itself from:
@@ -39315,8 +39385,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 140 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
-          - `infra` ×34
+        - Imported by: 141 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+          - `infra` ×35
           - `framework` ×23
           - `apps` ×18
           - `debug` ×15
@@ -40093,6 +40163,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SecretsMainOfflineError`
           - `SecretStore`
           - `setSecret`
+      - Machine:
+        - Uses: `infra/launcher/gateway-port.resolveGatewayOrigin`
+        - Exports (values):
+          - `centralSecretStore`
+          - `centralSecretStoreFor`
       - Core:
         - Uses:
           - `infra/endpoints.defineEndpoint`
@@ -40131,10 +40206,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/claude-cli/accounts`
       - Exemptions:
         - Exempts itself from: `paths:no-hardcoded-paths` — `central/index.ts` (sanctioned)
-      - Machine:
-        - Exports (values):
-          - `centralSecretStore`
-          - `centralSecretStoreFor`
       - Central:
         - Exports (types):
           - `SecretMetadata`
@@ -40197,9 +40268,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `spawnPassthrough`
           - `spawnToFile`
       - Cross-plugin:
-        - Imported by: 100 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
+        - Imported by: 101 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
           - `framework` ×32
-          - `infra` ×26
+          - `infra` ×27
           - `apps` ×9
           - `database` ×5
           - `debug` ×5
@@ -40805,13 +40876,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots: `LiveMapSetup.MapIdPreview`
         - Slot contributors: `LiveMapSetup.MapIdPreview` ← `map.google`
         - Contributes: `Auth.Integration` "Live map"
-        - Uses: 32 symbols — full list in [`plugins/integrations/plugins/google-maps/REFERENCE.md`](../plugins/integrations/plugins/google-maps/REFERENCE.md)
+        - Uses: 33 symbols — full list in [`plugins/integrations/plugins/google-maps/REFERENCE.md`](../plugins/integrations/plugins/google-maps/REFERENCE.md)
           - `primitives/setup-steps` ×10
           - `network/live/live-state` ×5
           - `auth` ×3
           - `infra/endpoints` ×3
           - `integrations/google-maps/browser-config` ×2
           - `primitives/css/ui-kit` ×2
+          - `infra/launcher/gateway-port.usePagePort`
           - `network/live.useLive`
           - `primitives/css/clip.Clip`
           - `primitives/css/spacing.Stack`
@@ -41531,13 +41603,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `GeoMap.Renderer` "Google Maps" → `LazyBoundary`
           - `ExternalHosts.Declare` "maps.googleapis.com, maps.gstatic.com, mapsresources-pa.googleapis.com, fonts.googleapis.com, fonts.gstatic.com"
           - `LiveMapSetup.MapIdPreview` → `MapIdPreview`
-        - Uses: 27 symbols — full list in [`plugins/map/plugins/google/REFERENCE.md`](../plugins/map/plugins/google/REFERENCE.md)
+        - Uses: 28 symbols — full list in [`plugins/map/plugins/google/REFERENCE.md`](../plugins/map/plugins/google/REFERENCE.md)
           - `integrations/google-maps` ×5
           - `map` ×4
           - `map/pin-layer` ×3
           - `config_v2` ×2
           - `primitives/css/spacing` ×2
           - `framework/browser-server.ExternalHosts`
+          - `infra/launcher/gateway-port.usePagePort`
           - `integrations/google-maps/browser-config.useMapsBrowserConfig`
           - `primitives/css/center.Center`
           - `primitives/css/motion.useTransitionHold`
@@ -43442,8 +43515,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `yieldMacrotask`
     - **`owned-fd`** — Owned file descriptors: openOwnedFd / adoptFd return an OwnedFd whose close() closes its descriptor exactly once — a second close throws FdAlreadyClosedError naming where the first happened, instead of closing whatever reused the number. Imports node:fs and the AppPath type only; enforced by the owned-fd/no-raw-fd-close lint (no fs.closeSync / fs.close outside it) and owned-fd/no-raw-spawn-stdio-fd (a spawn's stdio descriptor is an OwnedFd's .fd).
       - Cross-plugin:
-        - Imported by: 30 plugins — full list in [`plugins/packages/plugins/owned-fd/REFERENCE.md`](../plugins/packages/plugins/owned-fd/REFERENCE.md)
-          - `infra` ×12
+        - Imported by: 31 plugins — full list in [`plugins/packages/plugins/owned-fd/REFERENCE.md`](../plugins/packages/plugins/owned-fd/REFERENCE.md)
+          - `infra` ×13
           - `framework` ×7
           - `packages` ×4
           - `database` ×2
@@ -43952,9 +44025,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TIMED_FS_CALLS`
           - `withFsCallTally`
       - Cross-plugin:
-        - Imported by: 182 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
-          - `infra` ×54
-          - `framework` ×28
+        - Imported by: 184 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+          - `infra` ×55
+          - `framework` ×29
           - `apps` ×16
           - `debug` ×15
           - `conversations` ×13
@@ -53073,13 +53146,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live`
         - **`render-mode`** — Reading the browser while rendering, safely in both modes: useBrowserValue({ name, read, subscribe?, staticValue? }) (live: useSyncExternalStore, re-read on every change; static: staticValue, or a loud NoStaticValueError), useMediaQuery(query, staticValue), useViewportSize(staticValue), and useOwnedElement(name, create) — a DOM node a component mints once, which has no static form. The one place a render-time read of window / document / navigator / matchMedia happens (dom-access-safety/no-render-time-dom).
           - Cross-plugin:
-            - Imported by: 24 plugins — full list in [`plugins/primitives/plugins/dom/plugins/render-mode/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/render-mode/REFERENCE.md)
+            - Imported by: 26 plugins — full list in [`plugins/primitives/plugins/dom/plugins/render-mode/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/render-mode/REFERENCE.md)
               - `primitives` ×11
-              - `apps` ×3
+              - `apps` ×4
               - `companions/panel`
               - `conversations/conversation-view/jsonl-viewer/steady-reveal`
               - `debug/timeline`
               - `fullscreen`
+              - `infra/launcher/gateway-port`
               - `map/google`
               - `media/player`
               - `phone-window`
@@ -53342,6 +53416,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/endpoints.contentUrlOver`
               - `infra/endpoints.ReadyContentUrl`
               - `infra/endpoints.useAssetSrc`
+              - `infra/launcher/gateway-port.usePagePort`
               - `primitives/networking.useTransport`
             - Exports (types):
               - `FrameChannel`

@@ -25,6 +25,7 @@ import {
   namespaceUrl,
   MAIN_COMPOSITION_ID,
 } from "@plugins/infra/plugins/namespace/core";
+import { usePagePort } from "@plugins/infra/plugins/launcher/plugins/gateway-port/web";
 import { Auth, type IntegrationStatus } from "../slots";
 import { useAuthState } from "../hooks";
 import { accountsPane, accountPane } from "../panes";
@@ -40,8 +41,6 @@ const ACCOUNT_PLACE = {
   summary: "line2",
   status: "edge",
 } as const;
-
-const MAIN_URL = namespaceUrl(asNamespace(MAIN_COMPOSITION_ID));
 
 /**
  * One Accounts row: an auth provider or an integration, presented alike. Every
@@ -60,6 +59,12 @@ interface AccountRow {
 }
 
 export function AccountsPane(): ReactElement {
+  // The main app's address on the gateway this page was served by.
+  const mainUrl = namespaceUrl(
+    asNamespace(MAIN_COMPOSITION_ID),
+    "",
+    usePagePort(),
+  );
   const authState = useAuthState();
   const providers = Auth.Provider.useContributions();
   const integrations = Auth.Integration.useContributions();
@@ -171,11 +176,11 @@ export function AccountsPane(): ReactElement {
             comes back. Visit{" "}
             <a
               className="underline"
-              href={MAIN_URL}
+              href={mainUrl}
               target="_blank"
               rel="noreferrer"
             >
-              {MAIN_URL}
+              {mainUrl}
             </a>{" "}
             to start it.
           </Text>

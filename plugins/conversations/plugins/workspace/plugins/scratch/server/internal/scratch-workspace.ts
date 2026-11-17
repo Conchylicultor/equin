@@ -1,3 +1,4 @@
+import { servedGatewayPort } from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
 import { endpointPath } from "@plugins/infra/plugins/endpoints/server";
 import { mcpRequest } from "@plugins/infra/plugins/mcp/core";
 import { exists, access } from "@plugins/packages/plugins/timed-fs/core";
@@ -73,6 +74,7 @@ export function createScratchWorkspace(deps: {
         mcpUrl: namespaceUrl(
           runtimeNamespace(),
           endpointPath(mcpRequest, { conversationId }),
+          servedGatewayPort(),
         ),
         guardsRoot: deps.guardsRoot,
         permissions: profile.permissions,

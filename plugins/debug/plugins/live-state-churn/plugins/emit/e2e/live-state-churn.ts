@@ -13,7 +13,7 @@
 //
 // Example:
 //   ./equin run plugins/debug/plugins/live-state-churn/plugins/emit/e2e/live-state-churn.ts \
-//     --url http://<worktree>.localhost:9000/agents \
+//     --url http://<worktree>.localhost:<port>/agents \
 //     --key tasks.list --rate 10 --seconds 8
 
 import {

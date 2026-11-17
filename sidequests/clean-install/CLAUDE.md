@@ -7,15 +7,15 @@ written, where do they get stuck, and how long does each step take?
 
 ## Why a VM
 
-This Mac already runs a real equin instance: gateway on the hardcoded
-port 9000, embedded Postgres, state under `~/.equin`. A second macOS
-user account would still see this Mac's Homebrew and would collide on port
-9000, so it isn't clean. Instead this runs inside a throwaway VM via
+This Mac already runs a real equin instance: gateway on this account's
+port (8700–8709, `./equin url`), embedded Postgres, state under `~/.equin`. A
+second macOS user account would still see this Mac's Homebrew (its gateway
+takes the next free port of the range), so it isn't clean. Instead this runs inside a throwaway VM via
 [Tart](https://github.com/cirruslabs/tart) (`~/.local/bin/tart`), cloned
 fresh each time from `ghcr.io/cirruslabs/macos-tahoe-vanilla` (no
 Homebrew/Xcode CLT/Bun/Go/Postgres/Claude Code — just an `admin` user with
 remote login on). The VM has its own network/disk and a capped 6 core /
-12 GB, so its port 9000, `~/.equin` and Postgres are its own; nothing
+12 GB, so its gateway port, `~/.equin` and Postgres are its own; nothing
 under this Mac's `~/.equin` is ever touched.
 
 ## Running it

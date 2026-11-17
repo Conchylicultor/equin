@@ -10,6 +10,12 @@
 //! (`navigation_allowed`) — and each command checks the page the panel shows
 //! when it is called (commands.rs's gate), which also catches an in-document
 //! route change (`pushState`) no navigation handler sees.
+//!
+//! The pin's origin carries the gateway's port, which can move under a
+//! running tray (`gateway::listening_port`, read again at every show): when the port
+//! file names another port than the panel was built on, the window is
+//! destroyed and built again on the new origin — its grant, navigation pin
+//! and bridge script are all fixed at build — and shown once it is.
 
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
@@ -48,27 +54,37 @@ const PANEL_PATH: &str = "/home/menu-bar";
 
 /// The one page the bridge answers: the panel app at the configured
 /// instance's exact origin. Everything that admits a page reads it.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Pin {
     /// The page the panel loads (`?embed=1`: chromeless).
     url: Url,
 }
 
 impl Pin {
-    /// The panel of `namespace`, at the host it is handed out under (main:
-    /// `equin.localhost`, not its internal name).
-    pub fn for_namespace(namespace: &str) -> Self {
+    /// The panel of `namespace` on the gateway's `port`, at the host it is
+    /// handed out under (main: `equin.localhost`, not its internal name).
+    pub fn new(namespace: &str, port: u16) -> Self {
         let host = crate::cli::host_label(namespace);
-        let url = Url::parse(&format!("http://{host}.localhost:{}{PANEL_PATH}?embed=1", gateway::PORT))
+        let url = Url::parse(&format!("http://{host}.localhost:{port}{PANEL_PATH}?embed=1"))
             .expect("a validated namespace makes a valid URL");
         Pin { url }
+    }
+
+    /// The panel of `namespace` on the port the gateway listens on now.
+    pub fn current(namespace: &str) -> Result<Self, String> {
+        Ok(Self::new(namespace, gateway::listening_port()?))
     }
 
     pub fn url(&self) -> &Url {
         &self.url
     }
 
-    /// The instance's origin as a URL (`http://<ns>.localhost:9000/`).
+    /// The gateway port the pin is on.
+    pub fn port(&self) -> u16 {
+        self.url.port_or_known_default().expect("an http URL has a port")
+    }
+
+    /// The instance's origin as a URL (`http://<ns>.localhost:<port>/`).
     pub fn origin_url(&self) -> Url {
         let mut u = self.url.clone();
         u.set_path("/");
@@ -76,7 +92,7 @@ impl Pin {
         u
     }
 
-    /// `http://<ns>.localhost:9000` — what the ACL and bridge.js match.
+    /// `http://<ns>.localhost:<port>` — what the ACL and bridge.js match.
     pub fn origin(&self) -> String {
         self.url.origin().ascii_serialization()
     }
@@ -92,9 +108,11 @@ impl Pin {
     /// invoke key Tauri logs on a bad call is useless to it). The ACL sees
     /// only the origin (the fetch IPC carries the `Origin` header); the path
     /// and the frame are the navigation handler's and the command gate's.
+    /// A grant cannot be withdrawn: after a port move the old origin's stays,
+    /// and the command gate (the current pin) refuses it.
     pub fn capability(&self) -> CapabilityBuilder {
         PANEL_COMMANDS.iter().fold(
-            CapabilityBuilder::new("panel-bridge")
+            CapabilityBuilder::new(format!("panel-bridge-{}", self.port()))
                 .window(LABEL)
                 .local(false)
                 .remote(format!("{}/*", self.origin())),
@@ -122,29 +140,47 @@ pub fn is_offline_page(url: &Url) -> bool {
 /// handler cannot tell them apart, so a frame is held to the same rule): the
 /// pinned page or the offline page, nothing else. Same-origin frames (a
 /// prototype, `srcdoc`) would otherwise reach `top.equinNative`.
-pub fn navigation_allowed(pin: &Pin, url: &Url) -> bool {
-    pin.admits(url) || is_offline_page(url)
+/// A panel built with no pin (the port file was unreadable) loads the offline
+/// page only.
+pub fn navigation_allowed(pin: Option<&Pin>, url: &Url) -> bool {
+    pin.is_some_and(|p| p.admits(url)) || is_offline_page(url)
 }
 
 pub struct Panel {
-    pin: Pin,
+    namespace: String,
+    /// The pin the panel window was built on: `None` when the port file was
+    /// unreadable then (the window shows the offline page and its error).
+    built: Mutex<Option<Pin>>,
+    /// The window is being rebuilt on another origin: `Some(show)`, whether
+    /// to show it once it is (the show that found the port moved; the
+    /// offline page's Start, when it was shown).
+    rebuilding: Mutex<Option<bool>>,
+    /// Where the last show put the panel (a rebuilt one shows there).
+    anchor: Mutex<Anchor>,
     hidden_at: Mutex<Option<Instant>>,
     /// Where a link the panel opens in a new window goes (the default
     /// browser; the probe records it instead).
     hand_off: fn(&Url),
+    /// What the probe watches; the tray passes none.
+    observer: Option<Observer>,
 }
 
 impl Panel {
-    pub fn new(pin: Pin, hand_off: fn(&Url)) -> Self {
-        Panel { pin, hidden_at: Mutex::new(None), hand_off }
+    pub fn new(namespace: String, hand_off: fn(&Url), observer: Option<Observer>) -> Self {
+        Panel {
+            namespace,
+            built: Mutex::new(None),
+            rebuilding: Mutex::new(None),
+            anchor: Mutex::new(None),
+            hidden_at: Mutex::new(None),
+            hand_off,
+            observer,
+        }
     }
 
-    pub fn pin(&self) -> &Pin {
-        &self.pin
-    }
-
-    pub fn url(&self) -> &Url {
-        self.pin.url()
+    /// The pin the window was built on (`None`: built without one).
+    pub fn pin(&self) -> Option<Pin> {
+        self.built.lock().unwrap().clone()
     }
 }
 
@@ -160,15 +196,55 @@ pub fn open_in_browser(url: &Url) {
     });
 }
 
-fn offline_url() -> WebviewUrl {
-    WebviewUrl::App("index.html".into())
+/// The offline page's query: the port nothing answers on, or why the port is
+/// not known (the page says which; it names no port of its own).
+fn offline_query(port: &Result<u16, String>) -> String {
+    let mut q = url::form_urlencoded::Serializer::new(String::new());
+    match port {
+        Ok(port) => q.append_pair("port", &port.to_string()),
+        Err(e) => q.append_pair("error", e),
+    };
+    q.finish()
 }
 
-fn showing_remote(window: &WebviewWindow) -> bool {
-    window.url().map(|u| u.scheme() == "http" && u.port() == Some(gateway::PORT)).unwrap_or(false)
+/// The bundled offline page's URL as the webview loads it on this platform,
+/// telling it about `port`.
+fn offline_url(port: &Result<u16, String>) -> Url {
+    let raw = if cfg!(windows) { "http://tauri.localhost/index.html" } else { "tauri://localhost/index.html" };
+    let mut url = Url::parse(raw).expect("static URL");
+    url.set_query(Some(&offline_query(port)));
+    url
+}
+
+/// What the panel should show: the pinned page when the gateway answers on
+/// the pin's port, else the offline page saying why.
+fn wanted(pin: &Result<Pin, String>) -> Url {
+    match pin {
+        Ok(pin) if gateway::up(pin.port()) => pin.url().clone(),
+        Ok(pin) => {
+            eprintln!("equin-desktop: nothing answers on port {}; panel shows the offline page", pin.port());
+            offline_url(&Ok(pin.port()))
+        }
+        Err(e) => {
+            eprintln!("equin-desktop: {e}; panel shows the offline page");
+            offline_url(&Err(e.clone()))
+        }
+    }
+}
+
+/// Does `shown` already show `target`? The pinned page on any of its routes
+/// (an in-document route change is the page's own), the offline page only
+/// with the same message.
+fn shows(target: &Url, shown: &Url) -> bool {
+    if is_offline_page(target) {
+        is_offline_page(shown) && shown.query() == target.query()
+    } else {
+        shown.origin() == target.origin()
+    }
 }
 
 /// What the probe (src/probe.rs) watches on the panel; the tray passes none.
+#[derive(Clone, Copy)]
 pub struct Observer {
     /// A page finished loading in the main frame.
     pub loaded: fn(&WebviewWindow, &Url),
@@ -178,17 +254,22 @@ pub struct Observer {
     pub title: fn(&WebviewWindow, String),
 }
 
-/// Create the hidden panel window: the equin page if the gateway answers, else
-/// the bundled offline page.
-pub fn create(app: &AppHandle, observer: Option<Observer>) -> tauri::Result<WebviewWindow> {
+/// Create the hidden panel window on the gateway's current port, its bridge
+/// granted to that origin: the equin page if the gateway answers, else the
+/// bundled offline page.
+pub fn create(app: &AppHandle) -> tauri::Result<WebviewWindow> {
     let panel = app.state::<Panel>();
-    let initial = if gateway::up() {
-        WebviewUrl::External(panel.url().clone())
-    } else {
-        eprintln!("equin-desktop: nothing answers on port {}; panel shows the offline page", gateway::PORT);
-        offline_url()
+    let current = Pin::current(&panel.namespace);
+    let initial = match &wanted(&current) {
+        u if is_offline_page(u) => WebviewUrl::App(format!("index.html?{}", u.query().unwrap_or("")).into()),
+        u => WebviewUrl::External(u.clone()),
     };
-    let pin = panel.pin().clone();
+    let pin = current.ok();
+    if let Some(pin) = &pin {
+        app.add_capability(pin.capability())?;
+    }
+    *panel.built.lock().unwrap() = pin.clone();
+    let observer = panel.observer;
     let load_pin = pin.clone();
     let hand_off = panel.hand_off;
     let refused = observer.as_ref().map(|o| o.refused);
@@ -203,10 +284,15 @@ pub fn create(app: &AppHandle, observer: Option<Observer>) -> tauri::Result<Webv
         .visible_on_all_workspaces(true)
         .visible(false)
         .focused(true)
-        .shadow(true)
-        .initialization_script(panel.pin().bridge_script())
+        .shadow(true);
+    // No pin, no bridge: the offline page is all such a window loads.
+    let builder = match &pin {
+        Some(p) => builder.initialization_script(p.bridge_script()),
+        None => builder,
+    };
+    let builder = builder
         .on_navigation(move |url| {
-            let allowed = navigation_allowed(&pin, url);
+            let allowed = navigation_allowed(pin.as_ref(), url);
             if !allowed {
                 eprintln!("equin-desktop: panel refused {url}");
                 if let Some(refused) = refused {
@@ -228,7 +314,9 @@ pub fn create(app: &AppHandle, observer: Option<Observer>) -> tauri::Result<Webv
             // new web bundle — what a changed app set is): the keeper (the
             // main instance's tray only) syncs the installed apps, marked
             // before the page's scripts run, so its first `apps()` waits.
-            if matches!(payload.event(), tauri::webview::PageLoadEvent::Started) && load_pin.admits(payload.url()) {
+            if matches!(payload.event(), tauri::webview::PageLoadEvent::Started)
+                && load_pin.as_ref().is_some_and(|p| p.admits(payload.url()))
+            {
                 if let Some(keeper) = window.app_handle().try_state::<std::sync::Arc<apps::Keeper>>() {
                     keeper.begin_sync();
                 }
@@ -245,6 +333,7 @@ pub fn create(app: &AppHandle, observer: Option<Observer>) -> tauri::Result<Webv
         None => builder,
     };
     let window = with_material(builder).build()?;
+    eprintln!("equin-desktop: panel built on {}", window.url().map_or_else(|e| e.to_string(), |u| u.to_string()));
 
     let handle = app.clone();
     let shaped = window.clone();
@@ -289,32 +378,64 @@ fn with_material<'a, M: Manager<tauri::Wry>>(
     builder
 }
 
-/// Point the panel at the equin page or the offline page, whichever the
-/// gateway's presence calls for, when it shows the other one.
-pub fn reconcile(app: &AppHandle, window: &WebviewWindow) {
-    let up = gateway::up();
-    if up == showing_remote(window) {
-        return;
+/// Is a rebuild owed? The port file names a port (`current` is a pin) the
+/// window was not built on. An unreadable port file is not one: the window
+/// shows the offline page and its error, whatever it was built on.
+fn moved(built: Option<&Pin>, current: &Result<Pin, String>) -> bool {
+    matches!(current, Ok(pin) if built != Some(pin))
+}
+
+/// Before a show: `false` when the port moved since the window was built —
+/// it is destroyed and built again on the new origin (`destroyed`), and shown
+/// once it is when `show` says so. Otherwise point it at the equin page or the
+/// offline page, whichever the gateway's presence calls for, when it shows
+/// the other.
+fn reconcile(app: &AppHandle, window: &WebviewWindow, show: bool) -> bool {
+    let panel = app.state::<Panel>();
+    let current = Pin::current(&panel.namespace);
+    if moved(panel.pin().as_ref(), &current) {
+        eprintln!(
+            "equin-desktop: the gateway's port moved ({} → {}); rebuilding the panel",
+            panel.pin().map_or_else(|| "unknown".into(), |p| p.port().to_string()),
+            current.as_ref().map_or(0, Pin::port),
+        );
+        *panel.rebuilding.lock().unwrap() = Some(show);
+        if let Err(e) = window.destroy() {
+            *panel.rebuilding.lock().unwrap() = None;
+            eprintln!("equin-desktop: the panel cannot be rebuilt: {e}");
+        }
+        return false;
     }
-    let target = if up { app.state::<Panel>().url().clone() } else { tauri_local_index() };
+    let target = wanted(&current);
+    if window.url().is_ok_and(|shown| shows(&target, &shown)) {
+        return true;
+    }
     if let Err(e) = window.navigate(target.clone()) {
         eprintln!("equin-desktop: panel cannot navigate to {target}: {e}");
     }
+    true
 }
 
-/// The bundled index page's URL as the webview loads it on this platform.
-fn tauri_local_index() -> Url {
-    let raw = if cfg!(windows) { "http://tauri.localhost/index.html" } else { "tauri://localhost/index.html" };
-    Url::parse(raw).expect("static URL")
+/// The panel window was destroyed (the run loop's `Destroyed`, once its label
+/// is free): when a show rebuilt it, build it again on the current port and
+/// show it where the last show put it. A rebuild loads the pinned page, which
+/// starts the keeper's sync — rewriting every shim onto the new origin.
+pub fn destroyed(app: &AppHandle) {
+    let panel = app.state::<Panel>();
+    let Some(visible) = panel.rebuilding.lock().unwrap().take() else { return };
+    match create(app) {
+        Ok(window) if visible => show(&window, *panel.anchor.lock().unwrap()),
+        Ok(_) => {}
+        Err(e) => eprintln!("equin-desktop: the panel could not be rebuilt: {e}"),
+    }
 }
 
-/// Load the equin page now (the gateway just came up).
+/// Load the equin page now (the gateway just came up) — rebuilding the
+/// window when it came up on another port than the panel was built on.
 pub fn load_remote(app: &AppHandle) {
     if let Some(window) = app.get_webview_window(LABEL) {
-        let url = app.state::<Panel>().url().clone();
-        if let Err(e) = window.navigate(url.clone()) {
-            eprintln!("equin-desktop: panel cannot navigate to {url}: {e}");
-        }
+        let visible = window.is_visible().unwrap_or(false);
+        reconcile(app, &window, visible);
     }
 }
 
@@ -350,12 +471,18 @@ pub fn toggle(app: &AppHandle, anchor: Anchor) {
     if just_hidden {
         return;
     }
-    reconcile(app, &window);
-    if let Some(pos) = position(&window, anchor) {
+    *app.state::<Panel>().anchor.lock().unwrap() = anchor;
+    if reconcile(app, &window, true) {
+        show(&window, anchor);
+    }
+}
+
+fn show(window: &WebviewWindow, anchor: Anchor) {
+    if let Some(pos) = position(window, anchor) {
         let _ = window.set_position(pos);
     }
     let _ = window.show();
-    reshadow(&window);
+    reshadow(window);
     let _ = window.set_focus();
 }
 
@@ -437,15 +564,58 @@ mod tests {
     }
 
     #[test]
+    fn the_pin_is_on_the_gateways_port() {
+        let pin = Pin::new("equin", 8700);
+        assert_eq!(pin.url().as_str(), "http://equin.localhost:8700/home/menu-bar?embed=1");
+        assert_eq!(pin.port(), 8700);
+        assert_eq!(pin.origin(), "http://equin.localhost:8700");
+        assert_eq!(pin.origin_url().as_str(), "http://equin.localhost:8700/");
+        assert_eq!(Pin::new("equin", 9000).origin(), "http://equin.localhost:9000");
+        // The old port's page is another origin: not the pin.
+        assert!(!pin.admits(&u("http://equin.localhost:9000/home/menu-bar?embed=1")));
+    }
+
+    #[test]
+    fn a_moved_port_rebuilds_the_panel() {
+        let old = Pin::new("equin", 9000);
+        let new = Pin::new("equin", 8700);
+        assert!(moved(Some(&old), &Ok(new.clone())));
+        assert!(!moved(Some(&new), &Ok(new.clone())));
+        // Built without a pin (the port file was unreadable), now readable.
+        assert!(moved(None, &Ok(new.clone())));
+        // Unreadable now: the offline page says so, no rebuild.
+        assert!(!moved(Some(&new), &Err("broken".into())));
+        assert!(!moved(None, &Err("broken".into())));
+    }
+
+    #[test]
+    fn the_offline_page_is_told_the_port_or_the_error() {
+        let on = offline_url(&Ok(8700));
+        assert!(is_offline_page(&on));
+        assert_eq!(on.query(), Some("port=8700"));
+        let broken = offline_url(&Err("the port file is bad".into()));
+        assert_eq!(broken.query(), Some("error=the+port+file+is+bad"));
+        assert!(shows(&on, &on));
+        assert!(!shows(&on, &broken));
+        let pin = Pin::new("equin", 8700);
+        assert!(shows(pin.url(), &u("http://equin.localhost:8700/home/menu-bar/x")));
+        assert!(!shows(pin.url(), &u("http://equin.localhost:9000/home/menu-bar?embed=1")));
+        assert!(!shows(pin.url(), &on));
+    }
+
+    #[test]
     fn the_panel_loads_its_page_and_nothing_else() {
-        let pin = Pin::for_namespace("equin");
+        let pin = Pin::new("equin", 9000);
         assert_eq!(pin.url().as_str(), "http://equin.localhost:9000/home/menu-bar?embed=1");
         assert_eq!(
-            Pin::for_namespace(crate::cli::MAIN_NAMESPACE).url().as_str(),
+            Pin::new(crate::cli::MAIN_NAMESPACE, 9000).url().as_str(),
             "http://equin.localhost:9000/home/menu-bar?embed=1"
         );
-        assert!(navigation_allowed(&pin, pin.url()));
-        assert!(navigation_allowed(&pin, &u("tauri://localhost/index.html")));
+        let pin = Some(&pin);
+        assert!(navigation_allowed(pin, pin.unwrap().url()));
+        assert!(navigation_allowed(pin, &u("tauri://localhost/index.html")));
+        assert!(navigation_allowed(None, &u("tauri://localhost/index.html?error=x")));
+        assert!(!navigation_allowed(None, &u("http://equin.localhost:9000/home/menu-bar?embed=1")));
         for refused in [
             "http://other.localhost:9000/home/menu-bar?embed=1",
             "http://equin.localhost:9000/prototypes/x/index.html",
@@ -455,13 +625,13 @@ mod tests {
             "data:text/html,<script>top</script>",
             "https://example.com/",
         ] {
-            assert!(!navigation_allowed(&pin, &u(refused)), "{refused}");
+            assert!(!navigation_allowed(pin, &u(refused)), "{refused}");
         }
     }
 
     #[test]
     fn the_grant_is_the_exact_origin() {
-        let CapabilityFile::Capability(cap) = Pin::for_namespace("equin").capability().build() else {
+        let CapabilityFile::Capability(cap) = Pin::new("equin", 9000).capability().build() else {
             panic!("one capability");
         };
         assert_eq!(cap.windows, vec![LABEL.to_string()]);
@@ -473,7 +643,7 @@ mod tests {
 
     #[test]
     fn the_bridge_script_carries_the_pin() {
-        let js = Pin::for_namespace("equin").bridge_script();
+        let js = Pin::new("equin", 9000).bridge_script();
         assert!(!js.contains("__EQUIN_PIN__"));
         assert!(js.contains(r#""origin":"http://equin.localhost:9000""#));
     }

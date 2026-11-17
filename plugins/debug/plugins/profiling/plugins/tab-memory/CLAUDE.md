@@ -87,13 +87,13 @@ The bell re-rings at most every 6 h.
 
   ```bash
   ./equin run plugins/debug/plugins/profiling/plugins/tab-memory/e2e/clean-soak.ts \
-    --urls http://<ns>.localhost:9000/agents --tabs --paths /sonata,/agents/c/<id>,… \
+    --urls http://<ns>.localhost:<port>/agents --tabs --paths /sonata,/agents/c/<id>,… \
     --rounds 2 --dwell 5000 --out "$EQUIN_SCRATCH/tabs"
   ```
 
   ```bash
   ./equin run plugins/debug/plugins/profiling/plugins/tab-memory/e2e/clean-soak.ts \
-    --urls http://equin.localhost:9000/agents --minutes 30 --every 120 --out "$EQUIN_SCRATCH/clean"
+    --urls http://equin.localhost:<port>/agents --minutes 30 --every 120 --out "$EQUIN_SCRATCH/clean"
   ```
 
   **Why not Playwright**: Playwright enables `Network` and `Runtime` on every

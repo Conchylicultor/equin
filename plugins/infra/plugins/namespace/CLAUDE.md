@@ -3,7 +3,7 @@
 The one owner of what a deployed app is CALLED.
 
 A namespace is a single string that is simultaneously the subdomain in
-`http://<ns>.localhost:9000`, the spec-dir basename under
+`http://<ns>.localhost:<port>`, the spec-dir basename under
 `~/.equin/worktrees/<ns>/`, the socket stem, the Postgres database, the
 config dir, and the `--namespace` a backend is spawned with. Because it
 is all of those at once, it gets exactly one minter: `namespaceFor(composition,
@@ -112,11 +112,13 @@ Design: `research/2026-08-18-global-namespace-identity.md`.
     - `CONTENT_ITEM_RE`
     - `contentUrl`
     - `contentUrlParts`
-    - `GATEWAY_PORT`
+    - `GATEWAY_PORT_RANGE`
     - `isContentHost`
     - `isContentReservedNamespace`
+    - `isGatewayPort`
     - `isNamespace`
     - `isNamespaceHostAlias`
+    - `LEGACY_GATEWAY_PORT`
     - `MAIN_COMPOSITION_ID`
     - `MAIN_WORKTREE_NAME`
     - `NAMESPACE_HOST_ALIASES`
@@ -132,22 +134,23 @@ Design: `research/2026-08-18-global-namespace-identity.md`.
     - `namespaceUrl`
     - `resolveNamespaceAlias`
 - Cross-plugin:
-  - Imported by: 83 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 84 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework` ×15
-    - `apps` ×12
-    - `debug` ×12
-    - `infra` ×10
+    - `apps` ×13
+    - `debug` ×11
+    - `infra` ×11
     - `conversations` ×7
     - `build` ×6
     - `database` ×3
     - `plugin-meta` ×3
     - `primitives` ×3
     - `tasks` ×3
-    - `companions` ×2
     - `release` ×2
     - `reports` ×2
     - `auth`
     - `backup`
+    - `companions/browser-extension`
+    - `installer/window`
     - `upstream`
 - Exemptions:
   - Exempts itself from:

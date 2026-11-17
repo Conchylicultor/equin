@@ -17,11 +17,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { subThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
-import {
-  INSTALL_COMMAND,
-  LOCAL_APP_HOST,
-  LOCAL_APP_URL,
-} from "@plugins/apps/plugins/website/plugins/shell/core";
+import { INSTALL_COMMAND } from "@plugins/apps/plugins/website/plugins/shell/core";
 import { SOURCE_REPO_URL } from "@plugins/framework/plugins/product-name/core";
 import {
   WebsiteArrow,
@@ -29,7 +25,7 @@ import {
 } from "@plugins/apps/plugins/website/plugins/shell/web";
 import { track } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
 import { DownloadCode } from "./download-code";
-import { DownloadLink } from "./download-link";
+import { LocalAppLink } from "./download-link";
 import { DownloadNextSteps } from "./download-next-steps";
 import { DownloadTryDemo } from "./download-try-demo";
 import {
@@ -122,8 +118,7 @@ function ForYou() {
         </Text>
         <DownloadCode kind="command" text={INSTALL_COMMAND} />
         <Text as="p" variant="label" tone="faint" className="font-normal">
-          Then open{" "}
-          <DownloadLink href={LOCAL_APP_URL}>{LOCAL_APP_HOST}</DownloadLink>
+          Then open <LocalAppLink />
         </Text>
       </Stack>
       <Collapsible>

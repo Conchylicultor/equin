@@ -152,6 +152,10 @@ export const RUNTIME_WITHHELD_ENV = {
     "recursion guard the post-rewrite git hook sets for the command it runs (.githooks/post-rewrite)",
   LISTEN:
     "a launcher input; the launcher reads it and passes the gateway -listen",
+  GATEWAY_PORT:
+    "the port of the gateway that started this process (launcher/gateway-port servedGatewayPort): the gateway sets it from its own -listen for every child it spawns (gateway/env.go), so a backend always dials the gateway it runs under; never inherited from a starter",
+  GATEWAY_PORT_FILE:
+    "where this account's gateway port is recorded (launcher/gateway-port), written into the menu-bar helper's own job by its login-service declaration so the helper reads the port at every show; never inherited from a starter",
   APP_COMPONENT:
     "the bundled component a login-service job runs as, written into that job's own definition by login-services (app-component.ts); never inherited from a starter",
   GATEWAY_LABEL:

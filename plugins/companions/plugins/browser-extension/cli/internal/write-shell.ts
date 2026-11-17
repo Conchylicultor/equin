@@ -8,6 +8,7 @@ import {
   namespaceUrl,
   type Namespace,
 } from "@plugins/infra/plugins/namespace/core";
+import { gatewayPortSync } from "@plugins/infra/plugins/launcher/plugins/gateway-port/data-dirs";
 import { EXTENSION_PUBLIC_KEY } from "../../core";
 import {
   browserExtensionRoot,
@@ -46,7 +47,10 @@ export async function writeExtensionShell(opts: {
   root: string;
   namespace: Namespace;
 }): Promise<ShellWrite> {
-  const files = await shellFiles(opts.root, namespaceUrl(opts.namespace));
+  const files = await shellFiles(
+    opts.root,
+    namespaceUrl(opts.namespace, "", gatewayPortSync()),
+  );
 
   const hasher = createSha256();
   for (const [name, bytes] of files) hasher.update(name).update(bytes);

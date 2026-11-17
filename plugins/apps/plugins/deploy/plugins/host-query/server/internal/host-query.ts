@@ -1,3 +1,4 @@
+import { servedGatewayPort } from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
 import type { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
@@ -74,9 +75,12 @@ async function resolveDeployment(
  */
 async function fetchThisInstance(path: string): Promise<ThisInstanceResponse> {
   try {
-    const res = await fetch(namespaceUrl(runtimeNamespace(), path), {
-      signal: AbortSignal.timeout(CURL_MAX_SECONDS * 1000),
-    });
+    const res = await fetch(
+      namespaceUrl(runtimeNamespace(), path, servedGatewayPort()),
+      {
+        signal: AbortSignal.timeout(CURL_MAX_SECONDS * 1000),
+      },
+    );
     return { kind: "response", status: res.status, body: await res.text() };
   } catch (err) {
     // Network failure or the deadline: a failed request, named — not thrown.

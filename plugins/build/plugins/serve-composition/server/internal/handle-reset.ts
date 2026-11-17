@@ -1,3 +1,4 @@
+import { servedGatewayPort } from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { resetCompositionData } from "../../shared/endpoints";
 
@@ -10,6 +11,6 @@ import { resetCompositionData } from "../../shared/endpoints";
 // genuine error, not a 4xx the UI absorbs) — nothing is touched in that case.
 export const handleReset = implement(resetCompositionData, async ({ body }) => {
   const { resetCompositionData: runReset } = await import("./reset");
-  await runReset(body.id);
+  await runReset(body.id, servedGatewayPort());
   return { ok: true };
 });

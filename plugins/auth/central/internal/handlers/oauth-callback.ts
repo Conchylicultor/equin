@@ -6,12 +6,12 @@ import {
   consumePendingState,
   exchangeCodeForToken,
   fetchIdentity,
-  redirectUriFor,
 } from "../oauth-flow";
 import { getAccount, setAccount } from "../token-store";
 import { reportScopesIfLost } from "../scopes-lost-report";
-import { lostScopes, scopeLabel } from "@plugins/auth/core";
+import { lostScopes, oauthRedirectUri, scopeLabel } from "@plugins/auth/core";
 import { emitAuthChanged } from "../actions";
+import { servedGatewayPort } from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
 
 /**
  * GET /api/auth/callback/:provider?code=...&state=...
@@ -88,7 +88,7 @@ export const handleOAuthCallback: HttpHandler = async (req, params) => {
       clientSecret: creds.clientSecret,
       code,
       codeVerifier: pending.codeVerifier,
-      redirectUri: redirectUriFor(providerId),
+      redirectUri: oauthRedirectUri(providerId, servedGatewayPort()),
     });
     const identity = await fetchIdentity(descriptor.oauth, tokens.accessToken);
     const held = getAccount(providerId, "primary")?.scopes;

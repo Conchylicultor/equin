@@ -38,7 +38,7 @@ const SessionShape = z.object({
   conversationId: z.string(),
   /**
    * Where the session's routes resolve: its checkout's build,
-   * `http://<namespace>.localhost:9000`; `null` while the checkout is unbuilt.
+   * `http://<namespace>.localhost:<port>`; `null` while the checkout is unbuilt.
    */
   target: z.string().nullable(),
   /**

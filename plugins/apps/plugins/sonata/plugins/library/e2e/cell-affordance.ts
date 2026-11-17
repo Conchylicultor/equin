@@ -4,7 +4,7 @@
 //
 // Usage:
 //   ./equin run plugins/apps/plugins/sonata/plugins/library/e2e/cell-affordance.ts
-//     [--url http://<worktree>.localhost:9000] [--headed]
+//     [--url http://<worktree>.localhost:<port>] [--headed]
 
 import {
   pathUrl,

@@ -154,7 +154,10 @@ hover.
     - `apps/website/crawlable.WEBSITE_BASE_PATH`
     - `framework/product-name.SOURCE_REPO`
     - `framework/product-name.SOURCE_REPO_URL`
-    - `infra/namespace.GATEWAY_PORT`
+    - `infra/launcher/gateway-port.pagePort`
+    - `infra/namespace.GATEWAY_PORT_RANGE`
+    - `infra/namespace.isGatewayPort`
+    - `infra/namespace.LEGACY_GATEWAY_PORT`
     - `infra/namespace.MAIN_WORKTREE_NAME`
     - `infra/namespace.namespaceFromHost`
     - `infra/namespace.namespaceHost`
@@ -171,8 +174,9 @@ hover.
     - `isPublicSiteUrl`
     - `ISSUES_URL`
     - `landingPage`
-    - `LOCAL_APP_HOST`
-    - `LOCAL_APP_URL`
+    - `localAppHost`
+    - `localAppPortFor`
+    - `localAppUrl`
     - `localSiteUrl`
     - `PUBLIC_SITE_ORIGIN`
     - `publicSitePageUrl`

@@ -19,6 +19,7 @@ import (
 // Config holds all gateway settings, parsed from command-line flags.
 type Config struct {
 	Listen            string
+	LegacyListen      string
 	IdleTimeout       time.Duration
 	ShutdownGrace     time.Duration
 	ShutdownTimeout   time.Duration
@@ -150,7 +151,10 @@ func dataRoot() string {
 // cfg.ChildEnv by main, once logging is set up to report a bad one.
 func parseFlags() (Config, string) {
 	var cfg Config
-	flag.StringVar(&cfg.Listen, "listen", loopbackHost+":9000", "address to listen on: loopback:<port> (127.0.0.1 and [::1]), a host:port, or :<port> for every interface")
+	// No default: the port is this account's, chosen by ./equin start
+	// (listen.go). A missing -listen is a fatal startup error.
+	flag.StringVar(&cfg.Listen, "listen", "", "REQUIRED: address to listen on: loopback:<port> (127.0.0.1 and [::1]), a host:port, or :<port> for every interface; ./equin start passes this account's port")
+	flag.StringVar(&cfg.LegacyListen, "legacy-listen", "", "the port an install moved off, served too while it migrates (same grammar as -listen; a document navigation there is redirected to -listen's port; a failed bind is a warning); empty: none")
 	flag.DurationVar(&cfg.IdleTimeout, "idle-timeout", 10*time.Minute, "backend idle timeout")
 	flag.DurationVar(&cfg.ShutdownGrace, "shutdown-grace", 5*time.Second, "grace period before SIGKILL")
 	flag.DurationVar(&cfg.ShutdownTimeout, "shutdown-timeout", 15*time.Second, "the whole shutdown's budget, SIGTERM to exit: the HTTP drain, every backend's stop and its SIGKILL fit inside it (the launcher passes its service manager's stop timeout minus a margin)")
@@ -289,6 +293,13 @@ func main() {
 		fmt.Fprintf(os.Stderr, "gateway: fatal: %v\n", err)
 		os.Exit(2)
 	}
+	// Checked before the keeper starts anything: a gateway with no port to
+	// serve on stops here, naming the flag (listen.go).
+	plan, err := parseListenFlags(cfg.Listen, cfg.LegacyListen)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "gateway: fatal: %v\n", err)
+		os.Exit(2)
+	}
 	if keeperFd == 0 && !cfg.NoKeeper {
 		// Started by a service manager or a launcher: be the keeper, and run
 		// the gateway itself as its first generation (keeper.go).
@@ -326,7 +337,7 @@ func main() {
 	childEnv, dropped := captureChildEnv(declared)
 	// Every child starts with the data root's layout decided — the gateway is
 	// the root of the runtime tree (gateway/dataroot.go).
-	cfg.ChildEnv = childEnv.Plus(dataRootLayoutEnv()...)
+	cfg.ChildEnv = runtimeChildEnv(childEnv, plan.mainPort)
 	cfg.Taskpolicy = detectTaskpolicy()
 	slog.Info("child environment", "forwarded", cfg.ChildEnv.Names())
 	if len(dropped) > 0 {
@@ -493,32 +504,58 @@ func main() {
 
 	// The listening sockets: an adopting generation serves on the keeper's
 	// (the same sockets, never closed between generations); a fresh one binds
-	// them and hands them to its keeper.
-	var listeners []net.Listener
+	// them and hands them to its keeper. The legacy ones are best effort
+	// (listen.go): bound when free, held by the keeper with the main ones.
+	var mainLs, legacyLs []net.Listener
 	if adopting {
-		listeners, err = kc.inheritedListeners(listenAddrs(cfg.Listen))
+		mainLs, legacyLs, err = kc.inheritedListeners(plan)
+		if err == nil && plan.legacy != nil && len(legacyLs) == 0 {
+			slog.Warn("legacy listener not held by the keeper; serving on -listen only", "legacy_listen", plan.legacySpec)
+		}
 	} else {
-		listeners, err = listenAll(listenAddrs(cfg.Listen))
-		if err == nil && kc != nil {
-			err = kc.sendListeners(listeners)
+		mainLs, err = listenAll(plan.main)
+		if err == nil {
+			legacyLs = bindLegacy(plan)
+			if kc != nil {
+				err = kc.sendListeners(append(append([]net.Listener{}, mainLs...), legacyLs...))
+			}
 		}
 	}
 	if err != nil {
 		fatal(fmt.Sprintf("gateway: fatal: %v", err), "listen failed", err)
 	}
+	listeners := append(append([]net.Listener{}, mainLs...), legacyLs...)
+	var legacyStatus *legacyListenStatus
+	if plan.legacy != nil {
+		legacyStatus = &legacyListenStatus{Addr: plan.legacySpec, Held: len(legacyLs) > 0}
+	}
 
 	proxy := NewProxy(reg, routes, sup, cfg.DefaultNamespace, newPanicReporter(cfg.ReportOutboxDir, panicReportWindow))
 	proxy.deployer = deployer
 	proxy.publicHosts = parsePublicHosts(cfg.PublicHosts)
+	proxy.identity = &gatewayIdentity{Product: productName, UID: os.Getuid(), DataDir: dataRoot(), Port: plan.mainPort, LegacyListen: legacyStatus}
+	// One http.Server over the main listeners, and one over the legacy ones
+	// (the same handler behind legacyRedirect), shut down and closed together.
 	srv := &http.Server{
 		Handler:           proxy,
 		ReadHeaderTimeout: 10 * time.Second,
+	}
+	servers := serverSet{srv}
+	var legacySrv *http.Server
+	if len(legacyLs) > 0 {
+		legacySrv = &http.Server{
+			Handler:           legacyRedirect(proxy, plan.mainPort),
+			ReadHeaderTimeout: 10 * time.Second,
+		}
+		servers = append(servers, legacySrv)
 	}
 	if kc != nil {
 		proxy.handover = newHandover(kc, cfg.Gate, reg, sup, cfg.Listen)
 		proxy.handover.deploy = deployer
 		proxy.handover.listeners = listeners
-		srv.ConnState = proxy.handover.trackConn
+		for _, s := range servers {
+			s.ConnState = proxy.handover.trackConn
+		}
 	}
 
 	shutdownDone := make(chan struct{})
@@ -532,7 +569,7 @@ func main() {
 			// backends are the successor's now and keep running — and exit
 			// WITHOUT stopping a backend.
 			slog.Info("handover: draining this generation", "budget", handoverDrainBudget)
-			proxy.handover.drain(ctx, srv, handoverDrainBudget)
+			proxy.handover.drain(ctx, servers, handoverDrainBudget)
 			return
 		}
 		slog.Info("shutdown signal received", "budget", cfg.ShutdownTimeout)
@@ -540,7 +577,7 @@ func main() {
 			// A handover frozen mid-way gives up: the keeper is stopping.
 			cfg.Gate.unfreeze()
 		}
-		shutdownWithin(cfg.ShutdownTimeout, cfg.ShutdownGrace, srv.Shutdown, reg.StopAll)
+		shutdownWithin(cfg.ShutdownTimeout, cfg.ShutdownGrace, servers.Shutdown, reg.StopAll)
 		// Clears watchdog goroutines; services keep running as daemons.
 		sup.StopAll()
 	}()
@@ -549,12 +586,15 @@ func main() {
 	for i, l := range listeners {
 		addrs[i] = l.Addr().String()
 	}
-	slog.Info("gateway listening", "addr", cfg.Listen, "listeners", addrs, "registry-dir", cfg.RegistryDir, "sockets-dir", cfg.SocketsDir, "mode", mode)
-	// One http.Server over every listener, so srv.Shutdown closes them all and
-	// each Serve returns ErrServerClosed. Any other Serve error is fatal.
+	slog.Info("gateway listening", "addr", cfg.Listen, "legacy_listen", cfg.LegacyListen, "listeners", addrs, "registry-dir", cfg.RegistryDir, "sockets-dir", cfg.SocketsDir, "mode", mode)
+	// servers.Shutdown closes every listener, and each Serve returns
+	// ErrServerClosed. Any other Serve error is fatal.
 	serveErrs := make(chan error, len(listeners))
-	for _, l := range listeners {
+	for _, l := range mainLs {
 		go func(l net.Listener) { serveErrs <- srv.Serve(l) }(l)
+	}
+	for _, l := range legacyLs {
+		go func(l net.Listener) { serveErrs <- legacySrv.Serve(l) }(l)
 	}
 	if kc != nil {
 		// Serving: from here the keeper may close a predecessor's listeners.
@@ -596,7 +636,7 @@ const handoverDrainBudget = 6 * time.Minute
 
 // loopbackHost is the -listen host keyword for "loopback only, both
 // families": loopback:<port> binds 127.0.0.1:<port> AND [::1]:<port>. It is
-// the default — every interface is the explicit opt-in :<port>. The launcher
+// the usual spelling — every interface is the explicit opt-in :<port>. The launcher
 // spells the same keyword (LOOPBACK_BIND, plugins/infra/plugins/launcher).
 const loopbackHost = "loopback"
 

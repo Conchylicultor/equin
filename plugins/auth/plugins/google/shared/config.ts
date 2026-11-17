@@ -7,7 +7,7 @@ export const googleAuthConfig = defineConfig({
     clientId: secretField({
       label: "OAuth Client ID",
       description:
-        "Desktop-app client ID from Google Cloud Console. Add http://localhost:9000/api/auth/callback/google as the Authorized redirect URI.",
+        "Desktop-app client ID from Google Cloud Console. Add the redirect URI the Google setup in Settings → Accounts shows (it names this account's gateway port) as the Authorized redirect URI.",
     }),
     clientSecret: secretField({
       label: "OAuth Client Secret",

@@ -3,7 +3,7 @@
 // in a headless Chromium over the bundled page, with the window's bridge
 // recorded. Writes `<out>.png` with the sheet open.
 //
-//   ./equin run plugins/installer/plugins/window/e2e/password-sheet.ts --url http://equin.localhost:9000 --out "$EQUIN_SCRATCH/password"
+//   ./equin run plugins/installer/plugins/window/e2e/password-sheet.ts --url http://equin.localhost:<port> --out "$EQUIN_SCRATCH/password"
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -15,7 +15,7 @@ import { bundlePage } from "../deps";
 
 const out = requireArg(
   "out",
-  "password-sheet.ts --url http://equin.localhost:9000 --out <prefix>",
+  "password-sheet.ts --url http://equin.localhost:<port> --out <prefix>",
 );
 const html = await bundlePage(join(import.meta.dir, "../../../../.."));
 const r = report("installer password sheet");

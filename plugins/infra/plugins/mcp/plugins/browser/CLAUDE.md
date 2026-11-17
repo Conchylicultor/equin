@@ -57,7 +57,7 @@ Files: `services/agent-browser/` (`data-dirs`) — `host.sock`, `host.pid`,
   forever: a live socket, telemetry posts, which once kept sessions open for a
   day), except under a script hold (below). Its requests carry
   the agent-origin headers with source `mcp-browser:<conversationId>` on every
-  deploy behind the gateway (`http://<namespace>.localhost:9000` — its own
+  deploy behind the gateway (`http://<namespace>.localhost:<port>` — its own
   build, main, another worktree) and on nothing else (a CDN, a public website).
   The session records each deploy it reached (`origins` in the status), and
   closing reverts THAT source's writes on each (`shared/revert.ts`) — never

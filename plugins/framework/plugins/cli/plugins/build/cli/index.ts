@@ -2,7 +2,7 @@ import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
 
 /**
  * The command the whole agent workflow runs on: `./equin build` is how a
- * checkout's work becomes a running app at `http://<worktree>.localhost:9000`.
+ * checkout's work becomes a running app at `http://<worktree>.localhost:<port>`.
  *
  * It is a leaf with two postures over one pipeline — deploy this checkout into
  * the live dev cluster (the default), or produce a composition's artifact set
@@ -38,7 +38,7 @@ export default defineCliCommand({
       description:
         "Composition(s) to build INSTEAD of this checkout's own app: one shared install/codegen/" +
         "validation pass, one dist each. Deploying, each is served at " +
-        "http://<composition>.<checkout>.localhost:9000 with its own empty database. With " +
+        "http://<composition>.<checkout>.localhost:<port> with its own empty database. With " +
         "--hermetic the names come from the compositions manifest COMPILED INTO THE CODE; " +
         "deploying, they come from THIS CHECKOUT'S resolved config, so a composition created in " +
         "Studio is servable but not releasable.",

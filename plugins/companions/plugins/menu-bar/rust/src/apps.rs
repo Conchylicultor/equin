@@ -821,19 +821,27 @@ struct State {
 /// The device's installed apps, kept by the main instance's tray: one sync or
 /// pin at a time; a read waits for the one in flight, so the panel's first
 /// `apps()` answers after its own load's sync.
+///
+/// Its instance's origin is read at each use, on the gateway's port as the
+/// port file says now: after a port move, the next sync (the rebuilt panel's
+/// load) finds every shim's URL on the old origin and rewrites it.
 pub struct Keeper {
-    origin: Url,
+    namespace: String,
     state: Mutex<State>,
     settled: Condvar,
 }
 
 impl Keeper {
-    pub fn new(origin: Url) -> Arc<Keeper> {
-        Arc::new(Keeper { origin, state: Mutex::default(), settled: Condvar::new() })
+    pub fn new(namespace: String) -> Arc<Keeper> {
+        Arc::new(Keeper { namespace, state: Mutex::default(), settled: Condvar::new() })
     }
 
-    fn host(&self) -> Device {
-        Device { origin: self.origin.clone() }
+    fn origin(&self) -> Result<Url, String> {
+        Ok(crate::panel::Pin::current(&self.namespace)?.origin_url())
+    }
+
+    fn host(&self) -> Result<Device, String> {
+        Ok(Device { origin: self.origin()? })
     }
 
     fn roots() -> Result<Roots, String> {
@@ -885,9 +893,9 @@ impl Keeper {
     }
 
     fn sync_now(&self) -> Result<Report, String> {
-        let host = self.host();
+        let host = self.host()?;
         let catalog = fetch_catalog(&host)?;
-        sync(&host, &Self::roots()?, &self.origin, &Helper::current()?, &catalog)
+        sync(&host, &Self::roots()?, &host.origin, &Helper::current()?, &catalog)
     }
 
     /// Run `work` exclusively, after any sync in flight.
@@ -910,20 +918,26 @@ impl Keeper {
 
     /// Can this desktop keep an app pinned (probed once)?
     pub fn can_pin(&self) -> bool {
-        can_pin(&self.host())
+        match self.host() {
+            Ok(host) => can_pin(&host),
+            Err(e) => {
+                eprintln!("equin-desktop: cannot probe pinning: {e}");
+                false
+            }
+        }
     }
 
     /// The installed and pinned sets, once the sync in flight settled; a
     /// failed sync is the answer's failure.
     pub fn apps(&self) -> Result<NativeApps, String> {
-        self.exclusive(|| read_apps(&self.host(), &Self::roots()?))
+        self.exclusive(|| read_apps(&self.host()?, &Self::roots()?))
     }
 
     /// Pin an app to the Dock / dash — writing its shim first when it is not
     /// there yet (the sync has normally written it).
     pub fn pin(&self, app_id: &str) -> Result<(), String> {
         self.exclusive(|| {
-            let host = self.host();
+            let host = self.host()?;
             let roots = Self::roots()?;
             let find = || shim::installed_in(&roots).into_iter().find(|s| s.app_id == app_id);
             let shim = match find() {
@@ -933,7 +947,7 @@ impl Keeper {
                     if !catalog.iter().any(|a| a.id == app_id) {
                         return Err(format!("{app_id:?} is not an installable app"));
                     }
-                    sync(&host, &roots, &self.origin, &Helper::current()?, &catalog)?;
+                    sync(&host, &roots, &host.origin, &Helper::current()?, &catalog)?;
                     find().ok_or_else(|| format!("{app_id}: its shim was not written"))?
                 }
             };
@@ -1094,6 +1108,28 @@ mod tests {
         let elsewhere = Url::parse("http://other.localhost:9000").unwrap();
         let moved = sync(&host, &roots, &elsewhere, &helper(&exe, "d2"), &[app("mail", "Mail", "h2")]).unwrap();
         assert_eq!(moved.written, vec!["mail"]);
+    }
+
+    #[test]
+    fn a_port_move_rewrites_every_shim_onto_the_new_port_keeping_its_path() {
+        let (roots, exe) = home();
+        let host = Fake::new();
+        let catalog = [app("mail", "Mail", "h1"), app("pages", "Pages", "h1")];
+        sync(&host, &roots, &origin(), &helper(&exe, "d1"), &catalog).unwrap();
+        let moved = Url::parse("http://main.localhost:8700").unwrap();
+        let before = host.commands.borrow().len();
+        let r = sync(&host, &roots, &moved, &helper(&exe, "d1"), &catalog).unwrap();
+        assert_eq!(r.written, vec!["mail", "pages"]);
+        assert!(r.removed.is_empty());
+        let urls: Vec<String> = shim::installed_in(&roots).iter().map(|s| s.url.to_string()).collect::<std::collections::BTreeSet<_>>().into_iter().collect();
+        assert_eq!(urls, vec!["http://main.localhost:8700/mail", "http://main.localhost:8700/pages"]);
+        if cfg!(target_os = "macos") {
+            // Re-signed the way every shim is written.
+            assert!(host.commands.borrow()[before..].iter().any(|c| c[0] == "sign-tool"));
+        }
+        // Then current: nothing more to do.
+        let again = sync(&host, &roots, &moved, &helper(&exe, "d1"), &catalog).unwrap();
+        assert!(again.written.is_empty());
     }
 
     #[test]

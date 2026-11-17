@@ -1,3 +1,4 @@
+import { servedGatewayPort } from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
 import {
   MAIN_WORKTREE_NAME,
   namespaceUrl,
@@ -65,7 +66,7 @@ export async function capturePair(
         "Run `./equin build` first, then call again.",
     );
   }
-  const mainOrigin = namespaceUrl(MAIN_WORKTREE_NAME);
+  const mainOrigin = namespaceUrl(MAIN_WORKTREE_NAME, "", servedGatewayPort());
   const { shots, slotWaitedMs } = await callHostCapturePair({
     conversationId,
     target,

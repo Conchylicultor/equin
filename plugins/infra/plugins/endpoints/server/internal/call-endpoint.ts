@@ -8,8 +8,8 @@ import { readEndpointResponse, sendEndpointRequest } from "../../core";
 type CallOpts<TBody, TQuery> = EndpointRequestOpts<TBody, TQuery> & {
   /**
    * The server the request goes to, absolute and without a trailing slash:
-   * `http://localhost:9000` for central's routes (the gateway serves them on
-   * every host name), `namespaceUrl(ns)` for one backend.
+   * `http://localhost:<port>` for central's routes (the gateway serves them on
+   * every host name), `namespaceUrl(ns, "", port)` for one backend.
    */
   origin: string;
 };

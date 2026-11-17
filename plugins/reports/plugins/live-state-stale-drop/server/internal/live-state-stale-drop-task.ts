@@ -1,3 +1,4 @@
+import { servedGatewayPort } from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
 import {
   asNamespace,
   namespaceUrl,
@@ -57,7 +58,7 @@ function renderDescription(row: ReportRow): string {
   );
   lines.push(
     // eslint-disable-next-line endpoints/no-raw-endpoint-call -- a curl line in the task prompt, never fetched here
-    `3. Verify the endpoint forbids shared/browser caching: \`curl -is '${namespaceUrl(asNamespace(row.worktree), `/api/resources/${data.key}`)}?...'\` must show \`Cache-Control: no-store\` on both the 200 and any 304. A missing header lets the browser HTTP cache replay an old-boot body revalidated via a restart-stable ETag — the original poisoning bug.`,
+    `3. Verify the endpoint forbids shared/browser caching: \`curl -is '${namespaceUrl(asNamespace(row.worktree), `/api/resources/${data.key}`, servedGatewayPort())}?...'\` must show \`Cache-Control: no-store\` on both the 200 and any 304. A missing header lets the browser HTTP cache replay an old-boot body revalidated via a restart-stable ETag — the original poisoning bug.`,
   );
   lines.push(
     `4. Read \`research/2026-07-15-global-live-state-http-cache-poisoning-class-fix.md\` for the full diagnosis, the epoch-aware guard matrix, and the never-applied escape hatch.`,

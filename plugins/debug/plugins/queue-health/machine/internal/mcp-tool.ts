@@ -1,3 +1,4 @@
+import { servedGatewayPort } from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
 import { z } from "zod";
 import { basename } from "path";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
@@ -111,7 +112,7 @@ Default: reads the current conversation's own worktree. Pass \`worktree\` to tar
     const summary = await callEndpoint(
       queueHealthSummaryEndpoint,
       {},
-      { origin: namespaceUrl(worktreeName) },
+      { origin: namespaceUrl(worktreeName, "", servedGatewayPort()) },
     );
 
     return {

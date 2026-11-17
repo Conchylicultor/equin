@@ -16,6 +16,11 @@
 // modules", its own leaves' medians and a machine 7% slower than them, so the
 // fixture names the same strings and times to make the two comparable. The
 // mockup's log text and failures are its own simulation, ported verbatim.
+import {
+  GATEWAY_PORT_RANGE,
+  MAIN_WORKTREE_NAME,
+  namespaceUrl,
+} from "@plugins/infra/plugins/namespace/core";
 import { writeFileSync } from "node:fs";
 import { InstallEvent, type InstallEventBody } from "@plugins/installer/core";
 import {
@@ -370,7 +375,12 @@ for (const { id, mock } of SEQ) {
 }
 if (at === null) {
   emit({ type: "step", id: "build", state: "done", ms: 0 });
-  emit({ type: "done", url: "http://equin.localhost:9000", ms: clock * 1000 });
+  emit({
+    type: "done",
+    // What a fresh install reports: main on the first port of the range.
+    url: namespaceUrl(MAIN_WORKTREE_NAME, "", GATEWAY_PORT_RANGE.first),
+    ms: clock * 1000,
+  });
   now = clock;
 }
 

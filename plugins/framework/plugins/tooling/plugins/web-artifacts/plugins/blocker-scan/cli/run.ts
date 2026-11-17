@@ -1,3 +1,4 @@
+import { gatewayPortSync } from "@plugins/infra/plugins/launcher/plugins/gateway-port/data-dirs";
 import {
   existsSync,
   readdirSync,
@@ -9,7 +10,10 @@ import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { cliExecContext } from "@plugins/infra/plugins/jobs/plugins/supervised-job/cli";
 import { ensureDep } from "@plugins/infra/plugins/deps/deps";
 import { downloadedFile } from "@plugins/infra/plugins/deps/plugins/download/deps";
-import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
+import {
+  MAIN_WORKTREE_NAME,
+  namespaceUrl,
+} from "@plugins/infra/plugins/namespace/core";
 import {
   worktreeArtifacts,
   worktreeDataDir,
@@ -40,8 +44,16 @@ import {
   type SourceOf,
 } from "./internal/served-urls";
 
-/** The origins our paths are requested from: the public site and a local namespace. */
-const ORIGINS = ["https://equin.ai", "http://equin.localhost:9000"];
+/**
+ * The origins our paths are requested from: the public site and main's
+ * namespace on this account's gateway.
+ */
+function origins(): string[] {
+  return [
+    "https://equin.ai",
+    namespaceUrl(MAIN_WORKTREE_NAME, "", gatewayPortSync()),
+  ];
+}
 
 /** Every dist main serves or ships: its namespace's dist and each release dist it built. */
 function mainDists(): ServedDist[] {
@@ -83,6 +95,7 @@ const run: CliAction<[], { dryRun?: boolean }> = async (opts) => {
   }
 
   const metaMemo = new Map();
+  const requestOrigins = origins();
   const hits = new Map<string, BlockedArtifactUrlPayload>();
   let urls = 0;
   let gone = 0;
@@ -91,7 +104,7 @@ const run: CliAction<[], { dryRun?: boolean }> = async (opts) => {
     for (const served of dist.files) {
       urls++;
       const matched = new Map<string, (typeof rules)[number]>();
-      for (const origin of ORIGINS) {
+      for (const origin of requestOrigins) {
         for (const r of matchingRules(
           rules,
           origin + served.path,

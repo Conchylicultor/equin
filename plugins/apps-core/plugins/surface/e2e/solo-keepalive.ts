@@ -5,7 +5,7 @@
 //
 // Usage:
 //   ./equin run plugins/apps-core/plugins/surface/e2e/solo-keepalive.ts \
-//     [--url http://<worktree>.localhost:9000] [--out /tmp/solo-keepalive] [--headed]
+//     [--url http://<worktree>.localhost:<port>] [--out /tmp/solo-keepalive] [--headed]
 //
 // Why a DOM expando and not a screenshot: the old bug (a placement toggle that
 // swapped the tab container for a portal) preserved every *pixel* and destroyed

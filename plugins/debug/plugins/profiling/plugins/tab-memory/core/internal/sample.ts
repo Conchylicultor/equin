@@ -37,7 +37,7 @@ export const TabMemorySampleSchema = z.object({
   tabId: z.string().max(100),
   /** `performance.timeOrigin`: when this document started loading. */
   pageStartedAt: z.number().int(),
-  /** The namespace host the page is served from (`equin.localhost:9000`). */
+  /** The namespace host the page is served from (`equin.localhost:<port>`). */
   host: z.string().max(200),
   /** The address bar's in-app route. */
   route: z.string().max(500),

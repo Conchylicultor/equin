@@ -2,7 +2,7 @@
 
 The **serve capability** for a composition: build it into its own frontend dist
 and empty database and serve it live at
-`http://<id>.<checkout>.localhost:9000` — `http://<id>.localhost:9000` when the
+`http://<id>.<checkout>.localhost:<port>` — `http://<id>.localhost:<port>` when the
 checkout is main, where the suffix elides. It owns no surface of its own — it
 exports the pieces its hosts render:
 

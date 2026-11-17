@@ -39,7 +39,6 @@ export type {
 } from "./internal/release-swap";
 export {
   DEV_GATEWAY_LOG_LEVEL,
-  DEV_GATEWAY_PORT,
   devGatewayLaunchOptions,
 } from "./internal/dev-launch";
 export { gatewayServiceJob } from "./internal/gateway-service";

@@ -88,7 +88,7 @@ fi
 
 # ---- safety assertions -------------------------------------------------
 # This harness must never touch the author's real data root (gateway on
-# 9000, embedded Postgres, secrets) or the machine's own VM fleet outside
+# this account's port, embedded Postgres, secrets) or the machine's own VM fleet outside
 # this convention. See "Why the running main instance is untouched" in
 # CLAUDE.md.
 

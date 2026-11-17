@@ -1,7 +1,7 @@
 // Canonical namespace identity.
 //
 // A NAMESPACE is the one name that a deployed app answers to. It is the
-// subdomain in `http://<ns>.localhost:9000`, the spec-dir basename under
+// subdomain in `http://<ns>.localhost:<port>`, the spec-dir basename under
 // `~/.equin/worktrees/<ns>/`, the socket stem `<ns>.sock`, the Postgres
 // database, the config dir, and the `--namespace` a backend is spawned with. All
 // of those are the SAME string, which is exactly why there must be
@@ -77,7 +77,7 @@ export const MAIN_COMPOSITION_ID = LEGACY_IDS.mainNamespace;
  * zero-import leaf is reachable from every one of those runtimes.
  *
  * Like main's row it is a legal composition id but never a servable namespace —
- * its bundle is empty by construction, so `base-exclusions.localhost:9000` is a
+ * its bundle is empty by construction, so `base-exclusions.localhost:<port>` is a
  * namespace nothing could be served at.
  */
 export const BASE_EXCLUSIONS_ID = "base-exclusions";
@@ -255,7 +255,7 @@ export const MAIN_WORKTREE_NAME: Namespace = namespaceFor(MAIN_COMPOSITION_ID, {
 
 /**
  * The host label a namespace is HANDED OUT under, where that is not its own
- * name: main is `http://equin.localhost:9000`.
+ * name: main is `http://equin.localhost:<port>`.
  *
  * Every address the app produces goes through `namespaceHost` / `namespaceUrl`,
  * which read this table — so build output, e2e and agent-browser targets,
@@ -348,14 +348,41 @@ export function isNamespace(raw: string): boolean {
   return NAMESPACE_RE.test(raw);
 }
 
-/** The port every browser-facing namespace is served on. */
-export const GATEWAY_PORT = 9000;
+/**
+ * The ports an account's gateway may listen on: the first free one of
+ * 8700…8709, chosen once by `./equin start` and kept by that account
+ * (`infra/launcher/gateway-port`), so separate macOS accounts run side by side.
+ * 8700–8709 are unassigned in IANA and almost never open on a developer
+ * machine; 9000 (PHP-FPM, MinIO, Portainer, ClickHouse, SonarQube) was not.
+ *
+ * There is no "the" port constant: a port is always a value someone read — the
+ * account's port file, the env its gateway handed it, the page's own
+ * `location.port` — and every URL builder below takes it as an argument.
+ * Design: `research/2026-11-17-global-gateway-port-v2.md`.
+ */
+export const GATEWAY_PORT_RANGE = { first: 8700, last: 8709 } as const;
+
+/**
+ * The port every install listened on before the per-account port: an install
+ * that has not moved yet still runs there, and a moved one keeps answering on
+ * it for a while (the gateway's `-legacy-listen`).
+ */
+export const LEGACY_GATEWAY_PORT = 9000;
+
+/** Whether `port` is one an account's gateway may be given. */
+export function isGatewayPort(port: number): boolean {
+  return (
+    Number.isInteger(port) &&
+    port >= GATEWAY_PORT_RANGE.first &&
+    port <= GATEWAY_PORT_RANGE.last
+  );
+}
 
 /** The DNS suffix every namespace is served under. */
 export const NAMESPACE_HOST_SUFFIX = ".localhost";
 
 /**
- * The host authority for a namespace: `<label>.localhost:9000`, where the label
+ * The host authority for a namespace: `<label>.localhost:<port>`, where the label
  * is the namespace's public host label (`NAMESPACE_HOST_LABELS`) or else the
  * namespace itself.
  *
@@ -363,10 +390,7 @@ export const NAMESPACE_HOST_SUFFIX = ".localhost";
  * `no-hand-built-namespace-url` enforces it. Two dozen hand-built copies is how
  * the port and the suffix ended up spelled in two dozen places.
  */
-export function namespaceHost(
-  ns: Namespace,
-  port: number = GATEWAY_PORT,
-): string {
+export function namespaceHost(ns: Namespace, port: number): string {
   return `${namespaceLabel(ns)}${NAMESPACE_HOST_SUFFIX}:${port}`;
 }
 
@@ -378,8 +402,8 @@ export function namespaceHost(
  */
 export function namespaceUrl(
   ns: Namespace,
-  path = "",
-  port: number = GATEWAY_PORT,
+  path: string,
+  port: number,
 ): string {
   if (path && !path.startsWith("/")) {
     throw new Error(`namespaceUrl path must start with "/" — got "${path}".`);
@@ -388,7 +412,7 @@ export function namespaceUrl(
 }
 
 /**
- * The content host's label: `http://<item>.content.localhost:9000/<ns>/…` is
+ * The content host's label: `http://<item>.content.localhost:<port>/<ns>/…` is
  * where equin serves CONTENT — pages that run script but are not reviewed app
  * code (an agent-written prototype) — off every app origin. `<item>` is one
  * origin per piece of content; the first path segment routes to a namespace's
@@ -420,7 +444,7 @@ export function contentUrl(
   item: string,
   ns: Namespace,
   path: string,
-  port: number = GATEWAY_PORT,
+  port: number,
 ): string {
   if (!CONTENT_ITEM_RE.test(item)) {
     throw new Error(
@@ -483,7 +507,7 @@ export function isContentHost(host: string): boolean {
  */
 export function namespaceFromHost(host: string): Namespace | null {
   let h = host;
-  // Bracketed IPv6 (`[::1]:9000`) before the port strip, since it contains ':'.
+  // Bracketed IPv6 (`[::1]:<port>`) before the port strip, since it contains ':'.
   if (h.startsWith("[")) {
     const end = h.indexOf("]");
     if (end >= 0) h = h.slice(1, end);
@@ -520,7 +544,7 @@ export function asNamespaceOrigin(raw: string): string {
     namespaceFromHost(url.host) === null
   ) {
     throw new Error(
-      `Not a namespace URL: "${raw}" — expected an origin like ${namespaceUrl(MAIN_WORKTREE_NAME)}.`,
+      `Not a namespace URL: "${raw}" — expected an origin like http://${namespaceLabel(MAIN_WORKTREE_NAME)}${NAMESPACE_HOST_SUFFIX}:<port>.`,
     );
   }
   return url.origin;

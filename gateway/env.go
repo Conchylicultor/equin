@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"syscall"
 )
@@ -187,6 +188,22 @@ func (c ChildEnv) CommandContext(ctx context.Context, name string, args ...strin
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Env = c.With()
 	return cmd
+}
+
+// runtimeChildEnv is the base every child starts from: the captured
+// declared environment plus what the gateway itself decides for every child —
+// the data root's layout (dataroot.go) and EQUIN_GATEWAY_PORT, the port this
+// gateway serves on (-listen's). A backend, central and a deploy run read
+// their gateway's port from it, so they always agree with the gateway that
+// spawned them, whatever any file says. Set here, never forwarded: a value
+// the starter carried is replaced.
+func runtimeChildEnv(captured ChildEnv, gatewayPort int) ChildEnv {
+	return captured.Plus(append(dataRootLayoutEnv(), gatewayPortEntry(gatewayPort))...)
+}
+
+// gatewayPortEntry is the EQUIN_GATEWAY_PORT entry for port, in decimal.
+func gatewayPortEntry(port int) string {
+	return envPrefix + "GATEWAY_PORT=" + strconv.Itoa(port)
 }
 
 // ─── the app's own variables, by key ─────────────────────────

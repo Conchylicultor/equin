@@ -1,3 +1,4 @@
+import { servedGatewayPort } from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
 import { z } from "zod";
 import { basename } from "path";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
@@ -81,7 +82,7 @@ Default: profiles the current conversation's worktree server. Pass \`worktree\` 
     const profile = await callEndpoint(
       getRuntimeProfile,
       {},
-      { origin: namespaceUrl(worktreeName) },
+      { origin: namespaceUrl(worktreeName, "", servedGatewayPort()) },
     );
     const targetKinds: readonly SpanKind[] =
       kind === "all" ? SPAN_KINDS : [kind as SpanKind];

@@ -35,9 +35,10 @@ import {
  *    ways; one took `host.split(".")[0]`, which silently yields `sonata` for
  *    `sonata.att-x.localhost`.
  *
- * A hardcoded literal like `http://equin.localhost:9000` in a test fixture
+ * A hardcoded literal like `http://equin.localhost:<port>` in a test fixture
  * is deliberately NOT matched. It is sample data rather than a derivation, and
- * it cannot drift from the rule because it names nothing live.
+ * it cannot drift from the rule because it names nothing live. (A spelled-out
+ * PORT anywhere else is `gateway-port:no-port-literal`'s.)
  */
 const PATTERNS: ReadonlyArray<{ pattern: RegExp; what: string }> = [
   {
@@ -94,7 +95,7 @@ const noHandBuiltNamespaceUrlCheck: Check = {
       ok: false,
       message: `hand-built namespace host in ${offenders.length} place(s):\n    ${offenders.join("\n    ")}`,
       hint:
-        "Build one with `namespaceUrl(ns, path?)` / `namespaceHost(ns)` and read one back with `namespaceFromHost(location.host)`, from `@plugins/infra/plugins/namespace/core`. " +
+        "Build one with `namespaceUrl(ns, path, port)` / `namespaceHost(ns, port)` (the port from `launcher/gateway-port`) and read one back with `namespaceFromHost(location.host)`, from `@plugins/infra/plugins/namespace/core`. " +
         "A namespace is `<composition>.<checkout>` with both sentinels elided, so only the owner knows how many labels that is — which is why the four hand-rolled parsers disagreed with each other and with the gateway. " +
         "If your line is genuinely not namespace identity (an SSRF guard, a navigation heuristic), declare it in your own plugin's `exempt/index.ts` (rule `namespace:no-hand-built-url`) with the reason.",
     };
@@ -262,7 +263,7 @@ const legacyHostCheck: Check = {
       message: `${offenders.length} mention(s) of a legacy namespace host:\n    ${offenders.join("\n    ")}`,
       hint:
         "Write the public host (`NAMESPACE_HOST_LABELS` in `plugins/infra/plugins/namespace/core`) — in docs, comments, fixtures and e2e headers alike. " +
-        "Code builds an address with `namespaceUrl(ns)` / `namespaceHost(ns)`, never a literal. " +
+        "Code builds an address with `namespaceUrl(ns, path, port)` / `namespaceHost(ns, port)`, never a literal. " +
         `A file that must spell the old host (a test that it still resolves) declares a \`${LEGACY_HOST_RULE}\` exemption in its plugin's \`exempt/index.ts\`.`,
     };
   },

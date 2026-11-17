@@ -8,6 +8,7 @@
  * the DB directly for the server + its health row) and the reason they differ
  * are documented on the command declaration, `../index.ts`.
  */
+import { gatewayPortSync } from "@plugins/infra/plugins/launcher/plugins/gateway-port/data-dirs";
 import { writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -139,7 +140,7 @@ async function withDb<T>(fn: (db: NodePgDatabase) => Promise<T>): Promise<T> {
 
 /** This checkout's own backend, through the gateway. */
 async function backendBase(): Promise<string> {
-  return namespaceUrl(await deployNamespace());
+  return namespaceUrl(await deployNamespace(), "", gatewayPortSync());
 }
 
 /**

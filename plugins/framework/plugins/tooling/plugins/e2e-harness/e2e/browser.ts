@@ -203,7 +203,7 @@ function launchFailure(
  * The target URL's path is only meaningful to a tool whose job is "open the
  * page I name" (`screenshot.ts`, `perf.ts`, the profilers) — those call
  * `pageUrl()`. A script that verifies one specific screen names it itself, so
- * `tabs-verify.ts --url http://wt:9000/pages` would drive `/agents` and pass,
+ * `tabs-verify.ts --url http://wt:<port>/pages` would drive `/agents` and pass,
  * having tested a screen the caller did not ask for. Nothing crashes: the
  * origin was split off correctly, so only the intent is lost. That is exactly
  * the silent green run this harness exists to make unreachable.
@@ -217,7 +217,7 @@ function assertPageWasConsumed(): void {
   if (page === undefined) return;
   throw new Error(
     `the target URL named a page (${page}) but this script drives its own.\n` +
-      `  Drop the path to point it at another deploy: --url http://<worktree>.localhost:9000`,
+      `  Drop the path to point it at another deploy: --url http://<worktree>.localhost:<port>`,
   );
 }
 

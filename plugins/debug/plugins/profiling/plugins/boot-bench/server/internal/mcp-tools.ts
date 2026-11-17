@@ -1,3 +1,4 @@
+import { servedGatewayPort } from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
 import { z } from "zod";
 import { basename } from "path";
 import { callEndpoint } from "@plugins/infra/plugins/endpoints/server";
@@ -116,7 +117,10 @@ Default: benchmarks the current conversation's worktree server. Pass \`worktree\
     const response = await callEndpoint(
       bootBenchRun,
       {},
-      { origin: namespaceUrl(worktreeName), body: reqBody },
+      {
+        origin: namespaceUrl(worktreeName, "", servedGatewayPort()),
+        body: reqBody,
+      },
     );
     const report = buildReport(response);
 

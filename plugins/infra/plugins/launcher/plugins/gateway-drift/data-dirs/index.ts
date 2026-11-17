@@ -6,7 +6,8 @@ import { defineDataDir } from "@plugins/infra/plugins/paths/core";
  * the gateway and the successor's boot-edge run must not both act) and
  * `last-attempt.json` (the launch last tried, so a launch is tried once:
  * the termination rule of the loop a failing gateway would otherwise start —
- * every gateway boot runs the converge, which would retry it).
+ * every gateway boot runs the converge, which would retry it), and the switch
+ * helper's plan and log (`switch-plan.json`, `switch.log`).
  */
 export const gatewayFollowState = defineDataDir({
   kind: "state",
@@ -23,5 +24,12 @@ export const gatewayFollowState = defineDataDir({
 
 export const FOLLOW_LOCK_FILENAME = "follow.lock";
 export const LAST_ATTEMPT_FILENAME = "last-attempt.json";
+/**
+ * A service restart the follow hands to the switch helper (`bin/switch.ts`):
+ * the plan it runs, and the log it writes — the one record of a restart the
+ * run that planned it did not live to see.
+ */
+export const SWITCH_PLAN_FILENAME = "switch-plan.json";
+export const SWITCH_LOG_FILENAME = "switch.log";
 
 export default [gatewayFollowState];

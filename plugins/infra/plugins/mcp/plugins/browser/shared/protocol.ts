@@ -30,7 +30,7 @@ export const HOST_ORIGIN = "http://agent-browser";
 export const HostTargetSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("deploy"),
-    /** `http://<namespace>.localhost:9000`, no trailing slash. */
+    /** `http://<namespace>.localhost:<port>`, no trailing slash. */
     origin: z.string(),
     namespace: z.string(),
   }),

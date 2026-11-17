@@ -104,7 +104,7 @@ Bring it into THIS worktree. You own resolving the merge and proving the merged 
    failing — one side's published migration cannot run on this database. Ask the user: quote
    that output verbatim, say what each side meant, and recommend a shape.
 
-4. Open \`http://<worktree>.localhost:9000\` and check the app still works: it comes up, the
+4. Open \`http://<worktree>.localhost:<port>\` and check the app still works: it comes up, the
    screens you can reach render, the features the user built still do what they did, and
    Debug → Reports holds nothing new.
 

@@ -14,10 +14,8 @@
 
 import type { HeldBackend } from "@plugins/infra/plugins/worktree/plugins/backend-hold/core";
 import { z } from "zod";
-import {
-  GATEWAY_PORT,
-  type Namespace,
-} from "@plugins/infra/plugins/namespace/core";
+import type { Namespace } from "@plugins/infra/plugins/namespace/core";
+import { gatewayOriginFor } from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
 
 /** The gateway refused, or did not confirm, the hold — nothing was touched. */
 export class BackendHoldError extends Error {
@@ -27,12 +25,17 @@ export class BackendHoldError extends Error {
   }
 }
 
-const gatewayWorktreeUrl = (ns: Namespace, action: "stop" | "restart") =>
-  `http://localhost:${GATEWAY_PORT}/gateway/worktrees/${encodeURIComponent(ns)}/${action}`;
+const gatewayWorktreeUrl = (
+  ns: Namespace,
+  port: number,
+  action: "stop" | "restart",
+) =>
+  `${gatewayOriginFor(port)}/gateway/worktrees/${encodeURIComponent(ns)}/${action}`;
 
 // The only place a `HeldBackend` is built: after the gateway confirmed there is
 // no backend to hold, or that it holds this one.
-const held = (namespace: Namespace) => ({ namespace }) as HeldBackend;
+const held = (namespace: Namespace, gatewayPort: number) =>
+  ({ namespace, gatewayPort }) as HeldBackend;
 
 const HeldStatus = z.object({ held: z.boolean().optional() });
 
@@ -49,19 +52,31 @@ const HeldStatus = z.object({ held: z.boolean().optional() });
  * Two answers mean nothing can be running, so there is nothing to hold: an
  * unreachable gateway (every backend is its child) and 404 (the namespace is
  * not registered, so the gateway cannot start it).
+ *
+ * `gatewayPort` is the port of the gateway that runs the backend — so it must
+ * be the RIGHT one: an unreachable gateway reads as "no backend runs", and a
+ * wrong port would read as that while the backend serves on. A backend passes
+ * `servedGatewayPort()`, a CLI process `gatewayPortSync()`
+ * (`infra/launcher/gateway-port`).
  */
-export async function holdBackendDown(ns: Namespace): Promise<HeldBackend> {
+export async function holdBackendDown(
+  ns: Namespace,
+  gatewayPort: number,
+): Promise<HeldBackend> {
   let resp: Response;
   try {
-    resp = await fetch(`${gatewayWorktreeUrl(ns, "stop")}?hold=1`, {
-      method: "POST",
-      signal: AbortSignal.timeout(60_000),
-    });
+    resp = await fetch(
+      `${gatewayWorktreeUrl(ns, gatewayPort, "stop")}?hold=1`,
+      {
+        method: "POST",
+        signal: AbortSignal.timeout(60_000),
+      },
+    );
   } catch (err) {
-    if (err instanceof TypeError) return held(ns); // gateway down: no backend runs
+    if (err instanceof TypeError) return held(ns, gatewayPort); // gateway down: no backend runs
     throw err;
   }
-  if (resp.status === 404) return held(ns);
+  if (resp.status === 404) return held(ns, gatewayPort);
   const body = await resp.text();
   if (!resp.ok) {
     throw new BackendHoldError(
@@ -78,7 +93,7 @@ export async function holdBackendDown(ns: Namespace): Promise<HeldBackend> {
         `Nothing was touched; the backend cold-starts on the next request.`,
     );
   }
-  return held(ns);
+  return held(ns, gatewayPort);
 }
 
 /**
@@ -92,7 +107,7 @@ export async function startBackend(backend: HeldBackend): Promise<void> {
   const ns = backend.namespace;
   let resp: Response;
   try {
-    resp = await fetch(gatewayWorktreeUrl(ns, "restart"), {
+    resp = await fetch(gatewayWorktreeUrl(ns, backend.gatewayPort, "restart"), {
       method: "POST",
       signal: AbortSignal.timeout(180_000),
     });

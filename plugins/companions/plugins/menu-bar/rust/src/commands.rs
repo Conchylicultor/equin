@@ -199,8 +199,9 @@ async fn start_gateway(app: AppHandle) -> Result<(), String> {
 
 /// Which window is calling, with what it is held to.
 pub enum Caller<'a> {
-    /// The panel, held to its pin.
-    Panel(&'a panel::Pin),
+    /// The panel, held to the pin it was built on (`None`: built without one,
+    /// the offline page only).
+    Panel(Option<&'a panel::Pin>),
     /// An installed app's window, held to its scope (the app URL's origin).
     AppWindow(&'a window::Scope),
     /// A window no command answers.
@@ -214,7 +215,7 @@ pub enum Caller<'a> {
 /// else: no.
 pub fn admitted(caller: &Caller, command: &str, shown: &Url) -> Result<(), String> {
     let ok = match caller {
-        Caller::Panel(pin) if PANEL_COMMANDS.contains(&command) => pin.admits(shown),
+        Caller::Panel(pin) if PANEL_COMMANDS.contains(&command) => pin.is_some_and(|p| p.admits(shown)),
         Caller::Panel(_) if OFFLINE_COMMANDS.contains(&command) => panel::is_offline_page(shown),
         Caller::AppWindow(scope) if APP_WINDOW_COMMANDS.contains(&command) => scope.admits(shown),
         _ => false,
@@ -247,10 +248,10 @@ pub fn handler() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
         let webview = invoke.message.webview();
         let command = invoke.message.command().to_string();
         let app = webview.app_handle();
-        let panel = app.try_state::<panel::Panel>();
+        let pin = app.try_state::<panel::Panel>().map(|p| p.pin());
         let scope = app.try_state::<window::Scope>();
         let caller = match webview.label() {
-            panel::LABEL => panel.as_ref().map_or(Caller::Other, |p| Caller::Panel(p.pin())),
+            panel::LABEL => pin.as_ref().map_or(Caller::Other, |p| Caller::Panel(p.as_ref())),
             l if window::is_app_label(l) => scope.as_ref().map_or(Caller::Other, |s| Caller::AppWindow(s)),
             _ => Caller::Other,
         };
@@ -279,8 +280,8 @@ mod tests {
 
     #[test]
     fn the_bridge_answers_the_pinned_page_only() {
-        let pin = panel::Pin::for_namespace("equin");
-        let pin = &Caller::Panel(&pin);
+        let pin = panel::Pin::new("equin", 9000);
+        let pin = &Caller::Panel(Some(&pin));
         assert!(admitted(pin, "host_info", &u("http://equin.localhost:9000/home/menu-bar?embed=1")).is_ok());
         assert!(admitted(pin, "notify", &u("http://equin.localhost:9000/home/menu-bar/x")).is_ok());
         assert!(admitted(pin, "pin_app", &u("http://equin.localhost:9000/home/menu-bar?embed=1")).is_ok());
@@ -301,6 +302,19 @@ mod tests {
         assert!(admitted(pin, "unknown", &u("http://equin.localhost:9000/home/menu-bar")).is_err());
         // The panel never gets an app window's commands.
         assert!(admitted(pin, "start_file_drag", &u("http://equin.localhost:9000/home/menu-bar")).is_err());
+    }
+
+    #[test]
+    fn after_a_port_move_the_old_origin_is_refused() {
+        // The old origin's ACL grant cannot be withdrawn; the gate holds.
+        let moved = panel::Pin::new("equin", 8700);
+        let moved = &Caller::Panel(Some(&moved));
+        assert!(admitted(moved, "host_info", &u("http://equin.localhost:8700/home/menu-bar?embed=1")).is_ok());
+        assert!(admitted(moved, "host_info", &u("http://equin.localhost:9000/home/menu-bar?embed=1")).is_err());
+        // Built without a pin (an unreadable port file): Start only.
+        let none = &Caller::Panel(None);
+        assert!(admitted(none, "host_info", &u("http://equin.localhost:8700/home/menu-bar?embed=1")).is_err());
+        assert!(admitted(none, "start_gateway", &u("tauri://localhost/index.html?error=x")).is_ok());
     }
 
     #[test]

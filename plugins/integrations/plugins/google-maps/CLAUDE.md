@@ -17,7 +17,7 @@ for the other:
   **never** reach a browser. Setup: `auth/google-maps/setup-wizard`.
 - **The browser key — public config.** The live map is drawn in the page by
   the Maps JavaScript API, which needs a key in the page. Such a key is public
-  by design: it is restricted to HTTP referrers (`http://*.localhost:9000/*`
+  by design: it is restricted to HTTP referrers (`http://*.localhost:<port>/*`
   plus any published domain) and to the Maps JavaScript API only, and its
   spend is bounded by a daily quota. Setup: this plugin's **Live map** Accounts
   row, whose account pane (`settings/accounts/account/google-maps-live-map`)
@@ -145,13 +145,14 @@ over:
   - Slots: `LiveMapSetup.MapIdPreview`
   - Slot contributors: `LiveMapSetup.MapIdPreview` ← `map.google`
   - Contributes: `Auth.Integration` "Live map"
-  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/setup-steps` ×10
     - `network/live/live-state` ×5
     - `auth` ×3
     - `infra/endpoints` ×3
     - `integrations/google-maps/browser-config` ×2
     - `primitives/css/ui-kit` ×2
+    - `infra/launcher/gateway-port.usePagePort`
     - `network/live.useLive`
     - `primitives/css/clip.Clip`
     - `primitives/css/spacing.Stack`

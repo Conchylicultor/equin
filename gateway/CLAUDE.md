@@ -6,7 +6,7 @@ See the top-level [`CLAUDE.md`](../CLAUDE.md) for overall architecture and [`ser
 
 ## What It Does
 
-- Listens on loopback port 9000 (`-listen loopback:9000`: one listener on `127.0.0.1:9000`, one on `[::1]:9000`, one `http.Server`), routes `<name>.localhost:9000` → that worktree's backend
+- Listens on this account's loopback port (`-listen loopback:<port>`, required — see "The port": one listener on `127.0.0.1:<port>`, one on `[::1]:<port>`), routes `<name>.localhost:<port>` → that worktree's backend
 - Serves each worktree's `web/dist` as static files directly (no backend spawn needed for page loads)
 - Lazy-spawns the backend on a page load (in the background, beside the SPA shell) or the first `/api/*` or `/ws/*` request; tears it down after 10 minutes idle — except the namespace it serves to the public (below)
 - **Never sweeps a deployed site's backend.** The namespace a gateway serves at its `-public-hosts` is derived, never named: a public host has no `<name>.localhost` label, so it can only reach `-default-namespace` (`Config.publicNamespace`; public hosts without a default namespace are fatal at boot). Idle sweeping frees memory from backends nobody uses; a public site's one backend being "idle" only moves its cold start (~0.8 s) onto the next visitor — about five times a day on the website box before this (2026-11-13). A dev gateway, desktop app or preview passes no public hosts and is swept as before. `/stop` and `?hold=1` still stop it (a data reset must be able to).
@@ -18,6 +18,57 @@ See the top-level [`CLAUDE.md`](../CLAUDE.md) for overall architecture and [`ser
 - **Triggers main's deploy** (`-main-checkout`): on every advance of `refs/heads/main` it runs `./equin build --allow-main --converge` in main's checkout, one run at a time. See "Main's deploy" below.
 - **Is replaced by main's deploy when main changes it**: that same run rebuilds this binary and hands the running gateway over to it — no one runs `./equin start --force` for a pushed gateway change, and no backend restarts. See "The gateway follows main" below.
 - **Runs as a keeper and its generations** (`keeper.go`): the process a service manager or launcher starts holds the listening sockets and is the parent of every backend; the gateway proper is its child, replaced by `POST /gateway/handover` with no request refused and no backend stopped. See "The keeper: a gateway update is a handover" below.
+
+## The port
+
+**`-listen` is required, with no default**: a gateway started without it exits
+at once (`gateway: fatal: -listen is required …`, before the keeper starts
+anything). The port is per account — 8700 by default, the first free one of
+8700..8709 — chosen once by `./equin start`, recorded in
+`~/.equin/state/gateway/port` and owned by
+`plugins/infra/plugins/launcher/plugins/gateway-port` (`./equin url` prints this
+account's). A Go default would be a second copy of that choice. The port must
+be a real one (1..65535; `0` is refused — there would be nothing to tell a
+child or a browser).
+
+**Every child learns it from the gateway**: `env.go` (`runtimeChildEnv`) adds
+`EQUIN_GATEWAY_PORT=<port>` (decimal, -listen's port) to every child's base —
+backends, central, supervised services, main's deploy run — replacing any value
+the starter carried. A backend dials the gateway it runs under, never a port a
+file or a constant names; absent (a gateway older than this), a backend reads
+the old fixed port, the only one such a gateway listened on.
+
+**`-legacy-listen <addr>`** (same grammar as `-listen`, e.g. `loopback:9000`;
+empty = none) is the port an install moved off, served while it migrates
+(design: [`research/2026-11-17-global-gateway-port-v2.md`](../research/2026-11-17-global-gateway-port-v2.md) § 4;
+`listen.go`). Running agents (`EQUIN_PARENT_URL`), unrebased worktree builds
+and open tabs still hold the old origin, so it serves EXACTLY as the main port
+does — API, WebSockets, `/gateway/*`, MCP — on its own `http.Server` over the
+same handler, shut down and drained with the main one (`serverSet`). One
+exception, `legacyRedirect`: a **top-level document navigation**
+(`Sec-Fetch-Mode: navigate` AND `Sec-Fetch-Dest: document`) is answered
+`308 Permanent Redirect` to the same host name, path and query on the main
+port, so bookmarks and typed URLs move. Exempt (served, not redirected):
+`?embed=1` (the tray panel, the extension's frame); a `Sec-Fetch-Site` other
+than `none` / `same-origin`, absent included (OAuth popups, foreign frames,
+tools); any `/gateway`, `/api` or `/ws` path.
+
+- **Its bind is best effort.** Another account's gateway may hold that port,
+  so a failed bind (`EADDRINUSE`, …) is a warning in `gateway.log`, never
+  fatal; the legacy sockets are bound all-or-none (`listenAll`). The keeper
+  holds them with the main ones. A generation tags each inherited socket by
+  its address (`inheritedListeners`): `-listen`'s are required, as before;
+  `-legacy-listen`'s optional (a keeper may hold none — the generation serves
+  without them, and a handover whose argv names one succeeds either way); a
+  socket neither flag names is an error.
+- **Removing it** is a follow-up commit deleting the flag; the reload that
+  push triggers drops the port.
+
+**`GET /gateway/identity`** — whose gateway this is:
+`{"product":"equin","uid":<uid>,"dataDir":"<data root>","port":<main port>,"legacyListen":{"addr":"<-legacy-listen>","held":<bool>}|null}`.
+`./equin start` tells its own gateway from another account's (or a foreign
+server on the port) by it; the health read shows `legacyListen.held`.
+Owner-only, like every `/gateway/*` route.
 
 ## Key Design Decisions
 
@@ -171,7 +222,7 @@ Location: `~/.equin/worktrees/<name>/spec.json`. Directory name = worktree ident
 
 `server` is required and absolute; `web` is absolute when present (central has none). Optional `command` (argv to spawn instead of the bun convention) and `env` (full variable names → values, applied on top of the declared child env when the backend is spawned — a same-named entry is replaced; keys non-empty, no `=`, else the spec is rejected). `env` is how what belongs to the code a spec runs (a release bundle's own paths) travels with that spec instead of being inherited from whoever started the gateway. The gateway hardcodes the launch convention (`bun bin/index.ts --namespace <name> --socket <path> --principal-stamped`, escalating readiness timeout — see "Backend Contract"). No per-worktree overrides in v1. Other per-worktree files (build logs, profiling data) also live in the same subdirectory.
 
-Composition namespaces (`http://<composition>.<checkout>.localhost:9000`, or `http://<composition>.localhost:9000` when the checkout is main — `./equin build --composition <name>`) are ordinary spec dirs written by the build: `server` points at the checkout that built it, `web` at a composed dist, plus a `composition.json` provenance marker the gateway ignores. No gateway changes; namespace identity flows the same way (dir name → the backend's `--namespace`). The `composition` field on the spec is carried through the gateway's round-trip but never interpreted or forwarded — the backend reads it back off the same file.
+Composition namespaces (`http://<composition>.<checkout>.localhost:<port>`, or `http://<composition>.localhost:<port>` when the checkout is main — `./equin build --composition <name>`) are ordinary spec dirs written by the build: `server` points at the checkout that built it, `web` at a composed dist, plus a `composition.json` provenance marker the gateway ignores. No gateway changes; namespace identity flows the same way (dir name → the backend's `--namespace`). The `composition` field on the spec is carried through the gateway's round-trip but never interpreted or forwarded — the backend reads it back off the same file.
 
 ### Discovery: dir-level watch + lazy resolve + periodic reconcile
 
@@ -216,6 +267,8 @@ Flat single-package layout:
 ```
 gateway/
 ├── main.go        # Flags, wiring, signal handling, sockets-dir setup, service bring-up; keeper vs generation dispatch
+├── listen.go      # -listen / -legacy-listen parsed; the legacy port's best-effort bind and its navigation 308; the server set
+├── identity.go    # GET /gateway/identity: product, uid, data root, port, legacy listener
 ├── datalock.go    # One gateway per data root: the -lock-file flock held for the process's life (the keeper's, under one)
 ├── keeper.go      # The keeper: holds the listening sockets, starts the gateway generations and their long-lived children, runs a handover
 ├── keeper_proto.go # The keeper ⇄ generation control socket: framed JSON + SCM_RIGHTS descriptors
@@ -390,8 +443,9 @@ ready.
 
 **What still restarts the service:** a change to the keeper itself (its code
 reaches a machine only when its service restarts — a reboot, `start --force`), a
-`-listen` change (a generation refuses sockets that are not the ones `-listen`
-names), and on the box anything but the gateway binary (Postgres, PgBouncer, the
+`-listen` or `-legacy-listen` change that binds a new socket (a generation
+refuses sockets that are not the ones `-listen` names; a legacy port the keeper
+does not hold is served only after a restart), and on the box anything but the gateway binary (Postgres, PgBouncer, the
 gateway's flags — `release-swap.ts`). The protocol is versioned
 (`keeperProtocol`): a generation refuses a keeper speaking another one, which
 fails its handover and leaves the old one serving.
@@ -478,16 +532,21 @@ convergence run calls `followMainGateway` (`plugins/infra/plugins/launcher/plugi
 - **How.** Install main's build into the equin app, write the job (what the
   NEXT start of the service runs), then `POST /gateway/handover` with the job's
   binary, argv, environment and cwd: the keeper replaces the gateway process,
-  every backend keeps running. A gateway from before the keeper answers `404`;
-  only then is it `start --force`'s path — `reloadService` (unload, wait out
-  the old process, load) and `awaitGatewayReady` — once, after which it runs
-  under a keeper. A failed handover leaves the old gateway serving; the follow
-  restores the files (the bundle's binary, the job) and files the failure. What outlives it: agents (detached), Postgres / PgBouncer and
-  their log relays (reattached), and this run (its own process group —
-  measured 2026-11-11 on macOS 26: `launchctl bootout` kills the job's process
-  group and leaves a child that `setpgid`'d alone, reparented to pid 1; systemd
-  is `KillMode=process`). One window remains: a run killed between the unload
-  and the load leaves the job unloaded until the next login. A tab
+  every backend keeps running. A gateway from before the keeper answers `404`,
+  and a changed listen set (`-listen`, `-legacy-listen` — the keeper holds the
+  sockets) cannot be handed over; only then is the service restarted —
+  `reloadService` (unload, wait out the old process, load) and
+  `awaitGatewayReady` on the new port — by the **switch helper**
+  (`gateway-drift/bin/switch.ts`), never by the run itself: the run is a child
+  the keeper spawned, and the keeper's stop signals every child's process
+  group (`stopChildren`), so the run would die between the unload and the
+  load. The helper runs in a session of its own, outside the keeper's children
+  and the job's process group (measured 2026-11-11 on macOS 26: `launchctl
+  bootout` kills the job's process group and leaves a child that `setsid`'d
+  alone, reparented to pid 1; systemd is `KillMode=process`), and rolls back
+  itself. A failed handover leaves the old gateway serving; the follow
+  restores the files (the bundle's binary, the job) and files the failure. What outlives a restart: agents (detached), Postgres / PgBouncer and
+  their log relays (reattached), and the helper. A tab
   reconnects its socket; an agent's build that POSTs its restart in the gap
   finds no gateway, which it treats as "spawns on the next request".
 - **Never no gateway.** Before touching anything it captures the way back: the
@@ -594,19 +653,19 @@ platform). By hand, for a debugger:
 
 ```sh
 go build -o /tmp/gateway .
-/tmp/gateway -child-env HOME,USER,PATH                   # minimal hand-run (a keeper + its generation); defaults: loopback:9000, ~/.equin/worktrees/
-/tmp/gateway -no-keeper -child-env HOME,USER,PATH        # one process, for a debugger (cannot hand over)
-/tmp/gateway -child-env HOME,USER,PATH -listen loopback:8080 -idle-timeout 5m -log-level debug
+/tmp/gateway -listen loopback:8080 -child-env HOME,USER,PATH              # minimal hand-run (a keeper + its generation); default registry: ~/.equin/worktrees/
+/tmp/gateway -no-keeper -listen loopback:8080 -child-env HOME,USER,PATH   # one process, for a debugger (cannot hand over)
+/tmp/gateway -listen loopback:8080 -child-env HOME,USER,PATH -idle-timeout 5m -log-level debug
 ```
 
-`-child-env` is **required**: a comma-separated list of the environment variable names children may receive (an entry ending in `*`, like `EQUIN_AUTH_*`, matches a prefix). Without it the gateway exits non-zero before doing anything. It has no Go-side default on purpose — the declaration lives in one place, `runtimeEnvNames()` in `plugins/infra/plugins/launcher/plugins/runtime-env/core`, and `./equin start` passes exactly that. The minimal form above is enough to poke at routing under a debugger; a backend that needs more (the app's installation settings, OAuth credentials) needs the full list (`readEnv` in `env.go` reads `EQUIN_<key>`). At boot `gateway.log` records the forwarded names at info and, at warn, every name in the gateway's own environment it is NOT forwarding — the normal path drops nothing, so a warn line means a hand-run gateway. Names only, never values.
+`-listen` and `-child-env` are **required** (`./equin start` passes both; pick a port this account's gateway does not hold — `./equin url` names it). `-child-env`: a comma-separated list of the environment variable names children may receive (an entry ending in `*`, like `EQUIN_AUTH_*`, matches a prefix). Without it the gateway exits non-zero before doing anything. It has no Go-side default on purpose — the declaration lives in one place, `runtimeEnvNames()` in `plugins/infra/plugins/launcher/plugins/runtime-env/core`, and `./equin start` passes exactly that. The minimal form above is enough to poke at routing under a debugger; a backend that needs more (the app's installation settings, OAuth credentials) needs the full list (`readEnv` in `env.go` reads `EQUIN_<key>`). At boot `gateway.log` records the forwarded names at info and, at warn, every name in the gateway's own environment it is NOT forwarding — the normal path drops nothing, so a warn line means a hand-run gateway. Names only, never values.
 
 ## Backend Contract
 
 The gateway expects backends to:
 
 1. Read their socket path from `--socket <path>` on argv (required; backends should error out if missing). A socket is per process, so it must not ride in the environment, where every process the backend starts would inherit it. The server-side reader is `readServingSocket()` in `plugins/infra/plugins/runtime-identity/core`. (A spec written while the transition ran may still carry a `socketTransport` key; the gateway ignores it.)
-2. **Expect a declared environment, nothing ambient.** A backend receives exactly the declared runtime environment — the names the launcher passes via `-child-env` (`runtimeEnvNames()` in `plugins/infra/plugins/launcher/plugins/runtime-env/core`), with the values the gateway itself was started with — and nothing else. Nothing is inherited from whoever started the gateway: an undeclared variable in the starting shell never reaches a backend. A per-child value overrides a same-named base entry. Supervised-service start commands (Postgres, PgBouncer) and the gateway's own helper execs (`taskpolicy`, `ps`) get the base alone. A new variable a backend must read goes on the launcher's list — declaring it there is the whole change: `-child-env` changes, so main's deploy restarts the gateway once it lands (the value is the one the gateway was started with).
+2. **Expect a declared environment, nothing ambient.** A backend receives exactly the declared runtime environment — the names the launcher passes via `-child-env` (`runtimeEnvNames()` in `plugins/infra/plugins/launcher/plugins/runtime-env/core`), with the values the gateway itself was started with — and nothing else. Nothing is inherited from whoever started the gateway: an undeclared variable in the starting shell never reaches a backend. A per-child value overrides a same-named base entry. Supervised-service start commands (Postgres, PgBouncer) and the gateway's own helper execs (`taskpolicy`, `ps`) get the base alone. The base also carries what the gateway decides for every child itself: `EQUIN_DATA_ROOT_LAYOUT` and `EQUIN_GATEWAY_PORT` (see "The port"). A new variable a backend must read goes on the launcher's list — declaring it there is the whole change: `-child-env` changes, so main's deploy restarts the gateway once it lands (the value is the one the gateway was started with).
 3. Bind that Unix socket and accept HTTP/1.1 + WebSocket connections on it. The gateway polls readiness via `GET /api/health/ready` over the socket — it hot-swaps only once that returns `200` (backend fully ready: migrations applied, DB warm, registry built), not on a bare socket accept. A `404` (backend predates the readiness endpoint) falls back to "HTTP-reachable = ready"; `503` means still booting.
 
    **Wedge detection is progress-aware and escalates before it kills.** The base deadline (`-ready-timeout`, load-adaptive up to `-ready-timeout-max`) is only the wedge *threshold*: when it expires but the backend has answered HTTP at all (even `503`), or was spawned darwinbg-demoted (an E-core boot legitimately exceeds base under host load — even to first socket bind), the gateway tells the backend to leave darwinbg (its next readiness probe says `foreground`, see "Start priority") and extends the wait by `-ready-timeout-max` instead of SIGKILLing near-complete boot work. Only a silent, never-demoted backend is declared wedged at base; a crashed backend is always caught instantly via its exit channel. This closes the 2026-07-07 spawn-kill loop, where healthy demoted boots were killed at 15s four times in a row under load, turning a slow cold start into a ~2-minute outage.

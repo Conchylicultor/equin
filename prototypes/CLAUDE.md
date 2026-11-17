@@ -3,7 +3,7 @@
 A prototype is a throwaway UI mockup: one flat folder in
 `~/.equin/apps/prototypes/<id>/`, with an `index.html`. It is **not in
 the repo**: write there directly and commit nothing. That folder is shared by
-every worktree and main and shows at `http://equin.localhost:9000` as
+every worktree and main and shows at `http://equin.localhost:<port>` as
 soon as you save. No build is needed. Its pin, Done mark, tag and deletion are not in
 the folder: they are per-instance DB state, set in the app.
 
@@ -59,7 +59,7 @@ never create a `.git` inside a prototype folder.
   is the whole page height — and a page sized in `vh` or from `innerHeight`
   follows its window, so it has no whole-page height at all.
 - **It runs as untrusted content, off the app.** The app frames a prototype on
-  its own origin (`http://<id>.content.localhost:9000/<ns>/…`): its own files,
+  its own origin (`http://<id>.content.localhost:<port>/<ns>/…`): its own files,
   `localStorage` and nested frames of its own pages work; the app's API,
   `window.top` and a Service Worker do not. Never reach for the app from a
   mock.
@@ -120,7 +120,7 @@ and thumbnails.
 
 `./equin prototype options <id>` prints the variant the user is looking
 at (one shared pick for every tab and deploy) and its URL — on the prototype's
-own content host (`http://<id>.content.localhost:9000/<ns>/api/prototypes/<id>/…`).
+own content host (`http://<id>.content.localhost:<port>/<ns>/api/prototypes/<id>/…`).
 To render a variant, change that URL's query (`?pane=floating&accent=%2310b981`)
 and load it, e.g. with `e2e-harness/e2e/screenshot.ts --url …`. Never load
 `/api/prototypes/…` on an app origin: it serves untrusted content, so it

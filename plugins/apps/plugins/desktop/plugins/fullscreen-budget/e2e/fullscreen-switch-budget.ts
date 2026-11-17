@@ -22,7 +22,7 @@
 //
 // Usage:
 //   ./equin run plugins/apps/plugins/desktop/plugins/fullscreen-budget/e2e/fullscreen-switch-budget.ts \
-//     [--rounds 4] [--settle 1500] [--url http://<namespace>.localhost:9000]
+//     [--rounds 4] [--settle 1500] [--url http://<namespace>.localhost:<port>]
 //
 // On demand it prints the verdict and exits 1 while a case is over budget.
 // Main's `desktop.fullscreen-budget` job (after each of main's builds) adds

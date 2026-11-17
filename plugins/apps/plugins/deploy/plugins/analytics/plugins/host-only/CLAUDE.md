@@ -19,7 +19,7 @@ request straight to the gateway as `127.0.0.1`. `requestClientIp(req)` reads the
 same chain (second-to-last entry) and is the only code that should know it.
 
 A request made straight to the backend's unix socket carries no header at all,
-so it is refused too — go through the gateway (`http://<ns>.localhost:9000`
+so it is refused too — go through the gateway (`http://<ns>.localhost:<port>`
 locally, the loopback port on a box).
 
 ## Shared public-route guards

@@ -27,18 +27,32 @@ import { gatewayLogs } from "@plugins/infra/plugins/launcher/plugins/gateway-log
 import { startLogs } from "../data-dirs";
 import { GATEWAY_SERVICE } from "@plugins/infra/plugins/launcher/core";
 import {
+  GATEWAY_PORT_RANGE,
+  LEGACY_GATEWAY_PORT,
   MAIN_WORKTREE_NAME,
+  isGatewayPort,
   namespaceUrl,
 } from "@plugins/infra/plugins/namespace/core";
+import type { GatewayPortRecord } from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
+import {
+  chooseGatewayPort,
+  describeChoice,
+  portHolder,
+  probeGateway,
+  writeGatewayPortRecord,
+} from "@plugins/infra/plugins/launcher/plugins/gateway-port/machine";
+import {
+  gatewayPortSync,
+  readGatewayPortRecordSync,
+} from "@plugins/infra/plugins/launcher/plugins/gateway-port/data-dirs";
+import { listenPortOf } from "@plugins/infra/plugins/launcher/plugins/gateway-drift/machine";
 import {
   assertSupportedHost,
   readPid,
   isRunning,
-  isGatewayListening,
   spawnGatewayDaemon,
   gatewayLaunchSpec,
   awaitGatewayReady,
-  DEV_GATEWAY_PORT,
   gatewayServiceJob,
   type GatewayLaunchOptions,
 } from "@plugins/infra/plugins/launcher/server";
@@ -129,11 +143,32 @@ type Opts = {
   force?: boolean;
   logLevel: string;
   only?: string;
+  port?: string;
   verbose?: boolean;
 };
 
-/** What the steps `start` drives are handed: the app bundle, and the start log. */
-type Steps = { app: MacosAppHost; log: (line: string) => void };
+/**
+ * The port this start launches the gateway on, and what it records once the
+ * gateway answers there (`launcher/gateway-port`): the record it keeps, a
+ * fresh choice, a move off 9000, or `--port`.
+ */
+type PortPlan = {
+  record: GatewayPortRecord;
+  /** The port the running gateway listens on now (to say what moved), or null. */
+  from: number | null;
+  /** What to say about it, or null when nothing changed. */
+  said: string | null;
+};
+
+/**
+ * What the steps `start` drives are handed: the app bundle, the start log and
+ * the port.
+ */
+type Steps = {
+  app: MacosAppHost;
+  log: (line: string) => void;
+  port: PortPlan;
+};
 
 const run: CliAction<[], Opts> = async (opts) => {
   // `--only` is resolved first: a typo fails before anything is installed,
@@ -187,6 +222,7 @@ const run: CliAction<[], Opts> = async (opts) => {
   const steps: Steps = {
     app: machineMacosAppHost({ exec: cliExecContext() }, log),
     log,
+    port: await planPort(opts, gatewayService),
   };
   // Named however the run ends — done, refused, or failed — since a failure is
   // when someone reads it. (The refused-gateway exit names it itself.)
@@ -292,23 +328,21 @@ async function startAsLoginService(
       ? pidfilePid
       : null;
 
-  if (managedPid !== null && !opts.force) {
-    printRunning("equin is already running.", [
+  // `--port` is a restart, like --force. A running install still on 9000 is
+  // left where it is — main's next deploy moves it (gateway-drift's follow):
+  // a plain `start` never restarts a running gateway.
+  const moving =
+    opts.port !== undefined && steps.port.from !== steps.port.record.port;
+  if (managedPid !== null && !opts.force && !moving) {
+    printRunning("equin is already running.", runningPort(steps.port), [
       `${loginService.id.label} under ${manager}`,
       `PID ${managedPid}`,
     ]);
     await reportStaleGateway(loginService, opts, steps);
     return;
   }
-  if (
-    managedPid === null &&
-    legacyPid === null &&
-    (await isGatewayListening(DEV_GATEWAY_PORT))
-  ) {
-    printRunning("equin is already running (started outside this command).", [
-      `port ${DEV_GATEWAY_PORT} answers`,
-    ]);
-    return;
+  if (managedPid === null && legacyPid === null) {
+    if (await answeredByOurs(steps.port.record.port)) return;
   }
 
   announcePrepare();
@@ -351,9 +385,11 @@ async function startAsLoginService(
   // The gateway's service id carries no schedule: it always runs.
   if (pid === null)
     throw new Error(`${loginService.id.label} loaded with no running process`);
-  await awaitGatewayReady({ pid, port: DEV_GATEWAY_PORT });
+  await awaitGatewayReady({ pid, port: steps.port.record.port });
+  await recordPort(steps.port);
   printRunning(
     `equin is running, and starts by itself at every ${loginService.startsAt}.`,
+    steps.port.record.port,
     [`${loginService.id.label} under ${manager}`, `PID ${pid}`],
   );
 }
@@ -455,7 +491,7 @@ async function startDeclaredLoginServices(
           skipped.map((s) => s.decl.forUser),
           {
             optional: true,
-            appUrl: namespaceUrl(MAIN_WORKTREE_NAME),
+            appUrl: namespaceUrl(MAIN_WORKTREE_NAME, "", gatewayPortSync()),
             addLater: `Once it is allowed, \`./equin start --only ${ids}\` adds ${skipped.length > 1 ? "them" : "it"}.`,
           },
         ),
@@ -525,16 +561,18 @@ async function startDetached(opts: Opts, steps: Steps): Promise<void> {
   const existingPid = await readPid();
   const pidAlive = existingPid !== null && isRunning(existingPid);
 
-  if (!pidAlive && (await isGatewayListening(DEV_GATEWAY_PORT))) {
-    printRunning("equin is already running (started outside this command).", [
-      `port ${DEV_GATEWAY_PORT} answers`,
-    ]);
-    return;
-  }
+  if (!pidAlive && (await answeredByOurs(steps.port.record.port))) return;
 
+  // `--port` is a restart, like --force. A running install still on 9000 is
+  // left where it is — main's next deploy moves it (gateway-drift's follow):
+  // a plain `start` never restarts a running gateway.
+  const moving =
+    opts.port !== undefined && steps.port.from !== steps.port.record.port;
   if (pidAlive) {
-    if (!opts.force) {
-      printRunning("equin is already running.", [`PID ${existingPid}`]);
+    if (!opts.force && !moving) {
+      printRunning("equin is already running.", runningPort(steps.port), [
+        `PID ${existingPid}`,
+      ]);
       return;
     }
     console.log("Restarting equin (open apps reload)...");
@@ -550,9 +588,11 @@ async function startDetached(opts: Opts, steps: Steps): Promise<void> {
   // Wait for the gateway to actually serve before claiming success. It exits
   // when a managed service fails to start, so printing unconditionally
   // reported success for an already-dead gateway.
-  await awaitGatewayReady({ pid, port: DEV_GATEWAY_PORT });
+  await awaitGatewayReady({ pid, port: steps.port.record.port });
+  await recordPort(steps.port);
   printRunning(
     "equin is running. This system cannot start it by itself when you log in: after a restart, run `./equin start` again.",
+    steps.port.record.port,
     [`PID ${pid}`, "no service manager"],
   );
 }
@@ -560,9 +600,134 @@ async function startDetached(opts: Opts, steps: Steps): Promise<void> {
 /** Main's gateway build and the launch that would run it (`gateway-drift/cli`). */
 function prepareGateway(
   opts: Opts,
-  { app, log }: Steps,
+  { app, log, port }: Steps,
 ): Promise<PreparedGateway> {
-  return prepareMainGateway({ logLevel: opts.logLevel, app, log });
+  return prepareMainGateway({
+    logLevel: opts.logLevel,
+    port: port.record.port,
+    legacyPort: port.record.legacy,
+    app,
+    log,
+  });
+}
+
+/**
+ * The port this start launches on (see {@link PortPlan}):
+ *
+ * - `--port <n>`: that one, if it is in the range and free (or this
+ *   account's gateway already holds it);
+ * - else the recorded one — kept for good, since bookmarks and OAuth redirect
+ *   URIs name it;
+ * - else, an install still on 9000 (its job's `-listen`) moves to the first
+ *   free port of the range, 9000 kept answering for a while;
+ * - else (a fresh install) the first free port of the range.
+ *
+ * Nothing is written here: the record is written once the gateway answers.
+ */
+async function planPort(
+  opts: Opts,
+  gatewayService: LoginService | null,
+): Promise<PortPlan> {
+  const read = readGatewayPortRecordSync();
+  const installed = await gatewayService?.installedJob();
+  const installedPort =
+    installed === null || installed === undefined
+      ? null
+      : listenPortOf(installed.argv.slice(1));
+  const from = read.kind === "set" ? read.record.port : installedPort;
+  // Moved off 9000 at some point (now or before): 9000 keeps answering.
+  const legacy =
+    read.kind === "set"
+      ? read.record.legacy
+      : installedPort === LEGACY_GATEWAY_PORT
+        ? LEGACY_GATEWAY_PORT
+        : null;
+  if (opts.port !== undefined) {
+    const port = Number(opts.port);
+    if (!isGatewayPort(port)) {
+      throw new Error(
+        `--port ${opts.port}: equin uses one of ${GATEWAY_PORT_RANGE.first}–${GATEWAY_PORT_RANGE.last}.`,
+      );
+    }
+    if (port !== from) {
+      const probe = await probeGateway(port);
+      if (probe.kind !== "none") {
+        throw new Error(
+          `--port ${port}: the port is taken (${describeProbe(probe)}). Pick another of ${GATEWAY_PORT_RANGE.first}–${GATEWAY_PORT_RANGE.last}.`,
+        );
+      }
+    }
+    return {
+      record: { port, legacy },
+      from,
+      said: port === from ? null : `equin moves to port ${port}.`,
+    };
+  }
+  if (read.kind === "set") return { record: read.record, from, said: null };
+  const choice = await chooseGatewayPort();
+  return {
+    record: { port: choice.port, legacy },
+    from,
+    said:
+      legacy === null
+        ? describeChoice(choice)
+        : `equin moves off port ${LEGACY_GATEWAY_PORT}, which other programs often use: ${describeChoice(choice)} Old addresses on ${LEGACY_GATEWAY_PORT} keep working for a while and open the new one.`,
+  };
+}
+
+/** The port a gateway this start leaves running listens on: the one it had. */
+function runningPort(plan: PortPlan): number {
+  return plan.from ?? plan.record.port;
+}
+
+/** Who holds a port, in words. */
+function describeProbe(
+  probe: Exclude<Awaited<ReturnType<typeof probeGateway>>, { kind: "none" }>,
+): string {
+  switch (probe.kind) {
+    case "ours":
+      return "this account's equin";
+    case "other-equin":
+      return `the equin of another user account (uid ${probe.uid})`;
+    case "foreign":
+      return probe.holder ?? "a program of another user account";
+  }
+}
+
+/**
+ * When no gateway of ours is known to run: is the port answered anyway? By
+ * this account's gateway (started outside this command) — say so, and stop;
+ * by anything else — refuse, naming it: the port is this account's, and
+ * moving it silently would break every bookmark and redirect URI.
+ */
+async function answeredByOurs(port: number): Promise<boolean> {
+  const probe = await probeGateway(port);
+  switch (probe.kind) {
+    case "none":
+      return false;
+    case "ours":
+      printRunning(
+        "equin is already running (started outside this command).",
+        port,
+        [`port ${port} answers`],
+      );
+      return true;
+    case "other-equin":
+    case "foreign":
+      throw new Error(
+        `equin's port ${port} is taken by ${describeProbe(probe)}, so equin cannot start. ` +
+          `Stop that program, or move equin with \`./equin start --port <${GATEWAY_PORT_RANGE.first}–${GATEWAY_PORT_RANGE.last}>\`.` +
+          (probe.kind === "foreign"
+            ? ""
+            : ` (${(await portHolder(port)) ?? "no process of this account holds it"})`),
+      );
+  }
+}
+
+/** Record the port once the gateway answers on it, and say so when it is news. */
+async function recordPort(plan: PortPlan): Promise<void> {
+  await writeGatewayPortRecord(plan.record);
+  if (plan.said !== null) console.log(plan.said);
 }
 
 /** Said before a launch's prepare: a first build is minutes of silence otherwise. */
@@ -587,9 +752,9 @@ async function adoptAndHold(
   return launch;
 }
 
-function printRunning(headline: string, facts: string[]): void {
+function printRunning(headline: string, port: number, facts: string[]): void {
   console.log(headline);
-  console.log(`  Its address: ${namespaceUrl(MAIN_WORKTREE_NAME)}`);
+  console.log(`  Its address: ${namespaceUrl(MAIN_WORKTREE_NAME, "", port)}`);
   details(...facts, `logs ${gatewayLogs.path}/`);
 }
 

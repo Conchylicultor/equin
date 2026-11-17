@@ -4,7 +4,7 @@
 // latest additions, then reports the net growth over the soak.
 //
 //   ./equin run plugins/debug/plugins/profiling/plugins/tab-memory/e2e/listener-probe.ts \
-//     [--url http://equin.localhost:9000] [--path /agents] [--minutes 5]
+//     [--url http://equin.localhost:<port>] [--path /agents] [--minutes 5]
 import {
   arg,
   numArg,

@@ -3,7 +3,7 @@
 // native window would show it at one instant, with no window and no install.
 // Optionally photographs the approved mockup's window beside it and diffs them.
 //
-//   ./equin run plugins/installer/plugins/window/e2e/replay.ts --url http://equin.localhost:9000 \
+//   ./equin run plugins/installer/plugins/window/e2e/replay.ts --url http://equin.localhost:<port> \
 //     --events <events.jsonl> --out "$EQUIN_SCRATCH/replay" [--now <iso>] [--scale 1] \
 //     [--mockup "<prototype url>?view=window&state=running"] [--threshold 0.1] [--mockup-own-font] \
 //     [--mockup-claude app|cli]
@@ -34,7 +34,7 @@ import {
 import { bundlePage } from "../deps";
 
 const USAGE =
-  "replay.ts --url http://equin.localhost:9000 --events <events.jsonl> --out <prefix> [--now <iso>] [--scale 1] [--mockup <url>] [--threshold 0.1] [--mockup-own-font]";
+  "replay.ts --url http://equin.localhost:<port> --events <events.jsonl> --out <prefix> [--now <iso>] [--scale 1] [--mockup <url>] [--threshold 0.1] [--mockup-own-font]";
 const eventsPath = requireArg("events", USAGE);
 const out = requireArg("out", USAGE);
 const mockup = arg("mockup");

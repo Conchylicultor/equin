@@ -41,7 +41,7 @@ the same Gantt with no special-casing.
 
 - **Copy permalink** (live header) persists the current snapshot via
   `POST /api/boot-traces` and copies
-  `http://<wt>.localhost:9000/debug/boot-profile/<id>`.
+  `http://<wt>.localhost:<port>/debug/boot-profile/<id>`.
 - `/debug/boot-profile/<id>` (`bootProfileDetailPane`) reads the snapshot with
   `useLive(bootTrace, { id })` — `debug.boot-trace`, a lookup-only live
   collection over `boot_traces` (a non-uuid id reads nothing: `found: false`,

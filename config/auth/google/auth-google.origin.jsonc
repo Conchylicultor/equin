@@ -1,6 +1,6 @@
 // @hash 66614db4aa56
 {
-  // Desktop-app client ID from Google Cloud Console. Add http://localhost:9000/api/auth/callback/google as the Authorized redirect URI.
+  // Desktop-app client ID from Google Cloud Console. Add the redirect URI the Google setup in Settings → Accounts shows (it names this account's gateway port) as the Authorized redirect URI.
   "clientId": "",
   // Desktop-app client secret from Google Cloud Console. Required by Google's token endpoint even with PKCE.
   "clientSecret": ""

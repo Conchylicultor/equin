@@ -14,7 +14,6 @@ import {
   gatewayBuild,
 } from "@plugins/infra/plugins/launcher/deps";
 import {
-  DEV_GATEWAY_PORT,
   devGatewayLaunchOptions,
   ensureDatabaseConfig,
   type GatewayLaunchOptions,
@@ -45,6 +44,13 @@ export interface PreparedGateway {
  */
 export async function prepareMainGateway(opts: {
   logLevel: string;
+  /**
+   * The port the gateway listens on and the one it moved off, if any — decided
+   * by the caller (`start` reads or chooses it, the follow moves an install
+   * off 9000), never here: only a caller knows whether it may choose.
+   */
+  port: number;
+  legacyPort: number | null;
   app: MacosAppHost;
   log: (line: string) => void;
 }): Promise<PreparedGateway> {
@@ -64,7 +70,12 @@ export async function prepareMainGateway(opts: {
         GATEWAY_APP_COMPONENT,
         gatewayBuild(gateway),
       ),
-      ...devGatewayLaunchOptions({ repoRoot, logLevel: opts.logLevel }),
+      ...devGatewayLaunchOptions({
+        repoRoot,
+        logLevel: opts.logLevel,
+        port: opts.port,
+        legacyPort: opts.legacyPort,
+      }),
     },
   };
 }
@@ -94,8 +105,8 @@ export async function adoptGatewayLaunch(
   await ensureDatabaseConfig(asAppPath(launch.cwd), log);
   log(
     launch.bindHost === null
-      ? `Binding the gateway to every interface (${envName("LISTEN")}=:${DEV_GATEWAY_PORT})`
-      : `Binding the gateway to ${launch.bindHost}:${DEV_GATEWAY_PORT}`,
+      ? `Binding the gateway to every interface (${envName("LISTEN")}=:${launch.port})`
+      : `Binding the gateway to ${launch.bindHost}:${launch.port}`,
   );
   return { ...launch, executable };
 }

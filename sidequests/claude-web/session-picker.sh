@@ -32,8 +32,12 @@ create_new() {
     pg_dump -Fc singularity | pg_restore -d "$name"
   fi
 
+  # Main's address on this account's gateway port (`./equin url`, run in the
+  # main checkout: its dependencies are installed).
+  local parent_url
+  parent_url="$(cd "$WORKDIR" && zsh -l -c './equin url')"
   $TMUX -u new-session -d -s "$name" -c "$wt_path" \
-    "zsh -l -c 'export EQUIN_CONVERSATION_ID=$name EQUIN_PARENT_URL=http://equin.localhost:9000; $CLAUDE'"
+    "zsh -l -c 'export EQUIN_CONVERSATION_ID=$name EQUIN_PARENT_URL=$parent_url; $CLAUDE'"
   exec $TMUX -u attach -t "$name"
 }
 

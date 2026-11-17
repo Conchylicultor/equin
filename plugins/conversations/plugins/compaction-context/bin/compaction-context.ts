@@ -17,6 +17,7 @@ import {
 import {
   asNamespace,
   namespaceUrl,
+  LEGACY_GATEWAY_PORT,
 } from "@plugins/infra/plugins/namespace/core";
 import {
   backendBaseUrl,
@@ -33,11 +34,14 @@ const conversationId = readEnv("CONVERSATION_ID");
 // TEMPORARY: an agent launched before EQUIN_PARENT_URL existed carries only
 // EQUIN_PARENT_HOST (a namespace), while this script is read from main's live
 // checkout. Delete with the PARENT_HOST key (env-names) once no running agent
-// has it.
+// has it. Such an agent predates the per-account port, so its backend is on
+// the port every gateway listened on then.
 const legacyParentHost = readEnv("PARENT_HOST");
 const parentUrl =
   readEnv("PARENT_URL") ||
-  (legacyParentHost ? namespaceUrl(asNamespace(legacyParentHost)) : undefined);
+  (legacyParentHost
+    ? namespaceUrl(asNamespace(legacyParentHost), "", LEGACY_GATEWAY_PORT)
+    : undefined);
 if (!conversationId || !parentUrl) {
   fail(
     `${envName("CONVERSATION_ID")} / ${envName("PARENT_URL")} are not set — not an app-launched agent`,

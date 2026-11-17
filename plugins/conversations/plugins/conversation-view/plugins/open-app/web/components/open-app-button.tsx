@@ -1,3 +1,4 @@
+import { pagePort } from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
 import {
   PaneIconAction,
   useOpenPane,
@@ -82,7 +83,11 @@ function OpenAppAction({
         // The gesture's "elsewhere" flips the configured default — which is
         // why this is the low-level form: elsewhere is not always a browser tab.
         const inTab = (target === "new-tab") !== elsewhere;
-        if (inTab) window.open(appPreviewUrl(attemptId, path), "_blank");
+        if (inTab)
+          window.open(
+            appPreviewUrl(attemptId, path, pagePort(window.location)),
+            "_blank",
+          );
         else openPane(appPreviewPane, { attemptId, path }, { mode: "push" });
       })}
     />

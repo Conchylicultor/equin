@@ -1,3 +1,7 @@
+import {
+  gatewayOriginSync,
+  gatewayPortSync,
+} from "@plugins/infra/plugins/launcher/plugins/gateway-port/data-dirs";
 import { finishBuildSubSteps } from "@plugins/installer/cli";
 import { withInstallWaits } from "./internal/install-waits";
 import { assertThisInstance } from "@plugins/infra/plugins/launcher/plugins/instance-owner/cli";
@@ -453,7 +457,7 @@ async function requireBaseDatabase(name: string): Promise<void> {
 // central-side liveness probe.
 async function probeGatewayHealth(): Promise<string | null> {
   console.log("Probing gateway /gateway/worktrees...");
-  const url = "http://localhost:9000/gateway/worktrees";
+  const url = `${gatewayOriginSync()}/gateway/worktrees`;
   let lastStatus: number | string = "no response";
   const result = await retryUntil<true, string | null>(
     async () => {
@@ -948,7 +952,9 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   // per target — a killed multi-target build published nothing, so every
   // namespace it named is still on its previous dist and the banner has to
   // say so about all of them.
-  const targetUrls = targets.map((t) => namespaceUrl(t.namespace));
+  const targetUrls = targets.map((t) =>
+    namespaceUrl(t.namespace, "", gatewayPortSync()),
+  );
   // This run's transcript — every line it prints, the verdict included, written
   // as it goes by whoever supervises it (the backend's shim, or the attached
   // relay above). The one log every pointer names.
@@ -1175,7 +1181,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
           startedAt: new Date().toISOString(),
           finishedAt: null,
           exitCode: null,
-          url: namespaceUrl(ns),
+          url: namespaceUrl(ns, "", gatewayPortSync()),
           logPath: transcriptPath,
         };
         receipts.set(ns, receipt);
@@ -1768,7 +1774,9 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
         // than at finalizeBuild, so a later target's failure — or a kill — can
         // never rewrite a published namespace's receipt as `failed`.
         closeReceipt(target.namespace, "ok", 0);
-        deployedUrls.push(namespaceUrl(target.namespace));
+        deployedUrls.push(
+          namespaceUrl(target.namespace, "", gatewayPortSync()),
+        );
       }
 
       // 6b. Contributed build steps of the `deployed` phase, once the
@@ -1828,7 +1836,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
             endpoint: adoptCentralDeploy,
             asked: { process: "central", namespace: null },
             // The gateway serves central's routes on every host name.
-            origin: "http://localhost:9000",
+            origin: gatewayOriginSync(),
             server: centralDir,
             command: centralCommand,
             commit: headAtStart,
@@ -1850,7 +1858,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
           console.log("Restarting central...");
           try {
             const resp = await fetch(
-              "http://localhost:9000/gateway/worktrees/central/restart",
+              `${gatewayOriginSync()}/gateway/worktrees/central/restart`,
               { method: "POST", signal: AbortSignal.timeout(30_000) },
             );
             if (resp.ok) {

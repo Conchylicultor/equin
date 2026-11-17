@@ -184,7 +184,7 @@ Which variant of each option the user picked is ONE record per prototype,
 `_picks/<id>.json` (`{ "palette": "azure" }`), shared by every surface: main,
 every worktree deploy, every browser, and the CLI. It used to be per-browser
 localStorage, which left agents blind (their headless browser saw only the
-defaults) and gave each `*.localhost:9000` origin its own picks. Design:
+defaults) and gave each `*.localhost:<port>` origin its own picks. Design:
 `research/2026-09-16-global-shared-prototype-option-picks.md`.
 
 - **Raw, grammar-checked only** (`isOptionName` / `isPickValue` from
@@ -293,10 +293,10 @@ barrel is reached only behind a dynamic `import(…)` when a verb runs.
 reaches an npm package or a `web`/`server` barrel.
 
 `cli/prototype-url.ts` builds
-`http://<namespace>.localhost:9000/prototypes/proto/<id>` from parts rather than
+`http://<namespace>.localhost:<port>/prototypes/proto/<id>` from parts rather than
 by hand: the namespace is minted with `checkoutNamespace(root)` off the CHECKOUT
 (a CLI process declares no runtime namespace at all, so asking for one throws),
-`.localhost:9000` comes from
+`.localhost:<port>` comes from
 `namespaceUrl`, and `/prototypes` from `prototypesApp.basePath`. The one literal
 is the detail pane's own `proto/:name/:stage?` segment — it is declared in
 `gallery/web`, which a terminal verb must not import. The same origin prefixes

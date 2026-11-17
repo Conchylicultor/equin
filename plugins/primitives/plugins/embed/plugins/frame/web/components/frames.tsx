@@ -17,6 +17,7 @@ import type {
   ContentPath,
 } from "@plugins/infra/plugins/endpoints/core";
 import { useTransport } from "@plugins/primitives/plugins/networking/web";
+import { usePagePort } from "@plugins/infra/plugins/launcher/plugins/gateway-port/web";
 import {
   namespaceUrl,
   type Namespace,
@@ -204,13 +205,15 @@ export function AppFrame({
   /** An in-app path (`/agents/c/1?embed=1`). */
   path: string;
 }) {
+  // Another namespace is served by the same gateway as this page.
+  const port = usePagePort();
   if (!path.startsWith("/") || path.startsWith("//")) {
     throw new Error(`AppFrame: path must be an in-app path — got "${path}"`);
   }
   return (
     <iframe
       {...box}
-      src={namespace === undefined ? path : namespaceUrl(namespace, path)}
+      src={namespace === undefined ? path : namespaceUrl(namespace, path, port)}
     />
   );
 }

@@ -1,3 +1,4 @@
+import { usePagePort } from "@plugins/infra/plugins/launcher/plugins/gateway-port/web";
 import {
   Pane,
   PaneChrome,
@@ -72,14 +73,18 @@ export const appPreviewPane = Pane.define({
  * checkout name, and the main composition's prefix elides — so the attempt id
  * is the namespace.
  */
-export function appPreviewUrl(attemptId: string, path: string | undefined) {
-  return namespaceUrl(asNamespace(attemptId), path ?? "/");
+export function appPreviewUrl(
+  attemptId: string,
+  path: string | undefined,
+  port: number,
+) {
+  return namespaceUrl(asNamespace(attemptId), path ?? "/", port);
 }
 
 function AppPreviewPaneBody() {
   const { attemptId, path } = appPreviewPane.useParams();
   const namespace = asNamespace(attemptId);
-  const origin = new URL(appPreviewUrl(attemptId, path)).origin;
+  const origin = new URL(appPreviewUrl(attemptId, path, usePagePort())).origin;
   const [showChrome] = useShowChrome();
   // Bumped by the Reload action. The frame is cross-origin, so we cannot call
   // its `location.reload()`; remounting it under a new key is a fresh load of
@@ -122,9 +127,10 @@ export function ReloadAction() {
 /** Header action: the same route, unframed, in a new browser tab. */
 export function OpenInNewTabAction() {
   const { attemptId, path } = appPreviewPane.useParams();
+  const port = usePagePort();
   return (
     <NewTabButton
-      href={appPreviewUrl(attemptId, path)}
+      href={appPreviewUrl(attemptId, path, port)}
       label="Open in a new tab"
     />
   );

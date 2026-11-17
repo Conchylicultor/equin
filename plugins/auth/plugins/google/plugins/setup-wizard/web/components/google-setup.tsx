@@ -36,8 +36,8 @@ import {
 } from "@plugins/primitives/plugins/setup-steps/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-
-const REDIRECT_URI = "http://localhost:9000/api/auth/callback/google";
+import { oauthRedirectUri } from "@plugins/auth/core";
+import { usePagePort } from "@plugins/infra/plugins/launcher/plugins/gateway-port/web";
 
 /** The project the wizard's links open at — never stored server-side, so kept here. */
 const projectIdDraft = defineKept({
@@ -56,6 +56,9 @@ function extractProjectId(raw: string): string {
 
 /** Google's setup, rendered inline in the Google Accounts pane (`setup: { kind: "steps" }`). */
 export function GoogleSetup() {
+  // Bare localhost on this page's own port: the gateway forwards
+  // `/api/auth/callback/*` to central from there.
+  const redirectUri = oauthRedirectUri("google", usePagePort());
   const fetchEndpoint = useFetchEndpoint();
   const transport = useTransport();
   const project = useKept(projectIdDraft, "", { subject: "google" });
@@ -234,7 +237,7 @@ export function GoogleSetup() {
             <StepNote>
               Application type: <span className="font-medium">Desktop app</span>
             </StepNote>
-            <StepCommand text={REDIRECT_URI} title="Copy redirect URI" />
+            <StepCommand text={redirectUri} title="Copy redirect URI" />
             <StepNote>Add this as the Authorized redirect URI</StepNote>
           </Stack>
         </Step>

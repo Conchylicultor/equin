@@ -1,4 +1,5 @@
 import { useBrowserValue } from "@plugins/primitives/plugins/dom/plugins/render-mode/web";
+import { usePagePort } from "@plugins/infra/plugins/launcher/plugins/gateway-port/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -14,6 +15,7 @@ export type MapErrorReason =
  */
 export function MapErrorCard({ reason }: { reason: MapErrorReason }) {
   const origin = useBrowserValue({ name: "location.origin", read: readOrigin });
+  const port = usePagePort();
   return (
     <Center className="size-full">
       <Stack gap="xs" className="max-w-md px-md" role="alert">
@@ -27,7 +29,7 @@ export function MapErrorCard({ reason }: { reason: MapErrorReason }) {
             </Text>
             <Text variant="caption" tone="muted">
               • the key's HTTP referrers do not include this page ({origin}) —
-              add <code>http://*.localhost:9000/*</code>;
+              add <code>{`http://*.localhost:${port}/*`}</code>;
             </Text>
             <Text variant="caption" tone="muted">
               • the Maps JavaScript API is not enabled for the key's project, or

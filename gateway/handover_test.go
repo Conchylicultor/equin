@@ -79,6 +79,12 @@ type keeperFixture struct {
 // service manager does — over one worktree whose backend is this test binary.
 func startKeeperFixture(t *testing.T) *keeperFixture {
 	t.Helper()
+	return startKeeperFixtureWith(t)
+}
+
+// startKeeperFixtureWith is startKeeperFixture with extra gateway flags.
+func startKeeperFixtureWith(t *testing.T, extra ...string) *keeperFixture {
+	t.Helper()
 	if testing.Short() {
 		t.Skip("builds and runs the gateway binary")
 	}
@@ -130,6 +136,7 @@ func startKeeperFixture(t *testing.T) *keeperFixture {
 		"-child-env", "HOME,PATH,TMPDIR",
 		"-idle-timeout", "1h",
 	)
+	k.Args = append(k.Args, extra...)
 	k.Env = os.Environ()
 	k.Stdout, k.Stderr = out, out
 	if err := k.Start(); err != nil {

@@ -1,3 +1,4 @@
+import { LEGACY_GATEWAY_PORT } from "@plugins/infra/plugins/namespace/core";
 /**
  * How an installed gateway launch differs from the one `./equin start --force`
  * would write — one short phrase per difference, for the health report's
@@ -32,6 +33,26 @@ export function flagValue(
   flag: string,
 ): string | undefined {
   return flagMap(flags).get(flag);
+}
+
+/**
+ * The port a launch's `-listen` (`<host>:<port>`) names. A launch without one is
+ * a gateway from before `-listen` became required, whose default was
+ * {@link LEGACY_GATEWAY_PORT} — so that is its port, not a guess.
+ */
+export function listenPortOf(flags: readonly string[]): number {
+  const value = flagValue(flags, "-listen");
+  if (value === undefined) return LEGACY_GATEWAY_PORT;
+  const port = Number(value.slice(value.lastIndexOf(":") + 1));
+  if (!Number.isInteger(port) || port <= 0 || port > 65535) {
+    throw new Error(`-listen ${value} names no port`);
+  }
+  return port;
+}
+
+/** The loopback address a launch's gateway answers on, to dial it directly. */
+export function dialAddressOf(flags: readonly string[]): string {
+  return `127.0.0.1:${listenPortOf(flags)}`;
 }
 
 /**

@@ -22,10 +22,22 @@ import {
   report,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
+  contentUrl,
+  MAIN_WORKTREE_NAME,
+} from "@plugins/infra/plugins/namespace/core";
 
 const PROTO = "proto-1793450656-8cpct1";
-/** The mock's document, on its content host (served by the main namespace). */
-const MOCK_URL = `http://${PROTO}.content.localhost:9000/equin/api/prototypes/${PROTO}/index.html`;
+/**
+ * The mock's document, on its content host (served by the main namespace), on
+ * the port of the gateway this run targets.
+ */
+const MOCK_URL = contentUrl(
+  PROTO,
+  MAIN_WORKTREE_NAME,
+  `/api/prototypes/${PROTO}/index.html`,
+  Number(new URL(pathUrl("/")).port),
+);
 const VIEWPORT = { width: 1400, height: 900 };
 /** The sidebar's bottom band: the foot and the rule above it. */
 const FOOT = { x: 0, y: 820, width: 264, height: 80 };

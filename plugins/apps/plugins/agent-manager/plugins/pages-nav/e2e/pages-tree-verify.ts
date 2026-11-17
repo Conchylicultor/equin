@@ -8,7 +8,7 @@
 //
 // Usage:
 //   ./equin run plugins/apps/plugins/agent-manager/plugins/pages-nav/e2e/pages-tree-verify.ts \
-//     --conv <conversationId> [--url http://<worktree>.localhost:9000] [--headed]
+//     --conv <conversationId> [--url http://<worktree>.localhost:<port>] [--headed]
 
 import {
   numArg,

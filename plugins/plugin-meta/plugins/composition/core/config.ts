@@ -212,7 +212,7 @@ export const compositionsConfig = defineConfig({
         // WHEN this composition should be built and served. Anything but `off`
         // declares "this composition is meant to be live here" — a build of it
         // composes a per-composition frontend dist + empty DB served at
-        // http://<id>.<checkout>.localhost:9000. Still intent, not liveness:
+        // http://<id>.<checkout>.localhost:<port>. Still intent, not liveness:
         // what is actually served is what the composition.json marker says.
         //
         // The mode is BOTH halves of the intent — that it is served at all, and
@@ -326,7 +326,7 @@ export const compositionsConfig = defineConfig({
 
         // ── The showcase film's instance ────────────────────────────────────────
         // The whole app (`**`, like main) on its OWN empty database, served at
-        // http://promo-film.<checkout>.localhost:9000 by `./equin build
+        // http://promo-film.<checkout>.localhost:<port> by `./equin build
         // --composition promo-film`. `./equin promo-film seed` resets it to
         // first launch and writes the film's curated story into it
         // (`apps.website.promo-film.seed`, whose endpoint answers only on this

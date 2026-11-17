@@ -1,6 +1,7 @@
 import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import { GATEWAY_SERVICE } from "@plugins/infra/plugins/launcher/core";
+import { GATEWAY_PORT_RANGE } from "@plugins/infra/plugins/namespace/core";
 
 /**
  * The one command that deliberately leaves something running after it exits —
@@ -17,7 +18,13 @@ import { GATEWAY_SERVICE } from "@plugins/infra/plugins/launcher/core";
  */
 export default defineCliCommand<
   [],
-  { force?: boolean; logLevel: string; only?: string; verbose?: boolean }
+  {
+    force?: boolean;
+    logLevel: string;
+    only?: string;
+    port?: string;
+    verbose?: boolean;
+  }
 >({
   name: "start",
   description:
@@ -27,6 +34,10 @@ export default defineCliCommand<
     {
       flags: "--only <ids>",
       description: `Comma-separated services to start (the gateway's ${GATEWAY_SERVICE.label} — ${LEGACY_IDS.launchdLabel} on an install data-dir migrate has not moved yet — or a declared login service id); with --force, restarts only those`,
+    },
+    {
+      flags: "--port <port>",
+      description: `Move this account's equin to another port of ${GATEWAY_PORT_RANGE.first}–${GATEWAY_PORT_RANGE.last} (restarts it; open apps reload). Without it, the port chosen at the first start is kept — the first free one of that range`,
     },
     {
       flags: "--verbose",

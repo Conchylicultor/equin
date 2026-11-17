@@ -284,34 +284,65 @@ func (kc *keeperClient) sendListeners(ls []net.Listener) error {
 }
 
 // inheritedListeners opens the listening sockets the keeper handed this
-// generation, checked against the addresses -listen names: a different
-// -listen is a different socket, which only a restart of the keeper binds.
-func (kc *keeperClient) inheritedListeners(want []listenAddr) ([]net.Listener, error) {
+// generation, each tagged main or legacy by its address: -listen's addresses
+// are required (a different -listen is a different socket, which only a
+// restart of the keeper binds); -legacy-listen's are optional (its bind is
+// best effort, so a keeper may hold none — then this generation serves
+// without them, and says so); a socket matching neither flag is an error —
+// this generation's argv and the keeper's sockets disagree.
+func (kc *keeperClient) inheritedListeners(plan listenPlan) (mainLs, legacyLs []net.Listener, err error) {
+	isMain, isLegacy := addrSet(plan.main), addrSet(plan.legacy)
 	have := map[string]bool{}
-	var out []net.Listener
+	closeAll := func() {
+		for _, l := range append(mainLs, legacyLs...) {
+			_ = l.Close()
+		}
+	}
 	for _, li := range kc.init.Listeners {
-		have[normalAddr(li.Addr)] = true
+		a := normalAddr(li.Addr)
+		have[a] = true
 		f := kc.initFd(li.Fd)
 		if f == nil {
-			return nil, fmt.Errorf("the keeper's init names listener %s with no descriptor", li.Addr)
+			closeAll()
+			return nil, nil, fmt.Errorf("the keeper's init names listener %s with no descriptor", li.Addr)
 		}
 		l, err := net.FileListener(f)
 		_ = f.Close()
 		if err != nil {
-			return nil, fmt.Errorf("inherited listener %s: %w", li.Addr, err)
+			closeAll()
+			return nil, nil, fmt.Errorf("inherited listener %s: %w", li.Addr, err)
 		}
-		out = append(out, l)
+		switch {
+		case isMain[a]:
+			mainLs = append(mainLs, l)
+		case isLegacy[a]:
+			legacyLs = append(legacyLs, l)
+		default:
+			_ = l.Close()
+			closeAll()
+			return nil, nil, fmt.Errorf("the keeper holds listener %s, which neither -listen %q nor -legacy-listen %q names — changing them needs a restart of the keeper", li.Addr, plan.mainSpec, plan.legacySpec)
+		}
 	}
-	for _, w := range want {
+	for _, w := range plan.main {
 		if have[normalAddr(w.addr)] {
 			continue
 		}
-		if w.ipv6Loopback && len(out) > 0 {
+		if w.ipv6Loopback && len(mainLs) > 0 {
 			continue // the keeper's host has no IPv6 loopback (listenAll)
 		}
-		return nil, fmt.Errorf("-listen %s is not the address the keeper holds (%v) — changing it needs a restart of the keeper", w.addr, keys(have))
+		closeAll()
+		return nil, nil, fmt.Errorf("-listen %s is not the address the keeper holds (%v) — changing it needs a restart of the keeper", w.addr, keys(have))
 	}
-	return out, nil
+	return mainLs, legacyLs, nil
+}
+
+// addrSet is the normalized addresses of a listen flag's expansion.
+func addrSet(addrs []listenAddr) map[string]bool {
+	out := make(map[string]bool, len(addrs))
+	for _, a := range addrs {
+		out[normalAddr(a.addr)] = true
+	}
+	return out
 }
 
 func keys(m map[string]bool) []string {
