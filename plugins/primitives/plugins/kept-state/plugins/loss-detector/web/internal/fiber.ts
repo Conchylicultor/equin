@@ -28,6 +28,8 @@ export interface Fiber {
   flags: number;
   subtreeFlags: number;
   memoizedState: unknown;
+  /** The props the fiber last rendered with. */
+  memoizedProps: unknown;
   stateNode: unknown;
   child: Fiber | null;
   sibling: Fiber | null;
@@ -85,6 +87,23 @@ export function stateQueueOf(hook: HookNode): object | null {
   if (typeof (queue as { getSnapshot?: unknown }).getSnapshot === "function")
     return null;
   return queue;
+}
+
+/**
+ * Whether `value` is a prop `fiber` was handed anew this commit (by
+ * `Object.is` against a prop whose value differs from the one it last
+ * rendered with) — the mark of state mirroring a prop.
+ */
+export function isChangedPropValue(fiber: Fiber, value: unknown): boolean {
+  const props = fiber.memoizedProps;
+  const before = fiber.alternate?.memoizedProps;
+  if (typeof props !== "object" || props === null) return false;
+  if (typeof before !== "object" || before === null) return false;
+  for (const [key, prop] of Object.entries(props)) {
+    if (!Object.is(prop, value)) continue;
+    if (!Object.is((before as Record<string, unknown>)[key], prop)) return true;
+  }
+  return false;
 }
 
 /** The value a `useRef` hook holds, or `undefined` for any other hook. */

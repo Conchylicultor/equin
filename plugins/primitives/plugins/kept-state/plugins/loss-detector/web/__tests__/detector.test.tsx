@@ -16,6 +16,7 @@ import {
 } from "@plugins/primitives/plugins/kept-state/web";
 import {
   collectLosses,
+  createCommitAttribution,
   isUserData,
   isUserEvent,
   observeCommit,
@@ -80,11 +81,31 @@ function LibraryToggle() {
   );
 }
 
+// React's "adjust state when a prop changes" pattern: `prev` mirrors the
+// `items` prop, so it changes with every new `items` — in a click's commit too.
+function Mirror({ items }: { items: string[] }) {
+  const [prev, setPrev] = useState(items);
+  if (prev !== items) setPrev(items);
+  return <span>{prev.length}</span>;
+}
+
+// Not stamped: its `items` is the user's change, a real loss of its own.
+function MirrorHost() {
+  const [items, setItems] = useState<string[]>([]);
+  return (
+    <>
+      <button onClick={() => setItems(["a"])}>add</button>
+      <Mirror items={items} />
+    </>
+  );
+}
+
 // What the build's stamp (`vite/index.ts`) adds after a repo component.
 function stampAsRepo(component: object, file: string): void {
   Object.assign(component, { [COMPONENT_SOURCE_PROP]: file });
 }
 stampAsRepo(Surface, "src/surface.tsx");
+stampAsRepo(Mirror, "src/mirror.tsx");
 
 const click = (name: string) =>
   fireEvent.click(screen.getByRole("button", { name }));
@@ -185,6 +206,48 @@ describe("loss-detector", () => {
     unmount();
     stop();
     expect(losses).toEqual([]);
+  });
+
+  it("a state set to a prop handed in anew mirrors it: not the user's, even in a click's commit", () => {
+    const baselines = new WeakMap<
+      object,
+      { baseline: unknown; last: unknown }
+    >();
+    const { container, unmount } = render(
+      <KeepScope segment="t:tab-3">
+        <MirrorHost />
+      </KeepScope>,
+    );
+    observeCommit(hostRoot(container), baselines, false);
+    act(() => {
+      click("add");
+    });
+    observeCommit(hostRoot(container), baselines, true);
+
+    let losses: StateLoss[] | null = null;
+    const stop = onKeepScopeUnmount((u) => {
+      const probe = asFiber(u.fiber);
+      if (probe)
+        losses = collectLosses(committedFiber(probe), u.path, baselines);
+    });
+    unmount();
+    stop();
+    expect(losses).toEqual([]);
+  });
+
+  // jsdom cannot replay the real premise (a script-dispatched event has no
+  // microtask checkpoint while it is current), so this drives the attribution
+  // as the commit bridge would call it.
+  it("a commit inside a user commit's own flush is its cascade; the next listener's commit is the user's again", async () => {
+    const byUser = createCommitAttribution();
+    const click = new MouseEvent("click");
+    expect(byUser(click)).toBe(true); // the capture listener's commit
+    expect(byUser(click)).toBe(false); // a layout effect's re-render, same flush
+    await Promise.resolve();
+    expect(byUser(click)).toBe(true); // the bubble listener's commit
+    await Promise.resolve();
+    expect(byUser(new MouseEvent("mouseenter"))).toBe(false);
+    expect(byUser(undefined)).toBe(false);
   });
 
   it("previews a value by its shape, not its content", () => {

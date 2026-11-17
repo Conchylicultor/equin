@@ -22,9 +22,24 @@ losing state on a remount (design:
    an effect settling, a ResizeObserver measuring, a timer — commits with no
    current event and moves the baseline. React flushes a discrete event's
    updates in a microtask, which the browser runs before it clears
-   `window.event`, so the attribution is exact. (A first version used "within
-   100 ms of an input": a click's relayout re-measured within a frame and every
-   measured size read as the user's.)
+   `window.event`, so the attribution is exact. Two kinds of change in that
+   window are still not the user's (`createCommitAttribution`, and
+   `observeCommit`):
+   - a **cascade** — a commit React makes synchronously inside a user commit's
+     own flush (a layout effect re-fitting a bar or holding a row's widths for
+     an animation, a sync passive effect settling). The bridge is called inside
+     that flush, so a user commit opens a window a microtask closes; the next
+     listener's commit (capture then bubble handlers, a native document
+     listener) comes at a later checkpoint and is the user's again;
+   - a **prop mirror** — a state set to a prop the parent handed in anew this
+     commit (`Object.is`; React's "adjust state when a prop changes"
+     watermark, `prevItems` = `items`, `prevId` = `id`).
+
+   A solo → docked layout switch filed an adaptive bar's re-fit counter, a
+   Miller row's animation hold and a sortable list's `prevItems` as losses
+   before these. (A first version used "within 100 ms of an input": a click's
+   relayout re-measured within a frame and every measured size read as the
+   user's.)
 2. **The walk, at unmount.** Every `KeepScope` renders a probe whose
    `componentWillUnmount` runs while the deleted subtree is still linked
    (`onKeepScopeUnmount`). Only an **outermost** place is judged (a path with
@@ -74,6 +89,14 @@ named components above it, the state's index among the component's
 - State that lives only in the DOM (an uncontrolled input, scroll) is the
   reload drill's to find; state that never reaches React (a module store) is
   neither net's.
+- A handler that commits twice synchronously (`flushSync` then more updates
+  in the same listener) has its second commit read as a cascade.
+- The signal is "a commit a user event's listener flushed", not "a hook the
+  user's handler set": a render-phase update in that commit (state derived
+  during render from something other than a prop handed in anew) still reads
+  as the user's. The exact signal — which queues a listener dispatched to — is
+  not readable from a commit (React moves dispatched updates onto hooks inside
+  its render).
 - A change the user caused that commits in a later task (a click whose result
   arrives with a server answer, a `startTransition` update) is read as not the
   user's.

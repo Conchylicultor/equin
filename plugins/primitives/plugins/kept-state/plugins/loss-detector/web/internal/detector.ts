@@ -14,6 +14,7 @@ import {
   firstHostSource,
   holdsHooks,
   hooksOf,
+  isChangedPropValue,
   ownerTrail,
   PerformedWork,
   Placement,
@@ -90,6 +91,35 @@ export function isUserEvent(event: Event | undefined): boolean {
   if (event.type === "pointermove" || event.type === "mousemove")
     return (event as MouseEvent).buttons !== 0;
   return USER_EVENT_TYPES.has(event.type);
+}
+
+/**
+ * Which commits carry what a user did: `(event)` is true for a commit made
+ * while a user's event (`isUserEvent`) is being dispatched — unless it is a
+ * **cascade**: a commit React makes synchronously inside a user commit's own
+ * flush (a layout effect measuring the new layout — a bar re-fitting, a row
+ * holding its widths for an animation — or a sync passive effect settling;
+ * React re-renders those before `commitRoot` returns, so before the event
+ * clears). The commit bridge is called inside that flush, so a user commit
+ * opens the cascade window and a microtask closes it: every commit before the
+ * microtask runs is the cascade, and the next listener's own commit (a
+ * capture handler, then a bubble one; a native document listener) comes at a
+ * later microtask checkpoint and is the user's again. A solo → docked layout
+ * switch filed an adaptive bar's re-fit counter and a Miller row's animation
+ * hold as losses before this.
+ */
+export function createCommitAttribution(): (
+  event: Event | undefined,
+) => boolean {
+  let cascading = false;
+  return (event) => {
+    if (cascading || !isUserEvent(event)) return false;
+    cascading = true;
+    queueMicrotask(() => {
+      cascading = false;
+    });
+    return true;
+  };
 }
 
 function same(a: unknown, b: unknown): boolean {
@@ -188,7 +218,11 @@ export function observeCommit(
         // user changed earlier.
         if (Object.is(known.last, value)) continue;
         known.last = value;
-        if (!userInput) known.baseline = value;
+        // A state set to a prop the parent handed in anew this commit (React's
+        // "adjust state when a prop changes" watermark: `prevItems` = `items`,
+        // `prevId` = `id`) mirrors that prop, whatever event it rode in.
+        if (!userInput || isChangedPropValue(fiber, value))
+          known.baseline = value;
       }
     }
     for (let child = fiber.child; child !== null; child = child.sibling) {
@@ -280,10 +314,11 @@ export function watchStateLoss(onLoss: (loss: StateLoss) => void): () => void {
     );
   const baselines: Baselines = new WeakMap();
   const seen = new Set<string>();
+  const byUser = createCommitAttribution();
   const onCommit = (root: FiberRoot): void => {
     // `window.event`: the one read that says which event, if any, a commit
     // happens in (a listener is handed its own; a commit is not).
-    observeCommit(root.current, baselines, isUserEvent(window.event));
+    observeCommit(root.current, baselines, byUser(window.event));
   };
   subscribers.add(onCommit);
 
