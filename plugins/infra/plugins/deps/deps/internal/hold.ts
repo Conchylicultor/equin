@@ -179,8 +179,7 @@ export async function heldDep<S extends DepSource>(
   if (!(await exists(idDir))) return { kind: "none" };
   // Normally one; two only while a `holdDep` moves the hold (it writes the
   // new one first), when the newest is the one being moved to.
-  let newest: { identity: string; env: AppPath; mtimeMs: number } | null =
-    null;
+  let newest: { identity: string; env: AppPath; mtimeMs: number } | null = null;
   for (const identity of await readdir(idDir)) {
     const paths = installPaths(store, dep.id, identity);
     const file = join(paths.holds, holder);

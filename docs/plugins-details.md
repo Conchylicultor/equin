@@ -24712,6 +24712,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `pgPostmasterPidFile`
           - `RETIRED_CLUSTER_SETTINGS`
           - `sharedBuffersBytes`
+      - Plugins:
+        - **`binaries`** — The postgres-binaries dependency: the embedded cluster's server binaries, an infra/deps package copy of this platform's @embedded-postgres package outside the checkout, pinned (holder machine-postgres) — the start script runs the pinned install, switched only by ./equin deps pin postgres-binaries. A child of its own so no composition's closure reaches the deps engine through the database plugins.
+          - Deps:
+            - Uses:
+              - `infra/deps.defineDep`
+              - `infra/deps/package-copy.npmPackageCopy`
+            - Exports (values): `postgresBinaries`
     - **`fork`** — Durable, self-healing worktree DB fork: a graphile job that forks the base DB per worktree (idempotent, atomic), plus a scheduled sweep of orphaned temp forks.
       - Server:
         - Contributes:
@@ -25071,6 +25078,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PGBOUNCER_SOCKET_DIR`
           - `PGBOUNCER_USERLIST_FILE`
           - `pgbouncerPidFileUnder`
+      - Plugins:
+        - **`binary`** — The pgbouncer-binary dependency: an infra/deps package copy of this platform's @equin/pgbouncer package outside the checkout, pinned (holder machine-pgbouncer) — the start script runs the pinned install, switched only by ./equin deps pin pgbouncer-binary. A child of its own so no composition's closure reaches the deps engine through the database plugins.
+          - Deps:
+            - Uses:
+              - `infra/deps.defineDep`
+              - `infra/deps/package-copy.npmPackageCopy`
+            - Exports (values): `pgbouncerBinary`
     - **`pglite`** (excluded) — The PGlite database driver: provides the DatabaseDriver host service with Postgres compiled to WASM, for a host without the computer's Postgres cluster (the browser composition, the portable boot test) — in memory, or in IndexedDB when the host's declared storage is persistent (browser-server/host-storage). Never booted by the desktop, which provides its own driver.
       - Server:
         - Contributes: `host-service:database.driver` "database.driver"
@@ -36114,11 +36128,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/font-family --font-mono`
-        - Imported by: 35 plugins — full list in [`plugins/infra/plugins/deps/REFERENCE.md`](../plugins/infra/plugins/deps/REFERENCE.md)
-          - `infra` ×13
+        - Imported by: 38 plugins — full list in [`plugins/infra/plugins/deps/REFERENCE.md`](../plugins/infra/plugins/deps/REFERENCE.md)
+          - `infra` ×14
           - `framework` ×6
           - `apps` ×5
           - `companions` ×2
+          - `database` ×2
           - `integrations` ×2
           - `media` ×2
           - `packages` ×2
@@ -36130,6 +36145,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BundleSpec`
           - `DefineDepSpec`
           - `Dep`
+          - `DepPin`
           - `DepProgress`
           - `DepSource`
           - `DepTarget`
@@ -36137,6 +36153,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HeldDep`
           - `HoldDepOptions`
           - `InstallContext`
+          - `PinDrift`
+          - `PinMove`
+          - `PinnedDep`
           - `Ready`
           - `ReadyNow`
           - `RemoveOutcome`
@@ -36152,8 +36171,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ensureDepViaCli`
           - `heldDep`
           - `holdDep`
+          - `holdRunningDep`
           - `hostTarget`
           - `linkSealedDep`
+          - `pinDep`
+          - `pinnedDep`
           - `readyNow`
           - `removeDep`
           - `sealDep`
@@ -36310,6 +36332,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `plugin-meta/plugin-records`
               - Core:
                 - Exports (values): `lockfileNpmResolutions`
+        - **`package-copy`** — The package-copy installer kind of infra/deps: npmPackageCopy({ workspace, package }) (its deps barrel) declares a copy of one npm package the checkout's bun install put in a workspace's node_modules, installed outside the checkout — identity = the package's own bun.lock entry and the target (a self-contained package only), so only a new version or build of that package is a new install; the copy is verified against the lock's version. packageCopyDir(ready) is the copy's package root, packageCopyVersion(ready) its version. For a binary a host daemon runs, so a bun install in the checkout never replaces it under the daemon.
+          - Deps:
+            - Uses:
+              - `infra/deps.DepSource`
+              - `infra/deps.DepTarget`
+              - `infra/deps.hostTarget`
+              - `infra/deps.Ready`
+            - Exports (types): `PackageCopySource`
+            - Exports (values):
+              - `npmPackageCopy`
+              - `packageCopyDir`
+              - `packageCopyVersion`
+          - Cross-plugin:
+            - Imported by:
+              - `database/embedded/binaries`
+              - `database/pgbouncer/binary`
         - **`playwright-browser`** — The playwright-browser installer kind of infra/deps: playwrightBrowser({ browser: "chromium" }) (its deps barrel) declares the browser build the workspace's playwright-core pins — identity = that version (resolved through this plugin's module graph) plus the platform — installed by the workspace's own playwright CLI with PLAYWRIGHT_BROWSERS_PATH = the install's env/, which then records the headed and headless-shell executables as Playwright reports them in env/executables.json (what isIntact checks); launchChromium(ready, opts) launches the recorded binary for the mode.
           - Core:
             - Uses:
@@ -38208,8 +38246,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/sweep.ts` (debt)
         - **`user-path`** — Which host paths a synchronous fs call may touch: AppPath (a path the app owns — its data dirs, its checkout; the only kind a sync fs call in runtime code may take) and UserPath (one the user or their config chose), with the type-aware lint that refuses a sync fs call on any path not proven app-owned — so a macOS Files & Folders prompt can never freeze a backend's JS thread, whether or not anyone marked the user's path.
           - Cross-plugin:
-            - Imported by: 115 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
-              - `infra` ×43
+            - Imported by: 116 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
+              - `infra` ×44
               - `framework` ×20
               - `apps` ×8
               - `debug` ×7
@@ -44223,8 +44261,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TIMED_FS_CALLS`
           - `withFsCallTally`
       - Cross-plugin:
-        - Imported by: 186 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
-          - `infra` ×57
+        - Imported by: 187 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+          - `infra` ×58
           - `framework` ×29
           - `apps` ×16
           - `debug` ×15
