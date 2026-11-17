@@ -206,6 +206,9 @@ function SurfaceBodyReady({
         allowsEmpty: new Set(
           sorted.filter((d) => d.allowsEmpty).map((d) => d.id),
         ),
+        showsUnfocused: new Set(
+          sorted.filter((d) => d.visibleWhenUnfocused).map((d) => d.id),
+        ),
       }),
     [sorted, defaultId, registry],
   );

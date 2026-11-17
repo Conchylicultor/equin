@@ -227,6 +227,7 @@ const NO_PLACEMENTS: PlacementCapabilities = {
   appThemeScope: new Set(),
   ownsChrome: new Set(),
   allowsEmpty: new Set(),
+  showsUnfocused: new Set(),
 };
 
 /**

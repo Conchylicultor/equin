@@ -27,18 +27,21 @@ channels — nothing here files one itself:
 
 ## Plugin reference
 
-- Description: Isle's index pane (/isle): the island drawn by the canvas engine from the listed apps and the stored plots (apps without a plot placed by the pure world and claimed), with the title card (the product's name; Start held back while the world loads, a stage on screen past a minute or a failed claim failing into the pane's error boundary, which reports it), the where-chip, the prompt card for the building at the hero's door (E opens it), the iris an app opens through (useActivateApp), drag-and-drop of buildings (the move endpoint), the time of day from the clock or the config, and a visually hidden list of links mirroring the buildings. Server registration of the Isle config (seed, time of day, music).
+- Description: Isle's index pane (/isle): the island drawn by the canvas engine from the listed apps and the stored plots (apps without a plot placed by the pure world and claimed), with the title card (the product's name; Start held back while the world loads, a stage on screen past a minute or a failed claim failing into the pane's error boundary, which reports it), the where-chip, the prompt card for the building at the hero's door (E opens it), the iris an app opens through (useActivateApp), drag-and-drop of buildings (the move endpoint), the time of day from the clock or the config, and a visually hidden list of links mirroring the buildings. The island's music is a background music source (music/background): one page-lived ambient engine the view holds for its sound effects, played from the page root so it can keep playing after the island is left. Server registration of the Isle config (seed, time of day, music).
 - Web:
   - Slots: `isle.actions`
   - Slot contributors: `isle.actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "isle"
     - `ConfigV2.WebRegister` "isle"
-  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `BackgroundMusic.Source` "isle"
+  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/isle/renderer` ×7
-    - `config_v2` ×3
-    - `apps-core/tabs` ×2
+    - `config_v2` ×4
+    - `apps-core/tabs` ×3
     - `apps-core` ×2
+    - `music/ambient` ×2
+    - `music/background` ×2
     - `network/live/live-state` ×2
     - `primitives/link-gesture` ×2
     - `primitives/pane` ×2
@@ -46,7 +49,6 @@ channels — nothing here files one itself:
     - `apps-core/app-usage.useAppUsageSummary`
     - `apps/isle/buildings.useIsleBuildings`
     - `infra/endpoints.useEndpointMutation`
-    - `music/ambient.useAmbient`
     - `network/live.useLive`
     - `primitives/css/motion.prefersReducedMotion`
     - `primitives/dom/element-size.useElementSize`

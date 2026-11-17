@@ -1,6 +1,6 @@
 {
   "name": "@equin/plugin-music",
-  "description": "Umbrella for music building blocks shared across apps, knowing pitch classes, strings and sound only: the chord box (a chord's degree colour, numeral and tile) and the ambient engine (generative WebAudio music and sound effects).",
+  "description": "Umbrella for music shared across apps: the chord box (a chord's degree colour, numeral and tile), the ambient engine (generative WebAudio music and sound effects), and the background music service (the music apps offer, played from the page root so it outlives the app, one at a time across the browser's tabs, with the action bar's music button).",
   "private": true,
   "version": "0.0.1"
 }

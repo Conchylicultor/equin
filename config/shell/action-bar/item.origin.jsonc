@@ -1,4 +1,4 @@
-// @hash e17c2f2d490a
+// @hash ba6efbb3f40e
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -10,6 +10,7 @@
     "build:build",
     "config_v2.git-defaults-preview:git-defaults-preview",
     "hints.help-menu:help",
+    "music.background:music",
     "screenshot:screenshot",
     "screenshot.draw-on-app:draw-on-app",
     "shell.global-action-bar:view-options",

@@ -49,6 +49,7 @@ describe("AppTabsBody's placement capabilities", () => {
         appThemeScope: new Set(["docked"]),
         ownsChrome: new Set(),
         allowsEmpty: new Set(),
+        showsUnfocused: new Set(),
       },
     ]);
     expect(registry.disposed).toBe(0);

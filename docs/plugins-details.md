@@ -6029,18 +6029,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/isle/renderer`
               - `apps/isle/world-view`
-        - **`world-view`** — Isle's index pane (/isle): the island drawn by the canvas engine from the listed apps and the stored plots (apps without a plot placed by the pure world and claimed), with the title card (the product's name; Start held back while the world loads, a stage on screen past a minute or a failed claim failing into the pane's error boundary, which reports it), the where-chip, the prompt card for the building at the hero's door (E opens it), the iris an app opens through (useActivateApp), drag-and-drop of buildings (the move endpoint), the time of day from the clock or the config, and a visually hidden list of links mirroring the buildings. Server registration of the Isle config (seed, time of day, music).
+        - **`world-view`** — Isle's index pane (/isle): the island drawn by the canvas engine from the listed apps and the stored plots (apps without a plot placed by the pure world and claimed), with the title card (the product's name; Start held back while the world loads, a stage on screen past a minute or a failed claim failing into the pane's error boundary, which reports it), the where-chip, the prompt card for the building at the hero's door (E opens it), the iris an app opens through (useActivateApp), drag-and-drop of buildings (the move endpoint), the time of day from the clock or the config, and a visually hidden list of links mirroring the buildings. The island's music is a background music source (music/background): one page-lived ambient engine the view holds for its sound effects, played from the page root so it can keep playing after the island is left. Server registration of the Isle config (seed, time of day, music).
           - Web:
             - Slots: `isle.actions`
             - Slot contributors: `isle.actions` ← `primitives.pane`
             - Contributes:
               - `Pane.Register` "isle"
               - `ConfigV2.WebRegister` "isle"
-            - Uses: 31 symbols — full list in [`plugins/apps/plugins/isle/plugins/world-view/REFERENCE.md`](../plugins/apps/plugins/isle/plugins/world-view/REFERENCE.md)
+              - `BackgroundMusic.Source` "isle"
+            - Uses: 36 symbols — full list in [`plugins/apps/plugins/isle/plugins/world-view/REFERENCE.md`](../plugins/apps/plugins/isle/plugins/world-view/REFERENCE.md)
               - `apps/isle/renderer` ×7
-              - `config_v2` ×3
-              - `apps-core/tabs` ×2
+              - `config_v2` ×4
+              - `apps-core/tabs` ×3
               - `apps-core` ×2
+              - `music/ambient` ×2
+              - `music/background` ×2
               - `network/live/live-state` ×2
               - `primitives/link-gesture` ×2
               - `primitives/pane` ×2
@@ -6048,7 +6051,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core/app-usage.useAppUsageSummary`
               - `apps/isle/buildings.useIsleBuildings`
               - `infra/endpoints.useEndpointMutation`
-              - `music/ambient.useAmbient`
               - `network/live.useLive`
               - `primitives/css/motion.prefersReducedMotion`
               - `primitives/dom/element-size.useElementSize`
@@ -8819,11 +8821,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`audio`** — Audio playback umbrella for Sonata: engine + instruments.
           - Plugins:
-            - **`engine`** — Sonata audio engine: schedules the Score's notes against the Web Audio clock on play, routing each note to its track's resolved instrument, with master volume in the player pane's header (and the song peek's).
+            - **`engine`** — Sonata audio engine: schedules the Score's notes against the Web Audio clock on play, routing each note to its track's resolved instrument, with master volume in the player pane's header (and the song peek's); a song starting pauses the background music service's music nobody sees.
               - Web:
                 - Contributes:
                   - `SonataSession.Provider` → `AudioProvider`
                   - `SonataSession.Effect` "audio-engine" → `AudioEngine`
+                  - `SonataSession.Effect` "background-music-yield" → `BackgroundMusicYield`
                   - `sonataPlayerPane.Actions` "volume" → `VolumeControl`
                   - `songPeekPane.Actions` "volume" → `VolumeControl`
                 - Uses:
@@ -8839,6 +8842,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/sonata/track-mixer.useMutedTrackIds`
                   - `apps/sonata/track-mixer.useTrackInstrumentMap`
                   - `apps/sonata/track-mixer.useTrackVolumeMap`
+                  - `music/background.useForegroundMusic`
                   - `primitives/css/slider.Slider`
                   - `primitives/css/spacing.Inset`
                   - `primitives/css/spacing.Stack`
@@ -13795,6 +13799,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `companions/panel`
           - `config_v2/settings`
           - `framework/cli/release`
+          - `music/background`
     - **`app-launcher`** — The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the composition's home app (the app gallery on main), hover or ArrowDown for a grid of every other installed app (switching exactly as the rail does) — plus, as the sidebar header, the current app's name linking to its own home. Where no app switcher frames the surface — solo (fullscreen), or an AppEmbed, which draws no rail or tab bar — a surface that draws no brand gets the launcher floating at the top-left of its box, revealed as the pointer nears that corner. On a phone neither the top-left launcher nor the floating one is drawn: the phone action button's Apps sheet (PhoneActions.Action 'apps') is the app grid there.
       - Web:
         - Slots: `AppLauncherSlots.ReturnTip`
@@ -14265,7 +14270,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/layout`
           - `apps-core/surface`
           - `primitives/dom/static-render`
-    - **`tabs`** — Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, which tabs stay mounted (useResidentTabs: those on screen plus the most recently focused hidden ones; the rest are unloaded), the focused tab's title as a module signal (useFocusedTabTitle, readable outside TabsProvider), and the surface-written placement-capabilities registry — one per tab set: the page's own, or an embedded one (TabsProvider embedded={{ at, onLeave, onLocationChange?, browserTabUrl? }}, an AppEmbed's: seeded, never live, persisting nothing, publishing no page-global signal, behind its own navigation boundary), found from outside React by peekFocusedTabSet().
+    - **`tabs`** — Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, which tabs stay mounted (useResidentTabs: those on screen plus the most recently focused hidden ones; the rest are unloaded), whether a surface is on screen (useSurfaceShown: the focused tab, or any open tab in a mode that paints unfocused tabs — the desktop's windows, minimized included), the focused tab's title as a module signal (useFocusedTabTitle, readable outside TabsProvider), and the surface-written placement-capabilities registry — one per tab set: the page's own, or an embedded one (TabsProvider embedded={{ at, onLeave, onLocationChange?, browserTabUrl? }}, an AppEmbed's: seeded, never live, persisting nothing, publishing no page-global signal, behind its own navigation boundary), found from outside React by peekFocusedTabSet().
       - Web:
         - Uses: 51 symbols — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
           - `primitives/pane` ×21
@@ -14323,9 +14328,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useResidentTabs`
           - `useSurfaceFocused`
           - `useSurfaceMode`
+          - `useSurfaceShown`
           - `useTabs`
       - Cross-plugin:
-        - Imported by: 46 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+        - Imported by: 47 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
           - `apps` ×19
           - `apps-core` ×9
           - `debug` ×4
@@ -14337,6 +14343,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `companions/menu-bar/app-grid`
           - `config_v2/config-link`
           - `conversations/runtime-sdk`
+          - `music/background`
           - `ui/theme-engine/quick-theme`
           - `upstream`
     - **`theme-scope`** — Theme-scope helpers: the single definition of the focused full-surface app's theme scope, which decides the document's light/dark and canvas (never the :root tokens, always the desktop's) (useRootThemeScopeState: a state that keeps the not-registered-yet window apart from 'no app owns the surface'), and useAppSettingsScope — the app:<id> config scope per-app theme settings (variants) are read in: the nearest app theme boundary's (a pane's home app), else the focused app's.
@@ -16503,8 +16510,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins: the registry over the user-layer store (the ConfigStore host service) and the committed layer (ConfigGitLayer), its live values and the scope routes.
   - Web:
     - Slots: `ConfigV2.WebRegister`
-    - Slot contributors: 101 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×101
+    - Slot contributors: 102 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×102
     - Uses:
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
@@ -16703,7 +16710,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 151 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+    - Imported by: 152 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×43
       - `debug` ×15
       - `conversations` ×14
@@ -16724,6 +16731,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `fields/secret/config`
       - `hints/ask`
       - `map/google`
+      - `music/background`
       - `network/live/live-state-snapshot`
       - `reorder`
       - `reports`
@@ -29283,7 +29291,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boolField`
               - `boolSample`
           - Cross-plugin:
-            - Imported by: 86 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
+            - Imported by: 87 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
               - `apps` ×29
               - `debug` ×13
               - `backup` ×11
@@ -29298,6 +29306,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/build/experimental-marks`
               - `history/engine`
               - `integrations/gmail`
+              - `music/background`
               - `network/live/live-state-snapshot`
               - `plugin-meta/composition`
               - `primitives/data-view/list`
@@ -34312,8 +34321,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `Core.Root`
           - `Core.Boot`
-        - Slot contributors: 42 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
-          - `Core.Root` ×40
+        - Slot contributors: 43 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+          - `Core.Root` ×41
           - `Core.Boot` ×2
       - Core:
         - Uses:
@@ -34385,7 +34394,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `webCollectedDir`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 110 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+        - Imported by: 111 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
           - `primitives` ×25
           - `apps` ×19
           - `ui` ×8
@@ -34408,6 +34417,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ids`
           - `layouts/route-fallback`
           - `map`
+          - `music/background`
           - `plugin-meta/contributions-table`
           - `reorder/node-types`
           - `review/plugin-changes`
@@ -41425,19 +41435,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/video`
           - `primitives/file-viewer/media`
 
-- **`music`** — Umbrella for music building blocks shared across apps, knowing pitch classes, strings and sound only: the chord box (a chord's degree colour, numeral and tile) and the ambient engine (generative WebAudio music and sound effects).
+- **`music`** — Umbrella for music shared across apps: the chord box (a chord's degree colour, numeral and tile), the ambient engine (generative WebAudio music and sound effects), and the background music service (the music apps offer, played from the page root so it outlives the app, one at a time across the browser's tabs, with the action bar's music button).
   - Plugins:
-    - **`ambient`** — Generative ambient music in WebAudio, no samples: createAmbient(ctx, { mood }) plays a mood (lofi — a swung 72 bpm Rhodes loop with drums and vinyl crackle; bossa — an 84 bpm nylon guitar over shaker and rim clave; nocturne — a rolled piano in 3/4 with crickets and music-box fireflies; ambient — slow pads, bells, surf and birds), each an endless procedural form rather than a loop — core's createComposer walks sections (intro, verse, chorus, bridge, break) over the mood's progressions, moves key now and then, and gives each section a melodic motif stated, answered and varied, fresh from a new seed every start — written bar by bar a little ahead of the audio clock, its look-ahead pump woken by the audio clock itself (a silent source's onended, never an interval), with start / stop / setMood / duck and sound effects (step, blip, enter, whoosh, chime); useAmbient({ mood, on }) owns its own AudioContext, built suspended when it mounts (constructing one blocks the main thread while the browser opens the audio output, so never inside a gesture), resumed by unlock() from a user gesture and closed on unmount.
-      - Web:
-        - Uses: `primitives/dom/reload-readiness.useReloadHold`
-        - Exports (types):
-          - `Ambient`
-          - `AmbientHandle`
-          - `AmbientSfx`
-          - `AmbientStatus`
-        - Exports (values):
-          - `createAmbient`
-          - `useAmbient`
+    - **`ambient`** — Generative ambient music in WebAudio, no samples: createAmbient(ctx, { mood }) plays a mood (lofi — a swung 72 bpm Rhodes loop with drums and vinyl crackle; bossa — an 84 bpm nylon guitar over shaker and rim clave; nocturne — a rolled piano in 3/4 with crickets and music-box fireflies; ambient — slow pads, bells, surf and birds), each an endless procedural form rather than a loop — core's createComposer walks sections (intro, verse, chorus, bridge, break) over the mood's progressions, moves key now and then, and gives each section a melodic motif stated, answered and varied, fresh from a new seed every start — written bar by bar a little ahead of the audio clock, its look-ahead pump woken by the audio clock itself (a silent source's onended, never an interval), with start / stop / setMood / duck / setGain and sound effects (step, blip, enter, whoosh, chime); createAmbientHost() is one engine shared by everything on the page that holds it (a view and a background player alike): its AudioContext built suspended on the first retain (constructing one blocks the main thread while the browser opens the audio output, so never inside a gesture), resumed by unlock() or set({ on: true }), closed on the last release; useAmbientHost(host) holds it while mounted and reads its status.
       - Core:
         - Uses: `packages/seeded-random.mulberry32`
         - Exports (types):
@@ -41460,6 +41460,61 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SECTION_KINDS`
       - Cross-plugin:
         - Imported by: `apps/isle/world-view`
+      - Web:
+        - Exports (types):
+          - `Ambient`
+          - `AmbientHost`
+          - `AmbientSfx`
+          - `AmbientSnapshot`
+          - `AmbientStatus`
+        - Exports (values):
+          - `createAmbient`
+          - `createAmbientHost`
+          - `useAmbientHost`
+    - **`background`** — The background music service: apps offer music as BackgroundMusic.Source contributions (an app, a kind, useTitle, and usePlayer — run from the page root, so the music outlives the app's views); the service plays one at a time per page and one page at a time in the browser (a BroadcastChannel claim, the playing page's state mirrored to the others' buttons and driven from them, a per-page Web Lock telling when it is gone). An app view reports itself on screen with useMusicSource(id, { shown }): when the last view leaves, its music pauses unless Keep playing across apps (config, on by default) is on; music an app plays itself (useForegroundMusic) pauses background music nobody sees. The global action bar's music button (a note, moving bars while playing) opens the panel: now playing with its app, play / pause, the device's volume and stop; every app's music; and the across-apps switch. Registers the background music config (Keep playing across apps) for Settings → Config.
+      - Web:
+        - Slots: `BackgroundMusic.Source`
+        - Slot contributors: `BackgroundMusic.Source` ← `apps.isle.world-view`
+        - Contributes:
+          - `ConfigV2.WebRegister` "config"
+          - `Core.Root` → `BackgroundMusicRoot`
+          - `ActionBar.Item` → `MusicButton`
+        - Uses: 21 symbols — full list in [`plugins/music/plugins/background/REFERENCE.md`](../plugins/music/plugins/background/REFERENCE.md)
+          - `config_v2` ×4
+          - `primitives/css/control-panel` ×2
+          - `apps-core/app-icon.AppIconTile`
+          - `apps-core/tabs.useAppLinkProps`
+          - `network/live/live-state.foldResource`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/slider.Slider`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.Button`
+          - `primitives/dom/reload-readiness.useReloadHold`
+          - `primitives/dom/web-storage.defineStore`
+          - `primitives/error-boundary.PluginErrorBoundary`
+          - `primitives/icon-button.IconButton`
+          - `primitives/loading.Loading`
+          - `shell/action-bar.ActionBar`
+          - `ui/icons.Icon`
+        - Exports (types):
+          - `BackgroundMusicPlayerProps`
+          - `BackgroundMusicSource`
+          - `MusicSourceHandle`
+        - Exports (values):
+          - `BackgroundMusic`
+          - `useForegroundMusic`
+          - `useMusicSource`
+      - Server:
+        - Contributes: `ConfigV2.Register` "config"
+        - Uses: `config_v2.ConfigV2`
+      - Cross-plugin:
+        - Uses tokens: `ui/tokens/shape --spacing`
+        - Imported by:
+          - `apps/isle/world-view`
+          - `apps/sonata/audio/engine`
+      - Exemptions:
+        - Exempts itself from: `page-hosts-on-demand` — `web/index.ts` (sanctioned)
     - **`chord-box`** — The chord box: <ChordBox> (a frame painted in the colour of its numeral's number — filled tile, given or empty — holding its numeral and name, with a full-bleed hit button behind the content and now / selected states), <ChordNumeral> (the Roman numeral in the display serif, its mark raised in the sans), chordToneStyle / chordColour (the degree's --chord-N colour and tile depth as the --fn custom properties the .chord-tone paint reads), and chordPaint — the four named paints (tile, tint, tint-quiet, ghost) every chord surface applies by name instead of re-stating a chord colour, with .chord-caption for a reading under a numeral (V/V, I/3) in the paint's own ink. Knows degrees and strings only, so any app can draw a chord the same way.
       - Web:
         - Uses:
@@ -42323,7 +42378,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 317 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+            - Imported by: 318 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `apps` ×85
               - `conversations` ×49
               - `debug` ×31
@@ -42351,6 +42406,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `code-explorer/commit-detail`
               - `fields/secret/config`
               - `history/dialog`
+              - `music/background`
               - `reorder`
               - `screenshot`
               - `search/quick-find`
@@ -49602,7 +49658,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×9
               - `ui/tokens/type-scale` ×7
               - `ui/tokens/shape` ×2
-            - Imported by: 50 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
+            - Imported by: 51 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
               - `apps` ×15
               - `page` ×6
               - `primitives` ×4
@@ -49617,6 +49673,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `companions/menu-bar/open-in-window`
               - `framework/cli/build/experimental-marks`
               - `fullscreen`
+              - `music/background`
               - `phone-window`
               - `reports/panel-overflow`
               - `shell/global-action-bar`
@@ -49670,7 +49727,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 184 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+            - Imported by: 185 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
               - `apps` ×51
               - `primitives` ×33
               - `conversations` ×27
@@ -49689,6 +49746,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core/app-launcher`
               - `auth`
               - `companions/panel`
+              - `music/background`
               - `tag-tree/picker`
               - `upstream`
         - **`grid`** — Responsive/uniform grid layout primitive: <Grid minCellWidth> lays out a wrapping, equal-width card grid via a closed prop surface — not a raw grid-template passthrough.
@@ -50293,6 +50351,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/rich/swing`
               - `apps/sonata/track-mixer`
               - `media/player`
+              - `music/background`
               - `primitives/overlay/image-viewer`
         - **`space-ramp`** — The spacing ramp's one declaration: the closed step set and the literal class each step-keyed @utility family gives each step, generated from app.css so a step that exists in TypeScript but has no @utility behind it is unspellable. Read by every consumer (Stack, Inset, Column, railClass, Sticky, Pin) instead of re-spelling the steps.
           - Cross-plugin:
@@ -50356,7 +50415,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 450 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 451 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×108
               - `conversations` ×78
               - `primitives` ×55
@@ -50382,11 +50441,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2` ×2
               - `framework` ×2
               - `layouts` ×2
+              - `music` ×2
               - `screenshot` ×2
               - `hints/ask`
               - `history/dialog`
               - `map/google`
-              - `music/chord-box`
               - `network/live/live-state`
               - `reports/launch-fix`
               - `search/quick-find`
@@ -50590,7 +50649,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 432 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 433 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×111
               - `conversations` ×83
               - `primitives` ×48
@@ -50621,6 +50680,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `history/dialog`
               - `layouts/route-fallback`
               - `media/player`
+              - `music/background`
               - `search/quick-find`
               - `tag-tree/picker`
               - `upstream`
@@ -50916,7 +50976,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 477 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 478 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×113
               - `apps` ×110
               - `conversations` ×55
@@ -50941,6 +51001,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `backup` ×2
               - `hints` ×2
               - `layouts` ×2
+              - `music` ×2
               - `screenshot` ×2
               - `wish` ×2
               - `audience/developer-mark`
@@ -50948,7 +51009,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `history/dialog`
               - `map`
               - `media/player`
-              - `music/chord-box`
               - `network/live/live-state`
               - `reports/popover-anchor-lost`
               - `search/quick-find`
@@ -52745,7 +52805,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build`
               - `infra/attachments`
               - `integrations/youtube`
-              - `music/ambient`
+              - `music/background`
               - `network/live`
         - **`render-mode`** — Reading the browser while rendering, safely in both modes: useBrowserValue({ name, read, subscribe?, staticValue? }) (live: useSyncExternalStore, re-read on every change; static: staticValue, or a loud NoStaticValueError), useMediaQuery(query, staticValue), useViewportSize(staticValue), and useOwnedElement(name, create) — a DOM node a component mints once, which has no static form. The one place a render-time read of window / document / navigator / matchMedia happens (dom-access-safety/no-render-time-dom).
           - Cross-plugin:
@@ -52899,7 +52959,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SCOPE_PATTERN`
               - `SCOPE_SEPARATOR`
           - Cross-plugin:
-            - Imported by: 57 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
+            - Imported by: 58 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
               - `primitives` ×16
               - `apps` ×14
               - `conversations` ×6
@@ -52914,6 +52974,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `hints/ask`
               - `layouts/miller`
               - `map`
+              - `music/background`
               - `network/live/live-state`
               - `page/editor`
               - `shell/global-action-bar`
@@ -53119,6 +53180,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/prototypes/canvas`
           - `layouts/full-pane`
           - `layouts/miller`
+          - `music/background`
           - `plugin-meta/exhibits`
           - `primitives/text-editor/inline-chip`
           - `reports/crash`
@@ -53566,7 +53628,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 141 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 142 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×47
           - `conversations` ×23
           - `primitives` ×23
@@ -53586,6 +53648,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fullscreen`
           - `map/google`
           - `media/player`
+          - `music/background`
           - `network/live/live-state`
           - `plugin-meta/exhibits`
           - `tag-tree/picker`
@@ -54004,7 +54067,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 238 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 239 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×71
           - `conversations` ×25
           - `ui` ×24
@@ -54032,6 +54095,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hints/ask`
           - `history/dialog`
           - `layouts/route-fallback`
+          - `music/background`
           - `screenshot`
           - `search/quick-find`
           - `tag-tree/picker`
@@ -59704,6 +59768,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ActionBar.Item` ← `build`
           - `ActionBar.Item` ← `config_v2.git-defaults-preview`
           - `ActionBar.Item` ← `hints.help-menu`
+          - `ActionBar.Item` ← `music.background`
           - `ActionBar.Item` ← `screenshot`
           - `ActionBar.Item` ← `screenshot.draw-on-app`
           - `ActionBar.Item` ← `shell.global-action-bar`
@@ -59735,6 +59800,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/cli/build/experimental-marks`
           - `fullscreen`
           - `hints/help-menu`
+          - `music/background`
           - `phone-window`
           - `screenshot`
           - `screenshot/draw-on-app`
@@ -64175,7 +64241,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedSprites`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 604 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 605 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×157
           - `conversations` ×123
           - `primitives` ×54
@@ -64208,6 +64274,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fullscreen`
           - `layouts/miller`
           - `media/player`
+          - `music/background`
           - `network/live/live-state`
           - `phone-window`
           - `runs/run-outcome`
@@ -66137,7 +66204,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 415 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 416 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×97
               - `apps` ×80
               - `primitives` ×62
@@ -66166,6 +66233,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `integrations/google-maps`
               - `layouts/miller`
               - `media/player`
+              - `music/background`
               - `reports/launch-fix`
               - `search/quick-find`
               - `tag-tree/picker`

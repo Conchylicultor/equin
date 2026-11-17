@@ -512,6 +512,7 @@ export const browserHost = {
     "map.pin-layer",
     "media.player",
     "music.ambient",
+    "music.background",
     "music.chord-box",
     "network.live",
     "network.live.boot-snapshot",

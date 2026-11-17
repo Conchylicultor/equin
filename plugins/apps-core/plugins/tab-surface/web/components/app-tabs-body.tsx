@@ -24,6 +24,7 @@ const DOCKED_ONLY: PlacementCapabilities = {
   appThemeScope: new Set(["docked"]),
   ownsChrome: new Set(),
   allowsEmpty: new Set(),
+  showsUnfocused: new Set(),
 };
 
 /**

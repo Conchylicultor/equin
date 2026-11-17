@@ -40,6 +40,8 @@ export interface Ambient {
   setMood(mood: AmbientMood): void;
   /** Lowers the music under something else (an app opening). */
   duck(on: boolean): void;
+  /** The listener's volume, a gain in [0, 1] applied after everything (music and sound effects). */
+  setGain(gain: number): void;
   readonly sfx: AmbientSfx;
   /** Stops and disconnects from the context's destination. */
   dispose(): void;
@@ -66,7 +68,10 @@ export function createAmbient(
   const lp = ctx.createBiquadFilter();
   lp.type = "lowpass";
   lp.frequency.value = 5200;
-  master.connect(lp).connect(ctx.destination);
+  // the listener's volume, last in the chain
+  const out = ctx.createGain();
+  out.gain.value = 1;
+  master.connect(lp).connect(out).connect(ctx.destination);
   const music = ctx.createGain();
   music.gain.value = MUSIC;
   music.connect(master);
@@ -183,6 +188,11 @@ export function createAmbient(
         if (playing) bell(rig, midi(note), ctx.currentTime, 0.09, sfxBus);
       },
     },
+    setGain(gain) {
+      const now = ctx.currentTime;
+      out.gain.cancelScheduledValues(now);
+      out.gain.setTargetAtTime(Math.max(0, Math.min(1, gain)), now, 0.05);
+    },
     dispose() {
       playing = false;
       waker = null;
@@ -191,6 +201,7 @@ export function createAmbient(
         hiss = null;
       }
       lp.disconnect();
+      out.disconnect();
     },
   };
 }

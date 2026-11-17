@@ -1,0 +1,5 @@
+// @hash 7ca883cf215a
+{
+  // Music an app plays (Isle's ambience) keeps playing after you leave the app. Off, leaving the app stops it — clicking between windows on the desktop never does.
+  "acrossApps": true
+}

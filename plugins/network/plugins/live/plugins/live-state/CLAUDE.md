@@ -902,7 +902,7 @@ Details:
     - `unresolved`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/color-palette --destructive`
-  - Imported by: 317 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 318 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×85
     - `conversations` ×49
     - `debug` ×31
@@ -930,6 +930,7 @@ Details:
     - `code-explorer/commit-detail`
     - `fields/secret/config`
     - `history/dialog`
+    - `music/background`
     - `reorder`
     - `screenshot`
     - `search/quick-find`

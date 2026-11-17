@@ -88,6 +88,7 @@ barrel.
     - `apps/prototypes/canvas`
     - `layouts/full-pane`
     - `layouts/miller`
+    - `music/background`
     - `plugin-meta/exhibits`
     - `primitives/text-editor/inline-chip`
     - `reports/crash`

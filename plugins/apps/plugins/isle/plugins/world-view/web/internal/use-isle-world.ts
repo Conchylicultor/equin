@@ -75,7 +75,7 @@ function buildingOf(
 }
 
 const TIMES = ["auto", "day", "dusk", "night"] as const;
-const timeOf = (v: string): TimeOfDay | "auto" => {
+export const timeOf = (v: string): TimeOfDay | "auto" => {
   const t = TIMES.find((x) => x === v);
   if (!t) throw new Error(`isle: unknown time of day "${v}"`);
   return t;

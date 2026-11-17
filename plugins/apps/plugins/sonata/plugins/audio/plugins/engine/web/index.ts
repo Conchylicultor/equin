@@ -6,6 +6,7 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { AudioEngine } from "./components/audio-engine";
 import { AudioProvider } from "./components/audio-provider";
+import { BackgroundMusicYield } from "./components/background-music-yield";
 import { VolumeControl } from "./components/volume-control";
 
 // Shared audio toolkit for sibling per-surface audio effects (the metronome):
@@ -17,7 +18,7 @@ export { startScheduling, type ScheduleHandle } from "./scheduler";
 
 export default {
   description:
-    "Sonata audio engine: schedules the Score's notes against the Web Audio clock on play, routing each note to its track's resolved instrument, with master volume in the player pane's header (and the song peek's).",
+    "Sonata audio engine: schedules the Score's notes against the Web Audio clock on play, routing each note to its track's resolved instrument, with master volume in the player pane's header (and the song peek's); a song starting pauses the background music service's music nobody sees.",
   contributions: [
     // Per-session audio store, folded above the whole session subtree so the
     // engine effect and the volume control (different slot branches) share one
@@ -26,6 +27,11 @@ export default {
     // The Web Audio graph lives in a headless, always-mounted effect so the
     // AudioContext survives the player's section column being collapsed.
     SonataSession.Effect({ id: "audio-engine", component: AudioEngine }),
+    // A song starting pauses the background music nobody sees (music/background).
+    SonataSession.Effect({
+      id: "background-music-yield",
+      component: BackgroundMusicYield,
+    }),
     // The master-volume slider, pinned into the player pane's header; owns no
     // audio.
     sonataPlayerPane.Actions({ id: "volume", component: VolumeControl }),

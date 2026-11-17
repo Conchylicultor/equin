@@ -8,6 +8,7 @@ import {
 import {
   useActivateApp,
   useSurfaceFocused,
+  useSurfaceShown,
 } from "@plugins/apps-core/plugins/tabs/web";
 import { useAppUsageSummary } from "@plugins/apps-core/plugins/app-usage/web";
 import { useSetConfig } from "@plugins/config_v2/web";
@@ -15,7 +16,8 @@ import {
   AMBIENT_MOODS,
   AMBIENT_TRACKS,
 } from "@plugins/music/plugins/ambient/core";
-import { useAmbient } from "@plugins/music/plugins/ambient/web";
+import { useAmbientHost } from "@plugins/music/plugins/ambient/web";
+import { useMusicSource } from "@plugins/music/plugins/background/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
   activationHref,
@@ -59,6 +61,7 @@ import {
   type IsleStation,
 } from "../../core";
 import { useTimeOfDay } from "../internal/time";
+import { isleAmbient } from "../internal/music";
 import { useIsleWorld, type Resident } from "../internal/use-isle-world";
 import { useStageDeadline } from "../internal/stage-deadline";
 import "./isle.css";
@@ -141,33 +144,39 @@ export function IsleView() {
         ? world.what
         : "Drawing the island";
   const stuck = useStageDeadline(waitingOn, focused);
-  // the island's music: unlocked by Start (a user gesture), playing while the
-  // config says so and this tab is the one on screen
+  // the island's music: the background music service plays it (from the page
+  // root, so it can outlive the island); the island holds the engine for its
+  // sound effects and asks the service to play once Start was pressed and the
+  // config says so. Leaving the island pauses it unless the user keeps music
+  // across apps.
   const mood = moodOf(ready ? world.station : "auto", time);
-  const ambient = useAmbient({
-    mood,
-    on: playing && focused && ready && world.music,
-  });
-  const unlockSound = ambient.unlock;
+  const shown = useSurfaceShown();
+  const music = useMusicSource("isle", { shown });
+  const ambient = useAmbientHost(isleAmbient);
+  const musicOn = music.playing && ambient.status === "playing";
+  const unlockSound = isleAmbient.unlock;
   const toggleMusic = () => {
     if (world.kind !== "ready") return;
-    ambient.unlock();
-    if (ambient.status === "locked" && world.music) return;
-    setConfig("music", !world.music);
+    isleAmbient.unlock();
+    if (ambient.status === "locked" && music.playing) return;
+    setConfig("music", !music.playing);
+    if (music.playing) music.pause();
+    else music.play();
   };
   // picking a station is asking to hear it: the music comes on with it
   const tune = (station: IsleStation) => {
     if (world.kind !== "ready") return;
-    ambient.unlock();
+    isleAmbient.unlock();
     if (station !== world.station) setConfig("mood", station);
     if (!world.music) setConfig("music", true);
+    music.play();
   };
   const nextStation = () => {
     if (world.kind !== "ready") return;
     const at = STATIONS.indexOf(world.station);
     tune(STATIONS[(at + 1) % STATIONS.length]!);
   };
-  const sfx = ambient.sfx;
+  const sfx = isleAmbient.sfx;
 
   const enter = useEventCallback(
     (
@@ -304,10 +313,16 @@ export function IsleView() {
   }, [usageRows]);
   // the music ducks under an app opening, and down the well (the crystals sing there)
   const isEntering = entering !== null;
-  useEffect(
-    () => ambient.duck(isEntering || below),
-    [ambient, isEntering, below],
-  );
+  useEffect(() => isleAmbient.duck(isEntering || below), [isEntering, below]);
+  // the island may be left mid-iris: the music it leaves behind is not ducked
+  useEffect(() => () => isleAmbient.duck(false), []);
+  // on the island, once started, with the music on: it plays — unless other
+  // music plays (a song, another tab's), which an auto-play gives way to
+  const autoPlay = playing && shown && ready && world.music;
+  const playUnlessBusy = useEventCallback(() => music.playUnlessBusy());
+  useEffect(() => {
+    if (autoPlay) playUnlessBusy();
+  }, [autoPlay, playUnlessBusy]);
   useEffect(() => engineRef.current?.resize(size.width, size.height), [size]);
 
   useEffect(() => {
@@ -463,13 +478,7 @@ export function IsleView() {
               })}
             </div>
           ) : null}
-          <div
-            className={
-              ambient.status === "playing"
-                ? "isle-radio"
-                : "isle-radio isle-off"
-            }
-          >
+          <div className={musicOn ? "isle-radio" : "isle-radio isle-off"}>
             <button
               type="button"
               className="isle-radio-main"
@@ -490,17 +499,11 @@ export function IsleView() {
             <button
               type="button"
               className="isle-radio-more"
-              title={
-                ambient.status === "playing"
-                  ? "Pause music (M)"
-                  : "Play music (M)"
-              }
-              aria-pressed={ambient.status === "playing"}
+              title={musicOn ? "Pause music (M)" : "Play music (M)"}
+              aria-pressed={musicOn}
               onClick={toggleMusic}
             >
-              <Icon
-                icon={ambient.status === "playing" ? pauseIcon : playIcon}
-              />
+              <Icon icon={musicOn ? pauseIcon : playIcon} />
             </button>
           </div>
         </div>

@@ -5178,6 +5178,10 @@
       "name": "@equin/plugin-music-ambient",
       "version": "0.0.1",
     },
+    "plugins/music/plugins/background": {
+      "name": "@equin/plugin-music-background",
+      "version": "0.0.1",
+    },
     "plugins/music/plugins/chord-box": {
       "name": "@equin/plugin-music-chord-box",
       "version": "0.0.1",
@@ -10640,6 +10644,8 @@
     "@equin/plugin-music": ["@equin/plugin-music@workspace:plugins/music"],
 
     "@equin/plugin-music-ambient": ["@equin/plugin-music-ambient@workspace:plugins/music/plugins/ambient"],
+
+    "@equin/plugin-music-background": ["@equin/plugin-music-background@workspace:plugins/music/plugins/background"],
 
     "@equin/plugin-music-chord-box": ["@equin/plugin-music-chord-box@workspace:plugins/music/plugins/chord-box"],
 

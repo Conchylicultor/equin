@@ -40,6 +40,9 @@ export interface PlacementCapabilities {
   ownsChrome: Set<string>;
   /** Modes in which the surface may hold no tab at all (the desktop). */
   allowsEmpty: Set<string>;
+  /** Modes that paint every open tab, focused or not (the desktop's windows):
+   * an unfocused tab there is still on screen. */
+  showsUnfocused: Set<string>;
 }
 
 /**

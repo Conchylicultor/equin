@@ -152,6 +152,7 @@ beforeEach(() => {
     appThemeScope: new Set(),
     ownsChrome: new Set(["desktop"]),
     allowsEmpty: new Set(["desktop"]),
+    showsUnfocused: new Set(["desktop"]),
   });
 });
 
