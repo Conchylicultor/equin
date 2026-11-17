@@ -286,7 +286,9 @@ what skipping costs — raw lines only in `evidence` and the log.
   `quit`, exit 0.
 - **First-time macOS setup in the window**: Apple's own dialog
   (`xcode-select --install`, waited out every 5 s — an OS dialog has no
-  change signal), never `sudo softwareupdate`. **Linux in the window**: `sudo
+  change signal), brought to the front once it appears (`open -a`: it opens
+  behind the window, which takes focus as it opens), never `sudo
+  softwareupdate`. **Linux in the window**: `sudo
   -A` with an askpass wrapper running the window's binary (`--askpass`), which
   asks the window over its socket for a password sheet.
 - **Reproducing each on purpose** (dry run): `EQUIN_INSTALL_DRY_RUN_FAIL=

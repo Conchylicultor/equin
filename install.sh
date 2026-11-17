@@ -630,7 +630,13 @@ xcode_dialog() {
   until xcode-select -p >/dev/null 2>&1; do
     sleep 5
     n=$((n + 1))
-    if pgrep -f "Install Command Line Developer Tools" >/dev/null 2>&1; then seen=1
+    if pgrep -f "Install Command Line Developer Tools" >/dev/null 2>&1; then
+      # Apple's dialog opens behind the install window (which takes focus as
+      # it opens), where the user never sees what they are told to click:
+      # bring it to the front once. `open -a` on a running app only
+      # activates it — no permission asked.
+      [ "$seen" = 1 ] || open -a "/System/Library/CoreServices/Install Command Line Developer Tools.app" 2>&1 || true
+      seen=1
     elif [ "$seen" = 1 ] || [ "$n" -ge 12 ]; then break; fi # gone, or never came in a minute
   done
   step_ev "\"type\":\"wait\",\"step\":\"tools\",\"state\":\"end\",\"on\":\"apple-installer\""
