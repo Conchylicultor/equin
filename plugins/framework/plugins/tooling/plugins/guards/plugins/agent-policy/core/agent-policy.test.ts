@@ -6,8 +6,10 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import {
   agentPolicySettings,
-  bunScriptHookCommand,
   GUARD_SCRIPTS,
+  HOOK_LAUNCHER,
+  hookCommand,
+  isLauncherHookCommand,
 } from "./agent-policy";
 
 const repoRoot = Bun.spawnSync(["git", "rev-parse", "--show-toplevel"], {
@@ -24,10 +26,14 @@ function preToolUseCommand(): string {
 }
 
 /** Runs the hook the way Claude Code does: from the agent's `cwd`, the guards rooted at `guardsRoot`. */
-function runHook(cwd: string, guardsRoot: string) {
+function runHook(
+  cwd: string,
+  guardsRoot: string,
+  env: Record<string, string | undefined> = process.env,
+) {
   const result = Bun.spawnSync(["/bin/sh", "-c", preToolUseCommand()], {
     cwd,
-    env: { ...process.env, ...envEntries({ GUARDS_ROOT: guardsRoot }) },
+    env: { ...env, ...envEntries({ GUARDS_ROOT: guardsRoot }) },
     stdin: new TextEncoder().encode(
       JSON.stringify({ tool_name: "Read", tool_input: {} }),
     ),
@@ -61,37 +67,119 @@ describe("PreToolUse hook", () => {
       expect(stderr).toContain("every tool call is blocked");
     });
   });
+
+  test("blocks (exit 2) and names the fix when no bun can be found", () => {
+    inScratch((scratch) => {
+      const { exitCode, stderr } = runHook(
+        scratch,
+        repoRoot,
+        noBunEnv(scratch),
+      );
+      expect(exitCode).toBe(2);
+      expect(stderr).toContain("bun is not on PATH and mise has no bun shim");
+      expect(stderr).toContain("mise activate");
+      expect(stderr).toContain("every tool call is blocked");
+    });
+  });
 });
 
-describe("bunScriptHookCommand", () => {
+/** An environment with no bun anywhere: system PATH only, mise's data dir empty. */
+function noBunEnv(scratch: string): Record<string, string | undefined> {
+  return {
+    ...process.env,
+    PATH: "/usr/bin:/bin",
+    HOME: scratch,
+    MISE_DATA_DIR: join(scratch, "mise"),
+  };
+}
+
+describe("every hook command", () => {
+  test("runs through the launcher by absolute path, never a bare bun", () => {
+    for (const groups of Object.values(agentPolicySettings().hooks))
+      for (const group of groups)
+        for (const hook of group.hooks) {
+          expect(isLauncherHookCommand(hook.command)).toBe(true);
+          expect(hook.command).not.toMatch(/(^|[;&|]\s*)bun\s/);
+        }
+  });
+});
+
+describe("hookCommand", () => {
   // The PATH an agent pane runs with — mise's shims first: from a dir with no
   // mise.toml, a bare `bun` there fails "No version is set for shim: bun".
   const path = runtimePath(process.env);
-  const script = join(repoRoot, GUARD_SCRIPTS.stop);
+  const script = GUARD_SCRIPTS.stop;
 
-  test("runs the script from its own directory", () => {
-    expect(bunScriptHookCommand(script)).toBe(
-      `cd "${dirname(script)}" && bun "${script}"`,
+  function run(
+    command: string,
+    cwd: string,
+    env: Record<string, string | undefined>,
+  ) {
+    const result = Bun.spawnSync(["/bin/sh", "-c", command], {
+      cwd,
+      env,
+      stdin: new TextEncoder().encode("{}"),
+    });
+    return { exitCode: result.exitCode, stderr: result.stderr.toString() };
+  }
+
+  test("runs the launcher over the script, both by absolute path", () => {
+    const command = hookCommand({ checkout: repoRoot, script });
+    expect<string>(command).toBe(
+      `/bin/sh "${repoRoot}/${HOOK_LAUNCHER}" "${repoRoot}/${script}"`,
     );
+    expect(isLauncherHookCommand(command)).toBe(true);
+    expect(
+      isLauncherHookCommand(`cd "${repoRoot}" && bun "${repoRoot}/${script}"`),
+    ).toBe(false);
   });
 
   test("runs from a workspace outside any checkout, bun resolved by mise", () => {
     inScratch((scratch) => {
-      const result = Bun.spawnSync(
-        ["/bin/sh", "-c", bunScriptHookCommand(script)],
-        {
-          cwd: scratch,
-          env: { ...process.env, PATH: path },
-          stdin: new TextEncoder().encode("{}"),
-        },
-      );
-      expect(result.stderr.toString()).not.toContain("mise ERROR");
+      const result = run(hookCommand({ checkout: repoRoot, script }), scratch, {
+        ...process.env,
+        PATH: path,
+      });
+      expect(result.stderr).not.toContain("mise ERROR");
       expect(result.exitCode).toBe(0);
     });
   });
 
+  test("finds bun through mise's shims when it is not on PATH", () => {
+    const shims = path.split(":")[0] ?? "";
+    if (!shims.endsWith("/mise/shims"))
+      throw new Error(`no mise shims on ${path}`);
+    inScratch((scratch) => {
+      const result = run(hookCommand({ checkout: repoRoot, script }), scratch, {
+        ...process.env,
+        PATH: "/usr/bin:/bin",
+        MISE_DATA_DIR: dirname(shims),
+      });
+      expect(result.stderr).not.toContain("equin hook:");
+      expect(result.exitCode).toBe(0);
+    });
+  });
+
+  test("fails loudly, naming the fix, when there is no bun at all", () => {
+    inScratch((scratch) => {
+      const result = run(
+        hookCommand({ checkout: repoRoot, script }),
+        scratch,
+        noBunEnv(scratch),
+      );
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain("cannot run stop-guard.ts");
+      expect(result.stderr).toContain("mise install");
+    });
+  });
+
   test("refuses a path it cannot splice into a shell command", () => {
-    expect(() => bunScriptHookCommand("relative/x.ts")).toThrow();
-    expect(() => bunScriptHookCommand('/a/"; rm -rf ~ #.ts')).toThrow();
+    expect(() => hookCommand({ checkout: "relative", script })).toThrow();
+    expect(() =>
+      hookCommand({ checkout: repoRoot, script: "/abs/x.ts" }),
+    ).toThrow();
+    expect(() =>
+      hookCommand({ checkout: '/a/"; rm -rf ~ #', script }),
+    ).toThrow();
   });
 });

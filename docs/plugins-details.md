@@ -17979,7 +17979,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Routes: `POST /api/conversations/:id/compaction-context`
       - Core:
         - Uses:
-          - `framework/tooling/guards/agent-policy.bunScriptHookCommand`
+          - `framework/tooling/guards/agent-policy.hookCommand`
+          - `framework/tooling/guards/agent-policy.HookCommand`
           - `infra/endpoints.defineEndpoint`
         - Exports (types):
           - `CompactionContextResponse`
@@ -23429,7 +23430,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Routes: `GET /api/conversations/:id/stop-gate`
       - Core:
         - Uses:
-          - `framework/tooling/guards/agent-policy.bunScriptHookCommand`
+          - `framework/tooling/guards/agent-policy.hookCommand`
+          - `framework/tooling/guards/agent-policy.HookCommand`
           - `infra/endpoints.defineEndpoint`
         - Exports (types):
           - `StopGateHookEntry`
@@ -33776,13 +33778,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses: `infra/launcher/env-names.envName`
                 - Exports (types):
                   - `AgentPolicySettings`
+                  - `HookCommand`
                   - `PolicyHookCommand`
                   - `PolicyHookGroup`
                   - `PolicyHooks`
                 - Exports (values):
                   - `agentPolicySettings`
-                  - `bunScriptHookCommand`
                   - `GUARD_SCRIPTS`
+                  - `HOOK_LAUNCHER`
+                  - `hookCommand`
+                  - `isLauncherHookCommand`
               - Cross-plugin:
                 - Imported by:
                   - `conversations/agent-launch`
@@ -39638,17 +39643,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/host-fs/user-path.asAppPath`
             - Exports (values): `REPO_ROOT`
           - Cross-plugin:
-            - Imported by: 54 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
+            - Imported by: 56 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
               - `framework` ×15
               - `infra` ×8
               - `apps` ×7
               - `build` ×6
               - `debug` ×4
               - `plugin-meta` ×4
+              - `conversations` ×3
               - `reports` ×3
               - `code-explorer`
               - `config_v2`
-              - `conversations/workspace/scratch`
               - `database`
               - `primitives/css/layout-harness`
               - `release`

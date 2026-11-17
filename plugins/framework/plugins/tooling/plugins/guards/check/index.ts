@@ -13,6 +13,8 @@ import { loadGuards } from "../core/load-guards";
 import {
   agentPolicySettings,
   GUARD_SCRIPTS,
+  HOOK_LAUNCHER,
+  isLauncherHookCommand,
 } from "@plugins/framework/plugins/tooling/plugins/guards/plugins/agent-policy/core";
 import type { ToolMatcher } from "../core";
 
@@ -130,8 +132,46 @@ const bootstrapStandsAlone: Check = {
   },
 };
 
+/**
+ * Every hook command `.claude/settings.json` carries runs through the hook
+ * launcher by absolute path, which finds bun itself and fails loudly with the
+ * fix. A bare `bun` exits 127 in a Claude Code started from a shell without
+ * mise — on every tool call, saying nothing a user can act on. The agent
+ * policy can only spell the launcher form (its `HookCommand` type); this holds
+ * the file to it too, whatever wrote it.
+ */
+const hookCommandsViaLauncher: Check = {
+  id: "guards:hook-commands-via-launcher",
+  description:
+    ".claude/settings.json's hook commands all run through the hook launcher (guards/plugins/agent-policy/bin/run-hook.sh) by absolute path — never a bare `bun`",
+  async run(ctx: CheckContext): Promise<CheckResult> {
+    const repo = await ctx.repo();
+    const text = await repo.read(CLAUDE_SETTINGS_REL_PATH);
+    if (text === null) return { ok: true };
+    const settings = JSON.parse(text) as {
+      hooks?: Record<string, Array<{ hooks?: Array<{ command?: string }> }>>;
+    };
+    const bad: string[] = [];
+    for (const [event, groups] of Object.entries(settings.hooks ?? {}))
+      for (const group of groups)
+        for (const hook of group.hooks ?? [])
+          if (
+            hook.command !== undefined &&
+            !isLauncherHookCommand(hook.command)
+          )
+            bad.push(`${event}: ${hook.command}`);
+    if (bad.length === 0) return { ok: true };
+    return {
+      ok: false,
+      message: `${CLAUDE_SETTINGS_REL_PATH} has hook commands that do not run through the hook launcher, so they fail silently wherever bun is not on PATH:\n    ${bad.join("\n    ")}`,
+      hint: `Spell every hook command with hookCommand() (guards/plugins/agent-policy/core): /bin/sh "<checkout>/${HOOK_LAUNCHER}" "<checkout>/<script>.ts".`,
+    };
+  },
+};
+
 export default [
   matcherCoversGuards,
   claudeSettingsInSync,
+  hookCommandsViaLauncher,
   bootstrapStandsAlone,
 ];

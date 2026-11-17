@@ -1,4 +1,7 @@
-import { agentPolicySettings } from "@plugins/framework/plugins/tooling/plugins/guards/plugins/agent-policy/core";
+import {
+  agentPolicySettings,
+  hookCommand,
+} from "@plugins/framework/plugins/tooling/plugins/guards/plugins/agent-policy/core";
 import { describe, expect, test } from "bun:test";
 import { resolveEffortSettings } from "@plugins/conversations/plugins/effort-provider/core";
 import type { CompactionHookEntry } from "@plugins/conversations/plugins/compaction-context/core";
@@ -12,13 +15,19 @@ import {
 // The entry as compaction-context builds it (its own tests pin the builder).
 const COMPACTION: CompactionHookEntry = {
   type: "command",
-  command: 'bun "/srv/checkout/plugins/c/bin/compaction-context.ts"',
+  command: hookCommand({
+    checkout: "/srv/checkout",
+    script: "tools/bin/compaction-context.ts",
+  }),
   timeout: 60,
 };
 // The entry as stop-gate builds it (its own tests pin the builder).
 const STOP_GATE: StopGateHookEntry = {
   type: "command",
-  command: 'bun "/srv/checkout/plugins/c/bin/stop-gate.ts"',
+  command: hookCommand({
+    checkout: "/srv/checkout",
+    script: "tools/bin/stop-gate.ts",
+  }),
   timeout: 30,
 };
 const ENTRIES = { compaction: COMPACTION, stopGate: STOP_GATE };

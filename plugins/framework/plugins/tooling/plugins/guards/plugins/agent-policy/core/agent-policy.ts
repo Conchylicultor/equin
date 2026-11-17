@@ -31,7 +31,7 @@ export const GUARD_SCRIPTS = {
 
 export interface PolicyHookCommand {
   type: "command";
-  command: string;
+  command: HookCommand;
 }
 
 export interface PolicyHookGroup {
@@ -50,52 +50,75 @@ export interface AgentPolicySettings {
 /** The guards' checkout: GUARDS_ROOT when the launch set it, else the project dir. */
 const ROOT = `\${${envName("GUARDS_ROOT")}:-$CLAUDE_PROJECT_DIR}`;
 
-function script(rel: string): string {
-  return `"${ROOT}/${rel}"`;
-}
+/**
+ * The one launcher every hook command runs through, relative to a checkout
+ * root: it resolves `bun` itself (PATH, else mise's shims), runs the script
+ * from the script's own directory, and fails loudly — with the fix — when there
+ * is no bun at all. A bare `bun` in a hook command exited 127 on every call in
+ * a Claude Code started from a shell without mise, saying nothing.
+ */
+export const HOOK_LAUNCHER =
+  "plugins/framework/plugins/tooling/plugins/guards/plugins/agent-policy/bin/run-hook.sh";
 
-// `bun` is a mise shim, which picks its version from the CURRENT directory's
-// mise.toml / mise.lock — and a scratch workspace has none (nor is there a
-// global default: "mise ERROR No version is set for shim: bun"), so every hook
-// running a bun script `cd`s into the script's checkout first: its lock picks
-// the bun the script is written for. A hook reads the agent's cwd from the hook
-// input, never from the process.
-function runGuard(rel: string): string {
-  return `cd "${ROOT}" && bun ${script(rel)}`;
-}
+declare const hookCommandBrand: unique symbol;
+
+/**
+ * A hook command, spelled only by {@link hookCommand}: the launcher by absolute
+ * path over a bun script. A `string` does not satisfy it, so no hook entry can
+ * carry a hand-written `bun …` (the `guards:hook-commands-via-launcher` check
+ * holds `.claude/settings.json` to the same).
+ */
+export type HookCommand = string & { readonly [hookCommandBrand]: true };
 
 // A hook command is run by the CLI's own hook shell, so a literal path is held
 // to a plain-path alphabet rather than escaped for it.
-const SAFE_PATH_RE = /^\/[A-Za-z0-9_./ +-]+$/;
+const SAFE_ABSOLUTE_RE = /^\/[A-Za-z0-9_./ +-]+$/;
+const SAFE_RELATIVE_RE = /^[A-Za-z0-9_+-][A-Za-z0-9_./ +-]*$/;
+
+function launch(root: string, script: string): HookCommand {
+  return `/bin/sh "${root}/${HOOK_LAUNCHER}" "${root}/${script}"` as HookCommand;
+}
 
 /**
- * The hook command that runs the bun script at `scriptPath` (absolute, plain)
- * from the script's own directory, whatever the agent's cwd — so mise resolves
- * `bun` from the checkout holding the script (see `runGuard`). The one spelling
- * for a hook outside the agent policy (stop-gate, compaction-context, …).
+ * The hook command that runs the bun script `script` (relative to `checkout`,
+ * an absolute plain path — `REPO_ROOT` for the checkout serving the caller)
+ * through the launcher. The one spelling for a hook outside the agent policy
+ * (stop-gate, compaction-context, …).
  */
-export function bunScriptHookCommand(scriptPath: string): string {
-  if (!SAFE_PATH_RE.test(scriptPath)) {
+export function hookCommand({
+  checkout,
+  script,
+}: {
+  checkout: string;
+  script: string;
+}): HookCommand {
+  if (!SAFE_ABSOLUTE_RE.test(checkout) || !SAFE_RELATIVE_RE.test(script)) {
     throw new Error(
-      `hook script path ${JSON.stringify(scriptPath)} must be absolute and ` +
-        `plain (it is spliced into a hook command)`,
+      `hook command: checkout ${JSON.stringify(checkout)} must be absolute and ` +
+        `script ${JSON.stringify(script)} relative, both plain (they are spliced into a hook command)`,
     );
   }
-  const dir = scriptPath.slice(0, scriptPath.lastIndexOf("/")) || "/";
-  return `cd "${dir}" && bun "${scriptPath}"`;
+  return launch(checkout.replace(/\/+$/, ""), script);
+}
+
+/** Whether `command` is spelled by {@link hookCommand} (launcher by absolute path). */
+export function isLauncherHookCommand(command: string): boolean {
+  const launcher = /^\/bin\/sh "([^"]+)" "[^"]+"/.exec(command)?.[1];
+  return launcher?.endsWith(`/${HOOK_LAUNCHER}`) ?? false;
 }
 
 // Fails closed. Claude Code blocks a tool call only on exit 2 — any other
 // failure is a "non-blocking error" and the call runs unguarded. The guard
-// refuses through stdout and exits 0, so a non-zero exit is a crash (bun that
-// cannot start, a throwing guard): turn it into a block, its stderr the reason.
+// refuses through stdout and exits 0, so a non-zero exit is a crash (no bun —
+// the launcher says why — a missing checkout, a throwing guard): turn it into a
+// block, its stderr the reason.
 const PRE_TOOL_USE =
-  "command -v bun >/dev/null 2>&1 || { echo 'guards: bun is not on PATH, so no PreToolUse guard can run; every tool call is blocked until it is (an agent pane seeds PATH with the mise shims: runtime-tmux agentSessionPath)' >&2; exit 2; }; " +
-  `${runGuard(GUARD_SCRIPTS.preToolUse)} || { echo 'guards: the PreToolUse guard failed (above), so every tool call is blocked until it runs' >&2; exit 2; }`;
+  `${launch(ROOT, GUARD_SCRIPTS.preToolUse)} || { echo 'guards: the PreToolUse guard could not run (above), so every tool call is blocked until it does' >&2; exit 2; }` as HookCommand;
 
 // Stays fail-open: exit 2 from a stop hook means "keep working", so a crashing
-// stop guard would trap the subagent instead of guarding it.
-const STOP = runGuard(GUARD_SCRIPTS.stop);
+// stop guard would trap the subagent instead of guarding it. The launcher
+// exits 1 when it cannot run, which the CLI shows as a hook error.
+const STOP = launch(ROOT, GUARD_SCRIPTS.stop);
 
 /** Every protection an agent runs with. */
 export function agentPolicySettings(): AgentPolicySettings {

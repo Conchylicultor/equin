@@ -1,10 +1,13 @@
 export {
   agentPolicySettings,
-  bunScriptHookCommand,
   GUARD_SCRIPTS,
+  HOOK_LAUNCHER,
+  hookCommand,
+  isLauncherHookCommand,
 } from "./agent-policy";
 export type {
   AgentPolicySettings,
+  HookCommand,
   PolicyHookCommand,
   PolicyHookGroup,
   PolicyHooks,

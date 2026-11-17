@@ -1,4 +1,7 @@
-import { bunScriptHookCommand } from "@plugins/framework/plugins/tooling/plugins/guards/plugins/agent-policy/core";
+import {
+  hookCommand,
+  type HookCommand,
+} from "@plugins/framework/plugins/tooling/plugins/guards/plugins/agent-policy/core";
 
 // The compaction hook's Claude Code entry, as data: this plugin owns the one
 // place its command, matcher and timeout are spelled. The machine half resolves
@@ -17,19 +20,21 @@ export const COMPACTION_HOOK_TIMEOUT_S = 60;
 
 export interface CompactionHookEntry {
   type: "command";
-  command: string;
+  command: HookCommand;
   timeout: number;
 }
 
-/** The SessionStart hook entry that runs the script at `scriptPath` (absolute). */
-export function compactionContextHook({
-  scriptPath,
-}: {
-  scriptPath: string;
+/**
+ * The SessionStart hook entry that runs `script` (relative to `checkout`, absolute)
+ * through the hook launcher (guards/agent-policy `hookCommand`).
+ */
+export function compactionContextHook(at: {
+  checkout: string;
+  script: string;
 }): CompactionHookEntry {
   return {
     type: "command",
-    command: bunScriptHookCommand(scriptPath),
+    command: hookCommand(at),
     timeout: COMPACTION_HOOK_TIMEOUT_S,
   };
 }

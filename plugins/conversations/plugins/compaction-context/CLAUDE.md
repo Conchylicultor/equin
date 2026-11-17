@@ -91,7 +91,8 @@ recorded as received, so the write gate never sent them again.
   - Routes: `POST /api/conversations/:id/compaction-context`
 - Core:
   - Uses:
-    - `framework/tooling/guards/agent-policy.bunScriptHookCommand`
+    - `framework/tooling/guards/agent-policy.hookCommand`
+    - `framework/tooling/guards/agent-policy.HookCommand`
     - `infra/endpoints.defineEndpoint`
   - Exports (types):
     - `CompactionContextResponse`

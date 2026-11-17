@@ -1,4 +1,7 @@
-import { bunScriptHookCommand } from "@plugins/framework/plugins/tooling/plugins/guards/plugins/agent-policy/core";
+import {
+  hookCommand,
+  type HookCommand,
+} from "@plugins/framework/plugins/tooling/plugins/guards/plugins/agent-policy/core";
 
 // The stop-gate hook's Claude Code entry, as data: this plugin owns the one
 // place its command and timeout are spelled. The machine half resolves the
@@ -15,19 +18,21 @@ export const STOP_GATE_HOOK_TIMEOUT_S = 30;
 
 export interface StopGateHookEntry {
   type: "command";
-  command: string;
+  command: HookCommand;
   timeout: number;
 }
 
-/** The Stop hook entry that runs the script at `scriptPath` (absolute). */
-export function stopGateHook({
-  scriptPath,
-}: {
-  scriptPath: string;
+/**
+ * The Stop hook entry that runs `script` (relative to `checkout`, absolute)
+ * through the hook launcher (guards/agent-policy `hookCommand`).
+ */
+export function stopGateHook(at: {
+  checkout: string;
+  script: string;
 }): StopGateHookEntry {
   return {
     type: "command",
-    command: bunScriptHookCommand(scriptPath),
+    command: hookCommand(at),
     timeout: STOP_GATE_HOOK_TIMEOUT_S,
   };
 }

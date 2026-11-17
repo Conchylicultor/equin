@@ -82,7 +82,8 @@ This plugin names no contributor.
   - Routes: `GET /api/conversations/:id/stop-gate`
 - Core:
   - Uses:
-    - `framework/tooling/guards/agent-policy.bunScriptHookCommand`
+    - `framework/tooling/guards/agent-policy.hookCommand`
+    - `framework/tooling/guards/agent-policy.HookCommand`
     - `infra/endpoints.defineEndpoint`
   - Exports (types):
     - `StopGateHookEntry`

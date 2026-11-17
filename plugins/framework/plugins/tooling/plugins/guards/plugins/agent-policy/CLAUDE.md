@@ -19,6 +19,19 @@ the launching backend's). A worktree loads both copies, and Claude Code runs
 byte-identical hook commands once (measured) — so never make the two spellings
 differ.
 
+## Every hook runs through one launcher
+
+A hook command is a `HookCommand` (branded: only `hookCommand()` and this
+policy spell one) — `/bin/sh "<checkout>/…/agent-policy/bin/run-hook.sh"
+"<checkout>/<script>.ts"`. The launcher `cd`s to the script's directory (so
+mise's shim picks the checkout's pinned bun), finds `bun` on PATH or else in
+mise's shims dir, and when there is none prints what to install / activate and
+exits 1 (the PreToolUse command turns any failure into a block, exit 2). A bare
+`bun` used to exit 127 silently on every call in a Claude Code started from a
+shell without mise. `guards:hook-commands-via-launcher` holds
+`.claude/settings.json` to the same spelling. Other plugins' hooks (stop-gate,
+compaction-context) pass `REPO_ROOT` and a repo-relative script.
+
 Imports only `infra/launcher/env-names` (a portable leaf: the env-name registry): the
 portable `agent-launch` server barrel imports it.
 
@@ -31,13 +44,16 @@ portable `agent-launch` server barrel imports it.
   - Uses: `infra/launcher/env-names.envName`
   - Exports (types):
     - `AgentPolicySettings`
+    - `HookCommand`
     - `PolicyHookCommand`
     - `PolicyHookGroup`
     - `PolicyHooks`
   - Exports (values):
     - `agentPolicySettings`
-    - `bunScriptHookCommand`
     - `GUARD_SCRIPTS`
+    - `HOOK_LAUNCHER`
+    - `hookCommand`
+    - `isLauncherHookCommand`
 - Cross-plugin:
   - Imported by:
     - `conversations/agent-launch`
