@@ -394,10 +394,35 @@ Order: 1 first, then 2 and 4 in parallel, then 3, then 5.
   - an Ubuntu 22.04 desktop VM (window), and the same without webkit2gtk (terminal);
   - each failure induced on purpose (run under `sandbox-exec`, `rm` the gateway right after it is built, hold a host grant with a stuck op).
 
-## Open questions for the user
+## Decided with the user (2026-11-17, after review)
 
-1. **Optional failures don't block.** Should the App Management pause be a banner while the build continues, with "Add it now" at the end, instead of the mockup's blocking pause? Recommended: yes.
-2. **Claude app hand-off.** If there is no supported prefill link, is "prompt on the clipboard, open the app, paste" acceptable? Or should the default target be Claude Code in Terminal, which can also resume the install by itself?
-3. **Fresh installs check out the newest release** (`--ref main` for the old behaviour). Recommended: yes.
-4. **Authenticity beyond checksums.** Is the free GitHub attestation (verifiable later) enough for now, or should stage 0 verify a signature today (minisign, with a key in Actions secrets)?
-5. **Is `equinai/equin` public?** That decides whether macOS CI minutes are free.
+1. **Optional failures don't block.** The App Management failure is a banner while the build continues, with "Add it now" on the done screen. It replaces the mockup's blocking pause.
+2. **Claude app hand-off.** If the app has no supported prefill link, the prompt goes on the clipboard and the window says to paste it. That is accepted.
+3. **A fresh install checks out the newest release by default.** `--ref main` keeps the old behaviour.
+4. **Authenticity beyond checksums:** still open. See the note below.
+5. **`equinai/equin` is public,** so the GitHub-hosted macOS and Linux runners are free.
+
+### Note on signing the release (open question 4)
+
+**How hard it is: small, about half a day inside task 4.**
+
+1. **Key pair.** Generate one ECDSA P-256 key pair. The private key goes in an Actions secret; the public key is embedded in stage 0.
+2. **Sign.** The release job signs `SHA256SUMS`: `openssl dgst -sha256 -sign key.pem -out SHA256SUMS.sig SHA256SUMS`.
+3. **Verify.** Stage 0 runs `openssl dgst -sha256 -verify <embedded pub> -signature SHA256SUMS.sig SHA256SUMS` before trusting any checksum.
+
+P-256 rather than minisign or ed25519 because the `openssl` every Mac ships (LibreSSL 3.3.6) verifies it, and that was checked on this machine. minisign isn't installed, and LibreSSL's ed25519 support is patchy. Most Linux systems have `openssl` too; where it is missing, stage 0 says so and stops.
+
+**Is it the clean thing long term? Not in this form. It mostly repeats a trust we already rely on.**
+
+- **Shared trust root.** The public key would be inside `install.sh`, which is served by the same GitHub. Anyone who can change the release assets can usually change `install.sh` on main too.
+- **Same holder.** A key kept in an Actions secret is held by the same CI that builds the binaries.
+- **What it would catch:** only someone who can replace release files but cannot push to main. On this repo that is a narrow case.
+
+**What actually adds trust, in order:**
+
+1. **Protect `main` and the `v*` tags on GitHub** (no force-push, required review). It is free, a settings change rather than code, and closes the most likely real attack: a changed `install.sh` or a moved tag.
+2. **The provenance records** already in the plan. They bind each binary to this repo's workflow at that tag, and anyone can check them with `gh attestation verify`. They cost nothing and need no key to manage.
+3. **The notarized double-click app** (Backlog). There macOS itself checks an Apple-issued Developer ID signature, a trust root outside GitHub. This is the long-term clean answer for macOS.
+4. **Only if a separate key is still wanted,** the meaningful version keeps it **offline**: the maintainer signs `SHA256SUMS` locally during `./equin version cut`, and the key is never in CI. That adds a manual step and makes losing the key a real risk.
+
+**Recommendation:** no signature in stage 0 for now. Do 1 now, keep 2 as planned, and treat 3 as the real answer for macOS.
