@@ -140,6 +140,8 @@ async function stageSlot(
   const claimed = await claimStaging();
   try {
     // Every file written: the tree pool holds agent checkouts, not slots.
+    // Foreground, like a spare's tree write: it holds a `worktree-mutate`
+    // slot agent launches queue on (worktree's checkout-tier.ts).
     await withWorktreeMutateSlot(
       () =>
         addCheckout(
@@ -147,7 +149,7 @@ async function stageSlot(
           repoRoot,
           claimed.path,
           { kind: "detached", rev: sha },
-          { recycle: false },
+          { recycle: false, onStep: () => {}, tier: "foreground" },
           signal,
         ),
       signal,

@@ -17,7 +17,6 @@ import {
   declareDataRootLayoutSync,
 } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import { holdSlotLeaseSync } from "@plugins/infra/plugins/git/plugins/main-slots/plugins/boot-lease/core";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { realpathSync } from "@plugins/packages/plugins/timed-fs/core";
 
 /**
