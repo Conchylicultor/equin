@@ -39,9 +39,12 @@ export const SLOT_UNSERVED_FILE = "main-slot-unserved";
 /**
  * The slot is handed to a build (`runInBuildSlot`, main-slots cli) between
  * the hander releasing its lease and the build child claiming it:
- * `{handoff, pid}` — the handoff id the child must present, and the hander's
- * pid (names it only). The mark stands while the hander holds
- * {@link slotHandedLockFile}; unheld (or gone), it is stale.
+ * `{handoff, pid, hold}` — the handoff id the child must present, the
+ * hander's pid, and how the hander holds the mark (`hold: "lock"`: while it
+ * holds {@link slotHandedLockFile}; unheld or gone, it is stale). A mark with
+ * no `hold` is the pre-lock format, standing while its pid lives — read still,
+ * since the hander runs the older code main serves (main-slots core
+ * `handoff.ts`).
  */
 export const SLOT_HANDED_FILE = "main-slot-handed";
 

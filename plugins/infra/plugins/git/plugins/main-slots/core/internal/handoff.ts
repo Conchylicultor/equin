@@ -8,6 +8,7 @@ import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { flockTry } from "@plugins/packages/plugins/flock/core";
 import { openOwnedFd } from "@plugins/packages/plugins/owned-fd/core";
 import { checkoutAdminDir } from "@plugins/infra/plugins/paths/core";
+import { isAlive } from "./alive";
 import {
   SLOT_HANDED_FILE,
   slotHandedLockFile,
@@ -28,12 +29,36 @@ import {
 // slot states probe `tree.lock` rather than trust holder records. One lock
 // file per handoff, so a hander still holding its own after the child
 // claimed the slot never stands in the way of the next one.
+//
+// The mark's FORMAT crosses versions: the hander is the convergence run, which
+// the gateway starts in the slot main SERVES (gateway/main_deploy.go
+// convergeDir), so it runs the code of the commit before the one it builds.
+// A child must therefore read every mark an older hander may still write —
+// each format says how its hander holds it (`hold`), and a reader judges the
+// mark the way the code that wrote it meant. A child that refused an older
+// format would fail every build, and main could never deploy the commit that
+// stops writing it (2026-11-17: 958f655c93 added the lock; its own build, and
+// every later one, was handed a pid-only mark by 391c3fb280). An unknown
+// `hold` is refused loudly. Change the format by adding a `hold`, never by
+// reinterpreting one.
+
+/** How a mark's hander holds it — the format of the mark. */
+export type SlotHandedHold =
+  /** The hander holds {@link slotHandedLockFile} (since 958f655c93). */
+  | "lock"
+  /**
+   * Written before marks named their hold (`{handoff, pid}`): the hander
+   * lives while its pid does — still handed by a pre-lock hander serving
+   * main (a deploy across 958f655c93, a rollback to a commit before it).
+   */
+  | "pid";
 
 /** The mark: which handoff the slot waits for, and who handed it. */
 export interface SlotHanded {
   handoff: string;
-  /** The hander's pid — names it; its lock, not this, says whether it lives. */
+  /** The hander's pid — names it; for a `lock` mark its lock, not this, says whether it lives. */
   pid: number;
+  hold: SlotHandedHold;
 }
 
 /** The hander's hold on a handoff: the mark stands while it is held. */
@@ -87,7 +112,7 @@ export async function markSlotHanded(
       `main-slots: ${slot}'s handoff ${handoff} is already held — a handoff id is used once`,
     );
   }
-  const mark: SlotHanded = { handoff, pid: process.pid };
+  const mark: SlotHanded = { handoff, pid: process.pid, hold: "lock" };
   try {
     await writeFile(`${file}.tmp`, `${JSON.stringify(mark)}\n`);
     await rename(`${file}.tmp`, file);
@@ -139,19 +164,36 @@ async function readMark(slot: AppPath): Promise<SlotHanded | null> {
     if (code === "ENOENT" || code === "ENOTDIR") return null;
     throw err;
   }
-  const parsed = JSON.parse(text) as Partial<SlotHanded> | null;
+  const parsed = JSON.parse(text) as
+    (Omit<Partial<SlotHanded>, "hold"> & { hold?: unknown }) | null;
   if (
     parsed === null ||
     typeof parsed.handoff !== "string" ||
     typeof parsed.pid !== "number"
   )
     throw new Error(`main-slots: handoff mark ${file} is malformed: ${text}`);
-  return { handoff: parsed.handoff, pid: parsed.pid };
+  // No `hold`: the pre-lock format (see the header).
+  const hold = parsed.hold ?? "pid";
+  if (hold !== "lock" && hold !== "pid")
+    throw new Error(
+      `main-slots: handoff mark ${file} names a hold this code does not know (${JSON.stringify(hold)}): ${text}`,
+    );
+  return { handoff: parsed.handoff, pid: parsed.pid, hold };
+}
+
+/** Does the mark's hander still hold it — judged as the format that wrote it means. */
+async function handerLives(slot: AppPath, mark: SlotHanded): Promise<boolean> {
+  switch (mark.hold) {
+    case "lock":
+      return handerHolds(slot, mark.handoff);
+    case "pid":
+      return isAlive(mark.pid);
+  }
 }
 
 /**
  * The slot's handoff while its hander holds it; `null` when none — a mark
- * whose hander lock is unheld is stale (the hander died before its build
+ * whose hander lock is unheld (a pre-lock mark: whose pid is dead) is stale (the hander died before its build
  * claimed the slot or ended) and is deleted here, with its lock file.
  */
 export async function readSlotHanded(
@@ -159,7 +201,7 @@ export async function readSlotHanded(
 ): Promise<SlotHanded | null> {
   const mark = await readMark(slot);
   if (mark === null) return null;
-  if (await handerHolds(slot, mark.handoff)) return mark;
+  if (await handerLives(slot, mark)) return mark;
   await clearSlotHanded(slot);
   await unlinkIfThere(await handedLockOf(slot, mark.handoff));
   return null;

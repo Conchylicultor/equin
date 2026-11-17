@@ -61,6 +61,15 @@ the hander holds `main-slot-handed.lock` exclusively from before it writes the
 mark until it lets the handoff go, and a mark whose lock is unheld is stale —
 never the hander's pid, which a SIGKILL frees for reuse.
 
+The mark's format crosses versions: the hander is the convergence run, started
+in the slot main SERVES, so it runs the commit before the one it builds — the
+child must read every format an older hander writes. Each mark names its
+`hold` (`lock`; none = the pre-lock `{handoff, pid}`, judged by its pid, as
+its writer meant), and an unknown one is refused loudly. Change the format by
+adding a `hold`, never by reinterpreting one: a child that refused the served
+hander's mark failed every build, so main could not deploy the change
+(2026-11-17, 958f655c93).
+
 ## The pool lock
 
 Every step that reads slot states and acts on them runs under ONE exclusive
@@ -153,7 +162,7 @@ Who holds a slot:
   or was handed to a build meanwhile. Then the unserved stamp is cleared,
   `git checkout --force --detach <sha>` and `ensureDeps`.
 - **`runInBuildSlot(sha, opts, build)`**: `acquireBuildSlot`, MARK the slot
-  handed to a fresh handoff id (`markSlotHanded`: `{handoff, pid}` and the
+  handed to a fresh handoff id (`markSlotHanded`: `{handoff, pid, hold: "lock"}` and the
   hander lock, held until the build is over — it reads as `building` while
   that lock is held) and release the lease (one step under the
   pool lock), and hand the slot to

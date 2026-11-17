@@ -243,7 +243,7 @@ describe("slotStates", () => {
     const mark = join((await checkoutAdminDir(a))!, SLOT_HANDED_FILE);
     writeFileSync(
       mark,
-      JSON.stringify({ handoff: "handoff-1", pid: process.ppid }),
+      JSON.stringify({ handoff: "handoff-1", pid: process.ppid, hold: "lock" }),
     );
     expect(await stateOf(a)).toBe("free");
     expect(existsSync(mark)).toBe(false);
@@ -253,6 +253,44 @@ describe("slotStates", () => {
     await hold.release();
     expect(existsSync(mark)).toBe(false);
     expect(await stateOf(a)).toBe("free");
+  });
+
+  test("a pre-lock mark (an older hander's `{handoff, pid}`) is judged by its pid", async () => {
+    const { root, first } = await repo("repo");
+    const a = await slotAt(root, first);
+    const mark = join((await checkoutAdminDir(a))!, SLOT_HANDED_FILE);
+    writeFileSync(
+      mark,
+      JSON.stringify({ handoff: "handoff-1", pid: process.pid }),
+    );
+    expect(await readSlotHanded(a)).toEqual({
+      handoff: "handoff-1",
+      pid: process.pid,
+      hold: "pid",
+    });
+    expect(await stateOf(a)).toBe("building");
+    // Its hander dead: stale, and cleared.
+    const dead = Bun.spawnSync(["true"]).pid;
+    writeFileSync(mark, JSON.stringify({ handoff: "handoff-1", pid: dead }));
+    expect(await stateOf(a)).toBe("free");
+    expect(existsSync(mark)).toBe(false);
+  });
+
+  test("a mark naming a hold this code does not know is refused loudly", async () => {
+    const { root, first } = await repo("repo");
+    const a = await slotAt(root, first);
+    const mark = join((await checkoutAdminDir(a))!, SLOT_HANDED_FILE);
+    writeFileSync(
+      mark,
+      JSON.stringify({ handoff: "handoff-1", pid: process.pid, hold: "lease" }),
+    );
+    let caught: unknown;
+    try {
+      await readSlotHanded(a);
+    } catch (err) {
+      caught = err;
+    }
+    expect(String(caught)).toContain("names a hold this code does not know");
   });
 
   test("a hander still holding a claimed handoff neither blocks the next one nor clears its mark", async () => {
@@ -925,6 +963,21 @@ describe("runInBuildSlot and the handed slot", () => {
     expect((await claimHandedBuildSlot(root, "build-1")).kind).toBe(
       "not-handed",
     );
+    await handed.lease.release();
+  });
+
+  test("the child claims a slot handed by a pre-lock hander (the code main serves while it deploys the lock)", async () => {
+    const { root, first } = await repo("repo");
+    const a = await slotAt(root, first);
+    writeFileSync(
+      join((await checkoutAdminDir(a))!, SLOT_HANDED_FILE),
+      JSON.stringify({ handoff: "handoff-1", pid: process.pid }),
+    );
+    setEnv("BUILD_SLOT", a);
+    setEnv("BUILD_SLOT_HANDOFF", "handoff-1");
+    const handed = await claimHandedBuildSlot(a, "build-1");
+    if (handed.kind !== "handed") throw new Error("not handed");
+    expect(await readSlotHanded(a)).toBeNull();
     await handed.lease.release();
   });
 
