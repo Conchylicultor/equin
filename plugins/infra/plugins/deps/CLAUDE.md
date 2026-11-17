@@ -129,6 +129,24 @@ held), `failed.json`, `last-used`, `holds/`. The lock is `locks/deps/<id>-<ident
   install is never swept, and `removeDep` refuses it (`held`, naming the
   holders; 409 from Debug → Dependencies' Remove).
 
+## Pinned installs (host daemons)
+
+A declaration with `pin: { holder, appliesAt }` is run by something outside
+any checkout that must never change under it (the embedded Postgres, PgBouncer):
+
+- **`pinnedDep(dep, exec)`** answers the install the pin's hold names — never
+  the checkout's current identity. With nothing pinned yet it ensures the
+  checkout's install and pins it (adopting what would have run anyway). Its
+  `drift` says whether the checkout now declares another identity, for the
+  caller to log; it never follows it.
+- **`pinDep(dep, exec)`** — `./equin deps pin <id>` — is the explicit switch:
+  ensure the checkout's install, move the hold. Nothing restarts; it takes
+  effect at the declaration's `appliesAt`.
+- **`holdRunningDep(ready)`**: a daemon's fresh start holds its install as
+  `<holder>-running`, so a pin moved while the daemon runs never hands the
+  bytes under it to the sweep.
+- `./equin deps list` prints the pinned identity.
+
 ## Sealed installs (release bundles)
 
 A release host has no source, no toolchain and no network, so nothing can be
@@ -181,7 +199,7 @@ is `failed`, never `absent`.
 
 ## CLI
 
-`./equin deps list | install <id> [--json] | remove <id> | upgrade [<updater>] [--only a,b] [--skip-cooldown]`.
+`./equin deps list | install <id> [--json] | remove <id> | pin <id> | upgrade [<updater>] [--only a,b] [--skip-cooldown]`.
 `list`, `install` and `remove` import the `deps/` barrel directly — the
 declarations are a generated registry and the engine is host-only code, so no
 backend is booted and nothing needs to have been built (`install` passes
@@ -264,6 +282,14 @@ module eval).
   JSON file its `github-release-updater` sub-plugin rewrites to each new
   release past a 3-day cooldown (first user: `web-artifacts/blocker-scan`'s
   `blocker-rulesets`).
+- `package-copy` — the `package-copy` kind (`npmPackageCopy`,
+  `packageCopyDir`, `packageCopyVersion`): one npm package copied out of a
+  workspace's `node_modules` into `env/package/`. Identity = the package's
+  `bun.lock` entry + the target (a self-contained package only), so only a new version or build
+  of that package is a new install; install refuses a `node_modules` copy
+  whose version is not the lock's. Its updater is `npm`. Users: the pinned
+  `postgres-binaries` (`database/embedded/binaries`) and `pgbouncer-binary`
+  (`database/pgbouncer/binary`).
 - `build` — the `build` kind (`build`, `builtFile`, its `deps/` barrel):
   `build({ inputs: [globs], tool: { versionArgv }, output, run, then?, targets?, admission? })`.
   Identity = sha256 of every file the `git ls-files` globs match at the root
@@ -403,11 +429,12 @@ torch.
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/font-family --font-mono`
-  - Imported by: 35 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra` ×13
+  - Imported by: 38 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra` ×14
     - `framework` ×6
     - `apps` ×5
     - `companions` ×2
+    - `database` ×2
     - `integrations` ×2
     - `media` ×2
     - `packages` ×2
@@ -419,6 +446,7 @@ torch.
     - `BundleSpec`
     - `DefineDepSpec`
     - `Dep`
+    - `DepPin`
     - `DepProgress`
     - `DepSource`
     - `DepTarget`
@@ -426,6 +454,9 @@ torch.
     - `HeldDep`
     - `HoldDepOptions`
     - `InstallContext`
+    - `PinDrift`
+    - `PinMove`
+    - `PinnedDep`
     - `Ready`
     - `ReadyNow`
     - `RemoveOutcome`
@@ -441,8 +472,11 @@ torch.
     - `ensureDepViaCli`
     - `heldDep`
     - `holdDep`
+    - `holdRunningDep`
     - `hostTarget`
     - `linkSealedDep`
+    - `pinDep`
+    - `pinnedDep`
     - `readyNow`
     - `removeDep`
     - `sealDep`
@@ -457,6 +491,7 @@ torch.
   - **`download`** — The download installer kind of infra/deps: download({ files: [{ name, url, sha256 }], derive? }) (its deps barrel) declares a dependency on pinned files — identity = every url + sha256 plus…
   - **`mise`** — The mise toolchain as an updater: contributes `mise` to the updater registry, so the Dependency upgrades automation includes it in the batched upgrade task and `./equin deps upgrade mise` (alias…
   - **`npm`** — The `npm` updater: moves every npm package a workspace package.json declares (its range and bun.lock) to the newest release past a 3-day cooldown, lockstep groups together, honouring reviewed holds…
+  - **`package-copy`** — The package-copy installer kind of infra/deps: npmPackageCopy({ workspace, package }) (its deps barrel) declares a copy of one npm package the checkout's bun install put in a workspace's…
   - **`playwright-browser`** — The playwright-browser installer kind of infra/deps: playwrightBrowser({ browser: "chromium" }) (its deps barrel) declares the browser build the workspace's playwright-core pins — identity = that…
   - **`python`** — The python installer kind of infra/deps (pythonEnv, runPython, PythonEntryError) over uv, with its caches as declared data dirs Its uv-updater sub-plugin keeps every python/ project's uv.lock and…
   - **`rust`** — The rust installer kind of infra/deps, on top of the build kind: cargoBuild({ crate, bin }) (its deps barrel) builds a plugin's rust/ crate with cargo build --release --locked under the mise-pinned…

@@ -3,7 +3,8 @@
  * Embedded Postgres lifecycle script. Invoked by the gateway's generic
  * service supervisor via the "start" command in database.json.
  *
- * Handles: binary resolution, dylib symlinks, reattach detection,
+ * Handles: binary resolution (the pinned install, never the checkout's
+ * node_modules), the major-version guard, dylib symlinks, reattach detection,
  * initdb, stale pidfile cleanup, pg_ctl start, the base database and the
  * cluster-wide session settings.
  *
@@ -27,6 +28,7 @@ import { mkdirSync, rmSync, symlinkSync } from "node:fs";
 import {
   existsSync,
   lstatSync,
+  readdirSync,
   readFileSync,
   statSync,
 } from "@plugins/packages/plugins/timed-fs/core";
@@ -52,6 +54,7 @@ import {
   PG_LOG_FILE,
   PG_LEGACY_LOG_FILE,
   PG_PID_FILE,
+  PG_MAJOR,
   applyClusterSettings,
   clusterServerSettings,
   pendingServerSettings,
@@ -92,24 +95,25 @@ function assertNotRoot(): void {
   );
 }
 
-// ─── platform detection ──────────────────────────────────────
-
-function platformPackage(): string {
-  const platform = process.platform;
-  const arch = process.arch;
-  const mapping: Record<string, Record<string, string>> = {
-    darwin: { arm64: "darwin-arm64", x64: "darwin-x64" },
-    linux: { arm64: "linux-arm64", x64: "linux-x64" },
-  };
-  const pkg = mapping[platform]?.[arch];
-  if (!pkg) throw new Error(`pg: unsupported platform ${platform}/${arch}`);
-  return `@embedded-postgres/${pkg}`;
-}
-
 // ─── binary resolution ──────────────────────────────────────
 
-function resolveBinDir(): string {
-  // A packaged release points at vendored native binaries via env override.
+/** Where the binaries come from, and what to record once a postmaster runs them. */
+interface BinDir {
+  binDir: string;
+  /** After a fresh start: hold the install the new postmaster runs. */
+  markRunning(): Promise<void>;
+}
+
+/**
+ * The server binaries this start runs — never the checkout's `node_modules`,
+ * which a `bun install` rewrites under a running postmaster (and whose next
+ * restart would then silently run a new version).
+ *
+ * - A packaged release names its vendored tree (`PG_BIN_DIR`).
+ * - Otherwise the install pinned to this machine (`postgres-binaries`, see
+ *   `pinned-binaries.ts`), moved only by `./equin deps pin`.
+ */
+async function resolveBinDir(): Promise<BinDir> {
   const override = readEnv("PG_BIN_DIR");
   if (override) {
     if (!existsSync(override)) {
@@ -117,17 +121,81 @@ function resolveBinDir(): string {
         `pg: ${envName("PG_BIN_DIR")} set to ${override} but that directory does not exist`,
       );
     }
-    return override;
+    return { binDir: override, markRunning: async () => {} };
   }
-  const pluginRoot = join(dirname(import.meta.dir)); // scripts/ -> embedded plugin root
-  const pkg = platformPackage();
-  const dir = join(pluginRoot, "node_modules", pkg, "native", "bin");
-  if (!existsSync(dir)) {
+  const { pinnedBinDir } = await import("./pinned-binaries");
+  return pinnedBinDir();
+}
+
+// ─── major version ──────────────────────────────────────────
+
+/** The major version of the server at `binDir`, as `postgres --version` says. */
+function serverMajor(binDir: string): number {
+  const result = spawnSync(join(binDir, "postgres"), ["--version"], {
+    encoding: "utf8",
+  });
+  if (result.error) throw result.error;
+  const m = /\(PostgreSQL\) (\d+)/.exec(result.stdout);
+  if (result.status !== 0 || m === null) {
     throw new Error(
-      `pg: embedded PG binaries not found at ${dir}; run \`bun install\``,
+      `pg: \`${join(binDir, "postgres")} --version\` did not name a version (exit ${result.status}): ${result.stdout}${result.stderr}`,
     );
   }
-  return dir;
+  return Number(m[1]);
+}
+
+/**
+ * Refuse a server whose major version is not the cluster's, before anything
+ * starts. A data dir is only ever read by the major that wrote it: Postgres
+ * itself refuses one from another major, but only after `pg_ctl` has run, in
+ * words about "database files" that do not say a binary moved. And the data
+ * dir is named for `PG_MAJOR` (`data-pg<N>`), so a bump of that constant with
+ * no data moved would initdb an EMPTY cluster beside the real one — the app
+ * starting with no data at all. A major upgrade is a deliberate migration
+ * (`pg_upgrade` from the old data dir into a new one), which nothing runs on
+ * its own; until it is done, the start fails here, saying so.
+ */
+function assertSameMajor(binDir: string): void {
+  const major = serverMajor(binDir);
+  if (major !== PG_MAJOR) {
+    throw new Error(
+      `pg: the server binaries at ${binDir} are PostgreSQL ${major}, but this cluster is PostgreSQL ${PG_MAJOR} (${PG_DATA_DIR}). ` +
+        `A major-version change needs its data migrated (pg_upgrade), which nothing does on its own — not starting. ` +
+        `Pin binaries of PostgreSQL ${PG_MAJOR} (\`./equin deps pin postgres-binaries\` from a checkout that declares them), or run the upgrade.`,
+    );
+  }
+  if (dataDirValid()) {
+    const onDisk = readFileSync(
+      join(PG_DATA_DIR, "PG_VERSION"),
+      "utf-8",
+    ).trim();
+    if (onDisk !== String(PG_MAJOR)) {
+      throw new Error(
+        `pg: ${PG_DATA_DIR} holds a PostgreSQL ${onDisk} cluster, not ${PG_MAJOR}: not starting it with PostgreSQL ${major} binaries`,
+      );
+    }
+  }
+}
+
+/**
+ * Refuse to initdb a fresh cluster while another major's cluster sits beside
+ * it: that is a `PG_MAJOR` bump with the data not migrated, and a fresh
+ * cluster would be the app starting EMPTY, its data left in the old dir.
+ */
+function assertNoOtherMajorCluster(): void {
+  if (!existsSync(PG_DIR)) return;
+  const others = readdirSync(PG_DIR).filter(
+    (name) =>
+      /^data-pg\d+$/.test(name) &&
+      name !== basename(PG_DATA_DIR) &&
+      existsSync(join(PG_DIR, name, "PG_VERSION")),
+  );
+  if (others.length === 0) return;
+  throw new Error(
+    `pg: no cluster at ${PG_DATA_DIR}, but ${others.map((o) => join(PG_DIR, o)).join(", ")} holds one: ` +
+      `PostgreSQL's major version moved to ${PG_MAJOR} without its data. Not creating an empty cluster — ` +
+      `migrate the data first (pg_upgrade into ${PG_DATA_DIR}), or move the old dir aside if it is really to be abandoned.`,
+  );
 }
 
 // ─── symlink management ─────────────────────────────────────
@@ -348,6 +416,7 @@ function startPostmaster(binDir: string, target: ServiceLogTarget): void {
 
   const fresh = !dataDirValid();
   if (fresh) {
+    assertNoOtherMajorCluster();
     mkdirSync(PG_DIR, { recursive: true });
     mkdirSync(PG_SOCKET_DIR, { recursive: true, mode: 0o700 });
     console.log(`pg: running initdb (dataDir=${PG_DATA_DIR})`);
@@ -503,14 +572,27 @@ async function ensureClusterState(): Promise<void> {
 
 // ─── main lifecycle ─────────────────────────────────────────
 
+/**
+ * Start a postmaster where none runs. Only here are the binaries resolved: a
+ * reattach runs nothing, so it needs no binaries and never depends on the
+ * pinned install (or on adopting one) to keep a healthy cluster.
+ */
+async function freshStart(logTarget: ServiceLogTarget): Promise<void> {
+  const { binDir, markRunning } = await resolveBinDir();
+  ensureSymlinks(binDir);
+  assertSameMajor(binDir);
+  // Held before the start, so a postmaster that comes up is never running
+  // bytes the sweep may take (a failed start leaves a harmless extra hold).
+  await markRunning();
+  startPostmaster(binDir, logTarget);
+}
+
 async function main(): Promise<void> {
   // First, before any binary resolution, any mkdir, and any spawn: nothing
   // below this line is legal as root.
   assertNotRoot();
 
   const logTarget = serviceLogTarget(process.argv);
-  const binDir = resolveBinDir();
-  ensureSymlinks(binDir);
 
   // Reattach: PG is already running, so there is no cluster to start — but we
   // still fall through to the base-database and settings checks below, whose
@@ -525,11 +607,11 @@ async function main(): Promise<void> {
       );
       break;
     case "absent":
-      startPostmaster(binDir, logTarget);
+      await freshStart(logTarget);
       break;
     case "stale":
       removeStalePidFile(holder, judged!);
-      startPostmaster(binDir, logTarget);
+      await freshStart(logTarget);
       break;
     case "foreign":
       throw new Error(

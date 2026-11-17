@@ -22,7 +22,7 @@ import {
   type PidFileHolder,
   type PidFileRead,
 } from "@plugins/packages/plugins/pid-file-holder/core";
-import { join, dirname } from "node:path";
+import { join } from "node:path";
 import { spawn, spawnSync } from "node:child_process";
 import { connect } from "node:net";
 import {
@@ -42,25 +42,22 @@ const PGBOUNCER_SOCKET = join(
   `.s.PGSQL.${PGBOUNCER_PORT}`,
 );
 
-// ─── platform detection ──────────────────────────────────────
-
-function platformPackage(): string {
-  const mapping: Record<string, Record<string, string>> = {
-    darwin: { arm64: "darwin-arm64", x64: "darwin-x64" },
-    linux: { arm64: "linux-arm64", x64: "linux-x64" },
-  };
-  const pkg = mapping[process.platform]?.[process.arch];
-  if (!pkg)
-    throw new Error(
-      `pgbouncer: unsupported platform ${process.platform}/${process.arch}`,
-    );
-  return `@equin/pgbouncer-${pkg}`;
-}
-
 // ─── binary resolution ──────────────────────────────────────
 
-function resolveBinary(): string {
-  // A packaged release points at the vendored native binary via env override.
+/**
+ * The binary this start runs — never the checkout's `node_modules`, which a
+ * `bun install` rewrites under a running daemon (and whose next start would
+ * then silently run a new version).
+ *
+ * - A packaged release names its vendored binary (`PGBOUNCER_BIN`).
+ * - Otherwise the install pinned to this machine (`pgbouncer-binary`, see
+ *   `pinned-binary.ts`), moved only by `./equin deps pin`.
+ */
+async function resolveBinary(): Promise<{
+  binary: string;
+  /** After a fresh start: hold the install the launched daemon runs. */
+  markRunning(): Promise<void>;
+}> {
   const override = readEnv("PGBOUNCER_BIN");
   if (override) {
     if (!existsSync(override)) {
@@ -68,23 +65,10 @@ function resolveBinary(): string {
         `pgbouncer: ${envName("PGBOUNCER_BIN")} set to ${override} but that file does not exist`,
       );
     }
-    return override;
+    return { binary: override, markRunning: async () => {} };
   }
-  const pluginRoot = dirname(import.meta.dir);
-  const bin = join(
-    pluginRoot,
-    "node_modules",
-    platformPackage(),
-    "native",
-    "bin",
-    "pgbouncer",
-  );
-  if (!existsSync(bin)) {
-    throw new Error(
-      `pgbouncer: binary not found at ${bin}; run \`bun install\``,
-    );
-  }
-  return bin;
+  const { pinnedBinary } = await import("./pinned-binary");
+  return pinnedBinary();
 }
 
 // ─── socket probe ───────────────────────────────────────────
@@ -226,8 +210,6 @@ async function waitReady(exited: () => string | null): Promise<void> {
 // ─── main lifecycle ─────────────────────────────────────────
 
 async function main(): Promise<void> {
-  const binary = resolveBinary();
-
   const judged = readPidFile();
   const holder = pgbouncerHolder(judged);
   switch (holder.kind) {
@@ -271,6 +253,11 @@ async function main(): Promise<void> {
   writeFileSync(PGBOUNCER_USERLIST_FILE, userlist);
   writeFileSync(PGBOUNCER_CONFIG_FILE, ini);
 
+  // Only a fresh start resolves the binary: a reattach runs nothing, so it
+  // never depends on the pinned install (or on adopting one). Held before the
+  // launch, so the daemon never runs bytes the sweep may take.
+  const { binary, markRunning } = await resolveBinary();
+  await markRunning();
   console.log(
     `pgbouncer: starting (socket=${PGBOUNCER_SOCKET_DIR}, port=${PGBOUNCER_PORT})`,
   );

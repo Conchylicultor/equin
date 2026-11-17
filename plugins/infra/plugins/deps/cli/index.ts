@@ -40,6 +40,15 @@ export default defineCliCommand({
       arguments: [{ name: "<id>", description: "The dependency's id" }],
       run: () => import("./internal/remove"),
     }),
+    defineCliCommand<[string]>({
+      name: "pin",
+      description:
+        "Switch a pinned dependency (a host daemon's binaries: postgres, pgbouncer) to this checkout's install: installs it, " +
+        "moves the pin, restarts nothing — the daemon runs it from its next restart. A pinned dependency never follows a " +
+        "checkout on its own.",
+      arguments: [{ name: "<id>", description: "The dependency's id" }],
+      run: () => import("./internal/pin"),
+    }),
     defineCliCommand<
       [string | undefined],
       { only?: string; skipCooldown?: boolean }

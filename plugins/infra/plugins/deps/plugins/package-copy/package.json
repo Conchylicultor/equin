@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-infra-deps-package-copy",
+  "version": "0.0.1",
+  "private": true,
+  "description": "The package-copy installer kind of infra/deps: npmPackageCopy({ workspace, package }) (its deps barrel) declares a copy of one npm package the checkout's bun install put in a workspace's node_modules, installed outside the checkout — identity = the package's own bun.lock entry and the target (a self-contained package only), so only a new version or build of that package is a new install; the copy is verified against the lock's version. packageCopyDir(ready) is the copy's package root, packageCopyVersion(ready) its version. For a binary a host daemon runs, so a bun install in the checkout never replaces it under the daemon."
+}

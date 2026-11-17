@@ -2824,6 +2824,10 @@
         "@embedded-postgres/linux-x64": "^18.6.0-beta.19",
       },
     },
+    "plugins/database/plugins/embedded/plugins/binaries": {
+      "name": "@equin/plugin-database-embedded-binaries",
+      "version": "0.0.1",
+    },
     "plugins/database/plugins/fork": {
       "name": "@equin/plugin-database-fork",
       "version": "0.0.1",
@@ -2868,6 +2872,10 @@
         "@equin/pgbouncer-linux-arm64": "^1.26.1",
         "@equin/pgbouncer-linux-x64": "^1.26.1",
       },
+    },
+    "plugins/database/plugins/pgbouncer/plugins/binary": {
+      "name": "@equin/plugin-database-pgbouncer-binary",
+      "version": "0.0.1",
     },
     "plugins/database/plugins/pglite": {
       "name": "@equin/plugin-database-pglite",
@@ -4662,6 +4670,10 @@
     },
     "plugins/infra/plugins/deps/plugins/npm/plugins/lock-resolutions": {
       "name": "@equin/plugin-infra-deps-npm-lock-resolutions",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/deps/plugins/package-copy": {
+      "name": "@equin/plugin-infra-deps-package-copy",
       "version": "0.0.1",
     },
     "plugins/infra/plugins/deps/plugins/playwright-browser": {
@@ -9607,6 +9619,8 @@
 
     "@equin/plugin-database-embedded": ["@equin/plugin-database-embedded@workspace:plugins/database/plugins/embedded"],
 
+    "@equin/plugin-database-embedded-binaries": ["@equin/plugin-database-embedded-binaries@workspace:plugins/database/plugins/embedded/plugins/binaries"],
+
     "@equin/plugin-database-fork": ["@equin/plugin-database-fork@workspace:plugins/database/plugins/fork"],
 
     "@equin/plugin-database-fork-point": ["@equin/plugin-database-fork-point@workspace:plugins/database/plugins/fork-point"],
@@ -9624,6 +9638,8 @@
     "@equin/plugin-database-migrations-schema-question": ["@equin/plugin-database-migrations-schema-question@workspace:plugins/database/plugins/migrations/plugins/schema-question"],
 
     "@equin/plugin-database-pgbouncer": ["@equin/plugin-database-pgbouncer@workspace:plugins/database/plugins/pgbouncer"],
+
+    "@equin/plugin-database-pgbouncer-binary": ["@equin/plugin-database-pgbouncer-binary@workspace:plugins/database/plugins/pgbouncer/plugins/binary"],
 
     "@equin/plugin-database-pglite": ["@equin/plugin-database-pglite@workspace:plugins/database/plugins/pglite"],
 
@@ -10480,6 +10496,8 @@
     "@equin/plugin-infra-deps-npm-lock-closure": ["@equin/plugin-infra-deps-npm-lock-closure@workspace:plugins/infra/plugins/deps/plugins/npm/plugins/lock-closure"],
 
     "@equin/plugin-infra-deps-npm-lock-resolutions": ["@equin/plugin-infra-deps-npm-lock-resolutions@workspace:plugins/infra/plugins/deps/plugins/npm/plugins/lock-resolutions"],
+
+    "@equin/plugin-infra-deps-package-copy": ["@equin/plugin-infra-deps-package-copy@workspace:plugins/infra/plugins/deps/plugins/package-copy"],
 
     "@equin/plugin-infra-deps-playwright-browser": ["@equin/plugin-infra-deps-playwright-browser@workspace:plugins/infra/plugins/deps/plugins/playwright-browser"],
 

@@ -1,8 +1,10 @@
 import { mkdir, open, rename, rm, writeFile } from "node:fs/promises";
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   exists,
   readdir,
   readFile,
+  stat,
 } from "@plugins/packages/plugins/timed-fs/core";
 import { flockTry } from "@plugins/packages/plugins/flock/core";
 import { isAbsolute, join } from "node:path";
@@ -56,13 +58,6 @@ export async function holdDep(
   const store = opts.store ?? (await defaultStore());
   const paths = installPaths(store, ready.dep.id, ready.identity);
   if (paths.env !== ready.dir) return;
-  const idDir = join(store.cacheRoot, ready.dep.id);
-  for (const identity of await readdir(idDir)) {
-    if (identity === ready.identity) continue;
-    await rm(join(installPaths(store, ready.dep.id, identity).holds, holder), {
-      force: true,
-    });
-  }
   await mkdir(paths.holds, { recursive: true });
   const file = join(paths.holds, holder);
   const text =
@@ -78,6 +73,17 @@ export async function holdDep(
     throw new Error(
       `holdDep: ${ready.dep.id}@${ready.identity} was removed before ${holder} could hold it`,
     );
+  }
+  // The holder's other holds go only now that the new one is written: in
+  // between, a reader sees two (and `heldDep` takes the newest), never none —
+  // a pin read as "nothing pinned" would be re-adopted from whatever checkout
+  // asks.
+  const idDir = join(store.cacheRoot, ready.dep.id);
+  for (const identity of await readdir(idDir)) {
+    if (identity === ready.identity) continue;
+    await rm(join(installPaths(store, ready.dep.id, identity).holds, holder), {
+      force: true,
+    });
   }
 }
 
@@ -171,11 +177,21 @@ export async function heldDep<S extends DepSource>(
   const store = opts.store ?? (await defaultStore());
   const idDir = join(store.cacheRoot, dep.id);
   if (!(await exists(idDir))) return { kind: "none" };
+  // Normally one; two only while a `holdDep` moves the hold (it writes the
+  // new one first), when the newest is the one being moved to.
+  let newest: { identity: string; env: AppPath; mtimeMs: number } | null =
+    null;
   for (const identity of await readdir(idDir)) {
     const paths = installPaths(store, dep.id, identity);
-    if (!(await exists(join(paths.holds, holder)))) continue;
+    const file = join(paths.holds, holder);
+    if (!(await exists(file))) continue;
     if (!(await exists(paths.ready))) continue;
-    return { kind: "held", ready: mintReady(dep, paths.env, identity) };
+    const { mtimeMs } = await stat(file);
+    if (newest === null || mtimeMs > newest.mtimeMs) {
+      newest = { identity, env: paths.env, mtimeMs };
+    }
   }
-  return { kind: "none" };
+  return newest === null
+    ? { kind: "none" }
+    : { kind: "held", ready: mintReady(dep, newest.env, newest.identity) };
 }

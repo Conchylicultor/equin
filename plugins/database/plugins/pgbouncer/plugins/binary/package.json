@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-database-pgbouncer-binary",
+  "version": "0.0.1",
+  "private": true,
+  "description": "The pgbouncer-binary dependency: an infra/deps package copy of this platform's @equin/pgbouncer package outside the checkout, pinned (holder machine-pgbouncer) — the start script runs the pinned install, switched only by ./equin deps pin pgbouncer-binary. A child of its own so no composition's closure reaches the deps engine through the database plugins."
+}

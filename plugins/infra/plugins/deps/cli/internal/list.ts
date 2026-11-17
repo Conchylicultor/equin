@@ -1,6 +1,6 @@
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import type { DepState } from "../../core";
-import { declaredDeps, depState } from "../../deps";
+import { declaredDeps, depState, heldDep } from "../../deps";
 
 function describe(state: DepState): string {
   switch (state.kind) {
@@ -27,6 +27,14 @@ const run: CliAction<[], object> = async () => {
     console.log(
       `${dep.id}  [${dep.source.kind}: ${dep.source.label}]  ${dep.sizeHint}\n  ${describe(state)}`,
     );
+    if (dep.pin !== null) {
+      const held = await heldDep(dep, dep.pin.holder);
+      console.log(
+        held.kind === "held"
+          ? `  pinned ${held.ready.identity} — what runs; \`./equin deps pin ${dep.id}\` switches it to this checkout's`
+          : `  nothing pinned yet — the first start pins this checkout's install`,
+      );
+    }
   }
 };
 

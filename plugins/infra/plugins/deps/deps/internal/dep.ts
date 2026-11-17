@@ -176,6 +176,21 @@ type BundleField<S extends DepSource> = S extends {
   ? { bundle?: BundleSpec }
   : { bundle?: never };
 
+/**
+ * A dependency something OUTSIDE any checkout runs from (a host daemon), which
+ * must never change under it by a checkout moving on: what it runs is the
+ * install PINNED to it — a hold named `holder` — not the checkout's current
+ * identity. Adopted once (the first start pins the checkout's install);
+ * afterwards only `pinDep` (`./equin deps pin <id>`) moves it, on purpose,
+ * and it takes effect at `appliesAt`. See `pinnedDep`.
+ */
+export interface DepPin {
+  /** The hold that names the pinned install (`^[a-z][a-z0-9-]*$`). */
+  readonly holder: string;
+  /** When a moved pin takes effect, for people: "the cluster's next full restart". */
+  readonly appliesAt: string;
+}
+
 export type DefineDepSpec<S extends DepSource> = {
   /** Stable id: the cache dir name and the CLI argument. `^[a-z][a-z0-9-]*$`. */
   id: string;
@@ -185,6 +200,8 @@ export type DefineDepSpec<S extends DepSource> = {
   /** A human estimate of the install's size, e.g. `≈40 MB`. */
   sizeHint: string;
   source: S;
+  /** Run from a pinned install, switched only on purpose (see {@link DepPin}). */
+  pin?: DepPin;
 } & UpdatesSpec<S> &
   BundleField<S>;
 
@@ -198,6 +215,8 @@ export interface Dep<S extends DepSource = DepSource> {
   readonly updates: DepUpdates;
   /** Sealed into release bundles, and whether a bundle may go without it. `null`: never bundled. */
   readonly bundle: BundleSpec | null;
+  /** Run from a pinned install (see {@link DepPin}). `null`: from the checkout's current identity. */
+  readonly pin: DepPin | null;
 }
 
 const DEP_ID = /^[a-z][a-z0-9-]*$/;
@@ -232,7 +251,20 @@ export function defineDep<S extends DepSource>(spec: DefineDepSpec<S>): Dep<S> {
     source: spec.source,
     updates,
     bundle: bundleOf(spec.id, spec as { bundle?: BundleSpec }),
+    pin: pinOf(spec.id, spec.pin),
   };
+}
+
+const HOLDER = /^[a-z][a-z0-9-]*$/;
+
+function pinOf(id: string, pin: DepPin | undefined): DepPin | null {
+  if (pin === undefined) return null;
+  if (!HOLDER.test(pin.holder) || pin.appliesAt.trim() === "") {
+    throw new Error(
+      `defineDep(${id}): pin.holder must match ${HOLDER} and pin.appliesAt must say when a moved pin takes effect.`,
+    );
+  }
+  return pin;
 }
 
 function bundleOf(

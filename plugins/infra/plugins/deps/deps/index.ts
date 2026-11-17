@@ -14,12 +14,15 @@
 // from that manifest when the root is such a bundle (`linkSealedDep` seals an
 // install this host has by reference, for a bundle that runs here). `holdDep` keeps an install
 // that something outside any checkout points at (a launchd job) from the sweep
-// (`sweepUnusedDeps`, run daily by the `sweep` sub-plugin).
+// (`sweepUnusedDeps`, run daily by the `sweep` sub-plugin). A declaration with a
+// `pin` (a host daemon's binaries) runs from the install its pin holds
+// (`pinnedDep`), moved only on purpose (`pinDep`, `./equin deps pin`).
 export { defineDep, hostTarget } from "./internal/dep";
 export type {
   BundleSpec,
   DefineDepSpec,
   Dep,
+  DepPin,
   DepProgress,
   DepSource,
   DepTarget,
@@ -35,6 +38,8 @@ export type { SealOutcome } from "./internal/seal";
 export { SEALED_MANIFEST } from "./internal/sealed";
 export { heldDep, holdDep } from "./internal/hold";
 export type { HeldDep, HoldDepOptions } from "./internal/hold";
+export { holdRunningDep, pinDep, pinnedDep } from "./internal/pin";
+export type { PinDrift, PinMove, PinnedDep } from "./internal/pin";
 export { sweepUnusedDeps } from "./internal/sweep";
 export type { SweepReport } from "./internal/sweep";
 export {
