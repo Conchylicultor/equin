@@ -17,6 +17,7 @@ export const exhibitsEntries: CollectedEntry[] = [
   { pluginPath: "apps/plugins/deploy/plugins/analytics/plugins/sessions", id: "apps.deploy.analytics.sessions", loader: () => import("@plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/exhibits"), dependsOn: [] },
   { pluginPath: "apps/plugins/isle/plugins/dev", id: "apps.isle.dev", loader: () => import("@plugins/apps/plugins/isle/plugins/dev/exhibits"), dependsOn: ["primitives/plugins/css/plugins/ui-kit"] },
   { pluginPath: "apps/plugins/website/plugins/demos/plugins/workspace", id: "apps.website.demos.workspace", loader: () => import("@plugins/apps/plugins/website/plugins/demos/plugins/workspace/exhibits"), dependsOn: [] },
+  { pluginPath: "build", id: "build", loader: () => import("@plugins/build/exhibits"), dependsOn: [] },
   { pluginPath: "code-explorer/plugins/commit-detail", id: "code-explorer.commit-detail", loader: () => import("@plugins/code-explorer/plugins/commit-detail/exhibits"), dependsOn: [] },
   { pluginPath: "config_v2/plugins/settings", id: "config_v2.settings", loader: () => import("@plugins/config_v2/plugins/settings/exhibits"), dependsOn: ["primitives/plugins/css/plugins/control-panel", "primitives/plugins/css/plugins/placeholder"] },
   { pluginPath: "conversations/plugins/agent-thread", id: "conversations.agent-thread", loader: () => import("@plugins/conversations/plugins/agent-thread/exhibits"), dependsOn: ["primitives/plugins/css/plugins/text"] },
