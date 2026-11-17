@@ -4,7 +4,7 @@ import { PAGE_SOURCES, writePage } from "./page";
 
 /**
  * The installer window, `equin-installer` (rust/): built from this checkout's
- * crate with its page bundled in. The release pipeline (a later task) builds
+ * crate with its page bundled in. The release workflow (release-assets) builds
  * the same crate per release tag for the curl install; this local build is
  * what `./equin installer window` runs, and what a developer tries the window
  * with.

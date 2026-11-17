@@ -18,7 +18,20 @@ export const RELEASE_TAG_PREFIX = "v";
 /** The glob git matches release tags with (`git describe --match`, `tag -l`). */
 export const RELEASE_TAG_GLOB = `${RELEASE_TAG_PREFIX}*`;
 
-const RELEASE_TAG_RE = /^v(\d{4})\.(\d{2})\.(\d{2})(?:\.(\d+))?$/;
+/**
+ * The tag's shape as a POSIX extended regular expression, so the one spelling
+ * serves here and outside TypeScript: the release workflow
+ * (`.github/workflows/installer-release.yml`) matches tags with it in bash
+ * (`[[ $tag =~ $RE ]]`), held equal by the `release-assets:tag-grammar`
+ * check. Only ERE syntax: `[0-9]`, not `\d`; no `(?:`. Groups: 1 year,
+ * 2 month, 3 day, 5 the same-day sequence. The shape alone admits a few names
+ * parseReleaseTag still refuses (month 13, `.1`), which the workflow's
+ * release job never sees: `./equin version cut` names every tag.
+ */
+export const RELEASE_TAG_ERE =
+  "^v([0-9]{4})\\.([0-9]{2})\\.([0-9]{2})(\\.([0-9]+))?$";
+
+const RELEASE_TAG_RE = new RegExp(RELEASE_TAG_ERE);
 
 /** A parsed release tag. `seq` is 1 for the day's first release (no suffix). */
 export interface ReleaseTag {
@@ -40,7 +53,7 @@ export type ReleaseTagParse =
 export function parseReleaseTag(tag: string): ReleaseTagParse {
   const m = RELEASE_TAG_RE.exec(tag);
   if (m === null) return { kind: "other" };
-  const [, y, mo, d, s] = m;
+  const [, y, mo, d, , s] = m;
   const year = Number(y);
   const month = Number(mo);
   const day = Number(d);

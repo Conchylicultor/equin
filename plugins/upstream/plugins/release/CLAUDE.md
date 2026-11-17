@@ -43,6 +43,7 @@ declarations.
     - `parseReleaseTag`
     - `PublisherStatusSchema`
     - `ReleasabilitySchema`
+    - `RELEASE_TAG_ERE`
     - `RELEASE_TAG_GLOB`
     - `RELEASE_TAG_PREFIX`
     - `ReleaseStatusSchema`

@@ -15,8 +15,10 @@
 //!
 //! Design: research/2026-11-17-global-installer-window.md §2.
 
+mod bootstrap;
 mod child;
 mod clock;
+mod probe;
 
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -32,9 +34,9 @@ use tao::window::WindowBuilder;
 use wry::http::{header::CONTENT_TYPE, Request, Response};
 use wry::WebViewBuilder;
 
-const PAGE: &str = include_str!(concat!(env!("OUT_DIR"), "/page.html"));
-const WIDTH: f64 = 760.0;
-const HEIGHT: f64 = 640.0;
+pub(crate) const PAGE: &str = include_str!(concat!(env!("OUT_DIR"), "/page.html"));
+pub(crate) const WIDTH: f64 = 760.0;
+pub(crate) const HEIGHT: f64 = 640.0;
 /// The page's background (`--bg`), painted before the page's first frame.
 const BACKGROUND: (u8, u8, u8, u8) = (7, 9, 14, 255);
 
@@ -71,13 +73,19 @@ enum PageCommand {
 }
 
 fn usage() -> ! {
-    eprintln!("usage: equin-installer --script <install.sh> [-- <install.sh args…>]");
+    eprintln!(
+        "usage: equin-installer --script <install.sh> [-- <install.sh args…>]\n\
+         \x20      equin-installer [--ref <release tag>] [-- <install.sh args…>]   \
+         (download and verify the release's install.sh, then run it)\n\
+         \x20      equin-installer --probe | --version"
+    );
     std::process::exit(2);
 }
 
 fn main() {
     let mut args = std::env::args().skip(1);
     let mut script = None;
+    let mut release_ref = None;
     let mut rest = Vec::new();
     while let Some(arg) = args.next() {
         match arg.as_str() {
@@ -85,7 +93,9 @@ fn main() {
                 println!("equin-installer {}", env!("CARGO_PKG_VERSION"));
                 return;
             }
+            "--probe" => probe::run(),
             "--script" => script = Some(args.next().unwrap_or_else(|| usage())),
+            "--ref" => release_ref = Some(args.next().unwrap_or_else(|| usage())),
             "--" => {
                 rest.extend(args.by_ref());
             }
@@ -96,7 +106,26 @@ fn main() {
             }
         }
     }
-    let script = script.unwrap_or_else(|| usage());
+    let script = match (script, release_ref) {
+        (Some(_), Some(_)) => {
+            eprintln!("equin-installer: --script and --ref exclude each other");
+            usage();
+        }
+        (Some(script), None) => script,
+        // Self-bootstrap: no shell around it (the double-click app).
+        (None, release_ref) => match bootstrap::fetch(release_ref.as_deref()) {
+            Ok(fetched) => {
+                let mut handoff = fetched.handoff_args;
+                handoff.append(&mut rest);
+                rest = handoff;
+                fetched.script
+            }
+            Err(e) => {
+                eprintln!("\n{e}\n");
+                std::process::exit(1);
+            }
+        },
+    };
 
     let mut signals = child::catch_signals().unwrap_or_else(|e| {
         eprintln!("equin-installer: could not install its signal handlers: {e}");
@@ -187,19 +216,7 @@ fn main() {
     let webview = WebViewBuilder::new()
         .with_background_color(BACKGROUND)
         .with_devtools(cfg!(debug_assertions))
-        .with_custom_protocol("installer".into(), |_id, request: Request<Vec<u8>>| {
-            if request.uri().path() == "/" {
-                Response::builder()
-                    .header(CONTENT_TYPE, "text/html; charset=utf-8")
-                    .body(Cow::Borrowed(PAGE.as_bytes()))
-                    .expect("a static response")
-            } else {
-                Response::builder()
-                    .status(404)
-                    .body(Cow::Borrowed(&b"not found"[..]))
-                    .expect("a static response")
-            }
-        })
+        .with_custom_protocol("installer".into(), |_id, request| serve_page(&request))
         .with_ipc_handler(move |request: Request<String>| {
             send(&ipc_proxy, UserEvent::Ipc(request.into_body()))
         })
@@ -383,6 +400,21 @@ impl State {
             eprintln!("equin-installer: could not send '{decision}' to the install: {e}");
             self.control = None;
         }
+    }
+}
+
+/// The page, served from `installer://app/`; nothing else exists.
+pub(crate) fn serve_page(request: &Request<Vec<u8>>) -> Response<Cow<'static, [u8]>> {
+    if request.uri().path() == "/" {
+        Response::builder()
+            .header(CONTENT_TYPE, "text/html; charset=utf-8")
+            .body(Cow::Borrowed(PAGE.as_bytes()))
+            .expect("a static response")
+    } else {
+        Response::builder()
+            .status(404)
+            .body(Cow::Borrowed(&b"not found"[..]))
+            .expect("a static response")
     }
 }
 

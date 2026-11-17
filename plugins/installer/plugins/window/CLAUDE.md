@@ -9,12 +9,31 @@ its event stream ([`../../CLAUDE.md`](../../CLAUDE.md)).
 ./equin installer window [--pace 0.4] [--fail clone]   # build it, open it over a DRY RUN
 ./equin deps install installer-window --json          # just build it; prints where
 <dir>/equin-installer --script <install.sh> [-- <install.sh args…>]
+<dir>/equin-installer [--ref <tag>] [-- <install.sh args…>]  # self-bootstrap
+<dir>/equin-installer --probe                          # can a window show here?
 ```
+
+- **`--probe`** (`rust/src/probe.rs`): opens a hidden window and webview,
+  loads the page, exits 0 when the page says `ready` (20 s deadline; no Dock
+  icon). Stage 0 runs it before choosing the window, release CI as its smoke
+  test. On Linux without webkit2gtk-4.1 the loader refuses the binary before
+  `main`, so the probe fails without running.
+- **Self-bootstrap** (`rust/src/bootstrap.rs`): with no `--script`, the binary
+  does stage 0's fetch itself — `release.json` (newest, or `--ref`),
+  `SHA256SUMS`, `install.sh`, each sha256-checked (`sha2`) — and runs that
+  script with `--release <tag> --checkout <tag>`. That is what lets a
+  notarized double-click app wrap this same binary with no shell around it.
+  Downloads go through `curl`; `EQUIN_RELEASES_URL` overrides the source.
+  A failure is printed on stderr (no window yet).
+- **Release builds**: `.github/workflows/installer-release.yml`
+  ([`release-assets`](../release-assets/CLAUDE.md)) bundles the page with
+  `scripts/bundle-page.ts` and builds the crate per release tag (universal
+  macOS ad-hoc signed, Linux x64 / arm64).
 
 `./equin installer window` only ever runs a dry run: `install.sh` run from a
 checkout installs THAT checkout, which on a developer's machine would
 re-register the running gateway from a worktree. A real install runs the
-binary directly (a fresh macOS account, later the curl stage 0).
+binary through the curl stage 0 (`install.sh`), or directly.
 
 ## Process model (`rust/src/child.rs`)
 

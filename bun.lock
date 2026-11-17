@@ -5064,6 +5064,10 @@
       "name": "@equin/plugin-installer",
       "version": "0.0.1",
     },
+    "plugins/installer/plugins/release-assets": {
+      "name": "@equin/plugin-installer-release-assets",
+      "version": "0.0.1",
+    },
     "plugins/installer/plugins/window": {
       "name": "@equin/plugin-installer-window",
       "version": "0.0.1",
@@ -10624,6 +10628,8 @@
     "@equin/plugin-infra-worktree-spare-pool": ["@equin/plugin-infra-worktree-spare-pool@workspace:plugins/infra/plugins/worktree/plugins/spare-pool"],
 
     "@equin/plugin-installer": ["@equin/plugin-installer@workspace:plugins/installer"],
+
+    "@equin/plugin-installer-release-assets": ["@equin/plugin-installer-release-assets@workspace:plugins/installer/plugins/release-assets"],
 
     "@equin/plugin-installer-window": ["@equin/plugin-installer-window@workspace:plugins/installer/plugins/window"],
 

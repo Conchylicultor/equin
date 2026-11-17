@@ -458,3 +458,28 @@ Landed as `plugins/installer` (`core`: the protocol v1 schema) and `plugins/inst
 - The page's running, paused, done and stop states were drawn in a headless browser from the recorded streams.
 
 **Not yet proven:** a real install in a fresh macOS account. That needs a second account and a GUI session in it. It also collides with this machine's own instance, because the gateway's port 9000 is machine-wide. The steps are in the task's report.
+
+## Release pipeline and stage 0 results (task 4, 2026-11-17)
+
+Landed as `.github/workflows/installer-release.yml`, the `installer/release-assets` plugin (the contract and its checks), stage 0 at the top of `install.sh`, and two modes of the binary (`--probe`, self-bootstrap). Docs: `plugins/installer/CLAUDE.md` § Stage 0 and `plugins/installer/plugins/release-assets/CLAUDE.md`.
+
+**Changed from §6–7, found while building it:**
+
+- **A release says whether its script can be handed over.** `v2026.11.17` (the only release so far) predates the window: no crate, and an `install.sh` that knows no `--release`. So the tag's `install.sh` carries a marker line (`# installer-handoff: 1`), the workflow records it as `release.json`'s `handoff`, and stage 0 hands over only to a release that has it. A release without it is installed by main's own steps, on its tag, in the terminal. The workflow still publishes such a tag (install.sh, release.json, SHA256SUMS; no binaries).
+- **Two internal arguments, not one.** `--release <tag>` (this script is that release's, verified: never run stage 0 again) and `--checkout <tag|main>` (what the clone checks out), so `--ref main` runs the newest release's script and window but clones main's tip. A fork (`--repo`) installs its own main.
+- **The tag grammar is one POSIX ERE** (`RELEASE_TAG_ERE` in upstream/release), the JavaScript regex built from it, so the workflow (bash `=~`) and stage 0 copy one spelling, held equal by `release-assets:tag-grammar`.
+- **The toolchain is read from `mise.lock`, not installed by `jdx/mise-action`:** `mise install` would run the repo's postinstall hooks (machine setup and the doctor) on the runner.
+- **Published as a draft, then made public in one edit.** `latest` is set only when the tag is the newest release tag, so rebuilding an older tag by hand (`replace`) does not move `releases/latest`.
+- **The provenance bundle is a Release file too** (`provenance.intoto.jsonl`), beside the attestations GitHub stores.
+- **The checksum tool is `shasum` first.** macOS 14+ ships a BSD `/sbin/sha256sum` that reads no list on stdin; GNU `sha256sum` only where `shasum` is missing.
+- **Self-bootstrap downloads with `curl`** (no TLS stack in the binary) and checks with `sha2`. It reports a failure on stderr only: there is no window yet at that point. The double-click app will need that failure drawn in the window.
+- **A `publish: false` manual run** builds any ref and keeps the binaries as run artifacts, so the build jobs can be tried without cutting a release.
+
+**Proven locally:**
+
+- The stage-0 test (`release-assets/core/internal/stage0.test.ts`, 13 cases) runs main's `install.sh` piped, as under curl, against a local fake GitHub Releases whose files are written by the workflow's own assembler: newest release, `--ref <tag>`, `--ref main`, a fork, `--window` with the probe passing and failing, SSH / CI / no TTY / `--terminal` (the window binary never downloaded), a changed file and a file SHA256SUMS does not list (stop, deleted, never run), a release without the hand-off, no release at all, a release without a binary for this system.
+- `--probe` opens and exits 0 in under a second on macOS; the self-bootstrap reports a missing release loudly.
+- `git clone` then `git checkout -B main <tag>` leaves `main` at the tag, tracking `origin/main`.
+- `actionlint` passes on the workflow.
+
+**Not yet proven:** the workflow itself (it can only run once it is on main), and a real `curl | bash` on a clean Mac and a Linux VM. See the task's report.

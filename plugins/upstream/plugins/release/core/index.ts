@@ -3,6 +3,7 @@ export {
   newestReleaseTag,
   nextReleaseTag,
   parseReleaseTag,
+  RELEASE_TAG_ERE,
   RELEASE_TAG_GLOB,
   RELEASE_TAG_PREFIX,
   releaseTagMessage,

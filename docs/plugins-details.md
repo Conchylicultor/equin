@@ -40587,6 +40587,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by: `conversations/workspace/worktree`
 
 - **`installer`** — The equin installer: install.sh's structured event stream (protocol v1 — plan, step, log, done and exit events, one zod schema in core) and the renderers that draw it. Its window sub-plugin is the native installer window.
+  - Cross-plugin:
+    - Imported by: `installer/release-assets`
   - Core:
     - Exports (values):
       - `INSTALL_PROTOCOL_VERSION`
@@ -40596,6 +40598,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `parseInstallEventLine`
       - `PlanStep`
   - Plugins:
+    - **`release-assets`** — What a release tag publishes for the curl install: the GitHub Actions workflow (.github/workflows/installer-release.yml) that builds the installer window per release tag, the asset names and release.json it attaches, and the check holding the workflow's tag regex to the release tag grammar.
+      - Core:
+        - Uses: `installer.INSTALL_PROTOCOL_VERSION`
+        - Exports (types): `InstallerPlatform`
+        - Exports (values):
+          - `HANDOFF_MARKER`
+          - `INSTALLER_BINARIES`
+          - `RELEASE_FILES`
+          - `RELEASE_WORKFLOW`
+          - `releaseManifest`
+          - `ReleaseManifest`
+          - `sha256Sums`
     - **`window`** — The installer window: equin-installer, a small wry/tao Rust app (rust/) that runs install.sh as its child — events on fd 3, decisions on fd 4 — and draws the stream in a page bundled into the binary (standalone-page/). Built locally as the installer-window dependency; `./equin installer window` runs it over this checkout's install.sh.
       - Cli:
         - Uses: `infra/jobs/supervised-job.cliExecContext`
@@ -66980,6 +66994,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `parseReleaseTag`
           - `PublisherStatusSchema`
           - `ReleasabilitySchema`
+          - `RELEASE_TAG_ERE`
           - `RELEASE_TAG_GLOB`
           - `RELEASE_TAG_PREFIX`
           - `ReleaseStatusSchema`

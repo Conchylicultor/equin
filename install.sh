@@ -6,16 +6,40 @@
 #
 # Options (after `bash -s --` when piped):
 #   --dir <path>     where to clone (default ~/equin; ignored inside a checkout)
-#   --repo <url>     what to clone (default the canonical repo — pass your fork)
+#   --repo <url>     what to clone (default the canonical repo — pass your fork;
+#                    a fork installs its own main)
 #   --no-shell-rc    do not add the `mise activate` line to your shell rc
+#   --ref <tag|main> which equin to install: a release tag, or main's newest
+#                    commit (default: the newest release)
+#   --terminal       show the install in this terminal, not in its window
+#   --window         show it in its window, or stop if the window can't open
 #   --dry-run        emit the event stream of a scripted install and touch
 #                    nothing (what the stream test and the window's dev loop run)
 #
-# Internal, passed by the installer window (plugins/installer/plugins/window),
-# which runs this script as its child:
+# Stage 0. Piped (`curl … | bash`), this file is main's, and its first job is
+# to hand the install to the release it installs: it downloads that release's
+# own install.sh (and the installer window for this system) from the tag's
+# GitHub Release, checks every file against the Release's SHA256SUMS, and
+# runs it — in the window, or in this terminal when the window can't show
+# (`stage0`). A release cut before the window existed is installed by this
+# script's own steps. Run from a checkout (./install.sh), it installs that
+# checkout and skips stage 0. What a Release carries:
+# plugins/installer/plugins/release-assets.
+#
+# Internal, passed by stage 0 and the installer window
+# (plugins/installer/plugins/window), which runs this script as its child:
+#   --release <tag>  this script is that release's, already verified: run the
+#                    steps, never stage 0 again
+#   --checkout <ref> what the new clone checks out: the release tag, or main
+#   --stage0-only    stop after stage 0, printing what it decided (its test)
 #   --events-fd <n>  write the install's events (plugins/installer/core,
 #                    protocol v1: one JSON object per line) to fd <n>
 #   --control-fd <n> read decisions (retry / quit) from fd <n> when a step fails
+#
+# The line below says this script accepts --release / --checkout; a Release's
+# release.json records it (`handoff`), and stage 0 hands over only when it is
+# there. Keep it a line of its own.
+# installer-handoff: 1
 #
 # Every step checks before it acts, so re-running it resumes where it stopped.
 # The steps are docs/setup.md's install sequence; the doctor
@@ -61,6 +85,197 @@ refused_write_dir() {
   done
 }
 
+# ── Stage 0: hand the install to the release it installs ─────────────────────
+
+# The release tag grammar as a POSIX ERE. Must equal RELEASE_TAG_ERE in
+# plugins/upstream/plugins/release/core (the release-assets:tag-grammar check).
+RELEASE_TAG_ERE='^v([0-9]{4})\.([0-9]{2})\.([0-9]{2})(\.([0-9]+))?$'
+
+# stage0: find the release, download it, verify it, and exec its install.sh —
+# in the window or in this terminal. Returns (instead of exec'ing) only to
+# install with THIS script's steps: when the release predates the hand-off or
+# could not be downloaded; it then sets CHECKOUT and says why. A file that does
+# not match SHA256SUMS stops the install: nothing unverified ever runs.
+stage0() {
+  local base want manifest tag dir key bin
+  base="${EQUIN_RELEASES_URL:-https://github.com/equinai/equin/releases}"
+  base="${base%/}"
+  want="${REF:-latest}"
+  # A fork installs its own main: the releases are the canonical repo's.
+  [ -z "$REF" ] && [ "$REPO_URL" != "$CANONICAL_REPO_URL" ] && want=main
+  if [ "$want" != latest ] && [ "$want" != main ] && ! [[ $want =~ $RELEASE_TAG_ERE ]]; then
+    fail "--ref takes a release name (like v2026.11.17) or main; '$want' is neither." "--ref $want"
+  fi
+  if ! command -v curl >/dev/null 2>&1; then
+    stage0_fallback "$want" "" "this system has no curl to download it with"
+    return 0
+  fi
+
+  manifest="$(mktemp "${TMPDIR:-/tmp}/equin-release.XXXXXX")"
+  case "$want" in
+    latest|main) STAGE0_URL="$base/latest/download/release.json" ;;
+    *) STAGE0_URL="$base/download/$want/release.json" ;;
+  esac
+  if ! curl -fsSL --retry 2 -o "$manifest" "$STAGE0_URL" 2>/dev/null; then
+    rm -f "$manifest"
+    stage0_fallback "$want" "" "its description could not be downloaded (no internet connection, or no release published yet)"
+    return 0
+  fi
+  tag="$(json_field tag "$manifest")"
+  rm -f "$manifest"
+  [[ $tag =~ $RELEASE_TAG_ERE ]] || fail "The newest release's description names no release, so the installer stopped. Nothing was installed. Try again later, or install main's newest version with --ref main." \
+    "release.json from $STAGE0_URL: tag '$tag'"
+  case "$want" in
+    latest|main) ;;
+    *) [ "$tag" = "$want" ] || fail "The release you asked for ($want) describes itself as another one ($tag), so the installer stopped. Nothing was installed." \
+         "release.json from $STAGE0_URL: tag '$tag'" ;;
+  esac
+
+  # Every file from that one tag, so a release published meanwhile can never
+  # mix with this one.
+  dir="$(data_root)/install/bin/$tag"
+  mkdir -p "$dir"
+  if ! stage0_get "$base/download/$tag" SHA256SUMS "$dir" || ! stage0_get "$base/download/$tag" release.json "$dir"; then
+    stage0_fallback "$want" "$tag" "its files could not be downloaded"
+    return 0
+  fi
+  stage0_verify "$dir" release.json
+  if [ "$(json_field handoff "$dir/release.json")" != 1 ]; then
+    stage0_fallback "$want" "$tag" "it was published before the installer window"
+    return 0
+  fi
+  stage0_get "$base/download/$tag" install.sh "$dir" || { stage0_fallback "$want" "$tag" "its install script could not be downloaded"; return 0; }
+  stage0_verify "$dir" install.sh
+
+  case "$OS/$(uname -m)" in
+    Darwin/*) key=macos-universal ;;
+    Linux/x86_64|Linux/amd64) key=linux-x64 ;;
+    Linux/aarch64|Linux/arm64) key=linux-arm64 ;;
+    *) key="" ;;
+  esac
+  bin=""
+  if [ "$VIEW" != terminal ] && [ -n "$key" ]; then
+    bin="$(json_field "$key" "$dir/release.json")"
+    if [ -n "$bin" ]; then
+      if stage0_get "$base/download/$tag" "$bin" "$dir"; then
+        stage0_verify "$dir" "$bin"
+        chmod +x "$dir/$bin"
+        bin="$dir/$bin"
+      else
+        STAGE0_NO_WINDOW="the window could not be downloaded"
+        bin=""
+      fi
+    fi
+  fi
+
+  CHECKOUT="$tag"
+  [ "$want" = main ] && CHECKOUT=main
+  local handoff=(--release "$tag" --checkout "$CHECKOUT")
+  if choose_view "$bin" "$dir"; then
+    stage0_exec "$bin" --script "$dir/install.sh" -- "${handoff[@]}" ${INSTALL_ARGS[@]+"${INSTALL_ARGS[@]}"}
+  fi
+  echo "  Installing equin ${tag#v} in this terminal ($VIEW_WHY)."
+  stage0_exec bash "$dir/install.sh" "${handoff[@]}" ${INSTALL_ARGS[@]+"${INSTALL_ARGS[@]}"}
+}
+
+# stage0_exec <command…>: hand the install over (with --stage0-only, print
+# the command instead).
+stage0_exec() {
+  if [ "$STAGE0_ONLY" = 1 ]; then
+    echo "stage0: exec $*"
+    exit 0
+  fi
+  exec "$@"
+}
+
+# stage0_fallback <want> <tag or ""> <why>: install with this script's steps,
+# in this terminal. Sets CHECKOUT: the tag when one is known, else main.
+stage0_fallback() {
+  if [ "$VIEW" = window ]; then
+    fail "equin's install window can't open: the release could not be prepared, because $3. Run the installer again without --window to install in this terminal." \
+      "release ${2:-unknown}; from ${STAGE0_URL:-}"
+  fi
+  if [ "$1" = main ]; then
+    CHECKOUT=main
+  elif [ -n "$2" ]; then
+    CHECKOUT="$2"
+  elif [ "$1" != latest ]; then
+    CHECKOUT="$1"
+  else
+    CHECKOUT=main
+  fi
+  if [ "$CHECKOUT" = main ]; then
+    echo "  Installing main's newest version of equin in this terminal: the newest release could not be used, because $3."
+  else
+    echo "  Installing equin ${CHECKOUT#v} in this terminal: its install window can't be used, because $3."
+  fi
+}
+
+# stage0_get <url base> <file> <dir>: download one file of the release.
+stage0_get() {
+  curl -fsSL --retry 2 -o "$3/$2.part" "$1/$2" 2>/dev/null && mv "$3/$2.part" "$3/$2"
+}
+
+# stage0_verify <dir> <file>: the file's sha256 is the one SHA256SUMS lists
+# for it, or the install stops — a damaged or changed download is never run.
+stage0_verify() {
+  # shasum first: macOS's /sbin/sha256sum is BSD's, which reads no list on
+  # stdin; Linux without perl's shasum has GNU's sha256sum.
+  local line sum="shasum -a 256"
+  command -v shasum >/dev/null 2>&1 || sum=sha256sum
+  line="$(grep -E "^[0-9a-f]{64}  \*?$2\$" "$1/SHA256SUMS" || true)"
+  if [ -z "$line" ] || ! (cd "$1" && printf '%s\n' "$line" | $sum -c --status >/dev/null 2>&1); then
+    rm -f "$1/$2"
+    fail "The download was damaged or changed, so the installer stopped. Nothing was installed. Run the installer again; if it stops here again, tell us: https://github.com/equinai/equin/issues" \
+      "$2 does not match the release's SHA256SUMS (${line:-no entry for it}), in $1"
+  fi
+}
+
+# json_field <key> <file>: the value of `"key": value` in a release.json
+# (written one key per line by release-assets' assemble), quotes dropped;
+# empty when the key is absent.
+json_field() {
+  sed -n "s/^[[:space:]]*\"$1\":[[:space:]]*\"\{0,1\}\([^\",]*\)\"\{0,1\},\{0,1\}[[:space:]]*\$/\1/p" "$2" | head -n 1
+}
+
+# choose_view <window binary or ""> <dir>: 0 = the window, 1 = this terminal,
+# with the reason in VIEW_WHY. The window only where it can really show: a
+# desktop session, not over SSH or in CI, output on a terminal, not inside a
+# sandboxed shell, and the binary's own --probe (a hidden window loading the
+# page: on Linux it also catches a missing webkit2gtk, which the loader
+# refuses before the program starts). --window skips the guesses but not the
+# probe, and stops loudly when the window can't open; --terminal never tries.
+choose_view() {
+  VIEW_WHY=""
+  if [ "$VIEW" = terminal ]; then
+    VIEW_WHY="you asked for it with --terminal"; return 1
+  fi
+  if [ -z "$1" ]; then
+    VIEW_WHY="${STAGE0_NO_WINDOW:-this release has no install window for this system}"
+  elif [ "$VIEW" != window ]; then
+    if [ "$OS" != Darwin ] && [ -z "${DISPLAY:-}" ] && [ -z "${WAYLAND_DISPLAY:-}" ]; then
+      VIEW_WHY="there is no desktop to show a window on"
+    elif [ -n "${SSH_CONNECTION:-}${SSH_TTY:-}" ]; then
+      VIEW_WHY="you are connected over SSH"
+    elif [ -n "${CI:-}" ]; then
+      VIEW_WHY="this is an automated run (CI)"
+    elif ! [ -t 1 ]; then
+      VIEW_WHY="its output is not going to a terminal"
+    elif [ -n "${CLAUDECODE:-}${APP_SANDBOX_CONTAINER_ID:-}" ]; then
+      VIEW_WHY="this shell runs inside another app's protected mode"
+    fi
+  fi
+  if [ -z "$VIEW_WHY" ] && ! "$1" --probe >/dev/null 2>"$2/probe.log"; then
+    VIEW_WHY="the window could not open here (details in $2/probe.log)"
+  fi
+  [ -z "$VIEW_WHY" ] && return 0
+  if [ "$VIEW" = window ]; then
+    fail "equin's install window can't open: $VIEW_WHY. Run the installer again without --window to install in this terminal." \
+      "--window; ${1:-no window binary}"
+  fi
+  return 1
+}
+
 # Everything is inside main(), called on the last line: under `curl | bash`,
 # bash reads the script from the same pipe the commands below inherit as stdin,
 # so a command that reads stdin could otherwise swallow the rest of the script.
@@ -69,20 +284,34 @@ main() {
   # As typed, for the command a refusal asks the user to run again.
   ARGS="$*"
 
-  REPO_URL="https://github.com/equinai/equin"
+  CANONICAL_REPO_URL="https://github.com/equinai/equin"
+  REPO_URL="$CANONICAL_REPO_URL"
   INSTALL_DIR="$HOME/equin"
   EDIT_RC=1
   DRY_RUN=0
+  REF=""
+  VIEW=""
+  RELEASE=""
+  CHECKOUT=main
+  STAGE0_ONLY=0
+  # What the release's script is handed on: the install's own options.
+  INSTALL_ARGS=()
 
   while [ $# -gt 0 ]; do
     case "$1" in
-      --dir) INSTALL_DIR="$2"; shift 2 ;;
-      --repo) REPO_URL="$2"; shift 2 ;;
-      --no-shell-rc) EDIT_RC=0; shift ;;
+      --dir) INSTALL_DIR="$2"; INSTALL_ARGS+=("$1" "$2"); shift 2 ;;
+      --repo) REPO_URL="$2"; INSTALL_ARGS+=("$1" "$2"); shift 2 ;;
+      --no-shell-rc) EDIT_RC=0; INSTALL_ARGS+=("$1"); shift ;;
+      --ref) REF="$2"; shift 2 ;;
+      --terminal) VIEW=terminal; shift ;;
+      --window) VIEW=window; shift ;;
+      --release) RELEASE="$2"; shift 2 ;;
+      --checkout) CHECKOUT="$2"; shift 2 ;;
+      --stage0-only) STAGE0_ONLY=1; shift ;;
       --dry-run) DRY_RUN=1; shift ;;
       --events-fd) EV_FD="$2"; shift 2 ;;
       --control-fd) CTL_FD="$2"; shift 2 ;;
-      -h|--help) echo "usage: install.sh [--dir <path>] [--repo <url>] [--no-shell-rc] [--dry-run]"; exit 0 ;;
+      -h|--help) echo "usage: install.sh [--dir <path>] [--repo <url>] [--no-shell-rc] [--ref <tag|main>] [--terminal | --window] [--dry-run]"; exit 0 ;;
       *) echo "install.sh: unknown option '$1' (see --help)" >&2; exit 2 ;;
     esac
   done
@@ -149,6 +378,25 @@ EOF
     fi
   fi
 
+  # ── Stage 0: piped from main → the release's own script takes over ─────────
+  if [ -z "$SELF_DIR" ] && [ -z "$RELEASE" ] && [ -z "$EV_FD" ]; then
+    stage0
+    if [ "$STAGE0_ONLY" = 1 ]; then
+      echo "stage0: own steps, checkout $CHECKOUT"
+      exit 0
+    fi
+  elif [ -n "$SELF_DIR" ] && [ -n "$REF$VIEW" ]; then
+    echo "  --ref, --terminal and --window apply to a downloaded install; this installs the copy of equin at $INSTALL_DIR, in this terminal."
+  fi
+  if [ "$CHECKOUT" != main ] && ! [[ $CHECKOUT =~ $RELEASE_TAG_ERE ]]; then
+    echo "install.sh: --checkout takes a release tag or main (got '$CHECKOUT')" >&2; exit 2
+  fi
+  if [ "$CHECKOUT" = main ]; then
+    WHAT="main's newest version of equin"
+  else
+    WHAT="equin ${CHECKOUT#v}"
+  fi
+
   cat <<EOF
 
   equin installer. This will:
@@ -157,7 +405,7 @@ EOF
        logged in (Linux); asks for your password once
     2. install mise (it installs the exact Bun, Go and Rust versions equin is
        built with), and add one line to $RC so new terminals find them
-    3. $( [ -n "$SELF_DIR" ] && echo "use the copy of equin at $INSTALL_DIR" || echo "download equin's code into $INSTALL_DIR" )
+    3. $( [ -n "$SELF_DIR" ] && echo "use the copy of equin at $INSTALL_DIR" || echo "download $WHAT into $INSTALL_DIR" )
     4. install those exact Bun, Go and Rust versions
     5. start equin in the background (with its own database) and build it:
        ~10-15 minutes
@@ -237,8 +485,8 @@ EOF
     fail "The folder $INSTALL_DIR already holds something else, so equin will not install over it. Move it away, or install somewhere else with --dir <another folder>." \
       "$INSTALL_DIR exists and has no .git"
   else
-    say "Downloading equin's code into $INSTALL_DIR"
-    run_step clone git clone "$REPO_URL" "$INSTALL_DIR"
+    say "Downloading $WHAT into $INSTALL_DIR"
+    run_step clone clone_repo
     [ "$STEP_RC" = "0" ] || fail "equin's code did not download into $INSTALL_DIR; what went wrong is just above. Check your internet connection, then run the installer again." \
       "git clone $REPO_URL exited non-zero"
   fi
@@ -335,6 +583,17 @@ prepare_linux() {
 install_mise() {
   say "Installing mise"
   curl -fsSL https://mise.run | sh
+}
+
+# The clone, on main — moved to the release tag unless main was asked for, and
+# still tracking origin/main, so the app's updates (plugins/upstream) move it
+# from one release to the next.
+clone_repo() {
+  git clone "$REPO_URL" "$INSTALL_DIR"
+  if [ "$CHECKOUT" != main ]; then
+    git -C "$INSTALL_DIR" checkout -q -B main "refs/tags/$CHECKOUT"
+    git -C "$INSTALL_DIR" branch -q --set-upstream-to=origin/main main
+  fi
 }
 
 install_toolchain() {
@@ -449,7 +708,9 @@ ev_plan() {
   plan_step toolchain "Install Bun, Go and Rust"
   plan_step start "Start equin's services"
   plan_step build "Build equin"
-  ev plan "\"release\":null,\"platform\":\"$platform\",\"mode\":\"window\",\"steps\":[$PLAN_STEPS]"
+  local release=null
+  [ -n "$RELEASE" ] && release="\"$RELEASE\""
+  ev plan "\"release\":$release,\"platform\":\"$platform\",\"mode\":\"window\",\"steps\":[$PLAN_STEPS]"
 }
 
 # plan_step <id> <label>: append one step to PLAN_STEPS.

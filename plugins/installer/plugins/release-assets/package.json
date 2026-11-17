@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-installer-release-assets",
+  "private": true,
+  "version": "0.0.1",
+  "description": "What a release tag publishes for the curl install: the GitHub Actions workflow (.github/workflows/installer-release.yml) that builds the installer window per release tag, the asset names and release.json it attaches, and the check holding the workflow's tag regex to the release tag grammar."
+}
