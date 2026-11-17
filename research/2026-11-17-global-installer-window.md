@@ -1,0 +1,403 @@
+# The equin installer window: a native window over install.sh, built per release tag
+
+Design only, for review. Task `task-1794924169-qgnyrv` (onboarding audit, decision D8). Approved mockup: `proto-1794832268-wlybzk` (`view=window|terminal|hosting`, `state=running|failed|fixing|done`, `failure=sandbox|permission|security|stall`).
+
+The mockup's *hosting* view is replaced by this doc. It proposed a compiled Bun program serving a browser tab. That idea is superseded by the decisions below.
+
+## Context
+
+Today `curl … install.sh | bash` prints its plan and then 10–15 minutes of raw `mise`, cargo and vite output. It shows no progress and no time left, and a failure is a bare red line. New users can't tell a slow install from a stuck one, or a real bug from their own setup (a sandboxed shell, company security software).
+
+Decided with the user (2026-11-17):
+
+- **The window wraps the script, not the other way round.** `install.sh` (and the `./equin` commands it runs) stays the only place the install steps live. It emits a stream of structured events. Two renderers read that one stream: a native window, and the script's own terminal view.
+- **The window** is a small Rust app built on wry/tao, fixed at 760 × 640, drawing the approved mockup's HTML.
+- **Delivery is curl only.** There is no notarization. A file downloaded by curl is not quarantined, so an ad-hoc signature is enough. A double-click, notarized installer app is parked on the Backlog page; this design leaves room for it.
+- **GitHub Actions builds it on every release tag** (`v<YYYY.MM.DD>[.N]`, cut by `./equin version cut`). Three files are attached, with checksums, to that tag's GitHub Release: universal macOS, Linux x64 and Linux arm64. On Linux without webkit2gtk the install falls back to the terminal view.
+- **The user's 5 rules apply to every installer message:**
+  1. No internal names.
+  2. Say what equin was doing and why it helps.
+  3. Say why it was blocked, in the user's terms.
+  4. Say what the user can do now, and what happens if they skip.
+  5. Raw lines go only in the log or evidence area.
+- **The install needs no macOS permission.** Anything that does is optional and skippable (landed in `task-1794922059-nmdsaa`).
+
+## The shape in one picture
+
+```
+curl …/main/install.sh | bash                       (stage 0: tiny, stable bootstrap)
+  │  resolve the newest release → fetch release.json, SHA256SUMS, install.sh@tag,
+  │  equin-installer-<platform>; verify every sha256
+  │
+  ├─ window possible? ──yes──▶ exec equin-installer --script <install.sh@tag> -- <args>
+  │                               │  (native window, parent process)
+  │                               └─ bash install.sh@tag --events-fd 3 --control-fd 4
+  │                                     ├─ steps → events (fd 3) ──▶ window page
+  │                                     └─ decisions (retry/skip/quit) ◀── fd 4
+  │
+  └─ no ─────────────────────▶ exec bash install.sh@tag --terminal
+                                  (the same steps; the events drawn by the script itself:
+                                   interactive on a TTY, plain timestamped lines otherwise)
+```
+
+One step engine (`install.sh` together with `./equin start` / `./equin build`) produces one event stream. Two views draw it.
+
+## 1. The event stream (protocol v1)
+
+### Format
+
+The stream is NDJSON with one event per line. Every event carries `v: 1`, `t` (an ISO timestamp) and `type`. Each event is written in a single `write` of less than `PIPE_BUF`, so `install.sh` and the `./equin` children it runs can share the fd without their lines interleaving. Every event is also appended to `~/.equin/install/<run>/events.jsonl`; `~/.equin/install/latest` points at the newest run. The window reloads from that file, and `--fix` and `--report` read it.
+
+| `type` | Fields | Emitted by |
+|---|---|---|
+| `plan` | `release`, `platform`, `steps: [{id, label, group, est_s, optional?}]`, `mode` (window/interactive/plain) | install.sh at start, once it knows which steps are already done (done steps are listed as `skipped`) |
+| `step` | `id`, `state: start\|done\|skipped\|failed`, `ms?` | install.sh's `run_step`; `./equin build`'s phases |
+| `progress` | `id`, `done`, `total`, `unit` (`crates`, `plugins`, `packages`, `%`) | `./equin build` (cargo JSON messages, the artifact builder's counter, bun install); `git clone --progress`; `softwareupdate --verbose` |
+| `action` | `text`: a user-facing "what's happening now" line | install.sh, and `./equin` through its phase table |
+| `log` | `step`, `stream: out\|err`, `line` | `run_step`'s line reader (all child output) |
+| `wait` | `step`, `on: host-grant\|lock\|apple-installer\|password`, `holder?: {op, kind, startedAt, lastOutputAt}` | the op-runtime grant wait (the profiler already records waits); install.sh for Apple's dialog |
+| `notice` | `id`, `kind: optional-skipped`, `title`, `text`, `action?` | `./equin start` when it skips an optional login service (`BundleWriteRefusedError`, already landed) |
+| `pause` | `step`, `kind: sandbox\|permission\|security\|stall\|unknown`, `title`, `text`, `evidence: string[]`, `optional`, `manual?: {label, command}`, `chips` | install.sh's `diagnose` (§3) |
+| `done` | `url`, `ms` | install.sh after the build receipt is confirmed |
+| `exit` | `code` | install.sh's EXIT trap |
+
+### One schema, enforced
+
+- **A zod schema in core.** `plugins/installer/core` exports `InstallEvent` as a zod discriminated union.
+- **The page uses it.** The window page imports the schema and parses every line it receives.
+- **`./equin` emits through one helper.** `emitInstallEvent(e: InstallEvent)` is type-checked. It writes only when `EQUIN_INSTALL_EVENTS_FD` is set, so builds outside an install are unaffected.
+- **install.sh** writes JSON by hand through one `ev` function with a `json_str` escaper.
+- **A test** runs `install.sh --dry-run` (it emits the plan and a scripted step and pause sequence without touching the machine) and parses every line against the schema. This is the guard against the bash emitter drifting from the schema.
+
+### Messages live in the events
+
+`title`, `text` and `action` are produced by the step engine and never by a renderer. Both views draw them as they come, so the 5 message rules are applied in exactly one place.
+
+### Build sub-steps
+
+The mockup's "Build the app" sub-steps (dependencies, native modules, code generation, database, interface, start) come from `./equin build`'s existing profiler spans (`buildProfilerStart` in `plugins/framework/plugins/cli/plugins/op-runtime/cli/profiler.ts`).
+
+- **Typed phases.** A span gains an optional typed `installStep: InstallStepId`, a closed union in `installer/core`. The span emits `step` start and done events.
+- **Why typed.** Renaming a span cannot silently drop a step; tsc rejects a step id that no span declares.
+- **Untagged spans** go only to the log.
+
+### Time estimates
+
+- **The estimate table.** `plugins/installer/core/estimates.json` holds per-step medians from clean installs.
+- **How it is refreshed.** `./equin installer estimates` regenerates it from timing files. Every install writes `~/.equin/install/<run>/timing.json`. Build sub-steps can also be read from full-build profiles with step-baseline's `readBuildSteps` (`plugins/build/plugins/step-baseline/core`).
+- **First release.** It ships with medians measured on a few real clean installs.
+- **Running estimate.** The renderers rescale the remaining estimate by this machine's pace on the steps already done, as the mockup does.
+- **Unknown steps.** A step without a median shows no number ("Step 5 of 5"), never a made-up one.
+
+## 2. The window app
+
+### Where it lives
+
+A new top-level umbrella, `plugins/installer/`, with these sub-plugins:
+
+- `core`: the event schema, step ids, the estimates file and the message catalog's types.
+- `window`: the Rust crate (`rust/`) and the page source.
+- `release-assets`: the CI workflow source and asset names (§6).
+
+The repo-root `install.sh` stays where it is, because its URL is the documented entry point.
+
+The page is a standalone bundle that is neither the app's `web` runtime nor an import target. It needs a folder kind that may import other plugins' `core`, which the page uses to call `buildIssueUrl`. Proposal: a new leaf folder kind `standalone-page` (one vocabulary entry plus its row in `boundary-config.ts`). The spike decides the final name.
+
+### Crate
+
+- **Name and stack.** The crate is `equin-installer`, built on **wry + tao directly, not Tauri**. The menu-bar helper reaches the same libraries through Tauri 2 (lock: wry 0.57.2, tao 0.37.2, in `plugins/companions/plugins/menu-bar/rust`). We pin the same versions.
+- **Why not Tauri.** Tauri brings a config file, ACL and capabilities, none of which a one-page, one-window, one-child-process program needs. The direct build keeps the binary at a few MB.
+- **Window.** Fixed at 760 × 640 and not resizable. On macOS the title bar is transparent with a full-size content view and a hidden title, so the mockup's dark canvas runs under the traffic lights. Linux uses normal decorations.
+- **Page loading.** The page loads from a custom protocol (`installer://app/`) serving the HTML compiled into the binary with `include_bytes!`. Nothing is fetched from the network: the mockup's unpkg React and Google Fonts are dropped. The page uses the system font stack, or an embedded Inter subset. That is decided in the spike, and the system font is the default.
+- **Page source.** TypeScript (Preact, or plain DOM) bundled by `bun build` into one inline HTML file. CI builds it before `cargo build`, and `build.rs` fails loudly if the file is missing. It is ported pixel-perfect from the mockup's window view.
+
+### Process model
+
+`equin-installer --script <path> [--events-fd …] -- <install args>`:
+
+1. It opens a pipe for events (child fd 3) and one for control (child fd 4), and spawns `bash <path> --events-fd 3 --control-fd 4 <args>` in its own process group. The child's stdout and stderr are also piped to the window, which turns them into `log` events if the script did not already. The terminal that started the install keeps printing one plain line per step plus a line saying "Installing in the equin window. Closing it stops the install; running the installer again resumes."
+2. It keeps every event in memory and sends each one to the page with `evaluate_script("installer.push([...])")`, batched per frame. When the page loads (or reloads) it replays the backlog, so the page is a pure function of the event list.
+3. The page sends commands to Rust with `window.ipc.postMessage(json)`: `retry`, `skip`, `quit`, `fix {target}`, `report`, `open-url`, `reveal-log`, `copy`, `password`. Rust validates each against a closed enum. `retry`, `skip` and `quit` are written to the child's fd 4 as single lines.
+4. **Closing the window during an install** asks "Stop installing? Running the installer again picks up where it stopped." Confirming sends SIGINT to the child's process group. Every step checks before it acts, so a rerun resumes.
+5. **Done** shows "You're all set" and **Open equin**, which opens the default browser at `http://equin.localhost:9000` (`open` / `xdg-open`). The window exits after that, or when it is closed.
+6. **One install at a time.** install.sh takes an `flock` on `~/.equin/install/lock`. A second run reports "an install is already running" and exits; in window mode it focuses the existing window through the menu-bar crate's single-instance socket pattern (`rust/src/instance.rs`).
+7. **Exit codes** pass through: the window process exits with the script's code.
+
+### Why the window is the parent
+
+`curl | bash` gives no file to re-run, and the terminal is the only thing the user is looking at. Stage 0 `exec`s the window, so the shell becomes the window process. The script is its child, the terminal stays attached, and Ctrl-C still stops everything.
+
+## 3. Failure detection
+
+Every step runs through `run_step <id> <cmd…>`. It emits `step start`, reads the child's output line by line (each line becomes a `log` event and also goes to `install.log`), and on a non-zero exit calls `diagnose <step> <exit>`.
+
+`diagnose` tries the rules in order. The first match emits a `pause`; no match emits `kind: unknown`. Each rule needs both a symptom and a corroborating fact, because a single symptom alone produces confident wrong messages.
+
+### sandbox (the app the install was started from stopped it)
+
+- **Symptom:** the step's exit is 137 or 9, or its log contains `signal: 9, SIGKILL`.
+- **Fact:** an ancestor of the script is `sandbox-exec` (walking `ps -o ppid=,comm=` up to launchd).
+- **Checked up front too.** The same ancestry test runs at stage 0. A sandboxed parent can stop the build minutes in, and may not let a window appear at all, so a sandboxed run goes straight to the terminal view. It then pauses before step 1 with the same message instead of failing 6 minutes in.
+- **Manual action:** "Continue in Terminal". It writes `~/.equin/install/<run>/continue.command` (`cd <dir> && ./install.sh`) and runs `open` on it. A `.command` file opens in Terminal.app without any Automation permission. If `open` itself is refused, the message tells the user to open Terminal and run the shown command.
+
+### permission (macOS refused to add the menu-bar icon / app shortcuts)
+
+- **Symptom and fact** are both already structured: `./equin start` raises `BundleWriteRefusedError` and skips the optional login services (`installServiceExecutable`, `plugins/infra/plugins/launcher/plugins/login-services/machine/internal/macos-app.ts`).
+- **Change:** start emits a `notice {kind: optional-skipped}`, and the install does **not** stop.
+- **Window behaviour:** the window shows the mockup's paused card as a non-blocking banner while the build goes on. **Skip** dismisses it. The done screen keeps "Installed without the menu-bar icon and app shortcuts. **Add it now**".
+- **Add it now** opens Privacy & Security → App Management (`x-apple.systempreferences:…Privacy_AppBundles`) and runs `./equin start --only <id>` when the user comes back and clicks it.
+- **Deviation from the mockup.** The mockup blocks the install on this pause. A 15-minute install should not wait unattended on an optional item.
+
+### security (company security software removed part of equin)
+
+- **Symptom:** a binary the step just produced is gone, or exec fails with ENOENT or EPERM, within seconds of being written. `run_step` compares a step's declared outputs (gateway, helper) before and after.
+- **Fact:** a known endpoint agent is present. A small table maps a process name or path to a product name: Jamf Protect, WithSecure/F-Secure, CrowdStrike Falcon, SentinelOne, Microsoft Defender, Sophos. The table also checks for an MDM enrollment (`profiles status -type enrollment`, which needs no root).
+- **Message:** names the product found. The manual action is **Copy request for IT**, a ready-made message listing the folders to allow (`~/.equin`, the checkout) with the OS and architecture.
+- **No known agent found:** the failure is `unknown`, and the message never guesses.
+
+### stall (the install is waiting on something that stopped responding)
+
+- **Hard signal.** The op-runtime host-grant wait emits `wait {on: host-grant, holder}`. The rule fires when the wait has lasted more than 2 min **and** the holder's last output is more than 10 min old.
+  - **Manual action:** "Stop the old task", which stops that op through the existing op CLI. Verify the exact verb in the spike.
+- **Generic signal.** No event at all from the step for `max(10 min, 3 × its median)`. This is a watchdog in `run_step`: `read -t` on the child's output pipe, re-armed on every line.
+  - **Why this isn't polling:** it is a deadline on work we cannot observe otherwise.
+  - **Result:** a `stall` pause whose text says only what is known ("No progress for 12 minutes while building the interface"). **Keep waiting** is offered, never an automatic kill.
+
+### unknown
+
+Any other failure: "Installation paused", the step's label, the last 20 log lines as evidence, and Fix with Claude and Report issue.
+
+The full diagnosis is written to `~/.equin/install/<run>/diagnosis.json`, which `--fix`, `--report` and the Claude prompt read.
+
+### Pause and decision protocol
+
+After a `pause`, the script blocks until it gets a decision:
+
+- **Window:** a line on fd 4.
+- **Interactive terminal:** a key read from `/dev/tty`, using the mockup's terminal menu (`[f] Fix with Claude`, `[r] Report`, `[l] Show the full log`, `[q] Quit`).
+- **Plain mode:** no wait. The script prints the next commands and exits 1.
+
+`retry` re-runs the step. `skip` is accepted only when the pause says `optional`. `quit` exits 1, and running the installer again resumes.
+
+## 4. Fix with Claude, Report issue, Skip
+
+### Fix with Claude
+
+The control is the mockup's split button with a remembered target: the **Claude app** or **Claude Code in Terminal**.
+
+**The prompt.** It is written to `~/.equin/install/<run>/fix-prompt.md` and holds:
+
+- what the install was doing and why;
+- the diagnosis (title, text, evidence);
+- OS, architecture and release;
+- the paths of `install.log` and `events.jsonl`, with the last 150 log lines inline;
+- the rules: explain before changing anything, never disable security software, say plainly when a fix needs the user or IT;
+- **the resume command** (`~/.equin/install/resume`, a tiny script that writes `retry` to the waiting installer through `~/.equin/install/control.fifo`).
+
+Claude Code runs the resume command itself once it has fixed the problem. The window's **Try again** button does the same.
+
+**Claude Code in Terminal.** The installer writes `fix.command`, which runs `cd <checkout or ~> && claude "$(cat fix-prompt.md)"`, and runs `open` on it.
+
+- Using `open` on a file avoids the Apple Events/Automation permission that scripting Terminal would trigger.
+- If `claude` is not on PATH, the `.command` first installs Claude Code with Anthropic's official installer (the user sees it happen in Terminal), then starts it.
+- Linux: the same command in `x-terminal-emulator`, or `$TERMINAL`.
+
+**Claude app.** The installer copies the full prompt to the clipboard and opens the app. If the app supports a prefill deep link, it is used and the prompt is cut to fit. The window says "The problem and log are on your clipboard: paste them into Claude." The app cannot run commands on the machine, so resuming is the user's **Try again**.
+- *Open question:* is there a supported prefill URL (`claude://…` / `claude.ai/new?q=`)?
+
+**While Claude works,** the window shows the mockup's "Claude is working on it" card (Show Claude, Try again). The script keeps waiting on its control fd.
+
+**Terminal view:** `[f]` does the same, and the Claude Code path runs in the same terminal. In plain mode, `./install.sh --fix` starts `claude` with the prompt; `--yes` is needed for it to act without a TTY.
+
+### Report issue
+
+- **The URL.** The page builds it with `buildIssueUrl` (`plugins/integrations/plugins/github-issues/core/issue-url.ts`), already length-safe at 7,500 characters, against `SOURCE_REPO_URL` (`plugins/framework/plugins/product-name/core`) with `labels: ["install"]`.
+- **Title:** `Install: <pause title>`.
+- **Body:** what happened (the plain text), the evidence, the release, the OS and architecture, and "The full log is at ~/.equin/install/latest/install.log; drag it here to attach it."
+- **Redaction:** paths are redacted (`$HOME` becomes `~`, and the user and host names are removed) before the URL is built.
+- **How it opens:** the window opens the URL in the browser (an `open-url` command, limited to `https://github.com/` URLs). Nothing is sent until the user submits the issue on GitHub. **Reveal log** shows the file in Finder.
+- **Terminal:** `[r]` and `--report` print the same URL and open it when there is a display.
+- **Single source:** the URL builder is the TS core, so the terminal uses a tiny `./equin installer report-url` after the clone. Before the clone, a minimal bash builder covers the pre-clone steps: title plus evidence only, with no length logic needed.
+
+### Skip
+
+- **When:** only for a pause the engine marks `optional` (today: the login-service notice).
+- **Where:** the window's Skip button, or `[s]` in the terminal.
+- **Effect:** the step is recorded as `skipped` in `timing.json` and on the done screen ("Installed without … Add it now"), never silently.
+
+## 5. First-time macOS setup (Apple's command-line tools)
+
+The window binary needs neither git nor the command-line tools. It uses the system WebKit, and stage 0 needs only `curl` and `shasum`, which are in the base system. So the window can appear at second 0 on a bare Mac.
+
+**Window mode** uses **Apple's own dialog** (`xcode-select --install`), not `sudo softwareupdate`. The user sees Apple's trusted prompt, which asks for whatever authorization it needs; the equin window never asks for an admin password.
+
+- **The window shows:** "Installing Apple's developer tools: follow Apple's window, click Install. This can take 5–20 minutes." The bar is indeterminate, and the step's estimate is only counted when the tools are missing.
+- **The script waits** until `xcode-select -p` succeeds or the Apple dialog process is gone, checking every 5 s.
+  - **Why polling here:** this is a documented exception. It is an OS dialog with no change signal, and the existing script already polls the same way.
+- **Dialog closed with no tools installed:** a `pause` (kind `unknown`, title "Apple's developer tools weren't installed"). Retry opens the dialog again.
+
+**Terminal mode** keeps today's headless `sudo softwareupdate` route (the marker file plus `--verbose`, whose percentages become `progress` events). It works over SSH, where no dialog can be clicked.
+
+**Linux, window mode.** apt and `loginctl enable-linger` need sudo. The script runs them with `sudo -A`, with `SUDO_ASKPASS=equin-installer askpass`. That helper asks the running window over a socket to show a password sheet ("equin needs your password to install git and a C compiler. It goes to sudo only and is not stored.").
+
+Later, these steps could run in parallel with the tools download (mise and the toolchain do not need the tools). That is not part of this plan.
+
+## 6. Release builds: GitHub Actions and signing
+
+The repo has no CI today. A new `.github/workflows/installer-release.yml`, triggered `on: push: tags: ['v*']` and by `workflow_dispatch` with an input `tag` for rebuilds, runs these jobs.
+
+### 1. validate
+
+The tag must match the release grammar `^v\d{4}\.\d{2}\.\d{2}(\.\d+)?$`, the same as `RELEASE_TAG` in `plugins/upstream/plugins/release/core/internal/release-tag.ts`. A small `./equin` check keeps the workflow's regex and that one equal. Any other tag (e.g. `website-media`) ends the run without error.
+
+### 2. page
+
+Set up the toolchain from the repo's `mise.toml`/`mise.lock` (`jdx/mise-action`), so Bun and Rust are the exact versions mise records. Then `bun build` the page and upload it as an artifact.
+
+### 3. macOS
+
+On `macos-14`:
+
+- Build `aarch64-apple-darwin` and `x86_64-apple-darwin` with `--locked --release`.
+- `lipo -create` them into `equin-installer-macos-universal`.
+- **Ad-hoc sign** it with `codesign --force -s - …`. lipo invalidates the linker's per-arch ad-hoc signature, and arm64 refuses to run unsigned code.
+- Smoke-test with `--version` and `--self-test`, which open and close a hidden window.
+
+### 4. Linux
+
+A matrix over `ubuntu-22.04` (x64) and `ubuntu-22.04-arm` (arm64). Building on 22.04 gives a glibc 2.35 baseline and links `libwebkit2gtk-4.1`.
+
+- Install `libwebkit2gtk-4.1-dev`.
+- Build and smoke-test (`--version`) the binaries `equin-installer-linux-x64` and `equin-installer-linux-arm64`.
+
+### 5. release
+
+Runs with `contents: write`, `id-token: write` and `attestations: write`. It collects these assets:
+
+- the 3 binaries;
+- `install.sh` from the tag;
+- `release.json`: `{tag, commit, eventsProtocol: 1, assets}`;
+- `SHA256SUMS`, covering all of the above.
+
+Then it runs `actions/attest-build-provenance` on the binaries. That costs nothing now and lets a later `gh attestation verify` prove where they came from.
+
+Last, `gh release create <tag> --verify-tag --notes-from-tag` with every asset, published in one go. A GitHub Release only exists once all its files do, so "latest" never points at a half-built release.
+
+### Signing today and later
+
+- **Today:** ad-hoc only, with no secrets. A curl download carries no quarantine attribute, so Gatekeeper never assesses it.
+- **Later:** the notarized double-click app (Backlog) adds a job that wraps the same universal binary in `equin Installer.app`, signs it with Developer ID (`codesign --options runtime`, cert and password as Actions secrets), notarizes with `notarytool`, staples, and attaches a `.dmg`.
+- **Why it stays a one-job addition:** the binary already carries its own bootstrap mode. With no `--script`, it downloads and verifies `install.sh` itself, so the app needs no shell around it. Build that mode in task 4 so the app is purely additive.
+
+### `./equin version cut`
+
+The cut is unchanged; the tag push triggers the workflow. The cut prints the Actions run URL. A follow-up, not in this plan: the health report's release row shows the installer build state.
+
+## 7. install.sh: stage 0, download and verify, which commit to install
+
+### Stage 0
+
+Stage 0 is the top of `install.sh` on `main`. Keep it small and stable; it is the only part served from `main`.
+
+1. **Parse the args.** New args: `--terminal`, `--window`, `--ref <tag|main>`, `--fix`, `--report`, `--dry-run`, plus `--events-fd` and `--control-fd`, which are internal.
+2. **Resolve the release** with `https://github.com/equinai/equin/releases/latest/download/release.json`. This is a redirect, not the REST API, so there is no 60-requests-per-hour limit. `--ref <tag>` pins one release.
+3. **Download** into `~/.equin/install/bin/<tag>/`: `SHA256SUMS`, `install.sh`, and the platform's binary when window mode is possible.
+4. **Verify** every file against `SHA256SUMS` with `shasum -a 256 -c` (macOS) or `sha256sum -c` (Linux). A mismatch is fatal ("The download was damaged or changed. Nothing was installed."). It never falls back to running unverified code.
+5. **Decide the view.** Use the window when all of these hold:
+   - macOS, or Linux with `$DISPLAY` or `$WAYLAND_DISPLAY`;
+   - not over SSH (`$SSH_CONNECTION`);
+   - no `$CI`;
+   - stdout is a TTY;
+   - no `--terminal`;
+   - no sandboxed ancestor (§3);
+   - `equin-installer --probe` exits 0. On Linux this catches a missing webkit2gtk, because the dynamic loader fails before `main`. The probe's stderr is kept for the log.
+
+   Otherwise use the terminal. `--window` forces the window and fails loudly if it cannot open.
+6. **Hand off:** `exec` the window or `exec bash <install.sh@tag>`.
+
+Without a release yet (releases before this ships carry no assets), or when the download fails for network reasons, stage 0 runs the steps in the terminal view **from the tag's or main's own script** and says why. A checksum mismatch is never treated as a network failure.
+
+**Trust.** SHA256SUMS comes from the same GitHub that serves `install.sh`, so it catches corrupted or truncated downloads and mixed releases, not a compromised GitHub. The attestations are the path to authenticity if that is wanted later (*open question*).
+
+### Install the newest release, not main's tip (recommended)
+
+Now that clones follow releases (`plugins/upstream`, `research/2026-11-17-global-release-updates.md`), a fresh install clones and checks out the release tag. It runs `git clone`, then `git checkout -B main <tag>`, with `main` tracking `origin/main`.
+
+**Why:**
+
+- The release's build is known to have passed; `version cut` requires main's build of that commit to have exited 0.
+- The window binary and `install.sh` come from exactly that commit, so the protocol matches by construction.
+- The new clone's updates row reads `current` until the next release, instead of a tip that may be mid-change.
+
+`--ref main` keeps the old behaviour for developers. It uses the newest release's window binary, which works because events carry `v` and the page refuses an unknown major version with a clear message.
+
+An existing clone (`./install.sh` from a checkout) installs that checkout as today and never moves it.
+
+## 8. Reused, not rebuilt
+
+| Need | Existing code |
+|---|---|
+| Native window and webview | Same wry/tao versions, plus the macOS title-bar, ATS and single-instance patterns from `plugins/companions/plugins/menu-bar/rust` (`window.rs`, `main_frame.rs`, `instance.rs`) |
+| Build sub-steps and waits | `buildProfilerStart` spans and their wait records (`op-runtime/cli/profiler.ts`) |
+| Estimates | `readBuildSteps` / step-baseline profiles (`plugins/build/plugins/step-baseline/core`) |
+| Release identity | `parseReleaseTag` / `RELEASE_TAG` (`plugins/upstream/plugins/release/core`), `./equin version cut` |
+| Pinned-asset conventions | `githubReleaseDownload`'s pin shape and the `{tag}` asset template (`plugins/infra/plugins/deps/plugins/download/deps/internal/github-release.ts`): same asset naming, so equin's own `deps` could later pin the installer |
+| Permission-refused handling | `BundleWriteRefusedError` and start's optional-service skip (landed) |
+| Issue URL | `buildIssueUrl` plus `SOURCE_REPO_URL` |
+| Prerequisite checks | `doctor.sh` stays the authority on what is missing; its `miss` lines become `log` events, and its text gets the 5-rule rewrite (already its own D0 box) |
+| Signing | Ad-hoc in CI needs no helper. `plugins/infra/plugins/codesign` (`signBundle`, identity resolution) is the model for the later Developer ID job |
+| Data root | `data_root()` already in install.sh; `install/` is declared as a data dir by `plugins/installer/data-dirs` |
+
+## 9. Risks
+
+- **Sandboxed parent shells** may block the window or WebKit's helper processes. Mitigation: detect the sandbox at stage 0 and go to the terminal. The `--probe` self-test also opens a real hidden webview, not just a link check.
+- **Linux webview availability.** webkit2gtk-4.1 is missing on most servers and on older distros (Ubuntu 20.04 has only 4.0). That is expected: the probe falls back to the terminal. glibc older than 2.35 also falls back, with a clear line in the log.
+- **Protocol drift** between bash, `./equin` and the page. Mitigation: one zod schema, the typed emitter, the typed `installStep` on spans, and the `--dry-run` schema test.
+- **Bash complexity.** install.sh grows a step runner, a JSON emitter, diagnose rules and a terminal renderer. Mitigation: keep the interactive renderer modest (a redrawn status block plus a scrolling dim log), and test `--dry-run` output in both terminal modes. If it passes ~800 lines, split it into release assets that stage 0 also verifies.
+- **Mixed versions.** Stage 0 on `main` is newer than the tag's script. Keep stage 0 limited to resolve, download, verify and exec, and version `release.json`.
+- **Estimates** are wrong at first. Ship only measured medians, and show no number rather than a guessed one.
+- **Claude app hand-off** may have no prefill path; the clipboard is the fallback. Claude Code may be absent; the `.command` installs it in front of the user.
+- **The first tag** after this lands is the first time CI ever runs, so test with `workflow_dispatch` on an existing tag first. macOS runner minutes are free for a public repo; check whether `equinai/equin` is public.
+- **The canonical repo's own release** must not depend on CI. If the workflow fails, the tag still exists and stage 0's no-assets fallback still installs, in the terminal view.
+
+## 10. Build tasks (proposed split)
+
+1. **Spike: the window and the event stream end to end (macOS).**
+   - The `installer/core` schema with only the `plan`, `step`, `log`, `done` and `exit` events.
+   - install.sh's `run_step` and `ev` for its 6 top-level steps.
+   - The wry/tao crate built locally, showing a minimal page: running state, bar, log and done.
+   - The fd 3 / fd 4 process model, close-to-cancel, and the `--dry-run` schema test.
+   - Proof: a real install in a fresh macOS user account, with the window from second 0 to Open equin.
+   - Also settles the page folder kind and the font choice. *M*
+2. **Progress and estimates.** The typed `installStep` on build spans; `progress` events from cargo, the artifact builder, bun install, git clone and softwareupdate; host-grant `wait` events; `estimates.json` and `timing.json`; the interactive and plain terminal renderers (the mockup's terminal view); and the full window port of the running state. *M*
+3. **Failures and actions.**
+   - The `diagnose` rules (sandbox, security, stall plus the watchdog, unknown) and the login-service `notice`.
+   - The pause and decision protocol.
+   - Fix with Claude: the prompt, the `.command`, the clipboard path, and the resume FIFO.
+   - Report issue and Skip.
+   - The Apple-dialog flow and Linux askpass.
+   - Every message against the 5 rules; the paused, fixing and done window states pixel-perfect against the mockup.
+   - *M–L.* It could be split into 3a (detection and pause) and 3b (Claude, Report, Skip).
+4. **Release pipeline and stage 0.** The GitHub Actions workflow (page, macOS universal with ad-hoc signing, 2 Linux builds, `SHA256SUMS`, `release.json`, attestations, one-shot release); the tag-regex check; stage 0 (resolve, download, verify, view choice, `--probe`, fallback); installing the newest release; `--ref`; the binary's self-bootstrap mode, so the notarized app stays additive. Verify with `workflow_dispatch` on `v2026.11.17`, then a real `curl | bash` on a clean Mac and on a Linux VM with and without webkit2gtk. *M*
+5. **Docs and entry points** (small). `plugins/installer/CLAUDE.md`, recording the 5 message rules and the protocol; `docs/setup.md`; and the website's install snippet. *S*
+
+Order: 1 first, then 2 and 4 in parallel, then 3, then 5.
+
+## Verification (for the build tasks)
+
+- `./equin test plugins/installer`: the schema, `json_str` escaping, the `--dry-run` stream parsed for every pause kind, and the diagnose rules fed recorded logs (sandbox SIGKILL, Jamf removal, grant stall).
+- The window states compared to the mockup with `compare-diff.ts`, by loading the page with recorded event files (a `--replay events.jsonl` flag on the binary, which is also useful for bug reports).
+- End to end:
+  - a clean macOS user account (`curl | bash`, window, done);
+  - the same over SSH (interactive terminal);
+  - `CI=1 … | cat` (plain);
+  - an Ubuntu 22.04 desktop VM (window), and the same without webkit2gtk (terminal);
+  - each failure induced on purpose (run under `sandbox-exec`, `rm` the gateway right after it is built, hold a host grant with a stuck op).
+
+## Open questions for the user
+
+1. **Optional failures don't block.** Should the App Management pause be a banner while the build continues, with "Add it now" at the end, instead of the mockup's blocking pause? Recommended: yes.
+2. **Claude app hand-off.** If there is no supported prefill link, is "prompt on the clipboard, open the app, paste" acceptable? Or should the default target be Claude Code in Terminal, which can also resume the install by itself?
+3. **Fresh installs check out the newest release** (`--ref main` for the old behaviour). Recommended: yes.
+4. **Authenticity beyond checksums.** Is the free GitHub attestation (verifiable later) enough for now, or should stage 0 verify a signature today (minisign, with a key in Actions secrets)?
+5. **Is `equinai/equin` public?** That decides whether macOS CI minutes are free.
