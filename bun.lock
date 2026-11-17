@@ -6650,6 +6650,10 @@
     "plugins/primitives/plugins/kept-state/plugins/loss-detector": {
       "name": "@equin/plugin-primitives-kept-state-loss-detector",
       "version": "0.0.1",
+      "devDependencies": {
+        "@babel/core": "^7.29.13",
+        "@types/babel__core": "^7.20.5",
+      },
     },
     "plugins/primitives/plugins/keyset": {
       "name": "@equin/plugin-primitives-keyset",

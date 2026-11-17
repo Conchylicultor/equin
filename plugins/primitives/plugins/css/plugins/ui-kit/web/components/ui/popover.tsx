@@ -14,6 +14,7 @@ import type {
 import { usePortalContainer } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
 import { usePopupAnchorAtRest } from "@plugins/primitives/plugins/overlay/plugins/popup-open/web";
 import { useSteadyAnchor } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/steady-anchor";
+import { useTransient } from "@plugins/primitives/plugins/kept-state/web";
 
 /**
  * Whether this popover has ever been open. Once it has, its content stays
@@ -82,7 +83,12 @@ function Popover({
   // Latched on first open (the render-phase "adjust state on prop change"
   // pattern): a popover never opened mounts nothing, one opened once keeps its
   // content — so whatever the user typed in it survives closing it.
-  const [everOpened, setEverOpened] = React.useState(drawn);
+  // Transient: a remount mounts the content again on its next open, and what
+  // the content holds is judged (kept or not) where it lives.
+  const [everOpened, setEverOpened] = useTransient(
+    "mount-on-first-open latch: a remount mounts the content on its next open",
+    drawn,
+  );
   if (drawn && !everOpened) setEverOpened(true);
   // See `useHoldPopoverOpen`: a refused close is cancelled before the mirror or
   // the caller hears of it, so neither ever sees the popover as closed.

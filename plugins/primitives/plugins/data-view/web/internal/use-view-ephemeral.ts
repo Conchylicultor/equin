@@ -1,10 +1,7 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { z } from "zod";
-import {
-  defineStore,
-  useStore,
-  type Store,
-} from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import { useDraft } from "@plugins/primitives/plugins/kept-state/web";
 import type { ExpandChange } from "@plugins/primitives/plugins/tree/core";
 
 /**
@@ -51,6 +48,9 @@ type LocalMap = Record<string, LocalViewState>;
 
 /** The transient half — one query per view instance, scoped to the browser tab. */
 type QueryMap = Record<string, string>;
+
+const NO_LOCAL_MAP: LocalMap = {};
+const NO_QUERY_MAP: QueryMap = {};
 
 const EMPTY_LOCAL: LocalViewState = {
   expanded: {},
@@ -114,20 +114,12 @@ const viewQueries = defineStore({
   },
 });
 
-function readLocalMap(store: Store<LocalMap>, storageKey: string): LocalMap {
-  const read = store.read(storageKey);
-  return read.kind === "value" ? read.value : {};
-}
-
-function readQueryMap(store: Store<QueryMap>, storageKey: string): QueryMap {
-  const read = store.read(storageKey);
-  return read.kind === "value" ? read.value : {};
-}
-
 export interface EphemeralViewState {
   /** Per-instance device-local render state (expanded / collapsedSections /
-   *  collapsed) — the STORED blob, so it keeps its identity until a write to
-   *  this view replaces it (the model's cached getters key on it). */
+   *  collapsed) — the STORED blob, so it keeps its identity until a write
+   *  replaces the surface's map (this tab's own echo keeps it; a write from
+   *  another tab re-reads every view's blob). The model's cached getters key
+   *  on it. */
   localFor: (viewId: string) => LocalViewState;
   /** This browser tab's search query for the instance. */
   queryFor: (viewId: string) => string;
@@ -150,25 +142,26 @@ export interface EphemeralViewState {
  * sort/filter live on the config row.
  */
 export function useViewEphemeral(storageKey: string): EphemeralViewState {
-  const states = useStore(viewStates);
-  const queries = useStore(viewQueries);
-  const [localMap, setLocalMap] = useState<LocalMap>(() =>
-    readLocalMap(states, storageKey),
-  );
-  const [queryMap, setQueryMap] = useState<QueryMap>(() =>
-    readQueryMap(queries, storageKey),
+  // Each map is the store's entry for this surface, read through `useDraft` —
+  // the store IS the state (a remount, a reload, another tab read the same
+  // entry), never a useState copy of it seeded once on mount.
+  const [localMap, setLocalMap] = useDraft<LocalMap>(viewStates, NO_LOCAL_MAP, {
+    scope: storageKey,
+  });
+  const [queryMap, setQueryMap] = useDraft<QueryMap>(
+    viewQueries,
+    NO_QUERY_MAP,
+    { scope: storageKey },
   );
 
   const writeLocal = useCallback(
     (viewId: string, mutate: (prev: LocalViewState) => LocalViewState) => {
-      setLocalMap((prev) => {
-        const current = prev[viewId] ?? EMPTY_LOCAL;
-        const next = { ...prev, [viewId]: mutate(current) };
-        states.write(storageKey, next);
-        return next;
-      });
+      setLocalMap((prev) => ({
+        ...prev,
+        [viewId]: mutate(prev[viewId] ?? EMPTY_LOCAL),
+      }));
     },
-    [states, storageKey],
+    [setLocalMap],
   );
 
   const localFor = useCallback(
@@ -182,13 +175,9 @@ export function useViewEphemeral(storageKey: string): EphemeralViewState {
 
   const setQuery = useCallback(
     (viewId: string, query: string) => {
-      setQueryMap((prev) => {
-        const next = { ...prev, [viewId]: query };
-        queries.write(storageKey, next);
-        return next;
-      });
+      setQueryMap((prev) => ({ ...prev, [viewId]: query }));
     },
-    [queries, storageKey],
+    [setQueryMap],
   );
 
   const setExpanded = useCallback(

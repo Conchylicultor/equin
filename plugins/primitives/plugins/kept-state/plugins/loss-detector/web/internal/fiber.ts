@@ -12,6 +12,7 @@ const FunctionComponent = 0;
 const HostRoot = 3;
 const HostComponent = 5;
 const ForwardRef = 11;
+const MemoComponent = 14;
 const SimpleMemoComponent = 15;
 
 export interface HookNode {
@@ -23,6 +24,7 @@ export interface HookNode {
 export interface Fiber {
   tag: number;
   type: unknown;
+  elementType: unknown;
   flags: number;
   subtreeFlags: number;
   memoizedState: unknown;
@@ -133,6 +135,36 @@ export function* descendants(fiber: Fiber): Generator<Fiber> {
     if (node === null || node === fiber) return;
     node = node.sibling;
   }
+}
+
+/**
+ * The property the build stamps on every repo component that calls a hook:
+ * the repo file it is defined in (this plugin's `vite/index.ts`, which spells
+ * the same name — a test asserts they agree).
+ */
+export const COMPONENT_SOURCE_PROP = "__equinSource";
+
+function stampOf(type: unknown): string | undefined {
+  if (typeof type !== "function" && (typeof type !== "object" || !type))
+    return undefined;
+  const stamp = (type as Record<string, unknown>)[COMPONENT_SOURCE_PROP];
+  return typeof stamp === "string" ? stamp : undefined;
+}
+
+/**
+ * The repo file a component is defined in, from the build's stamp — or
+ * `undefined` for a component the repo did not write (a library's: only repo
+ * modules go through the build's Babel pass). Read off the fiber's `type` (a
+ * plain function, a forwardRef object), its `elementType` (the memo object
+ * around a simple memo component), and a `memo(forwardRef(…))`'s outer memo.
+ */
+export function componentSource(fiber: Fiber): string | undefined {
+  const own = stampOf(fiber.type) ?? stampOf(fiber.elementType);
+  if (own !== undefined) return own;
+  const parent = fiber.return;
+  return parent !== null && parent.tag === MemoComponent
+    ? stampOf(parent.elementType)
+    : undefined;
 }
 
 /** A component's name as React DevTools would show it. */

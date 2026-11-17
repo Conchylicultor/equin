@@ -22,7 +22,12 @@ import {
   previewValue,
   type StateLoss,
 } from "../internal/detector";
-import { asFiber, committedFiber, type Fiber } from "../internal/fiber";
+import {
+  asFiber,
+  committedFiber,
+  COMPONENT_SOURCE_PROP,
+  type Fiber,
+} from "../internal/fiber";
 
 beforeAll(() => {
   installStorage("local", new QuotaStorage());
@@ -65,6 +70,22 @@ function Surface() {
   );
 }
 
+// A library's component (no build stamp: node_modules never goes through the
+// build's Babel pass): its own state, flipped by a click, is not the repo's
+// to keep.
+function LibraryToggle() {
+  const [on, setOn] = useState(false);
+  return (
+    <button onClick={() => setOn(true)}>{on ? "library on" : "library"}</button>
+  );
+}
+
+// What the build's stamp (`vite/index.ts`) adds after a repo component.
+function stampAsRepo(component: object, file: string): void {
+  Object.assign(component, { [COMPONENT_SOURCE_PROP]: file });
+}
+stampAsRepo(Surface, "src/surface.tsx");
+
 const click = (name: string) =>
   fireEvent.click(screen.getByRole("button", { name }));
 
@@ -80,7 +101,7 @@ function hostRoot(container: HTMLElement): Fiber {
 }
 
 describe("loss-detector", () => {
-  it("reports user-changed plain state only — kept, transient and data-driven state are not losses", async () => {
+  it("reports user-changed plain state of repo components only — kept, transient, data-driven and library state are not losses", async () => {
     const baselines = new WeakMap<
       object,
       { baseline: unknown; last: unknown }
@@ -88,6 +109,7 @@ describe("loss-detector", () => {
     const { container, unmount } = render(
       <KeepScope segment="t:tab-1">
         <Surface />
+        <LibraryToggle />
       </KeepScope>,
     );
     const observe = (userInput: boolean) =>
@@ -110,6 +132,7 @@ describe("loss-detector", () => {
       click("hover");
       click("keep");
       click("bump");
+      click("library");
     });
     observe(true);
 

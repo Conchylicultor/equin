@@ -35,7 +35,18 @@ losing state on a remount (design:
    reloads then, and an open popup's flags and position are transient by
    design (the global action bar remounting under its own View options
    popover filed a dozen such false losses).
-3. **What counts.** Each `useState` / `useReducer` in the subtree whose value
+3. **Whose state.** Only the repo's own components are judged: a library's
+   internal state (base-ui's popover root keeping `true` after it closed) is
+   not the repo's to keep, and reporting it made every report suspect. A
+   production fiber says nothing about where its component came from, so the
+   build says it: this plugin's `vite/index.ts` (a Babel contribution, run on
+   repo modules only — node_modules never goes through the pass) adds
+   `Name.__equinSource = "<repo file>"` after every PascalCase component
+   binding whose own body calls a hook (`function Name`, `const Name = () =>`,
+   `const Name = memo(forwardRef(…))`), and `componentSource(fiber)` reads it
+   off the fiber's `type` / `elementType` (or a `memo(forwardRef())`'s outer
+   memo). No stamp, not judged — there is no list of library names.
+4. **What counts.** Each `useState` / `useReducer` in the subtree whose value
    differs from its baseline (`Object.is`, else equal JSON) and is not
    **marked**: the hook just before it is a `useRef` holding a `StateMark`
    (`kept` from `useKept` / `useDraft`, `transient` from
@@ -53,6 +64,12 @@ named components above it, the state's index among the component's
 
 ## Limits
 
+- A component the stamp cannot see is not judged: one with no PascalCase
+  binding (an inline `{ component: () => … }`, an anonymous default export),
+  or wrapped by a call other than `memo` / `forwardRef` (another HOC).
+- The stamp is per component, not per hook: a library HOOK a repo component
+  calls keeps its state in that component's fiber and is judged as the
+  component's (it is state the component chose to hold).
 - Fiber internals are private React; every read is defensive (`internal/fiber.ts`).
 - State that lives only in the DOM (an uncontrolled input, scroll) is the
   reload drill's to find; state that never reaches React (a module store) is

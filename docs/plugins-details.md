@@ -50858,6 +50858,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/rail.useRailGuard`
               - `primitives/dom/after-layout.afterLayout`
               - `primitives/dom/element-size.useResizeObserver`
+              - `primitives/kept-state.useTransient`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/link-gesture.activationProps`
@@ -51344,7 +51345,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×4
           - `DataViewSlots.Setting` ×4
           - `IdKinds.Kind` ×2
-        - Uses: 150 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 149 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `network/live` ×24
           - `primitives/css/ui-kit` ×17
           - `primitives/data-view/view-core` ×11
@@ -51355,7 +51356,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/rank-reorder` ×4
           - `primitives/css/text` ×3
           - `primitives/css/toggle-chip` ×3
-          - `primitives/dom/web-storage` ×3
+          - `primitives/kept-state` ×3
           - `primitives/tree` ×3
           - `config_v2` ×2
           - `primitives/collapsible` ×2
@@ -51367,7 +51368,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/cursor-pagination` ×2
           - `primitives/dom/element-size` ×2
           - `primitives/hover-reveal` ×2
-          - `primitives/kept-state` ×2
           - `primitives/latest-ref` ×2
           - `primitives/loading` ×2
           - `primitives/row-actions` ×2
@@ -51393,6 +51393,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/dom/auto-scroll.KeepAnchorAcross`
           - `primitives/dom/in-view.createInViewWatcher`
           - `primitives/dom/scroll-reveal.focusElement`
+          - `primitives/dom/web-storage.defineStore`
           - `primitives/icon-button.IconButton`
           - `primitives/link-gesture.activationProps`
           - `primitives/overlay/popover.InlinePopover`

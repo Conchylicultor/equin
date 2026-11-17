@@ -14,6 +14,7 @@ export interface CollectedEntry {
 
 export const viteEntries: CollectedEntry[] = [
   { pluginPath: "framework/plugins/tooling/plugins/react-compiler", id: "framework.tooling.react-compiler", loader: () => import("@plugins/framework/plugins/tooling/plugins/react-compiler/vite"), dependsOn: [] },
+  { pluginPath: "primitives/plugins/kept-state/plugins/loss-detector", id: "primitives.kept-state.loss-detector", loader: () => import("@plugins/primitives/plugins/kept-state/plugins/loss-detector/vite"), dependsOn: [] },
   { pluginPath: "wish/plugins/element-picker", id: "wish.element-picker", loader: () => import("@plugins/wish/plugins/element-picker/vite"), dependsOn: [] },
 ];
 

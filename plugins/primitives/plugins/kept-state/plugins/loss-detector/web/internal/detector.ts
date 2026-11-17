@@ -9,6 +9,7 @@ import {
   asFiber,
   committedFiber,
   componentName,
+  componentSource,
   descendants,
   firstHostSource,
   holdsHooks,
@@ -214,6 +215,11 @@ export function collectLosses(
   const losses: StateLoss[] = [];
   for (const fiber of descendants(place)) {
     if (!holdsHooks(fiber)) continue;
+    // Only the repo's own components: a library's internal state (a popover
+    // root's open flag) is not the repo's to keep, and reporting it would make
+    // every report suspect. A component the repo wrote carries the build's
+    // stamp; a library's never does.
+    if (componentSource(fiber) === undefined) continue;
     let mark: StateMark | null = null;
     let stateIndex = -1;
     for (const hook of hooksOf(fiber)) {

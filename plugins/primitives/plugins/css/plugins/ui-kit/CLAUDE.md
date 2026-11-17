@@ -453,6 +453,7 @@ yes/no guard: `useConfirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/css/rail.useRailGuard`
     - `primitives/dom/after-layout.afterLayout`
     - `primitives/dom/element-size.useResizeObserver`
+    - `primitives/kept-state.useTransient`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/link-gesture.activationProps`

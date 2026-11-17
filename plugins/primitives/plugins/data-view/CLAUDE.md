@@ -2410,7 +2410,7 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `DataViewSlots.Control` ×4
     - `DataViewSlots.Setting` ×4
     - `IdKinds.Kind` ×2
-  - Uses: 150 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 149 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live` ×24
     - `primitives/css/ui-kit` ×17
     - `primitives/data-view/view-core` ×11
@@ -2421,7 +2421,7 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `primitives/rank-reorder` ×4
     - `primitives/css/text` ×3
     - `primitives/css/toggle-chip` ×3
-    - `primitives/dom/web-storage` ×3
+    - `primitives/kept-state` ×3
     - `primitives/tree` ×3
     - `config_v2` ×2
     - `primitives/collapsible` ×2
@@ -2433,7 +2433,6 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `primitives/cursor-pagination` ×2
     - `primitives/dom/element-size` ×2
     - `primitives/hover-reveal` ×2
-    - `primitives/kept-state` ×2
     - `primitives/latest-ref` ×2
     - `primitives/loading` ×2
     - `primitives/row-actions` ×2
@@ -2459,6 +2458,7 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `primitives/dom/auto-scroll.KeepAnchorAcross`
     - `primitives/dom/in-view.createInViewWatcher`
     - `primitives/dom/scroll-reveal.focusElement`
+    - `primitives/dom/web-storage.defineStore`
     - `primitives/icon-button.IconButton`
     - `primitives/link-gesture.activationProps`
     - `primitives/overlay/popover.InlinePopover`

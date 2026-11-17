@@ -1,5 +1,9 @@
 {
   "name": "@equin/plugin-primitives-kept-state-loss-detector",
   "private": true,
-  "version": "0.0.1"
+  "version": "0.0.1",
+  "devDependencies": {
+    "@babel/core": "^7.29.13",
+    "@types/babel__core": "^7.20.5"
+  }
 }
