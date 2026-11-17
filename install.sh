@@ -236,6 +236,34 @@ stage0_verify() {
   fi
 }
 
+# other_instance: prints the checkout this account's equin already runs from,
+# and succeeds, when that is not the folder this run installs into. The same
+# two records `instance-owner` reads: the checkout main's deploy names, and the
+# one the background service is registered to follow. A record naming a folder
+# that is gone (the code moved) claims nothing.
+other_instance() {
+  local target spec claim unit
+  target="$INSTALL_DIR"
+  [ -d "$target" ] && target="$(cd "$target" && pwd -P)"
+  spec="$(data_root)/worktrees/singularity/spec.json"
+  for claim in \
+    "$( [ -f "$spec" ] && json_field server "$spec" | sed 's|/plugins/framework/plugins/server-core$||' )" \
+    "$(for unit in "$HOME/Library/LaunchAgents/dev.equin.gateway.plist" "$HOME/Library/LaunchAgents/dev.singularity.gateway.plist"; do
+         [ -f "$unit" ] && awk 'f { sub(/.*<string>/, ""); sub(/<\/string>.*/, ""); print; exit } /<string>-main-checkout<\/string>/ { f = 1 }' "$unit"
+       done | head -n 1)" \
+    "$(for unit in "${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/dev.equin.gateway.service" "${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/dev.singularity.gateway.service"; do
+         [ -f "$unit" ] && sed -n 's/^ExecStart=.*"-main-checkout" "\([^"]*\)".*/\1/p' "$unit"
+       done | head -n 1)"; do
+    [ -n "$claim" ] && [ -d "$claim" ] || continue
+    claim="$(cd "$claim" && pwd -P)"
+    if [ "$claim" != "$target" ]; then
+      printf '%s\n' "$claim"
+      return 0
+    fi
+  done
+  return 1
+}
+
 # json_field <key> <file>: the value of `"key": value` in a release.json
 # (written one key per line by release-assets' assemble), quotes dropped;
 # empty when the key is absent.
@@ -362,6 +390,17 @@ main() {
   if [ "$(id -u)" = "0" ]; then
     fail "equin can't be installed from the administrator (root) account: its database refuses to run as root, so equin could never start. Run the installer from your normal account. On a server with only root, create one first: adduser --disabled-password --gecos '' equin && su - equin" \
       "id -u = 0; initdb refuses to run as root"
+  fi
+
+  # ── One equin per account ─────────────────────────────────────────────────
+  # Before anything is downloaded: a second checkout would share this account's
+  # database, address and background service, and its build would replace the
+  # equin running from the first. `./equin start` and a main `./equin build`
+  # refuse the same way (infra/launcher/instance-owner); this is the early,
+  # cheap read of the same two records.
+  if held="$(other_instance)"; then
+    fail "equin is already installed on this account, from another folder (named below). A second one would share its database, its address and its background service, so installing it would replace the equin you use, possibly with an older version than your data. Nothing was changed. To update the equin you have, run ./install.sh from that folder. To try a second equin, use another account on this computer, or a virtual machine. If that folder is a leftover copy you no longer use, run ./equin stop --disable there, move it away, then run this again." \
+      "this account's equin runs from $held; this install: $INSTALL_DIR"
   fi
 
   # ── Stage 0: piped from main → the release's own script takes over ─────────

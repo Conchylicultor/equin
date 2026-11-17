@@ -1,5 +1,7 @@
 import { finishBuildSubSteps } from "@plugins/installer/cli";
 import { withInstallWaits } from "./internal/install-waits";
+import { assertThisInstance } from "@plugins/infra/plugins/launcher/plugins/instance-owner/cli";
+import { InstallerNoticeError } from "@plugins/infra/plugins/launcher/plugins/installer-notice/core";
 import {
   envEntries,
   readEnv,
@@ -662,6 +664,21 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   // The checkout half of every namespace this invocation touches — minted
   // once, because every target of one build is built from one tree.
   const checkout = await checkoutRef(root);
+  // Main deploys this account's one equin: only from the checkout that holds
+  // it. Asked of a build of `main` and of any checkout that would mint the
+  // main namespace — a second clone's main checkout with no deploy record yet
+  // (only the background service names the first) would otherwise deploy over
+  // the running app, on a database its code may predate
+  // (`infra/launcher/instance-owner`).
+  if (branch === "main" || checkout.kind === "main") {
+    try {
+      await assertThisInstance(root, "build");
+    } catch (err) {
+      if (!(err instanceof InstallerNoticeError)) throw err;
+      console.error(err.message);
+      process.exit(1);
+    }
+  }
   // THIS CHECKOUT's own namespace. It is not necessarily a target (a
   // composition-only build publishes nobody else's namespace and not this
   // one), but it is the key everything INVOCATION-scoped is filed under:

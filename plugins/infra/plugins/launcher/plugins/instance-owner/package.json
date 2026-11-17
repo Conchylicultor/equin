@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-infra-launcher-instance-owner",
+  "private": true,
+  "version": "0.0.1",
+  "description": "One equin per account, enforced: which checkout this account's equin runs from (the checkout main's deploy names, and the one the background service is registered to follow), and assertThisInstance — the refusal `./equin start` and a main `./equin build` raise, as an installer notice, when another checkout already holds it, so a second copy can never take over the running one."
+}

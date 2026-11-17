@@ -22,6 +22,7 @@ import {
   withGatewayFollowLock,
   type PreparedGateway,
 } from "@plugins/infra/plugins/launcher/plugins/gateway-drift/cli";
+import { assertThisInstance } from "@plugins/infra/plugins/launcher/plugins/instance-owner/cli";
 import { gatewayLogs } from "@plugins/infra/plugins/launcher/plugins/gateway-logs/data-dirs";
 import { startLogs } from "../data-dirs";
 import { GATEWAY_SERVICE } from "@plugins/infra/plugins/launcher/core";
@@ -146,6 +147,17 @@ const run: CliAction<[], Opts> = async (opts) => {
     : null;
   const gatewayLabel = gatewayService?.id.label ?? GATEWAY_SERVICE.label;
   const selected = selectServices(opts.only, gatewayLabel, declared);
+  // One equin per account: a second checkout of the repo would share this
+  // account's database, address and background service, so starting it would
+  // take over the equin running from another one (`instance-owner`). Asked
+  // before anything is installed, built or restarted.
+  try {
+    await assertThisInstance(await getMainRepoRoot(), "start");
+  } catch (err) {
+    if (!(err instanceof InstallerNoticeError)) throw err;
+    console.error(err.message);
+    process.exit(1);
+  }
   // The releases mise.lock records, installed if a lock arrived without them
   // (a clone, a pull, an upstream merge) — before the doctor, which would
   // otherwise only report them missing.

@@ -63,8 +63,10 @@ never the terminal (see its CLAUDE.md).
 - Description: The installer's message shape: InstallerNotice ({ title, doing, blocked, now, ifSkipped, evidence }) — every message that stops the install, asks for a permission or leaves something out is built as one, so each of the five installer message rules is a field to fill. defineNotice refuses one whose user-facing text names an internal part (gateway, helper, launchd…), a path or a label; renderNotice prints the message with the raw evidence apart under Details.
 - Cross-plugin:
   - Imported by:
+    - `framework/cli/build`
     - `framework/cli/start`
     - `infra/launcher`
+    - `infra/launcher/instance-owner`
     - `infra/launcher/login-services`
 - Core:
   - Exports (types): `InstallerNotice`

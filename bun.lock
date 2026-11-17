@@ -4911,6 +4911,10 @@
       "name": "@equin/plugin-infra-launcher-installer-notice",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/launcher/plugins/instance-owner": {
+      "name": "@equin/plugin-infra-launcher-instance-owner",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/launcher/plugins/login-services": {
       "name": "@equin/plugin-infra-launcher-login-services",
     },
@@ -10568,6 +10572,8 @@
     "@equin/plugin-infra-launcher-gateway-logs": ["@equin/plugin-infra-launcher-gateway-logs@workspace:plugins/infra/plugins/launcher/plugins/gateway-logs"],
 
     "@equin/plugin-infra-launcher-installer-notice": ["@equin/plugin-infra-launcher-installer-notice@workspace:plugins/infra/plugins/launcher/plugins/installer-notice"],
+
+    "@equin/plugin-infra-launcher-instance-owner": ["@equin/plugin-infra-launcher-instance-owner@workspace:plugins/infra/plugins/launcher/plugins/instance-owner"],
 
     "@equin/plugin-infra-launcher-login-services": ["@equin/plugin-infra-launcher-login-services@workspace:plugins/infra/plugins/launcher/plugins/login-services"],
 

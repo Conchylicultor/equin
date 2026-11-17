@@ -69,6 +69,7 @@ export {
   deploysForCheckoutSync,
   lookupCheckoutDeploy,
   lookupCheckoutDeploySync,
+  mainNamespaceOwner,
   resolveCheckoutDeploySync,
 } from "./internal/checkout-deploys";
 export type {

@@ -24,6 +24,16 @@ facts only as evidence). `start` runs inside `install.sh`, so its own output is 
 
 The modules `start` drives — `ensureDep`, the macOS app bundle (`machineMacosAppHost`), `reconcileLoginService`, `prepareMainGateway` / `adoptGatewayLaunch` — narrate their steps in internal terms ("Installed gateway (<identity>) into …/equin.app", "Kept <dir>: still running …"). None of that reaches the terminal: `run.ts` hands every one of them the same `log` (`Steps`), which appends to the last run's start log (`startLogs`, this plugin's `data-dirs`, `~/.equin/logs/start/start.log`, emptied on every run) and is named on the last `details:` line however the run ends (done, refused or failed). `--verbose` echoes those lines too, for a developer. A new module `start` calls takes that `log`, never `console.log`.
 
+## One equin per account
+
+Before anything is built, registered or restarted, `start` refuses when another
+checkout already holds this account's equin — main's deploy or the installed
+background service names it (`infra/launcher/instance-owner`,
+`assertThisInstance`). A second clone shares the account's data root, service
+label and Keychain entry, so starting it would take over the running app. The
+refusal is an installer notice: update the existing one, or test in another
+account or a VM.
+
 ## macOS: a launchd service
 
 The gateway is a per-user LaunchAgent, `<gateway-label>`
@@ -178,6 +188,7 @@ There is nobody left for it to report to, and the daemon it spawned is unaffecte
     - `infra/launcher/gateway-drift.PreparedGateway`
     - `infra/launcher/gateway-drift.prepareMainGateway`
     - `infra/launcher/gateway-drift.withGatewayFollowLock`
+    - `infra/launcher/instance-owner.assertThisInstance`
     - `installer.installEventsOn`
     - `installer.reportInstallNotice`
     - `installer.reportInstallProgress`

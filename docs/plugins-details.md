@@ -31710,7 +31710,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `repo-walk-safety/no-adhoc-repo-walk` — `cli/ensure-deps.ts` (sanctioned)
         - **`build`** — `./equin build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
           - Cli:
-            - Uses: 68 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
+            - Uses: 69 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
               - `framework/cli/op-runtime` ×32
               - `installer` ×6
               - `debug/profiling/op-log` ×4
@@ -31728,6 +31728,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/git-artifacts.registerMergeDrivers`
               - `framework/tooling/checks/type-check.readTypeCheckTree`
               - `infra/jobs/supervised-job.runAttached`
+              - `infra/launcher/instance-owner.assertThisInstance`
           - Plugins:
             - **`build-steps`** — Build steps plugins contribute to `./equin build`: a plugin's build-step/index.ts default-exports defineBuildStep values, each run at one build phase (dependencies installed, own app deployed); the build runs every registered step of a phase and names none.
               - Core:
@@ -32041,6 +32042,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/launcher/gateway-drift.PreparedGateway`
               - `infra/launcher/gateway-drift.prepareMainGateway`
               - `infra/launcher/gateway-drift.withGatewayFollowLock`
+              - `infra/launcher/instance-owner.assertThisInstance`
               - `installer.installEventsOn`
               - `installer.reportInstallNotice`
               - `installer.reportInstallProgress`
@@ -38682,6 +38684,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/cli/start`
           - `framework/cli/stop`
           - `infra/launcher/gateway-drift`
+          - `infra/launcher/instance-owner`
           - `infra/paths/root-migration`
           - `release`
       - Exemptions:
@@ -38835,8 +38838,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`installer-notice`** — The installer's message shape: InstallerNotice ({ title, doing, blocked, now, ifSkipped, evidence }) — every message that stops the install, asks for a permission or leaves something out is built as one, so each of the five installer message rules is a field to fill. defineNotice refuses one whose user-facing text names an internal part (gateway, helper, launchd…), a path or a label; renderNotice prints the message with the raw evidence apart under Details.
           - Cross-plugin:
             - Imported by:
+              - `framework/cli/build`
               - `framework/cli/start`
               - `infra/launcher`
+              - `infra/launcher/instance-owner`
               - `infra/launcher/login-services`
           - Core:
             - Exports (types): `InstallerNotice`
@@ -38848,6 +38853,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `noticeProblems`
               - `plainTextProblems`
               - `renderNotice`
+        - **`instance-owner`** — One equin per account, enforced: which checkout this account's equin runs from (the checkout main's deploy names, and the one the background service is registered to follow), and assertThisInstance — the refusal `./equin start` and a main `./equin build` raise, as an installer notice, when another checkout already holds it, so a second copy can never take over the running one.
+          - Cli:
+            - Uses: `infra/launcher/login-services.loginService`
+            - Exports (types):
+              - `InstanceAction`
+              - `InstanceClaim`
+              - `InstanceVerdict`
+            - Exports (values):
+              - `assertThisInstance`
+              - `instanceClaims`
+              - `judgeInstance`
+              - `otherInstanceNotice`
+          - Cross-plugin:
+            - Imported by:
+              - `framework/cli/build`
+              - `framework/cli/start`
         - **`login-services`** — Per-user login services, generalized from the gateway's: a LoginService over a LoginServiceSpec (label, argv, cwd, env, stdio log, session background | graphical), rendered as a launchd LaunchAgent on macOS (graphical → LimitLoadToSessionType=Aqua) or a systemd user unit on Linux (graphical → graphical-session.target, no lingering); defineLoginService and the collected login-services/ registry, so ./equin start / stop bring every declared service up and down without naming one. On main's boot and on every advance of main (a git-watcher ref reaction — main's build may keep its backend), every declared service a start registered follows main: reloaded when main's build of its dependency changed its job (rewritten only, when stopped), the dependency requested through deps first when it is not built yet. On macOS every service (the gateway too) runs from ONE app bundle, equin.app (bundle id dev.equin, signed with the machine's identity, at a stable path under state/macos-app): installServiceExecutable copies a component's build in and swaps the re-signed bundle in whole, so every permission prompt, System Settings row and tccutil reset names one app, equin.
           - Core:
             - Uses:
@@ -38875,6 +38896,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/stop`
               - `infra/launcher`
               - `infra/launcher/gateway-drift`
+              - `infra/launcher/instance-owner`
               - `infra/paths/root-migration`
           - Exemptions:
             - Exempts itself from: `user-path/no-unproven-claim` — `machine/internal/launchd.ts`, `machine/internal/systemd.ts` (sanctioned)
@@ -38914,6 +38936,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reloadService`
               - `terminateProcess`
             - Register: `defineRefReaction('login-services.follow-main (refs/heads/main)')`
+          - Cli:
+            - Exports (types):
+              - `InstalledJob`
+              - `LoginService`
+            - Exports (values): `loginService`
         - **`runtime-env`** — What environment the runtime tree starts from: the declared allowlist the launcher spawns the gateway with and the gateway forwards to its children (pickRuntimeEnv / runtimeEnvNames / pickHostEnv), and the runtime's PATH with mise's shims first (runtimePath / runtimeShimsDir). A core-only leaf, so a tool runner needing the runtime PATH never bundles the launcher's release boot.
           - Core:
             - Uses:
@@ -39254,6 +39281,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `lookupCheckoutDeploy`
           - `lookupCheckoutDeploySync`
           - `machineDeclaredRootEntriesSync`
+          - `mainNamespaceOwner`
           - `OPEN_KINDS`
           - `planMigration`
           - `PLUGINS_DIR`
@@ -39282,8 +39310,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 139 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
-          - `infra` ×33
+        - Imported by: 140 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+          - `infra` ×34
           - `framework` ×23
           - `apps` ×18
           - `debug` ×15
@@ -43919,8 +43947,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TIMED_FS_CALLS`
           - `withFsCallTally`
       - Cross-plugin:
-        - Imported by: 181 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
-          - `infra` ×53
+        - Imported by: 182 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+          - `infra` ×54
           - `framework` ×28
           - `apps` ×16
           - `debug` ×15

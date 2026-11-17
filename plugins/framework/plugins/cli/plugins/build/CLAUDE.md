@@ -82,7 +82,7 @@ through `EQUIN_BUILD_DETACHED` instead.
 
 - Description: `./equin build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
 - Cli:
-  - Uses: 68 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 69 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework/cli/op-runtime` ×32
     - `installer` ×6
     - `debug/profiling/op-log` ×4
@@ -100,6 +100,7 @@ through `EQUIN_BUILD_DETACHED` instead.
     - `framework/cli/git-artifacts.registerMergeDrivers`
     - `framework/tooling/checks/type-check.readTypeCheckTree`
     - `infra/jobs/supervised-job.runAttached`
+    - `infra/launcher/instance-owner.assertThisInstance`
 - Sub-plugins:
   - **`build-steps`** — Build steps plugins contribute to `./equin build`: a plugin's build-step/index.ts default-exports defineBuildStep values, each run at one build phase (dependencies installed, own app deployed); the…
   - **`experimental-marks`** — The Show experimental marks setting (view-options popover and Settings → Config, on an experimental build): useShowExperimentalMarks() is true when the build stamped this document experimental and…

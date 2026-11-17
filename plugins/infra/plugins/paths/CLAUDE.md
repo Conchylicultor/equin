@@ -467,6 +467,7 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `lookupCheckoutDeploy`
     - `lookupCheckoutDeploySync`
     - `machineDeclaredRootEntriesSync`
+    - `mainNamespaceOwner`
     - `OPEN_KINDS`
     - `planMigration`
     - `PLUGINS_DIR`
@@ -495,8 +496,8 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `worktreeDataDir`
     - `worktreesDir`
 - Cross-plugin:
-  - Imported by: 139 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra` ×33
+  - Imported by: 140 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra` ×34
     - `framework` ×23
     - `apps` ×18
     - `debug` ×15
