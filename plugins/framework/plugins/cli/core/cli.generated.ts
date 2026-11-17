@@ -35,6 +35,7 @@ export const cliEntries: CollectedEntry[] = [
   { pluginPath: "framework/plugins/cli/plugins/test", id: "framework.cli.test", loader: () => import("@plugins/framework/plugins/cli/plugins/test/cli"), dependsOn: ["framework/plugins/cli/plugins/test/plugins/digest"] },
   { pluginPath: "framework/plugins/cli/plugins/test/plugins/digest", id: "framework.cli.test.digest", loader: () => import("@plugins/framework/plugins/cli/plugins/test/plugins/digest/cli"), dependsOn: [] },
   { pluginPath: "framework/plugins/cli/plugins/upstream", id: "framework.cli.upstream", loader: () => import("@plugins/framework/plugins/cli/plugins/upstream/cli"), dependsOn: [] },
+  { pluginPath: "framework/plugins/cli/plugins/version", id: "framework.cli.version", loader: () => import("@plugins/framework/plugins/cli/plugins/version/cli"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/cache-prune", id: "framework.tooling.checks.cache-prune", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/cache-prune/cli"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/type-check/plugins/backstop", id: "framework.tooling.checks.type-check.backstop", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/plugins/backstop/cli"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/codegen", id: "framework.tooling.codegen", loader: () => import("@plugins/framework/plugins/tooling/plugins/codegen/cli"), dependsOn: [] },

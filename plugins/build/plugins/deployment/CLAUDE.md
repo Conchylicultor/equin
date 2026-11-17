@@ -308,6 +308,7 @@ convergence mechanisms all missing it) and the design.
   - Imported by:
     - `build`
     - `build/converge`
+    - `framework/cli/version`
 - Cli:
   - Exports (values): `readServedDeployment`
 

@@ -1,13 +1,15 @@
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { fetchUpstreamStatus } from "@plugins/upstream/core";
+import { releaseVersion } from "@plugins/upstream/plugins/release/core";
 import { noUpstreamSentence } from "./internal/describe";
 
 /**
- * `./equin upstream status` — what upstream has that you do not.
+ * `./equin upstream status` — whether upstream has cut a release local `main`
+ * does not hold.
  *
- * Read-only: it fetches (otherwise the count would be measured against however
- * old the remote-tracking ref on disk happens to be) and touches nothing else.
+ * Read-only: it fetches upstream's main and release tags (otherwise the answer
+ * would be as old as the last fetch) and touches nothing else.
  *
  * "There is no upstream" and "you are up to date" are answers, so they exit 0.
  * Not being able to REACH upstream is not an answer, so it exits 1 — but in
@@ -29,24 +31,23 @@ const run: CliAction<[], object> = async () => {
     );
     process.exit(1);
   }
+  if (status.kind === "no-release") {
+    console.log(
+      `${status.remote} (${status.url}) has cut no release yet — there is nothing to update to.`,
+    );
+    return;
+  }
   if (status.kind === "current") {
-    console.log(`Up to date with ${status.ref} (${status.url}).`);
+    console.log(
+      `Up to date: main holds ${status.remote}'s newest release, ${releaseVersion(status.release)} (${status.url}).`,
+    );
     return;
   }
 
-  const plural = status.count === 1 ? "" : "s";
   console.log(
-    `${status.count} commit${plural} on ${status.ref} that main does not have (${status.url}):\n`,
+    `${status.remote} has released ${releaseVersion(status.latest)}; main is on ${status.current === null ? "no release" : releaseVersion(status.current)} (${status.url}).`,
   );
-  for (const c of status.newest)
-    console.log(`  ${c.sha.slice(0, 9)}  ${c.subject}`);
-  const shown = status.newest.length;
-  if (shown < status.count)
-    console.log(`  … and ${status.count - shown} older`);
-
-  console.log(
-    `\nRun \`./equin upstream merge\` in a worktree to bring them in.`,
-  );
+  console.log(`\nRun \`./equin upstream merge\` in a worktree to bring it in.`);
 };
 
 export default run;

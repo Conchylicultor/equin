@@ -196,6 +196,7 @@ from `build`, so both sides of an otherwise-cyclic edge can reach them.
     - `build/failure-report`
     - `build/runs-arm`
     - `framework/cli/build`
+    - `framework/cli/version`
 - Exemptions:
   - Exempts itself from: `sql-writes:fit:hand-written` — `shared/recorder.ts`, `shared/stale-holder.ts` (sanctioned)
 - Machine:

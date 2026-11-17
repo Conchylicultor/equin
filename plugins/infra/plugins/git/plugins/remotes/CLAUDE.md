@@ -213,6 +213,7 @@ that fails re-probes and records what comes back.
     - `framework/cli/git-artifacts`
     - `framework/cli/push`
     - `framework/cli/upstream`
+    - `framework/cli/version`
     - `upstream`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/internal/commit-identity.ts`, `core/internal/publish-target.ts` (debt)

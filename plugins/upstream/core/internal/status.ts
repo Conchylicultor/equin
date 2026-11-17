@@ -8,41 +8,32 @@ import {
   spawnCaptured,
   spawnExpectOk,
 } from "@plugins/infra/plugins/spawn/core";
+import {
+  newestReleaseTag,
+  RELEASE_TAG_GLOB,
+} from "@plugins/upstream/plugins/release/core";
 
 /**
- * The branch an update is read from, on both sides. This repo's trunk is
- * `main` everywhere — the local one every worktree branches off, and the
- * upstream one a clone receives from.
+ * The trunk, on both sides: the local `main` every worktree branches off and a
+ * release is measured against, and the upstream `main` releases are cut on.
  */
 export const UPSTREAM_BRANCH = "main";
 
-/** One fetch of a branch that may be far ahead, over the network. */
+/** One fetch of a branch that may be far ahead, plus its release tags, over the network. */
 const FETCH_TIMEOUT_MS = 300_000;
 
-/** `rev-list` / `log` over refs already on disk. */
+/** `for-each-ref` / `merge-base` over refs already on disk. */
 const LOCAL_TIMEOUT_MS = 60_000;
 
 /**
- * How many of the newest commits come back with their subjects.
+ * Where this checkout stands against upstream's newest RELEASE, as a state with
+ * a reason rather than a value that could be read as "nothing new" for either
+ * "up to date" or "we never got to ask".
  *
- * The COUNT is exact and read separately, so this bounds only the list a caller
- * prints or files: a clone three years behind names its twenty newest commits
- * and still says it is ten thousand behind, rather than carrying ten thousand
- * subjects into a report payload.
- */
-export const UPSTREAM_SUBJECT_LIMIT = 20;
-
-export interface UpstreamCommit {
-  /** Full sha. */
-  sha: string;
-  /** The commit's first line. */
-  subject: string;
-}
-
-/**
- * Where this checkout stands against upstream, as a state with a reason rather
- * than a count that could be read as zero for either "nothing new" or "we never
- * got to ask".
+ * A clone is measured against releases — annotated `v<YYYY.MM.DD>` tags the
+ * author cuts on purpose (`./equin version cut`) — never against upstream's
+ * `main`, which moves a hundred times a day and would leave every clone
+ * permanently "behind".
  *
  * - `no-upstream` — this checkout publishes to its own remote (the author), or
  *   has no remote at all. There is nothing to be behind.
@@ -50,23 +41,39 @@ export interface UpstreamCommit {
  *   of its neighbours on purpose: folding it into `current` would report "no
  *   updates" on the strength of a question nobody answered, and folding it into
  *   `no-upstream` would deny the remote exists.
- * - `current` — upstream answered and holds nothing local `main` does not.
- * - `behind` — upstream holds `count` commits local `main` does not.
+ * - `no-release` — upstream answered and has cut no release yet: nothing to
+ *   tell the user about.
+ * - `current` — upstream's newest release is in local `main`.
+ * - `behind` — it is not. `current` names the newest release local `main` does
+ *   hold (`null`: none, e.g. a clone made before the first release).
  */
 export type UpstreamStatus =
   | { kind: "no-upstream"; reason: "is-publisher" | "no-remote" }
   | { kind: "unreachable"; remote: string; url: string; detail: string }
-  | { kind: "current"; remote: string; url: string; ref: string }
+  | {
+      kind: "no-release";
+      remote: string;
+      url: string;
+      current: string | null;
+    }
+  | {
+      kind: "current";
+      remote: string;
+      url: string;
+      release: string;
+      /** Where the fetched release lives locally (see {@link upstreamReleaseNamespace}). */
+      ref: string;
+    }
   | {
       kind: "behind";
       remote: string;
       url: string;
-      /** The remote-tracking ref the count was measured against. */
+      /** The newest release local `main` holds, if any. */
+      current: string | null;
+      /** Upstream's newest release — the tag an update merges. */
+      latest: string;
+      /** Where that release lives locally (see {@link upstreamReleaseNamespace}). */
       ref: string;
-      /** Exactly how many commits `main..<ref>` holds. */
-      count: number;
-      /** The newest of them, newest first, at most {@link UPSTREAM_SUBJECT_LIMIT}. */
-      newest: UpstreamCommit[];
     };
 
 /**
@@ -87,32 +94,111 @@ export function isCouldNotAsk(kind: RemoteFailure["kind"]): boolean {
   return kind === "unreachable" || kind === "no-credentials";
 }
 
-/** `<sha> <subject>`, with a subject that may itself be empty. */
-function parseLogLine(line: string): UpstreamCommit {
-  const space = line.indexOf(" ");
-  return space === -1
-    ? { sha: line, subject: "" }
-    : { sha: line.slice(0, space), subject: line.slice(space + 1) };
+/** Where this checkout's OWN tags live — the releases it cuts, if it publishes. */
+export const OWN_RELEASE_NAMESPACE = "refs/tags/";
+
+/**
+ * Where upstream's release tags are fetched to: a namespace of their own,
+ * `refs/release-tags/<remote>/`, never `refs/tags/`.
+ *
+ * Mirrored, not merged into the user's tags: the fetch force-updates and
+ * prunes it, so a release upstream re-cut or retracted reads as upstream says,
+ * and a tag of the user's own (a fork that cuts releases too, a `v2026.11.17`
+ * of their own) can neither collide with one of upstream's — `refs/tags/`
+ * would refuse the fetch outright, "would clobber existing tag", every day
+ * after — nor be mistaken for one.
+ */
+export function upstreamReleaseNamespace(remote: string): string {
+  return `refs/release-tags/${remote}/`;
 }
 
 /**
- * Fetch upstream and measure how far behind local `main` is.
+ * The newest release tag in `namespace` reachable from `ref` — the version
+ * `ref` is "on" — or `null` when it holds none.
  *
- * ONE definition of that question, because two things ask it: `./equin
- * upstream status|merge`, and main's daily detection job. They ran the same
- * three git commands either way — this is them written once, so the command a
- * user runs by hand and the report that wakes them up can never disagree about
- * what "behind" means.
+ * Read as the release tags merged into `ref`, ordered by the release grammar,
+ * not `git describe`: describe answers the topologically NEAREST matching tag,
+ * which after a merge can be an older release than one the history also holds,
+ * and its glob would also match a tag like `v1` that is no release.
+ */
+export async function currentRelease(
+  root: string,
+  ref: string,
+  namespace: string,
+): Promise<string | null> {
+  const newest = newestReleaseTag(
+    await releaseTagsMergedInto(root, ref, namespace),
+  );
+  return newest.kind === "release" ? newest.tag : null;
+}
+
+/** Every `v*` tag in `namespace` whose commit is in `ref`'s history, by tag name. */
+async function releaseTagsMergedInto(
+  root: string,
+  ref: string,
+  namespace: string,
+): Promise<string[]> {
+  const listed = await spawnExpectOk(
+    [
+      "git",
+      "for-each-ref",
+      `--merged=${ref}`,
+      "--format=%(refname)",
+      `${namespace}${RELEASE_TAG_GLOB}`,
+    ],
+    { cwd: root, timeoutMs: LOCAL_TIMEOUT_MS },
+  );
+  return listed.stdout
+    .split("\n")
+    .filter((l) => l.startsWith(namespace))
+    .map((l) => l.slice(namespace.length));
+}
+
+/** Is `commit` in `ref`'s history? `merge-base --is-ancestor` is exit-code-as-answer. */
+async function isAncestor(
+  root: string,
+  commit: string,
+  ref: string,
+): Promise<boolean> {
+  const argv = ["git", "merge-base", "--is-ancestor", commit, ref];
+  const r = await spawnCaptured(argv, {
+    cwd: root,
+    timeoutMs: LOCAL_TIMEOUT_MS,
+  });
+  if (r.exitCode === 0) return true;
+  if (r.exitCode === 1) return false;
+  throw new SpawnFailedError(
+    argv,
+    r.exitCode,
+    r.signalCode,
+    r.stdout,
+    r.stderr,
+  );
+}
+
+/**
+ * Fetch upstream's main and release tags, and say where local `main` stands
+ * against upstream's newest release.
  *
- * It fetches. That is the point of calling it: the remote-tracking ref on disk
- * is as old as the last fetch, and a count against a stale ref is a number that
- * looks current and is not. Nothing else is written — no merge, no checkout, no
- * ref of ours moves.
+ * ONE definition of that question, because several things ask it: `./equin
+ * upstream status|merge`, `./equin version`, main's daily detection job and the
+ * Upstream merges automation. They would run the same git commands either way —
+ * this is them written once, so the command a user runs by hand and the status
+ * the app shows can never disagree about what "behind" means.
+ *
+ * It fetches. That is the point of calling it: the tags on disk are as old as
+ * the last fetch. Upstream's `main` is fetched with them (its remote-tracking
+ * ref is what the published-migrations set reads, and what a release tag is
+ * checked to sit on). Nothing else is written — no merge, no checkout, no ref
+ * of ours moves but the fetched ones.
+ *
+ * Upstream's releases are the `v*` tags merged into `<remote>/main`: a tag of
+ * the user's own, or one upstream has not published on its main, is not a
+ * release they can be told about.
  *
  * The fetch is the one call that may fail without it being a bug (see
- * {@link isCouldNotAsk}); every local git call after it is `spawnExpectOk`, so
- * a `main` that does not exist or an unreadable object store throws with git's
- * own words rather than coming back as zero commits behind.
+ * {@link isCouldNotAsk}); every local git call after it throws with git's own
+ * words rather than coming back as "no release".
  */
 export async function fetchUpstreamStatus(
   root: string,
@@ -121,7 +207,19 @@ export async function fetchUpstreamStatus(
   if (upstream.kind === "none")
     return { kind: "no-upstream", reason: upstream.reason };
 
-  const argv = ["git", "fetch", upstream.remote, UPSTREAM_BRANCH];
+  const namespace = upstreamReleaseNamespace(upstream.remote);
+  // `--no-tags`: upstream's tags go to their own namespace only, never
+  // auto-followed into `refs/tags/`. `+` and `--prune` keep that namespace a
+  // mirror of upstream's release tags (re-cut and retracted ones included).
+  const argv = [
+    "git",
+    "fetch",
+    "--no-tags",
+    "--prune",
+    upstream.remote,
+    UPSTREAM_BRANCH,
+    `+refs/tags/${RELEASE_TAG_GLOB}:${namespace}${RELEASE_TAG_GLOB}`,
+  ];
   const fetched = await spawnCaptured(argv, {
     cwd: root,
     timeoutMs: FETCH_TIMEOUT_MS,
@@ -144,35 +242,65 @@ export async function fetchUpstreamStatus(
     );
   }
 
-  const ref = `${upstream.remote}/${UPSTREAM_BRANCH}`;
-  const range = `${UPSTREAM_BRANCH}..${ref}`;
-  const where = { remote: upstream.remote, url: upstream.url, ref };
+  const where = { remote: upstream.remote, url: upstream.url };
+  const latest = newestReleaseTag(
+    await releaseTagsMergedInto(
+      root,
+      `${upstream.remote}/${UPSTREAM_BRANCH}`,
+      namespace,
+    ),
+  );
+  if (latest.kind === "none")
+    return {
+      kind: "no-release",
+      ...where,
+      current: await currentRelease(root, UPSTREAM_BRANCH, namespace),
+    };
+  const standing = await standingAgainst(root, upstream.remote, latest.tag);
+  const ref = `${namespace}${latest.tag}`;
+  return standing.kind === "current"
+    ? { kind: "current", ...where, release: latest.tag, ref }
+    : {
+        kind: "behind",
+        ...where,
+        current: standing.current,
+        latest: latest.tag,
+        ref,
+      };
+}
 
-  const counted = await spawnExpectOk(["git", "rev-list", "--count", range], {
-    cwd: root,
-    timeoutMs: LOCAL_TIMEOUT_MS,
-  });
-  const count = Number(counted.stdout.trim());
-  if (!Number.isInteger(count) || count < 0)
-    throw new Error(
-      `git rev-list --count ${range} printed ${JSON.stringify(counted.stdout)}, which is not a commit count.`,
-    );
-  if (count === 0) return { kind: "current", ...where };
+/** Where local `main` stands against one release tag already on disk. */
+export type ReleaseStanding =
+  { kind: "current" } | { kind: "behind"; current: string | null };
 
-  const log = await spawnExpectOk(
-    [
-      "git",
-      "log",
-      `--max-count=${UPSTREAM_SUBJECT_LIMIT}`,
-      "--format=%H %s",
-      range,
-    ],
+/**
+ * Is upstream's release `latest` in local `main`? Local only — no fetch — so a
+ * reader that already knows upstream's newest release (the stored answer of the
+ * last check) re-derives the rest from git whenever `main` moves.
+ *
+ * The release must be in `remote`'s release namespace — a check fetched it
+ * there. Its absence (the namespace pruned by hand, the checkout re-cloned
+ * under an old database) is said in those words rather than as git's exit 128.
+ */
+export async function standingAgainst(
+  root: string,
+  remote: string,
+  latest: string,
+): Promise<ReleaseStanding> {
+  const namespace = upstreamReleaseNamespace(remote);
+  const ref = `${namespace}${latest}`;
+  const present = await spawnCaptured(
+    ["git", "rev-parse", "--verify", "--quiet", `${ref}^{commit}`],
     { cwd: root, timeoutMs: LOCAL_TIMEOUT_MS },
   );
-  const newest = log.stdout
-    .split("\n")
-    .filter((line) => line.length > 0)
-    .map(parseLogLine);
-
-  return { kind: "behind", ...where, count, newest };
+  if (present.exitCode !== 0)
+    throw new Error(
+      `Release ${latest} of ${remote} is not on disk (${ref} is missing), so where main stands against it is unknown. ` +
+        `Check upstream again (POST /api/upstream/check, or \`./equin upstream status\`) to fetch it.`,
+    );
+  if (await isAncestor(root, ref, UPSTREAM_BRANCH)) return { kind: "current" };
+  return {
+    kind: "behind",
+    current: await currentRelease(root, UPSTREAM_BRANCH, namespace),
+  };
 }

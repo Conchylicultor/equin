@@ -602,6 +602,9 @@ async function journey(ctx: Ctx, pristine: boolean): Promise<void> {
     throw new HarnessError(`upstream's generate failed:${tail(upGen)}`);
   }
   await commitAll(upWt, "upstream: e2e_upstream_probe");
+  // A clone updates to releases, never to upstream's main: cut one, as the
+  // author's `./equin version cut` would (an annotated tag on main).
+  await git(upWt, "tag", "-a", "v2026.11.14", "-m", "e2e release 1");
   const upMain = await filesAt(upWt, "main");
   const upstreamPublished = added(baseFiles, upMain);
   check(
@@ -777,6 +780,7 @@ async function journey(ctx: Ctx, pristine: boolean): Promise<void> {
   if (upNote.exitCode !== 0)
     throw new HarnessError(`upstream's note generate failed:${tail(upNote)}`);
   await commitAll(upWt, "upstream: note text");
+  await git(upWt, "tag", "-a", "v2026.11.14.2", "-m", "e2e release 2");
 
   await git(cloneWt, "checkout", "-q", "-b", "clone-note", "main");
   write(

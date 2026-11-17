@@ -1,6 +1,6 @@
 # upstream
 
-The repo this checkout was cloned from, watched.
+The repo this checkout was cloned from, watched — by its **releases**.
 
 Everything else in this app is offline: agent worktrees branch off the local
 `main`, main rebuilds itself when that ref moves, and the pushes ledger reads
@@ -8,50 +8,64 @@ local `main` only. So for someone who cloned this repo rather than authoring it,
 upstream can move for months in complete silence. This plugin is the one place
 that notices.
 
+Plan: `research/2026-11-17-global-release-updates.md` (this is its phase 1).
+
+## Releases, not commits
+
+The author pushes to `main` a hundred times a day, so "behind upstream's main"
+is true of every clone all the time — noise. A clone is measured against
+**releases** instead: annotated tags `v<YYYY.MM.DD>` (`.2`, `.3`… for another the
+same UTC day) on main, cut on purpose with `./equin version cut`
+(`framework/cli/plugins/version`), which refuses unless main is published,
+serving HEAD, and its build of HEAD passed. The tag grammar is
+`plugins/release` (web-safe core).
+
 - `core/`: `fetchUpstreamStatus(root)` — resolve upstream (via
-  `infra/git/remotes`), fetch it, and answer how far behind local `main` is, as
-  `no-upstream` / `unreachable` / `current` / `behind`. It lives in `core/` because two runtimes
-  ask the same question: `./equin upstream status|merge`
-  (`framework/cli/plugins/upstream`) and the daily job here. One definition, so
-  the command a user runs by hand and the report that wakes them up can never
-  disagree about what "behind" means. It fetches — a count against a stale
-  remote-tracking ref is a number that looks current and is not.
-- `server/internal/detect-job.ts`: the daily `upstream.detect-updates` job. Main
-  only (no `perWorktree` on the schedule) — "is there an update?" is a question
-  about the clone, not about one agent's branch.
-- `server/internal/report-kind.ts`: the `upstream-updates-available` kind.
-- `server/internal/merge-automation.ts`: the **Upstream merges** automation
-  (`upstream-merge`, see below).
-- `shared/merge-prompt.ts`: the task text — one template
-  (`UPSTREAM_MERGE_PROMPT`: `{{updates}}`, `{{ref}}`, `{{pushPolicy}}`), the
-  automation's default prompt, filled with "do not push" for Investigate.
-- `shared/config.ts`: the automation's config document
-  (`config/tasks/automations/upstream-merge.origin.jsonc`).
+  `infra/git/remotes`), fetch its main and `v*` tags, and answer where local
+  `main` stands against upstream's newest release: `no-upstream` /
+  `unreachable` / `no-release` / `current` / `behind { current, latest }`.
+  Upstream's tags are fetched into their own namespace,
+  `refs/release-tags/<remote>/` (force-updated and pruned — a mirror), never
+  into `refs/tags/`: a tag of the user's own can neither collide with one of
+  upstream's (`refs/tags/` refuses the fetch, "would clobber existing tag") nor
+  pass for one. Upstream's releases are those merged into `<remote>/main`. "Behind" means
+  `latest` is not an ancestor of local `main`. Also `currentRelease(root, ref)`
+  (the newest release in a ref's history — by the release grammar, not
+  `git describe`, which answers the nearest tag) and `standingAgainst(root,
+latest)` (the local half, no fetch). One definition, because the CLI
+  (`upstream status|merge`, `version status`), the daily job and the automation
+  all ask it.
+- `machine/`: the `upstream.release-status` live value (declared in
+  `plugins/release`), the daily `upstream.detect-updates` job and
+  `POST /api/upstream/check` and the Upstream merges automation. All three run `checkUpstream()`: fetch, store
+  the answer in `upstream_release_check` (one row), notify the value.
+- `server/`: the automation config registration, the task category, the table.
+- `shared/merge-prompt.ts`: the merge task's text (`UPSTREAM_MERGE_PROMPT`:
+  `{{updates}}` — the release and the one this checkout is on, `{{ref}}` — the
+  release tag, `{{pushPolicy}}`). No commit list: nothing lists changes.
+- `shared/config.ts`: the automation's config document.
 
-## The report files no task; the automation does
+## The live status: stored answer + git, re-derived
 
-An update is news. The job records a report; the bell rings; Debug → Reports
-holds a row with an **Investigate** button, and pressing it mints the task —
-carrying the merge instructions from `merge-prompt.ts`, ending on "do not push".
-The job itself merges nothing and touches no working tree.
+Only what needs the network is stored: upstream's newest release tag (or that
+there is none / no upstream) and when it was read. Where local `main` stands
+against it is re-derived from git on every read, and the value recomputes on
+`refHeadServed` (any tracked ref moving — the edge `build.deployment` uses) and
+on each recorded check. So merging the release reads as current the moment
+`main` moves, not at the next daily check. Before any check it is `unknown`,
+never "up to date". Fetching stays in the scheduled job / the explicit check:
+upstream has no change signal a clone can subscribe to.
 
-The **Upstream merges** automation (Automations pane; off by default — daily at
-07:00 local and Push = never once turned on) is the hands-off path for a clone user: it asks
-`fetchUpstreamStatus` itself and, when `behind` with no merge task open, files
-ONE auto-started task (Upstream category) whose agent merges in its own
-worktree, builds and checks the app. It lands the change only as far as Push
-allows — by default it raises a flag and the user lands it, because an upstream
-merge is a change to the user's own trunk. The filed task is linked to the
-rolling report, so Investigate does not mint a second one. On the canonical
-repo (`no-upstream`) and offline (`unreachable`) it files nothing.
+The old `upstream-updates-available` report kind is retired (a data migration
+deletes its rows): the status value replaces it, and the health row and the
+reminder (later phases of the plan) take over the bell and Investigate.
 
 ## Being offline is not an incident
 
-`unreachable` is its own arm, and the job returns on it **without filing
-anything**. It learned nothing about whether updates exist, so it has nothing to
-report, and a weekly "we could not check" row is a bell the user learns to
-ignore. Do not fold it into `current` (that reports "no updates" on a question
-nobody answered) or into `no-upstream` (that denies the remote exists).
+`unreachable` is its own arm, and the job returns on it **recording nothing**:
+the last answer stands. It learned nothing about whether a release exists. Do
+not fold it into `current` (that reports "up to date" on a question nobody
+answered) or into `no-upstream` (that denies the remote exists).
 
 Which git failures count as "could not ask" is `isCouldNotAsk` in
 `core/internal/status.ts`: `unreachable` and `no-credentials` yes, `denied` and
@@ -59,40 +73,32 @@ Which git failures count as "could not ask" is `isCouldNotAsk` in
 configuration that will not fix itself. The classification itself is
 `classifyRemoteFailure` from `infra/git/remotes`, shared with push's write probe.
 
-## One rolling row
+## The automation
 
-The report's fingerprint is a **constant**, not the newest sha. "You are behind
-upstream" is one standing fact whose count rises, not a new problem per commit —
-and a sha-derived fingerprint would mint a fresh row and a fresh alert every
-time upstream moved, which is exactly the cross-fingerprint fan-out the reports
-ceiling exists to collapse. Each detection lands on the same row and refreshes
-its payload, so the row always names today's count and today's newest commits.
-
-Read that row's own `count` column as "how many days running this has been
-true" — the commit count is in the payload, not there.
+The **Upstream merges** automation (Automations pane; off by default — daily at
+07:00 local and Push = never once turned on) asks `fetchUpstreamStatus` itself
+(through `checkUpstream()`, so what it acts on is recorded) and, when
+`behind` with no merge task open, files ONE auto-started task
+(Upstream category) whose agent runs `./equin upstream merge` — which merges
+the release tag, never `<remote>/main` — builds and checks the app, and lands it
+only as far as Push allows. `no-upstream`, `no-release` and `unreachable` file
+nothing.
 
 ## Migrations after a merge
 
-Both sides' migrations are published (upstream's on `<remote>/main`, the user's
-on local `main`), so the merge renames, deletes and re-hashes none of them. Their
-snapshot chains fork at the merge base; the first `./equin build` (or
-push's normalize) after the merge joins them with a **merge node** — a no-op
-migration whose snapshot is the 3-way merge of the two tips — and fails, naming
-the schema paths, when both sides changed the same column differently. See
-`database/migrations/CLAUDE.md` → **Merge nodes**. `shared/merge-prompt.ts` tells the
-agent to keep the node and to stop and report on a conflict.
-
-## What it does not do yet
-
-The row never clears itself. Once the user merges, the next day's job records
-nothing new, but the existing row stays until retention drops it. If that starts
-reading as stale, the job should resolve the row when the count reaches zero.
+Both sides' migrations are published (upstream's on `<remote>/main`, which the
+check fetches with the tags; the user's on local `main`), so the merge renames,
+deletes and re-hashes none of them. Their snapshot chains fork at the merge
+base; the first `./equin build` (or push's normalize) after the merge joins them
+with a **merge node** — see `database/migrations/CLAUDE.md` → **Merge nodes**.
+`shared/merge-prompt.ts` tells the agent to keep the node and to stop and report
+on a conflict.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
 
 ## Plugin reference
 
-- Description: Registers the Upstream merges automation's config (schedule, push policy, model, prompt template) for the Automations pane and Settings → Config. Daily upstream.detect-updates job (main only): when the repo this checkout was cloned from has commits local `main` does not, it records one rolling `upstream-updates-available` report — the bell and Debug → Reports, whose Investigate mints a merge task. And the Upstream merges automation (upstream-merge; off by default, daily once on, editable from the Automations pane): when upstream is ahead and no merge task is open, it files ONE auto-started task (Upstream category, linked to the report) whose agent runs `./equin upstream merge`, builds and checks the app, and lands it only as far as its Push setting allows (never, by default).
+- Description: Registers the Upstream merges automation's config (schedule, push policy, model, prompt template) for the Automations pane and Settings → Config. Upstream, portable half: the Upstream merges automation's config registration, the Upstream task category, and the upstream_release_check table the desktop half records each check of upstream's releases in.
 - Web:
   - Contributes:
     - `ConfigV2.WebRegister` "upstream-merge"
@@ -100,23 +106,19 @@ reading as stale, the job should resolve the row when the count reaches zero.
   - Uses: `tasks/automations.automationConfigContributions`
 - Server:
   - Contributes:
-    - `report-kind` "upstream-updates-available"
     - `ConfigV2.Register` "upstream-merge"
     - `taskCategory` "upstream"
+    - `resource.declare` "upstream.release-status"
   - Uses:
-    - `infra/jobs.defineJob`
-    - `primitives/log-channels.Log`
-    - `reports.ReportKind`
-    - `reports/engine.linkReportsToTask`
-    - `reports/engine.recordReport`
-    - `reports/engine.reportWorklist`
+    - `database/sql-column.parsedText`
     - `tasks/automations.automationConfigRegistration`
-    - `tasks/automations.defineAutomation`
     - `tasks/task-category.TaskCategory`
-  - Exports (types): `UpstreamUpdatesPayload`
-  - Exports (values):
-    - `UPSTREAM_UPDATES_KIND`
-    - `upstreamUpdatesKind`
+  - DB schema: `plugins/upstream/server/internal/tables.ts`
+  - Resources: `upstream.release-status` (push, notified)
+- Machine:
+  - Uses:
+    - `infra/endpoints.implementMachine`
+    - `network/live.serveValue`
   - Register:
     - `defineJob('upstream.detect-updates')`
     - `defineAutomation('upstream-merge')`
@@ -128,14 +130,23 @@ reading as stale, the job should resolve the row when the count reaches zero.
     - `infra/spawn.spawnCaptured`
     - `infra/spawn.spawnExpectOk`
     - `infra/spawn.SpawnFailedError`
+    - `upstream/release.newestReleaseTag`
+    - `upstream/release.RELEASE_TAG_GLOB`
   - Exports (types):
-    - `UpstreamCommit`
+    - `ReleaseStanding`
     - `UpstreamStatus`
   - Exports (values):
+    - `currentRelease`
     - `fetchUpstreamStatus`
+    - `OWN_RELEASE_NAMESPACE`
+    - `standingAgainst`
     - `UPSTREAM_BRANCH`
-    - `UPSTREAM_SUBJECT_LIMIT`
+    - `upstreamReleaseNamespace`
 - Cross-plugin:
-  - Imported by: `framework/cli/upstream`
+  - Imported by:
+    - `framework/cli/upstream`
+    - `framework/cli/version`
+- Sub-plugins:
+  - **`release`** — What an equin release is, as web-safe data: the release tag grammar (annotated `v<YYYY.MM.DD>[.<n>]` tags on main — parse, order, name the next one, display), the upstream.release-status live value…
 
 <!-- AUTOGENERATED:END -->

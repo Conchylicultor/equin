@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-upstream-release",
+  "private": true,
+  "version": "0.0.1",
+  "description": "What an equin release is, as web-safe data: the release tag grammar (annotated `v<YYYY.MM.DD>[.<n>]` tags on main — parse, order, name the next one, display), the upstream.release-status live value (where this clone's main stands against the newest release upstream has cut) and the POST /api/upstream/check endpoint that re-asks upstream. A leaf, so the CLI, the server and the web read one definition."
+}

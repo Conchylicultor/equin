@@ -1,6 +1,9 @@
 import { defineAutomationConfig } from "@plugins/tasks/plugins/automations/core";
 import { UPSTREAM_MERGE_PROMPT } from "./merge-prompt";
 
+/** The task category every upstream-merge task is filed under. */
+export const UPSTREAM_CATEGORY_ID = "upstream";
+
 /** The Upstream merges automation's id — its job is `automation.upstream-merge`. */
 export const UPSTREAM_MERGE_ID = "upstream-merge";
 

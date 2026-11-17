@@ -3902,6 +3902,10 @@
       "name": "@equin/plugin-framework-cli-upstream",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/cli/plugins/version": {
+      "name": "@equin/plugin-framework-cli-version",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/hook-value": {
       "name": "@equin/plugin-framework-hook-value",
       "version": "0.0.1",
@@ -7992,6 +7996,10 @@
       "name": "@equin/plugin-upstream",
       "version": "0.0.1",
     },
+    "plugins/upstream/plugins/release": {
+      "name": "@equin/plugin-upstream-release",
+      "version": "0.0.1",
+    },
     "plugins/wish": {
       "name": "@equin/plugin-wish",
       "version": "0.0.1",
@@ -10035,6 +10043,8 @@
 
     "@equin/plugin-framework-cli-upstream": ["@equin/plugin-framework-cli-upstream@workspace:plugins/framework/plugins/cli/plugins/upstream"],
 
+    "@equin/plugin-framework-cli-version": ["@equin/plugin-framework-cli-version@workspace:plugins/framework/plugins/cli/plugins/version"],
+
     "@equin/plugin-framework-hook-value": ["@equin/plugin-framework-hook-value@workspace:plugins/framework/plugins/hook-value"],
 
     "@equin/plugin-framework-http-router": ["@equin/plugin-framework-http-router@workspace:plugins/framework/plugins/http-router"],
@@ -11952,6 +11962,8 @@
     "@equin/plugin-ui-variant-region": ["@equin/plugin-ui-variant-region@workspace:plugins/ui/plugins/variant-region"],
 
     "@equin/plugin-upstream": ["@equin/plugin-upstream@workspace:plugins/upstream"],
+
+    "@equin/plugin-upstream-release": ["@equin/plugin-upstream-release@workspace:plugins/upstream/plugins/release"],
 
     "@equin/plugin-wish": ["@equin/plugin-wish@workspace:plugins/wish"],
 

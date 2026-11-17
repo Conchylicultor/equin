@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-framework-cli-version",
+  "private": true,
+  "version": "0.0.1",
+  "description": "`./equin version status|cut` — which release local main is on and the newest upstream has, and cutting a release: an annotated `v<YYYY.MM.DD>` tag on a main that is published, deployed and whose build passed, pushed to the publish remote."
+}

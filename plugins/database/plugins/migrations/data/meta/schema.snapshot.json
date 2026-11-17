@@ -1,6 +1,6 @@
 {
-  "id": "35672749-9912-44ba-baf8-d2de49dbf4d7",
-  "prevId": "e0b7471b-de9a-4dcf-952e-90664c4cffea",
+  "id": "8592c5a3-da05-437d-8a9b-25b55163fb9a",
+  "prevId": "35672749-9912-44ba-baf8-d2de49dbf4d7",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -17768,6 +17768,55 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.upstream_release_check": {
+      "name": "upstream_release_check",
+      "schema": "",
+      "columns": {
+        "singleton": {
+          "name": "singleton",
+          "type": "boolean",
+          "primaryKey": true,
+          "notNull": true,
+          "default": true
+        },
+        "outcome": {
+          "name": "outcome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "remote": {
+          "name": "remote",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "latest": {
+          "name": "latest",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "checked_at": {
+          "name": "checked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "upstream_release_check_one_row": {
+          "name": "upstream_release_check_one_row",
+          "value": "\"upstream_release_check\".\"singleton\""
+        }
+      },
       "isRLSEnabled": false
     },
     "public.improve_pending_groups": {

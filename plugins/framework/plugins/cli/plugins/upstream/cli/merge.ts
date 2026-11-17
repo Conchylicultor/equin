@@ -12,6 +12,8 @@ import {
   resolvePublishTarget,
 } from "@plugins/infra/plugins/git/plugins/remotes/core";
 import { fetchUpstreamStatus } from "@plugins/upstream/core";
+import { releaseVersion } from "@plugins/upstream/plugins/release/core";
+import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
 import { noUpstreamSentence } from "./internal/describe";
 
 /** Local git metadata reads: `rev-parse`, `status`, `diff --name-only`. */
@@ -205,27 +207,43 @@ async function startMerge(root: string): Promise<void> {
       `Could not reach ${status.remote} (${status.url}).\n  ${status.detail}\n\n` +
         `Nothing was fetched, so there is nothing to merge yet and your tree is untouched. Try again when you can reach it.`,
     );
-  if (status.kind === "current") {
-    console.log(`Already up to date with ${status.ref}. Nothing to merge.`);
+  if (status.kind === "no-release") {
+    console.log(
+      `${status.remote} (${status.url}) has cut no release yet. Nothing to merge — updates come as releases, never as upstream's main.`,
+    );
     return;
   }
-
-  const plural = status.count === 1 ? "" : "s";
+  // Local `main` holding the release ("current") says nothing about THIS
+  // branch, which may have been cut before main took it — so the release is
+  // merged either way, and git says "Already up to date" when the branch has it.
+  const release = status.kind === "current" ? status.release : status.latest;
+  const target = releaseVersion(release);
   console.log(
-    `Merging ${status.count} commit${plural} from ${status.ref} into ${branch}…\n`,
+    `Merging release ${target} (${status.ref}) from ${status.remote} into ${branch}…\n`,
   );
-  // git concludes this itself when it can: a fast-forward moves the branch and a
-  // real merge writes its own commit. `--continue` below is only ever for the
-  // path where git stopped.
-  const { exitCode } = await spawnPassthrough(["git", "merge", status.ref], {
-    cwd: root,
-  });
+  // The release TAG, never `<remote>/main`: a clone takes what the author cut
+  // on purpose, not whatever upstream's trunk holds this minute. Merged as its
+  // commit (`^{commit}`) so a branch with nothing of its own fast-forwards —
+  // merging an annotated tag by name always forces a merge commit. git
+  // concludes this itself when it can; `--continue` is only for the path
+  // where it stopped.
+  const { exitCode } = await spawnPassthrough(
+    [
+      "git",
+      "merge",
+      "--no-edit",
+      "-m",
+      `Merge ${PRODUCT_NAME} release ${target}`,
+      `${status.ref}^{commit}`,
+    ],
+    { cwd: root },
+  );
 
   if (exitCode === 0) {
     console.log(
       [
         ``,
-        `Merged ${status.ref} into ${branch}.`,
+        `Merged release ${target} into ${branch}.`,
         ``,
         `Next: \`./equin build\` (in the background), confirm the deploy receipt says ok,`,
         `open the worktree's URL and check the app still works. Then report — the user lands it.`,

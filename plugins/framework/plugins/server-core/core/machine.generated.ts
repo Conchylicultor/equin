@@ -156,6 +156,7 @@ export const machineEntries: CollectedEntry[] = [
   { pluginPath: "tasks/plugins/tasks-core", id: "tasks.tasks-core#machine", loader: () => import("@plugins/tasks/plugins/tasks-core/machine"), dependsOn: ["infra/plugins/git/plugins/git-read-cache", "infra/plugins/git/plugins/git-watcher", "infra/plugins/host/plugins/host-read-pool", "infra/plugins/runtime-profiler", "infra/plugins/worktree", "primitives/plugins/commit-list", "tasks/plugins/tasks-core"], core: () => import("@plugins/tasks/plugins/tasks-core/core") },
   { pluginPath: "ui/plugins/icons", id: "ui.icons#machine", loader: () => import("@plugins/ui/plugins/icons/machine"), dependsOn: ["ui/plugins/icons"], core: () => import("@plugins/ui/plugins/icons/core") },
   { pluginPath: "ui/plugins/icons/plugins/sprites", id: "ui.icons.sprites#machine", loader: () => import("@plugins/ui/plugins/icons/plugins/sprites/machine"), dependsOn: ["network/plugins/live#machine", "ui/plugins/icons", "ui/plugins/icons/plugins/sprites"], core: () => import("@plugins/ui/plugins/icons/plugins/sprites/core") },
+  { pluginPath: "upstream", id: "upstream#machine", loader: () => import("@plugins/upstream/machine"), dependsOn: ["database", "infra/plugins/endpoints#machine", "infra/plugins/git/plugins/git-watcher", "infra/plugins/jobs", "infra/plugins/spawn", "network/plugins/live#machine", "primitives/plugins/log-channels", "tasks/plugins/automations", "ui/plugins/icons", "upstream"], core: () => import("@plugins/upstream/core") },
 ];
 
 export interface CompositionIdentity {

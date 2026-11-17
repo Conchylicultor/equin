@@ -218,13 +218,19 @@ async function main(): Promise<void> {
     await git(clone, "fetch", "-q", "--prune", "upstream");
     await git(clone, "branch", "-q", "-D", "signed");
 
-    console.log("\nBefore upstream moves:");
-    const current = await fetchUpstreamStatus(clone);
-    check("is up to date", current.kind === "current", current.kind);
+    console.log("\nBefore upstream cuts a release:");
+    await commit(upstream, "shared.txt", "unreleased", "upstream: unreleased");
+    const none = await fetchUpstreamStatus(clone);
+    check(
+      "upstream's main moving is not news",
+      none.kind === "no-release",
+      none.kind,
+    );
 
-    // --- update #1: upstream moves, the clone merges it into a branch, and the
-    // --- branch lands on main by fast-forward (what push does when main is an
-    // --- ancestor). The user's own commit is there too, so the merge is real.
+    // --- update #1: upstream releases, the clone merges the TAG into a
+    // --- branch, and the branch lands on main by fast-forward (what push does
+    // --- when main is an ancestor). The user's own commit is there too, so
+    // --- the merge is real.
     await commit(clone, "mine.txt", "mine", "local: my own work");
     const upA = await commit(
       upstream,
@@ -232,23 +238,32 @@ async function main(): Promise<void> {
       "theirs",
       "upstream: first",
     );
+    await git(upstream, "tag", "-a", "v2026.11.14", "-m", "release 1");
+    // Work after the release: an update must not bring it in.
+    const unreleased = await commit(
+      upstream,
+      "later.txt",
+      "later",
+      "upstream: after the release",
+    );
 
-    console.log("\nAfter upstream moves:");
+    console.log("\nAfter upstream releases:");
     const behind = await fetchUpstreamStatus(clone);
     check(
-      "reports behind by 1",
-      behind.kind === "behind" && behind.count === 1,
-      JSON.stringify(behind),
-    );
-    check(
-      "names the newest commit",
+      "reports behind the release",
       behind.kind === "behind" &&
-        behind.newest[0]?.subject === "upstream: first",
-      behind.kind === "behind" ? JSON.stringify(behind.newest) : behind.kind,
+        behind.latest === "v2026.11.14" &&
+        behind.current === null,
+      JSON.stringify(behind),
     );
 
     await git(clone, "checkout", "-q", "-b", "update-1", "main");
-    await git(clone, "merge", "--no-edit", "upstream/main");
+    await git(
+      clone,
+      "merge",
+      "--no-edit",
+      "refs/release-tags/upstream/v2026.11.14^{commit}",
+    );
     await git(
       clone,
       "commit",
@@ -262,9 +277,14 @@ async function main(): Promise<void> {
 
     console.log("\nAfter landing update 1:");
     check(
-      "upstream's own commit is in main",
+      "upstream's own released commit is in main",
       await isAncestor(clone, upA, "main"),
       upA,
+    );
+    check(
+      "upstream's unreleased work is not",
+      !(await isAncestor(clone, unreleased, "main")),
+      unreleased,
     );
     check(
       "the tip carries the push trailer",
@@ -279,7 +299,11 @@ async function main(): Promise<void> {
       ).trim() === "e2e-1",
     );
     const settled = await fetchUpstreamStatus(clone);
-    check("nothing is left behind", settled.kind === "current", settled.kind);
+    check(
+      "on the newest release",
+      settled.kind === "current" && settled.release === "v2026.11.14",
+      JSON.stringify(settled),
+    );
 
     // --- update #2: the one that would fail if update 1 had imported COPIES of
     // --- upstream's commits instead of upstream's commits.
@@ -289,21 +313,34 @@ async function main(): Promise<void> {
       "more",
       "upstream: second",
     );
+    await git(upstream, "tag", "-a", "v2026.11.14.2", "-m", "release 2");
     const again = await fetchUpstreamStatus(clone);
     check(
-      "only the new commit is behind",
-      again.kind === "behind" && again.count === 1,
+      "behind the same day's second release",
+      again.kind === "behind" &&
+        again.current === "v2026.11.14" &&
+        again.latest === "v2026.11.14.2",
       JSON.stringify(again),
     );
 
     await git(clone, "checkout", "-q", "-b", "update-2", "main");
-    const base = await git(clone, "merge-base", "main", "upstream/main");
+    const base = await git(
+      clone,
+      "merge-base",
+      "main",
+      "refs/release-tags/upstream/v2026.11.14.2",
+    );
     check(
-      "the merge base is upstream's own last commit",
+      "the merge base is upstream's own released commit",
       base === upA,
       `${base} vs ${upA}`,
     );
-    await git(clone, "merge", "--no-edit", "upstream/main");
+    await git(
+      clone,
+      "merge",
+      "--no-edit",
+      "refs/release-tags/upstream/v2026.11.14.2^{commit}",
+    );
     check(
       "update 2 merged without replaying update 1",
       await isAncestor(clone, upB, "HEAD"),

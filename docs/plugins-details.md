@@ -15625,6 +15625,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `build`
           - `build/converge`
+          - `framework/cli/version`
       - Cli:
         - Exports (values): `readServedDeployment`
     - **`failure-report`** — Build-failed report kind's Debug → Reports summary view: one line naming the step main's build failed in and its failing checks or error line. The build-failed report kind: a failed build of main, deduped on what failed (the failing step, and its failing checks or normalized error line — not the run), category error so the Error reports supervisor stream carries it, with the fix ledger of every report. linkRunReport makes a task the owner of the report a run fell into (build/machine calls it when an Investigate task is filed about a build run).
@@ -15740,6 +15741,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build/failure-report`
           - `build/runs-arm`
           - `framework/cli/build`
+          - `framework/cli/version`
       - Exemptions:
         - Exempts itself from: `sql-writes:fit:hand-written` — `shared/recorder.ts`, `shared/stale-holder.ts` (sanctioned)
       - Machine:
@@ -24133,7 +24135,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadedDatabaseConfig`
       - `readDatabaseConfigSync`
   - Cross-plugin:
-    - Imported by: 177 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 178 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×48
       - `conversations` ×21
       - `tasks` ×20
@@ -24160,6 +24162,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `shell/notifications`
       - `tag-tree/engine`
       - `ui/theme-engine/saved-themes`
+      - `upstream`
       - `wish`
   - Exemptions:
     - Exempts itself from:
@@ -25024,7 +25027,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/color-palette --muted-foreground`
     - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies. `withWire` declares a column type's JSON wire form (a codec applied in JS by whatever projects the column onto the wire), carried on the built column's type so a row schema must match it.
       - Cross-plugin:
-        - Imported by: 30 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
+        - Imported by: 31 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
           - `apps` ×7
           - `infra` ×6
           - `fields` ×5
@@ -25036,6 +25039,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `search/engine`
           - `tasks/orchestration/watch`
           - `ui/theme-engine/saved-themes`
+          - `upstream`
       - Server:
         - DB schema: `plugins/database/plugins/sql-column/server/internal/column-schema.ts`
         - Exports (types):
@@ -31482,8 +31486,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readMergeMarkers`
           - `resolveGitDir`
       - Cross-plugin:
-        - Imported by: 39 plugins — full list in [`plugins/framework/plugins/cli/REFERENCE.md`](../plugins/framework/plugins/cli/REFERENCE.md)
-          - `framework` ×28
+        - Imported by: 40 plugins — full list in [`plugins/framework/plugins/cli/REFERENCE.md`](../plugins/framework/plugins/cli/REFERENCE.md)
+          - `framework` ×29
           - `infra` ×5
           - `apps` ×3
           - `plugin-meta` ×2
@@ -31976,6 +31980,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `TestRunRecordSchema`
                   - `TESTS_FAILED_EXIT`
         - **`upstream`** — `./equin upstream status|merge` — what the repo this checkout was cloned from has that local main does not, and the one sanctioned merge that brings it into a worktree branch.
+        - **`version`** — `./equin version status|cut` — which release local main is on and the newest upstream has, and cutting a release: an annotated `v<YYYY.MM.DD>` tag on a main that is published, deployed and whose build passed, pushed to the publish remote.
+          - Cli:
+            - Uses:
+              - `build/deployment.readServedDeployment`
+              - `build/run-ledger.createBuildRunRecorder`
     - **`hook-value`** — A React hook carried as a value: the Hook<F> brand, and the two lint rules that keep every binding holding one named use* (the React Compiler recognises hooks by name only and memoizes any other call).
       - Core:
         - Exports (types): `Hook`
@@ -32140,9 +32149,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/boot-snapshot`
     - **`product-name`** — The product's own name, as data: PRODUCT_NAME (`equin`, always lowercase — what every person and agent reads) and LEGACY_PRODUCT_NAMES (the names it went by before, never written again), enforced by the product-name:legacy check over every tracked file; and LEGACY_IDS, the identifiers built from the old name that are kept for good (stored state, cross-version contracts), the one place they are spelled — enforced by product-name:legacy-id (and its mirrors by product-name:legacy-ids-in-sync). A dependency-free leaf, so a browser bundle, a server or a script can import it.
       - Cross-plugin:
-        - Imported by: 67 plugins — full list in [`plugins/framework/plugins/product-name/REFERENCE.md`](../plugins/framework/plugins/product-name/REFERENCE.md)
+        - Imported by: 69 plugins — full list in [`plugins/framework/plugins/product-name/REFERENCE.md`](../plugins/framework/plugins/product-name/REFERENCE.md)
           - `infra` ×16
-          - `framework` ×11
+          - `framework` ×12
           - `apps` ×10
           - `conversations` ×4
           - `database` ×4
@@ -32152,13 +32161,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages` ×2
           - `page` ×2
           - `reports` ×2
+          - `upstream` ×2
           - `auth`
           - `debug/sentinel/machine-usage`
           - `network/live/resource-protocol`
           - `screenshot`
           - `stats/commits`
           - `tasks/tasks-core`
-          - `upstream`
           - `wish/github-issue`
       - Exemptions:
         - Exempts itself from:
@@ -36337,7 +36346,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 266 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 268 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×79
           - `conversations` ×36
           - `infra` ×23
@@ -36359,6 +36368,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `history` ×2
           - `screenshot` ×2
           - `tag-tree` ×2
+          - `upstream` ×2
           - `backup`
           - `code-explorer`
           - `hints`
@@ -37033,6 +37043,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `stats/commits`
               - `tasks/attempt-work`
               - `tasks/tasks-core`
+              - `upstream`
           - Exemptions:
             - Exempts itself from:
               - `ids:pk-declared` — `server/internal/tables-ref-advanced.ts` (debt)
@@ -37111,6 +37122,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/git-artifacts`
               - `framework/cli/push`
               - `framework/cli/upstream`
+              - `framework/cli/version`
               - `upstream`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `core/internal/commit-identity.ts`, `core/internal/publish-target.ts` (debt)
@@ -38901,8 +38913,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `namespaceUrl`
           - `resolveNamespaceAlias`
       - Cross-plugin:
-        - Imported by: 81 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
-          - `framework` ×14
+        - Imported by: 82 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
+          - `framework` ×15
           - `apps` ×12
           - `debug` ×12
           - `infra` ×10
@@ -39030,9 +39042,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 135 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 136 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `infra` ×33
-          - `framework` ×21
+          - `framework` ×22
           - `apps` ×18
           - `debug` ×15
           - `build` ×7
@@ -39908,8 +39920,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `spawnPassthrough`
           - `spawnToFile`
       - Cross-plugin:
-        - Imported by: 98 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
-          - `framework` ×31
+        - Imported by: 99 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
+          - `framework` ×32
           - `infra` ×26
           - `apps` ×9
           - `database` ×5
@@ -41780,7 +41792,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 355 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 357 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×89
           - `conversations` ×73
           - `debug` ×36
@@ -41807,6 +41819,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `history` ×2
           - `release` ×2
           - `search` ×2
+          - `upstream` ×2
           - `fields/secret/config`
           - `framework/browser-server/demo/scope`
           - `network/live/optimistic-mutation`
@@ -57965,7 +57978,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `versionSkewCode`
       - `versionSkewExplains`
   - Cross-plugin:
-    - Imported by: 88 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 87 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×33
       - `debug` ×20
       - `conversations` ×7
@@ -57981,7 +57994,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `network/live/boot-snapshot`
       - `page/place/google`
       - `plugin-meta/plugin-records/write-lost`
-      - `upstream`
   - Exemptions:
     - Exempts itself from:
       - `networking/no-page-transport` — `web/report.ts` (sanctioned)
@@ -58232,7 +58244,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Machine:
         - Uses: `infra/endpoints.implementMachine`
       - Cross-plugin:
-        - Imported by: 35 plugins — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
+        - Imported by: 34 plugins — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
           - `debug` ×13
           - `conversations` ×5
           - `infra` ×4
@@ -58244,7 +58256,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/cli/push`
           - `page/place/google`
           - `tasks/reports-investigation`
-          - `upstream`
       - Exemptions:
         - Exempts itself from:
           - `sink-safety/no-adhoc-file-sink` — `server/internal/crash-append.ts` (sanctioned)
@@ -66371,7 +66382,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/sidebar-framing`
           - `ui/tree-disclosure`
 
-- **`upstream`** — Registers the Upstream merges automation's config (schedule, push policy, model, prompt template) for the Automations pane and Settings → Config. Daily upstream.detect-updates job (main only): when the repo this checkout was cloned from has commits local `main` does not, it records one rolling `upstream-updates-available` report — the bell and Debug → Reports, whose Investigate mints a merge task. And the Upstream merges automation (upstream-merge; off by default, daily once on, editable from the Automations pane): when upstream is ahead and no merge task is open, it files ONE auto-started task (Upstream category, linked to the report) whose agent runs `./equin upstream merge`, builds and checks the app, and lands it only as far as its Push setting allows (never, by default).
+- **`upstream`** — Registers the Upstream merges automation's config (schedule, push policy, model, prompt template) for the Automations pane and Settings → Config. Upstream, portable half: the Upstream merges automation's config registration, the Upstream task category, and the upstream_release_check table the desktop half records each check of upstream's releases in.
   - Web:
     - Contributes:
       - `ConfigV2.WebRegister` "upstream-merge"
@@ -66379,23 +66390,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Uses: `tasks/automations.automationConfigContributions`
   - Server:
     - Contributes:
-      - `report-kind` "upstream-updates-available"
       - `ConfigV2.Register` "upstream-merge"
       - `taskCategory` "upstream"
+      - `resource.declare` "upstream.release-status"
     - Uses:
-      - `infra/jobs.defineJob`
-      - `primitives/log-channels.Log`
-      - `reports.ReportKind`
-      - `reports/engine.linkReportsToTask`
-      - `reports/engine.recordReport`
-      - `reports/engine.reportWorklist`
+      - `database/sql-column.parsedText`
       - `tasks/automations.automationConfigRegistration`
-      - `tasks/automations.defineAutomation`
       - `tasks/task-category.TaskCategory`
-    - Exports (types): `UpstreamUpdatesPayload`
-    - Exports (values):
-      - `UPSTREAM_UPDATES_KIND`
-      - `upstreamUpdatesKind`
+    - DB schema: `plugins/upstream/server/internal/tables.ts`
+    - Resources: `upstream.release-status` (push, notified)
+  - Machine:
+    - Uses:
+      - `infra/endpoints.implementMachine`
+      - `network/live.serveValue`
     - Register:
       - `defineJob('upstream.detect-updates')`
       - `defineAutomation('upstream-merge')`
@@ -66407,15 +66414,51 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `infra/spawn.spawnCaptured`
       - `infra/spawn.spawnExpectOk`
       - `infra/spawn.SpawnFailedError`
+      - `upstream/release.newestReleaseTag`
+      - `upstream/release.RELEASE_TAG_GLOB`
     - Exports (types):
-      - `UpstreamCommit`
+      - `ReleaseStanding`
       - `UpstreamStatus`
     - Exports (values):
+      - `currentRelease`
       - `fetchUpstreamStatus`
+      - `OWN_RELEASE_NAMESPACE`
+      - `standingAgainst`
       - `UPSTREAM_BRANCH`
-      - `UPSTREAM_SUBJECT_LIMIT`
+      - `upstreamReleaseNamespace`
   - Cross-plugin:
-    - Imported by: `framework/cli/upstream`
+    - Imported by:
+      - `framework/cli/upstream`
+      - `framework/cli/version`
+  - Plugins:
+    - **`release`** — What an equin release is, as web-safe data: the release tag grammar (annotated `v<YYYY.MM.DD>[.<n>]` tags on main — parse, order, name the next one, display), the upstream.release-status live value (where this clone's main stands against the newest release upstream has cut) and the POST /api/upstream/check endpoint that re-asks upstream. A leaf, so the CLI, the server and the web read one definition.
+      - Core:
+        - Uses:
+          - `framework/product-name.PRODUCT_NAME`
+          - `infra/endpoints.defineEndpoint`
+          - `network/live.liveValue`
+        - Exports (types):
+          - `ReleaseStatus`
+          - `ReleaseTag`
+          - `ReleaseTagParse`
+        - Exports (values):
+          - `checkUpstreamEndpoint`
+          - `compareReleases`
+          - `newestReleaseTag`
+          - `nextReleaseTag`
+          - `parseReleaseTag`
+          - `RELEASE_TAG_GLOB`
+          - `RELEASE_TAG_PREFIX`
+          - `ReleaseStatusSchema`
+          - `releaseTagMessage`
+          - `releaseTags`
+          - `releaseVersion`
+          - `upstreamReleaseStatus`
+      - Cross-plugin:
+        - Imported by:
+          - `framework/cli/upstream`
+          - `framework/cli/version`
+          - `upstream`
 
 - **`wish`** — The Wish toolbar button: the entry point for anything the user wants done — a fix, a change, a new app. Files a task under "Wishes" with the current URL. Companion actions join it as segments of one split pill via WishSlots.Segment; WishSlots.HeaderAction adds actions to its popover header (Ask equin), WishSlots.FooterAction to its footer beside Launch (File on GitHub). WishField is the same wish as a companion’s section — the task composer with its own ↑, filing one task under Wishes about the page the DraftPage around it names, confirming inline (“Filed — an agent is on …”). On a phone the same field is the Wish sheet of the phone action button (PhoneActions.Action “wish”). Task category of the Wish toolbar button. Files tasks stamped "Wishes" via the shared task-draft-form primitive.
   - Web:

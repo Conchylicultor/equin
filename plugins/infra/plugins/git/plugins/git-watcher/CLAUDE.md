@@ -101,6 +101,7 @@ Measure: `scripts/measure-ref-delivery.ts`; in the app, the
     - `stats/commits`
     - `tasks/attempt-work`
     - `tasks/tasks-core`
+    - `upstream`
 - Exemptions:
   - Exempts itself from:
     - `ids:pk-declared` — `server/internal/tables-ref-advanced.ts` (debt)

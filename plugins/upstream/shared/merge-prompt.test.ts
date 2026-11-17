@@ -1,70 +1,68 @@
 import { describe, expect, test } from "bun:test";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
-import { templateVariables } from "@plugins/tasks/plugins/automations/core";
+import {
+  renderPrompt,
+  templateVariables,
+} from "@plugins/tasks/plugins/automations/core";
 import {
   UPSTREAM_MERGE_PROMPT,
-  upstreamMergeInstructions,
+  upstreamMergeTitle,
   upstreamMergeVariables,
   type UpstreamUpdates,
 } from "./merge-prompt";
 
 const base: UpstreamUpdates = {
-  ref: "origin/main",
+  latest: "v2026.11.14",
+  current: "v2026.10.30",
   url: "https://github.com/equinai/equin",
-  count: 3,
-  newest: [
-    { sha: "1111111111111111111111111111111111111111", subject: "feat: a" },
-    { sha: "2222222222222222222222222222222222222222", subject: "fix: b" },
-    { sha: "3333333333333333333333333333333333333333", subject: "chore: c" },
-  ],
 };
 
-describe("upstreamMergeInstructions", () => {
-  test("names the gap, the ref and the remote's URL", () => {
-    const text = upstreamMergeInstructions(base);
-    expect(text).toContain("3 commits");
-    expect(text).toContain("origin/main");
+function rendered(d: UpstreamUpdates): string {
+  const r = renderPrompt(UPSTREAM_MERGE_PROMPT, {
+    ...upstreamMergeVariables(d),
+    pushPolicy: "**Wait.**",
+  });
+  if (!r.ok) throw new Error(`unfilled: ${r.unknown.join(", ")}`);
+  return r.text;
+}
+
+describe("upstreamMergeVariables", () => {
+  test("names the release, where this checkout stands, and the remote", () => {
+    const text = rendered(base);
+    expect(text).toContain("2026.11.14");
+    expect(text).toContain("is on 2026.10.30");
     expect(text).toContain(base.url);
   });
 
-  test("one commit reads as one commit", () => {
-    const text = upstreamMergeInstructions({
-      ...base,
-      count: 1,
-      newest: [base.newest[0]!],
-    });
-    expect(text).toContain("1 commit this checkout does not");
-    expect(text).not.toContain("1 commits");
+  test("a checkout holding no release says so", () => {
+    expect(rendered({ ...base, current: null })).toContain(
+      "holds no release yet",
+    );
   });
 
-  test("lists each commit by short sha and subject", () => {
-    const text = upstreamMergeInstructions(base);
-    for (const c of base.newest) {
-      expect(text).toContain(c.sha.slice(0, 9));
-      expect(text).toContain(c.subject);
-    }
-    // Only the newest are listed, so nothing claims there are more than there are.
-    expect(text).not.toContain("older");
+  test("merges the release tag, never upstream's main", () => {
+    expect(upstreamMergeVariables(base).ref).toBe("v2026.11.14");
+    expect(rendered(base)).not.toContain("/main");
   });
 
-  test("says how many it did not list when the list is capped", () => {
-    const text = upstreamMergeInstructions({ ...base, count: 250 });
-    expect(text).toContain("… and 247 older");
+  test("the title names the version", () => {
+    expect(upstreamMergeTitle(base)).toContain("2026.11.14");
   });
+});
 
-  test("carries the five steps, ending on do-not-push", () => {
-    const text = upstreamMergeInstructions(base);
+describe("UPSTREAM_MERGE_PROMPT", () => {
+  test("carries the five steps", () => {
+    const text = rendered(base);
     // The mechanical half is one command, not prose the agent re-derives.
     expect(text).toContain("./equin upstream merge");
     expect(text).toContain("./equin build");
     expect(text).toContain("build-status.json");
     for (const step of ["1.", "2.", "3.", "4.", "5."])
       expect(text).toContain(`\n${step} `);
-    expect(text).toContain("Do not push");
   });
 
   test("concludes the merge through the command, never a raw git commit", () => {
-    const text = upstreamMergeInstructions(base);
+    const text = rendered(base);
     // The repo's rule is that an agent never commits. `merge --continue` exists
     // so this prompt never has to carve an exception into it.
     expect(text).toContain("./equin upstream merge --continue");
@@ -72,30 +70,23 @@ describe("upstreamMergeInstructions", () => {
   });
 
   test("keeps the two conflict rules that decide whether to stop", () => {
-    const text = upstreamMergeInstructions(base);
-    // Generated files are re-derived, never hand-resolved…
+    const text = rendered(base);
     expect(text).toContain("Generated files re-derive themselves");
-    // …and a conflicted migration is a person's call.
     expect(text).toContain("conflicted migration");
   });
 
   test("explains the migration merge node, and when to stop on migrations", () => {
-    const text = upstreamMergeInstructions(base);
-    // The build writes a merge node; the agent must not mistake it for noise.
+    const text = rendered(base);
     expect(text).toContain("merge node");
     expect(text).toContain(`${LEGACY_IDS.migrationMarker}:snapshot id=`);
-    // Stop and report, verbatim, on either failure mode.
     expect(text).toContain("snapshot merge conflict");
     expect(text).toContain("migration-applies-clean");
     expect(text).toContain("verbatim");
-    // Published migrations are immutable.
     expect(text).toContain(
       "Never delete, rename or edit a file under\n   `plugins/database/plugins/migrations/data`",
     );
   });
-});
 
-describe("UPSTREAM_MERGE_PROMPT", () => {
   test("names exactly the variables the automation fills", () => {
     // `updates` and `ref` come from upstreamMergeVariables, `pushPolicy` from
     // the automation's Push setting — anything else would refuse to render.
@@ -105,7 +96,6 @@ describe("UPSTREAM_MERGE_PROMPT", () => {
   });
 
   test("leaves landing to the push policy", () => {
-    // Step 5 is the push policy; the template itself never decides it.
     expect(UPSTREAM_MERGE_PROMPT).not.toContain("Do not push");
     expect(UPSTREAM_MERGE_PROMPT).toContain("{{pushPolicy}}");
   });

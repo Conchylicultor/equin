@@ -11,13 +11,13 @@ never disagree about what "behind" means.
 
 ## `status`
 
-Fetches, then prints how many commits upstream has that local `main` does not,
-newest first. Read-only. Every arm exits 0 — "no upstream" (this checkout
-publishes to its own remote, or has none) and "up to date" are answers.
+Fetches upstream's main and release tags, then prints whether local `main`
+holds upstream's newest **release** (`v<YYYY.MM.DD>` tags, `plugins/upstream`)
+and which one it is on. Read-only. "No upstream", "no release yet" and "up to
+date" are answers and exit 0. Commits on upstream's main that no release
+carries are never reported.
 
-It fetches on every run. A count measured against the remote-tracking ref
-already on disk is as old as the last fetch, which is a number that looks
-current and is not.
+It fetches on every run. Tags on disk are as old as the last fetch.
 
 Not being able to REACH upstream exits 1, in plain words, with no stack and no
 CLI crash record — a laptop on a train is not an incident, and `process.exit`
@@ -25,8 +25,10 @@ before the throw is what keeps `run-cli`'s crash recorder out of it.
 
 ## `merge`
 
-Merges `<upstream>/main` into the branch this worktree is on, leaving conflicts
-in the tree. **This is the one sanctioned merge in this repo** — `CLAUDE.md`'s
+Merges upstream's newest **release tag** — never `<upstream>/main` — into the
+branch this worktree is on, leaving conflicts in the tree. It merges the tag's
+commit (`<tag>^{commit}`): merging an annotated tag by name always forces a
+merge commit, and a branch with nothing of its own should fast-forward. **This is the one sanctioned merge in this repo** — `CLAUDE.md`'s
 "always rebase, never merge" carves it out, because rebasing the user's own
 trunk onto upstream would replay their entire history on every update and
 rewrite `main` under every open worktree.

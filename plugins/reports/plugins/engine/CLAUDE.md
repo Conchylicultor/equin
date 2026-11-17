@@ -320,7 +320,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
 - Machine:
   - Uses: `infra/endpoints.implementMachine`
 - Cross-plugin:
-  - Imported by: 35 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 34 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×13
     - `conversations` ×5
     - `infra` ×4
@@ -332,7 +332,6 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `framework/cli/push`
     - `page/place/google`
     - `tasks/reports-investigation`
-    - `upstream`
 - Exemptions:
   - Exempts itself from:
     - `sink-safety/no-adhoc-file-sink` — `server/internal/crash-append.ts` (sanctioned)

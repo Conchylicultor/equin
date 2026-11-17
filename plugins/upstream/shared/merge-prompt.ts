@@ -1,58 +1,50 @@
-import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
+import {
+  LEGACY_IDS,
+  PRODUCT_NAME,
+} from "@plugins/framework/plugins/product-name/core";
 import { WORKTREES_DIR_DISPLAY } from "@plugins/infra/plugins/paths/plugins/display/core";
-import { renderPrompt } from "@plugins/tasks/plugins/automations/core";
+import { releaseVersion } from "@plugins/upstream/plugins/release/core";
 
 /** What the instructions need to name. A structural shape, so this module is a
- * pure function of plain data — no zod, no report row, no database. */
+ * pure function of plain data — no zod, no git, no database. */
 export interface UpstreamUpdates {
-  /** The remote-tracking ref the commits were counted against, e.g. `origin/main`. */
-  ref: string;
-  /** The URL that ref points at. */
+  /** Upstream's newest release tag, the one merged (`v2026.11.14`). */
+  latest: string;
+  /** The newest release local `main` holds, if any. */
+  current: string | null;
+  /** The upstream repository's URL. */
   url: string;
-  /** How many commits upstream holds that local `main` does not. */
-  count: number;
-  /** The newest of them, newest first — possibly fewer than `count`. */
-  newest: ReadonlyArray<{ sha: string; subject: string }>;
-}
-
-function commitLines(d: UpstreamUpdates): string {
-  const lines = d.newest.map((c) => `- \`${c.sha.slice(0, 9)}\` ${c.subject}`);
-  const shown = d.newest.length;
-  if (shown < d.count) lines.push(`- … and ${d.count - shown} older`);
-  return lines.join("\n");
 }
 
 /** The task title, whoever files it. */
 export function upstreamMergeTitle(d: UpstreamUpdates): string {
-  return `[upstream] ${d.count} new commit${d.count === 1 ? "" : "s"} on ${d.ref}`;
+  return `[upstream] Update to ${PRODUCT_NAME} ${releaseVersion(d.latest)}`;
 }
 
 /**
- * The template's variables for one set of updates — what the Upstream merges
- * automation fills its (editable) prompt with, and what the report's
- * Investigate fills the default one with.
+ * The template's variables for one release — what the Upstream merges
+ * automation fills its (editable) prompt with.
  */
 export function upstreamMergeVariables(d: UpstreamUpdates): {
   updates: string;
   ref: string;
 } {
+  const from =
+    d.current === null
+      ? "This checkout holds no release yet."
+      : `This checkout is on ${releaseVersion(d.current)}.`;
   return {
-    updates: `Upstream has ${d.count} commit${d.count === 1 ? "" : "s"} this checkout does not, on \`${d.ref}\` (${d.url}).
-
-Newest first:
-
-${commitLines(d)}`,
-    ref: d.ref,
+    updates: `Upstream (${d.url}) has released ${PRODUCT_NAME} ${releaseVersion(d.latest)}. ${from}`,
+    ref: d.latest,
   };
 }
 
 /**
  * The standing instructions of an upstream-merge task, as a template:
- * `{{updates}}` (the gap and its newest commits), `{{ref}}` (the
- * remote-tracking ref merged) and `{{pushPolicy}}` (what the agent may do with
- * the merged branch). The Upstream merges automation commits it as its config's
- * default `prompt`; Investigate on the report fills it with
- * {@link INVESTIGATE_PUSH_TEXT}.
+ * `{{updates}}` (the release and where this checkout stands), `{{ref}}` (the
+ * release tag merged) and `{{pushPolicy}}` (what the agent may do with the
+ * merged branch). The Upstream merges automation commits it as its config's
+ * default `prompt`.
  *
  * Fixed text, and deliberately short on judgement calls: the mechanical half is
  * one command (`./equin upstream merge`), so the agent never re-derives
@@ -62,10 +54,10 @@ ${commitLines(d)}`,
  */
 export const UPSTREAM_MERGE_PROMPT = `{{updates}}
 
-Bring them into THIS worktree. You own proving the merged tree works.
+Bring it into THIS worktree. You own proving the merged tree works.
 
-1. Run \`./equin upstream merge\` in this worktree. It fetches upstream and merges
-   \`{{ref}}\` into the branch you are on.
+1. Run \`./equin upstream merge\` in this worktree. It fetches upstream and merges its
+   newest release, the tag \`{{ref}}\`, into the branch you are on.
    This is the one sanctioned merge in this repo: rebasing the user's own trunk onto
    upstream would replay their entire history on every update and rewrite \`main\` under
    every open worktree.
@@ -102,23 +94,3 @@ Bring them into THIS worktree. You own proving the merged tree works.
 If the merge cannot be completed (a conflict you cannot resolve, a build that will not come
 up, a migration clash), do NOT push: leave the tree as it is, say so, and wait for
 instructions. Do not abandon the merge to make the tree look clean.`;
-
-/**
- * Step 5 of a task the user minted by pressing Investigate: they asked for the
- * merge, not for it to land — they land it themselves.
- */
-export const INVESTIGATE_PUSH_TEXT =
-  "**Wait. Do not push.** The user lands this.";
-
-/** The default template filled for the report's Investigate button. */
-export function upstreamMergeInstructions(d: UpstreamUpdates): string {
-  const rendered = renderPrompt(UPSTREAM_MERGE_PROMPT, {
-    ...upstreamMergeVariables(d),
-    pushPolicy: INVESTIGATE_PUSH_TEXT,
-  });
-  if (!rendered.ok)
-    throw new Error(
-      `upstream merge prompt names unfilled variables: ${rendered.unknown.join(", ")}`,
-    );
-  return rendered.text;
-}
