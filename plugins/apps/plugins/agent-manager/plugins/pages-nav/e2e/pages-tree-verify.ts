@@ -70,7 +70,7 @@ await withBrowser(async (h) => {
   // The page's own title bar leads with the way back: the same column returns
   // to the tree.
   const back = page.locator(
-    '[data-pane-id="page-detail"] button[aria-label="Back to pages"]',
+    '[data-pane-id="page-detail"] button[aria-label="Back"]',
   );
   console.log("back button count:", await back.count());
   await back.click();

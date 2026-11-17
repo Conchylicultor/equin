@@ -752,6 +752,27 @@ with an empty route.
 - Deeper in a route it's an ordinary pane.
 - A pane opened FROM the index still replaces it.
 
+### Navigator columns (`opensInPlace`)
+
+`opensInPlace: true` = a list borrowed as a column (the pages tree, the
+prototype gallery beside a conversation) whose job is to pick something and get
+out of the way: **what it opens takes its column**.
+
+- A plain right-push from it is a `swap` (`computeOpen`), so the list never
+  stands beside what it opened — the way an app's own navigator (its sidebar,
+  its index pane) never does. Callers keep writing `mode: "push"`.
+- ⌥-click still inserts beside it; a left-push, `root` and `append` are
+  untouched.
+- Explicit, never inferred: a list that is a master column (Tasks, a Debug
+  list) keeps its detail beside it, and a list that previews in its own pane
+  (the file browser's `;open`) never pushes at all.
+- It is its app's **navigator column** — at most one per app (registry sync
+  throws on a second). The way back is derived from it: a pane of that app
+  standing as the app's first column in another app's surface, with no
+  navigator column in the route, leads its header with the same **Back** a
+  full-pane child shows (`useReturnToNavigator`), swapping the navigator back.
+  No app hand-builds its own back button.
+
 ## Not yet implemented (deferred)
 
 - `keepalive` for heavy panes — switching slots remounts.

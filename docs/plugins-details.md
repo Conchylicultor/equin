@@ -7043,11 +7043,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PageDetail.UnderTitle` "backlinks" → `BacklinksUnderTitle`
               - `PageTree.RowActions` "delete" → `DeletePageAction`
               - `PageTree.RowActions` "add-below" → `AddPageBelowAction`
-            - Uses: 103 symbols — full list in [`plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md)
+            - Uses: 100 symbols — full list in [`plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md)
               - `primitives/css/ui-kit` ×9
-              - `primitives/pane` ×9
               - `page/editor` ×8
               - `primitives/data-view` ×8
+              - `primitives/pane` ×6
               - `infra/endpoints` ×4
               - `network/live/live-state` ×4
               - `page/page-reference` ×4

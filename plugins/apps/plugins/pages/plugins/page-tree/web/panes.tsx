@@ -48,7 +48,6 @@ import {
 import { TrashedPageView } from "./components/trashed-page";
 import { PageHeader } from "./components/page-header";
 import { PageBreadcrumb } from "./components/page-breadcrumb";
-import { BackToTreeButton } from "./components/back-to-tree-button";
 import { PageCover } from "./components/page-cover";
 import { PageDetail } from "./slots";
 import {
@@ -131,6 +130,11 @@ export const pagesTreePane = Pane.define({
   route: pagesTreeRoute,
   app: pagesApp,
   component: PagesTreeBody,
+  // A navigator column: a page opened from the tree (a row, a search result,
+  // New page) takes this column rather than stacking a third one beside the
+  // conversation. The page's header Back (the pane primitive's, derived from
+  // this flag) puts the tree back.
+  opensInPlace: true,
   // NO `titleOwner`: this is a nav column. `pageDetailPane` owns the tab title,
   // so opening a page from here titles the tab with the page.
 });
@@ -274,7 +278,6 @@ function PageDetailTitle(): ReactElement {
         gap="2xs"
         className={yieldClass("x")}
       >
-        <BackToTreeButton />
         <Text className="text-muted-foreground truncate line-through">
           {referent.data.title || "Untitled"}
         </Text>
@@ -349,11 +352,9 @@ function PageTitleTrail({
       direction="row"
       align="center"
       gap="2xs"
-      // The row yields: the button keeps its width and the trail beside it
-      // is what shortens when the column is narrow.
+      // The row yields: the trail is what shortens when the column is narrow.
       className={yieldClass("x")}
     >
-      <BackToTreeButton />
       <PageBreadcrumb pageId={pageId} leaf={leaf} />
     </Stack>
   );

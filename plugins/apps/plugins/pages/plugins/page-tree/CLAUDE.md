@@ -113,20 +113,15 @@ growing `Scroll` by `config/apps/pages/shell/sidebar.jsonc`.
 page means something different in each:
 
 - the **Pages app sidebar** is persistent chrome — it stays put whatever is
-  open — so a page opens as a column BESIDE it (`push`);
+  open — so a page opens as a column BESIDE it;
 - the **`pagesTreePane` column** (the tree opened next to a conversation in
-  another app) is a navigable surface, so activating a row navigates THAT
-  column to the page (`swap`), the way a file list moves its own column instead
-  of growing a third one.
+  another app) is declared `opensInPlace`, so the same `push` hands THAT
+  column to the page instead of growing a third one.
 
-The tree derives which host it is in from its own position — `useCurrentPane()
-=== pagesTreePane` — rather than being told through a context or a prop, so a
-new host cannot forget to declare it and the two hosts cannot disagree.
-
-The column that the page took over is put back by `BackToTreeButton`, at the
-head of the page's title bar. It paints only where this surface shows no tree
-of its own (not the Pages app, no tree column in the chain), asked of the live
-route each render rather than remembered from how the page was opened.
+The tree itself always pushes; the pane primitive decides
+(`primitives/pane` § Navigator columns). The way back is the primitive's too:
+the page's header leads with Back wherever it stands as the Pages app's first
+column in another app's surface with no tree column in the route.
 
 ## A block opened as a page
 
@@ -197,11 +192,11 @@ it, so an id means the same thing wherever it is clicked.
     - `PageDetail.UnderTitle` "backlinks" → `BacklinksUnderTitle`
     - `PageTree.RowActions` "delete" → `DeletePageAction`
     - `PageTree.RowActions` "add-below" → `AddPageBelowAction`
-  - Uses: 103 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 100 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×9
-    - `primitives/pane` ×9
     - `page/editor` ×8
     - `primitives/data-view` ×8
+    - `primitives/pane` ×6
     - `infra/endpoints` ×4
     - `network/live/live-state` ×4
     - `page/page-reference` ×4

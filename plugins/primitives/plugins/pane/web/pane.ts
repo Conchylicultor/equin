@@ -437,6 +437,24 @@ export interface PaneInternal {
    * index pane has none, so a reload resolves the same arrangement.
    */
   companion: boolean;
+  /**
+   * Declares this pane a NAVIGATOR COLUMN — a list borrowed as a column (the
+   * pages tree, the prototype gallery beside a conversation) whose job is to
+   * pick something and get out of the way: what it opens TAKES ITS COLUMN.
+   * A plain right-push from it is a `swap`, so the list never stands beside
+   * what it opened, the way an app's own navigator (its sidebar, its index
+   * pane) never does. ⌥-click still inserts beside it; a left-push, a
+   * `root` and an `append` are untouched. Explicit, never inferred: a list
+   * pane that is a master column (Tasks, a Debug list) keeps its detail
+   * beside it. Read by {@link computeOpen}.
+   *
+   * It is its app's navigator column — at most ONE per app (registry sync
+   * throws on a second) — so the way back is derived, not hand-built: a pane
+   * of that app standing as the app's first column in ANOTHER app's surface,
+   * with no navigator column in the route, leads its header with Back, which
+   * swaps the navigator back into its column (`useReturnToNavigator`).
+   */
+  opensInPlace: boolean;
   /** From `Pane.define({ expand })` — see {@link PaneExpand}. */
   expand?: PaneExpand;
 }
@@ -445,6 +463,9 @@ export interface PaneInternal {
 // pane.close / pane.expand / parseUrl read from it; nobody writes to it
 // outside the sync hook.
 const registry = new Map<string, PaneInternal>();
+// App id → its navigator column (the app's one `opensInPlace` pane), rebuilt
+// with `registry` by the registry sync.
+const navigatorColumns = new Map<string, PaneInternal>();
 
 // Reverse map from a pane's internal record back to its public PaneObject.
 // Populated by makePaneObject at define time. Lets callers that only hold a
@@ -2460,7 +2481,16 @@ export function computeOpen(
   // The second used to fall through to the right-push below — a mode that
   // silently did something else whenever the target happened not to be the
   // caller, which is exactly the kind of quiet mismatch a caller cannot see.
-  if (opts.mode === "swap") {
+  //
+  // A navigator column (`opensInPlace`) hands its column over on a plain
+  // right-push too: the list never stands beside what it opened. ⌥-click has
+  // already inserted above; a left-push keeps the caller by definition.
+  const swap =
+    opts.mode === "swap" ||
+    (opts.mode === "push" &&
+      opts.side !== "left" &&
+      registry.get(caller.paneId)?.opensInPlace === true);
+  if (swap) {
     // Only a same-pane swap can be a no-op: a different pane in the column
     // is a change however the params compare.
     if (
@@ -3083,6 +3113,17 @@ export interface PaneObject<
    */
   useBack: Hook<() => ((gesture: Gesture) => void) | null>;
   /**
+   * Hook: "back to my app's navigator", for a pane that took its app's
+   * navigator column (`opensInPlace`) over in ANOTHER app's surface — the
+   * prototype canvas where the gallery column stood beside a conversation.
+   * Swaps the navigator back into this pane's column. Null unless this pane
+   * is its app's first column in a surface of another app, the app has a
+   * navigator column (needing no params), and none is in the route already.
+   * Derived from the live route, so a pane reached any other way (a chip, a
+   * deep link) gets the same way back.
+   */
+  useReturnToNavigator: Hook<() => ((gesture: Gesture) => void) | null>;
+  /**
    * Hook: returns the bound {@link PromoteAction} for the current instance, or
    * null when there is nowhere to promote to (this pane is already the root of
    * its own app's route, or it is not in the route at all). Pass
@@ -3348,6 +3389,47 @@ function makePaneObject(
     }, [close, store, instanceId, route, navigator]);
   }
 
+  function useReturnToNavigator(): ((gesture: Gesture) => void) | null {
+    const store = usePaneStore();
+    const instanceId = useContext(PaneInstanceContext);
+    const route = useRouteSlots();
+    const surfaceAppId = useSurfaceAppId();
+    const navBoundary = useAppNavBoundary();
+    return useMemo(() => {
+      if (instanceId === undefined || internal.opensInPlace) return null;
+      // In its own app, the app's own navigator (sidebar, index) is the way.
+      if (surfaceAppId === undefined || surfaceAppId === internal.app.id)
+        return null;
+      const navigator = navigatorColumns.get(internal.app.id);
+      if (!navigator) return null;
+      if (segmentRequiredParamNames(navigator.segment).length > 0) return null;
+      const idx = route.findIndex((s) => s.instanceId === instanceId);
+      if (idx < 0) return null;
+      // Only the app's FIRST column stands where the navigator stood; one
+      // further right has its own app's pane to its left to close back to.
+      const sameAppLeft = route
+        .slice(0, idx)
+        .some((s) => registry.get(s.paneId)?.app.id === internal.app.id);
+      if (sameAppLeft) return null;
+      if (route.some((s) => s.paneId === navigator.id)) return null;
+      return (_gesture: Gesture) => {
+        const next = computeOpen(
+          store.getRoute(),
+          instanceId,
+          navigator,
+          NO_PARAMS,
+          { mode: "swap" },
+          store.getIndexParams(),
+        );
+        if (!next.changed) return;
+        const away = strandedOpenUrl(store.getBasePath(), next);
+        if (away === null)
+          store.setRoute(next.route, next.replace, next.landing?.index);
+        else (navBoundary ?? navigateApp)(away);
+      };
+    }, [store, instanceId, route, surfaceAppId, navBoundary]);
+  }
+
   /**
    * Promote = "show this pane on its own, in the app it belongs to".
    *
@@ -3515,6 +3597,7 @@ function makePaneObject(
     promote,
     useClose,
     useBack,
+    useReturnToNavigator,
     usePromote,
     useSetParams,
     useToggle,
@@ -3668,6 +3751,12 @@ type RouteDefineArgs<
    */
   companion?: boolean;
   /**
+   * Declares this pane a NAVIGATOR COLUMN: what it opens takes its column (a
+   * plain push from it is a `swap`). See {@link PaneInternal.opensInPlace}.
+   * Defaults to false.
+   */
+  opensInPlace?: boolean;
+  /**
    * Where Expand shows this pane's subject in full when that is another app's
    * view of it rather than this pane re-rooted. See {@link PaneExpand}.
    */
@@ -3768,6 +3857,7 @@ function define(
     optionDefaults: args.options ?? {},
     titleOwner: args.titleOwner ?? false,
     companion: args.companion ?? false,
+    opensInPlace: args.opensInPlace ?? false,
     ...(expand !== undefined ? { expand } : {}),
   };
 
@@ -3792,6 +3882,7 @@ export function useSyncPaneRegistry(): void {
   const contributions = PaneSlots.Register.useContributions();
   useRenderSync(() => {
     registry.clear();
+    navigatorColumns.clear();
     const seen = new Set<string>();
     // Maps a normalized segment pattern → the paneId that first claimed it, so a
     // second pane whose segment matches the same URLs is caught immediately.
@@ -3826,6 +3917,17 @@ export function useSyncPaneRegistry(): void {
           );
         }
         indexOwner.set(internal.app.id, internal.id);
+      }
+      if (internal.opensInPlace) {
+        const owner = navigatorColumns.get(internal.app.id);
+        if (owner) {
+          throw new Error(
+            `Navigator column collision: "${owner.id}" and "${internal.id}" both declare ` +
+              `opensInPlace for app "${internal.app.id}". An app has at most one navigator ` +
+              `column — the one Back returns its panes to. Drop opensInPlace from one of them.`,
+          );
+        }
+        navigatorColumns.set(internal.app.id, internal);
       }
       // Index/empty-segment panes (`""`, keyed-only `";page"`) resolve via
       // `appIndex`, not URL matching, so they match no URL and any number are

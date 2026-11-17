@@ -7,10 +7,7 @@ import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import {
-  useCurrentPane,
-  useOpenPane,
-} from "@plugins/primitives/plugins/pane/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
   DataView,
   defineDataView,
@@ -34,7 +31,7 @@ import { pageLinkTargets } from "@plugins/page/plugins/links/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
 import { usePageReferenceTint } from "@plugins/page/plugins/page-reference/web";
-import { pageDetailPane, pagesTreePane } from "../panes";
+import { pageDetailPane } from "../panes";
 import { createPageWithSeed } from "../internal/create-page-with-seed";
 import { PageTree } from "../slots";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -151,18 +148,10 @@ export function PagesSidebar() {
   const tintOf = usePageReferenceTint();
   const selectedId = pageDetailPane.useRouteEntry()?.params.pageId;
   const hasMarkers = PageTree.RowMarker.useContributions().length > 0;
-  // Where a page opens depends on WHICH host is showing this tree, and the tree
-  // can read that off its own position instead of being told:
-  //
-  //  - The Pages app's sidebar — persistent chrome that stays put whatever is
-  //    open — so the page opens as a column BESIDE it ("push").
-  //  - The `pagesTreePane` column, opened next to a conversation in another
-  //    app — a navigable surface, so activating a row navigates that column to
-  //    the page ("swap"), the way a file list moves its own column rather than
-  //    growing a third one. `PageBackToTreeAction` in the page's header puts
-  //    the tree back.
-  const inOwnColumn = useCurrentPane()?.id === pagesTreePane.id;
-  const openMode = inOwnColumn ? ("swap" as const) : ("push" as const);
+  // A page opens BESIDE the tree ("push"). In the Pages app the tree is the
+  // sidebar, so the page becomes the first column; as the `pagesTreePane`
+  // column (next to a conversation) the pane is `opensInPlace`, so the same
+  // push hands the column to the page — the primitive decides, not this list.
 
   // Plain literals (not the view children's options helpers) to respect
   // data-view's collection-consumer separation — consumers never import a view
@@ -215,7 +204,7 @@ export function PagesSidebar() {
   const creators = useMemo<CreateOption[]>(() => {
     const createRootPage = async () => {
       const id = await createPageWithSeed(fetchEndpoint, { parentId: null });
-      openPane(pageDetailPane, { pageId: id }, { mode: openMode });
+      openPane(pageDetailPane, { pageId: id }, { mode: "push" });
     };
     return [
       {
@@ -228,7 +217,7 @@ export function PagesSidebar() {
         views: ["pages"],
       },
     ];
-  }, [fetchEndpoint, openPane, openMode]);
+  }, [fetchEndpoint, openPane]);
 
   // The DataView's section headers ARE the sidebar chrome (no
   // SidebarPaneSection): every view instance stacks in config order under its
@@ -255,7 +244,7 @@ export function PagesSidebar() {
           creators={creators}
           selectedRowId={selectedId}
           rowActivation={(b) =>
-            openPane.to(pageDetailPane, { pageId: b.id }, { mode: openMode })
+            openPane.to(pageDetailPane, { pageId: b.id }, { mode: "push" })
           }
           hierarchy={{
             aliases: LINK_ALIASES,

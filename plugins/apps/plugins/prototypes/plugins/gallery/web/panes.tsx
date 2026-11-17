@@ -40,14 +40,17 @@ function PrototypesGalleryBody() {
  * manager's Prototypes button opens it next to the conversation. A pane of its
  * own because the gallery root is the app's index pane: it has no URL part of
  * its own, so as a column the URL would not name it (gone on reload). Its own
- * segment (`prototypes`) makes the column addressable; a card pushes the
- * canvas beyond it, as from the root.
+ * segment (`prototypes`) makes the column addressable; a card's canvas takes
+ * the column over (`opensInPlace`), as it replaces the root.
  */
 export const prototypesGalleryColumnPane = Pane.define({
   title: "Prototypes",
   route: prototypesGalleryColumnRoute,
   app: prototypesApp,
   component: PrototypesGalleryColumnBody,
+  // A navigator column: a card's canvas takes this column, as it replaces the
+  // gallery root in the app itself, rather than stacking a third column.
+  opensInPlace: true,
 });
 
 function PrototypesGalleryColumnBody() {

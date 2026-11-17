@@ -249,6 +249,7 @@ export function PaneChrome({
     if (isChromeGesture(e)) layoutCtx?.onDoubleClickHeader();
   };
   const doBack = pane.useBack();
+  const toNavigator = pane.useReturnToNavigator();
   const titleValue = useMemo<PaneTitleValue>(
     () => ({ pane: pane._internal, entry }),
     [pane, entry],
@@ -263,15 +264,22 @@ export function PaneChrome({
   // leading, like a browser's — not a × closing a column beside it. And a
   // same-app promote has nothing on screen to detach from (PromoteControl).
   const ancestorsHidden = layoutCtx?.ancestorsHidden === true;
+  // ONE Back, for both ways a pane stands where something it came from stood:
+  // painted alone, its parent is hidden (up to it); in columns, it took its
+  // app's navigator column over in another app's surface (swap it back).
+  const backAction = ancestorsHidden
+    ? chrome.close
+      ? doBack
+      : null
+    : toNavigator;
   // The header's leading controls: the surface's (sidebar toggle) and Back.
-  const back =
-    ancestorsHidden && chrome.close && doBack ? (
-      <PaneIconAction
-        label="Back"
-        icon={arrowBackIcon}
-        onClick={(e) => doBack(gestureOf(e))}
-      />
-    ) : null;
+  const back = backAction ? (
+    <PaneIconAction
+      label="Back"
+      icon={arrowBackIcon}
+      onClick={(e) => backAction(gestureOf(e))}
+    />
+  ) : null;
   const lead =
     showLeading || back !== null ? (
       <>
@@ -376,13 +384,7 @@ export function PaneChrome({
             >
               <ControlSizeProvider size="sm">
                 {showLeading && leadingControl}
-                {ancestorsHidden && chrome.close && doBack && (
-                  <PaneIconAction
-                    label="Back"
-                    icon={arrowBackIcon}
-                    onClick={(e) => doBack(gestureOf(e))}
-                  />
-                )}
+                {back}
                 <PaneTitleContext.Provider value={titleValue}>
                   {/* Each item is its own box (a hidden one leaves no gap). */}
                   <SlotItemLayout orientation="host-owned">
