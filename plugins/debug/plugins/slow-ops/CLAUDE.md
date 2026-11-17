@@ -197,6 +197,14 @@ only waited in the same cycle) and four client `update`s. Now:
   the item is recorded, aggregated and drawn on the Timeline like any other,
   but `incidentsFor` files no `slow-op` report for it — its kind
   (`slow-interaction`, `main-thread-stall`) already did, with a richer payload.
+- **A producer's evidence rides the report, not the row** (`evidence` on
+  `clientSlowOpSink`'s signal → the item → `RecordSlowOpInput` → the report
+  payload): a `main-thread` long frame of 1–5 s carries what the tab sampled
+  inside it and its heap (`reports/main-thread-stall/tab-evidence`), rendered
+  in the report's task. Never folded into `slow_ops`, never in the fingerprint
+  or message; a newer trip's payload replaces it. A batch body over 24 KB (one carrying
+  evidence can) goes without `keepalive`: Chrome refuses keepalive bodies
+  past 64 KB in flight.
 - **Only a reader's wait is the gate's** (`isReaderWait`,
   resolve-threshold.ts). A wait whose one waiter is a `bg` span (a warm-up, a
   watcher pass, a build's slot holder) is declined, so the recorder hands it
@@ -427,7 +435,7 @@ bar).
     - `slow-ops.ops:rows` (keyed, point)
   - Routes: `POST /api/slow-ops/client`
 - Core:
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×3
     - `infra/runtime-profiler` ×3
     - `packages/list-bound` ×3
@@ -443,6 +451,7 @@ bar).
     - `infra/entities.entityRef`
     - `infra/host/contention.ContentionSnapshotSchema`
     - `primitives/pane.defineRoute`
+    - `reports/main-thread-stall/tab-evidence.TabEvidenceSchema`
   - Exports (types):
     - `MeasureStat`
     - `SlowOp`
@@ -480,7 +489,9 @@ bar).
     - `VARIANT_CAP`
     - `VariantBreakdownSchema`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/color-palette --muted-foreground`
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/font-family --font-mono`
   - Imported by:
     - `debug/boot-monitor`
     - `debug/health-monitor`

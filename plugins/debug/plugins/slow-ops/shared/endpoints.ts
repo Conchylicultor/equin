@@ -3,6 +3,7 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { ClientBootSectionSchema } from "@plugins/debug/plugins/trace/plugins/client-boot/core";
 import { MAX_CLIENT_SLOW_OP_ITEMS } from "../core";
 import { CallerRefSchema } from "@plugins/debug/plugins/slow-ops/plugins/sink/core";
+import { TabEvidenceSchema } from "@plugins/reports/plugins/main-thread-stall/plugins/tab-evidence/core";
 
 // The wait layer an `element` settle charges its transport bring-up to: the
 // notifications socket was not ready when the resource mounted.
@@ -88,6 +89,11 @@ export const SlowOpClientItemSchema = z.object({
   // `reportedBy`): the item is recorded — aggregated, on the Timeline — but
   // files no `slow-op` report of its own. Absent for every other signal.
   reportedBy: z.string().optional(),
+  // What the producing tab's own thread ran inside the op (clientSlowOpSink's
+  // `evidence`: a long frame's sampled stacks and heap). Rides to the op's
+  // report payload only — never the aggregate row. Bounded by the profile's
+  // own caps (top stacks, frames per stack, string length).
+  evidence: TabEvidenceSchema.optional(),
   // Additive, backward-compatible client evidence for the `page-load` signal
   // (absent for the others and older clients): the browser's own boot
   // decomposition (perfs/boot-trace), trimmed by toClientBootSection so the

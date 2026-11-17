@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TabEvidenceSchema } from "@plugins/reports/plugins/main-thread-stall/plugins/tab-evidence/core";
 
 // The jsonb payload for the "slow-op" report. The report fingerprint keys on
 // (operationKind, operation), so each distinct slow op owns its own report; the
@@ -38,6 +39,11 @@ export const SlowOpReportPayloadSchema = z.object({
   // the code a visitor does; the report row's userAgent names it. Absent: a
   // person's browser, a server span, or a report filed before the mark.
   automated: z.literal(true).optional(),
+  // What the tab's own thread ran inside this trip — its sampled JS stacks and
+  // heap around it — when the producer had them (a `main-thread` long frame
+  // the tab lived through). LoAF names only a frame's entry point; this is
+  // what ran beneath it. Evidence only: never the fingerprint or message.
+  evidence: TabEvidenceSchema.optional(),
   // Present when this op tripped beside others of its kind in one batch — one
   // incident, which rang the bell once while each op kept its own report:
   // `count` is every distinct op of the batch, `operations` its slowest few

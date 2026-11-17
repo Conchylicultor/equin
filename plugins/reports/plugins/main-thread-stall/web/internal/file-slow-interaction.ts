@@ -5,8 +5,8 @@ import {
   interactionTargetLabel,
   slowInteractionSummary,
   type SlowInteractionDraft,
-  type StallStacks,
 } from "../../core";
+import type { StallStacks } from "@plugins/reports/plugins/main-thread-stall/plugins/tab-evidence/core";
 import { INTERACTION, type InteractionVerdict } from "./interaction-judge";
 
 // The slow-op every slow interaction lands as: one row per target (what was

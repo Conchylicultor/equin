@@ -302,7 +302,10 @@ export function installStallWatch(readTab: () => StallTab): StallWatch {
     )
       // A slow interaction overlapping it owns it (it names what was clicked);
       // otherwise it is the app + route's `main-thread` slow-op.
-      interactions.deferSlowFrame(frame, () => fileSlowFrame(frame, tab));
+      interactions.deferSlowFrame(
+        frame,
+        () => void fileSlowFrame(frame, tab, evidence),
+      );
     fallback?.onFrame(frame, tab, () => interactions.beganIn(frame));
   }
 

@@ -3,7 +3,7 @@
 // stall's window; everything about what the report carries is decided (and
 // tested, stack-profile.test.ts) here.
 
-import type { StallStacks } from "../../core";
+import type { StallStacks } from "@plugins/reports/plugins/main-thread-stall/plugins/tab-evidence/core";
 import { STALL } from "./constants";
 
 /** The JS Self-Profiling API's trace (https://wicg.github.io/js-self-profiling/#the-profilertrace-dictionary). */

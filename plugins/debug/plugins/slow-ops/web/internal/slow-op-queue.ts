@@ -70,6 +70,13 @@ let dropped = 0;
 const SLOW_OP_RETRY = { retries: 6, backoffMs: 500 };
 
 /**
+ * The largest batch body sent with `keepalive`: under Chrome's 64 KB budget
+ * for every keepalive body in flight, with room for the page's other beacons
+ * (client logs, reports).
+ */
+const KEEPALIVE_BODY_MAX = 24_000;
+
+/**
  * Queue one item. With `window`, the item is judged against the page's pauses
  * inside it at the flush (and stamped `endedAt` = its end, so the server can
  * place it — and take any machine sleep off it).
@@ -158,19 +165,24 @@ async function flush(departing = false): Promise<void> {
     });
     if (items.length === 0) continue;
     const carried = dropped;
+    const body = {
+      items,
+      ...(carried > 0 ? { dropped: carried } : {}),
+      // A browser under automation (the agent browser, an e2e run) runs the
+      // code a visitor does, so its signals are recorded and reported like
+      // any other — only marked, so a report says who saw it.
+      ...(AUTOMATED_BROWSER ? { automated: true } : {}),
+    };
     await fetchEndpoint(
       submitClientSlowOp,
       {},
       {
-        body: {
-          items,
-          ...(carried > 0 ? { dropped: carried } : {}),
-          // A browser under automation (the agent browser, an e2e run) runs the
-          // code a visitor does, so its signals are recorded and reported like
-          // any other — only marked, so a report says who saw it.
-          ...(AUTOMATED_BROWSER ? { automated: true } : {}),
-        },
-        keepalive: true,
+        body,
+        // Chrome refuses a keepalive request once the keepalive bodies in
+        // flight pass 64 KB (a TypeError, retried in vain): a batch carrying a
+        // long frame's sampled stacks (`evidence`, up to ~40 KB) can. Such a
+        // batch goes as a plain request — lost only if the page unloads under it.
+        keepalive: JSON.stringify(body).length <= KEEPALIVE_BODY_MAX,
         retry: SLOW_OP_RETRY,
         // Passive telemetry: a failed beacon must never toast or recurse into
         // the report path. Once the retries run out it still rejects — a

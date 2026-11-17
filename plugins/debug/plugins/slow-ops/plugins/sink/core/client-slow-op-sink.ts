@@ -1,4 +1,5 @@
 import { defineObservationSink } from "@plugins/primitives/plugins/report-sink/core";
+import type { TabEvidence } from "@plugins/reports/plugins/main-thread-stall/plugins/tab-evidence/core";
 import type { CallerRef } from "./caller-ref";
 
 /**
@@ -17,6 +18,10 @@ import type { CallerRef } from "./caller-ref";
  * slow interaction, a main-thread stall — each with its own richer payload):
  * the op is still recorded and drawn, but files no `slow-op` report, so one
  * cause rings once. Omitted ⇒ the op files its own `slow-op` report.
+ *
+ * `evidence` is what the producing tab's own thread ran inside the op (its
+ * sampled JS stacks and heap — a long frame's): carried to the op's `slow-op`
+ * report only, never the aggregate row, the fingerprint or the message.
  */
 export interface ClientSlowOpSignal {
   operationKind: string;
@@ -28,6 +33,7 @@ export interface ClientSlowOpSignal {
   detail?: { variant?: string };
   endedAt?: number;
   reportedBy?: string;
+  evidence?: TabEvidence;
 }
 
 /**

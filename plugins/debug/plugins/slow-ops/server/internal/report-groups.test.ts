@@ -17,6 +17,31 @@ const item = (
 });
 
 describe("incidentsFor", () => {
+  test("a tab's evidence rides the payload, never the message", () => {
+    const evidence = {
+      stacks: {
+        kind: "sampled" as const,
+        sampleIntervalMs: 20,
+        sampledMs: 1680,
+        noJsMs: 40,
+        truncated: false,
+        stacks: [
+          { ms: 1600, samples: 80, frames: ["commitInPhase (a.js:1:2)"] },
+        ],
+        topSelf: [{ frame: "commitInPhase (a.js:1:2)", ms: 1600 }],
+      },
+      memory: { kind: "unavailable" as const, reason: "no heap" },
+    };
+    const [incident] = incidentsFor([
+      item("pages pages-tree", 1698, {
+        operationKind: "main-thread",
+        evidence,
+      }),
+    ]);
+    expect(incident![0]!.data.evidence).toEqual(evidence);
+    expect(incident![0]!.message).not.toContain("commitInPhase");
+  });
+
   test("an automated browser's op is reported in full, marked, with its User-Agent", () => {
     const ua =
       "Mozilla/5.0 (Macintosh) AppleWebKit/537.36 HeadlessChrome/141.0";

@@ -7245,6 +7245,10 @@
       "name": "@equin/plugin-reports-main-thread-stall",
       "version": "0.0.1",
     },
+    "plugins/reports/plugins/main-thread-stall/plugins/tab-evidence": {
+      "name": "@equin/plugin-reports-main-thread-stall-tab-evidence",
+      "version": "0.0.1",
+    },
     "plugins/reports/plugins/mutation-errors": {
       "name": "@equin/plugin-reports-mutation-errors",
       "version": "0.0.1",
@@ -11662,6 +11666,8 @@
     "@equin/plugin-reports-live-state-stale-drop": ["@equin/plugin-reports-live-state-stale-drop@workspace:plugins/reports/plugins/live-state-stale-drop"],
 
     "@equin/plugin-reports-main-thread-stall": ["@equin/plugin-reports-main-thread-stall@workspace:plugins/reports/plugins/main-thread-stall"],
+
+    "@equin/plugin-reports-main-thread-stall-tab-evidence": ["@equin/plugin-reports-main-thread-stall-tab-evidence@workspace:plugins/reports/plugins/main-thread-stall/plugins/tab-evidence"],
 
     "@equin/plugin-reports-mutation-errors": ["@equin/plugin-reports-mutation-errors@workspace:plugins/reports/plugins/mutation-errors"],
 

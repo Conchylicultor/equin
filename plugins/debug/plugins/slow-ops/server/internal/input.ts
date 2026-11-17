@@ -5,6 +5,7 @@ import type {
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import type { ReportSource } from "@plugins/reports/core";
 import type { CallerRef } from "@plugins/debug/plugins/slow-ops/plugins/sink/core";
+import type { TabEvidence } from "@plugins/reports/plugins/main-thread-stall/plugins/tab-evidence/core";
 
 // The only report sources a slow-op originates from — narrowed from the
 // canonical ReportSource union (now in reports/core), so this stays a checked
@@ -67,6 +68,10 @@ export interface RecordSlowOpInput {
   // a richer payload — `slow-interaction`, `main-thread-stall`): recorded and
   // markered like any op, but `incidentsFor` files no `slow-op` report for it.
   reportedBy?: string;
+  // What the producing tab's own thread ran inside the op (a client long
+  // frame's sampled stacks and heap). Report payload only: the recorder never
+  // folds it into the row, and the fingerprint and message never read it.
+  evidence?: TabEvidence;
   // Who saw it, for a client signal: the browser's User-Agent (from the
   // beacon's request) and whether it was driven by automation (the agent
   // browser, an e2e run — `navigator.webdriver`). A mark only: an automated

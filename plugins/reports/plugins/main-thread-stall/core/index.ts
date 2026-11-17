@@ -6,7 +6,6 @@ export {
   StallFrameSchema,
   StallFrameScriptSchema,
   StallInteractionSchema,
-  StallStacksSchema,
   StallTabSchema,
   mainThreadStallFingerprint,
   mainThreadStallSummary,
@@ -18,9 +17,6 @@ export type {
   StallFrame,
   StallFrameScript,
   StallInteraction,
-  StallStack,
-  StallStacks,
-  StallMemory,
   StallTab,
   TaskMark,
 } from "./main-thread-stall-kind";

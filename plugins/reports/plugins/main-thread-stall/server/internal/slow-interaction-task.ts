@@ -6,7 +6,7 @@ import {
   slowInteractionSummary,
   type SlowInteractionPayload,
 } from "../../core";
-import { stacksSection } from "./stacks-section";
+import { stacksSection } from "@plugins/reports/plugins/main-thread-stall/plugins/tab-evidence/core";
 
 // A slow control is a standing bug, not news each time it is clicked.
 export const SLOW_INTERACTION_NOTIF_COOLDOWN_MS = 30 * 60 * 1000;

@@ -35,6 +35,15 @@ export function SlowOpKindView({ report }: { report: Report }) {
       <span className="text-muted-foreground">
         (threshold {Math.round(d.thresholdMs)}ms)
       </span>
+      {d.evidence?.stacks.kind === "sampled" &&
+        d.evidence.stacks.topSelf[0] && (
+          <span
+            className="truncate font-mono"
+            title={`sampled: ${d.evidence.stacks.topSelf[0].ms} ms self`}
+          >
+            {d.evidence.stacks.topSelf[0].frame}
+          </span>
+        )}
       {d.traceId && <TraceChip traceId={d.traceId} />}
     </Inline>
   );

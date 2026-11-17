@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-reports-main-thread-stall-tab-evidence",
+  "private": true,
+  "version": "0.0.1",
+  "description": "What a browser tab's own thread ran over a window, as evidence a report carries: the JS stacks its rolling JS Self-Profiling trace sampled (StallStacks) and its JS heap around it (StallMemory), with the markdown sections a task renders them as. Never identity. A leaf, so slow-ops (whose sink main-thread-stall feeds) can carry it on a `main-thread` slow-op report without a cycle."
+}

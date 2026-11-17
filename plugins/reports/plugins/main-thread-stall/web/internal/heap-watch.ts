@@ -1,4 +1,5 @@
-import type { MainThreadStallDraft, StallMemory } from "../../core";
+import type { StallMemory } from "@plugins/reports/plugins/main-thread-stall/plugins/tab-evidence/core";
+import type { MainThreadStallDraft } from "../../core";
 import { STALL } from "./constants";
 
 // The tab's JS heap around a stall. A sampled profile that saw no JS through a
@@ -26,6 +27,11 @@ export interface HeapWatch {
   pulse(): void;
   /** The heap around a stall this tab is filing (its own, recovered — else why not). */
   memoryFor(draft: MainThreadStallDraft, ownTabId: string): StallMemory;
+  /**
+   * The heap around a long frame this tab ran and lived through (`startedAt`,
+   * epoch ms — exact, from its LoAF entry): the last reading before it, and now.
+   */
+  memoryAround(window: { startedAt: number }): StallMemory;
 }
 
 interface MemoryInfo {
@@ -42,6 +48,27 @@ const mb = (bytes: number): number => Math.round(bytes / 1_000_000);
 
 export function installHeapWatch(): HeapWatch {
   const readings: Reading[] = [];
+  /** The heap now, and the last reading taken by `beforeBy` (epoch ms). */
+  const measure = (beforeBy: number, startedAt: number): StallMemory => {
+    const m = memoryInfo();
+    if (!m)
+      return {
+        kind: "unavailable",
+        reason:
+          "this browser exposes no JS heap size (`performance.memory`: Chromium only)",
+      };
+    const before = readings.findLast((r) => r.at <= beforeBy);
+    return {
+      kind: "measured",
+      beforeMb: before?.usedMb ?? null,
+      beforeAgoMs:
+        before === undefined
+          ? null
+          : Math.max(0, Math.round(startedAt - before.at)),
+      afterMb: mb(m.usedJSHeapSize),
+      limitMb: mb(m.jsHeapSizeLimit),
+    };
+  };
   return {
     pulse() {
       const m = memoryInfo();
@@ -61,29 +88,15 @@ export function installHeapWatch(): HeapWatch {
           reason:
             "filed by another tab: only the stalled tab can read its own heap",
         };
-      const m = memoryInfo();
-      if (!m)
-        return {
-          kind: "unavailable",
-          reason:
-            "this browser exposes no JS heap size (`performance.memory`: Chromium only)",
-        };
       // The stall began at the last pong, read just before it; no reading
       // happens inside a freeze (≥ REPORT_MIN_MS), so one within a ping of its
       // start is from before it.
-      const before = readings.findLast(
-        (r) => r.at <= draft.startedAt + STALL.PING_MS,
-      );
-      return {
-        kind: "measured",
-        beforeMb: before?.usedMb ?? null,
-        beforeAgoMs:
-          before === undefined
-            ? null
-            : Math.max(0, Math.round(draft.startedAt - before.at)),
-        afterMb: mb(m.usedJSHeapSize),
-        limitMb: mb(m.jsHeapSizeLimit),
-      };
+      return measure(draft.startedAt + STALL.PING_MS, draft.startedAt);
+    },
+    memoryAround(window) {
+      // A frame's start is its own (LoAF), not a pong's: a reading at or
+      // before it is from before it.
+      return measure(window.startedAt, window.startedAt);
     },
   };
 }

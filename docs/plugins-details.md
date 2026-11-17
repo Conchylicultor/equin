@@ -28166,7 +28166,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `slow-ops.ops:rows` (keyed, point)
         - Routes: `POST /api/slow-ops/client`
       - Core:
-        - Uses: 23 symbols — full list in [`plugins/debug/plugins/slow-ops/REFERENCE.md`](../plugins/debug/plugins/slow-ops/REFERENCE.md)
+        - Uses: 24 symbols — full list in [`plugins/debug/plugins/slow-ops/REFERENCE.md`](../plugins/debug/plugins/slow-ops/REFERENCE.md)
           - `fields` ×3
           - `infra/runtime-profiler` ×3
           - `packages/list-bound` ×3
@@ -28182,6 +28182,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/entities.entityRef`
           - `infra/host/contention.ContentionSnapshotSchema`
           - `primitives/pane.defineRoute`
+          - `reports/main-thread-stall/tab-evidence.TabEvidenceSchema`
         - Exports (types):
           - `MeasureStat`
           - `SlowOp`
@@ -28219,7 +28220,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `VARIANT_CAP`
           - `VariantBreakdownSchema`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/color-palette --muted-foreground`
+        - Uses tokens:
+          - `ui/tokens/color-palette --muted-foreground`
+          - `ui/tokens/font-family --font-mono`
         - Imported by:
           - `debug/boot-monitor`
           - `debug/health-monitor`
@@ -59118,12 +59121,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `report-kind` "main-thread-stall"
           - `report-kind` "slow-interaction"
         - Uses: `reports.ReportKind`
-      - Cross-plugin:
-        - Uses tokens:
-          - `ui/tokens/color-palette --muted-foreground`
-          - `ui/tokens/font-family --font-mono`
-        - Imported by: `apps/deploy/site-reports/import`
       - Core:
+        - Uses:
+          - `reports/main-thread-stall/tab-evidence.StallMemorySchema`
+          - `reports/main-thread-stall/tab-evidence.StallStacksSchema`
         - Exports (types):
           - `InteractionBreakdown`
           - `InteractionTarget`
@@ -59135,9 +59136,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `StallFrame`
           - `StallFrameScript`
           - `StallInteraction`
-          - `StallMemory`
-          - `StallStack`
-          - `StallStacks`
           - `StallTab`
           - `TaskMark`
         - Exports (values):
@@ -59158,8 +59156,32 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `StallFrameSchema`
           - `StallFrameScriptSchema`
           - `StallInteractionSchema`
-          - `StallStacksSchema`
           - `StallTabSchema`
+      - Cross-plugin:
+        - Uses tokens:
+          - `ui/tokens/color-palette --muted-foreground`
+          - `ui/tokens/font-family --font-mono`
+        - Imported by: `apps/deploy/site-reports/import`
+      - Plugins:
+        - **`tab-evidence`** — What a browser tab's own thread ran over a window, as evidence a report carries: the JS stacks its rolling JS Self-Profiling trace sampled (StallStacks) and its JS heap around it (StallMemory), with the markdown sections a task renders them as. Never identity. A leaf, so slow-ops (whose sink main-thread-stall feeds) can carry it on a `main-thread` slow-op report without a cycle.
+          - Cross-plugin:
+            - Imported by:
+              - `debug/slow-ops`
+              - `reports/main-thread-stall`
+          - Core:
+            - Exports (types):
+              - `EvidenceSubject`
+              - `StallMemory`
+              - `StallStack`
+              - `StallStacks`
+              - `TabEvidence`
+            - Exports (values):
+              - `memorySection`
+              - `stacksSection`
+              - `StallMemorySchema`
+              - `StallStackSchema`
+              - `StallStacksSchema`
+              - `TabEvidenceSchema`
     - **`mutation-errors`** — Warning toast and persistent notification for unhandled TanStack Query mutation errors.
       - Web:
         - Contributes: `Core.Root` → `MutationErrorWatcher`
@@ -66269,11 +66291,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `FontFamilyTokenValues`
             - Exports (values): `fontFamilyGroup`
           - Cross-plugin:
-            - Tokens used by: 157 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
+            - Tokens used by: 158 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
               - `conversations` ×39
               - `apps` ×25
               - `plugin-meta` ×23
-              - `debug` ×19
+              - `debug` ×20
               - `primitives` ×14
               - `reports` ×7
               - `tasks` ×5

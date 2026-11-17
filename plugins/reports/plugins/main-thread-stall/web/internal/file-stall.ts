@@ -10,6 +10,7 @@ import {
 import { STALL } from "./constants";
 import { coarseClient } from "./coarse-client";
 import { topFunction } from "./stall-machine";
+import type { TabEvidence } from "@plugins/reports/plugins/main-thread-stall/plugins/tab-evidence/core";
 import type { HeapWatch } from "./heap-watch";
 import type { StallProfiler } from "./stall-profiler";
 
@@ -25,6 +26,9 @@ function emitSlowOp(opts: {
   topFunction: string | null;
   // A filed stall is alerted by its own `main-thread-stall` report.
   reportedBy?: "main-thread-stall";
+  // What the tab's own thread ran (a long frame it filed): carried to the
+  // op's `slow-op` report as evidence, never its identity.
+  evidence?: TabEvidence;
 }): void {
   clientSlowOpSink.emit({
     operationKind: OPERATION_KIND,
@@ -35,6 +39,7 @@ function emitSlowOp(opts: {
     detail: { variant: opts.topFunction ?? "unattributed" },
     endedAt: Math.round(opts.endedAt),
     ...(opts.reportedBy ? { reportedBy: opts.reportedBy } : {}),
+    ...(opts.evidence ? { evidence: opts.evidence } : {}),
   });
 }
 
@@ -79,12 +84,30 @@ export async function fileStall(
   return res !== null;
 }
 
-/** A recovered long frame under the report bar: a slow-op only, never a report. */
-export function fileSlowFrame(frame: StallFrame, tab: StallTab): void {
+/**
+ * A recovered long frame under the stall bar: no `main-thread-stall` report,
+ * only its `main-thread` slow-op — whose own `slow-op` report then carries
+ * what the tab sampled inside the frame and its heap around it (LoAF names
+ * only the frame's entry point: a `ResizeObserverCallback`, a port handler).
+ * The tab ran the frame and lived through it, so its own profile covers it.
+ */
+export async function fileSlowFrame(
+  frame: StallFrame,
+  tab: StallTab,
+  evidence: { profiler: StallProfiler; heap: HeapWatch },
+): Promise<void> {
+  const window = {
+    startedAt: frame.startedAt,
+    endedAt: frame.startedAt + frame.durationMs,
+  };
   emitSlowOp({
     tab,
     durationMs: frame.durationMs,
-    endedAt: frame.startedAt + frame.durationMs,
+    endedAt: window.endedAt,
     topFunction: topFunction([frame]),
+    evidence: {
+      stacks: await evidence.profiler.stacksIn(window),
+      memory: evidence.heap.memoryAround(window),
+    },
   });
 }

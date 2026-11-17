@@ -1,5 +1,6 @@
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
-import type { MainThreadStallDraft, StallStacks } from "../../core";
+import type { StallStacks } from "@plugins/reports/plugins/main-thread-stall/plugins/tab-evidence/core";
+import type { MainThreadStallDraft } from "../../core";
 import { LOG_CHANNEL } from "./log-channel";
 import {
   reduceStallStacks,

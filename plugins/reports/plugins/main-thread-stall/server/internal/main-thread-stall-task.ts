@@ -8,7 +8,10 @@ import {
   type StallFrame,
   type TaskMark,
 } from "../../core";
-import { stacksSection } from "./stacks-section";
+import {
+  memorySection,
+  stacksSection,
+} from "@plugins/reports/plugins/main-thread-stall/plugins/tab-evidence/core";
 
 // A recurring freeze on the same screen is a standing bug, not news each time:
 // re-alert the bell at most every 30 min (as the server event-loop stall does).
@@ -50,33 +53,6 @@ function markLine(k: TaskMark, stallStartedAt: number): string {
   const offset = (k.at - stallStartedAt) / 1000;
   const at = `${offset < 0 ? "−" : "+"}${Math.abs(offset).toFixed(1)} s`;
   return `${at} — \`${k.source}\` \`${k.what}\` (${k.detail})`;
-}
-
-/** The stalled tab's JS heap just before and right after the freeze. */
-function memorySection(d: MainThreadStallPayload): string[] {
-  const m = d.memory;
-  const lines = ["**JS heap around the stall**"];
-  if (m.kind === "unavailable") {
-    lines.push(`Not available: ${m.reason}.`);
-    return lines;
-  }
-  const before =
-    m.beforeMb === null
-      ? "no reading before it"
-      : `${m.beforeMb} MB${m.beforeAgoMs !== null && m.beforeAgoMs > 1500 ? ` (${(m.beforeAgoMs / 1000).toFixed(1)} s before it began)` : ""}`;
-  lines.push(
-    `In use before: **${before}** · after: **${m.afterMb} MB** · heap limit: **${m.limitMb} MB**.`,
-  );
-  const peak = Math.max(m.beforeMb ?? 0, m.afterMb);
-  if (peak >= m.limitMb * 0.75)
-    lines.push(
-      `The heap was at ${Math.round((peak / m.limitMb) * 100)}% of its limit: V8 collecting garbage over and over near its ceiling stops the thread with no JS on the stack. Find what holds the memory (a leak growing over the visit, or one huge allocation), not the task it froze in.`,
-    );
-  else
-    lines.push(
-      "Far from its limit: not a collection near the ceiling. A stall with no visible JS was then the renderer not scheduled (the machine short of CPU, or swapping), or JS the profiler may not show.",
-    );
-  return lines;
 }
 
 function renderDescription(row: ReportRow, d: MainThreadStallPayload): string {
@@ -154,7 +130,7 @@ function renderDescription(row: ReportRow, d: MainThreadStallPayload): string {
   lines.push("");
   lines.push(...stacksSection(d.stacks, d.durationMs, "stall"));
   lines.push("");
-  lines.push(...memorySection(d));
+  lines.push(...memorySection(d.memory, "stall"));
   lines.push("");
   lines.push("**The task it froze in**");
   if (d.frozenIn) {

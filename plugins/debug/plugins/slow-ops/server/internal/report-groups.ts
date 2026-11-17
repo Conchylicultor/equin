@@ -88,6 +88,9 @@ function payloadOf(input: RecordSlowOpInput): SlowOpReportPayload {
     ...(input.automated === true && { automated: true }),
     // Optional link to the coherent-instant trace captured for this trip.
     ...(input.traceId !== undefined && { traceId: input.traceId }),
+    // What the tab's thread ran inside this trip (a long frame's stacks and
+    // heap). Evidence: the fingerprint keys on kind + operation only.
+    ...(input.evidence !== undefined && { evidence: input.evidence }),
   };
 }
 

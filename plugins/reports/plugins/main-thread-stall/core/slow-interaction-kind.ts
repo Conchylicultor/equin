@@ -6,7 +6,8 @@ import {
   interactionTargetLabel,
   InteractionTargetSchema,
 } from "./interaction-target";
-import { StallFrameSchema, StallStacksSchema } from "./main-thread-stall-kind";
+import { StallStacksSchema } from "@plugins/reports/plugins/main-thread-stall/plugins/tab-evidence/core";
+import { StallFrameSchema } from "./main-thread-stall-kind";
 
 // The `slow-interaction` report payload: a click, tap or key press whose next
 // paint came late — the delay the user felt, measured by the browser's Event

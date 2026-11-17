@@ -41,6 +41,23 @@ const draft = (
   }) as MainThreadStallDraft;
 
 describe("installHeapWatch", () => {
+  test("around a long frame: the last reading at or before its start, and now", () => {
+    const w = installHeapWatch();
+    heapAt(T0 + 1_000, 300);
+    w.pulse();
+    // A reading after the frame began is not "before" it.
+    heapAt(T0 + 2_500, 320);
+    w.pulse();
+    heapAt(T0 + 5_000, 310);
+    expect(w.memoryAround({ startedAt: T0 + 2_000 })).toEqual({
+      kind: "measured",
+      beforeMb: 300,
+      beforeAgoMs: 1_000,
+      afterMb: 310,
+      limitMb: 4_000,
+    });
+  });
+
   test("the heap at the last pulse before the stall, and now", () => {
     const w = installHeapWatch();
     heapAt(T0 + 1_000, 3_500);

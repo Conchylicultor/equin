@@ -9,6 +9,10 @@ import {
 } from "../../core";
 import { TRANSPORT_LAYER } from "../../shared/endpoints";
 import { describeWaits } from "./wait-layers";
+import {
+  memorySection,
+  stacksSection,
+} from "@plugins/reports/plugins/main-thread-stall/plugins/tab-evidence/core";
 
 // The slow-op report kind. Dedups per distinct `${operationKind}:${operation}`,
 // so each slow operation gets its own report pointing straight at the offending op
@@ -121,6 +125,11 @@ function renderDescription(row: ReportRow, d: SlowOpReportPayload): string {
   }
   const waitLines = describeWaits(d);
   if (waitLines.length > 0) lines.push("", ...waitLines);
+  if (d.evidence) {
+    // A long frame the tab lived through: what ran beneath its entry point.
+    lines.push("", ...stacksSection(d.evidence.stacks, d.durationMs, "frame"));
+    lines.push("", ...memorySection(d.evidence.memory, "frame"));
+  }
   if (d.traceId) {
     lines.push("");
     lines.push(

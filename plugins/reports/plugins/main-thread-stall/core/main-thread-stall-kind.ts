@@ -6,6 +6,10 @@ import {
   interactionTargetLabel,
   InteractionTargetSchema,
 } from "./interaction-target";
+import {
+  StallMemorySchema,
+  StallStacksSchema,
+} from "@plugins/reports/plugins/main-thread-stall/plugins/tab-evidence/core";
 
 // The `main-thread-stall` report payload: a browser tab's main thread stopped
 // answering for seconds. Filed by a live tab of the same origin on behalf of the
@@ -84,60 +88,6 @@ export const StallInteractionSchema = z.object({
   forcedBy: z.string().nullable(),
 });
 export type StallInteraction = z.infer<typeof StallInteractionSchema>;
-
-// One aggregated main-thread JS stack the sampling profiler caught inside the
-// stall: frames innermost first, each `name (url:line:col)`; `ms` is the
-// sampled time spent in exactly this stack.
-export const StallStackSchema = z.object({
-  ms: z.number(),
-  samples: z.number(),
-  frames: z.array(z.string()),
-});
-export type StallStack = z.infer<typeof StallStackSchema>;
-
-// What ran underneath the freeze's entry point, from the tab's rolling JS
-// Self-Profiling trace (web/internal/stall-profiler.ts). `sampled` only for a
-// stall the stalled tab itself survived and filed; otherwise `unavailable`
-// with the reason — never an empty `sampled`, which would read as "no JS ran".
-export const StallStacksSchema = z.discriminatedUnion("kind", [
-  z.object({
-    kind: z.literal("sampled"),
-    // The profiler's requested and the trace's actual mean sample interval.
-    sampleIntervalMs: z.number(),
-    // Sampled time inside the stall window, and how much of it ran no JS
-    // (no stack: style, layout, paint, GC — or the thread not scheduled).
-    sampledMs: z.number(),
-    noJsMs: z.number(),
-    // The profiler's buffer filled before the stall ended: the stacks cover
-    // its first `sampledMs` only.
-    truncated: z.boolean(),
-    // The heaviest exact stacks, heaviest first (capped).
-    stacks: z.array(StallStackSchema),
-    // The heaviest innermost frames (self time across every stack), capped.
-    topSelf: z.array(z.object({ frame: z.string(), ms: z.number() })),
-  }),
-  z.object({ kind: z.literal("unavailable"), reason: z.string() }),
-]);
-export type StallStacks = z.infer<typeof StallStacksSchema>;
-
-// The stalled tab's JS heap around the freeze (web/internal/heap-watch.ts):
-// in use at its last reading before the stall began (`beforeAgoMs` earlier;
-// null when it had none) and right after it, against the heap's ceiling. It
-// tells apart what sampled stacks with no JS cannot: V8 collecting garbage
-// near its limit (high before, near `limitMb`, lower after), a process starved
-// of CPU, or JS the profiler may not show. `measured` only for a stall the
-// stalled tab survived and filed; otherwise `unavailable` with the reason.
-export const StallMemorySchema = z.discriminatedUnion("kind", [
-  z.object({
-    kind: z.literal("measured"),
-    beforeMb: z.number().nullable(),
-    beforeAgoMs: z.number().nullable(),
-    afterMb: z.number(),
-    limitMb: z.number(),
-  }),
-  z.object({ kind: z.literal("unavailable"), reason: z.string() }),
-]);
-export type StallMemory = z.infer<typeof StallMemorySchema>;
 
 // The browser a stall happened in, coarsely: family and OS only — never the
 // user agent, a version or anything else that narrows who it was (a website
