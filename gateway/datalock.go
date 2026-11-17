@@ -82,3 +82,33 @@ func readLockHolder(path string) string {
 	}
 	return strings.TrimSpace(string(b))
 }
+
+// keeperLockFd is where a generation finds the data-root lock its keeper hands
+// it: the second of the keeper's ExtraFiles, after the control socket (fd 3).
+const keeperLockFd = 4
+
+// sealInheritedFds marks a generation's inherited descriptors close-on-exec.
+//
+// exec clears FD_CLOEXEC on every descriptor it hands a child (ExtraFiles),
+// so a generation receives the control socket and the data-root lock
+// inheritable — and, left so, handed both to every process it starts itself
+// (a supervised service's log relay, which outlives every gateway). The
+// relay then held the data-root lock after its gateway exited: the next
+// gateway refused to start ("another gateway already serves this data
+// root"), the first full restart of the service under a keeper left the
+// machine with no gateway (2026-11-17, the move off the legacy port). Sealed, the
+// generation still holds both for its life; nothing it starts does.
+func sealInheritedFds(fds ...int) error {
+	for _, fd := range fds {
+		if _, _, errno := syscall.Syscall(syscall.SYS_FCNTL, uintptr(fd), syscall.F_GETFD, 0); errno != 0 {
+			// Not open: a generation started without a lock (a keeper with
+			// none) has nothing there to seal.
+			if errno == syscall.EBADF {
+				continue
+			}
+			return fmt.Errorf("inherited fd %d: %w", fd, errno)
+		}
+		syscall.CloseOnExec(fd)
+	}
+	return nil
+}

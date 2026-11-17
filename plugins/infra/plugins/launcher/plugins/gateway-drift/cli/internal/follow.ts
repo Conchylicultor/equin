@@ -11,7 +11,14 @@ import {
 import { waitForFlock } from "@plugins/packages/plugins/flock/core";
 import { heldDep, readyNow } from "@plugins/infra/plugins/deps/deps";
 import { openOwnedFd } from "@plugins/packages/plugins/owned-fd/core";
-import { getMainRepoRoot } from "@plugins/infra/plugins/spawn/core";
+import {
+  getMainRepoRoot,
+  spawnCaptured,
+} from "@plugins/infra/plugins/spawn/core";
+import {
+  GATEWAY_LOCK_FILENAME,
+  gatewayLocks,
+} from "@plugins/infra/plugins/launcher/data-dirs";
 import { LEGACY_GATEWAY_PORT } from "@plugins/infra/plugins/namespace/core";
 import { GATEWAY_SERVICE } from "@plugins/infra/plugins/launcher/core";
 import {
@@ -540,6 +547,7 @@ export async function completeGatewaySwitch(
       await awaitProcessGone(plan.runPid, RUN_EXIT_BUDGET_MS);
       const state = await service.state();
       const runningPid = state.kind === "loaded" ? state.pid : null;
+      await assertLockOnlyHeldByGateway(runningPid);
       log(
         `gateway: restarting the service (PID ${runningPid ?? "none"}) onto ${plan.to}, port ${plan.oldPort} → ${plan.newPort}`,
       );
@@ -579,6 +587,51 @@ export async function completeGatewaySwitch(
     if (ready !== null) await holdGatewayBuild(ready);
     log(`gateway: restarted onto ${plan.to} (PID ${pid})`);
   });
+}
+
+/**
+ * Refuse a restart the new gateway could not survive: one that a process
+ * other than the running gateway (its keeper and the keeper's generations)
+ * holds the data-root lock for. The next gateway refuses to start beside a
+ * holder ("another gateway already serves this data root"), and so would the
+ * rollback — no gateway until the holder dies. Before 2026-11-17 a generation
+ * handed the lock to everything it started (gateway/datalock.go
+ * sealInheritedFds), so a supervised service's log relay, which outlives every
+ * gateway, kept it: the first restart under a keeper left the machine with no
+ * gateway. Checked before anything is unloaded, so a refusal leaves the old
+ * gateway serving.
+ */
+async function assertLockOnlyHeldByGateway(
+  keeperPid: number | null,
+): Promise<void> {
+  const lockFile = gatewayLocks.file(GATEWAY_LOCK_FILENAME);
+  const res = await spawnCaptured(["lsof", "-t", lockFile], {
+    timeoutMs: 10_000,
+  });
+  // lsof exits 1 when nothing has the file open.
+  if (res.exitCode === 1) return;
+  if (res.exitCode !== 0) {
+    throw new Error(`lsof ${lockFile} exited ${res.exitCode}: ${res.stderr}`);
+  }
+  const holders = res.stdout.split("\n").filter(Boolean).map(Number);
+  const strangers: string[] = [];
+  for (const pid of holders) {
+    if (pid === keeperPid) continue;
+    const ps = await spawnCaptured(
+      ["ps", "-o", "ppid=", "-o", "command=", "-p", String(pid)],
+      { timeoutMs: 10_000 },
+    );
+    if (ps.exitCode !== 0) continue; // gone meanwhile
+    const line = ps.stdout.trim();
+    const ppid = Number(line.split(/\s+/, 1)[0]);
+    if (keeperPid !== null && ppid === keeperPid) continue; // a generation
+    strangers.push(`PID ${pid}: ${line.slice(line.indexOf(" ") + 1)}`);
+  }
+  if (strangers.length > 0) {
+    throw new Error(
+      `not restarting: the gateway's data-root lock is also held by ${strangers.join("; ")} — the next gateway would refuse to start beside it. Stop it, then let main's next deploy retry.`,
+    );
+  }
 }
 
 /** Main's gateway build of identity `to`, to hold once it runs. */

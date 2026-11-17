@@ -305,6 +305,14 @@ func main() {
 		// the gateway itself as its first generation (keeper.go).
 		os.Exit(keeperMain(cfg))
 	}
+	if keeperFd > 0 {
+		// A generation: before it starts anything, its inherited descriptors
+		// stop reaching what it starts (datalock.go, generationInheritedFds).
+		if err := sealInheritedFds(keeperFd, keeperLockFd); err != nil {
+			fmt.Fprintf(os.Stderr, "gateway: fatal: %v\n", err)
+			os.Exit(2)
+		}
+	}
 	setupLogging(cfg)
 	// Before anything that touches the data root's runtime (pid file, sockets,
 	// registry, supervised services): a second gateway on a root that one
