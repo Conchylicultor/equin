@@ -63,7 +63,10 @@ export function TranscriptStatsStrip() {
   }, [events, firstSeq, visible, anchor]);
 
   return (
-    <Pin to="bottom" stretch offset="sm" layer="raised" decorative>
+    // `float`, not `raised`: a pinned user turn (the sticky user header) sits
+    // on `nav`, and a strip below it would vanish under any user message
+    // scrolling past the bottom. The strip reads over every row.
+    <Pin to="bottom" stretch offset="sm" layer="float" decorative>
       <Stack
         direction="row"
         justify="end"
