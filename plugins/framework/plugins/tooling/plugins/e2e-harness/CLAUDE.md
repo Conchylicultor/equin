@@ -392,6 +392,26 @@ Limits:
 - `performance` timeline entries are bounded browser buffers.
 - Snapshots are parsed in-process, and a 300 MB snapshot takes about 15 s.
 
+## The reload drill: `reloadDrill`
+
+`reloadDrill(page, { step, restore?, within?, ignore? })` (`e2e/reload-drill.ts`)
+checks kept-state's invariant on one flow: run the step, record what the
+screen shows, reload, wait for `waitForScreenReady`, run `restore` (reopen a
+popup the step typed into — a popup is closed after a reload by design),
+record again and diff. It records the route, every text field's value, every
+`aria-expanded` / `aria-selected` / `aria-checked` / `aria-pressed`, every
+slider's and spin button's `aria-valuenow`, every scrolled element's offset and every `[data-kept]` marker — each keyed by its
+`data-kept-name`, else its `data-source` / `data-ui-owner` / accessible name,
+plus its position among same-named elements. An empty field before is not
+compared. `reloadDrillText(result)` prints the verdict; a flow asserts
+`differences` is empty and `compared` is not zero:
+
+```ts
+const drill = await reloadDrill(page, { step: async (p) => { await p.keyboard.type("half a thought"); } });
+console.log(reloadDrillText(drill));
+r.ok("the reload gave everything back", drill.differences.length === 0 && drill.compared > 0);
+```
+
 ## `diffImages` — two captures in, a number and a picture out
 
 `diffImages(page, aPng, bPng, { threshold, grid, labels })` compares two PNG
@@ -492,11 +512,11 @@ own `requestfailed` listener calls it too. Diagnosis:
   - Uses: `framework/tooling/guards/module-extension.MODULE_EXTENSION`
   - Exports (values): `isE2eScriptPath`
 - Cross-plugin:
-  - Imported by: 198 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 200 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×60
     - `primitives` ×29
+    - `conversations` ×26
     - `page` ×26
-    - `conversations` ×25
     - `debug` ×10
     - `apps-core` ×6
     - `tasks` ×5
@@ -511,6 +531,7 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `infra` ×2
     - `network` ×2
     - `plugin-meta` ×2
+    - `wish` ×2
     - `build`
     - `database/admin`
     - `map/google`
@@ -519,7 +540,6 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `reorder/node-types`
     - `runs`
     - `screenshot`
-    - `wish/element-picker`
 - Exemptions:
   - Exempts itself from: `agent-origin-safety/no-unmarked-app-fetch` — `e2e/app-fetch.ts`, `e2e/deploy-identity.ts` (sanctioned)
 - Sub-plugins:

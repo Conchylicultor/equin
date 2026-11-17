@@ -156,6 +156,10 @@ export const CLIENT_REPORT_SOURCES = [
   // comparison — reports/core's SKEW_PROOF). From a current tab: an older
   // schema's entry this build neither reads nor migrates (a bug).
   "client-storage-other-schema",
+  // React state the user changed that a remount threw away (reports/
+  // reload-loss): the dev unmount detector saw a page-level place unmount
+  // with it neither kept nor marked transient. Developer mode only.
+  "client-reload-loss",
 ] as const;
 export type ReportSource =
   | (typeof SERVER_REPORT_SOURCES)[number]

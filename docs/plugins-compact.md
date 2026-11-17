@@ -368,7 +368,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`relocate`** [exempt] — `./equin plugin move <from> <to>` — relocate or rename a plugin (and every descendant) in one step: git mv the folder and its config dir, then rewrite every reference the plugin-refs locator finds…
     - **`token-usage`** [exempt] — Which theme tokens a plugin's source uses, and which plugin owns each one: the static defineTokenGroup reader (owner + CSS vars) and the token-usage scanner (literal var(--x) plus Tailwind classes…
 
-- **`primitives`** [test helpers] [exempt] [228 sub-plugins] — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
+- **`primitives`** [test helpers] [exempt] [229 sub-plugins] — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
 
 - **`release`** [exempt] [3 sub-plugins] — Release engine web presence: eagerly registers the boot-critical release.previews live value so boot-snapshot can hydrate it before first paint, independent of the (lazy) Studio release UI. Local…
 
@@ -379,7 +379,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`node-types`** [4 sub-plugins] — Reorder node-type registry: owns the reorder.node-type slot and the useReorderNodeTypes() read hook. Slot owner only — contributes no node types itself.
     - **`slot-middleware`** [load-bearing] — Applies every render slot's committed layout: reorder's list middleware, contributed to slot-render as a companion so it ships wherever slots render.
 
-- **`reports`** [exempt] [36 sub-plugins] — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The…
+- **`reports`** [exempt] [37 sub-plugins] — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The…
 
 - **`review`** — Toolbar button that opens a side pane exposing agent modifications in a structured, extensible view.
   - Plugins:

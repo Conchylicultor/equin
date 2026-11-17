@@ -1,4 +1,4 @@
-import { createContext, useContext, type ReactNode } from "react";
+import { Component, createContext, useContext, type ReactNode } from "react";
 import { removeEntriesWhere } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 
 /**
@@ -34,10 +34,66 @@ export function KeepScope({
   const path = parent === null ? segment : `${parent}/${segment}`;
   return (
     <KeepScopeContext.Provider value={path}>
-      {children}
+      <KeepScopeProbe path={path}>{children}</KeepScopeProbe>
     </KeepScopeContext.Provider>
   );
 }
+
+/**
+ * One place unmounting: its keep-scope path, and the React fiber of the probe
+ * around its content (React internals — read only by the dev unmount detector,
+ * `loss-detector`, which walks the subtree's hooks before React detaches it).
+ */
+export interface KeepScopeUnmount {
+  readonly path: string;
+  /** Whether the place was forgotten (closed for good) before it unmounted. */
+  readonly forgotten: boolean;
+  readonly fiber: unknown;
+}
+
+type UnmountListener = (unmount: KeepScopeUnmount) => void;
+
+const unmountListeners = new Set<UnmountListener>();
+
+/**
+ * Call `listener` as each KeepScope unmounts, before React detaches its
+ * subtree (so its hooks can still be read). Returns the unsubscribe.
+ */
+export function onKeepScopeUnmount(listener: UnmountListener): () => void {
+  unmountListeners.add(listener);
+  return () => {
+    unmountListeners.delete(listener);
+  };
+}
+
+/**
+ * A class component only for its `componentWillUnmount`: React calls it on a
+ * deleted subtree parent-first, while the subtree's fibers (and their hook
+ * lists) are still linked — the one moment state about to be lost is visible.
+ * Renders its children as they are; costs nothing while nobody listens.
+ */
+class KeepScopeProbe extends Component<{ path: string; children: ReactNode }> {
+  override componentWillUnmount(): void {
+    if (unmountListeners.size === 0) return;
+    const { path } = this.props;
+    const unmount: KeepScopeUnmount = {
+      path,
+      forgotten: path.split("/").some((segment) => forgotten.has(segment)),
+      fiber: (this as unknown as { _reactInternals?: unknown })._reactInternals,
+    };
+    for (const listener of unmountListeners) listener(unmount);
+  }
+
+  override render(): ReactNode {
+    return this.props.children;
+  }
+}
+
+// The places forgotten (closed for good) lately, newest last: an unmount that
+// follows a close is the end of the place, not a loss. Bounded — a close is
+// followed by its unmount within the same commit.
+const FORGOTTEN_MAX = 64;
+const forgotten = new Set<string>();
 
 /** The keep-scope path the caller renders in, or `null` outside every scope. */
 export function useKeepScope(): string | null {
@@ -68,6 +124,12 @@ export function viewEntryId(path: string, owner: string, key?: string): string {
  * close (a pane replaced in place).
  */
 export function forgetKeepScope(segment: string): void {
+  forgotten.delete(segment);
+  forgotten.add(segment);
+  if (forgotten.size > FORGOTTEN_MAX) {
+    const oldest = forgotten.values().next();
+    if (!oldest.done) forgotten.delete(oldest.value);
+  }
   removeEntriesWhere("session", (id) => {
     if (!id.startsWith(VIEW_ID_PREFIX)) return false;
     const bar = id.indexOf("|");

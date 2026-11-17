@@ -80,3 +80,19 @@ export type {
   LeakReport,
   LeakPhase,
 } from "./leak";
+// The reload drill: run a step, reload, diff what the screen shows — see
+// reload-drill.ts and kept-state's "remount ≡ reload ≡ upgrade".
+export {
+  reloadDrill,
+  reloadDrillText,
+  recordDrillSnapshot,
+  diffDrillSnapshots,
+} from "./reload-drill";
+export type {
+  DrillDifference,
+  DrillItem,
+  DrillItemKind,
+  DrillSnapshot,
+  ReloadDrillOptions,
+  ReloadDrillResult,
+} from "./reload-drill";

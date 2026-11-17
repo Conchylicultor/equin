@@ -36,6 +36,7 @@
     - `audience/developer-mark`
     - `audience/view-option`
     - `build`
+    - `reports/reload-loss`
     - `shell/notifications`
     - `shell/toast`
 - Sub-plugins:

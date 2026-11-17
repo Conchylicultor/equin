@@ -2,14 +2,19 @@
 //
 // Stages a capture the way the Screenshot button does (an attachment, recorded
 // as the screenshot's kept capture), opens the editor, draws a stroke and
-// reloads: the image, the stroke and the Draw tool come back. Then applies the
-// stroke (a committed edit) and reloads again: the edit is replayed over the
-// capture, with no stroke pending.
+// reloads: the image, the stroke and the Draw tool come back. That first
+// reload is the reload drill (`e2e-harness` reload-drill.ts): everything the
+// screen showed before it (the picked tool, the route, every field and
+// marker) must be there after it. Then applies the stroke (a committed edit)
+// and reloads again: the edit is replayed over the capture, with no stroke
+// pending.
 //
 // Usage: ./equin run plugins/screenshot/e2e/kept-across-reload.ts [--out <dir>] [--headed] [--attach <ticket>]
 import {
   arg,
   pathUrl,
+  reloadDrill,
+  reloadDrillText,
   report,
   snap,
   withBrowser,
@@ -67,17 +72,6 @@ await withBrowser(async (h) => {
   await img.waitFor({ state: "visible", timeout: 30_000 });
   r.ok("the editor shows the staged capture", true);
 
-  // 3. Draw one stroke.
-  await page.getByRole("button", { name: "Draw" }).click();
-  const box = (await img.boundingBox())!;
-  await page.mouse.move(box.x + box.width * 0.2, box.y + box.height * 0.3);
-  await page.mouse.down();
-  for (let i = 1; i <= 10; i++)
-    await page.mouse.move(
-      box.x + box.width * (0.2 + i * 0.05),
-      box.y + box.height * (0.3 + i * 0.03),
-    );
-  await page.mouse.up();
   const kept = () =>
     page.evaluate((id) => {
       const raw = localStorage.getItem(`s:screenshot.edits:${id}`);
@@ -86,14 +80,37 @@ await withBrowser(async (h) => {
         : (JSON.parse(raw) as { v: { edits: unknown[]; strokes: unknown[] } })
             .v;
     }, id);
-  await page.waitForFunction(
-    (id) => localStorage.getItem(`s:screenshot.edits:${id}`) !== null,
-    id,
+
+  // 3. Draw one stroke, then 4. reload — as the reload drill.
+  const drill = await reloadDrill(page, {
+    step: async (p) => {
+      await p.getByRole("button", { name: "Draw" }).click();
+      const box = (await img.boundingBox())!;
+      await p.mouse.move(box.x + box.width * 0.2, box.y + box.height * 0.3);
+      await p.mouse.down();
+      for (let i = 1; i <= 10; i++)
+        await p.mouse.move(
+          box.x + box.width * (0.2 + i * 0.05),
+          box.y + box.height * (0.3 + i * 0.03),
+        );
+      await p.mouse.up();
+      await p.waitForFunction(
+        (id) => localStorage.getItem(`s:screenshot.edits:${id}`) !== null,
+        id,
+      );
+    },
+    restore: async () => {
+      await img.waitFor({ state: "visible", timeout: 30_000 });
+    },
+  });
+  console.log(reloadDrillText(drill));
+  r.ok(
+    "the reload drill: the reload gave everything back",
+    drill.differences.length === 0 && drill.compared > 0,
+    reloadDrillText(drill),
   );
 
-  // 4. Reload: the image, the pending stroke and the Draw tool come back.
-  await page.reload({ waitUntil: "domcontentloaded" });
-  await img.waitFor({ state: "visible", timeout: 30_000 });
+  // 4. After the reload: the image, the pending stroke and the Draw tool came back.
   const afterDraw = await kept();
   r.ok(
     "the stroke survives the reload",

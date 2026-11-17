@@ -6643,6 +6643,10 @@
       "name": "@equin/plugin-primitives-kept-state",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/kept-state/plugins/loss-detector": {
+      "name": "@equin/plugin-primitives-kept-state-loss-detector",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/keyset": {
       "name": "@equin/plugin-primitives-keyset",
       "version": "0.0.1",
@@ -7235,6 +7239,10 @@
     },
     "plugins/reports/plugins/popover-anchor-lost": {
       "name": "@equin/plugin-reports-popover-anchor-lost",
+      "version": "0.0.1",
+    },
+    "plugins/reports/plugins/reload-loss": {
+      "name": "@equin/plugin-reports-reload-loss",
       "version": "0.0.1",
     },
     "plugins/reports/plugins/render-loop": {
@@ -11331,6 +11339,8 @@
 
     "@equin/plugin-primitives-kept-state": ["@equin/plugin-primitives-kept-state@workspace:plugins/primitives/plugins/kept-state"],
 
+    "@equin/plugin-primitives-kept-state-loss-detector": ["@equin/plugin-primitives-kept-state-loss-detector@workspace:plugins/primitives/plugins/kept-state/plugins/loss-detector"],
+
     "@equin/plugin-primitives-keyset": ["@equin/plugin-primitives-keyset@workspace:plugins/primitives/plugins/keyset"],
 
     "@equin/plugin-primitives-latest-ref": ["@equin/plugin-primitives-latest-ref@workspace:plugins/primitives/plugins/latest-ref"],
@@ -11604,6 +11614,8 @@
     "@equin/plugin-reports-plugin-load-errors": ["@equin/plugin-reports-plugin-load-errors@workspace:plugins/reports/plugins/plugin-load-errors"],
 
     "@equin/plugin-reports-popover-anchor-lost": ["@equin/plugin-reports-popover-anchor-lost@workspace:plugins/reports/plugins/popover-anchor-lost"],
+
+    "@equin/plugin-reports-reload-loss": ["@equin/plugin-reports-reload-loss@workspace:plugins/reports/plugins/reload-loss"],
 
     "@equin/plugin-reports-render-loop": ["@equin/plugin-reports-render-loop@workspace:plugins/reports/plugins/render-loop"],
 

@@ -20,6 +20,7 @@ import {
   readDraft,
   scheduleDraftWrite,
 } from "./draft-storage";
+import { useKeptMark } from "./state-marks";
 
 /** How a stored value is read back: as is (a store's own schema), or reparsed. */
 type Parse<T> = (stored: unknown) => T | null;
@@ -56,6 +57,9 @@ export function useKeptEntry<T>(
     return parse(stored) ?? resolvedInitial;
   }, [store, id, resolvedInitial, parse]);
 
+  // The value below is kept: a remount reads it back from storage, so the dev
+  // unmount detector (loss-detector) must not report it as lost.
+  useKeptMark();
   const [value, setValueState] = useState<T>(read);
   const latest = useLatestRef(value);
 

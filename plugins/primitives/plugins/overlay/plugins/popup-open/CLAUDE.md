@@ -89,6 +89,7 @@ still reported to the scope at once (that is what opens the bar). Default
     - `primitives/css/ui-kit`
     - `primitives/data-view/view-core`
     - `primitives/dom/reload-readiness`
+    - `primitives/kept-state/loss-detector`
     - `primitives/overlay/floating-action`
     - `primitives/row-actions`
 - Web:

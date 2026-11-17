@@ -14398,6 +14398,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `audience/developer-mark`
       - `audience/view-option`
       - `build`
+      - `reports/reload-loss`
       - `shell/notifications`
       - `shell/toast`
   - Plugins:
@@ -33523,11 +33524,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards/module-extension.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 198 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 200 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×60
               - `primitives` ×29
+              - `conversations` ×26
               - `page` ×26
-              - `conversations` ×25
               - `debug` ×10
               - `apps-core` ×6
               - `tasks` ×5
@@ -33542,6 +33543,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra` ×2
               - `network` ×2
               - `plugin-meta` ×2
+              - `wish` ×2
               - `build`
               - `database/admin`
               - `map/google`
@@ -33550,7 +33552,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reorder/node-types`
               - `runs`
               - `screenshot`
-              - `wish/element-picker`
           - Exemptions:
             - Exempts itself from: `agent-origin-safety/no-unmarked-app-fetch` — `e2e/app-fetch.ts`, `e2e/deploy-identity.ts` (sanctioned)
           - Plugins:
@@ -34331,8 +34332,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `Core.Root`
           - `Core.Boot`
-        - Slot contributors: 43 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
-          - `Core.Root` ×41
+        - Slot contributors: 44 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+          - `Core.Root` ×42
           - `Core.Boot` ×2
       - Core:
         - Uses:
@@ -34404,13 +34405,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `webCollectedDir`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 111 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+        - Imported by: 112 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
           - `primitives` ×25
           - `apps` ×19
           - `ui` ×8
+          - `reports` ×7
           - `apps-core` ×6
           - `debug` ×6
-          - `reports` ×6
           - `framework` ×4
           - `page` ×4
           - `shell` ×4
@@ -49369,11 +49370,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×6
               - `ui/tokens/shape` ×3
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 189 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 190 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×39
               - `debug` ×39
               - `conversations` ×28
-              - `reports` ×19
+              - `reports` ×20
               - `tasks` ×11
               - `primitives` ×10
               - `plugin-meta` ×8
@@ -49822,10 +49823,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 120 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 121 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `apps` ×23
+              - `reports` ×21
               - `debug` ×20
-              - `reports` ×20
               - `primitives` ×14
               - `conversations` ×9
               - `page` ×6
@@ -53575,6 +53576,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.SingleLineProvider`
           - `primitives/css/ui-kit.SURFACE_LEVELS`
           - `primitives/dom/element-size.useResizeObserver`
+          - `primitives/kept-state.useTransient`
           - `primitives/lazy-component.lazyComponent`
           - `primitives/link-gesture.activationProps`
         - Exports (types):
@@ -53752,10 +53754,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `DraftOptions`
           - `DraftWrite`
+          - `KeepScopeUnmount`
           - `KeptView`
           - `KeptViewSpec`
           - `KeptWork`
           - `KeptWorkSpec`
+          - `StateMark`
           - `SubmitShows`
         - Exports (values):
           - `clearDraft`
@@ -53766,17 +53770,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `KeepScope`
           - `legacyDraftKeys`
           - `onDraftWritten`
+          - `onKeepScopeUnmount`
           - `readDraft`
+          - `stateMarkOf`
           - `submitKept`
           - `useDraft`
           - `useKeepScope`
           - `useKept`
+          - `useTransient`
           - `writeDraft`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/color-palette --input`
-        - Imported by: 126 plugins — full list in [`plugins/primitives/plugins/kept-state/REFERENCE.md`](../plugins/primitives/plugins/kept-state/REFERENCE.md)
+        - Imported by: 128 plugins — full list in [`plugins/primitives/plugins/kept-state/REFERENCE.md`](../plugins/primitives/plugins/kept-state/REFERENCE.md)
           - `apps` ×37
-          - `primitives` ×25
+          - `primitives` ×27
           - `conversations` ×12
           - `fields` ×11
           - `page` ×9
@@ -53821,6 +53828,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `recordKeptWork`
           - `resolveTextKeep`
           - `transient`
+      - Plugins:
+        - **`loss-detector`** — The dev unmount detector, the coverage net under kept-state: watchStateLoss(onLoss) follows every React commit through the page's commit bridge (each state hook's baseline — its value before the user touched it; a change no user input caused moves it) and, when a page-level place (an outermost KeepScope: a tab's app, the global action bar) unmounts without being closed, walks its fibers and reports each useState / useReducer the user changed that is neither kept (useKept / useDraft) nor marked useTransient("<why>") — state a remount, so a reload, throws away. reports/reload-loss files them.
+          - Web:
+            - Uses:
+              - `primitives/kept-state.KeepScopeUnmount`
+              - `primitives/kept-state.onKeepScopeUnmount`
+              - `primitives/kept-state.StateMark`
+              - `primitives/kept-state.stateMarkOf`
+              - `primitives/overlay/popup-open.anyPopupOpen`
+            - Exports (types): `StateLoss`
+            - Exports (values): `watchStateLoss`
+          - Cross-plugin:
+            - Imported by: `reports/reload-loss`
     - **`keyset`** — Field-agnostic keyset pagination machinery: a null-aware keyset seek / at-or-before / order-by compiler over drizzle SQL, over keys the caller builds from declared columns. No data-view dependency, so any server-delegated windowed query can reuse it.
       - Cross-plugin:
         - Imported by: `network/live/query-resource`
@@ -55221,6 +55241,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit`
               - `primitives/data-view/view-core`
               - `primitives/dom/reload-readiness`
+              - `primitives/kept-state/loss-detector`
               - `primitives/overlay/floating-action`
               - `primitives/row-actions`
           - Web:
@@ -58121,8 +58142,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).
   - Web:
     - Slots: `Reports.KindView`
-    - Slot contributors: 49 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `Reports.KindView` ×49
+    - Slot contributors: 50 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `Reports.KindView` ×50
     - Contributes:
       - `IdKinds.Kind` "report|crash"
       - `ConfigV2.WebRegister` "reports"
@@ -58265,8 +58286,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `versionSkewCode`
       - `versionSkewExplains`
   - Cross-plugin:
-    - Imported by: 88 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `reports` ×33
+    - Imported by: 89 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `reports` ×34
       - `debug` ×21
       - `conversations` ×7
       - `infra` ×5
@@ -58989,6 +59010,29 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `popoverAnchorLostFingerprint`
           - `PopoverAnchorLostPayloadSchema`
+    - **`reload-loss`** — Reload-loss collector: for a developer (Developer mode on), a Core.Root controller runs kept-state's dev unmount detector (watchStateLoss) and files each piece of React state a remount throws away — a page-level place unmounting with useState / useReducer the user changed that is neither kept nor useTransient — as a deduped reload-loss report, plus the Debug → Reports summary view. Reload-loss report kind: validates the payload of a piece of React state a remount threw away (component, which state hook, the first element it renders, the value's shape), fingerprints by origin + component + state index + source line, and renders a task saying how to classify it (kept work, kept view, or useTransient). Re-arms daily.
+      - Web:
+        - Contributes:
+          - `Core.Root` → `ReloadLossController`
+          - `Reports.KindView` → `ReloadLossKindView`
+        - Uses:
+          - `audience.useAudience`
+          - `primitives/css/badge.Badge`
+          - `primitives/css/inline.Inline`
+          - `primitives/kept-state/loss-detector.watchStateLoss`
+          - `reports.report`
+          - `reports.Reports`
+      - Server:
+        - Contributes: `report-kind` "reload-loss"
+        - Uses: `reports.ReportKind`
+      - Cross-plugin:
+        - Uses tokens: `ui/tokens/color-palette --muted-foreground`
+      - Core:
+        - Exports (types): `ReloadLossPayload`
+        - Exports (values):
+          - `RELOAD_LOSS_ORIGINS`
+          - `reloadLossFingerprint`
+          - `ReloadLossPayloadSchema`
     - **`render-loop`** — Render-loop detector: a single invisible global controller (mounted via Core.Root) that installs one MutationObserver and files a deduped render-loop report when a subtree is rebuilt/re-mutated at a sustained high rate while idle, visible, and doing no meaningful work (wasted DOM thrash). Render-loop report kind: validates render-loop payloads, fingerprints by signature + mutation class, and renders per-loop perf tasks. Re-arms periodically (6h) since a still-present loop is a warning, not a one-shot crash.
       - Web:
         - Contributes:
@@ -65603,7 +65647,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ColorPaletteTokenValues`
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
-            - Tokens used by: 558 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 559 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×123
               - `conversations` ×97
               - `primitives` ×78
@@ -65612,7 +65656,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta` ×28
               - `ui` ×28
               - `tasks` ×18
-              - `reports` ×16
+              - `reports` ×17
               - `fields` ×12
               - `active-data` ×8
               - `apps-core` ×7

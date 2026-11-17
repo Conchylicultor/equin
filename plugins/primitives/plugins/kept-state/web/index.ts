@@ -9,7 +9,15 @@ export type {
   KeptWork,
   KeptWorkSpec,
 } from "./define-kept";
-export { forgetKeepScope, KeepScope, useKeepScope } from "./keep-scope";
+export {
+  forgetKeepScope,
+  KeepScope,
+  onKeepScopeUnmount,
+  useKeepScope,
+} from "./keep-scope";
+export type { KeepScopeUnmount } from "./keep-scope";
+export { stateMarkOf, useTransient } from "./state-marks";
+export type { StateMark } from "./state-marks";
 export { submitKept } from "./submit-kept";
 export type { SubmitShows } from "./submit-kept";
 export {

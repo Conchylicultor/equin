@@ -73,8 +73,8 @@ before it) beside the total, worded by `formatReportActivity`
 - Description: Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).
 - Web:
   - Slots: `Reports.KindView`
-  - Slot contributors: 49 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Reports.KindView` ×49
+  - Slot contributors: 50 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Reports.KindView` ×50
   - Contributes:
     - `IdKinds.Kind` "report|crash"
     - `ConfigV2.WebRegister` "reports"
@@ -217,8 +217,8 @@ before it) beside the total, worded by `formatReportActivity`
     - `versionSkewCode`
     - `versionSkewExplains`
 - Cross-plugin:
-  - Imported by: 88 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `reports` ×33
+  - Imported by: 89 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `reports` ×34
     - `debug` ×21
     - `conversations` ×7
     - `infra` ×5
@@ -267,6 +267,7 @@ before it) beside the total, worded by `formatReportActivity`
   - **`panel-overflow`** — Panel-overflow collector: drains the control-panel primitive's panelOverflowReportSink into a deduped report whenever a popover panel's showing page is wider than the panel — content needing a width…
   - **`plugin-load-errors`** [exempt] — Files crash tasks for plugins whose chunk failed to load, each after a load probe: the tab walks the failing plugin's static import graph through its own import map and asks the server for each…
   - **`popover-anchor-lost`** — Popover-anchor-lost collector: drains ui-kit's popoverAnchorLostSink into a deduped report whenever an open popover's anchor (its trigger, or the caller's anchor) leaves the document or is hidden…
+  - **`reload-loss`** — Reload-loss collector: for a developer (Developer mode on), a Core.Root controller runs kept-state's dev unmount detector (watchStateLoss) and files each piece of React state a remount throws away…
   - **`render-loop`** — Render-loop detector: a single invisible global controller (mounted via Core.Root) that installs one MutationObserver and files a deduped render-loop report when a subtree is rebuilt/re-mutated at a…
   - **`resource-errors`** — Resource-error collector: drains the live-state primitive's resourceErrorReportSink (one body per failing live read, however many hooks observe it) into a deduped resource-error report for the…
   - **`scoped-out-dispatch`** — Scoped-out-dispatch collector: drains slot-render's scopedOutDispatchSink into a deduped report whenever a dispatch slot renders its fallback inside a PluginScope though the page holds a…

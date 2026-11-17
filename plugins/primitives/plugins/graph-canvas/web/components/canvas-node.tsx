@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useTransient } from "@plugins/primitives/plugins/kept-state/web";
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import {
@@ -48,7 +48,10 @@ export function CanvasNode({ data }: NodeProps<CanvasFlowNode>) {
     actions,
     connectable,
   } = data;
-  const [hovered, setHovered] = useState(false);
+  const [hovered, setHovered] = useTransient(
+    "hover: gone with the pointer",
+    false,
+  );
 
   // Connectable handles are visible on hover; otherwise handles stay hidden but
   // mounted so xyflow can still anchor edges (read-only viewer default).

@@ -1,6 +1,6 @@
 import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useTransient } from "@plugins/primitives/plugins/kept-state/web";
 import {
   BaseEdge,
   EdgeLabelRenderer,
@@ -32,7 +32,10 @@ export function CanvasEdge({
   markerEnd,
   data,
 }: EdgeProps<CanvasFlowEdge>) {
-  const [hovered, setHovered] = useState(false);
+  const [hovered, setHovered] = useTransient(
+    "hover: gone with the pointer",
+    false,
+  );
 
   const pathArgs = {
     sourceX,

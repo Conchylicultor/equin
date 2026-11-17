@@ -17,6 +17,7 @@
     - `primitives/css/ui-kit.SingleLineProvider`
     - `primitives/css/ui-kit.SURFACE_LEVELS`
     - `primitives/dom/element-size.useResizeObserver`
+    - `primitives/kept-state.useTransient`
     - `primitives/lazy-component.lazyComponent`
     - `primitives/link-gesture.activationProps`
   - Exports (types):

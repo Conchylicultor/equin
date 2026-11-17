@@ -74,6 +74,7 @@ export const SKEW_PROOF: Record<
   "plugin-load": "retired-file",
   "client-storage": "none",
   "client-storage-other-schema": "outdated-tab",
+  "client-reload-loss": "none",
 };
 
 /** The proof a source declares; a server source never proves skew. */
