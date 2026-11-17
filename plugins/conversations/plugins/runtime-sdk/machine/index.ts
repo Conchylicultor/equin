@@ -34,6 +34,7 @@ import {
 } from "../core";
 import { autoResumeJob, requestAutoResume } from "./internal/auto-resume";
 import { handleResumeStopped } from "./internal/resume-stopped";
+import { warmClaudeClonesJob } from "./internal/warm-clones";
 
 export { heldAtClaudeLimit } from "./internal/limit-hold";
 
@@ -51,6 +52,7 @@ export default {
     attemptEndedJob,
     autoResumeJob,
     agentDirsReclaimJob,
+    warmClaudeClonesJob,
   ],
   contributions: [
     Trigger({
@@ -79,6 +81,9 @@ export default {
     // Off the boot path: one readyNow, then (when not installed) a
     // `deps.install` job — the helper is ready before the first agent needs it.
     void requestDisclaimHelper();
+    // A new Claude Code arrives with a build: its clones are outdated now, so
+    // the hibernated conversations' are re-made and scanned before a click.
+    void warmClaudeClonesJob.enqueue({});
   },
   onShutdown: () => {
     stopUsageOnProbe();

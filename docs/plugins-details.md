@@ -23182,6 +23182,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineJob('runtime-sdk.attempt-ended')`
           - `defineJob('runtime-sdk.auto-resume')`
           - `defineJob('runtime-sdk.agent-dirs-reclaim')`
+          - `defineJob('runtime-sdk.warm-claude-clones')`
         - Routes:
           - `POST /api/claude-usage/refresh`
           - `POST /api/runtime-sdk/resume-stopped`
@@ -43783,6 +43784,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `apps/desktop/windows`
+          - `conversations/runtime-sdk`
           - `debug/profiling/cold-start`
           - `framework/cli/run`
           - `framework/tooling/e2e-harness`

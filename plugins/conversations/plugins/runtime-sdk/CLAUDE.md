@@ -302,6 +302,16 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   `runtime-sdk.agent-dirs-reclaim` removes a kept clone an upgrade has
   replaced (`pruneStaleClones`, never a running agent's), so a stopped agent
   pins no old build; the whole folder goes with the workspace.
+- **A hibernated conversation's clone is warmed before it is woken**
+  (`machine/internal/warm-clones.ts`, `runtime-sdk.warm-claude-clones`: at
+  boot and hourly). A Claude Code upgrade makes every kept clone outdated, so
+  the first wake after one re-cloned and paid the scan inside
+  `resume-hibernated` (3.4–9.4 s on every wake after a version change,
+  2026-11-11 → 17; 0.3–1.1 s on the same version). The job re-clones each
+  hibernated conversation's outdated clone under its kept name and runs it
+  once (`--version`, darwinbg): the verdict covers the agent's later exec
+  through disclaim-exec (measured: 3.3 s, then 0.02 s). A conversation this
+  backend never started (no launch.json in its namespace) is skipped.
 - **The agent's bun is shared**: `equin · agent`, one clone per machine and Bun
   version (packages/process-name `cloneSharedBun`, beside the CLI verbs), so a
   new conversation's first start no longer scans a fresh bun (~1.7 s). The
@@ -433,6 +443,7 @@ Gotchas the spike hit:
     - `defineJob('runtime-sdk.attempt-ended')`
     - `defineJob('runtime-sdk.auto-resume')`
     - `defineJob('runtime-sdk.agent-dirs-reclaim')`
+    - `defineJob('runtime-sdk.warm-claude-clones')`
   - Routes:
     - `POST /api/claude-usage/refresh`
     - `POST /api/runtime-sdk/resume-stopped`

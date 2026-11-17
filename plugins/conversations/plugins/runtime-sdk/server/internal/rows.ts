@@ -47,6 +47,24 @@ export async function liveSdkConversationIds(
 }
 
 /**
+ * This DB's hibernated sdk conversations that are still live (`waiting`): the
+ * ones opening wakes, through a start of their agent.
+ */
+export async function hibernatedSdkConversationIds(): Promise<string[]> {
+  const rows = await db
+    .select({ id: _conversations.id })
+    .from(_conversations)
+    .where(
+      and(
+        eq(_conversations.runtime, "sdk"),
+        inArray(_conversations.status, [...LIVE_STATUSES]),
+        isNotNull(_conversations.hibernatedAt),
+      ),
+    );
+  return rows.map((r) => r.id);
+}
+
+/**
  * Of `ids`, this DB's sdk conversations, in any status. Which of them has a
  * process is the runtime's question (the agent's pid file), never the row's
  * status: the status is what the reconciler derives FROM that answer, so
