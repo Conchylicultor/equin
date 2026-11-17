@@ -12,6 +12,7 @@ import type { Transport } from "@plugins/primitives/plugins/networking/web";
 import {
   disconnect as disconnectEndpoint,
   oauthStart,
+  scopeLabel,
 } from "@plugins/auth/core";
 import {
   MAIN_COMPOSITION_ID,
@@ -42,6 +43,12 @@ export interface ConnectResult {
   ok: boolean;
   message?: string;
   identity?: { accountId: string; email?: string; displayName?: string };
+  /**
+   * Scopes the connect asked for that the provider did not grant (unticked on
+   * its consent screen) — a connected account that still lacks them. Central
+   * also files an `auth-scopes-lost` report when any of them was held before.
+   */
+  notGranted?: string[];
 }
 
 const POPUP_FEATURES = "width=600,height=720";
@@ -105,6 +112,7 @@ export function startConnectFlow(
         providerId?: string;
         message?: string;
         identity?: ConnectResult["identity"];
+        notGranted?: string[];
       };
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (!data || data.type !== LEGACY_IDS.authCompleteMessage) return; // runtime guard on external postMessage data
@@ -114,6 +122,10 @@ export function startConnectFlow(
         ok: !!data.ok,
         message: data.message,
         identity: data.identity,
+        notGranted:
+          data.notGranted && data.notGranted.length > 0
+            ? data.notGranted
+            : undefined,
       });
     }
 
@@ -155,6 +167,20 @@ export async function disconnect(
     }
     throw err;
   }
+}
+
+/**
+ * The warning a connect that came back short shows, or null when everything
+ * asked for was granted.
+ */
+export function notGrantedWarning(
+  result: ConnectResult,
+): { title: string; description: string } | null {
+  if (!result.ok || !result.notGranted) return null;
+  return {
+    title: "Some permissions were not granted",
+    description: `Not granted: ${result.notGranted.map(scopeLabel).join(", ")}. What needs them will not work — connect again and leave every permission ticked.`,
+  };
 }
 
 export function currentWorktreeName(): string {

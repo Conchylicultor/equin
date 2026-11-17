@@ -1,6 +1,7 @@
 import type { HttpHandler } from "@plugins/framework/plugins/central-core/core";
 import { tryGetProvider } from "../registry";
 import { resolveCredentials } from "../credentials";
+import { getAccount } from "../token-store";
 import {
   buildAuthorizeUrl,
   codeChallengeFor,
@@ -73,10 +74,17 @@ export const handleOAuthStart: HttpHandler = async (req, params) => {
   const requested = scopesParam
     ? scopesParam.split(",").filter((s) => s.length > 0)
     : [];
-  // Default scopes are always granted: a scoped (incremental-consent) request must
-  // never drop the identity scopes the rest of the app relies on.
+  // A connect never asks for less than the account already holds: the
+  // callback REPLACES the stored scopes with what this grant returns, so a
+  // Reconnect (or any consumer's Grant access) that asked only for its own
+  // scopes would drop every other one — and after a refused grant (an expired
+  // refresh token) `include_granted_scopes` has nothing left to carry over.
+  // The held scopes survive a refused refresh (only the tokens are cleared),
+  // so reconnecting re-asks for all of them. Default scopes always: the
+  // identity scopes the rest of the app relies on.
+  const held = getAccount(providerId, "primary")?.scopes ?? [];
   const scopes = [
-    ...new Set([...descriptor.oauth.defaultScopes, ...requested]),
+    ...new Set([...descriptor.oauth.defaultScopes, ...held, ...requested]),
   ];
 
   const nonce = generateNonce();

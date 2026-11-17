@@ -14436,7 +14436,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell/action-bar.ActionBar`
           - `ui/icons.Icon`
 
-- **`auth`** — Shared authentication infrastructure (OAuth 2.0, API keys, password sign-in). Exposes the Accounts pane — a DataView of every provider (Auth.Provider) and non-provider setup surface (Auth.Integration), grouped by service, each row opening one account pane to the right (header, account, and the row's setup inline — a provider's setup wizard, OAuth client steps or sign-in form; an integration's own setup) — and the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Registers the auth-refresh-failed report kind central's token refresh files through the report outbox: a refused grant at once, a transient failure once it has lasted 30 min of awake time. Centralized OAuth/API-key/password-sign-in infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
+- **`auth`** — Shared authentication infrastructure (OAuth 2.0, API keys, password sign-in). Exposes the Accounts pane — a DataView of every provider (Auth.Provider) and non-provider setup surface (Auth.Integration), grouped by service, each row opening one account pane to the right (header, account, and the row's setup inline — a provider's setup wizard, OAuth client steps or sign-in form; an integration's own setup) — and the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Registers the auth-refresh-failed report kind central's token refresh files through the report outbox: a refused grant at once, a transient failure once it has lasted 30 min of awake time. Registers the auth-scopes-lost report kind central files when a connect or refresh leaves an account with fewer permissions than it held. Centralized OAuth/API-key/password-sign-in infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
   - Web:
     - Slots:
       - `Auth.Provider`
@@ -14499,7 +14499,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useAccountStatus`
       - `useAuthState`
   - Server:
-    - Contributes: `report-kind` "auth-refresh-failed"
+    - Contributes:
+      - `report-kind` "auth-refresh-failed"
+      - `report-kind` "auth-scopes-lost"
     - Uses:
       - `infra/endpoints.callEndpoint`
       - `reports.ReportKind`
@@ -14574,6 +14576,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `AuthProviderDescriptor`
       - `AuthProviderKind`
       - `AuthRefreshFailedPayload`
+      - `AuthScopesLostPayload`
       - `AuthStateValue`
       - `DisconnectBody`
       - `GetAccessTokenArgs`
@@ -14584,6 +14587,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `RefreshError`
       - `RefreshFailureKind`
       - `ResolvedCredentials`
+      - `ScopesLostDuring`
       - `SetApiKeyBody`
       - `SignInBody`
       - `TokenFailure`
@@ -14597,6 +14601,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `AuthNeedsConsentError`
       - `AuthProviderUnknownError`
       - `AuthRefreshFailedPayloadSchema`
+      - `AuthScopesLostPayloadSchema`
       - `authState`
       - `AuthStateValueSchema`
       - `defineAuthProvider`
@@ -14606,9 +14611,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `getToken`
       - `GetTokenBodySchema`
       - `humanDuration`
+      - `lostScopes`
       - `oauthCallback`
       - `oauthStart`
       - `RefreshFailureKindSchema`
+      - `scopeLabel`
+      - `ScopesLostDuringSchema`
       - `setApiKey`
       - `SetApiKeyBodySchema`
       - `signIn`

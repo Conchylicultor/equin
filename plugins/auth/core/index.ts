@@ -57,3 +57,13 @@ export type {
   AuthRefreshFailedPayload,
   RefreshFailureKind,
 } from "./internal/refresh-failure";
+export {
+  AuthScopesLostPayloadSchema,
+  ScopesLostDuringSchema,
+  lostScopes,
+  scopeLabel,
+} from "./internal/scopes-lost";
+export type {
+  AuthScopesLostPayload,
+  ScopesLostDuring,
+} from "./internal/scopes-lost";

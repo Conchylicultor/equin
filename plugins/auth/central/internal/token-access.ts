@@ -6,6 +6,7 @@ import type { AuthIdentity, AuthProviderDescriptor } from "@plugins/auth/core";
 import { AuthNeedsConsentError } from "@plugins/auth/core";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import { reportRefreshFailure, refreshSucceeded } from "./refresh-report";
+import { reportScopesIfLost } from "./scopes-lost-report";
 import type { GetAccessTokenArgs, TokenResponse } from "@plugins/auth/core";
 
 const REFRESH_LEAD_MS = 60_000;
@@ -59,6 +60,15 @@ async function refreshAccount(
           lastRefreshError: undefined,
         });
         refreshSucceeded(descriptor.id, accountId);
+        if (refreshed.scopes)
+          await reportScopesIfLost({
+            providerId: descriptor.id,
+            providerName: descriptor.name,
+            accountId,
+            during: "refresh",
+            held: account.scopes,
+            granted: refreshed.scopes,
+          });
         return updated ?? account;
       } catch (err) {
         const status = (err as { status?: number }).status;
@@ -111,6 +121,18 @@ async function refreshAccount(
   );
 }
 
+/**
+ * Why the account needs reconsent, dated: every consumer that hits it later
+ * (a nightly backup a day after) repeats this, and undated it reads as a
+ * fresh refusal rather than the same one still waiting for a reconnect.
+ */
+function refusalHint(account: StoredAccount): string | undefined {
+  const refusal = account.lastRefreshError;
+  if (!refusal) return undefined;
+  const when = `Refused on ${new Date(refusal.at).toISOString()} and not reconnected since.`;
+  return refusal.hint ? `${when} ${refusal.hint}` : when;
+}
+
 export type {
   GetAccessTokenArgs,
   TokenResponse,
@@ -148,7 +170,7 @@ export async function getAccessTokenInternal(
       ok: false,
       needsConsent: true,
       reason: "needs-reconsent",
-      hint: account.lastRefreshError?.hint,
+      hint: refusalHint(account),
     };
   }
 

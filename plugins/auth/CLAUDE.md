@@ -89,12 +89,19 @@ Env-var overrides for developers:
 
 Google uses Desktop-app + PKCE, but the token endpoint **still requires** `client_secret` (Google's implementation of RFC 8252 §8.6). Notion uses web-integration and also requires both. Shipping our own verified Google credentials is deferred — see [research/2026-04-24-global-auth-plugin.md](../../research/2026-04-24-global-auth-plugin.md) §I.
 
+## Granted scopes are never lost silently
+
+The callback REPLACES an account's stored scopes with what the grant returned (the truth of what the provider granted). So:
+
+- **A connect never asks for less than the account holds.** `oauthStart` requests default ∪ held ∪ requested scopes — held read from the stored account, which keeps its scopes through a refused refresh (only the tokens are cleared). A Reconnect, the setup wizard's Connect, and a consumer's Grant access (which passes only its own scopes) all re-ask for everything. Relying on Google's `include_granted_scopes` alone is not enough: after a refused grant (a Testing-mode refresh token expiring at 7 days) there is nothing left for it to include.
+- **A shrink is loud.** Any write that replaces scopes (the callback, a refresh that returns a scope list) goes through `reportScopesIfLost`: fewer than held files an `auth-scopes-lost` report (kind in `server/`) naming the lost scopes and the fix. A connect that asked for scopes and did not get them (the user unticked them on Google's granular consent screen) also keeps its result popup open with a "Not granted" line, and the opener's toast warns (`notGrantedWarning`).
+- **A refusal is dated.** A needs-reconsent token answer's hint starts `Refused on <ISO> and not reconnected since.`, so a consumer failing a day later (the nightly backup) does not read as a fresh refusal.
+
 ## Explicit deferrals
 
 - **Multi-account per provider.** Schema keys accounts by `accountId`; code paths assume `"primary"` until we add an account picker.
 - **Revoke on disconnect.** `descriptor.oauth.revoke` is a hook in the type but unused. MVP deletes locally only.
 - **Rate-limited refresh retries.** Unconditional 60 s tick. Acceptable until something proves otherwise.
-- **Scope-merging UI.** Incremental scope requests trigger full re-consent. Google's `include_granted_scopes=true` is already passed in `buildAuthorizeParams`, so providers should generally re-grant cleanly.
 - **Keychain unlock UX.** If the secrets primitive cannot resolve its master key at boot, the `auth-state` value returns providers with `credentialsConfigured: false` and the UI surfaces the configuration empty-state. No web UI to repair the keychain itself.
 
 ## Verification
@@ -105,7 +112,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
 
 ## Plugin reference
 
-- Description: Shared authentication infrastructure (OAuth 2.0, API keys, password sign-in). Exposes the Accounts pane — a DataView of every provider (Auth.Provider) and non-provider setup surface (Auth.Integration), grouped by service, each row opening one account pane to the right (header, account, and the row's setup inline — a provider's setup wizard, OAuth client steps or sign-in form; an integration's own setup) — and the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Registers the auth-refresh-failed report kind central's token refresh files through the report outbox: a refused grant at once, a transient failure once it has lasted 30 min of awake time. Centralized OAuth/API-key/password-sign-in infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
+- Description: Shared authentication infrastructure (OAuth 2.0, API keys, password sign-in). Exposes the Accounts pane — a DataView of every provider (Auth.Provider) and non-provider setup surface (Auth.Integration), grouped by service, each row opening one account pane to the right (header, account, and the row's setup inline — a provider's setup wizard, OAuth client steps or sign-in form; an integration's own setup) — and the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Registers the auth-refresh-failed report kind central's token refresh files through the report outbox: a refused grant at once, a transient failure once it has lasted 30 min of awake time. Registers the auth-scopes-lost report kind central files when a connect or refresh leaves an account with fewer permissions than it held. Centralized OAuth/API-key/password-sign-in infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
 - Load-bearing: yes
 - Web:
   - Slots:
@@ -169,7 +176,9 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `useAccountStatus`
     - `useAuthState`
 - Server:
-  - Contributes: `report-kind` "auth-refresh-failed"
+  - Contributes:
+    - `report-kind` "auth-refresh-failed"
+    - `report-kind` "auth-scopes-lost"
   - Uses:
     - `infra/endpoints.callEndpoint`
     - `reports.ReportKind`
@@ -244,6 +253,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `AuthProviderDescriptor`
     - `AuthProviderKind`
     - `AuthRefreshFailedPayload`
+    - `AuthScopesLostPayload`
     - `AuthStateValue`
     - `DisconnectBody`
     - `GetAccessTokenArgs`
@@ -254,6 +264,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `RefreshError`
     - `RefreshFailureKind`
     - `ResolvedCredentials`
+    - `ScopesLostDuring`
     - `SetApiKeyBody`
     - `SignInBody`
     - `TokenFailure`
@@ -267,6 +278,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `AuthNeedsConsentError`
     - `AuthProviderUnknownError`
     - `AuthRefreshFailedPayloadSchema`
+    - `AuthScopesLostPayloadSchema`
     - `authState`
     - `AuthStateValueSchema`
     - `defineAuthProvider`
@@ -276,9 +288,12 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `getToken`
     - `GetTokenBodySchema`
     - `humanDuration`
+    - `lostScopes`
     - `oauthCallback`
     - `oauthStart`
     - `RefreshFailureKindSchema`
+    - `scopeLabel`
+    - `ScopesLostDuringSchema`
     - `setApiKey`
     - `SetApiKeyBodySchema`
     - `signIn`

@@ -1,7 +1,11 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState } from "react";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
-import { currentWorktreeName, startConnectFlow } from "../connect";
+import {
+  currentWorktreeName,
+  notGrantedWarning,
+  startConnectFlow,
+} from "../connect";
 import { useTransport } from "@plugins/primitives/plugins/networking/web";
 
 export interface ConnectButtonProps {
@@ -31,8 +35,16 @@ export function ConnectButton({
             worktree: currentWorktreeName(),
             scopes,
           });
-          if (result.ok && result.identity) {
-            onConnected?.(result.identity);
+          const warning = notGrantedWarning(result);
+          if (result.ok && result.identity) onConnected?.(result.identity);
+          if (warning) {
+            toast({
+              type: "auth",
+              category: "other",
+              ...warning,
+              variant: "warning",
+            });
+          } else if (result.ok && result.identity) {
             toast({
               type: "auth",
               category: "other",

@@ -1,21 +1,19 @@
 import { useState } from "react";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import {
-  foldResource,
-  ResourceErrorInline,
-} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
-import { useAccountStatus } from "../hooks";
-import { currentWorktreeName, startConnectFlow } from "../connect";
+import {
+  currentWorktreeName,
+  notGrantedWarning,
+  startConnectFlow,
+} from "../connect";
 import { useTransport } from "@plugins/primitives/plugins/networking/web";
-import { mergeScopes } from "../scopes";
 
 /**
  * Reusable "Grant access" affordance for an OAuth provider + scope set.
  *
- * Requests the UNION of already-granted + requested scopes so the OAuth
- * callback's full-replace of stored scopes can't drop scopes the rest of the
- * app relies on.
+ * Asks only for `scopes`: central's start adds every scope the account
+ * already holds, so the callback's full-replace of stored scopes can't drop
+ * the ones the rest of the app relies on.
  */
 export function GrantAccessButton(props: {
   providerId: string;
@@ -31,19 +29,7 @@ export function GrantAccessButton(props: {
   } = props;
   const transport = useTransport();
   const toast = useToast();
-  const status = useAccountStatus(providerId);
   const [busy, setBusy] = useState(false);
-  // The already-granted scopes, once known (`[]`-equivalent `undefined` when
-  // the provider has no account). Until then the union cannot be computed —
-  // and granting without it would let the callback's full-replace DROP scopes —
-  // so the button waits (disabled) and a failed read offers its Retry instead.
-  const grantedScopes = foldResource(status, {
-    loading: () => null,
-    error: () => null,
-    // Granting goes through the computer's central runtime: never here.
-    unavailable: () => null,
-    ready: (account) => account?.scopes,
-  });
 
   async function handleGrant() {
     setBusy(true);
@@ -51,9 +37,17 @@ export function GrantAccessButton(props: {
       const result = await startConnectFlow(transport, {
         providerId,
         worktree: currentWorktreeName(),
-        scopes: mergeScopes(grantedScopes ?? undefined, scopes),
+        scopes,
       });
-      if (result.ok) {
+      const warning = notGrantedWarning(result);
+      if (warning) {
+        toast({
+          type: "auth",
+          category: "other",
+          ...warning,
+          variant: "warning",
+        });
+      } else if (result.ok) {
         toast({
           type: "auth",
           category: "other",
@@ -83,23 +77,8 @@ export function GrantAccessButton(props: {
     }
   }
 
-  if (status.status === "error")
-    return (
-      <ResourceErrorInline
-        variant="inline"
-        subject="the account's granted scopes"
-        error={status.error}
-        refetch={status.refetch}
-      />
-    );
-
   return (
-    <Button
-      variant={variant}
-      loading={busy}
-      disabled={status.status === "loading"}
-      onClick={handleGrant}
-    >
+    <Button variant={variant} loading={busy} onClick={handleGrant}>
       {label}
     </Button>
   );

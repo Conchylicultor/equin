@@ -21,7 +21,12 @@ import {
 import { useAuthState } from "../hooks";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { currentWorktreeName, disconnect, startConnectFlow } from "../connect";
+import {
+  currentWorktreeName,
+  disconnect,
+  notGrantedWarning,
+  startConnectFlow,
+} from "../connect";
 import { useTransport } from "@plugins/primitives/plugins/networking/web";
 import { ScopeGrantNotice } from "./scope-grant-notice";
 import { PasswordSignInForm } from "./password-sign-in-form";
@@ -257,7 +262,15 @@ function AccountControls({
         providerId,
         worktree: currentWorktreeName(),
       });
-      if (result.ok) {
+      const warning = notGrantedWarning(result);
+      if (warning) {
+        toast({
+          type: "auth",
+          category: "other",
+          ...warning,
+          variant: "warning",
+        });
+      } else if (result.ok) {
         toast({
           type: "auth",
           category: "other",

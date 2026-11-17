@@ -8,7 +8,9 @@ import {
   fetchIdentity,
   redirectUriFor,
 } from "../oauth-flow";
-import { setAccount } from "../token-store";
+import { getAccount, setAccount } from "../token-store";
+import { reportScopesIfLost } from "../scopes-lost-report";
+import { lostScopes, scopeLabel } from "@plugins/auth/core";
 import { emitAuthChanged } from "../actions";
 
 /**
@@ -89,12 +91,14 @@ export const handleOAuthCallback: HttpHandler = async (req, params) => {
       redirectUri: redirectUriFor(providerId),
     });
     const identity = await fetchIdentity(descriptor.oauth, tokens.accessToken);
+    const held = getAccount(providerId, "primary")?.scopes;
+    const granted = tokens.scopes ?? pending.scopes;
     await setAccount(providerId, "primary", {
       kind: "oauth2",
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
       expiresAt: tokens.expiresAt,
-      scopes: tokens.scopes ?? pending.scopes,
+      scopes: granted,
       idToken: tokens.idToken,
       identity,
       connectedAt: Date.now(),
@@ -102,12 +106,31 @@ export const handleOAuthCallback: HttpHandler = async (req, params) => {
       needsReconsent: false,
     });
     await emitAuthChanged();
+    // What was asked for and not granted (a permission unticked on Google's
+    // consent screen). Default scopes are left out: Google answers them under
+    // other names (`email` → `…/userinfo.email`) and never lets them be
+    // unticked. A held scope among them is a LOSS, filed as a report too.
+    const notGranted = lostScopes(
+      pending.scopes.filter(
+        (s) => !descriptor.oauth!.defaultScopes.includes(s),
+      ),
+      granted,
+    );
+    await reportScopesIfLost({
+      providerId,
+      providerName: descriptor.name,
+      accountId: "primary",
+      during: "connect",
+      held,
+      granted,
+    });
     return htmlResponse(
       renderResultPage({
         ok: true,
         providerId,
         openerOrigin: pending.openerOrigin,
         identity,
+        notGranted,
       }),
     );
   } catch (err) {
@@ -135,6 +158,8 @@ interface ResultPageArgs {
   openerOrigin: string | null;
   identity?: { accountId: string; email?: string; displayName?: string };
   message?: string;
+  /** Scopes the connect asked for that the provider did not grant. */
+  notGranted?: string[];
 }
 
 function renderResultPage(args: ResultPageArgs): string {
@@ -146,6 +171,7 @@ function renderResultPage(args: ResultPageArgs): string {
     accountId: args.identity?.accountId,
     identity: args.identity,
     message: args.message,
+    notGranted: args.notGranted,
   };
   const payloadJson = JSON.stringify(payload).replace(/</g, "\\u003c");
   const headline = args.ok
@@ -161,6 +187,11 @@ function renderResultPage(args: ResultPageArgs): string {
 </style></head><body>
 <h1 class="${args.ok ? "ok" : "err"}">${escapeHtml(headline)}</h1>
 ${args.message ? `<p>${escapeHtml(args.message)}</p>` : ""}
+${
+  args.notGranted && args.notGranted.length > 0
+    ? `<p class="err">Not granted: ${escapeHtml(args.notGranted.map(scopeLabel).join(", "))}. What needs these will not work — connect again and leave every permission ticked.</p>`
+    : ""
+}
 <p>You can close this window.</p>
 <script>
   (function () {
@@ -169,9 +200,14 @@ ${args.message ? `<p>${escapeHtml(args.message)}</p>` : ""}
         window.opener.postMessage(${payloadJson}, ${JSON.stringify(targetOrigin)});
       }
     } catch (e) { /* noop */ }
-    setTimeout(function () {
+    ${
+      // A partial grant stays open, so its "Not granted" line is read.
+      args.notGranted && args.notGranted.length > 0
+        ? ""
+        : `setTimeout(function () {
       try { window.close(); } catch (e) {}
-    }, 200);
+    }, 200);`
+    }
   })();
 </script>
 </body></html>`;
