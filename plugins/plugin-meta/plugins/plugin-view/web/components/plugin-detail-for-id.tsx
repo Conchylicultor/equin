@@ -63,7 +63,10 @@ export function PluginDetailForId({
       return <Placeholder>{tree.message}</Placeholder>;
     case "ready":
       return (
-        <PluginDetail node={findNode(tree.data.plugins, pluginId) ?? null} />
+        <PluginDetail
+          node={findNode(tree.data.plugins, pluginId) ?? null}
+          plugins={tree.data.plugins}
+        />
       );
   }
 }

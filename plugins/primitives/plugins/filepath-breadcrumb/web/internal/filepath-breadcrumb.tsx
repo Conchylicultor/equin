@@ -49,11 +49,10 @@ export function FilepathBreadcrumb({
       // An absolute path's first segment is the root, which has no name.
       label: seg === "" && i === 0 ? "/" : seg,
       activation: onNavigate ? () => onNavigate(dirs[i]!) : undefined,
-      // Resting on a crumb lists its parent's places; the root has none.
+      // Resting on a crumb lists its parent's places; the root has none, and
+      // a caller that passed `places={null}` said why it has none either.
       siblings:
-        places !== null && parent !== undefined
-          ? places(parent, at)
-          : undefined,
+        places !== null && parent !== undefined ? places(parent, at) : null,
     };
   });
 

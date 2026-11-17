@@ -48675,13 +48675,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PluginViewSlots.Section` ← `plugin-meta.plugin-view.sub-plugins`
           - `pluginViewPane.Actions` ← `primitives.pane`
         - Contributes: `Pane.Register` "plugin-view"
-        - Uses: 23 symbols — full list in [`plugins/plugin-meta/plugins/plugin-view/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-view/REFERENCE.md)
+        - Uses: 25 symbols — full list in [`plugins/plugin-meta/plugins/plugin-view/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-view/REFERENCE.md)
           - `primitives/collapsible` ×4
           - `primitives/pane` ×4
+          - `primitives/breadcrumb` ×3
           - `primitives/css/spacing` ×2
           - `network/live/live-state.ResourceErrorInline`
           - `network/live.useLive`
-          - `primitives/breadcrumb.Breadcrumb`
           - `primitives/css/badge.Badge`
           - `primitives/css/center.Center`
           - `primitives/css/cluster.Cluster`

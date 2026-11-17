@@ -5,7 +5,7 @@ import {
   type LoadedPlugin,
 } from "@plugins/framework/plugins/web-sdk/core";
 import { BreadcrumbSlots } from "../slots";
-import { Breadcrumb } from "../internal/breadcrumb";
+import { Breadcrumb, type BreadcrumbSegment } from "../internal/breadcrumb";
 
 /**
  * The fold decision against a scripted layout: jsdom lays nothing out, so each
@@ -160,18 +160,19 @@ afterEach(() => {
 });
 
 const noop = () => {};
-const SEGMENTS = [
-  { key: "a", label: "alpha", activation: noop },
-  { key: "b", label: "beta", activation: noop },
-  { key: "c", label: "gamma" },
+// The fold reads widths only: no crumb here offers a menu.
+const SEGMENTS: BreadcrumbSegment[] = [
+  { key: "a", label: "alpha", activation: noop, siblings: null },
+  { key: "b", label: "beta", activation: noop, siblings: null },
+  { key: "c", label: "gamma", siblings: null },
 ];
-const DEEP = [
-  { key: "a", label: "alpha", activation: noop },
-  { key: "b", label: "beta", activation: noop },
-  { key: "c", label: "gamma", activation: noop },
-  { key: "d", label: "delta", activation: noop },
-  { key: "e", label: "epsilon", activation: noop },
-  { key: "f", label: "zeta" },
+const DEEP: BreadcrumbSegment[] = [
+  { key: "a", label: "alpha", activation: noop, siblings: null },
+  { key: "b", label: "beta", activation: noop, siblings: null },
+  { key: "c", label: "gamma", activation: noop, siblings: null },
+  { key: "d", label: "delta", activation: noop, siblings: null },
+  { key: "e", label: "epsilon", activation: noop, siblings: null },
+  { key: "f", label: "zeta", siblings: null },
 ];
 
 function renderTrail(segments = SEGMENTS) {

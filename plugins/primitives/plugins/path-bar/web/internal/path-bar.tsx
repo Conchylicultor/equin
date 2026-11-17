@@ -140,8 +140,8 @@ export function PathBar({
         ...seg,
         activation: activationFor({ kind: "dir", path: seg.path }),
         // Resting on a crumb lists the places beside it — its parent's.
-        siblings:
-          parent === undefined ? undefined : source.places(parent.path, at),
+        // The first crumb has no parent on the trail: no level to list.
+        siblings: parent === undefined ? null : source.places(parent.path, at),
       };
     });
   }, [segments, source, activationFor]);

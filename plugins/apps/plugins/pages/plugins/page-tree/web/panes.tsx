@@ -312,7 +312,12 @@ function BlockTitleTrail({
 }): ReactElement {
   const crumb = useBlockCrumb(blockId, type);
   return (
-    <PageTitleTrail pageId={pageId} leaf={{ key: blockId, label: crumb }} />
+    <PageTitleTrail
+      pageId={pageId}
+      // The zoomed block is a place inside the page, not a page: the page
+      // tree has no level of blocks to list beside it.
+      leaf={{ key: blockId, label: crumb, siblings: null }}
+    />
   );
 }
 

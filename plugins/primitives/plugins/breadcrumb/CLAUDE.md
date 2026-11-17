@@ -6,6 +6,23 @@ A quiet trail: muted ancestor crumbs, a themed separator
 (`inherit` | `strong`), `text` (`inherit` | `body`), trailing `actions`. The
 leaf carries `data-breadcrumb-leaf`.
 
+## Sibling menus (required)
+
+Every `BreadcrumbSegment` states its `siblings`: the element (a
+`<BreadcrumbPlaces>`) that lists the places beside the crumb, opened by
+resting the pointer on it while a click still goes to the crumb. The field is
+required (`ReactElement | null`), so a new trail cannot drop the menus by
+forgetting; `null` is the stated exception, for a crumb with no level to list,
+with a comment saying why. The trails today:
+
+- **Pages** (`apps/pages/page-tree`): the pages under each parent. A zoomed
+  block's leaf is `null`.
+- **File paths** (`path-bar`, `filepath-breadcrumb`, through
+  `path-bar/folder-places`): the folders in each parent. The root crumb is
+  `null`.
+- **Plugins** (`plugin-meta/plugin-view`): the plugins beside each one, from
+  the tree already loaded.
+
 ## The fold (`use-ancestor-collapse.ts`, `fold-plan.ts`)
 
 The leaf never truncates while something else can give: the visible ancestors

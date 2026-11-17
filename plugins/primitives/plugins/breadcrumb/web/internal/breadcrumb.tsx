@@ -51,9 +51,14 @@ export interface BreadcrumbSegment {
    * The places beside this crumb's (its siblings), opened by resting the
    * pointer on the crumb: the element that reads and lists them — a
    * `<BreadcrumbPlaces>` — mounted only while the menu is open. A click on the
-   * crumb still goes to it. Omit it for a crumb with nothing to switch to.
+   * crumb still goes to it.
+   *
+   * Required: every trail offers its crumbs' siblings, so a new trail cannot
+   * leave them out by forgetting. `null` is the stated exception — a crumb
+   * with no level to list (a path's root, a crumb whose places cannot be
+   * read here) — and the line that passes it says why.
    */
-  siblings?: ReactElement;
+  siblings: ReactElement | null;
 }
 
 export interface BreadcrumbProps {
@@ -122,7 +127,7 @@ function Crumb({
 }: {
   label: ReactNode;
   activation?: Activation;
-  siblings?: ReactElement;
+  siblings: ReactElement | null;
   textClass: string;
   /** Its place in the trail, which the fold measures it by. */
   index: number;
@@ -149,7 +154,7 @@ function Crumb({
       {label}
     </Button>
   );
-  if (siblings === undefined) return crumb;
+  if (siblings === null) return crumb;
   return <CrumbPlacesMenu trigger={crumb} places={siblings} navigates />;
 }
 
@@ -171,7 +176,7 @@ function Leaf({
       {segment.label}
     </span>
   );
-  if (segment.siblings === undefined) return leaf;
+  if (segment.siblings === null) return leaf;
   return (
     <CrumbPlacesMenu
       trigger={leaf}
