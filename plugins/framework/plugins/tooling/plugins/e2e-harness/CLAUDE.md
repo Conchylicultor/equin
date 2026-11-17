@@ -196,6 +196,11 @@ they print reads `<ledger label>: <key>`):
   in a `setTimeout` inside the page, so closing first bounds what can still
   arrive.
 
+A `--url` to a public site (`https://equin.ai`: not a namespace host, not
+loopback — `targetIsLocalGateway`) skips both repairs: it keeps no ledger of
+this machine's writes and refuses the call as cross-site, so such a run only
+reads.
+
 Not covered, by construction: **secret (provider-backed) config fields**, which
 never touch the JSONC layer; and a script's own **Node-side `fetch`**, which the
 browser context's headers cannot reach — use `agentFetch` for those

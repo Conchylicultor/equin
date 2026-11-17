@@ -24,7 +24,8 @@ const gz = promisify(gzip);
 
 /**
  * Extensions worth compressing: text and the uncompressed binaries a browser
- * host ships (PGlite's wasm and data). Already-compressed formats (woff2,
+ * host ships (PGlite's wasm and data, a host's starting snapshot `.bin` —
+ * 30 MB raw, 3.6 MB brotli for the workspace demo's). Already-compressed formats (woff2,
  * png, …) are absent on purpose. Source maps too: only DevTools fetches them,
  * and the vendor set alone carries tens of MB of them.
  */
@@ -35,6 +36,7 @@ const COMPRESSIBLE = new Set([
   ".json",
   ".wasm",
   ".data",
+  ".bin",
   ".svg",
   ".html",
   ".txt",

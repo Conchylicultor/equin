@@ -399,6 +399,20 @@ export function isTargetOrigin(url: string): boolean {
   return origin === t.origin || origin === t.pageOrigin;
 }
 
+/**
+ * Whether the target is served by this machine's gateway (a namespace host,
+ * or bare loopback) — a deploy that keeps this machine's
+ * agent-write ledger. A public site (`--url https://equin.ai`) keeps none and
+ * refuses the harness's control calls as cross-site: a run there only reads.
+ */
+export function targetIsLocalGateway(): boolean {
+  const { host, hostname } = new URL(target().origin);
+  return (
+    namespaceFromHost(host) !== null ||
+    ["localhost", "127.0.0.1", "[::1]"].includes(hostname)
+  );
+}
+
 let parsed: Target | undefined;
 
 /**

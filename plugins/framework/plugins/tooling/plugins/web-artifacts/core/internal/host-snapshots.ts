@@ -89,7 +89,8 @@ const SNAPSHOT_FILE = "snapshot.bin";
  * Bumped when what a snapshot dir holds, or how the script is run, changes
  * shape — the stage's own code is not in the address (see the header).
  */
-const SNAPSHOT_LAYOUT = "2";
+// 3: the snapshot file gets precompressed sidecars (`.br`, `.gz`).
+const SNAPSHOT_LAYOUT = "3";
 
 /** How long taking one snapshot may run (a boot of the whole graph plus a seed). */
 const TAKE_TIMEOUT_MS = 10 * 60_000;

@@ -183,7 +183,10 @@ export function createPgliteDriver(
         // removed rather than shipped (a cluster that keeps few segments,
         // web-artifacts' pglite-cluster).
         await pglite.exec("CHECKPOINT");
-        return pglite.dumpDataDir("gzip");
+        // A plain tar, not gzipped: the dump ships inside a snapshot file
+        // that the build compresses whole for the wire (brotli, ~30 % smaller
+        // than a gzip inside it), and the opener then untars it directly.
+        return pglite.dumpDataDir("none");
       },
     });
     return pglite;

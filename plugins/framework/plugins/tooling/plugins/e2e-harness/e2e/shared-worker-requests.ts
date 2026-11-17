@@ -44,6 +44,14 @@ export interface SharedWorkerRequest {
   fromCache?: boolean;
   /** The network error text, when the request got no response. */
   failed?: string;
+  /** When it was sent (epoch ms). */
+  sentAt?: number;
+  /** When its last byte arrived (epoch ms); absent until it finished. */
+  finishedAt?: number;
+  /** Bytes received on the wire for it (headers and the body as sent: compressed when it was). */
+  encodedBytes?: number;
+  /** The response's `Content-Encoding` (`br`, `gzip`), absent when sent as is. */
+  contentEncoding?: string;
 }
 
 export interface SharedWorkerTap {
@@ -97,6 +105,8 @@ export async function tapSharedWorkerRequests(
   const requests: SharedWorkerRequest[] = [];
   /** `<sessionId>:<requestId>` → entry (request ids are per target). */
   const pending = new Map<string, SharedWorkerRequest>();
+  /** `<sessionId>:<requestId>` → when it was sent, on the wall and the monotonic clock CDP stamps its events with. */
+  const sentClock = new Map<string, { wall: number; mono: number }>();
   /** sessionId → the worker, for the sessions still attached. */
   const sessions = new Map<string, RunningWorker>();
   /** targetId → the worker, while it runs. */
@@ -165,9 +175,14 @@ export async function tapSharedWorkerRequests(
             worker: worker.url,
             method: request.method,
             url: request.url,
+            sentAt: (p.wallTime as number) * 1000,
           };
           requests.push(entry);
           pending.set(key, entry);
+          sentClock.set(key, {
+            wall: (p.wallTime as number) * 1000,
+            mono: (p.timestamp as number) * 1000,
+          });
           return;
         }
         case "Network.responseReceived": {
@@ -177,11 +192,25 @@ export async function tapSharedWorkerRequests(
             status: number;
             fromDiskCache?: boolean;
             fromPrefetchCache?: boolean;
+            headers?: Record<string, string>;
           };
           entry.status = response.status;
+          const encoding = Object.entries(response.headers ?? {}).find(
+            ([name]) => name.toLowerCase() === "content-encoding",
+          )?.[1];
+          if (encoding !== undefined) entry.contentEncoding = encoding;
           entry.fromCache =
             response.fromDiskCache === true ||
             response.fromPrefetchCache === true;
+          return;
+        }
+        case "Network.loadingFinished": {
+          const entry = pending.get(key);
+          const sent = sentClock.get(key);
+          if (entry === undefined || sent === undefined) return;
+          entry.encodedBytes = p.encodedDataLength as number;
+          entry.finishedAt =
+            sent.wall + (p.timestamp as number) * 1000 - sent.mono;
           return;
         }
         case "Network.loadingFailed": {

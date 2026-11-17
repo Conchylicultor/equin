@@ -1,7 +1,7 @@
 // ── A host's starting snapshot: its whole state, as one file ────────────────
 //
 // What a browser host can start from instead of an empty storage: the
-// database's data directory (PGlite's `dumpDataDir`, a gzipped tar) and every
+// database's data directory (PGlite's `dumpDataDir`, a plain tar) and every
 // host store's entries, taken from a host that already ran (a demo's seed, run
 // once by the build — `../../cli`'s `takeHostSnapshot`). Times inside it are
 // as they were at `takenAt`; whoever loads it shifts them to now (the
@@ -19,7 +19,11 @@ export interface HostSnapshot {
   takenAt: number;
   /** The migration hashes its database has applied. */
   migrations: string[];
-  /** PGlite's data directory (`dumpDataDir("gzip")`). */
+  /**
+   * PGlite's data directory (`dumpDataDir("none")`, a plain tar: the file is
+   * compressed whole for the wire, which compresses it better than a gzip
+   * inside it would — 3.6 vs 4.2 MB brotli for the workspace demo's).
+   */
   database: Blob;
   /** Every host store's entries, by store name. */
   stores: Record<string, Array<[key: string, value: unknown]>>;

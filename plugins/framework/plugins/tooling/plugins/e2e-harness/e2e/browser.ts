@@ -34,7 +34,12 @@ import { failRun, onBeforeFinish } from "./report";
 import { createRecorder } from "./recorder";
 import { repairAgentWrites, settleAgentWrites } from "./agent-writes";
 import { assertDeployIdentity } from "./deploy-identity";
-import { isTargetOrigin, targetNamespace, unconsumedPage } from "./target";
+import {
+  isTargetOrigin,
+  targetIsLocalGateway,
+  targetNamespace,
+  unconsumedPage,
+} from "./target";
 import {
   trackContextNetwork,
   waitForNetworkIdle,
@@ -346,7 +351,10 @@ async function runBrowser<T>(
   // reads is taken after the user's real config has been restored.
   //
   // On the normal path, not in a `finally`, so `process.exit` cannot skip it.
-  await repairAgentWrites("start");
+  // A public site keeps no ledger of this machine's writes (and refuses the
+  // call as cross-site): nothing to repair there, at either end.
+  const repairs = targetIsLocalGateway();
+  if (repairs) await repairAgentWrites("start");
 
   // Chromium is an on-demand dependency: the first run on a machine installs
   // it (~280 MB, progress on this terminal) in a `./equin deps install`
@@ -398,8 +406,10 @@ async function runBrowser<T>(
     // bounds what can still reach the server to what is already dispatched.
     // Then drain those. Only then revert, or the revert races a write.
     await browser.close();
-    await settleAgentWrites();
-    await repairAgentWrites("end");
+    if (repairs) {
+      await settleAgentWrites();
+      await repairAgentWrites("end");
+    }
     assertPageWasConsumed();
     if (recording !== null) throw recording.err;
   };

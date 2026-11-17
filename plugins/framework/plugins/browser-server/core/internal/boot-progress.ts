@@ -30,8 +30,6 @@ type Listener = (progress: HostProgress) => void;
 let current: HostProgress = { downloadedBytes: 0, data: null, plugins: null };
 const listeners = new Set<Listener>();
 let observing = false;
-/** The starting data's URL: its bytes are counted as they stream (`reportDataProgress`), not again when its entry lands. */
-let dataUrl: string | null = null;
 
 function publish(next: HostProgress): void {
   current = next;
@@ -40,9 +38,13 @@ function publish(next: HostProgress): void {
 
 /**
  * Count what the worker downloads, from its resource entries (`buffered`:
- * the entry modules fetched before this ran too). Where the realm has no
- * `PerformanceObserver` for resources, the count stays at the starting data's
- * bytes alone.
+ * the entry modules fetched before this ran too) — the starting data's
+ * included, once it has landed. `transferSize` is the bytes on the wire (a
+ * compressed body counts compressed), which is what a visitor's connection
+ * pays; the starting data's streamed progress (`reportDataProgress`) counts
+ * decoded bytes, so it moves the data's fraction only, never this count.
+ * Where the realm has no `PerformanceObserver` for resources, the count stays
+ * at zero.
  */
 function observeDownloads(): void {
   if (observing) return;
@@ -55,10 +57,8 @@ function observeDownloads(): void {
   }
   new PerformanceObserver((list) => {
     let bytes = 0;
-    for (const entry of list.getEntries()) {
-      if (entry.name === dataUrl) continue;
+    for (const entry of list.getEntries())
       bytes += (entry as PerformanceResourceTiming).transferSize;
-    }
     if (bytes > 0)
       publish({ ...current, downloadedBytes: current.downloadedBytes + bytes });
   }).observe({ type: "resource", buffered: true });
@@ -74,27 +74,16 @@ export function watchHostProgress(listener: Listener): () => void {
 
 /**
  * The starting data's download from `url`, as it arrives (`received` of
- * `total` bytes). Its bytes are counted here as they stream, so its resource
- * entry is not counted again when the fetch completes.
+ * `total` bytes, decoded: what the build wrote, whatever encoding carried
+ * it). It moves the data's fraction only; its wire bytes join
+ * `downloadedBytes` from its resource entry once the fetch completes.
  */
 export function reportDataProgress(
-  url: string,
+  _url: string,
   received: number,
   total: number,
 ): void {
-  // A new load (another url, or the same one again after a Reset) counts
-  // from nothing; the same load from what it had counted.
-  const prev = current.data;
-  const before =
-    dataUrl === url && prev !== null && received >= prev.received
-      ? prev.received
-      : 0;
-  dataUrl = url;
-  publish({
-    ...current,
-    downloadedBytes: current.downloadedBytes + (received - before),
-    data: { received, total },
-  });
+  publish({ ...current, data: { received, total } });
 }
 
 /**

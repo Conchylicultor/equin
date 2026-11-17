@@ -26,7 +26,9 @@ the computer names it to take it back.
   anything reads it — every `timestamp` / `timestamptz` column of every public
   base table is moved by `shiftMs`, in one transaction with
   `session_replication_role = replica` (no trigger: the rows did not change,
-  the clock did). `dump()` (what the storage adopts) is `dumpDataDir("gzip")`.
+  the clock did). `dump()` (what the storage adopts) is `dumpDataDir("none")` — a plain
+  tar, since the snapshot file it ships in is compressed whole for the wire
+  (web-artifacts' precompressed sidecars).
   Pinned by `server/internal/snapshot-load.test.ts`. In memory, PGlite takes
   its options as its ONLY argument: `new PGlite(undefined, options)` drops them.
 - **An initialized cluster** (`databaseStart: { from: "initialized",
