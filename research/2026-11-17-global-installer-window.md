@@ -399,7 +399,7 @@ Order: 1 first, then 2 and 4 in parallel, then 3, then 5.
 1. **Optional failures don't block.** The App Management failure is a banner while the build continues, with "Add it now" on the done screen. It replaces the mockup's blocking pause.
 2. **Claude app hand-off.** If the app has no supported prefill link, the prompt goes on the clipboard and the window says to paste it. That is accepted.
 3. **A fresh install checks out the newest release by default.** `--ref main` keeps the old behaviour.
-4. **Authenticity beyond checksums:** still open. See the note below.
+4. **No release signature, and no branch protection.** You don't want human review in the loop, so `main` and the tags stay unprotected. Trust rests on the checksums plus GitHub's build-provenance records. The notarized app (Backlog) remains the long-term answer for macOS. The note below explains the reasoning.
 5. **`equinai/equin` is public,** so the GitHub-hosted macOS and Linux runners are free.
 
 ### Note on signing the release (open question 4)
