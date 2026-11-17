@@ -42,7 +42,12 @@ export function MessageAgentView({
   return (
     <ToolCallCard
       event={event}
-      aside={<AgentChip to={input.to.trim()} />}
+      aside={
+        <AgentChip
+          to={input.to.trim()}
+          sentTo={answer?.kind === "sent" ? answer.conversationId : undefined}
+        />
+      }
       summary={firstLine(input.text)}
       note={notSent ? "· not sent" : input.reopen ? "· reopened" : undefined}
       isError={notSent || undefined}

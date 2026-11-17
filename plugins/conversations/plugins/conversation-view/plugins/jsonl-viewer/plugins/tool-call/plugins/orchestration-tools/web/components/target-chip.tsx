@@ -9,11 +9,22 @@ export function TaskChip({ taskId }: { taskId: string }) {
   return <TaskLinkChip content={taskId} attrs={NO_ATTRS} />;
 }
 
-/** What `message_agent` names as its recipient: a task id (its latest
- *  conversation) or a conversation id. */
-export function AgentChip({ to }: { to: string }) {
-  if (to.startsWith("task-")) return <TaskChip taskId={to} />;
-  return <ConvChip content={to} attrs={NO_ATTRS} />;
+/** `message_agent`'s recipient, opening the conversation the message went to
+ *  (beside this one): the conversation the tool's answer says it was sent to,
+ *  else the conversation id it named. A task id (its latest conversation) the
+ *  answer has not resolved yet — still running, or not sent — stays the task's
+ *  chip. */
+export function AgentChip({
+  to,
+  sentTo,
+}: {
+  to: string;
+  /** The conversation the answer says the message was delivered to. */
+  sentTo: string | undefined;
+}) {
+  const conversationId = sentTo ?? (to.startsWith("task-") ? null : to);
+  if (conversationId === null) return <TaskChip taskId={to} />;
+  return <ConvChip content={conversationId} attrs={NO_ATTRS} />;
 }
 
 /** The tool's refusal, in its own words. */
