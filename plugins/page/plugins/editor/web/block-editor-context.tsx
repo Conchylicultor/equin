@@ -48,6 +48,7 @@ import {
   hasTextKey,
   rowDataOf,
   joinAroundSpan,
+  wrappableRoots,
   PAGE_BLOCK_TYPE,
   type Block,
   type BlockNode,
@@ -500,8 +501,10 @@ interface BlockEditorContextValue {
    * Turn into, over a block selection: retype every listed line to `type` in
    * ONE recorded write (one undo entry), each by the same swap
    * `BlockEditorAPI.convertTo` makes for one line. Void containers and
-   * sub-page rows in the list are skipped (neither can take a type swap); a
-   * `wrapOnConvert` target throws — a selection is not wrapped line by line.
+   * sub-page rows in the list are skipped (neither can take a type swap). A
+   * `wrapOnConvert` target wraps the whole selection in ONE container (its
+   * roots become the box's children — `wrappableRoots`), and throws when
+   * those roots do not share a parent.
    */
   convertBlocks: (
     blockIds: readonly string[],
@@ -2247,12 +2250,13 @@ export function BlockEditorProviderInner({
   );
 
   // The `wrapOnConvert` half of `convertTo`: mint a container row of `type` and
-  // make `blockId` its FIRST CHILD, in ONE patch through the shared row-set
+  // make `blockIds` — sibling subtree roots, in document order (one line, or
+  // the roots of a selection: `wrappableRoots`) — its children, in ONE patch through the shared row-set
   // chokepoint — hence ONE undo entry, and the reducer's childless-anchor prune
   // is never observed mid-flight (there is no intermediate state where the
   // container exists without its child).
   //
-  // The ORIGIN keeps its id, type, `data` (its `text` projection included, since
+  // Each ORIGIN keeps its id, type, `data` (its `text` projection included, since
   // its content doc is untouched), children and rank. Keeping the id is
   // load-bearing, not an optimization: its `page_block_docs` Yjs doc, its
   // content owner and its registered `BlockFocusHandle` are all keyed by block
@@ -2260,17 +2264,33 @@ export function BlockEditorProviderInner({
   // id goes to the container, which is void and never opens a content doc, so
   // the doc-init FK gate applies to neither row.
   //
-  // The container takes a FRESH rank strictly before the origin's, never the
-  // origin's own: reusing it would need the ranks to be parked (two rows briefly
+  // Each origin keeps its own rank too: the origins are one parent's siblings,
+  // so their ranks are already distinct and in order under the new parent.
+  // The container takes a FRESH rank strictly before the first origin's, never
+  // that origin's own: reusing it would need the ranks to be parked (two rows briefly
   // sharing one `(parent_id, rank)` slot), and the in-memory store has no
   // `parkRanks` — it applies the patch verbatim.
   const wrapInContainer = useCallback(
-    (blockId: string, type: string, containerData: unknown) => {
+    (blockIds: readonly string[], type: string, containerData: unknown) => {
       const containerId = newBlockId();
+      const [blockId] = blockIds;
+      if (blockId === undefined) return;
+      const wrapped = new Set(blockIds);
       commitRows(
         (rows) => {
           const origin = rows.find((b) => b.id === blockId);
           if (!origin) return rows;
+          // A stale caller (rows moved since it chose its roots) is a bug, not
+          // a partial wrap: every root must still be the first one's sibling.
+          if (
+            rows.some(
+              (b) => wrapped.has(b.id) && b.parentId !== origin.parentId,
+            ) ||
+            blockIds.some((id) => !rows.some((b) => b.id === id))
+          )
+            throw new Error(
+              "wrapInContainer: the blocks to wrap are not one parent's siblings",
+            );
           const nodes = toNodes(rows);
           const siblings = childrenOf(nodes, origin.parentId);
           const index = siblings.findIndex((s) => s.id === origin.id);
@@ -2294,7 +2314,7 @@ export function BlockEditorProviderInner({
           };
           return [
             ...rows.map((b) =>
-              b.id === blockId ? { ...b, parentId: containerId } : b,
+              wrapped.has(b.id) ? { ...b, parentId: containerId } : b,
             ),
             container,
           ];
@@ -2881,7 +2901,7 @@ export function BlockEditorProviderInner({
       // `preserveText` has nothing to do here.
       const target = blockHandles.get(type);
       if (target?.wrapOnConvert) {
-        wrapInContainer(blockId, type, target.empty?.() ?? {});
+        wrapInContainer([blockId], type, target.empty?.() ?? {});
         return;
       }
       commitRow(
@@ -2900,16 +2920,28 @@ export function BlockEditorProviderInner({
   // conversion are left alone rather than refusing the whole gesture: a void
   // container (it owns no text, so a type swap has nowhere to put its
   // children) and a sub-page row (converting it away would orphan its
-  // partition). A `wrapOnConvert` target is not a per-line swap — wrapping each
-  // line in its own box is not what a selection means — so it is refused
-  // loudly; the menu does not offer one for a selection.
+  // partition). A `wrapOnConvert` target is not a per-line swap — one box per
+  // line is not what a selection means — so the selection goes into ONE box:
+  // its subtree roots (`wrappableRoots`) become the new container's children.
+  // Roots under different parents have no one place for that box, so that
+  // case throws; the menu does not offer a wrap for it.
   const convertBlocks = useCallback(
     (blockIds: readonly string[], type: string, data: RowData) => {
-      if (blockHandles.get(type)?.wrapOnConvert)
-        throw new Error(
-          `convertBlocks: "${type}" wraps on convert; a selection cannot be retyped into it`,
-        );
       const ids = new Set(blockIds);
+      const target = blockHandles.get(type);
+      if (target?.wrapOnConvert) {
+        const roots = wrappableRoots(
+          toNodes(liveRowsRef.current),
+          ids,
+          isAnchorNode,
+        );
+        if (roots === null)
+          throw new Error(
+            `convertBlocks: the selection's roots do not share a parent, so it cannot be wrapped in one "${type}"`,
+          );
+        wrapInContainer(roots, type, target.empty?.() ?? {});
+        return;
+      }
       const convertible = (b: Block) =>
         ids.has(b.id) &&
         b.type !== PAGE_BLOCK_TYPE &&
@@ -2922,7 +2954,14 @@ export function BlockEditorProviderInner({
         { label: "Change block type", focusId: first.id },
       );
     },
-    [commitRows, blockHandles, retypeRow, liveRowsRef],
+    [
+      commitRows,
+      blockHandles,
+      retypeRow,
+      liveRowsRef,
+      isAnchorNode,
+      wrapInContainer,
+    ],
   );
 
   // The doc half of every text-consuming commit. `deleteRange` is DISCRETE, so

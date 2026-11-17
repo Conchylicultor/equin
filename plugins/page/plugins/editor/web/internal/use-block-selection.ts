@@ -546,6 +546,11 @@ export function useBlockSelection({
   const selectedBlockIds = useEventCallback((): readonly string[] =>
     isActive ? [...selectedIds] : [],
   );
+  const resume = useEventCallback((): boolean => {
+    if (!isActive || containerRef.current === null) return false;
+    focusContainer();
+    return true;
+  });
 
   const control = useMemo<SelectionControl>(
     () => ({
@@ -555,6 +560,7 @@ export function useBlockSelection({
       selectAll: selectEveryBlock,
       clear: clearSelection,
       selectedBlockIds,
+      resume,
     }),
     [
       enterSelectionMode,
@@ -563,6 +569,7 @@ export function useBlockSelection({
       selectEveryBlock,
       clearSelection,
       selectedBlockIds,
+      resume,
     ],
   );
 
@@ -570,9 +577,17 @@ export function useBlockSelection({
 
   const onFocusCapture = useEventCallback((e: React.FocusEvent) => {
     // Focusing into a block's editor (clicking to type) drops any block selection.
-    // Focusing the container itself (entering selection mode) doesn't.
+    // Focusing the container itself (entering selection mode) doesn't — and
+    // neither does focus moving into a PORTAL a row opened (the rail's block
+    // menu acting on the selection): React bubbles its focus through here, but
+    // it is not a place in the document, so the range stays — and stays painted
+    // — while the menu is open. `resume` hands the keyboard back on close.
+    const container = containerRef.current;
     if (
-      e.target !== containerRef.current &&
+      e.target !== container &&
+      container !== null &&
+      e.target instanceof Node &&
+      container.contains(e.target) &&
       (isActive || textSpanRef.current !== null)
     )
       clearSelection();

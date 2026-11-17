@@ -26,6 +26,7 @@ import {
   planSplice,
   blockSelectionRoots,
   withContainersSelected,
+  wrappableRoots,
   prevVisibleLine,
   nextVisibleLine,
   visibleChildrenOf,
@@ -4020,5 +4021,53 @@ describe("splice", () => {
       expect(textById(out, "A")).toBe("foobar");
       expect(ids(out, "PAGE")).toEqual(["A", "P1"]);
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Wrapping a selection in ONE box — `wrappableRoots`
+// ---------------------------------------------------------------------------
+
+describe("wrappableRoots", () => {
+  /** `P [p1, p2], Q, R` */
+  function forest(): BlockNode[] {
+    const r1 = a;
+    const r2 = after(r1);
+    const r3 = after(r2);
+    return [
+      mk("P", null, r1),
+      mk("p1", "P", a),
+      mk("p2", "P", after(a)),
+      mk("Q", null, r2),
+      mk("R", null, r3),
+    ];
+  }
+
+  test("sibling roots, in sibling order; a selected parent carries its children", () => {
+    expect(
+      wrappableRoots(forest(), new Set(["Q", "P", "p1", "p2"]), isAnchorFn),
+    ).toEqual(["P", "Q"]);
+  });
+
+  test("roots under different parents have no one place for the box", () => {
+    expect(
+      wrappableRoots(forest(), new Set(["p2", "Q"]), isAnchorFn),
+    ).toBeNull();
+  });
+
+  test("a fully covered card wraps as the card, not its lines", () => {
+    const blocks: BlockNode[] = [
+      anchorNode("C", null, a),
+      mk("c1", "C", a),
+      mk("T", null, after(a)),
+    ];
+    expect(wrappableRoots(blocks, new Set(["c1", "T"]), isAnchorFn)).toEqual([
+      "C",
+      "T",
+    ]);
+  });
+
+  test("nothing selected is nothing to wrap", () => {
+    expect(wrappableRoots(forest(), new Set(), isAnchorFn)).toBeNull();
   });
 });

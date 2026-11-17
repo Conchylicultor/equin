@@ -76,6 +76,7 @@ export {
   pasteAnchorId,
   blockSelectionRoots,
   withContainersSelected,
+  wrappableRoots,
   prevVisibleLine,
   nextVisibleLine,
   visibleChildRule,

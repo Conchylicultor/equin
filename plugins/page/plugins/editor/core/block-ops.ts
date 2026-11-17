@@ -951,6 +951,31 @@ export function blockSelectionRoots(
 }
 
 /**
+ * The blocks a selection wraps into ONE container (Turn into → callout over a
+ * selection): its subtree roots (`blockSelectionRoots`), in sibling order —
+ * or `null` when they do not all share a parent, since a box has one place in
+ * the tree and a selection that climbs out of a branch has no single spot for
+ * it. A block selection is contiguous, so roots sharing a parent are also
+ * adjacent siblings: moving them under a new container at the first root's
+ * position reorders nothing.
+ */
+export function wrappableRoots(
+  blocks: BlockNode[],
+  selectedIds: ReadonlySet<string>,
+  isAnchor: IsAnchor,
+): string[] | null {
+  const roots = new Set(blockSelectionRoots(blocks, selectedIds, isAnchor));
+  const parents = new Set(
+    blocks.filter((b) => roots.has(b.id)).map((b) => b.parentId),
+  );
+  const [parentId] = parents;
+  if (parents.size !== 1 || parentId === undefined) return null;
+  return childrenOf(blocks, parentId)
+    .filter((b) => roots.has(b.id))
+    .map((b) => b.id);
+}
+
+/**
  * Where a paste lands while a block selection is active: as a sibling AFTER the
  * last selected subtree root in DOCUMENT order, falling back to the caret's own
  * block when nothing is selected.

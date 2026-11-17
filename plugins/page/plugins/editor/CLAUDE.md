@@ -2713,6 +2713,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `withPageKind`
     - `withPasteIds`
     - `withRuns`
+    - `wrappableRoots`
     - `writtenIds`
     - `xmlTextContentLength`
     - `xmlTextToRuns`

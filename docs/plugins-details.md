@@ -44951,6 +44951,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withPageKind`
           - `withPasteIds`
           - `withRuns`
+          - `wrappableRoots`
           - `writtenIds`
           - `xmlTextContentLength`
           - `xmlTextToRuns`

@@ -11,7 +11,9 @@ import {
   PAGE_BLOCK_TYPE,
   toNodes,
   withContainersSelected,
+  wrappableRoots,
   type Block,
+  type BlockNode,
 } from "../../core";
 import type { BlockEditorAPI } from "../types";
 import { Editor, useBlockFrameMenus } from "../slots";
@@ -61,13 +63,15 @@ const unfoldMoreIcon = symbol("unfold-more");
  * Over a BLOCK SELECTION — the menu opened from a line inside a live block
  * range of 2+ convertible lines — the ordinary arm acts on the whole selection:
  * a type picked in "Turn into" retypes every selected line (`convertBlocks`,
- * one undo entry), and Delete removes the selection. The set is read once, as
- * the menu opens (`SelectionControl.selectedBlockIds`): focus moving into the
- * popover ends block-selection mode, and reading it on open rather than
- * subscribing keeps a selection change from re-rendering every row's rail. The
- * targets that are not a per-line type swap are not offered then — a
- * `wrapOnConvert` type (one box per line is not what a selection means) and
- * the `Editor.TurnInto` transitions (each takes one block).
+ * one undo entry), a `wrapOnConvert` type (callout, quote) puts the whole
+ * selection in ONE box — offered only when its roots share a parent — and
+ * Delete removes the selection. The set is read once, as the menu opens
+ * (`SelectionControl.selectedBlockIds`) rather than subscribed to, so a
+ * selection change re-renders no row's rail. The range stays live and painted
+ * while the menu is open (focus in a portal does not end it), and closing the
+ * menu hands the keyboard back to it (`SelectionControl.resume`). The
+ * `Editor.TurnInto` transitions are not offered for a selection (each takes
+ * one block). A menu opened from a block OUTSIDE the selection lets it go.
  *
  * On the ZOOM ROOT (`EditorScope.rootId`) the menu offers only what keeps the
  * root where it is: a plain type conversion keeps its id and its place, so it
@@ -116,10 +120,17 @@ export function BlockActionsMenu({
   const [batch, setBatch] = useState<{
     convertible: string[];
     all: string[];
+    /** Whether a `wrapOnConvert` target can take the selection as ONE box. */
+    wrappable: boolean;
   } | null>(null);
   const captureBatch = () => {
     const all = selectionControl?.selectedBlockIds() ?? [];
-    if (!all.includes(block.id)) return null;
+    if (!all.includes(block.id)) {
+      // A menu opened OUTSIDE the selection acts on its own block, so the
+      // range it does not touch is let go (as a drag from outside it is).
+      if (all.length > 0) selectionControl?.clear();
+      return null;
+    }
     const ids = new Set(all);
     const convertible = rowsRef.current
       .filter(
@@ -133,12 +144,16 @@ export function BlockActionsMenu({
     // Delete acts on what the selection bar's Delete does: the range closed
     // over every container it fully covers, so a covered card goes with its
     // lines rather than being left behind empty.
-    const deleted = withContainersSelected(
-      toNodes(rowsRef.current),
-      ids,
-      (n) => handles.get(n.type)?.anchor === true,
-    );
-    return { convertible, all: [...deleted] };
+    const nodes = toNodes(rowsRef.current);
+    const isAnchor = (n: BlockNode) => handles.get(n.type)?.anchor === true;
+    const deleted = withContainersSelected(nodes, ids, isAnchor);
+    // One box needs one place: the roots must share a parent, and the zoom
+    // root cannot move under a box inside its own view.
+    const roots = wrappableRoots(nodes, ids, isAnchor);
+    const wrappable =
+      roots !== null &&
+      (scope.rootId === null || !roots.includes(scope.rootId));
+    return { convertible, all: [...deleted], wrappable };
   };
   // A `TurnInto` contribution converts a block into something the editor's own
   // pure `convertTo` cannot express — a server-backed transition (into a
@@ -165,9 +180,10 @@ export function BlockActionsMenu({
           {
             // A `wrapOnConvert` target mints a container and reparents the block
             // into it — for the zoom root, a move out of its own view.
-            // Over a selection likewise: a wrap is one box around ONE line.
+            // Over a selection, a wrap puts the whole selection in ONE box —
+            // offered only when its roots share a parent (`wrappableRoots`).
             blocks:
-              isScopeRoot || batch !== null
+              isScopeRoot || (batch !== null && !batch.wrappable)
                 ? list.filter((b) => !b.wrapOnConvert)
                 : list,
           },
@@ -236,6 +252,13 @@ export function BlockActionsMenu({
       }}
       align={align}
       side={side}
+      // Over a selection the keyboard goes back to it, not to the handle.
+      finalFocus={
+        // `false` = "focus moved, leave it"; `true` = the default (trigger).
+        batch === null
+          ? undefined
+          : () => !(selectionControl?.resume() ?? false)
+      }
       // No width: contributed sections host arbitrary controls — today a full
       // icon picker — and declare the width they need on their own section
       // (`needs="picker"`), so the menu widens exactly when one is showing.
@@ -376,9 +399,13 @@ export function BlockActionsMenu({
             keepFocus
             tone="danger"
             icon={<Icon icon={deleteIcon} />}
-            onSelect={commit(() =>
-              batch === null ? api.remove() : bulkDelete(batch.all),
-            )}
+            onSelect={commit(() => {
+              if (batch === null) api.remove();
+              else {
+                bulkDelete(batch.all);
+                selectionControl?.clear();
+              }
+            })}
           >
             Delete
           </ControlPanel.Row>

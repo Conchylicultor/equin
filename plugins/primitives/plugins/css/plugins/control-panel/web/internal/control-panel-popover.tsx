@@ -62,6 +62,13 @@ interface ControlPanelPopoverOwnProps {
   label?: string;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /**
+   * Where focus goes when the panel closes (base-ui's `finalFocus`); default
+   * back to the trigger. For a panel that acted on something other than its
+   * trigger — a block menu acting on a block selection hands the keyboard back
+   * to that selection.
+   */
+  finalFocus?: ComponentProps<typeof PopoverContent>["finalFocus"];
   children: React.ReactNode;
 }
 
@@ -101,6 +108,7 @@ export function ControlPanelPopover({
   side = "bottom",
   open,
   onOpenChange,
+  finalFocus,
   children,
 }: ControlPanelPopoverProps) {
   // The stack's state lives HERE rather than inside the stack so it returns to
@@ -118,6 +126,7 @@ export function ControlPanelPopover({
       {trigger ? <PopoverTrigger render={trigger} /> : null}
       <PopoverContent
         resetOnClose
+        finalFocus={finalFocus}
         anchor={anchor}
         align={align}
         side={side}

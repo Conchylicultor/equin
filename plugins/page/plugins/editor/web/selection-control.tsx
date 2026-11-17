@@ -42,6 +42,13 @@ export interface SelectionControl {
    * re-renders no row.
    */
   selectedBlockIds: () => readonly string[];
+  /**
+   * Hand the keyboard back to the live block range — focus the selection
+   * container again — after a menu the range outlived (a rail popover acting on
+   * it) closes; a no-op with no block range. False when it moved nothing, so a
+   * popover's `finalFocus` can fall back to its own default.
+   */
+  resume: () => boolean;
 }
 
 const SelectionControlContext = createContext<SelectionControl | null>(null);
