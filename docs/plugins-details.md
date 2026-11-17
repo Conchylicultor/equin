@@ -38802,6 +38802,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `appExecutablePath`
               - `awaitProcessGone`
               - `bundleOfExecutable`
+              - `BundleWriteRefusedError`
               - `declaredLoginServices`
               - `defineLoginService`
               - `installedAppComponents`

@@ -17,6 +17,7 @@ import {
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
+  BundleWriteRefusedError,
   bundleOfExecutable,
   installedAppComponents,
   installServiceExecutable,
@@ -35,7 +36,8 @@ let dir: AppPath;
 let bundle: AppPath;
 let calls: string[];
 let signed: boolean;
-let failSign: boolean;
+/** true: a generic failure; a string: that message. */
+let failSign: boolean | string;
 let running: () => string[];
 
 beforeEach(() => {
@@ -63,7 +65,8 @@ function host(): MacosAppHost {
       // The staging copy is what gets signed, never the installed bundle.
       expect(staging).not.toBe(bundle);
       expect(existsSync(join(staging, "Contents", "Info.plist"))).toBe(true);
-      if (failSign) throw new Error("signing failed");
+      if (failSign !== false)
+        throw new Error(failSign === true ? "signing failed" : failSign);
     },
     isSigned: async () => signed,
     signer: async () => null,
@@ -305,6 +308,27 @@ describe("installServiceExecutable", () => {
     expect(
       installServiceExecutable(host(), gateway, build("gw", "2"), () => {}),
     ).rejects.toMatchObject({ message: "signing failed" });
+
+    expect(readFileSync(exe("gateway"), "utf8")).toBe("1");
+    expect(readdirSync(join(dir, "state"))).toEqual(["equin.app"]);
+  });
+
+  test("a write the Mac refuses is a BundleWriteRefusedError naming the bundle, which is left as it was", async () => {
+    await installServiceExecutable(host(), gateway, build("gw", "1"), () => {});
+    failSign =
+      "`rcodesign sign …` failed (exit 1): signing Mach-O file Contents/MacOS/gateway\nError: I/O error: Operation not permitted (os error 1)";
+    const err = await installServiceExecutable(
+      host(),
+      gateway,
+      build("gw", "2"),
+      () => {},
+    ).then(
+      () => null,
+      (e: unknown) => e,
+    );
+    expect(err).toBeInstanceOf(BundleWriteRefusedError);
+    expect((err as BundleWriteRefusedError).bundle).toBe(bundle);
+    expect((err as Error).message).toContain("App Management");
 
     expect(readFileSync(exe("gateway"), "utf8")).toBe("1");
     expect(readdirSync(join(dir, "state"))).toEqual(["equin.app"]);

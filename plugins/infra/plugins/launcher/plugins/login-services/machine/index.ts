@@ -24,6 +24,7 @@ export { loginService, loginServiceManager } from "./internal/host";
 export { reconcileLoginService, reloadService } from "./internal/reconcile";
 export {
   appExecutablePath,
+  BundleWriteRefusedError,
   bundleOfExecutable,
   installedAppComponents,
   installServiceExecutable,

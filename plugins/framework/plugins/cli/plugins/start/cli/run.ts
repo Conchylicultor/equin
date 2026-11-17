@@ -34,6 +34,7 @@ import {
   type GatewayLaunchOptions,
 } from "@plugins/infra/plugins/launcher/server";
 import {
+  BundleWriteRefusedError,
   declaredLoginServices,
   loginServiceManager,
   machineMacosAppHost,
@@ -250,20 +251,35 @@ async function startDeclaredLoginServices(
     return;
   }
   const root = await getMainRepoRoot();
+  const skipped: string[] = [];
   for (const decl of declared) {
     const ready = await ensureDep(decl.dep, cliExecContext(), {
       root,
       log: console.log,
     });
-    const { service, outcome } = await reconcileLoginService(
-      manager,
-      decl,
-      ready,
-      opts.force ? "force" : "start",
-      { host: app, log: console.log },
-    );
+    try {
+      const { service, outcome } = await reconcileLoginService(
+        manager,
+        decl,
+        ready,
+        opts.force ? "force" : "start",
+        { host: app, log: console.log },
+      );
+      console.log(
+        `${decl.id} (${decl.owner}) ${describeStart(outcome, service)}`,
+      );
+    } catch (err) {
+      // A declared service is optional: equin runs without it (the gateway,
+      // and so the app, is already up). A machine policy refusing the bundle
+      // write is a state to report, never the end of the install.
+      if (!(err instanceof BundleWriteRefusedError)) throw err;
+      console.log(`Skipped ${decl.id} (${decl.owner}): ${err.message}`);
+      skipped.push(decl.id);
+    }
+  }
+  if (skipped.length > 0) {
     console.log(
-      `${decl.id} (${decl.owner}) ${describeStart(outcome, service)}`,
+      `equin runs without ${skipped.join(", ")}. Once the Mac allows it, \`./equin start --only ${skipped.join(",")}\` adds ${skipped.length > 1 ? "them" : "it"}.`,
     );
   }
 }

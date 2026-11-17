@@ -263,48 +263,94 @@ export async function installServiceExecutable(
       `${basename(host.bundle)}.old-${process.pid}-${randomBytes(4).toString("hex")}`,
     );
     try {
-      // A bundle that is not ours (no record) is rebuilt, never merged into.
-      if (installed !== null)
-        await cp(host.bundle, staging, { recursive: true });
-      const contents = joinAppPath(staging, "Contents");
-      await mkdir(joinAppPath(contents, "MacOS"), { recursive: true });
-      await mkdir(joinAppPath(contents, "Resources"), { recursive: true });
-      const executable = appExecutablePath(staging, component.name);
-      await rm(executable, { force: true });
-      // A build from the deps cache.
-      await copyFile(build.file, executable);
-      await chmod(executable, 0o755);
-      if (build.icon !== undefined) {
-        await copyFile(
-          build.icon,
-          joinAppPath(contents, "Resources", `${ICON_NAME}.icns`),
-        );
+      await assembleAndSwap();
+    } catch (err) {
+      if (isPermissionRefusal(err)) {
+        throw new BundleWriteRefusedError(host.bundle, component.name, err);
       }
-      const components = [
-        ...(installed ?? []).filter((c) => c.name !== component.name),
-        entry,
-      ];
-      await writeFile(
-        joinAppPath(contents, "Info.plist"),
-        renderAppInfoPlist(components),
-      );
-      await host.sign(staging);
-      if (await exists(host.bundle)) await rename(host.bundle, old);
-      try {
-        await rename(staging, host.bundle);
-      } catch (err) {
-        // Put the previous bundle back: the services' jobs name its path.
-        if (await exists(old)) await rename(old, host.bundle);
-        throw err;
-      }
-    } finally {
-      await rm(staging, { recursive: true, force: true });
+      throw err;
     }
     await host.register(host.bundle);
     log(`Installed ${component.name} (${build.identity}) into ${host.bundle}`);
     await sweepOldBundles(host, log);
     return planned;
+
+    async function assembleAndSwap(): Promise<void> {
+      try {
+        // A bundle that is not ours (no record) is rebuilt, never merged into.
+        if (installed !== null)
+          await cp(host.bundle, staging, { recursive: true });
+        const contents = joinAppPath(staging, "Contents");
+        await mkdir(joinAppPath(contents, "MacOS"), { recursive: true });
+        await mkdir(joinAppPath(contents, "Resources"), { recursive: true });
+        const executable = appExecutablePath(staging, component.name);
+        await rm(executable, { force: true });
+        // A build from the deps cache.
+        await copyFile(build.file, executable);
+        await chmod(executable, 0o755);
+        if (build.icon !== undefined) {
+          await copyFile(
+            build.icon,
+            joinAppPath(contents, "Resources", `${ICON_NAME}.icns`),
+          );
+        }
+        const components = [
+          ...(installed ?? []).filter((c) => c.name !== component.name),
+          entry,
+        ];
+        await writeFile(
+          joinAppPath(contents, "Info.plist"),
+          renderAppInfoPlist(components),
+        );
+        await host.sign(staging);
+        if (await exists(host.bundle)) await rename(host.bundle, old);
+        try {
+          await rename(staging, host.bundle);
+        } catch (err) {
+          // Put the previous bundle back: the services' jobs name its path.
+          if (await exists(old)) await rename(old, host.bundle);
+          throw err;
+        }
+      } finally {
+        await rm(staging, { recursive: true, force: true });
+      }
+    }
   });
+}
+
+/**
+ * The OS refused a write while assembling or swapping in `equin.app`
+ * ("Operation not permitted"). Not a missing file or a bug of ours: something
+ * outside equin decides which process may change the bundle — on a stock Mac
+ * nothing does (verified on macOS 26: a process with no grants re-signs and
+ * swaps it), so it is the machine's own policy: macOS's App Management
+ * permission for the app the command runs in (a terminal, VS Code), or
+ * security software. A caller that can do without the component (an optional
+ * login service) reports it as a state and goes on; the bundle is left as it
+ * was.
+ */
+export class BundleWriteRefusedError extends Error {
+  constructor(
+    readonly bundle: AppPath,
+    readonly component: string,
+    cause: unknown,
+  ) {
+    super(
+      `macOS refused to update ${bundle} (installing ${component}): ${cause instanceof Error ? cause.message : String(cause)}\n` +
+        `This Mac's policy decides which app may change an app bundle. Usually one of:\n` +
+        `  - App Management: allow the app this command runs in (Terminal, iTerm, VS Code, …) under System Settings → Privacy & Security → App Management, then run it again;\n` +
+        `  - security software (e.g. a managed endpoint agent) blocking equin: ask your admin to allow ${bundle}.`,
+      { cause },
+    );
+    this.name = "BundleWriteRefusedError";
+  }
+}
+
+/** An EPERM from the filesystem, or a tool (rcodesign) that relayed one in its output. */
+function isPermissionRefusal(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  if ((err as NodeJS.ErrnoException).code === "EPERM") return true;
+  return /Operation not permitted/.test(err.message);
 }
 
 /**

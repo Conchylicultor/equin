@@ -280,6 +280,7 @@ folder needs only its boundary row, not a barrel's doc and shipping policy.
     - `appExecutablePath`
     - `awaitProcessGone`
     - `bundleOfExecutable`
+    - `BundleWriteRefusedError`
     - `declaredLoginServices`
     - `defineLoginService`
     - `installedAppComponents`
