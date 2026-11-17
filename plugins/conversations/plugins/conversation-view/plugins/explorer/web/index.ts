@@ -6,7 +6,7 @@ import { convFileTreePane } from "./panes";
 
 export default {
   description:
-    "Conversation toolbar button opening a side pane that browses the agent's worktree with the file explorer's browser (its header — back / forward / up, the path bar as the title, the filter, the toggles — as the pane header; its body wearing the Files theme), rooted at the checkout, its folder and open file carried in the pane's route (;dir / ;open), with Open in Files at that location (git status from the file explorer's git lens).",
+    "Conversation toolbar button opening a side pane that browses the agent's worktree with the file explorer's browser (its header — back / forward / up, the path bar as the title, the filter, the toggles — as the pane header; its body wearing the Files theme), rooted at the checkout, its folder carried in the pane's route (;dir) and the open file previewed in a column of its own beside it, with Open in Files at that location (git status from the file explorer's git lens).",
   contributions: [
     Pane.Register({ pane: convFileTreePane }),
     Conversation.ActionBar({

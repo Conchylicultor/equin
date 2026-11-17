@@ -7,6 +7,8 @@ import {
   useOpenPane,
   usePaneStore,
   PaneMessage,
+  type AnyPane,
+  type PaneExpandTarget,
 } from "@plugins/primitives/plugins/pane/web";
 import {
   PLAIN_GESTURE,
@@ -30,6 +32,7 @@ import {
   filesConfig,
   decodeOpenParam,
   encodeOpenParam,
+  parentPath,
   type ExplorerLocation,
 } from "../core";
 import { FileBrowserBody } from "./components/file-browser";
@@ -224,27 +227,10 @@ function locationTarget(
       );
 }
 
-/**
- * A location as route params: the folder, and the open file written relative
- * to it when it is inside it — the shape of a pane hosting a routed explorer
- * with its preview inside it (the conversation's Files pane, a folder peek).
- */
-export interface LocationParams {
-  dir: string;
-  open?: string;
-}
-
-/** The route params of a location. */
-export function locationParams(location: ExplorerLocation): LocationParams {
-  return location.open === null
-    ? { dir: location.dir }
-    : { dir: location.dir, open: encodeOpenParam(location.dir, location.open) };
-}
-
-/** The location route params name, in `fs`. */
-export function locationOf(
+/** The location Files' route params name, in `fs` (`open` relative to `dir`). */
+function locationOf(
   fs: BrowsableFileSystem,
-  params: LocationParams,
+  params: { dir: string; open?: string },
 ): ExplorerLocation {
   return {
     fs,
@@ -257,30 +243,143 @@ export function locationOf(
 }
 
 /**
- * A routed explorer's navigator, for a pane that previews the open file
- * inside itself: where the explorer is comes from its pane's route, a folder
- * change is `go` (a new history entry — a fresh route or a swapped slot, the
- * host's call), and an open-file change rewrites the current instance in
- * place (`setParams`). Every move is a link, and stays in the location's file
- * system.
+ * `preview-file/<file>[;fs=<system>]` — a file previewed in a column of its
+ * own beside the browser that opened it, for a browser hosted inside some
+ * other pane (the conversation's Files pane, a folder peek). Files' own folder
+ * column chains its preview under it instead (`filesPreviewPane`), so a root
+ * open rebuilds the pair; this one names its whole place itself — the file in
+ * display form (`~/…`), `;fs` absent for the computer's disk — so it reads
+ * nothing from the column to its left and serves any host.
+ *
+ * Its home is Files, but it opens BESIDE the browser holding the file, so
+ * Expand ("Open in Files") is the move that leaves the host — unless the
+ * file's renderer has a fuller view of its own (Open in Sonata), which wins.
  */
-export function useLocationNavigator(
-  location: ExplorerLocation,
-  go: (next: ExplorerLocation) => LinkTarget,
-  setParams: (params: LocationParams) => void,
-): ExplorerNavigator {
-  const fileTo = useCallback(
+export const filePreviewBesidePane = Pane.define({
+  route: defineRoute({
+    id: "files-preview-beside",
+    segment: "preview-file/:path;fs",
+  }),
+  app: fileExplorerApp,
+  title: {
+    useText: usePreviewBesideTitle,
+    component: FilePreviewTitle,
+  },
+  actions: FilePreviewHeader,
+  useResolve: false,
+  // Opened from an app's bare root, it stays beside that home rather than
+  // replacing it (like the folder peek it is opened from).
+  companion: true,
+  expand: { app: fileExplorerApp, useTarget: usePreviewBesideExpand },
+  component: FilePreviewBeside,
+});
+
+function usePreviewBesideTitle(params: { path: string }): string {
+  return baseName(params.path);
+}
+
+function usePreviewBesideExpand(params: {
+  path: string;
+  fs?: string;
+}): PaneExpandTarget {
+  const fs = systemOf(params.fs);
+  const dir = params.path === HOME ? null : parentPath(params.path, HOME);
+  const target = useOpenInFiles({
+    fs: fs ?? "computer",
+    dir: dir ?? "/",
+    open: params.path,
+  });
+  return fs === null || dir === null
+    ? { kind: "none" }
+    : { kind: "ready", target };
+}
+
+function FilePreviewBeside(): ReactNode {
+  const { path, fs: fsParam } = filePreviewBesidePane.useParams();
+  const fs = systemOf(fsParam);
+  if (fs === null) {
+    return (
+      <PendingFilePreviewPane
+        pane={filePreviewBesidePane}
+        name={baseName(path)}
+      >
+        <Placeholder>No file system is called “{fsParam}”</Placeholder>
+      </PendingFilePreviewPane>
+    );
+  }
+  return <FilePreviewPane pane={filePreviewBesidePane} fs={fs} path={path} />;
+}
+
+/**
+ * Opening and closing the file previewed in the column beside a browser: open
+ * is `openTarget` (a push — appending the column, or replacing the one open
+ * there, so the row's swap motion plays), close closes the column `opened`
+ * names on this surface's store (an embedded surface is not the live one) —
+ * as a link, the folder on its own (`here`).
+ */
+function useColumnFileTo(
+  openTarget: (open: string) => LinkTarget,
+  opened: { pane: AnyPane; instanceId: number } | null,
+  here: () => LinkTarget,
+): (open: string | null) => Activation {
+  const store = usePaneStore();
+  return useCallback(
     (open: string | null): Activation => {
-      const next = { fs: location.fs, dir: location.dir, open };
-      // Same place, reached in place: this instance keeps its scroll and
-      // expansion. A new browser tab simply boots the route.
+      if (open !== null) return openTarget(open);
       return {
-        open: () => setParams(locationParams(next)),
-        href: () => go(next).href(),
+        open: (gesture) => {
+          if (opened !== null) {
+            store.close(opened.pane._internal, opened.instanceId, gesture);
+          }
+        },
+        href: () => here().href(),
       };
     },
-    [location.fs, location.dir, go, setParams],
+    [openTarget, opened, here, store],
   );
+}
+
+/**
+ * The navigator of a browser hosted inside some pane, its open file
+ * previewed in the column beside it (`filePreviewBesidePane`): the folder
+ * comes from the host (`dir`, moved through `go` — a new history entry, a
+ * fresh route or a swapped slot, the host's call), the open file from the
+ * preview column this pane opened. Every move is a link, and stays in `fs`.
+ */
+export function useBesidePreviewNavigator(
+  fs: BrowsableFileSystem,
+  dir: string,
+  go: (next: ExplorerLocation) => LinkTarget,
+): ExplorerNavigator {
+  const entry = filePreviewBesidePane.useOpenedHere();
+  // Only a preview of this file system counts as this browser's open file.
+  const opened =
+    entry !== null && systemOf(entry.params.fs) === fs ? entry : null;
+  const openPath = opened?.params.path ?? null;
+  const location = useMemo(
+    () => ({ fs, dir, open: openPath }),
+    [fs, dir, openPath],
+  );
+  const openPane = useOpenPane();
+  const openTarget = useCallback(
+    (open: string) =>
+      openPane.to(
+        filePreviewBesidePane,
+        fs === "computer" ? { path: open } : { path: open, fs },
+        { mode: "push" },
+      ),
+    [openPane, fs],
+  );
+  const openedId = opened?.instanceId;
+  const openedRef = useMemo(
+    () =>
+      openedId === undefined
+        ? null
+        : { pane: filePreviewBesidePane, instanceId: openedId },
+    [openedId],
+  );
+  const here = useCallback(() => go({ fs, dir, open: null }), [go, fs, dir]);
+  const fileTo = useColumnFileTo(openTarget, openedRef, here);
   return useRoutedNavigator(location, go, fileTo);
 }
 
@@ -423,36 +522,29 @@ function FilesFolderBrowser({
     [fs, dir, openParam],
   );
   const openPane = useOpenPane();
-  const store = usePaneStore();
   const go = useCallback(
     (next: ExplorerLocation) => locationTarget(openPane, next),
     [openPane],
   );
-  const openedId = opened?.instanceId;
-  const fileTo = useCallback(
-    (open: string | null): Activation => {
-      if (open !== null) {
-        return openPane.to(
-          filesPreviewPane,
-          { ...folderParams(fs, dir), open: encodeOpenParam(dir, open) },
-          { mode: "push" },
-        );
-      }
-      // Closing: the preview column this one opened goes (on this surface's
-      // store — an embedded Files is not the live one); as a link, it is
-      // this folder on its own.
-      const here = go({ fs, dir, open: null });
-      return {
-        open: (gesture) => {
-          if (openedId !== undefined) {
-            store.close(filesPreviewPane._internal, openedId, gesture);
-          }
-        },
-        href: here.href,
-      };
-    },
-    [openPane, store, go, fs, dir, openedId],
+  const openTarget = useCallback(
+    (open: string) =>
+      openPane.to(
+        filesPreviewPane,
+        { ...folderParams(fs, dir), open: encodeOpenParam(dir, open) },
+        { mode: "push" },
+      ),
+    [openPane, fs, dir],
   );
+  const openedId = opened?.instanceId;
+  const openedRef = useMemo(
+    () =>
+      openedId === undefined
+        ? null
+        : { pane: filesPreviewPane, instanceId: openedId },
+    [openedId],
+  );
+  const here = useCallback(() => go({ fs, dir, open: null }), [go, fs, dir]);
+  const fileTo = useColumnFileTo(openTarget, openedRef, here);
   const navigator = useRoutedNavigator(location, go, fileTo);
   // The provider and the chrome stay mounted while the preview beside this
   // column opens, closes or changes file: only the navigator's value moves.

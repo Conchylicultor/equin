@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: A folder of any browsable file system browsed as a side pane through the Files browser (the browser's header — back / forward / up, the path bar as the title, the filter, the toggles — as the pane header; tree, a file previewed beside it): the folder/<dir>[/<open file>][;fs=<system>] pane (no ;fs: the computer's disk), homed in Files and opened beside any surface — useFolderPeekTarget()(fs, dir) is its link, folderLocationParams(fs, dir) its params — with Expand opening Files at the pane's location.
+- Description: A folder of any browsable file system browsed as a side pane through the Files browser (the browser's header — back / forward / up, the path bar as the title, the filter, the toggles — as the pane header; tree, the file opened from it previewed in a column of its own beside it): the folder/<dir>[;fs=<system>] pane (no ;fs: the computer's disk), homed in Files and opened beside any surface — useFolderPeekTarget()(fs, dir) is its link, folderLocationParams(fs, dir) its params — with Expand opening Files at the pane's location.
 - Web:
   - Contributes: `Pane.Register` "folder-peek"
   - Uses:
@@ -12,11 +12,9 @@
     - `apps/file-explorer/browser.FileBrowserHeader`
     - `apps/file-explorer/browser.FileBrowserPath`
     - `apps/file-explorer/browser.FileBrowserProvider`
-    - `apps/file-explorer/browser.locationOf`
-    - `apps/file-explorer/browser.locationParams`
-    - `apps/file-explorer/browser.LocationParams`
+    - `apps/file-explorer/browser.filePreviewBesidePane`
     - `apps/file-explorer/browser.PendingFileBrowserProvider`
-    - `apps/file-explorer/browser.useLocationNavigator`
+    - `apps/file-explorer/browser.useBesidePreviewNavigator`
     - `apps/file-explorer/browser.useOpenInFiles`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/pane.defineRoute`

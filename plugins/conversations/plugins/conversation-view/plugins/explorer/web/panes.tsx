@@ -9,7 +9,7 @@ import { fileExplorerApp } from "@plugins/apps/plugins/file-explorer/plugins/she
 import {
   FileBrowserHeader,
   FileBrowserPath,
-  locationOf,
+  filePreviewBesidePane,
   useOpenInFiles,
 } from "@plugins/apps/plugins/file-explorer/plugins/browser/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -21,13 +21,14 @@ export const convFileTreePane = Pane.define({
   // as the title, the filter, the toggles); the tab still reads "Files".
   title: { useText: "Files", component: FileBrowserPath },
   actions: FileBrowserHeader,
-  // The explorer's location rides the route like `/files/browse/…` does — the
-  // folder (`;dir`, absent = the checkout) and the file open beside it
-  // (`;open`) — so every folder is a link, back / forward are the browser
-  // history, and Open in Files lands where the user is.
+  // The explorer's folder rides the route like `/files/browse/…` does
+  // (`;dir`, absent = the checkout), so every folder is a link, back / forward
+  // are the browser history, and Open in Files lands where the user is. The
+  // open file is a column of its own beside this one (the browser's
+  // `filePreviewBesidePane`); a stale `;open` from before is dropped on parse.
   route: defineRoute({
     id: "conv-file-tree",
-    segment: "files;dir;open",
+    segment: "files;dir",
   }),
   app: agentManagerApp,
   // Conversation-scoped satellite: a promote of the pane itself would strip
@@ -36,19 +37,20 @@ export const convFileTreePane = Pane.define({
   component: ConvExplorerBody,
 });
 
-function useOpenInFilesTarget(params: {
-  dir?: string;
-  open?: string;
-}): PaneExpandTarget {
+function useOpenInFilesTarget(params: { dir?: string }): PaneExpandTarget {
   const convId = conversationPane.useEnclosing()?.params.convId ?? null;
   const conversation = useConversationById(convId);
   const worktree = rowOrStale(conversation)?.worktreePath;
-  const target = useOpenInFiles(
-    locationOf("computer", {
-      dir: params.dir ?? worktree ?? "",
-      open: params.open,
-    }),
-  );
+  // The file previewed in the column this pane opened, if any.
+  const opened = filePreviewBesidePane.useOpenedHere();
+  const target = useOpenInFiles({
+    fs: "computer",
+    dir: params.dir ?? worktree ?? "",
+    open:
+      opened !== null && opened.params.fs === undefined
+        ? opened.params.path
+        : null,
+  });
   // Never `none`: its fallback is the pane's own promote, which drops convId.
   // Pending only while the worktree may still arrive: a conversation that is
   // not there (or a read that failed with nothing seen) opens Files at its root.

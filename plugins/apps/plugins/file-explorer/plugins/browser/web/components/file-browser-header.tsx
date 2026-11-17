@@ -107,10 +107,11 @@ export interface FileBrowserProps {
   /**
    * Where the open file is previewed:
    * - `"split"` (default) — beside the listing, in a resizable split this
-   *   browser draws (a browser hosted inside one pane);
+   *   browser draws (`<FileBrowser/>`, for a host with no pane to put it in);
    * - `"pane"` — in a pane of its own beside this one, which the navigator
-   *   opens and closes (`/files`, whose preview is a Miller column): the
-   *   browser draws the listing only, marking the open file.
+   *   opens and closes (Files' preview column, or `filePreviewBesidePane`
+   *   through `useBesidePreviewNavigator` for a browser hosted in another
+   *   pane): the browser draws the listing only, marking the open file.
    */
   preview?: "split" | "pane";
 }

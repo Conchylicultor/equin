@@ -188,7 +188,7 @@
     },
     {
       "paneId": "conv-file-tree",
-      "segment": "files;dir;open",
+      "segment": "files;dir",
       "appIndex": false,
       "parent": null
     },
@@ -487,8 +487,14 @@
       "parent": "files-at"
     },
     {
+      "paneId": "files-preview-beside",
+      "segment": "preview-file/:path;fs",
+      "appIndex": false,
+      "parent": null
+    },
+    {
       "paneId": "folder-peek",
-      "segment": "folder/:dir/:open?;fs",
+      "segment": "folder/:dir;fs",
       "appIndex": false,
       "parent": null
     },

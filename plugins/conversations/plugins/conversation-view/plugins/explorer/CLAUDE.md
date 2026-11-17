@@ -7,11 +7,15 @@ is the file explorer app's `<FileBrowser root={wt}/>` over the conversation's
 Changed filter and the Diff tab come from the file explorer's `git` lens, not
 from this plugin.
 
-- **Routed, like `/files/at/…`.** The location rides the pane's keyed params —
-  `;dir` (absent = the checkout) and `;open` (the file previewed beside it) —
-  through the browser's `useLocationNavigator`: another folder swaps this slot
-  (a history entry), opening a file rewrites the params in place. Every folder
-  is a link; back / forward are the browser history.
+- **Routed, like `/files/browse/…`.** The folder rides the pane's keyed
+  `;dir` (absent = the checkout): another folder swaps this slot (a history
+  entry). Every folder is a link; back / forward are the browser history.
+- **The open file is a Miller column.** Through the browser's
+  `useBesidePreviewNavigator`, opening a file pushes the shared
+  `filePreviewBesidePane` (`preview-file/<path>`) beside this pane — swapped
+  for another file, closed by × or Esc — so the listing never remounts and the
+  preview gets the row's motion and the standard preview header. A `;open`
+  from before is dropped on parse.
 - **Files' look.** `<FileBrowser>` wears the Files app's theme wherever it is
   drawn; the pane header stays the agent manager's.
 - **Expand = Open in Files.** The pane's home stays the agent manager (it is
@@ -27,13 +31,13 @@ reverse. The pane's id and segment predate this plugin (it moved out of
 
 ## Plugin reference
 
-- Description: Conversation toolbar button opening a side pane that browses the agent's worktree with the file explorer's browser (its header — back / forward / up, the path bar as the title, the filter, the toggles — as the pane header; its body wearing the Files theme), rooted at the checkout, its folder and open file carried in the pane's route (;dir / ;open), with Open in Files at that location (git status from the file explorer's git lens).
+- Description: Conversation toolbar button opening a side pane that browses the agent's worktree with the file explorer's browser (its header — back / forward / up, the path bar as the title, the filter, the toggles — as the pane header; its body wearing the Files theme), rooted at the checkout, its folder carried in the pane's route (;dir) and the open file previewed in a column of its own beside it, with Open in Files at that location (git status from the file explorer's git lens).
 - Web:
   - Contributes:
     - `Pane.Register` "conv-file-tree"
     - `Conversation.ActionBar` → `ConvTreeButton`
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps/file-explorer/browser` ×9
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/file-explorer/browser` ×8
     - `primitives/pane` ×6
     - `conversations` ×2
     - `conversations/conversation-view/action-bar.Conversation`

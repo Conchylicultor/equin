@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: The file explorer's browser over any file system this host serves (the computer's disk, the browser's storage; useExplorerSystem says what `~` is there and what it can do, useHomeSystem which one Files opens on): the browser's header as the shared FileBrowserHeader pane-header slot (back / forward / up, the system's path bar as each pane's title — FileBrowserPath —, a filter, show hidden, the lenses' hide-rule toggles and the folder view's own controls), borrowed by the Files folder column, the folder peek and the conversation's Files pane, whose host wraps its PaneChrome in FileBrowserProvider (PendingFileBrowserProvider while it has nothing to browse) over FileBrowserBody (the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget); <FileBrowser/>, the same in one box under a sub-header of the same items, for a host with no pane header; its FileBrowserSlots seams — RowActions, a row's hover actions (its own: Extract here on an archive, Copy path in the ⋯ menu), and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — a Miller row of a folder column (/files/browse/<folder>[;fs=<system>], the bare /files forwarding to the home system's home) and the open file's preview column beside it (…/preview/<open file>, pushed and closed so it slides in and out while the listing stays mounted; the old /files/<fs>/at/<folder>[/<open file>] forwards), so every location is a link and back / forward are the browser history; moves (drag onto a folder) and the other operations are offered only where the system has them; useExplorerFileTarget names any file's place there (its folder, the file previewed) as a pane's Expand target; useFileHostPath + useHostPathSource let any surface draw a file's place as the same host path bar. The preview's header is the shared FilePreviewHeader pane-header slot (the file's title, its renderer tabs, Open with default app) — borrowed by the Files preview column and the attachment preview, with FilePreviewProvider / useFilePreview / FilePreviewBody for a host's own pane; a browser hosted inside one pane previews the open file beside the listing under a sub-header of the same items. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading). Registers the Files start-folder config: the folder the file explorer opens on when launched.
+- Description: The file explorer's browser over any file system this host serves (the computer's disk, the browser's storage; useExplorerSystem says what `~` is there and what it can do, useHomeSystem which one Files opens on): the browser's header as the shared FileBrowserHeader pane-header slot (back / forward / up, the system's path bar as each pane's title — FileBrowserPath —, a filter, show hidden, the lenses' hide-rule toggles and the folder view's own controls), borrowed by the Files folder column, the folder peek and the conversation's Files pane, whose host wraps its PaneChrome in FileBrowserProvider (PendingFileBrowserProvider while it has nothing to browse) over FileBrowserBody (the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget); <FileBrowser/>, the same in one box under a sub-header of the same items, for a host with no pane header; its FileBrowserSlots seams — RowActions, a row's hover actions (its own: Extract here on an archive, Copy path in the ⋯ menu), and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — a Miller row of a folder column (/files/browse/<folder>[;fs=<system>], the bare /files forwarding to the home system's home) and the open file's preview column beside it (…/preview/<open file>, pushed and closed so it slides in and out while the listing stays mounted; the old /files/<fs>/at/<folder>[/<open file>] forwards), so every location is a link and back / forward are the browser history; moves (drag onto a folder) and the other operations are offered only where the system has them; useExplorerFileTarget names any file's place there (its folder, the file previewed) as a pane's Expand target; useFileHostPath + useHostPathSource let any surface draw a file's place as the same host path bar. The preview's header is the shared FilePreviewHeader pane-header slot (the file's title, its renderer tabs, Open with default app) — borrowed by the Files preview column and the attachment preview, with FilePreviewProvider / useFilePreview / FilePreviewBody for a host's own pane; a browser hosted inside some other pane (the conversation's Files pane, the folder peek) previews its open file in a column of its own beside it — the shared preview-file/<file>[;fs=<system>] pane, through useBesidePreviewNavigator —, and <FileBrowser/> (no pane header) beside the listing under a sub-header of the same items. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading). Registers the Files start-folder config: the folder the file explorer opens on when launched.
 - Web:
   - Slots:
     - `filesHomePane.Actions`
@@ -31,6 +31,7 @@
     - `Pane.Register` "files-computer-at"
     - `Pane.Register` "files-home"
     - `Pane.Register` "files-preview"
+    - `Pane.Register` "files-preview-beside"
     - `ThemeEngine.SubTheme` "Files document"
     - `FieldPresentation.Register` "collection:file-explorer.entry"
     - `FileBrowserHeader` "nav" → `FileBrowserNav`
@@ -41,9 +42,9 @@
     - `ConfigV2.WebRegister` "files"
     - `FileBrowserSlots.RowActions` "extract" → `ExtractAction`
     - `FileBrowserSlots.RowActions` "copy-path" → `CopyPathAction`
-  - Uses: 86 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 87 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×10
-    - `primitives/pane` ×8
+    - `primitives/pane` ×9
     - `primitives/file-viewer` ×7
     - `primitives/css/ui-kit` ×5
     - `network/live` ×4
@@ -92,7 +93,6 @@
     - `FilePreviewValue`
     - `HomeDir`
     - `HomeSystemState`
-    - `LocationParams`
     - `PathBarSystem`
   - Exports (values):
     - `FileBrowser`
@@ -101,6 +101,7 @@
     - `FileBrowserPath`
     - `FileBrowserProvider`
     - `FileBrowserSlots`
+    - `filePreviewBesidePane`
     - `FilePreviewBody`
     - `FilePreviewHeader`
     - `FilePreviewProvider`
@@ -108,10 +109,9 @@
     - `filesFolderPane`
     - `filesHomePane`
     - `filesPreviewPane`
-    - `locationOf`
-    - `locationParams`
     - `PendingFileBrowserProvider`
     - `PendingFilePreviewPane`
+    - `useBesidePreviewNavigator`
     - `useExplorerDir`
     - `useExplorerFileTarget`
     - `useExplorerFolderTarget`
@@ -123,7 +123,6 @@
     - `useHomeDir`
     - `useHomeSystem`
     - `useHostPathSource`
-    - `useLocationNavigator`
     - `useOpenInFiles`
 - Server:
   - Contributes: `ConfigV2.Register` "files"

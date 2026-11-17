@@ -24,21 +24,19 @@ import {
   FileBrowserPath,
   FileBrowserProvider,
   PendingFileBrowserProvider,
-  locationOf,
-  locationParams,
-  useLocationNavigator,
+  filePreviewBesidePane,
+  useBesidePreviewNavigator,
   useOpenInFiles,
-  type LocationParams,
 } from "@plugins/apps/plugins/file-explorer/plugins/browser/web";
 
 /**
- * `folder/<folder>[/<open file>][;fs=<system>]` — any folder of a file system
- * browsed beside whatever surface named it (a folder path in an agent's
- * message, a folder crumb of a file's path bar), with the whole Files
- * browser: the tree, the path bar, Up out of it, a file previewed beside it.
- * The location rides the route like `/files/<fs>/at/…` (same params, same
- * encoding), so every folder is a link and back / forward are the browser
- * history. `;fs` names the file system; absent, it is the computer's disk —
+ * `folder/<folder>[;fs=<system>]` — any folder of a file system browsed beside
+ * whatever surface named it (a folder path in an agent's message, a folder
+ * crumb of a file's path bar), with the whole Files browser: the tree, the
+ * path bar, Up out of it, and a file opened from it previewed in a column of
+ * its own beside it (the browser's `filePreviewBesidePane`). The folder rides
+ * the route like `/files/browse/…` (same encoding), so every folder is a link
+ * and back / forward are the browser history. `;fs` names the file system; absent, it is the computer's disk —
  * the address every folder link had before the pane named one, so an old
  * link still opens.
  *
@@ -47,7 +45,7 @@ import {
  * location the pane is at.
  */
 export const folderPeekPane = Pane.define({
-  route: defineRoute({ id: "folder-peek", segment: "folder/:dir/:open?;fs" }),
+  route: defineRoute({ id: "folder-peek", segment: "folder/:dir;fs" }),
   app: fileExplorerApp,
   // The header is the Files browser's own (back / forward / up, the path bar
   // as the title, the filter, the toggles).
@@ -65,14 +63,18 @@ function useFolderTitle(params: { dir: string }): string {
   return baseName(params.dir);
 }
 
-/** The pane's route params of `location`: its folder, file and system. */
+/** The pane's route params of `location`: its folder and system. */
 function routeParamsOf(location: ExplorerLocation): FolderRouteParams {
-  const params = locationParams(location);
   // The computer's disk is the address without `;fs` (see the pane).
-  return location.fs === "computer" ? params : { ...params, fs: location.fs };
+  return location.fs === "computer"
+    ? { dir: location.dir }
+    : { dir: location.dir, fs: location.fs };
 }
 
-type FolderRouteParams = LocationParams & { fs?: string };
+interface FolderRouteParams {
+  dir: string;
+  fs?: string;
+}
 
 /** The file system `;fs` names: none is the computer's disk. */
 function systemOf(fs: string | undefined): BrowsableFileSystem | null {
@@ -82,7 +84,16 @@ function systemOf(fs: string | undefined): BrowsableFileSystem | null {
 
 function useOpenInFilesTarget(params: FolderRouteParams): PaneExpandTarget {
   const fs = systemOf(params.fs);
-  const target = useOpenInFiles(locationOf(fs ?? "computer", params));
+  // The file previewed in the column this pane opened, if any.
+  const opened = filePreviewBesidePane.useOpenedHere();
+  const target = useOpenInFiles({
+    fs: fs ?? "computer",
+    dir: params.dir,
+    open:
+      opened !== null && systemOf(opened.params.fs) === fs
+        ? opened.params.path
+        : null,
+  });
   return fs === null ? { kind: "none" } : { kind: "ready", target };
 }
 
@@ -106,28 +117,18 @@ function FolderPeek(): ReactNode {
 }
 
 function FolderPeekBrowser({ fs }: { fs: BrowsableFileSystem }): ReactNode {
-  const { dir, open } = folderPeekPane.useParams();
-  const setParams = folderPeekPane.useSetParams();
+  const { dir } = folderPeekPane.useParams();
   const openPane = useOpenPane();
-  const location = useMemo(
-    () => locationOf(fs, { dir, open }),
-    [fs, dir, open],
-  );
   // Another folder swaps this slot (a history entry, a fresh instance);
-  // opening a file rewrites the params in place.
+  // opening a file pushes its preview column beside this one.
   const go = useCallback(
     (next: ExplorerLocation) =>
       openPane.to(folderPeekPane, routeParamsOf(next), { mode: "swap" }),
     [openPane],
   );
-  const setLocation = useCallback(
-    (next: LocationParams) =>
-      setParams(fs === "computer" ? next : { ...next, fs }),
-    [setParams, fs],
-  );
-  const navigator = useLocationNavigator(location, go, setLocation);
+  const navigator = useBesidePreviewNavigator(fs, dir, go);
   return (
-    <FileBrowserProvider navigator={navigator}>
+    <FileBrowserProvider navigator={navigator} preview="pane">
       <PaneChrome pane={folderPeekPane}>
         <FileBrowserBody />
       </PaneChrome>

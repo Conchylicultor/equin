@@ -4,8 +4,7 @@ import {
   FileBrowserBody,
   FileBrowserProvider,
   PendingFileBrowserProvider,
-  locationParams,
-  useLocationNavigator,
+  useBesidePreviewNavigator,
 } from "@plugins/apps/plugins/file-explorer/plugins/browser/web";
 import type { ExplorerLocation } from "@plugins/apps/plugins/file-explorer/plugins/browser/core";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -19,7 +18,6 @@ import {
   PaneMessage,
 } from "@plugins/primitives/plugins/pane/web";
 import { convFileTreePane } from "../panes";
-import { useConvLocation } from "./conv-location";
 
 /**
  * The pane: the browser over the conversation's checkout, its header the
@@ -82,22 +80,22 @@ function ConvExplorer({ convId }: { convId: string }) {
 
 /**
  * The file explorer's browser over the checkout, routed through this pane's
- * params: another folder swaps this slot for a fresh instance (a history
+ * `;dir`: another folder swaps this slot for a fresh instance (a history
  * entry; the filter and selection start over, as in Files), and opening a
- * file rewrites the params in place.
+ * file pushes its preview as a column beside this one — swapped for another
+ * file, closed by × or Esc — so this listing never remounts.
  */
 function RoutedExplorer({ worktree }: { worktree: string }) {
-  const location = useConvLocation(worktree);
+  const { dir } = convFileTreePane.useParams();
   const openPane = useOpenPane();
-  const setParams = convFileTreePane.useSetParams();
   const go = useCallback(
     (next: ExplorerLocation) =>
-      openPane.to(convFileTreePane, locationParams(next), { mode: "swap" }),
+      openPane.to(convFileTreePane, { dir: next.dir }, { mode: "swap" }),
     [openPane],
   );
-  const navigator = useLocationNavigator(location, go, setParams);
+  const navigator = useBesidePreviewNavigator("computer", dir ?? worktree, go);
   return (
-    <FileBrowserProvider navigator={navigator} root={worktree}>
+    <FileBrowserProvider navigator={navigator} root={worktree} preview="pane">
       <PaneChrome pane={convFileTreePane}>
         <FileBrowserBody />
       </PaneChrome>
