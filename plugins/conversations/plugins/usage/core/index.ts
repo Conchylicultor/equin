@@ -4,4 +4,9 @@ export {
   claudeAccountSpend,
   type AccountSpendDay,
 } from "./account-spend";
-export { conversationCostAt } from "./cost-at";
+export {
+  conversationCostByHour,
+  costAtInstant,
+  hourStartOf,
+  type ConversationCostByHour,
+} from "./cost-by-hour";

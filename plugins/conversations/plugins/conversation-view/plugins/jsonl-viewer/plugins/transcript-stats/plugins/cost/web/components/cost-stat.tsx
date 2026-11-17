@@ -1,7 +1,9 @@
 import { useState } from "react";
 import {
-  conversationCostAt,
+  conversationCostByHour,
   conversationUsageById,
+  costAtInstant,
+  hourStartOf,
 } from "@plugins/conversations/plugins/usage/core";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import {
@@ -20,8 +22,9 @@ import { formatUsd } from "./format-usd";
  * conversation's own transcripts plus every sub-agent it launched, a
  * sub-agent's spend counted when it happened. At the end of the transcript it
  * is the totals the usage sync last counted; scrolled back, the cost at the
- * last visible row's instant (`conversationCostAt`) — so scrolling walks the
- * number back with the other readings.
+ * last visible row's instant, priced from the hour it falls in
+ * (`conversationCostByHour`, one key per hour: scrolling within an hour reads
+ * no new key) — so scrolling walks the number back with the other readings.
  *
  * Only in the conversation's own transcript: a sub-agent's pane would name the
  * parent's total.
@@ -104,19 +107,25 @@ function CostAt({
   conversationId: string;
   at: string;
 }) {
-  const read = useLive(conversationCostAt, { id: conversationId, at });
-  // While a new position loads, the strip keeps the last one it priced — the
-  // reading moves as the reader scrolls, so blanking it between rows would
-  // flicker on every step. Before any is known it shows nothing.
+  const instant = Date.parse(at);
+  const read = useLive(conversationCostByHour, {
+    id: conversationId,
+    hour: hourStartOf(instant),
+  });
+  // While a new hour loads, the strip keeps the last position it priced — the
+  // reading moves as the reader scrolls, so blanking it at an hour boundary
+  // would flicker. Before any is known it shows nothing.
   const [shown, setShown] = useState<Shown | null>(null);
-  if (
-    read.status === "ready" &&
-    (shown === null ||
+  if (read.status === "ready") {
+    const priced = costAtInstant(read.data, instant);
+    if (
+      shown === null ||
       shown.at !== at ||
-      shown.costUsd !== read.data.costUsd ||
-      shown.unpricedModels.join() !== read.data.unpricedModels.join())
-  ) {
-    setShown({ at, ...read.data });
+      shown.costUsd !== priced.costUsd ||
+      shown.unpricedModels.join() !== priced.unpricedModels.join()
+    ) {
+      setShown({ at, ...priced });
+    }
   }
   // The demo's in-browser server has no transcripts on disk to read.
   if (read.status === "unavailable") return null;

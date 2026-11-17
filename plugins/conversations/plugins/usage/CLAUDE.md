@@ -76,14 +76,17 @@ in force then. Design:
   per change of that module's code), is the repair. The `conversations.usage`
   lookup reads the same row.
 
-- **The cost by an instant** (`conversations.usage.cost-at`, machine half
-  `machine/internal/cost-at.ts`): the transcript's cost stat while the reader
-  is scrolled back. The priced ledger's hours before `hour(at)` (read from
-  `claude_spend_hours_v`), plus the stretch `[hour(at), at]` folded from the
-  conversation's transcripts — session chain then sub-agents, through one
-  seen-set, with the ledger's own `foldUsageEntry` (`cost-stretch.ts`) — and
-  priced with the rates in force at that hour (pricing's `ratesInForceAt` /
-  `priceWithRates`, the view's version rule and dot product). Each file's
+- **The cost through an hour** (`conversations.usage.cost-by-hour`, machine
+  half `machine/internal/cost-by-hour.ts`): the transcript's cost stat while
+  the reader is scrolled back. Keyed by `(conversation, UTC hour)`, never by
+  the reading position: the value is the priced ledger's hours before the hour
+  (read from `claude_spend_hours_v`) and one step per instant of the hour a
+  usage line moves the cost — the hour's lines from the conversation's
+  transcripts and sub-agents, in time order through one seen-set, with the
+  ledger's own `foldUsageEntry` (`cost-stretch.ts`'s `costSteps`), priced with
+  the rates in force at that hour (pricing's `ratesInForceAt` /
+  `priceWithRates`). The stat prices its position on the client
+  (`costAtInstant`), so scrolling within an hour opens no new key. Each file's
   usage lines are held per conversation (16 at most) and read incrementally.
   It follows the conversation's usage row (moved by every ledger write for it
   and every re-price) and its transcript chain. A worktree's fork reads its
@@ -182,7 +185,7 @@ in force then. Design:
     - `live.columns.expose` "conversations ← conversations_ext_usage"
     - `db-trigger` "conversations.usage.cost"
     - `resource.declare` "conversations.usage.account-spend"
-    - `resource.declare` "conversations.usage.cost-at"
+    - `resource.declare` "conversations.usage.cost-by-hour"
     - `resource.declare` "conversations.usage:rows"
     - `change-feed-exclusion` "claude_transcript_scans"
     - `change-feed-exclusion` "conversation_usage_files"
@@ -213,7 +216,7 @@ in force then. Design:
   - Resources:
     - `conversations.usage:rows` (keyed, point)
     - `conversations.usage.account-spend` (push, capped: 31)
-    - `conversations.usage.cost-at` (push, notified, capped: 64)
+    - `conversations.usage.cost-by-hour` (push, notified, capped: 20_000, capped: 64)
 - Machine:
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/subagents.listSubagentEntries`
@@ -238,13 +241,17 @@ in force then. Design:
     - `network/live.liveValue`
     - `packages/list-bound.cappedList`
     - `tasks/tasks-core.conversationsEntityRef`
-  - Exports (types): `AccountSpendDay`
+  - Exports (types):
+    - `AccountSpendDay`
+    - `ConversationCostByHour`
   - Exports (values):
     - `ACCOUNT_SPEND_MONTH`
     - `claudeAccountSpend`
-    - `conversationCostAt`
+    - `conversationCostByHour`
     - `conversationUsageById`
     - `conversationUsageShape`
+    - `costAtInstant`
+    - `hourStartOf`
 - Cross-plugin:
   - Imported by:
     - `conversations/conversation-view/jsonl-viewer/transcript-stats/cost`

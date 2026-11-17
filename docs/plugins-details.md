@@ -21272,7 +21272,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/density --space-xs`
                       - `ui/tokens/shape --radius`
                       - `ui/tokens/shape --spacing`
-                - **`cost`** — The session's API cost as a transcript stat, up to the reading position: what the conversation had cost at API prices by the last row on screen — its own transcripts and every sub-agent it launched, workflow agents included, a sub-agent's spend counted when it happened. At the end it reads the live usage totals (conversations.usage, with the tokens behind it on hover); scrolled back, the cost at that row's instant (conversations.usage.cost-at), keeping the last priced reading while the next one loads.
+                - **`cost`** — The session's API cost as a transcript stat, up to the reading position: what the conversation had cost at API prices by the last row on screen — its own transcripts and every sub-agent it launched, workflow agents included, a sub-agent's spend counted when it happened. At the end it reads the live usage totals (conversations.usage, with the tokens behind it on hover); scrolled back, the cost at that row's instant, priced from the hour it falls in (conversations.usage.cost-by-hour, one key per hour), keeping the last priced reading while the next one loads.
                   - Web:
                     - Contributes: `TranscriptStats.Item` "cost" → `CostStat`
                     - Uses:
@@ -23821,7 +23821,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `live.columns.expose` "conversations ← conversations_ext_usage"
           - `db-trigger` "conversations.usage.cost"
           - `resource.declare` "conversations.usage.account-spend"
-          - `resource.declare` "conversations.usage.cost-at"
+          - `resource.declare` "conversations.usage.cost-by-hour"
           - `resource.declare` "conversations.usage:rows"
           - `change-feed-exclusion` "claude_transcript_scans"
           - `change-feed-exclusion` "conversation_usage_files"
@@ -23852,7 +23852,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Resources:
           - `conversations.usage:rows` (keyed, point)
           - `conversations.usage.account-spend` (push, capped: 31)
-          - `conversations.usage.cost-at` (push, notified, capped: 64)
+          - `conversations.usage.cost-by-hour` (push, notified, capped: 20_000, capped: 64)
       - Machine:
         - Uses:
           - `conversations/conversation-view/jsonl-viewer/subagents.listSubagentEntries`
@@ -23877,13 +23877,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.liveValue`
           - `packages/list-bound.cappedList`
           - `tasks/tasks-core.conversationsEntityRef`
-        - Exports (types): `AccountSpendDay`
+        - Exports (types):
+          - `AccountSpendDay`
+          - `ConversationCostByHour`
         - Exports (values):
           - `ACCOUNT_SPEND_MONTH`
           - `claudeAccountSpend`
-          - `conversationCostAt`
+          - `conversationCostByHour`
           - `conversationUsageById`
           - `conversationUsageShape`
+          - `costAtInstant`
+          - `hourStartOf`
       - Cross-plugin:
         - Imported by:
           - `conversations/conversation-view/jsonl-viewer/transcript-stats/cost`

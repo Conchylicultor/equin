@@ -1,10 +1,10 @@
 import {
   emptyUsageBuckets,
   foldUsageEntry,
-  type UsageBuckets,
+  type DayBucket,
 } from "@plugins/infra/plugins/claude-cli/plugins/usage-ledger/core";
 
-// The pure half of the cost at a reading position (`cost-at.ts`): which lines
+// The pure half of the cost by the hour (`cost-by-hour.ts`): which lines
 // of a conversation's transcripts carry usage, and the ledger's own fold
 // (`foldUsageEntry`) over the ones written in a stretch of time — so the
 // stretch is counted exactly as the sync counts it into the ledger: one entry
@@ -60,22 +60,74 @@ export function usageLineOf(text: string): UsageLine | null {
   };
 }
 
+/** The conversation's cost once every usage line up to `t` (epoch ms) is counted. */
+export interface CostStep {
+  t: number;
+  costUsd: number;
+}
+
+/** What one hour's stretch adds to the cost before it, line by line. */
+export interface HourSteps {
+  /** One per instant the cost moves, ascending — `before` plus the stretch so far. */
+  steps: CostStep[];
+  /** Each model with no price, at the first instant one of its lines is counted. */
+  unpricedFrom: { model: string; t: number }[];
+}
+
 /**
- * The ledger's fold of every usage line written in `[from, to]` (epoch ms),
- * over `files` in the order the sync reads them (the session chain, oldest
- * first, then the sub-agents) through ONE seen-set, so a resumed session's
- * copied history counts once.
+ * The cost at every instant of `[from, to)` (epoch ms) a usage line moves it:
+ * `before` plus the ledger's fold of the stretch's lines so far, each bucket
+ * priced by `price` (null: no price — left out, its model named).
+ *
+ * The lines of every file are folded in time order (a stable sort, so lines of
+ * one instant keep the order the sync reads the files in: the session chain,
+ * oldest first, then the sub-agents) through ONE seen-set, so a resumed
+ * session's copied history counts once. The lines before `from` are folded
+ * first, unpriced, as the sync's seen-set has them: a message begun before the
+ * hour and topped up inside it is the earlier hour's (the ledger files the
+ * top-up there, so `before` holds it), never a new entry of this one. Only the
+ * buckets the hour's own lines open are priced — a stretch holds a handful
+ * (model × speed), each re-priced after each instant: O(lines × buckets).
  */
-export function foldStretch(
+export function costSteps(
   files: readonly (readonly UsageLine[])[],
   from: number,
   to: number,
-): UsageBuckets {
+  before: number,
+  price: (bucket: DayBucket) => number | null,
+): HourSteps {
+  const lines = files
+    .flat()
+    .filter((line) => line.t < to)
+    .sort((a, b) => a.t - b.t);
   const fold = emptyUsageBuckets();
-  for (const lines of files) {
-    for (const line of lines) {
-      if (line.t >= from && line.t <= to) foldUsageEntry(fold, line.entry);
-    }
+  let i = 0;
+  for (; i < lines.length && lines[i]!.t < from; i++) {
+    foldUsageEntry(fold, lines[i]!.entry);
   }
-  return fold;
+  // The earlier hours' buckets: a top-up lands in them, never in the cost here.
+  const earlier = new Set(fold.buckets.keys());
+  const steps: CostStep[] = [];
+  const unpricedFrom: HourSteps["unpricedFrom"] = [];
+  const unpriced = new Set<string>();
+  let last = before;
+  for (; i < lines.length; i++) {
+    const line = lines[i]!;
+    foldUsageEntry(fold, line.entry);
+    // Every line of one instant is counted before the instant is priced.
+    if (lines[i + 1]?.t === line.t) continue;
+    let costUsd = before;
+    for (const [key, bucket] of fold.buckets) {
+      if (earlier.has(key)) continue;
+      const cost = price(bucket);
+      if (cost !== null) costUsd += cost;
+      else if (!unpriced.has(bucket.model)) {
+        unpriced.add(bucket.model);
+        unpricedFrom.push({ model: bucket.model, t: line.t });
+      }
+    }
+    if (costUsd !== last) steps.push({ t: line.t, costUsd });
+    last = costUsd;
+  }
+  return { steps, unpricedFrom };
 }

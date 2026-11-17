@@ -22,29 +22,35 @@ import {
   priceWithRates,
   ratesInForceAt,
 } from "@plugins/infra/plugins/claude-cli/plugins/usage-ledger/plugins/pricing/server";
-import { conversationCostAt } from "../../core";
+import { conversationCostByHour } from "../../core";
 import { conversationUsageByIdServed } from "../../server/internal/served";
-import { foldStretch, usageLineOf, type UsageLine } from "./cost-stretch";
+import { costSteps, usageLineOf, type UsageLine } from "./cost-stretch";
 
 // ─── What this is ──────────────────────────────────────────────────────────────
 //
-// The cost of a conversation by an instant (`conversationCostAt`): the
-// transcript's cost stat reads it while the reader is scrolled back.
+// What a conversation had cost through one UTC hour (`conversationCostByHour`):
+// the transcript's cost stat reads the hour its reading position is in, and
+// prices the position from it on the client (`costAtInstant`) — so scrolling
+// within an hour reads one key, and a new key is read only when the position
+// crosses an hour (it once keyed by the position itself, minting a key per row
+// scrolled past, each re-run on every ledger write).
 //
-//   cost(at) = the priced ledger's hours before hour(at)      (the one pricing
-//            + the stretch [hour(at), at] of the transcripts,   function, read)
-//              folded with the ledger's fold and priced with
-//              the rates in force at hour(at)
+//   cost(t) = the priced ledger's hours before the hour      (the one pricing
+//           + the stretch [hour, t] of the transcripts,        function, read)
+//             folded with the ledger's fold and priced with
+//             the rates in force at the hour — one step per
+//             instant a usage line moves it
 //
-// The ledger is per hour, so only the stretch of one hour is read from disk —
-// and that stretch is what the sync files into the ledger for that hour, line
-// by line, so the reading walks smoothly up to the totals. Sub-agents' lines
-// carry their own timestamps: their spend lands where it happened.
+// The ledger is per hour, so only one hour's lines are priced (the earlier
+// ones only seed the fold's seen-set, as the sync's) — and they are what the
+// sync files into the ledger for that hour, line by line, so
+// the reading walks smoothly up to the totals. Sub-agents' lines carry their
+// own timestamps: their spend lands where it happened.
 //
 // Freshness: the value follows the conversation's usage row, which the
 // database moves on every ledger write for this conversation (and on a price
 // correction) — the sync writes after reading each append, so a line written
-// before `at` reaches the value through it; and the transcript chain, which
+// in the hour reaches the value through it; and the transcript chain, which
 // decides the files.
 
 /** Each file's usage lines, read incrementally (an append costs its bytes). */
@@ -57,7 +63,8 @@ interface FileLines {
 /**
  * Per conversation, its files' usage lines — held for the conversations being
  * read, least recently read first, bounded: a reader scrolling one transcript
- * asks for many instants of one conversation, each a fold over memory.
+ * asks for the hours it crosses, and every ledger write re-folds the hours
+ * being read, each a fold over memory.
  */
 const held = new Map<string, Map<string, FileLines>>();
 const HELD_MAX = 16;
@@ -172,14 +179,9 @@ async function ledgerBefore(
   return row;
 }
 
-/** The UTC hour `t` (epoch ms) falls in. */
-function hourOf(t: number): Date {
-  const d = new Date(t);
-  d.setUTCMinutes(0, 0, 0);
-  return d;
-}
+const HOUR_MS = 3_600_000;
 
-export const conversationCostAtServed = serveValue(conversationCostAt, {
+export const conversationCostByHourServed = serveValue(conversationCostByHour, {
   source: "external",
   changes: "notified",
   follows: (follow) => ({
@@ -202,9 +204,8 @@ export const conversationCostAtServed = serveValue(conversationCostAt, {
         "the conversation's priced ledger hours and the rates in force: each write that moves them moves the conversation's usage row, which the value follows",
     },
   },
-  loader: async ({ id, at }, { followed }) => {
-    const until = Date.parse(at);
-    const hour = hourOf(until);
+  loader: async ({ id, hour: hourIso }, { followed }) => {
+    const hour = new Date(hourIso);
     const sessionPaths = await resolveTranscriptPathsOf(
       followedTranscriptChain(followed),
     );
@@ -217,17 +218,20 @@ export const conversationCostAtServed = serveValue(conversationCostAt, {
       ]),
       ratesInForceAt(db, hour),
     ]);
-    let costUsd = before.costUsd;
-    const unpriced = new Set(before.unpriced);
-    for (const bucket of foldStretch(
+    const { steps, unpricedFrom } = costSteps(
       files,
       hour.getTime(),
-      until,
-    ).buckets.values()) {
-      const cost = priceWithRates(rates, bucket);
-      if (cost === null) unpriced.add(bucket.model);
-      else costUsd += cost;
-    }
-    return { costUsd, unpricedModels: [...unpriced].sort() };
+      hour.getTime() + HOUR_MS,
+      before.costUsd,
+      (bucket) => priceWithRates(rates, bucket),
+    );
+    return {
+      before: {
+        costUsd: before.costUsd,
+        unpricedModels: [...before.unpriced].sort(),
+      },
+      steps,
+      unpricedFrom,
+    };
   },
 });
