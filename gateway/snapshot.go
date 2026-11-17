@@ -53,6 +53,12 @@ type snapshotManifest struct {
 	// other. Neither side "/", never a path to itself, and no page lives
 	// under a former path.
 	Moved map[string]string `json:"moved"`
+	// HomeAtRoot says the composition serves its home app at `/`: every key
+	// above stays a route path (`/about/vision`, home `/about`), and a
+	// request's address is read as the route under Home (`/vision` →
+	// `/about/vision`) — see addressToRoute. Only `true` or absent, and only
+	// with a Home.
+	HomeAtRoot *bool `json:"homeAtRoot"`
 }
 
 type snapshotManifestPage struct {
@@ -79,7 +85,10 @@ type snapshotSet struct {
 	home string
 	// moved is the manifest's moved map (nil for none): see movedTarget.
 	moved map[string]string
-	err   error
+	// homeAtRoot: the home app is served at `/` (addresses drop home); then
+	// home is the address root, never a redirect target.
+	homeAtRoot bool
+	err        error
 }
 
 // snapshotCache holds one loaded manifest per web dir (the stable symlink in
@@ -167,7 +176,12 @@ func loadSnapshot(manifestFile string) snapshotSet {
 		pages[p] = page
 	}
 	home, _ := manifestHome(manifest)
-	return snapshotSet{pages: pages, home: home, moved: manifest.Moved}
+	return snapshotSet{
+		pages:      pages,
+		home:       home,
+		moved:      manifest.Moved,
+		homeAtRoot: manifest.HomeAtRoot != nil,
+	}
 }
 
 // movedTarget is where a request path goes when it sits at or under a moved
@@ -182,6 +196,37 @@ func movedTarget(moved map[string]string, urlPath string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// underBase reports whether a route path is base, under it, or base's
+// landing pane's keyed suffix (`/about;view.x=y`).
+func underBase(p, base string) bool {
+	return p == base || strings.HasPrefix(p, base+"/") || strings.HasPrefix(p, base+";")
+}
+
+// addressToRoute is the route a request's address names when the home app
+// is served at `/` (root = its base path): `/vision` → `/about/vision`, `/`
+// → `/about`, `/;k=v` → `/about;k=v`. Mirrors route-prefix's routePathOf
+// (plugins/primitives/plugins/pane/plugins/route-prefix/core).
+func addressToRoute(p, root string) string {
+	if p == "/" {
+		return root
+	}
+	if strings.HasPrefix(p, "/;") {
+		return root + p[1:]
+	}
+	return root + p
+}
+
+// routeToAddress is the address a route under root is served at:
+// `/about/vision` → `/vision`, `/about` → `/`, `/about;k=v` → `/;k=v`. The
+// caller checks underBase first. Mirrors route-prefix's addressPathOf.
+func routeToAddress(p, root string) string {
+	rest := p[len(root):]
+	if strings.HasPrefix(rest, "/") {
+		return rest
+	}
+	return "/" + rest
 }
 
 // parseSnapshotManifest decodes the manifest the way SnapshotManifestSchema
@@ -223,6 +268,14 @@ func parseSnapshotManifest(raw []byte) (snapshotManifest, error) {
 		}
 		if _, listed := m.Pages[home]; !listed {
 			return snapshotManifest{}, fmt.Errorf("home %q: no page of the snapshot", home)
+		}
+	}
+	if m.HomeAtRoot != nil {
+		if !*m.HomeAtRoot {
+			return snapshotManifest{}, errors.New("homeAtRoot: false (omit it for a home under its own base path)")
+		}
+		if m.Home == nil {
+			return snapshotManifest{}, errors.New("homeAtRoot: set with no home to serve at /")
 		}
 	}
 	for from, to := range m.Moved {

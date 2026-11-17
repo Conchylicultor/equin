@@ -50,6 +50,7 @@ export {
   renderCollectedDirRegistry,
   renderEmptyCollectedDirRegistry,
   resolveRegistryHome,
+  resolveRegistryHomeAtRoot,
   buildRegistryGenContext,
   type CollectedRawEntry,
   type RegistryComposition,

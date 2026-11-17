@@ -173,6 +173,59 @@ func TestSnapshotMovedRedirects(t *testing.T) {
 	}
 }
 
+// A home served at `/` (homeAtRoot): an address is read as the route under
+// the home — bare `/` and `/vision` serve their snapshots (canonical: the
+// address) — and the route's own spelling, or a moved path landing under the
+// home, is one 301 to the address.
+func TestSnapshotHomeAtRoot(t *testing.T) {
+	f := newStaticProxy(t)
+	withShell(t, f, snapshotShell)
+	writeSnapshot(t, f.web,
+		`{"home":"/about","homeAtRoot":true,"moved":{"/website":"/about"},"pages":{`+
+			`"/about":{"title":"equin","description":"The app.","file":"about.html"},`+
+			`"/about/vision":{"title":"Vision","description":"Where it goes.","file":"about/vision.html"}}}`,
+		map[string]string{"about.html": "<h1>equin</h1>", "about/vision.html": "<h1>Vision</h1>"})
+	for p, want := range map[string]string{
+		"/":       `href="http://alpha.localhost:9000/"`,
+		"/vision": `href="http://alpha.localhost:9000/vision"`,
+	} {
+		rec := serve(f.proxy, "alpha.localhost:9000", p)
+		if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `id="equin-snapshot"`) || !strings.Contains(rec.Body.String(), want) {
+			t.Errorf("%s: status=%d body=%q, want the snapshot with canonical %s", p, rec.Code, rec.Body.String(), want)
+		}
+	}
+	for p, want := range map[string]string{
+		"/about":                    "/",
+		"/about/":                   "/",
+		"/about/vision?utm=x":       "/vision?utm=x",
+		"/about;view.x=y":           "/;view.x=y",
+		"/website":                  "/",
+		"/website/story":            "/story",
+		"/website/vision?utm=x&a=1": "/vision?utm=x&a=1",
+	} {
+		rec := serve(f.proxy, "alpha.localhost:9000", p)
+		if rec.Code != http.StatusMovedPermanently || rec.Header().Get("Location") != want {
+			t.Errorf("%s: status=%d Location=%q, want 301 to %q", p, rec.Code, rec.Header().Get("Location"), want)
+		}
+	}
+	// An address with no snapshot is the plain shell, never a redirect.
+	if rec := serve(f.proxy, "alpha.localhost:9000", "/story"); rec.Code != http.StatusOK || strings.Contains(rec.Body.String(), `id="equin-snapshot"`) {
+		t.Errorf("/story: status=%d body=%q", rec.Code, rec.Body.String())
+	}
+}
+
+// homeAtRoot is only `true`, and only with a home.
+func TestSnapshotHomeAtRootValidated(t *testing.T) {
+	for _, m := range []string{
+		`{"homeAtRoot":true,"pages":{}}`,
+		`{"home":"/about","homeAtRoot":false,"pages":{"/about":{"title":"t","description":"d","file":"a.html"}}}`,
+	} {
+		if _, err := parseSnapshotManifest([]byte(m)); err == nil {
+			t.Errorf("%s: parsed, want refused", m)
+		}
+	}
+}
+
 // No manifest: today's behaviour, the plain shell.
 func TestSnapshotMissingManifestIsPlainShell(t *testing.T) {
 	f := newStaticProxy(t)

@@ -1,4 +1,7 @@
-import { composedOnly } from "@plugins/framework/plugins/server-core/core";
+import {
+  composedHome,
+  composedOnly,
+} from "@plugins/framework/plugins/server-core/core";
 import type { AppDeclaration } from "../../core";
 import { appEntries } from "./apps.generated";
 
@@ -31,4 +34,23 @@ const appEntriesWithPlugin = appEntries.map((e) => ({
  */
 export function declaredAppPlugins(): readonly DeclaredAppOf[] {
   return composedOnly(appEntriesWithPlugin);
+}
+
+/**
+ * The address root of this backend's composition: its home app's base path
+ * when it serves that app at `/` (`homeAtRoot` — the public site's `/about`),
+ * else null. What every address this backend hands out drops
+ * (`primitives/pane/route-prefix/core`'s `addressPathOf`). A home declared at
+ * root but missing from the declared apps throws.
+ */
+export function addressRoot(): string | null {
+  const { home, homeAtRoot } = composedHome();
+  if (!homeAtRoot) return null;
+  const app = declaredApps().find((a) => a.app.id === home);
+  if (app === undefined) {
+    throw new Error(
+      `[apps-core] the composition serves its home app "${home}" at / (homeAtRoot), but no declared app has that id`,
+    );
+  }
+  return app.app.basePath;
 }

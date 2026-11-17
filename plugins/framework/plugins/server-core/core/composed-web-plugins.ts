@@ -89,3 +89,46 @@ export function keepComposed<T>(
 ): T[] {
   return entries.filter((e) => plugins.has(e.plugin)).map((e) => e.value);
 }
+
+/** The composition's home, as its server registry states it. */
+export interface ComposedHome {
+  /** The home app's `defineApp` id (null: the composition holds no app). */
+  home: string | null;
+  /** Whether it serves the home app at `/` (its base path dropped from addresses). */
+  homeAtRoot: boolean;
+}
+
+let declaredHome: ComposedHome | undefined;
+
+/** Set by the process root, once, from the registry it booted — beside
+ * {@link declareComposedWebPlugins}. Never call it from plugin code. */
+export function declareComposedHome(composition: {
+  home: string | null;
+  homeAtRoot?: true;
+}): void {
+  const next: ComposedHome = {
+    home: composition.home,
+    homeAtRoot: composition.homeAtRoot === true,
+  };
+  if (
+    declaredHome !== undefined &&
+    (declaredHome.home !== next.home ||
+      declaredHome.homeAtRoot !== next.homeAtRoot)
+  ) {
+    throw new Error(
+      "[composition] composed home already declared with a different value; a process serves one composition",
+    );
+  }
+  declaredHome = next;
+}
+
+/** This backend's composition home — what an address it hands out is relative to. */
+export function composedHome(): ComposedHome {
+  if (declaredHome === undefined) {
+    throw new Error(
+      "[composition] composedHome() read before the process declared its composition — " +
+        "only a host that booted a composition registry (serve, exec) can answer it",
+    );
+  }
+  return declaredHome;
+}

@@ -4,6 +4,10 @@ import {
 } from "@plugins/framework/plugins/product-name/core";
 import { WEBSITE_BASE_PATH } from "@plugins/apps/plugins/website/plugins/crawlable/core";
 import {
+  addressPathOf,
+  routePathOf,
+} from "@plugins/primitives/plugins/pane/plugins/route-prefix/core";
+import {
   GATEWAY_PORT,
   MAIN_WORKTREE_NAME,
   namespaceFromHost,
@@ -42,11 +46,26 @@ export const LOCAL_APP_HOST = namespaceHost(MAIN_WORKTREE_NAME);
 export const LOCAL_APP_URL = namespaceUrl(MAIN_WORKTREE_NAME);
 
 /**
- * Where the site is published. Its paths are the local app's (the site is the
- * website app, at `WEBSITE_BASE_PATH` on both), so a page moves between the
- * two by swapping the origin.
+ * Where the site is published: the `website` composition, which serves the
+ * website app at `/` (its `homeAtRoot`) — `equin.ai/vision` is the local
+ * app's `/about/vision`. A page moves between the two by swapping the origin
+ * and putting back, or dropping, `WEBSITE_BASE_PATH` (route-prefix's address
+ * root, `PUBLIC_SITE_ROOT`).
  */
 export const PUBLIC_SITE_ORIGIN = "https://equin.ai";
+
+/** The base path the published site drops from its addresses. */
+const PUBLIC_SITE_ROOT = WEBSITE_BASE_PATH;
+
+/**
+ * A website page (`/about/guide`, query and hash allowed) as published:
+ * `https://equin.ai/guide`.
+ */
+export function publicSitePageUrl(path: string): string {
+  const end = path.search(/[?#]/);
+  const pathname = end < 0 ? path : path.slice(0, end);
+  return `${PUBLIC_SITE_ORIGIN}${addressPathOf(pathname, PUBLIC_SITE_ROOT)}${end < 0 ? "" : path.slice(end)}`;
+}
 
 /** Whether `url` is a page of the published site. */
 export function isPublicSiteUrl(url: URL): boolean {
@@ -73,26 +92,22 @@ export function isLocalAppUrl(url: URL): boolean {
   );
 }
 
-/** The same page on another origin: path, query and fragment kept. */
-function withOrigin(url: URL, origin: string): string {
-  return `${origin}${url.pathname}${url.search}${url.hash}`;
-}
-
-/** A published page, on the local instance. */
+/** A published page, on the local instance: the base path put back. */
 export function localSiteUrl(url: URL): string {
   if (!isPublicSiteUrl(url))
     throw new Error(`${url.href} is not a page of ${PUBLIC_SITE_ORIGIN}`);
-  return withOrigin(url, new URL(LOCAL_APP_URL).origin);
+  return `${new URL(LOCAL_APP_URL).origin}${routePathOf(url.pathname, PUBLIC_SITE_ROOT)}${url.search}${url.hash}`;
 }
 
 /**
- * A local equin page, on equin.ai: a website page at the same path, any other
- * app's page (which equin.ai does not publish) at the site's home.
+ * A local equin page, on equin.ai: a website page at its published address
+ * (the base path dropped), any other app's page (which equin.ai does not
+ * publish) at the site's home.
  */
 export function publicSiteUrl(url: URL): string {
   if (!isLocalAppUrl(url))
     throw new Error(`${url.href} is not a page of a local equin instance`);
   return isSitePath(url)
-    ? withOrigin(url, PUBLIC_SITE_ORIGIN)
+    ? `${PUBLIC_SITE_ORIGIN}${addressPathOf(url.pathname, PUBLIC_SITE_ROOT)}${url.search}${url.hash}`
     : `${PUBLIC_SITE_ORIGIN}/`;
 }

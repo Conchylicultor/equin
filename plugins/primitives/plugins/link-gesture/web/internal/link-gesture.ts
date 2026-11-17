@@ -72,8 +72,11 @@ export function linkProps({ open, href }: LinkTarget): LinkGestureProps {
     else open(gesture);
   });
   // A static render is never clicked: the destination goes in the markup, the
-  // one place a robot can read it. A throwing href() fails that render loudly.
-  if (renderMode() === "static") return { ...handlers, "data-link": href() };
+  // one place a robot can read it — as the address it is served at (a
+  // composition serving its home app at `/` drops the base path,
+  // `route-prefix`'s address root). A throwing href() fails that render loudly.
+  if (renderMode() === "static")
+    return { ...handlers, "data-link": withActiveRoutePrefix(href()) };
   return handlers;
 }
 

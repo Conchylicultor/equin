@@ -36,7 +36,10 @@ import {
   runShutdownHooks,
 } from "../core/boot-stages";
 import { installProcessCrashListeners } from "../core/process-crash-listeners";
-import { declareComposedWebPlugins } from "../core/composed-web-plugins";
+import {
+  declareComposedHome,
+  declareComposedWebPlugins,
+} from "../core/composed-web-plugins";
 // The desktop's native probes (memory, snapshot hash), installed into `core`
 // before the graph loads — see `./host-probes`.
 import "./host-probes";
@@ -174,6 +177,7 @@ export async function serve({
   // imported: the server keeps only those plugins' entries of the post-web
   // manifests (its apps, its themes — `composedOnly`), before any plugin loads.
   declareComposedWebPlugins(server.composition.webPlugins);
+  declareComposedHome(server.composition);
 
   // Which tier this boot starts in, journaled: a background-started backend
   // boots darwinbg (gateway `taskpolicy -b`) until the gateway's probe says

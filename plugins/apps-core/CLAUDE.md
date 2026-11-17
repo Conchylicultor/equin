@@ -113,7 +113,7 @@ so ⌘/middle-click opens a desktop in a new browser tab.
 
 ## Plugin reference
 
-- Description: App switcher rail. Wraps per-app shells; plugins contribute via Apps.App. Every app the browser registers, readable on the server: declaredApps() — each Apps.App contribution of the plugins the backend's composition loads: whole AppRef (id, name, base path, icon, tile colour) and its launch kind (tab or surface mode), generated at build time from the web contributions; declaredAppPlugins() — the same, each with the web plugin that contributes it.
+- Description: App switcher rail. Wraps per-app shells; plugins contribute via Apps.App. Every app the browser registers, readable on the server: declaredApps() — each Apps.App contribution of the plugins the backend's composition loads: whole AppRef (id, name, base path, icon, tile colour) and its launch kind (tab or surface mode), generated at build time from the web contributions; declaredAppPlugins() — the same, each with the web plugin that contributes it; addressRoot() — the home app's base path when the composition serves it at / (homeAtRoot), the prefix every address it hands out drops.
 - Load-bearing: yes
 - Web:
   - Slots:
@@ -138,6 +138,7 @@ so ⌘/middle-click opens a desktop in a new browser tab.
     - `primitives/pane.currentRoutePath`
     - `primitives/pane.stripBasePath`
     - `primitives/pane.useSurfaceAppId`
+    - `primitives/pane/route-prefix.setAddressRoot`
     - `primitives/pane/route-prefix.setRoutePrefixes`
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/slot-render.RenderSlot`
@@ -182,8 +183,8 @@ so ⌘/middle-click opens a desktop in a new browser tab.
     - `APP_RAIL_WIDTH`
     - `documentTitle`
 - Cross-plugin:
-  - Imported by: 65 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×31
+  - Imported by: 66 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×32
     - `apps-core` ×16
     - `ui` ×6
     - `companions` ×3
@@ -199,6 +200,7 @@ so ⌘/middle-click opens a desktop in a new browser tab.
 - Server:
   - Exports (types): `DeclaredAppOf`
   - Exports (values):
+    - `addressRoot`
     - `declaredAppPlugins`
     - `declaredApps`
 - Test helpers:

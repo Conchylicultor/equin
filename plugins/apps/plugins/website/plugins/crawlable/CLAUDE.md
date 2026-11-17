@@ -72,6 +72,17 @@ snapshot from the site's most-linked address; it is never `/` and always one
 of `pages` (absent: no home). Strict at both levels: an unknown field is an
 error, so writer and reader change together.
 
+**`homeAtRoot: true`** — the composition serves its home app at `/` (its
+`homeAtRoot` row field; the public site). Keys stay ROUTE paths
+(`/about/vision`); the gateway reads a request's ADDRESS as the route under
+the home (`/vision` → `/about/vision`, bare `/` → `/about`, no redirect),
+answers the route's own spelling (`/about/…`, and a `moved` target under the
+home) with one 301 to its address, and writes the address as the canonical
+link. The take writes every link (`data-link`) as an address too (static-render
+installs route-prefix's address root), and `/sitemap.xml` lists addresses
+(`addressRoot()`, apps-core/server). The mapping is route-prefix's
+`addressPathOf` / `routePathOf`; the desktop keeps `/about` (no address root).
+
 ## The snapshot — taken by the build, only for a crawlable composition
 
 A composition declared `crawlable: true` (its row in
@@ -148,7 +159,9 @@ Run the take by hand (any initialized cluster file from the store):
 
 - Description: The website's pages on the server: the WebsitePages.Page collection every page plugin contributes its defineWebsitePage declaration to, and the public /robots.txt (allow all, pointing at the sitemap) and /sitemap.xml (one URL per page) built from it per request, origin from the request's X-Forwarded-Host (else Host) and X-Forwarded-Proto; both 404 in a composition with no pages.
 - Server:
-  - Uses: `infra/endpoints.rawEndpointHandler`
+  - Uses:
+    - `apps-core.addressRoot`
+    - `infra/endpoints.rawEndpointHandler`
   - Exports (values): `WebsitePages`
   - Routes:
     - `GET /robots.txt`

@@ -228,6 +228,13 @@ export interface CompositionIdentity {
    * Absent = none.
    */
   unlisted?: readonly string[];
+  /**
+   * Whether this composition serves its home app at `/`: the home app's base
+   * path is dropped from every address (the public site shows `/vision` for
+   * the website's `/about/vision`) while routes keep it
+   * (`pane/plugins/route-prefix`, the address root). Absent = no.
+   */
+  homeAtRoot?: true;
 }
 
 const CompositionContext = createContext<CompositionIdentity | null>(null);

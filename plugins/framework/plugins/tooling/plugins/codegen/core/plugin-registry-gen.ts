@@ -245,6 +245,11 @@ async function buildContext(
         main.unlisted,
         main.home,
       ),
+      homeAtRoot: resolveRegistryHomeAtRoot(
+        MAIN_COMPOSITION_ID,
+        main.homeAtRoot,
+        main.home,
+      ),
     },
     repo: files,
     dirScans: new Map(),
@@ -708,6 +713,27 @@ export interface RegistryComposition {
   home: string | null;
   /** The bundled apps its launchers do not offer — `defineApp` ids, sorted. */
   unlisted: readonly string[];
+  /** Whether it serves its home app at `/` (the address root — `homeAtRoot`). */
+  homeAtRoot: boolean;
+}
+
+/**
+ * A composition's manifest `homeAtRoot`, checked against its `home` — THROWS
+ * when it is set with no home: there is no app to serve at `/`.
+ * `composition-closure` reports the same.
+ */
+export function resolveRegistryHomeAtRoot(
+  name: string,
+  homeAtRoot: boolean,
+  home: string,
+): boolean {
+  if (homeAtRoot && home === "") {
+    throw new Error(
+      `Composition "${name}" declares \`homeAtRoot\` but no \`home\` — name the app it serves at / ` +
+        `(plugins/plugin-meta/plugins/composition/core/config.ts).`,
+    );
+  }
+  return homeAtRoot;
 }
 
 /**
@@ -843,6 +869,8 @@ function renderRegistry(
     // a registry whose launchers offer every app reads as it always did.
     const unlisted = composition.unlisted.length > 0;
     if (unlisted) lines.push("  unlisted: readonly string[];");
+    // Likewise only a composition serving its home at `/` spells `homeAtRoot`.
+    if (composition.homeAtRoot) lines.push("  homeAtRoot: true;");
     if (webPlugins !== null) {
       lines.push(
         "  /** The plugins its browser loads (its web registry), dot-form ids. */",
@@ -852,7 +880,7 @@ function renderRegistry(
     lines.push("}");
     lines.push("");
     lines.push(
-      `export const composition: CompositionIdentity = { id: ${JSON.stringify(composition.id)}, home: ${JSON.stringify(composition.home)}${unlisted ? `, unlisted: ${JSON.stringify(composition.unlisted)}` : ""}${webPlugins !== null ? `, webPlugins: ${JSON.stringify(webPlugins)}` : ""} };`,
+      `export const composition: CompositionIdentity = { id: ${JSON.stringify(composition.id)}, home: ${JSON.stringify(composition.home)}${unlisted ? `, unlisted: ${JSON.stringify(composition.unlisted)}` : ""}${composition.homeAtRoot ? ", homeAtRoot: true" : ""}${webPlugins !== null ? `, webPlugins: ${JSON.stringify(webPlugins)}` : ""} };`,
     );
   }
   lines.push("");
@@ -913,6 +941,8 @@ export async function generateCompositionRegistry(opts: {
   home: string;
   /** The manifest's declared `unlisted`, resolved against `bundle` (throws when invalid). */
   unlisted: readonly string[];
+  /** The manifest's declared `homeAtRoot` (throws when set with no `home`). */
+  homeAtRoot: boolean;
   // The pass's context (`buildRegistryGenContext`, memoized per pass), so one
   // build shares ONE tree walk across several compositions' registries.
   ctx: RegistryGenContext;
@@ -941,6 +971,11 @@ export async function generateCompositionRegistry(opts: {
       opts.bundle,
       opts.name,
       opts.unlisted,
+      opts.home,
+    ),
+    homeAtRoot: resolveRegistryHomeAtRoot(
+      opts.name,
+      opts.homeAtRoot,
       opts.home,
     ),
   };

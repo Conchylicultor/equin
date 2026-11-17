@@ -1,3 +1,4 @@
+import { addressPathOf } from "@plugins/primitives/plugins/pane/plugins/route-prefix/core";
 import type { WebsitePage } from "../../core";
 
 /**
@@ -40,14 +41,22 @@ function xmlEscape(text: string): string {
   return text.replace(/[&<>"']/g, (c) => XML_ESCAPES[c]!);
 }
 
-/** sitemap.xml: one `<url><loc>` per page, sorted by path so it is stable. */
+/**
+ * sitemap.xml: one `<url><loc>` per page, sorted by path so it is stable —
+ * each at the address it is served at (`root`: the composition's address
+ * root, the home app's base path it serves at `/`; null for none).
+ */
 export function renderSitemapXml(
   origin: string,
   pages: readonly WebsitePage[],
+  root: string | null,
 ): string {
   const urls = [...pages]
     .sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0))
-    .map((p) => `  <url><loc>${xmlEscape(origin + p.path)}</loc></url>\n`)
+    .map(
+      (p) =>
+        `  <url><loc>${xmlEscape(origin + addressPathOf(p.path, root))}</loc></url>\n`,
+    )
     .join("");
   return (
     `<?xml version="1.0" encoding="UTF-8"?>\n` +

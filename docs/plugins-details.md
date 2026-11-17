@@ -12638,7 +12638,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `websiteTileStops`
         - **`crawlable`** — The website's pages on the server: the WebsitePages.Page collection every page plugin contributes its defineWebsitePage declaration to, and the public /robots.txt (allow all, pointing at the sitemap) and /sitemap.xml (one URL per page) built from it per request, origin from the request's X-Forwarded-Host (else Host) and X-Forwarded-Proto; both 404 in a composition with no pages.
           - Server:
-            - Uses: `infra/endpoints.rawEndpointHandler`
+            - Uses:
+              - `apps-core.addressRoot`
+              - `infra/endpoints.rawEndpointHandler`
             - Exports (values): `WebsitePages`
             - Routes:
               - `GET /robots.txt`
@@ -13211,7 +13213,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses: `apps/website/crawlable.defineWebsitePage`
                 - Exports (values): `guidePage`
               - Cross-plugin:
-                - Imported by: `apps/website/pages/download`
+                - Imported by:
+                  - `apps/website/pages/download`
+                  - `hints/help-menu`
             - **`privacy`** — The privacy page of the equin website and the consent prompt that links to it: the /about/privacy pane (this browser's choice, what a visit records, the two ways a return is recognised — a random key kept in the browser when the visitor accepts, else the daily hash — and how long it is kept), its Privacy link in the footer, and the prompt floating over every page (Website.Layer) until the browser answers Reject or Accept. The privacy page of the equin website on the server: its sitemap entry (WebsitePages.Page).
               - Web:
                 - Contributes:
@@ -13578,6 +13582,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/namespace.namespaceHost`
               - `infra/namespace.namespaceUrl`
               - `primitives/pane.defineApp`
+              - `primitives/pane/route-prefix.addressPathOf`
+              - `primitives/pane/route-prefix.routePathOf`
               - `ui/icons.symbol`
             - Exports (values):
               - `CONTACT_EMAIL`
@@ -13591,6 +13597,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `LOCAL_APP_URL`
               - `localSiteUrl`
               - `PUBLIC_SITE_ORIGIN`
+              - `publicSitePageUrl`
               - `publicSiteUrl`
               - `websiteApp`
           - Cross-plugin:
@@ -13615,7 +13622,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `companions/browser-extension/equin-site`
               - `hints/help-menu`
 
-- **`apps-core`** — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App. Every app the browser registers, readable on the server: declaredApps() — each Apps.App contribution of the plugins the backend's composition loads: whole AppRef (id, name, base path, icon, tile colour) and its launch kind (tab or surface mode), generated at build time from the web contributions; declaredAppPlugins() — the same, each with the web plugin that contributes it.
+- **`apps-core`** — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App. Every app the browser registers, readable on the server: declaredApps() — each Apps.App contribution of the plugins the backend's composition loads: whole AppRef (id, name, base path, icon, tile colour) and its launch kind (tab or surface mode), generated at build time from the web contributions; declaredAppPlugins() — the same, each with the web plugin that contributes it; addressRoot() — the home app's base path when the composition serves it at / (homeAtRoot), the prefix every address it hands out drops.
   - Web:
     - Slots:
       - `Apps.App`
@@ -13639,6 +13646,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/pane.currentRoutePath`
       - `primitives/pane.stripBasePath`
       - `primitives/pane.useSurfaceAppId`
+      - `primitives/pane/route-prefix.setAddressRoot`
       - `primitives/pane/route-prefix.setRoutePrefixes`
       - `primitives/slot-render.defineRenderSlot`
       - `primitives/slot-render.RenderSlot`
@@ -13683,8 +13691,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `APP_RAIL_WIDTH`
       - `documentTitle`
   - Cross-plugin:
-    - Imported by: 65 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
-      - `apps` ×31
+    - Imported by: 66 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
+      - `apps` ×32
       - `apps-core` ×16
       - `ui` ×6
       - `companions` ×3
@@ -13700,6 +13708,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Server:
     - Exports (types): `DeclaredAppOf`
     - Exports (values):
+      - `addressRoot`
       - `declaredAppPlugins`
       - `declaredApps`
   - Test helpers:
@@ -32211,6 +32220,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BrowserHostOptions`
           - `ChangeSource`
           - `ComposedEntry`
+          - `ComposedHome`
           - `DependsOnEntry`
           - `EndpointHttpHandler`
           - `EpochHandoffHooks`
@@ -32283,6 +32293,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `bootBrowserHost`
           - `boundedMembershipKeys`
           - `collectContributions`
+          - `composedHome`
           - `composedOnly`
           - `composedWebPlugins`
           - `defineDeferredResource`
@@ -33275,6 +33286,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resolveOriginAnnotations`
               - `resolveOriginDefaults`
               - `resolveRegistryHome`
+              - `resolveRegistryHomeAtRoot`
               - `scopedOnlyWebPlugins`
               - `seedAuthoredOverrides`
               - `serverBarrelBlockers`
@@ -52692,6 +52704,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/pane.stripBasePath`
               - `primitives/pane.usePaneMatch`
               - `primitives/pane.usePaneTitle`
+              - `primitives/pane/route-prefix.setAddressRoot`
             - Exports (types):
               - `StaticPage`
               - `StaticRenderer`
@@ -55415,24 +55428,37 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defaultStore`
           - `TestSurface` — A pane surface: `PluginProvider` + the real `PaneSurfaceProvider`.
       - Plugins:
-        - **`route-prefix`** — Route prefixes: a leading address-bar segment owned by a surface mode rather than an app (the desktop's /desktop, written before the focused window's URL). The known prefixes every read strips (splitRoutePrefix, used by pane's currentRoutePath) and the active prefix the current mode writes (withActiveRoutePrefix, used by the shell history adapter and openInBrowserTab). A leaf, so both the pane primitive and link-gesture read it.
+        - **`route-prefix`** — Route prefixes: a leading address-bar segment owned by a surface mode rather than an app (the desktop's /desktop, written before the focused window's URL). The known prefixes every read strips (splitRoutePrefix, used by pane's currentRoutePath) and the active prefix the current mode writes (withActiveRoutePrefix, used by the shell history adapter and openInBrowserTab). Also the address root (setAddressRoot, from the composition's homeAtRoot): the base path of the app a released composition serves at / — put back by every read, dropped by every write (core: addressPathOf / routePathOf, the pure mapping every side shares). A leaf, so both the pane primitive and link-gesture read it.
           - Cross-plugin:
             - Imported by:
               - `apps-core`
               - `apps-core/app-embed`
               - `apps-core/tab-origin`
               - `apps-core/tabs`
+              - `apps/website/crawlable`
               - `apps/website/live-demo`
+              - `apps/website/shell`
+              - `framework/web-core`
+              - `primitives/dom/static-render`
               - `primitives/link-gesture`
               - `primitives/pane`
           - Web:
             - Exports (types): `SplitRoutePath`
             - Exports (values):
               - `activeRoutePrefix`
+              - `peekAddressRoot`
               - `setActiveRoutePrefix`
+              - `setAddressRoot`
               - `setRoutePrefixes`
               - `splitRoutePrefix`
               - `withActiveRoutePrefix`
+          - Core:
+            - Exports (values):
+              - `addressPathOf`
+              - `AddressRootError`
+              - `addressUrlOf`
+              - `isUnderAddressRoot`
+              - `routePathOf`
           - Test helpers:
             - Web: `@plugins/primitives/plugins/pane/plugins/route-prefix/web/testing`
               - `resetRoutePrefixForTests` — Drop the installed state between tests.

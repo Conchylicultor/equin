@@ -418,6 +418,7 @@ wrapper fixpoint reads.
     - `resolveOriginAnnotations`
     - `resolveOriginDefaults`
     - `resolveRegistryHome`
+    - `resolveRegistryHomeAtRoot`
     - `scopedOnlyWebPlugins`
     - `seedAuthoredOverrides`
     - `serverBarrelBlockers`

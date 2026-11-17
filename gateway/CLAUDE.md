@@ -86,7 +86,13 @@ manifest's `home`** (the composition's home app's base path, query kept),
 when it names one: the app redirects `/` only once its JS runs, so a crawler
 would otherwise read an empty shell at the site's most-linked address. `home`
 is checked as strictly as the schema: a page path other than `/` that `pages`
-lists (null refused; absent = no redirect).
+lists (null refused; absent = no redirect). **Unless the manifest says
+`homeAtRoot: true`** (the composition serves its home app at `/`): then a
+request path is an address, read as the route under `home` for every lookup —
+the snapshot page, the document head, the framing policy (`addressToRoute`:
+`/vision` → `/about/vision`, `/` → `/about`); bare `/` is the home itself; a
+path at or under `home` (`/about/…`), or a `moved` target landing there, is
+one 301 to its address (`routeToAddress`); the canonical href is the address.
 
 `/robots.txt` and `/sitemap.xml` are forwarded to the backend whatever the
 dist holds (the `crawlable` server plugin answers, 404 with no pages). Every

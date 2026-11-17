@@ -177,6 +177,8 @@ export function useManifestActions(): ManifestActions {
           unlisted: [],
           // A new composition takes no crawl snapshot; set it via config edit.
           crawlable: false,
+          // …and serves its home under its own base path.
+          homeAtRoot: false,
           ...fields,
         };
         next = [...items, newItem];

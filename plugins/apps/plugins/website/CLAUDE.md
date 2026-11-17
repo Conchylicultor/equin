@@ -31,6 +31,16 @@ the claim, show what it looks like, and then get out of the way:
   every page wears, and the band / heading / page / footer chrome
   (`WebsiteBand`, `WebsiteHero`, `WebsiteChrome`).
 
+**Two addresses, one route.** On the desktop the site is the website app at
+`/about` (`/about/vision`), beside every other app. The public site — the
+`website` composition, `homeAtRoot: true` — serves it at `/`
+(`equin.ai/vision`), and `equin.ai/about/…` answers with a 301. Code always
+writes route paths (`/about/…`: page declarations, `pane.link`, analytics);
+the address is derived at the boundary (`primitives/pane/route-prefix`'s
+address root). A public URL in code goes through `publicSitePageUrl` /
+`publicSiteUrl` (`shell/core/site.ts`), never a hand-written
+`https://equin.ai/about/…`.
+
 ## The rules that are easy to break
 
 **Reading order is authored, not inherited.** A page's band order lives in

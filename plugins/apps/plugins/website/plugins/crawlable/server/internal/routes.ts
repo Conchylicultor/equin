@@ -1,4 +1,5 @@
 import type { HttpHandler } from "@plugins/framework/plugins/server-core/core";
+import { addressRoot } from "@plugins/apps-core/server";
 import type { WebsitePage } from "../../core";
 import { WebsitePages } from "./pages";
 import { renderRobotsTxt, renderSitemapXml, requestOrigin } from "./render";
@@ -32,7 +33,7 @@ export const handleRobotsTxt = withPages(
 
 export const handleSitemapXml = withPages(
   (req, pages) =>
-    new Response(renderSitemapXml(requestOrigin(req), pages), {
+    new Response(renderSitemapXml(requestOrigin(req), pages, addressRoot()), {
       headers: { "content-type": "application/xml; charset=utf-8" },
     }),
 );

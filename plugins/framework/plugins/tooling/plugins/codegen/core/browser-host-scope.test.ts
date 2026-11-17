@@ -84,7 +84,12 @@ describe("scopedOnlyWebPlugins over the repo", () => {
       ctx,
       def: web,
       bundle: new Set(bundle),
-      composition: { id: "website", home: "website", unlisted: [] },
+      composition: {
+        id: "website",
+        home: "website",
+        unlisted: [],
+        homeAtRoot: false,
+      },
     });
     const [own, onDemand] = rendered.split(
       "export const webScopedEntries: CollectedEntry[] = [",

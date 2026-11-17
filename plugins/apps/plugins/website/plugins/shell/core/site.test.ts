@@ -5,25 +5,36 @@ import {
   LOCAL_APP_URL,
   localSiteUrl,
   PUBLIC_SITE_ORIGIN,
+  publicSitePageUrl,
   publicSiteUrl,
 } from "./site";
 
 const local = new URL(LOCAL_APP_URL).origin;
 
 describe("the site's two origins", () => {
-  test("a published page opens at the same path locally", () => {
-    expect(
-      localSiteUrl(new URL(`${PUBLIC_SITE_ORIGIN}/about/guide?x=1#top`)),
-    ).toBe(`${local}/about/guide?x=1#top`);
+  test("a published page opens locally under the website's base path", () => {
+    expect(localSiteUrl(new URL(`${PUBLIC_SITE_ORIGIN}/guide?x=1#top`))).toBe(
+      `${local}/about/guide?x=1#top`,
+    );
+    expect(localSiteUrl(new URL(`${PUBLIC_SITE_ORIGIN}/`))).toBe(
+      `${local}/about`,
+    );
   });
 
-  test("a local site page opens at the same path on equin.ai", () => {
+  test("a local site page opens on equin.ai without the base path", () => {
     expect(publicSiteUrl(new URL(`${local}/about/apps`))).toBe(
-      `${PUBLIC_SITE_ORIGIN}/about/apps`,
+      `${PUBLIC_SITE_ORIGIN}/apps`,
     );
     expect(publicSiteUrl(new URL(`${local}/about`))).toBe(
-      `${PUBLIC_SITE_ORIGIN}/about`,
+      `${PUBLIC_SITE_ORIGIN}/`,
     );
+  });
+
+  test("a website page's published URL", () => {
+    expect(publicSitePageUrl("/about/guide")).toBe(
+      `${PUBLIC_SITE_ORIGIN}/guide`,
+    );
+    expect(publicSitePageUrl("/about?x=1")).toBe(`${PUBLIC_SITE_ORIGIN}/?x=1`);
   });
 
   test("any page of a local instance opens on equin.ai", () => {
@@ -32,7 +43,7 @@ describe("the site's two origins", () => {
     );
     expect(
       publicSiteUrl(new URL("http://att-x.localhost:9000/about/guide")),
-    ).toBe(`${PUBLIC_SITE_ORIGIN}/about/guide`);
+    ).toBe(`${PUBLIC_SITE_ORIGIN}/guide`);
     expect(publicSiteUrl(new URL(`${local}/aboutx`))).toBe(
       `${PUBLIC_SITE_ORIGIN}/`,
     );

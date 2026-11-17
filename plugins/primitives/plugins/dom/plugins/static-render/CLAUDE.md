@@ -193,6 +193,7 @@ The real website end to end: its crawl snapshot take
     - `primitives/pane.stripBasePath`
     - `primitives/pane.usePaneMatch`
     - `primitives/pane.usePaneTitle`
+    - `primitives/pane/route-prefix.setAddressRoot`
   - Exports (types):
     - `StaticPage`
     - `StaticRenderer`

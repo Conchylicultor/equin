@@ -264,6 +264,18 @@ export const compositionsConfig = defineConfig({
         // worktree's pay nothing. Engine-opaque — `manifestItemToManifest`
         // DROPS it.
         crawlable: boolField({ label: "Crawlable" }),
+        // WHETHER this composition serves its `home` app at `/`: the home
+        // app's base path is dropped from every address it hands out (the
+        // public site shows `equin.ai/vision` for the website's
+        // `/about/vision`) while every route keeps it — the address root of
+        // `primitives/pane/route-prefix`, put back by every URL read and
+        // dropped by every write. Its old addresses (`/about/…`) answer with
+        // a 301 (the snapshot manifest's `homeAtRoot`, read by the gateway).
+        // Off everywhere but the public site: on the desktop the home app
+        // shares `/` with every other app. Requires a `home` (codegen and
+        // `composition-closure` refuse it without one). Engine-opaque —
+        // `manifestItemToManifest` DROPS it.
+        homeAtRoot: boolField({ label: "Home at root" }),
       },
       default: [
         // ── The main app ────────────────────────────────────────────────────────
@@ -309,6 +321,7 @@ export const compositionsConfig = defineConfig({
           home: "home",
           unlisted: [] as string[],
           crawlable: false,
+          homeAtRoot: false,
         },
 
         // ── The showcase film's instance ────────────────────────────────────────
@@ -365,6 +378,7 @@ export const compositionsConfig = defineConfig({
           home: "home",
           unlisted: [] as string[],
           crawlable: false,
+          homeAtRoot: false,
         },
 
         // ── The global exclusions ───────────────────────────────────────────────
@@ -440,6 +454,7 @@ export const compositionsConfig = defineConfig({
           home: "",
           unlisted: [] as string[],
           crawlable: false,
+          homeAtRoot: false,
         },
 
         // ── The default exclusion set ───────────────────────────────────────────
@@ -475,6 +490,7 @@ export const compositionsConfig = defineConfig({
           home: "",
           unlisted: [] as string[],
           crawlable: false,
+          homeAtRoot: false,
         },
 
         // ── Profiles: the agent-manager worked example (full vs. lean) ──────────
@@ -497,6 +513,7 @@ export const compositionsConfig = defineConfig({
           home: "agent-manager",
           unlisted: [] as string[],
           crawlable: false,
+          homeAtRoot: false,
         },
         {
           id: "agent-manager-lean",
@@ -512,6 +529,7 @@ export const compositionsConfig = defineConfig({
           home: "agent-manager",
           unlisted: [] as string[],
           crawlable: false,
+          homeAtRoot: false,
         },
 
         // ── Profile: the agent manager as its in-page demo serves it ─────────────
@@ -700,6 +718,7 @@ export const compositionsConfig = defineConfig({
           home: "home",
           unlisted: [] as string[],
           crawlable: false,
+          homeAtRoot: false,
         },
 
         // ── Apps: lean baseline (entry only) for every other top-level app ──────
@@ -807,6 +826,9 @@ export const compositionsConfig = defineConfig({
           excludes: ["agent-runtime", "auth"],
           // The public site: its build snapshots every page for robots.
           crawlable: true,
+          // …and serves the website at `/` (`equin.ai/vision`), not under
+          // the `/about` it keeps on the desktop.
+          homeAtRoot: true,
         }),
 
         // ── Subsystems: infra closures as building blocks / inspection lenses ───
@@ -852,6 +874,7 @@ export const compositionsConfig = defineConfig({
           home: "",
           unlisted: [] as string[],
           crawlable: false,
+          homeAtRoot: false,
         },
         subsystem("page-editor", { entryPoints: ["page.**"] }),
         subsystem("fields", { entryPoints: ["fields.**"] }),
@@ -1027,6 +1050,7 @@ function app(
     extraExtends?: string[];
     excludes?: string[];
     crawlable?: boolean;
+    homeAtRoot?: boolean;
   },
 ) {
   return {
@@ -1044,6 +1068,7 @@ function app(
     home: name,
     unlisted: [] as string[],
     crawlable: opts.crawlable ?? false,
+    homeAtRoot: opts.homeAtRoot ?? false,
   };
 }
 
@@ -1063,6 +1088,7 @@ function subsystem(name: string, opts: { entryPoints: string[] }) {
     home: "",
     unlisted: [] as string[],
     crawlable: false,
+    homeAtRoot: false,
   };
 }
 
@@ -1082,5 +1108,6 @@ function pack(name: string, opts: { selectedContributors: string[] }) {
     home: "",
     unlisted: [] as string[],
     crawlable: false,
+    homeAtRoot: false,
   };
 }

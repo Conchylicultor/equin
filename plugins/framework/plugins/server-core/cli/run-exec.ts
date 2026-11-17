@@ -6,7 +6,10 @@ import { settleDeclaredDataDirMoves } from "@plugins/infra/plugins/paths/core";
 import { recordMemoryCheckpoint } from "../core/profiler";
 import { bootPluginGraph, runShutdownHooks } from "../core/boot-stages";
 import { installProcessCrashListeners } from "../core/process-crash-listeners";
-import { declareComposedWebPlugins } from "../core/composed-web-plugins";
+import {
+  declareComposedHome,
+  declareComposedWebPlugins,
+} from "../core/composed-web-plugins";
 import { declareExecAdmission, type ExecAdmission } from "../core/schema-role";
 
 // ── `exec` — the short-lived boot mode ───────────────────────────────────────
@@ -164,6 +167,7 @@ export async function runExec(
       await import("../bin/active-runtime");
     // The same answer `serve` declares, off the same registry.
     declareComposedWebPlugins(serverComposition.webPlugins);
+    declareComposedHome(serverComposition);
     ordered = await bootPluginGraph({
       mode: "exec",
       afterLoad: treeRead.releaseNow,

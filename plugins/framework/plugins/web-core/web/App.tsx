@@ -14,6 +14,7 @@ import {
   takeFirstPaintHolds,
 } from "@plugins/framework/plugins/web-sdk/core";
 import type {
+  CompositionIdentity,
   LoadedPlugin,
   OnDemandPlugins,
   PluginLoadError,
@@ -24,6 +25,7 @@ import {
   RenderScopeRoot,
 } from "@plugins/primitives/plugins/slot-render/web";
 import { normalizeRoutePath } from "@plugins/primitives/plugins/pane/core";
+import { routePathOf } from "@plugins/primitives/plugins/pane/plugins/route-prefix/core";
 import {
   NotificationsProvider,
   ensureNotificationsClient,
@@ -226,7 +228,7 @@ function resolveActiveAppPrefix(
   const idToPath = new Map(
     eagerEntries.map((e) => [e.id, e.pluginPath] as const),
   );
-  const apps: { path: string; pluginPath: string }[] = [];
+  const apps: { id: unknown; path: string; pluginPath: string }[] = [];
   // A surface-mode app's base path is a route PREFIX, not a route: in front of
   // the focused tab's own URL (`/desktop/agents/c/x` is the agent manager, shown
   // on the desktop). Same shape test — its entry carries `surfaceMode`.
@@ -248,7 +250,11 @@ function resolveActiveAppPrefix(
       // cast): this runs pre-boot on raw, unstamped, untyped values.
       const app = c.app as { basePath?: unknown } | undefined;
       if (typeof app?.basePath === "string") {
-        apps.push({ path: app.basePath, pluginPath });
+        apps.push({
+          id: (c.app as { id?: unknown }).id,
+          path: app.basePath,
+          pluginPath,
+        });
         if (typeof c.surfaceMode === "string") prefixes.push(app.basePath);
       }
     }
@@ -261,7 +267,17 @@ function resolveActiveAppPrefix(
   const raw = normalizeRoutePath(window.location.pathname);
   // Bare, the prefix is that app's own page (the empty desktop): matched as is.
   const prefix = prefixes.find((p) => raw.startsWith(p + "/"));
-  const pathname = prefix === undefined ? raw : raw.slice(prefix.length);
+  const address = prefix === undefined ? raw : raw.slice(prefix.length);
+  // A composition serving its home app at `/` (`homeAtRoot`): the address
+  // drops the home app's base path, the route keeps it — put it back, as
+  // route-prefix's reader does once the apps root installs the address root.
+  // A home whose shell is not eager simply matches nothing here (no front-load).
+  const identity: CompositionIdentity = composition;
+  const root =
+    identity.homeAtRoot === true
+      ? (apps.find((a) => a.id === identity.home)?.path ?? null)
+      : null;
+  const pathname = root === null ? address : routePathOf(address, root);
   const matched = [...apps]
     .sort((a, b) => b.path.length - a.path.length)
     .find(

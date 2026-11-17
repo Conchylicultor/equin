@@ -42,6 +42,7 @@ import { hostProviderServerBarrels } from "./host-services";
 import { readCompositionManifestsFromDisk } from "./main-bundle";
 import {
   resolveRegistryHome,
+  resolveRegistryHomeAtRoot,
   resolveRegistryUnlisted,
   scanCollectedDir,
   type RegistryGenContext,
@@ -76,6 +77,8 @@ export interface StaticHostGraph {
   composition: string;
   home: string | null;
   unlisted: readonly string[];
+  /** Whether it serves its home app at `/` (its snapshot's links drop the base path). */
+  homeAtRoot: boolean;
   /** The composition's plugins with a `web/index.ts`, by path, sorted. */
   webPlugins: string[];
   /** Every server plugin the take boots, by path, sorted. */
@@ -133,6 +136,7 @@ export async function deriveStaticHostGraphs(
         row.unlisted,
         row.home,
       ),
+      homeAtRoot: resolveRegistryHomeAtRoot(row.name, row.homeAtRoot, row.home),
       webPlugins: [...resolved.bundle]
         .map((id) => asFsPath(id))
         .filter((p) => repo.has(`plugins/${p}/web/index.ts`))
@@ -175,7 +179,7 @@ export function renderStaticHosts(
     const members = new Set(g.members);
     lines.push(
       `  ${JSON.stringify(g.composition)}: {`,
-      `    composition: { id: ${JSON.stringify(g.composition)}, home: ${JSON.stringify(g.home)}${g.unlisted.length > 0 ? `, unlisted: ${JSON.stringify(g.unlisted)}` : ""} },`,
+      `    composition: { id: ${JSON.stringify(g.composition)}, home: ${JSON.stringify(g.home)}${g.unlisted.length > 0 ? `, unlisted: ${JSON.stringify(g.unlisted)}` : ""}${g.homeAtRoot ? ", homeAtRoot: true" : ""} },`,
       "    webPlugins: [",
       ...g.webPlugins.map((p) => `      ${JSON.stringify(p)},`),
       "    ],",

@@ -71,6 +71,8 @@ export interface MainComposition {
   home: string;
   /** The row's declared `unlisted` (unresolved — `resolveRegistryUnlisted` validates it). */
   unlisted: readonly string[];
+  /** The row's declared `homeAtRoot` (`resolveRegistryHomeAtRoot` validates it). */
+  homeAtRoot: boolean;
 }
 
 /**
@@ -128,6 +130,7 @@ export function resolveMainComposition(
     negated: resolved.negatedTargets,
     home: mainItem.home,
     unlisted: mainItem.unlisted,
+    homeAtRoot: mainItem.homeAtRoot,
   };
 }
 

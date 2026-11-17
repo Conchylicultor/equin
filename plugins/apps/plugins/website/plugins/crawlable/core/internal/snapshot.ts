@@ -49,7 +49,8 @@ export interface SnapshotTaken {
  * keyed by its path, its fragment at `snapshotFileOf(path)`, and `home` — the
  * path bare `/` goes to, the composition's home app's base path, `null` for
  * none — recorded when given, and `moved` — each former base path mapped to
- * where it moved — recorded when not empty. Throws a `SnapshotPageError` on a page with no
+ * where it moved — recorded when not empty, and `homeAtRoot` — the composition
+ * serves its home at `/` — recorded when set (it needs a home). Throws a `SnapshotPageError` on a page with no
  * text (an empty render is no page a robot can read), a path taken twice, or
  * a home that is no taken page (`/` would redirect to a page with no
  * snapshot).
@@ -58,6 +59,7 @@ export function snapshotFiles(
   taken: readonly SnapshotTaken[],
   home: string | null,
   moved: Readonly<Record<string, string>> = {},
+  homeAtRoot = false,
 ): {
   manifest: SnapshotManifest;
   fragments: ReadonlyMap<string, string>;
@@ -80,12 +82,28 @@ export function snapshotFiles(
   }
   const movedPart =
     Object.keys(moved).length > 0 ? { moved: { ...moved } } : {};
-  if (home === null) return { manifest: { pages, ...movedPart }, fragments };
+  if (home === null) {
+    if (homeAtRoot) {
+      throw new SnapshotPageError(
+        "/",
+        "the composition serves its home at `/` (homeAtRoot) but has no home",
+      );
+    }
+    return { manifest: { pages, ...movedPart }, fragments };
+  }
   if (!(home in pages)) {
     throw new SnapshotPageError(
       home,
       "the composition's home is no declared page — `/` would redirect robots to a path with no snapshot",
     );
   }
-  return { manifest: { home, pages, ...movedPart }, fragments };
+  return {
+    manifest: {
+      home,
+      ...(homeAtRoot ? { homeAtRoot: true as const } : {}),
+      pages,
+      ...movedPart,
+    },
+    fragments,
+  };
 }

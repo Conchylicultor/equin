@@ -560,6 +560,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `BrowserHostOptions`
     - `ChangeSource`
     - `ComposedEntry`
+    - `ComposedHome`
     - `DependsOnEntry`
     - `EndpointHttpHandler`
     - `EpochHandoffHooks`
@@ -632,6 +633,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `bootBrowserHost`
     - `boundedMembershipKeys`
     - `collectContributions`
+    - `composedHome`
     - `composedOnly`
     - `composedWebPlugins`
     - `defineDeferredResource`

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { declareRenderMode } from "@plugins/primitives/plugins/dom/plugins/render-mode/core";
+import { setAddressRoot } from "@plugins/primitives/plugins/pane/plugins/route-prefix/web";
 import {
   loadPlugins,
   PluginProvider,
@@ -82,6 +83,12 @@ export interface StaticRenderer {
    * belongs to throws at creation.
    */
   readonly home: { id: string; name: string; basePath: string } | null;
+  /**
+   * Whether the composition serves its home app at `/`
+   * (`CompositionIdentity.homeAtRoot`): every link the render writes is then
+   * the address the page is served at, its home's base path dropped.
+   */
+  readonly homeAtRoot: boolean;
   /**
    * Every registered app's former base paths (`AppRef.formerBasePaths`), each
    * mapped to the app's base path: where a request under an old address goes.
@@ -190,6 +197,15 @@ export async function createStaticRenderer(opts: {
     }
     home = { id: app.id, name: app.name, basePath: app.basePath };
   }
+  // A composition serving its home at `/`: every link written into the
+  // markup (link-gesture's `data-link`) is that address, as the live page's.
+  const homeAtRoot = opts.composition.homeAtRoot === true;
+  if (homeAtRoot && home === null) {
+    throw new Error(
+      "[static-render] the composition serves its home app at / (homeAtRoot) but has no home",
+    );
+  }
+  setAddressRoot(homeAtRoot ? home!.basePath : null);
 
   const moved: Record<string, string> = {};
   for (const app of apps.values()) {
@@ -200,6 +216,7 @@ export async function createStaticRenderer(opts: {
   return {
     unhydrated: missing,
     home,
+    homeAtRoot,
     moved,
     // Async, so an unresolvable path rejects like every other failure.
     render: async (page) =>

@@ -28,7 +28,7 @@ export const SnapshotPageSchema = z
  * static snapshot, and what to put in the shell's head for each.
  *
  * ```json
- * { "home": "/about", "moved": { "/about": "/about" }, "pages": { "/about/download": { "title": "Download", "description": "…", "file": "about/download.html" } } }
+ * { "home": "/about", "homeAtRoot": true, "moved": { "/website": "/about" }, "pages": { "/about/download": { "title": "Download", "description": "…", "file": "about/download.html" } } }
  * ```
  *
  * - Keys are the exact page paths (`WebsitePage.path`: absolute, no trailing
@@ -60,6 +60,16 @@ export const SnapshotManifestSchema = z
      * Absent: nothing moved.
      */
     moved: z.record(PagePathSchema, PagePathSchema).optional(),
+    /**
+     * The composition serves its home app at `/` (its `homeAtRoot`): every
+     * key above stays a ROUTE path (`/about/vision`, the home `/about`), and
+     * the gateway reads a request's ADDRESS as the route under the home
+     * (`/vision` → `/about/vision`, bare `/` → `/about`, no redirect), answers
+     * the route's own spelling (`/about/…`, and a `moved` target under the
+     * home) with a 301 to its address, and writes the address as the
+     * canonical link. Requires `home`. Absent: every address is its route.
+     */
+    homeAtRoot: z.literal(true).optional(),
   })
   .strict()
   .superRefine((m, ctx) => {
@@ -80,6 +90,12 @@ export const SnapshotManifestSchema = z
           });
       }
     }
+    if (m.homeAtRoot === true && m.home === undefined)
+      ctx.addIssue({
+        code: "custom",
+        path: ["homeAtRoot"],
+        message: "serving the home at `/` needs a home",
+      });
     if (m.home === undefined) return;
     if (m.home === "/")
       ctx.addIssue({

@@ -229,6 +229,11 @@ func serveArtifact(w http.ResponseWriter, r *http.Request, file string) {
 // so without this a crawler would read an empty shell at the site's
 // most-linked address.
 //
+// Unless the manifest says the home is served at `/` (homeAtRoot): then a
+// request's path is an ADDRESS, read as the route under the home
+// (`/vision` → `/about/vision`) for every lookup above; bare `/` is the home
+// itself; and the route's own spelling (`/about/…`) is a 301 to its address.
+//
 // Both compose. The bytes then vary by path, theme and build, so the file's own
 // validators no longer describe them: the ETag is a hash of the bytes served,
 // which keeps an unchanged page a bodiless 304 and makes any change a 200.
@@ -249,37 +254,59 @@ func serveShell(w http.ResponseWriter, r *http.Request, wt *Worktree, webDir str
 		return
 	}
 
-	headFragment, csp := shellHead(wt, r.URL.Path)
+	set, hasSnapshot := readSnapshot(webDir)
+	// The address a request names (`/vision`) and the app route it shows
+	// (`/about/vision`): the same path unless the composition serves its home
+	// app at `/` (homeAtRoot) — then every lookup keyed by app path (the head,
+	// the framing policy, the snapshot's pages) takes the route.
+	pagePath := snapshotRequestPath(r.URL.Path)
+	atRoot := hasSnapshot && set.err == nil && set.homeAtRoot
+	routePath, routePage := r.URL.Path, pagePath
+	if atRoot {
+		routePage = addressToRoute(pagePath, set.home)
+		routePath = routePage
+	}
+
+	headFragment, csp := shellHead(wt, routePath)
 	if csp != "" {
 		// Before any answer below — a redirect, a 304, a 500 — so no response
 		// for this path goes out without it.
 		w.Header().Set("Content-Security-Policy", csp)
 	}
 	var page *snapshotPage
-	pagePath := snapshotRequestPath(r.URL.Path)
-	if set, ok := readSnapshot(webDir); ok {
+	if hasSnapshot {
 		if set.err != nil {
 			http.Error(w, "static snapshot unusable: "+set.err.Error(), http.StatusInternalServerError)
 			return
 		}
+		redirect := func(target string) {
+			if r.URL.RawQuery != "" {
+				target += "?" + r.URL.RawQuery
+			}
+			http.Redirect(w, r, target, http.StatusMovedPermanently)
+		}
 		if target, moved := movedTarget(set.moved, r.URL.Path); moved {
-			if r.URL.RawQuery != "" {
-				target += "?" + r.URL.RawQuery
+			// Under a root home, a target in the home app is its address,
+			// so an old link takes one hop, not two.
+			if atRoot && underBase(target, set.home) {
+				target = routeToAddress(target, set.home)
 			}
-			http.Redirect(w, r, target, http.StatusMovedPermanently)
+			redirect(target)
 			return
 		}
-		if r.URL.Path == "/" && set.home != "" {
-			target := set.home
-			if r.URL.RawQuery != "" {
-				target += "?" + r.URL.RawQuery
-			}
-			http.Redirect(w, r, target, http.StatusMovedPermanently)
+		if atRoot && underBase(pagePath, set.home) {
+			// The route's own spelling (`/about/vision`) — a link published
+			// before the home moved to `/` — answers with its address.
+			redirect(routeToAddress(pagePath, set.home))
 			return
 		}
-		if p, listed := set.pages[pagePath]; listed {
+		if !atRoot && r.URL.Path == "/" && set.home != "" {
+			redirect(set.home)
+			return
+		}
+		if p, listed := set.pages[routePage]; listed {
 			if p.err != nil {
-				http.Error(w, "static snapshot of "+pagePath+" unusable: "+p.err.Error(), http.StatusInternalServerError)
+				http.Error(w, "static snapshot of "+routePage+" unusable: "+p.err.Error(), http.StatusInternalServerError)
 				return
 			}
 			page = &p
@@ -304,6 +331,7 @@ func serveShell(w http.ResponseWriter, r *http.Request, wt *Worktree, webDir str
 		}
 	}
 	if page != nil {
+		// The address, never the route: what the visitor (and a robot) asked for.
 		canonical := requestOrigin(r.Host, r.Header.Get(forwardedProtoHeader)) + pagePath
 		spliced, err := spliceSnapshot(body, *page, canonical)
 		if err != nil {

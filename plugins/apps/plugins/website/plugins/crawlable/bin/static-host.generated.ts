@@ -19,7 +19,7 @@ export interface StaticHost {
 
 export const staticHosts: Record<string, StaticHost> = {
   "website": {
-    composition: { id: "website", home: "website" },
+    composition: { id: "website", home: "website", homeAtRoot: true },
     webPlugins: [
       "apps-core",
       "apps-core/plugins/app-embed",
@@ -385,7 +385,7 @@ export const staticHosts: Record<string, StaticHost> = {
       { pluginPath: "apps/plugins/deploy/plugins/analytics/plugins/host-only", id: "apps.deploy.analytics.host-only", loader: () => import("@plugins/apps/plugins/deploy/plugins/analytics/plugins/host-only/server"), dependsOn: [], core: null },
       { pluginPath: "apps/plugins/deploy/plugins/site-mirror/plugins/box", id: "apps.deploy.site-mirror.box", loader: () => import("@plugins/apps/plugins/deploy/plugins/site-mirror/plugins/box/server"), dependsOn: ["apps/plugins/deploy/plugins/analytics/plugins/host-only","database","database/plugins/table-mirror/plugins/source","infra/plugins/endpoints"], core: null },
       { pluginPath: "apps/plugins/deploy/plugins/site-reports/plugins/intake", id: "apps.deploy.site-reports.intake", loader: () => import("@plugins/apps/plugins/deploy/plugins/site-reports/plugins/intake/server"), dependsOn: ["apps/plugins/deploy/plugins/analytics/plugins/host-only","database","database/plugins/sql-column","database/plugins/table-mirror/plugins/source","infra/plugins/endpoints","infra/plugins/retention","network/plugins/live/plugins/change-feed","reports"], core: null },
-      { pluginPath: "apps/plugins/website/plugins/crawlable", id: "apps.website.crawlable", loader: () => import("@plugins/apps/plugins/website/plugins/crawlable/server"), dependsOn: ["infra/plugins/endpoints"], core: null },
+      { pluginPath: "apps/plugins/website/plugins/crawlable", id: "apps.website.crawlable", loader: () => import("@plugins/apps/plugins/website/plugins/crawlable/server"), dependsOn: ["apps-core","infra/plugins/endpoints"], core: null },
       { pluginPath: "apps/plugins/website/plugins/landing/plugins/hero", id: "apps.website.landing.hero", loader: () => import("@plugins/apps/plugins/website/plugins/landing/plugins/hero/server"), dependsOn: ["apps/plugins/website/plugins/crawlable","apps/plugins/website/plugins/media","apps/plugins/website/plugins/shell","shell/plugins/document-head"], core: null },
       { pluginPath: "apps/plugins/website/plugins/live-demo", id: "apps.website.live-demo", loader: () => import("@plugins/apps/plugins/website/plugins/live-demo/server"), dependsOn: ["apps/plugins/website/plugins/crawlable"], core: null },
       { pluginPath: "apps/plugins/website/plugins/media", id: "apps.website.media", loader: () => import("@plugins/apps/plugins/website/plugins/media/server"), dependsOn: ["infra/plugins/asset-mirror","infra/plugins/endpoints"], core: null },

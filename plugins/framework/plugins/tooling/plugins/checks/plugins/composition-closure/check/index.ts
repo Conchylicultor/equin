@@ -526,6 +526,14 @@ const check: Check = {
     //     deployed on its own, so it has no home to declare.
     const declaredApps = registryCtx.declaredApps;
     for (const item of items) {
+      // Serving the home app at `/` needs a home to serve (the same rule
+      // codegen's `resolveRegistryHomeAtRoot` throws on).
+      if (item.homeAtRoot && item.home === "") {
+        return fail(
+          `composition "${item.name}" declares \`homeAtRoot\` but no \`home\``,
+          "Name the app it serves at `/` in `home`, or clear `homeAtRoot` (plugins/plugin-meta/plugins/composition/core/config.ts).",
+        );
+      }
       const homeHint =
         "Set the composition's `home` to the `defineApp` id of the app that owns `/` (plugins/plugin-meta/plugins/composition/core/config.ts, or the Studio compositions pane).";
       if (item.entryPoints.length === 0) {

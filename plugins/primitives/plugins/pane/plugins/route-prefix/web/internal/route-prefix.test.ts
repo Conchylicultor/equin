@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import {
   resetRoutePrefixForTests,
   setActiveRoutePrefix,
+  setAddressRoot,
   setRoutePrefixes,
   splitRoutePrefix,
   withActiveRoutePrefix,
@@ -61,5 +62,34 @@ describe("withActiveRoutePrefix", () => {
     expect(withActiveRoutePrefix("https://x.dev/a")).toBe("https://x.dev/a");
     expect(withActiveRoutePrefix("//x.dev/a")).toBe("//x.dev/a");
     expect(withActiveRoutePrefix("/desktop/agents")).toBe("/desktop/agents");
+  });
+});
+
+describe("address root", () => {
+  beforeEach(() => setAddressRoot("/about"));
+
+  it("puts the root back on every read", () => {
+    expect(splitRoutePrefix("/vision")).toEqual({
+      prefix: undefined,
+      path: "/about/vision",
+    });
+    expect(splitRoutePrefix("/").path).toBe("/about");
+  });
+
+  it("drops the root on every write", () => {
+    expect(withActiveRoutePrefix("/about/vision?x=1#h")).toBe("/vision?x=1#h");
+    expect(withActiveRoutePrefix("/about")).toBe("/");
+    expect(withActiveRoutePrefix("/about;view.x=y")).toBe("/;view.x=y");
+  });
+
+  it("refuses a route path outside the root", () => {
+    expect(() => withActiveRoutePrefix("/agents/c/1")).toThrow();
+  });
+
+  it("composes with an active prefix", () => {
+    setActiveRoutePrefix("/desktop");
+    expect(withActiveRoutePrefix("/about/vision")).toBe("/desktop/vision");
+    expect(withActiveRoutePrefix("/about")).toBe("/desktop");
+    expect(splitRoutePrefix("/desktop/vision").path).toBe("/about/vision");
   });
 });

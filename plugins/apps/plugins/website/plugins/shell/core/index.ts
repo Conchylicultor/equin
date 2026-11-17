@@ -10,6 +10,7 @@ export {
   LOCAL_APP_URL,
   localSiteUrl,
   PUBLIC_SITE_ORIGIN,
+  publicSitePageUrl,
   publicSiteUrl,
 } from "./site";
 export { landingPage } from "./pages";

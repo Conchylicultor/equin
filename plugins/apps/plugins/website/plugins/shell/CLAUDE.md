@@ -160,6 +160,8 @@ hover.
     - `infra/namespace.namespaceHost`
     - `infra/namespace.namespaceUrl`
     - `primitives/pane.defineApp`
+    - `primitives/pane/route-prefix.addressPathOf`
+    - `primitives/pane/route-prefix.routePathOf`
     - `ui/icons.symbol`
   - Exports (values):
     - `CONTACT_EMAIL`
@@ -173,6 +175,7 @@ hover.
     - `LOCAL_APP_URL`
     - `localSiteUrl`
     - `PUBLIC_SITE_ORIGIN`
+    - `publicSitePageUrl`
     - `publicSiteUrl`
     - `websiteApp`
 - Cross-plugin:

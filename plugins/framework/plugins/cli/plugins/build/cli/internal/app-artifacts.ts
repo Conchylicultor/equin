@@ -611,6 +611,7 @@ export async function prepareCompositionSources(opts: {
         name: composition,
         home: item.home,
         unlisted: item.unlisted,
+        homeAtRoot: item.homeAtRoot,
       });
       hooks.log(
         `Composition "${composition}": ${bundle.size} plugins in closure.`,

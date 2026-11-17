@@ -160,7 +160,12 @@ function bundleFixture(): {
     // it is on the ctx so every consumer shares one classify pass.
     graph: classifyEdges(tree),
     mainBundle: new Set(nodes.map((n) => n.id)),
-    main: { id: MAIN_COMPOSITION_ID, home: "alpha", unlisted: [] },
+    main: {
+      id: MAIN_COMPOSITION_ID,
+      home: "alpha",
+      unlisted: [],
+      homeAtRoot: false,
+    },
     declaredApps: new Map(),
     repo: () => Promise.resolve(repo),
     dirScans: new Map(),
@@ -201,7 +206,12 @@ test("a composition registry names its composition; a checkout one names none", 
     ctx,
     def,
     bundle: ctx.mainBundle,
-    composition: { id: "website", home: "website", unlisted: [] },
+    composition: {
+      id: "website",
+      home: "website",
+      unlisted: [],
+      homeAtRoot: false,
+    },
   });
   expect(rendered).toContain(
     'export const composition: CompositionIdentity = { id: "website", home: "website" };',
@@ -217,7 +227,12 @@ test("a composition registry names its composition; a checkout one names none", 
     ctx,
     def,
     bundle: ctx.mainBundle,
-    composition: { id: "demo", home: "home", unlisted: ["file-explorer"] },
+    composition: {
+      id: "demo",
+      home: "home",
+      unlisted: ["file-explorer"],
+      homeAtRoot: false,
+    },
   });
   expect(unlisting).toContain(
     'export const composition: CompositionIdentity = { id: "demo", home: "home", unlisted: ["file-explorer"] };',
@@ -309,7 +324,12 @@ function machineFixture(): {
     tree,
     graph: classifyEdges(tree),
     mainBundle: new Set(nodes.map((n) => n.id)),
-    main: { id: MAIN_COMPOSITION_ID, home: null, unlisted: [] },
+    main: {
+      id: MAIN_COMPOSITION_ID,
+      home: null,
+      unlisted: [],
+      homeAtRoot: false,
+    },
     declaredApps: new Map(),
     repo: () => Promise.resolve(repo),
     dirScans: new Map(),

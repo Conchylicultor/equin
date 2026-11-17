@@ -69,10 +69,11 @@ describe("renderSitemapXml", () => {
 
   test("one <url><loc> per page, sorted by path", () => {
     expect(
-      renderSitemapXml("https://equin.ai", [
-        page("/about/download"),
-        page("/about"),
-      ]),
+      renderSitemapXml(
+        "https://equin.ai",
+        [page("/about/download"), page("/about")],
+        null,
+      ),
     ).toBe(
       `<?xml version="1.0" encoding="UTF-8"?>\n` +
         `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
@@ -83,8 +84,19 @@ describe("renderSitemapXml", () => {
   });
 
   test("escapes the origin", () => {
-    expect(renderSitemapXml("http://a&b", [page("/about")])).toContain(
+    expect(renderSitemapXml("http://a&b", [page("/about")], null)).toContain(
       "<loc>http://a&amp;b/about</loc>",
     );
+  });
+
+  test("lists each page at its address under an address root", () => {
+    const xml = renderSitemapXml(
+      "https://equin.ai",
+      [page("/about/vision"), page("/about")],
+      "/about",
+    );
+    expect(xml).toContain("<loc>https://equin.ai/</loc>");
+    expect(xml).toContain("<loc>https://equin.ai/vision</loc>");
+    expect(xml).not.toContain("/about");
   });
 });

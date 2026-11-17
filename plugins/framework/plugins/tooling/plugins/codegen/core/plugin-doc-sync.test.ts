@@ -34,6 +34,7 @@ const main: MainComposition = {
   negated: new Set(),
   home: "home",
   unlisted: [],
+  homeAtRoot: false,
 };
 
 let real: RepoSnapshot;

@@ -42,6 +42,7 @@ const fixedEntrypointsBundleCheck: Check = {
             id: "release-check-empty",
             home: null,
               unlisted: [],
+              homeAtRoot: false,
           }),
         },
         ],

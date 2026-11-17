@@ -1,4 +1,4 @@
-// @hash c7cdb87f88c1
+// @hash f9ab9d31a64e
 {
   "manifests": [
     {
@@ -18,7 +18,8 @@
       "serve": "off",
       "home": "home",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     },
     {
       "id": "promo-film",
@@ -42,7 +43,8 @@
       "serve": "manual",
       "home": "home",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     },
     {
       "id": "base-exclusions",
@@ -64,7 +66,8 @@
       "serve": "off",
       "home": "",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     },
     {
       "id": "all-exclusions",
@@ -86,7 +89,8 @@
       "serve": "off",
       "home": "",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     },
     {
       "id": "agent-manager",
@@ -137,7 +141,8 @@
       "serve": "off",
       "home": "agent-manager",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     },
     {
       "id": "agent-manager-lean",
@@ -187,7 +192,8 @@
       "serve": "off",
       "home": "agent-manager",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     },
     {
       "id": "agent-manager-demo",
@@ -267,7 +273,8 @@
       "serve": "off",
       "home": "home",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     },
     {
       "id": "home",
@@ -288,7 +295,8 @@
       "serve": "off",
       "home": "home",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     },
     {
       "id": "pages",
@@ -309,7 +317,8 @@
       "serve": "off",
       "home": "pages",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     },
     {
       "id": "settings",
@@ -330,7 +339,8 @@
       "serve": "off",
       "home": "settings",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     },
     {
       "id": "studio",
@@ -351,7 +361,8 @@
       "serve": "off",
       "home": "studio",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     },
     {
       "id": "sonata",
@@ -377,7 +388,8 @@
       "serve": "off",
       "home": "sonata",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     },
     {
       "id": "debug",
@@ -398,7 +410,8 @@
       "serve": "off",
       "home": "debug",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     },
     {
       "id": "deploy",
@@ -419,7 +432,8 @@
       "serve": "off",
       "home": "deploy",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     },
     {
       "id": "file-explorer",
@@ -440,7 +454,8 @@
       "serve": "off",
       "home": "file-explorer",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     },
     {
       "id": "website",
@@ -470,7 +485,8 @@
       "serve": "off",
       "home": "website",
       "unlisted": [],
-      "crawlable": true
+      "crawlable": true,
+      "homeAtRoot": true
     },
     {
       "id": "data",
@@ -489,7 +505,8 @@
       "serve": "off",
       "home": "",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     },
     {
       "id": "jobs-events",
@@ -510,7 +527,8 @@
       "serve": "off",
       "home": "",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     },
     {
       "id": "live-state",
@@ -530,7 +548,8 @@
       "serve": "off",
       "home": "",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     },
     {
       "id": "auth",
@@ -549,7 +568,8 @@
       "serve": "off",
       "home": "",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     },
     {
       "id": "search",
@@ -568,7 +588,8 @@
       "serve": "off",
       "home": "",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     },
     {
       "id": "history",
@@ -587,7 +608,8 @@
       "serve": "off",
       "home": "",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     },
     {
       "id": "conversations",
@@ -606,7 +628,8 @@
       "serve": "off",
       "home": "",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     },
     {
       "id": "tasks-domain",
@@ -625,7 +648,8 @@
       "serve": "off",
       "home": "",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     },
     {
       "id": "agent-runtime",
@@ -650,7 +674,8 @@
       "serve": "off",
       "home": "",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     },
     {
       "id": "page-editor",
@@ -669,7 +694,8 @@
       "serve": "off",
       "home": "",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     },
     {
       "id": "fields",
@@ -688,7 +714,8 @@
       "serve": "off",
       "home": "",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     },
     {
       "id": "design-system",
@@ -707,7 +734,8 @@
       "serve": "off",
       "home": "",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     },
     {
       "id": "mcp",
@@ -726,7 +754,8 @@
       "serve": "off",
       "home": "",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     },
     {
       "id": "served-baseline",
@@ -751,7 +780,8 @@
       "serve": "off",
       "home": "",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     },
     {
       "id": "reporters",
@@ -773,7 +803,8 @@
       "serve": "off",
       "home": "",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     },
     {
       "id": "diagnostics",
@@ -794,7 +825,8 @@
       "serve": "off",
       "home": "",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     },
     {
       "id": "root-features",
@@ -814,7 +846,8 @@
       "serve": "off",
       "home": "",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     },
     {
       "id": "self-improvement",
@@ -838,7 +871,8 @@
       "serve": "off",
       "home": "",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     },
     {
       "id": "theming",
@@ -859,7 +893,8 @@
       "serve": "off",
       "home": "",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     },
     {
       "id": "app-chrome",
@@ -885,7 +920,8 @@
       "serve": "off",
       "home": "",
       "unlisted": [],
-      "crawlable": false
+      "crawlable": false,
+      "homeAtRoot": false
     }
   ]
 }
