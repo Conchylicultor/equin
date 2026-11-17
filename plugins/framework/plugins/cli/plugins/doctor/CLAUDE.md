@@ -30,6 +30,14 @@ cargo cache. `install.sh` runs the same probe before it changes anything
 (`refused_write_dir`) and stops with the same advice: run it from the Terminal
 app. Every one is a `miss` and fails the run.
 
+## Messages a person installing reads
+
+Every message here that stops the install, asks for a permission or leaves
+something out follows the installer message rules —
+[`infra/launcher/installer-notice`](../../../../../infra/plugins/launcher/plugins/installer-notice/CLAUDE.md) (no internal names; what equin was
+doing and why; why it was blocked; what to do now and what skipping costs; raw
+facts only as evidence). Its output is the installer's (the tail of `mise install`, the first step of `start`): `miss <what> <why> <details> <fix…>` keeps `<what>` / `<why>` in the user's words and the raw facts (paths, mise's output) on the `details:` line.
+
 Claude Code is **not** checked: the app runs the build the Agent SDK ships
 (installed with the dependencies, after the doctor runs), and the user signs in
 from the app (`infra/claude-cli/plugins/sign-in`).

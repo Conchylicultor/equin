@@ -16,6 +16,11 @@
 # `toolchain:resolved`'s job, and the tool list itself comes from mise.toml +
 # mise.lock through mise, so adding a tool there needs no change here.
 #
+# Its messages follow the installer message rules
+# (plugins/infra/plugins/launcher/plugins/installer-notice/CLAUDE.md): a person
+# installing equin reads them, so <what> and <why> name no internal part and
+# say what it is for; raw facts (paths, tool output) go in <details>.
+#
 # Probes are builtins plus the tools being checked (id, uname, xcode-select,
 # git, mise), so the test can stub every one of them on PATH — and, inside a
 # Claude Code shell only, mv and rm for the write probe.
@@ -23,13 +28,17 @@
 missing=0
 report=""
 
-# miss <what> <why> <fix...>
+# miss <what> <why> <details> <fix...> — <details> may be "".
 miss() {
   missing=$((missing + 1))
   report="$report
   x $1
       $2"
-  shift 2
+  if [ -n "$3" ]; then
+    report="$report
+      details: $3"
+  fi
+  shift 3
   for fix in "$@"; do
     report="$report
       \$ $fix"
@@ -39,8 +48,9 @@ miss() {
 # ── Not root ────────────────────────────────────────────────────────────────
 # Same fact as assertSupportedHost (plugins/infra/plugins/launcher).
 if [ "$(id -u)" = "0" ]; then
-  miss "Running as root" \
-    "Postgres' initdb refuses to run as root, so the embedded cluster (and every backend) cannot start. Run as a non-root user." \
+  miss "Running as root (the administrator account)" \
+    "equin's database refuses to run as root, so equin could never start. Run it from your normal account." \
+    "id -u = 0; initdb refuses root" \
     "adduser --disabled-password --gecos '' equin && su - equin"
 fi
 
@@ -74,12 +84,13 @@ fi
 # ── Xcode command-line tools (macOS) and a working git ──────────────────────
 os="$(uname -s)"
 if [ "$os" = "Darwin" ] && ! xcode-select -p >/dev/null 2>&1; then
-  miss "Xcode command-line tools" \
-    "git and the C linker Rust builds with come from them." \
+  miss "Apple's command-line tools (Xcode)" \
+    "equin needs them to download its code and build parts of itself on your Mac." \
+    "xcode-select -p finds no developer directory" \
     "xcode-select --install"
 elif ! git --version >/dev/null 2>&1; then
   # On macOS without the CLT, /usr/bin/git is a stub — reported above instead.
-  miss "git" "The repo, its worktrees and every push run on git." \
+  miss "git" "equin downloads and saves its own code with git." "" \
     "sudo apt install git curl build-essential   # or your distro's equivalent"
 fi
 
@@ -97,7 +108,7 @@ fi
 
 if [ -z "$mise_bin" ]; then
   miss "mise" \
-    "It installs the exact Bun, Go and Rust releases mise.lock records." \
+    "It installs the exact Bun, Go and Rust versions equin is built with." "" \
     "curl https://mise.run | sh" "$activate" "mise install"
 else
   # Active = either `mise activate` ran in this shell (it exports MISE_SHELL),
@@ -112,8 +123,9 @@ else
     *) if [ -n "$MISE_SHELL" ]; then active=1; else active=0; fi ;;
   esac
   if [ "$active" = "0" ]; then
-    miss "mise is installed but not active in your shell" \
-      "Your shell finds \`bun\` (and so ./equin) only through mise." \
+    miss "mise is installed, but your terminal does not use it yet" \
+      "Without it your terminal cannot find the tools ./equin runs on." \
+      "mise not active in your shell: no MISE_SHELL, $shims not on PATH" \
       "$activate"
   fi
 
@@ -129,8 +141,9 @@ else
     if [ -L "$shim" ] && [ ! -e "$shim" ]; then broken="$broken ${shim##*/}"; fi
   done
   if [ -n "$broken" ]; then
-    miss "mise shims do not resolve (a symlink loop, or mise moved):$broken" \
-      "No bun or go can start through them (backends fail with posix_spawn ENOENT)." \
+    miss "The links your tools start through are broken" \
+      "No Bun or Go program — equin included — can start until mise rebuilds them." \
+      "mise shims do not resolve (a symlink loop, or mise moved):$broken; spawns fail with posix_spawn ENOENT" \
       "$mise_bin reshim --force"
   fi
 
@@ -140,8 +153,9 @@ else
   # the toolchain is installed explicitly (`mise install`, `toolchain upgrade`).
   # `mise run setup` turns it off, machine-wide.
   if [ "$("$mise_bin" settings get not_found_auto_install 2>/dev/null)" = "true" ]; then
-    miss "mise shims install missing tools on first use" \
-      "A \`bun\` run inside any repo that pins another release installs it, and the reshim that follows can loop every shim." \
+    miss "mise installs missing tools by itself" \
+      "Running a tool inside another project can then install another version and break the links every tool starts through." \
+      "mise shims install missing tools on first use (not_found_auto_install = true)" \
       "mise run setup"
   fi
 
@@ -155,13 +169,15 @@ else
     # XFENCE) holding the run while it asks the user — name what mise said,
     # not a list that comes back empty.
     if [ -n "$tools" ]; then
-      miss "Toolchain not installed: $tools" \
-        "The releases mise.lock records for this checkout." \
+      miss "Bun, Go or Rust is not installed yet" \
+        "equin is built with these exact versions." \
+        "missing: $tools" \
         "mise install"
     else
       said="$(printf '%s\n' "$dry" | { n=0; while IFS= read -r line && [ "$n" -lt 5 ]; do printf '\n        %s' "$line"; n=$((n + 1)); done; })"
-      miss "Toolchain not usable: every release is on disk, but mise says:$said" \
-        "mise could not run a release of this checkout's toolchain." \
+      miss "Bun, Go or Rust is installed but did not start" \
+        "Something on this machine stopped one of them — often security software waiting for your answer in a dialog. Answer it, then run the fix." \
+        "toolchain not usable: every release is on disk, but mise says:$said" \
         "mise install"
     fi
   fi
@@ -173,5 +189,5 @@ if [ "$missing" -eq 0 ]; then
 fi
 echo "equin prerequisites: $missing missing.$report
 
-Setup, in order: docs/setup.md"
+The whole setup, step by step, is in docs/setup.md."
 exit 1

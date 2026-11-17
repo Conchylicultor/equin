@@ -17,6 +17,7 @@ import {
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
+  appsBlockedNotice,
   BundleWriteRefusedError,
   bundleOfExecutable,
   installedAppComponents,
@@ -328,7 +329,7 @@ describe("installServiceExecutable", () => {
     );
     expect(err).toBeInstanceOf(BundleWriteRefusedError);
     expect((err as BundleWriteRefusedError).bundle).toBe(bundle);
-    expect((err as Error).message).toContain("App Management");
+    expect((err as Error).message).toContain("Operation not permitted");
 
     expect(readFileSync(exe("gateway"), "utf8")).toBe("1");
     expect(readdirSync(join(dir, "state"))).toEqual(["equin.app"]);
@@ -362,4 +363,42 @@ test("bundleOfExecutable", () => {
   expect(
     bundleOfExecutable(bundle, "/cache/gateway-binary/x/env/gateway"),
   ).toBe(null);
+});
+
+describe("appsBlockedNotice", () => {
+  const refused = new BundleWriteRefusedError(
+    asAppPath("/h/me/Applications/equin.app"),
+    "equin-desktop",
+    new Error("Operation not permitted (os error 1)"),
+  );
+  const icon = {
+    name: "the equin icon in your menu bar",
+    gives: "It opens equin from anywhere.",
+  };
+
+  test("keeps the installer message rules, the refusal only as evidence", () => {
+    const notice = appsBlockedNotice([refused], [icon], {
+      optional: true,
+      appUrl: "http://equin.localhost:9000",
+      addLater: "Add it later with `./equin start --only dev.equin.menu-bar`.",
+    });
+    expect(notice.doing).toContain("the equin icon in your menu bar");
+    expect(notice.ifSkipped.optional).toBe(true);
+    expect(notice.evidence.join("\n")).toContain("Operation not permitted");
+    expect(
+      JSON.stringify([notice.title, notice.doing, notice.blocked, notice.now]),
+    ).not.toContain("equin.app");
+  });
+
+  test("a needed part says why equin cannot go on", () => {
+    const notice = appsBlockedNotice([refused], [icon], {
+      optional: false,
+      because: "without it, equin cannot open in your browser.",
+    });
+    expect(notice.title).toBe("macOS blocked equin from setting itself up");
+    expect(notice.ifSkipped).toEqual({
+      optional: false,
+      because: "without it, equin cannot open in your browser.",
+    });
+  });
 });

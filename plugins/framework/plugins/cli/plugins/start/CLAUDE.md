@@ -14,6 +14,14 @@ rebuilds and restarts it whenever what this command would install differs
 `gateway/CLAUDE.md` § "The gateway follows main"). `start --force` stays the
 by-hand path.
 
+## Messages a person installing reads
+
+Every message here that stops the install, asks for a permission or leaves
+something out follows the installer message rules —
+[`infra/launcher/installer-notice`](../../../../../infra/plugins/launcher/plugins/installer-notice/CLAUDE.md) (no internal names; what equin was
+doing and why; why it was blocked; what to do now and what skipping costs; raw
+facts only as evidence). `start` runs inside `install.sh`, so its own output is a person's: each line says what they got ("equin is running", "Added the equin icon in your menu bar") in the services' `forUser` words, and the label, manager, PID and paths go on an indented `details:` line under it. An optional service the Mac refused is one `appsBlockedNotice` for all of them; the gateway refused stops `start` with the same notice, marked needed.
+
 ## macOS: a launchd service
 
 The gateway is a per-user LaunchAgent, `<gateway-label>`

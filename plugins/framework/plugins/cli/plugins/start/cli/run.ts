@@ -34,6 +34,12 @@ import {
   type GatewayLaunchOptions,
 } from "@plugins/infra/plugins/launcher/server";
 import {
+  joinNames,
+  plainTextProblems,
+  renderNotice,
+} from "@plugins/infra/plugins/launcher/plugins/installer-notice/core";
+import {
+  appsBlockedNotice,
   BundleWriteRefusedError,
   declaredLoginServices,
   loginServiceManager,
@@ -46,7 +52,36 @@ import {
   type LoginServiceManager,
   type MacosAppHost,
   type ReconcileOutcome,
+  type ServiceForUser,
 } from "@plugins/infra/plugins/launcher/plugins/login-services/machine";
+
+// What this command prints follows the installer message rules
+// (`infra/launcher/installer-notice`): a person installing equin reads it, so
+// every line says what they get, in their words, and the ids, PIDs and paths a
+// developer wants sit on a `details:` line under it — never in the sentence.
+
+/** The gateway, as the person installing knows it. */
+const GATEWAY_FOR_USER: ServiceForUser = {
+  name: "the part of equin that runs in the background",
+  gives:
+    "It is what opens equin in your browser, and it starts by itself every time you log in.",
+};
+// Declarations are checked by defineLoginService; this one by hand, at load,
+// so a rule break never surfaces first inside the error path that prints it.
+if (
+  plainTextProblems(GATEWAY_FOR_USER.name).length +
+    plainTextProblems(GATEWAY_FOR_USER.gives).length >
+  0
+) {
+  throw new Error(
+    "GATEWAY_FOR_USER breaks the installer message rules (infra/launcher/installer-notice)",
+  );
+}
+
+/** The raw facts under a line a person reads: ids, PIDs, paths. */
+function details(...facts: string[]): void {
+  console.log(`    details: ${facts.join(" · ")}`);
+}
 
 type Opts = { force?: boolean; logLevel: string; only?: string };
 
@@ -66,8 +101,12 @@ const run: CliAction<[], Opts> = async (opts) => {
   // (a clone, a pull, an upstream merge) — before the doctor, which would
   // otherwise only report them missing.
   const installed = await installLockedToolchain(await getWorktreeRoot());
-  if (installed.length > 0)
-    console.log(`Installed the locked toolchain: ${installed.join(", ")}`);
+  if (installed.length > 0) {
+    console.log(
+      "Installed the exact Bun, Go and Rust versions equin is built with.",
+    );
+    details(`mise installed ${installed.join(", ")}`);
+  }
   // Every missing dev prerequisite at once, before the gateway compile.
   await assertPrerequisites();
   // Same host preconditions as a release launch: the dev gateway supervises
@@ -79,11 +118,25 @@ const run: CliAction<[], Opts> = async (opts) => {
   if (selected(gatewayLabel)) {
     // Under the lock main's follow-main step swaps the gateway with, so a
     // person's start never interleaves with an automatic restart.
-    await withGatewayFollowLock(() =>
-      gatewayService
-        ? startAsLoginService(gatewayService, opts, app)
-        : startDetached(opts, app),
-    );
+    try {
+      await withGatewayFollowLock(() =>
+        gatewayService
+          ? startAsLoginService(gatewayService, opts, app)
+          : startDetached(opts, app),
+      );
+    } catch (err) {
+      if (!(err instanceof BundleWriteRefusedError)) throw err;
+      // Not optional: without it there is no equin to open.
+      console.error(
+        renderNotice(
+          appsBlockedNotice([err], [GATEWAY_FOR_USER], {
+            optional: false,
+            because: "without it, equin cannot open in your browser.",
+          }),
+        ),
+      );
+      process.exit(1);
+    }
   }
   // Then every login service a plugin declares — none named here.
   await startDeclaredLoginServices(
@@ -145,9 +198,10 @@ async function startAsLoginService(
       : null;
 
   if (managedPid !== null && !opts.force) {
-    printRunning(
-      `Gateway is already running under ${manager} (PID ${managedPid})`,
-    );
+    printRunning("equin is already running.", [
+      `${loginService.id.label} under ${manager}`,
+      `PID ${managedPid}`,
+    ]);
     await reportStaleGateway(loginService, opts, app);
     return;
   }
@@ -156,9 +210,9 @@ async function startAsLoginService(
     legacyPid === null &&
     (await isGatewayListening(DEV_GATEWAY_PORT))
   ) {
-    printRunning(
-      "Gateway is already running on port 9000 (started externally).",
-    );
+    printRunning("equin is already running (started outside this command).", [
+      `port ${DEV_GATEWAY_PORT} answers`,
+    ]);
     return;
   }
 
@@ -166,22 +220,21 @@ async function startAsLoginService(
   const launch = await adoptAndHold(prepared, app);
   const spec = gatewayLaunchSpec(launch);
   const written = await loginService.write(gatewayServiceJob(spec));
-  console.log(
-    `Registered ${loginService.id.label} with ${manager} (${written.path})`,
-  );
+  console.log("Set equin to start by itself every time you log in.");
+  details(`${loginService.id.label} registered with ${manager}`, written.path);
 
   if (legacyPid !== null) {
     if (!opts.force) {
       // Registering is enough for the next login/boot; swapping the live
       // gateway restarts every backend, which only an explicit --force asks for.
       console.log(
-        `The running gateway (PID ${legacyPid}) was started before it was a ${manager} service. It keeps running now, and ${manager} starts it from the next ${loginService.startsAt} on. Run \`./equin start --only ${loginService.id.label} --force\` to hand it to ${manager} now.`,
+        `equin keeps running as it is, and starts by itself from your next ${loginService.startsAt} on. To switch now (open apps reload), run \`./equin start --only ${loginService.id.label} --force\`.`,
       );
+      details(`running PID ${legacyPid} was started outside ${manager}`);
       return;
     }
-    console.log(
-      `Stopping the gateway started outside ${manager} (PID ${legacyPid})...`,
-    );
+    console.log("Restarting equin (open apps reload)...");
+    details(`stopping PID ${legacyPid}, started outside ${manager}`);
     await terminateProcess(legacyPid);
   }
 
@@ -192,7 +245,8 @@ async function startAsLoginService(
     // Unload rather than restart in place: neither manager re-reads a job
     // definition while it is loaded, so a rewritten job takes effect only
     // through a reload — one that always loads once it has unloaded.
-    console.log(`Reloading the ${manager} job...`);
+    console.log("Restarting equin (open apps reload)...");
+    details(`reloading the ${manager} job`);
     pid = await reloadService(loginService, managedPid, truncateLog);
   } else {
     truncateLog();
@@ -203,7 +257,8 @@ async function startAsLoginService(
     throw new Error(`${loginService.id.label} loaded with no running process`);
   await awaitGatewayReady({ pid, port: DEV_GATEWAY_PORT });
   printRunning(
-    `Gateway started under ${manager} (PID ${pid}); it starts again at every ${loginService.startsAt}`,
+    `equin is running, and starts by itself at every ${loginService.startsAt}.`,
+    [`${loginService.id.label} under ${manager}`, `PID ${pid}`],
   );
 }
 
@@ -225,7 +280,12 @@ async function reportStaleGateway(
   )
     return;
   console.log(
-    `  Stale:   the gateway's job changed since the running gateway started (main's gateway binary is now ${gateway.dir}, identity ${gateway.identity}). It keeps running the old one; \`./equin start --only ${loginService.id.label} --force\` swaps it (restarts every backend).`,
+    `An update to equin is ready. To install it now (open apps reload), run \`./equin start --only ${loginService.id.label} --force\`.`,
+  );
+  details(
+    `the running gateway's job differs from main's`,
+    `binary ${gateway.dir}`,
+    `identity ${gateway.identity}`,
   );
 }
 
@@ -246,12 +306,16 @@ async function startDeclaredLoginServices(
   if (declared.length === 0) return;
   if (manager === null) {
     console.log(
-      `Not starting ${declared.map((d) => d.id).join(", ")}: this OS has no service manager to run them.`,
+      `Left out ${listNames(declared)}: this system has no way to start programs when you log in. equin works without ${declared.length > 1 ? "them" : "it"}, in your browser.`,
     );
+    details(`no service manager for ${declared.map((d) => d.id).join(", ")}`);
     return;
   }
   const root = await getMainRepoRoot();
-  const skipped: string[] = [];
+  const skipped: {
+    decl: LoginServiceDeclaration;
+    err: BundleWriteRefusedError;
+  }[] = [];
   for (const decl of declared) {
     const ready = await ensureDep(decl.dep, cliExecContext(), {
       root,
@@ -265,38 +329,72 @@ async function startDeclaredLoginServices(
         opts.force ? "force" : "start",
         { host: app, log: console.log },
       );
-      console.log(
-        `${decl.id} (${decl.owner}) ${describeStart(outcome, service)}`,
+      console.log(describeStart(decl.forUser, outcome, service));
+      details(
+        `${decl.id} (${decl.owner}) under ${service.manager}`,
+        ...startFacts(outcome),
       );
     } catch (err) {
       // A declared service is optional: equin runs without it (the gateway,
       // and so the app, is already up). A machine policy refusing the bundle
       // write is a state to report, never the end of the install.
       if (!(err instanceof BundleWriteRefusedError)) throw err;
-      console.log(`Skipped ${decl.id} (${decl.owner}): ${err.message}`);
-      skipped.push(decl.id);
+      skipped.push({ decl, err });
     }
   }
   if (skipped.length > 0) {
+    const ids = skipped.map((s) => s.decl.id).join(",");
     console.log(
-      `equin runs without ${skipped.join(", ")}. Once the Mac allows it, \`./equin start --only ${skipped.join(",")}\` adds ${skipped.length > 1 ? "them" : "it"}.`,
+      renderNotice(
+        appsBlockedNotice(
+          skipped.map((s) => s.err),
+          skipped.map((s) => s.decl.forUser),
+          {
+            optional: true,
+            appUrl: namespaceUrl(MAIN_WORKTREE_NAME),
+            addLater: `Once it is allowed, \`./equin start --only ${ids}\` adds ${skipped.length > 1 ? "them" : "it"}.`,
+          },
+        ),
+      ),
     );
   }
 }
 
+/** "a, b and c", by the names a person knows them by. */
+function listNames(declared: readonly LoginServiceDeclaration[]): string {
+  return joinNames(declared.map((d) => d.forUser.name));
+}
+
+/** The raw facts of a start: PID, schedule, the definition's path. */
+function startFacts(outcome: ReconcileOutcome): string[] {
+  switch (outcome.kind) {
+    case "unchanged":
+      return [`PID ${outcome.pid ?? "none"}`];
+    case "started":
+      return [
+        `${outcome.reloaded ? "reloaded" : "loaded"}, PID ${outcome.pid ?? "none"}`,
+        outcome.path,
+      ];
+    // Only `follow` stops short of loading (describeStart throws on these).
+    case "unregistered":
+    case "rewritten":
+      return [];
+  }
+}
+
 function describeStart(
+  forUser: ServiceForUser,
   outcome: ReconcileOutcome,
   service: LoginService,
 ): string {
+  const name = forUser.name.charAt(0).toUpperCase() + forUser.name.slice(1);
   switch (outcome.kind) {
     case "unchanged":
-      return service.id.schedule === undefined
-        ? `is already running under ${service.manager} (PID ${outcome.pid ?? "none"})`
-        : `is already scheduled under ${service.manager} (every ${service.id.schedule.everySeconds} s)`;
+      return `${name} is already on.`;
     case "started":
       return service.id.schedule === undefined
-        ? `${outcome.reloaded ? "restarted" : "started"} under ${service.manager} (PID ${outcome.pid ?? "none"}); it starts again at every ${service.startsAt} (${outcome.path})`
-        : `${outcome.reloaded ? "rescheduled" : "scheduled"} under ${service.manager}: runs every ${service.id.schedule.everySeconds} s, from every ${service.startsAt} on (${outcome.path})`;
+        ? `${outcome.reloaded ? "Updated" : "Added"} ${forUser.name}; it comes back by itself at every ${service.startsAt}. ${forUser.gives}`
+        : `${outcome.reloaded ? "Updated" : "Turned on"} ${forUser.name}; it runs every ${service.id.schedule.everySeconds} seconds. ${forUser.gives}`;
     // Only `follow` stops short of loading.
     case "unregistered":
     case "rewritten":
@@ -315,18 +413,19 @@ async function startDetached(opts: Opts, app: MacosAppHost): Promise<void> {
   const pidAlive = existingPid !== null && isRunning(existingPid);
 
   if (!pidAlive && (await isGatewayListening(DEV_GATEWAY_PORT))) {
-    printRunning(
-      "Gateway is already running on port 9000 (started externally).",
-    );
+    printRunning("equin is already running (started outside this command).", [
+      `port ${DEV_GATEWAY_PORT} answers`,
+    ]);
     return;
   }
 
   if (pidAlive) {
     if (!opts.force) {
-      printRunning(`Gateway is already running (PID ${existingPid})`);
+      printRunning("equin is already running.", [`PID ${existingPid}`]);
       return;
     }
-    console.log(`Stopping existing gateway (PID ${existingPid})...`);
+    console.log("Restarting equin (open apps reload)...");
+    details(`stopping PID ${existingPid}`);
     await terminateProcess(existingPid!);
   }
 
@@ -338,9 +437,9 @@ async function startDetached(opts: Opts, app: MacosAppHost): Promise<void> {
   // when a managed service fails to start, so printing unconditionally
   // reported success for an already-dead gateway.
   await awaitGatewayReady({ pid, port: DEV_GATEWAY_PORT });
-  printRunning(`Gateway started (PID ${pid})`);
-  console.log(
-    "  Not registered with a service manager on this OS: run `./equin start` again after a reboot.",
+  printRunning(
+    "equin is running. This system cannot start it by itself when you log in: after a restart, run `./equin start` again.",
+    [`PID ${pid}`, "no service manager"],
   );
 }
 
@@ -367,10 +466,10 @@ async function adoptAndHold(
   return launch;
 }
 
-function printRunning(headline: string): void {
+function printRunning(headline: string, facts: string[]): void {
   console.log(headline);
-  console.log(`  Logs:    ${gatewayLogs.path}/`);
-  console.log(`  Gateway: ${namespaceUrl(MAIN_WORKTREE_NAME)}`);
+  console.log(`  Its address: ${namespaceUrl(MAIN_WORKTREE_NAME)}`);
+  details(...facts, `logs ${gatewayLogs.path}/`);
 }
 
 export default run;

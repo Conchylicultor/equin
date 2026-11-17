@@ -38806,6 +38806,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `SERVICE_LOG_FD_FLAG`
               - `serviceLogTarget`
+        - **`installer-notice`** — The installer's message shape: InstallerNotice ({ title, doing, blocked, now, ifSkipped, evidence }) — every message that stops the install, asks for a permission or leaves something out is built as one, so each of the five installer message rules is a field to fill. defineNotice refuses one whose user-facing text names an internal part (gateway, helper, launchd…), a path or a label; renderNotice prints the message with the raw evidence apart under Details.
+          - Cross-plugin:
+            - Imported by:
+              - `framework/cli/start`
+              - `infra/launcher/login-services`
+          - Core:
+            - Exports (types): `InstallerNotice`
+            - Exports (values):
+              - `defineNotice`
+              - `INTERNAL_TERMS`
+              - `joinNames`
+              - `noticeProblems`
+              - `plainTextProblems`
+              - `renderNotice`
         - **`login-services`** — Per-user login services, generalized from the gateway's: a LoginService over a LoginServiceSpec (label, argv, cwd, env, stdio log, session background | graphical), rendered as a launchd LaunchAgent on macOS (graphical → LimitLoadToSessionType=Aqua) or a systemd user unit on Linux (graphical → graphical-session.target, no lingering); defineLoginService and the collected login-services/ registry, so ./equin start / stop bring every declared service up and down without naming one. On main's boot and on every advance of main (a git-watcher ref reaction — main's build may keep its backend), every declared service a start registered follows main: reloaded when main's build of its dependency changed its job (rewritten only, when stopped), the dependency requested through deps first when it is not built yet. On macOS every service (the gateway too) runs from ONE app bundle, equin.app (bundle id dev.equin, signed with the machine's identity, at a stable path under state/macos-app): installServiceExecutable copies a component's build in and swaps the re-signed bundle in whole, so every permission prompt, System Settings row and tccutil reset names one app, equin.
           - Core:
             - Uses:
@@ -38849,9 +38863,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `MacosAppHost`
               - `ReconcileOutcome`
               - `ReconcilePolicy`
+              - `ServiceForUser`
             - Exports (values):
               - `APP_BUNDLE_ID`
               - `appExecutablePath`
+              - `appsBlockedNotice`
               - `awaitProcessGone`
               - `bundleOfExecutable`
               - `BundleWriteRefusedError`

@@ -40,7 +40,13 @@ import {
   type ComponentBuild,
   type ServiceExecutable,
 } from "../../core";
+import {
+  defineNotice,
+  joinNames,
+  type InstallerNotice,
+} from "@plugins/infra/plugins/launcher/plugins/installer-notice/core";
 import { macosAppDir } from "../../data-dirs";
+import type { ServiceForUser } from "./define";
 import {
   APP_BUNDLE_ID,
   ICON_NAME,
@@ -327,7 +333,8 @@ export async function installServiceExecutable(
  * permission for the app the command runs in (a terminal, VS Code), or
  * security software. A caller that can do without the component (an optional
  * login service) reports it as a state and goes on; the bundle is left as it
- * was.
+ * was. Its message is the evidence only: what a person reads is
+ * `appsBlockedNotice`.
  */
 export class BundleWriteRefusedError extends Error {
   constructor(
@@ -336,14 +343,52 @@ export class BundleWriteRefusedError extends Error {
     cause: unknown,
   ) {
     super(
-      `macOS refused to update ${bundle} (installing ${component}): ${cause instanceof Error ? cause.message : String(cause)}\n` +
-        `This Mac's policy decides which app may change an app bundle. Usually one of:\n` +
-        `  - App Management: allow the app this command runs in (Terminal, iTerm, VS Code, …) under System Settings → Privacy & Security → App Management, then run it again;\n` +
-        `  - security software (e.g. a managed endpoint agent) blocking equin: ask your admin to allow ${bundle}.`,
+      `refused to update ${bundle} (installing component ${component}): ${cause instanceof Error ? cause.message : String(cause)}`,
       { cause },
     );
     this.name = "BundleWriteRefusedError";
   }
+}
+
+/**
+ * What the person installing reads when the Mac refused to let equin add
+ * `adding` (each in their words, `forUser`): the installer message rules
+ * (`infra/launcher/installer-notice`), with the refusals as the evidence.
+ * `skip`: optional (where equin still opens, how to add them later), or needed (why equin
+ * cannot run without them).
+ */
+export function appsBlockedNotice(
+  refused: readonly BundleWriteRefusedError[],
+  adding: readonly ServiceForUser[],
+  skip:
+    | {
+        readonly optional: true;
+        /** Where equin opens in the browser without them. */
+        readonly appUrl: string;
+        readonly addLater: string;
+      }
+    | { readonly optional: false; readonly because: string },
+): InstallerNotice {
+  return defineNotice({
+    title: skip.optional
+      ? "macOS blocked equin from adding its apps"
+      : "macOS blocked equin from setting itself up",
+    doing: `equin was adding ${joinNames(adding.map((a) => a.name))}. ${adding.map((a) => a.gives).join(" ")}`,
+    blocked:
+      "This Mac lets only the apps you approve change other apps, and the app you ran this from (Terminal, iTerm, VS Code…) is not one of them. On a Mac your company manages, its security software can also stop it.",
+    now: [
+      "Allow it: in System Settings → Privacy & Security → App Management, turn on the app you ran this from, then run the installer again (`./install.sh`; on a Mac where equin is already installed, `./equin start`).",
+      "On a company-managed Mac, ask your IT team to allow equin.",
+    ],
+    ifSkipped: skip.optional
+      ? {
+          optional: true,
+          stillWorks: `Everything else goes on: equin works fully in your browser at ${skip.appUrl}.`,
+          addLater: skip.addLater,
+        }
+      : { optional: false, because: skip.because },
+    evidence: refused.map((e) => e.message),
+  });
 }
 
 /** An EPERM from the filesystem, or a tool (rcodesign) that relayed one in its output. */

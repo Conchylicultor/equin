@@ -64,6 +64,11 @@ export const menuBarService = defineLoginService({
   owner: "companions/menu-bar",
   description:
     "equin menu-bar helper (the equin icon in the menu bar / top bar)",
+  forUser: {
+    name: "the equin icon in your menu bar",
+    gives:
+      "It opens equin from anywhere, and opens equin's apps in their own windows.",
+  },
   session: "graphical",
   dep: menuBarHelper,
   // The equin app's main executable on macOS: what notifications (and

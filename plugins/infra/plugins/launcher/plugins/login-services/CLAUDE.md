@@ -76,6 +76,14 @@ export default [
 
 (`<gateway-label>` is the gateway's launchd label / systemd unit name, `dev.equin.gateway` (`GATEWAY_SERVICE` in `infra/launcher/core`); an install from before the rename keeps `LEGACY_IDS.launchdLabel` until `./equin data-dir migrate` relabels it — the service stays bound to whichever label is installed (`installedAs`).)
 
+## Messages a person installing reads
+
+Every message here that stops the install, asks for a permission or leaves
+something out follows the installer message rules —
+[`infra/launcher/installer-notice`](../installer-notice/CLAUDE.md) (no internal names; what equin was
+doing and why; why it was blocked; what to do now and what skipping costs; raw
+facts only as evidence). Every declaration carries `forUser: { name, gives }` — the service in the user's words, checked against the rules by `defineLoginService` — and that is all `start` says about it; the id, manager and PID go on a `details:` line. A refused write to `equin.app` is a `BundleWriteRefusedError` whose message is evidence only; what a person reads is `appsBlockedNotice(refused, forUser[], skip)`.
+
 ## Binding to the installed label
 
 `LoginServiceManager.service(id)` is **async**: it binds `id` to the label
@@ -275,9 +283,11 @@ folder needs only its boundary row, not a barrel's doc and shipping policy.
     - `MacosAppHost`
     - `ReconcileOutcome`
     - `ReconcilePolicy`
+    - `ServiceForUser`
   - Exports (values):
     - `APP_BUNDLE_ID`
     - `appExecutablePath`
+    - `appsBlockedNotice`
     - `awaitProcessGone`
     - `bundleOfExecutable`
     - `BundleWriteRefusedError`

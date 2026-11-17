@@ -16,6 +16,11 @@ export const fsLatencyMonitorService = defineLoginService({
   owner: "infra/host/io-health/monitor",
   description:
     "equin fs-latency monitor (one tick of host file-I/O health every 30 s)",
+  forUser: {
+    name: "the disk-speed check",
+    gives:
+      "equin notices when your disk slows your Mac down, and tells you why.",
+  },
   session: "background",
   schedule: { everySeconds: MONITOR_INTERVAL_MS / 1000 },
   // IOKit statistics, vfs.vnstats, darwinbg: there is nothing to read elsewhere.

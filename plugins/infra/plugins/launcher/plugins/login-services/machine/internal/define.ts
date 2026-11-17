@@ -10,7 +10,14 @@ import {
   type LoginServiceSession,
   type ServiceExecutable,
 } from "../../core";
+import { plainTextProblems } from "@plugins/infra/plugins/launcher/plugins/installer-notice/core";
 import type { LoginServiceManager } from "./login-service";
+
+/** A login service in the user's words (`DefineLoginServiceSpec.forUser`). */
+export interface ServiceForUser {
+  readonly name: string;
+  readonly gives: string;
+}
 
 /** What a declaration's `spec` computes from its installed dependency. */
 export type LoginServiceRun = Omit<LoginServiceJob, "description">;
@@ -39,6 +46,14 @@ export interface DefineLoginServiceSpec<
   owner: string;
   /** One line, as a user reads it in `systemctl status`. */
   description: string;
+  /**
+   * The service as the person installing equin knows it — never its id or
+   * equin's name for the part (the installer message rules,
+   * `infra/launcher/installer-notice`): `name`, what a message calls it
+   * ("an icon in your menu bar"); `gives`, what it adds for them, one
+   * sentence. Every `start` line and notice about it says these.
+   */
+  forUser: ServiceForUser;
   session: LoginServiceSession;
   /** When it runs: always (absent), or periodically (`LoginServiceId.schedule`). */
   schedule?: LoginServiceSchedule;
@@ -119,6 +134,18 @@ export function defineLoginService<
   if (!LABEL.test(spec.id)) {
     throw new Error(
       `defineLoginService: id ${JSON.stringify(spec.id)} must be a reverse-DNS label matching ${LABEL}`,
+    );
+  }
+  // The installer message rules hold at declaration: a service whose user
+  // wording names an internal part fails every `start` (and its own test)
+  // instead of reaching a user.
+  const problems = [
+    ...plainTextProblems(spec.forUser.name),
+    ...plainTextProblems(spec.forUser.gives),
+  ];
+  if (problems.length > 0) {
+    throw new Error(
+      `defineLoginService ${spec.id}: forUser breaks the installer message rules (infra/launcher/installer-notice): ${problems.join("; ")}`,
     );
   }
   // `spec` reads `labels` by the keys of `refersTo`, and the reconcile builds

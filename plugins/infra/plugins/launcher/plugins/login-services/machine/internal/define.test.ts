@@ -32,6 +32,7 @@ const decl = defineLoginService({
   id: "dev.equin.example",
   owner: "example",
   description: "An example tray helper",
+  forUser: { name: "an example icon", gives: "It shows an example." },
   session: "graphical",
   dep: helper,
   executable: {
@@ -142,6 +143,18 @@ describe("defineLoginService", () => {
   test("the hold names the service in holdDep's holder grammar", () => {
     expect(loginServiceHolder(decl)).toBe("login-service-dev-equin-example");
     expect(loginServiceHolder(decl)).toMatch(/^[a-z][a-z0-9-]*$/);
+  });
+
+  test("refuses user wording that names an internal part", () => {
+    expect(() =>
+      defineLoginService({
+        ...decl,
+        forUser: {
+          name: "the menu-bar helper",
+          gives: "It runs under launchd.",
+        },
+      }),
+    ).toThrow(/installer message rules.*"menu-bar helper".*"launchd"/);
   });
 
   test("refuses an id that is not a reverse-DNS label", () => {

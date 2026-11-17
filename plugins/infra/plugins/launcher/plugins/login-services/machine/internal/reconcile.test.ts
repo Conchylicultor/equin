@@ -55,6 +55,7 @@ const decl = defineLoginService({
   id: "dev.equin.example",
   owner: "example",
   description: "An example tray helper",
+  forUser: { name: "an example icon", gives: "It shows an example." },
   session: "graphical",
   dep: helper,
   executable: {

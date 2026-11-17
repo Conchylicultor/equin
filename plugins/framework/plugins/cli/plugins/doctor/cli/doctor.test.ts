@@ -99,7 +99,7 @@ describe("doctor.sh", () => {
     stub(m.bin, "id", "echo 0");
     const { code, out } = await doctor(m);
     expect(code).toBe(1);
-    expect(out).toContain("Running as root");
+    expect(out).toContain("Running as root (the administrator account)");
   });
 
   test("mise installed but not active in the shell", async () => {
@@ -151,7 +151,7 @@ describe("doctor.sh", () => {
     const { code, out } = await doctor(m);
     expect(code).toBe(1);
     expect(out).toContain("1 missing");
-    expect(out).toContain("Toolchain not usable");
+    expect(out).toContain("installed but did not start");
     expect(out).toContain("mise would install rust@1.99.1");
     expect(out).toContain("$ mise install");
   });
@@ -193,7 +193,10 @@ describe("doctor.sh", () => {
     stub(m.bin, "mise", settings("true"));
     const on = await doctor(m);
     expect(on.code).toBe(1);
-    expect(on.out).toContain("mise shims install missing tools on first use");
+    expect(on.out).toContain("mise installs missing tools by itself");
+    expect(on.out).toContain(
+      "details: mise shims install missing tools on first use",
+    );
     expect(on.out).toContain("mise run setup");
 
     stub(m.bin, "mise", settings("false"));

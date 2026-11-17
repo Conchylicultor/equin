@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-infra-launcher-installer-notice",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The installer's message shape: InstallerNotice ({ title, doing, blocked, now, ifSkipped, evidence }) — every message that stops the install, asks for a permission or leaves something out is built as one, so each of the five installer message rules is a field to fill. defineNotice refuses one whose user-facing text names an internal part (gateway, helper, launchd…), a path or a label; renderNotice prints the message with the raw evidence apart under Details."
+}

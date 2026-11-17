@@ -18,12 +18,14 @@ export type {
   DefineLoginServiceSpec,
   LoginServiceDeclaration,
   LoginServiceRun,
+  ServiceForUser,
 } from "./internal/define";
 export { declaredLoginServices } from "./internal/registry";
 export { loginService, loginServiceManager } from "./internal/host";
 export { reconcileLoginService, reloadService } from "./internal/reconcile";
 export {
   appExecutablePath,
+  appsBlockedNotice,
   BundleWriteRefusedError,
   bundleOfExecutable,
   installedAppComponents,

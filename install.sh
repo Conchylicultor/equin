@@ -14,6 +14,11 @@
 # (plugins/framework/plugins/cli/plugins/doctor/doctor.sh) is what decides
 # whether anything required is still missing.
 #
+# Every message it prints to the person installing follows the installer
+# message rules (plugins/infra/plugins/launcher/plugins/installer-notice/CLAUDE.md):
+# no internal names, what equin was doing and why, why it was blocked, what to
+# do now and what skipping costs — raw facts only on a `details:` line (fail).
+#
 # This file lives at the repo root on purpose: its URL above is the documented
 # entry point and must not move when plugins do.
 
@@ -90,7 +95,8 @@ main() {
 
   # ── 0. Say what will happen, before anything does ──────────────────────────
   if [ "$(id -u)" = "0" ]; then
-    die "do not run as root: Postgres' initdb refuses to, so the app cannot start. Run as a normal user (on a server: adduser --disabled-password --gecos '' equin && su - equin)."
+    fail "equin can't be installed from the administrator (root) account: its database refuses to run as root, so equin could never start. Run the installer from your normal account. On a server with only root, create one first: adduser --disabled-password --gecos '' equin && su - equin" \
+      "id -u = 0; initdb refuses to run as root"
   fi
 
   # ── Not from inside Claude Code's protected shell ──────────────────────────
@@ -129,24 +135,26 @@ EOF
 
   equin installer. This will:
     1. install the Xcode command-line tools, if missing (macOS), or git and a
-       C compiler (Linux, apt) — and enable lingering so the app runs with
-       nobody logged in (Linux); asks for your password once
-    2. install mise, and add one line to $RC so new terminals find its tools
-    3. $( [ -n "$SELF_DIR" ] && echo "use the checkout at $INSTALL_DIR" || echo "clone $REPO_URL into $INSTALL_DIR" )
-    4. install the exact Bun, Go and Rust releases mise.lock records
-    5. start the app (gateway + its own Postgres) and build it: ~10-15 minutes
+       C compiler (Linux, apt) — and let equin keep running while nobody is
+       logged in (Linux); asks for your password once
+    2. install mise (it installs the exact Bun, Go and Rust versions equin is
+       built with), and add one line to $RC so new terminals find them
+    3. $( [ -n "$SELF_DIR" ] && echo "use the copy of equin at $INSTALL_DIR" || echo "download equin's code into $INSTALL_DIR" )
+    4. install those exact Bun, Go and Rust versions
+    5. start equin in the background (with its own database) and build it:
+       ~10-15 minutes
 EOF
   if [ "$OS" = "Darwin" ]; then
     echo "  The app then comes back by itself at every login, after a reboot too."
   else
-    echo "  The app then comes back by itself at every boot (a systemd user service)."
+    echo "  The app then comes back by itself at every boot."
   fi
-  echo "  Nothing else on your machine is changed. No Homebrew, no system Postgres."
+  echo "  Nothing else on your machine is changed. No Homebrew, no database server for the whole machine."
 
   # ── 1. Xcode command-line tools / git ──────────────────────────────────────
   if [ "$OS" = "Darwin" ]; then
     if ! xcode-select -p >/dev/null 2>&1; then
-      say "Installing the Xcode command-line tools (git, and the linker Rust uses)"
+      say "Installing Apple's command-line tools, which equin needs to download its code and build parts of itself"
       # The headless route (the one Homebrew's installer uses): the marker file
       # makes softwareupdate list the tools, so this works over ssh too, where
       # `xcode-select --install`'s dialog has nobody to click it.
@@ -158,12 +166,13 @@ EOF
         sudo rm -f "$marker"
       else
         sudo rm -f "$marker"
-        echo "softwareupdate offered no Command Line Tools; opening Apple's installer instead."
+        echo "macOS's software update did not offer the tools, so Apple's installer opens instead."
         xcode-select --install || true
-        echo "Waiting for the installer dialog to finish…"
+        echo "Click Install in the window that opened; the install continues once it finishes."
         until xcode-select -p >/dev/null 2>&1; do sleep 5; done
       fi
-      xcode-select -p >/dev/null 2>&1 || die "the Xcode command-line tools did not install. Run: xcode-select --install"
+      xcode-select -p >/dev/null 2>&1 || fail "Apple's command-line tools did not install. equin needs them to download its code and build parts of itself on your Mac. Install them with: xcode-select --install — then run the installer again; it picks up where it stopped." \
+        "xcode-select -p finds no developer directory"
     fi
   else
     # The Linux counterpart of the Xcode step: what the app needs from the
@@ -174,8 +183,9 @@ EOF
     command -v curl >/dev/null 2>&1 || pkgs="$pkgs curl"
     command -v cc >/dev/null 2>&1 || pkgs="$pkgs build-essential"
     if [ -n "$pkgs" ]; then
-      command -v apt-get >/dev/null 2>&1 || die "missing:$pkgs. Install them with your distro's package manager (git, curl, a C compiler), then re-run."
-      say "Installing$pkgs (apt; asks for your password)"
+      command -v apt-get >/dev/null 2>&1 || fail "equin needs git, curl and a C compiler to download its code and build parts of itself, and this system has no apt to install them with. Install them with your system's package manager, then run the installer again." \
+        "missing:$pkgs; no apt-get on PATH"
+      say "Installing$pkgs, which equin needs to download its code and build parts of itself (asks for your password)"
       sudo apt-get update -qq
       sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq $pkgs
     fi
@@ -183,7 +193,7 @@ EOF
     # and with it every agent — when the last session closes, and never starts
     # them at boot. `./equin start` refuses without it.
     if [ "$(loginctl show-user "$(id -un)" -p Linger --value 2>/dev/null)" != "yes" ]; then
-      say "Enabling lingering for $(id -un), so the app runs with nobody logged in (asks for your password)"
+      say "Letting equin keep running while nobody is logged in, and start when the machine boots (asks for your password)"
       sudo loginctl enable-linger "$(id -un)"
     fi
   fi
@@ -195,12 +205,13 @@ EOF
     curl -fsSL https://mise.run | sh
   fi
   command -v mise >/dev/null 2>&1 && MISE="$(command -v mise)"
-  [ -x "$MISE" ] || die "mise did not install at $MISE."
+  [ -x "$MISE" ] || fail "mise did not install. equin needs it to install the exact Bun, Go and Rust versions it is built with. Check your internet connection, then run the installer again." \
+    "no executable at $MISE after: curl -fsSL https://mise.run | sh"
 
   ACTIVATE="eval \"\$($MISE activate $SH_NAME)\""
   if [ "$EDIT_RC" = "1" ]; then
     if ! grep -qs "mise activate" "$RC"; then
-      say "Activating mise in new terminals ($RC)"
+      say "Letting new terminals find equin's tools (one line added to $RC)"
       printf '\n# mise: the Bun/Go/Rust releases equin runs on\n%s\n' "$ACTIVATE" >> "$RC"
     fi
   fi
@@ -211,11 +222,12 @@ EOF
   # ── 3. The repo ────────────────────────────────────────────────────────────
   if [ -z "$SELF_DIR" ]; then
     if [ -d "$INSTALL_DIR/.git" ]; then
-      say "Using the existing clone at $INSTALL_DIR"
+      say "Using the copy of equin already at $INSTALL_DIR"
     elif [ -e "$INSTALL_DIR" ]; then
-      die "$INSTALL_DIR exists and is not a git clone. Move it, or pass --dir <another path>."
+      fail "The folder $INSTALL_DIR already holds something else, so equin will not install over it. Move it away, or install somewhere else with --dir <another folder>." \
+        "$INSTALL_DIR exists and has no .git"
     else
-      say "Cloning $REPO_URL into $INSTALL_DIR"
+      say "Downloading equin's code into $INSTALL_DIR"
       git clone "$REPO_URL" "$INSTALL_DIR"
     fi
   fi
@@ -224,22 +236,26 @@ EOF
   # ── 4. Toolchain ───────────────────────────────────────────────────────────
   # Its postinstall runs the repo's `setup` (trust, git hooks) and the doctor,
   # which fails this step if anything required is still missing.
-  say "Installing the toolchain mise.lock records"
+  say "Installing Bun, Go and Rust (the exact versions equin is built with)"
   "$MISE" trust
   # A failed install keeps every release it did install, so re-running resumes.
   if ! "$MISE" install; then
-    die "the toolchain did not install (above). Re-run the installer: it resumes where it stopped (cd $INSTALL_DIR && ./install.sh)."
+    fail "Bun, Go and Rust did not finish installing; what went wrong is in the output above. Run the installer again: it picks up where it stopped (cd $INSTALL_DIR && ./install.sh)." \
+      "mise install exited non-zero"
   fi
 
   # ── 5. Start, 6. build ─────────────────────────────────────────────────────
   # No Claude Code install: the app runs the build the Agent SDK ships (with
   # the toolchain's dependencies), and the user signs in from the app.
-  say "Starting the gateway and its Postgres"
-  ./equin start
+  say "Starting equin in the background, with its own database"
+  if ! ./equin start; then
+    fail "equin could not start; what stopped it is just above. Once that is sorted, run the installer again: it picks up where it stopped (cd $INSTALL_DIR && ./install.sh)." \
+      "./equin start exited non-zero"
+  fi
 
   STATUS="$(data_root)/worktrees/singularity/build-status.json"
   before="$(grep -o '"buildId": *"[^"]*"' "$STATUS" 2>/dev/null || true)"
-  say "Building the app (the long step)"
+  say "Building equin (the long step: about 10 minutes)"
   # --skip-checks: this deploys main, whose tree already passed the full check
   # pass when it was pushed (the cheap alwaysRun subset still runs). The full
   # pass is an authoring gate, and some of it needs headless Chromium (the
@@ -250,16 +266,28 @@ EOF
   # The receipt is the authority on whether it deployed, not the exit code.
   after="$(grep -o '"buildId": *"[^"]*"' "$STATUS" 2>/dev/null || true)"
   if [ -z "$after" ] || [ "$after" = "$before" ] || ! grep -q '"status": *"ok"' "$STATUS"; then
-    die "the build did not record a deploy ($STATUS). Re-run ./install.sh from $INSTALL_DIR to retry."
+    fail "equin did not finish building, so it cannot open yet; what went wrong is in the output above. Run the installer again to retry (cd $INSTALL_DIR && ./install.sh)." \
+      "no new ok deploy receipt in $STATUS"
   fi
 
   # ── 7. Done ────────────────────────────────────────────────────────────────
   say "equin is running: http://equin.localhost:9000"
-  echo "  Checkout: $INSTALL_DIR"
-  [ "$EDIT_RC" = "1" ] && echo "  Open a new terminal to use ./equin (mise is active there)."
+  echo "  equin's code is in $INSTALL_DIR"
+  if [ "$EDIT_RC" = "1" ]; then
+    echo "  Open a new terminal to use ./equin there (new terminals find its tools)."
+  fi
 }
 
 say() { printf '\n\033[1m==> %s\033[0m\n' "$*"; }
-die() { printf '\n\033[31minstall.sh: %s\033[0m\n' "$*" >&2; exit 1; }
+# fail <message> <details>: stop the install. The message follows the
+# installer message rules (plugins/infra/plugins/launcher/plugins/installer-notice/CLAUDE.md):
+# what equin was doing and why, what blocked it — in the user's words, no
+# internal names — and what to do now; the raw facts (paths, exit codes,
+# tool output) go in <details>, printed apart and dimmed.
+fail() {
+  printf '\n\033[31m%s\033[0m\n' "$1" >&2
+  [ -n "${2:-}" ] && printf '\033[2m    details: %s\033[0m\n' "$2" >&2
+  exit 1
+}
 
 main "$@"
