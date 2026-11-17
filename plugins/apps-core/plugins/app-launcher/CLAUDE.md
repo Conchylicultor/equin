@@ -31,14 +31,16 @@ never draw their own header (the shell places it; see
   `useActivateApp` (tabs), the one activation the rail and Home share.
 - **Back to where you came from** — when the user came from an app made for
   opening others, the popover's first line is "Back to <app>"
-  (`internal/return-target.ts`): the surface-mode app the surface just left
+  (`internal/return-target.ts`). The way back is a stack, most recent first:
+  the top of the focused tab's own way back (`Tab.openedFrom` in
+  `apps-core/tabs` — the launcher apps, declared `defineApp({ launcher: true })`
+  — Isle, it was opened from: pushed when the tab leaves one, popped when it
+  lands back on it), then under it the surface-mode app the surface just left
   (`previousMode` — the Desktop, after a window went full screen; its windows
-  are still there), else the launcher app the focused tab was opened from
-  (`Tab.openedFrom` in `apps-core/tabs`, set when a tab leaves an app declared
-  `defineApp({ launcher: true })` — Isle — kept across later app swaps, cleared
-  when it lands back on one). Picking it is that app's `useActivateApp`, as
-  its tile would be. Nothing is named here: a new surface-mode app or launcher
-  app gets the line for free.
+  are still there). So Desktop → Isle full screen → an app offers "Back to
+  Isle", and Isle then offers "Back to Desktop". Picking it is that app's
+  `useActivateApp`, as its tile would be. Nothing is named here: a new
+  surface-mode app or launcher app gets the line for free.
 - **`form="header"`** (sidebar header) — launcher + the current app's name, a
   link to that app's own `basePath` (not the gallery). The name is the row's
   flexible, truncating cell; the launcher is rigid.

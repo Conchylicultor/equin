@@ -82,6 +82,7 @@ import {
   type Tab,
 } from "./tabs-store";
 import { isDeadUnresolvedLink, loadScopePrefixFor } from "./load-scope";
+import { openedFromAfterSwap } from "./opened-from";
 
 export interface TabsApi {
   /**
@@ -353,28 +354,8 @@ function rebuildBackgroundTab(persisted: PersistedTab, apps: AppList): Tab {
     tabId: persisted.tabId,
     appId: persisted.appId,
     store,
-    ...(persisted.openedFrom !== undefined && {
-      openedFrom: persisted.openedFrom,
-    }),
+    openedFrom: persisted.openedFrom ?? [],
   };
-}
-
-/**
- * Where a tab swapped from `prev` to `appId` was opened from: the app it
- * leaves when that is a launcher app (Isle), else what `prev` was opened from
- * — cleared once the tab lands on a launcher app (back where it came from, or
- * on another one).
- */
-function openedFromAfterSwap(
-  prev: Tab,
-  appId: string,
-  apps: AppList,
-): string | undefined {
-  const isLauncher = (id: string) =>
-    apps.find((a) => a.id === id)?.app.launcher === true;
-  if (isLauncher(appId)) return undefined;
-  if (isLauncher(prev.appId)) return prev.appId;
-  return prev.openedFrom;
 }
 
 interface BootState {
@@ -558,6 +539,7 @@ export function bootTabs(
       tabId: reuseSeed ? seedTabId! : crypto.randomUUID(),
       appId: urlAppId,
       store: makeBackgroundStore(urlAppId, apps),
+      openedFrom: [],
     });
     focusIdx = tabs.length - 1;
   }
@@ -701,6 +683,7 @@ function bootEmbedded(
     tabId: crypto.randomUUID(),
     appId,
     store: makeBackgroundStore(appId, apps),
+    openedFrom: [],
   };
   const rawPath = normalizeRawPath(route);
   if (rawPath !== "") tab.store.seedPending(rawPath);
@@ -1059,7 +1042,7 @@ export function TabsProvider({
     (appId: string, target?: ActivateTarget, adopt?: PaneStore): string => {
       const tabId = crypto.randomUUID();
       const store = adopt ?? makeBackgroundStore(appId, appsRef.current);
-      const tab: Tab = { tabId, appId, store };
+      const tab: Tab = { tabId, appId, store, openedFrom: [] };
       const nextTabs = [...tabsRef.current, tab];
       tabsRef.current = nextTabs;
       setTabs(nextTabs);
@@ -1101,12 +1084,16 @@ export function TabsProvider({
       const prev = tabsRef.current[idx]!;
       prev.store.live = false;
       const store = makeBackgroundStore(appId, appsRef.current);
-      const openedFrom = openedFromAfterSwap(prev, appId, appsRef.current);
       const tab: Tab = {
         tabId,
         appId,
         store,
-        ...(openedFrom !== undefined && { openedFrom }),
+        openedFrom: openedFromAfterSwap(
+          prev,
+          appId,
+          (id) =>
+            appsRef.current.find((a) => a.id === id)?.app.launcher === true,
+        ),
       };
       const nextTabs = [...tabsRef.current];
       nextTabs[idx] = tab;
@@ -1393,6 +1380,7 @@ export function TabsProvider({
       tabId: seedId,
       appId: seedApp.id,
       store: createPaneStore({ live: false }),
+      openedFrom: [],
     };
     tabsRef.current = [seed];
     setTabs([seed]);
@@ -1622,6 +1610,7 @@ export function TabsProvider({
           tabId: crypto.randomUUID(),
           appId,
           store: makeBackgroundStore(appId, appsRef.current),
+          openedFrom: [],
         };
         const nextTabs = [...tabsRef.current, tab];
         tabsRef.current = nextTabs;

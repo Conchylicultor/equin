@@ -149,8 +149,8 @@ export interface AppRef {
   /**
    * `true` for an app whose purpose is opening other apps in its place (Isle:
    * walk to a building, enter it). A tab swapped from it to another app
-   * remembers it (`Tab.openedFrom`), so the app launcher offers the way back
-   * ("Back to Isle"). Omitted, the app is an ordinary app.
+   * pushes it on its way back (`Tab.openedFrom`), so the app launcher offers
+   * it ("Back to Isle"). Omitted, the app is an ordinary app.
    */
   readonly launcher?: true;
 }

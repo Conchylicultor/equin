@@ -259,7 +259,7 @@ describe("tab persistence — the landing pane's keyed params (`/places;page=x`)
     store.clearRoute({ index: { page: "x", "view.lib": "all" } });
 
     savePersistedTabs(
-      [{ tabId: "t-story", appId: "story", store }],
+      [{ tabId: "t-story", appId: "story", store, openedFrom: [] }],
       "t-story",
       "",
     );
@@ -276,7 +276,7 @@ describe("tab persistence — the landing pane's keyed params (`/places;page=x`)
     store.clearRoute();
 
     savePersistedTabs(
-      [{ tabId: "t-story", appId: "story", store }],
+      [{ tabId: "t-story", appId: "story", store, openedFrom: [] }],
       "t-story",
       "",
     );
