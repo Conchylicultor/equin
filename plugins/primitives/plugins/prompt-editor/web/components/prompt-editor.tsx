@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   TextEditor,
+  type TextEditorText,
   useInsertMarkdown,
   useReadMarkdown,
   useTakeMarkdownWith,
@@ -26,9 +27,8 @@ type FloatingActionItem = Parameters<
   >
 >[0];
 
-export function PromptEditor(props: {
-  value: string;
-  onChange: (markdown: string) => void;
+export function PromptEditor(
+  props: TextEditorText & {
   onSubmit?: () => void;
   submitMode?: "enter" | "cmd-enter" | "none";
   placeholder?: string;

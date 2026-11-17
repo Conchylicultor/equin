@@ -7,7 +7,14 @@ import { useConversationById } from "@plugins/conversations/web";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
-import { useActiveDataBinding } from "@plugins/active-data/web";
+import {
+  useActiveDataBinding,
+  useActiveDataIdentity,
+} from "@plugins/active-data/web";
+import {
+  defineKept,
+  useKept,
+} from "@plugins/primitives/plugins/kept-state/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   foldResource,
@@ -32,6 +39,14 @@ const TaskBindingSchema = z.object({
 });
 type TaskBinding = z.infer<typeof TaskBindingSchema>;
 
+const promptDraft = defineKept({
+  owner: "active-data.task.prompt",
+  label: "Suggested task drafts",
+  tier: "work",
+  cap: "32 KB",
+  schema: z.string(),
+});
+
 export function TaskCard({
   content,
 }: {
@@ -47,7 +62,16 @@ export function TaskCard({
 
   const binding = useActiveDataBinding<TaskBinding>(TaskBindingSchema);
 
-  const [prompt, setPrompt] = useState(initial);
+  const identity = useActiveDataIdentity();
+  // One draft per card: the binding's identity when the message has one, else
+  // the host conversation and the suggested text.
+  const promptKept = useKept(promptDraft, initial, {
+    subject:
+      identity === null
+        ? `${convId}|${initial}`
+        : `${identity.conversationId}|${identity.messageId}|${identity.occurrenceIndex}`,
+  });
+  const [prompt, , clearPrompt] = promptKept;
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Captured in a ref (not state) because onLaunched closes over the render
@@ -121,6 +145,7 @@ export function TaskCard({
     try {
       const task = await createTask();
       await binding.set({ taskId: task.id });
+      clearPrompt();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -131,8 +156,7 @@ export function TaskCard({
   return (
     <Stack as={Card} gap="sm" className="bg-background my-flow-block p-sm">
       <TextEditor
-        value={prompt}
-        onChange={setPrompt}
+        keep={promptKept}
         placeholder="What should be done?"
         disabled={creating}
         minRows={3}
@@ -168,6 +192,7 @@ export function TaskCard({
             const task = await createTask();
             pendingTaskIdRef.current = task.id;
             await binding.set({ taskId: task.id });
+            clearPrompt();
             return { taskId: task.id, prompt: trimmed };
           }}
           onLaunched={async (conv) => {

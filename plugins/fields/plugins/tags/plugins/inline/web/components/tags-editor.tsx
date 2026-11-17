@@ -1,4 +1,5 @@
 import { useRef, useState, type ReactNode } from "react";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
@@ -90,6 +91,7 @@ export function TagsEditor(props: CellEditorProps): ReactNode {
         <Input
           autoFocus
           placeholder="Add tag…"
+          keep={transient("a one-shot cell editor: the tag is added on Enter")}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {

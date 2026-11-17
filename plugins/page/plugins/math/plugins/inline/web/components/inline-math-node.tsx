@@ -1,7 +1,11 @@
 import { useState } from "react";
 import { $getNodeByKey, type LexicalNode } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  Textarea,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { localUndoProps } from "@plugins/primitives/plugins/undo-redo/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -87,7 +91,11 @@ function InlineMathView({
             <KatexMath expression={draft} display={false} />
           )}
         </Center>
-        <textarea
+        <Textarea
+          bare
+          keep={transient(
+            "committed into the block's text (its content doc) on every keystroke",
+          )}
           // NOT redundant, however portaled this looks. This field reads as
           // `local` today only because the popover portals to `document.body`,
           // which severs it from the page body's `surfaceUndoProps` subtree so

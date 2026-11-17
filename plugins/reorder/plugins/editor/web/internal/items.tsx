@@ -26,6 +26,7 @@ import {
 } from "@plugins/reorder/plugins/area/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 
 const addIcon = symbol("add");
 const closeIcon = symbol("close");
@@ -322,6 +323,9 @@ export function RestoreButton({
             </Pin>
             <ControlSizeProvider size="sm">
               <Input
+                keep={transient(
+                  "disabled placeholder preview: nothing is typed",
+                )}
                 placeholder="Search..."
                 // eslint-disable-next-line spacing/no-adhoc-spacing -- precise left padding clearing the absolutely-positioned search icon
                 className="pl-7"

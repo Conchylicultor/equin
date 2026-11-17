@@ -12,6 +12,7 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { EmojiSchema, type Emoji } from "../../core";
@@ -270,6 +271,9 @@ function MirroredEmojiPicker({
               search prop on its root. */}
           <SearchInput
             appearance={panel ? "menu" : "field"}
+            keep={transient(
+              "a quick filter inside a picker popover; frimousse filters from the field it draws, so a restored query would not reach it",
+            )}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search emoji…"

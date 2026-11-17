@@ -1,4 +1,5 @@
 import { defineFieldShape } from "@plugins/config_v2/plugins/fields/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { stringListFieldType } from "@plugins/fields/plugins/string-list/core";
 import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState } from "react";
@@ -96,6 +97,9 @@ function StringItemInput({
   if (!focused && local !== value) setLocal(value);
   return (
     <Input
+      keep={transient(
+        "committed on blur; a row's id is minted per mount, so there is no stable subject to keep it under",
+      )}
       value={local}
       placeholder={placeholder}
       onFocus={() => setFocused(true)}

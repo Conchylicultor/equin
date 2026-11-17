@@ -15,6 +15,7 @@ import {
   useControlSize,
   type ControlSize,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
@@ -296,6 +297,9 @@ export function PathBar({
     >
       <Input
         ref={inputRef}
+        keep={transient(
+          "navigation typeahead: blur cancels the edit, the path is the place",
+        )}
         value={state.text}
         readOnly={state.validating}
         spellCheck={false}

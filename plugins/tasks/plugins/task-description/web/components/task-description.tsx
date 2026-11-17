@@ -39,6 +39,7 @@ function TaskDescriptionInner({
   const descField = useEditableField({
     value: description ?? "",
     onSave: (v) => patchTask(taskId, { description: v }),
+    keep: { field: "tasks.description", subject: taskId },
   });
   useRegisterFlush(descField.flush);
 
@@ -53,7 +54,7 @@ function TaskDescriptionInner({
     <Stack gap="md">
       <DescriptionView
         value={descField.value}
-        onChange={descField.onChange}
+        keep={descField.keep}
         onFocus={descField.onFocus}
         onBlur={descField.onBlur}
       />

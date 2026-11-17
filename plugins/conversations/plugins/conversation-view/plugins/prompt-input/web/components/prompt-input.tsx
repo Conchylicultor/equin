@@ -37,9 +37,10 @@ export function PromptInput({
   const sendConversationTurn = useSendConversationTurn();
   const sendAvailability = useTurnSendAvailability();
   const toast = useToast();
-  const [draft, setDraft, , draftKept] = useDraft(conversationPromptDraft, "", {
+  const draftBinding = useDraft(conversationPromptDraft, "", {
     scope: conversation.id,
   });
+  const [draft, , , draftKept] = draftBinding;
 
   // The gate every turn-sending surface shares (canSendTurn): `starting` and
   // `working` stay sendable (the server holds or queues the turn), and so does a
@@ -103,8 +104,7 @@ export function PromptInput({
 
   return (
     <PromptEditor
-      value={draft}
-      onChange={setDraft}
+      keep={draftBinding}
       onSubmit={send}
       submitMode="enter"
       placeholder={placeholder}

@@ -2,6 +2,7 @@ import {
   defineFieldShape,
   useLocalValue,
 } from "@plugins/config_v2/plugins/fields/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { intFieldType } from "@plugins/fields/plugins/int/core";
 import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { type IntFieldDef } from "../../core";
@@ -17,6 +18,9 @@ const IntRenderer = defineFieldShape({
       control: (
         <Input
           type="number"
+          keep={transient(
+            "a number committed on blur: a half-typed number is cheap to retype",
+          )}
           value={local}
           min={min}
           max={max}

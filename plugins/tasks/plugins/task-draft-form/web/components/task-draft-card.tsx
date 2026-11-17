@@ -1,3 +1,4 @@
+import type { KeptText } from "@plugins/primitives/plugins/kept-state/core";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { SortableItem } from "@plugins/primitives/plugins/sortable-list/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -14,14 +15,14 @@ const dragIndicatorIcon = symbol("drag-indicator");
 export interface TaskDraftCardProps {
   cardId: string;
   index: number;
-  text: string;
+  /** The card's text, kept by the host's chain draft (`keptText`). */
+  keep: KeptText;
   /** Contributed launch-option values, keyed by option id. */
   launchOptions: LaunchOptionValues;
   autoFocus: boolean;
   /** Whether the card shows its drag grip — only when there is something to reorder against. */
   movable: boolean;
   disabled: boolean;
-  onTextChange: (next: string) => void;
   onLaunchOptionsChange: (next: LaunchOptionValues) => void;
   onSubmitChord: () => void;
   isHead?: boolean;
@@ -51,12 +52,11 @@ export interface TaskDraftCardProps {
 export function TaskDraftCard({
   cardId,
   index,
-  text,
+  keep,
   launchOptions,
   autoFocus,
   movable,
   disabled,
-  onTextChange,
   onLaunchOptionsChange,
   onSubmitChord,
   isHead = false,
@@ -91,11 +91,10 @@ export function TaskDraftCard({
         <Stack gap="none">
           <TaskDraftComposer
             cardId={cardId}
-            text={text}
+            keep={keep}
             launchOptions={launchOptions}
             autoFocus={autoFocus}
             disabled={disabled}
-            onTextChange={onTextChange}
             onLaunchOptionsChange={onLaunchOptionsChange}
             onSubmitChord={onSubmitChord}
             isHead={isHead}

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import {
   Button,
   Input,
@@ -56,6 +57,11 @@ export function SnippetEditor({
   const rootRef = useRef<HTMLElement>(null);
   const promptRef = useRef<HTMLTextAreaElement>(null);
   useReportPopupOpen(true);
+  // The editor lives inside a popup that a press outside, Escape or Cancel
+  // closes discarding it — throwaway by design until a host keeps it.
+  const keep = transient(
+    "inline popup editor: closing the popup (outside press, Escape, Cancel) discards it by design",
+  );
 
   // A press anywhere outside the editor leaves it — a hover panel's own
   // outside press is suspended while the editor holds it open.
@@ -94,6 +100,7 @@ export function SnippetEditor({
         autoFocus
         placeholder="Name"
         aria-label={`${noun} name`}
+        keep={keep}
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         onKeyDown={(e) => {
@@ -111,6 +118,7 @@ export function SnippetEditor({
         fitContent
         placeholder="Prompt"
         aria-label={`${noun} prompt`}
+        keep={keep}
         className="min-h-18 max-h-40"
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}

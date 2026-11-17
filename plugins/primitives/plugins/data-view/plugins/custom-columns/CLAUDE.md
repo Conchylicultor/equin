@@ -101,11 +101,12 @@ how the caller obtained it.
     - `IdKinds.Kind` "cc"
     - `DataViewSlots.FieldExtension` "custom-columns" → `CustomColumnFieldExtension`
     - `DataViewSlots.Setting` "custom-columns" → `CustomColumnsFieldsSetting`
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×11
     - `config_v2` ×2
     - `network/live/live-state` ×2
     - `primitives/css/control-panel` ×2
+    - `primitives/kept-state` ×2
     - `ids.IdKinds`
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`

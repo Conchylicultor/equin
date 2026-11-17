@@ -3,6 +3,7 @@ import {
   defineFieldShape,
   useLocalValue,
 } from "@plugins/config_v2/plugins/fields/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { secretFieldType } from "@plugins/fields/plugins/secret/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -121,6 +122,7 @@ const SecretRenderer = defineFieldShape({
       control: (
         <Input
           type="password"
+          keep={transient("secret: never written to browser storage")}
           value={local}
           placeholder={field.meta.placeholder ?? "Enter secret…"}
           onFocus={focus.onFocus}

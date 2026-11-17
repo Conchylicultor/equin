@@ -79,6 +79,7 @@ export {
 export type { MenuRowAction } from "./components/ui/dropdown-menu";
 export { Input } from "./components/ui/input";
 export { Textarea } from "./components/ui/textarea";
+export type { TextKeepProps } from "./components/ui/text-keep-props";
 export {
   PortalThemeScopeProvider,
   usePortalThemeScope,

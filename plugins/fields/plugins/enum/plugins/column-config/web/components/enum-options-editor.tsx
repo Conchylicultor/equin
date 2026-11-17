@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import {
   Button,
   Input,
@@ -60,6 +61,7 @@ export function EnumOptionsEditor(props: ColumnConfigProps): ReactNode {
       {options.map((option, index) => (
         <Stack key={option.value} direction="row" align="center" gap="xs">
           <Input
+            keep={transient("committed on every change")}
             value={option.label}
             onChange={(e) => rename(index, e.target.value)}
             placeholder="Option label"
@@ -73,6 +75,7 @@ export function EnumOptionsEditor(props: ColumnConfigProps): ReactNode {
       ))}
       <Stack direction="row" align="center" gap="xs">
         <Input
+          keep={transient("a one-line option label, added on Enter")}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {

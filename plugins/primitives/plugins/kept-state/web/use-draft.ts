@@ -13,37 +13,13 @@ import {
   type Store,
 } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import type { KeptBinding, KeptHandle } from "../core";
 import {
   clearDraft as clearStoredDraft,
   flushDraft,
   readDraft,
   scheduleDraftWrite,
 } from "./draft-storage";
-
-/**
- * What `submitKept` needs of one kept entry: its latest value, a way to show
- * a value without writing it, and a clear that holds only while the entry
- * still stores what was sent. Minted by `useDraft` / `useKept` (their 4th
- * element) — never built by a caller.
- */
-export interface KeptHandle<T> {
-  /** The latest value (as set, before its write lands). */
-  current(): T;
-  /** Make sure `current()` is in storage now. */
-  flush(): void;
-  /** Show the initial value without touching storage. */
-  showInitial(): void;
-  /** Clear the entry if storage still holds `sent`; reset what is shown if it still shows `sent`. */
-  clearIfStill(sent: T): void;
-}
-
-/** A kept value as a `useState` drop-in, plus its handle for `submitKept`. */
-export type KeptBinding<T> = readonly [
-  T,
-  Dispatch<SetStateAction<T>>,
-  () => void,
-  KeptHandle<T>,
-];
 
 /** How a stored value is read back: as is (a store's own schema), or reparsed. */
 type Parse<T> = (stored: unknown) => T | null;

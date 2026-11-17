@@ -109,6 +109,7 @@ function GeneralBody({ deployment }: { deployment: Deployment }): ReactNode {
   const hostnames = useEditableField({
     value: deployment.hostnames.join(", "),
     label: "Hostnames",
+    keep: { field: "deploy.deployment.hostnames", subject: deployment.id },
     onSave: (v) =>
       save({
         hostnames: v
@@ -123,6 +124,7 @@ function GeneralBody({ deployment }: { deployment: Deployment }): ReactNode {
   const loopbackPort = useEditableField({
     value: String(deployment.loopbackPort),
     label: "Loopback port",
+    keep: { field: "deploy.deployment.loopback-port", subject: deployment.id },
     onSave: (v) => {
       const n = Number(v);
       return Number.isInteger(n) && n >= 1024 && n <= 65535
@@ -138,8 +140,7 @@ function GeneralBody({ deployment }: { deployment: Deployment }): ReactNode {
         hint="Comma-separated; Caddy serves and certifies each"
       >
         <Input
-          value={hostnames.value}
-          onChange={(e) => hostnames.onChange(e.target.value)}
+          keep={hostnames.keep}
           onFocus={hostnames.onFocus}
           onBlur={hostnames.onBlur}
           placeholder="app.example.com, *.example.com"
@@ -149,8 +150,7 @@ function GeneralBody({ deployment }: { deployment: Deployment }): ReactNode {
         <Input
           type="number"
           className="max-w-32 font-mono"
-          value={loopbackPort.value}
-          onChange={(e) => loopbackPort.onChange(e.target.value)}
+          keep={loopbackPort.keep}
           onFocus={loopbackPort.onFocus}
           onBlur={loopbackPort.onBlur}
         />

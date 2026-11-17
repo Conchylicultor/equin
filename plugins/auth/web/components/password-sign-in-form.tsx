@@ -1,4 +1,5 @@
 import { useState, type FormEvent, type ReactElement } from "react";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import {
   Button,
   Input,
@@ -86,6 +87,9 @@ export function PasswordSignInForm({
         <Input
           name="username"
           autoComplete="username"
+          keep={transient(
+            "sign-in: the browser's autofill restores it, kept with the password it goes with",
+          )}
           value={username}
           onChange={(e) => setUsername(e.target.value)}
         />
@@ -97,6 +101,7 @@ export function PasswordSignInForm({
           name="password"
           type="password"
           autoComplete="current-password"
+          keep={transient("secret: never written to browser storage")}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />

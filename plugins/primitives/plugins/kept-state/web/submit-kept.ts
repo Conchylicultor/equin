@@ -1,4 +1,4 @@
-import type { KeptHandle } from "./use-draft";
+import type { KeptHandle } from "../core";
 
 /**
  * When the field shows empty again:

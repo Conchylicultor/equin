@@ -62,6 +62,20 @@ export default [
       "The one module allowed to render a raw block textarea: it IS the sanctioned surface, and it records every typing run onto the document stack itself. Everything else in `plugins/page/**/web` takes one of the two answers the rule's message names.",
   },
   {
+    rule: "kept-state/no-raw-text-input",
+    paths: ["web/components/block-text-area.tsx"],
+    kind: "sanctioned",
+    reason:
+      "The block's plain-text source surface: its text IS the block's row data, persisted by this primitive itself (a debounced row write, flushed on blur and unmount) with its own undo recording — nothing typed lives only in the field. Its props bag (value, handlers, undo owner) is the hook's, which ui-kit Textarea's keep/value split does not fit.",
+  },
+  {
+    rule: "kept-state/no-raw-text-input",
+    paths: ["web/__tests__"],
+    kind: "sanctioned",
+    reason:
+      "jsdom stand-ins for a block's Lexical editing host: a bare contentEditable div mirroring the DOM `BlockTextEditor` emits, whose text is the block's content doc in the real editor.",
+  },
+  {
     rule: "sortable-list/no-raw-dnd-kit",
     paths: ["web"],
     kind: "sanctioned",

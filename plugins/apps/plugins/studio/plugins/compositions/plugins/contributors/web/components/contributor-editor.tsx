@@ -4,6 +4,7 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import {
   updateActiveDraft,
   useGraph,
@@ -79,6 +80,9 @@ export function ContributorEditor({
         </Text>
       </Stack>
       <SearchInput
+        keep={transient(
+          "controlled by ContributorsSection: the owner keeps it",
+        )}
         value={query}
         onChange={(e) => onQueryChange(e.target.value)}
         placeholder="Filter contributors…"

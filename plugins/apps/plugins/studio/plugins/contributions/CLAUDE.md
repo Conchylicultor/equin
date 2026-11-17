@@ -11,9 +11,10 @@
   - Contributes:
     - `Pane.Register` "contributions"
     - `Studio.Sidebar` "Contributions"
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×4
     - `plugin-meta/contributions-table` ×3
+    - `primitives/kept-state` ×2
     - `apps/studio/shell.Studio`
     - `network/live/live-state.ResourceErrorInline`
     - `network/live.useLive`

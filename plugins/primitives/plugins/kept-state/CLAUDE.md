@@ -44,6 +44,42 @@ const [query, setQuery] = useKept(pickerQuery, "");
 - `useDraft(store, initial, { scope })` is the same hook over a store the
   caller declared with `defineStore` — the existing spelling, kept.
 
+## Text inputs: the required `keep`
+
+Every text field decides whether what is typed in it survives a reload and a
+tab switch. The text-input primitives — ui-kit `Input` / `Textarea`,
+`TextEditor` / `ComposerField` / `PromptEditor`, `SearchInput`, and
+`useEditableField` — take a **required** `keep` (`TextKeep`, from `core/`):
+
+| `keep` | Means | The field's `value` / `onChange` |
+|---|---|---|
+| a `useKept` / `useDraft` binding | kept (work or view) | the binding's; no `value` prop (type error), `onChange` runs after it |
+| `keptField(binding, "text")` — one string field of a kept object | kept: typing writes into the object entry | the object's field |
+| `field.keep` of a `useEditableField` | kept by the field: pending text is work until the save is acked | the field's |
+| `transient("<why>")` | throwaway by design — a secret, a value committed on every change | the caller's own |
+
+```tsx
+const name = useKept(renameDraft, "", { subject: pageId });
+<Input keep={name} />
+<Input type="password" keep={transient("secret: never written to browser storage")} value={pw} onChange={…} />
+const title = useEditableField({ value, onSave, keep: { field: "task.title", subject: taskId } });
+<Input keep={title.keep} onFocus={title.onFocus} onBlur={title.onBlur} />
+```
+
+`Input` / `Textarea` take `bare` for a field the host styles itself (an inline
+title, a cell): no chrome, no density size — the keep decision stays. The
+`kept-state/no-raw-text-input` lint rule bans the raw spellings (`<textarea>`,
+a text `<input>`, `contentEditable` on a DOM element) everywhere else; a
+surface whose content is persisted another way (the page editor's Y.Doc)
+declares a sanctioned exemption.
+
+`useEditableField`'s kept text lives in one work store
+(`editable-field.pending`, `{ text, base }` per `<field>|<subject>`): a remount
+restores the unsaved text and resumes its save, or shows it as a conflict when
+the source moved on since `base`. It is cleared once a save of it resolves,
+when the field adopts or converges with the source, and on `acceptExternal`.
+A failed save keeps it.
+
 ## The KeepScope
 
 `<KeepScope segment>` nests: tab-surface opens `t:<tabId>` around a tab's
@@ -93,7 +129,7 @@ carries them over, so no unsent text is lost — drop it once browsers migrated.
 
 ## Plugin reference
 
-- Description: Kept state: what a reload, a tab switch or an upgrade must give back. defineKept declares a piece of it in one of two tiers — work (what the user made and the server does not have yet: its own local store, refused when full, one entry per subject) or view (where the user was looking: one pooled session store, keyed by the ambient KeepScope — the pane instance, else the tab — and dropped when that place closes, forgetKeepScope) — and useKept reads it as a useState drop-in. useDraft is the same over a store the caller declared (defineStore). Writes are batched to the end of the frame and flushed on pagehide (flushKept). submitKept clears work only once its send is taken, so a reload between the click and the ack keeps it. readDraft/writeDraft are the render-free twin for callers writing at input frequency; onDraftWritten(scope, listener) observes every write and clear in one composition scope; legacyDraftKeys carries drafts written before web-storage into a store.
+- Description: Kept state: what a reload, a tab switch or an upgrade must give back. defineKept declares a piece of it in one of two tiers — work (what the user made and the server does not have yet: its own local store, refused when full, one entry per subject) or view (where the user was looking: one pooled session store, keyed by the ambient KeepScope — the pane instance, else the tab — and dropped when that place closes, forgetKeepScope) — and useKept reads it as a useState drop-in. useDraft is the same over a store the caller declared (defineStore). Writes are batched to the end of the frame and flushed on pagehide (flushKept). submitKept clears work only once its send is taken, so a reload between the click and the ack keeps it. readDraft/writeDraft are the render-free twin for callers writing at input frequency; onDraftWritten(scope, listener) observes every write and clear in one composition scope; legacyDraftKeys carries drafts written before web-storage into a store. core/ holds the required `keep` prop of every text-input primitive (TextKeep: a kept binding, a primitive's own keptText, or transient("<why>")), and lint/ bans raw text fields (kept-state/no-raw-text-input).
 - Web:
   - Uses:
     - `primitives/dom/web-storage.defineStore`
@@ -107,8 +143,6 @@ carries them over, so no unsent text is lost — drop it once browsers migrated.
   - Exports (types):
     - `DraftOptions`
     - `DraftWrite`
-    - `KeptBinding`
-    - `KeptHandle`
     - `KeptView`
     - `KeptViewSpec`
     - `KeptWork`
@@ -130,16 +164,46 @@ carries them over, so no unsent text is lost — drop it once browsers migrated.
     - `useKept`
     - `writeDraft`
 - Cross-plugin:
-  - Imported by: 34 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×10
-    - `primitives` ×9
-    - `conversations` ×7
+  - Uses tokens: `ui/tokens/color-palette --input`
+  - Imported by: 117 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×34
+    - `primitives` ×22
+    - `conversations` ×11
+    - `fields` ×11
+    - `page` ×9
+    - `ui` ×5
+    - `auth` ×4
+    - `tasks` ×4
+    - `debug` ×3
     - `apps-core` ×2
+    - `infra` ×2
+    - `active-data/task`
     - `build`
     - `hints/ask`
+    - `integrations/google-maps`
     - `map`
-    - `page/editor`
-    - `tasks/task-draft-form`
+    - `reorder/editor`
+    - `screenshot`
+    - `search/quick-find`
+    - `tag-tree/picker`
     - `wish`
+- Exemptions:
+  - Exempted by:
+    - `page/editor` (0 debt)
+    - `primitives/css/ui-kit` (0 debt)
+- Core:
+  - Exports (types):
+    - `KeptBinding`
+    - `KeptHandle`
+    - `KeptSetter`
+    - `KeptText`
+    - `TextKeep`
+    - `Transient`
+  - Exports (values):
+    - `isTransient`
+    - `keptField`
+    - `keptText`
+    - `resolveTextKeep`
+    - `transient`
 
 <!-- AUTOGENERATED:END -->

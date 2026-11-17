@@ -3,6 +3,7 @@ import {
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, useState } from "react";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 
 import { useLibrarySong } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import { SonataAudio } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/instruments/web";
@@ -215,6 +216,7 @@ function InstrumentPicker({
           appearance="menu"
           autoFocus
           placeholder="Search instruments…"
+          keep={transient("picker filter: the popover resets it on close")}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />

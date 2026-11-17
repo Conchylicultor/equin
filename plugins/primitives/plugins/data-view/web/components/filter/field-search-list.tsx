@@ -3,6 +3,7 @@ import {
   SearchInput,
   useTextFilter,
 } from "@plugins/primitives/plugins/search/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -48,6 +49,9 @@ export function FieldSearchList<TRow>(props: {
       <SearchInput
         appearance="menu"
         autoFocus
+        keep={transient(
+          "field-picker typeahead in a panel opened on demand: picking is one click",
+        )}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder={props.placeholder ?? "Filter by…"}

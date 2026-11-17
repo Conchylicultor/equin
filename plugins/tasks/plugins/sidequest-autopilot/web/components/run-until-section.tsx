@@ -6,6 +6,7 @@ import {
   ControlPanelPane,
 } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { sidequestAutopilotConfig } from "../../shared/config";
 import { parseRunUntil, type RunUntil } from "../../shared/run-until";
@@ -114,6 +115,7 @@ function EndInput({
   return (
     <Input
       type="datetime-local"
+      keep={transient("a date and time picked, committed on blur or Enter")}
       value={draft}
       aria-label="Run until"
       onChange={(e) => setDraft(e.target.value)}

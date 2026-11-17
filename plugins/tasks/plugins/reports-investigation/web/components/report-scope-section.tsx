@@ -7,6 +7,7 @@ import {
   ControlPanelPane,
 } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { reportInvestigationsConfig } from "../../shared/config";
 import { reportInvestigationsScope } from "../../shared/live";
@@ -191,6 +192,7 @@ function TimesInput({
     <Input
       type="number"
       min={1}
+      keep={transient("a number committed on blur or Enter")}
       value={draft}
       aria-label="Occurred at least this many times"
       onChange={(e) => setDraft(e.target.value)}

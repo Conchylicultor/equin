@@ -1,5 +1,6 @@
 import { PLAIN_GESTURE } from "@plugins/primitives/plugins/link-gesture/core";
 import type { ReactElement } from "react";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import {
   Button,
   Input,
@@ -87,6 +88,9 @@ export function DraftActions({ id }: { id: string }): ReactElement {
   return (
     <Stack gap="sm">
       <Input
+        keep={transient(
+          "controlled by the active-composition store: the whole unsaved draft lives there",
+        )}
         value={draft.name}
         onChange={(e) => updateActiveDraft({ name: e.target.value })}
         placeholder="Composition name"

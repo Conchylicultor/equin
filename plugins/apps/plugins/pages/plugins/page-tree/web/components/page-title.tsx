@@ -11,6 +11,7 @@ import type {
   CaretSurface,
 } from "@plugins/page/plugins/editor/web";
 import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
+import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 /** Any modifier turns an arrow into a selection/word move, never a surface crossing. */
 function isModified(event: KeyboardEvent<HTMLInputElement>): boolean {
@@ -94,10 +95,10 @@ export function PageTitle({
   }
 
   return (
-    <input
+    <Input
+      bare
       ref={inputRef}
-      value={field.value}
-      onChange={(e) => field.onChange(e.target.value)}
+      keep={field.keep}
       onFocus={field.onFocus}
       onBlur={field.onBlur}
       onKeyDown={onKeyDown}

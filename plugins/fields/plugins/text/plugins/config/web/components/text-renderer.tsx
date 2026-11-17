@@ -1,4 +1,9 @@
-import { defineFieldShape } from "@plugins/config_v2/plugins/fields/web";
+import {
+  ConfigFieldContext,
+  defineFieldShape,
+} from "@plugins/config_v2/plugins/fields/web";
+import { useContext } from "react";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { textFieldType } from "@plugins/fields/plugins/text/core";
 import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -11,21 +16,29 @@ import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 const TextRenderer = defineFieldShape({
   type: textFieldType,
   useShape: ({ field, value, onChange }) => {
+    const ctx = useContext(ConfigFieldContext);
     const draft = useEditableField({
       value,
       onSave: onChange,
       label: field.meta.label,
+      // Unsaved text is kept per stored config field; a form outside the
+      // config store (an event source's) has no stable record to key it by.
+      keep: ctx
+        ? {
+            field: "fields.config-text",
+            subject: `${ctx.storePath}|${ctx.fieldKey}|${field.meta.label ?? ""}`,
+          }
+        : transient("no config field around it: the host form owns the value"),
     });
     return {
       kind: "value",
       fit: "field",
       control: (
         <Input
-          value={draft.value}
+          keep={draft.keep}
           placeholder={field.meta.placeholder}
           onFocus={draft.onFocus}
           onBlur={draft.onBlur}
-          onChange={(e) => draft.onChange(e.target.value)}
         />
       ),
     };

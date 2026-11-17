@@ -1,5 +1,13 @@
-import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useState } from "react";
+import {
+  Button,
+  cn,
+  Input,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  defineKept,
+  useKept,
+} from "@plugins/primitives/plugins/kept-state/web";
+import { z } from "zod";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import {
   EndpointError,
@@ -24,6 +32,14 @@ function parseThemeId(input: string): string {
   // Strip trailing .json if present
   return trimmed.replace(/\.json$/, "");
 }
+
+const importUrlDraft = defineKept({
+  owner: "tweakcn.import-url",
+  label: "tweakcn import URLs",
+  tier: "work",
+  cap: "8 KB",
+  schema: z.string(),
+});
 
 const SECTION_TERMS = ["import by url", "import", "tweakcn", "url"];
 
@@ -51,7 +67,8 @@ export function useImportByUrlMatchesSearch({
 export function ImportByUrlSection() {
   const scopeId = useThemeScopeId();
   const selectTheme = useSetConfig(themeSelectionConfig, { scopeId });
-  const [input, setInput] = useState("");
+  const inputKept = useKept(importUrlDraft, "", { subject: "new" });
+  const [input, , clearInput] = inputKept;
 
   const importMutation = useEndpointMutation(importTweakcnTheme);
   const awaitSavedThemesWrite = useAwaitSavedThemesWrite();
@@ -71,21 +88,21 @@ export function ImportByUrlSection() {
     // painter would paint a missing theme for a frame.
     await awaitSavedThemesWrite(write.watermark);
     selectTheme("theme", write.theme.id);
-    setInput("");
+    clearInput();
   };
 
   return (
     <Stack gap="md">
       <Stack direction="row" gap="sm">
-        <input
+        <Input
+          bare
+          keep={inputKept}
           type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") void handleImport();
           }}
           placeholder="Theme ID or tweakcn URL..."
-          // A raw <input> must itself be the flex cell, so it takes the class
+          // The field must itself be the flex cell, so it takes the class
           // string rather than a <Fill> wrapper.
           className={cn(
             fillClasses("x"),

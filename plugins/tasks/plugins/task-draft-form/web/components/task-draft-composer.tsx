@@ -14,6 +14,10 @@ import { TaskDraftFormSlots } from "../slots";
 import { useDraftPage } from "../draft-page";
 import type { TaskChainRelateMode } from "@plugins/tasks/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import type {
+  KeptBinding,
+  KeptText,
+} from "@plugins/primitives/plugins/kept-state/core";
 
 const linkIcon = symbol("link");
 const launchIcon = symbol("arrow-upward");
@@ -21,12 +25,17 @@ const launchIcon = symbol("arrow-upward");
 export interface TaskDraftComposerProps {
   /** Scopes the editor's namespace; unique per mounted composer. */
   cardId: string;
-  text: string;
+  /**
+   * The task's text — always work, so always kept: the host's kept binding,
+   * or a card of its kept chain (`keptText`).
+   */
+  keep: KeptBinding<string> | KeptText;
   /** Contributed launch-option values, keyed by option id. */
   launchOptions: LaunchOptionValues;
   autoFocus: boolean;
   disabled: boolean;
-  onTextChange: (next: string) => void;
+  /** Runs after each edit (the text itself is written through `keep`). */
+  onTextChange?: (next: string) => void;
   onLaunchOptionsChange: (next: LaunchOptionValues) => void;
   onSubmitChord: () => void;
   isHead: boolean;
@@ -66,7 +75,7 @@ export interface TaskDraftComposerProps {
  */
 export function TaskDraftComposer({
   cardId,
-  text,
+  keep,
   launchOptions,
   autoFocus,
   disabled,
@@ -86,6 +95,7 @@ export function TaskDraftComposer({
   // back to the end of the document when the editor was never focused (no live
   // selection). The host may own the handle instead, so its own programmatic
   // inserts go through this exact path.
+  const text = Array.isArray(keep) ? keep[0] : (keep as KeptText).value;
   const localInsertRef = useRef<((snippet: string) => void) | null>(null);
   const insertRef = hostInsertRef ?? localInsertRef;
   const insertText = (snippet: string) => {
@@ -96,7 +106,7 @@ export function TaskDraftComposer({
 
   return (
     <ComposerField
-      value={text}
+      keep={keep}
       onChange={onTextChange}
       onSubmit={onSubmitChord}
       submitMode="cmd-enter"

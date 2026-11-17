@@ -1,7 +1,12 @@
 import { useMemo, useState, type ReactNode } from "react";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import type { FieldIdentity, FieldsRecord } from "@plugins/fields/core";
+import { z } from "zod";
 import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  defineKept,
+  useKept,
+} from "@plugins/primitives/plugins/kept-state/web";
 import {
   ControlPanel,
   usePanelStack,
@@ -20,6 +25,24 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const addIcon = symbol("add");
 const deleteIcon = symbol("delete");
+
+/** The name typed into the New field page, per DataView, until it is created. */
+const newColumnNameDraft = defineKept({
+  owner: "custom-columns.new-name",
+  label: "New field names",
+  tier: "work",
+  cap: "8 KB",
+  schema: z.string(),
+});
+
+/** A column rename typed and not yet committed, per DataView column. */
+const columnRenameDraft = defineKept({
+  owner: "custom-columns.rename",
+  label: "Field renames",
+  tier: "work",
+  cap: "8 KB",
+  schema: z.string(),
+});
 
 /** Default new-column field type — the string-valued baseline that needs no config. */
 const DEFAULT_TYPE = "text";
@@ -205,13 +228,16 @@ function NewColumnForm({
   onCreate: (label: string, type: string) => void;
 }): ReactNode {
   const typeOptions = useCustomColumnTypeOptions();
-  const [name, setName] = useState("");
+  const { storageKey } = useDataViewControls();
+  const nameKept = useKept(newColumnNameDraft, "", { subject: storageKey });
+  const [name, , clearName] = nameKept;
   const [type, setType] = useState<string>(DEFAULT_TYPE);
 
   const submit = () => {
     const label = name.trim();
     if (label === "") return;
     onCreate(label, type);
+    clearName();
   };
 
   return (
@@ -219,10 +245,9 @@ function NewColumnForm({
       <ControlPanel.Section label="Name">
         <Input
           autoFocus
-          value={name}
+          keep={nameKept}
           placeholder="Field name…"
           aria-label="New column name"
-          onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
@@ -261,9 +286,9 @@ function NewColumnForm({
  * The edit page: rename, the type as a read-only statement, the type's own
  * config editor when it contributes one, and a destructive footer row.
  *
- * The name input is UNCONTROLLED, keyed by `def.label` so an external rename
- * resets the draft without a sync effect; an empty commit reverts to the current
- * label.
+ * The name input (`ColumnNameField`) is keyed by `def.label` so an external
+ * rename resets the draft without a sync effect; an empty commit reverts to the
+ * current label.
  */
 function ColumnEditor({
   def,
@@ -283,30 +308,10 @@ function ColumnEditor({
     onChange: (next) => onSetConfig(def.id, next),
   });
 
-  const commit = (el: HTMLInputElement) => {
-    const next = el.value.trim();
-    if (next === "") {
-      el.value = def.label;
-      return;
-    }
-    if (next !== def.label) onRename(def.id, next);
-  };
-
   return (
     <>
       <ControlPanel.Section label="Name">
-        <Input
-          key={def.label}
-          defaultValue={def.label}
-          aria-label={`Rename column ${def.label}`}
-          onBlur={(e) => commit(e.currentTarget)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              e.currentTarget.blur();
-            }
-          }}
-        />
+        <ColumnNameField key={def.label} def={def} onRename={onRename} />
       </ControlPanel.Section>
 
       {/* A statement, not a control: the type is immutable after creation, and
@@ -333,5 +338,46 @@ function ColumnEditor({
         </ControlPanel.Row>
       </ControlPanel.Footer>
     </>
+  );
+}
+
+/**
+ * A column's rename field: a kept draft seeded from the label it mounted with
+ * (the caller keys it by `def.label`, so a rename remounts it on the new one),
+ * committed on blur or Enter and cleared once committed. An empty commit
+ * reverts to the current label.
+ */
+function ColumnNameField({
+  def,
+  onRename,
+}: {
+  def: CustomColumnDef;
+  onRename: (id: string, label: string) => void;
+}): ReactNode {
+  const { storageKey } = useDataViewControls();
+  const nameKept = useKept(columnRenameDraft, def.label, {
+    subject: `${storageKey}:${def.id}`,
+  });
+  const [name, , clearName] = nameKept;
+
+  const commit = () => {
+    const next = name.trim();
+    if (next !== "" && next !== def.label) onRename(def.id, next);
+    // Committed (or reverted): the draft is done; clear shows the label again.
+    clearName();
+  };
+
+  return (
+    <Input
+      keep={nameKept}
+      aria-label={`Rename column ${def.label}`}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          e.currentTarget.blur();
+        }
+      }}
+    />
   );
 }

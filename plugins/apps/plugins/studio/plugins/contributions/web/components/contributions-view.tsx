@@ -3,6 +3,11 @@ import { useMemo, useState } from "react";
 import { FilterChip } from "@plugins/primitives/plugins/filter-chips/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
+import {
+  defineKept,
+  useKept,
+} from "@plugins/primitives/plugins/kept-state/web";
+import { z } from "zod";
 import { DataTable } from "@plugins/primitives/plugins/data-table/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useLive } from "@plugins/network/plugins/live/web";
@@ -71,9 +76,16 @@ export function ContributionsView() {
   return <ContributionsTables plugins={tree.data.plugins} />;
 }
 
+const contributionsFilter = defineKept({
+  owner: "studio.contributions.filter",
+  tier: "view",
+  schema: z.string(),
+});
+
 function ContributionsTables({ plugins }: { plugins: PluginNode[] }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [filter, setFilter] = useState("");
+  const filterBinding = useKept(contributionsFilter, "");
+  const [filter, setFilter] = filterBinding;
   const openPane = useOpenPane();
   // Each facet contributes one declarative table; the host stays facet-blind,
   // slicing `node.facets[facetId]` and projecting to rows generically.
@@ -146,11 +158,7 @@ function ContributionsTables({ plugins }: { plugins: PluginNode[] }) {
 
           {/* eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band */}
           <div className="border-b px-md py-sm">
-            <SearchInput
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              placeholder="Filter…"
-            />
+            <SearchInput keep={filterBinding} placeholder="Filter…" />
           </div>
         </>
       }

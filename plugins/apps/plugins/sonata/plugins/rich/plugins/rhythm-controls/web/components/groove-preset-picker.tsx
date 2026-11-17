@@ -9,6 +9,7 @@ import {
   ControlPanel,
   ControlPanelPopover,
 } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -269,6 +270,9 @@ function NameField({
   return (
     <Stack direction="row" gap="xs" align="center">
       <Input
+        keep={transient(
+          "controlled by GroovePresetPicker: a one-shot naming step inside its popover, a short name",
+        )}
         autoFocus
         value={value}
         placeholder="Preset name"

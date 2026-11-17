@@ -6,7 +6,9 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import {
+  Input,
   Select,
   SelectContent,
   SelectItem,
@@ -122,7 +124,9 @@ export function TokenRow({
           </SelectContent>
         </Select>
       ) : (
-        <input
+        <Input
+          bare
+          keep={transient("a token value committed on blur or Enter")}
           ref={inputRef}
           type="text"
           className="text-caption font-mono bg-transparent border border-transparent rounded-md px-xs py-2xs text-right max-w-[160px] focus:border-border focus:bg-background focus:outline-none"

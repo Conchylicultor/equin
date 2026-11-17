@@ -482,6 +482,7 @@ yes/no guard: `useConfirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `SidebarToggleGlyph`
     - `SidebarToggleIcons`
     - `SurfaceLevel`
+    - `TextKeepProps`
     - `Tooltipped`
     - `TooltipSide`
     - `WithTooltipProps`
@@ -625,7 +626,7 @@ yes/no guard: `useConfirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `ui/tokens/chart` ×5
     - `ui/tokens/font-family` ×4
     - `ui/tokens/scrollbar --scrollbar-color`
-  - Imported by: 475 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 476 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×113
     - `apps` ×110
     - `conversations` ×55
@@ -633,7 +634,7 @@ yes/no guard: `useConfirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `debug` ×25
     - `ui` ×23
     - `tasks` ×20
-    - `fields` ×12
+    - `fields` ×13
     - `apps-core` ×11
     - `plugin-meta` ×10
     - `infra` ×7
@@ -667,6 +668,7 @@ yes/no guard: `useConfirmDialog` (`imperative-dialog/plugins/confirm`); native
   - Exempts itself from:
     - `surface/no-adhoc-surface` — `web/components/ui` (sanctioned)
     - `viewport-overlay/no-adhoc-viewport-overlay` — `web/components/ui` (sanctioned)
+    - `kept-state/no-raw-text-input` — `web/components/ui/textarea.tsx` (sanctioned)
 - Core:
   - Exports (types):
     - `ClassName`

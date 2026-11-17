@@ -1,4 +1,5 @@
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { useState, type ReactNode } from "react";
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
@@ -134,6 +135,9 @@ export function ChipSelectFilterInput(
               appearance="menu"
               autoFocus
               placeholder="Search…"
+              keep={transient(
+                "picker query in a popover that closes on remount; several filter rules share one pane",
+              )}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />

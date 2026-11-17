@@ -85,6 +85,7 @@ function SongTitleInner({
   const title = useEditableField({
     value: song.title,
     label: "Song title",
+    keep: { field: "sonata.song.title", subject: song.id },
     onSave: async (next) => {
       const trimmed = next.trim();
       // An empty title is not a rename — skip the write. The user can still
@@ -99,8 +100,7 @@ function SongTitleInner({
   // input chrome only appears when it is being treated as one.
   return (
     <Input
-      value={title.value}
-      onChange={(e) => title.onChange(e.target.value)}
+      keep={title.keep}
       onFocus={title.onFocus}
       onBlur={title.onBlur}
       placeholder="Untitled"

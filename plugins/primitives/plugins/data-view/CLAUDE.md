@@ -2410,7 +2410,7 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `DataViewSlots.Control` ×4
     - `DataViewSlots.Setting` ×4
     - `IdKinds.Kind` ×2
-  - Uses: 148 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 150 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live` ×24
     - `primitives/css/ui-kit` ×17
     - `primitives/data-view/view-core` ×11
@@ -2433,6 +2433,7 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `primitives/cursor-pagination` ×2
     - `primitives/dom/element-size` ×2
     - `primitives/hover-reveal` ×2
+    - `primitives/kept-state` ×2
     - `primitives/latest-ref` ×2
     - `primitives/loading` ×2
     - `primitives/row-actions` ×2

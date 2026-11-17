@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
@@ -326,6 +327,9 @@ function GroupRenameField({
   return (
     <Input
       ref={input}
+      keep={transient(
+        "one-shot inline rename: the rename mode itself does not survive a remount",
+      )}
       defaultValue={name}
       aria-label="Section name"
       onBlur={(e) => commit(e.target.value)}

@@ -23,6 +23,7 @@ and falls back to `"no-tab-id"` if storage is unavailable.
     - `debug/latency-ledger`
     - `debug/profiling/tab-memory`
     - `network/live/live-state`
+    - `primitives/editable-field`
     - `primitives/scope/app-instance`
     - `reports`
     - `reports/main-thread-stall`

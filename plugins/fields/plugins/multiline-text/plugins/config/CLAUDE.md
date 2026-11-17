@@ -23,8 +23,10 @@ table/filter capabilities from `text` via the identity `extends` chain.
     - `Fields.Renderer` "multiline-text" → `Rendered`
     - `Fields.Sample` "multiline-text"
   - Uses:
+    - `config_v2/fields.ConfigFieldContext`
     - `config_v2/fields.defineFieldShape`
     - `config_v2/fields.Fields`
+    - `primitives/css/ui-kit.Textarea`
     - `primitives/editable-field.useEditableField`
 - Core:
   - Uses:

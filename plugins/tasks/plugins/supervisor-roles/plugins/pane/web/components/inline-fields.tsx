@@ -1,13 +1,21 @@
 import { useRef, useState, type ReactElement } from "react";
-import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
+import {
+  useEditableField,
+  type UseEditableFieldOptions,
+} from "@plugins/primitives/plugins/editable-field/web";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  Textarea,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 // The Supervisors pane edits every setting in place — no dialog, no Save.
 // Both fields autosave through `useEditableField` (debounced, flushed on
-// blur), so a value typed is a value kept.
+// blur), and its `keep` (the caller's: which field of which record) keeps
+// text not saved yet across a reload or a tab switch.
+type FieldKeep = UseEditableFieldOptions<string>["keep"];
 
 /**
  * A plain-text value edited in place: a field that reads as text at rest and
@@ -19,6 +27,7 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 export function InlineTextField({
   value,
   onSave,
+  keep,
   label,
   placeholder,
   disabled,
@@ -28,6 +37,7 @@ export function InlineTextField({
 }: {
   value: string;
   onSave: (next: string) => void | Promise<void>;
+  keep: FieldKeep;
   label: string;
   placeholder: string;
   disabled?: boolean;
@@ -35,21 +45,22 @@ export function InlineTextField({
   autoFocus?: boolean;
   multiline?: boolean;
 }): ReactElement {
-  const field = useEditableField({ value, onSave, label });
+  const field = useEditableField({ value, onSave, label, keep });
   // A textarea sized by its content (`field-sizing: content`), so a long
   // value wraps instead of scrolling out of sight.
   return (
-    <textarea
+    <Textarea
+      bare
+      keep={field.keep}
       aria-label={label}
       rows={1}
-      value={field.value}
       disabled={disabled}
       autoFocus={autoFocus}
-      onChange={(e) =>
-        field.onChange(
-          multiline ? e.target.value : e.target.value.replace(/\n/g, " "),
-        )
-      }
+      onChange={(e) => {
+        // One line: a pasted line break becomes a space.
+        if (!multiline && e.target.value.includes("\n"))
+          field.onChange(e.target.value.replace(/\n/g, " "));
+      }}
       onFocus={field.onFocus}
       onBlur={field.onBlur}
       onKeyDown={(e) => {
@@ -75,6 +86,7 @@ export function InlineTextField({
 export function InlineMarkdownField({
   value,
   onSave,
+  keep,
   label,
   placeholder,
   namespace,
@@ -82,6 +94,7 @@ export function InlineMarkdownField({
 }: {
   value: string;
   onSave: (next: string) => void | Promise<void>;
+  keep: FieldKeep;
   label: string;
   placeholder: string;
   /** The editor's Lexical namespace (one per kind of field). */
@@ -89,7 +102,7 @@ export function InlineMarkdownField({
   /** Open in the editor (a role just created, its prompt still to write). */
   startEditing?: boolean;
 }): ReactElement {
-  const field = useEditableField({ value, onSave, label });
+  const field = useEditableField({ value, onSave, label, keep });
   const [editing, setEditing] = useState(startEditing ?? false);
   // Focus can leave the editor's DOM for a popup it portals (and come back in
   // the same task): only a leave that stays gone ends the edit.
@@ -114,8 +127,7 @@ export function InlineMarkdownField({
         }}
       >
         <TextEditor
-          value={field.value}
-          onChange={field.onChange}
+          keep={field.keep}
           placeholder={placeholder}
           autoFocus
           minRows={4}

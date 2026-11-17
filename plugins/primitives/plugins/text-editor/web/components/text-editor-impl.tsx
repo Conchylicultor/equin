@@ -30,10 +30,35 @@ import {
 } from "../internal/markdown";
 import { useInsertMarkdown } from "../internal/use-insert-markdown";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
+import {
+  resolveTextKeep,
+  type KeptBinding,
+  type KeptText,
+  type Transient,
+} from "@plugins/primitives/plugins/kept-state/core";
 
-export interface TextEditorProps {
-  value: string;
-  onChange: (markdown: string) => void;
+/**
+ * The editor's required `keep` (kept-state's `TextKeep`): whether what is
+ * typed survives a reload and a tab switch.
+ * - kept (a `useKept` / `useDraft` binding, or a field that keeps its own
+ *   text): the binding is the value; an `onChange` still runs, after it.
+ * - `transient("<why>")`: the editor takes its caller's `value` / `onChange`.
+ */
+export type TextEditorText =
+  | {
+      keep: KeptBinding<string> | KeptText;
+      value?: never;
+      onChange?: (markdown: string) => void;
+    }
+  | {
+      keep: Transient;
+      value: string;
+      onChange: (markdown: string) => void;
+    };
+
+export type TextEditorProps = TextEditorText & TextEditorOptions;
+
+export interface TextEditorOptions {
   onSubmit?: () => void;
   submitMode?: "enter" | "cmd-enter" | "none";
   placeholder?: string;
@@ -51,9 +76,12 @@ export interface TextEditorProps {
   bottomSlot?: React.ReactNode;
 }
 
+const noChange = (): void => {};
+
 export function TextEditor({
-  value,
-  onChange,
+  keep,
+  value: callerValue,
+  onChange: callerChange,
   onSubmit,
   submitMode = "cmd-enter",
   placeholder,
@@ -68,6 +96,15 @@ export function TextEditor({
   initialSelection,
   bottomSlot,
 }: TextEditorProps) {
+  const kept = resolveTextKeep(keep);
+  const value = kept === null ? (callerValue ?? "") : kept.value;
+  const onChange =
+    kept === null
+      ? (callerChange ?? noChange)
+      : (markdown: string) => {
+          kept.set(markdown);
+          callerChange?.(markdown);
+        };
   // Read at render, never memoized: the registry folds in lazy sources whose
   // families register as the plugin tiers load (see `getNodeExtensions`).
   const extensions = getNodeExtensions();

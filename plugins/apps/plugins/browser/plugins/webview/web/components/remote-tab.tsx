@@ -32,7 +32,11 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  Textarea,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useReconnectingWebSocket } from "@plugins/primitives/plugins/networking/web";
@@ -498,7 +502,11 @@ function AttachedTab({
         onMouseMove={onMouseMove}
         onContextMenu={(e) => e.preventDefault()}
       />
-      <textarea
+      <Textarea
+        bare
+        keep={transient(
+          "keyboard proxy: every keystroke is sent to the remote page at once",
+        )}
         ref={inputRef}
         aria-label="Page keyboard input"
         className="sr-only"

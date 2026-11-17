@@ -1,4 +1,5 @@
 import { useRef, useState, type ReactNode } from "react";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { CellEditorProps } from "@plugins/primitives/plugins/data-view/web";
 
@@ -27,6 +28,7 @@ export function NumberEditor(props: CellEditorProps): ReactNode {
       type="number"
       autoFocus
       className="tabular-nums"
+      keep={transient("a one-shot cell editor committed on blur / Enter")}
       value={local}
       onChange={(e) => setLocal(e.target.value)}
       onBlur={commit}

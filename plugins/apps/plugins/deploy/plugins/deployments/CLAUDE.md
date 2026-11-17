@@ -448,7 +448,7 @@ default, a left rail revealing each (`useRevealSection`).
     - `DeploymentDetail.Section` "Danger zone" → `DangerZone`
     - `DeploymentItemActions` "deploy" → `DeployAction`
     - `DeploymentItemActions` "delete" → `DeleteDeploymentAction`
-  - Uses: 82 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 84 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×14
     - `primitives/data-view` ×7
     - `network/live/live-state` ×6
@@ -460,6 +460,7 @@ default, a left rail revealing each (`useRevealSection`).
     - `primitives/app-shell` ×2
     - `primitives/css/badge` ×2
     - `primitives/css/spacing` ×2
+    - `primitives/kept-state` ×2
     - `primitives/link-gesture` ×2
     - `apps/deploy/health.useServerHealth`
     - `apps/deploy/shell.Deploy`

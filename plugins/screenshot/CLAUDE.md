@@ -11,12 +11,13 @@
   - Contributes:
     - `Pane.Register` "screenshot"
     - `ActionBar.Item` → `ScreenshotButton`
-  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/endpoints` ×3
     - `network/live/live-state` ×3
     - `primitives/pane` ×3
     - `screenshot/draw-canvas` ×3
     - `primitives/css/ui-kit` ×2
+    - `primitives/kept-state` ×2
     - `primitives/launch` ×2
     - `shell/notifications` ×2
     - `network/live.useLive`

@@ -19,6 +19,7 @@
     - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.Textarea`
     - `primitives/editable-field.useEditableField`
     - `primitives/icon-button.IconButton`
 - Server:

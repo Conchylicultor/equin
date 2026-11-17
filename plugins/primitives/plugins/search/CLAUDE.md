@@ -36,6 +36,7 @@ emoji search) is drawn through `render={<Lib.Search />}`, keeping this chrome.
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/ui-kit.DensityControlled`
     - `primitives/css/ui-kit.Input`
+    - `primitives/css/ui-kit.TextKeepProps`
     - `primitives/overlay/tooltip.Kbd`
     - `ui/icons.Icon`
   - Exports (types):

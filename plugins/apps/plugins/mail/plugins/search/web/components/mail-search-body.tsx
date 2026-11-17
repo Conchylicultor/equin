@@ -50,10 +50,21 @@ import {
   type MailSearchQuery,
   type MailSearchRefusal,
 } from "@plugins/apps/plugins/mail/plugins/sync/core";
+import {
+  defineKept,
+  useKept,
+} from "@plugins/primitives/plugins/kept-state/web";
+import { z } from "zod";
 import { mailMessagePane, mailSearchPane } from "../panes";
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
 const MAIL_SEARCH_VIEW = defineDataView("mail-search");
+
+const mailSearchQuery = defineKept({
+  owner: "mail.search.query",
+  tier: "view",
+  schema: z.string(),
+});
 
 /**
  * The search surface: a query input over Gmail's ranked answer. The answer is
@@ -69,8 +80,9 @@ const MAIL_SEARCH_VIEW = defineDataView("mail-search");
  * the search. (Follow-up: promote a `useDebounced` hook to primitives.)
  */
 export function MailSearchBody(): ReactElement {
-  const [query, setQuery] = useState("");
-  const [debounced, setDebounced] = useState("");
+  const queryKept = useKept(mailSearchQuery, "");
+  const [query] = queryKept;
+  const [debounced, setDebounced] = useState(query);
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(query), 250);
@@ -94,8 +106,7 @@ export function MailSearchBody(): ReactElement {
         header={
           <Inset pad="sm">
             <SearchInput
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              keep={queryKept}
               placeholder="Search all mail"
               maxLength={MAIL_SEARCH_MAX_CHARS}
               autoFocus

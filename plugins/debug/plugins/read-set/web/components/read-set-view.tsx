@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactElement } from "react";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -268,6 +269,7 @@ function CapturedIndexSection({
         <span className="opacity-60">{entries.length} tables</span>
       </SectionLabel>
       <SearchInput
+        keep={transient("debug tool: a throwaway filter")}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Filter by table or resource…"

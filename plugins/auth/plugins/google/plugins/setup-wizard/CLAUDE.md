@@ -6,11 +6,12 @@
 
 - Description: Guided setup steps for Google OAuth credentials (project → Drive API → consent screen → OAuth client → paste → connect), rendered inline in the Google Accounts pane.
 - Web:
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/setup-steps` ×6
     - `auth` ×3
     - `network/live/live-state` ×2
     - `primitives/css/ui-kit` ×2
+    - `primitives/kept-state` ×2
     - `config_v2.useConfigRegistrations`
     - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`

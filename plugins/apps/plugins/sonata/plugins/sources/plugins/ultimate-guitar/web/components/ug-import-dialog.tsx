@@ -16,6 +16,11 @@ import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
+import {
+  defineKept,
+  useKept,
+} from "@plugins/primitives/plugins/kept-state/web";
+import { z } from "zod";
 import { revealElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useLive, useLiveReader } from "@plugins/network/plugins/live/web";
@@ -67,6 +72,12 @@ function looksLikeUgUrl(query: string): boolean {
 
 type TypeFilter = "chords" | "all";
 
+const ugImportQuery = defineKept({
+  owner: "sonata.ug-import.query",
+  tier: "view",
+  schema: z.string(),
+});
+
 /** No rows to move through (the list is not drawn). */
 const NO_ROWS: readonly UgSearchResult[] = [];
 
@@ -104,7 +115,8 @@ const TYPE_OPTIONS = [
 export function UgImportDialog({ onClose }: { onClose: () => void }) {
   const fetchEndpoint = useFetchEndpoint();
   const readLive = useLiveReader();
-  const [query, setQuery] = useState("");
+  const queryKept = useKept(ugImportQuery, "");
+  const [query] = queryKept;
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("chords");
   const [error, setError] = useState<string | null>(null);
 
@@ -262,11 +274,10 @@ export function UgImportDialog({ onClose }: { onClose: () => void }) {
 
       <SearchInput
         autoFocus
-        value={query}
-        onChange={(e) => {
+        keep={queryKept}
+        onChange={() => {
           // A new question: back to the top row, and a failed import's
           // message no longer belongs to what is on screen.
-          setQuery(e.target.value);
           setActiveIdx(0);
           setError(null);
         }}

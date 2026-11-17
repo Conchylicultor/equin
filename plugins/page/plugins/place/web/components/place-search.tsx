@@ -1,4 +1,5 @@
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { useId, useRef, useState, type KeyboardEvent } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
@@ -125,6 +126,9 @@ export function PlaceSearch({ provider, session, onPick }: PlaceSearchProps) {
             ref={inputRef}
             value={query}
             placeholder={`Search ${provider.label}…`}
+            keep={transient(
+              "a metered lookup's query, discarded on pick: restoring it would re-run a billed search, and the view tier has no per-block subject",
+            )}
             aria-label="Search for a place"
             aria-controls={listId}
             aria-activedescendant={

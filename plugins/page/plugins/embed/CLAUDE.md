@@ -21,6 +21,8 @@
     - `primitives/embed/frame.ForeignFrame`
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/hover-reveal.hoverRevealTarget`
+    - `primitives/kept-state.defineKept`
+    - `primitives/kept-state.useKept`
     - `primitives/link-gesture/new-tab.NewTabLink`
     - `primitives/undo-redo.localUndoProps`
     - `ui/icons.Icon`

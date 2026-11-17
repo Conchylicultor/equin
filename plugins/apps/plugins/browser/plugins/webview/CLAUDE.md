@@ -9,8 +9,8 @@
   - Contributes:
     - `Browser.Viewport` "Viewport" → `Viewport`
     - `Browser.Actions` "Chrome actions" → `OpenExternal`
-  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/ui-kit` ×9
+  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×10
     - `apps/browser/shell` ×6
     - `primitives/css/overlay` ×2
     - `primitives/css/spacing` ×2

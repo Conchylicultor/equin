@@ -8,10 +8,21 @@ import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
+  defineKept,
+  useKept,
+} from "@plugins/primitives/plugins/kept-state/web";
+import { z } from "zod";
+import {
   WALLPAPER_QUERY_MAX,
   wallpaperSearch,
   type WallpaperCandidate,
 } from "../../core";
+
+const wallpaperQuery = defineKept({
+  owner: "desktop.wallpaper.search-query",
+  tier: "view",
+  schema: z.string(),
+});
 
 /**
  * Shared search panel for any server-side wallpaper provider (Openverse, …).
@@ -27,8 +38,9 @@ export function WallpaperSearchPanel({
   providerId: string;
   onPick: (candidate: WallpaperCandidate) => void;
 }) {
-  const [text, setText] = useState("");
-  const [debounced, setDebounced] = useState("");
+  const query = useKept(wallpaperQuery, "");
+  const [text] = query;
+  const [debounced, setDebounced] = useState(() => text.trim());
 
   // Debounce the query so a keystroke burst asks one question. A timer reset on
   // every change settles to the latest value after the user pauses.
@@ -46,8 +58,7 @@ export function WallpaperSearchPanel({
   return (
     <Stack gap="sm">
       <SearchInput
-        value={text}
-        onChange={(e) => setText(e.target.value)}
+        keep={query}
         placeholder="Search images…"
         maxLength={WALLPAPER_QUERY_MAX}
         autoFocus

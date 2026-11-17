@@ -24,6 +24,7 @@ import {
   useDraft,
 } from "@plugins/primitives/plugins/kept-state/web";
 import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import { keptField } from "@plugins/primitives/plugins/kept-state/core";
 import { z } from "zod";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -151,10 +152,11 @@ const TITLE_CHARS = 80;
  * place of the home. The unsent draft survives a reload.
  */
 function HomePrompt() {
-  const [draft, setDraft, , draftKept] = useDraft(homeDraftStore, {
+  const draftBinding = useDraft(homeDraftStore, {
     text: "",
     picked: {},
   });
+  const [draft, setDraft, , draftKept] = draftBinding;
   const { resolveOptions, launch, availability } = useTaskLaunch({
     openAfterLaunch: true,
     openMode: "root",
@@ -199,8 +201,8 @@ function HomePrompt() {
   return (
     <>
       <ComposerField
-        value={draft.text}
-        onChange={(text) => setDraft((d) => ({ ...d, text }))}
+        // The text is the kept draft's `text` (useDraft above).
+        keep={keptField(draftBinding, "text")}
         onSubmit={() => void send()}
         submitMode="enter"
         placeholder="What should an agent do?"

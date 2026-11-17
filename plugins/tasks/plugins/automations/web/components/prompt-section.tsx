@@ -11,7 +11,10 @@ import {
   ControlPanelPane,
 } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  Textarea,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
@@ -88,6 +91,10 @@ export function PromptTemplateBlock({
   const draft = useEditableField({
     value,
     label,
+    keep: {
+      field: "automations.prompt-template",
+      subject: `${configName}/${field}`,
+    },
     onSave: (next) => {
       if (unknownTemplateVariables(next, variables).length > 0) return;
       onSave(next);
@@ -112,14 +119,14 @@ export function PromptTemplateBlock({
       }
     >
       <Stack gap="sm">
-        <textarea
-          value={draft.value}
+        <Textarea
+          bare
+          keep={draft.keep}
           rows={16}
           spellCheck={false}
           aria-label={`${label} template`}
           onFocus={draft.onFocus}
           onBlur={draft.onBlur}
-          onChange={(e) => draft.onChange(e.target.value)}
           className="focus-border w-full resize-y rounded-lg border border-input bg-transparent px-sm py-xs font-mono text-caption dark:bg-input/30"
         />
         {unknown.length > 0 ? (

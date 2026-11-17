@@ -185,7 +185,8 @@ export function AskEmptyCard({
   card: () => Element;
 }) {
   const [suggestions] = useState(() => pickSuggestions(Math.random));
-  const [draft, setDraft, , draftKept] = useDraft(askQuestionDraft, "");
+  const question = useDraft(askQuestionDraft, "");
+  const [draft, , , draftKept] = question;
   const [pending, setPending] = useState(false);
   const { ask, blocked } = useAskQuestion();
   const busy = useRef(false);
@@ -250,8 +251,7 @@ export function AskEmptyCard({
         >
           <Fill>
             <TextEditor
-              value={draft}
-              onChange={setDraft}
+              keep={question}
               onSubmit={() => void send(draft, true)}
               submitMode="enter"
               placeholder={blocked ?? "How do I…?"}

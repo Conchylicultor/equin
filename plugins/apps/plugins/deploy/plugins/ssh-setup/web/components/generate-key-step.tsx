@@ -10,7 +10,11 @@ import {
   CollapsibleContent,
   CollapsibleChevron,
 } from "@plugins/primitives/plugins/collapsible/web";
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  Textarea,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useOpenDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
@@ -143,7 +147,9 @@ export function GenerateKeyStep({ server }: { server: Server }) {
               {key &&
                 " This destroys the key currently stored for this server."}
             </StepNote>
-            <textarea
+            <Textarea
+              bare
+              keep={transient("secret: never written to browser storage")}
               className={textareaClass}
               rows={5}
               placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"

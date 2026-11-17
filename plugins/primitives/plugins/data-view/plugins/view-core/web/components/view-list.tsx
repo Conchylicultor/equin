@@ -6,6 +6,7 @@ import {
   DropdownMenuTrigger,
   Input,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -230,6 +231,9 @@ function RenameField(props: {
   return (
     <Input
       autoFocus
+      keep={transient(
+        "one-shot inline rename: the rename mode itself does not survive a remount",
+      )}
       defaultValue={props.name}
       aria-label="View name"
       onBlur={(e) => {

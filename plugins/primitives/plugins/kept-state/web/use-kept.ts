@@ -5,7 +5,8 @@ import {
 } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { viewPoolStore, type KeptView, type KeptWork } from "./define-kept";
 import { useKeepScope, viewEntryId } from "./keep-scope";
-import { useKeptEntry, type KeptBinding } from "./use-draft";
+import type { KeptBinding } from "../core";
+import { useKeptEntry } from "./use-draft";
 
 const asStored = <T>(stored: unknown): T => stored as T;
 

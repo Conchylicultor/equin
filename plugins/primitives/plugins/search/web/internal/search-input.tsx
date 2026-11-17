@@ -4,7 +4,9 @@ import {
   ControlSizeProvider,
   Input,
   type DensityControlled,
+  type TextKeepProps,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { resolveTextKeep } from "@plugins/primitives/plugins/kept-state/core";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -51,11 +53,18 @@ const MENU_INPUT = "h-(--panel-row-h) rounded-panel-row text-label font-normal";
 // `sm` control size itself (as `Bar` does), so its height still follows the
 // density preset's `control-sm` token while staying quieter than the content it
 // filters. `bare` fills its host cell instead.
+//
+// `keep` is required, as on ui-kit `Input`: is the query kept across a reload
+// and a tab switch (a `useKept` view binding) or throwaway
+// (`transient("<why>")`, the field then takes `value` / `onChange`)?
 export type SearchInputProps = Omit<
   React.InputHTMLAttributes<HTMLInputElement>,
-  "size"
+  "size" | "value" | "defaultValue"
 > &
-  DensityControlled & {
+  DensityControlled &
+  TextKeepProps & {
+    value?: string;
+    defaultValue?: string;
     wrapperClassName?: ClassName;
     appearance?: SearchInputAppearance;
     /** The `<input>` element — lets a host focus the field (e.g. on `/`). */
@@ -79,9 +88,12 @@ export function SearchInput({
   keyHint,
   ...props
 }: SearchInputProps) {
-  const hasValue = typeof props.value === "string" && props.value.length > 0;
+  const kept = resolveTextKeep(props.keep);
+  const shown = kept === null ? props.value : kept.value;
+  const hasValue = typeof shown === "string" && shown.length > 0;
 
   const handleClear = () => {
+    kept?.set("");
     props.onChange?.({
       target: { value: "" },
     } as React.ChangeEvent<HTMLInputElement>);

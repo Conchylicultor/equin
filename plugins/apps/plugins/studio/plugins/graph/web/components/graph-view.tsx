@@ -13,6 +13,12 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
+import {
+  defineKept,
+  useKept,
+} from "@plugins/primitives/plugins/kept-state/web";
+import type { KeptBinding } from "@plugins/primitives/plugins/kept-state/core";
+import { z } from "zod";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -40,6 +46,12 @@ const DIRECTION_OPTIONS: { id: Direction; label: string }[] = [
   { id: "dependents", label: "Dependents" },
 ];
 
+const focusQuery = defineKept({
+  owner: "studio.graph.focus-query",
+  tier: "view",
+  schema: z.string(),
+});
+
 export function GraphView({ paneFocusId }: { paneFocusId?: PluginId }) {
   const { data } = useCompositionData();
   const graph = useGraph();
@@ -63,7 +75,8 @@ export function GraphView({ paneFocusId }: { paneFocusId?: PluginId }) {
   const [focusId, setFocusId] = useState<PluginId | null>(seed);
   const [depth, setDepth] = useState(DEFAULT_DEPTH);
   const [direction, setDirection] = useState<Direction>("both");
-  const [query, setQuery] = useState("");
+  const queryBinding = useKept(focusQuery, "");
+  const [query, setQuery] = queryBinding;
 
   const { nodes, edges, hiddenCount } = useMemo(() => {
     if (!graph || !focusId) return { nodes: [], edges: [], hiddenCount: 0 };
@@ -98,8 +111,7 @@ export function GraphView({ paneFocusId }: { paneFocusId?: PluginId }) {
     return (
       <FocusPicker
         allIds={allIds}
-        query={query}
-        onQuery={setQuery}
+        queryBinding={queryBinding}
         onPick={(id) => {
           setFocusId(id);
           setQuery("");
@@ -119,8 +131,7 @@ export function GraphView({ paneFocusId }: { paneFocusId?: PluginId }) {
             <div className="relative w-56">
               <SearchInput
                 placeholder="Focus on a plugin…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                keep={queryBinding}
               />
               {query && (
                 // The wrapper's top padding is the gap below the input — the
@@ -211,15 +222,14 @@ function Legend() {
 
 function FocusPicker({
   allIds,
-  query,
-  onQuery,
+  queryBinding,
   onPick,
 }: {
   allIds: PluginId[];
-  query: string;
-  onQuery: (q: string) => void;
+  queryBinding: KeptBinding<string>;
   onPick: (id: PluginId) => void;
 }) {
+  const [query] = queryBinding;
   return (
     <Inset pad="md">
       <Stack gap="md">
@@ -229,8 +239,7 @@ function FocusPicker({
         </Text>
         <SearchInput
           placeholder="Search plugins…"
-          value={query}
-          onChange={(e) => onQuery(e.target.value)}
+          keep={queryBinding}
           autoFocus
         />
         <FocusResults allIds={allIds} query={query} onPick={onPick} />

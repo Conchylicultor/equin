@@ -7,13 +7,14 @@
 - Description: Browser start page: the empty-state landing shown in the viewport when no URL is loaded — a centered hero (time-of-day greeting + pill search), a grid of pins (curated quick links, then the live bookmarks), and the recently visited pages.
 - Web:
   - Contributes: `Browser.StartPage` "Start page" → `StartPage`
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/browser/shell` ×3
+    - `primitives/css/ui-kit` ×3
     - `apps/browser/bookmarks` ×2
     - `apps/browser/omnibox` ×2
     - `network/live/live-state` ×2
     - `primitives/css/spacing` ×2
-    - `primitives/css/ui-kit` ×2
+    - `primitives/kept-state` ×2
     - `apps/browser/history.browserRecents`
     - `network/live.useLive`
     - `primitives/css/center.Center`

@@ -21,6 +21,7 @@ import {
   Stack,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import {
   ControlPanel,
   ControlPanelPopover,
@@ -95,6 +96,7 @@ export default function MenuSheetExhibit() {
           >
             <ControlPanel.Section>
               <SearchInput
+                keep={transient("exhibit fixture")}
                 value=""
                 onChange={() => {}}
                 placeholder="Search…"

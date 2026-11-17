@@ -19,6 +19,7 @@ import {
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { WithTooltip } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import {
   type HostViewSettings,
   ViewSettingsPopover,
@@ -271,6 +272,9 @@ function SectionRootPanel(props: {
         }
         search={
           <SearchInput
+            keep={transient(
+              "controlled by DataView: its view state keeps the query (useViewEphemeral, sessionStorage)",
+            )}
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
             placeholder={searchPlaceholder}

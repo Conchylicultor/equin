@@ -1,6 +1,7 @@
 import { useCallback, useState, type ReactNode } from "react";
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { isFoldLimit, type FilterGroup, type FoldLimit } from "../../../core";
 import { foldRuleOf } from "../../internal/fold-sections";
 import { useFilterController } from "../../internal/use-filter-controller";
@@ -153,6 +154,7 @@ function FoldLimitInput({
   return (
     <Input
       type="number"
+      keep={transient("numeric limit committed on blur / Enter")}
       min={1}
       step={1}
       className="w-16 tabular-nums"

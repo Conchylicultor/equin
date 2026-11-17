@@ -1,7 +1,10 @@
 import { useCallback, useLayoutEffect, useState } from "react";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  Textarea,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useConversationNote } from "../internal/use-conversation-note";
@@ -34,12 +37,12 @@ export function NotesArea({
     [conversationId, fetchEndpoint],
   );
 
-  const { value, onChange, onFocus, onBlur, isSaving } =
-    useEditableField<string>({
-      value: serverNote,
-      onSave: handleSave,
-      debounceMs: 1000,
-    });
+  const { keep, value, onFocus, onBlur, isSaving } = useEditableField<string>({
+    value: serverNote,
+    onSave: handleSave,
+    debounceMs: 1000,
+    keep: { field: "conversation-notes.note", subject: conversationId },
+  });
 
   // Before paint, so the toggle's dot never lags the text by a frame.
   useLayoutEffect(() => {
@@ -64,13 +67,13 @@ export function NotesArea({
 
   return (
     <div className={cn("relative", !isVisible && "sr-only")}>
-      <textarea
-        value={value}
+      <Textarea
+        bare
+        keep={keep}
         onChange={(e) => {
-          const next = e.target.value;
           // Deleting the last of the text closes the note.
-          if (hasText && next.trim() === "") setOpen(conversationId, false);
-          onChange(next);
+          if (hasText && e.target.value.trim() === "")
+            setOpen(conversationId, false);
         }}
         onFocus={() => {
           setIsFocused(true);

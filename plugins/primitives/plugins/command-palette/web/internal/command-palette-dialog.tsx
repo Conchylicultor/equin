@@ -12,6 +12,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import type { CommandPaletteItem } from "../slots";
 import { fuzzyMatch, type FuzzyMatch } from "./fuzzy";
@@ -172,6 +173,9 @@ function CommandPaletteBody({
         <SearchInput
           appearance="menu"
           autoFocus
+          keep={transient(
+            "palette query: starts empty on every open by design",
+          )}
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);

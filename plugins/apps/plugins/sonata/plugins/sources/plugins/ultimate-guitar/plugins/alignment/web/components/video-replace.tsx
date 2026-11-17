@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { youtubeThumbnailUrl } from "@plugins/integrations/plugins/youtube/core";
 import {
   Button,
@@ -22,6 +21,11 @@ import {
 } from "@plugins/primitives/plugins/hover-reveal/web";
 import { NewTabButton } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import {
+  defineKept,
+  useKept,
+} from "@plugins/primitives/plugins/kept-state/web";
+import { z } from "zod";
 import {
   resolveUgAlignment,
   setUgAlignmentVideo,
@@ -107,6 +111,14 @@ function CandidateRow({
   );
 }
 
+const videoLinkDraft = defineKept({
+  owner: "sonata.ug-alignment.video-link",
+  label: "Song video link drafts",
+  tier: "work",
+  cap: "8 KB",
+  schema: z.string(),
+});
+
 /**
  * Replace the song's video, inline under its line: a YouTube link (prefilled
  * with the current video's) and Use, then the resolver's candidates to pick
@@ -125,7 +137,12 @@ export function VideoReplace({
   candidates: readonly AlignmentCandidate[];
   onDone: () => void;
 }) {
-  const [url, setUrl] = useState(videoId === null ? "" : watchUrl(videoId));
+  const urlKept = useKept(
+    videoLinkDraft,
+    videoId === null ? "" : watchUrl(videoId),
+    { subject: songId },
+  );
+  const [url, , clearUrl] = urlKept;
   const { error, run } = useInlineAction();
   // Errors are shown inline under the field (a bad link is a 400), so the
   // global toast is suppressed.
@@ -157,7 +174,10 @@ export function VideoReplace({
     const ok = await run(() =>
       setVideo.mutateAsync({ params: { id: songId }, body: { url: link } }),
     );
-    if (ok) onDone();
+    if (ok) {
+      clearUrl();
+      onDone();
+    }
   };
   const searchAgain = async () => {
     const ok = await run(() => resolve.mutateAsync({ params: { id: songId } }));
@@ -170,9 +190,8 @@ export function VideoReplace({
       <Stack direction="row" align="center" gap="xs">
         <Fill>
           <Input
+            keep={urlKept}
             type="url"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && canUse) {
                 e.preventDefault();

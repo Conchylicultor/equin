@@ -31,6 +31,7 @@ pads the whole box (`padComposer`) can drop the row's own inset.
     - `primitives/css/yield.yieldClass`
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/text-editor.TextEditor`
+    - `primitives/text-editor.TextEditorText`
     - `primitives/text-editor.useInsertMarkdown`
     - `primitives/text-editor.useReadMarkdown`
     - `primitives/text-editor.useTakeMarkdownWith`

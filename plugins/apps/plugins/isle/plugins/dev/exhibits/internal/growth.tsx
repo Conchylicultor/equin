@@ -9,6 +9,7 @@ import {
   Input,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { kitBuilding } from "@plugins/apps/plugins/isle/plugins/buildings/core";
 import {
@@ -173,6 +174,7 @@ export default function IsleGrowth() {
         <Stack direction="row" gap="xs" align="center">
           Apps
           <Input
+            keep={transient("dev exhibit control")}
             aria-label="Apps"
             type="number"
             min={MIN_APPS}
@@ -217,6 +219,7 @@ export default function IsleGrowth() {
         <Stack direction="row" gap="xs" align="center">
           Seed
           <Input
+            keep={transient("dev exhibit control")}
             aria-label="Seed"
             type="number"
             className="w-20"

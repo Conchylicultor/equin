@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import {
   Button,
   Input,
@@ -63,6 +64,9 @@ function OtherDevice({
               autoFocus
               autoComplete="off"
               placeholder="Paste the code from the page"
+              keep={transient(
+                "a one-time sign-in code: it expires with its run",
+              )}
               value={code}
               onChange={(e) => setCode(e.target.value)}
               className="font-mono"

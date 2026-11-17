@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import {
   SectionLabel,
   Text,
@@ -111,6 +112,9 @@ export function DepSection({
             appearance="menu"
             autoFocus
             placeholder="Search conversations…"
+            keep={transient(
+              "picker filter: the add picker it filters closes on a remount",
+            )}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />

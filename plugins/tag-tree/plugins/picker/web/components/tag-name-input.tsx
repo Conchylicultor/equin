@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 /**
@@ -32,6 +33,7 @@ export function TagNameInput({
   return (
     <Input
       ref={ref}
+      keep={transient("a name typed in place: committed on Enter or blur")}
       defaultValue={initial}
       placeholder={placeholder}
       aria-label={placeholder}

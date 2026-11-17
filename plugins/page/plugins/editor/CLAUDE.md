@@ -2755,6 +2755,8 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `page-editor/no-unfiltered-blocks-read` — `server/internal/page-clipboard.ts` (sanctioned)
     - `page-editor/no-adhoc-structural-write` — `web/block-store.ts`, `web/composite-block-store.tsx` (sanctioned)
     - `page-editor/no-unhistoried-block-field` — `web/components/block-text-area.tsx` (sanctioned)
+    - `kept-state/no-raw-text-input` — `web/components/block-text-area.tsx` (sanctioned)
+    - `kept-state/no-raw-text-input` — `web/__tests__` (sanctioned)
     - `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)
     - `ids:pk-declared` — `server/internal/tables-events.ts` (debt)

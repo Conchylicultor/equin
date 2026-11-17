@@ -12,7 +12,7 @@ import { flushKept, readDraft } from "../draft-storage";
 import { forgetKeepScope, KeepScope } from "../keep-scope";
 import { submitKept } from "../submit-kept";
 import { useKept } from "../use-kept";
-import type { KeptBinding } from "../use-draft";
+import type { KeptBinding } from "../../core";
 
 let local: QuotaStorage;
 let session: QuotaStorage;

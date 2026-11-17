@@ -1,4 +1,5 @@
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { cn, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
@@ -125,7 +126,9 @@ function NumberField({
       >
         {channel.key}
       </Center>
-      <input
+      <Input
+        bare
+        keep={transient("committed on every change: the colour is the state")}
         type="text"
         inputMode="decimal"
         spellCheck={false}
@@ -193,7 +196,9 @@ function HexField({
       <Center as="span" aria-hidden="true" className={KEY}>
         {channel.key}
       </Center>
-      <input
+      <Input
+        bare
+        keep={transient("committed on every change: the colour is the state")}
         type="text"
         spellCheck={false}
         aria-label={channel.label}

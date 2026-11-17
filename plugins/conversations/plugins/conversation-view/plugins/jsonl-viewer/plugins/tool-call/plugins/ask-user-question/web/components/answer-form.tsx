@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useDraft } from "@plugins/primitives/plugins/kept-state/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -128,11 +129,10 @@ export function AnswerForm({
     () => emptyAnswers(questions),
     { scope: draftScope },
   );
-  const [reply, setReply, clearReply] = useDraft<string>(
-    responseDraftStore,
-    "",
-    { scope: draftScope },
-  );
+  const replyBinding = useDraft<string>(responseDraftStore, "", {
+    scope: draftScope,
+  });
+  const [reply, , clearReply] = replyBinding;
   // A restored reply draft opens the field on its own.
   const [replyOpen, setReplyOpen] = useState(false);
   const showReply = replyOpen || reply.length > 0;
@@ -244,6 +244,9 @@ export function AnswerForm({
               <OptionRow selected={otherActive} multi={q.multiSelect}>
                 <div onFocus={() => focusOther(qi, q.multiSelect)}>
                   <TextEditor
+                    keep={transient(
+                      "kept by the answers draft above (useDraft), with the picks it belongs to",
+                    )}
                     value={answer.otherText}
                     onChange={(value) => setOtherText(qi, value, q.multiSelect)}
                     onSubmit={submitIfReady}
@@ -263,8 +266,7 @@ export function AnswerForm({
           {/* The prompt's own editor: paste or drop an image or file, chips
               (`<ui-context>`, ids) render as they do in a turn. */}
           <TextEditor
-            value={reply}
-            onChange={setReply}
+            keep={replyBinding}
             onSubmit={submitIfReady}
             submitMode="enter"
             autoFocus={replyOpen}

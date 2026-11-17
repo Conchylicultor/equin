@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import {
   useOpenPane,
   type PaneObject,
@@ -78,6 +79,9 @@ function AppsCompose() {
             <ControlSizeProvider size="sm">
               <Input
                 className="website-apps-compose-field"
+                keep={transient(
+                  "never sent: Build it opens the download page, the idea is only a prompt to start describing",
+                )}
                 value={idea}
                 onChange={(e) => setIdea(e.target.value)}
                 placeholder="A habit tracker that reads my calendar…"

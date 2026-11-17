@@ -7,6 +7,8 @@ import {
   screen,
 } from "@testing-library/react";
 
+import { Textarea } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { ControlPanel } from "../internal/namespace";
 import { ControlPanelPane } from "../internal/control-panel-pane";
 import { ControlPanelPopover } from "../internal/control-panel-popover";
@@ -716,7 +718,7 @@ describe("ControlPanel.Setting — the row holds the control", () => {
       <ControlPanel>
         <ControlPanel.Section label="Content">
           <ControlPanel.Block label="Notes">
-            <textarea aria-label="Notes" />
+            <Textarea bare keep={transient("test")} aria-label="Notes" />
           </ControlPanel.Block>
         </ControlPanel.Section>
       </ControlPanel>,

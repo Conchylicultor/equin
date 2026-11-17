@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import {
   useEndpointMutation,
   getEndpointErrorMessage,
@@ -155,6 +156,7 @@ export function EmitPane() {
           </SelectContent>
         </Select>
         <Input
+          keep={transient("debug tool: a throwaway control")}
           value={manualKey}
           onChange={(e) => setManualKey(e.target.value)}
           placeholder="…or type any resource key (off-screen / no subscribers)"
@@ -181,6 +183,7 @@ export function EmitPane() {
               Pushes / sec (max {MAX_EMIT_RATE})
             </Text>
             <Input
+              keep={transient("debug tool: a throwaway control")}
               type="number"
               min={0.1}
               max={MAX_EMIT_RATE}
@@ -197,6 +200,7 @@ export function EmitPane() {
               Auto-stop after (minutes)
             </Text>
             <Input
+              keep={transient("debug tool: a throwaway control")}
               type="number"
               min={0.1}
               step={0.5}

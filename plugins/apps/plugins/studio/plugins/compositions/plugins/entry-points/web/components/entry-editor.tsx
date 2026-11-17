@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import {
   Button,
   ControlSizeProvider,
@@ -117,6 +118,7 @@ export function EntryEditor({
           <Stack gap="sm">
             <SearchInput
               appearance="menu"
+              keep={transient("picker filter: the popover resets it on close")}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search plugins…"

@@ -8,6 +8,11 @@ import {
   DialogTitle,
   Input,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  defineKept,
+  useKept,
+} from "@plugins/primitives/plugins/kept-state/web";
+import { z } from "zod";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
@@ -57,6 +62,14 @@ export function useOpenAddSourceDialog(): (
   );
 }
 
+const sourceNameDraft = defineKept({
+  owner: "events.sources.add-name",
+  label: "New event source names",
+  tier: "work",
+  cap: "8 KB",
+  schema: z.string(),
+});
+
 function AddSourceDialog({
   type,
   onCreated,
@@ -66,7 +79,8 @@ function AddSourceDialog({
   onCreated: (sourceId: string) => void;
   onClose: () => void;
 }): ReactElement {
-  const [name, setName] = useState("");
+  const nameKept = useKept(sourceNameDraft, "", { subject: type.id });
+  const [name, , clearName] = nameKept;
   const [refresh, setRefresh] = useState<RefreshCadence>("manual");
   const [values, setValues] = useState<Record<string, unknown>>(() =>
     initialConfigValues(type.configFields),
@@ -104,6 +118,7 @@ function AddSourceDialog({
       },
       {
         onSuccess: (source) => {
+          clearName();
           onCreated(source.id);
           onClose();
         },
@@ -128,11 +143,7 @@ function AddSourceDialog({
         <Text as="label" variant="label">
           Name
         </Text>
-        <Input
-          value={name}
-          placeholder="Defaults to the page host"
-          onChange={(e) => setName(e.target.value)}
-        />
+        <Input keep={nameKept} placeholder="Defaults to the page host" />
       </Stack>
 
       <SourceConfigForm

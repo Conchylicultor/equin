@@ -76,12 +76,12 @@ and
   - Slots: `SshProvider`
   - Slot contributors: `SshProvider` ← `apps.deploy.ssh-setup.hetzner`
   - Contributes: `ServerDetail.Section` "SSH key" → `SshSetupSection`
-  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/setup-steps` ×7
     - `apps/deploy/servers` ×4
     - `primitives/collapsible` ×4
+    - `primitives/css/ui-kit` ×4
     - `infra/endpoints` ×3
-    - `primitives/css/ui-kit` ×3
     - `apps/deploy/health` ×2
     - `network/live/live-state` ×2
     - `primitives/copy-to-clipboard.CopyButton`

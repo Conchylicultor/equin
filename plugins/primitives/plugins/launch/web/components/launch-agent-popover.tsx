@@ -28,6 +28,7 @@ import {
 } from "@plugins/primitives/plugins/kept-state/web";
 import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { z } from "zod";
+import { keptField } from "@plugins/primitives/plugins/kept-state/core";
 import { useTaskLaunch } from "./use-task-launch";
 
 /**
@@ -176,11 +177,12 @@ export function LaunchAgentForm({
   ownedOptions,
   textRequired = false,
 }: LaunchAgentFormProps) {
-  const [draft, setDraft, , draftKept] = useDraft(
+  const draftBinding = useDraft(
     launchDraftStore,
     { text: "", picked: {}, toggles: {} },
     { scope: draftKey },
   );
+  const [draft, setDraft, , draftKept] = draftBinding;
   const { text, picked } = draft;
   // Only what the user changed; the rest reads through to the registry's
   // defaults, so an option registered after mount is still sent with its seed.
@@ -265,8 +267,9 @@ export function LaunchAgentForm({
         </Text>
       </Stack>
       <ComposerField
-        value={text}
-        onChange={(next) => setDraft((d) => ({ ...d, text: next }))}
+        // The launch draft's `text` (one kept object with the picked options
+        // and toggles, cleared by `submitKept` once the launch is filed).
+        keep={keptField(draftBinding, "text")}
         placeholder={placeholder}
         onSubmit={() => void trySubmit()}
         submitMode="cmd-enter"

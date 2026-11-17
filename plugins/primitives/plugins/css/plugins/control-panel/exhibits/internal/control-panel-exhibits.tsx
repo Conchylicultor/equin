@@ -12,6 +12,7 @@ import {
   Button,
   Input,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import type { ReactNode } from "react";
 
@@ -275,7 +276,11 @@ export const controlPanelExhibits: Exhibit[] = [
           />
           <ControlPanel.Block label={<Fills id="block-label">Notes</Fills>}>
             <Fills id="block-child">
-              <Input defaultValue="…" aria-label="Notes" />
+              <Input
+                keep={transient("exhibit fixture")}
+                defaultValue="…"
+                aria-label="Notes"
+              />
             </Fills>
           </ControlPanel.Block>
         </ControlPanel.Section>
@@ -353,7 +358,11 @@ export const controlPanelExhibits: Exhibit[] = [
             description="Shown under the title."
           >
             <Fills id="block-child">
-              <Input defaultValue="…" aria-label="Description" />
+              <Input
+                keep={transient("exhibit fixture")}
+                defaultValue="…"
+                aria-label="Description"
+              />
             </Fills>
           </ControlPanel.Block>
         </ControlPanel.Section>
@@ -789,7 +798,11 @@ export const controlPanelExhibits: Exhibit[] = [
               measured box is the wrapper's, which fills the section, so its
               left edge IS where loose content lands. */}
           <Fills id="free-input">
-            <Input defaultValue="My view" aria-label="View name" />
+            <Input
+              keep={transient("exhibit fixture")}
+              defaultValue="My view"
+              aria-label="View name"
+            />
           </Fills>
           {/* The row whose leading cell defines the rail everything else is
               compared against — the grid's answer, not the panel's. */}
@@ -1173,7 +1186,11 @@ export const controlPanelExhibits: Exhibit[] = [
           <ControlPanel.Section label={<span data-geo="bare-label">Name</span>}>
             <RailMarker id="bare-rail" />
             <Fills id="bare-input">
-              <Input defaultValue="My view" aria-label="View name" />
+              <Input
+                keep={transient("exhibit fixture")}
+                defaultValue="My view"
+                aria-label="View name"
+              />
             </Fills>
             <ControlPanel.Row>
               <Fills id="bare-row-label">Assignee</Fills>

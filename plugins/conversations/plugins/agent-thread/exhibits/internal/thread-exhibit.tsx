@@ -1,3 +1,4 @@
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { useState } from "react";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -67,6 +68,7 @@ export function ThreadExhibit({
         }
         composer={
           <ThreadComposerView
+            keep={transient("exhibit fixture")}
             value={draft}
             onChange={setDraft}
             onSubmit={() => setDraft("")}

@@ -41,6 +41,7 @@ so `decorate` would return the injected markup).
     - `primitives/css/layer.layerClasses`
     - `primitives/css/text.textVariantClass`
     - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.Textarea`
   - Exports (types): `OverlayTextareaProps`
   - Exports (values): `OverlayTextarea`
 - Cross-plugin:

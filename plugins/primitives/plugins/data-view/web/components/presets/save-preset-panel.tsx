@@ -1,13 +1,28 @@
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
+import { z } from "zod";
 import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  defineKept,
+  useKept,
+} from "@plugins/primitives/plugins/kept-state/web";
 import {
   ControlPanel,
   usePanelStack,
 } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { useDataViewControls } from "../controls/controls-context";
 
 const bookmarkAddIcon = symbol("bookmark-add");
+
+/** A preset name typed and not yet saved, per DataView. */
+const presetNameDraft = defineKept({
+  owner: "data-view.preset-name",
+  label: "Preset names",
+  tier: "work",
+  cap: "8 KB",
+  schema: z.string(),
+});
 
 /**
  * The pushed "Save as preset" page — a name field over a Save row. Enter submits,
@@ -28,12 +43,15 @@ export function SavePresetPanel({
   onSave: (label: string) => void;
 }): ReactNode {
   const { pop } = usePanelStack();
-  const [name, setName] = useState("");
+  const { storageKey } = useDataViewControls();
+  const nameKept = useKept(presetNameDraft, "", { subject: storageKey });
+  const [name, , clearName] = nameKept;
 
   const submit = () => {
     const label = name.trim();
     if (label === "") return;
     onSave(label);
+    clearName();
     pop();
   };
 
@@ -42,10 +60,9 @@ export function SavePresetPanel({
       <ControlPanel.Section>
         <Input
           autoFocus
-          value={name}
+          keep={nameKept}
           placeholder="Preset name…"
           aria-label="Preset name"
-          onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();

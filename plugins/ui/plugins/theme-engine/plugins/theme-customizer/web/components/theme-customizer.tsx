@@ -5,6 +5,11 @@ import {
 import { useState } from "react";
 import { PaneChrome, PaneMessage } from "@plugins/primitives/plugins/pane/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
+import {
+  defineKept,
+  useKept,
+} from "@plugins/primitives/plugins/kept-state/web";
+import { z } from "zod";
 import { useScopeMembership } from "@plugins/config_v2/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { forkScope, deleteScope } from "@plugins/config_v2/core";
@@ -28,6 +33,13 @@ import {
   type TokenMode,
 } from "../internal/token-mode-context";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+
+// The section filter: where the user was looking, kept per pane.
+const sectionFilter = defineKept({
+  owner: "theme-customizer.filter",
+  tier: "view",
+  schema: z.string(),
+});
 
 // Pickers for pluggable-component variants (sidebar framing, progress bar, …),
 // each registered via `ThemeEngine.VariantGroup`. Scope follows the surrounding
@@ -136,7 +148,8 @@ function CustomizeForAppToggle({
 }
 
 export function ThemeCustomizerBody() {
-  const [search, setSearch] = useState("");
+  const filter = useKept(sectionFilter, "");
+  const [search] = filter;
   const [tokenMode, setTokenMode] = useState<TokenMode>("both");
   const appId = useCurrentAppId();
   const scopeId = appId ? `app:${appId}` : undefined;
@@ -195,11 +208,7 @@ export function ThemeCustomizerBody() {
             )}
             <VariantGroupSection />
             <TokenModeSelector mode={tokenMode} onChange={setTokenMode} />
-            <SearchInput
-              placeholder="Filter sections..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+            <SearchInput placeholder="Filter sections..." keep={filter} />
           </Stack>
           <TokenModeContext.Provider value={tokenMode}>
             <ThemeCustomizer.Host search={search} />

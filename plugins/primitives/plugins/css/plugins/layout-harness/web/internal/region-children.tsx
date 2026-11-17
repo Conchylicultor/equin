@@ -4,6 +4,7 @@ import {
   Input,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 
 // ── The one child kit every region is measured against ──────────────
 //
@@ -77,7 +78,11 @@ export const REGION_CHILDREN: RegionChild[] = [
     id: "bare-input",
     node: (
       <Probe id="bare-input">
-        <Input defaultValue="Untitled" aria-label="Region child input" />
+        <Input
+          keep={transient("layout harness fixture")}
+          defaultValue="Untitled"
+          aria-label="Region child input"
+        />
       </Probe>
     ),
   },

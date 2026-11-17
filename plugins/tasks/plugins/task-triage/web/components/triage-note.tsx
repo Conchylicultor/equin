@@ -45,6 +45,7 @@ function NoteField({
   const field = useEditableField({
     value: note,
     label: "Triage note",
+    keep: { field: "task-triage.note", subject: taskId },
     onSave: async (next) => {
       await fetchEndpoint(
         setTriageNoteEndpoint,
@@ -67,8 +68,7 @@ function NoteField({
         rows={2}
         fitContent
         placeholder="Constraints, context triage missed, where to start…"
-        value={field.value}
-        onChange={(e) => field.onChange(e.target.value)}
+        keep={field.keep}
         onFocus={field.onFocus}
         onBlur={field.onBlur}
       />

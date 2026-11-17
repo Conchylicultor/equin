@@ -125,6 +125,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "primitives/plugins/dom/plugins/web-storage", id: "primitives.dom.web-storage", loader: () => import("@plugins/primitives/plugins/dom/plugins/web-storage/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/embed/plugins/frame", id: "primitives.embed.frame", loader: () => import("@plugins/primitives/plugins/embed/plugins/frame/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/icon-button", id: "primitives.icon-button", loader: () => import("@plugins/primitives/plugins/icon-button/lint"), dependsOn: [] },
+  { pluginPath: "primitives/plugins/kept-state", id: "primitives.kept-state", loader: () => import("@plugins/primitives/plugins/kept-state/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/link-gesture", id: "primitives.link-gesture", loader: () => import("@plugins/primitives/plugins/link-gesture/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/link-gesture/plugins/new-tab", id: "primitives.link-gesture.new-tab", loader: () => import("@plugins/primitives/plugins/link-gesture/plugins/new-tab/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/loading", id: "primitives.loading", loader: () => import("@plugins/primitives/plugins/loading/lint"), dependsOn: [] },

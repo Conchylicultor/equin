@@ -17,6 +17,8 @@ import {
   SyncStatusIndicator,
   SyncStatusProvider,
 } from "@plugins/primitives/plugins/sync-status/web";
+import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { useEditableField } from "../use-editable-field";
 
 /** Render the hook over a changeable external `value`, as a live-state consumer does. */
@@ -32,6 +34,7 @@ function renderField(opts: {
         onSave: opts.onSave,
         debounceMs: opts.debounceMs ?? 20,
         label: "Title",
+        keep: transient("test"),
       }),
     { initialProps: { value: opts.value } },
   );
@@ -232,12 +235,13 @@ function Field({ value }: { value: string }) {
     onSave: () => {},
     debounceMs: 10_000,
     label: "Title",
+    keep: transient("test"),
   });
   return (
-    <input
+    <Input
+      bare
+      keep={field.keep}
       aria-label="title"
-      value={field.value}
-      onChange={(e) => field.onChange(e.target.value)}
       onFocus={field.onFocus}
       onBlur={field.onBlur}
     />
@@ -270,6 +274,7 @@ describe("sync-status", () => {
         onSave: () => {},
         debounceMs: 10_000,
         label: "Task title",
+        keep: transient("test"),
       });
       return (
         <button

@@ -1,5 +1,6 @@
 import { type ReactNode, useMemo } from "react";
 import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { variantField } from "@plugins/fields/plugins/variant/plugins/config/core";
 import { iconField } from "@plugins/fields/plugins/icon/plugins/config/core";
@@ -83,6 +84,9 @@ export function ViewSettingsPopover<T extends ViewTypeMeta>({
     <>
       <ControlPanel.Section label="Name">
         <Input
+          keep={transient(
+            "committed on blur, in a popover that does not survive a remount",
+          )}
           defaultValue={instance.instance.name}
           aria-label="View name"
           onBlur={(e) => {

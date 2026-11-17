@@ -7,27 +7,21 @@
 - Description: Param-driven customizer section for the shadow token group, with "Fill from…" shortcuts.
 - Web:
   - Contributes: `ThemeCustomizer.Section` "Shadow" → `ShadowSection`
-  - Uses:
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×3
+    - `ui/theme-engine/theme-customizer` ×3
+    - `primitives/collapsible` ×2
+    - `primitives/css/row` ×2
+    - `primitives/css/spacing` ×2
     - `network/live/live-state.ResourceErrorInline`
-    - `primitives/collapsible.Collapsible`
-    - `primitives/collapsible.CollapsibleContent`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/color-picker.ColorPickerPopover`
     - `primitives/css/fill.fillClasses`
     - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
-    - `primitives/css/row.Row`
-    - `primitives/css/row.SectionHeaderRow`
-    - `primitives/css/spacing.selfClass`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
-    - `ui/theme-engine/theme-customizer.FillFromMenu`
-    - `ui/theme-engine/theme-customizer.ThemeCustomizer`
-    - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --background`

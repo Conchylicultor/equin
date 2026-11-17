@@ -15,4 +15,11 @@ export default [
     reason:
       "The shadcn dialog/sheet definitions themselves: they open-code `fixed inset-0` as literal strings on base-ui `*.Popup`/`*.Backdrop` tags, which base-ui portals to the document root.",
   },
+  {
+    rule: "kept-state/no-raw-text-input",
+    paths: ["web/components/ui/textarea.tsx"],
+    kind: "sanctioned",
+    reason:
+      "The Textarea primitive itself: the one <textarea>, whose required `keep` makes every multi-line field decide whether its text survives a reload.",
+  },
 ] satisfies Exemptions;

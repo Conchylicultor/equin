@@ -18,6 +18,7 @@ import {
 } from "@plugins/primitives/plugins/tree/web";
 import { RankReorderDndContext } from "@plugins/primitives/plugins/rank-reorder/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -159,6 +160,9 @@ export function TagPickerPanel<Row extends TagRow>({
       <SearchInput
           appearance="menu"
           autoFocus={autoFocus}
+        keep={transient(
+          "picker query: one panel per popover, many in a pane — a pane-scoped view key would carry one picker's query into another",
+        )}
           value={query}
           placeholder="Search or create…"
           aria-label="Search or create a tag"

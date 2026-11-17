@@ -14,6 +14,7 @@ import {
 import { Switch } from "@plugins/primitives/plugins/css/plugins/switch/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
+import { keptText } from "@plugins/primitives/plugins/kept-state/core";
 import {
   serializeUiContext,
   type UiContextMeta,
@@ -225,8 +226,10 @@ function ComposeView({
       </Stack>
       <Stack gap="sm">
         <TextEditor
-          value={draft.text}
-          onChange={(text) => onDraftChange({ ...draft, text })}
+          // The text of ImproveNavItem's kept draft.
+          keep={keptText(draft.text, (text) =>
+            onDraftChange({ ...draft, text }),
+          )}
           onSubmit={onShowMe}
           submitMode="cmd-enter"
           minRows={4}

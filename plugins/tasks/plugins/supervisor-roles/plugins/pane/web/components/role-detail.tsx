@@ -120,6 +120,7 @@ function RoleDetailBody({
             label="Name"
             placeholder="Name"
             value={role.name}
+            keep={{ field: "supervisor-roles.name", subject: role.id }}
             autoFocus={justCreated}
             onSave={(v) => (v.trim() === "" ? undefined : save({ name: v }))}
           />
@@ -158,6 +159,7 @@ function RoleDetailBody({
             label="Description agents get"
             placeholder="What belongs here"
             value={role.description}
+            keep={{ field: "supervisor-roles.description", subject: role.id }}
             disabled={!role.listed}
             onSave={(description) => save({ description })}
           />
@@ -175,6 +177,7 @@ function RoleDetailBody({
               namespace="supervisor-role-prompt"
               placeholder="What a session of this supervisor is launched with"
               value={role.prompt}
+              keep={{ field: "supervisor-roles.prompt", subject: role.id }}
               startEditing={justCreated}
               onSave={(prompt) => save({ prompt })}
             />

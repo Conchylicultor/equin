@@ -1,3 +1,4 @@
+import { keptText } from "@plugins/primitives/plugins/kept-state/core";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Fragment, useEffect, useState } from "react";
 import {
@@ -322,12 +323,15 @@ export function TaskDraftForm({
                   insertRef={isHead ? headInsertRef : undefined}
                   cardId={card.localId}
                   index={idx}
-                  text={card.text}
+                  // The chain is the host's kept draft (TaskDraftPopover's
+                  // useDraft): each card's text is an entry of it.
+                  keep={keptText(card.text, (t) =>
+                    updateCard(idx, { text: t }),
+                  )}
                   launchOptions={card.options}
                   autoFocus={autoFocusId === card.localId}
                   movable={isMulti}
                   disabled={submitting}
-                  onTextChange={(t) => updateCard(idx, { text: t })}
                   onLaunchOptionsChange={(o) => updateCard(idx, { options: o })}
                   onSubmitChord={() => {
                     if (!disabled) onSubmit();

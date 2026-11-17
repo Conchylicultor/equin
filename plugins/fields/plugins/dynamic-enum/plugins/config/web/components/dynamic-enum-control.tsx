@@ -1,4 +1,5 @@
 import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import {
   Select,
   SelectContent,
@@ -46,6 +47,7 @@ export function DynamicEnumControl({
   if (!match) {
     return (
       <Input
+        keep={transient("committed on every change")}
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}

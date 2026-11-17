@@ -57,7 +57,8 @@ should look different wears a sub-theme over them — see the
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/overlay/tooltip.TooltipDoc`
     - `primitives/text-editor.TextEditor`
-    - `primitives/text-editor.TextEditorProps`
+    - `primitives/text-editor.TextEditorOptions`
+    - `primitives/text-editor.TextEditorText`
     - `primitives/text-editor/composer/picker-pill.pillHighlightClass`
     - `primitives/text-editor/paste-images.AttachFilesButton`
     - `ui/icons.Icon`

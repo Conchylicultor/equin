@@ -18,6 +18,7 @@ import {
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
@@ -281,6 +282,9 @@ export function DataViewToolbar({
             ),
           }
         : {})}
+      keep={transient(
+        "controlled by DataView: its view state keeps the query (useViewEphemeral, sessionStorage)",
+      )}
       value={query}
       onChange={(e) => onQueryChange(e.target.value)}
       {...(onSearchSubmit === undefined

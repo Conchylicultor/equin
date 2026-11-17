@@ -3,6 +3,7 @@ import {
   Input,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState } from "react";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   ResourceErrorInline,
@@ -215,6 +216,7 @@ export function AppleSetup() {
                 <Input
                   type="password"
                   placeholder="Certificate password"
+                  keep={transient("secret: never written to browser storage")}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
@@ -235,6 +237,9 @@ export function AppleSetup() {
                   <>
                     <Input
                       placeholder="Signing identity (e.g. Developer ID Application: Name (TEAMID))"
+                      keep={transient(
+                        "credential setup: pasted from Keychain Access, never typed at length",
+                      )}
                       value={manualIdentity}
                       onChange={(e) => setManualIdentity(e.target.value)}
                     />
@@ -288,11 +293,17 @@ export function AppleSetup() {
                 ) : null}
                 <Input
                   placeholder="Key ID"
+                  keep={transient(
+                    "credential setup: copied from App Store Connect with the .p8 file, which a reload loses anyway",
+                  )}
                   value={keyId}
                   onChange={(e) => setKeyId(e.target.value)}
                 />
                 <Input
                   placeholder="Issuer ID"
+                  keep={transient(
+                    "credential setup: copied from App Store Connect with the .p8 file, which a reload loses anyway",
+                  )}
                   value={issuerId}
                   onChange={(e) => setIssuerId(e.target.value)}
                 />

@@ -58,8 +58,8 @@ the task patch; re-route `PUT /api/tasks/:taskId/supervisor`.
     - `adhoc-actions` "open" → `OpenAdhocAction`
     - `backlog-actions` "adopt" → `AdoptAction`
     - `backlog-actions` "drop" → `DropAction`
-  - Uses: 71 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/ui-kit` ×8
+  - Uses: 73 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×9
     - `network/live/live-state` ×5
     - `primitives/data-view` ×5
     - `primitives/pane` ×5
@@ -69,6 +69,7 @@ the task patch; re-route `PUT /api/tasks/:taskId/supervisor`.
     - `infra/endpoints` ×2
     - `primitives/css/badge` ×2
     - `primitives/css/control-panel` ×2
+    - `primitives/editable-field` ×2
     - `primitives/link-gesture` ×2
     - `tasks` ×2
     - `conversations/conversation-view.useConversationOpener`
@@ -88,7 +89,6 @@ the task patch; re-route `PUT /api/tasks/:taskId/supervisor`.
     - `primitives/css/switch.Switch`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`
-    - `primitives/editable-field.useEditableField`
     - `primitives/icon-button.IconButton`
     - `primitives/icon-picker.IconPicker`
     - `primitives/loading.Loading`

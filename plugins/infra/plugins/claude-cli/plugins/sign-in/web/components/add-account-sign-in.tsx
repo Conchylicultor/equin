@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
 import {
+  defineKept,
+  useKept,
+} from "@plugins/primitives/plugins/kept-state/web";
+import { z } from "zod";
+import {
   Button,
   Input,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -14,6 +19,14 @@ import {
   useClaudeSignInFlow,
 } from "../internal/use-sign-in";
 import { ClaudeSignInPanel } from "./sign-in-flow";
+
+const accountNameDraft = defineKept({
+  owner: "claude-cli.account-name",
+  label: "Claude account names",
+  tier: "work",
+  cap: "8 KB",
+  schema: z.string(),
+});
 
 /**
  * The run this form started, as the computer's flow shows it: null until its
@@ -49,7 +62,7 @@ export function AddClaudeAccountSignIn({
   onAdded: (accountId: string) => void;
   onClose: () => void;
 }) {
-  const [name, setName] = useState("");
+  const name = useKept(accountNameDraft, "", { subject: "new" });
   const [runId, setRunId] = useState<string | null>(null);
   const actions = useClaudeSignInActions();
   const run = useOwnRun(runId);
@@ -61,7 +74,10 @@ export function AddClaudeAccountSignIn({
   const added = run?.kind === "done" ? run.accountId : undefined;
   const gone = run?.kind === "gone";
   // Each outcome reaches the host once, whatever its callbacks' identity.
-  const reportAdded = useEventCallback(onAdded);
+  const reportAdded = useEventCallback((accountId: string) => {
+    name[2]();
+    onAdded(accountId);
+  });
   const reportClosed = useEventCallback(onClose);
   useEffect(() => {
     if (added !== undefined) reportAdded(added);
@@ -80,7 +96,7 @@ export function AddClaudeAccountSignIn({
   if (runId !== null)
     return <Loading variant="spinner" label="Starting the sign-in…" />;
   const signIn = async () => {
-    const target = { kind: "new-account", name: name.trim() } as const;
+    const target = { kind: "new-account", name: name[0].trim() } as const;
     setRunId(await actions.start(target));
   };
   return (
@@ -95,13 +111,12 @@ export function AddClaudeAccountSignIn({
             <Input
               autoFocus
               placeholder="Account name, e.g. Personal"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              keep={name}
             />
           </Fill>
           <Button
             type="submit"
-            disabled={!name.trim()}
+            disabled={!name[0].trim()}
             tooltip="Sign in with the account's Claude subscription"
             onClick={signIn}
           >

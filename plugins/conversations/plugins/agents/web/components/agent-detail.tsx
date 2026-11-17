@@ -2,6 +2,7 @@ import { statusDotPaintClass } from "@plugins/primitives/plugins/css/plugins/sta
 import {
   Button,
   ControlSizeProvider,
+  Input,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   Stack,
@@ -131,10 +132,12 @@ function AgentDetailInner({
   const nameField = useEditableField({
     value: agent.name ?? "",
     onSave: (v) => save({ name: v.trim() || "Untitled" }),
+    keep: { field: "agents.name", subject: agentId },
   });
   const promptField = useEditableField({
     value: agent.prompt ?? "",
     onSave: (v) => save({ prompt: v }),
+    keep: { field: "agents.prompt", subject: agentId },
   });
 
   const onModelChange = async (newModel: ModelChoice | null) => {
@@ -190,9 +193,9 @@ function AgentDetailInner({
               />
             </ControlSizeProvider>
           </AvatarPicker>
-          <input
-            value={nameField.value}
-            onChange={(e) => nameField.onChange(e.target.value)}
+          <Input
+            bare
+            keep={nameField.keep}
             onFocus={nameField.onFocus}
             onBlur={nameField.onBlur}
             placeholder="Untitled"
@@ -219,8 +222,7 @@ function AgentDetailInner({
             }}
           >
             <TextEditor
-              value={promptField.value}
-              onChange={promptField.onChange}
+              keep={promptField.keep}
               placeholder="Instructions the agent runs with…"
               minRows={12}
               namespace={`agent-prompt-${agentId}`}

@@ -1,4 +1,11 @@
 import { useState, type ReactElement } from "react";
+import {
+  defineKept,
+  submitKept,
+  useKept,
+} from "@plugins/primitives/plugins/kept-state/web";
+import { z } from "zod";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
@@ -33,6 +40,14 @@ import {
 } from "../../shared/endpoints";
 import type { PageTagsEditor } from "../internal/hooks";
 import { TagDot, tagHue } from "./tag-chip";
+
+const tagNameDraft = defineKept({
+  owner: "page-tags.rename",
+  label: "Tag renames",
+  tier: "work",
+  cap: "8 KB",
+  schema: z.string(),
+});
 
 const checkIcon = symbol("check");
 const moreIcon = symbol("more-horiz");
@@ -123,6 +138,9 @@ export function TagPicker({
           {...localUndoProps}
           autoFocus
           placeholder="Search or create a tag…"
+          keep={transient(
+            "a popover's filter: a reload does not reopen the popover",
+          )}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
@@ -245,7 +263,8 @@ function TagSettings({
   vocabulary: readonly PageTagRow[];
   onDone: () => void;
 }) {
-  const [name, setName] = useState(tag.name);
+  const nameBinding = useKept(tagNameDraft, tag.name, { subject: tag.id });
+  const [name, , clearName, nameKept] = nameBinding;
   const [confirmDelete, setConfirmDelete] = useState(false);
   const update = useEndpointMutation(updatePageTag);
   const remove = useEndpointMutation(deletePageTag);
@@ -263,10 +282,18 @@ function TagSettings({
       : undefined;
 
   const saveName = async () => {
-    if (!parsed.success || taken || parsed.data === tag.name) return;
-    await update.mutateAsync({
-      params: { tagId: tag.id },
-      body: { name: parsed.data },
+    if (!parsed.success || taken) return;
+    if (parsed.data === tag.name) {
+      clearName();
+      return;
+    }
+    const next = parsed.data;
+    await submitKept(nameKept, async () => {
+      await update.mutateAsync({
+        params: { tagId: tag.id },
+        body: { name: next },
+      });
+      return { ok: true };
     });
   };
 
@@ -283,8 +310,7 @@ function TagSettings({
         aria-label="Tag name"
         aria-invalid={nameError !== undefined}
         title={nameError}
-        value={name}
-        onChange={(e) => setName(e.target.value)}
+        keep={nameBinding}
         onBlur={() => void saveName()}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
@@ -293,6 +319,7 @@ function TagSettings({
           } else if (e.key === "Escape") {
             e.preventDefault();
             e.stopPropagation();
+            clearName();
             onDone();
           }
         }}

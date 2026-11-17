@@ -19,6 +19,7 @@ Shared `FieldHeader` / `useLocalValue` come from the slot owner
     - `Fields.Renderer` "text" → `Rendered`
     - `Fields.Sample` "text"
   - Uses:
+    - `config_v2/fields.ConfigFieldContext`
     - `config_v2/fields.defineFieldShape`
     - `config_v2/fields.Fields`
     - `primitives/css/ui-kit.Input`

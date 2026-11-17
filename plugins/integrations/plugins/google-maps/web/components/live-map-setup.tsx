@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import {
   Button,
@@ -185,6 +186,7 @@ function LiveMapSetupSteps({
             <Stack gap="sm">
               <Input
                 placeholder="AIza…"
+                keep={transient("API key: never written to browser storage")}
                 value={keyValue}
                 onChange={(e) => setKeyDraft(e.target.value)}
               />
@@ -385,6 +387,9 @@ function MapIdSetupSteps({
           <Stack gap="sm">
             <Input
               placeholder="e.g. 8e0a97af9386fef"
+              keep={transient(
+                "an id pasted from the Cloud Console, checked and saved here: nothing composed to lose",
+              )}
               value={value}
               onChange={(e) => setDraft(e.target.value)}
             />

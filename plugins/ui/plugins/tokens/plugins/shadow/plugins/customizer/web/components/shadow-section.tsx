@@ -1,4 +1,9 @@
-import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  cn,
+  Input,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
@@ -131,7 +136,9 @@ function ParamInput({
 
   return (
     <Line className="gap-sm group">
-      <input
+      <Input
+        bare
+        keep={transient("a shadow param committed on blur or Enter")}
         ref={inputRef}
         type="text"
         className={cn(

@@ -6,6 +6,7 @@ import {
   Button,
   Input,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import {
   placeName,
   type Place,
@@ -49,6 +50,9 @@ export function PinPickBar({
       <Line className="gap-sm">
         {pick.kind === "drop" ? (
           <Input
+            keep={transient(
+              "controlled by PlacesScreen's pick mode, a transient map mode a reload ends",
+            )}
             autoFocus
             value={pick.name}
             onChange={(e) => onNameChange(e.target.value)}

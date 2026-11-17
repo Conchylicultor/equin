@@ -87,6 +87,8 @@ host owns its own inset, through `className`.
     - `primitives/css/text.SectionLabel`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
+    - `primitives/kept-state.defineKept`
+    - `primitives/kept-state.useKept`
     - `primitives/loading.Loading`
     - `primitives/search.SearchInput`
     - `primitives/virtual-rows.VirtualRows`

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { CompactControls } from "./compact-controls";
 import { useToolbarControls } from "./use-toolbar-controls";
 import { QuickFilters } from "./quick-filters";
@@ -38,6 +39,9 @@ export function HostedOptions({
     <CompactControls
       search={
         <SearchInput
+          keep={transient(
+            "controlled by DataView: its view state keeps the query (useViewEphemeral, sessionStorage)",
+          )}
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           placeholder={searchPlaceholder}

@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef } from "react";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
@@ -47,6 +48,7 @@ export function AppsSearch({
         wrapperClassName={cn("website-apps-search-line")}
         placeholder="Search apps"
         aria-label="Search apps"
+        keep={transient("controlled by AppsBody: the owner keeps it")}
         value={query}
         onChange={(e) => onQueryChange(e.target.value)}
       />

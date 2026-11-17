@@ -15,6 +15,19 @@ import {
 import type { Theme } from "@plugins/ui/plugins/theme-engine/core";
 import { renameSavedTheme } from "@plugins/ui/plugins/theme-engine/plugins/saved-themes/core";
 import { useAwaitSavedThemesWrite } from "@plugins/ui/plugins/theme-engine/plugins/saved-themes/web";
+import {
+  defineKept,
+  useKept,
+} from "@plugins/primitives/plugins/kept-state/web";
+import { z } from "zod";
+
+const renameDraft = defineKept({
+  owner: "theme-gallery.rename",
+  label: "Theme rename drafts",
+  tier: "work",
+  cap: "8 KB",
+  schema: z.string(),
+});
 
 /**
  * The rename dialog's body (opened through `openDialog`, which owns the
@@ -28,7 +41,8 @@ export function RenameThemeDialog({
   theme: Theme;
   onClose: () => void;
 }) {
-  const [label, setLabel] = useState(theme.label);
+  const labelKept = useKept(renameDraft, theme.label, { subject: theme.id });
+  const [label, , clearLabel] = labelKept;
   const [error, setError] = useState<string | null>(null);
   const rename = useEndpointMutation(renameSavedTheme);
   const awaitSavedThemesWrite = useAwaitSavedThemesWrite();
@@ -48,6 +62,7 @@ export function RenameThemeDialog({
       // Close once the live list carries the new label, so the gallery row
       // behind the dialog never shows the old one after it closes.
       await awaitSavedThemesWrite(watermark);
+      clearLabel();
       onClose();
     } catch (err) {
       setError(getEndpointErrorMessage(err));
@@ -61,10 +76,9 @@ export function RenameThemeDialog({
     <Stack gap="md">
       <DialogTitle>Rename theme</DialogTitle>
       <Input
-        value={label}
+        keep={labelKept}
         autoFocus
         aria-label="Theme name"
-        onChange={(e) => setLabel(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter") void save();
         }}
@@ -76,7 +90,14 @@ export function RenameThemeDialog({
       )}
       <Stack direction="row" align="center" gap="sm">
         <Fill />
-        <Button variant="ghost" onClick={onClose} disabled={rename.isPending}>
+        <Button
+          variant="ghost"
+          onClick={() => {
+            clearLabel();
+            onClose();
+          }}
+          disabled={rename.isPending}
+        >
           Cancel
         </Button>
         <Button onClick={save} disabled={!canSave}>

@@ -13,8 +13,20 @@ import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  defineKept,
+  useKept,
+} from "@plugins/primitives/plugins/kept-state/web";
+import { z } from "zod";
 
 const searchIcon = symbol("search");
+
+const heroQuery = defineKept({
+  owner: "browser.start-page.query",
+  tier: "view",
+  schema: z.string(),
+});
 
 /** "morning" / "afternoon" / "evening" for an hour of the day. */
 function partOfDay(hour: number): string {
@@ -31,7 +43,8 @@ function partOfDay(hour: number): string {
  */
 export function Hero() {
   const { navigate, goHome } = useBrowserNav();
-  const [value, setValue] = useState("");
+  const query = useKept(heroQuery, "");
+  const [value] = query;
   const [part] = useState(() => partOfDay(new Date().getHours()));
 
   const submit = (e: FormEvent) => {
@@ -57,9 +70,9 @@ export function Hero() {
           aria-hidden
         />
         <Fill>
-          <input
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
+          <Input
+            bare
+            keep={query}
             placeholder="Search or enter address"
             aria-label="Search or enter address"
             autoComplete="off"

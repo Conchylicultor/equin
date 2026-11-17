@@ -2,7 +2,11 @@ import { useCallback, useRef, type MutableRefObject } from "react";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
+import {
+  TextEditor,
+  type TextEditorText,
+} from "@plugins/primitives/plugins/text-editor/web";
+import { resolveTextKeep } from "@plugins/primitives/plugins/kept-state/core";
 import {
   submitKept,
   useDraft,
@@ -43,9 +47,8 @@ const sendIcon = symbol("arrow-upward");
 export type PrepareTurn = (text: string) => string;
 const stopIcon = symbol("stop");
 
-export interface ThreadComposerViewProps {
-  value: string;
-  onChange: (markdown: string) => void;
+/** The editor's text is the caller's `keep` (a draft binding, or transient with `value` / `onChange`). */
+export type ThreadComposerViewProps = TextEditorText & {
   onSubmit: () => void;
   placeholder: string;
   disabled: boolean;
@@ -56,12 +59,10 @@ export interface ThreadComposerViewProps {
   namespace: string;
   /** Receives the editor's insert-at-caret handle once it is mounted. */
   insertRef?: MutableRefObject<((text: string) => void) | null>;
-}
+};
 
 /** The thread's prompt line: a slim editor and one trailing Send / Stop button. */
 export function ThreadComposerView({
-  value,
-  onChange,
   onSubmit,
   placeholder,
   disabled,
@@ -69,7 +70,9 @@ export function ThreadComposerView({
   busy = false,
   namespace,
   insertRef,
+  ...text
 }: ThreadComposerViewProps) {
+  const value = resolveTextKeep(text.keep)?.value ?? text.value ?? "";
   return (
     <Stack
       direction="row"
@@ -79,8 +82,7 @@ export function ThreadComposerView({
     >
       <Fill>
         <TextEditor
-          value={value}
-          onChange={onChange}
+          {...text}
           onSubmit={onSubmit}
           submitMode="enter"
           placeholder={placeholder}
@@ -151,9 +153,8 @@ export function ThreadComposer({
   prepareTurn?: PrepareTurn | undefined;
 }) {
   const id = conversation.id;
-  const [draft, setDraft, , draftKept] = useDraft(conversationPromptDraft, "", {
-    scope: id,
-  });
+  const draftBinding = useDraft(conversationPromptDraft, "", { scope: id });
+  const [draft, setDraft, , draftKept] = draftBinding;
   const draftRef = useLatestRef(draft);
   const sendConversationTurn = useSendConversationTurn();
   const sendAvailability = useTurnSendAvailability();
@@ -245,8 +246,7 @@ export function ThreadComposer({
   const working = turnRunning || status === "starting";
   return (
     <ThreadComposerView
-      value={draft}
-      onChange={setDraft}
+      keep={draftBinding}
       onSubmit={send}
       placeholder={
         !sendAvailability.available

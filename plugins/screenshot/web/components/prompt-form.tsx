@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { z } from "zod";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { LaunchControl, type LaunchRequest } from "@plugins/primitives/plugins/launch/web";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
@@ -8,11 +8,24 @@ import {
 } from "@plugins/infra/plugins/endpoints/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import {
+  defineKept,
+  useKept,
+} from "@plugins/primitives/plugins/kept-state/web";
 import { saveScreenshotFile } from "../../shared/endpoints";
+
+const screenshotPromptDraft = defineKept({
+  owner: "screenshot.prompt",
+  label: "Screenshot prompt drafts",
+  tier: "work",
+  cap: "16 KB",
+  schema: z.string(),
+});
 
 export function PromptForm({ id, getBlob }: { id: string; getBlob: () => Blob | null | Promise<Blob | null> }) {
   const fetchEndpoint = useFetchEndpoint();
-  const [text, setText] = useState("");
+  const prompt = useKept(screenshotPromptDraft, "", { subject: id });
+  const [text] = prompt;
   const textRef = useLatestRef(text);
 
   // The screenshot blob is uploaded via the existing `/api/screenshots/:id/file`
@@ -48,8 +61,7 @@ export function PromptForm({ id, getBlob }: { id: string; getBlob: () => Blob | 
     // eslint-disable-next-line layout/no-adhoc-layout -- rigid footer leaf of the screenshot view's flex column
     <Stack gap="sm" className="bg-background shrink-0 border-t p-md">
       <TextEditor
-        value={text}
-        onChange={setText}
+        keep={prompt}
         placeholder="Describe what to do with this screenshot…"
         minRows={3}
         maxHeight="12rem"
@@ -58,6 +70,7 @@ export function PromptForm({ id, getBlob }: { id: string; getBlob: () => Blob | 
       <LaunchControl
         launchedFrom={asPluginId("screenshot")}
         getRequest={getRequest}
+        onLaunched={() => prompt[2]()}
       />
     </Stack>
   );

@@ -105,8 +105,10 @@ registry readers are headless.
     - `primitives/undo-redo.localUndoProps`
   - Exports (types):
     - `NodeExtension`
+    - `TextEditorOptions`
     - `TextEditorPluginProps`
     - `TextEditorProps`
+    - `TextEditorText`
   - Exports (values):
     - `registerNodeExtension`
     - `registerNodeExtensionSource`

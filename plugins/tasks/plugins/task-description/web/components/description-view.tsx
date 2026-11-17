@@ -9,6 +9,7 @@ import {
 } from "@plugins/primitives/plugins/hover-reveal/web";
 import { useRef, useState } from "react";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
+import type { KeptText } from "@plugins/primitives/plugins/kept-state/core";
 import { AttachmentText } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
@@ -24,12 +25,14 @@ const editIcon = symbol("edit");
 // Click anywhere on the display to edit; blur returns to display.
 export function DescriptionView({
   value,
-  onChange,
+  keep,
   onFocus,
   onBlur,
 }: {
+  /** What the display shows: the text `keep` holds. */
   value: string;
-  onChange: (v: string) => void;
+  /** The editor's text, kept by its editable field (`field.keep`). */
+  keep: KeptText;
   onFocus?: () => void;
   onBlur?: () => void;
 }) {
@@ -78,8 +81,7 @@ export function DescriptionView({
         }}
       >
         <TextEditor
-          value={value}
-          onChange={onChange}
+          keep={keep}
           placeholder="Add a description…"
           autoFocus
           minRows={8}

@@ -1,4 +1,9 @@
-import { useRef, useState } from "react";
+import { useRef } from "react";
+import {
+  defineKept,
+  useKept,
+} from "@plugins/primitives/plugins/kept-state/web";
+import { z } from "zod";
 import {
   cn,
   Button,
@@ -25,18 +30,38 @@ import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-rev
 
 const smartDisplayIcon = symbol("smart-display");
 
+const embedUrlDraft = defineKept({
+  owner: "embed.url",
+  label: "Embed links",
+  tier: "work",
+  cap: "8 KB",
+  schema: z.string(),
+});
+
 export function EmbedBlock({ block, editor }: BlockRendererProps) {
   const { url } = embedBlock.parse(block.data);
 
   if (!url) {
-    return <EmptyEmbedBlock onSubmit={(u) => editor.update({ url: u })} />;
+    return (
+      <EmptyEmbedBlock
+        blockId={block.id}
+        onSubmit={(u) => editor.update({ url: u })}
+      />
+    );
   }
 
   return <FilledEmbedBlock url={url} onReplace={() => editor.update({})} />;
 }
 
-function EmptyEmbedBlock({ onSubmit }: { onSubmit: (url: string) => void }) {
-  const [value, setValue] = useState("");
+function EmptyEmbedBlock({
+  blockId,
+  onSubmit,
+}: {
+  blockId: string;
+  onSubmit: (url: string) => void;
+}) {
+  const link = useKept(embedUrlDraft, "", { subject: blockId });
+  const [value, , clearLink] = link;
   const inputRef = useRef<HTMLInputElement>(null);
 
   // An empty embed block is a PROMPT — it is asking for a URL — so Enter on the
@@ -47,7 +72,9 @@ function EmptyEmbedBlock({ onSubmit }: { onSubmit: (url: string) => void }) {
 
   function submit() {
     const trimmed = value.trim();
-    if (trimmed) onSubmit(trimmed);
+    if (!trimmed) return;
+    onSubmit(trimmed);
+    clearLink();
   }
 
   return (
@@ -75,9 +102,8 @@ function EmptyEmbedBlock({ onSubmit }: { onSubmit: (url: string) => void }) {
             // claims the key and rewinds an unrelated block edit mid-typing.
             {...localUndoProps}
             ref={inputRef}
-            value={value}
+            keep={link}
             placeholder="https://…"
-            onChange={(e) => setValue(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();

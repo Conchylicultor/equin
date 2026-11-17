@@ -1,5 +1,6 @@
 import { useState, type ReactElement } from "react";
 import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 
 /**
  * A text input that writes once the person is done — on blur or Enter — not
@@ -32,6 +33,9 @@ export function CommitInput({
   return (
     <Input
       type={type}
+      keep={transient(
+        "committed on blur or Enter: a short cron, time or number",
+      )}
       value={draft}
       aria-label={ariaLabel}
       className={className}

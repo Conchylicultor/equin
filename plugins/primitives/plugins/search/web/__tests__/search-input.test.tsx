@@ -11,6 +11,7 @@ import {
   SearchInput,
   type SearchInputAppearance,
 } from "../internal/search-input";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 
 afterEach(cleanup);
 
@@ -24,6 +25,7 @@ function Controlled(props: {
     <SearchInput
       appearance={props.appearance}
       keyHint={props.keyHint}
+      keep={transient("test")}
       value={value}
       onChange={(e) => setValue(e.target.value)}
       placeholder="Search"

@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import {
   EndpointError,
   getEndpointErrorMessage,
@@ -278,6 +279,9 @@ function AddApiKeyForm({
             <Input
               autoFocus
               placeholder="Name — e.g. API credit"
+              keep={transient(
+                "a short label entered with the API key beside it, which is never kept",
+              )}
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
@@ -285,6 +289,7 @@ function AddApiKeyForm({
               type="password"
               autoComplete="off"
               placeholder="sk-ant-…"
+              keep={transient("secret: never written to browser storage")}
               value={credential}
               onChange={(e) => setCredential(e.target.value)}
               className="font-mono"

@@ -7,6 +7,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { localUndoProps } from "@plugins/primitives/plugins/undo-redo/web";
 import { normalizeLinkUrl } from "@plugins/page/plugins/editor/web";
 
@@ -97,6 +98,9 @@ export function LinkForm({
             {...localUndoProps}
             autoFocus
             name="url"
+            keep={transient(
+              "a popover over the selection or link it edits: it closes with that anchor, which a reload does not reopen",
+            )}
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="Paste or type a link"
@@ -108,6 +112,9 @@ export function LinkForm({
               // Same reason as the URL field above.
               {...localUndoProps}
               name="title"
+              keep={transient(
+                "same popover as the URL field: closes with its anchor",
+              )}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Link text"

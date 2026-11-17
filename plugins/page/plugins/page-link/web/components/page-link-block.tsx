@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
@@ -75,6 +76,9 @@ function PagePicker({
           {...localUndoProps}
           autoFocus
           placeholder="Search pages…"
+          keep={transient(
+            "a picker popover's filter: a reload does not reopen the popover, and it resets on close",
+          )}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />

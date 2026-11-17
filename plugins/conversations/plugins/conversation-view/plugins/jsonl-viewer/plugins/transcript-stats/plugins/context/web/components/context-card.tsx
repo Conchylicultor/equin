@@ -1,4 +1,10 @@
 import { useState, type ReactNode } from "react";
+import {
+  defineKept,
+  submitKept,
+  useKept,
+} from "@plugins/primitives/plugins/kept-state/web";
+import { z } from "zod";
 import type { ContextUsage } from "@plugins/conversations/plugins/context-usage/core";
 import {
   conversationSystemPrompt,
@@ -37,6 +43,14 @@ import { rowOrStale } from "@plugins/network/plugins/live/web";
 import { contextRows, tokensToAutoCompact } from "./context-math";
 
 const chevronIcon = symbol("chevron-right");
+
+const compactInstructionsDraft = defineKept({
+  owner: "conversations.context.compact-instructions",
+  label: "Compaction instructions",
+  tier: "work",
+  cap: "8 KB",
+  schema: z.string(),
+});
 const compactIcon = symbol("compress");
 
 // The note under the bar appears only once auto-compact is this close (a
@@ -88,7 +102,9 @@ export function ContextCard({
   usage: ContextUsage | null;
   onCompacted: () => void;
 }) {
-  const [instructions, setInstructions] = useState("");
+  const instructions = useKept(compactInstructionsDraft, "", {
+    subject: conversationId,
+  });
   const shownPath = useShownPath(conversationId);
   const promptRead = useLive(conversationSystemPrompt, { id: conversationId });
   const systemPrompt: SystemPromptParts =
@@ -104,11 +120,17 @@ export function ContextCard({
   const sendAvailability = useTurnSendAvailability();
   const compact = () => {
     if (!sendAvailability.available) return;
-    const focus = instructions.trim();
-    sendConversationTurn(conversationId, {
-      text: focus ? `/compact ${focus}` : "/compact",
-    });
-    setInstructions("");
+    // Gone from the field at once; kept in storage until the turn is recorded.
+    void submitKept(
+      instructions[3],
+      (typed) => {
+        const focus = typed.trim();
+        return sendConversationTurn(conversationId, {
+          text: focus ? `/compact ${focus}` : "/compact",
+        }).posted;
+      },
+      { shows: "at-once" },
+    );
     onCompacted();
   };
   return (
@@ -130,8 +152,7 @@ export function ContextCard({
         <Textarea
           rows={1}
           placeholder="Compaction instructions"
-          value={instructions}
-          onChange={(e) => setInstructions(e.target.value)}
+          keep={instructions}
           onKeyDown={(e) => {
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
               e.preventDefault();

@@ -60,6 +60,27 @@ There is no `frozen` option. It was declared, implemented in four places and
 called from nowhere — a "the server owns this field, mirror it unconditionally"
 escape hatch for exactly the case the reconcile now handles by default.
 
+## Unsaved text survives a remount (`keep`)
+
+`keep` is required: `{ field: "<plugin>.<field>", subject: <record id> }` or
+`transient("<why>")`. Kept, the text no save has taken yet is kept-state
+**work** (`internal/pending-text.ts`: one entry `{ text, base }` per
+`<field>|<subject>`, `base` being the value it was typed over). A reload, a
+tab switch (tab residency unmounts hidden tabs) or an unmount inside the
+debounce window therefore loses nothing: the next mount starts its draft from
+the entry and
+
+- `base` is still the source's value → resumes the save the debounce would
+  have made;
+- the source moved on since `base` → `lastSaved` is `base`, so the reconcile
+  reads `conflict` (or `converged`), never an `adopt` that would discard it;
+- the source already holds `text` → the entry is dropped.
+
+The entry is cleared once a save of it resolves (whatever was typed since
+stays), on `adopt` / `converged`, and on `acceptExternal`. A failed save keeps
+it. The result's `keep` (a kept-state `KeptText`) binds a text-input
+primitive: `<Input keep={field.keep} onFocus={field.onFocus} onBlur={field.onBlur} />`.
+
 ## Caret
 
 Adopting into a focused field must not throw the caret to the end. The hook
@@ -118,10 +139,16 @@ self-echo behavior that must keep holding.
 
 ## Plugin reference
 
-- Description: Debounced-autosave field hook with focus tracking, flush-on-blur, and self-echo suppression. Used by task/agent detail forms.
+- Description: Debounced-autosave field hook with focus tracking, flush-on-blur, and self-echo suppression. Its required keep ({ field, subject } or transient) keeps unsaved text as kept-state work until the save is acked: a remount restores it and resumes the save (or reports a conflict if the source moved on). Bind inputs with keep={field.keep}. Used by task/agent detail forms.
 - Web:
   - Uses:
+    - `primitives/dom/web-storage.useStore`
+    - `primitives/kept-state.clearDraft`
+    - `primitives/kept-state.defineKept`
+    - `primitives/kept-state.readDraft`
+    - `primitives/kept-state.writeDraft`
     - `primitives/latest-ref.useLatestRef`
+    - `primitives/scope/tab-id.getTabId`
     - `primitives/sync-status.SyncPhase`
     - `primitives/sync-status.useReportSync`
   - Exports (types):

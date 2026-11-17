@@ -14,6 +14,7 @@ import {
   useDraft,
 } from "@plugins/primitives/plugins/kept-state/web";
 import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import { keptField } from "@plugins/primitives/plugins/kept-state/core";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
   Button,
@@ -74,10 +75,11 @@ const TITLE_CHARS = 80;
  */
 export function NewAppPage() {
   const openPane = useOpenPane();
-  const [draft, setDraft, , draftKept] = useDraft(newAppDraftStore, {
+  const draftBinding = useDraft(newAppDraftStore, {
     text: "",
     picked: {},
   });
+  const [draft, setDraft, , draftKept] = draftBinding;
   const { resolveOptions, launch, availability } = useTaskLaunch({
     openAfterLaunch: true,
     openMode: "root",
@@ -144,8 +146,8 @@ export function NewAppPage() {
               {/* This one field wears the mock's box (newAppPromptTheme); every other composer in Home keeps the standard one. */}
               <Theme name={subThemeScope(newAppPromptTheme)} surface="none">
                 <ComposerField
-                  value={draft.text}
-                  onChange={(text) => setDraft((d) => ({ ...d, text }))}
+                  // The text is the kept draft's `text` (useDraft above).
+                  keep={keptField(draftBinding, "text")}
                   onSubmit={() => void create()}
                   submitMode="cmd-enter"
                   placeholder="Describe the app you want"

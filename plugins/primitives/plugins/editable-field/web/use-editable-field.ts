@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -10,6 +11,20 @@ import {
   type SyncPhase,
 } from "@plugins/primitives/plugins/sync-status/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import {
+  isTransient,
+  type KeptText,
+  type Transient,
+} from "@plugins/primitives/plugins/kept-state/core";
+import { useStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import {
+  clearPendingIfMine,
+  holdPending,
+  pendingText,
+  restorePending,
+  writePending,
+  type PendingText,
+} from "./internal/pending-text";
 import { mapCaret } from "./internal/map-caret";
 import { reconcile } from "./internal/reconcile";
 
@@ -23,6 +38,16 @@ export interface UseEditableFieldOptions<T extends string> {
    * and in the conflict state (e.g. "Task title changed elsewhere").
    */
   label?: string;
+  /**
+   * Required: does text typed here and not yet saved survive a reload and a
+   * tab switch? `{ field, subject }` keeps it as work (kept-state) — the text
+   * the server has not acked yet, with the value it was typed over — until a
+   * save of it resolves; a remount restores it and resumes the save (or shows
+   * it as a conflict if the source moved on meanwhile). `field` names the
+   * field (`[a-z0-9.-]`, e.g. "task.title"), `subject` the record it edits.
+   * `transient("<why>")` when losing it is fine.
+   */
+  keep: { field: string; subject: string } | Transient;
 }
 
 /**
@@ -38,6 +63,8 @@ export interface EditableFieldConflict<T extends string> {
 }
 
 export interface EditableField<T extends string> {
+  /** The text-input primitives' `keep`: `<Input keep={field.keep} … />`. */
+  keep: KeptText;
   value: T;
   onChange: (next: T) => void;
   onFocus: () => void;
@@ -117,9 +144,50 @@ function leavePast<T>(past: Set<T>, prev: T): void {
 export function useEditableField<T extends string>(
   opts: UseEditableFieldOptions<T>,
 ): EditableField<T> {
-  const { value, debounceMs = 500, label } = opts;
+  const { value, debounceMs = 500, label, keep } = opts;
 
-  const [draft, setDraft] = useState<T>(value);
+  // Pending text kept as work until a save of it resolves (`keep`): the store
+  // entry for this field of this record, or null for a transient field.
+  const pendingStore = useStore(pendingText.store);
+  const pendingId = isTransient(keep) ? null : `${keep.field}|${keep.subject}`;
+  // What a previous mount left unsaved, read once: the draft starts from it.
+  const [restored] = useState<PendingText | null>(() =>
+    pendingId === null ? null : restorePending(pendingStore, pendingId, value),
+  );
+  // The text this field last kept: the only entry text it may clear.
+  const writtenRef = useRef<string | null>(restored?.text ?? null);
+  useEffect(() => {
+    if (pendingId === null) return;
+    return holdPending(pendingId);
+  }, [pendingId]);
+  // Another record: nothing kept under it is this field's to clear.
+  const keptIdRef = useRef(pendingId);
+  useEffect(() => {
+    if (keptIdRef.current === pendingId) return;
+    keptIdRef.current = pendingId;
+    writtenRef.current = null;
+  }, [pendingId]);
+  const dropPending = useCallback(() => {
+    if (pendingId === null || writtenRef.current === null) return;
+    clearPendingIfMine(pendingStore, pendingId, writtenRef.current);
+    writtenRef.current = null;
+  }, [pendingStore, pendingId]);
+  const keepPending = useCallback(
+    (text: string, base: string) => {
+      if (pendingId === null) return;
+      if (text === base) {
+        dropPending();
+        return;
+      }
+      writePending(pendingStore, pendingId, text, base);
+      writtenRef.current = text;
+    },
+    [pendingStore, pendingId, dropPending],
+  );
+
+  const [draft, setDraft] = useState<T>(() =>
+    restored === null ? value : (restored.text as T),
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [isError, setIsError] = useState(false);
   // Explicit "this field's save completed" timestamp, reported to sync-status.
@@ -133,13 +201,19 @@ export function useEditableField<T extends string>(
   const focusedRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savePromiseRef = useRef<Promise<void> | null>(null);
-  const lastSavedRef = useRef<T>(value);
+  // A restored draft was typed over `restored.base`: that is what the source
+  // held when it was last saved, so a source that moved on since reads as a
+  // conflict, never as an adopt that would discard it.
+  const lastSavedRef = useRef<T>(
+    restored === null ? value : (restored.base as T),
+  );
   // The values this field has LEFT BEHIND: where it started and every save
   // before the latest, since the last value it adopted from elsewhere. One of
   // them showing up again is a stale echo of our own past (see `reconcile`'s
   // `stale`), never someone else's edit.
   const pastRef = useRef<Set<T>>(new Set());
   const onSaveRef = useRef(opts.onSave);
+  const keepPendingRef = useLatestRef(keepPending);
   const pendingCaretRef = useRef<CaretAdoption | null>(null);
 
   // Keep the latest draft/conflict in refs so the stable callbacks below
@@ -176,6 +250,7 @@ export function useEditableField<T extends string>(
         leavePast(pastRef.current, lastSavedRef.current);
         lastSavedRef.current = value;
         setConflict(null);
+        dropPending();
         return;
       case "conflict":
         // Keep the draft. Re-report the same external value as the SAME object
@@ -202,9 +277,10 @@ export function useEditableField<T extends string>(
         lastSavedRef.current = value;
         setDraft(value);
         setConflict(null);
+        dropPending();
         return;
     }
-  }, [value, draft]);
+  }, [value, draft, dropPending]);
 
   // Put the caret back after the adopted value has been committed to the DOM.
   // A layout effect runs after React DOM's own selection restore, so this wins;
@@ -256,6 +332,8 @@ export function useEditableField<T extends string>(
       // Saved again, it is current, not past.
       pastRef.current.delete(next);
       lastSavedRef.current = next;
+      // Acked: what is still pending is whatever was typed since (if anything).
+      keepPendingRef.current(draftRef.current, next);
       setIsError(false);
       setSavedAt(Date.now());
     })();
@@ -274,14 +352,26 @@ export function useEditableField<T extends string>(
   const onChange = useCallback(
     (next: T) => {
       setDraft(next);
+      keepPending(next, lastSavedRef.current);
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
         timerRef.current = null;
         void runSave(next);
       }, debounceMs);
     },
-    [debounceMs, runSave],
+    [debounceMs, runSave, keepPending],
   );
+
+  // A restored draft whose base is still the source's value was a save that
+  // never landed: resume it, as its debounce would have.
+  useEffect(() => {
+    if (restored === null || restored.base !== value) return;
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null;
+      void runSave(restored.text as T);
+    }, debounceMs);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on mount: what was restored is resumed; later edits go through onChange
+  }, []);
 
   const onFocus = useCallback(() => {
     focusedRef.current = true;
@@ -338,7 +428,8 @@ export function useEditableField<T extends string>(
     lastSavedRef.current = pending.external;
     setDraft(pending.external);
     setConflict(null);
-  }, []);
+    dropPending();
+  }, [dropPending]);
 
   // Auto-report to the universal sync-status indicator. Harmless no-op when no
   // <SyncStatusProvider> is above (unit tests, non-surface mounts). A failed
@@ -352,7 +443,16 @@ export function useEditableField<T extends string>(
         : "idle";
   useReportSync({ phase, label, retry: isError ? retry : undefined, savedAt });
 
+  // The field's own kept text, as the text-input primitives' `keep`. Built
+  // as data (not through `keptText`): `onChange` touches refs, and handing it
+  // to a call during render reads as a ref read to the React Compiler.
+  const keepText = useMemo(
+    () => ({ value: draft, onChange }) as unknown as KeptText,
+    [draft, onChange],
+  );
+
   return {
+    keep: keepText,
     value: draft,
     onChange,
     onFocus,

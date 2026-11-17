@@ -38,12 +38,25 @@ import {
   type UgSourceRaw,
 } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/core";
 import { ugTab } from "../shared/resources";
+import {
+  defineKept,
+  useKept,
+} from "@plugins/primitives/plugins/kept-state/web";
+import { z } from "zod";
 import { collectUnrecognisedChords } from "./compile";
 
 interface Props {
   raw?: unknown;
   onRaw: (raw: unknown) => void;
 }
+
+// The URL being typed, kept with the place it is typed in (the loader has no
+// record of its own to file it under: a song only exists once a tab loads).
+const urlKept = defineKept({
+  owner: "sonata.ultimate-guitar.loader-url",
+  tier: "view",
+  schema: z.string(),
+});
 
 const PLACEHOLDER = "https://tabs.ultimate-guitar.com/tab/...";
 
@@ -58,7 +71,8 @@ export function UltimateGuitarLoader({ raw, onRaw }: Props) {
   const loaded = asUgTab(raw);
   // The URL box is local working state; pre-fill it with the loaded tab's URL so
   // editing/reloading is easy. The fetched `UgTab` is the persisted `raw`.
-  const [url, setUrl] = useState(loaded?.urlWeb ?? "");
+  const urlBinding = useKept(urlKept, loaded?.urlWeb ?? "");
+  const [url, setUrl] = urlBinding;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Replace expands the URL row below the loaded tab's line; with no tab loaded
@@ -117,8 +131,7 @@ export function UltimateGuitarLoader({ raw, onRaw }: Props) {
     <Stack direction="row" align="center" gap="sm">
       <Input
         type="url"
-        value={url}
-        onChange={(e) => setUrl(e.target.value)}
+        keep={urlBinding}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             e.preventDefault();

@@ -3,6 +3,7 @@ import {
   cn,
   Input,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { useMemo, useState } from "react";
 import {
   DataView,
@@ -334,6 +335,7 @@ export function EventsTestView() {
           <Section title="Subscribe">
             <FieldRow label="userId (filter)">
               <Input
+                keep={transient("dev tool: a test form")}
                 placeholder="empty = match any"
                 value={subUserId}
                 onChange={(e) => setSubUserId(e.target.value)}
@@ -341,6 +343,7 @@ export function EventsTestView() {
             </FieldRow>
             <FieldRow label="label (job config)">
               <Input
+                keep={transient("dev tool: a test form")}
                 placeholder="required"
                 value={subLabel}
                 onChange={(e) => setSubLabel(e.target.value)}
@@ -366,6 +369,7 @@ export function EventsTestView() {
           <Section title="Emit">
             <FieldRow label="userId (payload)">
               <Input
+                keep={transient("dev tool: a test form")}
                 placeholder="required"
                 value={emitUserId}
                 onChange={(e) => setEmitUserId(e.target.value)}
@@ -373,6 +377,7 @@ export function EventsTestView() {
             </FieldRow>
             <FieldRow label="message (payload)">
               <Input
+                keep={transient("dev tool: a test form")}
                 placeholder="optional; defaults to 'hello'"
                 value={emitMessage}
                 onChange={(e) => setEmitMessage(e.target.value)}
@@ -403,6 +408,7 @@ export function EventsTestView() {
           <div className="grid gap-md md:grid-cols-3">
             <FieldRow label="label">
               <Input
+                keep={transient("dev tool: a test form")}
                 placeholder="required"
                 value={deLabel}
                 onChange={(e) => setDeLabel(e.target.value)}
@@ -410,6 +416,7 @@ export function EventsTestView() {
             </FieldRow>
             <FieldRow label="userId">
               <Input
+                keep={transient("dev tool: a test form")}
                 placeholder="default 'direct'"
                 value={deUserId}
                 onChange={(e) => setDeUserId(e.target.value)}
@@ -417,6 +424,7 @@ export function EventsTestView() {
             </FieldRow>
             <FieldRow label="message">
               <Input
+                keep={transient("dev tool: a test form")}
                 placeholder="default 'direct-enqueued'"
                 value={deMessage}
                 onChange={(e) => setDeMessage(e.target.value)}
@@ -447,6 +455,7 @@ export function EventsTestView() {
             <Fill>
               <FieldRow label="label match">
                 <Input
+                  keep={transient("dev tool: a test form")}
                   placeholder="exact label to sweep (JSONB @>)"
                   value={dtLabel}
                   onChange={(e) => setDtLabel(e.target.value)}

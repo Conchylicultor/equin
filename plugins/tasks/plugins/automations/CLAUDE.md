@@ -322,8 +322,8 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `FieldPresentation.Register` "exposure:tasks_ext_launch_decision"
     - `FieldPresentation.Register` "exposure:tasks_ext_origin"
     - `Notifications.Action` "review-automation"
-  - Uses: 58 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/ui-kit` ×7
+  - Uses: 59 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×8
     - `network/live/live-state` ×6
     - `primitives/pane` ×6
     - `network/live` ×5

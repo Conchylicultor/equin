@@ -13,6 +13,12 @@ import {
   Button,
   Textarea,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  defineKept,
+  submitKept,
+  useKept,
+} from "@plugins/primitives/plugins/kept-state/web";
+import { z } from "zod";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useConfirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
@@ -67,6 +73,22 @@ const savedIcon = symbol("event");
 const quoteIcon = symbol("format-quote");
 
 /** The card's two independent toggles, in order: Want to go, then Been. */
+const noteDraft = defineKept({
+  owner: "places.place-note",
+  label: "Place note drafts",
+  tier: "work",
+  cap: "32 KB",
+  schema: z.string(),
+});
+
+const titleDraft = defineKept({
+  owner: "places.place-title",
+  label: "Place name drafts",
+  tier: "work",
+  cap: "8 KB",
+  schema: z.string(),
+});
+
 const ROLE_TOGGLES: readonly TagRole[] = ["want", "been"];
 
 /** The drop under the hero, drawn at this multiple of the map pin. */
@@ -191,6 +213,9 @@ export function PlaceCard({
               <Fill>
                 <Stack gap="2xs" className="pt-sm">
                   <PlaceTitleInput
+                    // Keyed by the stored name: a rename arriving from
+                    // elsewhere starts the field over from it.
+                    key={placeName(place)}
                     place={place}
                     onCommit={(title) =>
                       updatePlace.mutateAsync({ params, body: { title } })
@@ -297,6 +322,9 @@ export function PlaceCard({
                 </Cluster>
               </Section>
               <NoteSlip
+                // Keyed by place and stored note: a note saved elsewhere, or
+                // another place selected, starts the field over from it.
+                key={`${place.id}:${place.note}`}
                 place={place}
                 onCommit={(note) =>
                   updatePlace.mutateAsync({ params, body: { note } })
@@ -448,6 +476,8 @@ function NoteSlip({
   place: Place;
   onCommit: (note: string) => Promise<unknown>;
 }): ReactNode {
+  // An unsaved note survives a reload; cleared once its save is taken.
+  const note = useKept(noteDraft, place.note, { subject: place.id });
   return (
     <Stack
       direction="row"
@@ -458,17 +488,17 @@ function NoteSlip({
       <Icon icon={quoteIcon} className="size-5 text-warning" />
       <Fill>
         <Textarea
-          // Keyed by place and stored note: a note saved elsewhere, or
-          // another place selected, resets the uncontrolled field.
-          key={`${place.id}:${place.note}`}
-          defaultValue={place.note}
+          keep={note}
           fitContent
           placeholder="Why this place? Who told you about it?"
           aria-label="Note"
           className="min-h-0 resize-none border-transparent bg-transparent p-none shadow-none focus-visible:ring-0"
-          onBlur={(e) => {
-            const note = e.currentTarget.value;
-            if (note !== place.note) void onCommit(note);
+          onBlur={() => {
+            if (note[0] === place.note) return;
+            void submitKept(note[3], async (next) => {
+              await onCommit(next);
+              return { ok: true };
+            });
           }}
         />
       </Fill>
@@ -491,12 +521,17 @@ function PlaceTitleInput({
 }): ReactNode {
   const shown = placeName(place);
   const custom = isCustomPlace(place);
+  // An unsaved rename survives a reload; cleared once its save is taken.
+  const title = useKept(titleDraft, shown, { subject: place.id });
+  const [, setTitle, clearTitle] = title;
+  const commit = (value: string | null) =>
+    void submitKept(title[3], async () => {
+      await onCommit(value);
+      return { ok: true };
+    });
   return (
     <Textarea
-      // Keyed by the stored name: a rename arriving from elsewhere resets the
-      // uncontrolled field to it.
-      key={shown}
-      defaultValue={shown}
+      keep={title}
       placeholder={custom ? "Name this pin" : place.name}
       aria-label="Place name"
       // One line that wraps a long name instead of cutting it; Enter saves.
@@ -509,28 +544,33 @@ function PlaceTitleInput({
           e.currentTarget.blur();
         }
         if (e.key === "Escape") {
+          // Set the DOM value too: the blur below reads it before React re-renders.
           e.currentTarget.value = shown;
+          setTitle(shown);
           e.currentTarget.blur();
         }
       }}
       onBlur={(e) => {
         const next = e.currentTarget.value.trim();
-        if (next === shown) return;
+        if (next === shown) {
+          clearTitle();
+          return;
+        }
         if (custom) {
           if (next === "") {
-            e.currentTarget.value = shown;
+            clearTitle();
             return;
           }
-          void onCommit(next);
+          commit(next);
           return;
         }
         // Google's own name (or nothing) is no title.
-        const title = next === "" || next === place.name ? null : next;
-        if (title === place.title) {
-          e.currentTarget.value = shown;
+        const userTitle = next === "" || next === place.name ? null : next;
+        if (userTitle === place.title) {
+          clearTitle();
           return;
         }
-        void onCommit(title);
+        commit(userTitle);
       }}
     />
   );

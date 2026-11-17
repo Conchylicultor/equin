@@ -12,7 +12,9 @@ import {
   cn,
   DropdownMenuItem,
   DropdownMenuSection,
+  Input,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { CursorAnchoredMenu } from "@plugins/primitives/plugins/overlay/plugins/cursor-menu/web";
@@ -191,7 +193,11 @@ function LauncherPanelBody({
                     icon={searchIcon}
                     className={cn(rigidClass(), "size-4.5")}
                   />
-                  <input
+                  <Input
+                    bare
+                    keep={transient(
+                      "launcher query: the panel opens empty each time it is summoned",
+                    )}
                     ref={input}
                     autoFocus
                     value={query}

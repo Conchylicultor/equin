@@ -1,8 +1,20 @@
-import { useState } from "react";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Button, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { WallpaperCandidate } from "@plugins/apps/plugins/desktop/plugins/wallpaper/web";
+import {
+  defineKept,
+  useKept,
+} from "@plugins/primitives/plugins/kept-state/web";
+import { z } from "zod";
+
+const urlDraft = defineKept({
+  owner: "desktop.wallpaper.from-url",
+  label: "Wallpaper URL drafts",
+  tier: "work",
+  cap: "8 KB",
+  schema: z.string(),
+});
 
 /** Cheap client-side guard — the server does the real SSRF/content validation. */
 function looksLikeHttpUrl(value: string): boolean {
@@ -20,23 +32,24 @@ export function UrlPanel({
 }: {
   onPick: (candidate: WallpaperCandidate) => void;
 }) {
-  const [url, setUrl] = useState("");
+  const urlKept = useKept(urlDraft, "", { subject: "wallpaper" });
+  const [url, , clearUrl] = urlKept;
   const valid = looksLikeHttpUrl(url);
 
   function submit() {
     if (!valid) return;
     onPick({ kind: "remote", url: url.trim() });
+    clearUrl();
   }
 
   return (
     <Stack gap="sm">
       <Input
+        keep={urlKept}
         type="url"
         inputMode="url"
-        value={url}
         autoFocus
         placeholder="https://example.com/image.jpg"
-        onChange={(e) => setUrl(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter") submit();
         }}

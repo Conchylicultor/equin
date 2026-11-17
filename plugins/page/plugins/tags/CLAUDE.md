@@ -19,10 +19,11 @@ The pages sidebar filters and groups by it with no tags code of its own.
     - `IdKinds.Kind` "tag"
     - `PageReference.Trailing` → `PageTagChips`
     - `FieldPresentation.Register` "exposure:page_blocks_ext_tags"
-  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live` ×5
     - `network/live/live-state` ×4
     - `primitives/css/ui-kit` ×4
+    - `primitives/kept-state` ×3
     - `ids.IdKinds`
     - `infra/endpoints.useEndpointMutation`
     - `page/page-reference.PageReference`

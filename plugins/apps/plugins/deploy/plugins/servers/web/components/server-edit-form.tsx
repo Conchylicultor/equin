@@ -3,17 +3,27 @@ import {
   useEditableField,
   type EditableField,
 } from "@plugins/primitives/plugins/editable-field/web";
+import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { Server } from "../../shared";
 import { updateServer, type UpdateServerBody } from "../../shared/endpoints";
 import { FieldShell, fieldInputClass } from "./server-fields";
 
-/** Wire an EditableField to a text input / textarea. */
+/** Wire an EditableField to a text input. */
 function fieldProps(field: EditableField<string>) {
   return {
+    keep: field.keep,
+    onFocus: field.onFocus,
+    onBlur: field.onBlur,
+  };
+}
+
+/** Wire an EditableField to a raw number input (a non-text field keeps its own value). */
+function numberFieldProps(field: EditableField<string>) {
+  return {
     value: field.value,
-    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
       field.onChange(e.target.value),
     onFocus: field.onFocus,
     onBlur: field.onBlur,
@@ -40,11 +50,13 @@ export function ServerEditForm({ server }: { server: Server }) {
   const name = useEditableField({
     value: server.name,
     label: "Server name",
+    keep: { field: "deploy.server.name", subject: server.id },
     onSave: (v) => save({ name: v || server.host }),
   });
   const host = useEditableField({
     value: server.host,
     label: "Host",
+    keep: { field: "deploy.server.host", subject: server.id },
     // Host is required — an empty draft reverts to the stored value on blur
     // (the hook mirrors the unchanged server value back) rather than wiping it.
     onSave: (v) => (v ? save({ host: v }) : undefined),
@@ -52,11 +64,13 @@ export function ServerEditForm({ server }: { server: Server }) {
   const sshUser = useEditableField({
     value: server.sshUser,
     label: "SSH user",
+    keep: { field: "deploy.server.ssh-user", subject: server.id },
     onSave: (v) => save({ sshUser: v || "root" }),
   });
   const port = useEditableField({
     value: String(server.port),
     label: "Port",
+    keep: { field: "deploy.server.port", subject: server.id },
     onSave: (v) => {
       const n = Number(v);
       return Number.isFinite(n) && n > 0 ? save({ port: n }) : undefined;
@@ -65,31 +79,33 @@ export function ServerEditForm({ server }: { server: Server }) {
   const consoleUrl = useEditableField({
     value: server.consoleUrl ?? "",
     label: "Console URL",
+    keep: { field: "deploy.server.console-url", subject: server.id },
     onSave: (v) => save({ consoleUrl: v || null }),
   });
 
   return (
     <Stack gap="lg">
       <FieldShell label="Name">
-        <input
+        <Input
+          bare
           className={fieldInputClass}
           placeholder={server.host}
           {...fieldProps(name)}
         />
       </FieldShell>
       <FieldShell label="Host" required>
-        <input className={fieldInputClass} {...fieldProps(host)} />
+        <Input bare className={fieldInputClass} {...fieldProps(host)} />
       </FieldShell>
       <Stack direction="row" gap="md">
         {/* FieldShell owns its own element, so the grow cell arrives as a class. */}
         <FieldShell label="SSH User" className={fillClasses("x")}>
-          <input className={fieldInputClass} {...fieldProps(sshUser)} />
+          <Input bare className={fieldInputClass} {...fieldProps(sshUser)} />
         </FieldShell>
         <FieldShell label="Port" className="w-20">
           <input
             className={fieldInputClass}
             type="number"
-            {...fieldProps(port)}
+            {...numberFieldProps(port)}
           />
         </FieldShell>
       </Stack>
@@ -97,7 +113,8 @@ export function ServerEditForm({ server }: { server: Server }) {
         label="Console URL"
         hint="Link to the provider's management console for this server."
       >
-        <input
+        <Input
+          bare
           className={fieldInputClass}
           type="url"
           placeholder="e.g. https://console.hetzner.com/projects/…/servers/…"

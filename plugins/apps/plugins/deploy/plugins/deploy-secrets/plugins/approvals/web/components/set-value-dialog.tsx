@@ -5,6 +5,7 @@ import {
   DialogTitle,
   Input,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -52,6 +53,7 @@ export function SetValueDialog({
       </Stack>
       <Stack gap="2xs">
         <Input
+          keep={transient("secret: never written to browser storage")}
           type="password"
           autoComplete="off"
           autoFocus

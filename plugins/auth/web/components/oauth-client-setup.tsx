@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import {
   Button,
   Input,
@@ -165,12 +166,14 @@ export function OAuthClientSetup({
           <Input
             type="password"
             placeholder="Client ID"
+            keep={transient("secret: never written to browser storage")}
             value={clientId}
             onChange={(e) => setClientId(e.target.value)}
           />
           <Input
             type="password"
             placeholder="Client secret"
+            keep={transient("secret: never written to browser storage")}
             value={clientSecret}
             onChange={(e) => setClientSecret(e.target.value)}
           />

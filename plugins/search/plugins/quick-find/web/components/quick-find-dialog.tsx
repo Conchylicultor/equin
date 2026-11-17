@@ -9,6 +9,7 @@ import {
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
@@ -172,6 +173,7 @@ function QuickFindDialogBody({
         <SearchInput
           appearance="menu"
           autoFocus
+          keep={transient("quick-find dialog: every open starts a fresh query")}
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);

@@ -3,6 +3,7 @@ import {
   Input,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState } from "react";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -95,6 +96,7 @@ function AddFolderField({
       <Fill>
         <Input
           outline="dashed"
+          keep={transient("a typed path is handed over on blur / Enter")}
           // A path is typed in the path face; the hint before it is prose.
           className="font-mono placeholder:font-sans"
           value={local}
@@ -191,6 +193,7 @@ function EditFolderField({
     <Stack direction="row" gap="xs" align="center">
       <Fill className="relative">
         <Input
+          keep={transient("committed on blur: the caller's value holds it")}
           value={local}
           placeholder={placeholder ?? "Absolute folder path"}
           onChange={(e) => setLocal(e.target.value)}

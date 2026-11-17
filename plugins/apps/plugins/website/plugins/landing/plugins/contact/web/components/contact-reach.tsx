@@ -22,6 +22,15 @@ import {
 import { useSendSiteMessage } from "@plugins/apps/plugins/deploy/plugins/site-messages/plugins/intake/web";
 import { WebsiteArrow } from "@plugins/apps/plugins/website/plugins/shell/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import {
+  keptField,
+  transient,
+} from "@plugins/primitives/plugins/kept-state/core";
+import {
+  defineKept,
+  useKept,
+} from "@plugins/primitives/plugins/kept-state/web";
+import { z } from "zod";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
   EMPTY_DRAFT,
@@ -34,6 +43,16 @@ import {
 } from "../internal/draft";
 
 const checkIcon = symbol("check");
+
+/** The one contact form there is: what its work is filed under. */
+const CONTACT_SUBJECT = "contact";
+const contactDraft = defineKept({
+  owner: "website.contact.draft",
+  label: "Contact messages",
+  tier: "work",
+  cap: "16 KB",
+  schema: z.object({ message: z.string(), email: z.string() }),
+});
 
 const COMPOSING: ContactPhase = { kind: "compose", notice: null };
 
@@ -60,7 +79,16 @@ export function ContactReach() {
   const sendSiteMessage = useSendSiteMessage();
   const formId = useId();
   const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState<ContactDraft>(EMPTY_DRAFT);
+  // The message and the address are the visitor's work, kept across a reload
+  // until the server takes them; the honeypot is a bot's, never kept.
+  const kept = useKept(
+    contactDraft,
+    { message: EMPTY_DRAFT.message, email: EMPTY_DRAFT.email },
+    { subject: CONTACT_SUBJECT },
+  );
+  const [written, , clearWritten] = kept;
+  const [honeypot, setHoneypot] = useState(EMPTY_DRAFT.honeypot);
+  const draft: ContactDraft = { ...written, honeypot };
   const [phase, setPhase] = useState<ContactPhase>(COMPOSING);
   // Who the last thank-you named — kept past "Send another", so the note
   // still reads right while it folds away.
@@ -107,10 +135,12 @@ export function ContactReach() {
   };
 
   // Returned to `Button`, which pends while it runs.
-  const send = async () => {
+  // The click's own timestamp (the clock `performance.now()` reads): ⌘↵
+  // clicks the button too, so every send has one.
+  const send = async (e: { timeStamp: number }) => {
     const body = messageBody(
       draft,
-      performance.now() - openedAt.current,
+      e.timeStamp - openedAt.current,
       // `location.host`: the gateway rewrites the Host header the server sees.
       { host: window.location.host, page: currentRoutePath() },
     );
@@ -119,7 +149,8 @@ export function ContactReach() {
       setPhase(phaseAfter(response, body.replyTo));
       if (response.kind === "sent") {
         setSentTo(body.replyTo);
-        setDraft(EMPTY_DRAFT);
+        clearWritten();
+        setHoneypot(EMPTY_DRAFT.honeypot);
       }
     } catch (err) {
       // No answer (offline) or a refusal: said inline, the text kept.
@@ -192,10 +223,7 @@ export function ContactReach() {
                 aria-label="Message"
                 placeholder="What would you like to talk about?"
                 rows={5}
-                value={draft.message}
-                onChange={(e) =>
-                  setDraft({ ...draft, message: e.target.value })
-                }
+                keep={keptField(kept, "message")}
               />
               <Input
                 type="email"
@@ -203,21 +231,20 @@ export function ContactReach() {
                 aria-label="Your email"
                 autoComplete="email"
                 placeholder="Your email, so we can reply"
-                value={draft.email}
-                onChange={(e) => setDraft({ ...draft, email: e.target.value })}
+                keep={keptField(kept, "email")}
               />
               {/* The honeypot: invisible, unreachable by keyboard, hidden from
                   assistive tech. Only a bot filling every input finds it. */}
               <div aria-hidden className="sr-only">
-                <input
+                <Input
+                  bare
+                  keep={transient("honeypot: only a bot fills it")}
                   type="text"
                   name="website"
                   tabIndex={-1}
                   autoComplete="off"
-                  value={draft.honeypot}
-                  onChange={(e) =>
-                    setDraft({ ...draft, honeypot: e.target.value })
-                  }
+                  value={honeypot}
+                  onChange={(e) => setHoneypot(e.target.value)}
                 />
               </div>
               {notice && (

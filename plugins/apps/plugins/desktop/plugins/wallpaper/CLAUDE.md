@@ -40,9 +40,10 @@ its own, so it declares no data dir; see `apps-core/CLAUDE.md`.
     - `Wallpaper.Provider` ← `apps.desktop.wallpaper.openverse`
     - `Wallpaper.Provider` ← `apps.desktop.wallpaper.upload`
   - Contributes: `ConfigV2.WebRegister` "wallpaper"
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `config_v2` ×3
     - `primitives/css/ui-kit` ×3
+    - `primitives/kept-state` ×2
     - `primitives/overlay/cursor-menu` ×2
     - `infra/endpoints.useFetchEndpoint`
     - `network/live/live-state.ResourceErrorInline`

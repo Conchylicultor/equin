@@ -1,4 +1,8 @@
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  Textarea,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import {
   Clip,
   clipClasses,
@@ -92,7 +96,11 @@ export function OverlayTextarea({
           </>
         )}
       </pre>
-      <textarea
+      <Textarea
+        bare
+        keep={transient(
+          "controlled by OverlayTextarea's caller: the owner keeps it",
+        )}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onClick={(e) => {

@@ -5,6 +5,8 @@ import {
   PluginProvider,
   type LoadedPlugin,
 } from "@plugins/framework/plugins/web-sdk/core";
+import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import {
   DataViewSlots,
   type CellEditorProps,
@@ -18,7 +20,9 @@ import { GalleryView } from "../components/gallery-view";
 function LocalTextEditor(props: CellEditorProps): ReactNode {
   const [v, setV] = useState(props.value == null ? "" : String(props.value));
   return (
-    <input
+    <Input
+      bare
+      keep={transient("test")}
       autoFocus
       aria-label="cell-editor"
       value={v}

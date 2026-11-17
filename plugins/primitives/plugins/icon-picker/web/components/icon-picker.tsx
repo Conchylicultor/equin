@@ -11,6 +11,11 @@ import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
+import {
+  defineKept,
+  useKept,
+} from "@plugins/primitives/plugins/kept-state/web";
+import { z } from "zod";
 import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
 import {
   runtimeSymbol,
@@ -24,6 +29,13 @@ import {
 } from "../internal/icons";
 
 const COLUMNS = 9;
+
+/** The icon search typed in the picker, where it was shown (view state). */
+const pickerQuery = defineKept({
+  owner: "icon-picker.query",
+  tier: "view",
+  schema: z.string(),
+});
 
 export interface IconPickerProps {
   /** Currently-selected icon, highlighted in the grid. */
@@ -69,7 +81,8 @@ function rowsOf(
  * here is exactly the double-ownership the panel's inset rule exists to stop.
  */
 export function IconPicker({ value, onSelect, className }: IconPickerProps) {
-  const [query, setQuery] = useState("");
+  const queryKept = useKept(pickerQuery, "");
+  const [query] = queryKept;
   const [set, setSet] = useState<SymbolSet | null>(null);
   const [failure, setFailure] = useState<Error | null>(null);
   if (failure) throw failure;
@@ -110,8 +123,7 @@ export function IconPicker({ value, onSelect, className }: IconPickerProps) {
       </Stack>
       <SearchInput
         appearance="menu"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        keep={queryKept}
         placeholder="Search icons…"
       />
 

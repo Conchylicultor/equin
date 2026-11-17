@@ -11,7 +11,8 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Rigid } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import {
   TextEditor,
-  type TextEditorProps,
+  type TextEditorOptions,
+  type TextEditorText,
 } from "@plugins/primitives/plugins/text-editor/web";
 import { AttachFilesButton } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 
@@ -20,19 +21,17 @@ import { AttachFilesButton } from "@plugins/primitives/plugins/text-editor/plugi
  * so there is no spelling for a caller to hand in a second one and silently
  * lose the bar.
  */
-export interface ComposerFieldProps extends Omit<
-  TextEditorProps,
-  "bottomSlot"
-> {
-  /**
-   * Leading half of the bar, after the composer's own "+" (attach files): icon
-   * actions and attach toggles (`ComposerAttachButton`), a
-   * {@link ComposerRule}, then pills.
-   */
-  barStart?: React.ReactNode;
-  /** Trailing half of the bar, pushed flush right. */
-  barEnd?: React.ReactNode;
-}
+export type ComposerFieldProps = TextEditorText &
+  Omit<TextEditorOptions, "bottomSlot"> & {
+    /**
+     * Leading half of the bar, after the composer's own "+" (attach files): icon
+     * actions and attach toggles (`ComposerAttachButton`), a
+     * {@link ComposerRule}, then pills.
+     */
+    barStart?: React.ReactNode;
+    /** Trailing half of the bar, pushed flush right. */
+    barEnd?: React.ReactNode;
+  };
 
 /**
  * The prompt field the Improve and Launch popovers are built from: ONE box

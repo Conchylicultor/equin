@@ -2,7 +2,10 @@ import {
   foldResource,
   ResourceErrorInline,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  Input,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import {
@@ -33,6 +36,7 @@ export function TaskHeader({ taskId }: { taskId: string }) {
     }),
     onSave: (v) => patchTask(taskId, { title: v.trim() || "Untitled" }),
     label: "Task title",
+    keep: { field: "tasks.title", subject: taskId },
   });
   useRegisterFlush(titleField.flush);
 
@@ -56,9 +60,9 @@ export function TaskHeader({ taskId }: { taskId: string }) {
 
   return (
     <Stack gap="lg">
-      <input
-        value={titleField.value}
-        onChange={(e) => titleField.onChange(e.target.value)}
+      <Input
+        bare
+        keep={titleField.keep}
         onFocus={titleField.onFocus}
         onBlur={titleField.onBlur}
         placeholder="Untitled"

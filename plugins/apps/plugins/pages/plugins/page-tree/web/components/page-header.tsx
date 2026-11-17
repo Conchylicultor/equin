@@ -79,6 +79,7 @@ function PageHeaderInner({
 
   const title = useEditableField({
     value: data?.title ?? "",
+    keep: { field: "pages.page.title", subject: pageId },
     onSave: async (next) => {
       if (!page) return;
       await mutateAsync({

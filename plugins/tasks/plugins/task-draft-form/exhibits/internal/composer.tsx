@@ -1,3 +1,4 @@
+import { keptText } from "@plugins/primitives/plugins/kept-state/core";
 import { useState } from "react";
 import type { LaunchOptionValues } from "@plugins/tasks/plugins/launch-options/web";
 import { useCaptureUrlDefault } from "../../web/use-capture-url-default";
@@ -17,11 +18,10 @@ export default function ComposerExhibit() {
   return (
     <TaskDraftComposer
       cardId="exhibit"
-      text={text}
+      keep={keptText(text, setText)}
       launchOptions={launchOptions}
       autoFocus={false}
       disabled={false}
-      onTextChange={setText}
       onLaunchOptionsChange={setLaunchOptions}
       onSubmitChord={() => {}}
       isHead

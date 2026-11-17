@@ -2,8 +2,11 @@ import {
   Button,
   cn,
   ControlSizeProvider,
+  Input,
+  Textarea,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, useCallback, useMemo } from "react";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
@@ -299,7 +302,11 @@ export function BroadcastsPanel() {
             >
               Message
             </Text>
-            <textarea
+            <Textarea
+              bare
+              keep={transient(
+                "debug tool: a broadcast composed and sent on the spot",
+              )}
               className="w-full resize-none rounded-md border bg-background px-sm py-xs text-caption focus:outline-none focus:ring-1 focus:ring-ring"
               rows={2}
               placeholder="Rebase required: breaking DB changes landed in abc1234"
@@ -319,7 +326,11 @@ export function BroadcastsPanel() {
             >
               Since
             </Text>
-            <input
+            <Input
+              bare
+              keep={transient(
+                "debug tool: a broadcast composed and sent on the spot",
+              )}
               className="w-28 rounded-md border bg-background px-sm py-xs font-mono text-caption focus:outline-none focus:ring-1 focus:ring-ring"
               placeholder="abc1234"
               value={form.since}
@@ -330,7 +341,11 @@ export function BroadcastsPanel() {
             <Text as="span" variant="caption" className="text-muted-foreground">
               Until
             </Text>
-            <input
+            <Input
+              bare
+              keep={transient(
+                "debug tool: a broadcast composed and sent on the spot",
+              )}
               className="w-28 rounded-md border bg-background px-sm py-xs font-mono text-caption focus:outline-none focus:ring-1 focus:ring-ring"
               placeholder="def5678"
               value={form.until}

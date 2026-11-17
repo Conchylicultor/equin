@@ -95,7 +95,8 @@ function firstLine(text: string): string {
  * task's "Filed from".
  */
 export function WishField({ filedFrom }: { filedFrom: PluginId }) {
-  const [text, setText, , textKept] = useDraft(wishTextStore, "");
+  const textBinding = useDraft(wishTextStore, "");
+  const [text, , , textKept] = textBinding;
   const [choices, setChoices, , choicesKept] = useDraft(
     wishChoicesStore,
     freshChoices,
@@ -155,12 +156,11 @@ export function WishField({ filedFrom }: { filedFrom: PluginId }) {
       <div className="rounded-card focus-within:ring-2 focus-within:ring-ring">
         <TaskDraftComposer
           cardId="wish-field"
-          text={text}
+          keep={textBinding}
           launchOptions={choices.options}
           autoFocus
           disabled={submitting}
-          onTextChange={(next) => {
-            setText(next);
+          onTextChange={() => {
             if (outcome.kind !== "idle") setOutcome({ kind: "idle" });
           }}
           onLaunchOptionsChange={(options) =>

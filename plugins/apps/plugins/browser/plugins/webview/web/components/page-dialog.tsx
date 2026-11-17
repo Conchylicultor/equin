@@ -10,6 +10,7 @@ import {
   DialogTitle,
   Input,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 
 export type PageDialogEvent = Extract<HostEvent, { t: "dialog" }>;
 
@@ -52,6 +53,9 @@ export function PageDialog({
           </Stack>
           {dialog.type === "prompt" && (
             <Input
+              keep={transient(
+                "a remote page's prompt(): it blocks the page, which asks again after a reload",
+              )}
               autoFocus
               value={text}
               onChange={(e) => setText(e.target.value)}

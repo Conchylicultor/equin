@@ -3,7 +3,9 @@ import type { FormEvent } from "react";
 import {
   cn,
   ControlSizeProvider,
+  Input,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -134,7 +136,11 @@ function OmniboxInput({
               ) : undefined
             }
           >
-            <input
+            <Input
+              bare
+              keep={transient(
+                "the address bar reverts to the page's URL on blur",
+              )}
               ref={inputRef}
               value={value}
               onChange={(e) => setValue(e.target.value)}

@@ -1,4 +1,9 @@
 import { useState } from "react";
+import { z } from "zod";
+import {
+  defineKept,
+  useKept,
+} from "@plugins/primitives/plugins/kept-state/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useActionForm } from "@plugins/primitives/plugins/action-presentation/web";
@@ -21,7 +26,8 @@ const autoAwesomeIcon = symbol("auto-awesome");
  *
  * The draft lives HERE, above the panel, because the panel unmounts when the
  * popover closes: a visitor who clicks away mid-sentence gets their words back
- * when they reopen it. Filing is the one thing that clears it.
+ * when they reopen it — and kept (kept-state work), so a reload does too.
+ * Filing is the one thing that clears it.
  *
  * So does `picking`, because it is the popover that changes while the visitor
  * points at the page: it is taken out of the layout (`hidden`) so the whole page
@@ -41,10 +47,21 @@ const autoAwesomeIcon = symbol("auto-awesome");
  * menu. The call to action is the one item that must stay, so it pins itself
  * at full size; the page links give way instead.
  */
+/** The visitor's wish: work, kept across a reload until it is filed. */
+const improveDraft = defineKept<ImproveDraft>({
+  owner: "website.improve.draft",
+  label: "Website wishes",
+  tier: "work",
+  cap: "16 KB",
+  schema: z.object({ text: z.string(), autoDeploy: z.boolean() }),
+});
+
 export function ImproveNavItem() {
   useActionForm({ yields: "never" });
   const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState<ImproveDraft>(EMPTY_DRAFT);
+  const [draft, setDraft] = useKept(improveDraft, EMPTY_DRAFT, {
+    subject: "site",
+  });
   const [picking, setPicking] = useState(false);
   return (
     <InlinePopover

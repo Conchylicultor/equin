@@ -92,6 +92,7 @@ export type ExemptableRuleId =
   | "investigate:failures-registered"
   | "jobs:no-raw-addjob"
   | "jobs:no-raw-addjob:task-literal"
+  | "kept-state/no-raw-text-input"
   | "launcher:env-names"
   | "layout/no-adhoc-layout"
   | "layout/no-unanchored-has"

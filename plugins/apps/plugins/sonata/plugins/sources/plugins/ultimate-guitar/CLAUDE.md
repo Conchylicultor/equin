@@ -257,7 +257,7 @@ reported) — the kind worth surfacing as crash tasks, not just toasts.
     - `Sonata.Effect` "ultimate-guitar-persist" → `UltimateGuitarPersistObserver`
     - `FieldPresentation.Register` "exposure:sonata_songs_ext_ultimate_guitar"
     - `Library.Cover` "ultimate-guitar"
-  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 46 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×6
     - `network/live/live-state` ×5
     - `network/live` ×4
@@ -265,6 +265,7 @@ reported) — the kind worth surfacing as crash tasks, not just toasts.
     - `apps/sonata/library` ×2
     - `infra/endpoints` ×2
     - `primitives/css/layer` ×2
+    - `primitives/kept-state` ×2
     - `apps/sonata/primitives/source-line.SourceLine`
     - `apps/sonata/shell.Sonata`
     - `primitives/css/badge.Badge`

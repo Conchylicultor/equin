@@ -7,6 +7,12 @@ import {
   Input,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState } from "react";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
+import {
+  defineKept,
+  useKept,
+} from "@plugins/primitives/plugins/kept-state/web";
+import { z } from "zod";
 import {
   useAccountStatus,
   startConnectFlow,
@@ -33,6 +39,15 @@ import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder
 
 const REDIRECT_URI = "http://localhost:9000/api/auth/callback/google";
 
+/** The project the wizard's links open at — never stored server-side, so kept here. */
+const projectIdDraft = defineKept({
+  owner: "auth.google.setup-project-id",
+  label: "Google setup project IDs",
+  tier: "work",
+  cap: "8 KB",
+  schema: z.string(),
+});
+
 function extractProjectId(raw: string): string {
   const match = raw.match(/[?&]project=([^&#]+)/);
   return match?.[1] ?? raw.trim();
@@ -42,7 +57,8 @@ function extractProjectId(raw: string): string {
 export function GoogleSetup() {
   const fetchEndpoint = useFetchEndpoint();
   const transport = useTransport();
-  const [projectId, setProjectId] = useState("");
+  const project = useKept(projectIdDraft, "", { subject: "google" });
+  const [projectId, setProjectId] = project;
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
   const [saving, setSaving] = useState(false);
@@ -143,7 +159,7 @@ export function GoogleSetup() {
         </Text>
         <Input
           placeholder="my-project-123"
-          value={projectId}
+          keep={project}
           onChange={(e) => handleProjectInput(e.target.value)}
         />
         <Text as="p" variant="caption" className="text-muted-foreground">
@@ -234,12 +250,14 @@ export function GoogleSetup() {
                 <Input
                   type="password"
                   placeholder="Client ID"
+                  keep={transient("secret: never written to browser storage")}
                   value={clientId}
                   onChange={(e) => setClientId(e.target.value)}
                 />
                 <Input
                   type="password"
                   placeholder="Client Secret"
+                  keep={transient("secret: never written to browser storage")}
                   value={clientSecret}
                   onChange={(e) => setClientSecret(e.target.value)}
                 />

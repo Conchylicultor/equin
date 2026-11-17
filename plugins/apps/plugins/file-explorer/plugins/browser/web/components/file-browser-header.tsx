@@ -1,11 +1,5 @@
 import { HOME, absolutePath } from "@plugins/infra/plugins/host-account/core";
-import {
-  createContext,
-  useContext,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
@@ -20,9 +14,12 @@ import {
 import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import {
+  defineKept,
   legacyDraftKeys,
   useDraft,
+  useKept,
 } from "@plugins/primitives/plugins/kept-state/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
 import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { z } from "zod";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -50,6 +47,13 @@ const hiddenOffIcon = symbol("visibility-off");
 /** Which lens hide rules are switched to show, by rule id. Absent → hidden. */
 export type LensShown = Readonly<Record<string, boolean>>;
 const NONE_SHOWN: LensShown = {};
+
+/** The folder's name filter, with the folder it filters (view state). */
+const folderFilter = defineKept({
+  owner: "file-explorer.folder-filter",
+  tier: "view",
+  schema: z.object({ dir: z.string(), query: z.string() }),
+});
 
 // Device preferences, kept like Finder keeps them — so a long TTL.
 const showHiddenStore = defineStore({
@@ -303,7 +307,7 @@ function PublishReady({
   const [showHidden, setShowHidden] = useDraft(showHiddenStore, false);
   const [lensShown, setLensShown] = useDraft(lensShownStore, NONE_SHOWN);
   // The filter belongs to the folder: another folder starts it empty.
-  const [filter, setFilter] = useState({ dir, query: "" });
+  const [filter, setFilter] = useKept(folderFilter, { dir, query: "" });
   const query = filter.dir === dir ? filter.query : "";
   const pathSource = useFolderPathSource(system, root);
 
@@ -347,6 +351,7 @@ function PublishReady({
     lensShown,
     setLensShown,
     query,
+    setFilter,
     dir,
     open,
     home,
@@ -429,6 +434,9 @@ export function FileBrowserFilter(): ReactNode {
   const { query, setQuery, nav } = browser;
   return (
     <SearchInput
+      keep={transient(
+        "controlled by FileBrowserHeader: the owner keeps it (folderFilter)",
+      )}
       value={query}
       onChange={(e) => setQuery(e.target.value)}
       onKeyDown={(e) => {

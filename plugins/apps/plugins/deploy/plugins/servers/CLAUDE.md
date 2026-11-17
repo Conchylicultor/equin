@@ -69,16 +69,17 @@ plus `sshKey`.
     - `ServerDetail.Section` "Connection" → `ServerEditForm`
     - `ServerDetail.Section` "Danger zone" → `ServerDeleteAction`
     - `item-actions` "open-console" → `OpenConsoleAction`
-  - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 45 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×6
+    - `primitives/css/ui-kit` ×5
     - `primitives/data-view` ×4
     - `infra/endpoints` ×3
     - `network/live/live-state` ×3
-    - `primitives/css/ui-kit` ×3
     - `primitives/copy-to-clipboard` ×2
     - `primitives/css/fill` ×2
     - `primitives/css/spacing` ×2
     - `primitives/editable-field` ×2
+    - `primitives/kept-state` ×2
     - `ids.IdKinds`
     - `network/live.useLive`
     - `primitives/css/center.Center`

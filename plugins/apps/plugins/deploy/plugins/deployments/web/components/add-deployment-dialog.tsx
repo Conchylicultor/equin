@@ -10,6 +10,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
+import {
+  defineKept,
+  useKept,
+} from "@plugins/primitives/plugins/kept-state/web";
+import { z } from "zod";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -28,6 +34,14 @@ import {
   deployments,
   deriveInstall,
 } from "../../core";
+
+const hostnamesDraft = defineKept({
+  owner: "deploy.deployments.add-hostnames",
+  label: "New deployment hostnames",
+  tier: "work",
+  cap: "8 KB",
+  schema: z.string(),
+});
 
 /** One labelled row of the form. Local, tiny, and not chrome worth a primitive. */
 function Field({
@@ -81,7 +95,10 @@ export function AddDeploymentDialog({
   const serverId = fixedServerId ?? pickedServerId;
 
   const [composition, setComposition] = useState("");
-  const [hostnames, setHostnames] = useState("");
+  const hostnamesKept = useKept(hostnamesDraft, "", {
+    subject: fixedServerId ?? "new",
+  });
+  const [hostnames, , clearHostnames] = hostnamesKept;
   const [port, setPort] = useState(String(DEFAULT_LOOPBACK_PORT));
 
   // `suppressError` + an inline message: every rejection here names a field on
@@ -91,7 +108,10 @@ export function AddDeploymentDialog({
   // that outlives the dialog.
   const create = useEndpointMutation(createDeployment, {
     meta: { suppressError: true },
-    onSuccess: () => close(),
+    onSuccess: () => {
+      clearHostnames();
+      close();
+    },
   });
 
   const install = composition ? deriveInstall(composition) : null;
@@ -142,11 +162,7 @@ export function AddDeploymentDialog({
         label="Hostnames"
         hint="Comma-separated, e.g. equin.ai, www.equin.ai. Leave empty to serve on loopback only — a deployment with no hostname gets no Caddy site and is not internet-reachable."
       >
-        <Input
-          value={hostnames}
-          placeholder="equin.ai"
-          onChange={(e) => setHostnames(e.target.value)}
-        />
+        <Input keep={hostnamesKept} placeholder="equin.ai" />
       </Field>
 
       <Field
@@ -154,6 +170,7 @@ export function AddDeploymentDialog({
         hint="The port the gateway binds on 127.0.0.1; Caddy proxies to it. Unique per server."
       >
         <Input
+          keep={transient("a port number: re-typing it is trivial")}
           type="number"
           value={port}
           onChange={(e) => setPort(e.target.value)}

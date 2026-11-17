@@ -1,4 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
+import {
+  defineKept,
+  useKept,
+} from "@plugins/primitives/plugins/kept-state/web";
+import { z } from "zod";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useAssetSrc } from "@plugins/infra/plugins/endpoints/web";
@@ -36,6 +41,14 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
 const bookmarkIcon = symbol("bookmark");
+
+const bookmarkUrlDraft = defineKept({
+  owner: "bookmark.url",
+  label: "Bookmark links",
+  tier: "work",
+  cap: "8 KB",
+  schema: z.string(),
+});
 const refreshIcon = symbol("refresh");
 
 /**
@@ -52,7 +65,7 @@ export function BookmarkBlock({ block, editor }: BlockRendererProps) {
     bookmarkBlock.parse(block.data);
 
   if (!url) {
-    return <EmptyBookmarkBlock editor={editor} />;
+    return <EmptyBookmarkBlock blockId={block.id} editor={editor} />;
   }
 
   if (!fetched) {
@@ -73,11 +86,14 @@ export function BookmarkBlock({ block, editor }: BlockRendererProps) {
 }
 
 function EmptyBookmarkBlock({
+  blockId,
   editor,
 }: {
+  blockId: string;
   editor: BlockRendererProps["editor"];
 }) {
-  const [value, setValue] = useState("");
+  const link = useKept(bookmarkUrlDraft, "", { subject: blockId });
+  const [value, , clearLink] = link;
   const inputRef = useRef<HTMLInputElement>(null);
 
   // An empty bookmark block is a PROMPT — it is asking for a link — so Enter on
@@ -92,6 +108,7 @@ function EmptyBookmarkBlock({
     // Just set the url — the fetch happens in the loading state (state 2) so
     // manual entry and paste-to-bookmark share one fetch path.
     editor.update({ url });
+    clearLink();
   }
 
   return (
@@ -105,9 +122,8 @@ function EmptyBookmarkBlock({
           // claims the key and rewinds an unrelated block edit mid-typing.
           {...localUndoProps}
           ref={inputRef}
-          value={value}
+          keep={link}
           placeholder="Paste a link…"
-          onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();

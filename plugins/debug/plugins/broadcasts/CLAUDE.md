@@ -16,9 +16,9 @@
     - `Pane.Register` "debug-broadcasts"
     - `DebugApp.Sidebar` "Broadcasts"
     - `item-actions` "delete" → `DeleteBroadcastAction`
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×5
     - `primitives/data-view` ×5
-    - `primitives/css/ui-kit` ×3
     - `primitives/pane` ×3
     - `apps/debug/shell.DebugApp`
     - `infra/endpoints.useFetchEndpoint`

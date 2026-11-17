@@ -51,6 +51,10 @@ export function SharedDetail(): ReactElement {
               namespace="supervisor-shared-prompt"
               placeholder="What every supervisor session is launched with"
               value={shared}
+              keep={{
+                field: "supervisor-roles.shared-prompt",
+                subject: "shared",
+              }}
               onSave={(prompt) => {
                 if (!setConfig("prompt", prompt))
                   throw new Error("The shared prompt was not saved.");

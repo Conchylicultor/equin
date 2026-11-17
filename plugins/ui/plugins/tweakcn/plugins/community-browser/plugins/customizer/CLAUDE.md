@@ -16,6 +16,9 @@
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.Input`
+    - `primitives/kept-state.defineKept`
+    - `primitives/kept-state.useKept`
     - `ui/theme-engine.useThemeScopeId`
     - `ui/theme-engine/saved-themes.useAwaitSavedThemesWrite`
     - `ui/theme-engine/theme-customizer.ThemeCustomizer`

@@ -1,4 +1,10 @@
 import { useState } from "react";
+import { transient } from "@plugins/primitives/plugins/kept-state/core";
+import {
+  defineKept,
+  useKept,
+} from "@plugins/primitives/plugins/kept-state/web";
+import { z } from "zod";
 import {
   Button,
   Input,
@@ -26,6 +32,15 @@ import { GOOGLE_MAPS_PROVIDER_ID } from "@plugins/auth/plugins/google-maps/core"
 
 const CONSOLE = "https://console.cloud.google.com";
 
+/** The project the wizard's links open at — never stored server-side, so kept here. */
+const projectIdDraft = defineKept({
+  owner: "auth.google-maps.setup-project-id",
+  label: "Google Maps setup project IDs",
+  tier: "work",
+  cap: "8 KB",
+  schema: z.string(),
+});
+
 /**
  * Accept either a bare project id or any pasted GCP console URL — every console
  * page carries the project as a `?project=` query param. Copied from the Google
@@ -39,7 +54,10 @@ function extractProjectId(raw: string): string {
 /** The Places key setup, rendered inline in its Accounts pane (`setup: { kind: "steps" }`). */
 export function GoogleMapsSetup() {
   const fetchEndpoint = useFetchEndpoint();
-  const [projectId, setProjectId] = useState("");
+  const project = useKept(projectIdDraft, "", {
+    subject: GOOGLE_MAPS_PROVIDER_ID,
+  });
+  const [projectId, setProjectId] = project;
   const [apiKey, setApiKeyInput] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -85,7 +103,7 @@ export function GoogleMapsSetup() {
         </Text>
         <Input
           placeholder="my-project-123"
-          value={projectId}
+          keep={project}
           onChange={(e) => setProjectId(extractProjectId(e.target.value))}
         />
         <Text as="p" variant="caption" className="text-muted-foreground">
@@ -167,6 +185,7 @@ export function GoogleMapsSetup() {
             <Input
               type="password"
               placeholder="AIza…"
+              keep={transient("secret: never written to browser storage")}
               value={apiKey}
               onChange={(e) => setApiKeyInput(e.target.value)}
             />
