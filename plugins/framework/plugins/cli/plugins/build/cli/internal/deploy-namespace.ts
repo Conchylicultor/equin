@@ -715,6 +715,7 @@ export async function deployNamespace(
       "registerWorktree",
       "build:deploy",
       "register worktree",
+      { installStep: "build.deploy" },
     );
     console.log("Registering worktree...");
     // MARKER AGAIN, in the same breath as the spec. The spec write is the instant

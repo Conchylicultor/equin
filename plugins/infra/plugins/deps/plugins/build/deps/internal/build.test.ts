@@ -278,6 +278,7 @@ describe("targets", () => {
       dir,
       log: () => {},
       exec,
+      progress: null,
       run: async (argv, opts) => {
         const r = spawnSync(argv[0] as string, argv.slice(1), {
           cwd: opts.cwd,

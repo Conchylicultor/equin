@@ -149,6 +149,14 @@ export interface WebArtifactsPipelineOptions {
   addressDir?: AppPath;
   log: (line: string) => void;
   /**
+   * Each artifact the build stage compiles (a reuse is not counted): how many
+   * are built so far, of how many were found stale when the stage began. The
+   * barrel closure resolved after the page artifacts can add more than that
+   * count; a caller showing it lets `built` run past it. What an install's
+   * "Building the interface · 137 of 1184" counts.
+   */
+  onArtifactBuilt?: (built: number, staleAtStart: number) => void;
+  /**
    * What needs the computer (boundaries' `isPlatformApi`): a browser host's
    * worker artifact importing one fails the build. Passed in, so the engine
    * depends on no checker.
@@ -323,6 +331,7 @@ async function runPipeline(
   const builder = opts.builder ?? inProcessBuilder(root, opts.minify);
   const metas = new Map<string, ArtifactMeta>(); // dirName → meta
   const counts = { built: 0, reused: 0 };
+  const staleAtStart = plan.staleWeb + (plan.entryStale ? 1 : 0);
   // Pin first, then look: a prune between detect and here may have taken a
   // reuse — which then simply builds.
   const ensure = async (t: PlannedTarget): Promise<ArtifactMeta> => {
@@ -331,6 +340,7 @@ async function runPipeline(
       const meta = await builder.build(t);
       metas.set(t.dirName, meta);
       counts.built++;
+      opts.onArtifactBuilt?.(counts.built, staleAtStart);
       return meta;
     }
     touchArtifact(t.dirName);

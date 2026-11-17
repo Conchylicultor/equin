@@ -1,4 +1,5 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { watch } from "node:fs";
 import { mkdir, open, rename, rm, writeFile } from "node:fs/promises";
 import {
   exists,
@@ -15,6 +16,7 @@ import type { DepState } from "../../core";
 import {
   mintReady,
   type Dep,
+  type DepProgress,
   type DepSource,
   type InstallContext,
   type Ready,
@@ -45,6 +47,12 @@ export interface EnsureOptions {
   root?: AppPath;
   /** Test seam: the cache and lock dirs. */
   store?: DepStore;
+  /**
+   * How far an install is, as its tool counts (`DepProgress`) — only while
+   * one runs, and only from a kind that can count (cargo). Unset: the kind
+   * asks its tool for no progress output.
+   */
+  progress?: (p: DepProgress) => void;
 }
 
 /**
@@ -77,6 +85,7 @@ export async function ensureDep<S extends DepSource>(
     root,
     store: opts.store ?? (await defaultStore()),
     say: opts.log ?? (() => {}),
+    progress: opts.progress ?? null,
   });
   return await found(dep, paths, identity);
 }
@@ -90,9 +99,14 @@ export async function installInCache(
   dep: Dep<DepSource>,
   source: DepSource,
   exec: ExecContext,
-  opts: { root: AppPath; store: DepStore; say: (line: string) => void },
+  opts: {
+    root: AppPath;
+    store: DepStore;
+    say: (line: string) => void;
+    progress: ((p: DepProgress) => void) | null;
+  },
 ): Promise<{ identity: string; paths: InstallPaths }> {
-  const { root, store, say } = opts;
+  const { root, store, say, progress } = opts;
   const { identity, inputs } = await sourceIdentity(source, root);
   const paths = installPaths(store, dep.id, identity);
 
@@ -106,7 +120,17 @@ export async function installInCache(
   try {
     // Whoever held the lock may have just finished this very install.
     if (!(await isInstalled(source, paths))) {
-      await install({ dep, source, root, paths, identity, inputs, exec, say });
+      await install({
+        dep,
+        source,
+        root,
+        paths,
+        identity,
+        inputs,
+        exec,
+        say,
+        progress,
+      });
     }
     return { identity, paths };
   } finally {
@@ -158,6 +182,35 @@ export async function dirBytes(dir: string): Promise<number> {
   return total;
 }
 
+/**
+ * Follow a log as a child appends to it: each chunk it grows by past `from`,
+ * read when the file system says it changed (a watch — push, not polling).
+ * `stop()` reads the last of it, then closes the watch.
+ */
+function followLog(
+  path: string,
+  from: number,
+  onChunk: (chunk: string) => void,
+): { stop: () => Promise<void> } {
+  let offset = from;
+  let reading: Promise<void> = Promise.resolve();
+  // One read at a time, in order: a change landing mid-read reads after it.
+  const readMore = (): Promise<void> =>
+    (reading = reading.then(async () => {
+      const text = await readFrom(path, offset);
+      if (text === "") return;
+      offset += Buffer.byteLength(text);
+      onChunk(text);
+    }));
+  const watcher = watch(path, () => void readMore());
+  return {
+    async stop() {
+      watcher.close();
+      await readMore();
+    },
+  };
+}
+
 /** The bytes a log grew by since `from`, as text. */
 async function readFrom(path: string, from: number): Promise<string> {
   const size = (await stat(path)).size;
@@ -181,8 +234,10 @@ async function install(args: {
   inputs: Readonly<Record<string, string>>;
   exec: ExecContext;
   say: (line: string) => void;
+  progress: ((p: DepProgress) => void) | null;
 }): Promise<void> {
-  const { dep, source, root, paths, identity, inputs, exec, say } = args;
+  const { dep, source, root, paths, identity, inputs, exec, say, progress } =
+    args;
   await mkdir(paths.root, { recursive: true });
   // A partial payload from an interrupted install, and the last failure, go.
   // A `ready.json` over a payload that is no longer intact goes first, so the
@@ -206,8 +261,14 @@ async function install(args: {
   const run: InstallContext["run"] = async (argv, runOpts) => {
     say(`$ ${argv.join(" ")}`);
     const from = (await stat(paths.log)).size;
+    const { onOutput, ...spawnOpts } = runOpts;
     // The child appends straight to the install log, so `logTail` follows a
-    // long install while it runs; `$0` is the log, `$@` the command.
+    // long install while it runs; `$0` is the log, `$@` the command. A kind
+    // reading progress out of the output follows the same log as it grows.
+    const follow =
+      onOutput !== undefined && progress !== null
+        ? followLog(paths.log, from, onOutput)
+        : null;
     const result = await spawnCaptured(
       [
         "sh",
@@ -216,8 +277,8 @@ async function install(args: {
         paths.log,
         ...argv,
       ],
-      runOpts,
-    );
+      spawnOpts,
+    ).finally(() => follow?.stop());
     const output = await readFrom(paths.log, from);
     for (const line of output.split("\n").map(screenLine)) {
       if (line !== "" && !line.startsWith("$ ")) say(line);
@@ -234,7 +295,7 @@ async function install(args: {
   say(`installing ${dep.id} (${source.kind}: ${source.label}) at ${identity}`);
   try {
     const installNow = () =>
-      source.install({ root, dir: paths.env, log, run, exec });
+      source.install({ root, dir: paths.env, log, run, exec, progress });
     // A source that declares it needs no admission (see `DepSource.admission`)
     // installs at once; every other one under the caller's host admission.
     await (source.admission === undefined

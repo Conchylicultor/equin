@@ -31672,13 +31672,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `exitCodeFor`
               - `isTerminalOutcome`
         - **`bootstrap`** — CLI bootstrap — the npm-free half that must run with node_modules absent: ensureDeps, the post-install re-exec, the orphan guard, the build lock.
-          - Cross-plugin:
-            - Imported by:
-              - `framework/cli/build`
-              - `framework/cli/install`
-          - Exemptions:
-            - Exempts itself from: `repo-walk-safety/no-adhoc-repo-walk` — `cli/ensure-deps.ts` (sanctioned)
           - Cli:
+            - Uses: `installer.installEventsOn`
             - Exports (types):
               - `AcquireCheckoutLockOptions`
               - `EnsureDepsOptions`
@@ -31703,16 +31698,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reexecUnderLockedBun`
               - `STAMP_REL`
               - `takeReexecBudget`
+          - Cross-plugin:
+            - Imported by:
+              - `framework/cli/build`
+              - `framework/cli/install`
+          - Exemptions:
+            - Exempts itself from: `repo-walk-safety/no-adhoc-repo-walk` — `cli/ensure-deps.ts` (sanctioned)
         - **`build`** — `./equin build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
           - Cli:
-            - Uses: 59 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
-              - `framework/cli/op-runtime` ×31
+            - Uses: 66 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
+              - `framework/cli/op-runtime` ×32
+              - `debug/profiling/op-log` ×4
               - `framework/cli/bootstrap` ×4
               - `framework/tooling/web-artifacts` ×4
+              - `installer` ×4
               - `framework/cli/migrations` ×3
               - `framework/tooling/web-artifacts/served-addresses` ×3
               - `plugin-meta/plugin-records` ×3
-              - `debug/profiling/op-log` ×2
               - `build/central-build-id.centralBuildOf`
               - `build/converge.decideConvergence`
               - `build/run-ledger.createBuildRunRecorder`
@@ -31910,6 +31912,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/jobs/supervised-job.cliExecContext`
               - `infra/jobs/supervised-job.takeRunErrorPath`
               - `infra/jobs/supervised-job.writeRunErrorSync`
+              - `installer.enterBuildSubStep`
               - `tasks/task-track.checkoutTrack`
             - Exports (types):
               - `BuildProfile`
@@ -32034,6 +32037,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/launcher/gateway-drift.PreparedGateway`
               - `infra/launcher/gateway-drift.prepareMainGateway`
               - `infra/launcher/gateway-drift.withGatewayFollowLock`
+              - `installer.installEventsOn`
+              - `installer.reportInstallProgress`
         - **`stop`** — `./equin stop` — stop the gateway daemon (and with it every backend); `--disable` also stops it starting at login.
         - **`test`** — `./equin test` — the ONLY way to run tests: both runners (bun:test for co-located logic suites, vitest for jsdom suites), with a summary naming both buckets so a green-but-partial result is impossible.
           - Core:
@@ -33559,7 +33564,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards/module-extension.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 200 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 201 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×60
               - `primitives` ×29
               - `conversations` ×26
@@ -33581,6 +33586,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `wish` ×2
               - `build`
               - `database/admin`
+              - `installer/window`
               - `map/google`
               - `media/film`
               - `release`
@@ -36073,6 +36079,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BundleSpec`
           - `DefineDepSpec`
           - `Dep`
+          - `DepProgress`
           - `DepSource`
           - `DepTarget`
           - `EnsureOptions`
@@ -38712,16 +38719,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `setEnvDefault`
               - `unsetEnv`
           - Cross-plugin:
-            - Imported by: 53 plugins — full list in [`plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md)
+            - Imported by: 54 plugins — full list in [`plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md)
               - `framework` ×18
               - `infra` ×14
               - `debug` ×5
               - `packages` ×5
               - `database` ×4
+              - `installer` ×2
               - `auth`
               - `build`
               - `conversations/agent-launch`
-              - `installer/window`
               - `plugin-meta/barrel-import`
               - `release`
               - `upstream`
@@ -39263,7 +39270,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 138 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 139 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `infra` ×33
           - `framework` ×23
           - `apps` ×18
@@ -39283,6 +39290,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks` ×2
           - `apps-core/app-preload`
           - `config_v2`
+          - `installer`
           - `review/plugin-changes`
           - `shell/document-head`
           - `stats/commits`
@@ -40588,15 +40596,48 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`installer`** — The equin installer: install.sh's structured event stream (protocol v1 — plan, step, log, done and exit events, one zod schema in core) and the renderers that draw it. Its window sub-plugin is the native installer window.
   - Cross-plugin:
-    - Imported by: `installer/release-assets`
+    - Imported by:
+      - `framework/cli/bootstrap`
+      - `framework/cli/build`
+      - `framework/cli/op-runtime`
+      - `framework/cli/start`
+      - `installer/release-assets`
+      - `installer/window`
   - Core:
+    - Exports (types): `InstallEventBody`
     - Exports (values):
+      - `BUILD_SUB_STEP_IDS`
+      - `BuildSubStepId`
+      - `ESTIMATES_BEGIN`
+      - `ESTIMATES_END`
+      - `estimatesFrom`
+      - `findEstimatesBlock`
+      - `INSTALL_ESTIMATES`
       - `INSTALL_PROTOCOL_VERSION`
+      - `INSTALL_STEP_IDS`
+      - `InstallEstimates`
       - `InstallEvent`
+      - `InstallGroupId`
       - `InstallMode`
       - `InstallStepId`
+      - `InstallTiming`
+      - `InstallTopStepId`
       - `parseInstallEventLine`
+      - `PlanGroup`
       - `PlanStep`
+      - `PlanSubStep`
+      - `ProgressUnit`
+      - `renderEstimatesBlock`
+      - `WaitHolder`
+      - `WaitOn`
+  - Cli:
+    - Exports (values):
+      - `emitInstallEvent`
+      - `enterBuildSubStep`
+      - `finishBuildSubSteps`
+      - `installEventsOn`
+      - `reportInstallProgress`
+      - `reportInstallWait`
   - Plugins:
     - **`release-assets`** — What a release tag publishes for the curl install: the GitHub Actions workflow (.github/workflows/installer-release.yml) that builds the installer window per release tag, the asset names and release.json it attaches, and the check holding the workflow's tag regex to the release tag grammar.
       - Core:
@@ -40617,7 +40658,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `infra/deps.defineDep`
           - `infra/deps/rust.cargoBuild`
-        - Exports (values): `installerWindow`
+        - Exports (values):
+          - `bundlePage`
+          - `installerWindow`
 
 - **`integrations`** — Umbrella for third-party service integrations that consume an auth connection (Gmail, …).
   - Plugins:
@@ -43061,6 +43104,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/cli/foreground-handoff`
           - `framework/cli/op-runtime`
           - `infra/jobs/supervised-job`
+          - `installer`
       - Exemptions:
         - Exempts itself from: `blocking-fs/no-sync-fs` — `machine/internal/write-all.ts` (sanctioned)
       - Machine:

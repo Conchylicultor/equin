@@ -1,3 +1,5 @@
+import { finishBuildSubSteps } from "@plugins/installer/cli";
+import { withInstallWaits } from "./internal/install-waits";
 import {
   envEntries,
   readEnv,
@@ -730,13 +732,17 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   // `build-<s>-<6>` above). `buildId` is passed AGAIN, separately, because
   // it means something else there — the join key to build-profile-<id>.json,
   // which is what makes a bar's span breakdown openable.
-  const profiler = createOpProfiler("build", {
-    opId: buildId,
-    branch,
-    opSlug: name,
-    lane,
-    buildId,
-  });
+  // Its waits are also an install's `wait` events, when an install runs this
+  // build as its step (installer/cli; a no-op otherwise).
+  const profiler = withInstallWaits(
+    createOpProfiler("build", {
+      opId: buildId,
+      branch,
+      opSlug: name,
+      lane,
+      buildId,
+    }),
+  );
   // This build's liveness marker (see worktree-op.ts): a flocked
   // `ops/<buildId>.json`, published BEFORE `requested` so the op log never
   // holds a build no marker vouches for, and released in finalizeBuild only
@@ -801,6 +807,8 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   ): Promise<void> => {
     if (buildFinalized) return;
     buildFinalized = true;
+    // An install running this build as its step: the last sub-step ends.
+    finishBuildSubSteps(success);
     // Stamp every STILL-OPEN receipt's terminal status. Synchronous, so the
     // exit-hook backstop lands it too — and a SIGKILL, which runs no hook at
     // all, is exactly what leaves a receipt at `running` with a dead pid.
@@ -1006,7 +1014,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
     "waitForPg",
     "build:database",
     "wait for Postgres",
-    { wait: true },
+    { wait: true, installStep: "build.database" },
   );
   await waitForPg();
   endSpan();

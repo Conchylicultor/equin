@@ -52,6 +52,7 @@ import {
   getWorktreeRoot,
   spawnPassthrough,
 } from "@plugins/infra/plugins/spawn/core";
+import { installEventsOn } from "@plugins/installer/cli";
 import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
 import { acquireCheckoutLock } from "./checkout-lock";
 import { walkFilesWithListing } from "./dir-listing";
@@ -451,8 +452,26 @@ function runBunInstall(
   const argv = frozenLockfile
     ? ["bun", "install", "--frozen-lockfile"]
     : ["bun", "install"];
-  return spawnPassthrough(argv, { cwd: root });
+  if (!installEventsOn()) return spawnPassthrough(argv, { cwd: root });
+  // Run by an install (its first `./equin` command installs the packages): bun
+  // prints no progress without a terminal, so its verbose output goes through
+  // the installer's filter, which counts the packages it unpacks for the
+  // install's window and passes the rest through. pipefail: bun's status is
+  // the pipeline's.
+  return spawnPassthrough(
+    [
+      "bash",
+      "-c",
+      'set -o pipefail; "$@" --verbose 2>&1 | bun "$0" bun.lock',
+      join(root, BUN_INSTALL_PROGRESS),
+      ...argv,
+    ],
+    { cwd: root },
+  );
 }
+
+/** The installer's `bun install` progress filter (installer/bin), repo-relative. */
+const BUN_INSTALL_PROGRESS = "plugins/installer/bin/bun-install-progress.ts";
 
 /**
  * Name the PHASE unambiguously. The historical bug was attribution: an install

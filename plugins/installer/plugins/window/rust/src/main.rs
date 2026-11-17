@@ -367,18 +367,28 @@ impl State {
         let text = |v: &Value, k: &str| v.get(k).and_then(Value::as_str).unwrap_or("").to_string();
         match event.get("type").and_then(Value::as_str) {
             Some("plan") => {
+                // A step's sub-steps (`build.deps`, …) are reported on their
+                // own: their labels too, so their lines read as words.
                 for step in event.get("steps").and_then(Value::as_array).into_iter().flatten() {
                     self.labels.insert(text(step, "id"), text(step, "label"));
+                    for sub in step.get("substeps").and_then(Value::as_array).into_iter().flatten() {
+                        self.labels.insert(text(sub, "id"), text(sub, "label"));
+                    }
                 }
             }
             Some("step") => {
                 let id = text(event, "id");
+                // A sub-step's id is `<step>.<sub>`: its line is indented under its step's.
+                let sub = id.contains('.');
+                let indent = if sub { "    " } else { "  " };
+                // A skipped step was done by an earlier run; a skipped sub-step had nothing to do.
+                let skipped = if sub { "nothing to do" } else { "already done" };
                 let label = self.labels.get(&id).cloned().unwrap_or(id);
                 let line = match text(event, "state").as_str() {
-                    "start" => format!("  … {label}"),
-                    "done" => format!("  ✓ {label}"),
-                    "skipped" => format!("  ✓ {label} (already done)"),
-                    "failed" => format!("  ✗ {label}: stopped; see the window"),
+                    "start" => format!("{indent}… {label}"),
+                    "done" => format!("{indent}✓ {label}"),
+                    "skipped" => format!("{indent}✓ {label} ({skipped})"),
+                    "failed" => format!("{indent}✗ {label}: stopped; see the window"),
                     _ => return,
                 };
                 println!("{line}");

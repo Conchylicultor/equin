@@ -115,6 +115,7 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "infra/plugins/namespace", id: "infra.namespace", loader: () => import("@plugins/infra/plugins/namespace/check"), dependsOn: [] },
   { pluginPath: "infra/plugins/paths", id: "infra.paths", loader: () => import("@plugins/infra/plugins/paths/check"), dependsOn: [] },
   { pluginPath: "infra/plugins/paths/plugins/data-files", id: "infra.paths.data-files", loader: () => import("@plugins/infra/plugins/paths/plugins/data-files/check"), dependsOn: [] },
+  { pluginPath: "installer", id: "installer", loader: () => import("@plugins/installer/check"), dependsOn: [] },
   { pluginPath: "installer/plugins/release-assets", id: "installer.release-assets", loader: () => import("@plugins/installer/plugins/release-assets/check"), dependsOn: [] },
   { pluginPath: "network/plugins/live", id: "network.live", loader: () => import("@plugins/network/plugins/live/check"), dependsOn: [] },
   { pluginPath: "network/plugins/live/plugins/change-feed", id: "network.live.change-feed", loader: () => import("@plugins/network/plugins/live/plugins/change-feed/check"), dependsOn: [] },

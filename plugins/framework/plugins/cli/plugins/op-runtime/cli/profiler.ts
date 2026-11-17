@@ -7,6 +7,8 @@ import {
 } from "@plugins/infra/plugins/paths/server";
 import { buildProgressSpanStart, buildProgressSpanEnd } from "./build-progress";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
+import type { BuildSubStepId } from "@plugins/installer/core";
+import { enterBuildSubStep } from "@plugins/installer/cli";
 import type { PeakFootprint } from "@plugins/packages/plugins/proc-rusage/core";
 import {
   fsCallsSince,
@@ -60,6 +62,16 @@ export interface BuildSpan {
 export interface SpanOptions {
   /** A wait, not work — see `BuildSpan.wait`. */
   wait?: boolean;
+  /**
+   * The install sub-step this span begins (installer/core `BuildSubStepId`):
+   * while `./equin build` runs as an install's build step, entering the span
+   * reports that sub-step as started (and the one before it as done) to the
+   * install's window or terminal. The id is typed, never derived from the
+   * span's name, so renaming a span keeps it; the
+   * `installer:build-sub-steps-declared` check fails when no span declares
+   * one of the sub-steps. Outside an install it does nothing.
+   */
+  installStep?: BuildSubStepId;
 }
 
 /** What closing a span may record beyond its timing. */
@@ -148,6 +160,8 @@ function makeSpanCollector(): SpanCollector {
       // never reaches; this is the crash-durable twin.
       const token = ++spanSeq;
       buildProgressSpanStart(token, id, phase, label);
+      if (options?.installStep !== undefined)
+        enterBuildSubStep(options.installStep);
       return (extra) => {
         const durationMs = Math.round(performance.now() - start);
         const fs = fsCallsSince(fsAtStart);

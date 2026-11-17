@@ -85,6 +85,7 @@ export async function sealDep(
     root,
     store: opts.store ?? (await defaultStore()),
     say,
+    progress: null,
   });
   const rel = sealedPayloadDir(dep.id);
   const dir = joinAppPath(outDir, rel);

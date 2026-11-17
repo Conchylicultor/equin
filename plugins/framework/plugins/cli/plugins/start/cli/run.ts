@@ -1,3 +1,4 @@
+import { installEventsOn, reportInstallProgress } from "@plugins/installer/cli";
 import { writeFileSync } from "node:fs";
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { defineFileSink } from "@plugins/infra/plugins/file-sink/core";
@@ -8,7 +9,7 @@ import {
   getMainRepoRoot,
   getWorktreeRoot,
 } from "@plugins/infra/plugins/spawn/core";
-import { ensureDep } from "@plugins/infra/plugins/deps/deps";
+import { ensureDep, type DepProgress } from "@plugins/infra/plugins/deps/deps";
 import { cliExecContext } from "@plugins/infra/plugins/jobs/plugins/supervised-job/cli";
 import {
   adoptGatewayLaunch,
@@ -400,6 +401,13 @@ async function startDeclaredLoginServices(
     const ready = await ensureDep(decl.dep, cliExecContext(), {
       root,
       log: steps.log,
+      // Run by an install: its window counts the helper's crates.
+      ...(installEventsOn()
+        ? {
+            progress: (p: DepProgress) =>
+              reportInstallProgress(p.done, p.total, p.unit),
+          }
+        : {}),
     });
     try {
       const { service, outcome } = await reconcileLoginService(

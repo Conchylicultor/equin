@@ -1,0 +1,16 @@
+{
+  "installs": 0,
+  "steps": {
+    "tools": null,
+    "mise": null,
+    "clone": null,
+    "toolchain": null,
+    "start": null,
+    "build": null,
+    "build.deps": null,
+    "build.codegen": null,
+    "build.database": null,
+    "build.interface": null,
+    "build.deploy": null
+  }
+}

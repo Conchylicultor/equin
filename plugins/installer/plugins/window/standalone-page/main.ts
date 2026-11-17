@@ -1,8 +1,10 @@
 import {
   applyLine,
+  captionParts,
   currentStep,
   emptyView,
   progress,
+  statusText,
   type InstallView,
 } from "./model";
 
@@ -81,38 +83,85 @@ function arrow(): SVGSVGElement {
   return svg;
 }
 
-/** The bar and its caption: which step, of how many. */
+/** The bar and its caption: which step (of the plan's groups), and the time left. */
 function progressBlock(paused: boolean): HTMLElement {
   const block = el("div", "iw-progress");
   const bar = el("div", paused ? "iw-bar paused" : "iw-bar");
   const fill = el("i");
-  fill.style.width = `${Math.round(progress(view) * 100)}%`;
   bar.append(fill);
-  const cur = currentStep(view);
-  const n = view.steps.length;
-  const caption =
-    cur === null
-      ? ""
-      : `Step ${cur.index + 1} of ${n}${paused ? " · Paused" : ""}`;
-  block.append(bar, el("div", "iw-eta", caption));
+  const eta = el("div", "iw-eta");
+  block.append(bar, eta);
+  updateProgress(block);
   return block;
+}
+
+/** Bring a progress block up to `now`, in place (the fill keeps its width transition). */
+function updateProgress(block: HTMLElement): void {
+  const now = Date.now();
+  const fill = block.querySelector<HTMLElement>(".iw-bar > i");
+  const eta = block.querySelector<HTMLElement>(".iw-eta");
+  if (fill === null || eta === null)
+    throw new Error("a progress block lost its bar");
+  fill.style.width = `${(progress(view, now) * 100).toFixed(2)}%`;
+  const parts = captionParts(view, now);
+  eta.replaceChildren();
+  parts.forEach((part, i) => {
+    if (i > 0) eta.append(el("span", "sep", "·"));
+    eta.append(part);
+  });
+}
+
+/**
+ * The running state's nodes, built once and updated in place on every event
+ * and clock tick — so the bar's width transitions instead of jumping.
+ */
+let running: { status: HTMLElement; block: HTMLElement } | null = null;
+
+function renderRunning(body: HTMLElement): void {
+  if (running === null || running.status.parentElement !== body) {
+    running = { status: el("div", "iw-status"), block: progressBlock(false) };
+    body.replaceChildren(running.status, running.block);
+  }
+  running.status.textContent = statusText(view, Date.now());
+  updateProgress(running.block);
+}
+
+/**
+ * A display clock, not polling: the data only changes when the window
+ * pushes an event, but the time left and the bar are functions of now
+ * (elapsed time against the estimates), so while the install runs the view
+ * is redrawn once a second. A CSS transition cannot stand in for it: the
+ * caption's minutes and a wait's "started N min ago" are text.
+ */
+let clock: ReturnType<typeof setInterval> | null = null;
+function syncClock(): void {
+  const want = view.phase === "running";
+  if (want && clock === null)
+    clock = setInterval(() => {
+      if (view.phase === "running" && running !== null)
+        renderRunning(byId("body"));
+    }, 1000);
+  else if (!want && clock !== null) {
+    clearInterval(clock);
+    clock = null;
+  }
 }
 
 function renderBody(): void {
   const body = byId("body");
   const root = byId("root");
   root.className = `iw ${view.phase === "failed" ? "failed" : view.phase === "done" ? "done" : "running"}`;
+  if (view.phase === "running") {
+    renderRunning(body);
+    renderChrome();
+    return;
+  }
+  running = null;
   body.replaceChildren();
   const cur = currentStep(view);
   switch (view.phase) {
     case "waiting":
       body.append(el("div", "iw-status", "Getting ready…"));
-      break;
-    case "running":
-      body.append(
-        el("div", "iw-status", cur === null ? "" : `${cur.step.label}…`),
-        progressBlock(false),
-      );
       break;
     case "failed": {
       body.append(
@@ -173,6 +222,11 @@ function renderBody(): void {
       );
       break;
   }
+  renderChrome();
+}
+
+/** The log's visibility and the foot's toggle. */
+function renderChrome(): void {
   const log = byId("log");
   log.hidden = !(showLog && view.phase !== "done");
   const foot = byId("foot");
@@ -191,7 +245,8 @@ function withChildren(
 /**
  * Append the log rows not drawn yet. The log follows its end by itself: its
  * scroller is `column-reverse`, which keeps the view at the end while it
- * grows and where the reader left it once scrolled up.
+ * grows and where the reader left it once scrolled up (the mockup's
+ * LogPanel does it with a scroll write, which the page has no need for).
  */
 function renderLog(): void {
   const lines = byId("log-lines");
@@ -221,6 +276,7 @@ function render(): void {
   if (view.phase !== "failed") decisionSent = false;
   renderBody();
   renderLog();
+  syncClock();
 }
 
 function confirmStop(): void {
@@ -268,7 +324,7 @@ byId("drag").addEventListener("mousedown", (e) => {
 });
 byId("toggle-log").addEventListener("click", () => {
   showLog = !showLog;
-  renderBody();
+  renderChrome();
 });
 render();
 post("ready");

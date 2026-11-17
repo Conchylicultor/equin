@@ -7,7 +7,7 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { runtimePath } from "@plugins/infra/plugins/launcher/plugins/runtime-env/core";
-import type { Ready } from "@plugins/infra/plugins/deps/deps";
+import type { DepProgress, Ready } from "@plugins/infra/plugins/deps/deps";
 import {
   build,
   type BuildContext,
@@ -106,6 +106,34 @@ export function cargoCommand(args: readonly string[]): {
   return { argv: ["cargo", ...args], env: cargoEnv() };
 }
 
+/**
+ * Cargo's own progress bar, forced on without a terminal: one
+ * `Building [=====>    ] 137/312: crate, …` frame per update, `\r`-separated,
+ * counted in compilation units (crates and their build scripts).
+ */
+const CARGO_PROGRESS_ENV = {
+  CARGO_TERM_PROGRESS_WHEN: "always",
+  CARGO_TERM_PROGRESS_WIDTH: "120",
+} as const;
+
+const CARGO_BAR = /Building \[[=> -]*\]\s+(\d+)\/(\d+)/g;
+
+/**
+ * Reads cargo's progress frames out of its output as it is written and
+ * reports the last count of each chunk — the units cargo has compiled of the
+ * total it planned (what an install's window shows as "137 of 312").
+ */
+export function cargoProgressReader(
+  report: (p: DepProgress) => void,
+): (chunk: string) => void {
+  return (chunk) => {
+    let last: RegExpExecArray | null = null;
+    for (const m of chunk.matchAll(CARGO_BAR)) last = m;
+    if (last === null) return;
+    report({ done: Number(last[1]), total: Number(last[2]), unit: "crates" });
+  };
+}
+
 /** The argv `cargoBuild` runs to build `bin` of the crate at `crate` under `root`. */
 export function cargoBuildArgv(
   root: string,
@@ -167,10 +195,20 @@ export function cargoBuild(spec: CargoBuildSpec): CargoSource {
     run: (ctx) =>
       withStagedTargetDir(ctx, crate, async (targetDir) => {
         await withEmbedded(ctx, embed, async (embedded) => {
+          const progress = ctx.progress;
           await ctx.run(cargoBuildArgv(ctx.root, crate, bin), {
             cwd: ctx.root,
-            env: { ...cargoEnv({ targetDir }), ...embedded },
+            env: {
+              ...cargoEnv({ targetDir }),
+              ...embedded,
+              // Someone shows how far the build is: cargo draws its
+              // `Building [==>  ] 137/312` bar even into a file.
+              ...(progress === null ? {} : CARGO_PROGRESS_ENV),
+            },
             timeoutMs: BUILD_TIMEOUT_MS,
+            ...(progress === null
+              ? {}
+              : { onOutput: cargoProgressReader(progress) }),
           });
         });
         const built = join(targetDir, "release", bin);

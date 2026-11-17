@@ -406,6 +406,7 @@ torch.
     - `BundleSpec`
     - `DefineDepSpec`
     - `Dep`
+    - `DepProgress`
     - `DepSource`
     - `DepTarget`
     - `EnsureOptions`

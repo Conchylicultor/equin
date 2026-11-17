@@ -191,6 +191,7 @@ the shared Playwright harness.
     - `infra/jobs/supervised-job.cliExecContext`
     - `infra/jobs/supervised-job.takeRunErrorPath`
     - `infra/jobs/supervised-job.writeRunErrorSync`
+    - `installer.enterBuildSubStep`
     - `tasks/task-track.checkoutTrack`
   - Exports (types):
     - `BuildProfile`

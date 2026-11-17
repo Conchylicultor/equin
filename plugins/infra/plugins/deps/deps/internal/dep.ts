@@ -27,9 +27,30 @@ export interface InstallContext {
       cwd: string;
       env: Record<string, string | undefined>;
       timeoutMs: number;
+      /**
+       * The command's output as it is written (each chunk the log grew by,
+       * `\r` progress frames included), for a kind that reads progress out
+       * of it — called only while someone listens (`progress` is not null).
+       */
+      onOutput?: (chunk: string) => void;
     },
   ) => Promise<void>;
   readonly exec: ExecContext;
+  /**
+   * Where the kind reports how far the install is, as its tool counts (cargo's
+   * crates), or null when nobody listens — a kind then asks its tool for no
+   * progress output at all. What the caller passed as
+   * `EnsureOptions.progress` (an install's window shows it).
+   */
+  readonly progress: ((p: DepProgress) => void) | null;
+}
+
+/** How far an install is, as its tool counts. */
+export interface DepProgress {
+  readonly done: number;
+  /** Null until the tool has said how much there is. */
+  readonly total: number | null;
+  readonly unit: "crates";
 }
 
 /** The platform and architecture an install is FOR (Node's spelling). */

@@ -33,6 +33,7 @@ verdict.
     - `framework/cli/foreground-handoff`
     - `framework/cli/op-runtime`
     - `infra/jobs/supervised-job`
+    - `installer`
 - Exemptions:
   - Exempts itself from: `blocking-fs/no-sync-fs` — `machine/internal/write-all.ts` (sanctioned)
 - Machine:

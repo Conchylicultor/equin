@@ -3,6 +3,7 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { centralBuildOf } from "@plugins/build/plugins/central-build-id/cli";
+import { reportInstallProgress } from "@plugins/installer/cli";
 import { writeFileSync } from "node:fs";
 import { isPlatformApi } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
 import { rm } from "node:fs/promises";
@@ -29,6 +30,7 @@ import {
   PROGRESS_FILE,
   readBuildProgress,
   runCheckSubprocess,
+  type SpanOptions,
   type ValveDeps,
 } from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
 import {
@@ -251,7 +253,7 @@ export interface ArtifactHooks {
     id: string,
     phase: string,
     label: string,
-    options?: { wait?: boolean },
+    options?: SpanOptions,
   ) => (info?: { peak?: PeakFootprint; reused?: boolean }) => void;
   /** `pushBuildSpan` — records an already-finished span retroactively. */
   pushSpan: (
@@ -302,7 +304,7 @@ export function footprintLine(label: string, peak: PeakFootprint): string {
 function codegenStepFor(hooks: ArtifactHooks): CodegenStep {
   return async (id, label, run) => {
     const phase = id === "pluginDocs" ? "build:validation" : "build:codegen";
-    const end = hooks.span(id, phase, label);
+    const end = hooks.span(id, phase, label, { installStep: "build.codegen" });
     try {
       await run();
     } finally {
@@ -462,7 +464,9 @@ export async function prepareCompositionSources(opts: {
   // plugin records the trees are read from (the shared store installed here:
   // a plugin whose files did not change is not extracted again, in any
   // worktree). Stage 2 reuses it through the memoized trees.
-  let endSpan = hooks.span("repoFiles", "build:setup", "repo file set");
+  let endSpan = hooks.span("repoFiles", "build:setup", "repo file set", {
+    installStep: "build.deps",
+  });
   installRecordStore(openRecordStore());
   // The misses of a cold store (a new machine, an edit to a facet or the
   // evaluator: every plugin) run on worker threads, about two per three
@@ -651,6 +655,7 @@ export async function generateAppSources(opts: {
     "generateMigration",
     "build:database",
     "generate migrations",
+    { installStep: "build.codegen" },
   );
   hooks.log("Generating DB migrations...");
   const migration = await generateMigration({
@@ -1227,7 +1232,9 @@ export async function buildAndPublishWebDist(
     // internal fan-out (per-plugin vite builds on a cold store) is the
     // same class of heavy work, so it spends a unit of the build's CPU
     // budget rather than running on top of it.
-    const end = hooks.span("viteBuild", "build:frontend", "web artifacts");
+    const end = hooks.span("viteBuild", "build:frontend", "web artifacts", {
+      installStep: "build.interface",
+    });
     const start = performance.now();
     // Its file calls include its content-addressed stages': it reused only
     // when every one of them did (`BuildSpan.reused`).
@@ -1295,6 +1302,9 @@ export async function buildAndPublishWebDist(
               materialize: opts.materialize,
               addressDir,
               log: (line) => lines.push({ text: line, stream: "stdout" }),
+              // An install's "Building the interface · 137 of 1184".
+              onArtifactBuilt: (built, stale) =>
+                reportInstallProgress(built, stale, "plugins"),
               isPlatformApi,
               onStage: async (id, label, run, reusedOf) => {
                 const endStage = hooks.span(id, "build:frontend", label);

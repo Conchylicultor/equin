@@ -1,35 +1,124 @@
 import { describe, expect, test } from "bun:test";
 import {
   applyLine,
+  captionParts,
+  currentGroup,
   currentStep,
   emptyView,
+  pace,
   progress,
+  remainingSeconds,
+  remainingText,
+  statusText,
   type InstallView,
 } from "./model";
 
-const T = "2026-11-17T15:00:00Z";
-const plan = JSON.stringify({
-  v: 1,
-  t: T,
-  type: "plan",
-  release: null,
-  platform: "darwin-arm64",
-  mode: "window",
-  steps: [
-    { id: "tools", label: "Prepare your Mac", est_s: null },
-    { id: "clone", label: "Download equin", est_s: null },
-  ],
-});
-const step = (id: string, state: string): string =>
-  JSON.stringify({ v: 1, t: T, type: "step", id, state });
+const T0 = Date.parse("2026-11-17T15:00:00Z");
+/** An ISO instant `s` seconds after T0. */
+const at = (s: number): string =>
+  new Date(T0 + s * 1000).toISOString().replace(/\.\d{3}Z$/, "Z");
+const now = (s: number): number => T0 + s * 1000;
+
+type Est = number | null;
+function plan(
+  est: {
+    tools?: Est;
+    clone?: Est;
+    database?: Est;
+    interface?: Est;
+  } = {},
+): string {
+  return JSON.stringify({
+    v: 1,
+    t: at(0),
+    type: "plan",
+    release: null,
+    platform: "darwin-arm64",
+    mode: "window",
+    groups: [
+      { id: "prepare", label: "Prepare your Mac" },
+      { id: "download", label: "Download equin" },
+      { id: "build", label: "Build equin" },
+    ],
+    steps: [
+      {
+        id: "tools",
+        label: "Prepare your Mac",
+        doing: "Preparing your Mac",
+        group: "prepare",
+        est_s: est.tools ?? null,
+      },
+      {
+        id: "clone",
+        label: "Download equin",
+        doing: "Downloading equin",
+        group: "download",
+        est_s: est.clone ?? null,
+      },
+      {
+        id: "build",
+        label: "Build equin",
+        doing: "Building equin",
+        group: "build",
+        est_s: null,
+        substeps: [
+          {
+            id: "build.database",
+            label: "Prepare the database",
+            doing: "Preparing the database",
+            est_s: est.database ?? null,
+          },
+          {
+            id: "build.interface",
+            label: "Build the interface",
+            doing: "Building the interface",
+            est_s: est.interface ?? null,
+          },
+        ],
+      },
+    ],
+  });
+}
+const step = (s: number, id: string, state: string, ms?: number): string =>
+  JSON.stringify({
+    v: 1,
+    t: at(s),
+    type: "step",
+    id,
+    state,
+    ...(ms === undefined ? {} : { ms }),
+  });
 const log = (line: string): string =>
   JSON.stringify({
     v: 1,
-    t: T,
+    t: at(0),
     type: "log",
     step: "clone",
     stream: "out",
     line,
+  });
+const count = (
+  s: number,
+  id: string,
+  done: number,
+  total: number | null,
+  unit = "plugins",
+): string =>
+  JSON.stringify({ v: 1, t: at(s), type: "progress", id, done, total, unit });
+const wait = (
+  s: number,
+  state: "start" | "end",
+  on = "host-grant",
+  holder?: object,
+): string =>
+  JSON.stringify({
+    v: 1,
+    t: at(s),
+    type: "wait",
+    step: "build.interface",
+    state,
+    on,
+    ...(holder ? { holder } : {}),
   });
 
 function fold(lines: string[]): InstallView {
@@ -39,70 +128,221 @@ function fold(lines: string[]): InstallView {
 }
 
 describe("installer page model", () => {
-  test("running: the current step, progress by steps finished, a log section per step", () => {
+  test("running: the current step, its group, a log section per step", () => {
     const view = fold([
-      plan,
-      step("tools", "skipped"),
-      step("clone", "start"),
+      plan(),
+      step(0, "tools", "skipped"),
+      step(1, "clone", "start"),
       log("\u001b[32mok\u001b[0m"),
     ]);
     expect(view.phase).toBe("running");
     expect(currentStep(view)?.step.label).toBe("Download equin");
-    expect(currentStep(view)?.index).toBe(1);
-    expect(progress(view)).toBe(0.5);
+    expect(currentGroup(view)).toEqual({ index: 1, count: 3 });
+    expect(statusText(view, now(2))).toBe("Downloading equin…");
     expect(view.log).toEqual([
-      { kind: "section", text: "Download equin" },
+      { kind: "section", text: "Downloading equin" },
       { kind: "line", text: "ok" },
     ]);
   });
 
-  test("a failed step pauses; a new start resumes", () => {
+  test("a sub-step's section replaces its step's empty one; the status names the sub-step and its count", () => {
+    const view = fold([
+      plan(),
+      step(0, "build", "start"),
+      step(0, "build.database", "start"),
+      step(5, "build.database", "done", 5000),
+      step(5, "build.interface", "start"),
+      count(6, "build.interface", 137, 312),
+    ]);
+    expect(view.log.map((r) => r.text)).toEqual([
+      "Preparing the database",
+      "Building the interface",
+    ]);
+    expect(statusText(view, now(7))).toBe(
+      "Building the interface · 137 of 312",
+    );
+    expect(currentGroup(view)).toEqual({ index: 2, count: 3 });
+  });
+
+  test("a count with no total yet, or one from before the step started, is not shown", () => {
+    const unknown = fold([
+      plan(),
+      step(0, "clone", "start"),
+      count(1, "clone", 3, null, "%"),
+    ]);
+    expect(statusText(unknown, now(2))).toBe("Downloading equin…");
+    const pct = fold([
+      plan(),
+      step(0, "clone", "start"),
+      count(1, "clone", 42, 100, "%"),
+    ]);
+    expect(statusText(pct, now(2))).toBe("Downloading equin · 42%");
+    const stale = fold([
+      plan(),
+      step(0, "build", "start"),
+      count(1, "build", 10, 20),
+      step(2, "build.interface", "start"),
+    ]);
+    expect(statusText(stale, now(3))).toBe("Building the interface…");
+  });
+
+  test("no estimates: no time, and the bar moves by finished steps, sub-steps as fractions", () => {
+    const view = fold([
+      plan(),
+      step(0, "tools", "skipped"),
+      step(0, "clone", "start"),
+      step(10, "clone", "done", 10000),
+      step(10, "build", "start"),
+      step(10, "build.database", "start"),
+      step(20, "build.database", "done", 10000),
+      step(20, "build.interface", "start"),
+    ]);
+    expect(remainingSeconds(view, now(30))).toBeNull();
+    expect(captionParts(view, now(30))).toEqual(["Step 3 of 3"]);
+    expect(progress(view, now(30))).toBeCloseTo((1 + 1 + 0.5) / 3);
+  });
+
+  test("one step left without an estimate is enough to show no time", () => {
+    const view = fold([
+      plan({ clone: 10, database: 10 }),
+      step(0, "clone", "start"),
+    ]);
+    expect(remainingSeconds(view, now(1))).toBeNull();
+  });
+
+  test("with estimates: time left scaled by this machine's pace, the bar by time", () => {
+    const view = fold([
+      plan({ tools: 5, clone: 20, database: 10, interface: 100 }),
+      step(0, "tools", "skipped"),
+      step(0, "clone", "start"),
+      step(30, "clone", "done", 30000), // 1.5× slower than its median
+      step(30, "build", "start"),
+      step(30, "build.database", "start"),
+    ]);
+    expect(pace(view)).toBeCloseTo(1.5);
+    // database: 10 × 1.5 − 6 worked = 9; interface 100 × 1.5 = 150.
+    expect(remainingSeconds(view, now(36))).toBeCloseTo(159);
+    expect(progress(view, now(36))).toBeCloseTo(36 / (36 + 159));
+    expect(captionParts(view, now(36))).toEqual([
+      "Step 3 of 3",
+      "About 3 minutes remaining",
+    ]);
+    // A step running past its estimate counts 0, never below.
+    expect(remainingSeconds(view, now(100))).toBeCloseTo(150);
+  });
+
+  test("pace is 1 before any estimated step finished", () => {
+    const view = fold([
+      plan({ tools: 0, clone: 20, database: 10, interface: 100 }),
+      step(0, "clone", "start"),
+    ]);
+    expect(pace(view)).toBe(1);
+    expect(remainingSeconds(view, now(5))).toBeCloseTo(15 + 10 + 100);
+  });
+
+  test("a wait is shown, and its time is not counted down", () => {
+    const base = [
+      plan({ tools: 0, clone: 20, database: 10, interface: 100 }),
+      step(0, "clone", "start"),
+      step(20, "clone", "done", 20000),
+      step(20, "build", "start"),
+      step(20, "build.database", "start"),
+      step(30, "build.database", "done", 10000),
+      step(30, "build.interface", "start"),
+    ];
+    const waiting = fold([...base, wait(40, "start")]);
+    expect(statusText(waiting, now(50))).toBe(
+      "Waiting for other work on this Mac to finish…",
+    );
+    expect(remainingSeconds(waiting, now(50))).toBeCloseTo(90);
+    expect(remainingSeconds(waiting, now(500))).toBeCloseTo(90);
+
+    const held = fold([
+      ...base,
+      wait(40, "start", "host-grant", {
+        op: "op-1",
+        kind: "test",
+        startedAt: at(-3 * 3600),
+      }),
+    ]);
+    expect(statusText(held, now(50))).toBe(
+      "Waiting for another task to finish · a test started 3 hours ago",
+    );
+
+    const resumed = fold([...base, wait(40, "start"), wait(100, "end")]);
+    expect(statusText(resumed, now(110))).toBe("Building the interface…");
+    // 10 s before the wait + 10 s after it worked.
+    expect(remainingSeconds(resumed, now(110))).toBeCloseTo(80);
+  });
+
+  test("remaining time, in words", () => {
+    expect(remainingText(49)).toBe("Less than a minute remaining");
+    expect(remainingText(60)).toBe("About 1 minute remaining");
+    expect(remainingText(409)).toBe("About 7 minutes remaining");
+  });
+
+  test("a failed step pauses; a new start resumes and runs its sub-steps again", () => {
     const failed = fold([
-      plan,
-      step("clone", "start"),
-      step("clone", "failed"),
+      plan(),
+      step(0, "build", "start"),
+      step(0, "build.database", "start"),
+      step(5, "build.database", "failed", 5000),
+      step(5, "build", "failed", 5000),
     ]);
     expect(failed.phase).toBe("failed");
+    expect(captionParts(failed, now(6))).toEqual(["Step 3 of 3", "Paused"]);
     const resumed = fold([
-      plan,
-      step("clone", "start"),
-      step("clone", "failed"),
-      step("clone", "start"),
+      plan(),
+      step(0, "build", "start"),
+      step(0, "build.database", "start"),
+      step(5, "build.database", "failed", 5000),
+      step(5, "build", "failed", 5000),
+      step(9, "build", "start"),
     ]);
     expect(resumed.phase).toBe("running");
+    expect(resumed.steps[2]?.substeps[0]?.state).toBe("pending");
   });
 
   test("done, then exit 0, stays done", () => {
     const view = fold([
-      plan,
-      step("clone", "done"),
+      plan(),
+      step(0, "clone", "done"),
       JSON.stringify({
         v: 1,
-        t: T,
+        t: at(1),
         type: "done",
         url: "http://equin.localhost:9000",
         ms: 1000,
       }),
-      JSON.stringify({ v: 1, t: T, type: "exit", code: 0 }),
+      JSON.stringify({ v: 1, t: at(1), type: "exit", code: 0 }),
     ]);
     expect(view.phase).toBe("done");
     expect(view.doneUrl).toBe("http://equin.localhost:9000");
-    expect(progress(view)).toBe(1);
+    expect(progress(view, now(2))).toBe(1);
   });
 
   test("exit without done is stopped", () => {
     const view = fold([
-      plan,
-      step("clone", "failed"),
-      JSON.stringify({ v: 1, t: T, type: "exit", code: 1 }),
+      plan(),
+      step(0, "clone", "failed"),
+      JSON.stringify({ v: 1, t: at(1), type: "exit", code: 1 }),
     ]);
     expect(view.phase).toBe("stopped");
     expect(view.exitCode).toBe(1);
   });
 
   test("a line outside the protocol is a loud error, and nothing after it is folded", () => {
-    const view = fold([plan, '{"v":2,"type":"plan"}', step("clone", "start")]);
+    const view = fold([
+      plan(),
+      '{"v":2,"type":"plan"}',
+      step(0, "clone", "start"),
+    ]);
     expect(view.phase).toBe("protocol-error");
     expect(view.protocolError).toContain('{"v":2');
+  });
+
+  test("a step outside the plan is a protocol error", () => {
+    const view = fold([plan(), step(0, "mise", "start")]);
+    expect(view.phase).toBe("protocol-error");
   });
 });

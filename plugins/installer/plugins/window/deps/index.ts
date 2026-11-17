@@ -4,5 +4,7 @@
 import { installerWindow } from "./internal/window";
 
 export { installerWindow } from "./internal/window";
+// The page as one HTML file, for a script that loads it without the window (e2e/replay.ts).
+export { bundlePage } from "./internal/page";
 
 export default [installerWindow];

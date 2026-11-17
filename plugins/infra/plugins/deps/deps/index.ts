@@ -19,6 +19,7 @@ export type {
   BundleSpec,
   DefineDepSpec,
   Dep,
+  DepProgress,
   DepSource,
   DepTarget,
   InstallContext,

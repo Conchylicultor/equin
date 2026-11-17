@@ -69,6 +69,10 @@ export const RUNTIME_WITHHELD_ENV = {
     "the step `install.sh --dry-run` fails once (installer), set by `./equin installer window --fail` and the stream test for that one run",
   RELEASES_URL:
     "where install.sh's stage 0 and the installer window's self-bootstrap download releases from (installer/release-assets; default the canonical repo's GitHub Releases), set by the stage-0 test to a local server for that one run",
+  INSTALL_EVENTS:
+    "the FIFO an install's events go to (installer), set by install.sh for the `./equin` commands it runs as steps, which report their sub-steps, progress and waits through it (installer/cli emitInstallEvent)",
+  INSTALL_STEP:
+    "the install step a command runs as (installer: tools, start, build…), set by install.sh beside INSTALL_EVENTS so what the command reports is filed under that step",
   INSTALLER_PAGE:
     "the bundled installer page the installer window's crate compiles in (installer/window rust/build.rs), set by its dependency build for that one cargo run",
   PEAK_FOOTPRINT_REPORT:

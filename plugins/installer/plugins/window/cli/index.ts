@@ -10,7 +10,7 @@ import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
  */
 export default defineCliCommand({
   name: "installer",
-  description: "The equin installer window",
+  description: "The equin installer: its window, and its time estimates",
   subcommands: [
     defineCliCommand<[], { pace?: string; fail?: string }>({
       name: "window",
@@ -29,6 +29,24 @@ export default defineCliCommand({
         },
       ],
       run: () => import("./internal/window"),
+    }),
+    defineCliCommand<[], { from?: string[]; fromJson?: boolean }>({
+      name: "estimates",
+      description:
+        "Regenerate the install's per-step time estimates (installer/core/estimates.json and install.sh's copy) as medians of real installs' timing files",
+      options: [
+        {
+          flags: "--from <dir...>",
+          description:
+            "Also read <run>/timing.json under these dirs (timing files collected from other machines)",
+        },
+        {
+          flags: "--from-json",
+          description:
+            "Only rewrite install.sh's estimates block from the committed estimates.json",
+        },
+      ],
+      run: () => import("./internal/estimates"),
     }),
   ],
 });
