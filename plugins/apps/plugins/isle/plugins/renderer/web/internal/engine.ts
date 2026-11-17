@@ -182,6 +182,13 @@ export interface IsleViewState {
     readonly facing: number;
   };
   readonly cam: { readonly x: number; readonly y: number; readonly z: number };
+  /**
+   * The building the hero went into (its app id), if it left the island by a
+   * door: coming back, the hero steps out of that door — facing the street —
+   * wherever it stood when the app was opened (a click opens a building from
+   * afar).
+   */
+  readonly inside?: string;
 }
 
 interface Tile {
@@ -1002,7 +1009,17 @@ export class IsleEngine {
       v.y = r.pts[v.k]![1];
     });
     const back = this.resume;
-    if (
+    const outOf =
+      !this.hero.placed && back?.inside !== undefined
+        ? this.buildings.find((b) => b.appId === back.inside)
+        : undefined;
+    const doorstep = outOf && { x: outOf.door[0], y: outOf.door[1] + 30 };
+    if (doorstep && this.walkableAt(doorstep.x, doorstep.y)) {
+      this.hero.x = doorstep.x;
+      this.hero.y = doorstep.y;
+      this.hero.facing = Math.PI / 2;
+      this.hero.placed = true;
+    } else if (
       !this.hero.placed &&
       back &&
       this.walkableAt(back.hero.x, back.hero.y)

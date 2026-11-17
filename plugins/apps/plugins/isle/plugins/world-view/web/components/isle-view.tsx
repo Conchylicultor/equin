@@ -83,6 +83,8 @@ const PHASE_OF_MOOD = new Map(
  */
 let startedThisPage = false;
 let lastView: IsleViewState | null = null;
+/** The building last opened in this tab: coming back, the hero steps out of its door. */
+let wentInto: string | null = null;
 
 interface Entering {
   readonly r: Resident;
@@ -180,6 +182,7 @@ export function IsleView() {
         return;
       }
       const gesture: Gesture = { keepOthers: click.keepOthers };
+      wentInto = appId;
       sfx.enter();
       if (prefersReducedMotion()) {
         runActivation(activation, gesture);
@@ -260,8 +263,14 @@ export function IsleView() {
       },
     );
     engineRef.current = engine;
+    wentInto = null;
     return () => {
-      lastView = engine.viewState() ?? lastView;
+      const view = engine.viewState() ?? lastView;
+      lastView = view && {
+        hero: view.hero,
+        cam: view.cam,
+        ...(wentInto === null ? {} : { inside: wentInto }),
+      };
       engineRef.current = null;
       engine.dispose();
     };
