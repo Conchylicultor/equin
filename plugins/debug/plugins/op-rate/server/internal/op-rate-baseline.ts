@@ -98,8 +98,9 @@ export interface OpHistory {
 /**
  * The op's usual calls per window: the `quantile` of its past windows, those it
  * was not called in counted as 0. Throws when the history counts more called
- * windows than windows — the two are written in one transaction, so that is a
- * broken store, not a number to judge on.
+ * windows than windows — the store writes each window's count no later than
+ * the buckets it covers (recordWindow), so that is a broken store, not a
+ * number to judge on.
  */
 export function usualCallsOf(history: OpHistory, quantile: number): number {
   let called = 0;

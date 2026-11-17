@@ -133,9 +133,16 @@ unit-tested):
   the next tick diffs against, and the window joins the history, only after
   every report is filed: a tick that throws and is retried re-diffs the same
   window and records it once.
-- **An op new to the history** (no called window in it — a changed SQL text is
-  a new `db` label) is judged on the warm-up bar, never as a jump from 0; its
-  hour is not judged. The hour horizon judges only ops called in this window,
+- **An op's history starts at its first called hour** in the span. A changed
+  SQL text is a new `db` label: counting the hours before it existed as "not
+  called" made its usual rate that of the hours it had lived through, so a
+  label born at noon read its first busy morning as 25× its quiet evening
+  (2026-11-17). Until the op has a regime's `MIN_HISTORY_WINDOWS` of its own,
+  its steady windows are judged on the warm-up bar (never as a jump from 0) and
+  its boot windows not at all, and until it has `MIN_COVERED_HOURS` covered
+  hours of its own, its hour is not judged. The span cannot tell a renamed
+  label from an op idle for most of the week: one woken within the last day
+  is judged as young too (the warm-up bar), erring toward not firing. The hour horizon judges only ops called in this window,
   so an hour trip stops with its op.
 - op-time keeps its own seed rule (`windowDelta`): the first observation of a
   label's time seeds its baseline and fires nothing.

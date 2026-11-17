@@ -47,7 +47,9 @@ function addSlots(stored: Column) {
  * count for the hour, each op called in it to its bucket for the day, and its
  * calls to its hour of the day. The window count is written in the same
  * statement as the first chunk of ops, so a reader can never see an op's
- * windows outnumber the regime's (usualCallsOf throws on that).
+ * windows outnumber the regime's (usualCallsOf throws on that); an op's hour
+ * row is written no later than its bucket, so its history (from its first
+ * called hour, readHistory) always holds every window its buckets count.
  */
 export async function recordWindow(
   exec: DbExecutor,
@@ -91,6 +93,9 @@ export async function recordWindow(
         target: [h.op, h.dayStart],
         set: { calls: addSlots(h.calls) },
       });
+  // An op's hour is written no later than its bucket (in the same statement,
+  // or the one before): an op's history starts at its first called hour
+  // (readHistory), so a bucket must never exist without that hour.
   const [first, ...rest] = chunked(called);
   await writeAtomically(exec, [
     exec
@@ -100,10 +105,13 @@ export async function recordWindow(
         target: [w.regime, w.hourStart],
         set: { windows: sql`${w.windows} + 1` },
       }),
+    first === undefined ? null : insertHours(first),
     first === undefined ? null : insertCounts(first),
   ]);
-  for (const chunk of rest) await insertCounts(chunk);
-  for (const chunk of chunked(called)) await insertHours(chunk);
+  for (const chunk of rest) {
+    await insertHours(chunk);
+    await insertCounts(chunk);
+  }
 }
 
 /**
@@ -122,9 +130,55 @@ function baselineSpan(atMs: number): { from: Date; until: Date } {
 
 /** A regime's window history over the baseline span. */
 export interface RegimeHistory {
+  /** Every window of the regime over the span, whatever op was called. */
   windows: number;
-  /** Each asked op's history; an op never called in it has empty buckets. */
+  /**
+   * Each asked op's history, from its first called hour in the span on (see
+   * firstCalledHours); an op never called in it has no windows and no buckets.
+   */
   ops: ReadonlyMap<string, OpHistory>;
+}
+
+/**
+ * The first hour (epoch ms) each op was called in, over the span — where its
+ * history starts. Before it the op did not exist under that name (a changed
+ * SQL text is a new `db` label; a new resource a new key): counting those
+ * hours as "not called" would make a young op's usual rate that of whatever
+ * hours of the day it has lived through, and judge its first busy hour as a
+ * jump from them (2026-11-17: a renamed upsert, born at noon, read 1,125
+ * calls/h at 11:00 next day as 25× its quiet evening hours).
+ */
+function firstCalledHours(
+  rows: readonly { op: string; dayStart: Date; calls: readonly number[] }[],
+): Map<string, number> {
+  const first = new Map<string, number>();
+  for (const r of rows) {
+    const hour = r.calls.findIndex((n) => n > 0);
+    if (hour < 0) continue;
+    const at = r.dayStart.getTime() + hour * HOUR_MS;
+    const prev = first.get(r.op);
+    if (prev === undefined || at < prev) first.set(r.op, at);
+  }
+  return first;
+}
+
+/** The day-hour rows of `ops` over the span. */
+function readDayHours(
+  exec: DbExecutor,
+  ops: readonly string[],
+  span: { from: Date; until: Date },
+) {
+  const h = _opRateDayHours;
+  return exec
+    .select({ op: h.op, dayStart: h.dayStart, calls: h.calls })
+    .from(h)
+    .where(
+      and(
+        opIn(h.op, ops),
+        gte(h.dayStart, span.from),
+        lt(h.dayStart, span.until),
+      ),
+    );
 }
 
 /**
@@ -137,27 +191,25 @@ export async function readHistory(
   atMs: number,
   ops: readonly string[],
 ): Promise<RegimeHistory> {
-  const { from, until } = baselineSpan(atMs);
-  const [total] = await exec
-    .select({
-      windows: sql`coalesce(sum(${_opRateWindows.windows}), 0)::int`.mapWith(
-        Number,
-      ),
-    })
-    .from(_opRateWindows)
+  const span = baselineSpan(atMs);
+  const { from, until } = span;
+  const w = _opRateWindows;
+  const hourRows = await exec
+    .select({ hourStart: w.hourStart, windows: w.windows })
+    .from(w)
     .where(
-      and(
-        eq(_opRateWindows.regime, regime),
-        gte(_opRateWindows.hourStart, from),
-        lt(_opRateWindows.hourStart, until),
-      ),
+      and(eq(w.regime, regime), gte(w.hourStart, from), lt(w.hourStart, until)),
     );
-  if (total === undefined)
-    throw new Error("op-rate: an aggregate read returned no row");
-  const { windows } = total;
+  const windowsSince = (atOrAfter: number) =>
+    hourRows.reduce(
+      (sum, r) => (r.hourStart.getTime() >= atOrAfter ? sum + r.windows : sum),
+      0,
+    );
+  const windows = windowsSince(-Infinity);
   const buckets = new Map<string, Map<number, number>>(
     ops.map((op) => [op, new Map()]),
   );
+  let firstCalled = new Map<string, number>();
   if (ops.length > 0) {
     const t = _opRateDayBuckets;
     const rows = await exec
@@ -171,6 +223,7 @@ export async function readHistory(
           lt(t.dayStart, until),
         ),
       );
+    firstCalled = firstCalledHours(await readDayHours(exec, ops, span));
     for (const r of rows) {
       const opBuckets = buckets.get(r.op);
       if (opBuckets === undefined)
@@ -182,7 +235,18 @@ export async function readHistory(
   }
   return {
     windows,
-    ops: new Map([...buckets].map(([op, b]) => [op, { windows, buckets: b }])),
+    ops: new Map(
+      [...buckets].map(([op, b]) => {
+        const since = firstCalled.get(op);
+        return [
+          op,
+          {
+            windows: since === undefined ? 0 : windowsSince(since),
+            buckets: b,
+          },
+        ];
+      }),
+    ),
   };
 }
 
@@ -195,7 +259,11 @@ export interface HourHistory {
     {
       /** Calls in `atMs`'s hour: those recorded, plus this window's. */
       hourSoFar: number;
-      /** One entry per covered past hour, 0 where the op was not called. */
+      /**
+       * One entry per covered past hour from the op's first called hour on
+       * (firstCalledHours), 0 where it was not called. Empty for an op never
+       * called in the span.
+       */
       pastHours: readonly number[];
     }
   >;
@@ -237,20 +305,15 @@ export async function readHourHistory(
   const past = new Map<string, Map<number, number>>(
     over.map(([op]) => [op, new Map()]),
   );
+  const firstCalled = new Map<string, number>();
   if (over.length > 0) {
-    const rows = await exec
-      .select({ op: h.op, dayStart: h.dayStart, calls: h.calls })
-      .from(h)
-      .where(
-        and(
-          opIn(
-            h.op,
-            over.map(([op]) => op),
-          ),
-          gte(h.dayStart, from),
-          lt(h.dayStart, until),
-        ),
-      );
+    const rows = await readDayHours(
+      exec,
+      over.map(([op]) => op),
+      { from, until },
+    );
+    for (const [op, first] of firstCalledHours(rows))
+      firstCalled.set(op, first);
     for (const r of rows) {
       const opPast = past.get(r.op);
       if (opPast === undefined)
@@ -270,7 +333,9 @@ export async function readHourHistory(
         op,
         {
           hourSoFar,
-          pastHours: hours.map((at) => past.get(op)?.get(at) ?? 0),
+          pastHours: hours
+            .filter((at) => at >= (firstCalled.get(op) ?? Infinity))
+            .map((at) => past.get(op)?.get(at) ?? 0),
         },
       ]),
     ),

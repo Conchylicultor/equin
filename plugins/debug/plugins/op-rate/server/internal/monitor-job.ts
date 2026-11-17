@@ -438,11 +438,17 @@ async function judgeCallRates(
     const opHistory = history.ops.get(key);
     if (opHistory === undefined)
       throw new Error(`op-rate: no history read for ${key}`);
-    // An op with no called window in the history is new to it (a changed SQL
-    // text is a new `db` label; a new resource is a new key): it has no usual
-    // rate yet, so it is judged on the warm-up bar, never as a jump from 0.
-    const basis: OpRateBasis =
-      learned && opHistory.buckets.size > 0
+    // An op's history starts at its first called hour (readHistory): an op
+    // younger than a regime's MIN_HISTORY_WINDOWS (a changed SQL text is a new
+    // `db` label; a new resource is a new key) has no usual rate yet, so it is
+    // judged on the warm-up bar — never against the hours of the day it has
+    // lived through so far, nor as a jump from 0.
+    const young =
+      opHistory.windows < MIN_HISTORY_WINDOWS[regime] ||
+      opHistory.buckets.size === 0;
+    // A young op's boot window is not judged, like a boot regime warming up.
+    if (young && regime === "boot") continue;
+    const basis: OpRateBasis = !young
         ? {
             kind: "baseline",
             usualCalls: usualCallsOf(opHistory, BASELINE_QUANTILE[regime]),
@@ -470,7 +476,9 @@ async function judgeCallRates(
 // (op-rate-baseline.ts, *The hour horizon*). Only an op called in this window
 // is judged, so an hour trip stops once its op does. Under MIN_COVERED_HOURS of
 // history the hour is not judged (the window's warm-up bar covers that day),
-// nor is an op with no past hour (new to the history, judged on its window).
+// nor is an op with under MIN_COVERED_HOURS since its first call: a young op
+// (a renamed SQL text) has only seen some hours of the day, and its busy hour
+// would be judged against its quiet ones.
 async function judgeHourRates(
   atMs: number,
   windowCalls: ReadonlyMap<
@@ -493,7 +501,7 @@ async function judgeHourRates(
     const w = windowCalls.get(key);
     if (w === undefined)
       throw new Error(`op-rate: hour history answered an op not asked: ${key}`);
-    if (!h.pastHours.some((n) => n > 0)) continue;
+    if (h.pastHours.length < MIN_COVERED_HOURS) continue;
     const usualCalls = usualHourCallsOf(h.pastHours, HOUR_QUANTILE);
     const threshold = hourThresholdOf(usualCalls, rule);
     if (h.hourSoFar <= threshold) continue;

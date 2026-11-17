@@ -22,8 +22,14 @@ import {
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
 import { readHistory, readHourHistory, recordWindow } from "./baseline-store";
-import { bucketOf, HOUR_MS, MIN_WINDOWS_PER_HOUR } from "./op-rate-baseline";
-import { _opRateDayBuckets, _opRateDayHours } from "./tables";
+import {
+  bucketOf,
+  HOUR_MS,
+  MIN_COVERED_HOURS,
+  MIN_HISTORY_WINDOWS,
+  MIN_WINDOWS_PER_HOUR,
+} from "./op-rate-baseline";
+import { _opRateDayBuckets, _opRateDayHours, _opRateWindows } from "./tables";
 
 const DAY_MS = 24 * HOUR_MS;
 // 2026-11-10T00:00Z, a UTC day start.
@@ -153,5 +159,66 @@ describe("recordWindow → readHourHistory", () => {
       hourSoFar: 55,
       pastHours: [10 * MIN_WINDOWS_PER_HOUR, 50 * MIN_WINDOWS_PER_HOUR],
     });
+  });
+});
+
+describe("an op's history starts at its first called hour", () => {
+  // The 2026-11-17 false alarm: an upsert's SQL text changed at noon, so its
+  // `db` label was new. The next morning its busy hour was judged against the
+  // week's hours, those before the label existed counted as "not called" and
+  // the rest its quiet evening — 1,125 calls/h read as 25× usual.
+  test("a young label in a busy hour, with only quiet hours behind it, is not judged", async () => {
+    // A week the backend was up: every hour of days 0–6 fully covered.
+    await t.db.insert(_opRateWindows).values(
+      Array.from({ length: 7 * 24 }, (_, i) => ({
+        regime: "steady" as const,
+        hourStart: new Date(DAY0 + i * HOUR_MS),
+        windows: 12,
+      })),
+    );
+    // "old" has been called since day 0; "young" is born at day 6, 12:00 and
+    // only ever saw the quiet evening (3 calls a window).
+    await recordWindow(t.db, "steady", at(0, 0), new Map([["old", 3]]));
+    for (let hour = 12; hour < 24; hour++)
+      await recordWindow(t.db, "steady", at(6, hour), new Map([["young", 3]]));
+
+    // Day 7, 11:00 — a busy hour: 94 calls in the window judged.
+    const nowMs = at(7, 11, 10);
+    const hour = await readHourHistory(
+      t.db,
+      nowMs,
+      new Map([
+        ["young", 94],
+        ["old", 94],
+      ]),
+      0,
+    );
+    expect(hour.coveredHours).toBe(7 * 24);
+    // The old op's past is the whole week; the young one's only its evening —
+    // under a day, so its hour is not judged (judgeHourRates).
+    expect(hour.ops.get("old")?.pastHours.length).toBe(7 * 24);
+    expect(hour.ops.get("young")?.pastHours).toEqual(
+      Array.from({ length: 12 }, () => 3),
+    );
+    expect(hour.ops.get("young")?.pastHours.length).toBeLessThan(
+      MIN_COVERED_HOURS,
+    );
+
+    // Its windows likewise count from its birth: under a day of steady
+    // windows, so it is judged on the warm-up bar (judgeCallRates).
+    const windows = await readHistory(t.db, "steady", nowMs, ["young", "old"]);
+    expect(windows.windows).toBe(7 * 24 * 12 + 13);
+    expect(windows.ops.get("old")?.windows).toBe(7 * 24 * 12 + 13);
+    expect(windows.ops.get("young")?.windows).toBe(12 * 13);
+    expect(windows.ops.get("young")?.windows).toBeLessThan(
+      MIN_HISTORY_WINDOWS.steady,
+    );
+  });
+
+  test("an op never called in the span has no history at all", async () => {
+    await recordWindow(t.db, "steady", at(0, 1), new Map([["a", 3]]));
+    const h = await readHistory(t.db, "steady", at(1, 3), ["a", "never"]);
+    expect(h.ops.get("a")?.windows).toBe(1);
+    expect(h.ops.get("never")).toEqual({ windows: 0, buckets: new Map() });
   });
 });
