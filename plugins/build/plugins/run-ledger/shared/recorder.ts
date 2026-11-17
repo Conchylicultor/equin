@@ -114,7 +114,13 @@ export type AttemptTarget = { only: string } | { includes: string };
  * through the ledger — the caller has to know that (`build/converge`).
  */
 export type LastClosedRun =
-  | { kind: "run"; commitHash: string | null; exitCode: number | null }
+  | {
+      kind: "run";
+      /** The run's id — what its run-detail pane opens. */
+      id: string;
+      commitHash: string | null;
+      exitCode: number | null;
+    }
   | { kind: "none" }
   | { kind: "missing-ledger" };
 
@@ -344,11 +350,12 @@ export async function lastClosedRunOn(
     const rows = await executeRows(db, {
       label: "build_runs: last closed run",
       row: z.object({
+        id: z.string(),
         commit_hash: z.string().nullable(),
         exit_code: z.number().int().nullable(),
       }),
       query: sql`
-        select "commit_hash", "exit_code" from "build_runs"
+        select "id", "commit_hash", "exit_code" from "build_runs"
         where "namespace" = ${namespace} and "finished_at" is not null and ${match}
         order by "started_at" desc
         limit 1
@@ -358,9 +365,49 @@ export async function lastClosedRunOn(
     if (row === undefined) return { kind: "none" };
     return {
       kind: "run",
+      id: row.id,
       commitHash: row.commit_hash,
       exitCode: row.exit_code,
     };
+  } catch (err) {
+    if (isMissingLedger(err)) return { kind: "missing-ledger" };
+    throw err;
+  }
+}
+
+/**
+ * The run of this namespace still in flight for `target`, or why there is
+ * none — at most one row can be (`build_runs_inflight_uniq`). What "main is
+ * building" reads (`upstream`'s release row): the same predicates as
+ * {@link lastClosedRunOn}, the open row instead of the newest closed one.
+ */
+export type InflightRun =
+  | { kind: "run"; id: string; commitHash: string | null }
+  | { kind: "none" }
+  | { kind: "missing-ledger" };
+
+export async function inflightRunOn(
+  db: NodePgDatabase,
+  namespace: Namespace,
+  target: AttemptTarget,
+): Promise<InflightRun> {
+  const targetMatch =
+    "only" in target
+      ? sql`"targets" = ${sql.param([target.only])}`
+      : sql`"targets" @> ${sql.param([target.includes])}`;
+  try {
+    const rows = await executeRows(db, {
+      label: "build_runs: in-flight run",
+      row: z.object({ id: z.string(), commit_hash: z.string().nullable() }),
+      query: sql`
+        select "id", "commit_hash" from "build_runs"
+        where "namespace" = ${namespace} and "finished_at" is null and ${targetMatch}
+        limit 1
+      `,
+    });
+    const row = rows[0];
+    if (row === undefined) return { kind: "none" };
+    return { kind: "run", id: row.id, commitHash: row.commit_hash };
   } catch (err) {
     if (isMissingLedger(err)) return { kind: "missing-ledger" };
     throw err;

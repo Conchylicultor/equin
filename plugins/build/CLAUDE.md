@@ -471,6 +471,7 @@ the common case.
     - `build/runs-arm`
     - `build/serve-composition`
     - `debug/reports`
+    - `upstream`
   - Endpoint callers: `restart-skip`
 - Exemptions:
   - Exempts itself from: `page-hosts-on-demand` — `web/index.ts` (sanctioned)

@@ -92,7 +92,7 @@ describe("lastClosedRunOn", () => {
     });
     expect(
       await lastClosedRunOn(t.db, NS, { only: MAIN_COMPOSITION_ID }),
-    ).toEqual({ kind: "run", commitHash: "aaa", exitCode: 1 });
+    ).toMatchObject({ kind: "run", commitHash: "aaa", exitCode: 1 });
   });
 
   test("only is equality, includes is containment", async () => {
@@ -105,7 +105,9 @@ describe("lastClosedRunOn", () => {
     expect(
       await lastClosedRunOn(t.db, NS, { only: MAIN_COMPOSITION_ID }),
     ).toEqual({ kind: "none" });
-    expect(await lastClosedRunOn(t.db, NS, { includes: "sonata" })).toEqual({
+    expect(
+      await lastClosedRunOn(t.db, NS, { includes: "sonata" }),
+    ).toMatchObject({
       kind: "run",
       commitHash: "ccc",
       exitCode: 0,
@@ -140,7 +142,7 @@ describe("lastClosedRunOn", () => {
     });
     expect(
       await lastClosedRunOn(t.db, NS, { only: MAIN_COMPOSITION_ID }, "eee"),
-    ).toEqual({ kind: "run", commitHash: "eee", exitCode: 0 });
+    ).toMatchObject({ kind: "run", commitHash: "eee", exitCode: 0 });
     expect(
       await lastClosedRunOn(t.db, NS, { only: MAIN_COMPOSITION_ID }, "ggg"),
     ).toEqual({ kind: "none" });
@@ -162,7 +164,7 @@ describe("lastClosedRunOn", () => {
     await recordRunCommitOn(t.db, open, "later");
     expect(
       await lastClosedRunOn(t.db, NS, { only: MAIN_COMPOSITION_ID }, "built"),
-    ).toEqual({ kind: "run", commitHash: "built", exitCode: 0 });
+    ).toMatchObject({ kind: "run", commitHash: "built", exitCode: 0 });
     expect(
       await lastClosedRunOn(
         t.db,

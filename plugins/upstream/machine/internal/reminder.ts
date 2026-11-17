@@ -20,7 +20,7 @@ import {
   type ReminderPayload,
 } from "../../shared/reminder";
 import { upstreamReleaseSubject } from "../../shared/subject";
-import { OUT_OF_DATE_TITLE, updateSpan } from "../../shared/update-words";
+import { OUT_OF_DATE_TITLE, outOfDateSummary } from "../../shared/update-words";
 
 /** When the newest reminder about `latest` was written, dismissed or not. */
 async function lastRemindedAt(latest: string): Promise<Date | null> {
@@ -53,6 +53,8 @@ async function lastRemindedAt(latest: string): Promise<Date | null> {
 export async function remindOfRelease(
   current: string | null,
   latest: string,
+  /** Commits `latest` holds that local `main` does not. */
+  commits: number,
 ): Promise<ReminderDecision> {
   const now = new Date();
   const decision = reminderDecision({
@@ -70,7 +72,7 @@ export async function remindOfRelease(
     variant: "info",
     audience: "user",
     title: OUT_OF_DATE_TITLE,
-    description: updateSpan(current, latest),
+    description: outOfDateSummary(current, latest, commits),
     metadata: { [REMINDER_RELEASE_KEY]: latest },
     dedupeKey: `${REMINDER_NOTIFICATION_TYPE}:${latest}:${now.toISOString().slice(0, 10)}`,
     action: { kind: REMINDER_ACTION_KIND, payload },

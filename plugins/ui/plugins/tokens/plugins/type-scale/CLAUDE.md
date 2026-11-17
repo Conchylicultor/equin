@@ -49,7 +49,7 @@ follow.
   - Exports (types): `TypeScaleTokenValues`
   - Exports (values): `typeScaleGroup`
 - Cross-plugin:
-  - Tokens used by: 232 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Tokens used by: 233 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×59
     - `conversations` ×40
     - `primitives` ×38
@@ -78,6 +78,7 @@ follow.
     - `screenshot`
     - `search/quick-find`
     - `tag-tree/picker`
+    - `upstream`
   - Imported by:
     - `apps-core/chrome-theme`
     - `apps/agent-manager/shell`

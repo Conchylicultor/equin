@@ -1,4 +1,4 @@
-// @hash 0a1470132fdc
+// @hash 71e278bdc91b
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -19,6 +19,7 @@
     "primitives.dom.web-storage.health:browser-storage",
     "reports.resource-errors:live-reads",
     "tasks.worktree-identity:worktree",
-    "upstream:updates"
+    "upstream:updates",
+    "upstream:releases"
   ]
 }

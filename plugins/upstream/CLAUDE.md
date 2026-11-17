@@ -75,7 +75,7 @@ off main; re-read on restart and on an adopted deploy).
 | State | Title | Summary | Health |
 |---|---|---|---|
 | no upstream / no release / never checked / no computer | — | — | `absent`: the row is not drawn |
-| behind, no task | equin is out of date | `2026.10.30 → 2026.11.14` | `attention`, ambient: the dot stays green |
+| behind, no task | equin is out of date | `2026.10.30 → 2026.11.14 · 312 commits` (the commits the release holds that local `main` does not — `standingAgainst`'s `commits`; the reminder says the same) | `attention`, ambient: the dot stays green |
 | behind, task about it | Update in progress | same | working → `ok` pulsing; at rest / not started → `attention` |
 | current, main's backend not built from it yet | Installing | `2026.11.14` | `ok` pulsing |
 | current | equin is up to date | `2026.11.14` | `ok` |
@@ -96,6 +96,33 @@ off main; re-read on restart and on an adopted deploy).
   folds into System checks.
 - "Never checked" is `absent` rather than "Checking…": the first check can be
   a day away, and a grey pulsing dot for a day is a false alarm.
+
+## The releases row (the checkout that publishes)
+
+On the canonical repo's main — no upstream because it IS upstream
+(`resolveUpstreamRemote` → `is-publisher`) — the `updates` row is absent and
+the `releases` row takes its place: "equin releases", subtitled `Latest
+2026.11.17 · 6h ago` (or `No release yet`), a commit line (`142 unreleased
+commits` — commits on `main` since its newest release, `readOwnReleases`) and
+a **Release 2026.11.17.2** button (the next tag of the day: `.2`, `.3`… are
+normal). Its truth is the `upstream.publisher-status` live value
+(`machine/internal/publisher-status.ts`, main's backend only; `not-publisher`
+everywhere else): git, the served dist's `.build-commit` and main's own
+`build_runs` (`inflightRunOn` / `lastClosedRunOn`, the run ledger's reads the
+cut runs too). It recomputes on `main` moving, a `build_runs` write, an
+adopted deploy and a cut through the endpoint — a tag cut from a terminal is
+heard at the next of those.
+
+**The button runs the CLI.** `POST /api/upstream/release` spawns `./equin
+version cut` in the backend's checkout: one implementation, every refusal its
+own (shown as the toast). The row only disables it ahead of time, for the
+reason on the commit line: `· main is building 8c1e2f0` (stricter than the cut:
+the served commit is about to be replaced), `· main's last build failed` (its
+build of the served commit; **Open build** opens the run), no finished build on
+record, no known served commit, or the served commit already released. With
+nothing unreleased: `No unreleased commits`, no button. All the words are
+`web/internal/releases-view.ts` (pure, tested); the `upstream/releases-row`
+exhibit draws every state.
 
 ## The update reminder (a notification the user controls)
 
@@ -176,28 +203,33 @@ that cannot run on this database).
 
 ## Plugin reference
 
-- Description: Registers the Upstream merges automation's config (schedule, push policy, model, prompt template) for the Automations pane and Settings → Config. The health report's updates row on a clone: titled by its state — 'equin is out of date' (2026.10.30 → 2026.11.14; drawn as attention but ambient, so the dot stays green) with a Send agent to update remedy (the launch popover, filed about the release so it is never filed twice), 'Update in progress' with the merging conversation linked beside its own status chip (pulsing while it works, attention while it waits on the user), 'Installing' while main rebuilds the merged release, then 'equin is up to date'; a reminder bell in every state (the update reminders config). The update reminder's action (equin-update) on the 'equin is out of date' notification the daily check writes: Send agent to update (the row's launch popover) and Remind me later (Tomorrow / In a week / In a month / Skip this release / Never), each settling the notification. Absent on the canonical repo, before any check, and where upstream has cut no release. Upstream, portable half: the Upstream merges automation's config registration, the update reminders config, the Upstream task category, and the upstream_release_check table the desktop half records each check of upstream's releases in.
+- Description: Registers the Upstream merges automation's config (schedule, push policy, model, prompt template) for the Automations pane and Settings → Config. The health report's updates row on a clone: titled by its state — 'equin is out of date' (2026.10.30 → 2026.11.14; drawn as attention but ambient, so the dot stays green) with a Send agent to update remedy (the launch popover, filed about the release so it is never filed twice), 'Update in progress' with the merging conversation linked beside its own status chip (pulsing while it works, attention while it waits on the user), 'Installing' while main rebuilds the merged release, then 'equin is up to date'; a reminder bell in every state (the update reminders config). The update reminder's action (equin-update) on the 'equin is out of date' notification the daily check writes: Send agent to update (the row's launch popover) and Remind me later (Tomorrow / In a week / In a month / Skip this release / Never), each settling the notification. Absent on the canonical repo, before any check, and where upstream has cut no release. On the canonical repo's main instead, the 'equin releases' row: the newest release and when it was cut, the commits on main since it, and a Release <next tag> button that runs `./equin version cut` through main's backend — disabled, with the reason on the commit line, while main builds, when its build of the served commit failed (with Open build), or when the served commit cannot be released for another reason the cut would give. Upstream, portable half: the Upstream merges automation's config registration, the update reminders config, the Upstream task category, and the upstream_release_check table the desktop half records each check of upstream's releases in.
 - Web:
   - Contributes:
     - `ConfigV2.WebRegister` "reminders"
     - `ConfigV2.WebRegister` "upstream-merge"
     - `Automations.Config` "upstream-merge"
+    - `HealthReport.Row` "Releases"
     - `HealthReport.Row` "Updates"
     - `Notifications.Action` "equin-update"
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×6
     - `config_v2` ×3
+    - `primitives/relative-time` ×2
     - `apps-core/tabs.useAppLinkProps`
     - `conversations/conversation-view/status.ConversationStatusChip`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live/live-state.ResourceErrorInline`
     - `network/live.useLive`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
+    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
     - `primitives/launch.LaunchAgentPopover`
     - `shell/health-report.HealthReport`
     - `shell/notifications.Notifications`
+    - `shell/toast.showToast`
     - `tasks/automations.automationConfigContributions`
     - `tasks/task-subject.useSubjectTask`
     - `ui/icons.Icon`
@@ -206,17 +238,22 @@ that cannot run on this database).
     - `ConfigV2.Register` "reminders"
     - `ConfigV2.Register` "upstream-merge"
     - `taskCategory` "upstream"
+    - `resource.declare` "upstream.publisher-status"
     - `resource.declare` "upstream.release-status"
-    - `restart-skip.adopted` "whether the served build holds the newest upstream release"
+    - `restart-skip.adopted` "whether the served build holds the newest upstream release, and the commit a release would tag"
   - Uses:
     - `config_v2.ConfigV2`
     - `database/sql-column.parsedText`
     - `tasks/automations.automationConfigRegistration`
     - `tasks/task-category.TaskCategory`
   - DB schema: `plugins/upstream/server/internal/tables.ts`
-  - Resources: `upstream.release-status` (push, notified)
+  - Resources:
+    - `upstream.publisher-status` (push, notified)
+    - `upstream.release-status` (push, notified)
 - Machine:
   - Uses:
+    - `build/run-ledger.inflightRunOn`
+    - `build/run-ledger.lastClosedRunOn`
     - `infra/endpoints.implementMachine`
     - `network/live.serveValue`
   - Register:
@@ -232,23 +269,30 @@ that cannot run on this database).
     - `infra/spawn.SpawnFailedError`
     - `upstream/release.newestReleaseTag`
     - `upstream/release.RELEASE_TAG_GLOB`
+    - `upstream/release.releaseTags`
   - Exports (types):
+    - `OwnReleases`
     - `ReleaseStanding`
     - `UpstreamStatus`
   - Exports (values):
+    - `countCommits`
     - `currentRelease`
     - `fetchUpstreamStatus`
     - `OWN_RELEASE_NAMESPACE`
+    - `readOwnReleases`
     - `releaseInCommit`
+    - `releasesHolding`
     - `standingAgainst`
     - `UPSTREAM_BRANCH`
     - `upstreamReleaseNamespace`
 - Cross-plugin:
   - Uses tokens:
+    - `ui/tokens/color-palette --foreground`
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by:
     - `framework/cli/upstream`
     - `framework/cli/version`

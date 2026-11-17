@@ -62,9 +62,13 @@ export const detectUpstreamUpdatesJob = defineJob({
         return;
       case "behind":
         log.publish(
-          `behind ${status.remote}'s newest release ${status.latest} (on ${status.current ?? "no release"})`,
+          `behind ${status.remote}'s newest release ${status.latest} by ${status.commits} commits (on ${status.current ?? "no release"})`,
         );
-        const reminder = await remindOfRelease(status.current, status.latest);
+        const reminder = await remindOfRelease(
+          status.current,
+          status.latest,
+          status.commits,
+        );
         log.publish(
           reminder.kind === "remind"
             ? `reminded the user of ${status.latest}`

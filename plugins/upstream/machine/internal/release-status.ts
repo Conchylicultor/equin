@@ -79,7 +79,13 @@ async function readReleaseStatus(): Promise<ReleaseStatus> {
         installed: await servesRelease(root, remote, latest),
         checkedAt,
       }
-    : { kind: "behind", current: standing.current, latest, checkedAt };
+    : {
+        kind: "behind",
+        current: standing.current,
+        latest,
+        commits: standing.commits,
+        checkedAt,
+      };
 }
 
 /**

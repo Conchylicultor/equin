@@ -43,6 +43,7 @@ export const exhibitsEntries: CollectedEntry[] = [
   { pluginPath: "primitives/plugins/syntax-highlight/plugins/code-preview/plugins/mermaid", id: "primitives.syntax-highlight.code-preview.mermaid", loader: () => import("@plugins/primitives/plugins/syntax-highlight/plugins/code-preview/plugins/mermaid/exhibits"), dependsOn: [] },
   { pluginPath: "tag-tree/plugins/picker", id: "tag-tree.picker", loader: () => import("@plugins/tag-tree/plugins/picker/exhibits"), dependsOn: [] },
   { pluginPath: "tasks/plugins/task-draft-form", id: "tasks.task-draft-form", loader: () => import("@plugins/tasks/plugins/task-draft-form/exhibits"), dependsOn: [] },
+  { pluginPath: "upstream", id: "upstream", loader: () => import("@plugins/upstream/exhibits"), dependsOn: ["primitives/plugins/css/plugins/text"] },
 ];
 
 export interface CompositionIdentity {

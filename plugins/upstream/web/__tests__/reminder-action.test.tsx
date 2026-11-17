@@ -61,6 +61,7 @@ describe("equin-update", () => {
       kind: "out-of-date",
       current: "v2026.11.14",
       latest: "v2026.11.20",
+      commits: 6,
     };
     cleanup();
     mount();
@@ -68,7 +69,7 @@ describe("equin-update", () => {
   });
 
   it("offers Send agent and Remind me later while out of date", () => {
-    spy.view = { kind: "out-of-date", ...payload };
+    spy.view = { kind: "out-of-date", ...payload, commits: 312 };
     mount();
     expect(
       screen.getByRole("button", { name: "Send agent to update" }),
@@ -84,7 +85,7 @@ describe("equin-update", () => {
   ] as const)(
     "%s writes its setting and settles the notification",
     (label, write) => {
-      spy.view = { kind: "out-of-date", ...payload };
+      spy.view = { kind: "out-of-date", ...payload, commits: 312 };
       const done = mount();
       act(() =>
         screen.getByRole("button", { name: /Remind me later/ }).click(),
@@ -96,7 +97,7 @@ describe("equin-update", () => {
   );
 
   it("Tomorrow snoozes to tomorrow's check", () => {
-    spy.view = { kind: "out-of-date", ...payload };
+    spy.view = { kind: "out-of-date", ...payload, commits: 312 };
     const done = mount();
     act(() => screen.getByRole("button", { name: /Remind me later/ }).click());
     act(() => screen.getByRole("menuitem", { name: "Tomorrow" }).click());
@@ -109,7 +110,7 @@ describe("equin-update", () => {
   });
 
   it("a refused write keeps the notification (the choice was not saved)", () => {
-    spy.view = { kind: "out-of-date", ...payload };
+    spy.view = { kind: "out-of-date", ...payload, commits: 312 };
     spy.accept = false;
     const done = mount();
     act(() => screen.getByRole("button", { name: /Remind me later/ }).click());

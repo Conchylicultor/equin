@@ -19,7 +19,8 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
  *                   true on any other checkout, which installs nothing).
  * - `behind`      — it is not. `current` is the newest release local `main`
  *                   holds (`null`: it holds none, e.g. a clone made before
- *                   releases existed).
+ *                   releases existed); `commits`, how many commits the new
+ *                   release holds that local `main` does not.
  *
  * `checkedAt` is when upstream last answered (ISO). Release names are tags
  * (`v2026.11.14`); `releaseVersion` makes them read as versions.
@@ -43,6 +44,7 @@ export const ReleaseStatusSchema = z.discriminatedUnion("kind", [
     kind: z.literal("behind"),
     current: z.string().nullable(),
     latest: z.string(),
+    commits: z.number().int().nonnegative(),
     checkedAt: z.string(),
   }),
 ]);

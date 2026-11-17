@@ -11,6 +11,7 @@ import {
 import {
   newestReleaseTag,
   RELEASE_TAG_GLOB,
+  releaseTags,
 } from "@plugins/upstream/plugins/release/core";
 
 /**
@@ -72,6 +73,8 @@ export type UpstreamStatus =
       current: string | null;
       /** Upstream's newest release — the tag an update merges. */
       latest: string;
+      /** Commits that release holds and local `main` does not — what an update brings. */
+      commits: number;
       /** Where that release lives locally (see {@link upstreamReleaseNamespace}). */
       ref: string;
     };
@@ -282,13 +285,15 @@ export async function fetchUpstreamStatus(
         ...where,
         current: standing.current,
         latest: latest.tag,
+        commits: standing.commits,
         ref,
       };
 }
 
 /** Where local `main` stands against one release tag already on disk. */
 export type ReleaseStanding =
-  { kind: "current" } | { kind: "behind"; current: string | null };
+  | { kind: "current" }
+  | { kind: "behind"; current: string | null; commits: number };
 
 /**
  * Is upstream's release `latest` in local `main`? Local only — no fetch — so a
@@ -319,5 +324,87 @@ export async function standingAgainst(
   return {
     kind: "behind",
     current: await currentRelease(root, UPSTREAM_BRANCH, namespace),
+    commits: await countCommits(root, `${UPSTREAM_BRANCH}..${ref}`),
   };
+}
+
+/** `git rev-list --count <range>`: the commits a range (`a..b`, or one ref) holds. */
+export async function countCommits(
+  root: string,
+  range: string,
+): Promise<number> {
+  const out = await spawnExpectOk(["git", "rev-list", "--count", range], {
+    cwd: root,
+    timeoutMs: LOCAL_TIMEOUT_MS,
+  });
+  const n = Number(out.stdout.trim());
+  if (!Number.isInteger(n) || n < 0)
+    throw new Error(
+      `git rev-list --count ${range} answered "${out.stdout.trim()}", not a count`,
+    );
+  return n;
+}
+
+/**
+ * The publisher's side of releases, read from its own git: the newest release
+ * it has cut on local `main` (with when it was cut — the annotated tag's
+ * date), and how many commits `main` holds past it (all of `main` when it has
+ * cut none). Local only: the tags a publisher cuts are its own.
+ */
+export interface OwnReleases {
+  latest: { tag: string; taggedAt: string } | null;
+  unreleased: number;
+}
+
+export async function readOwnReleases(root: string): Promise<OwnReleases> {
+  const tag = await currentRelease(
+    root,
+    UPSTREAM_BRANCH,
+    OWN_RELEASE_NAMESPACE,
+  );
+  if (tag === null)
+    return {
+      latest: null,
+      unreleased: await countCommits(root, UPSTREAM_BRANCH),
+    };
+  const ref = `${OWN_RELEASE_NAMESPACE}${tag}`;
+  const dated = await spawnExpectOk(
+    ["git", "for-each-ref", "--format=%(creatordate:iso-strict)", ref],
+    { cwd: root, timeoutMs: LOCAL_TIMEOUT_MS },
+  );
+  const taggedAt = new Date(dated.stdout.trim());
+  if (Number.isNaN(taggedAt.getTime()))
+    throw new Error(
+      `git for-each-ref gave ${ref} no readable date ("${dated.stdout.trim()}")`,
+    );
+  return {
+    latest: { tag, taggedAt: taggedAt.toISOString() },
+    unreleased: await countCommits(root, `${ref}..${UPSTREAM_BRANCH}`),
+  };
+}
+
+/**
+ * The release tags (of this checkout's own) on `commit` or on a commit after
+ * it — the cut's "already released, or a step back" refusal, read locally.
+ */
+export async function releasesHolding(
+  root: string,
+  commit: string,
+): Promise<string[]> {
+  const listed = await spawnExpectOk(
+    [
+      "git",
+      "for-each-ref",
+      `--contains=${commit}`,
+      "--format=%(refname)",
+      `${OWN_RELEASE_NAMESPACE}${RELEASE_TAG_GLOB}`,
+    ],
+    { cwd: root, timeoutMs: LOCAL_TIMEOUT_MS },
+  );
+  return releaseTags(
+    listed.stdout
+      .split("\n")
+      .filter((l) => l.startsWith(OWN_RELEASE_NAMESPACE))
+      .map((l) => l.slice(OWN_RELEASE_NAMESPACE.length)),
+  ).map((r) => r.tag);
 }

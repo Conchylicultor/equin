@@ -29,21 +29,27 @@ declarations.
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
   - Exports (types):
+    - `PublisherStatus`
+    - `Releasability`
     - `ReleaseStatus`
     - `ReleaseTag`
     - `ReleaseTagParse`
   - Exports (values):
     - `checkUpstreamEndpoint`
     - `compareReleases`
+    - `cutReleaseEndpoint`
     - `newestReleaseTag`
     - `nextReleaseTag`
     - `parseReleaseTag`
+    - `PublisherStatusSchema`
+    - `ReleasabilitySchema`
     - `RELEASE_TAG_GLOB`
     - `RELEASE_TAG_PREFIX`
     - `ReleaseStatusSchema`
     - `releaseTagMessage`
     - `releaseTags`
     - `releaseVersion`
+    - `upstreamPublisherStatus`
     - `upstreamReleaseStatus`
 - Cross-plugin:
   - Imported by:

@@ -13,7 +13,7 @@
   - Exports (types): `ColorPaletteTokenValues`
   - Exports (values): `colorPaletteGroup`
 - Cross-plugin:
-  - Tokens used by: 557 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Tokens used by: 558 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×123
     - `conversations` ×97
     - `primitives` ×78
@@ -52,6 +52,7 @@
     - `release/runs-arm`
     - `search/quick-find`
     - `tag-tree/picker`
+    - `upstream`
     - `wish`
   - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×15

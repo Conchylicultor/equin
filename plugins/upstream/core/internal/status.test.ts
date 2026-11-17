@@ -3,7 +3,13 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
-import { fetchUpstreamStatus, isCouldNotAsk, standingAgainst } from "./status";
+import {
+  fetchUpstreamStatus,
+  isCouldNotAsk,
+  readOwnReleases,
+  releasesHolding,
+  standingAgainst,
+} from "./status";
 
 describe("isCouldNotAsk", () => {
   test("a remote nobody could reach is a state, not a bug", () => {
@@ -92,10 +98,12 @@ describe("fetchUpstreamStatus", () => {
       kind: "behind",
       current: "v2026.10.30",
       latest: "v2026.11.14",
+      commits: 1,
     });
     expect(await standingAgainst(clone, "upstream", "v2026.11.14")).toEqual({
       kind: "behind",
       current: "v2026.10.30",
+      commits: 1,
     });
 
     // The user's own commit on main does not make them "current", nor does
@@ -189,5 +197,32 @@ describe("upstream's releases are a mirror of their own", () => {
     expect(standingAgainst(clone, "upstream", "v2030.01.01")).rejects.toThrow(
       "is not on disk",
     );
+  });
+});
+
+describe("the publisher's own releases", () => {
+  test("unreleased commits count from the newest release on main", async () => {
+    const { up } = await fixture("own");
+    await commit(up, "b.txt", "two");
+    expect(await readOwnReleases(up)).toEqual({ latest: null, unreleased: 2 });
+
+    await release(up, "v2026.11.17");
+    const head = (await git(up, "rev-parse", "HEAD")).trim();
+    const cut = await readOwnReleases(up);
+    expect(cut).toMatchObject({
+      latest: { tag: "v2026.11.17" },
+      unreleased: 0,
+    });
+    expect(Number.isNaN(Date.parse(cut.latest?.taggedAt ?? ""))).toBe(false);
+    expect(await releasesHolding(up, head)).toEqual(["v2026.11.17"]);
+
+    await commit(up, "c.txt", "three");
+    await commit(up, "d.txt", "four");
+    expect(await readOwnReleases(up)).toMatchObject({
+      latest: { tag: "v2026.11.17" },
+      unreleased: 2,
+    });
+    const newer = (await git(up, "rev-parse", "HEAD")).trim();
+    expect(await releasesHolding(up, newer)).toEqual([]);
   });
 });

@@ -1968,7 +1968,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons.symbol`
             - Exports (values): `debugApp`
           - Cross-plugin:
-            - Imported by: 40 plugins — full list in [`plugins/apps/plugins/debug/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/debug/plugins/shell/REFERENCE.md)
+            - Imported by: 41 plugins — full list in [`plugins/apps/plugins/debug/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/debug/plugins/shell/REFERENCE.md)
               - `debug` ×31
               - `infra` ×2
               - `backup`
@@ -1978,6 +1978,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/exhibits`
               - `reports/engine`
               - `shell/notifications`
+              - `upstream`
     - **`deploy`** — The Deploy task category: the category tasks filed from the Deploy app, such as a failed deploy's investigation, are grouped under.
       - Server:
         - Contributes: `taskCategory` "deploy"
@@ -15340,6 +15341,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `build/runs-arm`
       - `build/serve-composition`
       - `debug/reports`
+      - `upstream`
     - Endpoint callers: `restart-skip`
   - Exemptions:
     - Exempts itself from: `page-hosts-on-demand` — `web/index.ts` (sanctioned)
@@ -15790,10 +15792,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build/runs-arm`
           - `framework/cli/build`
           - `framework/cli/version`
+          - `upstream`
       - Exemptions:
         - Exempts itself from: `sql-writes:fit:hand-written` — `shared/recorder.ts`, `shared/stale-holder.ts` (sanctioned)
       - Machine:
-        - Exports (values): `settleDeadInflightRun`
+        - Exports (types):
+          - `AttemptTarget`
+          - `InflightRun`
+          - `LastClosedRun`
+        - Exports (values):
+          - `inflightRunOn`
+          - `lastClosedRunOn`
+          - `settleDeadInflightRun`
       - Cli:
         - Exports (types):
           - `AttemptTarget`
@@ -39033,7 +39043,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `namespaceUrl`
           - `resolveNamespaceAlias`
       - Cross-plugin:
-        - Imported by: 82 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
+        - Imported by: 83 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
           - `framework` ×15
           - `apps` ×12
           - `debug` ×12
@@ -39049,6 +39059,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports` ×2
           - `auth`
           - `backup`
+          - `upstream`
       - Exemptions:
         - Exempts itself from:
           - `namespace:no-hand-built-url` — `core/namespace.ts`, `check/index.ts` (sanctioned)
@@ -39587,7 +39598,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/host-fs/user-path.asAppPath`
             - Exports (values): `REPO_ROOT`
           - Cross-plugin:
-            - Imported by: 53 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
+            - Imported by: 54 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
               - `framework` ×15
               - `infra` ×8
               - `apps` ×7
@@ -39601,6 +39612,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database`
               - `primitives/css/layout-harness`
               - `release`
+              - `upstream`
           - Exemptions:
             - Exempts itself from: `user-path/no-unproven-claim` — `core/internal/repo-root.ts` (sanctioned)
         - **`root-migration`** — `./equin data-dir migrate`: moves an install's data root from the legacy home dir to ~/.equin (and its local backups beside it) in one run, with every other process of the app stopped — rewrites every stored copy of the old path (each database in the cluster, the files under the root, Claude Code's transcript dirs), drops the cache entries that hold it, removes the legacy name once a scan finds none left and no checkout of the repo still runs code from before the move (otherwise keeps it as a link and names those checkouts), and relabels the gateway's login service dev.equin.gateway. A dry run by default; --apply executes.
@@ -50415,7 +50427,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 451 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 452 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×108
               - `conversations` ×78
               - `primitives` ×55
@@ -50450,6 +50462,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reports/launch-fix`
               - `search/quick-find`
               - `tag-tree/picker`
+              - `upstream`
               - `wish`
         - **`spinner`** — Spinner for loading states: the spinning refresh glyph (default) or, with shape="ring", a thin ring (hover-tone track, current-colour arc). Always spinning by default; spinning={false} pauses.
           - Web:
@@ -55987,7 +56000,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
       - Cross-plugin:
-        - Imported by: 74 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
+        - Imported by: 75 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
           - `apps` ×25
           - `debug` ×15
           - `conversations` ×10
@@ -56004,6 +56017,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/plugin-health`
           - `runs`
           - `shell/notifications`
+          - `upstream`
       - Web:
         - Exports (types): `RelativeTimeFormat`
         - Exports (values):
@@ -60243,7 +60257,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --popover`
           - `ui/tokens/color-palette --popover-foreground`
           - `ui/tokens/shape --radius`
-        - Imported by: 36 plugins — full list in [`plugins/shell/plugins/toast/REFERENCE.md`](../plugins/shell/plugins/toast/REFERENCE.md)
+        - Imported by: 37 plugins — full list in [`plugins/shell/plugins/toast/REFERENCE.md`](../plugins/shell/plugins/toast/REFERENCE.md)
           - `apps` ×11
           - `config_v2` ×3
           - `conversations` ×3
@@ -60258,6 +60272,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `companions/panel`
           - `reports/optimistic-rejection`
           - `shell/notifications`
+          - `upstream`
       - Core:
         - Exports (types):
           - `ToastArgs`
@@ -65588,7 +65603,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ColorPaletteTokenValues`
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
-            - Tokens used by: 557 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 558 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×123
               - `conversations` ×97
               - `primitives` ×78
@@ -65627,6 +65642,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `release/runs-arm`
               - `search/quick-find`
               - `tag-tree/picker`
+              - `upstream`
               - `wish`
             - Imported by: 21 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×15
@@ -66402,7 +66418,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `TypeScaleTokenValues`
             - Exports (values): `typeScaleGroup`
           - Cross-plugin:
-            - Tokens used by: 232 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
+            - Tokens used by: 233 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
               - `apps` ×59
               - `conversations` ×40
               - `primitives` ×38
@@ -66431,6 +66447,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `screenshot`
               - `search/quick-find`
               - `tag-tree/picker`
+              - `upstream`
             - Imported by:
               - `apps-core/chrome-theme`
               - `apps/agent-manager/shell`
@@ -66665,28 +66682,33 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/sidebar-framing`
           - `ui/tree-disclosure`
 
-- **`upstream`** — Registers the Upstream merges automation's config (schedule, push policy, model, prompt template) for the Automations pane and Settings → Config. The health report's updates row on a clone: titled by its state — 'equin is out of date' (2026.10.30 → 2026.11.14; drawn as attention but ambient, so the dot stays green) with a Send agent to update remedy (the launch popover, filed about the release so it is never filed twice), 'Update in progress' with the merging conversation linked beside its own status chip (pulsing while it works, attention while it waits on the user), 'Installing' while main rebuilds the merged release, then 'equin is up to date'; a reminder bell in every state (the update reminders config). The update reminder's action (equin-update) on the 'equin is out of date' notification the daily check writes: Send agent to update (the row's launch popover) and Remind me later (Tomorrow / In a week / In a month / Skip this release / Never), each settling the notification. Absent on the canonical repo, before any check, and where upstream has cut no release. Upstream, portable half: the Upstream merges automation's config registration, the update reminders config, the Upstream task category, and the upstream_release_check table the desktop half records each check of upstream's releases in.
+- **`upstream`** — Registers the Upstream merges automation's config (schedule, push policy, model, prompt template) for the Automations pane and Settings → Config. The health report's updates row on a clone: titled by its state — 'equin is out of date' (2026.10.30 → 2026.11.14; drawn as attention but ambient, so the dot stays green) with a Send agent to update remedy (the launch popover, filed about the release so it is never filed twice), 'Update in progress' with the merging conversation linked beside its own status chip (pulsing while it works, attention while it waits on the user), 'Installing' while main rebuilds the merged release, then 'equin is up to date'; a reminder bell in every state (the update reminders config). The update reminder's action (equin-update) on the 'equin is out of date' notification the daily check writes: Send agent to update (the row's launch popover) and Remind me later (Tomorrow / In a week / In a month / Skip this release / Never), each settling the notification. Absent on the canonical repo, before any check, and where upstream has cut no release. On the canonical repo's main instead, the 'equin releases' row: the newest release and when it was cut, the commits on main since it, and a Release <next tag> button that runs `./equin version cut` through main's backend — disabled, with the reason on the commit line, while main builds, when its build of the served commit failed (with Open build), or when the served commit cannot be released for another reason the cut would give. Upstream, portable half: the Upstream merges automation's config registration, the update reminders config, the Upstream task category, and the upstream_release_check table the desktop half records each check of upstream's releases in.
   - Web:
     - Contributes:
       - `ConfigV2.WebRegister` "reminders"
       - `ConfigV2.WebRegister` "upstream-merge"
       - `Automations.Config` "upstream-merge"
+      - `HealthReport.Row` "Releases"
       - `HealthReport.Row` "Updates"
       - `Notifications.Action` "equin-update"
-    - Uses: 23 symbols — full list in [`plugins/upstream/REFERENCE.md`](../plugins/upstream/REFERENCE.md)
+    - Uses: 28 symbols — full list in [`plugins/upstream/REFERENCE.md`](../plugins/upstream/REFERENCE.md)
       - `primitives/css/ui-kit` ×6
       - `config_v2` ×3
+      - `primitives/relative-time` ×2
       - `apps-core/tabs.useAppLinkProps`
       - `conversations/conversation-view/status.ConversationStatusChip`
+      - `infra/endpoints.useFetchEndpoint`
       - `network/live/live-state.ResourceErrorInline`
       - `network/live.useLive`
       - `primitives/css/fill.Fill`
       - `primitives/css/line.Line`
+      - `primitives/css/spacing.Stack`
       - `primitives/css/text.Text`
       - `primitives/icon-button.IconButton`
       - `primitives/launch.LaunchAgentPopover`
       - `shell/health-report.HealthReport`
       - `shell/notifications.Notifications`
+      - `shell/toast.showToast`
       - `tasks/automations.automationConfigContributions`
       - `tasks/task-subject.useSubjectTask`
       - `ui/icons.Icon`
@@ -66695,17 +66717,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ConfigV2.Register` "reminders"
       - `ConfigV2.Register` "upstream-merge"
       - `taskCategory` "upstream"
+      - `resource.declare` "upstream.publisher-status"
       - `resource.declare` "upstream.release-status"
-      - `restart-skip.adopted` "whether the served build holds the newest upstream release"
+      - `restart-skip.adopted` "whether the served build holds the newest upstream release, and the commit a release would tag"
     - Uses:
       - `config_v2.ConfigV2`
       - `database/sql-column.parsedText`
       - `tasks/automations.automationConfigRegistration`
       - `tasks/task-category.TaskCategory`
     - DB schema: `plugins/upstream/server/internal/tables.ts`
-    - Resources: `upstream.release-status` (push, notified)
+    - Resources:
+      - `upstream.publisher-status` (push, notified)
+      - `upstream.release-status` (push, notified)
   - Machine:
     - Uses:
+      - `build/run-ledger.inflightRunOn`
+      - `build/run-ledger.lastClosedRunOn`
       - `infra/endpoints.implementMachine`
       - `network/live.serveValue`
     - Register:
@@ -66721,23 +66748,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `infra/spawn.SpawnFailedError`
       - `upstream/release.newestReleaseTag`
       - `upstream/release.RELEASE_TAG_GLOB`
+      - `upstream/release.releaseTags`
     - Exports (types):
+      - `OwnReleases`
       - `ReleaseStanding`
       - `UpstreamStatus`
     - Exports (values):
+      - `countCommits`
       - `currentRelease`
       - `fetchUpstreamStatus`
       - `OWN_RELEASE_NAMESPACE`
+      - `readOwnReleases`
       - `releaseInCommit`
+      - `releasesHolding`
       - `standingAgainst`
       - `UPSTREAM_BRANCH`
       - `upstreamReleaseNamespace`
   - Cross-plugin:
     - Uses tokens:
+      - `ui/tokens/color-palette --foreground`
       - `ui/tokens/density --space-2xs`
       - `ui/tokens/density --space-sm`
       - `ui/tokens/density --space-xs`
       - `ui/tokens/shape --spacing`
+      - `ui/tokens/type-scale --font-weight-semibold`
     - Imported by:
       - `framework/cli/upstream`
       - `framework/cli/version`
@@ -66749,21 +66783,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.defineEndpoint`
           - `network/live.liveValue`
         - Exports (types):
+          - `PublisherStatus`
+          - `Releasability`
           - `ReleaseStatus`
           - `ReleaseTag`
           - `ReleaseTagParse`
         - Exports (values):
           - `checkUpstreamEndpoint`
           - `compareReleases`
+          - `cutReleaseEndpoint`
           - `newestReleaseTag`
           - `nextReleaseTag`
           - `parseReleaseTag`
+          - `PublisherStatusSchema`
+          - `ReleasabilitySchema`
           - `RELEASE_TAG_GLOB`
           - `RELEASE_TAG_PREFIX`
           - `ReleaseStatusSchema`
           - `releaseTagMessage`
           - `releaseTags`
           - `releaseVersion`
+          - `upstreamPublisherStatus`
           - `upstreamReleaseStatus`
       - Cross-plugin:
         - Imported by:

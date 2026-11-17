@@ -1,4 +1,4 @@
-// @hash 0a1470132fdc
+// @hash 71e278bdc91b
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -16,6 +16,8 @@
     "tasks.worktree-identity:worktree",
     // Is this clone on the newest release: what the user acts on, right under where they are.
     "upstream:updates",
+    // The checkout that publishes releases (where the row above is absent): what is unreleased.
+    "upstream:releases",
     // "Can this app run an agent at all": the first thing a new user needs answered.
     "conversations.runtime-sdk:claude-code",
     // Can I reach the server ...

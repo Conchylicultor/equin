@@ -197,10 +197,18 @@ from `build`, so both sides of an otherwise-cyclic edge can reach them.
     - `build/runs-arm`
     - `framework/cli/build`
     - `framework/cli/version`
+    - `upstream`
 - Exemptions:
   - Exempts itself from: `sql-writes:fit:hand-written` — `shared/recorder.ts`, `shared/stale-holder.ts` (sanctioned)
 - Machine:
-  - Exports (values): `settleDeadInflightRun`
+  - Exports (types):
+    - `AttemptTarget`
+    - `InflightRun`
+    - `LastClosedRun`
+  - Exports (values):
+    - `inflightRunOn`
+    - `lastClosedRunOn`
+    - `settleDeadInflightRun`
 - Cli:
   - Exports (types):
     - `AttemptTarget`

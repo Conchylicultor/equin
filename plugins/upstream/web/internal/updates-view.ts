@@ -9,7 +9,11 @@ import {
   releaseVersion,
   type ReleaseStatus,
 } from "@plugins/upstream/plugins/release/core";
-import { OUT_OF_DATE_TITLE, updateSpan } from "../../shared/update-words";
+import {
+  OUT_OF_DATE_TITLE,
+  outOfDateSummary,
+  updateSpan,
+} from "../../shared/update-words";
 
 /** One read as `useLive` hands it back — a value read may be `unavailable`. */
 export type Read<T> = ResourceResult<T> | ResourceUnavailable;
@@ -41,7 +45,13 @@ export type UpdatesView =
   | { kind: "pending" }
   | { kind: "error"; what: string }
   | { kind: "absent" }
-  | { kind: "out-of-date"; current: string | null; latest: string }
+  | {
+      kind: "out-of-date";
+      current: string | null;
+      latest: string;
+      /** Commits the release holds that local `main` does not. */
+      commits: number;
+    }
   | {
       kind: "in-progress";
       current: string | null;
@@ -79,12 +89,12 @@ export function deriveUpdatesView({
         ? { kind: "up-to-date", latest: status.latest }
         : { kind: "installing", latest: status.latest };
     case "behind": {
-      const { current, latest } = status;
+      const { current, latest, commits } = status;
       if (task.status === "loading") return { kind: "pending" };
       if (task.status === "error" || task.status === "unavailable")
         return { kind: "error", what: "the update task" };
       if (task.data.taskId === null)
-        return { kind: "out-of-date", current, latest };
+        return { kind: "out-of-date", current, latest, commits };
       if (runs.status === "loading") return { kind: "pending" };
       if (runs.status === "error" || runs.status === "unavailable")
         return { kind: "error", what: "the update's conversation" };
@@ -123,7 +133,7 @@ export function updatesHealth(view: UpdatesView): HealthStatus {
       return {
         state: "attention",
         title: OUT_OF_DATE_TITLE,
-        summary: updateSpan(view.current, view.latest),
+        summary: outOfDateSummary(view.current, view.latest, view.commits),
         ambient: [],
       };
     case "in-progress": {

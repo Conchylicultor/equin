@@ -6,12 +6,19 @@
 // release tag grammar, the live status value) is `upstream/release`.
 
 export {
+  countCommits,
   currentRelease,
   fetchUpstreamStatus,
   OWN_RELEASE_NAMESPACE,
+  readOwnReleases,
   releaseInCommit,
+  releasesHolding,
   standingAgainst,
   upstreamReleaseNamespace,
   UPSTREAM_BRANCH,
 } from "./internal/status";
-export type { ReleaseStanding, UpstreamStatus } from "./internal/status";
+export type {
+  OwnReleases,
+  ReleaseStanding,
+  UpstreamStatus,
+} from "./internal/status";

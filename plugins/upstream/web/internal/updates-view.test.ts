@@ -17,6 +17,7 @@ const behind: ReleaseStatus = {
   kind: "behind",
   current: "v2026.10.30",
   latest: "v2026.11.14",
+  commits: 312,
   checkedAt,
 };
 const current: ReleaseStatus = {
@@ -67,7 +68,7 @@ describe("the updates row", () => {
     expect(health({})).toEqual({
       state: "attention",
       title: "equin is out of date",
-      summary: "2026.10.30 → 2026.11.14",
+      summary: "2026.10.30 → 2026.11.14 · 312 commits",
       ambient: [],
     });
   });
@@ -75,7 +76,7 @@ describe("the updates row", () => {
   test("out of date holding no release names the new one alone", () => {
     expect(
       health({ release: ready({ ...behind, current: null }) }),
-    ).toMatchObject({ summary: "2026.11.14 available" });
+    ).toMatchObject({ summary: "2026.11.14 available · 312 commits" });
   });
 
   test("an update whose agent works is ok and pulsing", () => {
