@@ -64,12 +64,11 @@ describe("the updates row", () => {
     ).toEqual({ state: "absent" });
   });
 
-  test("out of date: attention drawn, but the dot stays green", () => {
+  test("out of date: being behind is not a problem", () => {
     expect(health({})).toEqual({
-      state: "attention",
+      state: "ok",
       title: "equin is out of date",
       summary: "2026.10.30 → 2026.11.14 · 312 commits",
-      ambient: [],
     });
   });
 

@@ -80,10 +80,10 @@ describe("the releases row", () => {
     });
     expect(
       releasesHealth(ready(publisher({ kind: "ready", commit: served }))),
-    ).toMatchObject({
-      state: "attention",
+    ).toEqual({
+      state: "ok",
       title: "equin releases",
-      ambient: [],
+      summary: expect.any(String),
     });
   });
 
@@ -100,11 +100,14 @@ describe("the releases row", () => {
     });
   });
 
-  test("failed: disabled, with the build to open", () => {
-    const body = releasesBody(
-      publisher({ kind: "failed", commit: building, runId: "build-1" }),
-      now,
-    );
+  test("failed: disabled, with the build to open, still ok", () => {
+    const status = publisher({
+      kind: "failed",
+      commit: building,
+      runId: "build-1",
+    });
+    expect(releasesHealth(ready(status))).toMatchObject({ state: "ok" });
+    const body = releasesBody(status, now);
     expect(commitLineParts(body.line).rest).toBe(
       " unreleased commits · main's last build failed",
     );

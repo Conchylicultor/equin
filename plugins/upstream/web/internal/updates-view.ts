@@ -115,8 +115,8 @@ const UP_TO_DATE_TITLE = `${PRODUCT_NAME} is up to date`;
 /**
  * The row's health, titled by its state.
  *
- * Being behind is not a problem: `out-of-date` is drawn as attention (so its
- * Send remedy shows) but ambient with no marks, so the dot stays green. An
+ * Being behind is not a problem: `out-of-date` is `ok` — the row's title says
+ * it, and its Send agent button is one of the row's actions. An
  * update in progress follows its conversation: working → ok and pulsing; at
  * rest (waiting on the user, done, disconnected) or never started → attention,
  * since the next step is the user's.
@@ -131,10 +131,9 @@ export function updatesHealth(view: UpdatesView): HealthStatus {
       return { state: "absent" };
     case "out-of-date":
       return {
-        state: "attention",
+        state: "ok",
         title: OUT_OF_DATE_TITLE,
         summary: outOfDateSummary(view.current, view.latest, view.commits),
-        ambient: [],
       };
     case "in-progress": {
       const summary = updateSpan(view.current, view.latest);

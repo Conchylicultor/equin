@@ -102,9 +102,9 @@ export function HealthReportHeader() {
       : rows.flatMap((row) =>
           row.kind === "status" ? [statuses[row.id]] : [],
         );
-  // The same dot as the action bar's: an ambient row (the machine busy, a
-  // release waiting) is shown as it is in its own row and named by the
-  // verdict, but never colours the dot — here or in the bar.
+  // The same dot as the action bar's: an ambient row (the machine busy) is
+  // shown as it is in its own row and named by the verdict, but never
+  // colours the dot — here or in the bar.
   const merged = mergeDot(statusList);
   const verdict = verdictOf(statusList);
   return (

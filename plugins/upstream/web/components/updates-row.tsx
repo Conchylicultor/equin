@@ -36,7 +36,21 @@ const SEND_TOOLTIP =
   "Launch an agent in a new worktree to merge main changes with your app";
 
 /**
- * The updates row's remedy while it is out of date: "Send agent to update",
+ * The updates row's actions: "Send agent to update" while it is out of date
+ * (being behind is not a problem, so the row stays `ok` and the button is an
+ * action, not a remedy), then the reminder bell in every state.
+ */
+export function UpdatesActions() {
+  return (
+    <>
+      <SendAgentToUpdate />
+      <ReminderBell />
+    </>
+  );
+}
+
+/**
+ * The updates row's Send button while it is out of date: "Send agent to update",
  * the standard launch popover (pre-prompt, model, effort, extra instructions).
  * The agent is briefed with the Upstream merges prompt (the user's edited one,
  * when they edited it) and the user's words, filed about the release
@@ -44,7 +58,7 @@ const SEND_TOOLTIP =
  * its task. Nothing while an update is already in progress: the glance shows
  * that one instead.
  */
-export function SendAgentToUpdate() {
+function SendAgentToUpdate() {
   const view = useUpdatesView();
   if (view.kind !== "out-of-date") return null;
   return (
@@ -58,7 +72,7 @@ export function SendAgentToUpdate() {
 
 /**
  * "Send agent to update" for one release: the launch popover once the
- * Upstream merges prompt is read. The health row's remedy and the reminder
+ * Upstream merges prompt is read. The health row's action and the reminder
  * notification's action both draw it; `onSubmitted` says the launch was filed.
  */
 export function SendAgentButton({
@@ -193,7 +207,7 @@ export function UpdateGlance() {
  * The bell on the row, in every state: whether this clone reminds its user
  * of a new release. The tooltip says what a click does.
  */
-export function ReminderBell() {
+function ReminderBell() {
   const config = useConfigResult(upstreamReminderConfig);
   const setConfig = useSetConfig(upstreamReminderConfig);
   if (config.status === "loading")

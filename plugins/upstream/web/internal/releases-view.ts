@@ -145,11 +145,11 @@ export function commitLineParts(line: CommitLine): {
 }
 
 /**
- * The row's health. Having unreleased commits is not a problem: `ready` is
- * drawn as attention (the release is the next step) but ambient, so the dot
- * stays green — as is a failed build of the served commit, which the build
- * row itself reports. A build in flight pulses; nothing to release, or a
- * release held back for another reason, is plain ok.
+ * The row's health. Unreleased commits are a publisher's normal state, not a
+ * problem: the row is `ok` whatever it holds — the Release button lives in the
+ * glance, not behind a warning colour. A failed build of the served commit
+ * stays `ok` too: the build surfaces report that failure, and the commit line
+ * says why the release is held back. A build in flight pulses.
  */
 export function releasesHealth(read: Read<PublisherStatus>): HealthStatus {
   if (read.status === "unavailable") return { state: "absent" };
@@ -162,16 +162,7 @@ export function releasesHealth(read: Read<PublisherStatus>): HealthStatus {
     title: RELEASES_TITLE,
     summary: releasesSubtitle(status.latest),
   };
-  if (status.unreleased === 0) return { state: "ok", ...words };
-  switch (status.releasable.kind) {
-    case "ready":
-    case "failed":
-      return { state: "attention", ...words, ambient: [] };
-    case "building":
-      return { state: "ok", ...words, transitioning: true };
-    case "no-build":
-    case "not-served":
-    case "released":
-      return { state: "ok", ...words };
-  }
+  return status.unreleased > 0 && status.releasable.kind === "building"
+    ? { state: "ok", ...words, transitioning: true }
+    : { state: "ok", ...words };
 }
