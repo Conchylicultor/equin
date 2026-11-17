@@ -69,9 +69,12 @@ build's eight-file pipeline is build-private, and `converge-script` is deploy's.
 The **orphan guard** (`plugins/bootstrap/cli/orphan-guard.ts`) is armed by `bin/index.ts` for
 EVERY invocation, before the install: a CLI process exits once its invoking shell
 dies, so it can never sit on a host lock (the push mutex, worst case) or on the
-install lock. There is no op-command set and `bin/index.ts` reads no argv — a CLI
-whose commands are plugin contributions cannot keep such a list, because the
-bootstrap runs before the install that would let it load the declarations.
+install lock. There is no op-command set, and `bin/index.ts` reads no verb a
+declaration owns — a CLI whose commands are plugin contributions cannot keep such
+a list, because the bootstrap runs before the install that would let it load the
+declarations. The one verb it reads is its own: a bare `install` (whose whole
+work is the bootstrap's `ensureDeps()`) ends in the bootstrap, its name
+`INSTALL_VERB` exported from `plugins/bootstrap/core` for the declaration to use.
 
 The opt-out is declared, not inferred: a command meant to outlive its shell sets
 `detachable: true` and the mapper disarms the guard as it starts. The spawner-set

@@ -31701,7 +31701,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `adaptiveTimeoutMs`
               - `disarmOrphanGuard`
               - `ensureDeps`
+              - `installedLine`
               - `installOrphanGuard`
+              - `isInstallInvocation`
               - `lockedBunVersion`
               - `ORPHAN_EXIT_CODE`
               - `recordCheckoutBun`
@@ -31715,6 +31717,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/install`
           - Exemptions:
             - Exempts itself from: `repo-walk-safety/no-adhoc-repo-walk` — `cli/ensure-deps.ts` (sanctioned)
+          - Core:
+            - Exports (values): `INSTALL_VERB`
         - **`build`** — `./equin build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
           - Cli:
             - Uses: 69 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
@@ -31858,7 +31862,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `registerMergeDrivers`
         - **`install`** — `./equin install` — install this checkout's node_modules from its own bun.lock and nothing else; what creating a worktree runs in the new checkout (frozen, through EQUIN_FROZEN_LOCKFILE), so every checkout is installed before anything runs in it.
           - Cli:
-            - Uses: `framework/cli/bootstrap.STAMP_REL`
+            - Uses:
+              - `framework/cli/bootstrap.installedLine`
+              - `framework/cli/bootstrap.STAMP_REL`
         - **`migrations`** — Drizzle migration generation for the CLI: the generate/rename/journal pipeline and the interactive drizzle-kit prompt driver.
           - Cross-plugin:
             - Imported by:

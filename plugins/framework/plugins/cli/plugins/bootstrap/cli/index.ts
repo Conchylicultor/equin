@@ -31,6 +31,8 @@ export type {
   InstallOutcome,
 } from "./ensure-deps";
 
+export { installedLine, isInstallInvocation } from "./install-verb";
+
 export { reexecAfterInstall, takeReexecBudget } from "./reexec";
 export type { ReexecBudget, ReexecOptions, ReexecOutcome } from "./reexec";
 

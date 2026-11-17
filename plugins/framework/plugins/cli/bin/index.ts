@@ -3,12 +3,15 @@ import {
   ORPHAN_EXIT_CODE,
   ensureDeps,
   installOrphanGuard,
+  installedLine,
+  isInstallInvocation,
   recordCheckoutBun,
   reexecAfterInstall,
   reexecUnderLockedBun,
   takeReexecBudget,
 } from "@plugins/framework/plugins/cli/plugins/bootstrap/cli";
 import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import {
   DataRootSplitError,
   declareDataRootLayoutSync,
@@ -20,6 +23,7 @@ import {
  *
  *   1. arm the orphan guard
  *   2. `await ensureDeps()`   — this checkout's `node_modules` is correct
+ *      (`./equin install` — exactly this step — ends here: `install-verb.ts`)
  *   3. if `node_modules` changed (installed here, or by a command we waited on),
  *      hand the command to a fresh process and exit
  *   4. `await import("./cli")` — the commander program, from ./cli.ts
@@ -74,7 +78,7 @@ import {
 // this process, install included, or an orphan could sit on the install lock —
 // the one lock every other CLI invocation in this checkout queues behind.
 //
-// UNCONDITIONAL, and this file reads no argv at all. It used to match
+// UNCONDITIONAL, and no argv decides it. It used to match
 // `process.argv[2]` against a hardcoded {build, check, push} set, which a CLI
 // whose commands are plugin contributions cannot keep: this line runs before the
 // install, so it cannot load the declarations that would answer the question.
@@ -128,14 +132,31 @@ else await recordCheckoutBun();
 // `package.json`s fails there instead of being rewritten. Env, not argv, for the
 // orphan guard's reason: this line runs before the install, so it cannot load
 // the command declarations that would say what `install` means.
+//
+// The checkout is the one this file belongs to (REPO_ROOT, read from its own
+// path), not one asked of git: the wrapper runs from that directory anyway, and
+// a `git rev-parse` is a ~50 ms spawn on every invocation for an answer the
+// process already holds.
 let deps: EnsureDepsResult;
 try {
   deps = await ensureDeps({
+    root: REPO_ROOT,
     frozenLockfile: readEnv("FROZEN_LOCKFILE") === "1",
   });
 } catch (err) {
   console.error(err instanceof Error ? err.message : String(err));
   process.exit(1);
+}
+
+// `./equin install` asks for exactly the step above, so it ends here — whether
+// that step installed or found the stamp fresh. Handing it on would re-exec
+// (after an install) and import the whole CLI only for the verb to confirm the
+// stamp this process just wrote: ~0.6 s of every checkout creation. The verb's
+// name is the bootstrap's own (`install-verb.ts`), so reading it is no copy of
+// the command declarations this process cannot load yet.
+if (isInstallInvocation(process.argv.slice(2))) {
+  console.log(installedLine(REPO_ROOT));
+  process.exit(0);
 }
 
 // An install happened — by this process, or by another command this one waited
