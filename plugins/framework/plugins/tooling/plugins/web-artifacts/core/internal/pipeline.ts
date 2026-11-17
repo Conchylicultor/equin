@@ -776,11 +776,19 @@ async function runPipeline(
       }
 
       // Map entries: vendors and hosts — assembled by the same helper the
-      // map-in-sync check recomputes with, so the two cannot drift.
-      const mapEntries: ImportMapEntry[] = composeMapEntries({
-        vendorMeta: vendors,
-        hosts: composedHosts,
-      });
+      // map-in-sync check recomputes with, so the two cannot drift — and the
+      // link's chunks (the check reads those from the dist's link record).
+      const mapEntries: ImportMapEntry[] = [
+        ...composeMapEntries({
+          vendorMeta: vendors,
+          hosts: composedHosts,
+        }),
+        // The chunks, by the stable specifier they import each other by.
+        ...Object.entries(linked.record.chunkMap).map(([specifier, url]) => ({
+          specifier,
+          url,
+        })),
+      ];
       for (const host of hosts) {
         links.push({
           linkName: host.dirName,
@@ -850,6 +858,7 @@ async function runPipeline(
         link: {
           key: linked.record.key,
           entryUrl,
+          chunkMap: linked.record.chunkMap,
         },
         edges: Object.fromEntries(
           [...buildOut.metas].map(([dirName, meta]) => [

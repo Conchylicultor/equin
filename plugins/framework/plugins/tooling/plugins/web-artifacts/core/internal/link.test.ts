@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   bundleLinkGraph,
+  cutByKeys,
   linkKey,
   planLinkGraph,
   type LinkInputs,
@@ -188,8 +189,11 @@ describe("planLinkGraph", () => {
 });
 
 describe("bundleLinkGraph", () => {
-  const bundle = async () => {
-    const g = await planLinkGraph(inputs(), io);
+  const bundle = async (files: Record<string, string> = FILES) => {
+    const g = await planLinkGraph(inputs(), {
+      ...io,
+      read: (f) => files[f] ?? null,
+    });
     const chunks = await bundleLinkGraph(g, {
       minify: false,
       isExternal: (spec) => spec === "menu-vendor",
@@ -204,18 +208,50 @@ describe("bundleLinkGraph", () => {
     const { chunkOf } = await bundle();
     const menu = chunkOf("/s/kit.web/web/components/menu.js")!;
     const cn = chunkOf("/s/kit.web/web/cn.js")!;
-    expect(menu.fileName).not.toBe(cn.fileName);
+    expect(menu.url).not.toBe(cn.url);
     expect(menu.moduleIds).not.toContain("/s/a.web/__plugin.js");
     // Only the apps load it: the boot chunk does not import it.
-    expect(cn.imports).not.toContain(menu.fileName);
+    expect(cn.imports).not.toContain(menu.specifier);
   });
 
-  test("chunks are content-addressed store entries, imported by relative URL", async () => {
+  test("chunks are addressed by their own bytes and import each other by @chunk/<id>", async () => {
     const { chunks } = await bundle();
-    for (const c of chunks)
-      expect(c.fileName).toMatch(/^chunk\.[0-9a-f]{16}\/index\.js$/);
+    for (const c of chunks) {
+      expect(c.dirName).toMatch(/^chunk\.[0-9a-f]{16}$/);
+      expect(c.url).toBe(`/artifacts/${c.dirName}/index.js`);
+      if (c.specifier !== null)
+        expect(c.specifier).toMatch(/^@chunk\/[0-9a-f]{16}$/);
+      expect(c.code).not.toContain("chunk-id.");
+    }
     const entry = chunks.find((c) => c.isEntry)!;
-    expect(entry.code).toMatch(/from "\.\.\/chunk\.[0-9a-f]{16}\/index\.js"/);
+    expect(entry.code).toMatch(/import\("@chunk\/[0-9a-f]{16}"\)/);
+    const ids = new Set(chunks.map((c) => c.specifier));
+    const lazy = new Set(chunks.map((c) => `../${c.dirName}/index.js`));
+    for (const c of chunks)
+      for (const i of [...c.imports, ...c.dynamicImports])
+        if (i !== "menu-vendor") expect(ids.has(i) || lazy.has(i)).toBe(true);
+  });
+
+  test("a changed module re-addresses only its own chunk, never the chunks importing it", async () => {
+    const before = await bundle();
+    const after = await bundle({
+      ...FILES,
+      "/s/d.core/core/helper.js": `export const helper=()=>2;`,
+    });
+    const changed = before.chunkOf("/s/d.core/core/helper.js")!;
+    expect(after.chunkOf("/s/d.core/core/helper.js")!.url).not.toBe(
+      changed.url,
+    );
+    // Every chunk keeps its id; every other chunk keeps its URL.
+    expect(after.chunks.map((c) => c.specifier).sort()).toEqual(
+      before.chunks.map((c) => c.specifier).sort(),
+    );
+    const urlOf = new Map(after.chunks.map((c) => [c.specifier, c.url]));
+    const others = before.chunks.filter(
+      (c) => c.specifier !== changed.specifier,
+    );
+    expect(others.length).toBeGreaterThan(1);
+    for (const c of others) expect(urlOf.get(c.specifier)).toBe(c.url);
   });
 
   test("the boot-registering descriptor is in a chunk the boot loads", async () => {
@@ -223,11 +259,14 @@ describe("bundleLinkGraph", () => {
     const desc = chunkOf("/s/d.core/core/desc.js");
     expect(desc).toBeDefined();
     const entry = chunks.find((c) => c.isEntry)!;
-    const reachable = new Set<string>([entry.fileName]);
+    // How an importer names a chunk: its id, or a lazy chunk's relative URL.
+    const nameOf = (c: (typeof chunks)[number]) =>
+      c.specifier ?? `../${c.dirName}/index.js`;
+    const reachable = new Set<string>([nameOf(entry)]);
     for (let grew = true; grew;) {
       grew = false;
       for (const c of chunks) {
-        if (!reachable.has(c.fileName)) continue;
+        if (!reachable.has(nameOf(c))) continue;
         for (const i of c.imports)
           if (!reachable.has(i)) {
             reachable.add(i);
@@ -235,7 +274,50 @@ describe("bundleLinkGraph", () => {
           }
       }
     }
-    expect(reachable.has(desc!.fileName)).toBe(true);
+    expect(reachable.has(nameOf(desc!))).toBe(true);
+  });
+});
+
+describe("cutByKeys", () => {
+  const modules = Array.from({ length: 400 }, (_, i) => `p${i % 40}/m${i}.js`);
+  const size = (m: string) => 1_000 + ((m.length * 997) % 9_000);
+  const groupsOf = (pieces: Map<string, number>) => {
+    const byPiece = new Map<number, string[]>();
+    for (const [m, p] of pieces) byPiece.set(p, [...(byPiece.get(p) ?? []), m]);
+    return new Set([...byPiece.values()].map((ms) => ms.sort().join(",")));
+  };
+
+  test("cuts about every target bytes, a plugin's modules together", () => {
+    const pieces = cutByKeys(modules, (m) => m, size, 50_000);
+    const n = new Set(pieces.values()).size;
+    const total = modules.reduce((a, m) => a + size(m), 0);
+    expect(n).toBeGreaterThan(total / 50_000 / 3);
+    expect(n).toBeLessThan((total / 50_000) * 3);
+    // Key order: a piece is a contiguous run of keys.
+    const sorted = [...modules].sort();
+    for (let i = 1; i < sorted.length; i++)
+      expect(pieces.get(sorted[i]!)!).toBeGreaterThanOrEqual(
+        pieces.get(sorted[i - 1]!)!,
+      );
+  });
+
+  test("a module growing or joining changes at most the pieces around it", () => {
+    const base = groupsOf(cutByKeys(modules, (m) => m, size, 50_000));
+    const grown = groupsOf(
+      cutByKeys(
+        modules,
+        (m) => m,
+        (m) => (m === "p7/m207.js" ? 40_000 : size(m)),
+        50_000,
+      ),
+    );
+    const joined = groupsOf(
+      cutByKeys([...modules, "p7/new.js"], (m) => m, size, 50_000),
+    );
+    for (const other of [grown, joined]) {
+      const kept = [...other].filter((g) => base.has(g)).length;
+      expect(kept).toBeGreaterThanOrEqual(other.size - 2);
+    }
   });
 });
 

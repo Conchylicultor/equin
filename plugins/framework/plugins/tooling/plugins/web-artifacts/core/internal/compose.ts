@@ -130,6 +130,8 @@ export interface DistLink {
   key: string;
   /** The entry chunk's URL. */
   entryUrl: string;
+  /** The link's chunk map entries (`LinkRecord.chunkMap`): `@chunk/<id>` → URL. */
+  chunkMap: Record<string, string>;
 }
 
 const MAIN_SCRIPT_TAG = '<script type="module" src="/main.tsx"></script>';

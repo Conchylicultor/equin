@@ -2,7 +2,7 @@
 //
 // The registry names every web plugin by its own loader, and the link bundles
 // those plugins into a few dozen route chunks — so the boot chunk holds ~1,200
-// `import(\`../chunk.<hash>/index.js\`)` calls over only ~100 distinct URLs,
+// `import("@chunk/<id>")` calls over only ~100 distinct chunks,
 // and the eager tier runs ~1,000 of them at once. A browser does not answer a
 // repeated `import()` of a module it already has for free: each call runs the
 // module-tree fetch again — every static descendant looked up in the module
@@ -30,6 +30,9 @@ export const IMPORT_ONCE_HELPER =
   `if(p===undefined){p=load();${ONCE}$cache.set(key,p);` +
   `p.then(undefined,()=>{${ONCE}$cache.delete(key)})}return p}\n`;
 
+/** How every edit routing an import through the memo starts. */
+export const IMPORT_ONCE_CALL = `${ONCE}(`;
+
 export interface DynamicImportEdit {
   start: number;
   end: number;
@@ -45,26 +48,61 @@ export interface DynamicImportEdit {
 export async function dedupeDynamicImportEdits(
   code: string,
 ): Promise<DynamicImportEdit[]> {
+  return rewriteImportEdits(code, (spec) => spec);
+}
+
+/**
+ * The edits that respell every import specifier of `code` as `rename` maps it
+ * (`rename(s) === s` leaves it as written) and route each repeated literal
+ * dynamic import through {@link IMPORT_ONCE_HELPER}, keyed by its new
+ * spelling — one pass, so no two edits overlap. A computed or attributed
+ * dynamic import is neither renamed nor deduplicated.
+ */
+export async function rewriteImportEdits(
+  code: string,
+  rename: (specifier: string) => string,
+): Promise<DynamicImportEdit[]> {
   await lexerInit();
   const [imports] = lexerParse(code);
-  const sites = new Map<string, Array<{ start: number; end: number }>>();
-  for (const imp of imports) {
-    if (imp.type !== "dynamic") continue;
-    if (imp.specifier === undefined || imp.attributesStart !== -1) continue;
-    const list = sites.get(imp.specifier) ?? [];
-    list.push({ start: imp.importStart, end: imp.importEnd });
-    sites.set(imp.specifier, list);
-  }
   const edits: DynamicImportEdit[] = [];
-  for (const [specifier, list] of sites) {
-    if (list.length < 2) continue;
-    const key = JSON.stringify(specifier);
-    for (const { start, end } of list) {
-      edits.push({
-        start,
-        end,
-        text: `${ONCE}(${key},()=>${code.slice(start, end)})`,
+  const sites = new Map<
+    string,
+    Array<{ start: number; end: number; s: number; e: number }>
+  >();
+  for (const imp of imports) {
+    if (imp.type === "import-meta" || imp.specifier === undefined) continue;
+    if (imp.type === "dynamic") {
+      if (imp.attributesStart !== -1) continue;
+      const list = sites.get(imp.specifier) ?? [];
+      list.push({
+        start: imp.importStart,
+        end: imp.importEnd,
+        s: imp.start,
+        e: imp.end,
       });
+      sites.set(imp.specifier, list);
+      continue;
+    }
+    // A static import's range is the specifier without its quotes.
+    const renamed = rename(imp.specifier);
+    if (renamed !== imp.specifier)
+      edits.push({ start: imp.start, end: imp.end, text: renamed });
+  }
+  for (const [specifier, list] of sites) {
+    const renamed = rename(specifier);
+    // A dynamic import's specifier range includes its quotes.
+    const literal = JSON.stringify(renamed);
+    for (const { start, end, s, e } of list) {
+      if (list.length < 2) {
+        if (renamed !== specifier)
+          edits.push({ start: s, end: e, text: literal });
+        continue;
+      }
+      const call =
+        renamed === specifier
+          ? code.slice(start, end)
+          : code.slice(start, s) + literal + code.slice(e, end);
+      edits.push({ start, end, text: `${ONCE}(${literal},()=>${call})` });
     }
   }
   return edits.sort((a, b) => a.start - b.start);

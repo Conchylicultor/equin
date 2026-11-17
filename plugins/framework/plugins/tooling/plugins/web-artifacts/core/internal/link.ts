@@ -20,13 +20,23 @@
 //    entry, the registry and the eager plugins' definitions; each app root's
 //    set is the closure of its deferred plugins' definitions outside boot (the
 //    boot's priority batch, `apps-core/app-preload`).
-// 3. **Bundling** with rolldown: boot and each app set are code-splitting
-//    groups split by size (a few files a route on the six-socket HTTP/1.1
-//    gateway — research/2026-11-12-global-load-model-redesign.md §12.5);
-//    lazily loaded code keeps rolldown's own chunking. Vendors and the browser
+// 3. **Bundling** with rolldown: boot and each app set are cut into chunks at
+//    places their module keys decide (`cutByKeys`; a few dozen files a route
+//    on the six-socket HTTP/1.1 gateway —
+//    research/2026-11-12-global-load-model-redesign.md §12.5); lazily loaded
+//    code keeps rolldown's own chunking. Vendors and the browser
 //    host modules stay external (the import map serves them).
-// 4. **Publishing**: each chunk is a store entry `chunk.<hash>` (its URL is its
-//    content, so an unchanged chunk keeps its URL across builds), the result
+// 4. **Naming**: a chunk imports another by a stable bare specifier,
+//    `@chunk/<id>` — the id a hash of the modules it holds — which the page's
+//    import map resolves to the chunk's URL. A URL is the hash of the chunk's
+//    own bytes, and those bytes name no other chunk's content: a changed
+//    module re-addresses the one chunk holding it (and the map), never every
+//    chunk importing it up to the entry. With rolldown's own `[hash]` names
+//    (which include the hashes of the imported chunks) a one-module change
+//    re-addressed 84 of main's 85 boot chunks, so every deploy made every open
+//    tab and warm reload fetch and compile the whole boot set again (V8's code
+//    cache is per URL).
+// 5. **Publishing**: each chunk is a store entry `chunk.<hash>`, the result
 //    a `link.<key>` record keyed by every input address — a tree whose page
 //    artifacts did not change reuses it without bundling.
 //
@@ -46,7 +56,6 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import type { OutputChunk } from "rolldown";
 import {
   init as lexerInit,
   parse as lexerParse,
@@ -59,6 +68,7 @@ import {
   isImportMapOnlySpecifier,
 } from "@plugins/framework/plugins/import-map-names/core";
 import { appRootOf } from "@plugins/apps-core/plugins/app-preload/core";
+import type { PreRenderedChunk } from "rolldown";
 import { sha256Hex } from "../hash";
 import { isBrowserUnreachableDynamic, WORKER_ONLY_KINDS } from "../constants";
 import { COMPOSITION_REGISTRY_SPECIFIER } from "../composition-modules";
@@ -68,8 +78,9 @@ import {
   type Binding,
 } from "./bindings";
 import {
-  dedupeDynamicImportEdits,
+  IMPORT_ONCE_CALL,
   IMPORT_ONCE_HELPER,
+  rewriteImportEdits,
 } from "./dedupe-dynamic-imports";
 import { PLUGIN_DEFINITION_ENTRY } from "./plugin-definition";
 import { coEntryFileName, type CoEntry } from "./vite-builder";
@@ -85,18 +96,32 @@ import {
 } from "./store";
 
 /** Bump to re-link every tree (hash input of the link key). */
-const LINK_VERSION = 1;
+const LINK_VERSION = 2;
 
 /**
- * The largest boot / app chunk rolldown aims for, in raw bytes. ~100 KB br:
- * the website's boot set is ~10 files, main's ~30 — against 600 and 1,600
- * per-plugin files, the local gateway's six sockets stay busy without queueing
- * hundreds of requests behind each other.
+ * The mean size of a boot / app chunk, in bytes of the modules as linked
+ * (before tree-shaking): a few dozen files per route, so the local gateway's
+ * six sockets stay busy without queueing hundreds of requests behind each
+ * other (main's boot set is ~85 chunks).
  */
-const ROUTE_CHUNK_MAX_BYTES = 400_000;
+const ROUTE_CHUNK_TARGET_BYTES = 150_000;
 
 /** The store-entry prefix of a route chunk; its file is always `index.js`. */
 export const CHUNK_PREFIX = "chunk.";
+/**
+ * The import-map namespace a chunk is imported by (`@chunk/<id>`): what the
+ * chunks' bytes name instead of each other's URLs.
+ */
+export const CHUNK_SPECIFIER_PREFIX = "@chunk/";
+/**
+ * The directory prefix rolldown names a chunk file by (`chunk-id.<id>/
+ * index.js`) — the same depth as a store entry's `index.js`, so its relative
+ * imports are each `../chunk-id.<id>/index.js`, respelled as
+ * `@chunk/<id>` before any byte is hashed.
+ */
+const CHUNK_ID_DIR_PREFIX = "chunk-id.";
+const CHUNK_ID_IMPORT = /^\.\.\/chunk-id\.([0-9a-f]{16})\/index\.js$/;
+
 /** The store-entry prefix of a link record. */
 export const LINK_PREFIX = "link.";
 /** The record of the link a dist was composed from, beside `index.html`. */
@@ -141,6 +166,11 @@ export interface LinkRecord {
   bootSeeds: string[];
   /** Per app root: the chunk URLs of its deferred plugins' definitions. */
   appSeeds: Record<string, string[]>;
+  /**
+   * The import-map entries of the chunks: `@chunk/<id>` → the chunk's URL,
+   * for every chunk another chunk imports.
+   */
+  chunkMap: Record<string, string>;
   /**
    * Artifact dirs a chunk addresses files of (images, worker bundles, by
    * `new URL("/artifacts/<dir>/…", import.meta.url)`): linked into the dist
@@ -383,7 +413,16 @@ export interface LinkGraph {
   appGroupKeys: string[];
   assetDirs: Set<string>;
   elided: number;
+  /**
+   * Each module's name across builds: its artifact's name without the
+   * address, and its path inside it (`ui.icons.web/web/internal/icon.js`) —
+   * what a chunk's id is hashed from.
+   */
+  moduleKeys: Map<string, string>;
 }
+
+/** An artifact dir's name without its address (`<name>.<hex16>`). */
+const ARTIFACT_ADDRESS = /\.[0-9a-f]{16}$/;
 
 /**
  * Elide, walk and assign: every module the page reaches, its imports
@@ -750,10 +789,23 @@ export async function planLinkGraph(
   for (const [m, roots] of appsOf) appGroupOf.set(m, roots.join("+"));
   const appGroupKeys = [...new Set(appGroupOf.values())].sort();
 
+  const moduleKeys = new Map<string, string>();
+  const fileOfKey = new Map<string, string>();
+  for (const file of linked.keys()) {
+    const { dir, dirName } = storeDirOf(file);
+    const key = `${dirName.replace(ARTIFACT_ADDRESS, "")}/${posix.relative(dir, file)}`;
+    const other = fileOfKey.get(key);
+    if (other !== undefined)
+      throw new Error(`link: ${file} and ${other} share the module key ${key}`);
+    fileOfKey.set(key, file);
+    moduleKeys.set(file, key);
+  }
+
   return {
     entryFile,
     registryFile,
     linked,
+    moduleKeys,
     boot,
     bootRoots,
     bootRegistering,
@@ -766,9 +818,109 @@ export async function planLinkGraph(
   };
 }
 
+/** One route chunk, named and addressed (`bundleLinkGraph`). */
+export interface RouteChunk {
+  /**
+   * What other chunks import a boot or app chunk by (`@chunk/<id>`, its
+   * anchor's hash). null for a lazy chunk: imported by its relative URL.
+   */
+  specifier: string | null;
+  /**
+   * Its store entry, `chunk.<hash>`: a boot / app chunk's hash of its own
+   * bytes, a lazy chunk's rolldown's (which covers the lazy chunks it imports).
+   */
+  dirName: string;
+  url: string;
+  code: string;
+  map: string | null;
+  isEntry: boolean;
+  moduleIds: string[];
+  /**
+   * Static imports as the page resolves them: `@chunk/<id>`, a lazy chunk's
+   * relative URL, or a map specifier.
+   */
+  imports: string[];
+  dynamicImports: string[];
+}
+
+/**
+ * Cut a set of modules into chunks at places its module keys decide, never
+ * its running byte count: walk the modules in key order (a plugin's modules
+ * together) and end a chunk after a module with probability size / target,
+ * drawn from the module's key hash. A chunk is then ~target bytes on
+ * average, and a module joining, leaving or growing moves at most the cut
+ * after itself — the chunks elsewhere keep their modules, so the chunks
+ * importing them keep their bytes. (rolldown's `maxSize` cuts where the bytes
+ * add up: one module's growth shifted every later cut of its group, and
+ * re-partitioned 4 of main's 85 boot chunks in an ordinary deploy — whose
+ * importers, 76 boot chunks, then named their bindings in other chunks.)
+ */
+export function cutByKeys(
+  modules: Iterable<string>,
+  keyOf: (module: string) => string,
+  sizeOf: (module: string) => number,
+  targetBytes: number,
+): Map<string, number> {
+  const ordered = [...modules]
+    .map((m) => ({ m, key: keyOf(m) }))
+    .sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+  const pieceOf = new Map<string, number>();
+  let piece = 0;
+  for (const { m, key } of ordered) {
+    pieceOf.set(m, piece);
+    const draw = parseInt(sha256Hex(`cut\n${key}`).slice(0, 8), 16) / 2 ** 32;
+    if (draw < sizeOf(m) / targetBytes) piece++;
+  }
+  return pieceOf;
+}
+
+/**
+ * A chunk's id: its anchor's — the module (by its key across builds) whose
+ * key hashes least. Chunks hold disjoint modules, so anchors never collide;
+ * and a chunk keeps its id, and so every importer its bytes, while its anchor
+ * stays in it, whatever else joins or leaves — a module joining a chunk of n
+ * takes the anchor over one time in n+1. Hashing the whole module set renamed
+ * a hub chunk whenever one module moved, and with it ~70 of main's 85 boot
+ * chunks importing it; the least key itself sits where a cut range starts,
+ * where new plugins land.
+ */
+function chunkIdOf(
+  chunk: {
+    name: string;
+    isEntry: boolean;
+    moduleIds: readonly string[];
+    facadeModuleId: string | null;
+  },
+  moduleKeys: ReadonlyMap<string, string>,
+): string {
+  let anchor: string | null = null;
+  for (const m of chunk.moduleIds) {
+    // rolldown's own runtime (`\0rolldown/runtime.js`) is in no artifact:
+    // its id is the same in every build.
+    const h = sha256Hex(moduleKeys.get(m) ?? m);
+    if (anchor === null || h < anchor) anchor = h;
+  }
+  if (anchor !== null)
+    return sha256Hex(`${chunk.isEntry ? "entry" : "chunk"}\n${anchor}\n`).slice(
+      0,
+      16,
+    );
+  // A facade: a dynamic entry whose module another chunk holds, re-exported.
+  const facade =
+    chunk.facadeModuleId === null
+      ? undefined
+      : moduleKeys.get(chunk.facadeModuleId);
+  if (facade === undefined)
+    throw new Error(
+      `link: chunk ${chunk.name} holds no module and fronts none`,
+    );
+  return sha256Hex(`facade\n${facade}\n`).slice(0, 16);
+}
+
 /**
  * Bundle a planned graph into route chunks: one rolldown build, `boot` and
- * each app set a size-split group, lazy code in rolldown's own chunks.
+ * each app set cut by `cutByKeys`, lazy code in rolldown's own chunks. Each
+ * chunk imports the others by `@chunk/<id>` and is addressed by its own bytes.
  */
 export async function bundleLinkGraph(
   graph: LinkGraph,
@@ -777,8 +929,25 @@ export async function bundleLinkGraph(
     isExternal: (specifier: string) => boolean;
     log: (line: string) => void;
   },
-): Promise<OutputChunk[]> {
-  const { linked, boot, appGroupOf, appGroupKeys, entryFile } = graph;
+): Promise<RouteChunk[]> {
+  const { linked, boot, appGroupOf, appGroupKeys, entryFile, moduleKeys } =
+    graph;
+  // A boot / app chunk is named by its id; a lazy chunk by rolldown's hash.
+  // Only the former are in the page's import map: a site's lazy code is
+  // hundreds of chunks (the website's ~870, 70 KB of map in every page's
+  // HTML), and nothing loads it at boot. A changed lazy chunk re-addresses
+  // the chunks importing it up to the first boot / app chunk, whose
+  // importers name it by id.
+  const isRouted = (moduleIds: readonly string[]) =>
+    moduleIds.some((m) => chunkNameOf.has(m));
+  const fileNameOf = (c: PreRenderedChunk) =>
+    c.isEntry || isRouted(c.moduleIds)
+      ? `${CHUNK_ID_DIR_PREFIX}${chunkIdOf(c, moduleKeys)}/index.js`
+      : `${CHUNK_PREFIX}[hash:16]/index.js`;
+  const respell = (spec: string): string => {
+    const m = CHUNK_ID_IMPORT.exec(spec);
+    return m === null ? spec : `${CHUNK_SPECIFIER_PREFIX}${m[1]}`;
+  };
   // Bundle.
   const { rolldown, RolldownMagicString } = await import("rolldown");
   const bundle = await rolldown({
@@ -807,38 +976,59 @@ export async function bundleLinkGraph(
           if (m === undefined) throw new Error(`link: unlinked module ${id}`);
           return { code: m.code, map: m.map ?? undefined };
         },
-        // One import() per target per chunk: the registry's ~1,200 loaders
+        // Every import of another chunk respelled `@chunk/<id>`, and one
+        // import() per target per chunk: the registry's ~1,200 loaders
         // name ~100 chunks, and a browser re-walks a module's whole graph
         // on every import() of it (dedupe-dynamic-imports.ts).
         async renderChunk(code) {
-          const edits = await dedupeDynamicImportEdits(code);
+          const edits = await rewriteImportEdits(code, respell);
           if (edits.length === 0) return null;
           const s = new RolldownMagicString(code);
           for (const e of edits) s.overwrite(e.start, e.end, e.text);
-          s.prepend(IMPORT_ONCE_HELPER);
+          if (edits.some((e) => e.text.startsWith(IMPORT_ONCE_CALL)))
+            s.prepend(IMPORT_ONCE_HELPER);
           return s;
         },
       },
     ],
   });
-  const appGroups = appGroupKeys.map((key, i) => ({
-    name: `app${i}`,
-    test: (id: string) => appGroupOf.get(id) === key,
-    maxSize: ROUTE_CHUNK_MAX_BYTES,
-    priority: 1,
-  }));
+  // Boot and each app set, cut into chunks by their module keys.
+  const chunkNameOf = new Map<string, string>();
+  const sets: Array<[string, string[]]> = [
+    ["boot", [...boot]],
+    ...appGroupKeys.map((key, i): [string, string[]] => [
+      `app${i}`,
+      [...appGroupOf].filter(([, k]) => k === key).map(([m]) => m),
+    ]),
+  ];
+  for (const [name, modules] of sets) {
+    const pieces = cutByKeys(
+      modules,
+      (m) => moduleKeys.get(m)!,
+      (m) => linked.get(m)!.code.length,
+      ROUTE_CHUNK_TARGET_BYTES,
+    );
+    for (const [m, piece] of pieces) chunkNameOf.set(m, `${name}-${piece}`);
+  }
   const out = await bundle.generate({
     format: "es",
     sourcemap: true,
-    entryFileNames: `${CHUNK_PREFIX}[hash:16]/index.js`,
-    chunkFileNames: `${CHUNK_PREFIX}[hash:16]/index.js`,
-    // A size-split group is an arbitrary cut through the module graph, so
+    // No `[hash]`: rolldown's hash of a chunk includes the hashes of the
+    // chunks it imports. The id names the chunk; its bytes address it below.
+    entryFileNames: fileNameOf,
+    chunkFileNames: fileNameOf,
+    // A cut group is an arbitrary cut through the module graph, so
     // chunks can import each other in a cycle — and a chunk would then run
     // before the bodies of modules it needs (a slot recorded into a
     // registry array not yet initialized). Module bodies run in source order
     // whatever chunk holds them.
     strictExecutionOrder: true,
     hashCharacters: "hex",
+    // A chunk exports its bindings under their own names. Minified, they are
+    // drawn from one counter over the whole bundle (`Ai`, `Ca`, …), so a
+    // binding added anywhere renames the exports of most chunks — and every
+    // import of them: 74 of main's 85 boot chunks changed bytes for that alone.
+    minifyInternalExports: false,
     minify: opts.minify
       ? { compress: false, mangle: false, codegen: { removeWhitespace: true } }
       : false,
@@ -850,20 +1040,54 @@ export async function bundleLinkGraph(
       // reaches a module take it, and a page then loads another app's chunk
       // for one shared helper.
       includeDependenciesRecursively: false,
+      // Each name is a chunk of its own.
       groups: [
         {
-          name: "boot",
-          test: (id: string) => boot.has(id),
-          maxSize: ROUTE_CHUNK_MAX_BYTES,
-          priority: 2,
+          debugName: "route-chunks",
+          name: (id: string) => chunkNameOf.get(id) ?? null,
+          test: (id: string) => chunkNameOf.has(id),
         },
-        ...appGroups,
       ],
     },
   });
   await bundle.close();
 
-  return out.output.filter((o): o is OutputChunk => o.type === "chunk");
+  const chunks: RouteChunk[] = [];
+  const seen = new Set<string>();
+  for (const o of out.output) {
+    if (o.type !== "chunk") continue;
+    const [dir, base] = o.fileName.split("/");
+    if (dir === undefined || base !== "index.js")
+      throw new Error(`link: unexpected chunk file ${o.fileName}`);
+    const id = CHUNK_ID_IMPORT.exec(`../${o.fileName}`)?.[1] ?? null;
+    if (id === null && !dir.startsWith(CHUNK_PREFIX))
+      throw new Error(`link: unexpected chunk file ${o.fileName}`);
+    if (id !== null && seen.has(id))
+      throw new Error(`link: two chunks share the anchor of id ${id}`);
+    if (id !== null) seen.add(id);
+    const toSpecifier = (i: string) =>
+      i.startsWith(CHUNK_ID_DIR_PREFIX)
+        ? respell(`../${i}`)
+        : i.startsWith(CHUNK_PREFIX)
+          ? `../${i}`
+          : i;
+    // The bytes the browser fetches, sourcemap comment included (it names
+    // `index.js.map`, the same in every entry).
+    const dirName =
+      id === null ? dir : `${CHUNK_PREFIX}${sha256Hex(o.code).slice(0, 16)}`;
+    chunks.push({
+      specifier: id === null ? null : `${CHUNK_SPECIFIER_PREFIX}${id}`,
+      dirName,
+      url: urlOf(dirName, "index.js"),
+      code: o.code,
+      map: o.map === null || o.map === undefined ? null : o.map.toString(),
+      isEntry: o.isEntry,
+      moduleIds: o.moduleIds,
+      imports: o.imports.map(toSpecifier),
+      dynamicImports: o.dynamicImports.map(toSpecifier),
+    });
+  }
+  return chunks;
 }
 
 async function runLink(
@@ -889,57 +1113,48 @@ async function runLink(
     appGroupOf,
     assetDirs,
     elided,
-    entryFile,
   } = graph;
   const output = await bundleLinkGraph(graph, inputs);
 
   // Publish each chunk as its own store entry.
   const chunkMetas = new Map<string, ArtifactMeta>();
   const chunkOfModule = new Map<string, string>(); // module file → chunk URL
+  const chunkMap: Record<string, string> = {};
   let entryUrl: string | null = null;
-  const relSpec = (fromFile: string, toFile: string) => {
-    const r = posix.relative(posix.dirname(fromFile), toFile);
-    return r.startsWith(".") ? r : `./${r}`;
-  };
+  const imported = new Set(
+    output.flatMap((c) => [...c.imports, ...c.dynamicImports]),
+  );
+  for (const c of output) {
+    if (c.specifier !== null && imported.has(c.specifier))
+      chunkMap[c.specifier] = c.url;
+    if (c.isEntry) entryUrl = c.url;
+    for (const id of c.moduleIds) chunkOfModule.set(id, c.url);
+  }
+  // Two chunks whose bytes are the same (two ids, one address) publish once.
+  const byDir = new Map(output.map((c) => [c.dirName, c]));
   await Promise.all(
-    output.map(async (o) => {
-      const [dirName, base] = o.fileName.split("/");
-      if (
-        dirName === undefined ||
-        base !== "index.js" ||
-        !dirName.startsWith(CHUNK_PREFIX)
-      )
-        throw new Error(`link: unexpected chunk file ${o.fileName}`);
-      const url = urlOf(dirName, "index.js");
-      if (o.isEntry && o.facadeModuleId === entryFile) entryUrl = url;
-      for (const id of o.moduleIds) chunkOfModule.set(id, url);
+    [...byDir.values()].map(async (c) => {
       const meta: ArtifactMeta = {
         specifier: null,
         kind: "chunk",
         pluginPath: null,
-        inputsHash: dirName.slice(CHUNK_PREFIX.length),
-        staticImportsByFile: {
-          "index.js": o.imports.map((i) =>
-            i.startsWith(CHUNK_PREFIX) ? relSpec(o.fileName, i) : i,
-          ),
-        },
-        dynamicImports: o.dynamicImports.map((i) =>
-          i.startsWith(CHUNK_PREFIX) ? relSpec(o.fileName, i) : i,
-        ),
+        inputsHash: c.dirName.slice(CHUNK_PREFIX.length),
+        staticImportsByFile: { "index.js": c.imports },
+        dynamicImports: c.dynamicImports,
         tailwindCandidates: [],
         builtAtMs: Date.now(),
       };
-      chunkMetas.set(dirName, meta);
-      await inputs.pin([artifactStorePath(dirName)]);
-      if (hasArtifact(dirName)) {
-        touchArtifact(dirName);
+      chunkMetas.set(c.dirName, meta);
+      await inputs.pin([artifactStorePath(c.dirName)]);
+      if (hasArtifact(c.dirName)) {
+        touchArtifact(c.dirName);
         return;
       }
-      const tmp = artifactTmpDir(dirName);
-      writeFileSync(joinAppPath(tmp, "index.js"), o.code);
-      if (o.map !== null && o.map !== undefined)
-        writeFileSync(joinAppPath(tmp, "index.js.map"), o.map.toString());
-      await publishArtifact(dirName, tmp, meta);
+      const tmp = artifactTmpDir(c.dirName);
+      writeFileSync(joinAppPath(tmp, "index.js"), c.code);
+      if (c.map !== null)
+        writeFileSync(joinAppPath(tmp, "index.js.map"), c.map);
+      await publishArtifact(c.dirName, tmp, meta);
     }),
   );
   if (entryUrl === null)
@@ -978,6 +1193,7 @@ async function runLink(
     chunks: [...chunkMetas.keys()].sort(),
     bootSeeds,
     appSeeds,
+    chunkMap,
     assetDirs: [...assetDirs].sort(),
     stats: {
       modules: linked.size,

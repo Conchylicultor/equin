@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   dedupeDynamicImportEdits,
   IMPORT_ONCE_HELPER,
+  rewriteImportEdits,
 } from "./dedupe-dynamic-imports";
 
 const apply = (
@@ -26,6 +27,22 @@ describe("dedupeDynamicImportEdits", () => {
     expect(out).toContain(
       '__equinImportOnce("../chunk.ab/index.js",()=>import("../chunk.ab/index.js")).then(n=>n.C)',
     );
+  });
+
+  test("respells static and dynamic specifiers, keying the memo by the new spelling", async () => {
+    const rename = (s: string) =>
+      s.startsWith("../c.") ? `@c/${s.slice(5, 7)}` : s;
+    const code =
+      'import{x}from"../c.ab/i.js";import"vendor";' +
+      'const a=()=>import("../c.cd/i.js");' +
+      'const b=()=>import("../c.ef/i.js"),c=()=>import(`../c.ef/i.js`);';
+    const out = apply(code, await rewriteImportEdits(code, rename));
+    expect(out).toContain('import{x}from"@c/ab";import"vendor";');
+    expect(out).toContain('const a=()=>import("@c/cd");');
+    expect(out).toContain(
+      'const b=()=>__equinImportOnce("@c/ef",()=>import("@c/ef")),c=()=>__equinImportOnce("@c/ef",()=>import("@c/ef"));',
+    );
+    expect(out).not.toContain("../c.");
   });
 
   test("leaves single, computed and attributed imports alone", async () => {

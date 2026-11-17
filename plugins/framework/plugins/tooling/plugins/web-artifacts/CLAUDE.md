@@ -60,9 +60,13 @@ Key invariants:
     entry, the registry, the eager plugins' definitions and those descriptor
     modules; each app root's set = its deferred plugins' definitions' closure
     outside boot, grouped by the SET of app roots reaching it (a module two
-    apps share is in neither app's group). rolldown bundles them as
-    code-splitting groups split at ~400 KB raw (a few files a route on the
-    six-socket HTTP/1.1 gateway); lazy code keeps rolldown's own chunking.
+    apps share is in neither app's group). Each set is cut into chunks of
+    ~150 KB linked bytes on average (a few dozen files a route on the
+    six-socket HTTP/1.1 gateway) at places its module KEYS decide
+    (`cutByKeys`: modules in key order, a cut after each with probability
+    size / target drawn from its key hash) — never rolldown's `maxSize`, whose
+    byte-sum cuts shift with every module's growth and re-partition chunks
+    whose importers then all change. Lazy code keeps rolldown's own chunking.
     Vendors and `@browser-host*` stay external. Two rolldown settings are
     load-bearing: `strictExecutionOrder` (a size cut makes chunk cycles, and a
     chunk would otherwise run before its dependencies' bodies) and
@@ -80,19 +84,35 @@ Key invariants:
     every `import()` of it, even one already loaded.
   - **Content-addressing holds at both levels**: an artifact's bytes still
     name other plugins by barrel specifier (its address knows nothing of
-    theirs); each chunk is its own store entry `chunk.<hash>` (`index.js`, an
-    unchanged chunk keeps its URL across builds); the result is a `link.<key>`
+    theirs); each chunk is its own store entry `chunk.<hash>` — the hash of
+    its OWN bytes — and imports the others by a stable bare specifier,
+    `@chunk/<id>` (`id` = the hash of its anchor, the member module whose key
+    hashes least), resolved by the import map (`LinkRecord.chunkMap`). So a
+    changed module re-addresses only the chunk holding it, never every chunk
+    importing it up to the entry, and an open tab or warm reload keeps the
+    rest (V8's code cache is per URL). Only boot and app chunks are named so:
+    lazy chunks (the website's ~870, which would put 70 KB of map in every
+    page's HTML) keep rolldown's `[hash]` and are imported by relative URL —
+    a lazy change re-addresses its importers up to the first boot / app chunk. Export names are not minified
+    (`minifyInternalExports: false`): minified, they come from one counter
+    over the whole bundle and one new binding renamed most chunks' exports.
+    Measured on main's stored links (2026-11-17): with rolldown's `[hash]`
+    names a typical deploy kept 0–1 of ~85 boot chunk URLs; now every boot
+    chunk that changes holds a module whose own code changed (median ~89 % of
+    boot bytes kept; +0.7 % br, +4 KB br of map). The result is a `link.<key>`
     record keyed by every input address, the vendor set, the tier split and
     the builder identity — an unchanged fleet reuses it without bundling.
-  - **The import map holds only what stays external**: vendors and browser
-    hosts. No `@plugins/*` specifier is mapped, so a head script outside the
-    bundle cannot import a plugin barrel by specifier (it would 404).
+  - **The import map holds only what stays external, and the boot / app
+    chunks**: vendors, browser hosts and `@chunk/<id>`. No `@plugins/*` specifier is
+    mapped, so a head script outside the bundle cannot import a plugin barrel
+    by specifier (it would 404).
   - `new URL("<rel>", import.meta.url)` (images, workers) is rewritten to the
     file's absolute `/artifacts/<dir>/…` URL and the dir is linked for its
     files (`LinkRecord.assetDirs`, never scanned as modules); any other
     relative `import.meta` use fails the link.
   - `map-in-sync` compares the dist's `.web-link.json` key with the key the
-    tree plans (`linkInputsOf`, shared with the pipeline) — never the store.
+    tree plans (`linkInputsOf`, shared with the pipeline) — never the store —
+    and the deployed map's chunk entries with the `chunkMap` it records.
   Plan and numbers: `research/2026-11-14-global-load-redesign-r1-module-imports-route-chunks.md`.
 - **Stale artifacts compile where the caller says, never all on one thread.**
   The pipeline builds through an `ArtifactBuilder`

@@ -277,7 +277,12 @@ const mapInSync: Check = {
 
     const linkRaw = readIfExists(join(dist.dir, DIST_LINK_FILE));
     const link = linkRaw === null ? null : (JSON.parse(linkRaw) as DistLink);
-    const diff = diffImportMaps(deployed, expected.imports);
+    // The chunks' entries are the link's output, recorded beside the dist:
+    // this tree composes them when it links to the same key (checked below).
+    const diff = diffImportMaps(deployed, {
+      ...expected.imports,
+      ...(link?.chunkMap ?? {}),
+    });
     const problems: string[] = [];
     if (diff.changed.length > 0) {
       problems.push(
