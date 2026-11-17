@@ -235,6 +235,21 @@ jobs:
           cargo build --manifest-path "$CRATE/Cargo.toml" --locked --release
           mkdir -p "$RUNNER_TEMP/dist"
           cp "$CRATE/target/release/equin-installer" "$RUNNER_TEMP/dist/$ASSET"
+      # TEMPORARY: why WebKit never starts loading on a fresh runner.
+      - name: Probe diagnostics
+        continue-on-error: true
+        run: |
+          set +e
+          bin="$RUNNER_TEMP/dist/$ASSET"
+          sudo apt-get install -y -qq dbus-x11 >/dev/null
+          echo "== $(date +%T) cold probe inside a session bus"
+          dbus-run-session -- xvfb-run -a "$bin" --probe
+          echo "== $(date +%T) exit $?"
+          echo "== $(date +%T) the window, GLib debug, 45s"
+          G_MESSAGES_DEBUG=all EQUIN_INSTALL_DRY_RUN_PACE=0 xvfb-run -a timeout 45 "$bin" --script install.sh -- --dry-run 2>&1 | while IFS= read -r l; do echo "$(date +%T) $l"; done | tail -80
+          echo "== $(date +%T) probe without a session bus"
+          xvfb-run -a "$bin" --probe
+          echo "== $(date +%T) exit $?"
       - name: Smoke test
         # A fresh runner has no font cache: WebKit builds it on first use, on
         # the window's main thread, for longer than the probe's deadline (the
