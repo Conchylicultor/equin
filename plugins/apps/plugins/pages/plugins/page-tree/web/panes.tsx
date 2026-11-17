@@ -170,9 +170,18 @@ export const blockDetailPane = Pane.define({
 function PagesTreeBody(): ReactElement {
   return (
     <PaneChrome pane={pagesTreePane}>
-      <Pages.Sidebar.Render>
-        {(item) => <SidebarItem {...item} />}
-      </Pages.Sidebar.Render>
+      {/* The column the app-shell sidebar gives these items: as tall as the
+          pane body, never taller. The tree item's own growing `Scroll` is
+          then the column's viewport, as in the sidebar. Hung straight in the
+          pane's scroller instead, that `Scroll` grew to the whole tree and
+          never scrolled — and the tree's windowing, which measures against
+          its nearest scroller, mounted every row: ~1.7 s frames with the tree
+          open (report-1794951093-midl0z). */}
+      <Stack gap="none" className="h-full min-h-0">
+        <Pages.Sidebar.Render>
+          {(item) => <SidebarItem {...item} />}
+        </Pages.Sidebar.Render>
+      </Stack>
     </PaneChrome>
   );
 }

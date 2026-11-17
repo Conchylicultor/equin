@@ -42,6 +42,13 @@ function normalizeColor(value: string): string | null {
  * and ignores the horizontal strip. With no vertical overflow yet (content still
  * loading) there is simply nothing to flag.
  *
+ * **(1b) Unbounded-scroller guard.** The nearest scroll container is the
+ * viewport the rows window against and the sticky headers pin to. One taller
+ * than the scroller around it (a `<Scroll fill>` hung inside a pane's scroll
+ * with no height-bounded column around it) never scrolls, so windowing mounts
+ * every row. Compared against the enclosing scroller, never the window: a
+ * Miller strip's forced `overflow-y` never reaches it.
+ *
  * **(2) Chrome-mask match guard.** The sticky toolbar masks scrolled content with
  * `bg-chrome-mask` (→ `--chrome-mask`). For the pinned bar to read as a seamless
  * extension of its surface, `--chrome-mask` must equal the actual painted
@@ -84,6 +91,27 @@ export function useDataViewDevGuards(label: string) {
           break;
         }
         node = node.parentElement;
+      }
+
+      // (1b) Unbounded-scroller guard — the nearest scroll container is the
+      // viewport the rows window against (`VirtualRows.findScrollParent`) and
+      // the sticky headers pin to. Taller than the scroller around it, it
+      // never scrolls: every row counts as on screen and is mounted, and no
+      // header pins (the Pages tree column, report-1794951093-midl0z).
+      const scrollers: HTMLElement[] = [];
+      for (
+        let n = root.parentElement;
+        n && n !== document.body && scrollers.length < 2;
+        n = n.parentElement
+      ) {
+        if (SCROLLABLE.has(getComputedStyle(n).overflowY)) scrollers.push(n);
+      }
+      const [inner, outer] = scrollers;
+      if (inner && outer && inner.clientHeight > outer.clientHeight + 1) {
+        console.error(
+          `[DataView ${label}] its scroll container (${inner.clientHeight}px) is taller than the one around it (${outer.clientHeight}px), so it never scrolls — ` +
+            `windowing mounts every row and sticky headers never pin. Bound it (a full-height column around a <Scroll fill>), or drop the inner scroller.`,
+        );
       }
 
       // (2) Chrome-mask match guard — the toolbar's `--chrome-mask` vs the nearest
