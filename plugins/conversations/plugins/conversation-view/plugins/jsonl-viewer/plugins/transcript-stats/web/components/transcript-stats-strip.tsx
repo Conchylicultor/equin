@@ -42,7 +42,8 @@ export function TranscriptStatsStrip() {
   const anchor = anchorId === null ? null : Number(anchorId);
 
   const read = useMemo(() => {
-    const anchorEvent = anchor === null ? undefined : visible[anchor];
+    if (anchor === null) return { events, firstSeq, atEnd: true };
+    const anchorEvent = visible[anchor];
     // No anchor yet (first paint) or a row that is no longer in the transcript:
     // the honest answer is the whole thing, which is also what the strip showed
     // before it could follow the reader at all.
@@ -52,12 +53,13 @@ export function TranscriptStatsStrip() {
     // hidden row before it.
     const rawIndex = events.indexOf(anchorEvent);
     if (rawIndex < 0) return { events, firstSeq, atEnd: true };
-    const atEnd = rawIndex === events.length - 1;
-    return {
-      events: atEnd ? events : events.slice(0, rawIndex + 1),
-      firstSeq,
-      atEnd,
-    };
+    // At the end when no ROW follows the anchor — judged over the visible
+    // rows, never the raw events: a transcript ending in events no row draws
+    // (filtered out) would otherwise never be at its end, and a reader at the
+    // bottom of a running conversation would read "scrolled back" at a
+    // position moving with every appended row (a new cost-at read each time).
+    if (anchor === visible.length - 1) return { events, firstSeq, atEnd: true };
+    return { events: events.slice(0, rawIndex + 1), firstSeq, atEnd: false };
   }, [events, firstSeq, visible, anchor]);
 
   return (

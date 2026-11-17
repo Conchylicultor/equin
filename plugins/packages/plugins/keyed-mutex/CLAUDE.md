@@ -26,6 +26,12 @@ Neighbours, and why they do not fit a mutation that must not interleave:
 - `packages/semaphore` bounds concurrency across all callers, with no per-key
   queue.
 
+**Inside a yieldable gate slot** (a live read — `packages/semaphore`): a call
+queued behind another run of its key waits through `whileWaiting`, giving its
+slot back for the wait. Waiters keeping their slots while the holder yielded
+its own on a file wait would fill the gate, and the holder's take-back would
+never come.
+
 In-process only. It orders the callers of one process; two processes need a
 lock both can see (a pg advisory lock, `packages/flock`).
 
