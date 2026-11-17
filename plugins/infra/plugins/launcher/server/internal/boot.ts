@@ -4,6 +4,8 @@ import {
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import { InstallerNoticeError } from "@plugins/infra/plugins/launcher/plugins/installer-notice/core";
+import { RUN_AS_ROOT } from "./run-as-root";
 import { writeFile } from "node:fs/promises";
 import { openOwnedFd } from "@plugins/packages/plugins/owned-fd/core";
 import { exists, readFile } from "@plugins/packages/plugins/timed-fs/core";
@@ -116,17 +118,7 @@ const GATEWAY_SLOG_LOG = gatewayLogs.file("gateway.log");
 export function assertSupportedHost(): void {
   // `process.getuid` is undefined off POSIX; an absent uid cannot be root,
   // which is the only thing this check is about.
-  if (process.getuid?.() === 0) {
-    throw new Error(
-      [
-        "Refusing to run as root: Postgres' initdb refuses to run as the root OS user, so the embedded cluster (and every backend behind it) cannot start.",
-        "Create a non-root user and run this as them, e.g.:",
-        "  adduser --disabled-password --gecos '' equin",
-        "  chown -R equin:equin <bundle dir>",
-        "  su - equin -c '<bundle dir>/launch'",
-      ].join("\n"),
-    );
-  }
+  if (process.getuid?.() === 0) throw new InstallerNoticeError(RUN_AS_ROOT);
 }
 
 /**

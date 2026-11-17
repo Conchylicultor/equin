@@ -26,6 +26,8 @@ import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core
 import { dirname, join } from "node:path";
 // Path-independent: every path it touches is passed in, read after the env
 // below is in place.
+// Path-independent (it imports nothing), so safe ahead of the env setup.
+import { InstallerNoticeError } from "@plugins/infra/plugins/launcher/plugins/installer-notice/core";
 import { publishReleaseDist } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/plugins/served-addresses/cli";
 import {
   readEnv,
@@ -142,8 +144,15 @@ async function main(): Promise<void> {
   // until the env is frozen, so the two module-level `mkdtempSync` calls above
   // still run and leave two empty /tmp dirs on a refused launch. Accepted:
   // restructuring the env preamble to avoid them would trade a correctness
-  // constraint for cosmetics.
-  assertSupportedHost();
+  // constraint for cosmetics. A refusal is a notice a person reads: printed as
+  // itself, no stack around it.
+  try {
+    assertSupportedHost();
+  } catch (err) {
+    if (!(err instanceof InstallerNoticeError)) throw err;
+    console.error(err.message);
+    process.exit(1);
+  }
 
   const manifest = readReleaseManifest();
   // RELEASE.json is a serialization boundary: validate before it becomes a

@@ -1,4 +1,6 @@
 import { writeFileSync } from "node:fs";
+import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
+import { defineFileSink } from "@plugins/infra/plugins/file-sink/core";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { assertPrerequisites } from "@plugins/framework/plugins/cli/plugins/doctor/cli";
 import { installLockedToolchain } from "@plugins/infra/plugins/deps/plugins/mise/core";
@@ -16,6 +18,7 @@ import {
   type PreparedGateway,
 } from "@plugins/infra/plugins/launcher/plugins/gateway-drift/cli";
 import { gatewayLogs } from "@plugins/infra/plugins/launcher/plugins/gateway-logs/data-dirs";
+import { startLogs } from "../data-dirs";
 import { GATEWAY_SERVICE } from "@plugins/infra/plugins/launcher/core";
 import {
   MAIN_WORKTREE_NAME,
@@ -34,6 +37,7 @@ import {
   type GatewayLaunchOptions,
 } from "@plugins/infra/plugins/launcher/server";
 import {
+  InstallerNoticeError,
   joinNames,
   plainTextProblems,
   renderNotice,
@@ -83,7 +87,47 @@ function details(...facts: string[]): void {
   console.log(`    details: ${facts.join(" · ")}`);
 }
 
-type Opts = { force?: boolean; logLevel: string; only?: string };
+/**
+ * Where the step-by-step lines of the modules `start` drives go — the
+ * dependency installs, the app bundle, each login service's reconcile, the
+ * gateway's build and launch. They speak in internal names and paths ("Installed
+ * gateway (<identity>) into …/equin.app"), so the terminal a person installing
+ * reads never gets them: every one is appended to the last run's start log
+ * (`startLogs`), named on the final `details:` line. `--verbose` also echoes
+ * them, for a developer at the terminal. Every module hands its lines to the
+ * `log` it is given, so this one routing covers all of them.
+ */
+const START_LOG = startLogs.file("start.log");
+
+// A run writes a few dozen lines; 2 MB × 1 bounds even a runaway one.
+const startLogSink = defineFileSink({
+  id: "start-log",
+  description:
+    "`./equin start`'s detailed steps (installs, the app bundle, each login service, the background server's build and launch) — the last run, emptied by the next",
+  path: START_LOG,
+  maxBytes: 2 * 1024 * 1024,
+  keep: 1,
+});
+
+function openStartLog(verbose: boolean): (line: string) => void {
+  // The last run only: a whole-file write empties it before the first append
+  // (the sink seeds its size from disk on that append).
+  if (existsSync(START_LOG)) writeFileSync(START_LOG, "");
+  return (line) => {
+    startLogSink.appendSync(`${new Date().toISOString()} ${line}`);
+    if (verbose) console.log(`    · ${line}`);
+  };
+}
+
+type Opts = {
+  force?: boolean;
+  logLevel: string;
+  only?: string;
+  verbose?: boolean;
+};
+
+/** What the steps `start` drives are handed: the app bundle, and the start log. */
+type Steps = { app: MacosAppHost; log: (line: string) => void };
 
 const run: CliAction<[], Opts> = async (opts) => {
   // `--only` is resolved first: a typo fails before anything is installed,
@@ -110,19 +154,57 @@ const run: CliAction<[], Opts> = async (opts) => {
   // Every missing dev prerequisite at once, before the gateway compile.
   await assertPrerequisites();
   // Same host preconditions as a release launch: the dev gateway supervises
-  // the same embedded cluster, so the same machine facts have to hold.
-  assertSupportedHost();
+  // the same embedded cluster, so the same machine facts have to hold. A
+  // refusal is a notice a person reads: printed as itself, no stack around it.
+  try {
+    assertSupportedHost();
+  } catch (err) {
+    if (!(err instanceof InstallerNoticeError)) throw err;
+    console.error(err.message);
+    process.exit(1);
+  }
 
+  // Opened after the host checks: a refused start writes nothing.
+  const log = openStartLog(opts.verbose === true);
   // The equin app bundle every service runs from on macOS (a no-op elsewhere).
-  const app = machineMacosAppHost({ exec: cliExecContext() }, console.log);
-  if (selected(gatewayLabel)) {
+  const steps: Steps = {
+    app: machineMacosAppHost({ exec: cliExecContext() }, log),
+    log,
+  };
+  // Named however the run ends — done, refused, or failed — since a failure is
+  // when someone reads it. (The refused-gateway exit names it itself.)
+  try {
+    await startSelected(opts, steps, {
+      manager,
+      gatewayService,
+      gateway: selected(gatewayLabel),
+      declared: declared.filter((d) => selected(d.id)),
+    });
+  } finally {
+    details(`start log ${START_LOG}`);
+  }
+};
+
+async function startSelected(
+  opts: Opts,
+  steps: Steps,
+  services: {
+    manager: LoginServiceManager | null;
+    gatewayService: LoginService | null;
+    /** Whether `--only` keeps the gateway. */
+    gateway: boolean;
+    declared: readonly LoginServiceDeclaration[];
+  },
+): Promise<void> {
+  const { manager, gatewayService, gateway, declared } = services;
+  if (gateway) {
     // Under the lock main's follow-main step swaps the gateway with, so a
     // person's start never interleaves with an automatic restart.
     try {
       await withGatewayFollowLock(() =>
         gatewayService
-          ? startAsLoginService(gatewayService, opts, app)
-          : startDetached(opts, app),
+          ? startAsLoginService(gatewayService, opts, steps)
+          : startDetached(opts, steps),
       );
     } catch (err) {
       if (!(err instanceof BundleWriteRefusedError)) throw err;
@@ -135,17 +217,13 @@ const run: CliAction<[], Opts> = async (opts) => {
           }),
         ),
       );
+      details(`start log ${START_LOG}`);
       process.exit(1);
     }
   }
   // Then every login service a plugin declares — none named here.
-  await startDeclaredLoginServices(
-    manager,
-    declared.filter((d) => selected(d.id)),
-    opts,
-    app,
-  );
-};
+  await startDeclaredLoginServices(manager, declared, opts, steps);
+}
 
 /**
  * `--only <ids>`: which services this `start` touches — the gateway by its
@@ -184,7 +262,7 @@ function selectServices(
 async function startAsLoginService(
   loginService: LoginService,
   opts: Opts,
-  app: MacosAppHost,
+  steps: Steps,
 ): Promise<void> {
   const manager = loginService.manager;
   const service = await loginService.state();
@@ -202,7 +280,7 @@ async function startAsLoginService(
       `${loginService.id.label} under ${manager}`,
       `PID ${managedPid}`,
     ]);
-    await reportStaleGateway(loginService, opts, app);
+    await reportStaleGateway(loginService, opts, steps);
     return;
   }
   if (
@@ -216,8 +294,9 @@ async function startAsLoginService(
     return;
   }
 
-  const prepared = await prepareGateway(opts, app);
-  const launch = await adoptAndHold(prepared, app);
+  announcePrepare();
+  const prepared = await prepareGateway(opts, steps);
+  const launch = await adoptAndHold(prepared, steps);
   const spec = gatewayLaunchSpec(launch);
   const written = await loginService.write(gatewayServiceJob(spec));
   console.log("Set equin to start by itself every time you log in.");
@@ -272,9 +351,10 @@ async function startAsLoginService(
 async function reportStaleGateway(
   loginService: LoginService,
   opts: Opts,
-  app: MacosAppHost,
+  steps: Steps,
 ): Promise<void> {
-  const { gateway, launch } = await prepareGateway(opts, app);
+  console.log("Checking whether equin has an update ready...");
+  const { gateway, launch } = await prepareGateway(opts, steps);
   if (
     await loginService.isCurrent(gatewayServiceJob(gatewayLaunchSpec(launch)))
   )
@@ -301,7 +381,7 @@ async function startDeclaredLoginServices(
   manager: LoginServiceManager | null,
   declared: readonly LoginServiceDeclaration[],
   opts: Opts,
-  app: MacosAppHost,
+  steps: Steps,
 ): Promise<void> {
   if (declared.length === 0) return;
   if (manager === null) {
@@ -319,7 +399,7 @@ async function startDeclaredLoginServices(
   for (const decl of declared) {
     const ready = await ensureDep(decl.dep, cliExecContext(), {
       root,
-      log: console.log,
+      log: steps.log,
     });
     try {
       const { service, outcome } = await reconcileLoginService(
@@ -327,7 +407,7 @@ async function startDeclaredLoginServices(
         decl,
         ready,
         opts.force ? "force" : "start",
-        { host: app, log: console.log },
+        { host: steps.app, log: steps.log },
       );
       console.log(describeStart(decl.forUser, outcome, service));
       details(
@@ -408,7 +488,7 @@ function describeStart(
  * Hosts without a service manager: the detached spawn. It does not survive a reboot —
  * run `./equin start` again after one.
  */
-async function startDetached(opts: Opts, app: MacosAppHost): Promise<void> {
+async function startDetached(opts: Opts, steps: Steps): Promise<void> {
   const existingPid = await readPid();
   const pidAlive = existingPid !== null && isRunning(existingPid);
 
@@ -429,7 +509,8 @@ async function startDetached(opts: Opts, app: MacosAppHost): Promise<void> {
     await terminateProcess(existingPid!);
   }
 
-  const launch = await adoptAndHold(await prepareGateway(opts, app), app);
+  announcePrepare();
+  const launch = await adoptAndHold(await prepareGateway(opts, steps), steps);
   // `.pid` only, and no `.ref()`: the gateway deliberately outlives `start`.
   const { pid } = await spawnGatewayDaemon(launch);
 
@@ -446,9 +527,16 @@ async function startDetached(opts: Opts, app: MacosAppHost): Promise<void> {
 /** Main's gateway build and the launch that would run it (`gateway-drift/cli`). */
 function prepareGateway(
   opts: Opts,
-  app: MacosAppHost,
+  { app, log }: Steps,
 ): Promise<PreparedGateway> {
-  return prepareMainGateway({ logLevel: opts.logLevel, app, log: console.log });
+  return prepareMainGateway({ logLevel: opts.logLevel, app, log });
+}
+
+/** Said before a launch's prepare: a first build is minutes of silence otherwise. */
+function announcePrepare(): void {
+  console.log(
+    `Preparing ${GATEWAY_FOR_USER.name} (a few minutes the first time)...`,
+  );
 }
 
 /**
@@ -459,9 +547,9 @@ function prepareGateway(
  */
 async function adoptAndHold(
   prepared: PreparedGateway,
-  app: MacosAppHost,
+  steps: Steps,
 ): Promise<GatewayLaunchOptions> {
-  const launch = await adoptGatewayLaunch(prepared, app, console.log);
+  const launch = await adoptGatewayLaunch(prepared, steps.app, steps.log);
   await holdGatewayBuild(prepared.gateway);
   return launch;
 }

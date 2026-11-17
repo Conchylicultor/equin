@@ -37020,6 +37020,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/profiling/fs-wait`
           - `debug/profiling/op-log`
           - `framework/cli/op-runtime`
+          - `framework/cli/start`
           - `framework/tooling/checks`
           - `infra/host/host-admission`
           - `packages/signal-origin/sink`
@@ -38810,11 +38811,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `framework/cli/start`
+              - `infra/launcher`
               - `infra/launcher/login-services`
           - Core:
             - Exports (types): `InstallerNotice`
             - Exports (values):
               - `defineNotice`
+              - `InstallerNoticeError`
               - `INTERNAL_TERMS`
               - `joinNames`
               - `noticeProblems`
@@ -39254,9 +39257,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 137 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 138 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `infra` ×33
-          - `framework` ×22
+          - `framework` ×23
           - `apps` ×18
           - `debug` ×15
           - `build` ×8
@@ -43796,9 +43799,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TIMED_FS_CALLS`
           - `withFsCallTally`
       - Cross-plugin:
-        - Imported by: 179 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+        - Imported by: 180 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
           - `infra` ×53
-          - `framework` ×27
+          - `framework` ×28
           - `apps` ×16
           - `debug` ×15
           - `conversations` ×13

@@ -149,6 +149,19 @@ export function joinNames(names: readonly string[]): string {
 }
 
 /**
+ * A notice thrown: what a check that stops equin (deep inside a call, e.g. the
+ * launcher's host preconditions) raises so the command running it prints the
+ * notice ITSELF — `console.error(err.message)` and exit 1 — never Bun's
+ * uncaught-error dump of stack frames around it (rule 5).
+ */
+export class InstallerNoticeError extends Error {
+  constructor(readonly notice: InstallerNotice) {
+    super(renderNotice(notice));
+    this.name = "InstallerNoticeError";
+  }
+}
+
+/**
  * The notice as terminal text: the message, then the evidence under its own
  * "Details" heading, apart from it.
  */

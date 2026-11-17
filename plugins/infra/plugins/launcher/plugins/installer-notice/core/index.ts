@@ -1,5 +1,6 @@
 export {
   INTERNAL_TERMS,
+  InstallerNoticeError,
   defineNotice,
   joinNames,
   noticeProblems,

@@ -22,6 +22,8 @@ something out follows the installer message rules —
 doing and why; why it was blocked; what to do now and what skipping costs; raw
 facts only as evidence). `start` runs inside `install.sh`, so its own output is a person's: each line says what they got ("equin is running", "Added the equin icon in your menu bar") in the services' `forUser` words, and the label, manager, PID and paths go on an indented `details:` line under it. An optional service the Mac refused is one `appsBlockedNotice` for all of them; the gateway refused stops `start` with the same notice, marked needed.
 
+The modules `start` drives — `ensureDep`, the macOS app bundle (`machineMacosAppHost`), `reconcileLoginService`, `prepareMainGateway` / `adoptGatewayLaunch` — narrate their steps in internal terms ("Installed gateway (<identity>) into …/equin.app", "Kept <dir>: still running …"). None of that reaches the terminal: `run.ts` hands every one of them the same `log` (`Steps`), which appends to the last run's start log (`startLogs`, this plugin's `data-dirs`, `~/.equin/logs/start/start.log`, emptied on every run) and is named on the last `details:` line however the run ends (done, refused or failed). `--verbose` echoes those lines too, for a developer. A new module `start` calls takes that `log`, never `console.log`.
+
 ## macOS: a launchd service
 
 The gateway is a per-user LaunchAgent, `<gateway-label>`

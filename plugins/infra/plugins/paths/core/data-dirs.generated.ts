@@ -41,6 +41,7 @@ export const dataDirsEntries: CollectedEntry[] = [
   { pluginPath: "debug/plugins/tests", id: "debug.tests", loader: () => import("@plugins/debug/plugins/tests/data-dirs"), dependsOn: [] },
   { pluginPath: "framework/plugins/cli", id: "framework.cli", loader: () => import("@plugins/framework/plugins/cli/data-dirs"), dependsOn: [] },
   { pluginPath: "framework/plugins/cli/plugins/op-runtime", id: "framework.cli.op-runtime", loader: () => import("@plugins/framework/plugins/cli/plugins/op-runtime/data-dirs"), dependsOn: [] },
+  { pluginPath: "framework/plugins/cli/plugins/start", id: "framework.cli.start", loader: () => import("@plugins/framework/plugins/cli/plugins/start/data-dirs"), dependsOn: [] },
   { pluginPath: "framework/plugins/cli/plugins/test", id: "framework.cli.test", loader: () => import("@plugins/framework/plugins/cli/plugins/test/data-dirs"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/checks", id: "framework.tooling.checks", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/data-dirs"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/type-check", id: "framework.tooling.checks.type-check", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/data-dirs"), dependsOn: [] },

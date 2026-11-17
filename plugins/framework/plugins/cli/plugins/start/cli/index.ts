@@ -17,7 +17,7 @@ import { GATEWAY_SERVICE } from "@plugins/infra/plugins/launcher/core";
  */
 export default defineCliCommand<
   [],
-  { force?: boolean; logLevel: string; only?: string }
+  { force?: boolean; logLevel: string; only?: string; verbose?: boolean }
 >({
   name: "start",
   description:
@@ -27,6 +27,11 @@ export default defineCliCommand<
     {
       flags: "--only <ids>",
       description: `Comma-separated services to start (the gateway's ${GATEWAY_SERVICE.label} — ${LEGACY_IDS.launchdLabel} on an install data-dir migrate has not moved yet — or a declared login service id); with --force, restarts only those`,
+    },
+    {
+      flags: "--verbose",
+      description:
+        "Also print each step's detailed lines (always written to the start log)",
     },
     {
       flags: "--log-level <level>",
