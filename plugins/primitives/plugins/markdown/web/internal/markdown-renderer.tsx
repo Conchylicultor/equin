@@ -13,8 +13,9 @@ import {
   inlineParagraph,
   stripNodeProp,
 } from "./base-components";
+import { remarkLiteralPaths } from "./literal-paths";
 
-const BASE_REMARK_PLUGINS = [remarkGfm];
+const BASE_REMARK_PLUGINS = [remarkGfm, remarkLiteralPaths];
 
 // The heavy renderer: react-markdown + remark-gfm + the base component map
 // (which pulls in the syntax highlighter). Lives in its own module so

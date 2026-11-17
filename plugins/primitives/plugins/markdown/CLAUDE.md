@@ -20,6 +20,13 @@ element, whose pad, corners, hairline and type are theme tokens (density
 caption look. It has no notion of a span's *kind* (path, keyword, removed
 token), so a theme can border every chip but cannot tint one kind.
 
+**Bare file paths are literal.** A micromark text construct
+(`internal/literal-paths.ts`, a base remark plugin) claims a path run starting
+at `/` or `~/` as plain text, so the `_` / `~` inside it never become
+emphasis or strikethrough: `/srv/__A__/x.md` and `foo/__init__.py` stay
+one string the file-link chip can recognise. A trailing `_` run is left out, so
+`_/a/b_` is still an italic path.
+
 **`/api` addresses are the page's.** The base `img` and `a` render an
 `/api/…` address (relative, or absolute on the page's origin) as plain text
 when the subtree's transport serves no URL (`useTransport().servesUrls` —
