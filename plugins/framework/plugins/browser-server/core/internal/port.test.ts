@@ -23,6 +23,7 @@ import {
   portBrowserServer,
   portRequester,
   serveOverPort,
+  type HostServerError,
 } from "./port";
 import { reportingLoads, type HostProgress } from "./boot-progress";
 
@@ -65,6 +66,7 @@ async function overChannel(worker: BrowserServer, keys: string[]) {
     server: worker,
     keys: new Set(keys),
     boot: BOOT,
+    errors: () => {},
   }));
   return portBrowserServer(channel.port1);
 }
@@ -166,6 +168,7 @@ describe("a browser server over a port", () => {
       server: greetingServer("hi"),
       keys: new Set([greeting.key]),
       boot: BOOT,
+      errors: () => {},
     }));
     const { server } = await portBrowserServer(channel.port1);
     const r = recorder();
@@ -212,6 +215,7 @@ describe("boot progress", () => {
         server: greetingServer("hi"),
         keys: new Set<string>(),
         boot: BOOT,
+        errors: () => {},
       };
     });
     const seen: HostProgress[] = [];
@@ -219,6 +223,44 @@ describe("boot progress", () => {
       onProgress: (progress) => seen.push(progress),
     });
     expect(seen.at(-1)?.plugins).toEqual({ loaded: 2, total: 2 });
+  });
+});
+
+describe("server errors", () => {
+  test("an error the host caught — during its boot or after — reaches the page with its stack", async () => {
+    const channel = new MessageChannel();
+    channel.port1.start();
+    channel.port2.start();
+    let raise!: (error: HostServerError) => void;
+    const caught = (message: string): HostServerError => ({
+      message,
+      stack: `Error: ${message}\n    at loader (bytes.ts:1:1)`,
+      errorType: "NotReadableError",
+      scope: null,
+    });
+    void serveOverPort(channel.port2, async () => ({
+      server: greetingServer("hi"),
+      keys: new Set<string>(),
+      boot: BOOT,
+      errors: (forward) => {
+        // One caught before the page could hear it: replayed, as the sink holds it.
+        forward(caught("during boot"));
+        raise = forward;
+      },
+    }));
+    const heard: HostServerError[] = [];
+    let heardSecond!: () => void;
+    const second = new Promise<void>((resolve) => (heardSecond = resolve));
+    await portBrowserServer(channel.port1, {
+      onServerError: (error) => {
+        heard.push(error);
+        if (heard.length === 2) heardSecond();
+      },
+    });
+    raise(caught("after ready"));
+    await second;
+    expect(heard.map((e) => e.message)).toEqual(["during boot", "after ready"]);
+    expect(heard[1]).toEqual(caught("after ready"));
   });
 });
 

@@ -44,12 +44,14 @@ phone's backgrounded tab), or the whole host: a console warning, no report.
 - Web:
   - Contributes:
     - `Core.Root` → `CrashCollector`
+    - `ReportSinks.Collector` "framework.browser-server"
     - `ReportSinks.Collector` "infra.health"
     - `ReportSinks.Collector` "primitives.dom.element-size.resize-loop-trace"
     - `ReportSinks.Collector` "primitives.error-boundary"
     - `ReportSinks.Collector` "primitives.networking.request-guard"
     - `Reports.KindView` → `CrashSummary`
   - Uses:
+    - `framework/browser-server.hostServerErrorSink`
     - `infra/endpoints.EndpointAgentWriteRefusedError`
     - `infra/health.reachHost`
     - `infra/health.wedgeReportSink`

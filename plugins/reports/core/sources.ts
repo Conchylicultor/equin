@@ -114,6 +114,11 @@ export const CLIENT_REPORT_SOURCES = [
   // files it now; kept so existing rows still parse.
   "client-turn-unconfirmed",
   "client-live-state-stale-drop",
+  // A server error a browser host caught in its worker (the page's own
+  // in-browser server: a live loader's failure, a route handler's throw),
+  // handed to the page with its stack (browser-server's `server-error`) — the
+  // worker runs no reports engine, so the page files it (reports/crash).
+  "client-browser-host",
   // A live read whose query gained an error (reports/resource-errors) — one per
   // failing (key, params) episode, however many hooks observe it.
   "client-resource-error",

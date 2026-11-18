@@ -136,7 +136,9 @@ export type FromHost =
   | { t: "ended"; why: HostEndReason }
   | { t: "response"; id: number; response: WireResponse }
   | { t: "deliver"; conn: number; frame: string }
-  | { t: "closed"; conn: number; code: number; reason: string };
+  | { t: "closed"; conn: number; code: number; reason: string }
+  /** A server error the host caught (`HostBooted.errors`), told to ONE page. */
+  | { t: "server-error"; error: HostServerError };
 
 /**
  * A boot the host declines on purpose (`HostRefusal`: its data is newer than
@@ -244,10 +246,16 @@ export function serveHost(opts: ServeHostOptions): ServedHost {
   const settle = (): void => {
     bootSettled = true;
   };
-  void booted.then(settle, () => {
-    bootFailed = true;
-    settle();
-  });
+  void booted.then(
+    (host) => {
+      settle();
+      forwardErrors(host);
+    },
+    () => {
+      bootFailed = true;
+      settle();
+    },
+  );
 
   /** Every page end being served, and the sockets each opened. */
   const ends = new Map<PortEnd, Map<number, BrowserServerSocket>>();
@@ -493,9 +501,33 @@ export function serveHost(opts: ServeHostOptions): ServedHost {
     maybeRetire();
   }
 
-  opts.accept((end) => serveEnd(end, true));
+  // Every server error the host catches goes to ONE page — the oldest end
+  // still served — so a shared host's tabs do not file it once each. Held
+  // (bounded) while no page is connected, for the next one.
+  const unsent: HostServerError[] = [];
+  function sendErrors(): void {
+    const end = ends.keys().next().value;
+    if (end === undefined) return;
+    for (const error of unsent.splice(0))
+      end.postMessage({ t: "server-error", error } satisfies FromHost);
+  }
+  function forwardErrors(host: HostBooted): void {
+    // Already on the worker's console: the throw site logs it.
+    host.errors((error) => {
+      if (unsent.length < MAX_UNSENT_ERRORS) unsent.push(error);
+      sendErrors();
+    });
+  }
+
+  opts.accept((end) => {
+    serveEnd(end, true);
+    sendErrors();
+  });
   return { end: endAll };
 }
+
+/** Server errors held while no page is connected (`HostBooted.errors`). */
+const MAX_UNSENT_ERRORS = 50;
 
 /**
  * Serve a server on ONE end (a dedicated worker's `self`): `serveHost` with
@@ -561,15 +593,37 @@ export interface HostBoot {
   createdAt?: number;
 }
 
+/**
+ * A server error a host caught and answered for — a live loader's failure (the
+ * 500 a read gets), a route handler's throw — with its stack: what the Bun
+ * server files as a `server-caught` crash. A browser host runs no reports
+ * engine, so it hands each one to a page (`server-error`), which files it
+ * through its own report channel (`PortServerOptions.onServerError`).
+ */
+export interface HostServerError {
+  message: string;
+  stack: string | null;
+  errorType: string | null;
+  /** The subject a shared throw site failed for (a job's name), when it says. */
+  scope: string | null;
+}
+
 /** A server booted in the worker: what `serveHost`'s `boot` returns. */
 export interface HostBooted {
   server: BrowserServer;
   keys: ReadonlySet<string>;
   boot: HostBoot;
+  /**
+   * Start handing every server error the host catches to `forward` — those
+   * caught before it was called (during the boot) included. Required: an
+   * error a host catches in the visitor's browser and keeps there is an
+   * error nobody ever sees.
+   */
+  errors(forward: (error: HostServerError) => void): void;
 }
 
 /** A booted server across a port, with the keys it serves and how its boot went. */
-export interface PortServer extends HostBooted {
+export interface PortServer extends Omit<HostBooted, "errors"> {
   /** When the worker reported ready: ms after it was created, on its clock. */
   readyAtMs: number;
   /** Resolves when the host stops serving (`ended`); never, while it serves. */
@@ -591,6 +645,11 @@ export interface PortServerOptions {
   inputs?: readonly string[];
   /** Told how far the host's boot has come, until it is ready (`HostProgress`). */
   onProgress?: (progress: HostProgress) => void;
+  /**
+   * Told each server error the host caught (`HostServerError`) — at most one
+   * page of a shared host is told each. Absent: they are logged to the console.
+   */
+  onServerError?: (error: HostServerError) => void;
 }
 
 /** The task-mark source of the page-side port listeners (`primitives/perfs/task-marks`). */
@@ -624,6 +683,7 @@ function hostMessageMark(msg: FromHost, answers?: string): TaskMarkText {
     case "failed":
     case "progress":
     case "accepted":
+    case "server-error":
       return { what: msg.t, detail: "" };
   }
 }
@@ -720,7 +780,7 @@ export function attachPort(worker: PortEnd, port: MessagePort): void {
  */
 export function portBrowserServer(
   port: PortEnd,
-  { inputs = [], onProgress }: PortServerOptions = {},
+  { inputs = [], onProgress, onServerError }: PortServerOptions = {},
 ): Promise<PortServer> {
   let nextConn = 0;
   const peers = new Map<number, BrowserServerPeer>();
@@ -819,6 +879,14 @@ export function portBrowserServer(
           return;
         case "accepted":
           // `connectSharedHost`'s, where it connected.
+          return;
+        case "server-error":
+          if (onServerError === undefined) {
+            console.error(
+              "[browser-server] the host caught a server error:",
+              msg.error.stack ?? msg.error.message,
+            );
+          } else onServerError(msg.error);
           return;
         case "deliver":
           peers.get(msg.conn)?.deliver(msg.frame);

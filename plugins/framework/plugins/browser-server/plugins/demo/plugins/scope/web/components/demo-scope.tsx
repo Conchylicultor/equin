@@ -24,6 +24,7 @@ import {
   portBrowserServer,
   type BrowserServer,
   type HostProgress,
+  type HostServerError,
   type PageInputValue,
   type PortEnd,
   type PortServer,
@@ -33,6 +34,7 @@ import {
   browserServerTransport,
   HostInputs,
   hostBootReportSink,
+  hostServerErrorSink,
   type FrameServing,
   type HostInputSupply,
 } from "@plugins/framework/plugins/browser-server/web";
@@ -233,6 +235,15 @@ function startScopeServer(
           onProgress: (progress) => {
             if (!ended) report.onProgress(progress);
           },
+          // The host's caught server errors are telemetry like its traffic's:
+          // filed by the page (reports/crash) when the scope reports, the
+          // worker having no way out of its own; logged otherwise.
+          ...(telemetry
+            ? {
+                onServerError: (error: HostServerError) =>
+                  hostServerErrorSink.emit({ host: scenario.id, error }),
+              }
+            : {}),
         });
         // Listening now: what the host posted meanwhile is delivered.
         start();

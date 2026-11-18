@@ -54,6 +54,7 @@ export const SKEW_PROOF: Record<
   "client-optimistic-rejection": "none",
   "client-turn-unconfirmed": "none",
   "client-live-state-stale-drop": "none",
+  "client-browser-host": "none",
   "client-resource-error": "none",
   "client-caret-flight": "none",
   "client-adaptive-bar": "none",

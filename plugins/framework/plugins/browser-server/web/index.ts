@@ -5,6 +5,8 @@ export { attachFrameServing } from "./frame-serving";
 export type { FrameServing } from "./frame-serving";
 export { hostBootReportSink } from "./host-boot-sink";
 export type { HostBootInfo } from "./host-boot-sink";
+export { hostServerErrorSink } from "./host-error-sink";
+export type { HostServerErrorInfo } from "./host-error-sink";
 import {
   ExternalHosts as ExternalHostsSlots,
   HostInputs as HostInputsSlots,

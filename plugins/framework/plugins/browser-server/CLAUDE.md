@@ -97,6 +97,16 @@ version skew ("App updated — reload"). See `resource-runtime`'s `keySet`.
   `refused`. `ended` resolves with the reason the host stopped serving; every
   request still waiting, and every later one, rejects `HostEndedError`.
   `reset()` asks the host to wipe its data.
+- **Caught server errors leave the worker.** A browser host runs no reports
+  engine, so `HostBooted.errors(forward)` (required; server-core's
+  `bootBrowserHost` hands its `serverErrorSink` — a live loader's failure, a
+  route handler's throw, with stack) is how they get out: `serveHost` posts
+  each as `server-error` to ONE page end (the oldest; held, bounded, while
+  none is connected), and the page's `PortServerOptions.onServerError` gets
+  it. `DemoScope` emits it into `web/`'s `hostServerErrorSink` when its
+  transport reports telemetry; `reports/crash` files it as a
+  `client-browser-host` crash — on a deployed site, through the site's
+  visitor report channel.
 - **`attachPort(worker, port)`** hands the worker one more end (`ToHost`'s
   `attach` arm, the port transferred) that `serveOverPort` answers exactly as
   its own (requests queue until the graph is up); **`portRequester(end)`** is
@@ -298,12 +308,14 @@ reaching the server, detach on unmount).
     - `FrameServing`
     - `HostBootInfo`
     - `HostInputSupply`
+    - `HostServerErrorInfo`
   - Exports (values):
     - `attachFrameServing`
     - `browserServerTransport`
     - `ExternalHosts`
     - `hostBootReportSink`
     - `HostInputs`
+    - `hostServerErrorSink`
 - Core:
   - Uses:
     - `primitives/perfs/task-marks.runMarked`
@@ -317,6 +329,7 @@ reaching the server, detach on unmount).
     - `HostEndReason`
     - `HostProgress`
     - `HostRefusal`
+    - `HostServerError`
     - `PageInput`
     - `PageInputRead`
     - `PageInputValue`
@@ -354,6 +367,7 @@ reaching the server, detach on unmount).
     - `integrations/google-maps/browser-config`
     - `integrations/google-maps/page-config`
     - `map/google`
+    - `reports/crash`
 - Test helpers:
   - Core: `@plugins/framework/plugins/browser-server/core/testing`
     - `channelHost` — A host's `start`, as a scenario's `host.start` takes it, whose "worker" is one end of an in-realm `MessageChannel`: the other end runs `serveOverPort` over the server `boot` returns — or, when `boot` throws, reports the failure (`PortHostBootError` on the page side), as a real worker whose graph fails to boot does. `serviceWorkerUrl` is the host module's frame-serving script URL — only a test that stubs `navigator.serviceWorker` registers it.

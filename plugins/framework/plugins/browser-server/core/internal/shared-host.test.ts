@@ -168,6 +168,7 @@ function sharedWorkers(
             server,
             keys: new Set<string>(),
             boot: { plugins: 0, stages: [], slowest: [] },
+                errors: () => {},
           }),
         reset: () => Promise.resolve(),
         retire: {

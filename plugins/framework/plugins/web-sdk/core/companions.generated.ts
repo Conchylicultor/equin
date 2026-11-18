@@ -99,6 +99,7 @@ export const companionManifest: Readonly<
   "reports.collectors.collector": {
     keyed: {
       "conversations.conversation-view.jsonl-viewer.tool-call": ["reports.tool-input-drift"],
+      "framework.browser-server": ["reports.crash"],
       "framework.web-sdk": ["reports.plugin-load-errors"],
       "infra.endpoints": ["reports.endpoint-errors"],
       "infra.health": ["reports.crash"],

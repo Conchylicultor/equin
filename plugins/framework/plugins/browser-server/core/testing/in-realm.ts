@@ -112,6 +112,7 @@ export function channelHost(
             server: served,
             keys: new Set<string>(),
             boot: { plugins: 0, stages: [], slowest: [] },
+        errors: () => {},
           };
         }).catch((err: unknown) => {
           // The page side already rejects with `PortHostBootError`; the

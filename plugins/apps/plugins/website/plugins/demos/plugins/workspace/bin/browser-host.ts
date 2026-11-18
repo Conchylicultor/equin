@@ -43,6 +43,7 @@ serveBrowserHost({
       server: runtimeBrowserServer(host),
       keys: new Set(host.keys),
       boot: host.boot,
+      errors: host.errors,
     };
   },
 });

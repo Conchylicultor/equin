@@ -3,6 +3,7 @@ import type { BoundaryErrorReport } from "@plugins/primitives/plugins/error-boun
 import type { WedgeReport } from "@plugins/infra/plugins/health/web";
 import type { ResizeLoopReport } from "@plugins/primitives/plugins/dom/plugins/element-size/plugins/resize-loop-trace/web";
 import type { RawApiRequestError } from "@plugins/primitives/plugins/networking/plugins/request-guard/web";
+import type { HostServerErrorInfo } from "@plugins/framework/plugins/browser-server/web";
 import { report } from "@plugins/reports/web";
 import { describeResizeLoop } from "./describe-resize-loop";
 import { describeError } from "./describe-caught";
@@ -79,6 +80,31 @@ export function collectRequestGuardCrash(err: RawApiRequestError): void {
     url: window.location.href,
     userAgent: navigator.userAgent,
     data: crashFieldsOf(err),
+  });
+}
+
+/**
+ * A server error the page's browser host caught in its worker (a live
+ * loader's failure, a route handler's throw), with the worker's stack: the
+ * `server-caught` crash the Bun server files itself, filed here because the
+ * worker runs no reports engine. `label` names the host it came from.
+ */
+export function collectHostServerError({
+  host,
+  error,
+}: HostServerErrorInfo): void {
+  void report({
+    kind: "crash",
+    source: "client-browser-host",
+    message: error.message,
+    url: window.location.href,
+    userAgent: navigator.userAgent,
+    data: {
+      errorType: error.errorType,
+      stack: error.stack,
+      scope: error.scope,
+      label: `browser-host:${host}`,
+    },
   });
 }
 

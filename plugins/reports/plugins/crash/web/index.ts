@@ -3,6 +3,7 @@ import { Core } from "@plugins/framework/plugins/web-sdk/core";
 import { wedgeReportSink } from "@plugins/infra/plugins/health/web";
 import { resizeLoopReportSink } from "@plugins/primitives/plugins/dom/plugins/element-size/plugins/resize-loop-trace/web";
 import { boundaryReportSink } from "@plugins/primitives/plugins/error-boundary/web";
+import { hostServerErrorSink } from "@plugins/framework/plugins/browser-server/web";
 import { requestGuardReportSink } from "@plugins/primitives/plugins/networking/plugins/request-guard/web";
 import { drain } from "@plugins/primitives/plugins/report-sink/web";
 import { ReportSinks } from "@plugins/reports/plugins/collectors/web";
@@ -11,6 +12,7 @@ import { CrashCollector } from "./components/crash-collector";
 import { CrashSummary } from "./components/crash-summary";
 import {
   collectBoundaryCrash,
+  collectHostServerError,
   collectRequestGuardCrash,
   collectResizeLoopCrash,
   collectWedgeCrash,
@@ -35,6 +37,11 @@ export default {
     ReportSinks.Collector({
       from: "primitives.networking.request-guard",
       collect: drain(requestGuardReportSink, collectRequestGuardCrash),
+      companion: true,
+    }),
+    ReportSinks.Collector({
+      from: "framework.browser-server",
+      collect: drain(hostServerErrorSink, collectHostServerError),
       companion: true,
     }),
     ReportSinks.Collector({

@@ -24,13 +24,20 @@
 // serving — and its promise is the host's `settled`.
 
 import { createRequestHandler } from "@plugins/framework/plugins/http-router/core";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import {
   bootPluginGraph,
   runPostReadyPhases,
   runSettledPhase,
   type ServerRegistryEntry,
 } from "./boot-stages";
+import {
+  reportServerError,
+  serverErrorSink,
+  type ServerErrorReport,
+} from "./error-reporter";
 import { hostHttpRoutes } from "./host-routes";
+import { sinkHandler } from "./sink-handler";
 import { getProfilingData } from "./profiler";
 import {
   closeResourceKeySet,
@@ -72,12 +79,38 @@ export interface BrowserHost {
   /** Where the boot spent its time, for the page to log. */
   boot: BrowserHostBoot;
   /**
+   * Hand every server error the host catches (`reportServerError`: a live
+   * loader's failure, a route handler's throw) to `forward` — the ones caught
+   * during the boot first, replayed. A browser host boots no reports engine,
+   * so this is the only way out of the worker for them: the host's port
+   * carries them to a page, which files them (`browser-server`'s
+   * `HostBooted.errors`).
+   */
+  errors(forward: (error: BrowserHostError) => void): void;
+  /**
    * The settled phase (`onSettled`: the warm-up drain), started once the host
    * can serve and never awaited by the boot. Resolves when it is done; a
    * failure is already logged loudly by the host, and rejects this too — await
    * it (a test) before asserting on what the warm-ups produce.
    */
   settled: Promise<void>;
+}
+
+/** A server error a browser host caught, as it leaves the worker. */
+export interface BrowserHostError {
+  message: string;
+  stack: string | null;
+  errorType: string | null;
+  scope: string | null;
+}
+
+function hostError(report: ServerErrorReport): BrowserHostError {
+  return {
+    message: report.message,
+    stack: report.stack ?? null,
+    errorType: report.errorType ?? null,
+    scope: report.scope ?? null,
+  };
 }
 
 /** How long one browser-host boot took, on the worker's clock. */
@@ -122,11 +155,16 @@ export async function bootBrowserHost(
 
   const request = createRequestHandler({
     routes: hostHttpRoutes(ordered),
+    // As the Bun server's router: logged, and reported like any caught error.
     onError: (err, req, pathname) => {
       console.error(
         `[browser-host] ${req.method} ${pathname}: ${err.message}`,
         err.stack ?? "",
       );
+      reportServerError({
+        message: `[http] ${req.method} ${pathname}: ${err.message}`,
+        ...crashFieldsOf(err),
+      });
     },
     onUnmatched: opts.onUnmatched,
   });
@@ -148,6 +186,15 @@ export async function bootBrowserHost(
     request,
     settled,
     notifications: notificationsWsHandler,
+    // The worker's one handler of the sink — attached by this composition
+    // root as the framework attaches a plugin's `sinkHandlers`: no reports
+    // engine runs here, and a graph plugin that declared one too would make
+    // this attach throw (one handler per sink), never silently evict it.
+    errors: (forward) =>
+      sinkHandler(
+        serverErrorSink,
+        () => (report: ServerErrorReport) => forward(hostError(report)),
+      ).attach(),
     keys: Resource.Declare.getContributions().map((c) => c.key),
     boot: {
       plugins: ordered.length,
