@@ -9351,6 +9351,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `UpdateSongBody`
             - Exports (values):
               - `deleteSong`
+              - `fromLinkText`
               - `sonataPlayerRoute`
               - `SONG_LINK_KEYS`
               - `songAttachmentLinks`
@@ -9359,6 +9360,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `songLibrary`
               - `SongSchema`
               - `songsEntityRef`
+              - `toLinkText`
               - `updateSong`
           - Cross-plugin:
             - Uses tokens: 35 vars — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)

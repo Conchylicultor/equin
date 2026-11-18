@@ -34,7 +34,11 @@ The address of an open song is always its plain one
 edits. Sharing is explicit: the **Share** button in the section panel's "Song"
 header copies a link that carries the song's content and confirms it with a
 toast: `/sonata/song/<id>;title=…;grid=…;ug=…;groove=…` (keys:
-`SONG_LINK_KEYS`, core).
+`SONG_LINK_KEYS`, core). Free text (the title, the grid) is written in
+the readable link spelling (`toLinkText` / `fromLinkText`, core) — a space `_`,
+a newline `~`, a `;` `!`, `*` escaping a literal one — so the address reads
+`title=New_Chord_Grid;grid=key%3A_Eb~!_Intro~(Abmaj7_Gm7)…`, not a wall of
+`%20` / `%0A`.
 
 - **Each part is a contribution.** `Library.SongLink({ key, useValue, create?,
   apply? })` — the chord-grid source owns `grid` (the grid text, read from the
@@ -459,6 +463,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `UpdateSongBody`
   - Exports (values):
     - `deleteSong`
+    - `fromLinkText`
     - `sonataPlayerRoute`
     - `SONG_LINK_KEYS`
     - `songAttachmentLinks`
@@ -467,6 +472,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `songLibrary`
     - `SongSchema`
     - `songsEntityRef`
+    - `toLinkText`
     - `updateSong`
 - Cross-plugin:
   - Uses tokens: 35 vars — full list in [REFERENCE.md](./REFERENCE.md)

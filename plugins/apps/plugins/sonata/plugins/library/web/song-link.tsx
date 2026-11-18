@@ -10,10 +10,12 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
+  fromLinkText,
   SONG_LINK_KEYS,
   sonataPlayerRoute,
   type SongId,
   type SongLinkKey,
+  toLinkText,
 } from "../core";
 import { Library, type SongLinkValue } from "./slots";
 import { useCurrentSong } from "./use-current-song";
@@ -116,7 +118,7 @@ export function ShareSongButton(): ReactNode {
     if (link === null || song === undefined || song === null) return;
     const path = sonataPlayerRoute.link(sonataApp, {
       songId: song.id,
-      title: song.title,
+      title: toLinkText(song.title),
       ...link,
     });
     const url = new URL(path, window.location.href).href;
@@ -201,7 +203,8 @@ export function SongLinkImport({
   const readLive = useLiveReader();
   const openDialog = useOpenDialog();
   const [failure, setFailure] = useState<string | null>(null);
-  const title = params.title ?? UNTITLED;
+  const title =
+    params.title === undefined ? UNTITLED : fromLinkText(params.title);
 
   if (creator === null) {
     throw new Error(

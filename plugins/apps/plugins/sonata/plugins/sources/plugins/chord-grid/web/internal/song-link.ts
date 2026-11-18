@@ -7,12 +7,17 @@ import {
   beatToSeconds,
   scoreEndBeat,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import {
+  fromLinkText,
+  toLinkText,
+} from "@plugins/apps/plugins/sonata/plugins/library/core";
 import { asChordGridRaw, compile } from "../../core";
 import { createChordGridSong } from "../../shared/endpoints";
 import { CHORD_GRID_SOURCE_ID } from "../constants";
 
 /**
- * The open song's grid text, as its link spells it (`;grid=`): the loaded
+ * The open song's grid text, as its link spells it (`;grid=`, in the
+ * library's readable link spelling — `toLinkText`): the loaded
  * document's raw — so an edit reaches the address as it is typed, before its
  * debounced save — or none for a song with no chord grid.
  */
@@ -20,7 +25,7 @@ function useGridLinkValue(): SongLinkValue {
   const raw = useSongDocument().sourceRaw(CHORD_GRID_SOURCE_ID);
   return {
     known: true,
-    value: raw === undefined ? null : asChordGridRaw(raw).text,
+    value: raw === undefined ? null : toLinkText(asChordGridRaw(raw).text),
   };
 }
 
@@ -34,7 +39,8 @@ export const chordGridSongLink = Library.SongLink({
   key: "grid",
   useValue: useGridLinkValue,
   create: async ({ fetchEndpoint }, { id, title, value }) => {
-    const score = compile({ text: value });
+    const text = fromLinkText(value);
+    const score = compile({ text });
     const endBeat = scoreEndBeat(score);
     await fetchEndpoint(
       createChordGridSong,
@@ -44,7 +50,7 @@ export const chordGridSongLink = Library.SongLink({
           id,
           title,
           composer: null,
-          chordText: value,
+          chordText: text,
           durationSec: beatToSeconds(score, endBeat),
           endBeat,
         },
