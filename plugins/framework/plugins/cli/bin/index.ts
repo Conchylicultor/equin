@@ -108,13 +108,18 @@ if (
   handedSlot === undefined ||
   realpathSync(handedSlot) !== realpathSync(REPO_ROOT)
 ) {
-  const [verb, job] = process.argv.slice(2);
+  // `supervised-exec <job>` is named by its job, `run <script>` by its script
+  // (an argv supervised job — desktop.fullscreen-budget — is a bare `run`, so
+  // the verb alone would file every such job under one `run` report).
+  const [verb, operand] = process.argv.slice(2);
   holdSlotLeaseSync(
     REPO_ROOT,
     verb === "build" ? "build-relay" : "exec-child",
-    verb === "supervised-exec" && job !== undefined
-      ? job
-      : (verb ?? "(no verb)"),
+    verb === "supervised-exec" && operand !== undefined
+      ? operand
+      : verb === "run" && operand !== undefined
+        ? `run ${operand}`
+        : (verb ?? "(no verb)"),
   );
 }
 

@@ -109,8 +109,8 @@ export interface SlotHolder {
   acquiredAt: string;
   /**
    * What the holder is, in words a report names it by: a supervised child's
-   * job name (`worktree.prepare`), a CLI process's verb, a backend's
-   * namespace, a build's id. `null` on a record written without one (the
+   * job name (`worktree.prepare`), a CLI process's verb (`run <script>` for
+   * a `./equin run`), a backend's namespace, a build's id. `null` on a record written without one (the
    * guard bootstrap's copy).
    */
   label: string | null;

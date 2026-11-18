@@ -109,7 +109,9 @@ pool lock: every reclaim, and each slot just before it is stamped unserved)
 reaps by the lock — unheld, every record is a dead holder's, a reused pid
 included. Records name;
 the lock decides (`probeSlotLock`). `label` names the holder for a report: a supervised child's job name (`worktree.prepare`), a
-CLI process's verb, a backend's namespace, a build's id.
+CLI process's verb (`run <script>` for a `./equin run` — an argv supervised
+job such as `desktop.fullscreen-budget` — so each script is its own row), a
+backend's namespace, a build's id.
 
 Who holds a slot:
 

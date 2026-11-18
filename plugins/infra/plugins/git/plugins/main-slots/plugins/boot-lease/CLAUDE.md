@@ -29,8 +29,8 @@ it loads code from the slot. See the parent `main-slots` for what a slot is.
   plus a few leaf barrels), because its callers take it before loading the
   code it protects:
   - the CLI bootstrap (`framework/cli/bin/index.ts`) — every `./equin` run
-    from a slot holds it for life, kind `exec-child` (labelled by its verb, or
-    a supervised child's job name) or `build-relay` (a `./equin build`), except
+    from a slot holds it for life, kind `exec-child` (labelled by its verb — `run <script>` for a
+    `./equin run` — or a supervised child's job name) or `build-relay` (a `./equin build`), except
     in the slot handed to a build (`EQUIN_BUILD_SLOT`);
   - the agent host (`conversations/runtime-sdk/bin/agent-host.ts`), kind
     `agent-boot`, released by `bin/agent.ts` once its static imports are in.
