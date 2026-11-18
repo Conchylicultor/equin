@@ -67578,6 +67578,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `checkUpstreamEndpoint`
           - `compareReleases`
+          - `CUT_REFUSED_EXIT_CODE`
           - `cutReleaseEndpoint`
           - `newestReleaseTag`
           - `nextReleaseTag`

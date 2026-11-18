@@ -37,6 +37,7 @@ declarations.
   - Exports (values):
     - `checkUpstreamEndpoint`
     - `compareReleases`
+    - `CUT_REFUSED_EXIT_CODE`
     - `cutReleaseEndpoint`
     - `newestReleaseTag`
     - `nextReleaseTag`

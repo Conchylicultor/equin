@@ -115,8 +115,10 @@ cut runs too). It recomputes on `main` moving, a tag created or deleted
 terminal alike), a `build_runs` write and an adopted deploy.
 
 **The button runs the CLI.** `POST /api/upstream/release` spawns `./equin
-version cut` in the backend's checkout: one implementation, every refusal its
-own (shown as the toast). The row only disables it ahead of time, for the
+version cut` in the backend's checkout (main's slot): one implementation,
+every refusal its own (the cut's `CUT_REFUSED_EXIT_CODE`, shown as the toast).
+Any other exit is a crash, thrown — a 5xx, filed as an `endpoint-errors`
+report — never toasted as a refusal. The row only disables it ahead of time, for the
 reason on the commit line: `· main is building 8c1e2f0` (stricter than the cut:
 the served commit is about to be replaced), `· main's last build failed` (its
 build of the served commit; **Open build** opens the run), no finished build on

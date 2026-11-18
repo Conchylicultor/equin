@@ -73,6 +73,15 @@ export const upstreamPublisherStatus = liveValue("upstream.publisher-status", {
 });
 
 /**
+ * The exit code `./equin version cut` refuses with — and ONLY a refusal: the
+ * cut looked and found a reason not to release (its reason on stderr). Not 1,
+ * which every CLI failure exits with (an uncaught throw, a failed install):
+ * sharing it made a crashed cut read as a refusal — a toast, no report — so a
+ * broken button could never be investigated (2026-11-18).
+ */
+export const CUT_REFUSED_EXIT_CODE = 3;
+
+/**
  * Cut a release: run `./equin version cut` in main's checkout — the CLI
  * itself, so the button and the terminal share one implementation and every
  * refusal. `released` carries what the cut said it did; `refused`, the cut's

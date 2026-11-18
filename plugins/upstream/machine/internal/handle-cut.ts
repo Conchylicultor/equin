@@ -2,7 +2,10 @@ import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 import { implementMachine } from "@plugins/infra/plugins/endpoints/machine";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
-import { cutReleaseEndpoint } from "@plugins/upstream/plugins/release/core";
+import {
+  CUT_REFUSED_EXIT_CODE,
+  cutReleaseEndpoint,
+} from "@plugins/upstream/plugins/release/core";
 
 /**
  * One fetch of the publish remote and one tag push, the cut's own bounds
@@ -17,8 +20,10 @@ const CUT_TIMEOUT_MS = 10 * 60_000;
  * released. On a worktree's backend the CLI refuses (a release is cut from
  * main's checkout), and that refusal is what the page shows.
  *
- * A refusal is the CLI's exit 1 with its reason on stderr; anything else
- * (killed, timed out) is a failure of the cut itself, thrown.
+ * A refusal is the CLI's `CUT_REFUSED_EXIT_CODE` with its reason on stderr;
+ * anything else (a crash — exit 1 —, killed, timed out) is a failure of the
+ * cut itself, thrown, so the endpoint answers 5xx and the failure is filed as
+ * a report an agent can investigate, not only toasted.
  */
 export const handleCutRelease = implementMachine(
   cutReleaseEndpoint,
@@ -34,7 +39,8 @@ export const handleCutRelease = implementMachine(
       );
     if (r.exitCode === 0)
       return { kind: "released", detail: lastLine(r.stdout) };
-    if (r.exitCode === 1) return { kind: "refused", detail: r.stderr.trim() };
+    if (r.exitCode === CUT_REFUSED_EXIT_CODE)
+      return { kind: "refused", detail: r.stderr.trim() };
     throw new Error(
       `\`${argv.join(" ")}\` exited ${r.exitCode}${r.signalCode === null ? "" : ` (${r.signalCode})`}.\n${r.stderr.trim()}`,
     );

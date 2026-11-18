@@ -1,19 +1,22 @@
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import {
-  getMainRepoRoot,
   getWorktreeRoot,
   spawnCaptured,
   spawnExpectOk,
   spawnPassthrough,
 } from "@plugins/infra/plugins/spawn/core";
 import { resolvePublishTarget } from "@plugins/infra/plugins/git/plugins/remotes/core";
-import { actAsCheckoutNamespace } from "@plugins/infra/plugins/paths/core";
+import {
+  actAsCheckoutNamespace,
+  checkoutRef,
+} from "@plugins/infra/plugins/paths/core";
 import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 import { unresolved } from "@plugins/network/plugins/live/plugins/live-state/core";
 import { readServedDeployment } from "@plugins/build/plugins/deployment/cli";
 import { createBuildRunRecorder } from "@plugins/build/plugins/run-ledger/cli";
 import { UPSTREAM_BRANCH } from "@plugins/upstream/core";
 import {
+  CUT_REFUSED_EXIT_CODE,
   nextReleaseTag,
   RELEASE_TAG_GLOB,
   releaseTagMessage,
@@ -26,9 +29,13 @@ const GIT_TIMEOUT_MS = 60_000;
 /** The one network read: the publish remote's main and release tags. */
 const FETCH_TIMEOUT_MS = 300_000;
 
+/**
+ * A refusal: the cut looked and will not release. Its own exit code, never 1 —
+ * the Release button tells a refusal (a toast) from a crash (a report) by it.
+ */
 function refuse(message: string): never {
   console.error(message);
-  process.exit(1);
+  process.exit(CUT_REFUSED_EXIT_CODE);
 }
 
 function lines(stdout: string): string[] {
@@ -56,7 +63,8 @@ async function isAncestor(
   );
   if (r.exitCode === 0) return true;
   if (r.exitCode === 1) return false;
-  refuse(
+  // Not a refusal: git could not answer, which is a failure of the cut.
+  throw new Error(
     `git merge-base --is-ancestor ${commit} ${ref} failed:\n${r.stderr.trim()}`,
   );
 }
@@ -79,7 +87,11 @@ function behind(served: string, head: string): string {
  *
  * Each refusal below is one way it might not be a good release:
  *
- * 1. **Main's checkout, on `main`.** The served dist read is main's.
+ * 1. **A checkout of main** (`checkoutRef`): the repo's main checkout or a
+ *    main slot — main's backend runs from a slot, detached at the commit it
+ *    serves, and the Release button runs this there. Main's line is the
+ *    `main` BRANCH (`refs/heads/main`), never the checkout's HEAD: a slot's is
+ *    the served commit, and the human's checkout may sit on another branch.
  * 2. **This checkout publishes** (`resolvePublishTarget`). A clone has nowhere
  *    to push a tag its users would see.
  * 3. **Main serves a known commit** — the served dist's `.build-commit`
@@ -100,10 +112,10 @@ const run: CliAction<[], { message?: string; dryRun?: boolean }> = async (
   opts,
 ) => {
   const root = await getWorktreeRoot();
-  if (root !== (await getMainRepoRoot()))
+  if ((await checkoutRef(root)).kind !== "main")
     refuse(
-      `Run \`./equin version cut\` in main's checkout (${await getMainRepoRoot()}): a release is the commit ` +
-        `main serves, checked against main's own build of it.`,
+      `Run \`./equin version cut\` in main's checkout: a release is the commit main serves, checked against ` +
+        `main's own build of it.`,
     );
 
   const target = await resolvePublishTarget(root);
@@ -113,12 +125,12 @@ const run: CliAction<[], { message?: string; dryRun?: boolean }> = async (
         `pushed where clones fetch from. Releases are cut by the checkout that owns the repository.`,
     );
 
-  const branch = await git(root, "rev-parse", "--abbrev-ref", "HEAD");
-  if (branch !== UPSTREAM_BRANCH)
-    refuse(
-      `Main's checkout is on \`${branch}\`, not \`${UPSTREAM_BRANCH}\`. A release is cut from main.`,
-    );
-  const head = await git(root, "rev-parse", "HEAD");
+  const head = await git(
+    root,
+    "rev-parse",
+    "--verify",
+    `refs/heads/${UPSTREAM_BRANCH}^{commit}`,
+  );
 
   const namespace = await actAsCheckoutNamespace(root);
   const web = (await readServedDeployment(namespace)).deployable.find(
