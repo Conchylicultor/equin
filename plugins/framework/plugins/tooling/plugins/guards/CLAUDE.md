@@ -111,6 +111,13 @@ cache the whole host shares.
   by what it expands to.
 - Opt-in elsewhere: an explicit depth, ≤ 2 for a names-only walk, ≤ 1 for a
   content search. `du -d` bounds what it prints, not what it walks.
+  The bound is one pair of constants (`MAX_NAME_DEPTH` / `MAX_CONTENT_DEPTH`)
+  the rule and the denial's advice (`DEPTH_HINT`) both read, and a too-deep
+  walk's denial names its depth against the bound — it once said only "not a
+  bounded place" to an `fd -d 3` while advising `fd -d 2` (measured 2026-11-18:
+  185 refusals in 7 days, none of a walk within the bound; ~19 named one deep
+  subdirectory with a depth past it, the rest `~/.equin` / `~/.claude/projects`
+  3–8 levels deep — no per-dir allowlist).
 - **A warning, not a wall.** Its denial is `allowOnRepeat`: the first
   out-of-scope search is refused with the narrowing hints, and the same agent
   repeating the IDENTICAL call is let through — a deliberate search of

@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import { createContext } from "../context";
 import type { Verdict } from "../types";
+import { DEPTH_HINT, MAX_CONTENT_DEPTH, MAX_NAME_DEPTH } from "../walk-scope";
 import {
   globScopeGuard,
   grepScopeGuard,
@@ -162,6 +163,34 @@ describe("search-scope guard", () => {
       expect(blocks(`rg --max-depth 2 foo ~`)).toBe(true);
       expect(blocks(`fd -d 3 . ~`)).toBe(true);
       expect(blocks(`find ~ -maxdepth 5 -name x`)).toBe(true);
+    });
+  });
+
+  describe("the denial and the rule share one depth bound", () => {
+    // 2026-11-18: `fd -d 3 ffmpeg <one deps dir>` was refused as "not a
+    // bounded place to search" while the hint advised `fd -d 2` — the reason
+    // never said the depth was what crossed the line.
+    const reason = (command: string): string => {
+      const v = verdict(command);
+      if (v.kind !== "deny") throw new Error(`expected a denial: ${command}`);
+      return v.reason;
+    };
+    test("a walk one level past the bound is refused, naming both numbers", () => {
+      const deeper = MAX_NAME_DEPTH + 1;
+      expect(reason(`fd -d ${deeper} . ~`)).toContain(
+        `its depth bound (${deeper}) is deeper than the ${MAX_NAME_DEPTH} allowed there for a names-only walk`,
+      );
+      expect(reason(`rg --max-depth ${MAX_CONTENT_DEPTH + 1} foo ~`)).toContain(
+        `deeper than the ${MAX_CONTENT_DEPTH} allowed there for a content search`,
+      );
+    });
+    test("the walk the hint suggests is the one the rule accepts", () => {
+      expect(reason(`fd . ~`)).toContain("has no depth bound");
+      expect(reason(`fd . ~`)).toContain(DEPTH_HINT);
+      expect(DEPTH_HINT).toContain(`fd -d ${MAX_NAME_DEPTH} . <dir>`);
+      expect(blocks(`fd -d ${MAX_NAME_DEPTH} . ~`)).toBe(false);
+      expect(blocks(`rg --files --max-depth ${MAX_NAME_DEPTH} ~`)).toBe(false);
+      expect(blocks(`rg --max-depth ${MAX_CONTENT_DEPTH} foo ~`)).toBe(false);
     });
   });
 

@@ -28,8 +28,20 @@ import type { Walk, WalkRoot } from "./walk-roots";
 export type WalkVerdict =
   { ok: true } | { ok: false; root: WalkRoot; reason: string };
 
-const MAX_NAME_DEPTH = 2;
-const MAX_CONTENT_DEPTH = 1;
+/**
+ * The deepest a walk outside the bounded places may go — the one definition
+ * the rule (`judgeRoot`) and the denial's advice (`DEPTH_HINT`) both read.
+ */
+export const MAX_NAME_DEPTH = 2;
+export const MAX_CONTENT_DEPTH = 1;
+
+/** The depth bound outside the bounded places, for this kind of walk. */
+function depthBound(walk: Walk): number {
+  return walk.readsContent ? MAX_CONTENT_DEPTH : MAX_NAME_DEPTH;
+}
+
+/** How to look at a directory's shape within the bound — the denial's advice. */
+export const DEPTH_HINT = `To look at a directory's shape, bound the depth to at most ${MAX_NAME_DEPTH} (${MAX_CONTENT_DEPTH} for a content search like \`rg foo\`): \`fd -d ${MAX_NAME_DEPTH} . <dir>\`, \`rg --files --max-depth ${MAX_NAME_DEPTH} <dir>\`, \`rg --max-depth ${MAX_CONTENT_DEPTH} foo <dir>\`, \`ls <dir>\`. That holds for any directory, however deep it lies — start nearer what you are looking for instead of going deeper.`;
 /**
  * A glob expanding to more entries than this is refused without looking at
  * each one: the hook would stat them all, and a command naming that many
@@ -126,12 +138,17 @@ function judgeRoot(root: WalkRoot, walk: Walk, ctx: GuardContext): WalkVerdict {
   if (sharedParents().some((d) => strictlyInside(p, d))) return { ok: true };
   if (!isDirectory(p)) return { ok: true };
 
-  const bound = walk.readsContent ? MAX_CONTENT_DEPTH : MAX_NAME_DEPTH;
+  const bound = depthBound(walk);
   if (walk.maxDepth !== null && walk.maxDepth <= bound) return { ok: true };
+  const outside = `it is outside your workspace (\`${ctx.workRoot}\`)`;
+  const kind = walk.readsContent ? "a content search" : "a names-only walk";
   return {
     ok: false,
     root,
-    reason: `it is outside your workspace (\`${ctx.workRoot}\`) and not a bounded place to search`,
+    reason:
+      walk.maxDepth === null
+        ? `${outside} and not a bounded place to search, and the walk has no depth bound`
+        : `${outside}, and its depth bound (${walk.maxDepth}) is deeper than the ${bound} allowed there for ${kind}`,
   };
 }
 
