@@ -34717,8 +34717,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `webCollectedDir`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 113 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
-          - `primitives` ×25
+        - Imported by: 114 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+          - `primitives` ×26
           - `apps` ×19
           - `reports` ×8
           - `ui` ×8
@@ -34783,7 +34783,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Shortcuts.Shortcut` "hints.tour-back (ArrowLeft)"
       - `Shortcuts.Shortcut` "hints.tour-end (Escape)"
       - `Shortcuts.Shortcut` "hints.tour-next (ArrowRight)"
-    - Uses: 28 symbols — full list in [`plugins/hints/REFERENCE.md`](../plugins/hints/REFERENCE.md)
+    - Uses: 29 symbols — full list in [`plugins/hints/REFERENCE.md`](../plugins/hints/REFERENCE.md)
       - `network/live/live-state` ×3
       - `primitives/css/ui-kit` ×3
       - `primitives/overlay/popup-open` ×3
@@ -34801,6 +34801,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/dom/element-size.useResizeObserver`
       - `primitives/dom/scroll-reveal.revealElement`
       - `primitives/latest-ref.useEventCallback`
+      - `primitives/scope/host-election.useElectedHost`
       - `primitives/shortcuts.defineShortcut`
       - `ui/icons.Icon`
       - `ui/theme-engine.ThemeEngine`
@@ -42595,7 +42596,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `createAmbient`
           - `createAmbientHost`
           - `useAmbientHost`
-    - **`background`** — The background music service: apps offer music as BackgroundMusic.Source contributions (an app, a kind, useTitle, and usePlayer — run from the page root, so the music outlives the app's views); the service plays one at a time per page and one page at a time in the browser (a BroadcastChannel claim, the playing page's state mirrored to the others' buttons and driven from them, a per-page Web Lock telling when it is gone). An app view reports itself on screen with useMusicSource(id, { shown }): when the last view leaves, its music pauses unless Keep playing across apps (config, on by default) is on — never across a closed desktop window (useSurfaceShowsAppsSideBySide: leaving there is closing the app); music an app plays itself (useForegroundMusic) pauses background music nobody sees. Music an app played in its view can outlive the view (useMusicSource(id).adopt(), a Sonata song whose page went away): kept across apps (and not left by closing its desktop window), it becomes what the service plays; a source carrying only such music lists itself while it has some (useAvailable) and may keep its own volume (ownVolume: no device slider, no gain). The global action bar's music button (a note, moving bars while playing) opens the panel: now playing with its app, play / pause, the device's volume and stop; every app's music; and the across-apps switch. Registers the background music config (Keep playing across apps) for Settings → Config.
+    - **`background`** — The background music service: apps offer music as BackgroundMusic.Source contributions (an app, a kind, useTitle, and usePlayer — run from the page root, so the music outlives the app's views; a root host of every scope of which one runs, so a page holding the service only for a scope — the website's live demo — plays it too); the service plays one at a time per page and one page at a time in the browser (a BroadcastChannel claim, the playing page's state mirrored to the others' buttons and driven from them, a per-page Web Lock telling when it is gone). An app view reports itself on screen with useMusicSource(id, { shown }): when the last view leaves, its music pauses unless Keep playing across apps (config, on by default) is on — never across a closed desktop window (useSurfaceShowsAppsSideBySide: leaving there is closing the app); music an app plays itself (useForegroundMusic) pauses background music nobody sees. Music an app played in its view can outlive the view (useMusicSource(id).adopt(), a Sonata song whose page went away): kept across apps (and not left by closing its desktop window), it becomes what the service plays; a source carrying only such music lists itself while it has some (useAvailable) and may keep its own volume (ownVolume: no device slider, no gain). The global action bar's music button (a note, moving bars while playing) opens the panel: now playing with its app, play / pause, the device's volume and stop; every app's music; and the across-apps switch. Registers the background music config (Keep playing across apps) for Settings → Config.
       - Web:
         - Slots: `BackgroundMusic.Source`
         - Slot contributors:
@@ -42605,7 +42606,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ConfigV2.WebRegister` "config"
           - `Core.Root` → `BackgroundMusicRoot`
           - `ActionBar.Item` → `MusicButton`
-        - Uses: 24 symbols — full list in [`plugins/music/plugins/background/REFERENCE.md`](../plugins/music/plugins/background/REFERENCE.md)
+        - Uses: 25 symbols — full list in [`plugins/music/plugins/background/REFERENCE.md`](../plugins/music/plugins/background/REFERENCE.md)
           - `config_v2` ×4
           - `apps-core/tabs` ×2
           - `primitives/css/control-panel` ×2
@@ -42623,6 +42624,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/icon-button.IconButton`
           - `primitives/latest-ref.useEventCallback`
           - `primitives/loading.Loading`
+          - `primitives/scope/host-election.useElectedHost`
           - `shell/action-bar.ActionBar`
           - `ui/icons.Icon`
         - Exports (types):
@@ -42644,8 +42646,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/isle/world-view`
           - `apps/sonata/background-music`
           - `apps/sonata/player`
-      - Exemptions:
-        - Exempts itself from: `page-hosts-on-demand` — `web/index.ts` (sanctioned)
     - **`chord-box`** — The chord box: <ChordBox> (a frame painted in the colour of its numeral's number — filled tile, given or empty — holding its numeral and name, with a full-bleed hit button behind the content and now / selected states), <ChordNumeral> (the Roman numeral in the display serif, its mark raised in the sans), chordToneStyle / chordColour (the degree's --chord-N colour and tile depth as the --fn custom properties the .chord-tone paint reads), and chordPaint — the four named paints (tile, tint, tint-quiet, ghost) every chord surface applies by name instead of re-stating a chord colour, with .chord-caption for a reading under a numeral (V/V, I/3) in the paint's own ink. Knows degrees and strings only, so any app can draw a chord the same way.
       - Web:
         - Uses:
@@ -57390,6 +57390,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/file-explorer/browser`
               - `conversations/conversation-view/jsonl-viewer`
               - `page/editor`
+        - **`host-election`** — Which mounted root host of a page-global service runs: useElectedHost(service) — for a `scope: "each"` root host whose engine is ONE per page (a hints tour, the background music), mounted at the page root and in every `<PluginScope>`. Every mounted host registers under its service; exactly one is elected: the page's when the page holds the plugin, else the first scope's (the standalone website, which holds the plugin only for its demo's scope). A static render registers nothing and elects no one.
+          - Cross-plugin:
+            - Imported by:
+              - `hints`
+              - `music/background`
+          - Web:
+            - Exports (values): `useElectedHost`
         - **`install-sink`** — Installed-sink primitive: defineInstallSink declares the module-level slot a higher layer installs an implementation into and a lower layer calls (the navigator, the history adapter, the overlay fallback). Presence is answerable from render ONLY through the subscribed useInstalled(), so a late install re-renders whoever asked early; the imperative sample is named peek… so install-sink/no-render-phase-peek can keep it out of render.
           - Cross-plugin:
             - Imported by:

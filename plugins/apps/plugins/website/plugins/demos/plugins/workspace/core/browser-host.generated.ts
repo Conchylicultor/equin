@@ -747,6 +747,7 @@ export const browserHost = {
     "primitives.scope.app-instance",
     "primitives.scope.context-relay",
     "primitives.scope.dom-scope",
+    "primitives.scope.host-election",
     "primitives.scope.install-sink",
     "primitives.scope.render-origin",
     "primitives.scope.scoped-store",

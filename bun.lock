@@ -7010,6 +7010,10 @@
       "name": "@equin/plugin-primitives-scope-dom-scope",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/scope/plugins/host-election": {
+      "name": "@equin/plugin-primitives-scope-host-election",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/scope/plugins/install-sink": {
       "name": "@equin/plugin-primitives-scope-install-sink",
       "version": "0.0.1",
@@ -11648,6 +11652,8 @@
     "@equin/plugin-primitives-scope-context-relay": ["@equin/plugin-primitives-scope-context-relay@workspace:plugins/primitives/plugins/scope/plugins/context-relay"],
 
     "@equin/plugin-primitives-scope-dom-scope": ["@equin/plugin-primitives-scope-dom-scope@workspace:plugins/primitives/plugins/scope/plugins/dom-scope"],
+
+    "@equin/plugin-primitives-scope-host-election": ["@equin/plugin-primitives-scope-host-election@workspace:plugins/primitives/plugins/scope/plugins/host-election"],
 
     "@equin/plugin-primitives-scope-install-sink": ["@equin/plugin-primitives-scope-install-sink@workspace:plugins/primitives/plugins/scope/plugins/install-sink"],
 

@@ -101,7 +101,7 @@ at a time); tours stay the page's.
 scope (`scope: "each"`, web-sdk's `RootScope`): a page that holds this plugin
 only for a `<PluginScope>` (the standalone website, whose demo loads it on
 demand) mounts it nowhere but inside the scope. Every mounted host registers
-and exactly one runs (`web/internal/host-election.ts`): the page's when there
+and exactly one runs (`primitives/scope/host-election`'s `useElectedHost("hints")`): the page's when there
 is one (main — unchanged), else the first scope's. Requests carry their scope,
 so whichever runs serves every scope's tips alike.
 
@@ -341,7 +341,7 @@ Exhibits: `hints/card`, `hints/caption`, `hints/spotlight`, `hints/welcome`.
     - `Shortcuts.Shortcut` "hints.tour-back (ArrowLeft)"
     - `Shortcuts.Shortcut` "hints.tour-end (Escape)"
     - `Shortcuts.Shortcut` "hints.tour-next (ArrowRight)"
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/live-state` ×3
     - `primitives/css/ui-kit` ×3
     - `primitives/overlay/popup-open` ×3
@@ -359,6 +359,7 @@ Exhibits: `hints/card`, `hints/caption`, `hints/spotlight`, `hints/welcome`.
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/dom/scroll-reveal.revealElement`
     - `primitives/latest-ref.useEventCallback`
+    - `primitives/scope/host-election.useElectedHost`
     - `primitives/shortcuts.defineShortcut`
     - `ui/icons.Icon`
     - `ui/theme-engine.ThemeEngine`

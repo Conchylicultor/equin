@@ -53,7 +53,7 @@ import {
 } from "../internal/tip-queue";
 import { ledgerOf, subscribeLedgers } from "../internal/seen-ledger";
 import { inScope } from "../internal/scope-key";
-import { useElectedHintHost } from "../internal/host-election";
+import { useElectedHost } from "@plugins/primitives/plugins/scope/plugins/host-election/web";
 import {
   canGoBack,
   currentStep,
@@ -90,7 +90,7 @@ const INPUT_EVENTS = [
 /**
  * The one hints host, at `Core.Root` — outside every tab, so a tour crosses
  * apps. Mounted at the page root and in every plugin scope; one of them runs
- * (`useElectedHintHost`): the page's, else — on a page that holds the hints
+ * (`useElectedHost`): the page's, else — on a page that holds the hints
  * plugin only for a scope — the scope's. It owns the engine's effects: stepping the tip queue (one waiting-window
  * timer), resolving `startTour` / `autoStart` against the declared tours, the
  * single tour-exit path, routing signals to the running tour, and declaring
@@ -101,7 +101,7 @@ const INPUT_EVENTS = [
  */
 export function HintHost() {
   // A root host of every scope (`scope: "each"`), of which one runs.
-  return useElectedHintHost() ? <ElectedHintHost /> : null;
+  return useElectedHost("hints") ? <ElectedHintHost /> : null;
 }
 
 function ElectedHintHost() {

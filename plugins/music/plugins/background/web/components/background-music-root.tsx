@@ -2,6 +2,7 @@ import { useEffect, type ReactNode } from "react";
 import { useConfig } from "@plugins/config_v2/web";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import { useReloadHold } from "@plugins/primitives/plugins/dom/plugins/reload-readiness/web";
+import { useElectedHost } from "@plugins/primitives/plugins/scope/plugins/host-election/web";
 import { backgroundMusicConfig } from "../../shared/config";
 import { BackgroundMusic, type BackgroundMusicSource } from "../slots";
 import {
@@ -14,12 +15,23 @@ import { gainOf, useVolume } from "../internal/volume";
 import { ServiceMediaSession } from "./service-media-session";
 
 /**
- * The service's page root: joins the browser's other pages, follows the
- * across-apps setting, and plays — here, outside every app, so the music
- * outlives the app's views — the current source's player (and, idle, every
- * source's while the panel is open).
+ * The service's root host, mounted at the page root and in every plugin scope
+ * (`scope: "each"`), of which one runs (`useElectedHost`): the page's, else —
+ * on a page that holds the service only for a scope (the standalone website's
+ * live demo, whose island plays its music through it) — the scope's. The store
+ * is one per page, so whichever runs plays every scope's music alike.
  */
 export function BackgroundMusicRoot(): ReactNode {
+  return useElectedHost("background-music") ? <ElectedMusicRoot /> : null;
+}
+
+/**
+ * The running root: joins the browser's other pages, follows the across-apps
+ * setting, and plays — here, outside every app, so the music outlives the
+ * app's views — the current source's player (and, idle, every source's while
+ * the panel is open), read from the contributions of its own scope.
+ */
+function ElectedMusicRoot(): ReactNode {
   const { acrossApps } = useConfig(backgroundMusicConfig);
   useEffect(() => setAcrossApps(acrossApps), [acrossApps]);
   useEffect(() => connectPages(), []);
