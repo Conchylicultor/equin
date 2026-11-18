@@ -14,7 +14,8 @@ import {
   type UnansweredServer,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useToast, type Toast } from "@plugins/shell/plugins/notifications/web";
-import { getHealth } from "../internal/client";
+import { getHealth, reachHost } from "../internal/client";
+import { createSocketDownWatch } from "../internal/socket-down-watch";
 import { PUSH_STALL_MS } from "../internal/push-stall";
 import { wedgeReportSink } from "../internal/wedge-report-sink";
 import { createVisibleDeadlines } from "../internal/visible-deadline";
@@ -189,29 +190,34 @@ export function WedgeWatchdog() {
 
     // --- Signal 1: socket-down wedge ---
     // One deadline per url: armed on connecting/reconnecting/closed, cleared
-    // on open, elapsed after SOCKET_DOWN_MS of visible time in total.
+    // on open, elapsed after SOCKET_DOWN_MS of visible time in total — and
+    // filed only once the host is shown answering HTTP (a host the page cannot
+    // reach at all is the visitor's network: the window restarts instead).
+    const socketDown = createSocketDownWatch({
+      deadlines,
+      downMs: SOCKET_DOWN_MS,
+      reach: reachHost,
+      onWedge: (url, status) => {
+        const channelKind = liveStateSocketKind(url);
+        if (channelKind === null) return;
+        wedge(
+          toast,
+          "socket-down",
+          `socket-down:${channelKind}`,
+          `${url} (${status})`,
+        );
+      },
+    });
     const unsubWs = subscribeWsStatus(({ url, status }) => {
       // The status bus is global across EVERY app socket (logs, terminal,
       // build, …). Only the live-state pipeline sockets count toward a
       // live-state wedge — an unrelated socket's downtime (e.g. a build popover
       // left open while the server restarts) must not file a live-state crash.
-      const channelKind = liveStateSocketKind(url);
-      if (channelKind === null) return;
-      if (status === "open") {
-        deadlines.clear(url);
-      } else {
-        // "connecting" counts: a first connect whose handshake never answers
-        // fires no event and never becomes "reconnecting" — the socket just
-        // stays connecting, which once went 9 minutes unreported.
-        deadlines.arm(url, SOCKET_DOWN_MS, () => {
-          wedge(
-            toast,
-            "socket-down",
-            `socket-down:${channelKind}`,
-            `${url} (${status})`,
-          );
-        });
-      }
+      if (liveStateSocketKind(url) === null) return;
+      // "connecting" counts: a first connect whose handshake never answers
+      // fires no event and never becomes "reconnecting" — the socket just
+      // stays connecting, which once went 9 minutes unreported.
+      socketDown.status(url, status);
     });
 
     // --- Signal 3: transport faults the networking layer recovers from ---
@@ -238,10 +244,16 @@ export function WedgeWatchdog() {
         // the page runs is reported as socket-down, on the same visible clock.
         const visibleMs = deadlines.visibleMsSince(stalledSince);
         if (visibleMs < CONNECT_DEADLINE_MS) return;
+        // The host must answer HTTP for the stall to be the live-state path's:
+        // a page that cannot reach its host at all (no answer) is looking at
+        // the visitor's network, and files nothing — a socket still down once
+        // the host answers is socket-down's (`reachHost`, `internal/client.ts`).
         // A server (re)booting during the attempt held the handshake at the
         // gateway for the whole deadline — a boot that slow is a fault of its
         // own, split into its own task by that fact.
-        void getHealth().then((health) => {
+        void reachHost().then((reach) => {
+          if (reach.kind === "no-answer") return;
+          const health = reach.health;
           if (health !== null && health.startedAt > stalledSince) {
             wedge(
               toast,
@@ -254,7 +266,7 @@ export function WedgeWatchdog() {
               toast,
               "connect-stalled",
               `connect-stalled:${kind}`,
-              `${detail}; server ${health === null ? "unreachable" : `up since ${new Date(health.startedAt).toISOString()}`}`,
+              `${detail}; server ${health === null ? `answered its health check with HTTP ${reach.status}` : `up since ${new Date(health.startedAt).toISOString()}`}`,
             );
           }
         });
@@ -285,12 +297,25 @@ export function WedgeWatchdog() {
       // server's silence as well as a visible one (2026-11-12: hidden tabs
       // measured reports.list:rows unanswered 18–111 s, muted as suspended).
       const visibleMs = deadlines.visibleMsSince(Date.now() - r.oldestWaitMs);
-      wedge(
-        toast,
-        "unanswered-sub",
-        `unanswered-sub:${r.server}:${r.oldestKey}`,
-        `${r.count} sub(s) unanswered on an open ${UNANSWERED_SERVER_LABEL[r.server]} socket, oldest ${r.oldestKey} ${r.oldestParams} for ${Math.round(r.oldestWaitMs / 1000)}s (${Math.round(visibleMs / 1000)}s visible; tabs on socket: ${r.attachedTabs ?? "?"}, connection ${r.connection ?? "-"}). Where the server stands on it: ${describeUnansweredTrail(r.trail)}`,
-      );
+      const file = () =>
+        wedge(
+          toast,
+          "unanswered-sub",
+          `unanswered-sub:${r.server}:${r.oldestKey}`,
+          `${r.count} sub(s) unanswered on an open ${UNANSWERED_SERVER_LABEL[r.server]} socket, oldest ${r.oldestKey} ${r.oldestParams} for ${Math.round(r.oldestWaitMs / 1000)}s (${Math.round(visibleMs / 1000)}s visible; tabs on socket: ${r.attachedTabs ?? "?"}, connection ${r.connection ?? "-"}). Where the server stands on it: ${describeUnansweredTrail(r.trail)}`,
+        );
+      // A server in this browser is reached without the network.
+      if (r.server === "in-browser") {
+        file();
+        return;
+      }
+      // A socket "open" over a link that no longer carries anything (the
+      // visitor's network dropped) leaves every sub unanswered: filed only
+      // when the host answers HTTP (`reachHost`, `internal/client.ts`). A socket that then
+      // closes is socket-down's to judge.
+      void reachHost().then((reach) => {
+        if (reach.kind === "answered") file();
+      });
     });
 
     // --- Signal 2: missed-updates wedge + self-heal ---
