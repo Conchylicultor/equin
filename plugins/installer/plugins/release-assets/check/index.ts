@@ -1,6 +1,11 @@
 import type { Check } from "@plugins/framework/plugins/tooling/core";
 import { RELEASE_TAG_ERE } from "@plugins/upstream/plugins/release/core";
-import { HANDOFF_MARKER, INSTALLER_BINARIES, RELEASE_WORKFLOW } from "../core";
+import {
+  ATTACH_MARKER,
+  HANDOFF_MARKER,
+  INSTALLER_BINARIES,
+  RELEASE_WORKFLOW,
+} from "../core";
 
 /** install.sh: repo root (its URL is the documented entry point). */
 const INSTALL_SCRIPT = "install.sh";
@@ -61,7 +66,7 @@ const tagGrammar: Check = {
 const assetNames: Check = {
   id: "release-assets:asset-names",
   description:
-    "The release workflow builds every INSTALLER_BINARIES asset, and install.sh carries the hand-off marker",
+    "The release workflow builds every INSTALLER_BINARIES asset, and install.sh carries the hand-off and attach markers (every attach marker it spells the current one)",
   async run(ctx) {
     const repo = await ctx.repo();
     const problems: string[] = [];
@@ -77,6 +82,17 @@ const assetNames: Check = {
       problems.push(
         `${INSTALL_SCRIPT} has lost its '${HANDOFF_MARKER}' line: stage 0 would no longer hand any new release to its own script`,
       );
+    if (script !== null) {
+      if (!script.split("\n").includes(ATTACH_MARKER))
+        problems.push(
+          `${INSTALL_SCRIPT} has lost its '${ATTACH_MARKER}' line: no install could hand its steps after the clone to the checkout's own script, and stage 0 would refuse every release for --ref main`,
+        );
+      for (const m of script.matchAll(/# installer-attach: \d+/g))
+        if (m[0] !== ATTACH_MARKER)
+          problems.push(
+            `${INSTALL_SCRIPT} spells '${m[0]}', but the install event protocol is '${ATTACH_MARKER}': its hand-over and stage 0 must test the marker it carries`,
+          );
+    }
     if (problems.length === 0) return { ok: true };
     return { ok: false, message: problems.join("\n") };
   },

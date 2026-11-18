@@ -27,7 +27,9 @@ curl -fsSL …/install.sh | bash -s -- --terminal --ref main                    
 
 Internal (passed between the install's own processes, never typed):
 `--release`, `--checkout` (stage 0 → the release's script), `--events-fd`,
-`--control-fd` (the window → its child), `--stage0-only` (the stage-0 test).
+`--control-fd` (the window → its child), `--attach <run dir> --mode <view>`
+(an install → the checkout's own script, § The checkout's own steps),
+`--stage0-only` (the stage-0 test).
 
 **The views.** The window (`equin-installer`, [`window`](plugins/window/CLAUDE.md))
 by default on a desktop; the **interactive terminal** view (a redrawn status
@@ -97,9 +99,13 @@ own (next section): fix wording in the step engine, and every view changes.
 - **Versioning**: `v` is the protocol's major version
   (`INSTALL_PROTOCOL_VERSION`); a renderer refuses any other. Every event is
   a `strictObject`, so even a new field breaks an older reader — which is
-  safe only because a release's window binary reads that release's own
-  `install.sh` and `./equin` (stage 0 fetches both from one tag). Bump `v`
-  when that stops holding (a window reading another release's stream).
+  safe only because a window reads only streams of its own protocol: a
+  release's window runs that release's `install.sh`, which hands the steps
+  after the clone only to a checkout carrying the same `# installer-attach:
+  <v>` line (§ The checkout's own steps) — so under `--ref main` the window
+  reads main's steps and `./equin`. Any change an older window can't read
+  bumps `v` (and with it the attach marker: `ATTACH_MARKER` is derived
+  from it, and `release-assets:asset-names` holds install.sh's spellings to it).
 - **Changing the stream**: edit `core/internal/events.ts`, the bash emitter
   (`ev` / `ev_*` in install.sh — hand-written JSON, escaped by `json_str`),
   the dry run (it must emit every type), and the renderers (the window's
@@ -146,6 +152,34 @@ own (next section): fix wording in the step engine, and every view changes.
   `read -t` in whole seconds (a timeout and EOF both return 1: a timeout
   leaves the variable as it was). Write `${a}━`, never `$a━`: 3.2 reads a
   non-ASCII byte after `$name` as part of the name.
+
+## The checkout's own steps (`--attach`)
+
+An install of ref X runs X's own steps on X's code. The running script — a
+release's, or stage 0's own — runs only what needs nothing from equin's code
+(tools, mise, the clone); then `hand_to_checkout` runs the CHECKOUT's
+`install.sh --attach <run dir> --mode <view>` for the rest (toolchain, start,
+build, done) and exits with its status. So `--ref main` (and a fork) runs
+main's steps even though an older release's script and window started it,
+and no step needs a compatibility shim for an older script.
+
+- **The owner keeps the stream**: the hub, the window's fds, the decision
+  forwarder, `pid` (so `resume` and the window's Stop — a signal to the
+  process group — reach both). The attached script opens its own write end of
+  `events.fifo`, `control.fifo` and `install.log` by path (`attach_streams`),
+  emits no `plan` and no `exit`, and rewrites `resume` to run from the
+  checkout. It reports back through the run dir: `attached-done` (it sent
+  `done`: the owner writes `timing.json`) and `attached-fail` (a failure's
+  message, printed by the owner below the terminal view's last frame). Exit 0
+  without `attached-done` is a loud failure, never a success.
+- **Same protocol or nothing**: the hand-over needs the checkout's
+  `# installer-attach: <v>` line to equal this script's; another version stops
+  the install, asking to finish with the checkout's `./install.sh`. A
+  checkout with no line at all predates the hand-over (an old tag stage 0
+  could not hand to its own script): this script's steps install it, saying so.
+- Run from a checkout (`./install.sh`), the script already is the checkout's:
+  no hand-over. The dry run hands over too (to the script beside it), so the
+  stream test runs the attached path every time.
 
 ## install.sh: the terminal view
 
@@ -206,7 +240,10 @@ hand over to the release it installs (`stage0`):
 `--release` marks the script as a release's (stage 0 never runs twice);
 `--checkout` is what the clone checks out: the tag (`git checkout -B main
 <tag>`, still tracking `origin/main`, so updates move it release to release),
-or `main` for `--ref main` and for a fork (`--repo`). **Falls back to this
+or `main` for `--ref main` and for a fork (`--repo`) — the release's script
+then hands the steps after the clone to main's own (§ The checkout's own
+steps); a release whose script lacks the attach marker is not used for main
+(this script's own steps, in the terminal). **Falls back to this
 script's own steps, in the terminal, saying why** when no release could be
 read (none published, no network: main's tip), or the release predates the
 hand-off (`release.json` `handoff: null`: its tag). Run from a checkout

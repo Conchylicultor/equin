@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { INSTALL_PROTOCOL_VERSION } from "@plugins/installer/core";
 
 /**
  * What a release tag publishes on its GitHub Release, for the curl install.
@@ -45,6 +46,17 @@ export const RELEASE_FILES = {
  * then installs that release with its own (main's) steps instead.
  */
 export const HANDOFF_MARKER = "# installer-handoff: 1";
+
+/**
+ * The line install.sh carries when it runs an install's steps after the
+ * clone from the CHECKOUT's own install.sh (`--attach <run dir>`), so an
+ * install of ref X always runs X's steps on X's code. Its number is the
+ * install event protocol the attached script writes into the stream
+ * ({@link INSTALL_PROTOCOL_VERSION}): a script hands over only to a checkout
+ * carrying the same line, and stage 0 never lets a release whose script lacks
+ * it install main.
+ */
+export const ATTACH_MARKER = `# installer-attach: ${INSTALL_PROTOCOL_VERSION}`;
 
 /** `release.json`: what one release published. */
 export const ReleaseManifest = z.object({

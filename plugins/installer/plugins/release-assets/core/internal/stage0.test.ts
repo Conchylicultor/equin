@@ -8,6 +8,7 @@ import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/co
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { releaseManifest, sha256Sums } from "./assemble";
 import {
+  ATTACH_MARKER,
   HANDOFF_MARKER,
   INSTALLER_BINARIES,
   type InstallerPlatform,
@@ -30,12 +31,18 @@ type Files = Record<string, string>;
 /** One release's files, as the workflow publishes them. */
 function release(
   tag: string,
-  opts: { handoff?: boolean; probe?: number; built?: InstallerPlatform[] } = {},
+  opts: {
+    handoff?: boolean;
+    attach?: boolean;
+    probe?: number;
+    built?: InstallerPlatform[];
+  } = {},
 ): Files {
   const handoff = opts.handoff ?? true;
+  const attach = opts.attach ?? true;
   const built = opts.built ?? ALL;
   const files: Files = {
-    "install.sh": `set -e\n${handoff ? `${HANDOFF_MARKER}\n` : ""}echo release script\n`,
+    "install.sh": `set -e\n${handoff ? `${HANDOFF_MARKER}\n` : ""}${attach ? `${ATTACH_MARKER}\n` : ""}echo release script\n`,
   };
   for (const p of built)
     files[INSTALLER_BINARIES[p]] =
@@ -194,6 +201,23 @@ describe("install.sh stage 0", () => {
     };
     expect((await stage0(["--ref", "main"])).out).toContain(
       "--release v2026.12.01 --checkout main",
+    );
+  });
+
+  test("--ref main: a release whose script would run its own steps on main is not used", async () => {
+    published = {
+      latest: "v2026.12.01",
+      tags: { "v2026.12.01": release("v2026.12.01", { attach: false }) },
+    };
+    const r = await stage0(["--ref", "main"]);
+    expect(r.code).toBe(0);
+    expect(r.out).toContain(
+      "its installer would install main with its own older steps",
+    );
+    expect(r.out).toContain("stage0: own steps, checkout main");
+    // A pinned release still runs its own script: its steps are its tag's.
+    expect((await stage0([])).out).toContain(
+      "--release v2026.12.01 --checkout v2026.12.01",
     );
   });
 

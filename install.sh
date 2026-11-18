@@ -22,7 +22,8 @@
 # GitHub Release, checks every file against the Release's SHA256SUMS, and
 # runs it — in the window, or in this terminal when the window can't show
 # (`stage0`). A release cut before the window existed is installed by this
-# script's own steps. Run from a checkout (./install.sh), it installs that
+# script's own steps, and so is main when the release's script can't hand
+# main its own steps after the clone (the attach marker, below). Run from a checkout (./install.sh), it installs that
 # checkout and skips stage 0. What a Release carries:
 # plugins/installer/plugins/release-assets.
 #
@@ -32,6 +33,9 @@
 #                    steps, never stage 0 again
 #   --checkout <ref> what the new clone checks out: the release tag, or main
 #   --stage0-only    stop after stage 0, printing what it decided (its test)
+#   --attach <run dir> --mode <window|interactive|plain> --since <s>
+#                    run only the steps after the clone, into that running
+#                    install's event stream (below), <s> seconds after it began
 #   --events-fd <n>  write the install's events (plugins/installer/core,
 #                    protocol v1: one JSON object per line) to fd <n>
 #   --control-fd <n> read decisions (retry / quit) from fd <n> when a step fails
@@ -40,6 +44,17 @@
 # release.json records it (`handoff`), and stage 0 hands over only when it is
 # there. Keep it a line of its own.
 # installer-handoff: 1
+#
+# An install of ref X runs X's own steps. This script runs the steps that
+# need nothing from equin's code (the system tools, mise, the clone); once the
+# checkout exists, the rest — the toolchain, start, build, done — run from the
+# CHECKOUT's install.sh, attached to this run's event stream (--attach), so
+# the steps and the code they install always come from the same commit, even
+# when an older release's script installs main (`--ref main`, a fork). The
+# line below says this script accepts --attach and speaks the install event
+# protocol v1 on it; the version moves with the protocol. Keep it a line of
+# its own.
+# installer-attach: 1
 #
 # Every run keeps its events in ~/.equin/logs/install/<run>/events.jsonl
 # (`latest` links to the newest run). Without a window, the terminal draws
@@ -151,6 +166,13 @@ stage0() {
   fi
   stage0_get "$base/download/$tag" install.sh "$dir" || { stage0_fallback "$want" "$tag" "its install script could not be downloaded"; return 0; }
   stage0_verify "$dir" install.sh
+  # Installing main (or a fork's): the release's script runs only the steps
+  # before the clone, then hands the rest to main's own (see the header). A
+  # release from before that would install main with its own, older steps.
+  if [ "$want" = main ] && ! grep -qx '# installer-attach: 1' "$dir/install.sh"; then
+    stage0_fallback main "$tag" "its installer would install main with its own older steps"
+    return 0
+  fi
 
   case "$OS/$(uname -m)" in
     Darwin/*) key=macos-universal ;;
@@ -337,6 +359,8 @@ main() {
   RELEASE=""
   CHECKOUT=main
   STAGE0_ONLY=0
+  ATTACH=""
+  ATTACH_MODE=""
   AFTER=""
   YES=0
   # What the release's script is handed on: the install's own options.
@@ -353,6 +377,9 @@ main() {
       --release) RELEASE="$2"; shift 2 ;;
       --checkout) CHECKOUT="$2"; shift 2 ;;
       --stage0-only) STAGE0_ONLY=1; shift ;;
+      --attach) ATTACH="$2"; shift 2 ;;
+      --mode) ATTACH_MODE="$2"; shift 2 ;;
+      --since) SECONDS="$2"; shift 2 ;;
       --dry-run) DRY_RUN=1; shift ;;
       --fix) AFTER=fix; shift ;;
       --report) AFTER=report; shift ;;
@@ -370,7 +397,7 @@ main() {
   [ -z "$AFTER" ] || after_pause "$AFTER"
   open_streams
 
-  if [ "$DRY_RUN" = "1" ]; then
+  if [ "$DRY_RUN" = "1" ] && [ -z "$ATTACH" ]; then
     dry_run
     exit 0
   fi
@@ -390,6 +417,16 @@ main() {
     */bash) RC="$HOME/.bashrc"; SH_NAME=bash ;;
     *) RC="$HOME/.zshrc"; SH_NAME=zsh ;;
   esac
+
+  # Attached: the checkout's steps, into the install that cloned it.
+  if [ -n "$ATTACH" ]; then
+    attach_streams
+    cd "$INSTALL_DIR"
+    if [ "$CHECKOUT" = main ]; then WHAT="main's newest version of equin"; else WHAT="equin ${CHECKOUT#v}"; fi
+    plan_data "Download equin"
+    if [ "$DRY_RUN" = "1" ]; then dry_checkout_steps; else checkout_steps; fi
+    exit 0
+  fi
 
   # ── 0. Say what will happen, before anything does ──────────────────────────
   if [ "$(id -u)" = "0" ]; then
@@ -530,6 +567,18 @@ EOF
       "git clone $REPO_URL exited non-zero"
   fi
   cd "$INSTALL_DIR"
+
+  # ── The checkout's own steps from here (see the header) ───────────────────
+  # Run from the checkout itself, this script already is its own.
+  [ -n "$SELF_DIR" ] || hand_to_checkout "$INSTALL_DIR/install.sh"
+  checkout_steps
+}
+
+# checkout_steps: the steps that need equin's code — run by the checkout's
+# own install.sh, in its folder, with mise's tools on PATH.
+checkout_steps() {
+  MISE="$HOME/.local/bin/mise"
+  command -v mise >/dev/null 2>&1 && MISE="$(command -v mise)"
 
   # ── 4. Toolchain ───────────────────────────────────────────────────────────
   # Its postinstall runs the repo's `setup` (trust, git hooks) and the doctor,
@@ -849,6 +898,11 @@ on_exit() {
   local rc=$?
   set +e
   if [ -n "$HUB_PID" ]; then
+    # Attached steps that sent done, even if a signal cut the wait after it.
+    if [ -n "$RUN_DIR" ] && [ -f "$RUN_DIR/attached-done" ]; then
+      rm -f "$RUN_DIR/attached-done"
+      DONE_SENT=1
+    fi
     ev exit "\"code\":$rc"
     eval "exec $HUB_FD>&-"
     EV_OUT=""
@@ -860,6 +914,11 @@ on_exit() {
       write_timing
       rm -f "$RUN_DIR/diagnosis.json"
     fi
+  elif [ -n "$ATTACH" ]; then
+    # The install that started this one writes `exit` and prints the message,
+    # below its terminal view's last frame.
+    [ -z "$FAIL_MSG" ] || printf '%s\n%s\n' "$FAIL_MSG" "$FAIL_DETAILS" >"$RUN_DIR/attached-fail"
+    FAIL_MSG=""
   else
     ev exit "\"code\":$rc"
   fi
@@ -949,6 +1008,74 @@ start_hub() {
   write_resume
 }
 
+# attach_streams: --attach's side of start_hub — the running install's run
+# dir, its FIFO (the hub that owner started reads it; this script writes its
+# own events on a write end of its own), its control FIFO and install.log.
+# The owner keeps the hub, the window's fds, the forwarder and pid: it waits
+# for this script and ends the stream (`exit`) when it does.
+attach_streams() {
+  RUN_DIR=$ATTACH
+  FIFO="$RUN_DIR/events.fifo"
+  CFIFO="$RUN_DIR/control.fifo"
+  if ! [ -p "$FIFO" ] || ! [ -p "$CFIFO" ]; then
+    echo "install.sh: --attach: no install is running in '$RUN_DIR'" >&2; exit 2
+  fi
+  case "$ATTACH_MODE" in
+    window|interactive|plain) MODE=$ATTACH_MODE ;;
+    *) echo "install.sh: --attach needs --mode window, interactive or plain (got '$ATTACH_MODE')" >&2; exit 2 ;;
+  esac
+  free_fds
+  eval "exec $CF_FD<>\"\$CFIFO\""
+  eval "exec $LOG_FD>>\"\$RUN_DIR/install.log\""
+  # The hub has the read end open: this never blocks.
+  eval "exec $HUB_FD>\"\$FIFO\""
+  EV_OUT=$HUB_FD
+  CLOSE_FDS="$HUB_FD>&- $CF_FD<&- $LOG_FD>&-"
+  # Run again from now on, the install resumes from this checkout.
+  write_resume
+}
+
+# hand_to_checkout <the checkout's install.sh> [args…]: run the rest of the
+# install with the checkout's own steps (see the header), attached to this
+# run's stream, and exit with its status. Never returns, except for a
+# checkout from before --attach existed (no marker): its steps can't attach,
+# so this script's run them, as every install did then.
+hand_to_checkout() {
+  local script=$1 marker rc
+  shift
+  rm -f "$RUN_DIR/attached-done" "$RUN_DIR/attached-fail"
+  marker="$(grep -m 1 '^# installer-attach: ' "$script" 2>/dev/null || true)"
+  if [ -z "$marker" ]; then
+    say "This version of equin is older than this installer, so the installer's own steps install it."
+    return 0
+  fi
+  [ "$marker" = "# installer-attach: 1" ] || fail "This version of equin installs itself with newer steps than this installer can show, so the installer stopped. What it did so far is kept: finish the install from equin's folder with: cd $INSTALL_DIR && ./install.sh" \
+    "$script says '$marker'; this installer speaks '# installer-attach: 1'"
+  set +e
+  (
+    eval "exec $CLOSE_FDS"
+    exec bash "$script" --attach "$RUN_DIR" --mode "$MODE" --since "$SECONDS" \
+      --checkout "$CHECKOUT" ${RELEASE:+--release "$RELEASE"} "$@" ${INSTALL_ARGS[@]+"${INSTALL_ARGS[@]}"}
+  )
+  rc=$?
+  set -e
+  if [ -f "$RUN_DIR/attached-fail" ]; then
+    { IFS= read -r FAIL_MSG; IFS= read -r FAIL_DETAILS; } <"$RUN_DIR/attached-fail" || true
+    rm -f "$RUN_DIR/attached-fail"
+  fi
+  if [ -f "$RUN_DIR/attached-done" ]; then
+    rm -f "$RUN_DIR/attached-done"
+    DONE_SENT=1
+  elif [ "$rc" = 0 ]; then
+    # Its status says done but it never said so: a crash, never a success.
+    rc=1
+    FAIL_MSG="The install stopped before it finished, without saying why. Run the installer again: it picks up where it stopped (cd $INSTALL_DIR && ./install.sh)."
+    FAIL_DETAILS="$script --attach exited 0 without the done event"
+    [ "$MODE" != "window" ] || { print_fail "$FAIL_MSG" "$FAIL_DETAILS"; FAIL_MSG=""; }
+  fi
+  exit "$rc"
+}
+
 # The event's timestamp, re-read from `date` at most once a second (a fork per
 # log line would cost seconds over a build's output). Sets EV_T.
 ev_now() {
@@ -997,6 +1124,8 @@ ev_step() {
 ev_done() {
   ev done "\"url\":\"$APP_URL\",\"ms\":$((SECONDS * 1000))"
   DONE_SENT=1
+  # Attached: tells the install that started this one that it finished.
+  [ -z "$ATTACH" ] || : >"$RUN_DIR/attached-done"
 }
 
 # step_ev <fields, without braces>: an event from inside a step, written the
@@ -2795,12 +2924,19 @@ dry_run() {
   ev_plan
   sandbox_check
   ev_step tools skipped
-  local id
-  for id in mise clone toolchain start build; do
-    [ "$id" != "${EQUIN_INSTALL_DRY_RUN_OPTIONAL:-}" ] || STEP_OPTIONAL=1
-    run_step "$id" dry_step "$id"
-    [ "$STEP_RC" = "0" ] || fail "The $id step of the dry run failed." "dry run, $id"
-  done
+  dry_steps mise clone
+  # The rest from the checkout's script, attached, as a real install does:
+  # the script beside this one (a dry run plays from a checkout).
+  local here=""
+  [ -z "${BASH_SOURCE[0]:-}" ] || here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  [ -n "$here" ] && [ -x "$here/equin" ] || fail "The dry run plays from a checkout, which runs its steps after the download." "no ./equin beside install.sh"
+  hand_to_checkout "$here/install.sh" --dry-run
+  fail "The dry run's own steps could not take over after the download." "$here/install.sh carries no attach marker"
+}
+
+# dry_checkout_steps: the dry run's attached half (checkout_steps' stand-in).
+dry_checkout_steps() {
+  dry_steps toolchain start build
   # Nothing started here, so the address is the one this account's equin has
   # (or, never started, would get first): asked of the checkout the dry run
   # is played from, never spelled in this script.
@@ -2810,6 +2946,16 @@ dry_run() {
   APP_URL="$(cd "$here" && ./equin url)"
   ev_done
   done_wait
+}
+
+# dry_steps <id…>: each step played by dry_step.
+dry_steps() {
+  local id
+  for id in "$@"; do
+    [ "$id" != "${EQUIN_INSTALL_DRY_RUN_OPTIONAL:-}" ] || STEP_OPTIONAL=1
+    run_step "$id" dry_step "$id"
+    [ "$STEP_RC" = "0" ] || fail "The $id step of the dry run failed." "dry run, $id"
+  done
 }
 
 # dry_notice <state>: the notice `./equin start` writes when macOS refused to
@@ -2828,7 +2974,7 @@ dry_notice() {
 # view's watch it is a log line of the view (step null): printed straight to
 # the terminal it would be drawn over.
 say() {
-  if [ -n "$HUB_PID" ] && [ "$MODE" != "window" ] && [ -z "${EQUIN_INSTALL_STEP:-}" ]; then
+  if [ -n "$RUN_DIR" ] && [ "$MODE" != "window" ] && [ -z "${EQUIN_INSTALL_STEP:-}" ]; then
     log_line "" "$*"
   else
     printf '\n\033[1m==> %s\033[0m\n' "$*"
@@ -2844,7 +2990,7 @@ say() {
 fail() {
   # The pause before it already said what happened and what to do.
   [ "$PAUSE_QUIT" != "1" ] || exit 1
-  if [ -n "$HUB_PID" ] && [ "$MODE" != "window" ]; then
+  if [ -n "$RUN_DIR" ] && [ "$MODE" != "window" ]; then
     FAIL_MSG=$1
     FAIL_DETAILS=${2:-}
   else

@@ -41064,6 +41064,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses: `installer.INSTALL_PROTOCOL_VERSION`
         - Exports (types): `InstallerPlatform`
         - Exports (values):
+          - `ATTACH_MARKER`
           - `HANDOFF_MARKER`
           - `INSTALLER_BINARIES`
           - `RELEASE_FILES`
