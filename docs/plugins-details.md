@@ -13703,6 +13703,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --faint-foreground`
               - `ui/tokens/color-palette --foreground`
               - `ui/tokens/color-palette --muted-foreground`
+              - `ui/tokens/color-palette --popover`
               - `ui/tokens/color-palette --primary`
               - `ui/tokens/color-palette --primary-foreground`
               - `ui/tokens/color-palette --primary-text`
@@ -13710,6 +13711,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --control-height-sm`
               - `ui/tokens/density --control-pad-sm`
               - `ui/tokens/density --space-2xl`
+              - `ui/tokens/shadow --shadow-popover`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-weight-bold`
@@ -67420,8 +67422,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ShadowParamsSchema`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --popover`
-            - Tokens used by: 61 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
-              - `apps` ×23
+            - Tokens used by: 62 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
+              - `apps` ×24
               - `primitives` ×13
               - `ui` ×6
               - `framework` ×4
@@ -67442,6 +67444,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/pages/shell`
               - `apps/prototypes/shell`
               - `apps/sonata/shell`
+              - `apps/website/shell`
               - `hints`
               - `media/player`
               - `ui/tokens/shadow/customizer`

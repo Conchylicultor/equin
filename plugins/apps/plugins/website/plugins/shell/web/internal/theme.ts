@@ -8,6 +8,7 @@ import { chartGroup } from "@plugins/ui/plugins/tokens/plugins/chart/core";
 import { typeScaleGroup } from "@plugins/ui/plugins/tokens/plugins/type-scale/core";
 import { densityGroup } from "@plugins/ui/plugins/tokens/plugins/density/core";
 import { shapeGroup } from "@plugins/ui/plugins/tokens/plugins/shape/core";
+import { shadowGroup } from "@plugins/ui/plugins/tokens/plugins/shadow/core";
 import { fontFamilyGroup } from "@plugins/ui/plugins/tokens/plugins/font-family/core";
 
 /** Azure accent and cyan counter-accent, shared by both modes. */
@@ -21,11 +22,19 @@ const colorPalette = colorPaletteGroup.fragment({
     // Near-black, faintly blue: the page.
     background: "oklch(0.1398 0.0117 265.76)",
     foreground: "oklch(0.9674 0.0013 286.38)",
-    // The card and popover panel — one step off the page.
+    // The card — one step off the page.
     card: "oklch(0.1814 0.0158 261.54)",
     cardForeground: "oklch(0.9674 0.0013 286.38)",
-    popover: "oklch(0.1814 0.0158 261.54)",
+    // A popup (the Learn menu, the Wish panel) — one step further: it floats
+    // over cards too, so it is lighter than them, edged by a 10% white
+    // hairline (see `popupFrame` for its shadow and corners).
+    popover: "oklch(0.213 0.0147 261.62)",
     popoverForeground: "oklch(0.9674 0.0013 286.38)",
+    popoverBorder: "oklch(1 0 0 / 10%)",
+    // A row under the pointer inside a popup (a Learn menu entry): a 12% grey
+    // wash over the panel. The page's hover tone (`muted`) sits below the
+    // popup's fill, so it would not show there.
+    popoverHover: "oklch(0.6 0 0 / 12%)",
     // The brand colour: the wordmark's full stop, the headline gradient, the
     // property dots, every hover.
     primary: AZURE,
@@ -65,6 +74,8 @@ const colorPalette = colorPaletteGroup.fragment({
     cardForeground: "oklch(0.16 0.012 265)",
     popover: WHITE,
     popoverForeground: "oklch(0.16 0.012 265)",
+    popoverBorder: "oklch(0.21 0.04 266 / 12%)",
+    popoverHover: "oklch(0.6 0 0 / 12%)",
     primary: AZURE,
     primaryForeground: WHITE,
     secondary: "oklch(0.16 0.012 265)",
@@ -244,7 +255,26 @@ const shape = shapeGroup.fragment(
 );
 
 /**
- * The site's own theme — its look: palette, chart ramp and typeface. Selected
+ * A popup's frame, beyond its fill and edge (in the palette): a deep drop and,
+ * on dark, a faint azure glow — the light the headline casts, so a panel reads
+ * as lit by the page rather than cut out of it — and the site's rounder 14px
+ * corner. Part of the look, not of the page's sizes: a popup leaves the
+ * document sub-theme, and its frame must still be the site's.
+ */
+const popupShadow = shadowGroup.fragment({
+  dark: {
+    "shadow-popover":
+      "0 40px 80px -30px oklch(0 0 0), 0 0 60px -20px oklch(0.5461 0.2152 262.88 / 36%)",
+  },
+  light: {
+    "shadow-popover": "0 30px 60px -30px oklch(0.21 0.04 266 / 35%)",
+  },
+});
+const popupCorner = shapeGroup.fragment(both({ radiusPopover: "0.875rem" }));
+
+/**
+ * The site's own theme — its look: palette, chart ramp, typeface and its
+ * popups' frame. Selected
  * for the website app in `config/ui/theme-engine/@app/website/theme.jsonc`.
  *
  * The public site is a designed thing, so it does not follow whatever the
@@ -253,7 +283,8 @@ const shape = shapeGroup.fragment(
  * paints that group's schema defaults — never another scope's setting. That
  * includes the sizes: everything the app shows OUTSIDE its pages (the Improve
  * panel and every other popup, the tab bar and rail while the site is focused)
- * is ordinary UI, at the standard UI sizes, in the site's colours.
+ * is ordinary UI, at the standard UI sizes, in the site's colours — and a popup
+ * in the site's frame (shadow, glow, corner).
  *
  * The dark values are the design. The light values are a readable inversion of
  * it — the site follows the desktop's colour mode, which is still global, and a
@@ -262,7 +293,7 @@ const shape = shapeGroup.fragment(
 export const equinTheme = defineTheme({
   id: "equin",
   label: "equin",
-  fragments: [colorPalette, chart, fontFamily],
+  fragments: [colorPalette, chart, fontFamily, popupShadow, popupCorner],
 });
 
 /**

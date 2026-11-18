@@ -54,7 +54,9 @@ gradient all read as things you can act on.
 
 **The site's theme lives here** (`web/internal/theme.ts`):
 
-- `equinTheme` — the look: palette, chart ramp, font. Contributed through
+- `equinTheme` — the look: palette, chart ramp, font, and a popup's frame
+  (its fill a step lighter than a card, a 10% hairline edge, a deep drop with a
+  faint azure glow on dark, 14px corners). Contributed through
   `ThemeEngine.Theme` and selected for the website app by
   `config/ui/theme-engine/@app/website/theme.jsonc`. It sets no sizes, so
   everything outside the pages — the Wish panel and every other popup, the
@@ -206,6 +208,7 @@ hover.
     - `ui/tokens/color-palette --faint-foreground`
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --popover`
     - `ui/tokens/color-palette --primary`
     - `ui/tokens/color-palette --primary-foreground`
     - `ui/tokens/color-palette --primary-text`
@@ -213,6 +216,7 @@ hover.
     - `ui/tokens/density --control-height-sm`
     - `ui/tokens/density --control-pad-sm`
     - `ui/tokens/density --space-2xl`
+    - `ui/tokens/shadow --shadow-popover`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-bold`

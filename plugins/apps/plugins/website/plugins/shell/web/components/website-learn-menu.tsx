@@ -60,7 +60,11 @@ export function WebsiteLearnMenu() {
           className="text-muted-foreground hover:text-foreground aria-expanded:text-foreground hover:bg-transparent aria-expanded:bg-transparent"
         >
           Learn
-          <Icon icon={chevronIcon} className="size-4" />
+          {/* Points up while the panel hangs open below it. */}
+          <Icon
+            icon={chevronIcon}
+            className="size-3 transition-transform duration-150 group-aria-expanded/button:rotate-180"
+          />
         </Button>
       }
       content={(api) => <LearnPanel api={api} />}
@@ -74,7 +78,7 @@ function LearnPanel({ api }: { api: HoverPopoverApi }) {
   return (
     <LearnPlaceContext.Provider value={place}>
       <ActionFormShield>
-        <Stack gap="none" className="w-72">
+        <Stack gap="none" className="website-learn-panel">
           <Website.LearnEntry.Render />
         </Stack>
       </ActionFormShield>
@@ -114,10 +118,12 @@ export function WebsiteLearnLink({
         place.api.close();
       }}
     >
-      <Text as="div" variant="label" tone="strong">
+      {/* The name in the header's own words (the control role), a step
+          bolder; the gloss in the faintest grey, so the name leads. */}
+      <Text as="div" variant="control" tone="strong" className="font-semibold">
         {label}
       </Text>
-      <Text as="div" variant="caption" tone="muted">
+      <Text as="div" variant="caption" tone="faint">
         {gloss}
       </Text>
     </button>

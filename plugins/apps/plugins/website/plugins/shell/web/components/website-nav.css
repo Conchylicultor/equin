@@ -59,14 +59,21 @@
  * saying what the page is — a menu read like the header, not a list of
  * commands. Each entry is the whole link, hovering to the panel's fill.
  */
+.website-learn-panel {
+  /* With the popover's own 4px inset, the mock's 6px around the entries and a
+     290px panel: wide enough that every gloss stays on one line. */
+  width: 17.625rem;
+  padding: 0.125rem;
+}
 .website-learn-entry {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
   width: 100%;
   text-align: start;
   cursor: pointer;
   padding: 0.5625rem 0.75rem;
-  border-radius: calc(var(--radius) * 0.75);
-  line-height: 1.35;
+  border-radius: calc(var(--radius) * 0.9);
 }
 .website-learn-entry:hover,
 .website-learn-entry:focus-visible {
