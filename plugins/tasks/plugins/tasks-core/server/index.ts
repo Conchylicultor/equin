@@ -161,6 +161,7 @@ export type { NearestMandate } from "./internal/queries/tasks";
 
 export {
   listAttempts,
+  attemptRetention,
   getAttempt,
   getAttemptRow,
   listAttemptsForTask,

@@ -126,9 +126,18 @@ function treePathOf(root: string, change: CheckoutChange): string | null {
 
 /**
  * Inside a git dir, what never moves the checkout: object writes (they always
- * come with an index or ref change), reflogs, and other worktrees' git dirs.
+ * come with an index or ref change), reflogs, other worktrees' git dirs, and
+ * the fsmonitor daemon's socket and cookie dir (`infra/git/fsmonitor`) — every
+ * git read in a checkout with fsmonitor on writes and deletes a cookie there,
+ * so hearing it would make each reader's read trigger its next one.
  */
-const GIT_DIR_NOISE = ["objects", "logs", "worktrees"];
+const GIT_DIR_NOISE = [
+  "objects",
+  "logs",
+  "worktrees",
+  "fsmonitor--daemon",
+  "fsmonitor--daemon.ipc",
+];
 
 function isGitNoise(relInGitDir: string): boolean {
   const top = relInGitDir.split("/", 1)[0]!;

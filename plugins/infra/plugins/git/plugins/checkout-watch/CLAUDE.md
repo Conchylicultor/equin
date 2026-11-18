@@ -17,7 +17,9 @@ creation is heard; edits inside it are not until the watch reopens).
   `acquireDirWatch`, so a linked worktree's git dirs ride the main checkout's
   watch when that one is open.
 - Each change is tagged `area: "worktree" | "git"`. Dropped as noise for every
-  reader: `objects/`, `logs/`, `worktrees/` inside a git dir, anything in a
+  reader: `objects/`, `logs/`, `worktrees/` and the fsmonitor daemon's
+  socket and cookie dir (`fsmonitor--daemon*`, written by every read in a
+  checkout running one — `infra/git/fsmonitor`) inside a git dir, anything in a
   `node_modules`, and **every working-tree path git ignores** — a build's `dist/`,
   the main checkout's `.claude/worktrees/**`. An ignored, untracked path cannot
   move a checkout's state, so no reader recomputes on it. The answer is git's own:

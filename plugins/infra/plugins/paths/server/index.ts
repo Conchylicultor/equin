@@ -52,7 +52,7 @@ export type {
   ReclaimPolicy,
 } from "../core/internal/data-dir";
 
-export { GIT, PGREP, PS, SAMPLE } from "./internal/bins";
+export { GIT, LSOF, PGREP, PS, SAMPLE } from "./internal/bins";
 
 export {
   listWorktreeDirsSync,

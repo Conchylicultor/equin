@@ -91,8 +91,9 @@ signals the backend's whole process group (see
     naming the spare's, which nothing recognises).
   - **The claim's switch onto an existing branch** checks "checked out
     elsewhere" against our list, then passes `--ignore-other-worktrees`.
-  The repo has no `post-checkout` hook and no `config.worktree` — the two
-  things git's add does that `addCheckout` does not.
+  The repo has no `post-checkout` hook and main's checkout has no
+  `config.worktree` — the two things git's add does that `addCheckout` does
+  not (an agent checkout's own `config.worktree` holds only its fsmonitor).
 - **Nobody else runs them either** — the `worktree/no-raw-worktree-git` lint
   rule (`lint/`) rejects `git worktree list|add|move|lock|unlock|remove|repair`
   and a `git switch` without `--ignore-other-worktrees` / `--detach` / `-c`,
@@ -169,6 +170,11 @@ every racy file.
 - `WorktreeSetup.untrackedCache`: `published` | `index-busy` | `index-changed` |
   `not-primed` (an `existing` checkout — an agent may be in it).
 - Never on a spare: the cache names the checkout's path, so the claim's move drops it.
+- Just before that refresh, `setupWorktree` turns the checkout's git fsmonitor
+  on (`infra/git/fsmonitor`: `core.fsmonitor` in its own `config.worktree`, and
+  the daemon), so the refresh records the daemon's token; an `existing`
+  checkout gets `ensureCheckoutFsmonitor`. `WorktreeEntry.gitDir` is each
+  checkout's git dir (its `config.worktree`, index and the daemon's socket).
 
 ## A removed checkout's dependency store goes to the next one (`server/internal/dep-store-pool.ts`)
 
@@ -375,6 +381,10 @@ pid liveness.
 
 - Server:
   - Uses:
+    - `infra/git/fsmonitor.ensureCheckoutFsmonitor`
+    - `infra/git/fsmonitor.FsmonitorEnsure`
+    - `infra/git/fsmonitor.FsmonitorStart`
+    - `infra/git/fsmonitor.startCheckoutFsmonitor`
     - `infra/git/index-refresh.CheckoutTier`
     - `infra/git/index-refresh.refreshCheckoutIndex`
     - `infra/host/host-admission.defineHostPool`

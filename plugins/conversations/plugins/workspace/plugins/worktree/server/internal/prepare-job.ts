@@ -62,7 +62,8 @@ export const worktreePrepareJob = defineSupervisedJob({
     const steps = recordSetupSteps((s) =>
       log(`checkout ${attemptId} step: ${describeSetupStep(s)}`),
     );
-    const { source, tree, depStore, untrackedCache } = await setupWorktree(
+    const { source, tree, depStore, fsmonitor, untrackedCache } =
+      await setupWorktree(
       attemptId,
       path,
       new Set(getConfig(compositionsConfig).manifests.map((m) => m.id)),
@@ -71,7 +72,7 @@ export const worktreePrepareJob = defineSupervisedJob({
       steps.onStep,
     );
     log(
-      `checkout ${attemptId}: ${source}; ${tree === null ? "" : `${describeTreeStart(tree)}; `}${describeAdoption(depStore)}; untracked cache: ${untrackedCache}; steps: ${steps.summary()}`,
+      `checkout ${attemptId}: ${source}; ${tree === null ? "" : `${describeTreeStart(tree)}; `}${describeAdoption(depStore)}; fsmonitor: ${typeof fsmonitor === "string" ? fsmonitor : "kind" in fsmonitor ? `FAILED (${fsmonitor.error})` : `${fsmonitor.daemon}, token ${fsmonitor.token.kind}`}; untracked cache: ${untrackedCache}; steps: ${steps.summary()}`,
     );
   },
   // A checkout was made — from a spare (the pool is now one short) or cold

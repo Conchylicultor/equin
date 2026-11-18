@@ -332,6 +332,7 @@ takes a `debt` exemption on the check's id.
     - `infra/file-watcher` (5 debt)
     - `infra/file-watcher/background-arm` (1 debt)
     - `infra/git/checkout-watch` (1 debt)
+    - `infra/git/fsmonitor` (2 debt)
     - `infra/git/git-watcher` (2 debt)
     - `infra/git/index-refresh` (1 debt)
     - `infra/git/main-slots` (4 debt)

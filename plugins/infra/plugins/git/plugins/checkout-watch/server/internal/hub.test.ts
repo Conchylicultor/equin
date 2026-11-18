@@ -52,6 +52,18 @@ describe("classifyGitDirEvent", () => {
     expect(classifyGitDirEvent(gd, ev(`${gd}/index`))?.area).toBe("git");
     expect(classifyGitDirEvent(gd, ev(`${gd}/logs/HEAD`))).toBeNull();
   });
+  test("the fsmonitor daemon's socket and cookies are noise (every read writes a cookie)", () => {
+    const gd = "/main/.git/worktrees/wt";
+    expect(
+      classifyGitDirEvent(gd, ev(`${gd}/fsmonitor--daemon/cookies/123-0`)),
+    ).toBeNull();
+    expect(
+      classifyGitDirEvent(gd, ev(`${gd}/fsmonitor--daemon.ipc`)),
+    ).toBeNull();
+    expect(
+      classifyRootEvent("/r", ev("/r/.git/fsmonitor--daemon/cookies/1-2")),
+    ).toBeNull();
+  });
 });
 
 /** Fake dir watches: each acquire recorded, emitting by dir on demand. */

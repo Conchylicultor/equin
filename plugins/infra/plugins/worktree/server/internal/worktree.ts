@@ -44,6 +44,12 @@ import {
   refreshCheckoutIndex,
 } from "@plugins/infra/plugins/git/plugins/index-refresh/server";
 import {
+  ensureCheckoutFsmonitor,
+  startCheckoutFsmonitor,
+  type FsmonitorEnsure,
+  type FsmonitorStart,
+} from "@plugins/infra/plugins/git/plugins/fsmonitor/server";
+import {
   emptyTreePool,
   harvestTree,
   takeTree,
@@ -151,6 +157,11 @@ export interface WorktreeEntry {
   head: WorktreeHead | null;
   locked: string | null;
   prunable: boolean;
+  /**
+   * Its git dir: the common `.git` for the main worktree, `<common>/worktrees/<id>`
+   * for a linked one — where its HEAD, index and `config.worktree` live.
+   */
+  gitDir: string;
 }
 
 // Every worktree is read from its admin files (gitrepository-layout(5)), not
@@ -254,6 +265,7 @@ async function readWorktreeEntries(common: string): Promise<WorktreeEntry[]> {
     head: await readHead(join(common, "HEAD")),
     locked: null,
     prunable: false,
+    gitDir: common,
   };
   const adminRoot = join(common, "worktrees");
   let ids: string[];
@@ -279,6 +291,7 @@ async function readWorktreeEntries(common: string): Promise<WorktreeEntry[]> {
         head: await readHead(join(admin, "HEAD")),
         locked: lockedReason,
         prunable: lockedReason === null && !(await pathExists(dotGit)),
+        gitDir: admin,
       };
     }),
   );
@@ -1511,6 +1524,42 @@ export interface WorktreeSetup {
    * may have an agent working in it, and its first check run publishes one.
    */
   untrackedCache: IndexPublish | "not-primed";
+  /**
+   * The checkout's git fsmonitor (`infra/git/fsmonitor`): started (or found
+   * running) for a checkout written here; for an `existing` one, ensured —
+   * started if need be and its index token renewed if a daemon that is gone
+   * issued it.
+   */
+  fsmonitor: FsmonitorStart | FsmonitorEnsure | FsmonitorFailed;
+}
+
+/** The checkout's fsmonitor could not be turned on; the launch went on without it. */
+interface FsmonitorFailed {
+  kind: "failed";
+  error: string;
+}
+
+/**
+ * The `fsmonitor` step: a speed-up of the checkout's git reads, so its failure
+ * (a daemon refusing the volume, a repo whose config cannot take a
+ * `config.worktree`) does not fail the launch — it is returned, logged by the
+ * caller, and the checkout's reconcile (`worktree.fsmonitor-reconcile`, main)
+ * tries again and fails loudly there. A cancellation still throws.
+ */
+async function fsmonitorStep<T>(
+  onStep: OnSetupStep,
+  signal: AbortSignal | undefined,
+  fn: () => Promise<T>,
+): Promise<T | FsmonitorFailed> {
+  try {
+    return await timeStep(onStep, "fsmonitor", fn);
+  } catch (err) {
+    if (signal?.aborted) throw err;
+    return {
+      kind: "failed",
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
 }
 
 /**
@@ -1614,16 +1663,32 @@ export async function setupWorktree(
       { frozen: false, onStep, tier: LAUNCH_TIER },
       signal,
     );
-    // A checkout discarded and written again here is a new one: fill its
-    // untracked cache. An `existing` one is left to its next check run.
-    const untrackedCache =
-      source === "existing"
-        ? "not-primed"
-        : await timeStep(onStep, "index-refresh", () =>
-            refreshCheckoutIndex(wtPath, LAUNCH_TIER, signal),
-          );
+    // A checkout discarded and written again here is a new one: turn its
+    // fsmonitor on, then fill its untracked cache (the refresh records the
+    // daemon's token). An `existing` one is left to its next check run — only
+    // its fsmonitor is ensured (started, and a token of a daemon that is gone
+    // renewed: a resume after a reboot).
+    if (source === "existing") {
+      const fsmonitor = await fsmonitorStep(onStep, signal, () =>
+        ensureCheckoutFsmonitor(wtPath, LAUNCH_TIER, signal),
+      );
+      await stampMinter(id, minter);
+      return {
+        source,
+        tree,
+        depStore,
+        fsmonitor,
+        untrackedCache: "not-primed",
+      };
+    }
+    const fsmonitor = await fsmonitorStep(onStep, signal, () =>
+      startCheckoutFsmonitor(wtPath, signal),
+    );
+    const untrackedCache = await timeStep(onStep, "index-refresh", () =>
+      refreshCheckoutIndex(wtPath, LAUNCH_TIER, signal),
+    );
     await stampMinter(id, minter);
-    return { source, tree, depStore, untrackedCache };
+    return { source, tree, depStore, fsmonitor, untrackedCache };
   }
 
   // A checkout's namespace is its own name (the main composition's prefix
@@ -1664,13 +1729,19 @@ export async function setupWorktree(
     { frozen: true, onStep, tier: LAUNCH_TIER },
     signal,
   );
+  // The checkout's git fsmonitor first (infra/git/fsmonitor): its reads then
+  // cost what changed, not its ~25k files, however cold the machine's file
+  // cache — and the refresh below records the daemon's token in the index.
+  const fsmonitor = await fsmonitorStep(onStep, signal, () =>
+    startCheckoutFsmonitor(wtPath, signal),
+  );
   // Installed, at its final path, and nobody works in it yet — the one moment
   // its untracked cache can be filled (see refreshCheckoutIndex).
   const untrackedCache = await timeStep(onStep, "index-refresh", () =>
     refreshCheckoutIndex(wtPath, LAUNCH_TIER, signal),
   );
   await stampMinter(id, minter);
-  return { source, tree, depStore, untrackedCache };
+  return { source, tree, depStore, fsmonitor, untrackedCache };
 }
 
 // Once the checkout exists, never before: a stamp-only `<ns>/` dir with no

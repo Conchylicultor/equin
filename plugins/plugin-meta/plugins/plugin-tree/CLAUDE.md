@@ -169,10 +169,10 @@ Snapshot and facet loading run together, then structure and keying.
 
 The worker lives and dies with the backend, which restarts on every deploy,
 so each one starts by listing the checkout (`loadRepoSnapshot`: `ls-files -s`,
-the untracked delta, `diff-files`). On main git's `core.fsmonitor` is on, so
-that listing is already git's own incremental answer — its daemon's live
-FSEvents stream says which paths to stat: 0.35–0.7 s for ~25k files at host
-load ~20 (main's `plugin-tree` log, 2026-11-15).
+the untracked delta, `diff-files`): 0.35–0.7 s for ~25k files at host
+load ~20 (main's `plugin-tree` log, 2026-11-15). Main's checkout runs no
+fsmonitor (its root holds every agent checkout — `infra/git/fsmonitor`); an
+agent checkout's does, so there the listing is git's incremental answer.
 
 **Why not resume from a checkpoint (what it did 2026-11-13 → 11-15).** Each
 build left its file set and an FSEvents journal cursor

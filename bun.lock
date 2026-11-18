@@ -4778,6 +4778,10 @@
       "name": "@equin/plugin-infra-git-checkout-watch",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/git/plugins/fsmonitor": {
+      "name": "@equin/plugin-infra-git-fsmonitor",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/git/plugins/git-read-cache": {
       "name": "@equin/plugin-infra-git-git-read-cache",
       "version": "0.0.1",
@@ -10586,6 +10590,8 @@
     "@equin/plugin-infra-git": ["@equin/plugin-infra-git@workspace:plugins/infra/plugins/git"],
 
     "@equin/plugin-infra-git-checkout-watch": ["@equin/plugin-infra-git-checkout-watch@workspace:plugins/infra/plugins/git/plugins/checkout-watch"],
+
+    "@equin/plugin-infra-git-fsmonitor": ["@equin/plugin-infra-git-fsmonitor@workspace:plugins/infra/plugins/git/plugins/fsmonitor"],
 
     "@equin/plugin-infra-git-git-read-cache": ["@equin/plugin-infra-git-git-read-cache@workspace:plugins/infra/plugins/git/plugins/git-read-cache"],
 

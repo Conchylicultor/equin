@@ -18,6 +18,8 @@
  * - `lock`          locking the checkout
  * - `dep-store`     adopting a waiting dependency store, or copying the seed
  * - `install`       the checkout's own `./equin install` (bun install + provisions)
+ * - `fsmonitor`     turning the checkout's git fsmonitor on (config + daemon;
+ *                   for a checkout already there, renewing a stale index token)
  * - `index-refresh` filling the new checkout's index (untracked cache)
  */
 export type SetupStepName =
@@ -29,6 +31,7 @@ export type SetupStepName =
   | "lock"
   | "dep-store"
   | "install"
+  | "fsmonitor"
   | "index-refresh";
 
 export interface SetupStep {

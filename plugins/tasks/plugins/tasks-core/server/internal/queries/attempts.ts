@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { _attemptDeliveries, _attempts } from "../tables";
 import { attempts } from "../views";
@@ -7,6 +7,24 @@ import type { DbExecutor } from "../status-batch";
 
 export async function listAttempts(): Promise<Attempt[]> {
   return db.select().from(attempts).orderBy(asc(attempts.createdAt));
+}
+
+/**
+ * Whether each of these attempts is RETAINED (`attempts_v.retained`: the user
+ * has not finished with it — no conversation closed for good, or none yet).
+ * An id with no row is absent from the map: unknown here, never "not
+ * retained" (a checkout another backend minted has its row in that backend's
+ * database).
+ */
+export async function attemptRetention(
+  ids: readonly string[],
+): Promise<Map<string, boolean>> {
+  if (ids.length === 0) return new Map();
+  const rows = await db
+    .select({ id: attempts.id, retained: attempts.retained })
+    .from(attempts)
+    .where(inArray(attempts.id, [...ids]));
+  return new Map(rows.map((r) => [r.id, r.retained]));
 }
 
 export async function getAttempt(id: string): Promise<Attempt | null> {

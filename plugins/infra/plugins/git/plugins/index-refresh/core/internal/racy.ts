@@ -35,6 +35,69 @@ export function countRacyEntries(
   bytes: Uint8Array,
   indexMtimeSec: number,
 ): IndexRacyCount {
+  let racy = 0;
+  const { entries } = walkEntries(bytes, (mtimeSec) => {
+    if (mtimeSec >= indexMtimeSec) racy++;
+  });
+  return { entries, racy };
+}
+
+/** SHA-1 trailer of the index file: the extensions end before it. */
+const TRAILER_BYTES = 20;
+const FSMN = 0x46534d4e; /* "FSMN" */
+
+/**
+ * The fsmonitor token a git index carries (its `FSMN` extension), or null when
+ * it has none — written by any git that ran with `core.fsmonitor` on and wrote
+ * the index. git asks its fsmonitor "what changed since this token?", so the
+ * token is what makes a read cost O(changes): a token the running daemon did
+ * not issue (it was restarted) is answered "everything", a full scan, on every
+ * read until the index is written again — which no read of ours does
+ * (`GIT_OPTIONAL_LOCKS=0`). `infra/git/fsmonitor` reads it to tell.
+ *
+ * Version 2 (a string token, the builtin daemon's
+ * `builtin:<n>.<pid>.<started>:<seq>`) is returned as written; version 1 (a
+ * hook's nanosecond timestamp) as `v1:<ns>`.
+ */
+export function readIndexFsmonitorToken(bytes: Uint8Array): string | null {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let p = walkEntries(bytes, () => {}).end;
+  const end = bytes.byteLength - TRAILER_BYTES;
+  while (p + 8 <= end) {
+    const sig = view.getUint32(p);
+    const size = view.getUint32(p + 4);
+    const data = p + 8;
+    if (data + size > end) {
+      throw new Error(
+        `[index-refresh] index extension at ${p} overruns the file (${size} bytes)`,
+      );
+    }
+    if (sig === FSMN) {
+      const version = view.getUint32(data);
+      if (version === 1) return `v1:${view.getBigUint64(data + 4)}`;
+      if (version === 2) {
+        const nul = bytes.indexOf(0, data + 4);
+        if (nul < 0 || nul >= data + size) {
+          throw new Error("[index-refresh] FSMN token unterminated");
+        }
+        return new TextDecoder().decode(bytes.subarray(data + 4, nul));
+      }
+      throw new Error(`[index-refresh] unsupported FSMN version ${version}`);
+    }
+    p = data + size;
+  }
+  return null;
+}
+
+/**
+ * Walk a git index's entries (versions 2, 3 and 4, SHA-1 ids), calling
+ * `onEntry` with each entry's mtime seconds; answers the entry count and the
+ * offset the extensions start at. Throws on anything it cannot read.
+ */
+function walkEntries(
+  bytes: Uint8Array,
+  onEntry: (mtimeSec: number) => void,
+): { entries: number; end: number } {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   if (bytes.byteLength < 12 || view.getUint32(0) !== 0x44495243 /* DIRC */) {
     throw new Error("[index-refresh] not a git index (no DIRC signature)");
@@ -44,14 +107,12 @@ export function countRacyEntries(
     throw new Error(`[index-refresh] unsupported index version ${version}`);
   }
   const entries = view.getUint32(8);
-  let racy = 0;
   let p = 12;
   for (let i = 0; i < entries; i++) {
     if (p + FIXED_BYTES > bytes.byteLength) {
       throw new Error(`[index-refresh] index truncated at entry ${i}`);
     }
-    const mtimeSec = view.getUint32(p + 8);
-    if (mtimeSec >= indexMtimeSec) racy++;
+    onEntry(view.getUint32(p + 8));
     const flags = view.getUint16(p + 60);
     const head = FIXED_BYTES + (version >= 3 && flags & EXTENDED_FLAG ? 2 : 0);
     let q = p + head;
@@ -69,7 +130,7 @@ export function countRacyEntries(
       p += (head + len + 8) & ~7;
     }
   }
-  return { entries, racy };
+  return { entries, end: p };
 }
 
 function nulAfter(bytes: Uint8Array, from: number, entry: number): number {

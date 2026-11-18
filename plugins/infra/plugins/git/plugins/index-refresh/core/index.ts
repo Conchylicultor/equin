@@ -1,1 +1,5 @@
-export { countRacyEntries, type IndexRacyCount } from "./internal/racy";
+export {
+  countRacyEntries,
+  readIndexFsmonitorToken,
+  type IndexRacyCount,
+} from "./internal/racy";

@@ -24208,19 +24208,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `withDirTrusted`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `core/claude-trust.ts`, `server/internal/reap-job.ts`, `server/internal/scratch-workspace.ts` (debt)
-        - **`worktree`** — The worktree workspace: a conversation runs in its attempt's git checkout of this repo (`.claude/worktrees/<id>`), with a forked DB and config dir — checked out by the supervised worktree.prepare job (a detached child a restart does not kill) that the spawn job requests and waits on, resumable while the checkout exists.
+        - **`worktree`** — The worktree workspace: a conversation runs in its attempt's git checkout of this repo (`.claude/worktrees/<id>`), with a forked DB and config dir — checked out by the supervised worktree.prepare job (a detached child a restart does not kill) that the spawn job requests and waits on, resumable while the checkout exists. Keeps git's fsmonitor daemon running for exactly the checkouts whose attempt is still retained (worktree.fsmonitor-reconcile, main only: on a conversation closing, at start and every 10 minutes).
           - Server:
-            - Uses: 21 symbols — full list in [`plugins/conversations/plugins/workspace/plugins/worktree/REFERENCE.md`](../plugins/conversations/plugins/workspace/plugins/worktree/REFERENCE.md)
-              - `infra/worktree` ×8
+            - Contributes: `trigger` "worktree.fsmonitor-on-conversation-ended"
+            - Uses: 31 symbols — full list in [`plugins/conversations/plugins/workspace/plugins/worktree/REFERENCE.md`](../plugins/conversations/plugins/workspace/plugins/worktree/REFERENCE.md)
+              - `infra/worktree` ×10
               - `infra/jobs/supervised-job` ×5
-              - `infra/jobs` ×2
+              - `infra/git/fsmonitor` ×3
+              - `infra/jobs` ×3
+              - `tasks/tasks-core` ×2
               - `config_v2.getConfig`
               - `conversations/workspace.Workspace`
               - `database/admin.databaseExists`
               - `database/fork.databaseForkJob`
+              - `infra/events.Trigger`
+              - `infra/warmup.defineWarmup`
               - `infra/worktree/spare-pool.spareRefillJob`
               - `primitives/log-channels.defineLogSink`
-            - Register: `defineSupervisedJob('worktree.prepare')`
+            - Register:
+              - `defineSupervisedJob('worktree.prepare')`
+              - `defineJob('worktree.fsmonitor-reconcile')`
+              - `defineJob('worktree.fsmonitor-on-conversation-ended')`
+              - `defineWarmup('worktree.fsmonitor-reconcile')`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/worktree-workspace.ts` (debt)
           - Test helpers:
@@ -32942,6 +32951,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/file-watcher` (5 debt)
               - `infra/file-watcher/background-arm` (1 debt)
               - `infra/git/checkout-watch` (1 debt)
+              - `infra/git/fsmonitor` (2 debt)
               - `infra/git/git-watcher` (2 debt)
               - `infra/git/index-refresh` (1 debt)
               - `infra/git/main-slots` (4 debt)
@@ -37092,8 +37102,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TriggerRowSchema`
           - `TriggersPayloadSchema`
       - Cross-plugin:
-        - Imported by: 43 plugins — full list in [`plugins/infra/plugins/events/REFERENCE.md`](../plugins/infra/plugins/events/REFERENCE.md)
-          - `conversations` ×12
+        - Imported by: 44 plugins — full list in [`plugins/infra/plugins/events/REFERENCE.md`](../plugins/infra/plugins/events/REFERENCE.md)
+          - `conversations` ×13
           - `tasks` ×11
           - `apps` ×7
           - `infra` ×5
@@ -37424,6 +37434,38 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/code`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/checkout-watch.ts` (debt)
+        - **`fsmonitor`** — The one owner of git's builtin fsmonitor daemons for checkouts: startCheckoutFsmonitor (core.fsmonitor in the checkout's own config.worktree, then the daemon, in a process group of its own so a backend restart does not stop it), ensureCheckoutFsmonitor (the same, plus renewing the index's fsmonitor token when the running daemon did not issue it — a stale token makes every read a full scan, since no read of ours writes the index), stopCheckoutFsmonitor, and reconcileCheckoutFsmonitors (converge every checkout on on / off as its caller says, and signal daemons whose checkout is gone). A git read in a live checkout then costs what changed, not the checkout's ~25k files, however cold the machine's file cache is.
+          - Server:
+            - Uses:
+              - `infra/git/index-refresh.CheckoutTier`
+              - `infra/git/index-refresh.refreshCheckoutIndex`
+              - `infra/paths.GIT`
+              - `infra/paths.LSOF`
+              - `infra/paths.PS`
+            - Exports (types):
+              - `FsmonitorCheckout`
+              - `FsmonitorDaemon`
+              - `FsmonitorEnsure`
+              - `FsmonitorReconcile`
+              - `FsmonitorStart`
+              - `FsmonitorStop`
+              - `FsmonitorToken`
+              - `FsmonitorWant`
+              - `RunningDaemon`
+            - Exports (values):
+              - `describeFsmonitorReconcile`
+              - `ensureCheckoutFsmonitor`
+              - `listFsmonitorDaemons`
+              - `listRunningDaemons`
+              - `reconcileCheckoutFsmonitors`
+              - `startCheckoutFsmonitor`
+              - `stopCheckoutFsmonitor`
+          - Cross-plugin:
+            - Imported by:
+              - `conversations/workspace/worktree`
+              - `infra/worktree`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/lifecycle.ts`, `server/internal/daemons.ts` (debt)
         - **`git-read-cache`** — Git-state-keyed result memos: skip a gated git recompute when a cheap ungated signature is unchanged; single-flight + coalesce per worktree. createGitStateMemo takes signature/compute per call; createSignedMemo binds them at construction so a resource's revalidate and loader cannot drift.
           - Cross-plugin:
             - Imported by:
@@ -37521,6 +37563,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `infra/git/checkout-watch`
+              - `infra/git/fsmonitor`
               - `infra/worktree`
           - Exemptions:
             - Exempts itself from:
@@ -37528,7 +37571,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `user-path/no-unproven-claim` — `server/internal/refresh.ts` (sanctioned)
           - Core:
             - Exports (types): `IndexRacyCount`
-            - Exports (values): `countRacyEntries`
+            - Exports (values):
+              - `countRacyEntries`
+              - `readIndexFsmonitorToken`
         - **`main-slots`** — Main's per-commit slots: every app main serves (its own and its compositions) runs from a checkout of the commit it was built from, apps built together share one, and one free slot is kept ready (see the plugin's core and cli). Web half: registers the main-slots config (drainReportAfterSec — how long a process may keep an old slot busy after its app switched away before it is reported) for Settings → Config. Main's per-commit slots (the checkouts main and its compositions are built and served from; see the plugin's core and cli), server half: the main-slots config (drainReportAfterSec), the main-slot-drain-slow report kind (a process that kept an old slot busy past the threshold after its app switched away, one row per job), the main-slots-exhausted report kind (a build found no free slot and the draining ones at the leak limit, and waited), and the daily main-slots.reclaim job (main only) — the backstop reclaim for slots freed by a killed process.
           - Web:
             - Contributes: `ConfigV2.WebRegister` "main-slots"
@@ -39748,8 +39793,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 145 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
-          - `infra` ×37
+        - Imported by: 146 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+          - `infra` ×38
           - `framework` ×24
           - `apps` ×18
           - `debug` ×15
@@ -39816,6 +39861,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isRelease`
           - `listWorktreeDirsAsync`
           - `listWorktreeDirsSync`
+          - `LSOF`
           - `PGREP`
           - `PLUGINS_DIR`
           - `pruneWorktreeBuildArtifactsSync`
@@ -40644,9 +40690,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `spawnPassthrough`
           - `spawnToFile`
       - Cross-plugin:
-        - Imported by: 107 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
+        - Imported by: 108 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
+          - `infra` ×33
           - `framework` ×32
-          - `infra` ×32
           - `apps` ×9
           - `database` ×5
           - `debug` ×5
@@ -40901,11 +40947,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WarmupHost`
           - `warmupRunOf`
       - Cross-plugin:
-        - Imported by: 27 plugins — full list in [`plugins/infra/plugins/warmup/REFERENCE.md`](../plugins/infra/plugins/warmup/REFERENCE.md)
+        - Imported by: 28 plugins — full list in [`plugins/infra/plugins/warmup/REFERENCE.md`](../plugins/infra/plugins/warmup/REFERENCE.md)
           - `tasks` ×7
           - `apps` ×6
           - `infra` ×5
-          - `conversations` ×2
+          - `conversations` ×3
           - `database/lock-watch`
           - `debug/config-orphans`
           - `page/links`
@@ -40931,6 +40977,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`worktree`**
       - Server:
         - Uses:
+          - `infra/git/fsmonitor.ensureCheckoutFsmonitor`
+          - `infra/git/fsmonitor.FsmonitorEnsure`
+          - `infra/git/fsmonitor.FsmonitorStart`
+          - `infra/git/fsmonitor.startCheckoutFsmonitor`
           - `infra/git/index-refresh.CheckoutTier`
           - `infra/git/index-refresh.refreshCheckoutIndex`
           - `infra/host/host-admission.defineHostPool`
@@ -44624,8 +44674,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TIMED_FS_CALLS`
           - `withFsCallTally`
       - Cross-plugin:
-        - Imported by: 189 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
-          - `infra` ×58
+        - Imported by: 190 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+          - `infra` ×59
           - `framework` ×29
           - `apps` ×16
           - `debug` ×15
@@ -64812,6 +64862,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `attemptConversationIdsServed`
           - `attemptDeliveriesServed`
           - `attemptPushIdsServed`
+          - `attemptRetention`
           - `AttemptSchema`
           - `AttemptStatusSchema`
           - `attemptTasksServed`
@@ -65086,8 +65137,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TRAILER_LOG_FORMAT`
           - `UNATTRIBUTED_TRAILER_KEY`
       - Cross-plugin:
-        - Imported by: 127 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
-          - `conversations` ×50
+        - Imported by: 128 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `conversations` ×51
           - `tasks` ×41
           - `debug` ×6
           - `active-data` ×5
