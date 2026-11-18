@@ -95,8 +95,20 @@ elif ! git --version >/dev/null 2>&1; then
 fi
 
 # ── mise, active in the shell ───────────────────────────────────────────────
+# The file a NEW terminal reads — the same pick as install.sh: bash on macOS
+# opens login shells (first of ~/.bash_profile, ~/.bash_login, ~/.profile),
+# bash on Linux non-login ones (~/.bashrc).
 case "$SHELL" in
-  */bash) rc="$HOME/.bashrc"; sh_name=bash ;;
+  */bash)
+    sh_name=bash
+    rc="$HOME/.bashrc"
+    if [ "$os" = "Darwin" ]; then
+      rc="$HOME/.bash_profile"
+      for f in .bash_profile .bash_login .profile; do
+        if [ -f "$HOME/$f" ]; then rc="$HOME/$f"; break; fi
+      done
+    fi
+    ;;
   *) rc="$HOME/.zshrc"; sh_name=zsh ;;
 esac
 activate="echo 'eval \"\$(~/.local/bin/mise activate $sh_name)\"' >> $rc   # then open a new shell"

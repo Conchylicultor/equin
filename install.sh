@@ -437,8 +437,22 @@ main() {
     fi
   fi
 
+  # The file a NEW terminal of the user's shell reads (the doctor's
+  # doctor.sh picks the same one). bash on macOS: Terminal opens a login
+  # shell, which reads the first of ~/.bash_profile, ~/.bash_login,
+  # ~/.profile — never ~/.bashrc. On Linux a terminal is a non-login shell,
+  # which reads ~/.bashrc.
   case "${SHELL:-}" in
-    */bash) RC="$HOME/.bashrc"; SH_NAME=bash ;;
+    */bash)
+      SH_NAME=bash
+      RC="$HOME/.bashrc"
+      if [ "$OS" = "Darwin" ]; then
+        RC="$HOME/.bash_profile"
+        for f in .bash_profile .bash_login .profile; do
+          if [ -f "$HOME/$f" ]; then RC="$HOME/$f"; break; fi
+        done
+      fi
+      ;;
     *) RC="$HOME/.zshrc"; SH_NAME=zsh ;;
   esac
 

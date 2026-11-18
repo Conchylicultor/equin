@@ -53,11 +53,20 @@ step_02_one_command_DOC="README.md Install: \`curl -fsSL $INSTALL_URL | bash\`${
 step_02_one_command_TAG="from-docs"
 
 step_03_new_terminal() {
+  # equin's tools are the checkout's own (~/equin/mise.toml; no global mise
+  # config): `mise activate` puts bun/go on PATH inside ~/equin only. So the
+  # contract is "cd ~/equin && ./equin works in a new terminal"; what $HOME
+  # sees is recorded, not asserted (absent there is by design).
+  # The guest's login shell is zsh; a bash user gets the same line in the file
+  # bash's new terminals read (install.sh picks it).
   cat <<'CMD'
-zsh -l -i -c 'for t in mise bun go; do printf "%-5s %s\n" "$t" "$(command -v $t || echo MISSING)"; done; command -v bun >/dev/null && cd ~/equin && ./equin --help >/dev/null && echo "./equin runs"'
+zsh -l -i -c 'echo "in \$HOME (absent by design):"; for t in mise bun go; do printf "  %-5s %s\n" "$t" "$(command -v $t || echo absent)"; done
+cd ~/equin || exit 1
+echo "in ~/equin:"; for t in bun go; do printf "  %-5s %s\n" "$t" "$(command -v $t || echo MISSING)"; done
+command -v bun >/dev/null && command -v go >/dev/null && ./equin --help >/dev/null && echo "./equin runs"'
 CMD
 }
-step_03_new_terminal_DOC="README.md: open a new terminal and ./equin works there (install.sh's closing line says so)."
+step_03_new_terminal_DOC="README.md: open a new terminal, cd into equin's folder, and ./equin works there (install.sh's closing line says so)."
 step_03_new_terminal_TAG="from-docs"
 
 step_04_app_answers() {
