@@ -41,7 +41,7 @@ A notification is **icon · one-line headline · line 2 · at most one action**
 - `state` — `{ tone, text }`, where the problem now stands (a report's fix):
   one line under line 2, the tone's glyph and tint. Changes in place.
   `stateTone` is its tone, derived by the database — the bell's state chips.
-- `category` — `conversations | updates | automations | reports | other`
+- `category` — `conversations | updates | automations | reports | confirmations | other`
   (`NOTIFICATION_CATEGORIES`, a closed list in `core/`; default `other`). The
   bell's chips.
 - `variant` — `error` ⇒ a reply toast (`useToast`) stays until dismissed or
@@ -128,7 +128,7 @@ it centres on the headline's first line in every row.
   popover's `empty`; the chips are `:groups` groupings and a picked chip reads a
   server-filtered window. The popover: header (title · Mark all read · View
   all), chips All · Errors · Conversations · Updates · Automations (Reports /
-  Other only while non-empty; counts over the whole collection, Errors' in
+  Confirmations / Other only while non-empty; counts over the whole collection, Errors' in
   red); under a picked category whose rows carry a `state`, a second row of
   state chips — Any state · Open (no state) · Pending · Resolved · Came back —
   grouped and filtered on `stateTone` (`state.tone`, a STORED generated column:
@@ -180,28 +180,54 @@ and crash — equin's own telemetry.
 - **Debug → Notifications is unscoped**: Debug is a developer app, and its pane
   is the whole record.
 
-## Toasts persist only where there is a bell (`useToast`)
+## Every toast is a notification (`useToast`)
 
-`useToast()` shows the toast at once, then persists it as a notification over
-the subtree's transport (`POST /api/notifications`, served by the machine
-half). That endpoint is `needsMachine` (D4,
-`research/2026-10-22-global-demo-scope-sealed.md`): under a transport with no
-computer behind it (the demo) the toast stays ephemeral — shown, written
-nowhere, no request made.
+`useToast()` is the ONE way the app raises a toast (`shell/toast` has no text
+toast of its own; its `shell-toast/no-direct-custom-toast` lint rule keeps the
+stack to this plugin). It shows the toast at once, then records it as a
+notification over the subtree's transport (`POST /api/notifications`, served by
+the machine half) — so a toast the user had no time to read is in the bell
+(`research/2026-11-18-global-unified-recorded-toast.md`).
+
+- **`category` is required** and is how the bell filters: a small
+  acknowledgement of the user's own action (Copied, Deleted with Undo,
+  Restored, Saved) is `confirmations` — never an error or warning. Info rows
+  never count toward the unread badge, so recording them adds no alert.
+- **`kind`**: `reply` (default — the answer to what the user did) or
+  `announcement` (something that happened on its own — the server
+  reconnecting): shown only on a page on screen, gone after 4 s. Recorded
+  either way.
+- **`liveAction`** (`{ label, onClick }` or `{ label, link }`) — an action
+  only the live toast can offer (an Undo closure, a link the page's hooks
+  built): drawn on the toast in place of a registry `action`, never stored; the
+  bell's row of the same toast has no action. Exclusive with `action` (tsc).
+- **A toast another tab raised is not an arrival here unless it is a
+  failure** (`announcedElsewhere` in `use-notification-arrivals.ts`): a tab's
+  confirmations and observations stay that tab's toast; its errors and
+  warnings still find the user in the tab they are looking at.
+- **Raised outside React?** Hand it to a component that holds `useToast` —
+  `reports/optimistic-rejection` emits into its own report sink, drained by a
+  page-root `RejectionToasts` (the sink holds what arrives before it mounts).
+- The endpoint is `needsMachine` (D4,
+  `research/2026-10-22-global-demo-scope-sealed.md`): under a transport with no
+  computer behind it (the demo) the toast is shown and written nowhere, no
+  request made — the one unrecorded case.
 
 ## The pane: Debug → Notifications
 
-The popover's **"View all"** (its header) opens `notificationsPane`
-(`web/panes.tsx`, route `notificationsRoute` in `core/`, app `debugApp`, with a
-`DebugApp.Sidebar` entry) — every undismissed notification, unbounded, as a
-DataView (`web/components/notifications-view.tsx`):
+The popover's **"View all"** (its header) opens `notificationsPane` — its own
+child plugin, `plugins/pane` (`web/panes.tsx`, route `notificationsRoute` in
+this plugin's `core/`, app `debugApp`, with a `DebugApp.Sidebar` entry), so this
+plugin never imports data-view (data-view raises toasts through `useToast`;
+the other way round would be an import cycle) — every undismissed
+notification, unbounded, as a DataView (`web/components/notifications-view.tsx`):
 
 - **Source**: `liveDataSource(notifications, { searchable: ["title"], facets:
   ["type", "variant"] })` — the bell's own collection, read as live key-range
   pages. Its filterable columns are `countedUnreadFilterable` (`read`, `muted`,
   `variant`) plus `type`, `title` and `category` (its options declared by the
   entity field — a closed list — so it is not a facet).
-- **View** (`config/shell/notifications/shell.notifications.jsonc`, the
+- **View** (`config/shell/notifications/pane/shell.notifications.jsonc`, the
   authored override): one `list`, grouped on the raw `read` column (`bool`,
   grouping `value` → server sections, unread first, exact counts), newest
   `createdAt` first. `read` is NOT the badge's "counted unread" (which also
@@ -216,21 +242,17 @@ DataView (`web/components/notifications-view.tsx`):
 - **Leaving the popover through "View all" marks nothing read.** It closes
   through `onClose` (like a row's link), and the bell's mark-all-read runs only
   in the popover's own `onOpenChange`; the pane has "Mark all read" for that.
-  `web/__tests__/bell-button.test.tsx` pins both exits.
+  `web/__tests__/bell-button.test.tsx` pins both exits (the pane's own tests
+  are `plugins/pane/web/__tests__/`).
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
 
 ## Plugin reference
 
-- Description: Persistent bell-button notifications backed by the DB, and Debug → Notifications: every undismissed notification as a DataView (the bell popover's View all). Persistent bell-button notifications backed by the DB (the fork exclusion of its table is the machine half's).
+- Description: Persistent bell-button notifications backed by the DB, and the one toast API: useToast() shows a toast and records it in the notification history (a liveAction — an Undo closure — is drawn on the live toast only). Persistent bell-button notifications backed by the DB (the fork exclusion of its table is the machine half's).
 - Web:
-  - Slots:
-    - `notifications.actions`
-    - `notification-actions`
-    - `Notifications.Action`
+  - Slots: `Notifications.Action`
   - Slot contributors:
-    - `notifications.actions` ← `primitives.pane`
-    - `notification-actions` ← `shell.notifications`
     - `Notifications.Action` ← `build.build-fix`
     - `Notifications.Action` ← `conversations.conversation-view.resume`
     - `Notifications.Action` ← `debug.reports`
@@ -240,14 +262,9 @@ DataView (`web/components/notifications-view.tsx`):
   - Contributes:
     - `IdKinds.Kind` "notif"
     - `ActionBar.Item` → `BellButton`
-    - `Pane.Register` "notifications"
-    - `DebugApp.Sidebar` "Notifications"
-    - `notification-actions` "open" → `OpenNotificationAction`
-    - `notification-actions` "dismiss" → `DismissNotificationAction`
     - `Notifications.Action` "open"
     - `Notifications.Action` "reload"
-  - Uses: 56 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×5
+  - Uses: 48 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps-core/tab-origin` ×4
     - `infra/endpoints` ×3
     - `primitives/css/ui-kit` ×3
@@ -256,9 +273,7 @@ DataView (`web/components/notifications-view.tsx`):
     - `primitives/css/coords` ×2
     - `primitives/css/fill` ×2
     - `primitives/cursor-pagination` ×2
-    - `primitives/pane` ×2
     - `apps-core/tabs.useAppLink`
-    - `apps/debug/shell.DebugApp`
     - `audience/developer-mark.DeveloperMark`
     - `audience.useAudience`
     - `network/live.useLive`
@@ -287,12 +302,17 @@ DataView (`web/components/notifications-view.tsx`):
     - `shell/toast.useShowCustomToast`
     - `ui/icons.Icon`
   - Exports (types):
+    - `LiveToastAction`
     - `Notification`
     - `NotificationActionControlProps`
     - `NotificationActionKind`
     - `Toast`
     - `ToastArgs`
   - Exports (values):
+    - `dismissAllNotifications`
+    - `dismissNotification`
+    - `markAllNotificationsRead`
+    - `notifications`
     - `Notifications`
     - `useNotificationArrivals`
     - `useToast`
@@ -381,28 +401,35 @@ DataView (`web/components/notifications-view.tsx`):
     - `notificationsRoute`
     - `NotificationStateSchema`
 - Cross-plugin:
-  - Uses tokens: 31 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 29 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/color-palette` ×13
-    - `ui/tokens/type-scale` ×10
+    - `ui/tokens/type-scale` ×8
     - `ui/tokens/density` ×6
     - `ui/tokens/shape` ×2
-  - Imported by: 40 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×15
+  - Imported by: 73 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×18
+    - `apps` ×12
     - `tasks` ×8
-    - `apps` ×2
-    - `build` ×2
-    - `debug` ×2
-    - `reports` ×2
+    - `debug` ×5
+    - `build` ×3
+    - `config_v2` ×3
+    - `infra` ×3
+    - `page` ×3
+    - `primitives` ×3
+    - `reports` ×3
+    - `hints` ×2
     - `screenshot` ×2
+    - `shell` ×2
+    - `active-data/show-me`
+    - `apps-core/app-embed`
     - `auth`
     - `history/dialog`
-    - `infra/events-test`
     - `network/live`
-    - `page/inline-date`
-    - `shell/notifications/native`
     - `upstream`
 - Exemptions:
-  - Exempts itself from: `endpoints/no-void-fetch-endpoint` — `web/internal/toast.ts` (sanctioned)
+  - Exempts itself from:
+    - `endpoints/no-void-fetch-endpoint` — `web/internal/toast.ts` (sanctioned)
+    - `shell-toast/no-direct-custom-toast` — `web/components/notification-view.tsx` (sanctioned)
 - Shared:
   - Exports (values):
     - `createNotification`
@@ -411,5 +438,6 @@ DataView (`web/components/notifications-view.tsx`):
     - `markAllNotificationsRead`
 - Sub-plugins:
   - **`native`** — Native OS notifications from the menu-bar panel: the Notifications switch (MenuBar.Section 'notifications', a config_v2 bool, off by default), shown only when the helper can notify, and a…
+  - **`pane`** — Debug → Notifications: every undismissed notification as a DataView (the bell popover's View all), with Open / Dismiss row actions. Its own plugin so the notifications plugin (and its useToast)…
 
 <!-- AUTOGENERATED:END -->

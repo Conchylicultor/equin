@@ -44,7 +44,7 @@ import {
   readFileLocations,
   type FileEntry,
 } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import type { RowSelectionState } from "@plugins/primitives/plugins/tree/core";
 import { DROP_TARGET_RING } from "@plugins/primitives/plugins/data-view/web";
 import {
@@ -236,6 +236,7 @@ function Listing({ browser }: { browser: FileBrowserReady }): ReactNode {
   const treeRef = useRef<HTMLElement | null>(null);
   const { listings, request, setOpen, readers } = useListings(system.fs, dir);
   const moveInto = useMoveInto(system.fs);
+  const toast = useToast();
   // The paths this listing is dragging right now: dropping them back into
   // the folder they sit in is no move, so the pane does not offer it.
   const dragging = useRef<readonly string[] | null>(null);
@@ -351,10 +352,12 @@ function Listing({ browser }: { browser: FileBrowserReady }): ReactNode {
       );
     }
     if (read.fs !== system.fs) {
-      showToast({
+      toast({
+        type: "file-explorer-cross-system-move",
         variant: "error",
-        description:
-          "Moving files between two file systems is not supported yet",
+        title: "Moving files between two file systems is not supported yet",
+        description: "",
+        category: "other",
       });
       return;
     }

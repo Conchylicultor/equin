@@ -25,7 +25,7 @@ import {
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import { useLiveReader } from "@plugins/network/plugins/live/web";
 import { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import {
   $setLinkText,
   readTransferText,
@@ -198,6 +198,7 @@ export function UrlPastePlugin({ block, editor }: BlockTextPluginProps) {
   const [lexical] = useLexicalComposerContext();
   const { recordDocEdit, serverSync } = useBlockEditor();
   const read = useLiveReader();
+  const toast = useToast();
 
   // The React copy drives the render; the ref is what the update listener reads.
   // Written together (only in `setMenu`), so a text change landing between the
@@ -353,33 +354,46 @@ export function UrlPastePlugin({ block, editor }: BlockTextPluginProps) {
       // Already reported by the reader; the user still learns the link
       // keeps its URL.
       if (!(err instanceof ResourceError)) throw err;
-      showToast({
+      toast({
+        type: "page-url-paste-title-failed",
         title: "Couldn't fetch the page title",
         description: err.message,
         variant: "error",
+        category: "other",
       });
       return;
     }
     // No computer behind the app to fetch the page: the link keeps its URL.
     if (answer.status === "unavailable") {
-      showToast({ description: answer.message, variant: "info" });
+      toast({
+        type: "page-url-paste-title-unavailable",
+        title: answer.message,
+        description: "",
+        variant: "info",
+        category: "confirmations",
+      });
       return;
     }
     // A blocked or dead link is an expected answer about the user's link, not
     // an app defect: a toast, and the link keeps its URL.
     if (answer.status === "refused") {
-      showToast({
+      toast({
+        type: "page-url-paste-title-refused",
         title: "Couldn't fetch the page title",
         description: answer.message,
         variant: "error",
+        category: "other",
       });
       return;
     }
     const title = answer.data.title?.trim();
     if (!title) {
-      showToast({
-        description: "That page has no title, so the link keeps its URL.",
+      toast({
+        type: "page-url-paste-no-title",
+        title: "That page has no title, so the link keeps its URL.",
+        description: "",
         variant: "info",
+        category: "other",
       });
       return;
     }

@@ -11,7 +11,7 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { DeveloperMark } from "@plugins/audience/plugins/developer-mark/web";
-import type { Notification } from "../../shared/resources";
+import type { Notification } from "@plugins/shell/plugins/notifications/web";
 
 const VARIANT_TEXT: Record<Notification["variant"], string> = {
   error: "text-destructive",

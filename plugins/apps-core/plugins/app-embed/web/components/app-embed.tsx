@@ -12,7 +12,7 @@ import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/we
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { RenderOrigin } from "@plugins/primitives/plugins/scope/plugins/render-origin/web";
 import { Apps } from "@plugins/apps-core/web";
 import {
@@ -37,13 +37,18 @@ import { useSurfaceTabId } from "@plugins/primitives/plugins/scope/plugins/surfa
 export type AppEmbedLeave = (url: string) => void;
 
 /** The default `onLeave`: say so, and stay. */
-const refuseLeave: AppEmbedLeave = () => {
-  showToast({
-    title: "Opens outside this embed",
-    description:
-      "This app is embedded here; that destination is not part of it.",
-  });
-};
+function useRefuseLeave(): AppEmbedLeave {
+  const toast = useToast();
+  return () => {
+    toast({
+      type: "app-embed-leave-refused",
+      title: "Opens outside this embed",
+      description:
+        "This app is embedded here; that destination is not part of it.",
+      category: "confirmations",
+    });
+  };
+}
 
 /**
  * The app, in-process, inside its own box: an EMBEDDED tab set
@@ -110,7 +115,7 @@ const refuseLeave: AppEmbedLeave = () => {
  * it opens on the composition's home app.
  */
 export function AppEmbed({
-  onLeave = refuseLeave,
+  onLeave: onLeaveProp,
   fills,
   onTitleChange,
   className,
@@ -137,6 +142,8 @@ export function AppEmbed({
   place?: EmbedPlaceBinding;
   className?: string;
 }): ReactNode {
+  const refuseLeave = useRefuseLeave();
+  const onLeave = onLeaveProp ?? refuseLeave;
   const fillsPage = fills !== undefined;
   // Filling the viewport, the embed's own brand (its floating launcher) holds
   // the page's top-left corner: the page draws no launcher of its own there.

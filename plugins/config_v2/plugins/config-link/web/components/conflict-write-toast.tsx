@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { onConfigWriteRefused } from "@plugins/config_v2/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { useConfigPathLink } from "../internal/use-config-link";
 
 /**
@@ -11,17 +11,20 @@ import { useConfigPathLink } from "../internal/use-config-link";
  */
 export function ConflictWriteToast() {
   const linkTo = useConfigPathLink();
+  const toast = useToast();
   useEffect(
     () =>
       onConfigWriteRefused("conflict", ({ storePath, scopeId }) =>
-        showToast({
+        toast({
+          type: "config-write-refused-conflict",
           variant: "error",
           title: "Config has a conflict — resolve it first",
           description: scopeId ? `${storePath} (${scopeId})` : storePath,
-          action: { label: "Resolve", link: linkTo(storePath) },
+          category: "other",
+          liveAction: { label: "Resolve", link: linkTo(storePath) },
         }),
       ),
-    [linkTo],
+    [linkTo, toast],
   );
   return null;
 }

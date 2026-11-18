@@ -61,7 +61,7 @@ import {
   type ListedFolder,
 } from "../../core";
 import { isOnDisk, type Listing, type Listings } from "../internal/listings";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { FileBrowserSlots } from "../slots";
 import { ExplorerControlsSlot } from "../internal/controls-slot";
 import type { ExplorerSystem } from "../internal/explorer-system";
@@ -74,7 +74,9 @@ const FILE_TREE_VIEW = defineDataView("file-explorer.tree");
  * protected folder asks the user; after a no, this is what every drag says.)
  */
 const DRAG_DENIED_TOAST = {
+  type: "file-explorer-drag-denied",
   variant: "error",
+  category: "other",
   title: "Can't drag files out of this folder",
   description:
     "macOS hasn't allowed this app to read it. Allow it in System Settings › Privacy & Security › Files and Folders, then drag again.",
@@ -492,6 +494,7 @@ export function FileTree({
   // files; in a browser tab, one file also carries Chrome's `DownloadURL`
   // (dropped on the desktop or Finder, it is saved there).
   const fileDrag = useNativeFileDrag();
+  const toast = useToast();
   const transport = useTransport();
   const rowDrag = useMemo<RowDragConfig<EntryRow>>(() => {
     const { fs, home, capabilities } = system;
@@ -518,7 +521,7 @@ export function FileTree({
         const entries = entriesOf(dragged);
         const ended = handOffComputerFiles(entries, fileDrag).then(
           (outcome) => {
-            if (outcome === "denied") showToast(DRAG_DENIED_TOAST);
+            if (outcome === "denied") toast(DRAG_DENIED_TOAST);
             return outcome;
           },
         );
@@ -529,7 +532,7 @@ export function FileTree({
         return ended;
       },
     };
-  }, [system, onDragPaths, fileDrag, transport, listings, root]);
+  }, [system, onDragPaths, fileDrag, transport, listings, root, toast]);
   // A real folder takes them — not an archive file, nor a folder inside one
   // (its listing is an archive's: `within`), which cannot be written to.
   const rowDrop = useMemo<RowDropConfig<EntryRow>>(

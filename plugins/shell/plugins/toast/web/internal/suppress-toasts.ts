@@ -28,8 +28,9 @@ function subscribe(listener: () => void): () => void {
 /**
  * The calling surface shows no toasts: while it is mounted the page's toast
  * host draws nothing — for a document that is one small surface (the
- * menu-bar panel), where the app-wide stack does not belong. `showToast` from
- * inside it then lands nowhere, so the surface must say its outcomes inline.
+ * menu-bar panel), where the app-wide stack does not belong. A toast raised from
+ * inside it is then not drawn (still recorded in the bell), so the surface must
+ * say its outcomes inline.
  */
 export function useSuppressToasts(): void {
   useEffect(() => {

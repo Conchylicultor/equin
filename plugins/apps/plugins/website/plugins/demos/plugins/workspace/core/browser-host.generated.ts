@@ -826,6 +826,7 @@ export const browserHost = {
     "shell.global-action-bar",
     "shell.health-report",
     "shell.notifications",
+    "shell.notifications.pane",
     "shell.toast",
     "tag-tree.engine",
     "tag-tree.picker",

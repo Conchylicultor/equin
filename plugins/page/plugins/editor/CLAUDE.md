@@ -2271,7 +2271,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `primitives/sortable-list.useChromePointerSensor`
     - `primitives/sync-status.useReportSync`
     - `primitives/text-editor/decorator-nav.DecoratorNavPlugin`
-    - `shell/toast.showToast`
+    - `shell/notifications.useToast`
     - `ui/icons/emoji.EmojiGlyph`
     - `ui/icons.Icon`
   - Exports (types):

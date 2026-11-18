@@ -328,7 +328,7 @@ code, that is the bug this section exists to prevent.
     - `primitives/latest-ref.useLatestRef`
     - `primitives/overlay/imperative-dialog/confirm.useConfirmDialog`
     - `primitives/relative-time.RelativeTime`
-    - `shell/toast.showToast`
+    - `shell/notifications.useToast`
   - Exports (types):
     - `DeleteCompositionRequest`
     - `ServeStatus`

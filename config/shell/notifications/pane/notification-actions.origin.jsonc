@@ -1,4 +1,4 @@
-// @hash 7d7f0f24fbfa
+// @hash cfd71dd824dc
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,7 +7,7 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
-    "shell.notifications:open",
-    "shell.notifications:dismiss"
+    "shell.notifications.pane:open",
+    "shell.notifications.pane:dismiss"
   ]
 }

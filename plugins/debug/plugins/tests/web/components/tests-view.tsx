@@ -23,7 +23,7 @@ import {
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { formatDuration } from "@plugins/fields/plugins/duration/core";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import {
   runTestsNow,
   TEST_STATUSES,
@@ -122,10 +122,13 @@ function TestsBody({
   );
   const rows = useMemo(() => buildTestTree(shown), [shown]);
   const runNow = useEndpointMutation(runTestsNow);
+  const toast = useToast();
   const run = async (paths: string[], what: string): Promise<void> => {
     if (runNow.kind === "unavailable") return;
     const { files: n } = await runNow.mutateAsync({ body: { paths } });
-    showToast({
+    toast({
+      type: "tests-run-started",
+      category: "confirmations",
       title: `Running ${n} test file${n === 1 ? "" : "s"}`,
       description: `${what}: their verdicts appear here as the run finishes.`,
     });

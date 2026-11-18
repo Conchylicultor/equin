@@ -129,7 +129,7 @@ Tests: `web/__tests__/app-embed.test.tsx`.
     - `primitives/scope/render-origin.RenderOrigin`
     - `primitives/scope/surface-id.useSurfaceTabId`
     - `primitives/slot-render.renderIsolated`
-    - `shell/toast.showToast`
+    - `shell/notifications.useToast`
   - Exports (types):
     - `AppEmbedAt`
     - `AppEmbedLeave`

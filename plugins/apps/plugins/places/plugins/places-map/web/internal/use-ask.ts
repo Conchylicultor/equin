@@ -1,7 +1,7 @@
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { useState } from "react";
 import type { MapBounds } from "@plugins/map/core";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import {
   useStartThread,
   useThreadProgress,
@@ -53,6 +53,7 @@ export function useAsk(bounds: MapBounds | null): AskState {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [shown, setShown] = useState(false);
   const [restored, setRestored] = useState(false);
+  const toast = useToast();
   const { start: startThread, availability } = useStartThread({
     filedFrom: asPluginId("apps.places.places-map"),
     profile: PLACES_ASK_PROFILE,
@@ -109,9 +110,11 @@ export function useAsk(bounds: MapBounds | null): AskState {
       input,
     });
     if (result.kind !== "ok") {
-      showToast({
+      toast({
+        type: "places-ask-unavailable",
         title: "Sonnet can't be asked",
         description: result.message,
+        category: "other",
       });
       return false;
     }

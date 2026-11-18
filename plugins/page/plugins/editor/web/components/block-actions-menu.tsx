@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactElement } from "react";
 
 import { useCopyToClipboard } from "@plugins/primitives/plugins/copy-to-clipboard/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import {
   ControlPanel,
   ControlPanelPopover,
@@ -104,6 +104,7 @@ export function BlockActionsMenu({
   align?: ControlPanelPopoverProps["align"];
   side?: ControlPanelPopoverProps["side"];
 }) {
+  const toast = useToast();
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const blocks = useInsertableBlocks();
@@ -390,7 +391,12 @@ export function BlockActionsMenu({
           icon={<Icon icon={contentCopyIcon} />}
           onSelect={commit(() => {
             copyBlockId();
-            showToast({ description: "Block ID copied" });
+            toast({
+              type: "page-block-id-copied",
+              title: "Block ID copied",
+              description: "",
+              category: "confirmations",
+            });
           })}
         >
           Copy block ID

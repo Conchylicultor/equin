@@ -41,7 +41,7 @@ import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/eleme
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useReconnectingWebSocket } from "@plugins/primitives/plugins/networking/web";
 import type { CursorAnchor } from "@plugins/primitives/plugins/overlay/plugins/cursor-menu/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import {
   heldButtonOf,
   keyMessage,
@@ -123,6 +123,7 @@ function AttachedTab({
 }) {
   const { markAttached, markSent, report } = useBrowserRemote();
   const { open: openTab } = useBrowserTabs();
+  const toast = useToast();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const painterRef = useRef<FramePainter | null>(null);
@@ -219,9 +220,11 @@ function AttachedTab({
           openTab(event.url, { key: event.key });
           break;
         case "download":
-          showToast({
+          toast({
+            type: "browser-download-done",
             title: `Downloaded ${event.name}`,
             description: event.path,
+            category: "confirmations",
           });
           break;
         case "error":

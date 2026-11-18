@@ -40,6 +40,7 @@ re-arms every 6h, like `optimistic-divergence`.
 - Web:
   - Contributes:
     - `ReportSinks.Collector` "network.live"
+    - `Core.Root` → `RejectionToasts`
     - `Reports.KindView` → `OptimisticRejectionKindView`
   - Uses:
     - `network/live.optimisticRejectionSink`
@@ -49,7 +50,8 @@ re-arms every 6h, like `optimistic-divergence`.
     - `reports.report`
     - `reports.Reports`
     - `reports/collectors.ReportSinks`
-    - `shell/toast.showToast`
+    - `shell/notifications.ToastArgs`
+    - `shell/notifications.useToast`
 - Server:
   - Contributes: `report-kind` "optimistic-rejection"
   - Uses: `reports.ReportKind`

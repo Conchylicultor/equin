@@ -12,7 +12,7 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { useConfirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import {
   isServableCompositionId,
   isServed,
@@ -67,13 +67,17 @@ export function ServeTargetPanel({
   status: ServeStatus;
 }): ReactElement {
   const confirmDialog = useConfirmDialog();
+  const toast = useToast();
   const { setMode, rebuildNow } = useServeComposition();
   // Reset the served composition's own DB + config back to first-launch. Handles
   // its own toasts (success + failure) so `onError` suppresses the global one.
   const reset = useEndpointMutation(resetCompositionData, {
     onError: (err) =>
-      showToast({
-        description: `Reset failed: ${err.message}`,
+      toast({
+        type: "composition-reset-failed",
+        title: "Reset failed",
+        description: err.message,
+        category: "updates",
         variant: "error",
       }),
   });
@@ -199,8 +203,11 @@ export function ServeTargetPanel({
                 confirmLabel: "Reset to first-launch",
                 onConfirm: async () => {
                   await reset.mutateAsync({ body: { id: item.id } });
-                  showToast({
-                    description: `Reset ${host} to first-launch.`,
+                  toast({
+                    type: "composition-reset",
+                    title: `Reset ${host} to first-launch`,
+                    description: "",
+                    category: "updates",
                     variant: "success",
                   });
                 },

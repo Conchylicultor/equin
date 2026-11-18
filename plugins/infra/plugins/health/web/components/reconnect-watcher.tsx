@@ -1,8 +1,9 @@
 import { useEffect } from "react";
 import { subscribeWsStatus } from "@plugins/primitives/plugins/networking/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 
 export function ReconnectWatcher() {
+  const toast = useToast();
   useEffect(() => {
     const wasReconnecting = new Set<string>();
     let toastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -14,9 +15,12 @@ export function ReconnectWatcher() {
         // An announcement: a reconnect the user did not watch is not news (the
         // health report's Connection row has the state), so the toast plugin
         // raises it only on a page on screen.
-        showToast({
+        toast({
           kind: "announcement",
-          description: "Reconnected to server",
+          type: "health-reconnected",
+          title: "Reconnected to server",
+          description: "",
+          category: "other",
           variant: "info",
           audience: "developer",
         });
@@ -38,7 +42,7 @@ export function ReconnectWatcher() {
       unsub();
       if (toastTimer) clearTimeout(toastTimer);
     };
-  }, []);
+  }, [toast]);
 
   return null;
 }

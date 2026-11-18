@@ -3,7 +3,7 @@ import {
   onStorageFailure,
   type StorageFailure,
 } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 
 // Once per owner per page load: every keystroke after the first refusal fails
 // the same way, and one toast per kind of thing being lost is enough.
@@ -29,6 +29,7 @@ function describe(f: StorageFailure): string {
  * unreadable entry is not the user's to act on — it files a report instead.
  */
 export function StorageFailureToast() {
+  const toast = useToast();
   useEffect(
     () =>
       onStorageFailure((f) => {
@@ -39,13 +40,15 @@ export function StorageFailureToast() {
         )
           return;
         warned.add(f.owner);
-        showToast({
+        toast({
+          type: "web-storage-write-failed",
           title: `${f.label} are not being saved`,
           description: describe(f),
           variant: "error",
+          category: "other",
         });
       }),
-    [],
+    [toast],
   );
   return null;
 }

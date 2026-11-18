@@ -26,7 +26,7 @@ import type {
 } from "@plugins/config_v2/core";
 import { ControlPanelPane } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { acknowledgeConflict, deleteOverride, mergeConflict } from "../../core";
@@ -309,6 +309,8 @@ function ConfigDetailBody({
     [tierFor, registration.descriptor.fields],
   );
 
+  const toast = useToast();
+
   // useEndpointMutation (not void fetchEndpoint) so a failed reset/dismiss
   // surfaces via the global error toast instead of escaping as an unhandled
   // rejection. The config view refreshes via its live-state resource on success.
@@ -331,10 +333,18 @@ function ConfigDetailBody({
   // user — from the response the endpoint already returns.
   const mergeM = useEndpointMutation(mergeConflict, {
     onSuccess: ({ resolved, conflictKeys }) => {
-      showToast(
+      toast(
         resolved
-          ? { description: "Merged — conflict resolved", variant: "success" }
+          ? {
+              type: "config-conflict-merged",
+              title: "Merged — conflict resolved",
+              description: "",
+              category: "confirmations",
+              variant: "success",
+            }
           : {
+              type: "config-conflict-merge-partial",
+              category: "other",
               title: `${conflictKeys.length} field${conflictKeys.length === 1 ? "" : "s"} still need${conflictKeys.length === 1 ? "s" : ""} your attention`,
               description: `Merged the rest. Resolve ${conflictKeys.join(", ")} below, then merge again.`,
               variant: "warning",

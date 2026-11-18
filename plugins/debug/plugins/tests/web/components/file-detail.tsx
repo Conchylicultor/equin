@@ -23,7 +23,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { formatDuration } from "@plugins/fields/plugins/duration/core";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import {
   runTestsNow,
   TESTS_CATEGORY_ID,
@@ -67,6 +67,7 @@ export function FileDetail({ path }: { path: string }): ReactElement {
 function FileDetailBody({ file }: { file: TestFileStatusRow }): ReactElement {
   const meta = STATUS_META[file.status];
   const runNow = useEndpointMutation(runTestsNow);
+  const toast = useToast();
   // The newest run on the current code that did not pass: its failing cases.
   const failingRun = file.history.find(
     (h) => h.current && h.outcome !== "passed",
@@ -142,7 +143,9 @@ function FileDetailBody({ file }: { file: TestFileStatusRow }): ReactElement {
               variant="outline"
               onClick={async () => {
                 await runNow.mutateAsync({ body: { paths: [file.path] } });
-                showToast({
+                toast({
+                  type: "tests-run-started",
+                  category: "confirmations",
                   title: "Running 1 test file",
                   description: `${file.path}: its verdict appears here when the run finishes.`,
                 });

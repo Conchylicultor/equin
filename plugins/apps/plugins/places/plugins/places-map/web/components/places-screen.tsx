@@ -29,7 +29,7 @@ import { useDraft } from "@plugins/primitives/plugins/kept-state/web";
 import { type LatLng, type MapBounds, type MapPin } from "@plugins/map/core";
 import { deriveLinkedHover } from "@plugins/primitives/plugins/data-view/core";
 import { useLinkedHover } from "@plugins/primitives/plugins/data-view/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import {
   placeFlags,
   placeName,
@@ -272,6 +272,7 @@ function PlacesSurface({
   onClosePage: () => void;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const toast = useToast();
   // A Google place not saved yet, in the detail card (exclusive with the
   // selection: opening one closes the other).
   const [detail, setDetail] = useState<GoogleDetail | null>(null);
@@ -794,7 +795,12 @@ function PlacesSurface({
   const savePlaceOf = async (hit: GoogleHit): Promise<SavedHit | null> => {
     // Saving from Google needs the computer: a host without one says so.
     if (saveMutation.kind === "unavailable") {
-      showToast({ description: saveMutation.message });
+      toast({
+        type: "places-save-unavailable",
+        title: saveMutation.message,
+        description: "",
+        category: "other",
+      });
       return null;
     }
     const result = await saveMutation.mutateAsync({
@@ -827,10 +833,12 @@ function PlacesSurface({
     ].map((t) => t.name);
     // Saved where it is: no selection, no camera move — the ghost becomes
     // the place's own pin and the card says Saved.
-    showToast({
+    toast({
+      type: "places-saved",
       title: `Saved ${placeName(place)}`,
       description: `Tagged ${tagged.join(", ")}`,
-      action: {
+      category: "confirmations",
+      liveAction: {
         label: "Undo",
         onClick: () => void deletePlace({ params: { id: place.id } }),
       },
@@ -871,13 +879,15 @@ function PlacesSurface({
     }
     if (made.length === 0) return;
     const title = overlay?.kind === "page" ? overlay.page.title : "the page";
-    showToast({
+    toast({
+      type: "places-saved-from-page",
       title:
         made.length === 1
           ? `Saved ${placeName(made[0]!)}`
           : `Saved ${made.length} places from ${title}`,
       description: "Tagged Want to go",
-      action: {
+      category: "confirmations",
+      liveAction: {
         label: "Undo",
         onClick: () => {
           for (const place of made) {

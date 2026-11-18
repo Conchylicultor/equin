@@ -7,7 +7,7 @@ import {
 } from "@plugins/primitives/plugins/pane/web";
 import { useUndoRedo } from "@plugins/primitives/plugins/undo-redo/web";
 import { useUndoableTrash } from "@plugins/infra/plugins/trash/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import {
   pagesTree,
@@ -37,6 +37,7 @@ export function DeletePageAction({ row }: ItemActionProps<Block>) {
   const title = pageData(row).title;
   const trashWithUndo = useUndoableTrash();
   const { undo } = useUndoRedo();
+  const toast = useToast();
   const openPane = useOpenPane();
   const paneStore = usePaneStore();
   const openPageId = pageDetailPane.useRouteEntry()?.params.pageId;
@@ -76,9 +77,12 @@ export function DeletePageAction({ row }: ItemActionProps<Block>) {
 
     if (reopenId !== undefined) paneStore.clearRoute();
 
-    showToast({
-      description: "Page moved to trash",
-      action: { label: "Undo", onClick: () => undo() },
+    toast({
+      type: "pages-page-trashed",
+      title: "Page moved to trash",
+      description: "",
+      category: "confirmations",
+      liveAction: { label: "Undo", onClick: () => undo() },
     });
   };
 

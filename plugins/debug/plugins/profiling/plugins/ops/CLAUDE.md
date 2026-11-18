@@ -107,7 +107,7 @@ The orphan reconciler lives in `op-log/plugins/op-store` (`reconcile.ts`).
     - `primitives/css/ui-kit.cn`
     - `primitives/loading.Loading`
     - `primitives/relative-time.useNow`
-    - `shell/toast.showToast`
+    - `shell/notifications.useToast`
     - `tasks/attempt-view.attemptPane`
   - Exports (values):
     - `opDetailPane`

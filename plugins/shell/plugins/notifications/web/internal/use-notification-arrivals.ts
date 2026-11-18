@@ -12,7 +12,9 @@ import { recentClientIds } from "./toast";
  * rows already there when the read first settles are history and are never
  * announced; a resurfaced row keeps its id and is not announced again. Rows
  * this page raised itself (its own toasts, already on screen) and muted rows
- * are skipped, and only rows that reach the user's audience are read at all.
+ * are skipped, and so is a toast ANOTHER tab raised unless it is a failure
+ * (`announcedElsewhere`) — a confirmation or a tab's own observation (Copied,
+ * Reconnected) answers that tab, not this one; and only rows that reach the user's audience are read at all.
  * A change of audience (Developer mode switched on) starts the history over:
  * the rows it newly reaches were already there, not arrivals.
  *
@@ -34,7 +36,12 @@ export function useNotificationArrivals(
       seen.current?.audience === audience.data ? seen.current.ids : null;
     if (before !== null) {
       for (const n of rows) {
-        if (!before.has(n.id) && !recentClientIds.has(n.id) && !n.muted) {
+        if (
+          !before.has(n.id) &&
+          !recentClientIds.has(n.id) &&
+          !n.muted &&
+          announcedElsewhere(n)
+        ) {
           arrive(n);
         }
       }
@@ -44,4 +51,16 @@ export function useNotificationArrivals(
       ids: new Set(rows.map((n) => n.id)),
     };
   }, [result, audience, arrive]);
+}
+
+/**
+ * Whether a row reaches other tabs as an arrival: one the server wrote always
+ * does; one a browser tab wrote (`metadata.clientId`, stamped by `useToast`)
+ * only when it is a failure — what went wrong in a tab the user is not looking
+ * at should find them, but a tab's confirmations and observations ("Copied",
+ * "Reconnected") stay that tab's toast, recorded in the bell.
+ */
+function announcedElsewhere(n: Notification): boolean {
+  if (typeof n.metadata?.clientId !== "string") return true;
+  return n.variant === "error" || n.variant === "warning";
 }

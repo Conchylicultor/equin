@@ -57,7 +57,7 @@ import {
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import {
   clearBackward,
   desiredShare,
@@ -459,6 +459,7 @@ function Trainer({
 
   const record = useEndpointMutation(recordRoundEndpoint);
   const report = useEndpointMutation(reportPlaybackEndpoint);
+  const toast = useToast();
 
   const updateSheet = (fn: (sheet: AnswerSheet) => AnswerSheet) => {
     if (session === null || round === null) return;
@@ -473,10 +474,13 @@ function Trainer({
   const playNotes = useEventCallback(
     (pitches: readonly number[], ringSeconds?: number) => {
       void piano.play(pitches, { ringSeconds }).catch((err: unknown) => {
-        showToast({
+        toast({
+          type: "chord-piano-play-failed",
           title: "The piano could not play",
-          description: err instanceof Error ? err.message : String(err),
+          description: "",
+          detail: err instanceof Error ? err.message : String(err),
           variant: "error",
+          category: "other",
         });
         throw err;
       });
@@ -598,8 +602,11 @@ function Trainer({
       params: { videoId: loop.videoId },
       body: { outcome: "error", code },
     });
-    showToast({
-      description: "This video can't play here — next song",
+    toast({
+      type: "chord-video-unplayable",
+      title: "This video can't play here — next song",
+      description: "",
+      category: "other",
     });
     queue.skipVideo(loop.videoId);
   });

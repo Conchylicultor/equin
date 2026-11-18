@@ -222,6 +222,7 @@ that cannot run on this database).
     - `primitives/css/ui-kit` ×6
     - `config_v2` ×3
     - `primitives/relative-time` ×2
+    - `shell/notifications` ×2
     - `apps-core/tabs.useAppLinkProps`
     - `conversations/conversation-view/status.ConversationStatusChip`
     - `infra/endpoints.useFetchEndpoint`
@@ -234,8 +235,6 @@ that cannot run on this database).
     - `primitives/icon-button.IconButton`
     - `primitives/launch.LaunchAgentPopover`
     - `shell/health-report.HealthReport`
-    - `shell/notifications.Notifications`
-    - `shell/toast.showToast`
     - `tasks/automations.automationConfigContributions`
     - `tasks/task-subject.useSubjectTask`
     - `ui/icons.Icon`

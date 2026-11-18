@@ -4,7 +4,7 @@ import {
 } from "@plugins/infra/plugins/endpoints/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import type { LoopExtras } from "@plugins/apps/plugins/chord/plugins/song-index/core";
 import {
   chordCatalog,
@@ -47,11 +47,14 @@ export type CurriculumWrites = {
 };
 
 export function useCurriculumWrites(): CurriculumWrites {
+  const toast = useToast();
   const onError = (err: Parameters<typeof getEndpointErrorMessage>[0]) =>
-    showToast({
+    toast({
+      type: "chord-curriculum-write-failed",
       title: "Your practice settings could not be changed",
       description: getEndpointErrorMessage(err),
       variant: "error",
+      category: "other",
     });
   const chords = useEndpointMutation(setChordsEndpoint, { onError });
   const blanks = useEndpointMutation(setBlanksEndpoint, { onError });

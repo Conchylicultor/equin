@@ -16,12 +16,13 @@ import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
-import { notifications, type Notification } from "../../shared/resources";
 import {
+  notifications,
+  type Notification,
   dismissAllNotifications,
   dismissNotification,
   markAllNotificationsRead,
-} from "../../shared/endpoints";
+} from "@plugins/shell/plugins/notifications/web";
 import {
   NotificationBody,
   VARIANT_FILL,

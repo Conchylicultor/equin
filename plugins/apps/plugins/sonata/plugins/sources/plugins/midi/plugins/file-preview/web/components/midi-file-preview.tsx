@@ -32,7 +32,7 @@ import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { PaneMessage } from "@plugins/primitives/plugins/pane/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 
 /**
  * The file viewer's MIDI renderer: the file in Sonata's mini player — the
@@ -129,6 +129,7 @@ function OpenInSonata({
   const { score, stop, isPlaying } = useSession();
   const cursor = useCursorApi();
   const fetchEndpoint = useFetchEndpoint();
+  const toast = useToast();
   const resolve = async () => {
     // Opening continues what the preview was doing: playing → Sonata plays.
     const wasPlaying = isPlaying;
@@ -145,10 +146,12 @@ function OpenInSonata({
       if (wasPlaying) requestPlayOnOpen(song.id);
       return appLink(sonataSongLink(song.id, bar));
     } catch (err) {
-      showToast({
+      toast({
+        type: "sonata-midi-open-failed",
         title: "Could not open in Sonata",
         description: err instanceof Error ? err.message : String(err),
         variant: "error",
+        category: "other",
       });
       throw err;
     }

@@ -19,7 +19,7 @@ import {
   getEndpointErrorMessage,
   useEndpointMutation,
 } from "@plugins/infra/plugins/endpoints/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast, type Toast } from "@plugins/shell/plugins/notifications/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { canSendTurn, stopConversation } from "@plugins/conversations/core";
 import type { ConversationEntry } from "@plugins/conversations/core";
@@ -115,10 +115,12 @@ export function ThreadComposerView({
   );
 }
 
-function failed(title: string, err: unknown): void {
-  showToast({
+function failed(toast: Toast, type: string, title: string, err: unknown): void {
+  toast({
+    type,
     title,
     description: getEndpointErrorMessage(err),
+    category: "conversations",
     variant: "error",
   });
 }
@@ -158,14 +160,22 @@ export function ThreadComposer({
   const draftRef = useLatestRef(draft);
   const sendConversationTurn = useSendConversationTurn();
   const sendAvailability = useTurnSendAvailability();
+  const toast = useToast();
   const resume = useEndpointMutation(resumeConversationEndpoint, {
-    onError: (err) => failed("Couldn't resume the conversation", err),
+    onError: (err) =>
+      failed(
+        toast,
+        "conversation-resume-failed",
+        "Couldn't resume the conversation",
+        err,
+      ),
   });
   const stop = useEndpointMutation(stopConversation, {
     onSuccess: (data) => {
       if (data.rewindText) setDraft(data.rewindText);
     },
-    onError: (err) => failed("Couldn't stop the agent", err),
+    onError: (err) =>
+      failed(toast, "conversation-stop-failed", "Couldn't stop the agent", err),
   });
 
   const ended = status === "gone" || status === "done";

@@ -98,7 +98,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "running-agents", pluginId: "conversations.conversation-view.running-agents" },
   { id: "runs", pluginId: "runs" },
   { id: "runtime-sdk.error-stopped", pluginId: "conversations.runtime-sdk" },
-  { id: "shell.notifications", pluginId: "shell.notifications" },
+  { id: "shell.notifications", pluginId: "shell.notifications.pane" },
   { id: "sonata.library", pluginId: "apps.sonata.library" },
   { id: "stats.cost.top-sessions", pluginId: "stats.cost" },
   { id: "studio.compositions", pluginId: "apps.studio.compositions" },

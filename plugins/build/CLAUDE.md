@@ -356,7 +356,7 @@ the common case.
     - `Pane.Register` "build-detail"
     - `DebugApp.Sidebar` "Builds"
     - `ConfigV2.WebRegister` "config"
-  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 43 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/live-state` ×4
     - `primitives/css/ui-kit` ×4
     - `infra/endpoints` ×3
@@ -388,7 +388,6 @@ the common case.
     - `runs.RunsDataView`
     - `shell/action-bar.ActionBar`
     - `shell/notifications.useToast`
-    - `shell/toast.showToast`
     - `ui/icons.Icon`
   - Exports (values):
     - `buildDetailPane`

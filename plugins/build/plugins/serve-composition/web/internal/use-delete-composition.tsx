@@ -5,7 +5,7 @@ import { useLiveReader } from "@plugins/network/plugins/live/web";
 import { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useConfirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { OwnedNamespacesList } from "../components/owned-namespaces-list";
 import {
   reclaimCompositionNamespaces,
@@ -57,6 +57,7 @@ export function useDeleteComposition(): {
   deleteComposition: (req: DeleteCompositionRequest) => Promise<void>;
 } {
   const confirmDialog = useConfirmDialog();
+  const toast = useToast();
   const read = useLiveReader();
   const { remove } = useManifestActions();
   // The dialog shows the failure inline and re-enables its confirm button, so it
@@ -83,9 +84,11 @@ export function useDeleteComposition(): {
       // hook exists to prevent, so a failed read is a refusal to delete, not a
       // reason to fall back to the old one-line behaviour.
       const refuse = (why: string) =>
-        showToast({
+        toast({
+          type: "composition-delete-refused",
           title: `Did not delete “${name}”`,
           description: `Could not check what it is serving: ${why}`,
+          category: "updates",
           variant: "error",
         });
       let answer;
@@ -146,15 +149,17 @@ export function useDeleteComposition(): {
           }
           latest.current.remove(id);
           onDeleted?.();
-          showToast({
+          toast({
+            type: "composition-deleted",
             title: `Deleted “${name}”`,
             description: `Reclaimed ${results.map((r) => r.namespace).join(", ")}.`,
+            category: "updates",
             variant: "success",
           });
         },
       });
     },
-    [read, latest, confirmDialog],
+    [read, latest, confirmDialog, toast],
   );
 
   return { deleteComposition };

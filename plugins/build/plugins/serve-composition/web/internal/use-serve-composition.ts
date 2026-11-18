@@ -5,7 +5,7 @@ import {
 import { isServed } from "@plugins/plugin-meta/plugins/composition/core";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { serveCompositionEndpoint } from "@plugins/build/core";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 
 /**
  * The serve capability for a composition: persist the `serve` mode, and run the
@@ -25,6 +25,7 @@ export function useServeComposition(): {
   const items = useManifestItems();
   const { setServeMode } = useManifestActions();
   const build = useEndpointMutation(serveCompositionEndpoint);
+  const toast = useToast();
 
   /**
    * Start a serve build of `id`; `false` when this host cannot build at all.
@@ -36,9 +37,11 @@ export function useServeComposition(): {
    */
   const startBuild = (id: string): boolean => {
     if (build.kind === "unavailable") {
-      showToast({
+      toast({
+        type: "composition-build-unavailable",
         title: `Can't build “${id}”`,
         description: build.message,
+        category: "updates",
         variant: "error",
       });
       return false;
@@ -73,7 +76,9 @@ export function useServeComposition(): {
     setServeMode(id, mode);
     if (!claimsNamespace) return;
     if (!startBuild(id)) return;
-    showToast({
+    toast({
+      type: "composition-serve-started",
+      category: "updates",
       title: `Building & serving “${id}”…`,
       description:
         "Running a build of this checkout; the live URL will be ready shortly.",
@@ -93,7 +98,9 @@ export function useServeComposition(): {
    */
   const rebuildNow = (id: string): void => {
     if (!startBuild(id)) return;
-    showToast({
+    toast({
+      type: "composition-rebuild-started",
+      category: "updates",
       title: `Rebuilding “${id}”…`,
       description:
         "Running a build of this checkout; the live URL updates when it ends.",

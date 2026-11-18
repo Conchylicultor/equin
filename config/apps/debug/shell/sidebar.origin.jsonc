@@ -1,4 +1,4 @@
-// @hash 63cd139c0a7c
+// @hash c51ad0c81c26
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -36,6 +36,6 @@
     "infra.deps:dependencies",
     "infra.events-test:events-test",
     "plugin-meta.exhibits:exhibits",
-    "shell.notifications:notifications"
+    "shell.notifications.pane:notifications"
   ]
 }

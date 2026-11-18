@@ -45,7 +45,7 @@ descriptor (`button — Share`, without a `×N`). No hand-written anchor labels.
     - `primitives/css/ui-kit.cn`
     - `primitives/log-channels.clientLog`
     - `primitives/ui-context.resolveUiContext`
-    - `shell/toast.showToast`
+    - `shell/notifications.useToast`
     - `ui/icons.Icon`
 - Cross-plugin:
   - Uses tokens:

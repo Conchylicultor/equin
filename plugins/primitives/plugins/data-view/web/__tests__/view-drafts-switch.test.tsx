@@ -9,12 +9,14 @@ import { useDataViewModel } from "../internal/use-data-view-model";
 // and offers it back with an Undo toast. view-core's engine is faked: its
 // drafts are spies, `setActiveView` records the selection.
 const toasts: {
-  description?: string;
-  action?: { label: string; onClick: () => void };
+  title: string;
+  category: string;
+  liveAction?: { label: string; onClick: () => void };
 }[] = [];
-vi.mock("@plugins/shell/plugins/toast/web", async (importOriginal) => ({
+const toastSpy = (args: (typeof toasts)[number]) => toasts.push(args);
+vi.mock("@plugins/shell/plugins/notifications/web", async (importOriginal) => ({
   ...(await importOriginal<object>()),
-  showToast: (args: (typeof toasts)[number]) => toasts.push(args),
+  useToast: () => toastSpy,
 }));
 
 const COPY = { type: "map", sort: [1] } as VariantValue;
@@ -102,9 +104,14 @@ describe("useDataViewModel — switching views under drafts", () => {
     expect(discard).toHaveBeenCalledWith("all");
     expect(selected).toEqual(["food"]);
     expect(toasts).toHaveLength(1);
-    expect(toasts[0]!.description).toBe("All places reset to its saved filter");
+    expect(toasts[0]).toEqual(
+      expect.objectContaining({
+        title: "All places reset to its saved filter",
+        category: "confirmations",
+      }),
+    );
 
-    act(() => toasts[0]!.action!.onClick());
+    act(() => toasts[0]!.liveAction!.onClick());
     expect(restore).toHaveBeenCalledWith("all", COPY);
     expect(selected).toEqual(["food", "all"]);
   });

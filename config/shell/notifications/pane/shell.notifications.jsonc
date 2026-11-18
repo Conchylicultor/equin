@@ -1,6 +1,6 @@
 // @hash 6ec84829688d
 {
-  // Debug → Notifications (plugins/shell/plugins/notifications): every
+  // Debug → Notifications (plugins/shell/plugins/notifications/plugins/pane): every
   // undismissed notification — the bell popover's "View all". One list view,
   // grouped on the raw `read` column (server sections, unread first, each with
   // its exact count) and newest first inside each. `read` is the column, not

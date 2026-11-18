@@ -141,7 +141,7 @@ await withBrowser(async (h) => {
   // replay — and the `<Toaster>`'s subscription is a `useEffect` keyed on its
   // own toast list, so it tears down and re-registers on every add. React runs
   // every passive destroy for a commit before any passive create, which leaves
-  // a synchronous stretch with no subscriber at all; a `showToast` fired from
+  // a synchronous stretch with no subscriber at all; a toast fired from
   // another component's effect in that same commit is simply discarded. The
   // bell is exactly such a producer, so a tight burst is the shape that hits
   // it.

@@ -78,7 +78,7 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `ui/tokens/type-scale` ×6
     - `ui/tokens/shape` ×3
     - `ui/tokens/font-family --font-mono`
-  - Imported by: 190 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 191 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×39
     - `debug` ×39
     - `conversations` ×28
@@ -93,6 +93,7 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `page` ×3
     - `apps-core` ×2
     - `runs` ×2
+    - `shell` ×2
     - `auth`
     - `backup/runs-arm`
     - `code-explorer/commit-detail`
@@ -101,7 +102,6 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `hints/ask`
     - `integrations/google-maps/usage`
     - `release/runs-arm`
-    - `shell/notifications`
     - `stats/responsiveness`
 - Core:
   - Exports (types): `BadgeVariant`

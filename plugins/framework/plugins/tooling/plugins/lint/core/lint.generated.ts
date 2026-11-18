@@ -144,6 +144,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "primitives/plugins/text-editor", id: "primitives.text-editor", loader: () => import("@plugins/primitives/plugins/text-editor/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/text-editor/plugins/caret-motion", id: "primitives.text-editor.caret-motion", loader: () => import("@plugins/primitives/plugins/text-editor/plugins/caret-motion/lint"), dependsOn: [] },
   { pluginPath: "reorder/plugins/node-types/plugins/spacer", id: "reorder.node-types.spacer", loader: () => import("@plugins/reorder/plugins/node-types/plugins/spacer/lint"), dependsOn: [] },
+  { pluginPath: "shell/plugins/toast", id: "shell.toast", loader: () => import("@plugins/shell/plugins/toast/lint"), dependsOn: [] },
   { pluginPath: "ui/plugins/icons", id: "ui.icons", loader: () => import("@plugins/ui/plugins/icons/lint"), dependsOn: [] },
   { pluginPath: "ui/plugins/tokens/plugins/color-palette", id: "ui.tokens.color-palette", loader: () => import("@plugins/ui/plugins/tokens/plugins/color-palette/lint"), dependsOn: [] },
   { pluginPath: "ui/plugins/tokens/plugins/type-scale", id: "ui.tokens.type-scale", loader: () => import("@plugins/ui/plugins/tokens/plugins/type-scale/lint"), dependsOn: [] },

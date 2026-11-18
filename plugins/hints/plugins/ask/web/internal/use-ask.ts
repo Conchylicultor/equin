@@ -1,6 +1,6 @@
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { useEffect } from "react";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { useActiveApp, usePathname } from "@plugins/apps-core/web";
 import { useFocusedTabTitle } from "@plugins/apps-core/plugins/tabs/web";
 import { useConfigResult } from "@plugins/config_v2/web";
@@ -103,6 +103,7 @@ export function useAskQuestion(): {
   blocked: AskBlocked;
 } {
   const capture = usePageContext();
+  const toast = useToast();
   const config = useConfigResult(askConfig);
   // The configured model, or why a question cannot be asked yet: every send
   // waits for the settings to be known, never runs on a stand-in model.
@@ -138,7 +139,9 @@ export function useAskQuestion(): {
       input,
     });
     if (result.kind !== "ok") {
-      showToast({
+      toast({
+        type: "ask-start-failed",
+        category: "conversations",
         title: "equin can't be asked right now",
         description: result.message,
         variant: "error",

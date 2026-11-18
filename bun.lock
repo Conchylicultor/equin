@@ -7462,6 +7462,10 @@
       "name": "@equin/plugin-shell-notifications-native",
       "version": "0.0.1",
     },
+    "plugins/shell/plugins/notifications/plugins/pane": {
+      "name": "@equin/plugin-shell-notifications-pane",
+      "version": "0.0.1",
+    },
     "plugins/shell/plugins/toast": {
       "name": "@equin/plugin-shell-toast",
       "version": "0.0.1",
@@ -11814,6 +11818,8 @@
     "@equin/plugin-shell-notifications": ["@equin/plugin-shell-notifications@workspace:plugins/shell/plugins/notifications"],
 
     "@equin/plugin-shell-notifications-native": ["@equin/plugin-shell-notifications-native@workspace:plugins/shell/plugins/notifications/plugins/native"],
+
+    "@equin/plugin-shell-notifications-pane": ["@equin/plugin-shell-notifications-pane@workspace:plugins/shell/plugins/notifications/plugins/pane"],
 
     "@equin/plugin-shell-toast": ["@equin/plugin-shell-toast@workspace:plugins/shell/plugins/toast"],
 

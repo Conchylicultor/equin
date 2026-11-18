@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useReloadReadiness } from "@plugins/primitives/plugins/dom/plugins/reload-readiness/web";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { useStaleFrontend } from "../hooks/use-stale-frontend";
 import { useTabUpdate } from "../hooks/use-tab-update";
 import {
@@ -30,6 +30,7 @@ export function UpdatePolicyRoot() {
   const update = useTabUpdate();
   const readiness = useReloadReadiness();
   const { current } = useStaleFrontend();
+  const toast = useToast();
   const [arrival] = useState(updateArrival);
   const pending = isPending(update);
   const target = pending ? update.target : null;
@@ -85,11 +86,14 @@ export function UpdatePolicyRoot() {
     if (toasted.current || arrival === null || !arrival.visible || !current)
       return;
     toasted.current = true;
-    showToast({
+    toast({
       kind: "announcement",
-      description: "Updated to the latest version",
+      type: "app-updated",
+      title: "Updated to the latest version",
+      description: "",
+      category: "updates",
     });
-  }, [arrival, current]);
+  }, [arrival, current, toast]);
 
   return null;
 }

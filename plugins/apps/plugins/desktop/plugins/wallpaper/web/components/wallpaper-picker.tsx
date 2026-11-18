@@ -1,6 +1,6 @@
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { useCallback, useState } from "react";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { useOpenDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import { useSetConfig } from "@plugins/config_v2/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
@@ -36,6 +36,7 @@ function WallpaperPickerDialog({ onClose }: { onClose: () => void }) {
   const fetchEndpoint = useFetchEndpoint();
   const [activeId, setActiveId] = useState(providers[0]?.id ?? "");
   const [saving, setSaving] = useState(false);
+  const toast = useToast();
 
   const active = providers.find((p) => p.id === activeId) ?? providers[0];
 
@@ -56,9 +57,11 @@ function WallpaperPickerDialog({ onClose }: { onClose: () => void }) {
     try {
       const outcome = await saveCandidate(fetchEndpoint, candidate);
       if (outcome.kind === "unavailable") {
-        showToast({
+        toast({
+          type: "desktop-wallpaper-unavailable",
           title: "Not available here",
           description: outcome.message,
+          category: "confirmations",
         });
         return;
       }

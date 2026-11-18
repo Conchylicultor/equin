@@ -28,8 +28,14 @@ import {
 import { boolGroupings } from "@plugins/fields/plugins/bool/plugins/data-view-group/core";
 import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
-import { notificationIdKind, notificationsRoute } from "../../core";
-import { notifications, type Notification } from "../../shared/resources";
+import {
+  notificationIdKind,
+  notificationsRoute,
+} from "@plugins/shell/plugins/notifications/core";
+import {
+  notifications,
+  type Notification,
+} from "@plugins/shell/plugins/notifications/web";
 
 /** An in-app link, built from a route as every `linkTo` is. */
 const IN_APP_LINK = notificationsRoute.link(debugApp, {});
@@ -186,16 +192,17 @@ describe("the field schema over the notifications source", () => {
       "Updates",
       "Automations",
       "Reports",
+      "Confirmations",
       "Other",
     ]);
     expect(f.filterable).not.toBe(false);
   });
 });
 
-describe("the authored view (config/shell/notifications)", () => {
+describe("the authored view (config/shell/notifications/pane)", () => {
   const CONFIG_PATH = join(
     REPO_ROOT,
-    "config/shell/notifications/shell.notifications.jsonc",
+    "config/shell/notifications/pane/shell.notifications.jsonc",
   );
 
   it("groups on `read` by value, newest first, over fields that exist", () => {

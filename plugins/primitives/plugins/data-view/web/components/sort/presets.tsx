@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { useSortPresets } from "../../internal/use-sort-presets";
 import {
   applyPresetRules,
@@ -27,6 +27,7 @@ function useSortPresetEntries(): {
 } {
   const { storageKey, sort } = useDataViewControls();
   const presets = useSortPresets(storageKey);
+  const toast = useToast();
 
   const entries = presets.presets.map((preset) => ({
     id: preset.id,
@@ -64,9 +65,12 @@ function useSortPresetEntries(): {
         throw new Error(`data-view: no sort preset "${id}" to delete.`);
       }
       presets.deletePreset(id);
-      showToast({
-        description: `Deleted preset “${preset.label}”`,
-        action: {
+      toast({
+        type: "data-view-sort-preset-deleted",
+        title: `Deleted preset “${preset.label}”`,
+        description: "",
+        category: "confirmations",
+        liveAction: {
           label: "Undo",
           onClick: () => presets.restorePreset(preset, index),
         },

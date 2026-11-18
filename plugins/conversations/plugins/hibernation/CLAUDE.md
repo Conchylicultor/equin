@@ -32,7 +32,7 @@ Idle conversations are hibernated (their agent session killed, the row kept
   - Uses:
     - `config_v2.ConfigV2`
     - `infra/endpoints.useFetchEndpoint`
-    - `shell/toast.showToast`
+    - `shell/notifications.useToast`
   - Exports (values): `useMarkConversationViewed`
 - Server:
   - Contributes: `ConfigV2.Register` "conversation-hibernation"

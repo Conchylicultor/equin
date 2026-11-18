@@ -423,6 +423,43 @@ describe("BellButton — toasts mirror the bell", () => {
   });
 });
 
+describe("NotificationView — a toast's live-only action", () => {
+  it("draws the liveAction on the toast; its click runs it and dismisses", () => {
+    const undo = vi.fn();
+    const acted = vi.fn();
+    render(
+      withActions(
+        <NotificationView
+          surface="toast"
+          n={{
+            ...note({ action: null }),
+            liveAction: { label: "Undo", onClick: undo },
+          }}
+          onActed={acted}
+        />,
+      ),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(undo).toHaveBeenCalledTimes(1);
+    expect(acted).toHaveBeenCalledTimes(1);
+  });
+
+  it("the bell never draws it: the recorded row has no action", () => {
+    render(
+      withActions(
+        <NotificationView
+          surface="bell"
+          n={{
+            ...note({ action: null }),
+            liveAction: { label: "Undo", onClick: () => {} },
+          }}
+        />,
+      ),
+    );
+    expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
+  });
+});
+
 describe("BellButton — opening a row", () => {
   /** The popover open over one row whose action opens `/agents`. */
   async function openWith(n: Notification) {

@@ -78,7 +78,7 @@ every file's bytes, so PDF, media and images preview wherever the file lives
     - `primitives/loading.Loading`
     - `primitives/select-scope.ContentScope`
     - `primitives/slot-render.renderIsolated`
-    - `shell/toast.showToast`
+    - `shell/notifications.useToast`
     - `ui/icons.Icon`
   - Exports (types):
     - `FileRendererContribution`

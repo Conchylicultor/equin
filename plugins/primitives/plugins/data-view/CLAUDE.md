@@ -2439,7 +2439,6 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `primitives/search` ×2
     - `primitives/shortcuts` ×2
     - `primitives/sortable-list` ×2
-    - `shell/toast` ×2
     - `fields.Fields`
     - `ids.IdKinds`
     - `infra/endpoints.useAssetSrc`
@@ -2466,6 +2465,8 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `primitives/pane.usePaneViewParam`
     - `primitives/relative-time.useNow`
     - `primitives/virtual-rows.offscreenSkipClass`
+    - `shell/notifications.useToast`
+    - `shell/toast.isInToast`
     - `ui/icons.Icon`
   - Exports (types):
     - `CardFields`
@@ -2913,7 +2914,7 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `integrations/google-maps/usage`
     - `page/links`
     - `runs`
-    - `shell/notifications`
+    - `shell/notifications/pane`
     - `stats/cost`
     - `ui/theme-engine/theme-gallery`
 - Exemptions:

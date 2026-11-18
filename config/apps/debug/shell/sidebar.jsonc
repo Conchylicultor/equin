@@ -1,4 +1,4 @@
-// @hash 63cd139c0a7c
+// @hash c51ad0c81c26
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -11,7 +11,7 @@
   "items": [
     "debug.logs:logs",
     "debug.reports:reports",
-    "shell.notifications:notifications",
+    "shell.notifications.pane:notifications",
     "debug.trace.pane:trace-slow-events",
     "debug.profiling:profiling",
     "build:build",

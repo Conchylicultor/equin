@@ -49,7 +49,7 @@ started" popover. Plan: section 6 of
     - `primitives/link-gesture/new-tab.NewTabGlyph`
     - `primitives/slot-render.defineRenderSlot`
     - `shell/action-bar.ActionBar`
-    - `shell/toast.showToast`
+    - `shell/notifications.useToast`
     - `ui/icons.Icon`
   - Exports (types): `HelpMenuEntryContribution`
   - Exports (values):

@@ -8,7 +8,7 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import {
   cutReleaseEndpoint,
   upstreamPublisherStatus,
@@ -33,6 +33,7 @@ export function ReleasesGlance() {
   const read = useLive(upstreamPublisherStatus);
   const now = useNow(NOW_TICK_MS);
   const fetchEndpoint = useFetchEndpoint();
+  const toast = useToast();
   switch (read.status) {
     case "loading":
     case "unavailable":
@@ -47,18 +48,32 @@ export function ReleasesGlance() {
   const release = async (): Promise<void> => {
     const result = await fetchEndpoint(cutReleaseEndpoint, {});
     if (result.kind === "unavailable") {
-      showToast({
+      toast({
+        type: "release-cut-unavailable",
         title: "Not released",
         description: result.message,
         variant: "error",
+        category: "updates",
       });
       return;
     }
     const cut = result.value;
-    showToast(
+    toast(
       cut.kind === "released"
-        ? { title: "Released", description: cut.detail, variant: "success" }
-        : { title: "Not released", description: cut.detail, variant: "error" },
+        ? {
+            type: "release-cut",
+            title: "Released",
+            description: cut.detail,
+            variant: "success",
+            category: "updates",
+          }
+        : {
+            type: "release-cut-failed",
+            title: "Not released",
+            description: cut.detail,
+            variant: "error",
+            category: "updates",
+          },
     );
   };
   return (

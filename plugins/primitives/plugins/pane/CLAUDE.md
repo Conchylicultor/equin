@@ -1084,7 +1084,7 @@ out of the way: **what it opens takes its column**.
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --spacing`
-  - Imported by: 218 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 219 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×79
     - `conversations` ×33
     - `debug` ×29
@@ -1098,6 +1098,7 @@ out of the way: **what it opens takes its column**.
     - `companions` ×2
     - `page` ×2
     - `reports` ×2
+    - `shell` ×2
     - `stats` ×2
     - `ui` ×2
     - `auth`
@@ -1111,7 +1112,6 @@ out of the way: **what it opens takes its column**.
     - `review`
     - `runs`
     - `screenshot`
-    - `shell/notifications`
 - Exemptions:
   - Exempts itself from:
     - `pane/no-core-define-route-in-web` — `.` (sanctioned)

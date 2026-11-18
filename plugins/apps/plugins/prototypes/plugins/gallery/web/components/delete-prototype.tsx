@@ -9,7 +9,7 @@ import {
   matchResource,
   ResourceErrorInline,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { prototypesList } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { deletePrototype } from "@plugins/apps/plugins/prototypes/plugins/state/core";
 import { usePrototypeState } from "@plugins/apps/plugins/prototypes/plugins/state/web";
@@ -43,14 +43,18 @@ function useDeletePrototype(): (
 ) => void {
   const mutation = useEndpointMutation(deletePrototype);
   const { restore } = useRestorePrototype();
+  const toast = useToast();
   return (name, title, onDeleted) => {
     mutation.mutate(
       { params: { name } },
       {
         onSuccess: () => {
-          showToast({
-            description: `Deleted “${title}” — it is in the gallery's Trash.`,
-            action: { label: "Undo", onClick: () => restore(name) },
+          toast({
+            type: "prototypes-prototype-deleted",
+            title: `Deleted “${title}”`,
+            description: "It is in the gallery's Trash.",
+            category: "confirmations",
+            liveAction: { label: "Undo", onClick: () => restore(name) },
           });
           onDeleted?.();
         },

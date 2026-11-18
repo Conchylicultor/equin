@@ -19,6 +19,13 @@ vi.mock(
     useViewModel: () => useFakeCore(),
   }),
 );
+// The model's toaster (a draft-discard Undo) is not under test: a stable no-op,
+// so it needs no transport above the hook.
+const noToast = () => {};
+vi.mock("@plugins/shell/plugins/notifications/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  useToast: () => noToast,
+}));
 
 let initialViews: Record<string, VariantValue> = {};
 

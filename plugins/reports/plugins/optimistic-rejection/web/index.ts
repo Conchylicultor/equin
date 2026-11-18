@@ -1,10 +1,14 @@
-import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import {
+  Core,
+  type PluginDefinition,
+} from "@plugins/framework/plugins/web-sdk/core";
 import { Reports } from "@plugins/reports/web";
 import { optimisticRejectionSink } from "@plugins/network/plugins/live/web";
 import { drain } from "@plugins/primitives/plugins/report-sink/web";
 import { ReportSinks } from "@plugins/reports/plugins/collectors/web";
 import { collectOptimisticRejection } from "./internal/optimistic-rejection-collector";
 import { OptimisticRejectionKindView } from "./components/optimistic-rejection-kind-view";
+import { RejectionToasts } from "./components/rejection-toasts";
 
 export default {
   description:
@@ -15,6 +19,8 @@ export default {
       collect: drain(optimisticRejectionSink, collectOptimisticRejection),
       companion: true,
     }),
+    // The user's half: each rejection as a toast, recorded in the bell.
+    Core.Root({ component: RejectionToasts, scope: "page" }),
     Reports.KindView({
       match: "optimistic-rejection",
       component: OptimisticRejectionKindView,

@@ -78,7 +78,7 @@ files a task about the `test-file` subject under the Tests category.
     - `primitives/loading.Loading`
     - `primitives/rank.Rank`
     - `primitives/relative-time.RelativeTime`
-    - `shell/toast.showToast`
+    - `shell/notifications.useToast`
 - Server:
   - Contributes:
     - `resource.declare` "tests.case-failures"

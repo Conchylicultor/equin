@@ -57,7 +57,7 @@ its own, so it declares no data dir; see `apps-core/CLAUDE.md`.
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog.useOpenDialog`
     - `primitives/search.SearchInput`
-    - `shell/toast.showToast`
+    - `shell/notifications.useToast`
     - `ui/icons.Icon`
   - Exports (types): `WallpaperCandidate`
   - Exports (values):

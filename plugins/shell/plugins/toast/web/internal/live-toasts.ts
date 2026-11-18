@@ -32,7 +32,7 @@ const listeners = new Set<() => void>();
 /**
  * Snapshot must be a stable primitive: `useSyncExternalStore` compares by identity.
  */
-// eslint-disable-next-line scoped-store/no-module-mutable-store -- the toast stack IS page-global: one <ToasterHost/> at Core.Root, one corner, and showToast() is a module-level imperative API callable from anywhere. Per-surface state would count a window's toasts against another window's stack.
+// eslint-disable-next-line scoped-store/no-module-mutable-store -- the toast stack IS page-global: one <ToasterHost/> at Core.Root, one corner, and a toast can be raised from any surface of the page. Per-surface state would count a window's toasts against another window's stack.
 let count = 0;
 
 function publish(): void {

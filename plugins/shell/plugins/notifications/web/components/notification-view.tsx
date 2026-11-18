@@ -22,6 +22,7 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import {
   afterOpen,
   type Activation,
+  type LinkTarget,
 } from "@plugins/primitives/plugins/link-gesture/core";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
@@ -78,13 +79,28 @@ export type NotificationContent = Pick<
 > & {
   /** The stored row's id — `null` for a toast written nowhere (the demo). */
   id: Notification["id"] | null;
+  /**
+   * A toast's live-only action (Undo, a closure the page holds): drawn on the
+   * toast in place of a registry `action`, never stored — the bell's row of
+   * the same toast has no action. Absent on a stored row.
+   */
+  liveAction?: LiveToastAction;
 };
+
+/**
+ * An action only the live toast can offer, because it is a closure of the
+ * page that raised it (an Undo) or a link built by its hooks: a plain action,
+ * or a `link` (plain click opens it here, ⌘/Ctrl-click in a new browser tab).
+ */
+export type LiveToastAction =
+  { label: string; onClick: () => void } | { label: string; link: LinkTarget };
 
 const CATEGORY_ICON: Record<NotificationCategory, IconRef> = {
   conversations: symbol("forum"),
   updates: symbol("update"),
   automations: symbol("schedule"),
   reports: symbol("bug-report"),
+  confirmations: symbol("check-circle"),
   other: symbol("notifications"),
 };
 const errorIcon = symbol("error");
@@ -299,6 +315,35 @@ function RunView({
 }
 
 /**
+ * A toast whose action is live-only (`LiveToastAction`): its button runs the
+ * closure or opens the link, then the toast goes.
+ */
+function LiveActionView({
+  action,
+  ...view
+}: ViewProps & { action: LiveToastAction }): ReactElement {
+  const { onActed } = view;
+  const target = afterOpen(
+    "onClick" in action ? action.onClick : action.link,
+    () => {
+      onActed?.();
+    },
+  );
+  return (
+    <NotificationLayout
+      {...view}
+      activation={undefined}
+      button={
+        <ActionButton
+          label={action.label}
+          {...activationProps(target, { isolate: true })}
+        />
+      }
+    />
+  );
+}
+
+/**
  * A notification whose action draws its own control (a launch popover): the
  * kind renders it, at the compact size, from the payload. In the bell, a row
  * that also carries an in-app `linkTo` (a report's detail, a build's run)
@@ -358,6 +403,10 @@ function ControlView({
  */
 export function NotificationView(props: ViewProps): ReactElement {
   const kinds = Notifications.Action.useContributions();
+  const live = props.surface === "toast" ? props.n.liveAction : undefined;
+  if (live !== undefined) {
+    return <LiveActionView {...props} action={live} />;
+  }
   const action = notificationAction(props.n);
   if (action === null) {
     return (

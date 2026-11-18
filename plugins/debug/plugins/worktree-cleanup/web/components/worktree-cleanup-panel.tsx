@@ -27,7 +27,7 @@ import {
   type FieldOption,
 } from "@plugins/primitives/plugins/data-view/web";
 import { useConfirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import {
   bulkDeleteWorktrees,
   deleteWorktree,
@@ -389,6 +389,7 @@ const STEP_LABEL: Record<ReapStep, string> = {
 function DeleteAction({ entry }: { entry: WorktreeEntry }): ReactElement {
   const confirmDialog = useConfirmDialog();
   const transport = useTransport();
+  const toast = useToast();
   const [step, setStep] = useState<ReapStep | null>(null);
   const branchName = entry.worktreePath.split("/").pop() ?? entry.attemptId;
 
@@ -401,20 +402,26 @@ function DeleteAction({ entry }: { entry: WorktreeEntry }): ReactElement {
         const event = frame as DeleteEvent;
         if ("step" in event) setStep(event.step);
         else if ("refreshError" in event)
-          showToast({
+          toast({
+            type: "worktree-cleanup-refresh-failed",
+            category: "other",
             variant: "error",
             title: `Could not re-read ${branchName} after the delete`,
             description: event.refreshError,
           });
         else if (!event.ok)
-          showToast({
+          toast({
+            type: "worktree-cleanup-delete-failed",
+            category: "other",
             variant: "error",
             title: `Could not delete ${branchName}`,
             description: event.error,
           });
       }
     } catch (e) {
-      showToast({
+      toast({
+        type: "worktree-cleanup-delete-failed",
+        category: "other",
         variant: "error",
         title: `Could not delete ${branchName}`,
         description: getEndpointErrorMessage(e),

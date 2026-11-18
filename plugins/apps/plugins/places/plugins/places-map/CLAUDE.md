@@ -538,7 +538,7 @@ away closes it — a click in the thread is not away (`useClickAway`'s
     - `primitives/overlay/tooltip.Kbd`
     - `primitives/pane.Pane`
     - `primitives/shortcuts.useSurfaceShortcuts`
-    - `shell/toast.showToast`
+    - `shell/notifications.useToast`
     - `tag-tree/engine.useTagTreeActions`
 - Server:
   - Contributes: `ConfigV2.Register` "place-cards"

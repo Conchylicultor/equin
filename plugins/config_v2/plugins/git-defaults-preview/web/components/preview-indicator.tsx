@@ -5,7 +5,7 @@ import {
   useConfigPreview,
 } from "@plugins/config_v2/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const previewIcon = symbol("visibility");
@@ -17,16 +17,19 @@ const previewIcon = symbol("visibility");
  */
 export function PreviewIndicator() {
   const preview = useConfigPreview();
+  const toast = useToast();
   useEffect(
     () =>
       onConfigWriteRefused("preview", () =>
-        showToast({
+        toast({
+          type: "config-write-refused-preview",
           variant: "error",
           title: "Config is read-only while previewing the default config",
           description: "Turn the preview off to change it.",
+          category: "other",
         }),
       ),
-    [],
+    [toast],
   );
   if (!preview) return null;
   return (

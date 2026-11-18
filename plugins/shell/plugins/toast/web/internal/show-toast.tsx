@@ -13,11 +13,8 @@ import {
   type RenderOriginHandle,
 } from "@plugins/primitives/plugins/scope/plugins/render-origin/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
-import { linkProps } from "@plugins/primitives/plugins/link-gesture/web";
-import { DeveloperMark } from "@plugins/audience/plugins/developer-mark/web";
 import type { ReactNode } from "react";
 import type { Audience } from "@plugins/audience/core";
-import type { ToastArgs } from "../../core";
 import { trackToast, untrackToast } from "./live-toasts";
 import { toastReachesReader } from "./reader-audience";
 import { isPageOnScreen } from "./on-screen";
@@ -164,25 +161,6 @@ export type CustomToastArgs = {
   audience?: Audience;
 } & ({ kind: "announcement" } | { kind: "reply"; duration: number });
 
-/**
- * Fire a text toast. Backed by sonner's global imperative API — callable from
- * anywhere; if no `<ToasterHost/>` is mounted the enqueue simply has no renderer
- * (a silent no-op, never a throw). A toast declaring `audience: "developer"` is
- * dropped unless the reader is in Developer mode.
- *
- * Data only — strings, and the caller's own closures (an `onClick`, a
- * `LinkTarget` its hooks built) — so it renders the same wherever the stack
- * is. A toast whose content is drawn by the caller (a component, with hooks)
- * is `useShowCustomToast`, which renders it in the caller's origin.
- */
-export function showToast(args: ToastArgs): void {
-  // A developer toast is shown only to a developer (Developer mode on).
-  if (!toastReachesReader(args.audience)) return;
-  // An announcement is for a user looking at the page (`isPageOnScreen`).
-  if (args.kind === "announcement" && !isPageOnScreen()) return;
-  showTextToast(nextToastId(), args);
-}
-
 function nextToastId(): string {
   return `shell-toast-${SESSION}-${++seq}`;
 }
@@ -240,8 +218,17 @@ function showCustomToast(
       />
     </ToastBody>
   );
-  // After the content committed, and through the same one-microtask
-  // deferral as the text toast — see `showTextToast`.
+  // After the content committed, then deferred by exactly one microtask,
+  // never published inline. `Observer.publish` (sonner 2.0.7, `dist:132`) is a
+  // synchronous `forEach` over the current subscribers with no buffer and no
+  // replay, and the `<Toaster>`'s only subscription is keyed on its own toast
+  // list (`dist:956-993`) — so it unsubscribes and re-subscribes on every add
+  // and removal, and each such commit has a synchronous stretch with zero
+  // subscribers. A publish from a `useEffect` lands in exactly that stretch and
+  // its toast is dropped on the floor. A microtask checkpoint only occurs at
+  // stack-empty, and React's passive flush (destroys, then creates) is one
+  // synchronous call, so a microtask-deferred publish always lands after the
+  // Toaster is back.
   void mounted.then(() =>
     queueMicrotask(() => sonnerToast.custom(() => body, { id, duration })),
   );
@@ -318,75 +305,4 @@ function AdoptElement({
   const report = useEventCallback(onPortalContainer);
   useLayoutEffect(() => report(portal), [portal, report]);
   return <span ref={adopt} style={{ display: "contents" }} />;
-}
-
-function showTextToast(
-  id: string,
-  { title, description, variant, audience, action }: ToastArgs,
-): void {
-  // `||`, not `??`: `title: ""` is a caller saying "no title", and `??` would
-  // render an empty headline and drop the description entirely.
-  const rawMessage = title || description;
-  const rawDescription = title ? description : undefined;
-  const fn = variant && variant !== "default" ? sonnerToast[variant] : sonnerToast;
-
-  // Built eagerly, outside the microtask below, so the element snapshots the
-  // caller's strings and any JSX error surfaces on the caller's own stack.
-  //
-  // Registered in the title slot ONLY. Sonner renders `toast.title` in the
-  // `[data-title]` div unconditionally (2.0.7, `dist:794-797`) but the
-  // description div only when a description is present — so a second
-  // registration there would put two mounts behind one Set entry, and the
-  // first unmount would untrack a toast the other half still shows.
-  const body = (
-    <ToastBody id={id}>
-      <ContentScope fill={false}>
-        {rawMessage}
-        {/* The developer mark after the headline, inline so a long headline
-            still wraps — the same mark the bell's row draws for it. */}
-        {audience === "developer" && (
-          <>
-            {" "}
-            <DeveloperMark />
-          </>
-        )}
-      </ContentScope>
-    </ToastBody>
-  );
-
-  // Deferred by exactly one microtask, never published inline. `Observer.publish`
-  // (2.0.7, `dist:132`) is a synchronous `forEach` over the current subscribers
-  // with no buffer and no replay, and the `<Toaster>`'s only subscription is
-  // keyed on its own toast list (`dist:956-993`) — so it unsubscribes and
-  // re-subscribes on every add and removal, and each such commit has a
-  // synchronous stretch with zero subscribers. A producer calling us from a
-  // `useEffect` lands in exactly that stretch and its toast is dropped on the
-  // floor. A microtask checkpoint only occurs at stack-empty, and React's
-  // passive flush (destroys, then creates) is one synchronous call, so a
-  // microtask-deferred publish always lands after the Toaster is back.
-  //
-  // This does NOT cover a producer calling us from render or a layout effect —
-  // no such caller exists today.
-  queueMicrotask(() =>
-    fn(body, {
-      id,
-      description: rawDescription ? <ContentScope fill={false}>{rawDescription}</ContentScope> : undefined,
-      // Sonner renders + dismisses the action button itself; the caller only
-      // supplies the intent (e.g. Undo). No bookkeeping here — the dismiss
-      // unmounts the body, which retires the ledger entry. Called through a
-      // wrapper because sonner passes the click event and `ToastArgs` promises
-      // a nullary handler: forwarding it would hand the event to a caller whose
-      // first parameter is its own optional argument.
-      // A link action reads the click's modifiers (⌘/Ctrl → a new browser tab).
-      action: action
-        ? {
-            label: action.label,
-            onClick:
-              "link" in action
-                ? (e) => linkProps(action.link).onClick(e)
-                : () => action.onClick(),
-          }
-        : undefined,
-    }),
-  );
 }

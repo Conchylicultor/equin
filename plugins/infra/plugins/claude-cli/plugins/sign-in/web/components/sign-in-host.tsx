@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { openInBrowserTab } from "@plugins/primitives/plugins/link-gesture/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import type { ClaudeSignInFlow } from "../../core";
 import {
   claimAnnouncement,
@@ -25,6 +25,7 @@ function doneMessage(
 export function ClaudeSignInHost() {
   const result = useClaudeSignInFlow();
   const flow = result.status === "ready" ? result.data : null;
+  const toast = useToast();
   useEffect(() => {
     if (!flow || flow.kind === "idle" || !wasStartedHere(flow.id)) return;
     // The page Claude Code asked to open, in this browser: the click that
@@ -33,7 +34,13 @@ export function ClaudeSignInHost() {
     if (flow.kind === "waiting" && flow.url && claimOpen(flow.id))
       openInBrowserTab(flow.url);
     if (flow.kind === "done" && claimAnnouncement(flow.id))
-      showToast({ variant: "success", description: doneMessage(flow) });
-  }, [flow]);
+      toast({
+        type: "claude-sign-in-done",
+        variant: "success",
+        title: doneMessage(flow),
+        description: "",
+        category: "other",
+      });
+  }, [flow, toast]);
   return null;
 }

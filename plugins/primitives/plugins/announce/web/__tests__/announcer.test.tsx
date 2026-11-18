@@ -94,8 +94,8 @@ describe("the announcer host renders what announce() writes", () => {
   });
 
   it("is a silent no-op when no host is mounted", () => {
-    // Same degradation contract as showToast: callable from anywhere, with no
-    // obligation on the caller to know whether the app shell is up.
+    // Callable from anywhere, with no obligation on the caller to know whether
+    // the app shell is up.
     expect(() => announce("nobody is listening")).not.toThrow();
     expect(screen.queryByRole("status")).toBeNull();
   });

@@ -213,7 +213,7 @@ the panel until it is given something to say.
     - `primitives/icon-button.IconButton`
     - `primitives/networking.useTransport`
     - `primitives/overlay/imperative-dialog/confirm.useConfirmDialog`
-    - `shell/toast.showToast`
+    - `shell/notifications.useToast`
     - `ui/icons.Icon`
   - Exports (values): `worktreeCleanupPane`
 - Server:

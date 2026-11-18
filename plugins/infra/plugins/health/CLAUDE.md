@@ -49,7 +49,8 @@ Watches this page's connection to its backends and says so.
     - `primitives/networking.subscribeNetDiag`
     - `primitives/networking.subscribeWsStatus`
     - `primitives/networking/page-transport.pageTransport`
-    - `shell/toast.showToast`
+    - `shell/notifications.Toast`
+    - `shell/notifications.useToast`
   - Exports (types): `WedgeReport`
   - Exports (values):
     - `PUSH_STALL_MS`

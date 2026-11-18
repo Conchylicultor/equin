@@ -36,6 +36,14 @@ import { AppEmbed } from "../components/app-embed";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 
+// The default `onLeave` toasts; these tests pass their own, so the toaster is
+// a spy (it needs the page's transport, which no test here mounts).
+const toastSpy = vi.fn();
+vi.mock("@plugins/shell/plugins/notifications/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  useToast: () => toastSpy,
+}));
+
 // An embed is its own tab set: its routes live in its own pane stores (never
 // the page URL), and a hop read through the navigation boundary is the
 // embed's — a same-app URL moves its route, another tab app in scope swaps the

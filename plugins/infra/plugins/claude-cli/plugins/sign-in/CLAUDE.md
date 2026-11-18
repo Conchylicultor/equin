@@ -142,7 +142,7 @@ report (its output length only — never the output). Adjust
     - `primitives/link-gesture.openInBrowserTab`
     - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`
-    - `shell/toast.showToast`
+    - `shell/notifications.useToast`
     - `ui/icons.Icon`
   - Exports (values):
     - `AddClaudeAccountSignIn`

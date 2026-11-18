@@ -5,7 +5,7 @@ import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web"
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { resolveUiContext } from "@plugins/primitives/plugins/ui-context/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -44,6 +44,7 @@ function ShowMeChip({
   children: ReactNode;
 }) {
   const [gone, setGone] = useState(false);
+  const toast = useToast();
   const element = attrs.element;
   if (!element) {
     return (
@@ -72,7 +73,13 @@ function ShowMeChip({
         }),
       );
       setGone(true);
-      showToast({ title: NOT_HERE, description: label, variant: "info" });
+      toast({
+        type: "show-me-not-here",
+        title: NOT_HERE,
+        description: label,
+        variant: "info",
+        category: "confirmations",
+      });
       return;
     }
     setGone(false);

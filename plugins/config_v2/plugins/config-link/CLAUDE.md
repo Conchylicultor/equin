@@ -66,7 +66,7 @@ and the editor.
     - `primitives/css/ui-kit.SelectContent`
     - `primitives/icon-button.IconButton`
     - `primitives/link-gesture.activationProps`
-    - `shell/toast.showToast`
+    - `shell/notifications.useToast`
   - Exports (types):
     - `ConfigGearButtonProps`
     - `ConfigMenuContentProps`

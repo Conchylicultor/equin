@@ -1,6 +1,9 @@
 import type { ReactElement } from "react";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { showToast, type ToastArgs } from "@plugins/shell/plugins/toast/web";
+import {
+  useToast,
+  type ToastArgs,
+} from "@plugins/shell/plugins/notifications/web";
 import { useRefreshAllEventSources } from "@plugins/apps/plugins/events/plugins/events-core/web";
 import type { RefreshAllResult } from "@plugins/apps/plugins/events/plugins/events-core/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -36,9 +39,11 @@ function describeRefreshAll(result: RefreshAllResult): ToastArgs {
   // a success chirp: the user pressed refresh and no run was started.
   if (enqueued === 0 && alreadyRunning === 0 && skipped === 0) {
     return {
+      type: "events-refresh-all",
       title: "Nothing to refresh",
       description: "Every source is disabled, so no run was started.",
       variant: "info",
+      category: "other",
     };
   }
 
@@ -60,6 +65,7 @@ function describeRefreshAll(result: RefreshAllResult): ToastArgs {
   }
 
   return {
+    type: "events-refresh-all",
     title:
       enqueued > 0
         ? `Refreshing ${enqueued} ${enqueued === 1 ? "source" : "sources"}`
@@ -70,6 +76,7 @@ function describeRefreshAll(result: RefreshAllResult): ToastArgs {
     // A refusal is the one arm the user might want to act on, so it colours the
     // whole toast; everything else is a statement of what is now in flight.
     variant: skipped > 0 ? "warning" : "info",
+    category: "other",
   };
 }
 
@@ -87,6 +94,7 @@ function describeRefreshAll(result: RefreshAllResult): ToastArgs {
  */
 export function RefreshAllAction(): ReactElement {
   const refreshAll = useRefreshAllEventSources();
+  const toast = useToast();
 
   return (
     <IconButton
@@ -101,7 +109,7 @@ export function RefreshAllAction(): ReactElement {
           // No path params and no body — the endpoint refreshes the whole
           // set, so there is nothing to address it with.
           {},
-          { onSuccess: (result) => showToast(describeRefreshAll(result)) },
+          { onSuccess: (result) => toast(describeRefreshAll(result)) },
         );
       }}
     />

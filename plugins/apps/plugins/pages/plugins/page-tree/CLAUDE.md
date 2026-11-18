@@ -240,7 +240,7 @@ it, so an id means the same thing wherever it is clicked.
     - `primitives/text-editor/paste-images.attachmentUrl`
     - `primitives/tree.useOptionalRowControls`
     - `primitives/undo-redo.useUndoRedo`
-    - `shell/toast.showToast`
+    - `shell/notifications.useToast`
     - `ui/icons/emoji.EmojiPicker`
     - `ui/icons.Icon`
   - Exports (types):

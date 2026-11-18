@@ -13,7 +13,7 @@ import {
   useNotificationsChannelStatuses,
   type UnansweredServer,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast, type Toast } from "@plugins/shell/plugins/notifications/web";
 import { getHealth } from "../internal/client";
 import { PUSH_STALL_MS } from "../internal/push-stall";
 import { wedgeReportSink } from "../internal/wedge-report-sink";
@@ -81,6 +81,7 @@ function diagSocketKind(url: string) {
 // toast is a developer one: this is equin's own telemetry, and the health
 // report's Connection row already tells a user their live state.
 function wedge(
+  toast: Toast,
   kind: WedgeKind,
   discriminator: string,
   detail: string,
@@ -91,12 +92,15 @@ function wedge(
   if (prev !== undefined && now - prev < WEDGE_COOLDOWN_MS) return;
   lastWedgeAt.set(discriminator, now);
 
-  showToast({
+  toast({
+    type: "health-live-updates-stalled",
+    category: "other",
     title: "Live updates stalled",
     description:
       opts.description ?? "Reconnecting… refresh if data looks stale",
     variant: "warning",
     audience: "developer",
+    detail: `${kind} — ${detail}`,
   });
 
   // Emit onto the neutral wedge sink; `reports.crash` (when present) maps it to a
@@ -126,6 +130,7 @@ export function WedgeWatchdog() {
   //   channel per episode, the key in the discriminator: each is its own bug.
   // An episode ends when the age drops back under the threshold (delivered,
   // or the socket changed status).
+  const toast = useToast();
   const statuses = useNotificationsChannelStatuses();
   const stalled = useRef(new Set<string>());
   useEffect(() => {
@@ -138,6 +143,7 @@ export function WedgeWatchdog() {
         now.add(id);
         if (!stalled.current.has(id))
           wedge(
+            toast,
             "push-stall",
             id,
             `the ${kind} server's oldest change has gone undelivered for ${Math.round(ms / 1000)}s on an open socket`,
@@ -156,6 +162,7 @@ export function WedgeWatchdog() {
         now.add(id);
         if (!stalled.current.has(id))
           wedge(
+            toast,
             "push-stall-resource",
             id,
             `the ${kind} server's push of ${r.key} has been stuck for ${Math.round(r.ms / 1000)}s while every other push flows`,
@@ -166,7 +173,7 @@ export function WedgeWatchdog() {
       }
     }
     stalled.current = now;
-  }, [statuses]);
+  }, [statuses, toast]);
 
   useEffect(() => {
     // --- Page suspension ---
@@ -198,6 +205,7 @@ export function WedgeWatchdog() {
         // stays connecting, which once went 9 minutes unreported.
         deadlines.arm(url, SOCKET_DOWN_MS, () => {
           wedge(
+            toast,
             "socket-down",
             `socket-down:${channelKind}`,
             `${url} (${status})`,
@@ -236,12 +244,14 @@ export function WedgeWatchdog() {
         void getHealth().then((health) => {
           if (health !== null && health.startedAt > stalledSince) {
             wedge(
+              toast,
               "connect-stalled",
               `connect-stalled:${kind}:restart`,
               `${detail}; held by a server boot (up since ${new Date(health.startedAt).toISOString()})`,
             );
           } else {
             wedge(
+              toast,
               "connect-stalled",
               `connect-stalled:${kind}`,
               `${detail}; server ${health === null ? "unreachable" : `up since ${new Date(health.startedAt).toISOString()}`}`,
@@ -258,6 +268,7 @@ export function WedgeWatchdog() {
           ? "aborted"
           : ev.tabLock;
         wedge(
+          toast,
           "port-evicted",
           `port-evicted:${lockClass}`,
           `${ev.url}: the shared-ws worker released this live tab as gone after ${Math.round(ev.attachedMs / 1000)}s (tab lock: ${ev.tabLock})`,
@@ -275,6 +286,7 @@ export function WedgeWatchdog() {
       // measured reports.list:rows unanswered 18–111 s, muted as suspended).
       const visibleMs = deadlines.visibleMsSince(Date.now() - r.oldestWaitMs);
       wedge(
+        toast,
         "unanswered-sub",
         `unanswered-sub:${r.server}:${r.oldestKey}`,
         `${r.count} sub(s) unanswered on an open ${UNANSWERED_SERVER_LABEL[r.server]} socket, oldest ${r.oldestKey} ${r.oldestParams} for ${Math.round(r.oldestWaitMs / 1000)}s (${Math.round(visibleMs / 1000)}s visible; tabs on socket: ${r.attachedTabs ?? "?"}, connection ${r.connection ?? "-"}). Where the server stands on it: ${describeUnansweredTrail(r.trail)}`,
@@ -321,12 +333,13 @@ export function WedgeWatchdog() {
             sinceHidden != null && health != null && health.startedAt > sinceHidden;
           if (restartWhileHidden) {
             wedge(
+              toast,
               "missed-updates",
               "missed-updates:restart",
               `${detail}; the server restarted while this tab was hidden`,
             );
           } else {
-            wedge("missed-updates", "missed-updates", detail);
+            wedge(toast, "missed-updates", "missed-updates", detail);
           }
         })
         .finally(() => {
@@ -343,7 +356,7 @@ export function WedgeWatchdog() {
       deadlines.clearAll();
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, []);
+  }, [toast]);
 
   return null;
 }

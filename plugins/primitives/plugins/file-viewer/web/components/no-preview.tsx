@@ -3,7 +3,7 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { navIcons } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { fileTypeOf } from "@plugins/primitives/plugins/file-type/core";
@@ -109,30 +109,43 @@ export function useOpenHostFile(): (
   opts?: { reveal?: boolean },
 ) => Promise<void> {
   const open = useEndpointMutation(computerFileOpen);
+  const toast = useToast();
   return async (path, opts) => {
     // Opening hands the file to the computer's default app: a host without
     // the computer says so instead.
     if (open.kind === "unavailable") {
-      showToast({ title: open.message, description: path, variant: "error" });
+      toast({
+        type: "file-viewer-open-unavailable",
+        title: open.message,
+        description: path,
+        variant: "error",
+        category: "other",
+      });
       return;
     }
     const result = await open.mutateAsync({
       body: opts?.reveal ? { path, reveal: true } : { path },
     });
     if (result.kind === "missing") {
-      showToast({
+      toast({
+        type: "file-viewer-open-not-found",
         title: "File not found",
         description: path,
         variant: "error",
+        category: "other",
       });
     } else if (result.kind === "denied") {
-      showToast({
+      toast({
+        type: "file-viewer-open-permission-denied",
         title: "Permission denied",
         description: path,
         variant: "error",
+        category: "other",
       });
     } else if (result.kind === "in-archive") {
-      showToast({
+      toast({
+        type: "file-viewer-open-in-archive",
+        category: "other",
         title: "This file is inside an archive",
         description: `Extract ${result.archive} to open it with its default app.`,
         variant: "error",

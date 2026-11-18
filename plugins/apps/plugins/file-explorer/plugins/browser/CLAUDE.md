@@ -42,7 +42,7 @@
     - `ConfigV2.WebRegister` "files"
     - `FileBrowserSlots.RowActions` "extract" → `ExtractAction`
     - `FileBrowserSlots.RowActions` "copy-path" → `CopyPathAction`
-  - Uses: 87 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 88 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×10
     - `primitives/pane` ×9
     - `primitives/file-viewer` ×7
@@ -58,6 +58,7 @@
     - `primitives/copy-to-clipboard` ×2
     - `primitives/link-gesture` ×2
     - `primitives/networking` ×2
+    - `shell/notifications` ×2
     - `companions/menu-bar/app-window.useNativeFileDrag`
     - `primitives/bar.Bar`
     - `primitives/css/center.Center`
@@ -81,7 +82,6 @@
     - `primitives/scope/surface-id.useSurfaceTabId`
     - `primitives/search.SearchInput`
     - `primitives/shortcuts.useSurfaceShortcuts`
-    - `shell/toast.showToast`
     - `ui/theme-engine.ThemeEngine`
   - Exports (types):
     - `ExplorerLensItem`

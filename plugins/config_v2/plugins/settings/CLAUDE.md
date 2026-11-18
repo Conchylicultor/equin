@@ -122,7 +122,7 @@ renderer, which only the running app has.
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/syntax-highlight.HighlightedCode`
-    - `shell/toast.showToast`
+    - `shell/notifications.useToast`
     - `ui/icons.Icon`
   - Exports (types):
     - `ConfigConflictContext`

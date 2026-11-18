@@ -12,7 +12,7 @@ import type {
   ViewDrafts,
   ViewGetter,
 } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { usePaneViewParam } from "@plugins/primitives/plugins/pane/web";
 import type {
   AddableSource,
@@ -535,6 +535,7 @@ export function useDataViewModel(
   // value the next time — and offers them back: Undo restores the copy and
   // returns to the view.
   const { drafts, setActiveView: selectView, activeId, instances } = core;
+  const toast = useToast();
   const setActiveView = useCallback(
     (next: string) => {
       const prev = activeId;
@@ -544,9 +545,12 @@ export function useDataViewModel(
           const name =
             instances.find((r) => r.instance.id === prev)?.instance.name ??
             prev;
-          showToast({
-            description: `${name} reset to its saved filter`,
-            action: {
+          toast({
+            type: "data-view-view-draft-reset",
+            title: `${name} reset to its saved filter`,
+            description: "",
+            category: "confirmations",
+            liveAction: {
               label: "Undo",
               onClick: () => {
                 drafts.restore(prev, copy);
@@ -558,7 +562,7 @@ export function useDataViewModel(
       }
       selectView(next);
     },
-    [activeId, drafts, instances, selectView],
+    [activeId, drafts, instances, selectView, toast],
   );
 
   const model = useMemo(

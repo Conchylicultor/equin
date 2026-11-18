@@ -1,7 +1,7 @@
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { openInBrowserTab } from "@plugins/primitives/plugins/link-gesture/web";
 import { NewTabGlyph } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import {
   startTour,
   useHints,
@@ -49,6 +49,7 @@ export function ShowTipsAgainEntry() {
   const close = useCloseHelpMenu();
   const hints = useHints();
   const resetHints = useResetHints();
+  const toast = useToast();
   return (
     <ControlPanel.Row
       icon={<Icon icon={lightbulbIcon} />}
@@ -58,7 +59,9 @@ export function ShowTipsAgainEntry() {
         // A failed reset rejects unhandled, which the reports plugin files;
         // the toast only follows a reset that landed.
         void resetHints(hints.map((h) => h.id)).then(() =>
-          showToast({
+          toast({
+            type: "hints-tips-reset",
+            category: "confirmations",
             title: "Tips are back on",
             description: "They'll show again as you go.",
           }),

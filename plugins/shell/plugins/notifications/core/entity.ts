@@ -32,6 +32,7 @@ export const NOTIFICATION_CATEGORIES = [
   "updates",
   "automations",
   "reports",
+  "confirmations",
   "other",
 ] as const;
 export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number];
@@ -42,6 +43,7 @@ export const NOTIFICATION_CATEGORY_LABELS = {
   updates: "Updates",
   automations: "Automations",
   reports: "Reports",
+  confirmations: "Confirmations",
   other: "Other",
 } as const satisfies Record<NotificationCategory, string>;
 
@@ -197,6 +199,7 @@ export const notificationFields = {
       updates: { label: NOTIFICATION_CATEGORY_LABELS.updates },
       automations: { label: NOTIFICATION_CATEGORY_LABELS.automations },
       reports: { label: NOTIFICATION_CATEGORY_LABELS.reports },
+      confirmations: { label: NOTIFICATION_CATEGORY_LABELS.confirmations },
       other: { label: NOTIFICATION_CATEGORY_LABELS.other },
     },
   }),

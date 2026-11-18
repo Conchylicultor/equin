@@ -9,7 +9,7 @@ import {
   computerFileExtract,
   type FileExtractResult,
 } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast, type Toast } from "@plugins/shell/plugins/notifications/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { baseName, type EntryRow } from "../../core";
 import { useHomeDir } from "../internal/host-path-source";
@@ -19,30 +19,51 @@ const checkIcon = symbol("check");
 const contentCopyIcon = symbol("content-copy");
 
 /** What an extraction's answer tells the user. */
-function extractToast(result: FileExtractResult): void {
+function extractToast(toast: Toast, result: FileExtractResult): void {
   switch (result.kind) {
     case "extracted":
-      showToast({
+      toast({
+        type: "file-explorer-extracted",
         variant: "success",
-        description: `Extracted ${baseName(result.created)}`,
+        title: `Extracted ${baseName(result.created)}`,
+        description: "",
+        category: "confirmations",
       });
       return;
     case "not-an-archive":
-      showToast({ variant: "error", description: "Not an archive" });
+      toast({
+        type: "file-explorer-extract-not-an-archive",
+        variant: "error",
+        title: "Not an archive",
+        description: "",
+        category: "other",
+      });
       return;
     case "missing":
-      showToast({
+      toast({
+        type: "file-explorer-extract-missing",
         variant: "error",
-        description: "This archive no longer exists",
+        title: "This archive no longer exists",
+        description: "",
+        category: "other",
       });
       return;
     case "denied":
-      showToast({ variant: "error", description: "Permission denied" });
+      toast({
+        type: "file-explorer-permission-denied",
+        variant: "error",
+        title: "Permission denied",
+        description: "",
+        category: "other",
+      });
       return;
     case "unreadable-archive":
-      showToast({
+      toast({
+        type: "file-explorer-extract-unreadable",
         variant: "error",
-        description: archiveReasonMessage(result.reason),
+        title: archiveReasonMessage(result.reason),
+        description: "",
+        category: "other",
       });
       return;
   }
@@ -58,6 +79,7 @@ function extractToast(result: FileExtractResult): void {
  */
 export function ExtractAction({ row }: ItemActionProps<EntryRow>): ReactNode {
   const extract = useEndpointMutation(computerFileExtract);
+  const toast = useToast();
   // Extracting writes beside the archive on the computer's disk: with no
   // computer behind the app there is no action to offer.
   if (
@@ -71,7 +93,10 @@ export function ExtractAction({ row }: ItemActionProps<EntryRow>): ReactNode {
       icon={unarchiveIcon}
       label="Extract here"
       onClick={async () => {
-        extractToast(await extract.mutateAsync({ body: { path: row.path } }));
+        extractToast(
+          toast,
+          await extract.mutateAsync({ body: { path: row.path } }),
+        );
       }}
     />
   );

@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-shell-notifications-pane",
+  "description": "Debug → Notifications: every undismissed notification as a DataView (the bell popover's View all), with Open / Dismiss row actions and Mark all read / Dismiss all.",
+  "private": true,
+  "version": "0.0.1"
+}

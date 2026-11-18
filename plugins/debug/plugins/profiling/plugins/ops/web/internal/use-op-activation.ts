@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
 import { buildProfileDetailPane } from "@plugins/debug/plugins/profiling/plugins/build/web";
 import type { OpEntry } from "@plugins/debug/plugins/profiling/plugins/ops/plugins/op-gantt/web";
@@ -25,6 +25,7 @@ export function useOpActivation(): (
   worktree: string,
 ) => Activation {
   const openPane = useOpenPane();
+  const toast = useToast();
 
   return useCallback(
     (op: OpEntry, worktree: string): Activation => {
@@ -36,9 +37,12 @@ export function useOpActivation(): (
         const buildId = op.buildId;
         if (!buildId) {
           return () =>
-            showToast({
-              description:
-                "No build profile for this build (logged before profiling).",
+            toast({
+              type: "profiling-build-profile-missing",
+              title:
+                "No build profile for this build (logged before profiling)",
+              description: "",
+              category: "confirmations",
               variant: "info",
             });
         }
@@ -50,6 +54,6 @@ export function useOpActivation(): (
       }
       return openPane.to(opDetailPane, { opId: op.opId }, { mode: "push" });
     },
-    [openPane],
+    [openPane, toast],
   );
 }

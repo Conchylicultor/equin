@@ -22,7 +22,7 @@ import { isEmbeddedDocument } from "@plugins/primitives/plugins/embed/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { useTransport } from "@plugins/primitives/plugins/networking/web";
 import {
   type ContentUrl,
@@ -400,6 +400,7 @@ function DetailProvider({
   writeShared: (change: PicksChange) => void;
 }) {
   const contributed = FrameSource.useContributions();
+  const toast = useToast();
   const sources = useMemo<CanvasSourceEntry[]>(
     () =>
       contributed.flatMap((c) =>
@@ -519,9 +520,12 @@ function DetailProvider({
     const closed = before.frames.length - 1;
     if (closed < 1) return;
     dispatch({ type: "keepOnly", id });
-    showToast({
-      description: `Closed ${String(closed)} other frame${closed === 1 ? "" : "s"}`,
-      action: {
+    toast({
+      type: "prototypes-frames-closed",
+      title: `Closed ${String(closed)} other frame${closed === 1 ? "" : "s"}`,
+      description: "",
+      category: "confirmations",
+      liveAction: {
         label: "Undo",
         onClick: () =>
           dispatch({ type: "restore", state: before, shared: snapshot }),

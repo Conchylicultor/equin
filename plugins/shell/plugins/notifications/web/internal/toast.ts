@@ -13,9 +13,44 @@ import {
 } from "../../core";
 import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
 import type { SymbolRef } from "@plugins/ui/plugins/icons/core";
-import { useToastNotification } from "../components/notification-view";
+import {
+  useToastNotification,
+  type LiveToastAction,
+  type NotificationToastKind,
+} from "../components/notification-view";
 
-export interface ToastArgs {
+/**
+ * A toast — every toast the app raises. It is shown at once AND recorded in
+ * the notification history (the bell), so a toast the user had no time to
+ * read is still there; `category` files it under the bell's chips (small
+ * acknowledgements — Copied, Deleted, Restored — under `confirmations`).
+ */
+export type ToastArgs = ToastFields &
+  (
+    | {
+        /** The one action (`Notifications.Action` kind + payload), stored. */
+        action?: NotificationAction;
+        liveAction?: never;
+      }
+    | {
+        action?: never;
+        /**
+         * A closure action (Undo) or a link built by the page's hooks: drawn
+         * on the live toast only — the recorded row has no action.
+         */
+        liveAction: LiveToastAction;
+      }
+  );
+
+interface ToastFields {
+  /**
+   * Why it is shown. `reply` (the default) answers what the user just did and
+   * is shown whatever the page's state (an error stays until handled);
+   * `announcement` is something that happened on its own (the server
+   * reconnecting) — shown only on a page on screen, gone after 4 s. Recorded
+   * either way.
+   */
+  kind?: NotificationToastKind;
   type: string;
   /** Headline: the event, sentence case ("Conversation dropped"). */
   title: string;
@@ -32,8 +67,6 @@ export interface ToastArgs {
   subjectName?: string;
   /** Developer-only internals (HTTP status, raw error). */
   detail?: string;
-  /** The one action (`Notifications.Action` kind + payload). */
-  action?: NotificationAction;
   /** The event's own glyph; without one, the variant's or the category's. */
   icon?: SymbolRef;
   linkTo?: string;
@@ -48,7 +81,7 @@ export interface ToastArgs {
 
 export const recentClientIds = new Set<string>();
 
-/** Show a toast and persist it to the bell — see `useToast`. */
+/** Show a toast and record it in the bell — see `useToast`. */
 export type Toast = (args: ToastArgs) => void;
 
 /**
@@ -99,8 +132,11 @@ export function useToast(): Toast {
           linkTo: args.linkTo ?? null,
           metadata,
           count: 1,
+          ...(args.liveAction === undefined
+            ? {}
+            : { liveAction: args.liveAction }),
         },
-        "reply",
+        args.kind ?? "reply",
       );
       if (id === null) return;
 

@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
-import { notificationsRoute } from "../core";
+import { notificationsRoute } from "@plugins/shell/plugins/notifications/core";
 import { NotificationsView } from "./components/notifications-view";
 
 /**

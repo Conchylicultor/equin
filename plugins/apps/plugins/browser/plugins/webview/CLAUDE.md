@@ -27,7 +27,7 @@
     - `primitives/latest-ref.useLatestRef`
     - `primitives/link-gesture/new-tab.NewTabButton`
     - `primitives/log-channels.clientLog`
-    - `shell/toast.showToast`
+    - `shell/notifications.useToast`
     - `ui/icons.Icon`
 - Cross-plugin:
   - Uses tokens:

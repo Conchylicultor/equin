@@ -267,7 +267,7 @@ A round nothing was typed into reads exactly like the next one, so after
     - `primitives/css/ui-kit.cn`
     - `primitives/css/yield.yieldClass`
     - `primitives/dom/web-storage.defineStore`
-    - `shell/toast.showToast`
+    - `shell/notifications.useToast`
     - `ui/icons.Icon`
   - Exports (types):
     - `ChipStanding`

@@ -214,7 +214,7 @@ portable `server/` half.
     - `primitives/pane.useOpenPane`
     - `primitives/text-editor.TextEditor`
     - `primitives/ui-context/element-picker`
-    - `shell/toast.showToast`
+    - `shell/notifications.useToast`
     - `tasks/task-detail.taskDetailPane`
     - `tasks/tasks-core.useTaskConversations`
     - `ui/icons.Icon`

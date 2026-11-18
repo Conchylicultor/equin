@@ -41,9 +41,9 @@ vi.mock(
     quietReload: state.quietReload,
   }),
 );
-vi.mock("@plugins/shell/plugins/toast/web", async (importOriginal) => ({
+vi.mock("@plugins/shell/plugins/notifications/web", async (importOriginal) => ({
   ...(await importOriginal<object>()),
-  showToast: state.toast,
+  useToast: () => state.toast,
 }));
 
 import { act, cleanup, render } from "@testing-library/react";
@@ -162,6 +162,13 @@ describe("UpdatePolicyRoot", () => {
     state.current = true;
     rerender(<UpdatePolicyRoot />);
     expect(state.toast).toHaveBeenCalledTimes(1);
+    expect(state.toast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: "announcement",
+        title: "Updated to the latest version",
+        category: "updates",
+      }),
+    );
     rerender(<UpdatePolicyRoot />);
     expect(state.toast).toHaveBeenCalledTimes(1);
   });

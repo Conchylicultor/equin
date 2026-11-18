@@ -1,11 +1,18 @@
 /**
  * The toast ledger's DOM contract: `useLiveToastCount()` equals the number of
  * `[data-sonner-toast]` elements on screen, through every path a toast takes in
- * and out of the DOM.
+ * and out of the DOM — plus the stack's lifecycle around it: a toast raised
+ * before the host mounts, from an effect above the toaster, its expiry,
+ * click-to-dismiss, its render origin, and announcements vs replies.
+ *
+ * Every toast is raised the one way there is, `useShowCustomToast` (its
+ * content rendered in the caller's render origin, then `sonnerToast.custom`);
+ * text content is enough for a test about the ledger.
  *
  * Two cases are regressions and are expected to FAIL against the enqueue-time
  * ledger this replaces — "a toast no <Toaster/> ever rendered" (defect A) and
- * "a toast fired from an effect above the toaster" (defect B).
+ * "a toast fired from an effect above the toaster" (defect B; the deferral
+ * that fixes it now lives in `showCustomToast`).
  *
  * Sonner is mounted here as a bare `<Toaster/>`, not the plugin's
  * `<ToasterHost/>`: the host exists to carry theme scope, colour mode and the
@@ -21,12 +28,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { Toaster, toast as sonnerToast } from "sonner";
 
-import type { ToastVariant } from "../../core";
 import { useLiveToastCount } from "../internal/live-toasts";
 import { RenderOrigin } from "@plugins/primitives/plugins/scope/plugins/render-origin/web";
 import {
   ANNOUNCEMENT_DURATION_MS,
-  showToast,
   useShowCustomToast,
   type CustomToastArgs,
 } from "../internal/show-toast";
@@ -36,28 +41,48 @@ const TOAST_LIFETIME = 4000;
 /** sonner's exit-animation window between removal and unmount (dist:425). */
 const TIME_BEFORE_UNMOUNT = 200;
 
-const VARIANTS: ToastVariant[] = ["default", "success", "error", "warning", "info"];
+/** A text-only reply, alive for sonner's default lifetime. */
+function textToast(text: string): CustomToastArgs {
+  return {
+    kind: "reply",
+    duration: TOAST_LIFETIME,
+    render: () => <span>{text}</span>,
+  };
+}
 
 function LedgerProbe() {
   const count = useLiveToastCount();
   return <div data-testid="ledger-count">{count}</div>;
 }
 
-/** Toaster-optional tree, so a rerender can unmount the host under a live probe. */
+/** The raiser of the mounted tree, captured by `Raiser`. */
+let show: ((args: CustomToastArgs) => void) | null = null;
+function Raiser() {
+  const raise = useShowCustomToast();
+  // Published after commit, never assigned during render.
+  useEffect(() => {
+    show = raise;
+  }, [raise]);
+  return null;
+}
+
+/** Toaster-optional tree, so a rerender can mount or unmount the host under a live probe. */
 function Harness({ toaster }: { toaster: boolean }) {
   return (
-    <>
+    <RenderOrigin>
       <LedgerProbe />
+      <Raiser />
       {toaster ? <Toaster /> : null}
-    </>
+    </RenderOrigin>
   );
 }
 
 /** Fires one toast from a passive effect, the shape the real bell button has. */
-function ToastOnMount({ description }: { description: string }) {
+function ToastOnMount({ text }: { text: string }) {
+  const raise = useShowCustomToast();
   useEffect(() => {
-    showToast({ description });
-  }, [description]);
+    raise(textToast(text));
+  }, [raise, text]);
   return null;
 }
 
@@ -70,9 +95,10 @@ function mountedToasts(): HTMLElement[] {
 }
 
 /**
- * Drive every asynchronous hop between `showToast()` and the DOM settling:
+ * Drive every asynchronous hop between a raise and the DOM settling:
  *
- *  1. our own `queueMicrotask` deferral — drained by the `await` below;
+ *  1. the content committing in its origin, then our own `queueMicrotask`
+ *     deferral — drained by the `await`s below;
  *  2. sonner's addition path, a `setTimeout(0)` wrapping a `ReactDOM.flushSync`
  *     (dist:969) — a zero-length tick still fires zero-delay timers;
  *  3. its dismissal hops: a `requestAnimationFrame` in the observer (dist:185)
@@ -84,17 +110,29 @@ function mountedToasts(): HTMLElement[] {
 async function flushToasts(ms = 0): Promise<void> {
   await act(async () => {
     await Promise.resolve();
+    await Promise.resolve();
     vi.advanceTimersByTime(ms);
     await Promise.resolve();
   });
 }
 
+/** Raise each toast from outside React (an event handler's shape), then settle. */
+async function raise(...toasts: CustomToastArgs[]): Promise<void> {
+  await act(async () => {
+    for (const args of toasts) show!(args);
+    // The content commits in the origin before the toast is enqueued.
+    await Promise.resolve();
+  });
+  await flushToasts();
+}
+
 beforeEach(() => {
+  show = null;
   vi.useFakeTimers({
     // `requestAnimationFrame` is load-bearing here, not incidental: every
     // dismissal hops through one, so under a frozen clock with a real rAF the
     // toast never leaves and the dismiss cases hang on an <li> that will not go
-    // away. `queueMicrotask` is deliberately NOT faked — `showToast`'s
+    // away. `queueMicrotask` is deliberately NOT faked — `showCustomToast`'s
     // one-microtask deferral is the thing under test, and faking it would let
     // the test skip the very hop the fix relies on.
     toFake: [
@@ -126,18 +164,12 @@ afterEach(() => {
 
 describe("the toast ledger is the set of mounted toasts", () => {
   it("counts exactly the toasts that are mounted", async () => {
-    render(
-      <>
-        <LedgerProbe />
-        <Toaster />
-      </>,
-    );
+    render(<Harness toaster />);
 
     // Five, deliberately past sonner's `visibleToasts` default of 3: it mounts
     // all of them and only drives opacity, and sweeping the ones you cannot see
     // is the whole justification for the affordance this count feeds.
-    for (const n of [1, 2, 3, 4, 5]) showToast({ description: `toast ${n}` });
-    await flushToasts();
+    await raise(...[1, 2, 3, 4, 5].map((n) => textToast(`toast ${n}`)));
 
     const mounted = mountedToasts().length;
     expect(mounted).toBe(5);
@@ -148,10 +180,9 @@ describe("the toast ledger is the set of mounted toasts", () => {
     // REGRESSION. The old ledger recorded at enqueue time and retired only from
     // sonner's exit callbacks, so an enqueue with no renderer was counted
     // forever with no repair path: the empty corner under a "Dismiss all (3)".
-    render(<LedgerProbe />);
+    render(<Harness toaster={false} />);
 
-    for (const n of [1, 2, 3, 4, 5]) showToast({ description: `orphan ${n}` });
-    await flushToasts();
+    await raise(...[1, 2, 3, 4, 5].map((n) => textToast(`orphan ${n}`)));
 
     expect(mountedToasts()).toHaveLength(0);
     expect(ledgerCount()).toBe(0);
@@ -167,11 +198,11 @@ describe("the toast ledger is the set of mounted toasts", () => {
     // mirrors the real app, where the dominant toast producer (the notifications
     // bell) sits above the toaster host.
     render(
-      <>
+      <RenderOrigin>
         <LedgerProbe />
-        <ToastOnMount description="from an effect" />
+        <ToastOnMount text="from an effect" />
         <Toaster />
-      </>,
+      </RenderOrigin>,
     );
     await flushToasts();
 
@@ -187,8 +218,7 @@ describe("the toast ledger is the set of mounted toasts", () => {
     // replays every still-active toast to a new subscriber. If an upgrade drops
     // that replay, this fails and the host must hold a queue instead.
     const { rerender } = render(<Harness toaster={false} />);
-    showToast({ description: "before the host" });
-    await flushToasts();
+    await raise(textToast("before the host"));
     expect(mountedToasts()).toHaveLength(0);
 
     rerender(<Harness toaster />);
@@ -199,62 +229,23 @@ describe("the toast ledger is the set of mounted toasts", () => {
     expect(screen.getByText("before the host")).toBeTruthy();
   });
 
-  it("defers the enqueue by exactly one microtask", async () => {
+  it("never enqueues inside the caller's stack", async () => {
     // The deferral, observed directly at sonner's own boundary rather than
     // through the DOM: nothing reaches `ToastState` inside the caller's stack.
-    render(<Toaster />);
+    render(<Harness toaster />);
     const before = sonnerToast.getHistory().length;
 
-    showToast({ description: "deferred" });
+    act(() => show!(textToast("deferred")));
     expect(sonnerToast.getHistory()).toHaveLength(before);
 
-    await act(async () => {
-      await Promise.resolve();
-    });
+    await flushToasts();
     expect(sonnerToast.getHistory()).toHaveLength(before + 1);
   });
 
-  it("drains the count when the action button dismisses the toast", async () => {
-    const onClick = vi.fn();
-    render(
-      <>
-        <LedgerProbe />
-        <Toaster />
-      </>,
-    );
-
-    showToast({ description: "undoable", action: { label: "Undo", onClick } });
-    await flushToasts();
-    expect(ledgerCount()).toBe(1);
-
-    const actionButton = document.querySelector<HTMLButtonElement>("[data-action]");
-    expect(actionButton).not.toBeNull();
-    await act(async () => {
-      fireEvent.click(actionButton!);
-    });
-
-    expect(onClick).toHaveBeenCalledTimes(1);
-
-    // The action button is the one exit sonner reports through neither
-    // `onAutoClose` nor `onDismiss` — the old ledger needed a bespoke untrack
-    // inside this very handler. Now it is just another unmount, so nothing in
-    // `showToast` has to know the button exists.
-    await flushToasts(TIME_BEFORE_UNMOUNT + 50);
-    expect(mountedToasts()).toHaveLength(0);
-    expect(ledgerCount()).toBe(0);
-  });
-
   it("keeps an exiting toast counted for its exit animation, then drops it", async () => {
-    render(
-      <>
-        <LedgerProbe />
-        <Toaster />
-      </>,
-    );
+    render(<Harness toaster />);
 
-    showToast({ description: "expires a" });
-    showToast({ description: "expires b" });
-    await flushToasts();
+    await raise(textToast("expires a"), textToast("expires b"));
     expect(ledgerCount()).toBe(2);
 
     await flushToasts(TOAST_LIFETIME);
@@ -280,9 +271,7 @@ describe("the toast ledger is the set of mounted toasts", () => {
   it("drains the count when the host unmounts", async () => {
     const { rerender } = render(<Harness toaster />);
 
-    showToast({ description: "host goes away a" });
-    showToast({ description: "host goes away b" });
-    await flushToasts();
+    await raise(textToast("host goes away a"), textToast("host goes away b"));
     expect(ledgerCount()).toBe(2);
 
     // No lifecycle hook clears the ledger any more. React unmounting the toast
@@ -295,132 +284,24 @@ describe("the toast ledger is the set of mounted toasts", () => {
     expect(mountedToasts()).toHaveLength(0);
     expect(ledgerCount()).toBe(0);
   });
-
-  it.each(VARIANTS)("mounts the toast body for the %s variant", async (variant) => {
-    // `default` goes through sonner's `toastFunction` (dist:373) and every other
-    // variant through `Observer.create` (dist:142) — two different id-assignment
-    // and publish paths, both of which have to honour the explicit non-empty
-    // string id the body is keyed by. Cheap insurance against a sonner bump.
-    render(
-      <>
-        <LedgerProbe />
-        <Toaster />
-      </>,
-    );
-
-    showToast({ description: `a ${variant} toast`, variant });
-    await flushToasts();
-
-    expect(mountedToasts()).toHaveLength(1);
-    expect(ledgerCount()).toBe(1);
-    expect(screen.getByText(`a ${variant} toast`)).toBeTruthy();
-  });
-
-  it("counts a description-only toast exactly once", async () => {
-    render(
-      <>
-        <LedgerProbe />
-        <Toaster />
-      </>,
-    );
-
-    showToast({ description: "just a description" });
-    await flushToasts();
-
-    // With no title the description IS the message, so sonner renders no
-    // `[data-description]` div at all (dist:797) — there is only one slot the
-    // body could be in.
-    expect(mountedToasts()).toHaveLength(1);
-    expect(document.querySelectorAll("[data-description]")).toHaveLength(0);
-    expect(ledgerCount()).toBe(1);
-  });
-
-  it("counts a title + description toast exactly once, registering in the title only", async () => {
-    render(
-      <>
-        <LedgerProbe />
-        <Toaster />
-      </>,
-    );
-
-    showToast({ title: "The title", description: "The description" });
-    await flushToasts();
-
-    expect(mountedToasts()).toHaveLength(1);
-    expect(ledgerCount()).toBe(1);
-
-    // The body must register in the TITLE slot only. Sonner renders
-    // `[data-title]` unconditionally (dist:794) but `[data-description]` only
-    // when a description is present, so two registrations behind one Set entry
-    // would let the first unmount untrack a toast the other half is still
-    // showing — an undercount, the worse direction. The body's anchor is the
-    // only <span> either slot would contain, which is what makes the absence
-    // below assertable.
-    const title = document.querySelector("[data-title]");
-    const description = document.querySelector("[data-description]");
-    expect(title).not.toBeNull();
-    expect(description).not.toBeNull();
-    expect(title!.querySelector("span")).not.toBeNull();
-    expect(description!.querySelector("span")).toBeNull();
-  });
-
-  it("falls back to the description when the title is an empty string", async () => {
-    // Drive-by from the same change: `title ?? description` let `title: ""`
-    // through, rendering an empty toast and silently dropping the description.
-    render(
-      <>
-        <LedgerProbe />
-        <Toaster />
-      </>,
-    );
-
-    showToast({ title: "", description: "the only text there is" });
-    await flushToasts();
-
-    expect(screen.getByText("the only text there is")).toBeTruthy();
-    expect(ledgerCount()).toBe(1);
-  });
 });
 
 describe("click-to-dismiss", () => {
-  /**
-   * A custom toast with words and one control of its own, raised from inside
-   * a render origin — where its content renders, adopted into sonner's `<li>`.
-   */
+  /** A custom toast with words and one control of its own, kept until handled. */
   async function showCustom(onControl: () => void): Promise<void> {
-    let show: ((args: CustomToastArgs) => void) | null = null;
-    function Raiser({
-      into,
-    }: {
-      into: (r: (args: CustomToastArgs) => void) => void;
-    }) {
-      into(useShowCustomToast());
-      return null;
-    }
-    render(
-      <RenderOrigin>
-        <LedgerProbe />
-        <Toaster />
-        <Raiser into={(r) => (show = r)} />
-      </RenderOrigin>,
-    );
-    await act(async () => {
-      show!({
-        kind: "reply",
-        duration: Infinity,
-        render: () => (
-          <div>
-            <p>the body</p>
-            <button type="button" onClick={onControl}>
-              Act
-            </button>
-          </div>
-        ),
-      });
-      // The content commits in the origin before the toast is enqueued.
-      await Promise.resolve();
+    render(<Harness toaster />);
+    await raise({
+      kind: "reply",
+      duration: Infinity,
+      render: () => (
+        <div>
+          <p>the body</p>
+          <button type="button" onClick={onControl}>
+            Act
+          </button>
+        </div>
+      ),
     });
-    await flushToasts();
     expect(ledgerCount()).toBe(1);
   }
 
@@ -461,16 +342,6 @@ describe("a custom toast renders in its caller's origin", () => {
     return <p>{`body in ${useContext(World)}`}</p>;
   }
 
-  let show: ((args: CustomToastArgs) => void) | null = null;
-  function Raiser({
-    into,
-  }: {
-    into: (r: (args: CustomToastArgs) => void) => void;
-  }) {
-    into(useShowCustomToast());
-    return null;
-  }
-
   /** The toaster in the page's world; the raiser in its own origin, in another. */
   function Tree({ withOrigin }: { withOrigin: boolean }) {
     return (
@@ -480,7 +351,7 @@ describe("a custom toast renders in its caller's origin", () => {
         {withOrigin && (
           <World.Provider value="demo">
             <RenderOrigin>
-              <Raiser into={(r) => (show = r)} />
+              <Raiser />
             </RenderOrigin>
           </World.Provider>
         )}
@@ -488,17 +359,15 @@ describe("a custom toast renders in its caller's origin", () => {
     );
   }
 
-  async function raise(): Promise<void> {
-    await act(async () => {
-      show!({ kind: "reply", duration: Infinity, render: () => <WorldName /> });
-      await Promise.resolve();
-    });
-    await flushToasts();
-  }
+  const worldToast: CustomToastArgs = {
+    kind: "reply",
+    duration: Infinity,
+    render: () => <WorldName />,
+  };
 
   it("shows the body inside the toast, reading the caller's contexts", async () => {
     render(<Tree withOrigin />);
-    await raise();
+    await raise(worldToast);
     const [li] = mountedToasts();
     expect(li?.textContent).toContain("body in demo");
     expect(ledgerCount()).toBe(1);
@@ -506,7 +375,7 @@ describe("a custom toast renders in its caller's origin", () => {
 
   it("is dismissed when its origin goes away", async () => {
     const view = render(<Tree withOrigin />);
-    await raise();
+    await raise(worldToast);
     expect(mountedToasts()).toHaveLength(1);
     view.rerender(<Tree withOrigin={false} />);
     await flushToasts(50);
@@ -517,40 +386,15 @@ describe("a custom toast renders in its caller's origin", () => {
 });
 
 describe("an announcement is never sticky", () => {
-  /**
+  /*
    * An announcement is something that happened on its own (a notification
    * arriving): its record is its persistent surface (the bell), so the toast
    * leaves after the announcement duration whatever it says, and a page off
    * screen never raises one — sonner would keep it mounted until shown.
    */
-  let show: ((args: CustomToastArgs) => void) | null = null;
-  function Raiser({
-    into,
-  }: {
-    into: (r: (args: CustomToastArgs) => void) => void;
-  }) {
-    into(useShowCustomToast());
-    return null;
-  }
-  function mountHost() {
-    render(
-      <RenderOrigin>
-        <LedgerProbe />
-        <Toaster />
-        <Raiser into={(r) => (show = r)} />
-      </RenderOrigin>,
-    );
-  }
-  async function raise(args: CustomToastArgs): Promise<void> {
-    await act(async () => {
-      show!(args);
-      await Promise.resolve();
-    });
-    await flushToasts();
-  }
 
-  it("a custom announcement leaves after the announcement duration", async () => {
-    mountHost();
+  it("an announcement leaves after the announcement duration", async () => {
+    render(<Harness toaster />);
     await raise({ kind: "announcement", render: () => <p>arrived</p> });
     expect(mountedToasts()).toHaveLength(1);
     await flushToasts(ANNOUNCEMENT_DURATION_MS);
@@ -560,7 +404,7 @@ describe("an announcement is never sticky", () => {
   });
 
   it("a reply may stay until handled", async () => {
-    mountHost();
+    render(<Harness toaster />);
     await raise({
       kind: "reply",
       duration: Infinity,
@@ -570,18 +414,15 @@ describe("an announcement is never sticky", () => {
     expect(mountedToasts()).toHaveLength(1);
   });
 
-  it("a page off screen raises no announcement, custom or text — a reply still shows", async () => {
+  it("a page off screen raises no announcement — a reply still shows", async () => {
     const visibility = vi
       .spyOn(document, "visibilityState", "get")
       .mockReturnValue("hidden");
     try {
-      mountHost();
+      render(<Harness toaster />);
       await raise({ kind: "announcement", render: () => <p>arrived</p> });
-      showToast({ kind: "announcement", description: "reconnected" });
-      await flushToasts();
       expect(mountedToasts()).toHaveLength(0);
-      showToast({ description: "copied" });
-      await flushToasts();
+      await raise(textToast("copied"));
       expect(mountedToasts()).toHaveLength(1);
     } finally {
       visibility.mockRestore();

@@ -7,7 +7,7 @@ import type {
   FileMoveResult,
 } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { useFileMove } from "@plugins/infra/plugins/paths/plugins/file-systems/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { baseName } from "../../core";
 import { useAskConflict } from "../components/conflict-dialog";
 
@@ -70,12 +70,19 @@ export function useMoveInto(
 ): (sources: readonly string[], destDir: string) => Promise<readonly string[]> {
   const move = useFileMove(fs);
   const askConflict = useAskConflict();
+  const toast = useToast();
   return useCallback(
     async (sources, destDir) => {
       // A system this host cannot run (the computer's disk in the demo) says
       // so and moves nothing.
       if (move.kind === "unavailable") {
-        showToast({ variant: "error", description: move.message });
+        toast({
+          type: "file-explorer-move-unavailable",
+          variant: "error",
+          title: move.message,
+          description: "",
+          category: "other",
+        });
         return [];
       }
       const { mutateAsync } = move;
@@ -155,16 +162,19 @@ export function useMoveInto(
       }
 
       if (refused.length > 0) {
-        showToast({
+        toast({
+          type: "file-explorer-move-refused",
           variant: "error",
-          description:
+          title:
             refused.length === 1
               ? refused[0]!
-              : `${refused.length} items were not moved: ${refused.join("; ")}`,
+              : `${refused.length} items were not moved`,
+          description: refused.length === 1 ? "" : refused.join("; "),
+          category: "other",
         });
       }
       return moved;
     },
-    [move, askConflict],
+    [move, askConflict, toast],
   );
 }

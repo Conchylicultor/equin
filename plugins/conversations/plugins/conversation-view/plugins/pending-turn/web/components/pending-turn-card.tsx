@@ -14,7 +14,7 @@ import {
   getEndpointErrorMessage,
   useFetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast, type Toast } from "@plugins/shell/plugins/notifications/web";
 import { writeDraft } from "@plugins/primitives/plugins/kept-state/web";
 import { useStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { conversationPromptDraft } from "../internal/prompt-draft";
@@ -29,11 +29,18 @@ import {
 const scheduleIcon = symbol("schedule");
 
 /** Run a card action against the server; a refusal is a toast, not a crash. */
-async function act(verb: string, run: () => Promise<void>): Promise<void> {
+async function act(
+  toast: Toast,
+  type: string,
+  verb: string,
+  run: () => Promise<void>,
+): Promise<void> {
   try {
     await run();
   } catch (err) {
-    showToast({
+    toast({
+      type,
+      category: "conversations",
       title: `${verb} failed`,
       description: getEndpointErrorMessage(err),
       variant: "error",
@@ -61,6 +68,7 @@ function useCardActions(conversationId: string): CardActions {
   const promptDrafts = useStore(conversationPromptDraft);
   const resendTurn = useResendTurn();
   const dismissSentTurn = useDismissSentTurn();
+  const toast = useToast();
   return {
     retry(turn) {
       if (turn.state === "unsent") {
@@ -70,7 +78,7 @@ function useCardActions(conversationId: string): CardActions {
       // A retry that fails again is written on the row (`failed`, with its
       // error), which this card then shows; the toast says the click did
       // nothing.
-      return act("Retry", () =>
+      return act(toast, "pending-turn-retry-failed", "Retry", () =>
         retryLedgerTurn(fetchEndpoint, conversationId, turn.id),
       );
     },
@@ -80,12 +88,12 @@ function useCardActions(conversationId: string): CardActions {
         dismissSentTurn(conversationId, turn.id);
         return Promise.resolve();
       }
-      return act("Copy to draft", () =>
+      return act(toast, "pending-turn-take-back-failed", "Copy to draft", () =>
         withdrawLedgerTurn(fetchEndpoint, conversationId, turn.id),
       );
     },
     sendNow() {
-      return act("Send now", () =>
+      return act(toast, "pending-turn-send-now-failed", "Send now", () =>
         sendQueuedNow(fetchEndpoint, conversationId),
       );
     },

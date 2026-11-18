@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import type { ConversationEntry } from "@plugins/conversations/core";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { markViewed, resumeHibernated } from "../../shared/endpoints";
 
 /** What marking a conversation viewed needs to know about it. */
@@ -22,6 +22,7 @@ export function useMarkConversationViewed(): (
   conversation: ViewedConversation,
 ) => Promise<void> {
   const fetchEndpoint = useFetchEndpoint();
+  const toast = useToast();
   return useCallback(
     async ({ id, hibernatedAt }: ViewedConversation) => {
       await fetchEndpoint(markViewed, { id });
@@ -35,7 +36,9 @@ export function useMarkConversationViewed(): (
           return;
         case "ok":
           if (result.value.kind !== "blocked") return;
-          showToast({
+          toast({
+            type: "conversation-resume-blocked",
+            category: "conversations",
             title: "Can't resume conversation",
             description: result.value.message,
             variant: "error",
@@ -43,6 +46,6 @@ export function useMarkConversationViewed(): (
           return;
       }
     },
-    [fetchEndpoint],
+    [fetchEndpoint, toast],
   );
 }

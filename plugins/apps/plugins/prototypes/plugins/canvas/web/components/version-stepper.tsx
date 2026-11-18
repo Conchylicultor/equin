@@ -20,7 +20,7 @@ import {
   useFetchEndpoint,
   type FetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast, type Toast } from "@plugins/shell/plugins/notifications/web";
 import { matchResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { ActionFormShield } from "@plugins/primitives/plugins/action-presentation/web";
@@ -161,6 +161,7 @@ function ReadyStepper({
 }): ReactElement {
   const fetchEndpoint = useFetchEndpoint();
   const confirmDialog = useConfirmDialog();
+  const toast = useToast();
   const [open, setOpen] = useState(false);
   const { model, current, prev, next, go, stepBack, stepForward } =
     useVersionStepping(history, { shown, show });
@@ -235,6 +236,7 @@ function ReadyStepper({
                   confirmRestore(
                     confirmDialog,
                     fetchEndpoint,
+                    toast,
                     name,
                     restorable,
                     show,
@@ -340,6 +342,7 @@ function StepTooltip({ step }: { step: VersionStep | null }) {
 function confirmRestore(
   confirmDialog: ConfirmDialog,
   fetchEndpoint: FetchEndpoint,
+  toast: Toast,
   name: string,
   version: PrototypeVersion,
   show: (version: PrototypeVersion | null) => void,
@@ -355,10 +358,12 @@ function confirmRestore(
         sha: version.sha,
       });
       show(null);
-      showToast({
+      toast({
+        type: "prototypes-version-restored",
         title: `Restored v${String(version.n)}`,
         description: `Recorded as v${String(restored.n)}.`,
         variant: "success",
+        category: "confirmations",
       });
     },
   });

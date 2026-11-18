@@ -280,7 +280,7 @@ piano.
     - `primitives/loading.Loading`
     - `primitives/overlay/tooltip.Kbd`
     - `primitives/shortcuts.useSurfaceShortcuts`
-    - `shell/toast.showToast`
+    - `shell/notifications.useToast`
     - `ui/icons.Icon`
 - Core:
   - Uses:

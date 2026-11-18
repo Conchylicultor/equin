@@ -4,7 +4,7 @@ import {
   getEndpointErrorMessage,
   useEndpointMutation,
 } from "@plugins/infra/plugins/endpoints/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { useConversation } from "@plugins/conversations/web";
 import { dropAndExit } from "@plugins/conversations/plugins/conversation-view/plugins/drop-and-exit/core";
 
@@ -34,10 +34,13 @@ export function EndThreadButton({
   onEnded,
 }: EndThreadButtonProps) {
   const row = useConversation(conversationId);
+  const toast = useToast();
   const close = useEndpointMutation(dropAndExit, {
     onSuccess: () => onEnded?.(),
     onError: (err) =>
-      showToast({
+      toast({
+        type: "conversation-close-failed",
+        category: "conversations",
         title: "Couldn't close the conversation",
         description: getEndpointErrorMessage(err),
         variant: "error",

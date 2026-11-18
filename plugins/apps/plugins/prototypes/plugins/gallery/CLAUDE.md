@@ -172,7 +172,7 @@ honest — the prototype does exist — and it self-corrects.
     - `PrototypeCardActions` "done" → `DoneCardAction`
     - `PrototypeCardActions` "delete" → `DeleteCardAction`
     - `trash-actions` "restore" → `RestoreCardAction`
-  - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×8
     - `infra/endpoints` ×5
     - `apps/prototypes/canvas` ×4
@@ -189,7 +189,6 @@ honest — the prototype does exist — and it self-corrects.
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
     - `shell/notifications.useToast`
-    - `shell/toast.showToast`
     - `tag-tree/engine.useTagTree`
     - `ui/icons.Icon`
   - Exports (types): `PrototypeGalleryRow`
