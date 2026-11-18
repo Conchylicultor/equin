@@ -50712,7 +50712,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 185 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+            - Imported by: 186 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
               - `apps` ×51
               - `primitives` ×33
               - `conversations` ×27
@@ -50732,6 +50732,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `auth`
               - `companions/panel`
               - `music/background`
+              - `search/quick-find`
               - `tag-tree/picker`
               - `upstream`
         - **`grid`** — Responsive/uniform grid layout primitive: <Grid minCellWidth> lays out a wrapping, equal-width card grid via a closed prop surface — not a raw grid-template passthrough.
@@ -60799,23 +60800,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `search/quick-find`
     - **`quick-find`** — Reusable quick-find search UI: the debounced useSearch hook and the <QuickFindDialog> dialog (each result a link, injected via resultActivation).
       - Web:
-        - Uses:
+        - Uses: 21 symbols — full list in [`plugins/search/plugins/quick-find/REFERENCE.md`](../plugins/search/plugins/quick-find/REFERENCE.md)
+          - `primitives/css/ui-kit` ×6
+          - `network/live/live-state` ×2
+          - `primitives/link-gesture` ×2
           - `network/live.useLive`
-          - `network/live/live-state.foldResource`
-          - `network/live/live-state.ResourceErrorInline`
+          - `primitives/css/fill.fillClasses`
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/row.Row`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
-          - `primitives/css/ui-kit.Dialog`
-          - `primitives/css/ui-kit.DialogContent`
-          - `primitives/css/ui-kit.ScrollArea`
           - `primitives/css/yield.yieldClass`
           - `primitives/dom/scroll-reveal.revealElement`
-          - `primitives/link-gesture.activationProps`
-          - `primitives/link-gesture.gestureOf`
           - `primitives/loading.Loading`
           - `primitives/search.SearchInput`
+          - `ui/icons.Icon`
         - Exports (types):
           - `QuickFindDialogProps`
           - `UseSearchOptions`
@@ -65373,7 +65372,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedSprites`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 606 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 607 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×157
           - `conversations` ×123
           - `primitives` ×54
@@ -65410,6 +65409,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/live-state`
           - `phone-window`
           - `runs/run-outcome`
+          - `search/quick-find`
           - `stats`
           - `tag-tree/picker`
           - `upstream`

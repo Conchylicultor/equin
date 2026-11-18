@@ -6,23 +6,21 @@
 
 - Description: Reusable quick-find search UI: the debounced useSearch hook and the <QuickFindDialog> dialog (each result a link, injected via resultActivation).
 - Web:
-  - Uses:
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×6
+    - `network/live/live-state` ×2
+    - `primitives/link-gesture` ×2
     - `network/live.useLive`
-    - `network/live/live-state.foldResource`
-    - `network/live/live-state.ResourceErrorInline`
+    - `primitives/css/fill.fillClasses`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Dialog`
-    - `primitives/css/ui-kit.DialogContent`
-    - `primitives/css/ui-kit.ScrollArea`
     - `primitives/css/yield.yieldClass`
     - `primitives/dom/scroll-reveal.revealElement`
-    - `primitives/link-gesture.activationProps`
-    - `primitives/link-gesture.gestureOf`
     - `primitives/loading.Loading`
     - `primitives/search.SearchInput`
+    - `ui/icons.Icon`
   - Exports (types):
     - `QuickFindDialogProps`
     - `UseSearchOptions`

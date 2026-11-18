@@ -2,10 +2,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { revealElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import {
+  Button,
+  cn,
   Dialog,
+  DialogClose,
   DialogContent,
   ScrollArea,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
@@ -70,6 +76,8 @@ function Snippet({ snippet }: { snippet: string }) {
   );
 }
 
+const closeIcon = symbol("close");
+
 /** Stable identity for "no settled hits", so the key handler does not churn. */
 const NO_HITS: SearchResult[] = [];
 
@@ -83,7 +91,10 @@ export function QuickFindDialog({
 }: QuickFindDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="md">
+      {/* No corner ✕: it is absolutely placed over the panel's top-right
+          corner, where the search field runs, so it sat on top of the field.
+          The body draws its own ✕ in the search band, beside the field. */}
+      <DialogContent size="md" showCloseButton={false}>
         {/* Self-key the body on `open` so query + activeIdx re-initialize on every
             open via a fresh mount — no props-to-state reset effect. */}
         <QuickFindDialogBody
@@ -169,8 +180,14 @@ function QuickFindDialogBody({
           panel while the input inside it lands back on the panel's rail. It is a
           direct child of the panel, which is what makes a bleed free (see the
           caveat in `dialog.tsx`). */}
-      <div className="border-b rail-bleed py-sm">
+      <Stack
+        direction="row"
+        align="center"
+        gap="xs"
+        className="border-b rail-bleed py-sm"
+      >
         <SearchInput
+          wrapperClassName={cn(fillClasses("x"))}
           appearance="menu"
           autoFocus
           keep={transient("quick-find dialog: every open starts a fresh query")}
@@ -183,7 +200,11 @@ function QuickFindDialogBody({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
         />
-      </div>
+        <DialogClose render={<Button variant="ghost" aspect="icon" />}>
+          <Icon icon={closeIcon} />
+          <span className="sr-only">Close</span>
+        </DialogClose>
+      </Stack>
 
       <ScrollArea className="max-h-80">
         {/* Block rhythm only: the list opens NO region of its own, so its rows
