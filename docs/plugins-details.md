@@ -34945,7 +34945,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `tasks/task-draft-form`
       - `wish`
   - Plugins:
-    - **`ask`** — Ask equin, web half: the ? menu's entry (Ask equin how to… / Back to your question) and the same entry as an icon in the Wish popover's header, and the AskHost at Core.Root — a draggable card in the chrome's theme (a developer-only Agent instructions header action opening the Ask equin config) holding one threaded conversation with the help agent (AgentThread; a filed task shows as its live status and title, opening in the Agent Manager), above every tab so it follows the user across apps: suggested questions and a first-question box when empty (the first send attaches the focused app, route, tab title and the page outline), minimized to a pill with the step it is on and an unseen dot, its position kept edge-anchored and snapped only near a corner, and the newest unseen or working run taken back as the pill once per load. A reply sent from another page carries that page (a <page-context> token after the words, drawn as a chip naming the page). Registers the Ask equin config with both model pickers. Ask equin, server half: the help agent's reserved ask_file_task tool (a task with no folder or dependency edges, in the default worktree workspace, filed under Wishes and armed with the configured model so it launches at once), and the Ask equin config (the answering model, the filed tasks' model, the help agent's whole prompt as an editable template).
+    - **`ask`** — Ask equin, web half: the ? menu's entry (Ask equin how to… / Back to your question) and the same entry as an icon in the Wish popover's header, and the AskHost at Core.Root — a draggable card in the chrome's theme (a developer-only Agent instructions header action opening the Ask equin config) holding one threaded conversation with the help agent (AgentThread; a filed task shows as its live status and title, opening in the Agent Manager), above every tab so it follows the user across apps: suggested questions and a first-question box when empty (the first send attaches the focused app, route, tab title and the page outline), minimized to a pill with the step it is on and an unseen dot, its position kept edge-anchored and snapped only near a corner — the card the browser tab's own (a reload keeps it, another tab never takes its run back). A reply sent from another page carries that page (a <page-context> token after the words, drawn as a chip naming the page). Registers the Ask equin config with both model pickers. Ask equin, server half: the help agent's reserved ask_file_task tool (a task with no folder or dependency edges, in the default worktree workspace, filed under Wishes and armed with the configured model so it launches at once), and the Ask equin config (the answering model, the filed tasks' model, the help agent's whole prompt as an editable template).
       - Web:
         - Contributes:
           - `Core.Root` → `AskHost`
@@ -34956,8 +34956,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ConfigV2.WebRegister` "config"
           - `DynamicEnum.Options` "Model for filed tasks"
           - `DynamicEnum.Options` "Model"
-        - Uses: 69 symbols — full list in [`plugins/hints/plugins/ask/REFERENCE.md`](../plugins/hints/plugins/ask/REFERENCE.md)
-          - `conversations/agent-thread` ×7
+        - Uses: 68 symbols — full list in [`plugins/hints/plugins/ask/REFERENCE.md`](../plugins/hints/plugins/ask/REFERENCE.md)
+          - `conversations/agent-thread` ×6
           - `primitives/kept-state` ×4
           - `apps-core` ×2
           - `config_v2` ×2

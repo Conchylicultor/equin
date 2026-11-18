@@ -16,7 +16,6 @@ import {
 } from "../../core";
 import { restoreCard, useAskState } from "../internal/ask-store";
 import { askPositionStore } from "../internal/stores";
-import { useRestoreNewestRun } from "../internal/use-ask";
 import { AskEmptyCard, AskThreadCard, CardFrame } from "./ask-card";
 import { AskPill } from "./ask-pill";
 import { AskLayer } from "../internal/layer";
@@ -47,14 +46,13 @@ function extentOf(
 
 /**
  * The one Ask equin host, at `Core.Root` — above every tab, so the card (or
- * its pill) stays put while the user moves between apps. It restores the
- * newest run once per load, and places the card where the user left it
+ * its pill) stays put while the user moves between apps. It places the card
+ * where the user left it
  * (`askPositionStore`): dragged by its header, free, snapping only when
  * dropped near a corner (`placeAfterDrag`). The pill sits where the card was.
  * In the chrome's fixed theme, so it looks the same over every app.
  */
 export function AskHost() {
-  useRestoreNewestRun();
   const { mode, conversationId, fresh } = useAskState();
   const [position, setPosition] = useDraft<AskPosition>(
     askPositionStore,

@@ -17,31 +17,27 @@ export interface AskState {
    * picked again and the first-question box starts clean.
    */
   fresh: number;
-  /**
-   * The once-per-load restore is decided (taken back, or nothing to take
-   * back), or a run was picked by hand — which must not be overtaken by it.
-   */
-  restored: boolean;
 }
 
 const CARD_ENTRY = "card";
 
 /**
  * The state at page load: the card as this tab left it (a reload keeps it —
- * open, minimized or closed, on the same run), which also settles the
- * once-per-load restore; else nothing on screen, the restore to come.
+ * open, minimized or closed, on the same run); else nothing on screen. The
+ * card belongs to the browser tab it was opened in: another tab never takes
+ * a run back on its own (it stays in the Agent Manager).
  */
 function initialState(): AskState {
   const saved = askCardStore.read(CARD_ENTRY);
   if (saved.kind === "none")
-    return { mode: "closed", conversationId: null, fresh: 0, restored: false };
+    return { mode: "closed", conversationId: null, fresh: 0 };
   const { conversationId } = saved.value;
   // `min` is the pill, which only exists with a run in hand.
   const mode =
     saved.value.mode === "min" && conversationId === null
       ? "closed"
       : saved.value.mode;
-  return { mode, conversationId, fresh: 0, restored: true };
+  return { mode, conversationId, fresh: 0 };
 }
 
 // The page has ONE Ask equin card, mounted at Core.Root above every tab; the
@@ -105,7 +101,7 @@ export function askAbout(question: string): void {
 
 /** Show run `conversationId` in the open card (a question just started). */
 export function showRun(conversationId: string): void {
-  set({ mode: "open", conversationId, restored: true });
+  set({ mode: "open", conversationId });
 }
 
 /** Minimize: to the pill with a run in hand, else the card just closes. */
@@ -127,25 +123,5 @@ export function releaseRun(opts: { close: boolean }): void {
     mode: opts.close ? "closed" : "open",
     conversationId: null,
     fresh: current().fresh + 1,
-    restored: true,
-  });
-}
-
-/**
- * The once-per-load restore decided: `conversationId` is the run to take
- * back as the pill (still working, or with an answer not yet seen), or null.
- * A no-op once a run was picked by hand.
- */
-export function settleRestore(conversationId: string | null): void {
-  const s = current();
-  if (s.restored) return;
-  if (conversationId === null || s.conversationId !== null) {
-    set({ restored: true });
-    return;
-  }
-  set({
-    restored: true,
-    conversationId,
-    mode: s.mode === "closed" ? "min" : s.mode,
   });
 }

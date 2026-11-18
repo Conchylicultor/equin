@@ -1,5 +1,4 @@
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
-import { useEffect } from "react";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { useActiveApp, usePathname } from "@plugins/apps-core/web";
 import { useFocusedTabTitle } from "@plugins/apps-core/plugins/tabs/web";
@@ -9,11 +8,7 @@ import {
   normalizeModelChoice,
   type ModelChoice,
 } from "@plugins/conversations/plugins/model-provider/core";
-import {
-  useStartThread,
-  useThreadProgress,
-  useThreadRuns,
-} from "@plugins/conversations/plugins/agent-thread/web";
+import { useStartThread } from "@plugins/conversations/plugins/agent-thread/web";
 import {
   collectOutline,
   formatOutline,
@@ -29,7 +24,7 @@ import {
   stripPageContext,
   type AskInput,
 } from "../../core";
-import { settleRestore, showRun, useAskState } from "./ask-store";
+import { showRun } from "./ask-store";
 import { askSeenPageStore } from "./stores";
 
 export const ASK_RESULTS = [askFiledTask];
@@ -154,45 +149,4 @@ export function useAskQuestion(): {
   };
 
   return { ask, blocked };
-}
-
-/**
- * Once per page load, take back the newest Ask equin run as the pill when it
- * is still working or said something you have not seen — so a reload mid-run
- * keeps it, without covering the page. A run you have read stays in the Agent
- * Manager.
- */
-export function useRestoreNewestRun(): void {
-  const { restored } = useAskState();
-  const runs = useThreadRuns(HELP_ASK_PROFILE, { limit: 1 });
-  const newest =
-    runs.status === "ready"
-      ? (runs.data[0]?.id ?? null)
-      : // A failed read has nothing to take back: the run (if any) is still
-        // in the Agent Manager.
-        runs.status === "error"
-        ? null
-        : undefined;
-  const progress = useThreadProgress(
-    restored || newest === undefined || newest === null ? null : newest,
-    ASK_RESULTS,
-  );
-  // The run to take back (a conversation id), nothing (null), or not decided
-  // yet (undefined) while the reads load.
-  const decision: string | null | undefined =
-    restored || newest === undefined
-      ? undefined
-      : newest === null
-        ? null
-        : progress.status === "ready"
-          ? progress.data !== null &&
-            (progress.data.state === "working" || progress.data.unseen)
-            ? newest
-            : null
-          : progress.status === "error"
-            ? null
-            : undefined;
-  useEffect(() => {
-    if (decision !== undefined) settleRestore(decision);
-  }, [decision]);
 }

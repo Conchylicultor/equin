@@ -47,24 +47,16 @@ async function box(l: Locator) {
 const near = (a: number, b: number) => Math.abs(a - b) <= TOLERANCE;
 
 /**
- * Open the empty card from ? → Ask equin. A run this worktree asked earlier
- * may be taken back on load (the entry then reads "Back to your question"
- * and opens its thread): New question lets go of it for the empty card.
+ * Open the empty card from ? → Ask equin. A fresh browser tab holds no run
+ * (the card is the tab's own: no run is taken back on load), so the entry
+ * reads "Ask equin how to…" and opens the empty card.
  */
 async function openEmptyCard(page: Page): Promise<Locator> {
   await openFloatingActionBar(page);
   await page.getByRole("button", { name: "Getting started" }).click();
-  await page
-    .getByText(/^(Ask equin how to…|Back to your question)$/)
-    .first()
-    .click();
+  await page.getByText("Ask equin how to…", { exact: true }).first().click();
   const c = card(page);
   await c.waitFor();
-  const fresh = c.getByRole("button", { name: "New question", exact: true });
-  if (await fresh.isVisible()) {
-    r.note("a previous run was restored — New question for the empty card");
-    await fresh.click();
-  }
   await c.getByRole("button", { name: "Close", exact: true }).waitFor();
   // Let the pointer leave the bar so it folds away from the card.
   await page.mouse.move(DEFAULT_VIEWPORT.width / 2, 300);
