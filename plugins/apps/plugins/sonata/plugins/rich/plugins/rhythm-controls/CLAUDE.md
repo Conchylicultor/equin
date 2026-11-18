@@ -134,6 +134,25 @@ and a block chord struck once per cycle, restarting on every chord change.
   updater + forward-written ref pattern of data-view's `useSortPresets`, so
   back-to-back writes in one tick both land.
 
+## The groove in a song's link (`;groove=`)
+
+A `Library.SongLink` part (`web/song-link.ts`): the open song's groove,
+written into the player URL so a shared link carries the accompaniment, and
+written as the groove of a song created from a link (`apply`). The grammar
+(`shared/groove-link.ts`, tested) is words a person can read and edit, in
+characters a URL leaves unescaped:
+
+    [preset~]R.<figuration>[.<token>…].<rhythm>~L.<figuration>[.<token>…].<rhythm>[~norestart]
+    stride~R.block.basic-2~L.stride.basic-4
+
+`R` is the right hand (chords), `L` the left (bass); tokens are only what
+differs from the hand's default voicing (`o<n>`, `vl`/`novl`, `dbl`/`nodbl`,
+`off`) and a rotation `r<n>`; the rhythm is a named rhythm when it strikes that
+rhythm's steps, else one bead per step (`x--x-x--`). The link carries no
+groove while the song does not play one (a MIDI song with the accompaniment
+off) or while it is the default accompaniment. A value that does not parse is
+skipped, like a malformed `;bar`.
+
 ## The generic circle
 
 The necklace itself is the domain-agnostic
@@ -152,9 +171,9 @@ already-effective onsets (`effectiveOnsets(pattern)`, rotation applied) and maps
     - `ConfigV2.WebRegister` "groove-presets"
     - `SonataDocument.SongSetting` "rhythm-sync" → `RhythmObserver`
     - `Library.SongLink` "groove"
-  - Uses: 58 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 60 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/sonata/document` ×11
     - `primitives/css/ui-kit` ×11
-    - `apps/sonata/document` ×9
     - `network/live/live-state` ×6
     - `apps/sonata/primitives/rhythm-circle` ×3
     - `config_v2` ×3

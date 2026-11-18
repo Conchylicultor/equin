@@ -36,8 +36,9 @@ link that opens the same song elsewhere:
 - **Each part is a contribution.** `Library.SongLink({ key, useValue, create?,
   apply? })` — the chord-grid source owns `grid` (the grid text, read from the
   loaded document so an edit reaches the address as it is typed) and can
-  `create` the song; rhythm-controls owns `groove` (the accompaniment as a
-  versioned base64url tuple, omitted while it is the default) and `apply`s it.
+  `create` the song; rhythm-controls owns `groove` (the accompaniment in
+  readable words, e.g. `stride~R.block.basic-2~L.stride.basic-4`; omitted
+  while it is the default or not playing) and `apply`s it.
   The library names none of them.
 - **Mirror.** `SongLinkMirror` (mounted with the hydrated player) reads every
   part and rewrites the CURRENT history entry (debounced 400 ms; a content

@@ -10589,9 +10589,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ConfigV2.WebRegister` "groove-presets"
                   - `SonataDocument.SongSetting` "rhythm-sync" → `RhythmObserver`
                   - `Library.SongLink` "groove"
-                - Uses: 58 symbols — full list in [`plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/REFERENCE.md)
+                - Uses: 60 symbols — full list in [`plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/REFERENCE.md)
+                  - `apps/sonata/document` ×11
                   - `primitives/css/ui-kit` ×11
-                  - `apps/sonata/document` ×9
                   - `network/live/live-state` ×6
                   - `apps/sonata/primitives/rhythm-circle` ×3
                   - `config_v2` ×3

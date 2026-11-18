@@ -1,4 +1,10 @@
-import { defaultGroove } from "@plugins/apps/plugins/sonata/plugins/document/web";
+import {
+  chordModeSetting,
+  defaultGroove,
+  useHasVoicedChords,
+  useSongDocument,
+  useSongSetting,
+} from "@plugins/apps/plugins/sonata/plugins/document/web";
 import {
   Library,
   type SongLinkValue,
@@ -23,12 +29,19 @@ function defaultContent(): GrooveContent {
 }
 
 /**
- * The open song's groove as its link spells it (`;groove=`), or none while it
- * sounds like the default accompaniment — which a song created from the link
- * plays anyway. Not known while the groove is loading or its read failed.
+ * The open song's groove as its link spells it (`;groove=`) — only while the
+ * song plays it: none while its chords are not voiced (a MIDI song with the
+ * accompaniment off), and none while it sounds like the default accompaniment,
+ * which a song created from the link plays anyway. Not known while the song,
+ * its chord mode or its groove is still loading (or a read failed).
  */
 function useGrooveLinkValue(): SongLinkValue {
   const groove = useGroove();
+  const voiced = useHasVoicedChords();
+  const contentReady = useSongDocument().content.kind === "ready";
+  const chordMode = useSongSetting(chordModeSetting);
+  if (!contentReady || chordMode.kind !== "settled") return { known: false };
+  if (!voiced) return { known: true, value: null };
   if (groove.status !== "ready") return { known: false };
   const g = groove.data;
   return {

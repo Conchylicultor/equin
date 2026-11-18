@@ -1,77 +1,109 @@
-import { z } from "zod";
-import { wholeList } from "@plugins/packages/plugins/list-bound/core";
-import { figurationsForHand } from "@plugins/apps/plugins/sonata/plugins/voicing/core";
+import {
+  RHYTHMS,
+  type RhythmPattern,
+} from "@plugins/apps/plugins/sonata/plugins/rhythm/core";
+import {
+  DEFAULT_BASS_VOICING,
+  DEFAULT_CHORD_VOICING,
+  figurationsForHand,
+  type HandVoicing,
+} from "@plugins/apps/plugins/sonata/plugins/voicing/core";
 import type { GrooveFields } from "./groove";
 import { HandVoicingSchema, RhythmPatternSchema } from "./resources";
 
 /**
- * A groove as a song link spells it (`;groove=` on the player route): the
- * format's version, a dot, then the groove as a compact JSON tuple in
- * base64url — every field of {@link GrooveFields}, positional so the link
- * stays short.
+ * A groove as a song link spells it (`;groove=` on the player route) — words a
+ * person can read and edit, in characters a URL leaves unescaped:
  *
- *   [presetId, restartOnChordChange, chordHand, bassHand]
- *   hand = [figurationId, [enabled, octave, voiceLead, doubleOctave],
- *           [subdivisions, onsets, rotation, patternPresetId]]
+ *   [preset~]R.<figuration>[.<token>…].<rhythm>~L.<figuration>[.<token>…].<rhythm>[~norestart]
  *
- * Booleans are 0/1. A new layout is a new version; a reader refuses any
- * version it does not know.
+ *   stride~R.block.basic-2~L.stride.basic-4
+ *   bossa-nova~R.harp-roll.o5.son.r2~L.root-fifth.x---x---x-x-----~norestart
+ *
+ * - `preset` — the groove preset it was applied from (provenance; omitted for
+ *   none).
+ * - `R` / `L` — the right hand (chords) and the left hand (bass), each its
+ *   figuration (what it plays), then only what differs from that hand's
+ *   default voicing — `o<octave>`, `vl` / `novl` (voice-leading), `dbl` /
+ *   `nodbl` (octave doubling), `off` (the hand is silent), `r<n>` (the
+ *   rhythm turned by n steps) — then its rhythm: a named rhythm (`son`,
+ *   `basic-4`) when it strikes that rhythm's own steps, else one character per
+ *   step, `x` struck and `-` silent.
+ * - `norestart` — the rhythm keeps its place in the bar across chord changes
+ *   (it restarts on each by default).
  */
-const VERSION = "1";
+const HAND_SEPARATOR = "~";
+const FIELD_SEPARATOR = ".";
+const NO_RESTART = "norestart";
+const SIDES = { chord: "R", bass: "L" } as const;
 
-const Bit = z.union([z.literal(0), z.literal(1)]);
+type Hand = keyof typeof SIDES;
 
-const HandTuple = z.tuple([
-  z.string(),
-  z.tuple([Bit, z.number(), Bit, Bit]),
-  z.tuple([
-    z.number(),
-    wholeList(z.number(), {
-      reason: "one pattern's onsets, each below its subdivisions (≤ 48)",
-    }),
-    z.number(),
-    z.string().nullable(),
-  ]),
-]);
+/** A preset id the grammar can carry as is. */
+const PRESET_ID = /^[A-Za-z0-9_-]+$/;
 
-const GrooveTuple = z.tuple([z.string().nullable(), Bit, HandTuple, HandTuple]);
-
-type Hand = "bass" | "chord";
-
-function handTuple(g: GrooveFields, hand: Hand): z.infer<typeof HandTuple> {
-  const voicing = hand === "bass" ? g.bassVoicing : g.chordVoicing;
-  const pattern = hand === "bass" ? g.bass : g.chord;
-  return [
-    hand === "bass" ? g.bassFigurationId : g.chordFigurationId,
-    [
-      voicing.enabled ? 1 : 0,
-      voicing.octave,
-      voicing.voiceLead ? 1 : 0,
-      voicing.doubleOctave ? 1 : 0,
-    ],
-    [
-      pattern.subdivisions,
-      [...pattern.onsets],
-      pattern.rotation,
-      pattern.presetId,
-    ],
-  ];
-}
+const DEFAULT_VOICING: Record<Hand, HandVoicing> = {
+  chord: DEFAULT_CHORD_VOICING,
+  bass: DEFAULT_BASS_VOICING,
+};
 
 /** The groove as its link value. */
 export function encodeGrooveLink(g: GrooveFields): string {
-  const tuple: z.infer<typeof GrooveTuple> = [
-    g.presetId,
-    g.restartOnChordChange ? 1 : 0,
-    handTuple(g, "chord"),
-    handTuple(g, "bass"),
-  ];
-  return `${VERSION}.${toBase64Url(JSON.stringify(tuple))}`;
+  const parts: string[] = [];
+  if (g.presetId !== null && PRESET_ID.test(g.presetId)) parts.push(g.presetId);
+  parts.push(encodeHand(g, "chord"), encodeHand(g, "bass"));
+  if (!g.restartOnChordChange) parts.push(NO_RESTART);
+  return parts.join(HAND_SEPARATOR);
 }
 
-/** Why a link value is not a groove. */
+function encodeHand(g: GrooveFields, hand: Hand): string {
+  const voicing = hand === "bass" ? g.bassVoicing : g.chordVoicing;
+  const pattern = hand === "bass" ? g.bass : g.chord;
+  const base = DEFAULT_VOICING[hand];
+  const fields: string[] = [
+    SIDES[hand],
+    hand === "bass" ? g.bassFigurationId : g.chordFigurationId,
+  ];
+  if (!voicing.enabled) fields.push("off");
+  if (voicing.octave !== base.octave) fields.push(`o${voicing.octave}`);
+  if (voicing.voiceLead !== base.voiceLead)
+    fields.push(voicing.voiceLead ? "vl" : "novl");
+  if (voicing.doubleOctave !== base.doubleOctave)
+    fields.push(voicing.doubleOctave ? "dbl" : "nodbl");
+  if (pattern.rotation !== 0) fields.push(`r${pattern.rotation}`);
+  fields.push(encodeRhythm(pattern));
+  return fields.join(FIELD_SEPARATOR);
+}
+
+/** A named rhythm when the pattern strikes its own steps, else its beads. */
+function encodeRhythm(p: RhythmPattern): string {
+  const named = RHYTHMS.find((r) => r.id === p.presetId);
+  if (
+    named !== undefined &&
+    named.subdivisions === p.subdivisions &&
+    named.onsets.length === p.onsets.length &&
+    named.onsets.every((o, i) => o === p.onsets[i])
+  ) {
+    return named.id;
+  }
+  const struck = new Set(p.onsets);
+  let beads = "";
+  for (let i = 0; i < p.subdivisions; i++) beads += struck.has(i) ? "x" : "-";
+  return beads;
+}
+
+/** A link value that is a groove, or why it is not one. */
 export type GrooveLinkResult =
   { ok: true; groove: GrooveFields } | { ok: false; reason: string };
+
+type HandResult =
+  | {
+      ok: true;
+      figurationId: string;
+      voicing: HandVoicing;
+      pattern: RhythmPattern;
+    }
+  | { ok: false; reason: string };
 
 /**
  * The groove a link value spells, or why it does not spell one. A link is
@@ -80,31 +112,32 @@ export type GrooveLinkResult =
  * validates with, and each figuration must be one its hand offers.
  */
 export function decodeGrooveLink(value: string): GrooveLinkResult {
-  const dot = value.indexOf(".");
-  if (dot < 0 || value.slice(0, dot) !== VERSION) {
-    return { ok: false, reason: "unknown groove link version" };
+  const parts = value.split(HAND_SEPARATOR);
+  let restartOnChordChange = true;
+  if (parts[parts.length - 1] === NO_RESTART) {
+    restartOnChordChange = false;
+    parts.pop();
   }
-  const json = fromBase64Url(value.slice(dot + 1));
-  if (json === null) return { ok: false, reason: "not base64url" };
-  let data: unknown;
-  try {
-    data = JSON.parse(json);
-  } catch (err) {
-    if (!(err instanceof SyntaxError)) throw err;
-    return { ok: false, reason: "not JSON" };
+  let presetId: string | null = null;
+  if (parts.length === 3) {
+    const preset = parts.shift() as string;
+    if (!PRESET_ID.test(preset)) {
+      return { ok: false, reason: `not a preset id: ${preset}` };
+    }
+    presetId = preset;
   }
-  const tuple = GrooveTuple.safeParse(data);
-  if (!tuple.success) return { ok: false, reason: tuple.error.message };
-  const [presetId, restart, chordTuple, bassTuple] = tuple.data;
-  const chord = readHand(chordTuple, "chord");
+  if (parts.length !== 2) {
+    return { ok: false, reason: "a groove is a right and a left hand" };
+  }
+  const chord = decodeHand(parts[0] as string, "chord");
   if (!chord.ok) return chord;
-  const bass = readHand(bassTuple, "bass");
+  const bass = decodeHand(parts[1] as string, "bass");
   if (!bass.ok) return bass;
   return {
     ok: true,
     groove: {
       presetId,
-      restartOnChordChange: restart === 1,
+      restartOnChordChange,
       chord: chord.pattern,
       chordFigurationId: chord.figurationId,
       chordVoicing: chord.voicing,
@@ -115,58 +148,69 @@ export function decodeGrooveLink(value: string): GrooveLinkResult {
   };
 }
 
-function readHand(
-  [figurationId, v, p]: z.infer<typeof HandTuple>,
-  hand: Hand,
-):
-  | {
-      ok: true;
-      figurationId: string;
-      voicing: GrooveFields["bassVoicing"];
-      pattern: GrooveFields["bass"];
-    }
-  | { ok: false; reason: string } {
+function decodeHand(text: string, hand: Hand): HandResult {
+  const fields = text.split(FIELD_SEPARATOR);
+  const side = fields.shift();
+  if (side !== SIDES[hand]) {
+    return { ok: false, reason: `expected the ${SIDES[hand]} hand: ${text}` };
+  }
+  const figurationId = fields.shift();
+  const rhythm = fields.pop();
+  if (figurationId === undefined || rhythm === undefined) {
+    return {
+      ok: false,
+      reason: `a hand is a figuration and a rhythm: ${text}`,
+    };
+  }
   if (!figurationsForHand(hand).some((f) => f.id === figurationId)) {
     return { ok: false, reason: `unknown ${hand} figuration: ${figurationId}` };
   }
-  const voicing = HandVoicingSchema.safeParse({
-    enabled: v[0] === 1,
-    octave: v[1],
-    voiceLead: v[2] === 1,
-    doubleOctave: v[3] === 1,
-  });
-  if (!voicing.success) return { ok: false, reason: voicing.error.message };
-  const pattern = RhythmPatternSchema.safeParse({
-    subdivisions: p[0],
-    onsets: p[1],
-    rotation: p[2],
-    presetId: p[3],
-  });
+  const voicing: HandVoicing = { ...DEFAULT_VOICING[hand] };
+  let rotation = 0;
+  for (const token of fields) {
+    const octave = /^o(\d+)$/.exec(token);
+    const turn = /^r(\d+)$/.exec(token);
+    if (octave) voicing.octave = Number(octave[1]);
+    else if (turn) rotation = Number(turn[1]);
+    else if (token === "off") voicing.enabled = false;
+    else if (token === "vl") voicing.voiceLead = true;
+    else if (token === "novl") voicing.voiceLead = false;
+    else if (token === "dbl") voicing.doubleOctave = true;
+    else if (token === "nodbl") voicing.doubleOctave = false;
+    else return { ok: false, reason: `unknown ${hand} hand token: ${token}` };
+  }
+  const parsedVoicing = HandVoicingSchema.safeParse(voicing);
+  if (!parsedVoicing.success) {
+    return { ok: false, reason: parsedVoicing.error.message };
+  }
+  const named = RHYTHMS.find((r) => r.id === rhythm);
+  let candidate: RhythmPattern;
+  if (named !== undefined) {
+    candidate = {
+      presetId: named.id,
+      subdivisions: named.subdivisions,
+      onsets: [...named.onsets],
+      rotation,
+    };
+  } else if (/^[x-]+$/.test(rhythm)) {
+    const onsets: number[] = [];
+    for (let i = 0; i < rhythm.length; i++)
+      if (rhythm[i] === "x") onsets.push(i);
+    candidate = {
+      presetId: null,
+      subdivisions: rhythm.length,
+      onsets,
+      rotation,
+    };
+  } else {
+    return { ok: false, reason: `not a rhythm: ${rhythm}` };
+  }
+  const pattern = RhythmPatternSchema.safeParse(candidate);
   if (!pattern.success) return { ok: false, reason: pattern.error.message };
   return {
     ok: true,
     figurationId,
-    voicing: voicing.data,
+    voicing: parsedVoicing.data,
     pattern: pattern.data,
   };
-}
-
-function toBase64Url(text: string): string {
-  let binary = "";
-  for (const byte of new TextEncoder().encode(text)) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary)
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
-}
-
-/** The text a base64url string holds, or null when it is not base64url. */
-function fromBase64Url(value: string): string | null {
-  if (!/^[A-Za-z0-9_-]*$/.test(value) || value.length % 4 === 1) return null;
-  const b64 = value.replace(/-/g, "+").replace(/_/g, "/");
-  const binary = atob(b64 + "=".repeat((4 - (b64.length % 4)) % 4));
-  const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
-  return new TextDecoder("utf-8", { fatal: false }).decode(bytes);
 }
