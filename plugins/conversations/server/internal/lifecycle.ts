@@ -12,6 +12,7 @@ import {
   getConversation,
   getConversationRuntime,
   updateConversation,
+  markConversationClosed,
   updateTask,
   setConversationHibernated,
   claimHibernatedResume,
@@ -824,15 +825,27 @@ async function respawnResume(
         },
       );
     } catch (err) {
-      await updateConversation(row.id, {
-        ...(keepStatus
-          ? { resumingSince: null }
-          : {
-              status: statusAfterFailedResume(row.status),
-              endedAt: row.endedAt,
-            }),
-        closeRequested: row.closeRequested,
-      });
+      const restored = statusAfterFailedResume(row.status);
+      if (keepStatus) {
+        await updateConversation(row.id, {
+          resumingSince: null,
+          closeRequested: row.closeRequested,
+        });
+      } else if (restored === "done") {
+        // A closed conversation goes back to closed through the close itself,
+        // so an agent the failed create left half-started is stopped with it
+        // (its teardown is queued in the same commit).
+        await updateConversation(row.id, {
+          closeRequested: row.closeRequested,
+        });
+        await markConversationClosed(row.id, row.endedAt ?? new Date());
+      } else {
+        await updateConversation(row.id, {
+          status: restored,
+          endedAt: row.endedAt,
+          closeRequested: row.closeRequested,
+        });
+      }
       throw err;
     }
 

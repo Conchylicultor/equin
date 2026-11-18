@@ -66,11 +66,16 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
   moves it to `gone` with the failure shown. A wait whose wake-up died no
   longer reads as "still coming" either way (`keysInFlight` checks the
   waker). `spawn-dead-letter.test.ts` drives it end to end.
-- **A closed conversation's agent is stopped, whoever failed to.** `done`
-  rows are never planned (a close is final) and not even read by the sweep,
-  so a close whose own stop never ran (2026-11-08: exit_clean's finalize job
-  died on a killed `git log` before its stop, and the agent ran ten days)
-  left the agent running for good. The minute sweep (`stopAgentsOfClosed`)
+- **A closed conversation's agent is stopped, whoever failed to.** The stop
+  is derived from the close: `markConversationClosed` (the only `done` write)
+  commits the row and `conversation.statusChanged` in one transaction, which
+  queues close's `conversations.teardown-closed` stop in that same commit.
+  Before, the event was emitted after the commit — and on 2026-11-08 (main
+  crash-looping every ~10 s) exit_clean's finalize died on a killed `git log`
+  three times, the row was then closed by a backend that crashed a second
+  later, and nothing stopped conv-1794151725-hdw3rp's agent for ten days.
+  `done` rows are never planned (a close is final) and not even read by the
+  sweep, so the backstop is explicit: the minute sweep (`stopAgentsOfClosed`)
   takes every agent the runtimes' `list()` answered that no active row
   claims; one whose row is this database's own `done` row, closed over a
   minute ago (`CLOSE_STOP_GRACE_MS`: the close's own stop is bounded at 15 s)

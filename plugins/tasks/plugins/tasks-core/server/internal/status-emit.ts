@@ -101,7 +101,10 @@ export function conversationStatusChange(
 
 // Emit `conversation.statusChanged` when a single conversation's status
 // actually changes (`conversationStatusChange`). Callers snapshot the prior
-// state before the write and pass it here after the write commits.
+// state before the write and pass it here after the write — on the write's
+// own transaction (`tx`) when a subscriber's run must not be lost with a crash
+// between the two (a close: its agent stop is that run), else after it
+// commits.
 //
 // Deliberately NOT part of the task-status scope: this is a fact about one
 // conversation row's own stored columns, not about a derived value with a
@@ -111,6 +114,7 @@ export async function emitConversationStatusChange(
   taskId: string | null,
   previous: ConversationStatusState | null,
   next: ConversationStatusState,
+  tx?: EmitTx,
 ): Promise<void> {
   const payload = conversationStatusChange(
     conversationId,
@@ -118,5 +122,6 @@ export async function emitConversationStatusChange(
     previous,
     next,
   );
-  if (payload !== null) await conversationStatusChanged.emit(payload);
+  if (payload !== null)
+    await conversationStatusChanged.emit(payload, tx ? { tx } : undefined);
 }

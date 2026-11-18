@@ -25,7 +25,8 @@ import { noteAttributionChanged } from "../push-ledger/attribution";
 import { PushLedger } from "../push-ledger/service";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
-import type { DbExecutor } from "../status-batch";
+import { withTaskStatusBatch, type DbExecutor } from "../status-batch";
+import type { EmitTx } from "@plugins/infra/plugins/events/server";
 import { withTaskStatusChange } from "../status-scope";
 
 export interface InsertConversationInput {
@@ -48,7 +49,12 @@ export interface InsertConversationInput {
 type ConversationStatusPatch =
   | { status?: undefined; workingOn?: never }
   | { status: "working"; workingOn: ConversationWorkingOn }
-  | { status: Exclude<ConversationStatus, "working">; workingOn?: never };
+  | {
+      // Never `done`: a close goes through `markConversationClosed`, the one
+      // write that commits the row with the event its agent stop rides on.
+      status: Exclude<ConversationStatus, "working" | "done">;
+      workingOn?: never;
+    };
 
 export type UpdateConversationPatch = ConversationStatusPatch & {
   title?: string | null;
@@ -241,8 +247,7 @@ export async function updateConversation(
   patch: UpdateConversationPatch,
   opts: { alongside?: (tx: DbExecutor) => Promise<void> } = {},
 ): Promise<void> {
-  if (patch.status === "gone" || patch.status === "done")
-    await ledgerCurrentBeforeEnding();
+  if (patch.status === "gone") await ledgerCurrentBeforeEnding();
   const { taskId, state: prev } = await conversationContext(id);
   // Typed against the table's own insert row, not `Record<string, unknown>`:
   // `status` is a DECODED column now, so its encoder runs on this `.set(...)`.
@@ -507,20 +512,33 @@ export async function markConversationClosed(
 ): Promise<void> {
   await ledgerCurrentBeforeEnding();
   const { taskId, state: prev } = await conversationContext(id);
-  await withTaskStatusChange(taskId ?? [], db, async () => {
-    await db
-      .update(_conversations)
-      .set({
-        ...statusWrite("done"),
-        endedAt,
-        workingOn: null,
-        statusUnverifiedSince: null,
-      })
-      .where(eq(_conversations.id, id));
-  });
-  // Closing leaves `waitingFor` as it was.
-  await emitConversationStatusChange(id, taskId, prev, {
-    status: "done",
-    waitingFor: prev?.waitingFor ?? null,
+  // The close and its event commit together: `conversation.statusChanged` is
+  // what stops a closed conversation's agent (close's teardown trigger, a
+  // `dedup: "none"` job enqueued on this transaction), so a `done` row can
+  // never exist without its stop queued. Emitted after the commit, a backend
+  // killed in between left the row `done` and the agent running, which
+  // nothing looks at again (2026-11-08: conv-1794151725-hdw3rp, closed during
+  // main's crash loop, ran ten days).
+  await withTaskStatusBatch(async (tx) => {
+    await withTaskStatusChange(taskId ?? [], tx, async () => {
+      await tx
+        .update(_conversations)
+        .set({
+          ...statusWrite("done"),
+          endedAt,
+          workingOn: null,
+          statusUnverifiedSince: null,
+        })
+        .where(eq(_conversations.id, id));
+    });
+    // Closing leaves `waitingFor` as it was.
+    await emitConversationStatusChange(
+      id,
+      taskId,
+      prev,
+      { status: "done", waitingFor: prev?.waitingFor ?? null },
+      // A PgTransaction (structurally an EmitTx), as in flushStatusBatch.
+      tx as EmitTx,
+    );
   });
 }
