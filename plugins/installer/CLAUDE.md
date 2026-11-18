@@ -9,7 +9,7 @@ User-facing summary: [`docs/setup.md`](../../docs/setup.md) § Quick install.
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/equinai/equin/main/install.sh | bash          # newest release
-curl -fsSL …/install.sh | bash -s -- --terminal --ref main                                   # piped: options after `bash -s --`
+curl -fsSL …/install.sh | bash -s -- --window --ref main                                     # piped: options after `bash -s --`
 ./install.sh                                                                                 # from a clone: installs THAT checkout
 ```
 
@@ -19,11 +19,23 @@ curl -fsSL …/install.sh | bash -s -- --terminal --ref main                    
 | `--repo <url>` | Clone a fork; checks out its `main` (forks have no releases). |
 | `--no-shell-rc` | Don't add mise's activation to the shell's rc file. |
 | `--ref <tag\|main>` | Install that release tag, or `main`'s tip; default the newest release. |
-| `--terminal` | Draw the install in the terminal; no window is downloaded. |
-| `--window` | Open the window even where stage 0 would guess terminal (SSH, `CI`, no TTY…); still probed, and stops loudly when the probe fails. |
+| `--terminal` | Draw the install in the terminal; no window is downloaded. The default today (`DEFAULT_VIEW`, below). |
+| `--window` | Download and open the window (also where stage 0's guesses would pick the terminal: SSH, `CI`, no TTY…); still probed, and stops loudly when the probe fails. |
 | `--dry-run` | Emit every event type, touching nothing but its run dir (§ The dry run). |
 | `--fix [--yes]` | Start Claude Code on the problem the last install stopped on (`--yes`: without asking before each command). |
 | `--report` | Print (and open) the GitHub issue link for that problem. |
+
+**The default view is ONE switch**: `DEFAULT_VIEW` near the top of
+`install.sh` — `terminal` (today, decided 2026-11-18: the terminal by
+default for now; stage 0 neither downloads nor verifies the window unless
+`--window`) or `auto` (the window wherever it can show, § Stage 0, step 4).
+Releases keep publishing the window binaries either way. Making the window
+the default again is `DEFAULT_VIEW=auto` plus the places that describe the
+default: this file (§ Running it, § The views, § Stage 0), `install.sh`'s
+header, [`docs/setup.md`](../../docs/setup.md) § Quick install and the
+website's install steps (`website/pages/download`'s `INSTALLER_STEPS`),
+and [`release-assets`](plugins/release-assets/CLAUDE.md) § the attach step. The
+stage-0 test runs both values.
 
 Internal (passed between the install's own processes, never typed):
 `--release`, `--checkout` (stage 0 → the release's script), `--events-fd`,
@@ -38,10 +50,11 @@ The interactive view also sets the title to "equin installer" and, when it
 ends, clears it and restores the terminal's own (xterm title stack, where the
 terminal keeps one).
 
-**The views.** The window (`equin-installer`, [`window`](plugins/window/CLAUDE.md))
-by default on a desktop; the **interactive terminal** view (a redrawn status
-block) over SSH, with `--terminal`, or where no window can open; the **plain**
-view (append-only lines) under `CI` or into a pipe. All three draw the same
+**The views.** The **interactive terminal** view (a redrawn status block) by
+default; the window (`equin-installer`, [`window`](plugins/window/CLAUDE.md))
+with `--window` (under `DEFAULT_VIEW=auto`: by default on a desktop, the
+terminal over SSH or where no window can open); the **plain** view
+(append-only lines) under `CI` or into a pipe. All three draw the same
 stream, so they say the same words. Which one, and why: § Stage 0, step 4.
 
 ## The five message rules
@@ -257,7 +270,8 @@ hand over to the release it installs (`stage0`):
    REST API: no rate limit), or `download/<tag>/…` for `--ref <tag>`.
 2. **Download** into `~/.equin/install/bin/<tag>/` — `SHA256SUMS`,
    `release.json`, the tag's `install.sh`, and this platform's window binary
-   unless `--terminal` — all from that one tag. The window: for a v2
+   only when the view may be the window (`--window`, or `DEFAULT_VIEW=auto`
+   without `--terminal`) — all from that one tag. The window: for a v2
    manifest (`installers: 1`) `INSTALLER-SHA256SUMS` first — attached after
    the Release is published, last; absent (404), the terminal view, "this
    release's installer window isn't published (yet)" — then
@@ -268,13 +282,16 @@ hand over to the release it installs (`stage0`):
    `sha256sum -c`: macOS's `/sbin/sha256sum` is BSD's and reads no list).
    A mismatch or a missing entry stops the install; the file is deleted,
    never run.
-4. **Pick the view** (`choose_view`): the window unless `--terminal`, no
+4. **Pick the view** (`choose_view`): the terminal by default
+   (`DEFAULT_VIEW=terminal`, no reason printed) or with `--terminal`. Under
+   `--window`, or `DEFAULT_VIEW=auto`: the window unless
    binary for this system, Linux without a display or a session D-Bus
    (WebKitGTK stalls ~30 s without one), SSH, `CI`, output not a
    TTY, or a sandboxed shell (`CLAUDECODE`, `APP_SANDBOX_CONTAINER_ID`) —
    then the binary's own `--probe` (a hidden window loading the page; a
-   missing webkit2gtk fails before `main`). `--window` skips the guesses, not
-   the probe, and stops loudly when it fails.
+   missing webkit2gtk fails before `main`) — the guesses apply to `auto`
+   only. `--window` skips the guesses, not the probe, and stops loudly when
+   it fails.
 5. **Exec** `equin-installer --script <install.sh@tag> -- --release <tag>
    --checkout <ref> <install args>`, or `bash <install.sh@tag> --release …`.
 

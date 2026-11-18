@@ -52,8 +52,10 @@ the two-phase publish:
     `installer-provenance.intoto.jsonl`; `gh release upload --clobber` the
     binaries, then the provenance, then **`INSTALLER-SHA256SUMS` last** (a
     re-run deletes it first): its presence means every binary it lists is
-    there. Until it is (or for good, when a build failed), stage 0 installs in
-    the terminal, saying the window "isn't published (yet)".
+    there. Until it is (or for good, when a build failed), `--window` stops,
+    saying the window "isn't published (yet)" (the default terminal view never
+    asks for it; under `DEFAULT_VIEW=auto`, stage 0 installs in the terminal,
+    saying so).
   - `gh attestation verify <file> -R equinai/equin` checks any file.
 - **A tag cut before the window** (no crate at the tag, no hand-off marker in
   its install.sh) still gets a Release — install.sh, release.json, SHA256SUMS

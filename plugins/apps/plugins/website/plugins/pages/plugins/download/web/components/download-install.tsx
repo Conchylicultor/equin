@@ -53,7 +53,7 @@ const INSTALLER_STEPS = [
   "Installs Apple's developer tools and mise, the tool manager",
   "Clones equin and installs its pinned Bun, Go and Rust",
   "Starts equin's services in the background and builds every app",
-  "Shows its progress in a small window (in the terminal over SSH, or with --terminal). If a step fails, it pauses and offers Try again, Fix with Claude or Report issue",
+  "Shows its progress in your terminal (or in a small window: end the command with bash -s -- --window). If a step fails, it pauses and offers Try again, Fix with Claude or Report issue",
 ];
 
 /** The same install, said to an agent: run the command, repair, report back. */

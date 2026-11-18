@@ -145,10 +145,27 @@ afterAll(() => {
   rmSync(home, { recursive: true, force: true });
 });
 
+/** install.sh's one default-view switch (`DEFAULT_VIEW=…`), as a line. */
+const DEFAULT_VIEW_LINE = /^DEFAULT_VIEW=(terminal|auto)$/m;
+
+/**
+ * install.sh with its default view set to `view` — so the window-by-default
+ * path (`auto`: choose_view's guesses) stays tested while the shipped default
+ * is the terminal.
+ */
+function scriptWithDefault(view: "terminal" | "auto"): string {
+  const text = readFileSync(SCRIPT, "utf8");
+  expect(text.match(new RegExp(DEFAULT_VIEW_LINE.source, "gm"))).toHaveLength(
+    1,
+  );
+  return text.replace(DEFAULT_VIEW_LINE, `DEFAULT_VIEW=${view}`);
+}
+
 /** Run stage 0; async, so the fake server above keeps answering. */
 async function stage0(
   args: string[],
   env: Record<string, string> = {},
+  defaultView?: "terminal" | "auto",
 ): Promise<{ code: number | null; out: string }> {
   requests.length = 0;
   // Piped, as under `curl | bash`: run from a file in this checkout, the
@@ -168,7 +185,11 @@ async function stage0(
   let out = "";
   child.stdout.on("data", (b: Buffer) => (out += b.toString()));
   child.stderr.on("data", (b: Buffer) => (out += b.toString()));
-  child.stdin.end(readFileSync(SCRIPT));
+  child.stdin.end(
+    defaultView === undefined
+      ? readFileSync(SCRIPT)
+      : scriptWithDefault(defaultView),
+  );
   const code = await new Promise<number | null>((resolve) =>
     child.on("close", resolve),
   );
@@ -178,12 +199,32 @@ async function stage0(
 const bin = (tag: string) => join(home, ".equin/install/bin", tag);
 
 describe("install.sh stage 0", () => {
+  test("the shipped default is the terminal: the window is never downloaded unless --window", async () => {
+    expect(readFileSync(SCRIPT, "utf8")).toMatch(/^DEFAULT_VIEW=terminal$/m);
+    published = {
+      latest: "v2026.12.01",
+      tags: { "v2026.12.01": release("v2026.12.01") },
+    };
+    const r = await stage0([]);
+    expect(r.code).toBe(0);
+    expect(r.out).toContain(
+      "  Installing equin 2026.12.01 in this terminal.\n",
+    );
+    expect(r.out).toContain("stage0: exec bash ");
+    expect(
+      requests.some(
+        (p) =>
+          p.includes("equin-installer-") || p.endsWith("INSTALLER-SHA256SUMS"),
+      ),
+    ).toBe(false);
+  });
+
   test("hands the newest release to its own script, in the terminal when output is no terminal", async () => {
     published = {
       latest: "v2026.12.01",
       tags: { "v2026.12.01": release("v2026.12.01") },
     };
-    const r = await stage0(["--dir", "/x y"]);
+    const r = await stage0(["--dir", "/x y"], {}, "auto");
     expect(r.code).toBe(0);
     expect(r.out).toContain("its output is not going to a terminal");
     expect(r.out).toContain(
@@ -226,7 +267,7 @@ describe("install.sh stage 0", () => {
     );
   });
 
-  test("--window stops loudly when the probe fails; without it, the terminal", async () => {
+  test("--window stops loudly when the probe fails", async () => {
     published = {
       latest: "v2026.12.01",
       tags: { "v2026.12.01": release("v2026.12.01", { probe: 127 }) },
@@ -239,21 +280,23 @@ describe("install.sh stage 0", () => {
     expect(forced.out).not.toContain("stage0: exec");
   });
 
-  test("over SSH, in CI or in a sandboxed shell: the terminal, and the window is never downloaded for --terminal", async () => {
+  test("window by default (auto): over SSH or in CI the terminal; --terminal never downloads the window", async () => {
     published = {
       latest: "v2026.12.01",
       tags: { "v2026.12.01": release("v2026.12.01") },
     };
-    expect((await stage0([], { SSH_CONNECTION: "1 2 3 4" })).out).toContain(
-      "stage0: exec bash ",
-    );
-    expect((await stage0([], { CI: "1" })).out).toContain("stage0: exec bash ");
-    const r = await stage0(["--terminal"]);
+    const ssh = await stage0([], { SSH_CONNECTION: "1 2 3 4" }, "auto");
+    expect(ssh.out).toContain("you are connected over SSH");
+    expect(ssh.out).toContain("stage0: exec bash ");
+    const ci = await stage0([], { CI: "1" }, "auto");
+    expect(ci.out).toContain("this is an automated run (CI)");
+    expect(ci.out).toContain("stage0: exec bash ");
+    const r = await stage0(["--terminal"], {}, "auto");
     expect(r.out).toContain("you asked for it with --terminal");
     expect(requests.some((p) => p.includes("equin-installer-"))).toBe(false);
   });
 
-  test("--ref main: the newest release's script and window, checking out main", async () => {
+  test("--ref main: the newest release's script, checking out main", async () => {
     published = {
       latest: "v2026.12.01",
       tags: { "v2026.12.01": release("v2026.12.01") },
@@ -341,7 +384,9 @@ describe("install.sh stage 0", () => {
     };
     const r = await stage0([]);
     expect(r.code).toBe(0);
-    expect(r.out).toContain("published before the installer window");
+    expect(r.out).toContain(
+      "published before releases could install themselves",
+    );
     expect(r.out).toContain("stage0: own steps, checkout v2026.11.17");
   });
 
@@ -353,7 +398,7 @@ describe("install.sh stage 0", () => {
     expect(r.out).toContain("stage0: own steps, checkout main");
   });
 
-  test("a release without a window for this system: the terminal", async () => {
+  test("a release without a window for this system: --window stops, saying so", async () => {
     published = {
       latest: "v2026.12.01",
       tags: { "v2026.12.01": release("v2026.12.01", { built: [] }) },
@@ -399,7 +444,7 @@ describe("install.sh stage 0", () => {
       latest: "v2026.12.01",
       tags: { "v2026.12.01": release("v2026.12.01", { attached: false }) },
     };
-    const r = await stage0([]);
+    const r = await stage0([], {}, "auto");
     expect(r.code).toBe(0);
     expect(r.out).toContain(
       "this release's installer window isn't published (yet)",

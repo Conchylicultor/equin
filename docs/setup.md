@@ -8,21 +8,21 @@ One-time environment setup for developing equin.
 curl -fsSL https://raw.githubusercontent.com/equinai/equin/main/install.sh | bash
 ```
 
-It installs the **newest release** (a tag on `main`: the script, and the
-installer window, are downloaded from that release and checked against its
+It installs the **newest release** (a tag on `main`: the script, and with
+`--window` the installer window, are downloaded from that release and checked against its
 checksum files before anything runs; with no release published yet, `main`'s
 tip, saying so). Or `./install.sh` from inside a clone or
 fork you already have, which installs that checkout. It runs the steps
 below, skipping whatever is already done, so re-running it resumes where it
 stopped. It lists what it will change before changing anything.
 
-**Where it shows.** On a Mac or Linux desktop, a small **installer window**
-opens: each step, a progress bar, the time left once one is known, and the
-log behind "Show log". Over SSH, in CI, piped, inside a sandboxed shell, or
-where no window can open (Linux without WebKitGTK or a desktop session), it
-runs **in the terminal** instead: a status block redrawn in place, or plain
-lines when the output is not a terminal. The window and both terminal views
-show the same steps and the same messages.
+**Where it shows.** It runs **in the terminal**: a status block redrawn in
+place (each step, the time left once one is known), or plain lines when the
+output is not a terminal (CI, a pipe). With `--window`, a small **installer
+window** opens instead on a Mac or Linux desktop: each step, a progress bar,
+the time left, and the log behind "Show log" (it stops, saying why, where no
+window can open — Linux without WebKitGTK or a desktop session). The window
+and both terminal views show the same steps and the same messages.
 
 **When something goes wrong** the install pauses rather than stopping with a
 bare error: it says what it was doing, what blocked it, and what you can do —
@@ -34,7 +34,7 @@ account and machine names removed; nothing is sent until you submit it), and
 mode it prints the next commands and exits.
 
 Options (piped, pass them after `bash -s --`, e.g. `curl … | bash -s --
---terminal`):
+--window`):
 
 | Option | |
 | --- | --- |
@@ -42,7 +42,8 @@ Options (piped, pass them after `bash -s --`, e.g. `curl … | bash -s --
 | `--repo <url>` | Install your fork (its `main`). |
 | `--no-shell-rc` | Don't edit your shell's rc file. |
 | `--ref <tag\|main>` | Install that release, or the latest `main`. |
-| `--terminal` / `--window` | Force the terminal view, or the window. |
+| `--window` | Show the install in its own window instead of the terminal. |
+| `--terminal` | Show it in the terminal (the default). |
 | `--dry-run` | Walk through every screen without installing anything. |
 | `--fix [--yes]` | Start Claude Code on the problem the last install stopped on. |
 | `--report` | Print (and open) the issue link for that problem. |

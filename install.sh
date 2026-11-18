@@ -11,21 +11,23 @@
 #   --no-shell-rc    do not add the `mise activate` line to your shell rc
 #   --ref <tag|main> which equin to install: a release tag, or main's newest
 #                    commit (default: the newest release)
-#   --terminal       show the install in this terminal, not in its window
-#   --window         show it in its window, or stop if the window can't open
+#   --terminal       show the install in this terminal (the default: see
+#                    DEFAULT_VIEW below)
+#   --window         show it in its own window, or stop if the window can't
+#                    open
 #   --dry-run        emit the event stream of a scripted install and touch
 #                    nothing (what the stream test and the window's dev loop run)
 #
 # Stage 0. Piped (`curl … | bash`), this file is main's, and its first job is
 # to hand the install to the release it installs: it downloads that release's
-# own install.sh (and the installer window for this system) from the tag's
-# GitHub Release, checks every file against the Release's SHA256SUMS (the
-# window: INSTALLER-SHA256SUMS, attached after the Release), and
-# runs it — in the window, or in this terminal when the window can't show
-# (`stage0`). A release cut before the window existed is installed by this
-# script's own steps, and so is main when the release's script can't hand
-# main its own steps after the clone (the attach marker, below). Run from a checkout (./install.sh), it installs that
-# checkout and skips stage 0. What a Release carries:
+# own install.sh (and, with --window, the installer window for this system)
+# from the tag's GitHub Release, checks every file against the Release's
+# SHA256SUMS (the window: INSTALLER-SHA256SUMS, attached after the Release),
+# and runs it — in this terminal, or in the window when asked (`stage0`). A
+# release cut before the hand-off existed is installed by this script's own
+# steps, and so is main when the release's script can't hand main its own
+# steps after the clone (the attach marker, below). Run from a checkout
+# (./install.sh), it installs that checkout and skips stage 0. What a Release carries:
 # plugins/installer/plugins/release-assets.
 #
 # Internal, passed by stage 0 and the installer window
@@ -64,7 +66,7 @@
 # installer-internal-args: env
 #
 # Every run keeps its events in ~/.equin/logs/install/<run>/events.jsonl
-# (`latest` links to the newest run). Without a window, the terminal draws
+# (`latest` links to the newest run). Without a window (the default), the terminal draws
 # them: a status block redrawn in place on a terminal, timestamped lines
 # otherwise (CI, a pipe, TERM=dumb).
 #
@@ -118,8 +120,17 @@ refused_write_dir() {
 # plugins/upstream/plugins/release/core (the release-assets:tag-grammar check).
 RELEASE_TAG_ERE='^v([0-9]{4})\.([0-9]{2})\.([0-9]{2})(\.([0-9]+))?$'
 
+# The view an install shows when neither --terminal nor --window is passed —
+# the ONE switch for the default: `terminal` (this terminal; the window is
+# neither downloaded nor tried) or `auto` (the window wherever it can show,
+# else this terminal: choose_view's guesses). The terminal by default for now
+# (decided 2026-11-18); set `auto` to make the window the default again, and
+# say so where the default is described (plugins/installer/CLAUDE.md
+# § Running it lists them, release-assets' CLAUDE.md included).
+DEFAULT_VIEW=terminal
+
 # stage0: find the release, download it, verify it, and exec its install.sh —
-# in the window or in this terminal. Returns (instead of exec'ing) only to
+# in this terminal or in the window (VIEW). Returns (instead of exec'ing) only to
 # install with THIS script's steps: when the release predates the hand-off or
 # could not be downloaded; it then sets CHECKOUT and says why. A file that does
 # not match its sums file stops the install: nothing unverified ever runs.
@@ -168,7 +179,7 @@ stage0() {
   fi
   stage0_verify "$dir" release.json
   if [ "$(json_field handoff "$dir/release.json")" != 1 ]; then
-    stage0_fallback "$want" "$tag" "it was published before the installer window"
+    stage0_fallback "$want" "$tag" "it was published before releases could install themselves"
     return 0
   fi
   stage0_get "$base/download/$tag" install.sh "$dir" || { stage0_fallback "$want" "$tag" "its install script could not be downloaded"; return 0; }
@@ -214,7 +225,7 @@ stage0() {
   if choose_view "$bin" "$dir"; then
     stage0_exec "$bin" --script "$dir/install.sh" -- ${IA_ARGV[@]+"${IA_ARGV[@]}"} ${INSTALL_ARGS[@]+"${INSTALL_ARGS[@]}"}
   fi
-  echo "  Installing equin ${tag#v} in this terminal ($VIEW_WHY)."
+  echo "  Installing equin ${tag#v} in this terminal${VIEW_WHY:+ ($VIEW_WHY)}."
   stage0_exec bash "$dir/install.sh" ${IA_ARGV[@]+"${IA_ARGV[@]}"} ${INSTALL_ARGS[@]+"${INSTALL_ARGS[@]}"}
 }
 
@@ -282,7 +293,7 @@ stage0_fallback() {
   if [ "$CHECKOUT" = main ]; then
     echo "  Installing main's newest version of equin in this terminal: the newest release could not be used, because $3."
   else
-    echo "  Installing equin ${CHECKOUT#v} in this terminal: its install window can't be used, because $3."
+    echo "  Installing equin ${CHECKOUT#v} in this terminal, with the steps of the installer you downloaded: that release's own installer can't be used, because $3."
   fi
 }
 
@@ -348,7 +359,8 @@ json_field() {
 }
 
 # choose_view <window binary or ""> <dir>: 0 = the window, 1 = this terminal,
-# with the reason in VIEW_WHY. The window only where it can really show: a
+# with the reason in VIEW_WHY (empty for the default view, which needs none).
+# VIEW is what was asked, else DEFAULT_VIEW. `auto`: the window only where it can really show: a
 # desktop session, not over SSH or in CI, output on a terminal, not inside a
 # sandboxed shell, and the binary's own --probe (a hidden window loading the
 # page: on Linux it also catches a missing webkit2gtk, which the loader
@@ -357,7 +369,8 @@ json_field() {
 choose_view() {
   VIEW_WHY=""
   if [ "$VIEW" = terminal ]; then
-    VIEW_WHY="you asked for it with --terminal"; return 1
+    [ "$VIEW_ASKED" != terminal ] || VIEW_WHY="you asked for it with --terminal"
+    return 1
   fi
   if [ -z "$1" ]; then
     VIEW_WHY="${STAGE0_NO_WINDOW:-this release has no install window for this system}"
@@ -444,11 +457,20 @@ main() {
       --events-fd) EV_FD="$2"; shift 2 ;;
       --control-fd) CTL_FD="$2"; shift 2 ;;
       -h|--help) echo "usage: install.sh [--dir <path>] [--repo <url>] [--no-shell-rc] [--ref <tag|main>] [--terminal | --window] [--dry-run]"
+        if [ "$DEFAULT_VIEW" = terminal ]; then
+          echo "       the install shows in this terminal; --window shows it in its own window instead"
+        else
+          echo "       the install shows in its own window where one can open, else in this terminal; --terminal keeps it here"
+        fi
         echo "       install.sh --fix [--yes]   start Claude Code on the problem the last install stopped on"
         echo "       install.sh --report        print (and open) the GitHub issue link for it"; exit 0 ;;
       *) echo "install.sh: unknown option '$1' (see --help)" >&2; exit 2 ;;
     esac
   done
+
+  # What was asked (for the messages), then the view this run uses.
+  VIEW_ASKED="$VIEW"
+  VIEW="${VIEW:-$DEFAULT_VIEW}"
 
   OS="$(uname -s)"
   [ -z "$AFTER" ] || after_pause "$AFTER"
@@ -523,7 +545,7 @@ main() {
       echo "stage0: own steps, checkout $CHECKOUT"
       exit 0
     fi
-  elif [ -n "$SELF_DIR" ] && [ -n "$REF$VIEW" ]; then
+  elif [ -n "$SELF_DIR" ] && [ -n "$REF$VIEW_ASKED" ]; then
     echo "  --ref, --terminal and --window apply to a downloaded install; this installs the copy of equin at $INSTALL_DIR, in this terminal."
   fi
   if [ "$CHECKOUT" != main ] && ! [[ $CHECKOUT =~ $RELEASE_TAG_ERE ]]; then
@@ -708,7 +730,7 @@ checkout_steps() {
   # ── 7. Done ────────────────────────────────────────────────────────────────
   ev_done
   done_wait
-  # Without a window the terminal view draws the same in its done state.
+  # Without a window (the default) the terminal view draws the same in its done state.
   if [ "$MODE" = "window" ]; then
     say "equin is running: $APP_URL"
     echo "  equin's code is in $INSTALL_DIR"

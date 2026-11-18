@@ -1,5 +1,7 @@
 # The equin installer window: a native window over install.sh, built per release tag
 
+> **Update 2026-11-18:** the terminal is the default view for now; the window opens only with `--window` (one switch, `DEFAULT_VIEW` in `install.sh`; see `plugins/installer/CLAUDE.md` § Running it). The design below is unchanged behind that flag.
+
 Design only, for review. Task `task-1794924169-qgnyrv` (onboarding audit, decision D8). Approved mockup: `proto-1794832268-wlybzk` (`view=window|terminal|hosting`, `state=running|failed|fixing|done`, `failure=sandbox|permission|security|stall`).
 
 The mockup's *hosting* view is replaced by this doc. It proposed a compiled Bun program serving a browser tab. That idea is superseded by the decisions below.
