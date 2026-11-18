@@ -566,6 +566,11 @@ main() {
     prep1="install git and a C compiler with apt, and let equin keep running"
     prep2="while nobody is logged in; asks for your password once"
   fi
+  # The plan's arrays first: step 5's time is their measured estimates (the
+  # same medians the live bar counts down from), never a number written here.
+  plan_data "$( [ -n "$SELF_DIR" ] && echo "Use your copy of equin" || echo "Download equin" )"
+  local build_time
+  build_time="$(est_minutes start build)"
   cat <<EOF
 
   equin installer. This will:
@@ -575,16 +580,19 @@ main() {
        built with), and add one line to $RC so new terminals find them
     3. $( [ -n "$SELF_DIR" ] && echo "use the copy of equin at $INSTALL_DIR" || echo "download $WHAT into $INSTALL_DIR" )
     4. install those exact Bun, Go and Rust versions
-    5. start equin in the background (with its own database) and build it:
-       ~10-15 minutes
+    5. start equin in the background (with its own database) and build it${build_time:+:
+       $build_time}
 EOF
+  # Lines kept under 80 columns: a terminal that wide wraps them mid-word.
   if [ "$OS" = "Darwin" ]; then
     echo "  The app then comes back by itself at every login, after a reboot too."
+    echo "  Nothing else on your Mac is changed: no Homebrew, and no database"
+    echo "  server for the whole machine."
   else
     echo "  The app then comes back by itself at every boot."
+    echo "  Nothing else on your system is changed: no database server for the"
+    echo "  whole machine."
   fi
-  echo "  Nothing else on your machine is changed. No Homebrew, no database server for the whole machine."
-  plan_data "$( [ -n "$SELF_DIR" ] && echo "Use your copy of equin" || echo "Download equin" )"
   start_hub
   ev_plan
 
@@ -701,13 +709,13 @@ checkout_steps() {
     fail "equin could not start; what stopped it is just above. Once that is sorted, run the installer again: it picks up where it stopped (cd $INSTALL_DIR && ./install.sh)." \
       "./equin start exited non-zero"
   fi
-  # The port is chosen by the start just above; never spelled here.
-  APP_URL="$(./equin url)"
+  APP_URL=""
+  [ ! -f "$RUN_DIR/app-url" ] || APP_URL="$(cat "$RUN_DIR/app-url")"
   [ -n "$APP_URL" ] || fail "equin started but could not say where it answers. Run the installer again (cd $INSTALL_DIR && ./install.sh)." \
     "./equin url printed nothing"
 
   STATUS="$(data_root)/worktrees/singularity/build-status.json"
-  say "Building equin (the long step: about 10 minutes)"
+  say "Building equin"
   # ONE build of this tree, not two. `./equin start` brought equin's
   # background service up, and its first boot already deploys main the way
   # every later update is deployed: a convergence run (`./equin build
@@ -854,7 +862,7 @@ prepare_linux() {
     say "Installing$1, which equin needs to download its code and build parts of itself (asks for your password)"
     sudo apt-get update -qq
     # shellcheck disable=SC2086 # one word per package
-    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq $1
+    sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_SUSPEND=1 apt-get install -y -qq $1
   fi
   if [ "$2" = "0" ]; then
     say "Letting equin keep running while nobody is logged in, and start when the machine boots (asks for your password)"
@@ -900,7 +908,7 @@ start_services() {
     # shellcheck disable=SC2086 # one word per package
     if sudo_once "equin needs your password to install the libraries its desktop icon is built with." &&
       { sudo apt-get -o DPkg::Lock::Timeout=300 update -qq || echo "apt-get update reported errors; installing anyway."; } &&
-      sudo DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=300 install -y -qq $pkgs; then :
+      sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_SUSPEND=1 apt-get -o DPkg::Lock::Timeout=300 install -y -qq $pkgs; then :
     else
       echo "Those packages did not install; equin starts anyway and says what is missing."
     fi
@@ -915,12 +923,16 @@ start_services() {
     say "Installing $for_user (asks for your password)"
     echo "command: ${fields[*]:1}"
     if sudo_once "equin needs your password to install $for_user." &&
-      sudo -- env DEBIAN_FRONTEND=noninteractive "${fields[@]:1}"; then :
+      sudo -- env DEBIAN_FRONTEND=noninteractive NEEDRESTART_SUSPEND=1 "${fields[@]:1}"; then :
     else
       echo "That did not install; equin starts anyway, and what needs $for_user says what is missing."
     fi
   done <<<"$setups"
   ./equin start
+  # The address, asked in the step (the port is chosen by the start just
+  # above; never spelled here): its run is the step's output, timed with it,
+  # never a bare command between two steps writing over the view.
+  ./equin url >"$RUN_DIR/app-url"
 }
 
 install_mise() {
@@ -1566,6 +1578,19 @@ plan_data() {
   plan_add build.codegen build build "Generate code" "Generating code"
   plan_add build.interface build build "Build the interface" "Building the interface"
   plan_add build.deploy build build "Start equin" "Starting equin"
+}
+
+# est_minutes <step id>...: the steps' measured estimates added up, in words
+# ("about 4 minutes"), or nothing when one has none (no made-up number).
+est_minutes() {
+  local id total=0 m
+  for id in "$@"; do
+    m=$(est_s "$EST_SET" "$id")
+    [ "$m" != "null" ] || return 0
+    total=$((total + m))
+  done
+  m=$(((total + 30) / 60))
+  if [ "$m" -le 1 ]; then echo "about a minute"; else echo "about $m minutes"; fi
 }
 
 # plan_add <id> <parent id or ""> <group> <label> <doing>

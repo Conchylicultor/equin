@@ -45,6 +45,11 @@ const NOISE = [
   /^-- (BEGIN|END) /,
   /^Clean lockfile: /,
   /^Resolved, downloaded and extracted /,
+  // bun's advice about the lifecycle scripts it did not run. The repo leaves
+  // them untrusted on purpose (embedded-postgres' symlink hydration is done by
+  // database/embedded's start script, @parcel/watcher ships prebuilt), so
+  // `bun pm untrusted` is nothing for a person installing equin to act on.
+  /^Blocked \d+ (postinstall|lifecycle script)s?\. Run 'bun pm untrusted' for details\.$/,
 ];
 
 let done = 0;
