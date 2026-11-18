@@ -10,6 +10,7 @@ import {
   describeRejection,
 } from "../internal/describe-caught";
 import { fileUnlessOffline } from "../internal/fetch-no-answer";
+import { takeShellReports } from "../internal/shell-reports";
 
 // A Core.Root side-effect component (the old reports ReportCollector, now owned
 // by the crash kind). It owns the two browser crash signals that are window
@@ -80,8 +81,13 @@ export function CrashCollector() {
 
     window.addEventListener("error", onError);
     window.addEventListener("unhandledrejection", onRejection);
+    // The page shell's own inline reporter (a boot file that failed to load)
+    // cannot send once the request guard is installed: it queues its report
+    // for this collector, which sends it through report().
+    const releaseShellReports = takeShellReports();
 
     return () => {
+      releaseShellReports();
       window.removeEventListener("error", onError);
       window.removeEventListener("unhandledrejection", onRejection);
     };

@@ -59821,6 +59821,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RESIZE_LOOP_OBSERVATIONS_MAX`
           - `RESIZE_LOOP_TARGETS_MAX`
           - `ResizeLoopTraceSchema`
+          - `SHELL_REPORT_QUEUE_GLOBAL`
       - Cross-plugin:
         - Imported by: `infra/jobs/attempt-audit`
     - **`endpoint-errors`** — Files crash tasks for bug-shaped handled endpoint errors (validation 400s and 5xx).

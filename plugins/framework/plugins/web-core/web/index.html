@@ -168,14 +168,38 @@
           }
           (root && root.parentNode ? root.parentNode : document.body).appendChild(box);
         }
+        // The boot files are the module scripts and stylesheets the served
+        // document itself carries, from this origin: the entry and the global
+        // stylesheet. Taken when parsing ends (readyState leaves "loading"),
+        // before any module runs - so a stylesheet the app adds later (a web
+        // font from fonts.googleapis.com a visitor's blocker refuses) is not
+        // one: its failure is no reason to cover a running page with this
+        // screen. While the document is still parsing, every element is its own.
+        var BOOT_FILE = 'script[type="module"][src], link[rel="stylesheet"]';
+        var bootFiles = null;
+        function takeBootFiles() {
+          bootFiles = Array.prototype.slice.call(document.querySelectorAll(BOOT_FILE));
+        }
+        if (document.readyState === "loading") {
+          document.addEventListener("readystatechange", function parsed() {
+            if (document.readyState === "loading") return;
+            document.removeEventListener("readystatechange", parsed);
+            takeBootFiles();
+          });
+        } else {
+          takeBootFiles();
+        }
+        function isBootFile(t) {
+          if (!t || typeof t.matches !== "function" || !t.matches(BOOT_FILE)) return false;
+          if (bootFiles !== null && bootFiles.indexOf(t) < 0) return false;
+          var url = t.getAttribute(t.tagName === "SCRIPT" ? "src" : "href");
+          return !!url && new URL(url, location.href).origin === new URL(location.href).origin;
+        }
         window.addEventListener(
           "error",
           function (e) {
             var t = e.target;
-            var bootFile =
-              t && ((t.tagName === "SCRIPT" && t.type === "module") ||
-                (t.tagName === "LINK" && t.rel === "stylesheet"));
-            if (shown || !bootFile) return;
+            if (shown || !isBootFile(t)) return;
             shown = true;
             var urls = failedUrls(t);
             servedNewerBuild().then(
@@ -215,18 +239,32 @@
           console.error("[boot] boot files failed to load:", urls);
           show(urls);
           // Same alert funnel as plugin-load failures (reports/plugin-load-errors).
+          send({
+            kind: "crash",
+            source: "plugin-load",
+            message: "boot: " + urls.length + " file(s) failed to load: " + urls.slice(0, 5).join(", "),
+            url: location.href,
+            userAgent: navigator.userAgent,
+            data: { errorType: "BootModuleLoadFailed", stack: null, urls: urls.slice(0, 50) },
+          });
+        }
+        // Before the app entry runs, nothing else can carry a report: a raw
+        // POST. Once it has installed the page request guard
+        // (__equinRequestGuardInstalled, request-guard's
+        // REQUEST_GUARD_INSTALLED_GLOBAL) a raw POST is refused, and the app's
+        // own reporter is (or soon will be) up: the report is queued for it on
+        // __equinShellReports (reports/crash's SHELL_REPORT_QUEUE_GLOBAL), which
+        // the crash collector drains through the page's report channel.
+        function send(body) {
+          if (window.__equinRequestGuardInstalled !== undefined) {
+            (window.__equinShellReports = window.__equinShellReports || []).push(body);
+            return;
+          }
           fetch("/api/reports", {
             method: "POST",
             headers: { "content-type": "application/json" },
             keepalive: true,
-            body: JSON.stringify({
-              kind: "crash",
-              source: "plugin-load",
-              message: "boot: " + urls.length + " file(s) failed to load: " + urls.slice(0, 5).join(", "),
-              url: location.href,
-              userAgent: navigator.userAgent,
-              data: { errorType: "BootModuleLoadFailed", stack: null, urls: urls.slice(0, 50) },
-            }),
+            body: JSON.stringify(body),
           }).catch(function (err) {
             console.warn("[boot] failure report not delivered:", err);
           });

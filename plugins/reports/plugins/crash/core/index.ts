@@ -7,3 +7,4 @@ export {
   ResizeLoopTraceSchema,
 } from "./resize-loop";
 export type { ResizeLoopTrace } from "./resize-loop";
+export { SHELL_REPORT_QUEUE_GLOBAL } from "./shell-reports";

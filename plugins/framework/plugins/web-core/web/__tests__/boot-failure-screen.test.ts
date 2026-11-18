@@ -10,11 +10,26 @@ import {
   vi,
   type Mock,
 } from "vitest";
+import { REQUEST_GUARD_INSTALLED_GLOBAL } from "@plugins/primitives/plugins/networking/plugins/request-guard/core";
+import { SHELL_REPORT_QUEUE_GLOBAL } from "@plugins/reports/plugins/crash/core";
 
 // The boot-failure script lives inline in index.html (it must run with no
 // module graph at all), so the test lifts it out of the shell and runs it.
 const html = readFileSync(join(__dirname, "..", "index.html"), "utf8");
 const source = /<script id="boot-failure">([\s\S]*?)<\/script>/.exec(html)?.[1];
+
+/** Runs the shell's script over the document as it stands: its boot files. */
+function run(): void {
+  new Function(source!)();
+}
+
+function stylesheet(href: string): HTMLLinkElement {
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.href = href;
+  document.head.appendChild(link);
+  return link;
+}
 
 function moduleScript(): HTMLScriptElement {
   const s = document.createElement("script");
@@ -73,6 +88,8 @@ describe("boot-failure screen", () => {
     ] as unknown as PerformanceEntryList);
   });
   afterEach(() => {
+    Reflect.deleteProperty(window, REQUEST_GUARD_INSTALLED_GLOBAL);
+    Reflect.deleteProperty(window, SHELL_REPORT_QUEUE_GLOBAL);
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
@@ -83,8 +100,9 @@ describe("boot-failure screen", () => {
 
   it("names the 404ing modules and reports when the served build is this page's", async () => {
     const { reports } = serve(PAGE_MAP);
-    new Function(source!)();
-    moduleScript().dispatchEvent(new Event("error"));
+    const entry = moduleScript();
+    run();
+    entry.dispatchEvent(new Event("error"));
     await settle();
     const screen = document.getElementById("boot-failure-screen");
     expect(screen?.textContent).toContain("./equin build");
@@ -104,8 +122,9 @@ describe("boot-failure screen", () => {
     const { reports, fetchMock } = serve(
       '{"imports":{"zod":"/artifacts/set.new/zod.js"}}',
     );
-    new Function(source!)();
-    moduleScript().dispatchEvent(new Event("error"));
+    const entry = moduleScript();
+    run();
+    entry.dispatchEvent(new Event("error"));
     await settle();
     expect(fetchMock).toHaveBeenCalledWith("http://x/home", {
       cache: "no-store",
@@ -123,8 +142,9 @@ describe("boot-failure screen", () => {
         : Promise.reject(new TypeError("offline")),
     );
     vi.stubGlobal("fetch", fetchMock);
-    new Function(source!)();
-    moduleScript().dispatchEvent(new Event("error"));
+    const entry = moduleScript();
+    run();
+    entry.dispatchEvent(new Event("error"));
     await settle();
     expect(document.getElementById("boot-failure-screen")).not.toBeNull();
     expect(reload).not.toHaveBeenCalled();
@@ -132,11 +152,8 @@ describe("boot-failure screen", () => {
 
   it("shows the screen when the global stylesheet fails", async () => {
     const { reports } = serve(PAGE_MAP);
-    new Function(source!)();
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = "/assets/style-abc.css";
-    document.head.appendChild(link);
+    const link = stylesheet("/assets/style-abc.css");
+    run();
     link.dispatchEvent(new Event("error"));
     await settle();
     const screen = document.getElementById("boot-failure-screen");
@@ -147,12 +164,55 @@ describe("boot-failure screen", () => {
 
   it("ignores errors of non-module elements", async () => {
     const { fetchMock } = serve(PAGE_MAP);
-    new Function(source!)();
+    run();
     const img = document.createElement("img");
     document.body.appendChild(img);
     img.dispatchEvent(new Event("error"));
     await settle();
     expect(fetchMock).not.toHaveBeenCalled();
     expect(document.getElementById("boot-failure-screen")).toBeNull();
+  });
+
+  it("spells the request guard's and the crash collector's globals", () => {
+    expect(source).toContain(REQUEST_GUARD_INSTALLED_GLOBAL);
+    expect(source).toContain(SHELL_REPORT_QUEUE_GLOBAL);
+  });
+
+  // equin.ai/story adds a Google Fonts stylesheet once the app runs; a
+  // visitor's blocker refusing it covered the working page with this screen.
+  it("ignores a stylesheet added once the document was parsed", async () => {
+    const { fetchMock } = serve(PAGE_MAP);
+    run();
+    stylesheet("/assets/late.css").dispatchEvent(new Event("error"));
+    await settle();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(document.getElementById("boot-failure-screen")).toBeNull();
+  });
+
+  it("ignores a stylesheet of another origin", async () => {
+    const { fetchMock } = serve(PAGE_MAP);
+    const font = stylesheet("https://fonts.googleapis.com/css2?family=X");
+    run();
+    font.dispatchEvent(new Event("error"));
+    await settle();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(document.getElementById("boot-failure-screen")).toBeNull();
+  });
+
+  // The global stylesheet can fail after the entry ran: the guard would
+  // refuse a raw POST, so the report is queued for the app's crash collector.
+  it("queues the report for the app once the request guard is installed", async () => {
+    const { reports } = serve(PAGE_MAP);
+    const link = stylesheet("/assets/style-abc.css");
+    run();
+    Reflect.set(window, REQUEST_GUARD_INSTALLED_GLOBAL, true);
+    link.dispatchEvent(new Event("error"));
+    await settle();
+    expect(document.getElementById("boot-failure-screen")).not.toBeNull();
+    expect(reports()).toHaveLength(0);
+    const queued: unknown = Reflect.get(window, SHELL_REPORT_QUEUE_GLOBAL);
+    expect(queued).toEqual([
+      expect.objectContaining({ kind: "crash", source: "plugin-load" }),
+    ]);
   });
 });
