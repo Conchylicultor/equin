@@ -52,6 +52,28 @@ export interface BatchProcessJob extends BatchJob {
 
 async function run(job: BatchProcessJob): Promise<BatchOutcome> {
   const view = await openRepoView(job.root, job.tree);
+  const rel = (abs: string): string =>
+    relative(job.root, abs).split("\\").join("/");
+  const read = (abs: string): string => view.readText(rel(abs));
+  const specs = Object.entries(job.lint).map(
+    ([p, s]) => [join(job.root, p), s] as const,
+  );
+  const engine =
+    specs.length > 0
+      ? createLintEngine(job.root, readDeclaredUtilities(job.root))
+      : undefined;
+  // The syntactic groups FIRST, with no program: a program, once built, stays
+  // alive to the process's exit and the collector paces the heap at a
+  // multiple of it, so the same parses after it cost that multiple (the
+  // worker's own `LintHook.beforeProgram`). Before it they run on a small heap
+  // whose pages the program then reuses. The worker hands them here instead
+  // of parsing every batched file itself (`./worker.ts`).
+  const syntactic = new Map<string, BatchLintOut["syntactic"]>();
+  for (const [abs, s] of specs) {
+    if (s.unit === "split" && s.syntactic.length > 0) {
+      syntactic.set(abs, await engine!.syntactic(abs, read(abs), s.syntactic));
+    }
+  }
   const store = openNameStore();
   const resolver = new RecordingResolver(new ProbeFs(view), job.options);
   let program: ts.Program;
@@ -86,17 +108,14 @@ async function run(job: BatchProcessJob): Promise<BatchOutcome> {
     throw err;
   }
   const lint: Record<string, BatchLintOut> = {};
-  const specs = Object.entries(job.lint);
-  if (specs.length > 0) {
-    const engine = createLintEngine(job.root, readDeclaredUtilities(job.root));
-    const rel = (abs: string): string =>
-      relative(job.root, abs).split("\\").join("/");
-    const out = await engine.files(
-      program,
-      new Map(specs.map(([p, s]) => [join(job.root, p), s])),
-      (abs) => view.readText(rel(abs)),
-    );
-    for (const [abs, o] of out) lint[rel(abs)] = o;
+  for (const [abs, s] of specs) {
+    lint[rel(abs)] = {
+      typed:
+        s.typed.length > 0
+          ? await engine!.typed(program, abs, read(abs), s.unit, s.typed)
+          : {},
+      syntactic: syntactic.get(abs) ?? {},
+    };
   }
   return {
     kind: "done",

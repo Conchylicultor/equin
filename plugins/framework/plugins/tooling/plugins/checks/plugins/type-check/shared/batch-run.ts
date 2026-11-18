@@ -136,6 +136,13 @@ export interface BatchContext {
   resolver: RecordingResolver;
   /** A stored `.d.ts` by hash; throws `ContractMissing` when it aged out. */
   contractText(path: string, hash: string): string;
+  /**
+   * Awaited before a set of at most `k` files is built as one program in
+   * THIS process (`LintHook.beforeProgram`). Never for a batch: a batch
+   * process lints its own files' syntactic groups first, and the fixtures'
+   * in-process runner (which bounds nothing) lints them with the batch.
+   */
+  beforeProgram(): Promise<void>;
   /** Lint files inside a program built here (the in-process runner). */
   lintIn?(
     program: ts.Program,
@@ -236,6 +243,7 @@ const emptyStats = (): ProgramStats => ({
 export async function checkSet(input: CheckSetInput): Promise<SetRun> {
   const { ctx, sources, check, batching } = input;
   if (batching === undefined || sources.size <= batching.k) {
+    await ctx.beforeProgram();
     const run = runProgram({
       view: ctx.view,
       options: ctx.options,

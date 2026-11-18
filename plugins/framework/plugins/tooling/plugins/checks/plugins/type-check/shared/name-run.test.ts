@@ -210,6 +210,7 @@ const unbatched = (
   hook: Pick<LintHook, "wants" | "run" | "discard">,
 ): LintHook => ({
   ...hook,
+  beforeProgram: () => Promise.resolve(),
   spec: () => undefined,
   lintIn: () => Promise.resolve({}),
   adopt: () => {
@@ -1039,7 +1040,12 @@ test("typed lint in batches: each file is linted inside its batch, and adopted u
   const linted: { path: string; source: boolean }[] = [];
   const adopted: { path: string; r: string }[] = [];
   const syntactic: string[] = [];
+  let beforeProgram = 0;
   const lint: LintHook = {
+    beforeProgram() {
+      beforeProgram++;
+      return Promise.resolve();
+    },
     wants: (p) => wanted.has(p),
     run() {
       throw new Error("a batched set has no program to lint in");
@@ -1082,6 +1088,56 @@ test("typed lint in batches: each file is linted inside its batch, and adopted u
   expect(adopted.map((a) => a.path).sort()).toEqual([...wanted].sort());
   for (const a of adopted) expect(a.r).toBe(out.keys.get(a.path)!);
   expect(syntactic.sort()).toEqual([...wanted].sort());
+  // Every set went to batches: no program was built here, so the lint that
+  // needs none never ran here either — the batches ran it.
+  expect(beforeProgram).toBe(0);
+});
+
+test("the lint that needs no program runs before the first program built here, once", async () => {
+  const root = freshRoot();
+  writeTree(root, BATCHED);
+  const events: string[] = [];
+  const lint = unbatched({
+    wants: () => false,
+    run: () => Promise.resolve(),
+    discard() {},
+  });
+  await run(root, BATCHED, memoryNameStore(), {
+    lint: {
+      ...lint,
+      beforeProgram() {
+        events.push("before");
+        return Promise.resolve();
+      },
+    },
+  });
+  expect(events).toEqual(["before"]);
+});
+
+test("a small run refuses a program over its bound before it lints anything", async () => {
+  const root = freshRoot();
+  writeTree(root, BATCHED);
+  let before = 0;
+  const lint = unbatched({
+    wants: () => false,
+    run: () => Promise.resolve(),
+    discard() {},
+  });
+  const refused = run(root, BATCHED, memoryNameStore(), {
+    refuse: 1,
+    lint: {
+      ...lint,
+      beforeProgram() {
+        before++;
+        return Promise.resolve();
+      },
+    },
+  });
+  expect(refused).rejects.toThrow(OverBudget);
+  await refused.catch((err: unknown) => {
+    if (!(err instanceof OverBudget)) throw err;
+  });
+  expect(before).toBe(0);
 });
 
 test("a type reached through a barrel is spelled by its declaring file, whichever path the program printed", async () => {

@@ -89,6 +89,13 @@ const sha = (s: string): string =>
 
 /** Type-aware lint, run inside the programs (`./worker.ts`). */
 export interface LintHook {
+  /**
+   * Called before every program built in THIS process (idempotent: the
+   * first call does the work): the lint that needs no program runs first,
+   * while the heap is small. Never called for a set that goes to batch
+   * processes — each batch lints its own files' syntactic groups (`spec`).
+   */
+  beforeProgram(): Promise<void>;
   /** Whether a file's typed lint must run under result key `r`. */
   wants(path: string, r: string): boolean;
   /** Lint `files` (sources of `program`), each under its result key. */
@@ -113,7 +120,10 @@ export interface LintHook {
     outs: ReadonlyMap<string, BatchLintOut>,
     files: { path: string; r: string }[],
   ): void;
-  /** Forget every result run so far: the run starts again, under other keys. */
+  /**
+   * Forget every typed result run so far: the run starts again, under other
+   * keys (a syntactic result depends on no key, and stands).
+   */
   discard(): void;
   /**
    * The files sent to be linted: each needs a result key, and a program
@@ -740,6 +750,7 @@ async function walkAndCheck(a: Attempt): Promise<NameRunOutput> {
     cache,
     resolver,
     contractText,
+    beforeProgram: () => lint?.beforeProgram() ?? Promise.resolve(),
     ...(lint ? { lintIn: (prog, specs) => lint.lintIn(prog, specs) } : {}),
   };
   const lintSpec = lint ? { lintSpec: (p: string) => lint.spec(p) } : {};
@@ -1077,6 +1088,9 @@ async function walkAndCheck(a: Attempt): Promise<NameRunOutput> {
       .filter(([p, r]) => input.lint!.wants(p, r))
       .map(([path, r]) => ({ path, r }));
     if (lintable.length > 0) {
+      if (p2Run?.program === undefined && p1Run?.program === undefined) {
+        await input.lint.beforeProgram();
+      }
       const holder =
         p2Run?.program ??
         p1Run?.program ??
@@ -1217,6 +1231,7 @@ async function walkAndCheck(a: Attempt): Promise<NameRunOutput> {
   } else {
     programDiagnostics = store.readProgramDiagnostics(global);
     if (programDiagnostics === undefined) {
+      await input.lint?.beforeProgram();
       const empty = runProgram({
         view,
         options,

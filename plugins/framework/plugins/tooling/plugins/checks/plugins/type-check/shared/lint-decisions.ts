@@ -31,7 +31,8 @@
 // What needs neither a program nor a result key is named apart
 // (`beforeProgram`): every stale syntactic group, and the verdict of every
 // carried directive file whose raw parts are the base's. The worker runs it
-// before the type check builds any program, because a program, once built,
+// before the type check builds its first program in the worker process (and
+// not at all for what batch processes lint), because a program, once built,
 // stays alive to the end of the process (JSC's optimized code of
 // `createProgram`'s inner functions holds its scope), and the collector paces
 // the heap at a multiple of what is live: a syntactic rule edit's ~16.5k

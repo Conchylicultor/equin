@@ -188,35 +188,55 @@ async function lintRunner(job: Job, view: RepoView) {
   const read = (file: string): string => view.readText(rel(job.root, file));
   const counts = { typed: 0, syntactic: 0 };
 
-  // Before the type check builds any program: everything that needs neither
-  // a program nor a result key (`LintDecisions.beforeProgram`). A program
-  // stays alive to the end of this process — JSC's optimized code of
-  // `createProgram`'s inner functions holds its scope, whatever we drop —
-  // and the collector lets the heap grow to a multiple of what is live, so
-  // ~16.5k syntactic parses run after it cost the footprint of that multiple
-  // of the program (research/2026-11-12-global-type-check-worker-memory-split.md).
-  const early = decisions.beforeProgram();
+  // Everything that needs neither a program nor a result key
+  // (`LintDecisions.beforeProgram`) runs before this process builds its FIRST
+  // program — and only then, never up front (`LintHook.beforeProgram`, called
+  // by the type check at that moment). A program stays alive to the end of
+  // this process — JSC's optimized code of `createProgram`'s inner functions
+  // holds its scope, whatever we drop — and the collector lets the heap grow
+  // to a multiple of what is live, so ~16.5k syntactic parses run after it
+  // cost the footprint of that multiple of the program
+  // (research/2026-11-12-global-type-check-worker-memory-split.md).
+  //
+  // Not up front, because a run whose sets go to batch processes builds no
+  // program here: each batch lints its own files' syntactic groups before it
+  // builds its program (`spec` hands them over while this has not run), so
+  // this process never parses them at all. Run up front, a cold run's ~18k
+  // parses (~250 CPU-s) grew this process to ~2.7 GB that it then held idle
+  // beside every batch — and a small run's worker paid them in full before
+  // finding its program too big and refusing, all of it thrown away
+  // (research/2026-11-18-global-cold-check-pass-memory.md).
   /** Syntactic groups run before any program, by repo path. */
   const earlySyntactic = new Map<string, Record<string, RawLintMessage[]>>();
-  for (const t of early.syntactic) {
-    earlySyntactic.set(
-      rel(job.root, t.file),
-      await engine.syntactic(t.file, read(t.file), t.syntactic),
-    );
-  }
   // A verdict is a function of the text and the raw messages it replays: one
   // run early is the answer only for the same raw messages.
   const verdictKey = (file: string, raw: readonly RawLintMessage[]): string =>
     `${file}\n${JSON.stringify(raw)}`;
   const earlyVerdicts = new Map<string, RawLintMessage[]>();
-  for (const { target, raw } of early.verdicts) {
-    earlyVerdicts.set(
-      verdictKey(target.file, raw),
-      await engine.combined(target.file, read(target.file), raw),
-    );
-  }
+  let earlyRan = false;
+  const beforeProgram = async (): Promise<void> => {
+    if (earlyRan) return;
+    earlyRan = true;
+    const early = decisions.beforeProgram();
+    for (const t of early.syntactic) {
+      const path = rel(job.root, t.file);
+      // A batch already ran it (the same stale groups: `spec`).
+      if (syntacticRan.has(path)) continue;
+      earlySyntactic.set(
+        path,
+        await engine.syntactic(t.file, read(t.file), t.syntactic),
+      );
+    }
+    for (const { target, raw } of early.verdicts) {
+      earlyVerdicts.set(
+        verdictKey(target.file, raw),
+        await engine.combined(target.file, read(target.file), raw),
+      );
+    }
+  };
 
   const hook: LintHook = {
+    beforeProgram,
     wants: (path, r) => decisions.wants(path, r),
     async run(program, files) {
       for (const { path, r } of files) {
@@ -246,9 +266,12 @@ async function lintRunner(job: Job, view: RepoView) {
       if (f === undefined) return undefined;
       return {
         unit: f.unit,
-        // Not again in a batch what already ran before the program.
+        // Not again in a batch what already ran: before a program here, or
+        // in an earlier batch (program 1's, when program 2 batches too).
         syntactic:
-          f.unit === "split" && !earlySyntactic.has(path)
+          f.unit === "split" &&
+          !earlySyntactic.has(path) &&
+          !syntacticRan.has(path)
             ? [...f.syntactic]
             : [],
         typed: decisions.typedGroups(f),
@@ -293,8 +316,11 @@ async function lintRunner(job: Job, view: RepoView) {
       }
     },
     discard() {
+      // A syntactic result is a function of the text and its groups alone,
+      // never of a key: it stands for the next attempt. Dropping it would
+      // leave a file `beforeProgram` skipped for a batch's sake to be parsed
+      // at answer time, after a program exists here.
       typedOut.clear();
-      syntacticRan.clear();
       counts.typed = 0;
     },
   };
@@ -485,6 +511,11 @@ async function run(job: Job): Promise<Result> {
   const lint = await lintRunner(job, view);
   lintCpu += cpuSeconds() - lintStart;
   const timedHook: LintHook | undefined = lint.hook && {
+    async beforeProgram() {
+      const c0 = cpuSeconds();
+      await lint.hook!.beforeProgram();
+      lintCpu += cpuSeconds() - c0;
+    },
     wants: lint.hook.wants,
     async run(program, files) {
       const c0 = cpuSeconds();
@@ -531,6 +562,8 @@ async function run(job: Job): Promise<Result> {
   let fullWalk: NameRunOutput | undefined;
   const fullStore = bufferedNameStore(store);
   if (job.tscMode !== "keyed") {
+    // The full walk builds programs here before the incremental one does.
+    await timedHook?.beforeProgram();
     fullWalk = await runNameCheck({
       view,
       options,
@@ -599,6 +632,7 @@ async function run(job: Job): Promise<Result> {
   //    compared file by file. Its verdict stands; on any divergence a cold
   //    run overwrites the store (`./full-check.ts`).
   if (job.tscMode === "dual") {
+    // No `beforeProgram` here: `dual` ran it before the full walk above.
     const full = fullCheck(view, options, roots);
     const keyed = new Map<string, NameResult>(
       [...out.walk.all()].map(([p, f]) => [
