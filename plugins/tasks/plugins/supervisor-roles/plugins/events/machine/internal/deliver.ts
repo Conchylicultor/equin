@@ -305,6 +305,11 @@ async function claimMessage(
       outcome: "sending",
       taskId: null,
     });
+    // Pruned in the transaction that wrote the row, so no committed state
+    // ever holds more than MESSAGES_KEPT_PER_ROLE — the bound the live set
+    // (`all: { max }`) reads by. Every message, failed ones included, is
+    // written here, so this is the one place retention is kept.
+    await pruneMessages(roleId, tx);
     return { messageId, text, pending };
   });
 }
@@ -378,13 +383,10 @@ export async function flushRoleEvents(
     await unclaimMessage(roleId, claimed);
     throw err;
   }
-  await db.transaction(async (tx) => {
-    await tx
-      .update(_supervisorEventMessages)
-      .set({ outcome: sent.outcome, taskId: sent.taskId })
-      .where(eq(_supervisorEventMessages.id, claimed.messageId));
-    await pruneMessages(roleId, tx);
-  });
+  await db
+    .update(_supervisorEventMessages)
+    .set({ outcome: sent.outcome, taskId: sent.taskId })
+    .where(eq(_supervisorEventMessages.id, claimed.messageId));
 }
 
 async function deliver(
