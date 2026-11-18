@@ -69,8 +69,10 @@ first commit, the box of every observation at or above the delivery
 and no transform advances inside one task). When the phase ends, each one the
 commits resized is stopped (nothing left for the browser to hold back),
 restarted at the next frame, and answered now through its `onHeldBack` — which
-may commit and resize more, settled the same way (at most 50 passes, then it
-throws). A phase that commits nothing reads nothing; the root's phase reaches
+may commit and resize more, settled the same way (at most 10 passes, then it
+throws, naming the observations that kept resizing — their element's
+`data-source` or tag, and their last boxes — so a report says which observer
+loops). A phase that commits nothing reads nothing; the root's phase reaches
 every depth and records nothing.
 
 Not covered: a change of the content box alone (padding, with the border box

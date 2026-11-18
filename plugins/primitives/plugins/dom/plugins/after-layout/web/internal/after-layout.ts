@@ -21,6 +21,18 @@ interface Entry {
  */
 const MAX_PASSES = 50;
 
+/**
+ * Settle passes one phase may take before it is a loop (see {@link settle}).
+ * A pass answers every observation the previous one resized, each answer a
+ * commit of the observer's tree, so a loop costs passes × that commit with the
+ * main thread frozen. Measured on equin.ai's demo (agents, tasks, places;
+ * resizes, view switches, classic scrollbars): every one of ~5,000 phases
+ * settled in its first pass. A two-state oscillation shows by the third, so
+ * ten is ample margin — where fifty froze the frame for seconds before the
+ * guard spoke.
+ */
+const MAX_SETTLE_PASSES = 10;
+
 let pending: Entry[] = [];
 let inPhase = false;
 /**
@@ -374,6 +386,40 @@ function sameBox(a: Box, b: Box): boolean {
   );
 }
 
+/**
+ * The observations a settle loop kept resizing, most-resized first: each named
+ * by its element's source (`data-source`, the file:line that rendered it) or
+ * tag and class, with its last boxes — `w×h` (layout box) and `/cw×ch` (client
+ * box) when they differ, the client box being where a scrollbar shows. Short:
+ * a visitor's report keeps one line of 300 characters.
+ */
+function describeTrail(trail: ReadonlyMap<Observation, Box[]>): string {
+  const ranked = [...trail].sort((a, b) => b[1].length - a[1].length);
+  const named = ranked.slice(0, 2).map(([obs, boxes]) => {
+    const last = boxes.slice(-3).map(formatBox).join("→");
+    return `${elementLabel(obs.el)} ${last}`;
+  });
+  const more = ranked.length - named.length;
+  return named.join("; ") + (more > 0 ? ` (+${more} more)` : "");
+}
+
+function elementLabel(el: Element): string {
+  const source = el.getAttribute("data-source");
+  if (source !== null && source !== "") return source.split("/").pop()!;
+  const cls = el.classList[0];
+  return el.tagName.toLowerCase() + (cls === undefined ? "" : `.${cls}`);
+}
+
+function formatBox(b: Box): string {
+  const px = (n: number) => String(Math.round(n * 10) / 10);
+  const layout = `${px(b.width)}×${px(b.height)}`;
+  const client = `${px(b.clientWidth)}×${px(b.clientHeight)}`;
+  return Math.round(b.width) === b.clientWidth &&
+    Math.round(b.height) === b.clientHeight
+    ? layout
+    : `${layout}/${client}`;
+}
+
 /** The box of every connected observation the running phase's delivery can no
  * longer reach: at or above its shallowest target. */
 function shallowBoxes(): Map<Observation, Box> {
@@ -406,11 +452,14 @@ function shallowBoxes(): Map<Observation, Box> {
  * way, until nothing changes.
  */
 function settle(): void {
+  // Each observation's boxes across the passes that resized it: what the
+  // loop error names, so a report says WHICH observer kept resizing.
+  const trail = new Map<Observation, Box[]>();
   for (let pass = 0; snapshot !== null; pass++) {
-    if (pass >= MAX_PASSES) {
+    if (pass >= MAX_SETTLE_PASSES) {
       snapshot = null;
       throw new Error(
-        `afterLayout: still resizing observed elements above the delivery after ${MAX_PASSES} passes in one frame — an observer's response keeps resizing what it observes`,
+        `afterLayout: still resizing observed elements above the delivery after ${MAX_SETTLE_PASSES} passes in one frame: ${describeTrail(trail)} — an observer's response keeps resizing what it observes`,
       );
     }
     const before = snapshot;
@@ -418,7 +467,13 @@ function settle(): void {
     const resized: Observation[] = [];
     for (const [obs, box] of before) {
       if (obs.released || !obs.el.isConnected) continue;
-      if (!sameBox(box, boxOf(obs.el))) resized.push(obs);
+      const now = boxOf(obs.el);
+      if (sameBox(box, now)) continue;
+      resized.push(obs);
+      const boxes = trail.get(obs);
+      if (boxes === undefined) trail.set(obs, [box, now]);
+      else if (!sameBox(boxes[boxes.length - 1]!, box)) boxes.push(box, now);
+      else boxes.push(now);
     }
     if (resized.length === 0) return;
     for (const obs of resized) {

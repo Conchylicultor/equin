@@ -146,4 +146,29 @@ describe("commitInPhase", () => {
     ).toThrow(/still resizing observed elements/);
     release();
   });
+
+  it("names the observation that kept resizing, and stops within ten passes", () => {
+    const { shallow, deep, widths } = tree();
+    shallow.setAttribute("data-source", "plugins/x/web/oscillator.tsx:12");
+    stubFrames();
+    const { observer } = fakeObserver();
+    let answers = 0;
+    // A two-state oscillation: each answer flips the width back.
+    const release = observeInPhase(observer, shallow, () => {
+      answers++;
+      commitInPhase(() =>
+        widths.set(shallow, widths.get(shallow) === 100 ? 85 : 100),
+      );
+    });
+    expect(() =>
+      runAsAfterLayout(
+        () => commitInPhase(() => widths.set(shallow, 85)),
+        [deep],
+      ),
+    ).toThrow(
+      /after 10 passes in one frame: oscillator\.tsx:12 100×10\/0×0→85×10\/0×0→100×10\/0×0 — /,
+    );
+    expect(answers).toBe(10);
+    release();
+  });
 });
