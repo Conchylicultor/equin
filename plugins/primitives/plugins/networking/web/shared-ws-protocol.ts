@@ -66,7 +66,16 @@ export type WorkerToTab =
    * closes it, so a tab that is in fact alive learns it was dropped instead of
    * sending into a port nobody reads.
    */
-  | { kind: "released"; attachedMs: number };
+  | { kind: "released"; attachedMs: number }
+  /**
+   * The port's first message was not `attach`: it attached to an EARLIER
+   * instance of the worker, which the browser restarted and handed the port
+   * again (WebKit relaunches a terminated SharedWorker for its live clients,
+   * re-sending `connect` with their existing ports). This instance never heard
+   * the attach — so it holds no socket, will and liveness watch for the port —
+   * and closes it; the tab attaches again on a fresh port.
+   */
+  | { kind: "orphaned"; first: TabToWorker["kind"] };
 
 // The prefix of the worker's and its port locks' names. Not a kept id: the
 // worker's URL is content-addressed per networking build, so a tab only ever

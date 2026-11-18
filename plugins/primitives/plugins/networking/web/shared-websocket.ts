@@ -105,6 +105,7 @@ function portMark(url: string, msg: WorkerToTab): TaskMarkText {
       return { what: `port diag ${msg.event.type}`, detail: url };
     case "ws-error":
     case "released":
+    case "orphaned":
     case "fatal":
       return { what: `port ${msg.kind}`, detail: url };
   }
@@ -163,7 +164,7 @@ function defaultSeams(): WorkerSeams {
 }
 
 /**
- * A live tab the worker evicted re-attaches — at most `MAX_EVICTIONS` times per
+ * A live tab the worker evicted (or restarted under) re-attaches — at most `MAX_EVICTIONS` times per
  * `EVICTION_WINDOW_MS`; one more and the socket closes with a thrown error.
  */
 const MAX_EVICTIONS = 3;
@@ -487,31 +488,52 @@ export class SharedWebSocket {
           attachedMs: msg.attachedMs,
           tabLock: session.lock,
         });
-        runMarked("networking", step("detach"), () => this.detach());
-        {
-          const now = Date.now();
-          this.evictions = this.evictions.filter(
-            (t) => now - t < EVICTION_WINDOW_MS,
-          );
-          this.evictions.push(now);
-          // Evicted again and again: the cause is not transient, and
-          // re-attaching would only spin. Stop and fail loudly.
-          if (this.evictions.length > MAX_EVICTIONS) {
-            this.setStatus("closed");
-            throw new Error(
-              `SharedWebSocket ${this.url}: the shared-ws worker evicted this live tab ${this.evictions.length} times in ${EVICTION_WINDOW_MS / 1000}s (tab lock: ${session.lock}) — giving up`,
-            );
-          }
-        }
-        this.boundConn = null;
-        this.readyState = SharedWebSocket.CONNECTING;
-        runMarked("networking", step("attach"), () => this.attach());
+        this.reattach(
+          () =>
+            `the shared-ws worker evicted this live tab ${this.evictions.length} times in ${EVICTION_WINDOW_MS / 1000}s (tab lock: ${session.lock})`,
+        );
+        return;
+      case "orphaned":
+        // The worker restarted under this tab and was handed its port again
+        // (WebKit relaunches a SharedWorker for its live clients): the new
+        // instance never heard this port's attach, so it serves nothing on it.
+        // The socket it owned died with the old instance — attach again, and
+        // `onopen` on the new connection replays the consumers' state.
+        publishNetDiag({
+          type: "port-orphaned",
+          url: this.absUrl,
+          first: msg.first,
+        });
+        this.reattach(
+          () =>
+            `the shared-ws worker restarted under this tab ${this.evictions.length} times in ${EVICTION_WINDOW_MS / 1000}s`,
+        );
         return;
       case "fatal":
         this.detach();
         this.setStatus("closed");
         throw new Error(`SharedWebSocket ${this.url}: ${msg.message}`);
     }
+  }
+
+  /**
+   * The worker dropped this live tab's port (evicted it, or restarted and no
+   * longer knows it): attach again on a fresh port — at most `MAX_EVICTIONS`
+   * times per `EVICTION_WINDOW_MS`. One more and the cause is not transient:
+   * re-attaching would only spin, so it stops and fails loudly (`why`).
+   */
+  private reattach(why: () => string): void {
+    runMarked("networking", step("detach"), () => this.detach());
+    const now = Date.now();
+    this.evictions = this.evictions.filter((t) => now - t < EVICTION_WINDOW_MS);
+    this.evictions.push(now);
+    if (this.evictions.length > MAX_EVICTIONS) {
+      this.setStatus("closed");
+      throw new Error(`SharedWebSocket ${this.url}: ${why()} — giving up`);
+    }
+    this.boundConn = null;
+    this.readyState = SharedWebSocket.CONNECTING;
+    runMarked("networking", step("attach"), () => this.attach());
   }
 
   private onWorkerError(session: PortSession): void {

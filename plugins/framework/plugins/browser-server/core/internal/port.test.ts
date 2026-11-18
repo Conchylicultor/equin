@@ -22,8 +22,10 @@ import {
   attachPort,
   portBrowserServer,
   portRequester,
+  serveHost,
   serveOverPort,
   type HostServerError,
+  type PortEnd,
 } from "./port";
 import { reportingLoads, type HostProgress } from "./boot-progress";
 
@@ -197,6 +199,78 @@ describe("a browser server over a port", () => {
     socket.close();
     server.dispose();
     side.port2.close();
+  });
+});
+
+describe("a worker the browser restarted under the page", () => {
+  test("its new instance, handed the page's port, tells the page so instead of dropping the page's frames", async () => {
+    // 2026-11-18, equin.ai on desktop Safari: subs unanswered on an open
+    // in-browser server socket — WebKit relaunched the host's SharedWorker
+    // and re-sent `connect` with the page's port, so the frames of a socket
+    // the old instance had opened reached one that never opened it.
+    const channel = new MessageChannel();
+    channel.port1.start();
+    channel.port2.start();
+    // The worker's side of the port, as whichever instance currently holds it.
+    let instance: (event: MessageEvent) => void = () => {};
+    channel.port2.addEventListener("message", (event) => instance(event));
+    const handedTo = (): PortEnd => ({
+      postMessage: (msg, transfer) =>
+        channel.port2.postMessage(msg, transfer ?? []),
+      addEventListener: (_type, listener) => {
+        instance = listener;
+      },
+    });
+    const boot = async () => ({
+      server: greetingServer("hi"),
+      keys: new Set([greeting.key]),
+      boot: BOOT,
+      errors: () => {},
+    });
+
+    serveHost({ accept: (serve) => serve(handedTo()), boot });
+    const page = await portBrowserServer(channel.port1);
+    const r = recorder();
+    const socket = page.server.connect(r.peer);
+    socket.send(sub(1, greeting.key, { who: "before" }));
+    await r.next((f) => f.kind === "sub-ack");
+
+    // The browser restarts the worker: a fresh instance is handed the port.
+    serveHost({ accept: (serve) => serve(handedTo()), boot });
+    socket.send(sub(2, greeting.key, { who: "after" }));
+    expect(await page.ended).toBe("restarted");
+  });
+
+  test("a frame on a conn the new instance never opened is caught even after a late inputs re-declaration", async () => {
+    const channel = new MessageChannel();
+    channel.port1.start();
+    channel.port2.start();
+    let instance: (event: MessageEvent) => void = () => {};
+    channel.port2.addEventListener("message", (event) => instance(event));
+    const handedTo = (): PortEnd => ({
+      postMessage: (msg, transfer) =>
+        channel.port2.postMessage(msg, transfer ?? []),
+      addEventListener: (_type, listener) => {
+        instance = listener;
+      },
+    });
+    const boot = async () => ({
+      server: greetingServer("hi"),
+      keys: new Set([greeting.key]),
+      boot: BOOT,
+      errors: () => {},
+    });
+    serveHost({ accept: (serve) => serve(handedTo()), boot });
+    const page = await portBrowserServer(channel.port1);
+    const r = recorder();
+    const socket = page.server.connect(r.peer);
+    socket.send(sub(1, greeting.key, { who: "before" }));
+    await r.next((f) => f.kind === "sub-ack");
+
+    serveHost({ accept: (serve) => serve(handedTo()), boot });
+    page.declareInputs(["late.supply"]);
+    socket.send(sub(2, greeting.key, { who: "after" }));
+    expect(await page.ended).toBe("restarted");
   });
 });
 

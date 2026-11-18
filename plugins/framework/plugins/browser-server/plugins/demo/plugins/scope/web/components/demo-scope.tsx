@@ -143,8 +143,8 @@ interface ScopeStart {
   onReady(host: ScopeHost): void;
   /** The host will not serve this page (it declined, or another took its data): show why. */
   onStopped(why: StopReason): void;
-  /** It ended under this page in a way the page follows (a Reset, a retirement): start again. */
-  onFollow(why: "reset" | "retired"): void;
+  /** It ended under this page in a way the page follows (a Reset, a retirement, a worker restart): start again. */
+  onFollow(why: "reset" | "retired" | "restarted"): void;
   onFailed(err: unknown): void;
   /** How far its boot has come, until it is ready. */
   onProgress(progress: HostProgress): void;
@@ -307,6 +307,14 @@ function startScopeServer(
           // either way); then follow to the next host, on the same data or
           // the fresh one.
           generations.advance(generation);
+          if (!ended) report.onFollow(why);
+          return;
+        case "restarted":
+          // The browser restarted the worker under this page (its end was
+          // handed to a new instance, which never heard this page connect):
+          // connect again — to that instance, or, when it already retired
+          // (this page was its only end), past it to the next generation
+          // (`connectSharedHost` moves on by itself).
           if (!ended) report.onFollow(why);
           return;
         case "updated":

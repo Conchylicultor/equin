@@ -50,7 +50,15 @@ export type NetDiagEvent =
       url: string;
       attachedMs: number;
       tabLock: "held" | "ended" | `aborted:${string}`;
-    };
+    }
+  /**
+   * Published by the TAB (shared-websocket.ts) whose port the worker answered
+   * `orphaned`: the port's first message to this worker instance was not
+   * `attach` (`first`, its kind) — the browser restarted the worker and
+   * reconnected a port that had attached to its previous instance. The tab
+   * re-attaches after publishing.
+   */
+  | { type: "port-orphaned"; url: string; first: string };
 
 const bus = markedListeners<NetDiagEvent>("net-diag", (ev) => ev.type);
 

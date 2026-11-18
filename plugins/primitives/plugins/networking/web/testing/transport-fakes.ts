@@ -306,6 +306,8 @@ export class FakeLockManager implements LockManagerLike {
  */
 export class FakeSharedWorkers {
   private hosts = new Map<string, SharedWsHost>();
+  /** The worker-side end of every port each worker was handed, by name. */
+  private workerPorts = new Map<string, FakeMessagePort[]>();
 
   constructor(
     private server: FakeWsServer,
@@ -323,8 +325,35 @@ export class FakeSharedWorkers {
     }
     const [tabPort, workerPort] = FakeMessagePort.pair();
     host.connect(workerPort);
+    const handed = this.workerPorts.get(name) ?? [];
+    handed.push(workerPort);
+    this.workerPorts.set(name, handed);
     return { port: tabPort, onerror: null };
   };
+
+  /**
+   * The browser restarts the worker `name` the way WebKit relaunches a
+   * terminated SharedWorker for its still-live clients: the old instance is
+   * gone (its sockets die — the server sees them close), and a FRESH host is
+   * handed every port the old one had (`connect` again), in order. A port's
+   * next message reaches the fresh host, which never heard its `attach`.
+   */
+  restart(name: string): void {
+    for (const ws of this.server.openSockets()) ws.serverClose();
+    const host = createSharedWsHost({
+      makeWebSocket: this.server.connect,
+      locks: this.locks,
+    });
+    this.hosts.set(name, host);
+    for (const port of this.workerPorts.get(name) ?? []) {
+      if (!port.closed) host.connect(port);
+    }
+  }
+
+  /** Every worker name made so far. */
+  names(): string[] {
+    return [...this.hosts.keys()];
+  }
 
   /** How many distinct workers exist (one per URL). */
   count(): number {

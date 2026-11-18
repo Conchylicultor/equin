@@ -74,7 +74,16 @@ export type HostEndReason =
    * The same host in another tab's own worker took its storage over: the
    * browser has no SharedWorker, so its tabs cannot share one host.
    */
-  | "unshared";
+  | "unshared"
+  /**
+   * The browser restarted the worker under this page and handed the new
+   * instance the page's existing port (WebKit relaunches a terminated
+   * SharedWorker for its live clients, re-sending `connect` with their
+   * ports): the new instance never heard the page connect — none of its
+   * sockets are open there — so it serves nothing on that port. The page
+   * connects again, to the instance now running.
+   */
+  | "restarted";
 
 /**
  * Why a host declined to boot for a page — on purpose, not a crash. Each arm
@@ -290,11 +299,43 @@ export function serveHost(opts: ServeHostOptions): ServedHost {
       retiring?.abort();
       retiring = null;
     }
-    const post = (msg: FromHost, transfer?: Transferable[]) =>
-      end.postMessage(msg, transfer);
+    /**
+     * A page's end first says who it is: `hello` (a SharedWorker connection,
+     * `connectSharedHost`) or `inputs` (`portBrowserServer`, before anything
+     * else). An announced end whose page talks to it before either was
+     * connected to an EARLIER instance of this worker: the browser restarted
+     * the worker and handed it the page's port again (WebKit relaunches a
+     * terminated SharedWorker for its live clients). Its sockets were opened
+     * on that instance, so every frame for them would go nowhere — the page
+     * is told (`ended: "restarted"`) and connects again; nothing more is
+     * posted to, or read from, that end. The same holds for a `frame` on a
+     * conn this instance never heard `open` — a page whose first message
+     * after the restart happened to be a late `inputs` re-declaration.
+     */
+    let introduced = !announce;
+    let orphaned = false;
+    /** Every conn the page opened on THIS instance (read synchronously, before the boot settles). */
+    const opened = new Set<number>();
+    const post = (msg: FromHost, transfer?: Transferable[]) => {
+      if (!orphaned) end.postMessage(msg, transfer);
+    };
     if (announce) post({ t: "accepted" });
     end.addEventListener("message", (event: MessageEvent) => {
       const msg = event.data as ToHost;
+      if (orphaned) return;
+      if (msg.t === "open") opened.add(msg.conn);
+      if (msg.t === "hello" || msg.t === "inputs") introduced = true;
+      else if (
+        (!introduced && msg.t !== "attach") ||
+        (msg.t === "frame" && !opened.has(msg.conn))
+      ) {
+        post({ t: "ended", why: "restarted" });
+        orphaned = true;
+        ends.delete(end);
+        dropSockets(sockets);
+        maybeRetire();
+        return;
+      }
       void handle(msg, end, sockets, post).catch((err: unknown) => {
         console.error("[browser-server] worker host failed a message:", err);
         throw err;

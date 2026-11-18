@@ -170,11 +170,24 @@ export function createSharedWsHost(deps: SharedWsHostDeps): SharedWsHost {
   return {
     connect(port) {
       let portId: string | null = null;
+      /** The port's first message was not `attach` (see below). */
+      let orphaned = false;
       port.onmessage = (ev: MessageEvent<TabToWorker>) => {
         const msg = ev.data;
+        if (orphaned) return; // told once; the tab re-attaches on a new port
         if (portId === null) {
           if (msg.kind !== "attach") {
-            fatal(port, `shared-ws: expected attach, got ${msg.kind}`);
+            // A port that attached to an EARLIER instance of this worker: the
+            // browser restarted the worker and handed it the port it already
+            // had (WebKit relaunches a terminated SharedWorker for the
+            // SharedWorker objects still alive, re-sending `connect` with
+            // their ports). This instance has no attach for it — tell the tab
+            // to attach again, on a fresh port.
+            orphaned = true;
+            if (msg.kind !== "detach") {
+              post(port, { kind: "orphaned", first: msg.kind });
+            }
+            port.close();
             return;
           }
           portId = attach(port, msg);

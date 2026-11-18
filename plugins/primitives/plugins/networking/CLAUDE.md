@@ -61,6 +61,12 @@ others — there is no leader to lose. Design:
   Web Lock per port and attaches only once it is held; the worker queues for the
   same lock and, when granted, knows the tab is gone. `pagehide` always detaches
   (a bfcache'd page must not look alive); a persisted `pageshow` re-attaches.
+- **A worker the browser restarts.** WebKit relaunches a terminated
+  SharedWorker for its live tabs and re-sends `connect` with their existing
+  ports, so a fresh instance can get a port whose first message is not
+  `attach`. The host answers `orphaned` and closes it; the tab publishes
+  `port-orphaned` and re-attaches on a fresh port (bounded like an
+  eviction), and `onopen` on the new connection replays its consumers' state.
 - **Last will.** `setLastWill(frame)` — the worker sends it to the server when
   the port leaves, however it leaves. live-state registers its `unsub-tab` there.
 - **Without SharedWorker or Web Locks, the worker runs in the page.** Chrome

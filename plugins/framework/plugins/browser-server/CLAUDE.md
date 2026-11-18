@@ -80,7 +80,18 @@ version skew ("App updated — reload"). See `resource-runtime`'s `keySet`.
   after which the host answers nothing. `HostEndReason` is a closed union, one
   arm per cause — `reset`, `retired` (followed by the page), `updated`
   (another build took the storage), `unshared` (no SharedWorker: another
-  tab's own worker took it) — so a page decides by the cause. `browser-server/host-storage`'s `serveBrowserHost` builds on it.
+  tab's own worker took it), `restarted` (followed: see below) — so a page
+  decides by the cause. `browser-server/host-storage`'s `serveBrowserHost`
+  builds on it.
+- **A worker the browser restarts under its pages.** WebKit relaunches a
+  terminated SharedWorker for the pages still holding it and re-sends
+  `connect` with their EXISTING ports, so a fresh instance receives frames
+  for sockets an earlier instance opened. A page's end always introduces
+  itself first (`hello` / `inputs`), so an announced end that talks before
+  that is such a port: the host tells it `ended: "restarted"` and serves
+  nothing on it (never dropping its frames silently — on equin.ai that was
+  subs left unanswered on an "open" socket), and `DemoScope` connects again,
+  to the instance now running (same generation).
 - **`serveOverPort(port, boot)`** (worker side, `port` = the worker's `self`):
   serves the `{ server, keys, boot }` `boot` resolves to over the port — `ready`
   with its keys, its boot report (`HostBoot`: stages, plugin count, slowest

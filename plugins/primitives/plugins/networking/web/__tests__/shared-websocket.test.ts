@@ -641,4 +641,44 @@ describe("SharedWebSocket — reported recoveries", () => {
     await flush();
     expect(ws.sent).toContain("after-eviction");
   });
+
+  test("a worker the browser restarted under the tab (its port handed to a fresh instance) tells the tab, which re-attaches and replays", async () => {
+    // 2026-11-18, equin.ai on desktop Safari: "shared-ws: expected attach, got
+    // tx" — WebKit relaunched the worker and re-sent `connect` with the tab's
+    // existing port, whose next message was a frame, not an attach.
+    const hub = createTransportHub();
+    const tab = hub.tab();
+    const sws = new SharedWebSocket(URL_PATH, tab.hooks);
+    built.push(sws);
+    let opens = 0;
+    sws.onopen = () => {
+      opens++;
+    };
+    await flush();
+    hub.server.all()[0]!.open();
+    await flush();
+    expect(opens).toBe(1);
+
+    hub.workers.restart(hub.workers.names()[0]!);
+    // The consumer, unaware, sends on the port the fresh instance never
+    // attached: the frame is not lost to a fatal — the tab is told.
+    sws.send("sub-after-restart");
+    await flush();
+
+    expect(diag.find((e) => e.type === "port-orphaned")).toMatchObject({
+      type: "port-orphaned",
+      first: "tx",
+    });
+    // Re-attached on a fresh port to the fresh instance, which dials a new
+    // socket; its open re-dispatches onopen so the consumer replays its state.
+    expect(tab.ports).toHaveLength(2);
+    const fresh = hub.server.all()[1]!;
+    fresh.open();
+    await flush();
+    expect(opens).toBe(2);
+    expect(sws.readyState).toBe(1);
+    sws.send("after-restart");
+    await flush();
+    expect(fresh.sent).toContain("after-restart");
+  });
 });
