@@ -37,8 +37,9 @@ renders exactly the gateway's pre-generic plist / unit (pinned byte for byte by
 the renderer tests).
 
 A plugin declares its own in `<plugin>/login-services/index.ts` (a leaf folder,
-collected by codegen; see that sub-plugin's `CLAUDE.md`). `start` brings each
-one up after the gateway and `stop` / `stop --disable` take each one down,
+collected by codegen; see that sub-plugin's `CLAUDE.md`). `start` builds each
+one's program before the gateway (whose first boot deploys main, holding the
+build slot for minutes) and brings each one up after it, and `stop` / `stop --disable` take each one down,
 reading only the collected registry. The gateway itself is not a declaration:
 `start` gates every other step on it answering, hands over a gateway started
 outside the manager, and builds its launch from flags — so `start` drives it

@@ -587,7 +587,7 @@ describe("install.sh --dry-run, plain terminal view", () => {
     );
     expect(stamped).toContainEqual(
       expect.stringMatching(
-        /\[5\/5\] build › build the interface: 25% \(296 of 1184 plugins built\)$/,
+        /\[5\/5\] build › build the interface: 25% \(296 of 1184 plugins built\)( · .+ left)?$/,
       ),
     );
     expect(stamped).toContainEqual(

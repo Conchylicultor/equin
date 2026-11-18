@@ -370,13 +370,34 @@ what skipping costs — raw lines only in `evidence` and the log.
 
 `./equin start` brings the background service up, and its first boot
 deploys main at once (a convergence run, `build/converge`; a first deploy —
-nothing served yet — runs without the full check pass). The install's build
-step is the same convergence run (`./equin build --allow-main --converge`):
-it waits on the deploy lock for the service's run and finds main deployed, or
-deploys it itself if it got there first. It builds main on its own
-(`--skip-checks`) only when main is still not deployed at HEAD afterwards (the
-service's build of it failed — a convergence run decides a commit once), so
-that failure is the step's own output. Done = main's receipt `ok` for HEAD.
+nothing served yet — runs without the full check pass). So `start` builds
+every program a login service runs (the menu-bar icon, the disk-speed check)
+BEFORE it starts the gateway: built after, one would queue for the host's
+build slot behind main's whole first build (2026-11-18: a 5 s compile waited
+~9 min, booked to `start`), since admission on a fresh machine runs on its
+1-slot floor. A program that fails to build no longer stops the gateway: `start`
+fails naming it once equin itself is up.
+
+The install's build step is the same convergence run (`./equin build
+--allow-main --converge`): it waits on the deploy lock for the service's run
+and finds main deployed, or deploys it itself if it got there first. While it
+waits it **follows** the service's build (installer/cli `requestFollow` /
+`followableBy`): it publishes a request (`worktreeArtifacts.installFollow`,
+naming its event FIFO and its pid), and main's build — at its next sub-step or
+count — takes it, ends the step's wait, tells it the sub-steps already behind
+it (start + done with their `ms`, or skipped), and from then on reports its
+sub-steps and counts to that install as the step's own. So the build step
+shows main's build with its real sub-steps, and time left counts it as work,
+not a wait. The waiter withdraws the request once it holds the lock; a build
+that took it stamps `followedBy`, so the waiter does not report the sub-steps
+skipped after it. A stale request (its pid gone, its FIFO without a reader) is
+ignored; an install that ends mid-build (EPIPE) or stops draining its FIFO
+(EAGAIN — the build writes each event once, never waits on it: it is main's
+deploy) is let go. It builds main on
+its own (`--skip-checks`) only when main is still not deployed at HEAD
+afterwards (the service's build of it failed — a convergence run decides a
+commit once), so that failure is the step's own output. Done = main's receipt
+`ok` for HEAD.
 
 ## Estimates (`core/estimates.json`)
 
@@ -474,12 +495,14 @@ build of main per install). Remeasure start and build when that moves.
     - `emitInstallEvent`
     - `enterBuildSubStep`
     - `finishBuildSubSteps`
+    - `followableBy`
     - `installEventsOn`
     - `reportInstallNotice`
     - `reportInstallProgress`
     - `reportInstallResolved`
     - `reportInstallStall`
     - `reportInstallWait`
+    - `requestFollow`
 - Sub-plugins:
   - **`release-assets`** — What a release tag publishes for the curl install: the GitHub Actions workflow (.github/workflows/installer-release.yml) that builds the installer window per release tag, the asset names and…
   - **`waits`** — How a `./equin` command run as an install step reports a wait on another task, naming its holder from the op log: installGrantHooks (a host CPU grant wait — any CLI admission, a build's or a…

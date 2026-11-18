@@ -2,7 +2,7 @@ import {
   gatewayOriginSync,
   gatewayPortSync,
 } from "@plugins/infra/plugins/launcher/plugins/gateway-port/data-dirs";
-import { finishBuildSubSteps } from "@plugins/installer/cli";
+import { finishBuildSubSteps, followableBy } from "@plugins/installer/cli";
 import { withInstallWaits } from "./internal/install-waits";
 import { assertThisInstance } from "@plugins/infra/plugins/launcher/plugins/instance-owner/cli";
 import { InstallerNoticeError } from "@plugins/infra/plugins/launcher/plugins/installer-notice/core";
@@ -781,6 +781,11 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   // module holds a single `current`, so a second `openBuildProgress` would
   // be a silent no-op rather than a second log.
   openBuildProgress(name, readEnv("BUILD_ID") ?? null);
+  // Main's build may be what a fresh install's build step is waiting for (the
+  // background service's first deploy): an install that asks to follow it is
+  // told its sub-steps and counts as its own (installer/cli `followableBy`).
+  if (checkout.kind === "main")
+    followableBy(worktreeArtifacts.installFollow(name));
 
   // Report a predecessor that never completed, BEFORE this build overwrites
   // its receipt. Self-healing on purpose: the previous build was SIGKILLed, so

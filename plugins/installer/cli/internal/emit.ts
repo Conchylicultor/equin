@@ -1,4 +1,15 @@
-import { constants, openSync } from "node:fs";
+import {
+  constants,
+  mkdirSync,
+  openSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+  writeSync,
+} from "node:fs";
+import { dirname } from "node:path";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
+import { adoptFd, type OwnedFd } from "@plugins/packages/plugins/owned-fd/core";
 import { writeAllSync } from "@plugins/packages/plugins/blocking-write/machine";
 import {
   envName,
@@ -89,59 +100,82 @@ export function installEventsOn(): boolean {
 export function emitInstallEvent(event: InstallEventBody): void {
   const out = openSink();
   if (out === null) return;
+  writeAllSync(out.fd, eventLine(event));
+}
+
+/** One event as its line: stamped with `v` and `t`, and whole under PIPE_BUF. */
+function eventLine(event: InstallEventBody): string {
   const line = `${JSON.stringify({ v: 1, t: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"), ...event })}\n`;
   if (Buffer.byteLength(line) > PIPE_BUF)
     throw new Error(
       `install event over ${PIPE_BUF} bytes (it could interleave with another writer's): ${line.slice(0, 200)}`,
     );
-  writeAllSync(out.fd, line);
+  return line;
 }
 
 // ── Sub-steps ────────────────────────────────────────────────────────────────
 // The build's sub-steps run one after another: entering one ends the one
 // before it. A span tagged with an EARLIER sub-step than the current one (a
 // codegen span after the migrations started) stays in the current one — the
-// install's view only moves forward.
+// install's view only moves forward. Tracked whether or not anyone listens: a
+// follower that attaches mid-build is told what already happened.
 
-let current: { id: BuildSubStepId; at: number } | null = null;
-const entered = new Set<BuildSubStepId>();
+type SubStepState =
+  | { state: "running"; at: number }
+  | { state: "done" | "failed"; ms: number }
+  | { state: "skipped" };
+const subSteps = new Map<BuildSubStepId, SubStepState>();
+let current: BuildSubStepId | null = null;
 
 /** The step a report from this process is filed under: the sub-step running now, else the process's own step. */
 function reportingStep(): InstallStepId | null {
   const out = openSink();
   if (out === null) return null;
-  return current?.id ?? out.step;
+  return current ?? out.step;
+}
+
+/** Whether anyone hears this process's sub-steps and progress: its own install, or one following it. */
+function heard(): boolean {
+  return openSink() !== null || followerFd() !== null;
+}
+
+/** A sub-step event, to this process's install and to a follower. */
+function sendSubStep(event: InstallEventBody): void {
+  emitInstallEvent(event);
+  toFollower(event);
 }
 
 /** A span tagged `id` started: enter it, unless the build is already past it. */
 export function enterBuildSubStep(id: BuildSubStepId): void {
-  if (!installEventsOn()) return;
+  if (openSink() === null && followFile === null) return;
+  // A follower that asked meanwhile is told what happened so far first.
+  followerFd();
   if (current !== null) {
-    if (SUB_STEP_ORDER.indexOf(id) <= SUB_STEP_ORDER.indexOf(current.id))
-      return;
+    if (SUB_STEP_ORDER.indexOf(id) <= SUB_STEP_ORDER.indexOf(current)) return;
     endCurrent("done");
   }
   // A sub-step the build jumped over (none of its spans ran) is said to be
   // skipped, never left pending.
   for (const skipped of SUB_STEP_ORDER.slice(0, SUB_STEP_ORDER.indexOf(id)))
-    if (!entered.has(skipped)) {
-      entered.add(skipped);
-      emitInstallEvent({ type: "step", id: skipped, state: "skipped" });
+    if (!subSteps.has(skipped)) {
+      subSteps.set(skipped, { state: "skipped" });
+      sendSubStep({ type: "step", id: skipped, state: "skipped" });
     }
-  entered.add(id);
-  current = { id, at: performance.now() };
+  subSteps.set(id, { state: "running", at: performance.now() });
+  current = id;
   lastProgress = null;
-  emitInstallEvent({ type: "step", id, state: "start" });
+  sendSubStep({ type: "step", id, state: "start" });
 }
 
 function endCurrent(state: "done" | "failed"): void {
   if (current === null) return;
-  emitInstallEvent({
-    type: "step",
-    id: current.id,
-    state,
-    ms: Math.round(performance.now() - current.at),
-  });
+  const running = subSteps.get(current);
+  const ms =
+    running?.state === "running"
+      ? Math.round(performance.now() - running.at)
+      : 0;
+  subSteps.set(current, { state, ms });
+  sendSubStep({ type: "step", id: current, state, ms });
   current = null;
 }
 
@@ -150,14 +184,196 @@ function endCurrent(state: "done" | "failed"): void {
  * sub-step it never entered is said to be skipped.
  */
 export function finishBuildSubSteps(ok: boolean): void {
-  if (!installEventsOn()) return;
+  if (openSink() === null && followFile === null) return;
+  followerFd();
   endCurrent(ok ? "done" : "failed");
-  if (!ok) return;
-  for (const id of SUB_STEP_ORDER)
-    if (!entered.has(id)) {
-      entered.add(id);
-      emitInstallEvent({ type: "step", id, state: "skipped" });
+  if (ok)
+    for (const id of SUB_STEP_ORDER)
+      if (!subSteps.has(id)) {
+        subSteps.set(id, { state: "skipped" });
+        sendSubStep({ type: "step", id, state: "skipped" });
+      }
+  // Nothing more to tell a follower: let it go.
+  dropFollower();
+}
+
+// ── Following: an install's build step watching this build ──────────────────
+// A fresh install's background service deploys main itself (its first boot's
+// convergence run), and the install's build step is the same convergence run:
+// it waits for the service's. While it waits it asks to FOLLOW main's build —
+// a follow request (`InstallFollowRequest`) at a path main's build knows —
+// and the build reports to that install's stream what it would report as the
+// step itself: its sub-steps (those already behind it first) and its counts.
+// The install's step then shows main's build as its own work, not a wait.
+
+/** What an install's waiting build step publishes to be told of main's build. */
+interface InstallFollowRequest {
+  /** The install's event FIFO (its `EQUIN_INSTALL_EVENTS`). */
+  events: string;
+  /** The waiting process: a request whose process is gone is stale. */
+  pid: number;
+  /** Stamped by the build that took the request: the waiter then knows its build step was shown. */
+  followedBy?: number;
+}
+
+let followFile: string | null = null;
+let follower: OwnedFd | null = null;
+
+/**
+ * Let an install follow this build: `file` is where a waiting install step
+ * publishes its request (main's `worktreeArtifacts.installFollow`). Called by
+ * main's build before its first span; a build that is itself an install's
+ * step (its own `EQUIN_INSTALL_EVENTS`) is never followed.
+ */
+export function followableBy(file: string): void {
+  if (openSink() !== null) return;
+  followFile = file;
+}
+
+/**
+ * Ask main's build to be followed (see above): writes the request, and
+ * returns the call that withdraws it — answering whether a build took it
+ * (and so already showed the step its sub-steps). A no-op outside an install.
+ */
+export function requestFollow(file: string): () => { followed: boolean } {
+  const events = readEnv("INSTALL_EVENTS");
+  if (events === undefined || events === "") return () => ({ followed: false });
+  const request: InstallFollowRequest = { events, pid: process.pid };
+  // A fresh install's main namespace may have no dir yet (its first deploy is
+  // what makes it).
+  mkdirSync(dirname(file), { recursive: true });
+  writeFileAtomic(file, JSON.stringify(request));
+  return () => {
+    const read = readRequest(file);
+    rmSync(file, { force: true });
+    return {
+      followed:
+        read !== null &&
+        read.pid === process.pid &&
+        read.followedBy !== undefined,
+    };
+  };
+}
+
+function writeFileAtomic(file: string, text: string): void {
+  const tmp = `${file}.${process.pid}.tmp`;
+  writeFileSync(tmp, text);
+  renameSync(tmp, file);
+}
+
+function readRequest(file: string): InstallFollowRequest | null {
+  let text: string;
+  try {
+    text = readFileSync(file, "utf8");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw err;
+  }
+  const parsed: unknown = JSON.parse(text);
+  if (
+    typeof parsed !== "object" ||
+    parsed === null ||
+    typeof (parsed as InstallFollowRequest).events !== "string" ||
+    typeof (parsed as InstallFollowRequest).pid !== "number"
+  )
+    throw new Error(
+      `${file} is not an install follow request: ${text.slice(0, 200)}`,
+    );
+  return parsed as InstallFollowRequest;
+}
+
+function alive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ESRCH") return false;
+    if ((err as NodeJS.ErrnoException).code === "EPERM") return true;
+    throw err;
+  }
+}
+
+function attachedFd(): number | null {
+  return follower?.fd ?? null;
+}
+
+/** The follower's FIFO, attaching to a pending request first; null when none follows. */
+function followerFd(): number | null {
+  if (follower !== null) return follower.fd;
+  if (followFile === null) return null;
+  const request = readRequest(followFile);
+  if (
+    request === null ||
+    request.followedBy !== undefined ||
+    !alive(request.pid)
+  )
+    return null;
+  let fd: number;
+  try {
+    fd = openSync(request.events, constants.O_WRONLY | constants.O_NONBLOCK);
+  } catch (err) {
+    // The install's hub is gone (no reader: ENXIO) or its run dir is: the
+    // request is stale, and there is nobody to tell.
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === "ENXIO" || code === "ENOENT") return null;
+    throw err;
+  }
+  follower = adoptFd(fd);
+  writeFileAtomic(
+    followFile,
+    JSON.stringify({ ...request, followedBy: process.pid }),
+  );
+  catchUp();
+  // The catch-up may have found the install gone (and dropped it).
+  return attachedFd();
+}
+
+/**
+ * What a follower that attached mid-build missed: the wait it was in is over
+ * (this build is its step's work now), then every sub-step so far, in order.
+ */
+function catchUp(): void {
+  toFollower({ type: "wait", step: FOLLOWED_STEP, state: "end", on: "lock" });
+  for (const id of SUB_STEP_ORDER) {
+    const s = subSteps.get(id);
+    if (s === undefined) continue;
+    if (s.state === "skipped") {
+      toFollower({ type: "step", id, state: "skipped" });
+      continue;
     }
+    toFollower({ type: "step", id, state: "start" });
+    if (s.state !== "running")
+      toFollower({ type: "step", id, state: s.state, ms: s.ms });
+  }
+}
+
+/** The step a follower shows this build as. */
+const FOLLOWED_STEP = "build" satisfies InstallTopStepId;
+
+function toFollower(event: InstallEventBody): void {
+  const fd = attachedFd();
+  if (fd === null) return;
+  // One write, never waited out: an event is under PIPE_BUF, so the FIFO
+  // takes it whole or not at all. This build is main's deploy — a follower
+  // whose reader stopped draining (EAGAIN) or went away (EPIPE) is let go,
+  // never waited for.
+  try {
+    writeSync(fd, eventLine(event));
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code !== "EPIPE" && code !== "EAGAIN") throw err;
+    console.error(
+      `[installer] stopped reporting to the install following this build (${code})`,
+    );
+    dropFollower();
+  }
+}
+
+function dropFollower(): void {
+  const held = follower;
+  follower = null;
+  held?.close();
+  followFile = null;
 }
 
 // ── Progress and waits ───────────────────────────────────────────────────────
@@ -175,8 +391,7 @@ export function reportInstallProgress(
   total: number | null,
   unit: ProgressUnit,
 ): void {
-  const id = reportingStep();
-  if (id === null) return;
+  if (openSink() === null && followFile === null) return;
   const now = performance.now();
   const final = total !== null && done >= total;
   if (
@@ -186,13 +401,15 @@ export function reportInstallProgress(
   )
     return;
   lastProgress = { at: now, done };
-  emitInstallEvent({
-    type: "progress",
-    id,
+  if (!heard()) return;
+  const counted = {
     done,
     total: total === null ? null : Math.max(total, done),
     unit,
-  });
+  };
+  const own = reportingStep();
+  if (own !== null) emitInstallEvent({ type: "progress", id: own, ...counted });
+  toFollower({ type: "progress", id: current ?? FOLLOWED_STEP, ...counted });
 }
 
 /** The step stopped to wait on something (`start`), or resumed (`end`). */

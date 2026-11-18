@@ -31755,14 +31755,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `INSTALL_VERB`
         - **`build`** — `./equin build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
           - Cli:
-            - Uses: 70 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
+            - Uses: 72 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
               - `framework/cli/op-runtime` ×32
+              - `installer` ×5
               - `framework/cli/bootstrap` ×4
               - `framework/tooling/web-artifacts` ×4
               - `framework/cli/migrations` ×3
               - `framework/tooling/web-artifacts/served-addresses` ×3
               - `installer/waits` ×3
-              - `installer` ×3
               - `plugin-meta/plugin-records` ×3
               - `build/converge` ×2
               - `debug/profiling/op-log` ×2
@@ -41062,12 +41062,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `emitInstallEvent`
       - `enterBuildSubStep`
       - `finishBuildSubSteps`
+      - `followableBy`
       - `installEventsOn`
       - `reportInstallNotice`
       - `reportInstallProgress`
       - `reportInstallResolved`
       - `reportInstallStall`
       - `reportInstallWait`
+      - `requestFollow`
   - Plugins:
     - **`release-assets`** — What a release tag publishes for the curl install: the GitHub Actions workflow (.github/workflows/installer-release.yml) that builds the installer window per release tag, the asset names and release.json it attaches, and the check holding the workflow's tag regex to the release tag grammar.
       - Core:
@@ -43839,7 +43841,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `yieldMacrotask`
     - **`owned-fd`** — Owned file descriptors: openOwnedFd / adoptFd return an OwnedFd whose close() closes its descriptor exactly once — a second close throws FdAlreadyClosedError naming where the first happened, instead of closing whatever reused the number. Imports node:fs and the AppPath type only; enforced by the owned-fd/no-raw-fd-close lint (no fs.closeSync / fs.close outside it) and owned-fd/no-raw-spawn-stdio-fd (a spawn's stdio descriptor is an OwnedFd's .fd).
       - Cross-plugin:
-        - Imported by: 33 plugins — full list in [`plugins/packages/plugins/owned-fd/REFERENCE.md`](../plugins/packages/plugins/owned-fd/REFERENCE.md)
+        - Imported by: 34 plugins — full list in [`plugins/packages/plugins/owned-fd/REFERENCE.md`](../plugins/packages/plugins/owned-fd/REFERENCE.md)
           - `infra` ×15
           - `framework` ×7
           - `packages` ×4
@@ -43847,6 +43849,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/chord/song-index`
           - `conversations/runtime-sdk`
           - `debug/browser-recordings/writer`
+          - `installer`
           - `integrations/youtube/audio-fetch`
           - `reports/outbox`
       - Exemptions:
@@ -44367,7 +44370,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TIMED_FS_CALLS`
           - `withFsCallTally`
       - Cross-plugin:
-        - Imported by: 187 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+        - Imported by: 188 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
           - `infra` ×58
           - `framework` ×29
           - `apps` ×16
@@ -44381,13 +44384,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports` ×4
           - `config_v2` ×3
           - `release` ×3
+          - `installer` ×2
           - `integrations` ×2
           - `primitives` ×2
           - `apps-core/app-preload`
           - `code-explorer`
           - `companions/browser-extension`
           - `hints/ask`
-          - `installer/window`
           - `stats/commits`
           - `toolchain`
           - `ui/icons/icon-sets`

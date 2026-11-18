@@ -250,6 +250,14 @@ async function startSelected(
   },
 ): Promise<void> {
   const { manager, gatewayService, gateway, declared } = services;
+  // Every declared service's program BEFORE the gateway: the gateway's first
+  // boot deploys main (a convergence run, minutes of build holding the host's
+  // build slot), and a program built after it would queue behind that whole
+  // build (2026-11-18 fresh installs: the disk-speed check's 5 s compile
+  // waited 9 minutes for main's first build). Built first, nothing here waits
+  // for anything but itself.
+  const ensuredDeps =
+    manager === null ? null : await ensureServiceDeps(declared, steps);
   if (gateway) {
     // Under the lock main's follow-main step swaps the gateway with, so a
     // person's start never interleaves with an automatic restart.
@@ -275,7 +283,7 @@ async function startSelected(
     }
   }
   // Then every login service a plugin declares — none named here.
-  await startDeclaredLoginServices(manager, declared, opts, steps);
+  await startDeclaredLoginServices(manager, declared, ensuredDeps, opts, steps);
 }
 
 /**
@@ -423,16 +431,56 @@ async function reportStaleGateway(
 }
 
 /**
+ * Each selected login service's dependency, ensured from the MAIN checkout — a
+ * CLI may build in the foreground — in declaration order, before the gateway
+ * starts (see `startSelected`). A failed one is kept as its error, not thrown
+ * here: the gateway (equin itself) still starts, and `start` fails naming it
+ * once the rest is up (`startDeclaredLoginServices`).
+ */
+async function ensureServiceDeps(
+  declared: readonly LoginServiceDeclaration[],
+  steps: Steps,
+): Promise<Map<LoginServiceDeclaration, EnsuredDep>> {
+  const root = await getMainRepoRoot();
+  const ensured = new Map<LoginServiceDeclaration, EnsuredDep>();
+  for (const decl of declared) {
+    try {
+      const ready = await ensureDep(decl.dep, cliExecContext(), {
+        root,
+        log: steps.log,
+        // Run by an install: its window counts the helper's crates.
+        ...(installEventsOn()
+          ? {
+              progress: (p: DepProgress) =>
+                reportInstallProgress(p.done, p.total, p.unit),
+            }
+          : {}),
+      });
+      ensured.set(decl, { ok: true, ready });
+    } catch (error) {
+      // Whatever it was, it is thrown after the gateway is up — never lost.
+      ensured.set(decl, { ok: false, error });
+    }
+  }
+  return ensured;
+}
+
+type EnsuredDep =
+  | { ok: true; ready: Awaited<ReturnType<typeof ensureDep>> }
+  | { ok: false; error: unknown };
+
+/**
  * Every login service a plugin declares (`login-services/index.ts`, collected
- * by `infra/launcher/login-services`) that `--only` selects, after the gateway:
- * each one's dependency ensured from the MAIN checkout — a CLI may build in the
- * foreground — then reconciled (`reconcileLoginService`, the body main's boot
- * shares): held, its job (re)written, and (re)loaded when it is not running,
- * its job changed, or `--force`.
+ * by `infra/launcher/login-services`) that `--only` selects, after the gateway,
+ * from its dependency ensured before it (`ensureServiceDeps`): reconciled
+ * (`reconcileLoginService`, the body main's boot shares) — held, its job
+ * (re)written, and (re)loaded when it is not running, its job changed, or
+ * `--force`.
  */
 async function startDeclaredLoginServices(
   manager: LoginServiceManager | null,
   declared: readonly LoginServiceDeclaration[],
+  ensuredDeps: Map<LoginServiceDeclaration, EnsuredDep> | null,
   opts: Opts,
   steps: Steps,
 ): Promise<void> {
@@ -444,23 +492,22 @@ async function startDeclaredLoginServices(
     details(`no service manager for ${declared.map((d) => d.id).join(", ")}`);
     return;
   }
-  const root = await getMainRepoRoot();
   const skipped: {
     decl: LoginServiceDeclaration;
     err: BundleWriteRefusedError;
   }[] = [];
+  const failed: { decl: LoginServiceDeclaration; error: unknown }[] = [];
   for (const decl of declared) {
-    const ready = await ensureDep(decl.dep, cliExecContext(), {
-      root,
-      log: steps.log,
-      // Run by an install: its window counts the helper's crates.
-      ...(installEventsOn()
-        ? {
-            progress: (p: DepProgress) =>
-              reportInstallProgress(p.done, p.total, p.unit),
-          }
-        : {}),
-    });
+    const ensured = ensuredDeps?.get(decl);
+    if (ensured === undefined)
+      throw new Error(
+        `${decl.id}: its dependency was not ensured before the gateway started`,
+      );
+    if (!ensured.ok) {
+      failed.push({ decl, error: ensured.error });
+      continue;
+    }
+    const ready = ensured.ready;
     try {
       const { service, outcome } = await reconcileLoginService(
         manager,
@@ -507,6 +554,13 @@ async function startDeclaredLoginServices(
       without: "the menu-bar icon and app shortcuts",
     });
   }
+  // A program that failed to build, raised now that equin itself is up.
+  if (failed.length === 1) throw failed[0]!.error;
+  if (failed.length > 1)
+    throw new AggregateError(
+      failed.map((f) => f.error),
+      `${listNames(failed.map((f) => f.decl))} could not be prepared`,
+    );
 }
 
 /** "a, b and c", by the names a person knows them by. */

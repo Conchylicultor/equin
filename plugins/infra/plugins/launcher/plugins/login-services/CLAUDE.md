@@ -49,8 +49,10 @@ export default [
   off macOS) — for a service that signs bundles of its own with the identity
   `equin.app` is signed with (the menu-bar helper's app shims). Resolved by the
   reconcile like the labels, so a new identity renders a changed job.
-- `start` (after the gateway): ensures `dep` from the MAIN checkout (building
-  it in the foreground if needed), then reconciles the service under `start`
+- `start`: ensures `dep` from the MAIN checkout (building it in the
+  foreground if needed) BEFORE the gateway starts — the gateway's first boot
+  deploys main, and a build queued behind it waits minutes for the host's
+  build slot — then, after the gateway, reconciles the service under `start`
   (or `force` with `--force`).
 - **Main's backend follows main** — at boot (`machine` `onReady`) and on every
   advance of `refs/heads/main` (`machine/internal/follow-reaction.ts`, a

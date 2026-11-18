@@ -2391,6 +2391,9 @@ r_on_wait() {
       r_draw; R_PAUSED=1
     fi
   else
+    # Already closed (a followed build ends the wait it ends, and the waiter
+    # ends it again): nothing to say twice.
+    [ -n "${S_WON[i]}" ] || return 0
     local waited=$((SECONDS - S_WT0[i]))
     r_wait_close "$i"
     if [ "$MODE" = "plain" ]; then r_name "$i"; r_fmt "$waited"; r_plain "$NM: resumed after waiting $FM"; fi

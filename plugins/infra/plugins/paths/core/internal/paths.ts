@@ -463,6 +463,16 @@ export const worktreeArtifacts = {
   deployLock: (name: Namespace): AppPath =>
     joinAppPath(worktreeDataDir(name), "deploy.lock"),
   /**
+   * An install's request to follow this namespace's build
+   * (`install-follow.json`, installer/cli `requestFollow`): written by a fresh
+   * install's build step while it waits for the background service's first
+   * deploy of main, read by main's build, which then reports its sub-steps and
+   * counts to that install as the step's own. Removed by the waiter once its
+   * wait is over. No `<id>` variant: one deploy at a time per namespace.
+   */
+  installFollow: (name: Namespace): AppPath =>
+    joinAppPath(worktreeDataDir(name), "install-follow.json"),
+  /**
    * The schema-owner boot marker: `schema-owner-boot.lock`, an flock (never
    * read or written for its bytes). The namespace's serving backend holds it
    * SHARED from the top of its entry point (`serve`) until its `onReady`

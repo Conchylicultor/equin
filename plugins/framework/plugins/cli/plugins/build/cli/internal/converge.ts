@@ -38,7 +38,7 @@ const GATEWAY_FOLLOW_MODULE =
 interface GatewayFollowModule {
   followMainGateway: typeof followMainGateway;
 }
-import { finishBuildSubSteps } from "@plugins/installer/cli";
+import { finishBuildSubSteps, requestFollow } from "@plugins/installer/cli";
 import { reportLockWait } from "@plugins/installer/plugins/waits/cli";
 import { readCheckoutCompositions } from "./build-targets";
 import { waitForArtifactLock } from "./app-artifacts";
@@ -144,13 +144,20 @@ export async function runConvergence(opts: ConvergeOptions): Promise<number> {
   // Run as an install's build step, the wait for the gateway's own run (a
   // fresh install's first boot converges at once) is reported naming that
   // run's build (installer/waits) — the install reuses its work rather than
-  // building the same tree twice.
+  // building the same tree twice. And it asks to FOLLOW that build: once the
+  // build takes the request, its sub-steps and counts are this step's (the
+  // wait ends there), so the install shows main's build as it runs.
   const lockWait = reportLockWait("build");
+  const withdrawFollow = requestFollow(
+    worktreeArtifacts.installFollow(namespace),
+  );
   let deployLock: Awaited<ReturnType<typeof waitForFlock>>;
+  let followed = false;
   try {
     deployLock = await waitForFlock(worktreeArtifacts.deployLock(namespace));
   } finally {
     lockWait.end();
+    followed = withdrawFollow().followed;
   }
   const lockWaitMs = Date.now() - lockStartedAt;
   if (lockWaitMs >= 1000)
@@ -158,7 +165,7 @@ export async function runConvergence(opts: ConvergeOptions): Promise<number> {
       `waited ${Math.round(lockWaitMs / 1000)} s for the deploy lock (another convergence run held it)`,
     );
   try {
-    return await convergeAndFollow(root, checkout, namespace, log);
+    return await convergeAndFollow(root, checkout, namespace, log, followed);
   } finally {
     await deployLock.release();
   }
@@ -170,12 +177,19 @@ async function convergeAndFollow(
   checkout: Awaited<ReturnType<typeof checkoutRef>>,
   namespace: Namespace,
   log: (line: string) => void,
+  installFollowed: boolean,
 ): Promise<number> {
   let builds: { ok: true; code: number } | { ok: false; error: unknown };
   try {
     builds = {
       ok: true,
-      code: await convergeBuilds(root, checkout, namespace, log),
+      code: await convergeBuilds(
+        root,
+        checkout,
+        namespace,
+        log,
+        installFollowed,
+      ),
     };
   } catch (error) {
     builds = { ok: false, error };
@@ -244,8 +258,18 @@ async function convergeBuilds(
   checkout: Awaited<ReturnType<typeof checkoutRef>>,
   namespace: Namespace,
   log: (line: string) => void,
+  /** An install step that followed the build it waited for: its sub-steps are told. */
+  followed: boolean,
 ): Promise<number> {
   const recorder = createBuildRunRecorder(namespace);
+  // This run built nothing: another run (the gateway's own, on an install's
+  // first boot) did. Run as an install's build step that did not follow that
+  // build, its sub-steps are none of this step's work — reported skipped, so
+  // the view closes them rather than leaving them pending. A no-op outside an
+  // install.
+  const builtElsewhere = (): void => {
+    if (!followed) finishBuildSubSteps(true);
+  };
   try {
     let previous: string | null = null;
     let built = false;
@@ -373,16 +397,6 @@ async function convergeBuilds(
   } finally {
     await recorder.close();
   }
-}
-
-/**
- * This run built nothing: another run (the gateway's own, on an install's
- * first boot) did. Run as an install's build step, its sub-steps are then
- * none of this step's work — reported skipped, so the view closes them rather
- * than leaving them pending. A no-op outside an install.
- */
-function builtElsewhere(): void {
-  finishBuildSubSteps(true);
 }
 
 function slotSha(head: string | null): string {
