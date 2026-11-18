@@ -6,11 +6,11 @@
     "clone": 16,
     "toolchain": 17,
     "start": 122,
-    "build": 572,
+    "build": 114,
     "build.database": 1,
     "build.deps": 1,
     "build.codegen": 23,
-    "build.interface": 523,
+    "build.interface": 69,
     "build.deploy": 11
   }
 }

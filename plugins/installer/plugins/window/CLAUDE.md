@@ -121,7 +121,9 @@ binary through the curl stage 0 (`install.sh`), or directly.
   answers (`password` / `password-cancel`); nothing is written anywhere.
 - **Running state** (the mockup's, pixel for pixel): the status line is what
   runs now — the running sub-step, else its step — as `<doing> · <done> of
-  <total> <unit words>` when the tool gave a count (`progress`; `UNIT_WORDS`:
+  <total> <unit words>` when the tool gave a count still short of its total
+  (`progress`; a count that reached its total no longer says what the step
+  does, so it reads `<doing>…` — install.sh's terminal view likewise; `UNIT_WORDS`:
   crates are "components compiled", the same words install.sh's terminal view
   uses), else `<doing>…`; an open
   `wait` says what it waits for instead (no internal names). The caption is

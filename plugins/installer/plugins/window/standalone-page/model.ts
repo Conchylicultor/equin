@@ -536,8 +536,9 @@ function waitText(wait: Wait, now: number): string {
 
 /**
  * The running state's status line: what is happening now, with its count
- * when the tool doing it gave one (`Compiling native modules · 137 of 312`),
- * else `<doing>…`; an open wait says what it waits for instead.
+ * when the tool doing it gave one and it is still counting
+ * (`Compiling native modules · 137 of 312`), else `<doing>…`; an open wait
+ * says what it waits for instead.
  */
 export function statusText(view: InstallView, now: number): string {
   if (view.wait !== null) return waitText(view.wait, now);
@@ -553,7 +554,11 @@ export function statusText(view: InstallView, now: number): string {
       (c): c is Progress => c !== undefined && c.at >= (leaf.startedAt ?? 0),
     )
     .sort((a, b) => b.at - a.at)[0];
-  if (count === undefined || count.total === null) return `${leaf.doing}…`;
+  // A count that reached its total no longer says what the step is doing: the
+  // step runs on (other work beside what was counted), and "2,294 of 2,294"
+  // held for minutes reads as stuck (2026-11-18 fresh installs: 8 min).
+  if (count === undefined || count.total === null || count.done >= count.total)
+    return `${leaf.doing}…`;
   if (count.unit === "%") return `${leaf.doing} · ${count.done}%`;
   return `${leaf.doing} · ${countText(count.done, count.total, count.unit)}`;
 }

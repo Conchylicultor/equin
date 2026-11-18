@@ -31,15 +31,21 @@ is the policy, run by the commit being deployed:
   is a cross-language contract pinned by
   `gateway/testdata/main-deploy-failed-entry.json`.
 
-## A first deploy skips the full check pass
+## A first deploy runs with no validation gate
 
-When main's own app is due and nothing of it is served yet (the dist names no
-commit: a fresh install), the build runs with `--skip-checks`
-(`convergenceBuild`'s `skipChecks`, `cli/internal/plan.ts`). The pass is a
-gate that keeps a served app in place; with none served it can only turn "an
-app" into "no app", and the tree passed it where it was authored. On the
-2026-11-17 fresh-Mac installs it held the machine's only build slot for ~20
-minutes on the person's critical path. Every later build runs it in full.
+The convergence run passes no validation flag. The build decides for itself
+(`firstMainDeploy`, `framework/cli/build`'s `cli/run.ts`): a build in main's
+checkout whose targets have no served dist naming a commit (a fresh install)
+runs neither the full check pass nor the `--skip-checks` set (always-run
+checks + the repo type-check). Validation is a gate that keeps a served app in
+place; with none served it can only turn "an app" into "no app", and main's
+tree passed the full pass where it was authored. On the 2026-11-17 fresh-Mac
+installs the full pass held the machine's only build slot for ~20 minutes on
+the person's critical path; on 2026-11-18, with it skipped, the repo
+type-check alone was still 7–9 of the interface step's ~8–10 minutes. Every
+later build runs the full pass. Derived in the build rather than passed as a
+flag: the build is at the commit being deployed, the convergence run at the
+commit served, and a flag is a promise nothing holds its caller to.
 The install's build step reuses this run rather than building again
 (`installer` § One build of main per install).
 

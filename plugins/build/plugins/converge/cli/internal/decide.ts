@@ -34,12 +34,6 @@ export interface ConvergenceDecision {
   /** The HEAD both halves converge toward (`null`: git could not name one). */
   head: string | null;
   /**
-   * Whether this checkout's own app is served at all: the served dist names
-   * the commit it was built from. `false` is the machine's first deploy of it
-   * (a fresh install) — see `convergenceBuild` for what that changes.
-   */
-  mainServed: boolean;
-  /**
    * Whether this namespace has a `build_runs` table at all. `missing` is the
    * machine's very first build: no attempt can be recorded, so the ledger
    * cannot terminate the loop and the caller must run at most one pass.
@@ -133,8 +127,7 @@ export async function decideConvergence(i: {
     if (wants) compositions.push(item.id);
   }
 
-  const mainServed = deployment.deployable.some((c) => c.commit.resolved);
-  return { main, compositions, head, ledger, mainServed };
+  return { main, compositions, head, ledger };
 }
 
 // The build config's owning plugin — where its jsonc files live under

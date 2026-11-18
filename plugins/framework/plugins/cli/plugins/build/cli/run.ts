@@ -64,8 +64,10 @@ import {
   MAIN_WORKTREE_NAME,
   NAMESPACE_RE,
   namespaceUrl,
+  type CheckoutRef,
   type Namespace,
 } from "@plugins/infra/plugins/namespace/core";
+import { readServedDeployment } from "@plugins/build/plugins/deployment/cli";
 import { join, relative, resolve } from "path";
 import { parseMigrationAnswers } from "@plugins/framework/plugins/cli/plugins/migrations/cli";
 import { formatChangedSources } from "@plugins/framework/plugins/tooling/plugins/format/core";
@@ -518,6 +520,46 @@ interface BuildOptions {
   allowMain?: boolean;
   converge?: boolean;
   minify: boolean;
+}
+
+/**
+ * Whether this build is main's FIRST deploy — main's checkout, and no target
+ * has a served dist naming the commit it was built from (a fresh install) —
+ * and so runs with no validation gate at all: neither the full check pass nor
+ * the `--skip-checks` set.
+ *
+ * Validation is a gate in front of a deploy: a tree that fails it keeps the
+ * served app in place. With nothing served there is nothing for it to keep —
+ * it can only turn "an app" into "no app", after the longest step of the
+ * build. And main's tree passed the full pass where it was authored
+ * (`./equin push` runs it first; a release tag is cut from such a main). On a
+ * fresh install the full pass sat on the person's critical path for ~20
+ * minutes (2026-11-17 Tart VM runs); once that was skipped, the `--skip-checks`
+ * set's whole-repo type-check — nothing cached, one batch at a time to bound
+ * memory — still took 7–9 of the interface step's ~8–10 minutes on a 4-CPU VM
+ * while the interface itself built in ~1.5 (2026-11-18). Every later build of
+ * main, where a served app exists to protect, is gated as asked.
+ *
+ * Derived here, from the same fact the convergence decision reads (the served
+ * dist's `.build-commit`, `readServedDeployment`), rather than passed as a
+ * flag: a flag would be a promise its caller makes ("nothing is served, and
+ * this tree was checked") that nothing holds it to, and a contract between a
+ * convergence run and the build it spawns at another commit.
+ *
+ * Ruled out: running the pass after the first deploy in the background (a
+ * second, non-gating kind of check run, still contending for the one slot
+ * while the person makes their first moves in the app).
+ */
+async function firstMainDeploy(
+  checkout: CheckoutRef,
+  targets: readonly { namespace: Namespace }[],
+): Promise<boolean> {
+  if (checkout.kind !== "main") return false;
+  for (const target of targets) {
+    const served = await readServedDeployment(target.namespace);
+    if (served.deployable.some((c) => c.commit.resolved)) return false;
+  }
+  return true;
 }
 
 /** Every flag set beside `--converge` other than `--allow-main`, by name. */
@@ -1677,13 +1719,24 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
       // The `--skip-checks` validation set (always-run checks + one incremental
       // tsc per runtime entrypoint) is shared with the hermetic caller, so
       // neither can drift on what a fast artifact build still proves.
-      const companions: HeavyJob[] = opts.skipChecks
-        ? await fastValidationJobs({
-            root,
-            checkRunId: buildId,
-            hooks,
-          })
-        : [fullChecksJob];
+      //
+      // A main build with nothing served yet runs NO validation
+      // (`firstMainDeploy`).
+      const ungated = await firstMainDeploy(checkout, targets);
+      if (ungated)
+        console.log(
+          "[build] first deploy of main: nothing is served yet, so no validation gate " +
+            "(the tree passed the full check pass when it was pushed)",
+        );
+      const companions: HeavyJob[] = ungated
+        ? []
+        : opts.skipChecks
+          ? await fastValidationJobs({
+              root,
+              checkRunId: buildId,
+              hooks,
+            })
+          : [fullChecksJob];
 
       // The transcript, the step roster and the profile are ONE per invocation,
       // so `stepResults` is refreshed by whichever target is currently in stage

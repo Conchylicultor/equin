@@ -322,17 +322,10 @@ async function convergeBuilds(
         if (!built) builtElsewhere();
         return 0;
       }
-      log(
-        `building ${targets.join(", ")} at ${head} — ${buildId}` +
-          (build.skipChecks
-            ? " (first deploy: without the full check pass)"
-            : ""),
-      );
+      log(`building ${targets.join(", ")} at ${head} — ${buildId}`);
       const buildArgs = [
         "build",
         "--allow-main",
-        // Before --composition, whose variadic would swallow it.
-        ...(build.skipChecks ? ["--skip-checks"] : []),
         // After --allow-main: commander's variadic is greedy to the next flag.
         ...build.compositionArgs,
       ];

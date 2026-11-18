@@ -400,7 +400,8 @@ what skipping costs — raw lines only in `evidence` and the log.
 
 `./equin start` brings the background service up, and its first boot
 deploys main at once (a convergence run, `build/converge`; a first deploy —
-nothing served yet — runs without the full check pass). So `start` builds
+nothing served yet — runs no validation at all, so the build step is codegen,
+the interface and the deploy). So `start` builds
 every program a login service runs (the menu-bar icon, the disk-speed check)
 BEFORE it starts the gateway: built after, one would queue for the host's
 build slot behind main's whole first build (2026-11-18: a 5 s compile waited
@@ -424,7 +425,8 @@ skipped after it. A stale request (its pid gone, its FIFO without a reader) is
 ignored; an install that ends mid-build (EPIPE) or stops draining its FIFO
 (EAGAIN — the build writes each event once, never waits on it: it is main's
 deploy) is let go. It builds main on
-its own (`--skip-checks`) only when main is still not deployed at HEAD
+its own (`--skip-checks`; with nothing served the build runs no validation
+anyway — `build/converge` § A first deploy) only when main is still not deployed at HEAD
 afterwards (the service's build of it failed — a convergence run decides a
 commit once), so that failure is the step's own output. Done = main's receipt
 `ok` for HEAD.

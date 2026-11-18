@@ -15764,6 +15764,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `build`
           - `build/converge`
+          - `framework/cli/build`
           - `framework/cli/version`
       - Cli:
         - Exports (values): `readServedDeployment`
@@ -31826,7 +31827,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `INSTALL_VERB`
         - **`build`** — `./equin build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
           - Cli:
-            - Uses: 72 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
+            - Uses: 73 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
               - `framework/cli/op-runtime` ×32
               - `installer` ×5
               - `framework/cli/bootstrap` ×4
@@ -31839,6 +31840,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/profiling/op-log` ×2
               - `infra/git/main-slots` ×2
               - `build/central-build-id.centralBuildOf`
+              - `build/deployment.readServedDeployment`
               - `build/run-ledger.createBuildRunRecorder`
               - `build/step-baseline.judgeBuildSteps`
               - `framework/cli/build/build-steps.runBuildSteps`

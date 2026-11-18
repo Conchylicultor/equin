@@ -694,8 +694,9 @@ deploy_main() {
   fi
   echo "This version of equin is not deployed yet; building it here."
   # --skip-checks: this deploys main, whose tree already passed the full check
-  # pass when it was pushed (the cheap alwaysRun subset still runs) — the same
-  # call a first convergence run makes (build/converge plan.ts).
+  # pass when it was pushed. With nothing served yet the build runs no
+  # validation at all (firstMainDeploy, build's cli/run.ts) — the same as the
+  # service's first build.
   ./equin build --allow-main --skip-checks
 }
 
@@ -861,11 +862,11 @@ est_s() {
     clone) echo 16 ;;
     toolchain) echo 17 ;;
     start) echo 122 ;;
-    build) echo 572 ;;
+    build) echo 114 ;;
     build.database) echo 1 ;;
     build.deps) echo 1 ;;
     build.codegen) echo 23 ;;
-    build.interface) echo 523 ;;
+    build.interface) echo 69 ;;
     build.deploy) echo 11 ;;
     *) echo "install.sh: no estimate entry for step '$1'" >&2; exit 2 ;;
   esac
@@ -2888,7 +2889,9 @@ r_sub_rows() {
     [ "${S_ST[i]}" != "pending" ] || label="${C_D}$label${C_0}"
     cnt=""; right=""
     if [ "${S_ST[i]}" = "active" ] || [ "${S_ST[i]}" = "failed" ]; then
-      if [ -n "${S_PD[i]}" ]; then
+      # A count that reached its total no longer says what the step is doing
+      # (it runs on past what was counted): not shown, as in the window.
+      if [ -n "${S_PD[i]}" ] && ! { [ -n "${S_PT[i]}" ] && [ "${S_PD[i]}" -ge "${S_PT[i]}" ]; }; then
         if [ "${S_PU[i]}" = "%" ]; then cnt="${S_PD[i]}%"
         else
           unit_words "${S_PU[i]}"

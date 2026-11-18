@@ -197,6 +197,16 @@ describe("installer page model", () => {
     expect(statusText(stale, now(3))).toBe("Building the interface…");
   });
 
+  test("a count that reached its total is not shown: the step runs on past it", () => {
+    const view = fold([
+      plan(),
+      step(0, "build", "start"),
+      step(0, "build.interface", "start"),
+      count(1, "build.interface", 2294, 2294),
+    ]);
+    expect(statusText(view, now(600))).toBe("Building the interface…");
+  });
+
   test("no estimates: no time, and the bar moves by finished steps, sub-steps as fractions", () => {
     const view = fold([
       plan(),

@@ -132,8 +132,9 @@ starts the app again.
 ([`infra/deps`](../plugins/infra/plugins/deps/CLAUDE.md)), installed (~600 MB)
 the first time something needs it: the full check pass (its layout-geometry
 suite, so a build without `--skip-checks` or a `push`), an `e2e/` script, or an
-agent's `browser_*` tools. The install's build passes `--skip-checks` because
-main's tree already passed every check when it was pushed. On Linux, headless
+agent's `browser_*` tools. A first build of main, with nothing served yet,
+runs no validation at all because main's tree already passed every check when
+it was pushed. On Linux, headless
 Chromium links against system libraries a server image lacks (NSS, ATK,
 libgbm, ALSA, …); its install then fails, naming the missing libraries and the
 one root command that installs them (Playwright's own `install-deps chromium`).
