@@ -23,6 +23,7 @@ import type {
   RecomputeCost as RtRecomputeCost,
   HandoffState as RtHandoffState,
   ResumeRecord as RtResumeRecord,
+  ReplaySettled as RtReplaySettled,
 } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
 import type {
   TableChange as RtTableChange,
@@ -122,6 +123,7 @@ export type SeedOutcome = RtSeedOutcome;
 export type PersistedValueCheck = RtPersistedValueCheck;
 /** See `ResourceRuntime.handoffState`. */
 export type HandoffState = RtHandoffState;
+export type ReplaySettled = RtReplaySettled;
 /** See `ResourceRuntimeOptions.resumeEpoch`. */
 export type ResumeRecord = RtResumeRecord;
 
@@ -371,6 +373,20 @@ export function setEpochHandoffHooks(hooks: EpochHandoffHooks | null): void {
 export async function handOffEpoch(): Promise<void> {
   if (epochHandoffHooks === null) return;
   await epochHandoffHooks.write(() => runtime.handoffState());
+}
+
+/**
+ * Resolves once this backend's restart replay has settled: every sub a tab
+ * replayed from the previous process (echoing its epoch) answered and the
+ * herd quiet, or no tab replayed within the herd window, or the ceiling
+ * passed — the runtime's `replaySettled` (resource-runtime's
+ * `replay-settle.ts`). The first call arms the window, so a serving host
+ * calls it at its ready barrier (the instant the gateway swaps it in and
+ * closes the old backend's sockets) and awaits it before its post-serving
+ * background work (`serve`'s settled phase).
+ */
+export function whenReplaySettled(): Promise<RtReplaySettled> {
+  return runtime.replaySettled();
 }
 
 // The build graph this backend serves, for judging a live-resource contract

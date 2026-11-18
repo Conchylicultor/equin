@@ -8,7 +8,8 @@ Design: `research/2026-11-11-global-test-status-page.md`.
 `./equin test` (framework/cli/test) digests the files it runs before the op
 (`test/plugins/digest`) and, as the run's leader, writes one record per run to
 the host-global `test-runs` dir. Every backend ingests that dir (`machine/`
-`ingest.ts`: a watch plus one pass at boot; a pass skips opIds its database
+`ingest.ts`: a watch, plus a catch-up pass after boot as the
+`tests.ingest-catch-up` warm-up — after the tabs' restart replay; a pass skips opIds its database
 already holds; a malformed record is reported once, an unknown `v` is left for
 a newer reader). Nothing runs on push.
 
@@ -135,6 +136,7 @@ files a task about the `test-file` subject under the Tests category.
     - `defineSupervisedJob('tests.checkout-digests')`
     - `defineSupervisedJob('tests.run-now')`
     - `defineRefReaction('tests.checkout-digests (refs/heads/main)')`
+    - `defineWarmup('tests.ingest-catch-up')`
   - Routes: `POST /api/debug/tests/run-now`
 - Core:
   - Uses:

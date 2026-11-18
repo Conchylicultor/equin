@@ -1061,6 +1061,8 @@ Out of reach at this seam (DB-backed harness instead):
     - `PointBatch`
     - `ReadTags`
     - `RecomputeCost`
+    - `ReplaySettleBounds`
+    - `ReplaySettled`
     - `Resource`
     - `ResourceContract`
     - `ResourceDefinition`
@@ -1087,6 +1089,7 @@ Out of reach at this seam (DB-backed harness instead):
   - Exports (values):
     - `createResourceRuntime`
     - `diffKeyedScopedMembership`
+    - `REPLAY_SETTLE_BOUNDS`
     - `ResourceGuardError`
     - `retainSnapEncoder`
 - Cross-plugin:

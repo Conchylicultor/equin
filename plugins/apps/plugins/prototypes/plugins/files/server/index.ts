@@ -24,6 +24,7 @@ import {
   handlePrototypeVersionFile,
 } from "./internal/serve-file";
 import {
+  adoptHistoriesWarmup,
   startPrototypesWatcher,
   stopPrototypesWatcher,
 } from "./internal/watcher";
@@ -102,6 +103,7 @@ export default {
       handlePrototypeVersionFile,
     ),
   },
+  register: [adoptHistoriesWarmup],
   contributions: [
     IdKinds.Kind({ kind: protoIdKind }),
     ...prototypesListServed.declare,

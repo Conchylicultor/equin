@@ -225,7 +225,9 @@ export interface ServerPluginDefinition {
   /**
    * Called once on a SERVING host (the desktop's `serve`, the browser host)
    * after `onAllReady` — and, in the browser, the seed — while the host is
-   * already serving; never in `exec`. Runs in parallel across plugins; a
+   * already serving; never in `exec`. On the desktop, only once the open
+   * tabs' restart replay has settled (`whenReplaySettled`), so post-serving
+   * work never competes with the reads every tab waits on after a restart. Runs in parallel across plugins; a
    * rejection is reported, never fatal (as `onReady`).
    *
    * Not a home for new post-serving work: declare a `defineWarmup`

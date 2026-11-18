@@ -8156,6 +8156,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
               - `infra/endpoints.rawEndpointHandler`
+              - `infra/warmup.defineWarmup`
               - `network/live.serveValue`
             - Exports (types):
               - `CheckpointInput`
@@ -8185,6 +8186,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `readPrototypeMeta`
               - `readPrototypeTitle`
               - `settlePrototypesWatcher`
+            - Register: `defineWarmup('prototypes.adopt-histories')`
             - Resources:
               - `prototypes.history` (push, notified, whole: one prototype's recorded versions — one per agent turn that changed it, read whole by the version stepper, whole: the options one prototype's index.html declares — a handful of hand-written lines, whole: the values one hand-written <meta name="prototype-option"> line declares — a handful)
               - `prototypes.list` (push, notified, whole: every prototype folder on disk — each made by hand, and the gallery lists, filters and groups them all, whole: the options one prototype's index.html declares — a handful of hand-written lines, whole: the ways one prototype folder breaks the contract — a handful of checks, whole: the values one hand-written <meta name="prototype-option"> line declares — a handful)
@@ -28560,6 +28562,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineSupervisedJob('tests.checkout-digests')`
           - `defineSupervisedJob('tests.run-now')`
           - `defineRefReaction('tests.checkout-digests (refs/heads/main)')`
+          - `defineWarmup('tests.ingest-catch-up')`
         - Routes: `POST /api/debug/tests/run-now`
       - Core:
         - Uses:
@@ -32526,6 +32529,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ProfilerSpanDetail`
           - `Registration`
           - `ReplayScope`
+          - `ReplaySettled`
           - `ResourceContract`
           - `ResourceDefinition`
           - `ResourceDeliveryObserver`
@@ -32644,6 +32648,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `validatePersistedValue`
           - `visitorReadable`
           - `visitorReadsTuple`
+          - `whenReplaySettled`
           - `withNotifyBatch`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
@@ -40947,13 +40952,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WarmupHost`
           - `warmupRunOf`
       - Cross-plugin:
-        - Imported by: 28 plugins — full list in [`plugins/infra/plugins/warmup/REFERENCE.md`](../plugins/infra/plugins/warmup/REFERENCE.md)
+        - Imported by: 30 plugins — full list in [`plugins/infra/plugins/warmup/REFERENCE.md`](../plugins/infra/plugins/warmup/REFERENCE.md)
+          - `apps` ×7
           - `tasks` ×7
-          - `apps` ×6
           - `infra` ×5
           - `conversations` ×3
+          - `debug` ×2
           - `database/lock-watch`
-          - `debug/config-orphans`
           - `page/links`
           - `plugin-meta/plugin-tree`
           - `reports/engine`
@@ -43712,6 +43717,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PointBatch`
               - `ReadTags`
               - `RecomputeCost`
+              - `ReplaySettleBounds`
+              - `ReplaySettled`
               - `Resource`
               - `ResourceContract`
               - `ResourceDefinition`
@@ -43738,6 +43745,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `createResourceRuntime`
               - `diffKeyedScopedMembership`
+              - `REPLAY_SETTLE_BOUNDS`
               - `ResourceGuardError`
               - `retainSnapEncoder`
           - Cross-plugin:

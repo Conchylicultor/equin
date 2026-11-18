@@ -460,6 +460,7 @@ function printIteration(it: IterationResult): void {
     "runMigrations",
     "routePopulation",
     "socketBind",
+    "replaySettle",
     "settled",
   ]) {
     const s = phase(id);

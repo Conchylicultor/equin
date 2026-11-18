@@ -48,6 +48,8 @@ export type {
 } from "./runtime";
 export { diffKeyedScopedMembership, retainSnapEncoder } from "./keyed-diff";
 export { ResourceGuardError } from "./guard-error";
+export { REPLAY_SETTLE_BOUNDS } from "./replay-settle";
+export type { ReplaySettled, ReplaySettleBounds } from "./replay-settle";
 export type {
   KeyedDiff,
   KeyedMembershipInput,

@@ -8,6 +8,7 @@ import {
 } from "@plugins/infra/plugins/file-watcher/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { createCoalescer } from "@plugins/packages/plugins/coalesce/core";
+import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import {
   TEST_RUN_RECORD_VERSION,
   TestRunRecordSchema,
@@ -19,7 +20,9 @@ import { ingestedOpIds, ingestRunRecord } from "../../server";
 // The harvest's ingest on THIS backend: every `./equin test` run on the host
 // leaves a record in the host-global records dir; each serving backend reads
 // the ones its database has not seen into its own tables. One serialized pass
-// at boot, on every change in the dir, and when the watch reports lost events.
+// on every change in the dir, when the watch reports lost events, and once
+// after boot as a warm-up (the catch-up for what was written while no backend
+// watched — after the tabs' restart replay, never inside it).
 // Every backend (not one drainer): a worktree's page shows real data while it
 // is developed, with no lock and no delete to race.
 
@@ -128,18 +131,35 @@ export function ingestRunRecordsNow(): Promise<void> {
   return passes.run();
 }
 
-/** Boot: one pass (awaited), then watch; a write between the two is caught by the pass after subscribing. */
+/**
+ * Boot: watch the dir. The catch-up pass is {@link ingestCatchUpWarmup},
+ * which runs after the subscribe, so a record written before it is in that
+ * pass and one written after it is seen by the watch.
+ */
 export async function startIngest(): Promise<void> {
   if (watcher) return;
-  await passes.run();
   const dir = await testRunRecordsDir.ensure();
   watcher = await testRunRecordsWatcher.start({
     dirs: [dir],
     onChange: () => passes.run(),
     onLost: () => passes.run(),
   });
-  passes.trigger();
 }
+
+/**
+ * The boot catch-up: every record written while this backend was down. A
+ * warm-up, not part of `onReady`: nobody waits on it (Run now's idle runner
+ * asks `ingestRunRecordsNow` itself), and on main it read the whole records
+ * dir in the seconds every tab replays its subscriptions after a restart
+ * (5.5 s, 2026-11-18). Every backend: each ingests into its own database.
+ */
+export const ingestCatchUpWarmup = defineWarmup({
+  name: "tests.ingest-catch-up",
+  description:
+    "Reads the test runs recorded while this server was down into the Tests page.",
+  scope: "worktree",
+  run: () => passes.run(),
+});
 
 export async function stopIngest(): Promise<void> {
   if (!watcher) return;

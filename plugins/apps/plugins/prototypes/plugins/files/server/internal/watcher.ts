@@ -8,6 +8,7 @@ import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { createCoalescer } from "@plugins/packages/plugins/coalesce/core";
 import { yieldMacrotask } from "@plugins/packages/plugins/macrotask-yield/core";
+import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import { protoIdKind } from "../../core";
 import {
   adoptPrototypeHistories,
@@ -26,6 +27,32 @@ import { prototypeRecords } from "./tree-records";
 // Background-catalog entry `prototypes-files.tree`); in a browser host, the
 // memory store's own change feed.
 
+/**
+ * Every prototype that predates version history gets its `v0` — once; after
+ * that this is a stat per prototype. A warm-up, not part of the watcher's
+ * start: nobody waits on it, and at boot it ran in the seconds every open tab
+ * replays its subscriptions after a restart (6.9 s on main, 2026-11-18),
+ * taking the same file and git capacity the replay reads with. The watcher
+ * still adopts a folder that appears later (`refreshOnce`). Host scope: the
+ * tree is the machine's, shared by every backend (the store's per-repo lock
+ * made exactly one of them win each prototype when each raced to do it).
+ */
+export const adoptHistoriesWarmup = defineWarmup({
+  name: "prototypes.adopt-histories",
+  description:
+    "Gives every prototype made before version history its first version, so its history opens with one.",
+  scope: "host",
+  run: async () => {
+    try {
+      await adoptPrototypeHistories();
+    } finally {
+      // A repo is born by renaming a stamped staging dir into place, which
+      // need not surface as a watch event: the counts re-read here.
+      prototypeVersionCountsServed.notify();
+    }
+  },
+});
+
 let subscription: DataWatch | null = null;
 let started = false;
 
@@ -33,7 +60,7 @@ const listeners: ((changed: readonly string[]) => void)[] = [];
 
 /**
  * The watcher's work in flight — each delivered change until its handling
- * settles, and the boot adoption — and who waits for it to reach zero
+ * settles, and the boot baseline — and who waits for it to reach zero
  * ({@link settlePrototypesWatcher}).
  */
 let busy = 0;
@@ -254,14 +281,6 @@ export async function startPrototypesWatcher(): Promise<void> {
   const baseline = Promise.withResolvers<void>();
   baselineRead = baseline.promise;
   seenDuringBaseline = new Set();
-
-  // Every prototype that predates version history gets its `v0` — once; after
-  // that this is a stat per prototype. Not awaited: boot need not wait on a few
-  // hundred milliseconds of git, and every backend on the box races to do it
-  // (the store's per-repo lock makes exactly one of them win each prototype).
-  void runTracked("prototypes:adopt-histories", () =>
-    tracked(adoptPrototypeHistories()),
-  );
 
   try {
     subscription = await prototypesFiles.watch(onTreeChange);

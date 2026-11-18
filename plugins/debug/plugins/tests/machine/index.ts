@@ -6,6 +6,7 @@ import {
   digestsOnMainAdvance,
 } from "./internal/checkout-digests";
 import {
+  ingestCatchUpWarmup,
   startIngest,
   stopIngest,
   testRunRecordsWatcher,
@@ -17,7 +18,7 @@ export { ingestRunRecordsNow } from "./internal/ingest";
 
 export default {
   description:
-    "Debug → Tests, desktop-only half: ingests the host-global test-run records into this backend's tables (a watch on the records dir, one pass at boot), keeps the checkout's test digests current while the page is open (the tests.checkout-digests supervised job, asked on subscribe and on every advance of main, behind the tests.digest-generation value), and runs Run now's `./equin test` as the tests.run-now supervised job.",
+    "Debug → Tests, desktop-only half: ingests the host-global test-run records into this backend's tables (a watch on the records dir, and a catch-up pass after boot as a warm-up), keeps the checkout's test digests current while the page is open (the tests.checkout-digests supervised job, asked on subscribe and on every advance of main, behind the tests.digest-generation value), and runs Run now's `./equin test` as the tests.run-now supervised job.",
   httpRoutes: {
     [runTestsNow.route]: handleRunNow,
   },
@@ -26,6 +27,7 @@ export default {
     checkoutDigestsJob,
     runNowJob,
     digestsOnMainAdvance,
+    ingestCatchUpWarmup,
   ],
   contributions: [...digestGenerationServed.declare],
   onReady: startIngest,

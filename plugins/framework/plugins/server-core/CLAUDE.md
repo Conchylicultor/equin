@@ -24,6 +24,13 @@ there, not in a composition root, unless it is genuinely serve-only.
   `onReady`, `onAllReady`), signal handlers and the orphan poll, then the
   settled phase (`runSettledPhase`: every plugin's `onSettled` — the warm-up
   drain) — last, so a SIGTERM during a long drain shuts the backend down.
+  The settled phase waits for the open tabs' restart replay to settle
+  (`whenReplaySettled`, armed at `markServerReady` — the gateway's swap,
+  which closes the old backend's sockets): every sub echoing the previous
+  boot's epoch answered and 2 s quiet, else 3 s with no replay, at most
+  30 s (resource-runtime's `replay-settle.ts`; the boot profile's
+  `replaySettle` span). Post-serving work never takes the read gates, pool
+  and event loop the replay needs; nothing interactive waits on it.
 - **`exec`** — a short-lived process that runs ONE registered piece of work and
   exits (`cli/run-exec.ts`, exported as `runExec` from
   `@plugins/framework/plugins/server-core/cli`). Runs load waves,
@@ -66,6 +73,7 @@ there, not in a composition root, unless it is genuinely serve-only.
 | `markServerReady()`                            | yes     | no     | no        |
 | change-feed assertion (D3), `onReady` / `onAllReady` | yes | no   | yes       |
 | seed (after the post-ready phases, before serving) | no  | no     | yes       |
+| wait for the restart replay to settle          | yes     | no     | no        |
 | settled phase (`onSettled`: the warm-up drain) | yes     | no     | yes (not awaited) |
 | process crash listeners (before the graph loads) | yes | yes    | no        |
 | QoS boost, signal handlers, orphan-exit poll   | yes     | no     | no        |
@@ -600,6 +608,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `ProfilerSpanDetail`
     - `Registration`
     - `ReplayScope`
+    - `ReplaySettled`
     - `ResourceContract`
     - `ResourceDefinition`
     - `ResourceDeliveryObserver`
@@ -718,6 +727,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `validatePersistedValue`
     - `visitorReadable`
     - `visitorReadsTuple`
+    - `whenReplaySettled`
     - `withNotifyBatch`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`

@@ -45,6 +45,7 @@ import {
 import { ResourceGuardError } from "./guard-error";
 import { createLingerLedger, type LingerEnd } from "./linger-ledger";
 import { createAnswerLedger } from "./answer-ledger";
+import { createReplaySettle, type ReplaySettled } from "./replay-settle";
 import {
   isMintedPlan,
   routeTuple,
@@ -3076,6 +3077,13 @@ export interface ResourceRuntime {
    * out, and loads in the successor.
    */
   handoffState: () => HandoffState;
+  /**
+   * Resolves once the restart replay has settled — every sub echoing another
+   * boot's epoch answered and the herd quiet — or no tab replayed, or the
+   * ceiling passed (`replay-settle.ts`). The first call arms the herd window
+   * and the ceiling: call it at the ready barrier. One-shot per process.
+   */
+  replaySettled: () => Promise<ReplaySettled>;
 }
 
 /** The L2 row a boot seed restores: its catch-up floor and when a replace last set it. */
@@ -3468,6 +3476,39 @@ export function createResourceRuntime(
   // loading, answered — for a tab whose sub went unanswered (the answer
   // trail, `GET …/_answer`). Wall clock: the tab sets it against its own.
   const answerLedger = createAnswerLedger(() => Date.now());
+  // When the restart replay — the subs echoing another boot's epoch — has
+  // been answered (`replay-settle.ts`): what a serving host waits on before
+  // its post-serving background work. A request stops being owed when its
+  // answer leaves (`noteSent`), its socket closes, or its tab no longer
+  // awaits an answer for the tuple on that socket (an unsub, a later request
+  // for the tuple answered under its own id).
+  const replaySettle = createReplaySettle<SocketState>({
+    now: () => Date.now(),
+    stillOwed: (state, tabId, tuple) => {
+      if (!sockets.has(state.ws)) return false;
+      if (state.pendingSubs.has(tuple)) return true;
+      const cut = tuple.indexOf("\u0000");
+      const rec = state.subs
+        .get(tuple.slice(0, cut))
+        ?.get(tuple.slice(cut + 1));
+      return rec?.awaiting.has(tabId) === true;
+    },
+  });
+  // A request of the restart replay: a tagged sub echoing ANOTHER boot's
+  // epoch (a tab that was connected to an earlier process).
+  function noteReplayRequest(
+    state: SocketState,
+    epoch: unknown,
+    tabId: unknown,
+    id: unknown,
+    key: string,
+    params: ResourceParams,
+  ): void {
+    if (typeof epoch !== "string" || epoch === bootEpoch) return;
+    if (typeof tabId !== "string" || tabId === "" || typeof id !== "number")
+      return;
+    replaySettle.owe(state, tabId, id, `${key}\u0000${paramsKey(params)}`);
+  }
   // The flush scheduler, as ONE state whose every transition is synchronous:
   //   idle    — nothing pending a flush;
   //   queued  — a `flushNotifies` microtask is pending;
@@ -6861,6 +6902,33 @@ export function createResourceRuntime(
     }
   }
 
+  // An answer left on `state`: the replay request it names is no longer owed.
+  function noteReplayAnswer(state: SocketState, obj: ServerFrame): void {
+    switch (obj.kind) {
+      case "up-to-date-batch":
+        if (obj.tabId === undefined) return;
+        for (const e of obj.entries) {
+          if (e.id !== undefined) replaySettle.answered(state, obj.tabId, e.id);
+        }
+        return;
+      case "sub-ack":
+      case "up-to-date":
+      case "sub-error":
+        if (obj.tabId !== undefined && obj.id !== undefined) {
+          replaySettle.answered(state, obj.tabId, obj.id);
+        }
+        return;
+      // Not an answer to a request: a push, a ping.
+      case "update":
+      case "delta":
+      case "patch":
+      case "invalidate":
+      case "ack":
+      case "ping":
+        return;
+    }
+  }
+
   function noteSent(
     state: SocketState,
     obj: ServerFrame,
@@ -6870,6 +6938,7 @@ export function createResourceRuntime(
   ): void {
     const position = state.framesSent++;
     noteAnswer(obj);
+    noteReplayAnswer(state, obj);
     // An answer settles its asker's wait (`SocketSubRecord.awaiting`).
     if (obj.kind === "up-to-date-batch") {
       if (obj.tabId !== undefined) {
@@ -9098,6 +9167,16 @@ export function createResourceRuntime(
           const m = msg as ReceivedFrame<"sub">;
           m.params = canonicalFor(m.key, m.params);
           noteReceived(m.tabId, m.id);
+          if (m.key) {
+            noteReplayRequest(
+              state,
+              m.epoch,
+              m.tabId,
+              m.id,
+              m.key,
+              m.params ?? {},
+            );
+          }
           void handleSub(state, m);
           return;
         }
@@ -9111,6 +9190,16 @@ export function createResourceRuntime(
               if (e !== null && typeof e === "object") {
                 e.params = canonicalFor(e.key, e.params);
                 noteReceived(m.tabId, e.id);
+                if (e.key) {
+                  noteReplayRequest(
+                    state,
+                    m.epoch,
+                    m.tabId,
+                    e.id,
+                    e.key,
+                    e.params ?? {},
+                  );
+                }
               }
             }
           }
@@ -9121,6 +9210,7 @@ export function createResourceRuntime(
           const m = msg as ReceivedFrame<"unsub">;
           m.params = canonicalFor(m.key, m.params);
           handleUnsub(state, m);
+          replaySettle.released();
           return;
         }
         case "sub-acks": {
@@ -9142,6 +9232,7 @@ export function createResourceRuntime(
           releaseTabSubs(state, tabId);
           cancelPendingSubs(state, { tabId });
           releaseDetachedTab(tabId, "unsub-tab", state.caller);
+          replaySettle.released();
           return;
         }
       }
@@ -9156,6 +9247,7 @@ export function createResourceRuntime(
       heartbeats.delete(ws);
       const state = sockets.get(ws);
       sockets.delete(ws);
+      if (state) replaySettle.closed(state);
       // A sub still waiting on its access decision never registers on a closed
       // socket: nothing would release it (its linger is armed only for what is
       // held now), and its tab replays it on its next socket.
@@ -12261,6 +12353,7 @@ export function createResourceRuntime(
     keptSnapshotValue,
     dropPendingPersists,
     handoffState,
+    replaySettled: () => replaySettle.settled(),
     readGateStats: () => readLoadGate.stats(),
     readSpawnGateStats: () => readSpawnGate.stats(),
   };

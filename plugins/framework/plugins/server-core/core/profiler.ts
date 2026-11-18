@@ -15,6 +15,10 @@ export type PhaseId =
   | "onReadyBlocking"
   | "onReady"
   | "onAllReady"
+  // The desktop serving host's wait for the tabs' restart replay to settle
+  // (`serve`, before the settled phase): one `replaySettle` span from the
+  // ready barrier's arming to the replay's settle.
+  | "replaySettle"
   // The serving host's settled phase (`runSettledPhase`), after the onAllReady
   // barrier: `settled` is the wrapping span — its presence marks a complete
   // boot profile — each plugin's hook an `onSettled:<id>` span, and each

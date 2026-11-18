@@ -11,6 +11,17 @@ like `defineJob`.
   signal handlers are installed, the browser host without blocking readiness
   (`BrowserHost.settled`). No composition root names warm-ups, and an `exec`
   child has no path to the settled phase, so it never runs one.
+- **Never inside the restart replay.** On the desktop, `serve` awaits the
+  tabs' restart replay before the settled phase (server-core's
+  `whenReplaySettled`, resource-runtime's `replay-settle.ts`): armed at the
+  ready barrier (when the gateway swaps the backend in and closes the old
+  one's sockets), it settles once every sub echoing the previous process's
+  epoch is answered and the herd has been quiet 2 s — or 3 s with no replay,
+  or at a 30 s ceiling. So no warm-up — nor any other `onSettled` — runs
+  while ~15 tabs replay their ~3,500 subscriptions through the same gates,
+  pool and event loop; the boot profile shows the wait as its
+  `replaySettle` span. Interactive reads never wait on it. A browser host
+  has no restart replay and drains at once.
 - **Admission is the host's answer** — the `WarmupHost` host service
   (`warmup.host`): `runs(scope)` and `withSlot(fn)`. Never `isMain()`: a browser
   host's namespace is its composition name, so `isMain()` is false there and
@@ -67,13 +78,13 @@ like `defineJob`.
     - `WarmupHost`
     - `warmupRunOf`
 - Cross-plugin:
-  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 30 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×7
     - `tasks` ×7
-    - `apps` ×6
     - `infra` ×5
     - `conversations` ×3
+    - `debug` ×2
     - `database/lock-watch`
-    - `debug/config-orphans`
     - `page/links`
     - `plugin-meta/plugin-tree`
     - `reports/engine`

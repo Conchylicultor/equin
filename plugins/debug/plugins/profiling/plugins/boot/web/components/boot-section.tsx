@@ -34,6 +34,7 @@ const PHASE_ORDER = [
   "onReady",
   "onAllReady",
   "step",
+  "replaySettle",
   "settled",
   "onSettled",
 ];
@@ -83,6 +84,11 @@ const PHASE_CONFIG: Record<string, PhaseConfig> = {
     label: "onAllReady (parallel)",
     color: "bg-categorical-8",
     bg: "bg-categorical-8/10",
+  },
+  replaySettle: {
+    label: "Restart replay settled (the settled phase waits for it)",
+    color: "bg-categorical-6",
+    bg: "bg-categorical-6/10",
   },
   settled: {
     label: "Settled",

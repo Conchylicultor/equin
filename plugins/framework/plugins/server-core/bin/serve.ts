@@ -17,6 +17,7 @@ import {
   markServerReady,
   markServerSettled,
   handOffEpoch,
+  whenReplaySettled,
 } from "@plugins/framework/plugins/server-core/core";
 import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import type {
@@ -402,6 +403,16 @@ export async function serve({
     beforeReadyBarrier: installRoutes,
   });
   markServerReady();
+  // ── The restart replay's window opens here ───────────────────────
+  // Ready is when the gateway swaps this backend in and closes the old one's
+  // WebSockets, so every open tab reconnects now and replays its whole sub
+  // set. Armed here, awaited before the settled phase below.
+  const endReplaySpan = profilerStart(
+    "replaySettle",
+    "replaySettle",
+    "Restart replay settled",
+  );
+  const replaySettled = whenReplaySettled();
 
   // ── Leave darwinbg (every backend, once ready) ───────────────────
   // The gateway spawns a background-started backend under `taskpolicy -b` so its
@@ -466,6 +477,15 @@ export async function serve({
   // warm-up drains here (infra/warmup's `onSettled`). LAST, after the signal
   // handlers and the orphan poll are installed, so a SIGTERM during a long drain
   // shuts the backend down instead of waiting for it.
+  //
+  // It waits for the tabs' restart replay to settle first (resource-runtime's
+  // `replay-settle.ts`): the warm-ups take the same read gates, DB pool and
+  // event loop the replay needs, and nobody waits on them — the tabs wait on
+  // the replay. Once, here, so every `onSettled` (every warm-up, current and
+  // future) starts after it, and no tab's read ever waits on it.
+  const replay = await replaySettled;
+  endReplaySpan();
+  console.log(`[boot] restart replay settled: ${JSON.stringify(replay)}`);
   await runSettledPhase(ordered);
   // Every boot phase ran in THIS process: `/api/health` now says `settled`,
   // the instant a deploy counts as having stayed up (build's deploy-namespace).

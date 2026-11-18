@@ -173,10 +173,12 @@ stamped staging dir into place, which need not surface as a `latest.json`
 event.
 
 Adoption: `mintPrototype` calls `ensureHistory` (v0 = the page as minted — the
-title is stamped in the staging copy, before the folder is visible); boot and
-every real tree change run `adoptAll`, so the prototypes that predate history,
-and any folder made by hand, get a v0. Every backend races to do it; the lock
-makes one win.
+title is stamped in the staging copy, before the folder is visible); every
+real tree change runs `adoptAll` (any backend whose watcher saw it — the lock
+makes one win), and so does main's boot, as the `prototypes.adopt-histories`
+warm-up (host scope: drained after the tabs' restart replay settles, never
+inside it) — so the prototypes that predate history, and any folder made by
+hand, get a v0.
 
 ## Option picks (`shared/picks.ts`)
 
@@ -579,6 +581,7 @@ for the `checkpoints` plugin's end-of-turn job, and the history contract
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/endpoints.rawEndpointHandler`
+    - `infra/warmup.defineWarmup`
     - `network/live.serveValue`
   - Exports (types):
     - `CheckpointInput`
@@ -608,6 +611,7 @@ for the `checkpoints` plugin's end-of-turn job, and the history contract
     - `readPrototypeMeta`
     - `readPrototypeTitle`
     - `settlePrototypesWatcher`
+  - Register: `defineWarmup('prototypes.adopt-histories')`
   - Resources:
     - `prototypes.history` (push, notified, whole: one prototype's recorded versions — one per agent turn that changed it, read whole by the version stepper, whole: the options one prototype's index.html declares — a handful of hand-written lines, whole: the values one hand-written <meta name="prototype-option"> line declares — a handful)
     - `prototypes.list` (push, notified, whole: every prototype folder on disk — each made by hand, and the gallery lists, filters and groups them all, whole: the options one prototype's index.html declares — a handful of hand-written lines, whole: the ways one prototype folder breaks the contract — a handful of checks, whole: the values one hand-written <meta name="prototype-option"> line declares — a handful)
