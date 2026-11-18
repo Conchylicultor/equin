@@ -1,6 +1,7 @@
 export {
   SPEND_SOURCE_PREFIX,
   UNKNOWN_ACCOUNT,
+  claudeLoginAccountId,
   cliSpendSource,
   conversationSpendSource,
   sessionSpendSource,

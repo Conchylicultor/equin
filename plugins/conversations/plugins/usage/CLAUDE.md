@@ -97,8 +97,9 @@ in force then. Design:
   live pass (`requestUsageSync` with written sessions) files under the account
   the conversation's runtime runs its agent on now
   (`conversationRunningAccount`; after the agent exits, the last one this
-  process saw); a session's live pass under the active account; a job pass
-  under `UNKNOWN_ACCOUNT`. Read as `conversations.usage.account-spend` (one
+  process saw); a job pass under `UNKNOWN_ACCOUNT`. A `session:` source (a
+  session equin did not launch) files what its transcript says, live or job
+  alike — see "Sessions equin did not launch" below. Read as `conversations.usage.account-spend` (one
   account, one UTC month — a clock param the reader pins): the priced hours
   summed per UTC day, every source, plus `claude_account_spend_carryover` —
   the legacy dollar ledger's `unattributed` dollars (2026-11-13 → 15, per
@@ -119,6 +120,28 @@ in force then. Design:
   queued by the warm-up: every session file with no scan row or grown past it,
   one `conversations.usage.session-sync` job each, in the transcript-read lane
   the conversation sync shares). Reads go a chunk (8 MiB) at a time.
+
+  **Account: the transcript's `session-owner` record.** Claude Code (since
+  ~2.1.319) writes `{"type":"session-owner","accountUuid","organizationUuid"}`
+  in the metadata block it re-appends through a session (start, around
+  turns, exit): the claude.ai login (`~/.claude.json`'s `oauthAccount`) the
+  session runs on — kept for the session's life, restored on resume, written
+  anew when the session moves to another login. It writes none for a session
+  on `CLAUDE_CODE_OAUTH_TOKEN` (an equin added account) or an API key, nor in
+  a sub-agent's transcript. Each entry is filed under the last record before
+  it (`scanTranscript` cuts the count at each new owner; the scan row keeps
+  `owner` across reads; a sub-agent follows its session file): the system
+  account when that login is the computer's login now (accounts'
+  `readSystemLogin`), else `claudeLoginAccountId(uuid)` (`claude-login:<uuid>`
+  — a setup-token credential cannot read its own account uuid, so no added
+  account can be matched); no record before it, `UNKNOWN_ACCOUNT`. Never the
+  active account: a session equin did not launch runs on whatever its
+  terminal or Claude Desktop is signed into. Rows written before owners were
+  read (`owner_tracked` false) are recounted whole once (the backfill queues
+  them) while all their files are on disk; with a file gone they keep what
+  they filed. Whether equin launched a session stays the session-chain test,
+  not the transcript's `entrypoint` (`sdk-ts` is any Agent SDK client, and
+  equin's chain record is exact).
 
   **Adoption.** The reconciler records a launched agent's session id only once
   its transcript exists, so an equin session's first appends may be counted
@@ -221,6 +244,8 @@ in force then. Design:
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/subagents.listSubagentEntries`
     - `conversations/conversation-view/jsonl-viewer/subagents.subagentDirOf`
+    - `infra/claude-cli/accounts.readSystemLogin`
+    - `infra/claude-cli/accounts.SystemLogin`
     - `network/live.serveValue`
   - Register:
     - `defineJob('conversations.usage.sync')`

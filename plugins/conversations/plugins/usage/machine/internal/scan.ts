@@ -33,7 +33,8 @@ const decoder = new TextDecoder();
 
 /**
  * Fold the complete lines of `path` between `start` (a line start) and `size`
- * into `fold`, a chunk at a time. A trailing line with no newline yet is torn
+ * into `fold`, a chunk at a time — each parsed line shown to `beforeLine`
+ * first, if given. A trailing line with no newline yet is torn
  * (Claude is mid-append) and left for the next read. Returns the offset of the
  * first line not folded, and the hashes of the entries counted, oldest first.
  */
@@ -42,6 +43,7 @@ async function foldAppended(
   start: number,
   size: number,
   fold: UsageBuckets,
+  beforeLine?: (line: unknown) => void,
 ): Promise<{ offset: number; hashes: string[] }> {
   const hashes: string[] = [];
   const file = Bun.file(path);
@@ -68,6 +70,7 @@ async function foldAppended(
         if (!(err instanceof SyntaxError)) throw err;
         continue;
       }
+      beforeLine?.(line);
       const counted = foldUsageEntry(fold, line);
       if (counted?.kind === "entry" && counted.hash) hashes.push(counted.hash);
     }
@@ -190,8 +193,9 @@ export async function advanceFile(
 
 /**
  * One transcript's scan state as `claude_transcript_scans` holds it: how far
- * it was read and its last counted entries — no buckets, no dollars. What it
- * counted lives in the token ledger, filed as each read's delta.
+ * it was read, its last counted entries — no buckets, no dollars; what it
+ * counted lives in the token ledger, filed as each read's delta — and the
+ * claude.ai login in force where it stopped reading (`owner`).
  */
 export interface TranscriptScan {
   path: string;
@@ -199,6 +203,50 @@ export interface TranscriptScan {
   /** Byte offset of the first line not yet folded — always a line start. */
   offset: number;
   tailHashes: UsageTailEntry[];
+  /**
+   * The account uuid of the last `session-owner` record read (see
+   * {@link sessionOwnerOf}), or `null` when none was — every entry read
+   * since then was spent by it.
+   */
+  owner: string | null;
+  /**
+   * Whether `owner` was followed from the transcript's start. A row written
+   * before owners were read (`false`) filed its tokens under a guess or
+   * under no account; such a source is recounted whole while its files are
+   * all on disk (session-sync.ts).
+   */
+  ownerTracked: boolean;
+}
+
+/**
+ * Tokens one read counted, split by the claude.ai login that spent them: the
+ * login a transcript names in its `session-owner` record (an account uuid),
+ * or `null` for entries no record precedes.
+ */
+export interface OwnedCount {
+  owner: string | null;
+  buckets: DayBucket[];
+}
+
+/**
+ * The account uuid a transcript line names as its session's owner, or `null`
+ * for any other line. Claude Code (since ~2.1.319) writes
+ * `{"type":"session-owner","accountUuid","organizationUuid","sessionId"}` in
+ * the metadata block it re-appends through a session (at its start, around
+ * every turn, at exit): the claude.ai login (`~/.claude.json`'s
+ * `oauthAccount`) the session runs on, kept for the session's life and
+ * restored on resume. A new value is written when the session moves to
+ * another login. None is written for a session on `CLAUDE_CODE_OAUTH_TOKEN`
+ * (an equin added account) or an API key, nor in a sub-agent's transcript.
+ */
+export function sessionOwnerOf(line: unknown): string | null {
+  if (typeof line !== "object" || line === null) return null;
+  const record = line as { type?: unknown; accountUuid?: unknown };
+  return record.type === "session-owner" &&
+    typeof record.accountUuid === "string" &&
+    record.accountUuid !== ""
+    ? record.accountUuid
+    : null;
 }
 
 /**
@@ -207,17 +255,22 @@ export interface TranscriptScan {
  * SHRUNK below what was read (replaced, not appended to: what the ledger holds
  * for it can no longer be told apart, so the caller recounts its whole source),
  * or the read — the new scan state and the buckets it COUNTED (only what this
- * read added, a top-up of an entry counted before included).
+ * read added, a top-up of an entry counted before included), split by owner.
  */
 export type TranscriptRead =
   | { status: "unchanged" | "gone" | "shrunk" }
-  | { status: "read"; scan: TranscriptScan; counted: DayBucket[] };
+  | { status: "read"; scan: TranscriptScan; counted: OwnedCount[] };
 
 /**
  * Advance `prev` over the complete lines `path` now holds, or read it from the
  * start when there is no `prev`. Per-file dedup: the entries this file counted
  * before (its tail) and those it counts now, never another file's — the reading
  * Stats → Cost has always applied to every transcript (and ccusage's, near enough).
+ *
+ * Each entry is counted under the owner of the last `session-owner` record
+ * before it (`prev`'s owner at the start, when it tracked one): the count is
+ * cut wherever a record names another owner. A top-up of an entry counted
+ * before a cut goes to the owner in force when it is read.
  */
 export async function scanTranscript(
   path: string,
@@ -233,9 +286,28 @@ export async function scanTranscript(
   const fold = resumeUsageDelta(
     resumed.map(({ hash, ...entry }) => [hash, entry] as const),
   );
-  const read = await foldAppended(path, prev?.offset ?? 0, size, fold);
+  let owner = prev?.ownerTracked ? prev.owner : null;
+  const counted: OwnedCount[] = [];
+  const cut = () => {
+    const buckets = tokenDelta(undefined, [...fold.buckets.values()]);
+    if (buckets.length > 0) counted.push({ owner, buckets });
+    for (const bucket of fold.buckets.values()) zeroTokens(bucket);
+  };
+  const read = await foldAppended(
+    path,
+    prev?.offset ?? 0,
+    size,
+    fold,
+    (line) => {
+      const next = sessionOwnerOf(line);
+      if (next === null || next === owner) return;
+      cut();
+      owner = next;
+    },
+  );
   if (prev !== undefined && read.offset === prev.offset)
     return { status: "unchanged" };
+  cut();
   return {
     status: "read",
     scan: {
@@ -243,9 +315,16 @@ export async function scanTranscript(
       kind,
       offset: read.offset,
       tailHashes: tailOf([...resumed.map((e) => e.hash), ...read.hashes], fold),
+      owner,
+      ownerTracked: prev === undefined || prev.ownerTracked,
     },
-    counted: tokenDelta(undefined, [...fold.buckets.values()]),
+    counted,
   };
+}
+
+/** `b` with every count set to 0, in place (a fold keeps counting into it). */
+function zeroTokens(b: DayBucket): void {
+  for (const kind of TOKEN_KINDS) b[kind] = { below: 0, above: 0 };
 }
 
 /** A bucket's `(date, model, speed)` — the day it counts toward. */

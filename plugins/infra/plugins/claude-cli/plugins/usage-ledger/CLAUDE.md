@@ -93,6 +93,7 @@ backup covers it. The legacy dollar ledger (`claude_spend_hours`) is gone; its
     - `UsageSpeed`
     - `UsageTokens`
   - Exports (values):
+    - `claudeLoginAccountId`
     - `cliSpendSource`
     - `conversationSpendSource`
     - `emptyUsageBuckets`

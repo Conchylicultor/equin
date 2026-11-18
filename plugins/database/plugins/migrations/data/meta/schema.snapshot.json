@@ -1,6 +1,6 @@
 {
-  "id": "8592c5a3-da05-437d-8a9b-25b55163fb9a",
-  "prevId": "35672749-9912-44ba-baf8-d2de49dbf4d7",
+  "id": "9099812d-e204-46df-816c-9bb3f6b1a628",
+  "prevId": "8592c5a3-da05-437d-8a9b-25b55163fb9a",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -8451,6 +8451,19 @@
           "type": "jsonb",
           "primaryKey": false,
           "notNull": true
+        },
+        "owner": {
+          "name": "owner",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "owner_tracked": {
+          "name": "owner_tracked",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         }
       },
       "indexes": {

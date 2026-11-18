@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   bigint,
+  boolean,
   date,
   doublePrecision,
   index,
@@ -143,6 +144,19 @@ export const _claudeTranscriptScans = pgTable(
       "tail_hashes",
       z.array(UsageTailEntrySchema),
     ).notNull(),
+    /**
+     * The claude.ai account uuid of the last `session-owner` record read —
+     * who spends what is read next (`null`: none read yet). See scan.ts's
+     * `sessionOwnerOf`.
+     */
+    owner: text("owner"),
+    /**
+     * Whether `owner` was followed from the file's start. `false` on rows
+     * written before owners were read: their tokens were filed under a guess
+     * (the active account) or under no account, and their source is recounted
+     * whole while its files are on disk (machine/internal/session-sync.ts).
+     */
+    ownerTracked: boolean("owner_tracked").notNull().default(false),
   },
   (t) => [index("claude_transcript_scans_source_idx").on(t.source)],
 );

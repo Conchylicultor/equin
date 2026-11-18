@@ -43,6 +43,16 @@ export function sessionSpendSource(claudeSessionId: string): SpendSource {
  */
 export const UNKNOWN_ACCOUNT = "unknown";
 
+/**
+ * The account id of usage a transcript names the claude.ai login of (its
+ * `session-owner` record) when that login is none of equin's accounts — not
+ * the computer's login now (that is the system account). Its own account,
+ * never a guess at one of equin's.
+ */
+export function claudeLoginAccountId(accountUuid: string): string {
+  return `claude-login:${accountUuid}`;
+}
+
 /** The UTC hour `instant` falls in — the ledger's time key. */
 export function spendHourOf(instant: Date): Date {
   const hour = new Date(instant.getTime());

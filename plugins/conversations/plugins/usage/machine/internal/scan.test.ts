@@ -281,7 +281,7 @@ describe("scanTranscript", () => {
     if (read.status !== "read") throw new Error(`not a read: ${read.status}`);
     let input = 0;
     let output = 0;
-    for (const b of read.counted) {
+    for (const b of read.counted.flatMap((part) => part.buckets)) {
       input += b.input.below + b.input.above;
       output += b.output.below + b.output.above;
     }
@@ -303,9 +303,11 @@ describe("scanTranscript", () => {
     if (second.status !== "read") throw new Error("unreachable");
     expect(second.scan.offset).toBeGreaterThan(first.scan.offset);
     // Every delta is on the line's own hour.
-    expect(second.counted.map((b) => `${b.date}T${b.hour}`)).toEqual([
-      "2026-10-08T12",
-    ]);
+    expect(
+      second.counted.flatMap((p) =>
+        p.buckets.map((b) => `${b.date}T${b.hour}`),
+      ),
+    ).toEqual(["2026-10-08T12"]);
 
     expect(await scanTranscript(path, "session", second.scan)).toEqual({
       status: "unchanged",
@@ -335,6 +337,56 @@ describe("scanTranscript", () => {
       input: 4,
       output: 0,
     });
+  });
+
+  test("each entry is counted under the last session-owner record before it", async () => {
+    const path = join(await newDir(), "s.jsonl");
+    const owner = (uuid: string) =>
+      JSON.stringify({
+        type: "session-owner",
+        accountUuid: uuid,
+        organizationUuid: "org",
+        sessionId: "s",
+      }) + "\n";
+    await writeFile(
+      path,
+      line("m0", { input: 1 }) +
+        owner("a") +
+        line("m1", { input: 2 }) +
+        owner("a") +
+        line("m2", { input: 4 }) +
+        owner("b") +
+        line("m3", { input: 8 }),
+    );
+    const first = await scanTranscript(path, "session", undefined);
+    if (first.status !== "read") throw new Error("unreachable");
+    const byOwner = (read: typeof first) =>
+      read.counted.map((p) => [
+        p.owner,
+        p.buckets.reduce((n, b) => n + b.input.below + b.input.above, 0),
+      ]);
+    expect(byOwner(first)).toEqual([
+      [null, 1],
+      ["a", 6],
+      ["b", 8],
+    ]);
+    expect(first.scan).toMatchObject({ owner: "b", ownerTracked: true });
+
+    // An append with no record of its own: still the owner in force.
+    await appendFile(path, line("m4", { input: 16 }));
+    const second = await scanTranscript(path, "session", first.scan);
+    if (second.status !== "read") throw new Error("unreachable");
+    expect(byOwner(second)).toEqual([["b", 16]]);
+
+    // A row that did not follow owners does not lend its owner to an append.
+    await appendFile(path, line("m5", { input: 32 }));
+    const untracked = await scanTranscript(path, "session", {
+      ...second.scan,
+      ownerTracked: false,
+    });
+    if (untracked.status !== "read") throw new Error("unreachable");
+    expect(byOwner(untracked)).toEqual([[null, 32]]);
+    expect(untracked.scan.ownerTracked).toBe(false);
   });
 
   test("a file shorter than was read, or gone, is reported — never re-read as new", async () => {

@@ -9,6 +9,7 @@ import {
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/machine";
 import {
   UNKNOWN_ACCOUNT,
+  claudeLoginAccountId,
   isRepoProjectDir,
   sessionSpendSource,
   type SpendSource,
@@ -18,13 +19,18 @@ import {
   usageLedgerRowsOf,
 } from "@plugins/infra/plugins/claude-cli/plugins/usage-ledger/server";
 import { ensureModelRates } from "@plugins/infra/plugins/claude-cli/plugins/usage-ledger/plugins/pricing/server";
-import { activeClaudeAccountId } from "@plugins/infra/plugins/claude-cli/plugins/accounts/server";
+import { SYSTEM_ACCOUNT_ID } from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
+import {
+  readSystemLogin,
+  type SystemLogin,
+} from "@plugins/infra/plugins/claude-cli/plugins/accounts/machine";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
 import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import { _conversations } from "@plugins/tasks/plugins/tasks-core/server";
 import {
   scanTranscript,
   spendHourKey,
+  type OwnedCount,
   type TranscriptRead,
   type TranscriptScan,
 } from "./scan";
@@ -66,10 +72,24 @@ import {
 // session's ledger rows, source row and scan rows in the same statement that
 // files the conversation's own count of the files from their start.
 //
-// **Account.** A live pass files under the account active when it reads (a
-// session equin did not launch runs on whatever the user's terminal runs on;
-// the active account is the best this host knows — the same rule as an exited
-// agent's last tokens); a job's pass (the backfill) under `UNKNOWN_ACCOUNT`.
+// **Account.** What the transcript says, never a guess: each entry is filed
+// under the claude.ai login of the last `session-owner` record before it
+// (scan.ts's `sessionOwnerOf`; a sub-agent's transcript has none, so its
+// entries follow its session file's) — the system account when that login is
+// the computer's Claude Code login now (`readSystemLogin`), else the login's
+// own account id (`claudeLoginAccountId`). No record (Claude Code before
+// ~2.1.319, or a session on a token or API key, which Claude Code writes none
+// for): `UNKNOWN_ACCOUNT`. A session equin did not launch runs on whatever its
+// terminal or Claude Desktop is signed into, so equin's active account says
+// nothing about it.
+//
+// **Re-attribution.** A source whose scan rows predate owners
+// (`ownerTracked` false — filed under the active account then, or under no
+// account) is recounted whole once, the next time it is read: its `counted`
+// ledger rows taken back and every file read again from its start, owners
+// followed — while every file of it is still on disk. Otherwise (a file gone,
+// its tokens unreadable) it keeps what it filed and its rows are marked
+// tracked from there on.
 //
 // Per-file dedup (each file's own counted entries), as Stats → Cost has
 // always read them; only an equin conversation's chain is deduped
@@ -143,6 +163,8 @@ async function loadState(
       kind: _claudeTranscriptScans.kind,
       offset: _claudeTranscriptScans.offset,
       tailHashes: _claudeTranscriptScans.tailHashes,
+      owner: _claudeTranscriptScans.owner,
+      ownerTracked: _claudeTranscriptScans.ownerTracked,
     })
     .from(_claudeTranscriptScans)
     .where(eq(_claudeTranscriptScans.source, source));
@@ -225,7 +247,17 @@ export async function syncSessionUsage(
       path,
       await scanTranscript(path, kind, state.files.get(transcriptKey(path))),
     );
-  const recount = [...reads.values()].some((r) => r.status === "shrunk");
+  const shrunk = [...reads.values()].some((r) => r.status === "shrunk");
+  // Rows from before owners were read: recount the source whole, when every
+  // file it read is still here to read again.
+  const untracked = [...state.files.values()].some((f) => !f.ownerTracked);
+  const onDisk = new Set(
+    [...paths.keys()]
+      .filter((path) => reads.get(path)?.status !== "gone")
+      .map(transcriptKey),
+  );
+  const recountable = [...state.files.keys()].every((key) => onDisk.has(key));
+  const recount = shrunk || (untracked && recountable);
   let takeBack: AccountUsage[] = [];
   if (recount) {
     takeBack = negateUsage(await usageLedgerRowsOf(exec, [source]));
@@ -234,14 +266,47 @@ export async function syncSessionUsage(
   }
 
   const scans: TranscriptScan[] = [];
-  const counted: AccountUsage[] = [];
+  const counted: { owner: string | null; buckets: OwnedCount["buckets"] }[] =
+    [];
+  const sessionRead = reads.get(sessionPath);
+  const sessionOwner =
+    sessionRead?.status === "read"
+      ? sessionRead.scan.owner
+      : (state.files.get(transcriptKey(sessionPath))?.owner ?? null);
   for (const read of reads.values()) {
     if (read.status !== "read") continue;
     // Stored under its key, never its absolute path (`transcript-key.ts`).
     scans.push({ ...read.scan, path: transcriptKey(read.scan.path) });
-    for (const b of read.counted)
+    for (const part of read.counted)
       counted.push({
-        accountId: UNKNOWN_ACCOUNT,
+        // A sub-agent's transcript names no owner: its session's spends it.
+        owner:
+          part.owner ?? (read.scan.kind === "subagent" ? sessionOwner : null),
+        buckets: part.buckets,
+      });
+  }
+  // Not recountable: what was filed stays, and the rows are owner-tracked
+  // from here on (a row this pass did not move is written back as such).
+  if (untracked && !recount) {
+    const written = new Set(scans.map((scan) => scan.path));
+    for (const [key, row] of state.files)
+      if (!row.ownerTracked && !written.has(key))
+        scans.push({ ...row, path: key });
+    for (const scan of scans) scan.ownerTracked = true;
+  }
+  if (scans.length === 0 && takeBack.length === 0) {
+    if (cause === "live" || held.has(sessionId)) hold(sessionId, state);
+    return;
+  }
+  const login = counted.some((part) => part.owner !== null)
+    ? await readSystemLogin()
+    : null;
+  const usage: AccountUsage[] = [...takeBack];
+  for (const part of counted) {
+    const accountId = ownerAccountId(part.owner, login);
+    for (const b of part.buckets)
+      usage.push({
+        accountId,
         hour: new Date(spendHourKey(b)),
         model: b.model,
         speed: b.speed,
@@ -254,15 +319,6 @@ export async function syncSessionUsage(
         },
       });
   }
-  if (scans.length === 0 && takeBack.length === 0) {
-    if (cause === "live" || held.has(sessionId)) hold(sessionId, state);
-    return;
-  }
-  const accountId =
-    cause === "live" && counted.length > 0
-      ? await activeClaudeAccountId()
-      : UNKNOWN_ACCOUNT;
-  const usage = [...takeBack, ...counted.map((row) => ({ ...row, accountId }))];
   const facts =
     counted.length > 0 && !sourced.has(source)
       ? await sourceFacts(sessionPath)
@@ -275,9 +331,29 @@ export async function syncSessionUsage(
     throw err;
   }
   if (facts !== null) sourced.add(source);
-  await ensureModelRates(exec, new Set(counted.map((row) => row.model)));
+  await ensureModelRates(
+    exec,
+    new Set(counted.flatMap((part) => part.buckets.map((b) => b.model))),
+  );
   for (const scan of scans) state.files.set(scan.path, scan);
   if (cause === "live" || held.has(sessionId)) hold(sessionId, state);
+}
+
+/**
+ * The account usage a `session-owner` login spent is filed under: the system
+ * account when it is the computer's Claude Code login now, else the login's
+ * own id — never one of equin's added accounts by guess (a setup-token
+ * credential cannot read its own account's uuid, and Claude Code writes no
+ * record for a session on one). No owner: `UNKNOWN_ACCOUNT`.
+ */
+export function ownerAccountId(
+  owner: string | null,
+  login: SystemLogin | null,
+): string {
+  if (owner === null) return UNKNOWN_ACCOUNT;
+  return login?.kind === "signed-in" && login.accountUuid === owner
+    ? SYSTEM_ACCOUNT_ID
+    : claudeLoginAccountId(owner);
 }
 
 /**

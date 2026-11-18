@@ -23988,6 +23988,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `conversations/conversation-view/jsonl-viewer/subagents.listSubagentEntries`
           - `conversations/conversation-view/jsonl-viewer/subagents.subagentDirOf`
+          - `infra/claude-cli/accounts.readSystemLogin`
+          - `infra/claude-cli/accounts.SystemLogin`
           - `network/live.serveValue`
         - Register:
           - `defineJob('conversations.usage.sync')`
@@ -35616,9 +35618,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `infra/endpoints.implementMachine`
               - `network/live.serveValue`
+            - Exports (types): `SystemLogin`
             - Exports (values):
               - `addClaudeAccountWithCredential`
               - `readClaudeAccounts`
+              - `readSystemLogin`
               - `selectClaudeAccountById`
               - `watchClaudeAccounts`
             - Routes:
@@ -35892,6 +35896,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `UsageSpeed`
               - `UsageTokens`
             - Exports (values):
+              - `claudeLoginAccountId`
               - `cliSpendSource`
               - `conversationSpendSource`
               - `emptyUsageBuckets`

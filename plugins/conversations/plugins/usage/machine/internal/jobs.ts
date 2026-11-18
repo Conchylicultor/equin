@@ -12,6 +12,7 @@ import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import { _conversations } from "@plugins/tasks/plugins/tasks-core/server";
 import { ensureModelRates } from "@plugins/infra/plugins/claude-cli/plugins/usage-ledger/plugins/pricing/server";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
+import { sessionSpendSource } from "@plugins/infra/plugins/claude-cli/plugins/usage-ledger/core";
 import { requestUsageSync } from "./sync";
 import { importUsageHistory, transcriptsOnDisk } from "./history-import";
 import { loadCostArchive } from "./archive";
@@ -115,8 +116,10 @@ const SESSION_FILE_RE = /^([0-9a-f-]{36})\.jsonl$/;
 /**
  * Queues a ledger-only count of every session transcript on the host no
  * conversation owns that is not counted up to its end: one with no scan row
- * (never read — the first boot reads every one), or one whose file grew past
- * its row's offset (appended while no backend listened). A session equin ran
+ * (never read — the first boot reads every one), one whose file grew past
+ * its row's offset (appended while no backend listened), or one whose rows
+ * predate owners (`ownerTracked` false — recounted under the owners its
+ * transcripts name). A session equin ran
  * is the conversation path's, never queued.
  *
  * On the host singleton only, like the live recount: one scanner per host. A
@@ -162,8 +165,22 @@ export const usageSessionBackfillJob = defineJob({
         .from(_claudeTranscriptScans)
         .where(eq(_claudeTranscriptScans.kind, "session")),
     );
+    // Sources whose rows predate owners: recounted once, under the owners
+    // their transcripts name (session-sync.ts's re-attribution).
+    const untracked = new Set(
+      (
+        await db
+          .selectDistinct({ source: _claudeTranscriptScans.source })
+          .from(_claudeTranscriptScans)
+          .where(eq(_claudeTranscriptScans.ownerTracked, false))
+      ).map((row) => row.source),
+    );
     for (const [sessionId, path] of files) {
       if (owned.has(sessionId)) continue;
+      if (untracked.has(sessionSpendSource(sessionId))) {
+        await usageSessionSyncJob.enqueue({ sessionId, path });
+        continue;
+      }
       const offset = read.get(transcriptKey(path))?.offset;
       if (offset !== undefined && (await stat(path)).size <= offset) continue;
       await usageSessionSyncJob.enqueue({ sessionId, path });

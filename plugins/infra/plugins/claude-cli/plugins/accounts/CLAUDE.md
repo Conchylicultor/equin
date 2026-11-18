@@ -39,9 +39,11 @@ The Claude accounts agents can run on, and which one new agents launch on.
   - Uses:
     - `infra/endpoints.implementMachine`
     - `network/live.serveValue`
+  - Exports (types): `SystemLogin`
   - Exports (values):
     - `addClaudeAccountWithCredential`
     - `readClaudeAccounts`
+    - `readSystemLogin`
     - `selectClaudeAccountById`
     - `watchClaudeAccounts`
   - Routes:

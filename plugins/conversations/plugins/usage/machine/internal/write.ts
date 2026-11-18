@@ -142,6 +142,8 @@ export async function writeSessionUsage(
               kind: sql`excluded.kind`,
               offset: sql`excluded.offset`,
               tailHashes: sql`excluded.tail_hashes`,
+              owner: sql`excluded.owner`,
+              ownerTracked: sql`excluded.owner_tracked`,
             },
           })
       : null,

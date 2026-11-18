@@ -42,7 +42,7 @@ import { _conversationSessions } from "@plugins/conversations/plugins/session-ch
 import { sessionLinkIdKind } from "@plugins/conversations/plugins/session-chain/core";
 import { _claudeUsageHours } from "@plugins/infra/plugins/claude-cli/plugins/usage-ledger/server";
 import { sessionSpendSource } from "@plugins/infra/plugins/claude-cli/plugins/usage-ledger/core";
-import { syncSessionUsage } from "./session-sync";
+import { ownerAccountId, syncSessionUsage } from "./session-sync";
 import { writeUsage } from "./write";
 import { keyTranscriptScans } from "./scan-keys";
 import { _claudeTranscriptScans } from "../../server/internal/tables";
@@ -132,6 +132,27 @@ async function sourceRowsOf(source: string) {
     sql`select project_dir, is_repo, title from claude_usage_sources where source = ${source}`,
   );
   return rows;
+}
+
+const owner = (accountUuid: string) =>
+  JSON.stringify({
+    type: "session-owner",
+    accountUuid,
+    organizationUuid: "org",
+    sessionId: "s",
+  }) + "\n";
+
+/** Input tokens the ledger holds for `source`, per account (zero accounts left out). */
+async function ledgerByAccount(source: string) {
+  const rows = await t.db
+    .select()
+    .from(_claudeUsageHours)
+    .where(eq(_claudeUsageHours.source, source));
+  const out: Record<string, number> = {};
+  for (const r of rows)
+    out[r.accountId] = (out[r.accountId] ?? 0) + r.inputBelow + r.inputAbove;
+  for (const [k, v] of Object.entries(out)) if (v === 0) delete out[k];
+  return out;
 }
 
 const scansOf = (source: string) =>
@@ -290,5 +311,83 @@ describe("syncSessionUsage", () => {
     await writeFile(s.path, line("m3", 7, 1));
     await syncSessionUsage(t.db, s.id, s.path, "job");
     expect(await ledgerOf(source)).toMatchObject({ input: 7, output: 1 });
+  });
+
+  test("files each entry under the login its session-owner record names; a sub-agent under its session's", async () => {
+    const login = randomUUID();
+    const s = await newSession(
+      line("m0", 1, 0) + owner(login) + line("m1", 10, 5),
+    );
+    const agentDir = join(s.path.slice(0, -".jsonl".length), "subagents");
+    await mkdir(agentDir, { recursive: true });
+    await writeFile(join(agentDir, "agent-a1.jsonl"), line("a1", 100, 50));
+    await syncSessionUsage(t.db, s.id, s.path, "live");
+    const source = sessionSpendSource(s.id);
+    expect(await ledgerByAccount(source)).toEqual({
+      unknown: 1,
+      [`claude-login:${login}`]: 110,
+    });
+  });
+
+  test("rows from before owners were read are recounted whole under the owners, once", async () => {
+    const login = randomUUID();
+    const s = await newSession(owner(login) + line("m1", 10, 5));
+    const source = sessionSpendSource(s.id);
+    await syncSessionUsage(t.db, s.id, s.path, "job");
+    // As an older backend left it: filed under a guess, its row untracked.
+    await t.db
+      .update(_claudeUsageHours)
+      .set({ accountId: "acct-guess" })
+      .where(eq(_claudeUsageHours.source, source));
+    await t.db
+      .update(_claudeTranscriptScans)
+      .set({ owner: null, ownerTracked: false })
+      .where(eq(_claudeTranscriptScans.source, source));
+
+    await syncSessionUsage(t.db, s.id, s.path, "job");
+    expect(await ledgerByAccount(source)).toEqual({
+      [`claude-login:${login}`]: 10,
+    });
+    expect(await scansOf(source)).toMatchObject([
+      { owner: login, ownerTracked: true },
+    ]);
+    // Once: the next pass reads nothing new and files nothing.
+    await syncSessionUsage(t.db, s.id, s.path, "job");
+    expect(await ledgerByAccount(source)).toEqual({
+      [`claude-login:${login}`]: 10,
+    });
+  });
+
+  test("an untracked source with a file gone keeps what it filed, and is tracked from then on", async () => {
+    const s = await newSession(line("m1", 10, 5));
+    const source = sessionSpendSource(s.id);
+    await syncSessionUsage(t.db, s.id, s.path, "job");
+    await t.db.insert(_claudeTranscriptScans).values({
+      path: `${s.id}/subagents/agent-gone.jsonl`,
+      source,
+      kind: "subagent",
+      offset: 10,
+      tailHashes: [],
+      ownerTracked: false,
+    });
+    await t.db
+      .update(_claudeTranscriptScans)
+      .set({ ownerTracked: false })
+      .where(eq(_claudeTranscriptScans.source, source));
+
+    await syncSessionUsage(t.db, s.id, s.path, "job");
+    expect(await ledgerByAccount(source)).toEqual({ unknown: 10 });
+    expect((await scansOf(source)).map((r) => r.ownerTracked)).toEqual([
+      true,
+      true,
+    ]);
+  });
+
+  test("an owner is the system account when it is the computer's login now", () => {
+    const login = { kind: "signed-in", accountUuid: "u-1" } as const;
+    expect(ownerAccountId("u-1", login)).toBe("system");
+    expect(ownerAccountId("u-2", login)).toBe("claude-login:u-2");
+    expect(ownerAccountId("u-1", { kind: "none" })).toBe("claude-login:u-1");
+    expect(ownerAccountId(null, login)).toBe("unknown");
   });
 });
