@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { Packument } from "./plan";
 import type { Group } from "./policy";
-import type { Hold } from "@plugins/infra/plugins/deps/plugins/updates/core";
+import type { Hold } from "@plugins/infra/plugins/deps/plugins/hold/core";
 import {
   newestTag,
   patternProblem,

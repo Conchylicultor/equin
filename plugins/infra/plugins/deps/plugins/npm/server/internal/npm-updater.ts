@@ -11,12 +11,12 @@ import { z } from "zod";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
 import {
-  utcDay,
   type Cooldown,
   type Outdated,
   type Updater,
   type UpdaterPlan,
 } from "@plugins/infra/plugins/deps/plugins/updates/core";
+import { utcDay } from "@plugins/infra/plugins/deps/plugins/hold/core";
 import {
   installedVersions,
   planNpm,

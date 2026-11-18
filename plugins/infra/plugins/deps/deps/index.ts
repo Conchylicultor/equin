@@ -48,6 +48,19 @@ export type {
   PinnedInstall,
   PinStatus,
 } from "./internal/pin";
+export {
+  liftPinStay,
+  PIN_LAG_MAX_DAYS,
+  pinDecisionDue,
+  reviewPin,
+  stayPin,
+} from "./internal/pin-review";
+export type {
+  PinDecision,
+  PinLag,
+  PinReview,
+  PinReviewOptions,
+} from "./internal/pin-review";
 export { sweepUnusedDeps } from "./internal/sweep";
 export type { SweepReport } from "./internal/sweep";
 export {

@@ -60,9 +60,9 @@ every move proven before it lands.
   - Uses: `tasks/task-category.TaskCategory`
 - Core:
   - Uses:
-    - `infra/deps/updates.heldBy`
-    - `infra/deps/updates.Hold`
-    - `infra/deps/updates.holdProblems`
+    - `infra/deps/hold.heldBy`
+    - `infra/deps/hold.Hold`
+    - `infra/deps/hold.holdProblems`
     - `infra/host-fs/user-path.asAppPath`
     - `infra/paths/data-root-layout.HOME_DIR`
     - `packages/timed-fs.access`

@@ -38,12 +38,30 @@ const PinStatusSchema = z.discriminatedUnion("kind", [
   }),
 ]);
 
+/**
+ * A lagging pin's review (infra/deps `reviewPin`, read only): `within-bound`
+ * (lagging for less than the bound, or not recorded yet — the weekly Dependency
+ * upgrades run records when it first saw it), `due` (past it, nobody decided),
+ * `stayed` (a person chose to stay, until `stay.reviewBy`) or `stay-lapsed`
+ * (that day has passed). The weekly upgrade task carries `due` and
+ * `stay-lapsed` for a person to decide.
+ */
+const PinReviewSchema = z.object({
+  decision: z.enum(["within-bound", "due", "stayed", "stay-lapsed"]),
+  since: z.string().nullable(),
+  dueOn: z.string().nullable(),
+  stay: z.object({ reason: z.string(), reviewBy: z.string() }).nullable(),
+});
+export type PinReviewView = z.infer<typeof PinReviewSchema>;
+
 export const PinnedDepRowSchema = z.object({
   id: z.string(),
   description: z.string(),
   /** When a moved pin takes effect ("the cluster's next full restart"). */
   appliesAt: z.string(),
   status: PinStatusSchema,
+  /** The lag's review; null unless the pin lags what main declares. */
+  review: PinReviewSchema.nullable(),
 });
 export type PinnedDepRow = z.infer<typeof PinnedDepRowSchema>;
 
@@ -76,6 +94,14 @@ export const pinDrift = liveValue("deps.pin-drift", {
   schema: PinDriftSchema,
   needsMachine: { feature: "Checking pinned binaries" },
 });
+
+/**
+ * The command that records a person's decision to keep `id` on its pinned
+ * version (a stay, bounded like a dependency hold), run in main's checkout.
+ */
+export function pinStayCommand(mainRoot: string, id: string): string {
+  return `cd ${mainRoot} && ./equin deps pin-stay ${id} --reason "<why it stays>"`;
+}
 
 /** The command that moves `id`'s pin to what main declares, run in main's checkout. */
 export function pinSwitchCommand(mainRoot: string, id: string): string {

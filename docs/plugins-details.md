@@ -36180,10 +36180,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HeldDep`
           - `HoldDepOptions`
           - `InstallContext`
+          - `PinDecision`
           - `PinDrift`
+          - `PinLag`
           - `PinMove`
           - `PinnedDep`
           - `PinnedInstall`
+          - `PinReview`
+          - `PinReviewOptions`
           - `PinStatus`
           - `Ready`
           - `ReadyNow`
@@ -36203,14 +36207,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `holdDep`
           - `holdRunningDep`
           - `hostTarget`
+          - `liftPinStay`
           - `linkSealedDep`
+          - `PIN_LAG_MAX_DAYS`
+          - `pinDecisionDue`
           - `pinDep`
           - `pinnedDep`
           - `pinStatus`
           - `readyNow`
           - `removeDep`
+          - `reviewPin`
           - `sealDep`
           - `SEALED_MANIFEST`
+          - `stayPin`
           - `sweepUnusedDeps`
           - `UnknownDepError`
       - Test helpers:
@@ -36282,6 +36291,31 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values):
                   - `GITHUB_RELEASE_HOLDS`
                   - `GITHUB_RELEASE_HOLDS_FILE`
+        - **`hold`** — The one hold model of infra/deps: a release not to land yet, with a reason and a review day at most 90 days out — shared by every updater and by a pinned dependency's decision to stay behind main.
+          - Cross-plugin:
+            - Imported by:
+              - `infra/deps`
+              - `infra/deps/download/github-release-updater`
+              - `infra/deps/mise`
+              - `infra/deps/npm`
+              - `infra/deps/python/uv-updater`
+              - `infra/deps/rust/cargo-updater`
+              - `infra/deps/updates`
+              - `toolchain`
+          - Core:
+            - Exports (types):
+              - `Hold`
+              - `HoldState`
+            - Exports (values):
+              - `describeHold`
+              - `heldBy`
+              - `HOLD_MAX_DAYS`
+              - `holdProblems`
+              - `HoldSchema`
+              - `holdState`
+              - `lapsedHolds`
+              - `latestReviewBy`
+              - `utcDay`
         - **`mise`** — The mise toolchain as an updater: contributes `mise` to the updater registry, so the Dependency upgrades automation includes it in the batched upgrade task and `./equin deps upgrade mise` (alias: `toolchain upgrade`) moves mise.lock through the gated runner.
           - Server:
             - Contributes: `updater` "mise"
@@ -36289,7 +36323,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Core:
             - Uses: 23 symbols — full list in [`plugins/infra/plugins/deps/plugins/mise/REFERENCE.md`](../plugins/infra/plugins/deps/plugins/mise/REFERENCE.md)
               - `toolchain` ×12
-              - `infra/deps/updates` ×7
+              - `infra/deps/updates` ×5
+              - `infra/deps/hold` ×2
               - `infra/host-fs/user-path` ×2
               - `infra/spawn.spawnCaptured`
               - `packages/timed-fs.readFile`
@@ -36309,15 +36344,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `infra/deps/updates.UpdaterDeclare`
           - Core:
             - Uses:
-              - `infra/deps/updates.heldBy`
+              - `infra/deps/hold.heldBy`
+              - `infra/deps/hold.Hold`
+              - `infra/deps/hold.holdProblems`
+              - `infra/deps/hold.HoldSchema`
+              - `infra/deps/hold.utcDay`
               - `infra/deps/updates.heldWaiting`
-              - `infra/deps/updates.Hold`
-              - `infra/deps/updates.holdProblems`
-              - `infra/deps/updates.HoldSchema`
               - `infra/deps/updates.Move`
               - `infra/deps/updates.Outdated`
               - `infra/deps/updates.OutdatedWaiting`
-              - `infra/deps/updates.utcDay`
               - `plugin-meta/plugin-records.foldRepoFiles`
             - Exports (types):
               - `Group`
@@ -36391,7 +36426,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/text.Text`
               - `shell/health-report.HealthReport`
           - Server:
-            - Contributes: `resource.declare` "deps.pin-drift"
+            - Contributes:
+              - `resource.declare` "deps.pin-drift"
+              - `upgrade-decision` "pinned-binaries"
             - Resources: `deps.pin-drift` (push, notified, whole: one row per dependency declaring a pin — the host daemons' binaries, a closed handful)
           - Machine:
             - Uses: `network/live.serveValue`
@@ -36406,10 +36443,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PinDrift`
               - `PinnedDepRow`
               - `PinnedInstallView`
+              - `PinReviewView`
             - Exports (values):
               - `pinDrift`
               - `PinDriftSchema`
               - `PinnedDepRowSchema`
+              - `pinStayCommand`
               - `pinSwitchCommand`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/font-family --font-mono`
@@ -36537,7 +36576,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/worktree.listWorktreePaths`
               - `primitives/log-channels.Log`
             - Register: `defineJob('deps.sweep')`
-        - **`updates`** — Registers the Dependency upgrades automation's config (schedule, push policy, model, prompt template) for the Automations pane and Settings → Config. The updater registry (UpdaterDeclare) and the Dependency upgrades automation (deps-upgrades; its job automation.deps-upgrades runs on the schedule its config sets — weekly by default — editable live from the Automations pane): when any included updater has something newer than its lock records and no upgrade task is open, files ONE auto-started task (Dependencies category) covering every outdated updater, whose agent runs `./equin deps upgrade` (all updaters behind one baseline, a regressed batch narrowed down to its culprits on its own) and pushes what landed on an `upgraded` or `partial` verdict as far as its Push setting allows.
+        - **`updates`** — Registers the Dependency upgrades automation's config (schedule, push policy, model, prompt template) for the Automations pane and Settings → Config. The updater registry (UpdaterDeclare) and the Dependency upgrades automation (deps-upgrades; its job automation.deps-upgrades runs on the schedule its config sets — weekly by default — editable live from the Automations pane): when any included updater has something newer than its lock records and no upgrade task is open, files ONE auto-started task (Dependencies category) covering every outdated updater and every decision a DecisionDeclare source says is due (a pinned host daemon lagging main past its bound — its agent raises a flag for the person, never acts), whose agent runs `./equin deps upgrade` (all updaters behind one baseline, a regressed batch narrowed down to its culprits on its own) and pushes what landed on an `upgraded` or `partial` verdict as far as its Push setting allows.
           - Web:
             - Contributes:
               - `ConfigV2.WebRegister` "deps-upgrades"
@@ -36555,29 +36594,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/task-category.tasksCategory`
               - `tasks/tasks-core._tasks`
             - Exports (values):
+              - `DecisionDeclare`
               - `declaredUpdaters`
               - `DEPS_CATEGORY_ID`
               - `UpdaterDeclare`
             - Register: `defineAutomation('deps-upgrades')`
-          - Cross-plugin:
-            - Imported by:
-              - `infra/deps`
-              - `infra/deps/download/github-release-updater`
-              - `infra/deps/mise`
-              - `infra/deps/npm`
-              - `infra/deps/python/uv-updater`
-              - `infra/deps/rust/cargo-updater`
-              - `toolchain`
           - Core:
+            - Uses:
+              - `infra/deps/hold.describeHold`
+              - `infra/deps/hold.Hold`
+              - `infra/deps/hold.HOLD_MAX_DAYS`
+              - `infra/deps/hold.holdProblems`
+              - `infra/deps/hold.holdState`
+              - `infra/deps/hold.lapsedHolds`
+              - `infra/deps/hold.utcDay`
             - Exports (types):
               - `AwaitingOn`
               - `Cooldown`
+              - `DecisionSource`
               - `GateResult`
-              - `Hold`
               - `Move`
               - `Outdated`
               - `OutdatedUpdater`
               - `OutdatedWaiting`
+              - `PendingDecision`
               - `PlanOptions`
               - `Updater`
               - `UpdaterPlan`
@@ -36588,16 +36628,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `cooldownEnd`
               - `DEPS_UPGRADE_PROMPT`
               - `hasUpgradeWork`
-              - `heldBy`
               - `heldWaiting`
-              - `HOLD_MAX_DAYS`
-              - `holdProblems`
-              - `HoldSchema`
               - `isActionable`
               - `outdatedSections`
               - `reviewableHolds`
               - `upgradeTaskTitle`
-              - `utcDay`
+          - Cross-plugin:
+            - Imported by:
+              - `infra/deps`
+              - `infra/deps/download/github-release-updater`
+              - `infra/deps/mise`
+              - `infra/deps/npm`
+              - `infra/deps/pin-drift`
+              - `infra/deps/python/uv-updater`
+              - `infra/deps/rust/cargo-updater`
+              - `toolchain`
           - Cli:
             - Exports (values): `upgradeThisWorktree`
     - **`endpoints`** — Typed endpoint contract primitive. useFetchEndpoint (a FetchEndpoint bound to the subtree's transport; fetchEndpointOver(t) for sanctioned page-level code) and useEndpointMutation send writes only — a GET def is a tsc error (the derived read marker; & WriteEndpoint) and throws if cast through (every server read is a live resource, read with useLive, or useLiveReader in an event handler); useAssetSrc turns an AssetPath (a GET endpoint's asset) into what an element loads over the subtree's transport (the path, a blob URL, or unavailable); useAssetUrl / assetUrlOver hand a sink that loads by URL on its own (a library's fetch, an HTML string) an AssetPath's or AssetBase's URL, unavailable, or fetch-only (served, but no URL reaches it); assetFetchOver hands a library that takes a fetch hook the asset's base and a fetch over the transport; contentUrlOver hands a content frame a ContentPath's URL on the transport's content serving (the content host, off every app origin, for the page's own server; an in-browser server's frame Service Worker, declared safe), unavailable, or unsupported. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; callEndpoint() calls one from off the page (a backend, the CLI) through its contract; useFetchEndpoint / useEndpointMutation consume it on the client. Typed endpoint contract primitive, central half: implementCentral() creates central's handler of an endpoint declared needsMachine — central runs only on the computer, so it serves what a host without one answers not available.
@@ -40227,8 +40272,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runtimeNamespace`
           - `servingSocketPath`
       - Cross-plugin:
-        - Imported by: 78 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
-          - `infra` ×17
+        - Imported by: 79 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
+          - `infra` ×18
           - `debug` ×15
           - `build` ×9
           - `conversations` ×9
@@ -64923,9 +64968,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Uses: `tasks/task-category.TaskCategory`
   - Core:
     - Uses:
-      - `infra/deps/updates.heldBy`
-      - `infra/deps/updates.Hold`
-      - `infra/deps/updates.holdProblems`
+      - `infra/deps/hold.heldBy`
+      - `infra/deps/hold.Hold`
+      - `infra/deps/hold.holdProblems`
       - `infra/host-fs/user-path.asAppPath`
       - `infra/paths/data-root-layout.HOME_DIR`
       - `packages/timed-fs.access`

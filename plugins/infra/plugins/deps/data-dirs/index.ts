@@ -34,4 +34,23 @@ export const depsLocksDir = defineDataDir({
   reclaim: { kind: "restart" },
 });
 
-export default [depsCacheDir, depsLocksDir];
+/**
+ * What this machine decided about its pinned dependencies (`<id>.json`): when
+ * a pin was first seen lagging what main declares, and a deliberate "stay on
+ * this version" (a hold: a reason and a review day). Machine-local, like the
+ * pins themselves (`deps/internal/pin-review.ts`).
+ */
+export const depsPinsState = defineDataDir({
+  kind: "state",
+  name: "deps-pins",
+  owner: "infra/deps",
+  description:
+    "Each pinned dependency's lag record (first seen behind main) and the person's stay decision, if any",
+  reclaim: {
+    kind: "never",
+    reason:
+      "the only record of a person's decision to keep a host daemon on an older version, and of how long its pin has lagged main",
+  },
+});
+
+export default [depsCacheDir, depsLocksDir, depsPinsState];

@@ -1,7 +1,10 @@
 import { mkdir } from "node:fs/promises";
 import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { defineFileWatcher } from "@plugins/infra/plugins/file-watcher/server";
-import { depsCacheDir } from "@plugins/infra/plugins/deps/data-dirs";
+import {
+  depsCacheDir,
+  depsPinsState,
+} from "@plugins/infra/plugins/deps/data-dirs";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { serveValue } from "@plugins/network/plugins/live/machine";
 import { pinDrift } from "../../core";
@@ -12,7 +15,7 @@ import { onMainMoved } from "./reaction";
 export const pinnedDepsWatcher = defineFileWatcher({
   name: "deps.pinned",
   description:
-    "While the health report reads the pinned binaries' row, watches the pinned dependencies' cache dirs, so a moved pin (`./equin deps pin`) or a daemon's fresh start (its running hold) shows at once.",
+    "While the health report reads the pinned binaries' row, watches the pinned dependencies' cache dirs and their review records, so a moved pin (`./equin deps pin`), a daemon's fresh start (its running hold) or a stay (`./equin deps pin-stay`) shows at once.",
   // The payloads: only the holds and state files beside them matter.
   ignore: ["**/env/**"],
 });
@@ -29,7 +32,10 @@ export const pinDriftServed = serveValue(pinDrift, {
   changes: "notified",
   loader: () => currentPinDrift(),
   whileSubscribed: async (_params, notify) => {
-    const root = await depsCacheDir.ensure();
+    const [root, reviews] = await Promise.all([
+      depsCacheDir.ensure(),
+      depsPinsState.ensure(),
+    ]);
     const dirs = await Promise.all(
       (await pinnedDepIds()).map(async (id) => {
         const dir = joinAppPath(root, id);
@@ -38,6 +44,8 @@ export const pinDriftServed = serveValue(pinDrift, {
         return dir;
       }),
     );
+    // A lag's review record (its clock, a stay set or lifted).
+    dirs.push(reviews);
     const watcher = await pinnedDepsWatcher.start({
       dirs,
       onChange: () => notify(),

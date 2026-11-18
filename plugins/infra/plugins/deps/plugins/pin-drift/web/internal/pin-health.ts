@@ -12,13 +12,31 @@ export function installLabel(install: PinnedInstallView): string {
 
 /**
  * One pinned dependency's verdict: `ok` (nothing pinned yet — the next start
- * pins main's — or pinned to what main declares and running it), `attention`
- * with a phrase (main declares another version, switchable or blocked; or a
- * moved pin the live daemon has not restarted onto), or `unknown` (main's
- * declaration unreadable).
+ * pins main's — or pinned to what main declares and running it, or behind it
+ * by a person's decision to stay, in force: `note` says so), `attention` with
+ * a phrase (main declares another version, switchable or blocked — saying when
+ * a decision is due or overdue; or a moved pin the live daemon has not
+ * restarted onto), or `unknown` (main's declaration unreadable).
  */
 export type PinVerdict =
-  { level: "ok" } | { level: "attention" | "unknown"; phrase: string };
+  | { level: "ok"; note?: string }
+  | { level: "attention" | "unknown"; phrase: string };
+
+/** What a lagging pin's review adds to its phrase. */
+function reviewSuffix(row: PinnedDepRow): string {
+  const r = row.review;
+  if (r === null) return "";
+  switch (r.decision) {
+    case "within-bound":
+      return r.dueOn === null ? "" : ` (decide by ${r.dueOn})`;
+    case "due":
+      return ` — decision due since ${r.dueOn ?? "?"}`;
+    case "stay-lapsed":
+      return ` — staying was to be reviewed by ${r.stay?.reviewBy ?? "?"}`;
+    case "stayed":
+      return "";
+  }
+}
 
 export function pinVerdict(row: PinnedDepRow): PinVerdict {
   const s = row.status;
@@ -32,13 +50,17 @@ export function pinVerdict(row: PinnedDepRow): PinVerdict {
       };
     case "differs": {
       const to = installLabel(s.declared.install);
-      return {
-        level: "attention",
-        phrase:
-          s.declared.blocked === null
-            ? `${row.id} ${pinned} → ${to}`
-            : `${row.id} ${pinned} → ${to} blocked`,
-      };
+      if (row.review?.decision === "stayed" && row.review.stay !== null) {
+        return {
+          level: "ok",
+          note: `${row.id} stays on ${pinned} until ${row.review.stay.reviewBy}`,
+        };
+      }
+      const move =
+        s.declared.blocked === null
+          ? `${row.id} ${pinned} → ${to}`
+          : `${row.id} ${pinned} → ${to} blocked`;
+      return { level: "attention", phrase: move + reviewSuffix(row) };
     }
     case "same":
       return s.running === null
@@ -86,6 +108,9 @@ export function pinDriftVerdict(
       const phrases = verdicts.flatMap((v) =>
         v.level === "ok" ? [] : [v.phrase],
       );
+      const notes = verdicts.flatMap((v) =>
+        v.level === "ok" && v.note !== undefined ? [v.note] : [],
+      );
       if (verdicts.some((v) => v.level === "attention")) {
         return {
           state: "attention",
@@ -96,7 +121,10 @@ export function pinDriftVerdict(
       if (phrases.length > 0) {
         return { state: "unknown", summary: phrases.join("; ") };
       }
-      return { state: "ok", summary: "Up to date with main" };
+      return {
+        state: "ok",
+        summary: notes.length === 0 ? "Up to date with main" : notes.join("; "),
+      };
     }
   }
 }

@@ -11,7 +11,8 @@
 - Core:
   - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `toolchain` ×12
-    - `infra/deps/updates` ×7
+    - `infra/deps/updates` ×5
+    - `infra/deps/hold` ×2
     - `infra/host-fs/user-path` ×2
     - `infra/spawn.spawnCaptured`
     - `packages/timed-fs.readFile`

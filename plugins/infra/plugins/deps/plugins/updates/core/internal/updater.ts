@@ -9,7 +9,7 @@ import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/c
  * tests the moved things must pass.
  */
 
-import type { Hold } from "./hold";
+import type { Hold } from "@plugins/infra/plugins/deps/plugins/hold/core";
 
 /** One command a moved input must still pass, beyond the check and test suites. */
 export interface UpdaterSmoke {

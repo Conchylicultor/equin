@@ -29,9 +29,9 @@ import { boundedRows } from "../../core/internal/awaiting";
 import { formatOutdated } from "../../core/internal/upgrade-prompt";
 import {
   describeHold,
-  reviewableHolds,
   type Hold,
-} from "../../core/internal/hold";
+} from "@plugins/infra/plugins/deps/plugins/hold/core";
+import { reviewableHolds } from "../../core/internal/hold";
 
 /**
  * `running` until the end, and only then: every run ends on one of the others.

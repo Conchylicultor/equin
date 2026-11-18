@@ -8,7 +8,7 @@
  * tool means saying how to probe and smoke-test it.
  */
 
-import type { Hold } from "@plugins/infra/plugins/deps/plugins/updates/core";
+import type { Hold } from "@plugins/infra/plugins/deps/plugins/hold/core";
 
 /** One command a new version of a tool must still pass. Run from the repo root. */
 export interface ToolSmoke {

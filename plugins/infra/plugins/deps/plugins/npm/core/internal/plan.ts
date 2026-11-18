@@ -7,14 +7,16 @@
 // of those four, so nothing newer is ever silently skipped.
 
 import {
-  heldBy,
   heldWaiting,
-  utcDay,
-  type Hold,
   type Move,
   type Outdated,
   type OutdatedWaiting,
 } from "@plugins/infra/plugins/deps/plugins/updates/core";
+import {
+  heldBy,
+  utcDay,
+  type Hold,
+} from "@plugins/infra/plugins/deps/plugins/hold/core";
 import type { Group } from "./policy";
 import { agreeKey, isPrerelease } from "./spec";
 

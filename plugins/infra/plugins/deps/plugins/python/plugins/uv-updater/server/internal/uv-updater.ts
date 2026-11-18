@@ -9,18 +9,20 @@ import { z } from "zod";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import {
   cooldownEnd,
-  heldBy,
   heldWaiting,
   isActionable,
-  utcDay,
   type Cooldown,
-  type Hold,
   type Outdated,
   type OutdatedWaiting,
   type Updater,
   type UpdaterPlan,
   type UpdaterSmoke,
 } from "@plugins/infra/plugins/deps/plugins/updates/core";
+import {
+  heldBy,
+  utcDay,
+  type Hold,
+} from "@plugins/infra/plugins/deps/plugins/hold/core";
 import {
   UV_HOLDS,
   UV_HOLDS_FILE,

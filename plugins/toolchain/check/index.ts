@@ -18,7 +18,7 @@ import type {
   Check,
   CheckResult,
 } from "@plugins/framework/plugins/tooling/core";
-import { utcDay } from "@plugins/infra/plugins/deps/plugins/updates/core";
+import { utcDay } from "@plugins/infra/plugins/deps/plugins/hold/core";
 import {
   HOLDS,
   TOOLS,

@@ -19,14 +19,13 @@ import {
   upgradeTarget,
 } from "@plugins/toolchain/core";
 import {
-  heldBy,
   heldWaiting,
-  utcDay,
   type Move,
   type Outdated,
   type Updater,
   type UpdaterPlan,
 } from "@plugins/infra/plugins/deps/plugins/updates/core";
+import { heldBy, utcDay } from "@plugins/infra/plugins/deps/plugins/hold/core";
 import { mise } from "./mise";
 
 const MINUTE = 60_000;

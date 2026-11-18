@@ -6,11 +6,13 @@
 // release either, awaiting that group.
 
 import {
-  heldBy,
   heldWaiting,
-  type Hold,
   type Outdated,
 } from "@plugins/infra/plugins/deps/plugins/updates/core";
+import {
+  heldBy,
+  type Hold,
+} from "@plugins/infra/plugins/deps/plugins/hold/core";
 import type { Packument } from "./plan";
 import type { Agree, Group, Wraps } from "./policy";
 import { agreeKey, publishers } from "./spec";

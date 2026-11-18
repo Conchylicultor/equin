@@ -156,6 +156,19 @@ any checkout that must never change under it (the embedded Postgres, PgBouncer):
   install, the running one when another, and what `root` declares (same /
   differs with `blocked` / failed). The health report's Pinned binaries row
   (`pin-drift` sub-plugin) shows it against main's checkout.
+- **A pin's lag is bounded like a hold** (`deps/internal/pin-review.ts`).
+  `reviewPin(dep, { root, now, record })` records, in the machine-local
+  `state/deps-pins/<id>.json`, when a pin was first seen lagging what main
+  declares (reset when the pinned install changes; dropped once it no longer
+  lags). Past `PIN_LAG_MAX_DAYS` (30) a person must decide: switch it
+  (`./equin deps pin`) or record a **stay** — `./equin deps pin-stay <id>
+  --reason "…" [--review-by DAY]` (`stayPin`): a `Hold` (`deps/hold`) on the
+  declared version and up, `reviewBy` at most `HOLD_MAX_DAYS` (90) out; `--lift`
+  removes it. A stay in force defers the decision; past its `reviewBy` it is
+  due again (`stay-lapsed`). The weekly Dependency upgrades automation records
+  and carries every due one (`pin-drift`'s decision source); its agent raises
+  a flag, never switches or restarts. A switch closes the lag and drops the
+  stay with the record.
 
 ## Sealed installs (release bundles)
 
@@ -209,7 +222,7 @@ is `failed`, never `absent`.
 
 ## CLI
 
-`./equin deps list | install <id> [--json] | remove <id> | pin <id> | upgrade [<updater>] [--only a,b] [--skip-cooldown]`.
+`./equin deps list | install <id> [--json] | remove <id> | pin <id> | pin-stay <id> --reason "…" [--review-by DAY] [--lift] | upgrade [<updater>] [--only a,b] [--skip-cooldown]`.
 `list`, `install` and `remove` import the `deps/` barrel directly — the
 declarations are a generated registry and the engine is host-only code, so no
 backend is booted and nothing needs to have been built (`install` passes
@@ -250,7 +263,7 @@ module eval).
   deps upgrade` with no updater moves every one behind one baseline
   (receipt `deps-upgrade.json`); naming one moves only it
   (`deps-upgrade-<updater>.json`, `--only` allowed). **Holds** are one model
-  for every updater (`Hold` in `core/`: `names`, `version` | `below`, `reason`,
+  for every updater (`Hold`, the `hold` sub-plugin: `names`, `version` | `below`, `reason`,
   `issue?`, required `reviewBy` at most 90 days out): a hold is honoured until
   a diff deletes it — never released by its date. Each updater exposes its own
   through `holds.read`; the runner and the detect job refuse one set past the
@@ -269,6 +282,11 @@ module eval).
   updaters take part are the automation's settings (Agent manager →
   Automations); the push policy decides whether the task's text authorizes a
   push.
+- `hold` — the one hold model (`HoldSchema`, `HOLD_MAX_DAYS`, `heldBy`,
+  `holdProblems`, …), a leaf with only zod behind it: every updater's holds
+  and a pin's stay (above) share it, and the engine reaches it without
+  loading the Dependency upgrades automation (which a browser composition
+  excludes).
 - `npm` — every npm package a workspace `package.json` declares, as an
   updater (ranges + `bun.lock`, 3-day cooldown), plus the `dependencyPolicy`
   (lockstep groups, holds bounded to 90 days) and the `deps-npm:*` checks that
@@ -465,10 +483,14 @@ torch.
     - `HeldDep`
     - `HoldDepOptions`
     - `InstallContext`
+    - `PinDecision`
     - `PinDrift`
+    - `PinLag`
     - `PinMove`
     - `PinnedDep`
     - `PinnedInstall`
+    - `PinReview`
+    - `PinReviewOptions`
     - `PinStatus`
     - `Ready`
     - `ReadyNow`
@@ -488,14 +510,19 @@ torch.
     - `holdDep`
     - `holdRunningDep`
     - `hostTarget`
+    - `liftPinStay`
     - `linkSealedDep`
+    - `PIN_LAG_MAX_DAYS`
+    - `pinDecisionDue`
     - `pinDep`
     - `pinnedDep`
     - `pinStatus`
     - `readyNow`
     - `removeDep`
+    - `reviewPin`
     - `sealDep`
     - `SEALED_MANIFEST`
+    - `stayPin`
     - `sweepUnusedDeps`
     - `UnknownDepError`
 - Test helpers:
@@ -504,6 +531,7 @@ torch.
 - Sub-plugins:
   - **`build`** — The build installer kind of infra/deps: build({ inputs, tool, output, run }) (its deps barrel) declares something built from this checkout's own source — identity = sha256 of every file the git…
   - **`download`** — The download installer kind of infra/deps: download({ files: [{ name, url, sha256 }], derive? }) (its deps barrel) declares a dependency on pinned files — identity = every url + sha256 plus…
+  - **`hold`** — The one hold model of infra/deps: a release not to land yet, with a reason and a review day at most 90 days out — shared by every updater and by a pinned dependency's decision to stay behind main.
   - **`mise`** — The mise toolchain as an updater: contributes `mise` to the updater registry, so the Dependency upgrades automation includes it in the batched upgrade task and `./equin deps upgrade mise` (alias…
   - **`npm`** — The `npm` updater: moves every npm package a workspace package.json declares (its range and bun.lock) to the newest release past a 3-day cooldown, lockstep groups together, honouring reviewed holds…
   - **`package-copy`** — The package-copy installer kind of infra/deps: npmPackageCopy({ workspace, package }) (its deps barrel) declares a copy of one npm package the checkout's bun install put in a workspace's…

@@ -1,4 +1,4 @@
-import type { Hold } from "@plugins/infra/plugins/deps/plugins/updates/core";
+import type { Hold } from "@plugins/infra/plugins/deps/plugins/hold/core";
 
 /** Where {@link UV_HOLDS} is declared, named in a hold's messages. */
 export const UV_HOLDS_FILE =

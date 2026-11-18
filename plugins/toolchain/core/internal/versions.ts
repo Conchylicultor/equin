@@ -2,7 +2,7 @@ import {
   heldBy,
   holdProblems,
   type Hold,
-} from "@plugins/infra/plugins/deps/plugins/updates/core";
+} from "@plugins/infra/plugins/deps/plugins/hold/core";
 import { HOLDS_FILE, TOOLS } from "./tools";
 
 /**

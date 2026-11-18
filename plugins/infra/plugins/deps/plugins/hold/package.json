@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-infra-deps-hold",
+  "version": "0.0.1",
+  "private": true,
+  "description": "The one hold model of infra/deps: a release not to land yet, with a reason and a review day at most 90 days out — shared by every updater and by a pinned dependency's decision to stay behind main."
+}

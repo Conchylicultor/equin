@@ -4,10 +4,12 @@ export {
   pinDrift,
   PinDriftSchema,
   PinnedDepRowSchema,
+  pinStayCommand,
   pinSwitchCommand,
 } from "./internal/pin-drift";
 export type {
   PinDrift,
   PinnedDepRow,
   PinnedInstallView,
+  PinReviewView,
 } from "./internal/pin-drift";

@@ -11,7 +11,7 @@ import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
 export default defineCliCommand({
   name: "deps",
   description:
-    "Optional dependencies installed on demand (Python envs, …): list, install, remove, upgrade",
+    "Optional dependencies installed on demand (Python envs, …): list, install, remove, pin, pin-stay, upgrade",
   subcommands: [
     defineCliCommand({
       name: "list",
@@ -48,6 +48,36 @@ export default defineCliCommand({
         "checkout on its own.",
       arguments: [{ name: "<id>", description: "The dependency's id" }],
       run: () => import("./internal/pin"),
+    }),
+    defineCliCommand<
+      [string],
+      { reason?: string; reviewBy?: string; lift?: boolean }
+    >({
+      name: "pin-stay",
+      description:
+        "Record a decision to keep a pinned dependency on its pinned version while main declares a newer one: a hold " +
+        "with a reason and a review day at most 90 days out (default: 90 days). Until that day the lag is not raised " +
+        "again; past it, the weekly Dependency upgrades task asks for a decision again. A pin lagging main for more " +
+        "than 30 days with no stay is in that task every week. Machine-local, like the pin; switches and restarts nothing.",
+      arguments: [{ name: "<id>", description: "The dependency's id" }],
+      options: [
+        {
+          flags: "--reason <text>",
+          description:
+            "Why it stays (what blocks or is not worth the switch, what was checked) — required unless --lift",
+        },
+        {
+          flags: "--review-by <day>",
+          description:
+            "YYYY-MM-DD, at most 90 days from today: when to decide again (default: 90 days out)",
+        },
+        {
+          flags: "--lift",
+          description:
+            "Remove the stay instead: the lag is raised again once it is past the 30-day bound",
+        },
+      ],
+      run: () => import("./internal/pin-stay"),
     }),
     defineCliCommand<
       [string | undefined],

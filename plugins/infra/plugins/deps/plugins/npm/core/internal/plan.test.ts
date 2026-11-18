@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { planNpm, type Packument, type PlanInput } from "./plan";
-import type { Hold } from "@plugins/infra/plugins/deps/plugins/updates/core";
+import type { Hold } from "@plugins/infra/plugins/deps/plugins/hold/core";
 import type { Group } from "./policy";
 
 const OLD = "2026-01-01T00:00:00.000Z";

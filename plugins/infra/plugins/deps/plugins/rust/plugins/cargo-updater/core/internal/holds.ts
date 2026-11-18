@@ -1,4 +1,4 @@
-import type { Hold } from "@plugins/infra/plugins/deps/plugins/updates/core";
+import type { Hold } from "@plugins/infra/plugins/deps/plugins/hold/core";
 
 /** Where {@link CARGO_HOLDS} is declared, named in a hold's messages. */
 export const CARGO_HOLDS_FILE =

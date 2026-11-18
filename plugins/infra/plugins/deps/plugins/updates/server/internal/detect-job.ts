@@ -19,7 +19,9 @@ import {
   reviewableHolds,
   outdatedSections,
   upgradeTaskTitle,
+  type DecisionSource,
   type OutdatedUpdater,
+  type PendingDecision,
   type Updater,
 } from "../../core";
 import { depsUpgradesConfig } from "../../shared/config";
@@ -40,6 +42,19 @@ export const UpdaterDeclare = defineServerContribution<{ updater: Updater }>(
 /** Every declared updater. */
 export function declaredUpdaters(): Updater[] {
   return UpdaterDeclare.getContributions().map((c) => c.updater);
+}
+
+/**
+ * The set of decision sources: what, past its bound, needs a person's decision
+ * the upgrade task carries (a pinned host daemon lagging main —
+ * `deps/pin-drift`). The automation reads only this generic set.
+ */
+export const DecisionDeclare = defineServerContribution<{
+  source: DecisionSource;
+}>("upgrade-decision", { docLabel: (c) => c.source.id });
+
+function declaredDecisionSources(): DecisionSource[] {
+  return DecisionDeclare.getContributions().map((c) => c.source);
 }
 
 /**
@@ -99,12 +114,15 @@ export const depsUpgradesAutomation = defineAutomation({
   triggers: { kinds: ["schedule"] },
   inProcess:
     "A read-only detection pass (one release query per updater, then at most one task insert) that a restart can abort and the next scheduled tick simply repeats; each query is bounded by its own spawn timeout.",
-  sources: () => declaredUpdaters().map((u) => ({ id: u.id, label: u.id })),
+  sources: () => [
+    ...declaredUpdaters().map((u) => ({ id: u.id, label: u.id })),
+    ...declaredDecisionSources().map((d) => ({ id: d.id, label: d.label })),
+  ],
   promptVariables: [
     {
       name: "outdated",
       description:
-        "Each outdated updater, its holds file and every release move it found",
+        "Each outdated updater, its holds file and every release move it found, then the decisions only a person can make",
     },
   ],
   detect: async ({ sources, partialFailure }) => {
@@ -129,11 +147,25 @@ export const depsUpgradesAutomation = defineAutomation({
         partialFailure(err);
       }
     }
-    if (batch.length === 0) return null;
+    const decisions: PendingDecision[] = [];
+    const deciding: string[] = [];
+    for (const source of declaredDecisionSources()) {
+      if (!included.has(source.id)) continue;
+      try {
+        const due = await source.pending(now);
+        if (due.length > 0) {
+          decisions.push(...due);
+          deciding.push(source.id);
+        }
+      } catch (err) {
+        partialFailure(err);
+      }
+    }
+    if (batch.length === 0 && decisions.length === 0) return null;
     return {
-      title: upgradeTaskTitle(batch),
-      variables: { outdated: outdatedSections(batch) },
-      sourceKeys: batch.map((u) => u.updaterId),
+      title: upgradeTaskTitle(batch, decisions),
+      variables: { outdated: outdatedSections(batch, decisions) },
+      sourceKeys: [...batch.map((u) => u.updaterId), ...deciding],
     };
   },
   adoptLegacy: legacyUpgradeTaskIds,

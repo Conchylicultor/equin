@@ -2,7 +2,7 @@
 // workspace read: specs are ranges, policies are well-formed and bounded, and
 // every lockstep group resolves to versions its members agree on.
 
-import { holdProblems } from "@plugins/infra/plugins/deps/plugins/updates/core";
+import { holdProblems } from "@plugins/infra/plugins/deps/plugins/hold/core";
 import { agreeKey } from "./spec";
 import { patternProblem } from "./upstream";
 import type { Declared, DeclaredPolicy, Lock, PolicyError } from "./workspace";

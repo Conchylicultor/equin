@@ -6,7 +6,7 @@
 // infra/deps/updates, the same model the mise and uv updaters use).
 
 import { z } from "zod";
-import { HoldSchema } from "@plugins/infra/plugins/deps/plugins/updates/core";
+import { HoldSchema } from "@plugins/infra/plugins/deps/plugins/hold/core";
 
 // The package.json key, spelled once with the manifest fold that reads it.
 export { POLICY_KEY } from "./manifests.scan";

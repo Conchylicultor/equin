@@ -14,6 +14,7 @@ const row = (id: string, status: PinnedDepRow["status"]): PinnedDepRow => ({
   description: "",
   appliesAt: "the next restart",
   status,
+  review: null,
 });
 
 describe("pinDriftVerdict", () => {
@@ -78,6 +79,82 @@ describe("pinDriftVerdict", () => {
     ).toMatchObject({
       state: "attention",
       summary: "pgbouncer-binary still runs 1.24.0, pinned 1.24.1",
+    });
+  });
+
+  test("a lag's review: a stay in force is ok, a due or lapsed decision says so", () => {
+    const behind: PinnedDepRow["status"] = {
+      kind: "pinned",
+      pinned: v("18.1.0"),
+      running: null,
+      declared: {
+        kind: "differs",
+        install: v("19.0.0"),
+        blocked: "PostgreSQL 18 → 19 is a major upgrade",
+      },
+    };
+    const reviewed = (review: PinnedDepRow["review"]) => ({
+      ...row("postgres-binaries", behind),
+      review,
+    });
+    const stay = {
+      reason: "no major upgrade procedure",
+      reviewBy: "2027-02-01",
+    };
+    expect(
+      checked(
+        reviewed({
+          decision: "stayed",
+          since: "2026-10-01T00:00:00.000Z",
+          dueOn: "2026-10-31",
+          stay,
+        }),
+      ),
+    ).toEqual({
+      state: "ok",
+      summary: "postgres-binaries stays on 18.1.0 until 2027-02-01",
+    });
+    expect(
+      checked(
+        reviewed({
+          decision: "due",
+          since: "2026-10-01T00:00:00.000Z",
+          dueOn: "2026-10-31",
+          stay: null,
+        }),
+      ),
+    ).toMatchObject({
+      state: "attention",
+      summary:
+        "postgres-binaries 18.1.0 → 19.0.0 blocked — decision due since 2026-10-31",
+    });
+    expect(
+      checked(
+        reviewed({
+          decision: "stay-lapsed",
+          since: "2026-10-01T00:00:00.000Z",
+          dueOn: "2026-10-31",
+          stay,
+        }),
+      ),
+    ).toMatchObject({
+      state: "attention",
+      summary:
+        "postgres-binaries 18.1.0 → 19.0.0 blocked — staying was to be reviewed by 2027-02-01",
+    });
+    expect(
+      checked(
+        reviewed({
+          decision: "within-bound",
+          since: "2026-11-10T00:00:00.000Z",
+          dueOn: "2026-12-10",
+          stay: null,
+        }),
+      ),
+    ).toMatchObject({
+      state: "attention",
+      summary:
+        "postgres-binaries 18.1.0 → 19.0.0 blocked (decide by 2026-12-10)",
     });
   });
 

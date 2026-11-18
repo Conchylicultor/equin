@@ -15,7 +15,7 @@ import type {
   Outdated,
   Updater,
 } from "../../core/internal/updater";
-import type { Hold } from "../../core/internal/hold";
+import type { Hold } from "@plugins/infra/plugins/deps/plugins/hold/core";
 
 let root: AppPath;
 let syncs: string[];

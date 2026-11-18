@@ -4660,6 +4660,10 @@
       "name": "@equin/plugin-infra-deps-download-github-release-updater",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/deps/plugins/hold": {
+      "name": "@equin/plugin-infra-deps-hold",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/deps/plugins/mise": {
       "name": "@equin/plugin-infra-deps-mise",
       "version": "0.0.1",
@@ -10510,6 +10514,8 @@
     "@equin/plugin-infra-deps-download": ["@equin/plugin-infra-deps-download@workspace:plugins/infra/plugins/deps/plugins/download"],
 
     "@equin/plugin-infra-deps-download-github-release-updater": ["@equin/plugin-infra-deps-download-github-release-updater@workspace:plugins/infra/plugins/deps/plugins/download/plugins/github-release-updater"],
+
+    "@equin/plugin-infra-deps-hold": ["@equin/plugin-infra-deps-hold@workspace:plugins/infra/plugins/deps/plugins/hold"],
 
     "@equin/plugin-infra-deps-mise": ["@equin/plugin-infra-deps-mise@workspace:plugins/infra/plugins/deps/plugins/mise"],
 

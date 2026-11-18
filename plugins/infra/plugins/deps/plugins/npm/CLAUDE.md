@@ -138,15 +138,15 @@ functions in `core/internal/coherence.ts` over `readWorkspace(files)` (a check r
   - Uses: `infra/deps/updates.UpdaterDeclare`
 - Core:
   - Uses:
-    - `infra/deps/updates.heldBy`
+    - `infra/deps/hold.heldBy`
+    - `infra/deps/hold.Hold`
+    - `infra/deps/hold.holdProblems`
+    - `infra/deps/hold.HoldSchema`
+    - `infra/deps/hold.utcDay`
     - `infra/deps/updates.heldWaiting`
-    - `infra/deps/updates.Hold`
-    - `infra/deps/updates.holdProblems`
-    - `infra/deps/updates.HoldSchema`
     - `infra/deps/updates.Move`
     - `infra/deps/updates.Outdated`
     - `infra/deps/updates.OutdatedWaiting`
-    - `infra/deps/updates.utcDay`
     - `plugin-meta/plugin-records.foldRepoFiles`
   - Exports (types):
     - `Group`

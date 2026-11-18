@@ -2,7 +2,7 @@ import type { Check } from "@plugins/framework/plugins/tooling/core";
 import {
   holdProblems,
   utcDay,
-} from "@plugins/infra/plugins/deps/plugins/updates/core";
+} from "@plugins/infra/plugins/deps/plugins/hold/core";
 import {
   CARGO_HOLDS,
   CARGO_HOLDS_FILE,

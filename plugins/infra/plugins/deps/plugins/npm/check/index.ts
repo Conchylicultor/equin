@@ -10,7 +10,7 @@ import {
   unrangedSpecs,
   wrappersUndeclared,
 } from "@plugins/infra/plugins/deps/plugins/npm/core";
-import { utcDay } from "@plugins/infra/plugins/deps/plugins/updates/core";
+import { utcDay } from "@plugins/infra/plugins/deps/plugins/hold/core";
 
 function verdict(problems: readonly string[], hint: string): CheckResult {
   return problems.length === 0

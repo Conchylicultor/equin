@@ -4,7 +4,13 @@ import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { pinDrift, pinSwitchCommand, type PinnedDepRow } from "../../core";
+import {
+  pinDrift,
+  pinStayCommand,
+  pinSwitchCommand,
+  type PinnedDepRow,
+  type PinReviewView,
+} from "../../core";
 import { installLabel } from "../internal/pin-health";
 
 // The Pinned binaries row's expanded detail: per pinned dependency, what is
@@ -24,6 +30,40 @@ function Command({ command }: { command: string }) {
       <CopyButton text={command} tooltip="Copy the command" aspect="inline" />
     </Inline>
   );
+}
+
+/** Where a lagging pin's decision stands: its clock, or the stay in force. */
+function Review({ review }: { review: PinReviewView | null }) {
+  if (review === null) return null;
+  switch (review.decision) {
+    case "within-bound":
+      return review.dueOn === null ? null : (
+        <Text variant="caption" tone="muted">
+          Behind since {review.since?.slice(0, 10)}: switch it or decide to stay
+          by {review.dueOn}, or the weekly Dependency upgrades task asks.
+        </Text>
+      );
+    case "due":
+      return (
+        <Text variant="caption" tone="destructive">
+          Behind since {review.since?.slice(0, 10)}, a decision was due{" "}
+          {review.dueOn}: switch it, or decide to stay.
+        </Text>
+      );
+    case "stayed":
+    case "stay-lapsed":
+      return review.stay === null ? null : (
+        <Text
+          variant="caption"
+          tone={review.decision === "stayed" ? "muted" : "destructive"}
+        >
+          {review.decision === "stayed"
+            ? `Staying, to review by ${review.stay.reviewBy}: `
+            : `The decision to stay was to be reviewed by ${review.stay.reviewBy}: `}
+          {review.stay.reason}
+        </Text>
+      );
+  }
 }
 
 function PinnedDep({ row, mainRoot }: { row: PinnedDepRow; mainRoot: string }) {
@@ -82,6 +122,11 @@ function PinnedDep({ row, mainRoot }: { row: PinnedDepRow; mainRoot: string }) {
               Not a plain switch: {s.declared.blocked}.
             </Text>
           )}
+          <Review review={row.review} />
+          <Text variant="caption" tone="muted">
+            Or keep it, with a reason (reviewed again in at most 90 days):
+          </Text>
+          <Command command={pinStayCommand(mainRoot, row.id)} />
           {running}
         </Stack>
       );

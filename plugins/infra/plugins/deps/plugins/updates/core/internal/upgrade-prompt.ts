@@ -1,5 +1,10 @@
 import { AWAIT_MAX_DAYS, type BoundedRows } from "./awaiting";
-import { describeHold, utcDay, type Hold } from "./hold";
+import { decisionSection, type PendingDecision } from "./decision";
+import {
+  describeHold,
+  utcDay,
+  type Hold,
+} from "@plugins/infra/plugins/deps/plugins/hold/core";
 import { isActionable, type AwaitingOn, type Outdated } from "./updater";
 
 /** One updater's share of an upgrade task: what it found outdated, and the holds it must review. */
@@ -18,10 +23,18 @@ export function hasUpgradeWork(u: OutdatedUpdater): boolean {
   return u.lapsed.length > 0 || u.outdated.some(isActionable);
 }
 
-/** The title of the batched upgrade task: its actionable rows and its holds to review. */
-export function upgradeTaskTitle(batch: readonly OutdatedUpdater[]): string {
-  return `Upgrade ${batch
-    .filter(hasUpgradeWork)
+/**
+ * The title of the batched upgrade task: its actionable rows, its holds to
+ * review and the decisions it carries.
+ */
+export function upgradeTaskTitle(
+  batch: readonly OutdatedUpdater[],
+  decisions: readonly PendingDecision[],
+): string {
+  const work = batch.filter(hasUpgradeWork);
+  const decide = decisions.map((d) => d.title).join(", ");
+  if (work.length === 0) return `Decide: ${decide}`;
+  const upgrade = `Upgrade ${work
     .map((u) => {
       const moves = u.outdated
         .filter(isActionable)
@@ -32,6 +45,7 @@ export function upgradeTaskTitle(batch: readonly OutdatedUpdater[]): string {
       return `${u.updaterId}: ${[...moves, ...review].join(", ")}`;
     })
     .join("; ")}`;
+  return decisions.length === 0 ? upgrade : `${upgrade}; decide: ${decide}`;
 }
 
 /** Who an awaiting row waits on, in words — the one place `AwaitingOn` becomes text. */
@@ -64,26 +78,30 @@ export function formatOutdated(o: Outdated): string {
 /**
  * The \`{{outdated}}\` variable of the upgrade prompt: each updater with work, the
  * file its holds live in, every release move it found, and every hold whose
- * review is overdue.
+ * review is overdue — then the decisions only a person can make (carried in
+ * this variable, so a customized template still shows them).
  */
-export function outdatedSections(batch: readonly OutdatedUpdater[]): string {
-  return batch
-    .map((u) => {
-      const rows = u.outdated.map((o) => `- ${formatOutdated(o)}`);
-      const review =
-        u.lapsed.length === 0
-          ? []
-          : [
-              "Holds to review:",
-              ...u.lapsed.map((h) => `- [ ] ${describeHold(h)}`),
-            ];
-      return [
-        `\`${u.updaterId}\` (holds in \`${u.holdsFile}\`):`,
-        ...rows,
-        ...review,
-      ].join("\n");
-    })
-    .join("\n\n");
+export function outdatedSections(
+  batch: readonly OutdatedUpdater[],
+  decisions: readonly PendingDecision[],
+): string {
+  const updaters = batch.map((u) => {
+    const rows = u.outdated.map((o) => `- ${formatOutdated(o)}`);
+    const review =
+      u.lapsed.length === 0
+        ? []
+        : [
+            "Holds to review:",
+            ...u.lapsed.map((h) => `- [ ] ${describeHold(h)}`),
+          ];
+    return [
+      `\`${u.updaterId}\` (holds in \`${u.holdsFile}\`):`,
+      ...rows,
+      ...review,
+    ].join("\n");
+  });
+  const decide = decisionSection(decisions);
+  return [...updaters, ...(decide === "" ? [] : [decide])].join("\n\n");
 }
 
 /**
@@ -93,8 +111,8 @@ export function outdatedSections(batch: readonly OutdatedUpdater[]): string {
  * `{{pushPolicy}}` is what the automation's Push setting allows, scoped by
  * step 2 to an `upgraded` or `partial` verdict and an `ok` build.
  */
-export const DEPS_UPGRADE_PROMPT = `Newer releases are available, or holds are due for review (seen on main by the Dependency upgrades
-automation):
+export const DEPS_UPGRADE_PROMPT = `Newer releases are available, holds are due for review, or a decision only a person can make is due
+(seen on main by the Dependency upgrades automation):
 
 {{outdated}}
 

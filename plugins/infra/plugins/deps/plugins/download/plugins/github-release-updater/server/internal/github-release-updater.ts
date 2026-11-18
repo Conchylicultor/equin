@@ -16,16 +16,18 @@ import {
 } from "@plugins/infra/plugins/deps/plugins/download/deps";
 import {
   cooldownEnd,
-  heldBy,
   heldWaiting,
-  utcDay,
   type Cooldown,
-  type Hold,
   type Move,
   type Outdated,
   type Updater,
   type UpdaterPlan,
 } from "@plugins/infra/plugins/deps/plugins/updates/core";
+import {
+  heldBy,
+  utcDay,
+  type Hold,
+} from "@plugins/infra/plugins/deps/plugins/hold/core";
 import {
   GITHUB_RELEASE_HOLDS,
   GITHUB_RELEASE_HOLDS_FILE,

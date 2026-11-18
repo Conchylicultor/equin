@@ -11,7 +11,7 @@
 // and title accept only its output, so no updater and no consumer can carry an
 // unbounded wait into a task.
 
-import { utcDay } from "./hold";
+import { utcDay } from "@plugins/infra/plugins/deps/plugins/hold/core";
 import type { AwaitingOn, Outdated, OutdatedWaiting } from "./updater";
 
 /** The longest a release may wait on someone else's publish before the wait becomes work. */
