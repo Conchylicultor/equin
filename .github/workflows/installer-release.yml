@@ -13,6 +13,9 @@
 #
 # So a failed installer build no longer blocks the Release: the curl install's
 # stage 0 finds no INSTALLER-SHA256SUMS and installs in the terminal view.
+# 3. `release-status` (always, once the Release exists): a Release missing its
+#    window says so in its notes and fails the run loudly; a build that never
+#    got a runner is re-run once (see the job).
 #
 # - Runs on every pushed tag; only release tags (`./equin version cut`:
 #   v<YYYY.MM.DD>[.N]) go further, any other tag ends here without error.
@@ -50,6 +53,10 @@ on:
         default: true
       replace:
         description: "Replace the tag's existing GitHub Release (off: an existing Release keeps its files, and only gets the installer attached)"
+        type: boolean
+        default: false
+      retried:
+        description: "Set by the workflow itself when it re-runs a build that never got a runner (at most once): this run does not re-run again"
         type: boolean
         default: false
 
@@ -159,7 +166,15 @@ jobs:
         run: |
           set -euo pipefail
           create=true
-          if gh release view "$TAG" >/dev/null 2>&1; then
+          # Only "release not found" means none: any other error stops here,
+          # never mistaken for a missing Release (which would republish it).
+          if ! draft="$(gh release view "$TAG" --json isDraft --jq .isDraft 2>"$RUNNER_TEMP/view.err")"; then
+            grep -qx 'release not found' "$RUNNER_TEMP/view.err" || { cat "$RUNNER_TEMP/view.err" >&2; exit 1; }
+            draft=none
+          fi
+          if [ "$draft" = true ]; then
+            echo "::notice::$TAG has only a draft Release (an earlier publish stopped midway): publishing it from scratch."
+          elif [ "$draft" = false ]; then
             if [ "$REPLACE" = true ]; then
               echo "::notice::$TAG already has a Release: replacing it (replace is on)."
             else
@@ -424,3 +439,90 @@ jobs:
           gh release upload "$TAG" --clobber "$RUNNER_TEMP/installer-provenance.intoto.jsonl"
           gh release upload "$TAG" --clobber "$DIR/INSTALLER-SHA256SUMS"
           gh release view "$TAG"
+
+  # The Release says whether its window is attached. Every run that published
+  # (or found) the Release ends here, whatever the builds did:
+  # - attached: any earlier "not attached" note is taken off the notes;
+  # - not attached: the notes say so (with this run's link), the run fails
+  #   with an error naming the job — equin's release-assets watch files the
+  #   report — and, when a build job never got a runner at all (GitHub's
+  #   hosted macOS pool turned it away: "not acquired by Runner … after
+  #   multiple attempts", the job's annotation — v2026.11.18.6), the attach is
+  #   dispatched again, once: GitHub's runner capacity is outside our control,
+  #   so a single bounded re-run is the remedy, not a longer timeout (the
+  #   build itself takes ~1–2 min). A build that RAN and failed is never re-run:
+  #   that is a bug to fix.
+  release-status:
+    name: Is the window attached?
+    needs: [validate, publish, page, macos, linux, attach]
+    if: >-
+      always() && needs.validate.outputs.window == 'true' &&
+      needs.validate.outputs.publish == 'true' && needs.publish.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+      checks: read
+    env:
+      TAG: ${{ needs.validate.outputs.ref }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      ATTACH: ${{ needs.attach.result }}
+      RETRIED: ${{ inputs.retried || false }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      BEGIN: "<!-- installer-window-status -->"
+      END: "<!-- /installer-window-status -->"
+    steps:
+      - name: Mark the Release
+        id: mark
+        run: |
+          set -euo pipefail
+          body="$(gh release view "$TAG" --json body --jq .body | tr -d '\r')"
+          # The notes without any earlier status block.
+          base="$(printf '%s\n' "$body" | awk -v b="$BEGIN" -v e="$END" '
+            $0 == b { skip = 1; next } $0 == e { skip = 0; next } !skip')"
+          if [ "$ATTACH" = success ]; then
+            if [ "$base" != "$body" ]; then
+              printf '%s\n' "$base" | gh release edit "$TAG" --notes-file -
+              echo "::notice::$TAG: the installer window is attached; the 'not attached' note is removed."
+            fi
+            exit 0
+          fi
+          # Which build jobs did not succeed, and which of them GitHub never
+          # gave a runner — said by the job's own annotation, not guessed from
+          # its empty step list (a job cancelled by hand while queued has none
+          # either).
+          jobs="$(gh api --paginate "repos/$GH_REPO/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs" \
+            --jq '.jobs[] | select(.name | test("^(Installer page|macOS|Linux)")) | select(.conclusion != "success" and .conclusion != "skipped") | "\(.id)\t\(.name)\t\(.conclusion)"')"
+          failed="" unacquired=0 other=0
+          while IFS=$'\t' read -r id name conclusion; do
+            [ -n "$id" ] || continue
+            failed="${failed:+$failed, }$name ($conclusion)"
+            msgs="$(gh api "repos/$GH_REPO/check-runs/$id/annotations" --jq '.[].message')"
+            if grep -q 'not acquired by Runner' <<< "$msgs"; then
+              unacquired=$((unacquired + 1))
+            else
+              other=$((other + 1))
+            fi
+          done <<< "$jobs"
+          retry=false
+          if [ "$RETRIED" != true ] && [ "$unacquired" -gt 0 ] && [ "$other" -eq 0 ]; then retry=true; fi
+          next="Re-attach it: \`gh workflow run installer-release.yml -R $GH_REPO -f ref=$TAG\`."
+          if [ "$retry" = true ]; then next="A build never got a GitHub runner, so the attach is re-run once automatically."; fi
+          {
+            printf '%s\n\n' "$base"
+            echo "$BEGIN"
+            echo "> [!WARNING]"
+            echo "> The installer window is not attached to this release (${failed:-attach: $ATTACH}; [run]($RUN_URL))."
+            echo "> \`curl | bash\` installs it in the terminal; \`--window\` stops. $next"
+            echo "$END"
+          } | gh release edit "$TAG" --notes-file -
+          echo "retry=$retry" >> "$GITHUB_OUTPUT"
+          echo "::error::$TAG was published WITHOUT its installer window: ${failed:-attach $ATTACH}. $next"
+          exit 1
+      # The new run waits behind this one (the concurrency group), then finds
+      # the Release and only attaches.
+      - name: Re-run the attach once
+        if: ${{ failure() && steps.mark.outputs.retry == 'true' }}
+        run: gh workflow run installer-release.yml --ref "$DEFAULT_BRANCH" -f ref="$TAG" -f retried=true

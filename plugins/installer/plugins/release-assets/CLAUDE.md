@@ -13,7 +13,8 @@ the two-phase publish:
   error. **By hand** (Actions → Installer release → Run workflow, or
   `gh workflow run installer-release.yml -f ref=<tag>`): on a tag that already
   has a Release, its files are left alone and the installer is (re)attached;
-  `replace` republishes the Release from scratch; `publish` off builds any ref
+  `replace` republishes the Release from scratch (as does a run finding only
+  a draft, left by a publish that stopped midway); `publish` off builds any ref
   and keeps the binaries as run artifacts only (how to try a build without
   releasing).
 - **Jobs**: validate (which ref, is it a release, does it have the window's
@@ -28,7 +29,24 @@ the two-phase publish:
   `--probe` under xvfb, the real window over a dry run (must reach "✓ Start
   equin", the last step), and `--probe` in a bare `ubuntu:22.04` container must FAIL: the
   loader refuses the binary, exit 127 — the no-webkit
-  fallback) → attach (needs publish, macOS and Linux all green).
+  fallback) → attach (needs publish, macOS and Linux all green) →
+  release-status ("Is the window attached?", runs whatever the builds did,
+  once the Release exists).
+- **A Release missing its window is loud**: release-status writes a warning
+  block into the Release notes (between `<!-- installer-window-status -->`
+  markers: which build failed, the run, the re-attach command), fails the run
+  with an `::error::` (so the watch below files a `github-run-failed`
+  report), and takes the block off again once a later run attaches.
+- **A build that never got a runner is re-run once**: GitHub's hosted macOS
+  pool can turn a job away ("not acquired by Runner … after multiple
+  attempts" — the job is cancelled after ~15 min with zero steps;
+  v2026.11.18.6). When every failed build job carries that annotation (read
+  from its check run, so a job cancelled by hand is never mistaken for it),
+  release-status dispatches the workflow again for the tag (`retried=true`,
+  so at most once); it queues behind this run
+  in the concurrency group, finds the Release and only attaches. A build
+  that ran and failed is never re-run — that is a bug. No timeout is raised:
+  the macOS build takes ~1–2 min.
 - **Toolchain**: the exact bun and rust versions `mise.lock` records, installed
   directly (`setup-bun`, `rust-toolchain`) — `mise install` would also run the
   repo's postinstall hooks, meant for a developer's machine.

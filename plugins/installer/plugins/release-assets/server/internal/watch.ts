@@ -11,7 +11,11 @@ const workflow = workflowFileOf(RELEASE_WORKFLOW);
 /**
  * The release workflow of the product's repo, and its Releases: a failed run
  * is reported, and the publisher's releases row shows what GitHub published.
- * A failed release tag's report names the re-publish.
+ * A failed release tag's report names the re-run: on a tag whose Release
+ * exists it only (re)attaches the installer — the published files stay as
+ * they are (`replace` would rewrite release.json / SHA256SUMS under clients
+ * reading them, and is never needed for a missing window) — and on a tag
+ * with no Release yet it publishes one.
  */
 export const releaseWorkflowWatch = GitHubEvents.Watch({
   repo: SOURCE_REPO,
@@ -22,7 +26,7 @@ export const releaseWorkflowWatch = GitHubEvents.Watch({
   remedy: ({ repo, head }) =>
     parseReleaseTag(head).kind === "release"
       ? [
-          `Once fixed, re-publish the release: \`gh workflow run ${workflow} -R ${repo} -f ref=${head} -f replace=true\`.`,
+          `Once fixed, re-run the release (it publishes the Release if missing, else only attaches the installer): \`gh workflow run ${workflow} -R ${repo} -f ref=${head}\`.`,
         ]
       : [],
 });
