@@ -23,6 +23,11 @@ shortcut. Before matching, it yields the key to whoever already owns it:
   `preventDefault` the Esc they close on), no inner Esc shortcut (exit full
   screen, leave the desktop overview, end a tour).
 
+Not every `keydown` is a `KeyboardEvent`: Chrome's autofill and password
+managers dispatch plain `Event`s named `keydown`, with no `key` (the DOM
+typings say otherwise). The listener takes an `Event` and narrows with
+`instanceof KeyboardEvent`; such an event names no key, so no shortcut fires.
+
 A raw key listener that bypasses the registry (allowed only with a lint
 exemption, e.g. Sonata's hold-to-scrub seek) must apply the same three rules.
 

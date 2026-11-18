@@ -38,7 +38,15 @@ export function ShortcutManager() {
   }, [shortcuts]);
 
   useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
+    // Typed `Event`, not `KeyboardEvent`: a "keydown" is not always a keyboard
+    // event. Chrome's autofill (picking a saved address or password) and
+    // password-manager extensions dispatch plain `Event`s named "keydown" with
+    // no `key`, `code` or modifier fields — the DOM typings' keydown →
+    // KeyboardEvent mapping lies for them. Such an event names no key, so it is
+    // never a shortcut; narrowing here makes every read below sound.
+    function handleKeyDown(event: Event) {
+      if (!(event instanceof KeyboardEvent)) return;
+      const e = event;
       // An element that already handled the key owns it: a tree or list moving
       // its selection with the arrows, a row activated by Space. This window
       // listener runs after React's root-delegated handlers, so their

@@ -46,7 +46,8 @@ function setup() {
         cancelable: true,
       }),
     );
-  return { handler, press, unregister };
+  const bystander = () => getByTestId("bystander");
+  return { handler, press, unregister, bystander };
 }
 
 describe("shortcut manager", () => {
@@ -60,6 +61,22 @@ describe("shortcut manager", () => {
   it("yields a key an element already handled (defaultPrevented)", () => {
     const s = setup();
     s.press("owner");
+    expect(s.handler).not.toHaveBeenCalled();
+    s.unregister();
+  });
+
+  it("ignores a keydown that is not a KeyboardEvent (Chrome autofill)", () => {
+    // Chrome's autofill and password managers dispatch plain `Event`s named
+    // "keydown", with no `key`: they name no key, so they match no shortcut.
+    const s = setup();
+    const errors: unknown[] = [];
+    const onError = (e: ErrorEvent) => errors.push(e.error);
+    window.addEventListener("error", onError);
+    s.bystander().dispatchEvent(
+      new Event("keydown", { bubbles: true, cancelable: true }),
+    );
+    window.removeEventListener("error", onError);
+    expect(errors).toEqual([]);
     expect(s.handler).not.toHaveBeenCalled();
     s.unregister();
   });
