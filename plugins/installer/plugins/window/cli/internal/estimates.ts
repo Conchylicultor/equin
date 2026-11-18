@@ -30,8 +30,8 @@ const ESTIMATES_JSON = "plugins/installer/core/estimates.json";
  * `timing.json`, else the `events.jsonl` it was read from — take each step's
  * median, and write `installer/core/estimates.json` and install.sh's
  * generated copy of it. A dry run's timings are never counted.
- * `--only <step…>` measures only those steps: every other one is null (the
- * runs' times for it are not to be trusted — a fix changed that step since).
+ * `--only <step…>` re-measures only those steps (a fix changed them since the
+ * runs that measured the rest): every other step keeps its committed estimate.
  * `--from-json` rewrites only install.sh's block from the committed JSON.
  */
 const run: CliAction<
@@ -45,25 +45,24 @@ const run: CliAction<
       opts.only === undefined
         ? undefined
         : new Set(opts.only.map((id) => InstallStepId.parse(id)));
-    const timings = (await Promise.all(dirs.map(readTimings)))
-      .flat()
-      .map((t) =>
-        only === undefined
-          ? t
-          : {
-              ...t,
-              steps: Object.fromEntries(
-                Object.entries(t.steps).filter(([id]) =>
-                  only.has(InstallStepId.parse(id)),
-                ),
-              ),
-            },
-      );
+    const timings = (await Promise.all(dirs.map(readTimings))).flat();
     if (timings.length === 0)
       throw new Error(
         `no finished install runs in ${dirs.join(", ")} — a real install writes <run>/events.jsonl, and <run>/timing.json when it finishes`,
       );
-    estimates = estimatesFrom(timings);
+    const measured = estimatesFrom(timings);
+    estimates =
+      only === undefined
+        ? measured
+        : {
+            installs: Math.max(INSTALL_ESTIMATES.installs, measured.installs),
+            steps: Object.fromEntries(
+              InstallStepId.options.map((id) => [
+                id,
+                only.has(id) ? measured.steps[id] : INSTALL_ESTIMATES.steps[id],
+              ]),
+            ) as InstallEstimates["steps"],
+          };
     await writeFile(
       join(REPO_ROOT, ESTIMATES_JSON),
       `${JSON.stringify(estimates, null, 2)}\n`,

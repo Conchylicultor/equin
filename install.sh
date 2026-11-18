@@ -836,13 +836,13 @@ est_s() {
     mise) echo 1 ;;
     clone) echo 16 ;;
     toolchain) echo 17 ;;
-    start) echo null ;;
-    build) echo null ;;
-    build.database) echo null ;;
-    build.deps) echo null ;;
-    build.codegen) echo null ;;
-    build.interface) echo null ;;
-    build.deploy) echo null ;;
+    start) echo 638 ;;
+    build) echo 2 ;;
+    build.database) echo 0 ;;
+    build.deps) echo 0 ;;
+    build.codegen) echo 0 ;;
+    build.interface) echo 0 ;;
+    build.deploy) echo 0 ;;
     *) echo "install.sh: no estimate entry for step '$1'" >&2; exit 2 ;;
   esac
 }
@@ -1366,14 +1366,24 @@ plan_json() {
 # every step that ran to done took, read back from events.jsonl (this
 # script's step events and the `./equin` commands' share one shape:
 # {"v":1,"t":…,"type":"step","id":…,"state":"done","ms":…}). A step done twice
-# (a retry) keeps its last time. `./equin installer estimates` takes the
-# medians over these files.
+# (a retry) keeps its last time. A build sub-step (`build.*`) whose last word
+# is skipped took 0 when the build ran to done — a fresh install's build finds
+# main already built, and those zeros are what lets the window show a time
+# left (timingFromEvents reads a stream the same way). `./equin installer
+# estimates` takes the medians over these files.
 write_timing() {
   local steps dry=false
   [ "$DRY_RUN" != "1" ] || dry=true
-  steps="$(sed -n 's/^{"v":1,"t":"[^"]*","type":"step","id":"\([^"]*\)","state":"done","ms":\([0-9]*\)}$/\1 \2/p' "$RUN_DIR/events.jsonl" |
+  steps="$(sed -n -e 's/^{"v":1,"t":"[^"]*","type":"step","id":"\([^"]*\)","state":"done","ms":\([0-9]*\)}$/\1 \2/p' \
+    -e 's/^{"v":1,"t":"[^"]*","type":"step","id":"\(build\.[^"]*\)","state":"skipped"}$/\1 skipped/p' "$RUN_DIR/events.jsonl" |
     awk '{ if (!($1 in ms)) order[n++] = $1; ms[$1] = $2 }
-      END { for (i = 0; i < n; i++) printf "%s\"%s\":%s", (i ? "," : ""), order[i], ms[order[i]] }')"
+      END {
+        for (i = 0; i < n; i++) {
+          id = order[i]; v = ms[id]
+          if (v == "skipped") { if (!("build" in ms) || ms["build"] == "skipped") continue; v = 0 }
+          printf "%s\"%s\":%s", (out++ ? "," : ""), id, v
+        }
+      }')"
   printf '{"v":1,"dryRun":%s,"release":null,"platform":"%s","at":"%s","steps":{%s}}\n' \
     "$dry" "$PLATFORM" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$steps" >"$RUN_DIR/timing.json"
 }

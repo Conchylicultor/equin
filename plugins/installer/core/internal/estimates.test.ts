@@ -104,3 +104,33 @@ test("an unfinished stream measures nothing; a dry run's stream says so", () => 
   );
   expect(dry.ok && dry.timing.dryRun).toBe(true);
 });
+
+const skipped = (id: string) =>
+  `{"v":1,"t":"2026-11-17T23:17:10Z","type":"step","id":"${id}","state":"skipped"}`;
+
+test("a build sub-step skipped inside a finished build took 0; a skipped top step is not measured", () => {
+  const r = timingFromEvents(
+    events(
+      PLAN,
+      skipped("tools"),
+      skipped("build.database"),
+      step("build.deps", 4_000),
+      skipped("build.deps"),
+      skipped("build.deploy"),
+      step("build.deploy", 3_000),
+      step("build", 2_000),
+      DONE,
+    ),
+  );
+  expect(r.ok && r.timing.steps).toEqual({
+    build: 2_000,
+    "build.database": 0,
+    "build.deps": 0,
+    "build.deploy": 3_000,
+  });
+  // A build that never finished measured none of its sub-steps.
+  const unfinished = timingFromEvents(
+    events(PLAN, skipped("build.database"), DONE),
+  );
+  expect(unfinished.ok && unfinished.timing.steps).toEqual({});
+});

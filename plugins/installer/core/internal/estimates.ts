@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { InstallStepId, type InstallEvent } from "./events";
+import { BuildSubStepId, InstallStepId, type InstallEvent } from "./events";
 import estimatesJson from "../estimates.json";
 
 /**
@@ -11,7 +11,10 @@ import estimatesJson from "../estimates.json";
  * equal to this file by the `installer:estimates-in-sync` check.
  */
 export const InstallEstimates = z.strictObject({
-  /** How many timing files the medians were taken over. */
+  /**
+   * How many timing files the medians were taken over — the most any step's
+   * was, when steps were measured in separate passes (`--only`).
+   */
   installs: z.number().int().nonnegative(),
   steps: z.record(InstallStepId, z.number().nonnegative().nullable()),
 });
@@ -24,7 +27,11 @@ export const INSTALL_ESTIMATES: InstallEstimates =
  * What one install measured, written beside its events when it ends
  * (`~/.equin/install/<run>/timing.json`): every step that ran to `done`, with
  * how long it took. Skipped, failed and never-reached steps are absent — a
- * median is taken only over steps that really ran.
+ * median is taken only over steps that really ran — except a build sub-step
+ * skipped inside a build that ran to `done`: it is part of that measured
+ * build, and took 0 (a fresh install's build finds main already built by the
+ * service, so every sub-step is skipped; leaving them out would keep their
+ * estimates null, and with them the whole time left).
  */
 export const InstallTiming = z.strictObject({
   v: z.literal(1),
@@ -67,8 +74,9 @@ export function estimatesFrom(
  * for a run that left no `timing.json` — an install whose run dir was copied
  * off another machine before its timing file existed, say. The same reading
  * install.sh's `write_timing` makes: each step's last `done` time (a retry
- * keeps its last), only for a stream that reached `done` (a finished
- * install). A stream that did not is an error, never an empty timing.
+ * keeps its last), a build sub-step's last `skipped` as 0 when the build ran
+ * to `done`, only for a stream that reached `done` (a finished install). A
+ * stream that did not is an error, never an empty timing.
  */
 export function timingFromEvents(
   events: readonly InstallEvent[],
@@ -80,9 +88,20 @@ export function timingFromEvents(
   if (done === undefined)
     return { ok: false, error: "the install never finished (no done event)" };
   const steps: InstallTiming["steps"] = {};
-  for (const e of events)
-    if (e.type === "step" && e.state === "done" && e.ms !== undefined)
+  const skippedSubSteps = new Set<BuildSubStepId>();
+  for (const e of events) {
+    if (e.type !== "step") continue;
+    const sub = BuildSubStepId.safeParse(e.id);
+    if (e.state === "done" && e.ms !== undefined) {
       steps[e.id] = e.ms;
+      if (sub.success) skippedSubSteps.delete(sub.data);
+    } else if (e.state === "skipped" && sub.success) {
+      skippedSubSteps.add(sub.data);
+      delete steps[sub.data];
+    }
+  }
+  if (steps.build !== undefined)
+    for (const id of skippedSubSteps) steps[id] = 0;
   return {
     ok: true,
     timing: {

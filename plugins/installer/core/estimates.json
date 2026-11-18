@@ -5,12 +5,12 @@
     "mise": 1,
     "clone": 16,
     "toolchain": 17,
-    "start": null,
-    "build": null,
-    "build.database": null,
-    "build.deps": null,
-    "build.codegen": null,
-    "build.interface": null,
-    "build.deploy": null
+    "start": 638,
+    "build": 2,
+    "build.database": 0,
+    "build.deps": 0,
+    "build.codegen": 0,
+    "build.interface": 0,
+    "build.deploy": 0
   }
 }

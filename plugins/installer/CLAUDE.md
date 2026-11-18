@@ -117,7 +117,8 @@ own (next section): fix wording in the step engine, and every view changes.
 - **Every run has a dir**, `~/.equin/logs/install/<run-id>/` (`latest` links
   to the newest): `events.fifo` while it runs, `events.jsonl` (every event, the
   install's record) and, after a success, `timing.json` (`InstallTiming`: each
-  step that ran to done, with its `ms`; `dryRun: true` from `--dry-run`).
+  step that ran to done, with its `ms` — a build sub-step skipped inside a
+  finished build as 0; `dryRun: true` from `--dry-run`).
 - **One hub**: a background `tee` reads the FIFO, appends to `events.jsonl`
   and hands each line on — to the window's `--events-fd`, else to the terminal
   view. install.sh keeps one write end open for its whole life (`ev`); the
@@ -383,20 +384,26 @@ that failure is the step's own output. Done = main's receipt `ok` for HEAD.
 step's median over every finished real install run (this machine's run dirs,
 plus run dirs collected elsewhere — a VM's, say): its `timing.json`, else the
 `events.jsonl` it is read from (`timingFromEvents`: each step's last `done`
-time, only for a stream that reached `done`). Dry runs never count (their plan
-says `dryRun`). `--only` measures just the listed steps and leaves every other
-one null — for runs that predate a change to those steps. It writes
-`core/estimates.json` and install.sh's generated `estimates` block
-(`--from-json` rewrites only the block). `installer:estimates-in-sync` holds
-the two equal. A null step shows no time, and no total is shown while any
-remaining step has none.
+time, only for a stream that reached `done`; a build sub-step skipped inside a
+build that ran to `done` counts as 0 — install.sh's `write_timing` writes the
+same). Dry runs never count (their plan says `dryRun`). `--only` re-measures
+just the listed steps and keeps every other one's committed estimate — for
+runs that predate a change to those steps. It writes `core/estimates.json` and
+install.sh's generated `estimates` block (`--from-json` rewrites only the
+block). `installer:estimates-in-sync` holds the two equal. A null step shows
+no time, and no total is shown while any remaining step has none.
 
-Current values (2026-11-18): `tools`, `mise`, `clone`, `toolchain` from three
-clean installs in fresh macOS VMs (4 CPU / 8 GB; `--only` those four).
-`start` and `build` (with its sub-steps) stay null: those runs predate the
-fix that made a fresh install build main once without the check pass
-(0e1c3cbe53), so their ~24 min `start` measured the bug. Regenerate them from
-a clean install of a release that includes it.
+Current values (2026-11-18), all from clean installs in fresh macOS VMs
+(Tart, 4 CPU / 8 GB): `tools`, `mise`, `clone`, `toolchain` from three
+release installs (`--only` those four); `start`, `build` and its sub-steps
+from two `--ref main` installs at a2559eaca1 (`--only` those) — start 670 s
+and 606 s, build 2 s with every sub-step skipped. On a fresh install the
+service's first boot deploys main while `./equin start` still runs, and
+start's next login-service install (the disk-speed monitor) waits ~8–9 min
+for a host CPU grant — admission is unmeasured on a fresh machine, so it runs
+on a 1-slot floor, and that build holds the slot — so the build's time is
+booked to `start` and the build step finds main already deployed (§ One
+build of main per install). Remeasure start and build when that moves.
 
 ## Sub-plugins
 

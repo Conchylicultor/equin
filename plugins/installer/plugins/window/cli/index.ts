@@ -51,7 +51,7 @@ export default defineCliCommand({
         {
           flags: "--only <step...>",
           description:
-            "Measure only these step ids; every other step's estimate is null (its measured runs predate a change to it)",
+            "Re-measure only these step ids (a change to them since the runs that measured the rest); every other step keeps its committed estimate",
         },
         {
           flags: "--from-json",
