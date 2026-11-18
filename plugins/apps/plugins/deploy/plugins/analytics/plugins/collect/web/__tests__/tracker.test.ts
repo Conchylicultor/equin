@@ -195,6 +195,25 @@ describe("pageviews", () => {
     ]);
   });
 
+  it("a DataView filter in the path is not a new page, and is never sent", () => {
+    // report-1795037821-l4a4xo: each filter edit in the demo's Places sent a
+    // pageview whose path carried the filter blob past the server's cap (400).
+    const h = harness();
+    const places = "/demo/at/desktop/places";
+    h.tracker.pathChanged(places);
+    h.tracker.pathChanged(
+      `${places};view.places.presets=all~${"A".repeat(900)}`,
+    );
+    h.tracker.pathChanged(
+      `${places};view.places.presets=all~${"B".repeat(900)}`,
+    );
+    h.tracker.track("demo_open", undefined, `${places};view.places.presets=x`);
+    expect(h.sent.map((b) => ("path" in b ? b.path : null))).toEqual([
+      places,
+      places,
+    ]);
+  });
+
   it("sends the landing source with the first pageview only", () => {
     const landing = {
       referrer: "https://news.ycombinator.com/item?id=1",

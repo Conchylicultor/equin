@@ -1,4 +1,5 @@
 import { hashHex } from "@plugins/packages/plugins/string-hash/core";
+import { pathWithoutSurfaceViews } from "@plugins/primitives/plugins/pane/core";
 import type { SiteReportRecord } from "@plugins/apps/plugins/deploy/plugins/site-reports/plugins/intake/core";
 import { MainThreadStallPayloadSchema } from "@plugins/reports/plugins/main-thread-stall/core";
 import {
@@ -24,6 +25,25 @@ export interface SiteContext {
   deploymentId: string;
   /** The deployment's public hostnames: frames on another origin are dropped. */
   hostnames: readonly string[];
+}
+
+/**
+ * The visitor page's path as stored: without its surface view keys
+ * (`;view.<surface>=…` — a DataView filter rides there as a base64 blob, and
+ * the channel may have sent it percent-encoded and cut mid-blob), then kept
+ * only when it is a safe pathname. Before, any page showing a filtered view
+ * (report-1795037821-l4a4xo: the demo's Places) arrived with no path at all.
+ */
+export function reducePagePath(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  let decoded = raw;
+  try {
+    decoded = decodeURIComponent(raw);
+  } catch (err) {
+    if (!(err instanceof URIError)) throw err;
+  }
+  const path = pathWithoutSurfaceViews(decoded);
+  return path.length <= L.maxPath && SAFE_PATHNAME.test(path) ? path : null;
 }
 
 // Control (Cc) and format (Cf: bidi overrides, zero-width joiners) characters,
@@ -268,12 +288,7 @@ export function reduceSiteReport(
   )
     ? (record.source as WebsiteVisitorError["visitorSource"])
     : "other";
-  const path =
-    typeof record.path === "string" &&
-    record.path.length <= L.maxPath &&
-    SAFE_PATHNAME.test(record.path)
-      ? record.path
-      : null;
+  const path = reducePagePath(record.path);
   return WebsiteVisitorErrorSchema.parse({
     deploymentId: site.deploymentId,
     hostname: hostnames[0] ?? null,

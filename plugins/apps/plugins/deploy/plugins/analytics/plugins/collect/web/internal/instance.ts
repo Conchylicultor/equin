@@ -6,7 +6,7 @@ import { getBootTrace } from "@plugins/primitives/plugins/perfs/plugins/boot-tra
 import {
   EVENT_NAME_PATTERN,
   collectEndpoint,
-  stripQuery,
+  pagePathOf,
   type CollectBody,
 } from "../../core";
 import { consentKeyOf, consentStore } from "./consent";
@@ -54,7 +54,7 @@ const pageSections = createPageSectionRegistry();
  * page's full section list its beacons carry. Returns the unmount.
  */
 export function registerPageSection(el: Element, section: string): () => void {
-  return pageSections.register(stripQuery(currentRoutePath()), el, section);
+  return pageSections.register(pagePathOf(currentRoutePath()), el, section);
 }
 
 /** Input that says someone is at the page (passive listeners, capture phase so element scrolls count). */

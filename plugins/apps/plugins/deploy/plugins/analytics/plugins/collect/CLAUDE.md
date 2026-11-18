@@ -395,6 +395,7 @@ after new visits, a rollup and a retention sweep arrive as deltas.
     - `packages/list-bound.cappedList`
     - `packages/list-bound.cappedRecord`
     - `packages/list-bound.wholeList`
+    - `primitives/pane.pathWithoutSurfaceViews`
   - Exports (types):
     - `AdditiveMetrics`
     - `AnalyticsFilter`
@@ -521,6 +522,7 @@ after new visits, a rollup and a retention sweep arrive as deltas.
     - `OWNER_UNMARK_FRAGMENT`
     - `ownerMarkUrl`
     - `ownerUnmarkUrl`
+    - `pagePathOf`
     - `PagePathSchema`
     - `PageSectionsSchema`
     - `PageviewBodySchema`
@@ -545,7 +547,6 @@ after new visits, a rollup and a retention sweep arrive as deltas.
     - `SESSIONS_PAGE`
     - `SessionSchema`
     - `SiteHostSchema`
-    - `stripQuery`
     - `TOTAL_DIMENSION`
     - `UNFILTERED_LEVEL`
     - `utcDay`

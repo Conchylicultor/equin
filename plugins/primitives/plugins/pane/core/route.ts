@@ -423,6 +423,22 @@ export function splitSurfaceViewPart(part: string): {
   return m ? { base: m[1]!, keyed: m[2]! } : { base: part, keyed: null };
 }
 
+/**
+ * A route path with every part's surface view keys (`;view.<surface>=…`)
+ * removed: the screens it addresses, without which view of each surface is on
+ * screen. A DataView's filter rides there as a base64 blob of any length, so
+ * a consumer that records a path as a page (analytics) reads it through this —
+ * one page whatever the visitor filtered, and never their filter values.
+ * Declared keyed params (`;lens=notation`) and positional parts are kept.
+ */
+export function pathWithoutSurfaceViews(path: string): string {
+  if (!path.includes(";")) return path;
+  return path
+    .split("/")
+    .map((part) => splitSurfaceViewPart(part).base)
+    .join("/");
+}
+
 /** The surface view keys `params` holds, sorted. */
 function surfaceViewKeysOf(params: Record<string, string>): string[] {
   return Object.keys(params).filter(isSurfaceViewKey).sort();

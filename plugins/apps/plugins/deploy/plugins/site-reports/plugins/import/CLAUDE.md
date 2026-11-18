@@ -134,6 +134,7 @@ reconcile mechanics are `table-mirror/replica`'s suite.
   - Uses:
     - `packages/list-bound.cappedList`
     - `packages/string-hash.hashHex`
+    - `primitives/pane.pathWithoutSurfaceViews`
     - `reports.CLIENT_REPORT_SOURCES`
     - `reports/main-thread-stall.CLIENT_FAMILIES`
     - `reports/main-thread-stall.CLIENT_OSES`

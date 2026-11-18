@@ -3,22 +3,48 @@ import {
   CollectBodySchema,
   MAX_COLLECT_BODY_BYTES,
   MAX_ENGAGED_MS,
-  stripQuery,
+  pagePathOf,
 } from "./collect-body";
 import { MAX_GAPS, MAX_GAP_OFFSET_MS, appendGap, type Gap } from "./gaps";
 import { MAX_LOAD_MS, loadMs } from "./load-timing";
 import { MAX_PAGE_SECTIONS, MAX_SECTION_NAME_LENGTH } from "./page-sections";
 import { MAX_VIEWPORT_PX } from "./viewport";
 
-describe("stripQuery", () => {
+describe("pagePathOf", () => {
   test("removes query and fragment", () => {
-    expect(stripQuery("/a/b?x=1#top")).toBe("/a/b");
-    expect(stripQuery("/a#x?y")).toBe("/a");
-    expect(stripQuery("/plain")).toBe("/plain");
+    expect(pagePathOf("/a/b?x=1#top")).toBe("/a/b");
+    expect(pagePathOf("/a#x?y")).toBe("/a");
+    expect(pagePathOf("/plain")).toBe("/plain");
+  });
+  test("drops every part's surface view keys, keeps declared keys", () => {
+    expect(
+      pagePathOf("/demo/at/desktop/places;view.places.presets=all~eyJmaWx0"),
+    ).toBe("/demo/at/desktop/places");
+    expect(pagePathOf("/sonata;view.sonata.library=all/song/s1")).toBe(
+      "/sonata/song/s1",
+    );
+    expect(
+      pagePathOf("/sonata/song/s1/12;lens=notation;view.a=1;view.b=2?x"),
+    ).toBe("/sonata/song/s1/12;lens=notation");
   });
 });
 
 describe("CollectBodySchema", () => {
+  test("a path whose DataView filter rides past the cap is accepted, filter dropped", () => {
+    // report-1795037821-l4a4xo: a Places filter in the demo made the path
+    // longer than MAX_PATH_LENGTH, and every beacon was refused with a 400.
+    const blob = "A".repeat(1500);
+    const body = CollectBodySchema.parse({
+      kind: "pageview",
+      host: "equin.ai",
+      path: `/demo/at/desktop/places;view.places.presets=all~${blob}`,
+    });
+    expect(body).toEqual({
+      kind: "pageview",
+      host: "equin.ai",
+      path: "/demo/at/desktop/places",
+    });
+  });
   test("a pageview path loses its query string server-side too", () => {
     const body = CollectBodySchema.parse({
       kind: "pageview",

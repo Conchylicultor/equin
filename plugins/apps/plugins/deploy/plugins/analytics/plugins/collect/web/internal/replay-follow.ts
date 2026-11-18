@@ -3,7 +3,7 @@ import { revealElement } from "@plugins/primitives/plugins/dom/plugins/scroll-re
 import {
   REPLAY_PROTOCOL,
   ReplayCommandSchema,
-  stripQuery,
+  pagePathOf,
   type ReplayCommand,
   type ReplayFrameMessage,
 } from "../../core";
@@ -70,7 +70,7 @@ export function followReplay(deps: ReplayFollowDeps): boolean {
 const REVEAL = { behavior: "smooth", block: "start" } as const;
 
 function run(command: ReplayCommand, deps: ReplayFollowDeps): void {
-  const here = stripQuery(deps.currentPath());
+  const here = pagePathOf(deps.currentPath());
   switch (command.kind) {
     case "navigate":
       if (command.path !== here) deps.navigate(command.path);

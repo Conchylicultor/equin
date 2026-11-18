@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { pathWithoutSurfaceViews } from "@plugins/primitives/plugins/pane/core";
 import { GapsSchema } from "./gaps";
 import { LoadTimingSchema } from "./load-timing";
 import { PageSectionsSchema } from "./page-sections";
@@ -12,7 +13,7 @@ import { ViewportSchema } from "./viewport";
 
 /** Requests whose declared `Content-Length` exceeds this are refused (413). */
 export const MAX_COLLECT_BODY_BYTES = 4096;
-/** A path longer than this (after the query string is removed) is refused. */
+/** A path longer than this (after `pagePathOf` stripped it) is refused. */
 export const MAX_PATH_LENGTH = 512;
 export const MAX_HOST_LENGTH = 253;
 export const MAX_REFERRER_LENGTH = 2048;
@@ -29,19 +30,22 @@ export const MAX_EVENT_PROP_VALUE_LENGTH = 128;
 export const MAX_ENGAGED_MS = 24 * 60 * 60 * 1000;
 
 /**
- * A page path with its query string and fragment removed. The tracker strips
- * them before sending; the schema strips them again, so a query string never
- * reaches storage whatever the client does.
+ * A page path as analytics records it: the query string and fragment removed,
+ * and every surface view key (`;view.<surface>=…` — which view of a DataView
+ * is on screen, its filter a base64 blob of any length) dropped from each
+ * part. A filter is not a page, and its values are what the visitor typed:
+ * the tracker strips them before sending; the schema strips them again, so
+ * neither reaches storage (nor trips the path cap) whatever the client does.
  */
-export function stripQuery(path: string): string {
+export function pagePathOf(path: string): string {
   const cut = path.search(/[?#]/);
-  return cut === -1 ? path : path.slice(0, cut);
+  return pathWithoutSurfaceViews(cut === -1 ? path : path.slice(0, cut));
 }
 
 export const PagePathSchema = z
   .string()
   .max(MAX_REFERRER_LENGTH)
-  .transform(stripQuery)
+  .transform(pagePathOf)
   .pipe(z.string().min(1).max(MAX_PATH_LENGTH).startsWith("/"));
 
 /** `location.host` of the page (hostname plus any port). */

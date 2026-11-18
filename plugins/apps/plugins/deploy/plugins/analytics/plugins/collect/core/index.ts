@@ -55,7 +55,7 @@ export {
   PageviewBodySchema,
   SiteHostSchema,
   UtmTagsSchema,
-  stripQuery,
+  pagePathOf,
 } from "./internal/collect-body";
 export {
   GAP_KINDS,

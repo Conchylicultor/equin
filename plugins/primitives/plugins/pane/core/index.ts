@@ -15,6 +15,7 @@ export {
   normalizeRoutePath,
   onlySurfaceViews,
   parseSegmentParts,
+  pathWithoutSurfaceViews,
   positionalOf,
   readIndexKeyedParams,
   readEmbedTail,

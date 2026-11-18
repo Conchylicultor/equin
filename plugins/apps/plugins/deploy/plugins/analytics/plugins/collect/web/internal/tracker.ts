@@ -3,7 +3,7 @@ import {
   MAX_ENGAGED_MS,
   appendGap,
   loadMs,
-  stripQuery,
+  pagePathOf,
   type CollectBody,
   type CollectResponse,
   type Gap,
@@ -273,7 +273,7 @@ export function createTracker(deps: TrackerDeps): Tracker {
 
   return {
     pathChanged(rawPath) {
-      const path = stripQuery(rawPath);
+      const path = pagePathOf(rawPath);
       if (current?.path === path) return;
       const now = deps.now();
       if (current) {
@@ -352,7 +352,7 @@ export function createTracker(deps: TrackerDeps): Tracker {
       void deps.send({
         kind: "event",
         host: deps.host,
-        path: current?.path ?? stripQuery(fallbackPath),
+        path: current?.path ?? pagePathOf(fallbackPath),
         name,
         ...(props !== undefined ? { props } : {}),
         ...identity(),

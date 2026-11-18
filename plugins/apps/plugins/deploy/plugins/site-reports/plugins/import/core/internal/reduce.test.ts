@@ -142,6 +142,30 @@ describe("reduceSiteReport", () => {
     expect(r.errorType).toBeNull();
   });
 
+  test("a page showing a filtered view keeps its path, the filter dropped", () => {
+    // report-1795037821-l4a4xo arrived with no path: the site held it
+    // percent-encoded with the DataView filter blob, cut at 512 characters.
+    const blob = "eyJmaWx0ZXIiOnsiY2hpbGRyZW4iOlt7".repeat(20);
+    for (const path of [
+      `/demo/at/desktop/places%3Bview.places.presets%3Dall~${blob.slice(0, 400)}…`,
+      `/demo/at/desktop/places;view.places.presets=all~${blob}`,
+    ]) {
+      expect(reduceSiteReport(record({ path }), SITE).path).toBe(
+        "/demo/at/desktop/places",
+      );
+    }
+    // Decoding never lets an unsafe path through.
+    expect(
+      reduceSiteReport(record({ path: "/x%3Fq%3D1" }), SITE).path,
+    ).toBeNull();
+    expect(
+      reduceSiteReport(record({ path: "/a%2F%2Fb" }), SITE).path,
+    ).toBeNull();
+    expect(
+      reduceSiteReport(record({ path: "/bad%E0%A4%A" }), SITE).path,
+    ).toBeNull();
+  });
+
   test("an error type is kept as one sanitised plain line, not dropped for not being an identifier", () => {
     const r = reduceSiteReport(
       record({

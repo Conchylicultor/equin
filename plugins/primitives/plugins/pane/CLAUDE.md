@@ -1084,8 +1084,8 @@ out of the way: **what it opens takes its column**.
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --spacing`
-  - Imported by: 219 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×79
+  - Imported by: 220 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×80
     - `conversations` ×33
     - `debug` ×29
     - `active-data` ×14
@@ -1147,6 +1147,7 @@ out of the way: **what it opens takes its column**.
     - `normalizeRoutePath`
     - `onlySurfaceViews`
     - `parseSegmentParts`
+    - `pathWithoutSurfaceViews`
     - `positionalOf`
     - `readEmbedTail`
     - `readIndexKeyedParams`

@@ -12,6 +12,7 @@ import {
   readKeyedParams,
   slotKeyedParamNames,
   splitSurfaceViewPart,
+  pathWithoutSurfaceViews,
   surfaceViewKey,
   surfaceViewsOf,
   withoutSurfaceViews,
@@ -391,6 +392,17 @@ describe("surface view keys", () => {
       base: "a;junk=1",
       keyed: null,
     });
+  });
+
+  test("drop from every part of a path, other keyed params kept", () => {
+    expect(
+      pathWithoutSurfaceViews("/places;view.p=all~eyJ/place/x;view.d=1"),
+    ).toBe("/places/place/x");
+    expect(pathWithoutSurfaceViews("/song/a/12;lens=n;view.x=1")).toBe(
+      "/song/a/12;lens=n",
+    );
+    expect(pathWithoutSurfaceViews("/a;junk=1/b")).toBe("/a;junk=1/b");
+    expect(pathWithoutSurfaceViews("/plain/path")).toBe("/plain/path");
   });
 
   test("project out of, and apart from, a slot's params", () => {

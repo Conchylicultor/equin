@@ -2072,6 +2072,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `packages/list-bound.cappedList`
                   - `packages/list-bound.cappedRecord`
                   - `packages/list-bound.wholeList`
+                  - `primitives/pane.pathWithoutSurfaceViews`
                 - Exports (types):
                   - `AdditiveMetrics`
                   - `AnalyticsFilter`
@@ -2198,6 +2199,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `OWNER_UNMARK_FRAGMENT`
                   - `ownerMarkUrl`
                   - `ownerUnmarkUrl`
+                  - `pagePathOf`
                   - `PagePathSchema`
                   - `PageSectionsSchema`
                   - `PageviewBodySchema`
@@ -2222,7 +2224,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `SESSIONS_PAGE`
                   - `SessionSchema`
                   - `SiteHostSchema`
-                  - `stripQuery`
                   - `TOTAL_DIMENSION`
                   - `UNFILTERED_LEVEL`
                   - `utcDay`
@@ -3794,6 +3795,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses:
                   - `packages/list-bound.cappedList`
                   - `packages/string-hash.hashHex`
+                  - `primitives/pane.pathWithoutSurfaceViews`
                   - `reports.CLIENT_REPORT_SOURCES`
                   - `reports/main-thread-stall.CLIENT_FAMILIES`
                   - `reports/main-thread-stall.CLIENT_OSES`
@@ -56886,8 +56888,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --spacing`
-        - Imported by: 219 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `apps` ×79
+        - Imported by: 220 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `apps` ×80
           - `conversations` ×33
           - `debug` ×29
           - `active-data` ×14
@@ -56949,6 +56951,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `normalizeRoutePath`
           - `onlySurfaceViews`
           - `parseSegmentParts`
+          - `pathWithoutSurfaceViews`
           - `positionalOf`
           - `readEmbedTail`
           - `readIndexKeyedParams`
