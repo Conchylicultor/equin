@@ -15,7 +15,10 @@ import { pathShowsPage } from "../../shared/page-path";
  *   the moment the page plugin evaluates and the first paint waits for it
  *   (`lazyComponent`'s `preload: "first-paint"`), so the page still paints
  *   whole;
- * - anywhere else, on first mount (navigating to the page).
+ * - anywhere else, once the page being shown is idle (`preload: "idle"`):
+ *   off the first paint, but in before a visitor clicks to the page — loaded
+ *   on first mount instead, the page went blank behind the lazy fallback
+ *   (header included) for ~0.4–0.7 s on every first visit of a page.
  *
  * `load` imports the module holding the component and answers it
  * (`() => import("./components/x-body").then((m) => m.XBody)`).
@@ -30,6 +33,6 @@ export function websitePagePart<P extends object>(
     pathShowsPage(currentRoutePath(), page.path);
   return lazyComponent(
     () => load().then((component) => ({ default: component })),
-    shown ? { preload: "first-paint" } : undefined,
+    { preload: shown ? "first-paint" : "idle" },
   );
 }
