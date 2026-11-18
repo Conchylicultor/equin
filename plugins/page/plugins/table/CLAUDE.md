@@ -132,11 +132,10 @@ editor's line-claim escape, not this file's.
 - Web:
   - Contributes: `Editor.Block` "table" → `TableBlock`
   - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `page/editor` ×11
+    - `page/editor` ×12
     - `primitives/css/coords` ×4
     - `primitives/css/control-panel` ×2
     - `primitives/latest-ref` ×2
-    - `page/read-only-view.RunsRenderer`
     - `primitives/css/center.Center`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Inset`

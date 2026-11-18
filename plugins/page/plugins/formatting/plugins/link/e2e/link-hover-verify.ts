@@ -34,7 +34,7 @@ const OUT = arg("out", "/tmp/link-hover-verify");
 
 const CARD = "[data-link-hover-card]";
 const CARD_URL = `${CARD} [data-link-hover-url]`;
-const EDITABLE = '[contenteditable="true"]';
+const EDITABLE = "[data-block-text]";
 const UNDO = "ControlOrMeta+z";
 
 const URL_BEFORE = "https://example.com/";

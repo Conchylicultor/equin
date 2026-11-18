@@ -1,11 +1,19 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useMemo, type ReactNode } from "react";
+import {
+  useCallback,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 import { FirstLine } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { rowDataOf } from "../../core";
 import type { BlockRegionProps, BlockRendererProps } from "../types";
 import { Editor } from "../slots";
+import { useBlockEditor } from "../block-editor-context";
 import { BlockTextEditor } from "./block-text-editor";
+import { StaticBlockText } from "./static-block-text";
 import { TextBlockLayout } from "./text-block-layout";
 
 /**
@@ -14,6 +22,14 @@ import { TextBlockLayout } from "./text-block-layout";
  * `component` a compile error for them — converting one into another (`* ` →
  * bullet, `/quote`, `/prompt`) reconciles in place: the live Lexical instance,
  * its Yjs binding, its focus and the caret all survive.
+ *
+ * The LEAF is one of two: a live `BlockTextEditor` while the block is live
+ * (`internal/live-text-editors.ts` — woken by an edit intent, or pinned by the
+ * caret), else the block's text as static DOM (`StaticBlockText`). A woken
+ * block keeps its static line on screen until the editor's text is (`ready`),
+ * then swaps in one commit — so waking never flashes an empty line. Both sit at
+ * fixed child slots of the leaf cell, so the editor's element chain stays
+ * constant whichever is showing.
  *
  * It names no block type. Per-type presentation comes from two generic sources:
  * the matched handle's marker ladder + placeholder + typography, and the
@@ -26,6 +42,16 @@ export function BlockTextRenderer({
   editor,
   ordinal,
 }: BlockRendererProps) {
+  const { liveTextEditors } = useBlockEditor();
+  const live = useSyncExternalStore(
+    useCallback(
+      (onChange: () => void) => liveTextEditors.subscribe(block.id, onChange),
+      [liveTextEditors, block.id],
+    ),
+    () => liveTextEditors.isLive(block.id),
+    () => liveTextEditors.isLive(block.id),
+  );
+  const [ready, setReady] = useState(false);
   const contributions = Editor.Block.useContributions();
   const contribution = useMemo(
     () => contributions.find((c) => c.block.type === block.type),
@@ -114,14 +140,25 @@ export function BlockTextRenderer({
       region={region}
       fallbackMarker={fallbackMarker}
     >
-      <BlockTextEditor
-        block={block}
-        isFocused={isFocused}
-        editor={editor}
-        placeholder={handle?.placeholder}
-        contentClassName={contentClassName}
-        textVariant={handle?.textVariant ?? "body"}
-      />
+      {live ? (
+        <BlockTextEditor
+          block={block}
+          isFocused={isFocused}
+          editor={editor}
+          placeholder={handle?.placeholder}
+          contentClassName={contentClassName}
+          textVariant={handle?.textVariant ?? "body"}
+          ready={ready}
+          onReadyChange={setReady}
+        />
+      ) : null}
+      {live && ready ? null : (
+        <StaticBlockText
+          block={block}
+          contentClassName={contentClassName}
+          textVariant={handle?.textVariant ?? "body"}
+        />
+      )}
     </TextBlockLayout>
   );
 }

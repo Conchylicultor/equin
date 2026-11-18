@@ -110,9 +110,9 @@ async function parkAwayFromDropTarget(page: Page): Promise<void> {
 /** Every editable block's text, in document order. */
 function blockTexts(page: Page): Promise<string[]> {
   return page.evaluate(() =>
-    [
-      ...document.querySelectorAll('[data-block-id] [contenteditable="true"]'),
-    ].map((el) => (el.textContent ?? "").trim()),
+    [...document.querySelectorAll("[data-block-id] [data-block-text]")].map(
+      (el) => (el.textContent ?? "").trim(),
+    ),
   );
 }
 

@@ -30,7 +30,7 @@ await withBrowser(async (h) => {
 
   await page.evaluate((id) => {
     const el = document.querySelector(
-      `[data-block-id="${id}"] [contenteditable="true"]`,
+      `[data-block-id="${id}"] [data-block-text]`,
     ) as HTMLElement | null;
     if (!el) throw new Error("no editable block");
     const dt = new DataTransfer();

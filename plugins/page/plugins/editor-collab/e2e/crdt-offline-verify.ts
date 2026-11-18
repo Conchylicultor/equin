@@ -162,7 +162,7 @@ await withBrowser(async (h) => {
   // arrived and "second context converges" failed with "" — the clock, not the
   // app. The demand is unchanged; only WHEN it is read.
   const blockB = pageB
-    .locator(`[data-block-id="${blockId}"] [contenteditable="true"]`)
+    .locator(`[data-block-id="${blockId}"] [data-block-text]`)
     .first();
   const convergedB = await waitFor(
     () => blockText(blockB),

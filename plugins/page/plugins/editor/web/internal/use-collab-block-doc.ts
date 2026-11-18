@@ -839,6 +839,23 @@ function serverStateOf(content: ResourceResult<BlockDocSlice>): BlockDocSlice {
   }
 }
 
+/** The hold's selector: it reads nothing, so a push re-renders nothing. */
+const holdOnly = (): null => null;
+
+/**
+ * Hold `pageId`'s block docs open for as long as the page is on screen.
+ *
+ * Every live text editor reads its doc from this one page-level tuple, but most
+ * of a page's lines are DORMANT (no editor, `StaticBlockText`). Without a page
+ * hold, a page whose lines are all dormant would let the tuple go, and the
+ * first line the user clicks would wait for the whole set to load again before
+ * its editor could show its text. Held, a woken editor finds its doc already
+ * delivered and hydrates in the same task.
+ */
+export function usePageBlockDocsHold(pageId: string): void {
+  useLive(pageBlockDocs, { where: { pageId }, select: holdOnly });
+}
+
 export function useCollabBlockDoc(
   blockId: string,
   pageId: string | null,

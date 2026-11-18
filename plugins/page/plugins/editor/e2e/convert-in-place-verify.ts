@@ -267,7 +267,7 @@ await withBrowser(async (h) => {
     // The block is looked up BY ID: a conversion must keep the block's identity
     // (and therefore its content doc), so a new id here is itself the failure.
     const converted = page
-      .locator(`[data-block-id="${blockId}"] [contenteditable="true"]`)
+      .locator(`[data-block-id="${blockId}"] [data-block-text]`)
       .first();
     const stillThere = (await converted.count()) > 0;
     r.ok(`${c.label}: block id unchanged`, stillThere, `looked for ${blockId}`);
@@ -305,7 +305,7 @@ await withBrowser(async (h) => {
       if (!sel || sel.rangeCount === 0)
         return { has: false, collapsed: false, inside: false };
       const el = document.querySelector(
-        `[data-block-id="${id}"] [contenteditable="true"]`,
+        `[data-block-id="${id}"] [data-block-text]`,
       );
       return {
         has: true,
@@ -348,7 +348,7 @@ await withBrowser(async (h) => {
   {
     const doc = await openBlankPage(page, { settleMs: 3000 });
     const blockId = doc.blockId;
-    const sel = `[data-block-id="${blockId}"] [contenteditable="true"]`;
+    const sel = `[data-block-id="${blockId}"] [data-block-text]`;
     r.note(`identity: page ${doc.pageId} block ${blockId}`);
 
     /** Hold the LIVE editable element, so identity can be compared later. */
@@ -512,7 +512,7 @@ await withBrowser(async (h) => {
       );
     }
     const editables = await page
-      .locator(`[data-block-id="${blockId}"] [contenteditable="true"]`)
+      .locator(`[data-block-id="${blockId}"] [data-block-text]`)
       .count();
     r.eq("void swap: no text surface on a void row", editables, 0);
 
@@ -588,7 +588,7 @@ await withBrowser(async (h) => {
     await snap(page, out, "todo-checkbox");
 
     const block = page
-      .locator(`[data-block-id="${blockId}"] [contenteditable="true"]`)
+      .locator(`[data-block-id="${blockId}"] [data-block-text]`)
       .first();
     const domText = await blockText(block);
     const row = await rowWhenProjected(page, doc.pageId, blockId, "buy milk");

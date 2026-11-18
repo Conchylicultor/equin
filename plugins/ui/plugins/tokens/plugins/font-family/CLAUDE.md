@@ -18,7 +18,7 @@
   - Exports (types): `FontFamilyTokenValues`
   - Exports (values): `fontFamilyGroup`
 - Cross-plugin:
-  - Tokens used by: 159 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Tokens used by: 158 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×39
     - `apps` ×25
     - `plugin-meta` ×23
@@ -28,12 +28,12 @@
     - `infra` ×5
     - `tasks` ×5
     - `fields` ×3
-    - `page` ×3
     - `ui` ×3
     - `active-data` ×2
     - `auth` ×2
     - `build` ×2
     - `code-explorer` ×2
+    - `page` ×2
     - `config_v2/settings`
     - `hints`
     - `music/chord-box`

@@ -40,10 +40,8 @@ async function readCaret(page: Page): Promise<CaretRead> {
     if (!sel || sel.rangeCount === 0) return { has: false };
     const anchor = sel.anchorNode;
     const editable =
-      anchor?.parentElement?.closest?.('[contenteditable="true"]') ??
-      (anchor instanceof Element
-        ? anchor.closest('[contenteditable="true"]')
-        : null);
+      anchor?.parentElement?.closest?.("[data-block-text]") ??
+      (anchor instanceof Element ? anchor.closest("[data-block-text]") : null);
     if (!editable || !anchor) return { has: true, inBlock: null };
     // Linear offset = text before the anchor within the editable.
     const range = document.createRange();
@@ -133,7 +131,7 @@ await withBrowser(async (h) => {
   await page.keyboard.type("X", { delay: 15 });
   await page.waitForTimeout(600);
   const mover = page
-    .locator(`[data-block-id="${moverId}"] [contenteditable="true"]`)
+    .locator(`[data-block-id="${moverId}"] [data-block-text]`)
     .first();
   const typed = await blockText(mover);
   r.ok(

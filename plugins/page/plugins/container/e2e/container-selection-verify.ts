@@ -82,9 +82,7 @@ async function editableIndexOf(page: Page, blockId: string): Promise<number> {
   const index = await page.evaluate(
     (id: string) =>
       [
-        ...document.querySelectorAll(
-          '[data-block-id] [contenteditable="true"]',
-        ),
+        ...document.querySelectorAll("[data-block-id] [data-block-text]"),
       ].findIndex(
         (el) =>
           el.closest("[data-block-id]")?.getAttribute("data-block-id") === id,

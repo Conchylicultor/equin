@@ -54,7 +54,7 @@ await withBrowser(async (h) => {
   // renderers (`quote`) identically, so it is a harness trait, not this block's
   // — and select-all replaces the leftover "/prompt" query rather than
   // appending to it.
-  const editable = page.locator('[contenteditable="true"]').first();
+  const editable = page.locator("[data-block-text]").first();
   await editable.click();
   await page.waitForTimeout(300);
   await page.keyboard.press("ControlOrMeta+a");

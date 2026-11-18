@@ -79,7 +79,7 @@ async function getRows(page: Page): Promise<RowSnapshot[]> {
     ({ gutter, indent }) => {
       const rows = [
         ...document.querySelectorAll<HTMLElement>("[data-block-id]"),
-      ].filter((el) => el.querySelector('[contenteditable="true"]'));
+      ].filter((el) => el.querySelector("[data-block-text]"));
       return rows.map((el) => {
         const paddingLeft = parseFloat(el.style.paddingLeft || "0");
         const depth = Math.round((paddingLeft - gutter) / indent);
@@ -89,7 +89,7 @@ async function getRows(page: Page): Promise<RowSnapshot[]> {
         const checkbox = el.querySelector<HTMLInputElement>(
           'input[type="checkbox"]',
         );
-        const editable = el.querySelector('[contenteditable="true"]');
+        const editable = el.querySelector("[data-block-text]");
         return {
           id: el.getAttribute("data-block-id"),
           text: (editable?.textContent ?? "").trim(),
@@ -104,9 +104,7 @@ async function getRows(page: Page): Promise<RowSnapshot[]> {
 }
 
 function editableFor(page: Page, blockId: string | null | undefined): Locator {
-  return page
-    .locator(`[data-block-id="${blockId}"] [contenteditable="true"]`)
-    .first();
+  return page.locator(`[data-block-id="${blockId}"] [data-block-text]`).first();
 }
 
 /**

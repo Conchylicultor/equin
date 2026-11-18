@@ -131,17 +131,17 @@ await withBrowser(async (h) => {
   await pageA.waitForTimeout(1500);
   await snap(pageA, out, "2-split");
 
-  const blocks = pageA.locator('[data-block-id]:has([contenteditable="true"])');
+  const blocks = pageA.locator("[data-block-id]:has([data-block-text])");
   const blockCount = await blocks.count();
   r.ok("split: two text blocks", blockCount === 2, `count=${blockCount}`);
 
   const head = pageA
-    .locator(`[data-block-id="${block1Id}"] [contenteditable="true"]`)
+    .locator(`[data-block-id="${block1Id}"] [data-block-text]`)
     .first();
   const headText = await blockText(head);
   const tailBlockId = await pageA.evaluate((b1) => {
     const all = [...document.querySelectorAll("[data-block-id]")].filter((el) =>
-      el.querySelector('[contenteditable="true"]'),
+      el.querySelector("[data-block-text]"),
     );
     return (
       all
@@ -151,7 +151,7 @@ await withBrowser(async (h) => {
   }, block1Id);
   console.log("block2 id:", tailBlockId);
   const tail = pageA
-    .locator(`[data-block-id="${tailBlockId}"] [contenteditable="true"]`)
+    .locator(`[data-block-id="${tailBlockId}"] [data-block-text]`)
     .first();
   const tailText = await blockText(tail);
   console.log("head text:", JSON.stringify(headText));
@@ -186,7 +186,7 @@ await withBrowser(async (h) => {
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return { has: false };
     const el = document.querySelector(
-      `[data-block-id="${tid}"] [contenteditable="true"]`,
+      `[data-block-id="${tid}"] [data-block-text]`,
     );
     return {
       has: true,
@@ -251,7 +251,7 @@ await withBrowser(async (h) => {
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return { has: false };
     const el = document.querySelector(
-      `[data-block-id="${b1}"] [contenteditable="true"]`,
+      `[data-block-id="${b1}"] [data-block-text]`,
     );
     return {
       has: true,
@@ -281,7 +281,7 @@ await withBrowser(async (h) => {
   const { page: pageB } = await h.session({ label: "B" });
   await pageB.goto(pageUrl);
   const headB = pageB
-    .locator(`[data-block-id="${block1Id}"] [contenteditable="true"]`)
+    .locator(`[data-block-id="${block1Id}"] [data-block-text]`)
     .first();
   await headB.waitFor({ state: "visible", timeout: ELEMENT_TIMEOUT_MS });
   // Was a fixed `waitForTimeout(5000)` before this read. A second context
@@ -293,7 +293,7 @@ await withBrowser(async (h) => {
     async () => ({
       text: await blockText(headB),
       count: await pageB
-        .locator('[data-block-id]:has([contenteditable="true"])')
+        .locator("[data-block-id]:has([data-block-text])")
         .count(),
     }),
     ({ text, count }) => text === mergedText && count === 1,

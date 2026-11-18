@@ -35,7 +35,7 @@ const r = report();
 async function blockIdsInOrder(page: Page): Promise<(string | null)[]> {
   return page.evaluate(() =>
     [...document.querySelectorAll("[data-block-id]")]
-      .filter((el) => el.querySelector('[contenteditable="true"]'))
+      .filter((el) => el.querySelector("[data-block-text]"))
       .map((el) => el.getAttribute("data-block-id")),
   );
 }
@@ -103,7 +103,7 @@ await withBrowser(async (h) => {
 
   // The origin keeps its full text under its ORIGINAL id.
   const origin = pageA
-    .locator(`[data-block-id="${originId}"] [contenteditable="true"]`)
+    .locator(`[data-block-id="${originId}"] [data-block-text]`)
     .first();
   const originText = await blockText(origin);
   r.ok(
@@ -122,7 +122,7 @@ await withBrowser(async (h) => {
   );
   if (aboveId) {
     const above = pageA
-      .locator(`[data-block-id="${aboveId}"] [contenteditable="true"]`)
+      .locator(`[data-block-id="${aboveId}"] [data-block-text]`)
       .first();
     const aboveText = await blockText(above);
     r.ok(
@@ -198,7 +198,7 @@ await withBrowser(async (h) => {
   await pageB.goto(pageUrl);
   await pageB.waitForTimeout(5000);
   const originB = pageB
-    .locator(`[data-block-id="${originId}"] [contenteditable="true"]`)
+    .locator(`[data-block-id="${originId}"] [data-block-text]`)
     .first();
   await originB.waitFor({ state: "visible", timeout: 15000 });
   const textB = await blockText(originB);

@@ -39,7 +39,7 @@ await withBrowser(async (h) => {
   await page.waitForTimeout(2500);
 
   const longEditable = page
-    .locator('[data-block-id] [contenteditable="true"]')
+    .locator("[data-block-id] [data-block-text]")
     .filter({ hasText: LONG.slice(0, 30) })
     .first();
   // Put the long paragraph in the middle of the viewport (scrolled page).
@@ -50,7 +50,7 @@ await withBrowser(async (h) => {
     page.evaluate((long) => {
       const editables = [
         ...document.querySelectorAll<HTMLElement>(
-          '[data-block-id] [contenteditable="true"]',
+          "[data-block-id] [data-block-text]",
         ),
       ];
       const firstVisible = editables.find(

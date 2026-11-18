@@ -112,9 +112,9 @@ function dragEvent(page: Page, spec: DragSpec): Promise<boolean> {
 /** Every editable block's text, in document order. */
 function blockTexts(page: Page): Promise<string[]> {
   return page.evaluate(() =>
-    [
-      ...document.querySelectorAll('[data-block-id] [contenteditable="true"]'),
-    ].map((el) => (el.textContent ?? "").trim()),
+    [...document.querySelectorAll("[data-block-id] [data-block-text]")].map(
+      (el) => (el.textContent ?? "").trim(),
+    ),
   );
 }
 
@@ -122,7 +122,7 @@ function blockTexts(page: Page): Promise<string[]> {
 function rootParagraphs(page: Page, blockId: string): Promise<number> {
   return page.evaluate(
     (id) =>
-      document.querySelector(`[data-block-id="${id}"] [contenteditable="true"]`)
+      document.querySelector(`[data-block-id="${id}"] [data-block-text]`)
         ?.childElementCount ?? -1,
     blockId,
   );
@@ -144,7 +144,7 @@ await withBrowser(async (h) => {
 
   const bravo = editableBlocks(page).nth(1);
   const bravoId = await blockIdOf(bravo);
-  const bravoText = `[data-block-id="${bravoId}"] [contenteditable="true"]`;
+  const bravoText = `[data-block-id="${bravoId}"] [data-block-text]`;
   const bravoRow = `[data-block-id="${bravoId}"]`;
 
   // ---- D: the dragover half ---------------------------------------------------
@@ -226,7 +226,7 @@ await withBrowser(async (h) => {
   const beforeE = await blockTexts(page);
   const claimedE = await dragEvent(page, {
     type: "drop",
-    selector: `[data-block-id="${alphaId}"] [contenteditable="true"]`,
+    selector: `[data-block-id="${alphaId}"] [data-block-text]`,
     text: "X\nY",
     charOffset: 2,
   });

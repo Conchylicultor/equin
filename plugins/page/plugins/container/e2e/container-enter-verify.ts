@@ -56,7 +56,7 @@ function childLines(all: Row[], parentId: string): string[] {
 
 async function caretInto(page: Page, blockId: string): Promise<void> {
   const editable = page
-    .locator(`[data-block-id="${blockId}"] [contenteditable="true"]`)
+    .locator(`[data-block-id="${blockId}"] [data-block-text]`)
     .first();
   const box = await editable.boundingBox();
   if (!box) throw new Error(`no editable for ${blockId}`);

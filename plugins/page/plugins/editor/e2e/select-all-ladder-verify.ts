@@ -83,10 +83,7 @@ await withBrowser(async (h) => {
   await driver.checkSelectionOwnsFocus("text block, 2nd press");
   await clear();
 
-  await page
-    .locator('[data-block-id] [contenteditable="true"]')
-    .first()
-    .click();
+  await page.locator("[data-block-id] [data-block-text]").first().click();
   await page.waitForTimeout(500);
   await page.keyboard.press("End");
   await page.keyboard.press("Enter");
@@ -100,7 +97,7 @@ await withBrowser(async (h) => {
   await clear();
 
   // ---- 3: divider --------------------------------------------------------
-  await page.locator('[data-block-id] [contenteditable="true"]').nth(1).click();
+  await page.locator("[data-block-id] [data-block-text]").nth(1).click();
   await page.waitForTimeout(500);
   await page.keyboard.type("---", { delay: 40 });
   await page.waitForTimeout(800);

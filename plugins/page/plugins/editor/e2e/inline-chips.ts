@@ -418,7 +418,7 @@ await withBrowser(async (h) => {
   await snap(page, out, "2-reloaded");
 
   const reloadedBlock = page
-    .locator(`[data-block-id="${blockId}"] [contenteditable="true"]`)
+    .locator(`[data-block-id="${blockId}"] [data-block-text]`)
     .first();
   const reloadedDecorators = await decoratorsIn(reloadedBlock).count();
   r.ok(
@@ -427,14 +427,14 @@ await withBrowser(async (h) => {
     `decorators=${reloadedDecorators} shape=[${await shapeOf(reloadedBlock)}]`,
   );
   const reloadedTyped = page
-    .locator(`[data-block-id="${typedBlockId}"] [contenteditable="true"]`)
+    .locator(`[data-block-id="${typedBlockId}"] [data-block-text]`)
     .first();
   r.ok(
     "2. reload: the TYPED id is still plain (a reload does not re-scan text)",
     (await decoratorsIn(reloadedTyped).count()) === 0,
   );
   r.note(
-    `url-block after reload: "${await textOf(page.locator(`[data-block-id="${urlBlockId}"] [contenteditable="true"]`).first())}"`,
+    `url-block after reload: "${await textOf(page.locator(`[data-block-id="${urlBlockId}"] [data-block-text]`).first())}"`,
   );
 
   // ---- 5. clicking the chip opens the attempt pane ---------------------------

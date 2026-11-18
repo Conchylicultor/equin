@@ -85,8 +85,7 @@ function domBlocks(page: Page): Promise<DomBlock[]> {
       .map((el) => ({
         id: el.getAttribute("data-block-id"),
         text:
-          el.querySelector<HTMLElement>('[contenteditable="true"]')
-            ?.innerText ?? null,
+          el.querySelector<HTMLElement>("[data-block-text]")?.innerText ?? null,
       }))
       .filter(
         (b): b is { id: string; text: string } =>
@@ -221,7 +220,7 @@ await withBrowser(async (h) => {
   // below watches for. Only B is sampled: reading A's DOM in parallel with A's
   // own keystrokes would race the typing this arm depends on.
   const targetBlock = pageA
-    .locator(`[data-block-id="${targetId}"] [contenteditable="true"]`)
+    .locator(`[data-block-id="${targetId}"] [data-block-text]`)
     .first();
   await targetBlock.click();
   await pageA.keyboard.press("End");

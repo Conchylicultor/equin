@@ -259,6 +259,7 @@ function argsFor(
     writeRow: (runs) => {
       rowWrites.push(runs);
     },
+    projectRow: () => {},
     rowPresent: () => true,
     rowLive: () => true,
     waitRowPresent: () => Promise.resolve(),

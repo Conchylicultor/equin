@@ -59,11 +59,7 @@ await withBrowser(async (h) => {
   // text), and the only way to say "nothing ELSE changed" about an undo.
   const blockIds = (): Promise<string[]> =>
     page.evaluate(() =>
-      [
-        ...document.querySelectorAll(
-          '[data-block-id] [contenteditable="true"]',
-        ),
-      ].map(
+      [...document.querySelectorAll("[data-block-id] [data-block-text]")].map(
         (el) =>
           el.closest("[data-block-id]")?.getAttribute("data-block-id") ?? "",
       ),
@@ -74,7 +70,7 @@ await withBrowser(async (h) => {
   const contentLeftOf = (i: number): Promise<number> =>
     page.evaluate((n) => {
       const editables = document.querySelectorAll(
-        '[data-block-id] [contenteditable="true"]',
+        "[data-block-id] [data-block-text]",
       );
       return editables[n]?.getBoundingClientRect().left ?? -1;
     }, i);

@@ -59,11 +59,9 @@ async function recordStates(page: Page): Promise<void> {
   await page.evaluate(() => {
     const read = () =>
       JSON.stringify(
-        [
-          ...document.querySelectorAll(
-            '[data-block-id] [contenteditable="true"]',
-          ),
-        ].map((el) => (el.textContent ?? "").trim()),
+        [...document.querySelectorAll("[data-block-id] [data-block-text]")].map(
+          (el) => (el.textContent ?? "").trim(),
+        ),
       );
     const seen: string[] = [read()];
     (window as unknown as { __states: string[] }).__states = seen;
@@ -100,11 +98,9 @@ await withBrowser(async (h) => {
   await b.page.waitForFunction(
     (expected) =>
       JSON.stringify(
-        [
-          ...document.querySelectorAll(
-            '[data-block-id] [contenteditable="true"]',
-          ),
-        ].map((el) => (el.textContent ?? "").trim()),
+        [...document.querySelectorAll("[data-block-id] [data-block-text]")].map(
+          (el) => (el.textContent ?? "").trim(),
+        ),
       ) === expected,
     JSON.stringify(LINES),
     { timeout: 30_000 },
@@ -131,9 +127,7 @@ await withBrowser(async (h) => {
       (expected) =>
         JSON.stringify(
           [
-            ...document.querySelectorAll(
-              '[data-block-id] [contenteditable="true"]',
-            ),
+            ...document.querySelectorAll("[data-block-id] [data-block-text]"),
           ].map((el) => (el.textContent ?? "").trim()),
         ) === expected,
       JSON.stringify([JOINED]),
@@ -175,9 +169,7 @@ await withBrowser(async (h) => {
       (expected) =>
         JSON.stringify(
           [
-            ...document.querySelectorAll(
-              '[data-block-id] [contenteditable="true"]',
-            ),
+            ...document.querySelectorAll("[data-block-id] [data-block-text]"),
           ].map((el) => (el.textContent ?? "").trim()),
         ) === expected,
       JSON.stringify(LINES),

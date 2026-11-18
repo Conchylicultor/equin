@@ -248,9 +248,8 @@ async function probeAnchor(
       const insetRow = document.querySelector<HTMLElement>(
         `[data-block-id="${insetRowId}"]`,
       );
-      const insetText = insetRow?.querySelector<HTMLElement>(
-        '[contenteditable="true"]',
-      );
+      const insetText =
+        insetRow?.querySelector<HTMLElement>("[data-block-text]");
       const insetRect = insetRow?.getBoundingClientRect();
       const inset =
         insetRow && insetText && insetRect
@@ -315,7 +314,7 @@ async function anchorIds(page: Page): Promise<string[]> {
 /** Put the caret at the end of a block's text by clicking past its last glyph. */
 async function caretToEnd(page: Page, blockId: string): Promise<boolean> {
   const editable = page
-    .locator(`[data-block-id="${blockId}"] [contenteditable="true"]`)
+    .locator(`[data-block-id="${blockId}"] [data-block-text]`)
     .first();
   const box = await editable.boundingBox();
   if (!box) return false;
@@ -329,7 +328,7 @@ async function caretToEnd(page: Page, blockId: string): Promise<boolean> {
 /** Put the caret at offset 0 by clicking the text's very left edge. */
 async function caretToStart(page: Page, blockId: string): Promise<boolean> {
   const editable = page
-    .locator(`[data-block-id="${blockId}"] [contenteditable="true"]`)
+    .locator(`[data-block-id="${blockId}"] [data-block-text]`)
     .first();
   const box = await editable.boundingBox();
   if (!box) return false;
@@ -422,7 +421,7 @@ await withBrowser(async (h) => {
   );
   const firstText = await blockText(
     page
-      .locator(`[data-block-id="${seeded.c1First}"] [contenteditable="true"]`)
+      .locator(`[data-block-id="${seeded.c1First}"] [data-block-text]`)
       .first(),
   );
   r.ok(
@@ -597,9 +596,7 @@ await withBrowser(async (h) => {
 
     if (splitId) {
       const splitText = await blockText(
-        page
-          .locator(`[data-block-id="${splitId}"] [contenteditable="true"]`)
-          .first(),
+        page.locator(`[data-block-id="${splitId}"] [data-block-text]`).first(),
       );
       r.ok(
         "enter: typing landed in the new line",
@@ -662,7 +659,7 @@ await withBrowser(async (h) => {
     );
     const headingText = await blockText(
       page
-        .locator(`[data-block-id="${seeded.c2First}"] [contenteditable="true"]`)
+        .locator(`[data-block-id="${seeded.c2First}"] [data-block-text]`)
         .first(),
     );
     r.ok(
@@ -672,7 +669,7 @@ await withBrowser(async (h) => {
     );
     const fontSize = await page.evaluate((id) => {
       const el = document.querySelector<HTMLElement>(
-        `[data-block-id="${id}"] [contenteditable="true"]`,
+        `[data-block-id="${id}"] [data-block-text]`,
       );
       return el ? parseFloat(getComputedStyle(el).fontSize) : -1;
     }, seeded.c2First);
@@ -714,7 +711,7 @@ await withBrowser(async (h) => {
   // instance — unlike an ordinary indent, which only reorders keyed siblings in
   // one parent. If the caret does not survive that, the frame is not viable.
   const outsiderEditable = page
-    .locator(`[data-block-id="${seeded.outsiderId}"] [contenteditable="true"]`)
+    .locator(`[data-block-id="${seeded.outsiderId}"] [data-block-text]`)
     .first();
   const boxOut = await outsiderEditable.boundingBox();
   if (boxOut) {
@@ -830,7 +827,7 @@ await withBrowser(async (h) => {
     );
     const unwrappedText = await blockText(
       page
-        .locator(`[data-block-id="${seeded.c4Only}"] [contenteditable="true"]`)
+        .locator(`[data-block-id="${seeded.c4Only}"] [data-block-text]`)
         .first(),
     );
     r.ok(

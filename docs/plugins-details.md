@@ -45846,7 +45846,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Editor.TurnInto` ×2
           - `Editor.BlockMenuItem` ← `page.open-as-page`
         - Contributes: `IdKinds.Kind` "block"
-        - Uses: 103 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+        - Uses: 104 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
           - `network/live/live-state` ×6
           - `primitives/dom/web-storage` ×5
           - `primitives/text-editor/caret-trigger` ×5
@@ -45875,6 +45875,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/badge.Badge`
           - `primitives/css/center.Center`
           - `primitives/css/inline.Inline`
+          - `primitives/css/layer.layerClasses`
           - `primitives/css/overlay.Overlay`
           - `primitives/css/pin.Pin`
           - `primitives/css/placeholder.Placeholder`
@@ -45947,6 +45948,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RichTextFieldCaret`
           - `RichTextFieldKey`
           - `RichTextFieldProps`
+          - `RunsRendererProps`
           - `SelectionControl`
           - `TextBlockLayoutProps`
           - `UndoConflictReason`
@@ -45989,6 +45991,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `registerBlockTextExtension`
           - `registerBlockTextExtensionSource`
           - `RichTextField`
+          - `RunsRenderer`
           - `selectableText`
           - `TextBlockLayout`
           - `undoConflictReportSink`
@@ -47584,8 +47587,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape --spacing`
     - **`read-only-view`** — Faithful, non-editable renderer for a page block forest, with optional per-block diff highlighting. Reuses the editor's block-handle metadata + rich-text runs model without mounting Lexical.
       - Web:
-        - Uses: 38 symbols — full list in [`plugins/page/plugins/read-only-view/REFERENCE.md`](../plugins/page/plugins/read-only-view/REFERENCE.md)
-          - `page/editor` ×18
+        - Uses: 37 symbols — full list in [`plugins/page/plugins/read-only-view/REFERENCE.md`](../plugins/page/plugins/read-only-view/REFERENCE.md)
+          - `page/editor` ×17
           - `primitives/overlay/image-viewer` ×5
           - `primitives/css/spacing` ×3
           - `primitives/css/text` ×2
@@ -47604,28 +47607,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ForestBlock`
           - `ReadOnlyBlocksProps`
           - `ReadOnlyNode`
-          - `RunsRendererProps`
         - Exports (values):
           - `buildForest`
           - `ReadOnlyBlocks`
-          - `RunsRenderer`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --border`
           - `ui/tokens/color-palette --muted`
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/color-palette --primary`
-          - `ui/tokens/color-palette --primary-text`
           - `ui/tokens/color-palette --success`
           - `ui/tokens/density --space-xs`
-          - `ui/tokens/font-family --font-mono`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --font-weight-medium`
         - Imported by:
           - `apps/pages/history`
           - `apps/pages/page-tree`
-          - `page/table`
     - **`sub-page`** — Sub-page block type: renders a child page inline in its parent's content flow as a clickable Notion-style page row. A void, text-less block — selectable and arrow-navigable, but Enter/Backspace can never originate in it. A page of a special kind (agent-authored, instructions) expanded inline is drawn as a card: its reference's tint washes the row and all of its content.
       - Web:
         - Contributes:
@@ -47660,11 +47658,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Contributes: `Editor.Block` "table" → `TableBlock`
         - Uses: 28 symbols — full list in [`plugins/page/plugins/table/REFERENCE.md`](../plugins/page/plugins/table/REFERENCE.md)
-          - `page/editor` ×11
+          - `page/editor` ×12
           - `primitives/css/coords` ×4
           - `primitives/css/control-panel` ×2
           - `primitives/latest-ref` ×2
-          - `page/read-only-view.RunsRenderer`
           - `primitives/css/center.Center`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Inset`
@@ -51010,10 +51007,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Layer`
               - `layerClasses`
           - Cross-plugin:
-            - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/css/plugins/layer/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/layer/REFERENCE.md)
+            - Imported by: 32 plugins — full list in [`plugins/primitives/plugins/css/plugins/layer/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/layer/REFERENCE.md)
               - `apps` ×16
               - `primitives` ×8
-              - `page` ×2
+              - `page` ×3
               - `apps-core/phone-actions`
               - `conversations/before-after`
               - `integrations/youtube`
@@ -58363,7 +58360,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `page/editor`
-              - `page/read-only-view`
               - `primitives/text-editor`
               - `primitives/text-editor/inline-chip`
               - `primitives/text-editor/token-extension/node`
@@ -67195,7 +67191,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `FontFamilyTokenValues`
             - Exports (values): `fontFamilyGroup`
           - Cross-plugin:
-            - Tokens used by: 159 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
+            - Tokens used by: 158 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
               - `conversations` ×39
               - `apps` ×25
               - `plugin-meta` ×23
@@ -67205,12 +67201,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra` ×5
               - `tasks` ×5
               - `fields` ×3
-              - `page` ×3
               - `ui` ×3
               - `active-data` ×2
               - `auth` ×2
               - `build` ×2
               - `code-explorer` ×2
+              - `page` ×2
               - `config_v2/settings`
               - `hints`
               - `music/chord-box`

@@ -551,13 +551,13 @@ function measureFocusLines(
 
 // --- caret placement (target editor) ---------------------------------------
 
-interface DomCaret {
+export interface DomCaret {
   node: Node;
   offset: number;
 }
 
 /** Cross-browser caret hit-test: WebKit/Chrome `caretRangeFromPoint`, Firefox `caretPositionFromPoint`. */
-function caretFromPoint(x: number, y: number): DomCaret | null {
+export function caretFromPoint(x: number, y: number): DomCaret | null {
   const doc = document as Document & {
     caretRangeFromPoint?: (x: number, y: number) => Range | null;
     caretPositionFromPoint?: (
@@ -595,6 +595,35 @@ export function placeCaretAtOffset(
   focusEditor(editor, scroll);
   editor.update(
     () => $placeCaretAtOffset(offset),
+    scroll ? undefined : { tag: SKIP_SCROLL_TAG },
+  );
+}
+
+/**
+ * Focus `editor` and select linear `[anchor, focus]` — a range whose direction
+ * is the order given (`focus < anchor` selects backwards). How a selection the
+ * user made in a DORMANT line's static text carries over once its editor wakes
+ * (`StaticBlockText`): both ends resolve through the same leaf-walking
+ * placement as {@link placeCaretAtOffset}. `scroll` as there.
+ */
+export function placeSelectionAtOffsets(
+  editor: LexicalEditor,
+  anchor: number,
+  focus: number,
+  scroll = false,
+): void {
+  focusEditor(editor, scroll);
+  editor.update(
+    () => {
+      $placeCaretAtLinearOffset(anchor);
+      const atAnchor = $getSelection();
+      if (!$isRangeSelection(atAnchor)) return;
+      const { key, offset, type } = atAnchor.anchor;
+      $placeCaretAtLinearOffset(focus);
+      const selection = $getSelection();
+      if (!$isRangeSelection(selection)) return;
+      selection.anchor.set(key, offset, type);
+    },
     scroll ? undefined : { tag: SKIP_SCROLL_TAG },
   );
 }

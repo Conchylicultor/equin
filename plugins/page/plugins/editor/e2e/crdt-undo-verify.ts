@@ -139,11 +139,11 @@ await withBrowser(async (h) => {
   // it just created, the locator resolves to `[data-block-id="null"]` and the
   // assertion reports the miss — the pre-move behaviour, kept verbatim.
   const editorOf = (id: string | null): Locator =>
-    pageA.locator(`[data-block-id="${id}"] [contenteditable="true"]`).first();
+    pageA.locator(`[data-block-id="${id}"] [data-block-text]`).first();
   const textOf = async (id: string | null): Promise<string> =>
     norm(await editorOf(id).innerText());
   const blockCount = (): Promise<number> =>
-    pageA.locator(`[data-block-id]:has([contenteditable="true"])`).count();
+    pageA.locator(`[data-block-id]:has([data-block-text])`).count();
   const paragraphsOf = (id: string | null): Promise<number> =>
     editorOf(id).locator("p").count();
   /** The editable block id not among `known` — the one a split just minted. */
@@ -151,7 +151,7 @@ await withBrowser(async (h) => {
     pageA.evaluate<string | null, (string | null)[]>(
       (ids) =>
         [...document.querySelectorAll("[data-block-id]")]
-          .filter((el) => el.querySelector('[contenteditable="true"]'))
+          .filter((el) => el.querySelector("[data-block-text]"))
           .map((el) => el.getAttribute("data-block-id"))
           .find((id) => !ids.includes(id)) ?? null,
       known,
@@ -419,11 +419,11 @@ await withBrowser(async (h) => {
   const { page: pageB } = await h.session({ label: "B" });
   await pageB.goto(pageUrl);
   const aB = pageB
-    .locator(`[data-block-id="${idA}"] [contenteditable="true"]`)
+    .locator(`[data-block-id="${idA}"] [data-block-text]`)
     .first();
   await aB.waitFor({ state: "visible", timeout: ELEMENT_TIMEOUT_MS });
   const bB = pageB
-    .locator(`[data-block-id="${idB}"] [contenteditable="true"]`)
+    .locator(`[data-block-id="${idB}"] [data-block-text]`)
     .first();
   // Was a fixed `waitForTimeout(5000)` before three separate reads. A second
   // context measured 6.7-11.2s to render text against main, so the reads could
@@ -434,9 +434,7 @@ await withBrowser(async (h) => {
     async () => ({
       a: norm(await aB.innerText()),
       b: norm(await bB.innerText()),
-      n: await pageB
-        .locator('[data-block-id]:has([contenteditable="true"])')
-        .count(),
+      n: await pageB.locator("[data-block-id]:has([data-block-text])").count(),
     }),
     ({ a, b, n }) => a === "alpha beta zulu" && b === "bravo" && n === 2,
   );

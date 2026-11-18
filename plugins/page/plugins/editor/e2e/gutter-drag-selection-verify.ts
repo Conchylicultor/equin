@@ -113,7 +113,7 @@ await withBrowser(async (h) => {
         const el = document.elementFromPoint(px, py);
         if (!surface || !el || !surface.contains(el)) return false;
         if (el.closest("button")) return false;
-        if (el.closest('[contenteditable="true"]')) return false;
+        if (el.closest("[data-block-text]")) return false;
         // Mirrors `onPointerDown`'s own classification: the surface itself, a
         // row element itself (its gutter rail is its own padding), a void
         // block's caret host, a row's pure-geometry chrome, or something that

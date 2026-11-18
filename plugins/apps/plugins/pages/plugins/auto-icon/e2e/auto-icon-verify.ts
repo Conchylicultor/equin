@@ -73,7 +73,7 @@ function glyphCount(page: Page, emoji: string): Promise<number> {
 }
 
 async function typeInBody(page: Page, text: string): Promise<void> {
-  const block = page.locator('[data-block-id] [contenteditable="true"]').last();
+  const block = page.locator("[data-block-id] [data-block-text]").last();
   await block.click();
   await page.keyboard.press("End");
   await page.keyboard.type(text, { delay: 5 });

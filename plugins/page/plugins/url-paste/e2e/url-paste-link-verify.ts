@@ -75,7 +75,7 @@ interface Row {
 
 /** The editing host of the block with this id. */
 function blockEl(page: Page, blockId: string): Locator {
-  return page.locator(`[data-block-id="${blockId}"] [contenteditable="true"]`);
+  return page.locator(`[data-block-id="${blockId}"] [data-block-text]`);
 }
 
 /** A block's rendered text, NBSP-normalised and trimmed. */

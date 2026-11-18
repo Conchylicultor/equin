@@ -473,6 +473,79 @@ model Lexical commit timing) and `e2e/split-typing-verify.ts` (anything about *w
 edit becomes visible). Design:
 [`research/2026-07-31-page-caret-authority.md`](../../../../research/2026-07-31-page-caret-authority.md).
 
+## A line is static until it is edited (dormant lines)
+
+> A text block renders a live Lexical editor only while something needs one;
+> every other text block is a DORMANT line — its row text as static DOM
+> (`StaticBlockText`, through the same `TextBlockLayout`). Design:
+> [`research/2026-11-15-page-lazy-block-editors.md`](../../../../research/2026-11-15-page-lazy-block-editors.md)
+> (decision D5 = A).
+
+A live editor costs a Lexical instance (each update reads the DOM selection), a
+Yjs binding, every block-text plugin and its menus — paid per block, it made a
+600-line page a 1–2 s freeze.
+
+- **Who is live** (`internal/live-text-editors.ts`, one store on the context):
+  the `MAX_RECENT` most recently WOKEN blocks, plus PINNED ones — the caret's
+  block (`focusedBlockId`) and a text span's start line. Everything else is
+  dormant.
+- **Waking is a caret landing.** A dormant line registers a `DormantTextHandle`
+  (the read half of `BlockTextReads` over its static DOM, plus `wake`). The
+  caret authority never hands it to a policy: `land` / `landIfMounted` on a
+  dormant line WAKE it and CLAIM the keyboard, exactly as for a block that does
+  not exist yet, and the flight lands when the live editor registers. Every
+  claim wakes its target, so a new block is born live.
+- **The live editor registers its handle only once `ready`** (its text is on
+  screen: `hydrated`, `stalled`, or `everRendered` — `CollabBinding`). Until
+  then the static line stays in flow and the editor is an invisible,
+  click-through layer, and they swap in one layout-effect commit: waking never
+  flashes empty or moves the line. A policy (`focusAtColumn`, …) therefore
+  always runs against text that is there. Spec: `e2e/dormant-lines-verify.ts` E.
+- **A click in a dormant line is the browser's press** (the line spreads
+  `selectableText`): a drag out of the row becomes a span as from a live line
+  (`handOverAnchor` / `offsetAtPoint` over the static DOM); a click, or a drag
+  that stayed in the line, lands the caret / selection there through
+  `selectText` (`selectOffsets` on the woken handle).
+- **Offsets are the stored-runs basis** (`internal/static-text-geometry.ts`): a
+  token counts its whole spelling (`RunsRenderer` marks it with
+  `TOKEN_LENGTH_ATTR`), a soft break one. So a span painted across dormant lines
+  and the caret that lands on wake agree with the live editor.
+- **Edits that need a live editor wake their target first.** Merge into a
+  dormant line is a landing (the merge runs in the flight's policy, against the
+  rows as they are then). A text span pins its start line (`commitSpanEdit`
+  splices its doc); `spliceOwnerOf` throws on an owner whose doc has not arrived
+  rather than splicing into nothing.
+- **What a dormant line shows is the row's `data.text`** — the doc's projection.
+  Another writer's edit reaches it through their projection (≤ ~1 s). An
+  undo/redo replayed into a dormant line goes through the stored doc (host B),
+  which now projects the row itself (`ApplyBlockRunsArgs.projectRow`): no editor
+  holds that doc to do it.
+- **The page's block docs are held page-wide** (`usePageBlockDocsHold`, one per
+  page on screen), so a woken editor finds its doc delivered and hydrates in the
+  same task.
+- **`data-block-text`** marks a line's visible text root, static or live
+  (`BLOCK_TEXT_ATTR`); e2e helpers read lines by it (`BLOCK_TEXT_SELECTOR`),
+  never by `[contenteditable]`.
+- **Work that needs a line's live text without moving the caret** waits for its
+  editor through `authority.afterLive` (resolved with `null` if the block goes):
+  Delete-at-end pulling up a dormant next line (its row text lags its doc), an
+  undo replayed into a dormant line (kept on its live doc, so it works offline).
+- **A painted span follows the swap**: the span painter re-derives on every
+  handle registration/release (`subscribeTextReads`), since a swap replaces the
+  DOM its Ranges point into. Spec: `e2e/dormant-lines-verify.ts` I.
+- **Known bounds:**
+  - **A woken line takes no input until its doc is on screen.** The claim
+    buffers keystrokes (and keys it does not buffer — Home, End, Escape,
+    shortcuts — go nowhere) until the editor is `ready`; with the page's docs
+    held that is the same task, but in the first moments after opening a page
+    (docs not delivered yet) or offline it lasts until they arrive.
+  - **A span edit inside that window throws** (`spliceOwnerOf`'s
+    `docAuthoritative` check) rather than splicing into an empty doc.
+  - **A drop onto a dormant line's text** is not an inline insertion point (no
+    editing host): the forest lands as blocks after the row.
+  - **Another writer's typing shows on a dormant line in projection steps**
+    (≤ ~1 s), not keystroke by keystroke.
+
 ## The caret does not stop at the editor's edge (`CaretSurface`)
 
 The title sits outside the provider, yet ArrowUp/Left/Backspace at the top of the body
@@ -1735,9 +1808,11 @@ own **replica**.
 flush. `contentEditable={false}` would deadlock the caret authority. Open in
 `attaching`, `hydrated`, `stalled`; released on `end()` (an unmount always flushes).
 
-**Placeholder**: row non-empty + not `hydrated` + never rendered here
-(`BlockDocOwner.everRendered`) ⇒ skeleton (`HydrationPlaceholder`); row empty ⇒
-nothing; `stalled` ⇒ right-aligned Retry.
+**Until ready the static line stands in**: not `hydrated`, not `stalled` and never
+rendered here (`BlockDocOwner.everRendered`) ⇒ the editor is hidden and the block
+shows its dormant line (the row's text — see *A line is static until it is
+edited*); `stalled` ⇒ the editor shows, with a right-aligned Retry
+(`HydrationPlaceholder`).
 
 #### A restored row binds to its surviving doc (`RowTruth`)
 
@@ -1919,7 +1994,7 @@ the fix is the trigger owner consuming the key.
   - `starved-doc` → `refetch()` (`provider.rehydrateFromServer()`, idempotent
     `doc-init` re-read, nothing moves);
   - user `stalled` Retry → `rehydrate()`.
-- **A skeleton never paints over text already seen**: `BlockDocOwner.everRendered`
+- **A static stand-in never replaces text already seen**: `BlockDocOwner.everRendered`
   (monotonic latch from `CollabSession.verifyRendered`), on the OWNER because recovery
   and frame moves reset sessions/mounts. Folded into the one hydration snapshot.
 - **A DETECTOR, not a write gate** — reported via `collabHydrationReportSink` →
@@ -2224,7 +2299,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `Editor.TurnInto` ×2
     - `Editor.BlockMenuItem` ← `page.open-as-page`
   - Contributes: `IdKinds.Kind` "block"
-  - Uses: 103 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 104 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/live-state` ×6
     - `primitives/dom/web-storage` ×5
     - `primitives/text-editor/caret-trigger` ×5
@@ -2253,6 +2328,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/inline.Inline`
+    - `primitives/css/layer.layerClasses`
     - `primitives/css/overlay.Overlay`
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
@@ -2325,6 +2401,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `RichTextFieldCaret`
     - `RichTextFieldKey`
     - `RichTextFieldProps`
+    - `RunsRendererProps`
     - `SelectionControl`
     - `TextBlockLayoutProps`
     - `UndoConflictReason`
@@ -2367,6 +2444,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `registerBlockTextExtension`
     - `registerBlockTextExtensionSource`
     - `RichTextField`
+    - `RunsRenderer`
     - `selectableText`
     - `TextBlockLayout`
     - `undoConflictReportSink`

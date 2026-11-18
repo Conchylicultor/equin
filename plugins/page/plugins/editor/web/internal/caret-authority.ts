@@ -123,12 +123,45 @@ export interface BlockFocusHandle extends CaretSurface, BlockTextSurgery {
   /** Place the caret at a linear character offset (the merge join point). */
   focusOffset?: (offset: number, opts?: CaretLandOptions) => void;
   /**
+   * Select linear `[anchor, focus]` (direction as given). Carries a selection
+   * the user made in a dormant line's static text into its woken editor.
+   */
+  selectOffsets?: (
+    anchor: number,
+    focus: number,
+    opts?: CaretLandOptions,
+  ) => void;
+  /**
    * Apply input the authority buffered while this block's editor was still
    * mounting, in order. Registered by bound text editors only — and a handle
    * that omits it can never be a flight's target (see {@link CaretAuthority.land}),
    * because there would be nowhere to put the user's keystrokes.
    */
   replayInput?: (entries: readonly FlightInput[]) => void;
+}
+
+/**
+ * A DORMANT text block's handle: the line is drawn as static text
+ * (`StaticBlockText`), with no Lexical editor behind it. It answers the READ
+ * half — what the line holds, where a point or a span falls in it — over its
+ * static DOM, and `wake` asks for its live editor.
+ *
+ * It cannot take a caret, so a policy never sees it: a landing on a dormant
+ * block WAKES it and CLAIMS the keyboard exactly as a landing on a block that
+ * does not exist yet does (the editor's mount is the same gap), and the flight
+ * lands when the live editor registers its own handle — which it does only
+ * once its text is on screen (`BlockTextEditor`'s `ready`).
+ */
+export type DormantTextHandle = BlockTextReads & {
+  /** Ask for this block's live editor. Idempotent. */
+  wake: () => void;
+};
+
+/** What a block registers: a live caret host, or a dormant line. */
+export type RegisteredHandle = BlockFocusHandle | DormantTextHandle;
+
+function isDormant(handle: RegisteredHandle): handle is DormantTextHandle {
+  return "wake" in handle;
 }
 
 /** One buffered unit of user input, captured while the caret is in flight. */
@@ -272,7 +305,8 @@ export interface CaretAuthority {
   /**
    * Land the caret in `blockId`. Synchronous when its host is mounted; a CLAIM
    * (the authority takes the keyboard and buffers input) when the block does not
-   * exist yet — i.e. the caller just created it. A block that exists but has no
+   * exist yet — i.e. the caller just created it — or is DORMANT (drawn as static
+   * text: the claim wakes it, and the flight lands on its live editor). A block that exists but has no
    * mounted handle (a void row, a collapsed-away editor) is queued best-effort
    * WITHOUT taking the keyboard: the caret never moved off the origin, so there
    * is nothing to route.
@@ -300,14 +334,49 @@ export interface CaretAuthority {
   /**
    * Land only if the block's host is mounted right now; `false` means it has no
    * caret host. The empty-background click uses the answer to fall back to
-   * selecting the row instead.
+   * selecting the row instead. A dormant line CAN take a caret, so it answers
+   * `true` and is woken under a claim, as {@link land} does.
    */
   landIfMounted: (blockId: string, policy: LandPolicy) => boolean;
-  /** Whether the block currently has a caret host (arrow-nav skips those without). */
+  /**
+   * Whether the block currently has a caret host (arrow-nav skips those
+   * without) — a dormant line counts: a landing wakes it.
+   */
   hasHandle: (blockId: string) => boolean;
-  /** A mounted block's content surgery — never a way to place a caret. */
+  /**
+   * A mounted block's content surgery — never a way to place a caret. A
+   * dormant line answers its reads only (`readRuns`, `offsetAtPoint`,
+   * `domRangeOf`, …): every edit member is absent, so a caller takes its
+   * no-editor path.
+   */
   surgeryOf: (blockId: string) => BlockTextSurgery | null;
-  registerHandle: (id: string, handle: BlockFocusHandle) => () => void;
+  /** Whether the block is a dormant line (static text, no editor yet). */
+  isDormant: (blockId: string) => boolean;
+  /**
+   * Run `fn` against the block's LIVE handle: now when it has one, else once a
+   * dormant line's woken editor registers. It moves no caret and claims no
+   * keyboard — for work that needs the line's live text where the caret is
+   * elsewhere (pulling the next line up, an undo replayed into it). Called
+   * with `null` — at once, or when it happens — when the block has no handle
+   * at all (it is gone, or never rendered), so a waiter always resolves.
+   */
+  afterLive: (
+    blockId: string,
+    fn: (handle: BlockFocusHandle | null) => void,
+  ) => void;
+  /**
+   * Every registration and release of a handle — a line swapping between its
+   * static and live text surface. Whoever holds DOM Ranges into a line's text
+   * (the span painter) re-derives them on it. `handlesVersion` counts them.
+   */
+  subscribeHandles: (listener: () => void) => () => void;
+  handlesVersion: () => number;
+  /**
+   * Register a block's handle. The returned release removes THIS handle only:
+   * a dormant line and its live editor hand over in one commit, and the
+   * release of the one leaving must not drop the one arriving.
+   */
+  registerHandle: (id: string, handle: RegisteredHandle) => () => void;
   /** The block list hands the authority its interaction surface. */
   attachContainer: (el: HTMLElement | null) => void;
   /**
@@ -338,13 +407,20 @@ interface Flight {
 export function createCaretAuthority({
   getOriginId,
   isLiveRow,
+  wake,
 }: {
   /** The block that currently holds the caret, for the abort replay. */
   getOriginId: () => string | null;
   /** Whether a block already exists in the editor's rows — the claim discriminator. */
   isLiveRow: (id: string) => boolean;
+  /**
+   * Ask for `blockId`'s live editor: every claim's target is about to take the
+   * caret, so it must render one — a dormant line woken, and a block that does
+   * not exist yet born live.
+   */
+  wake: (blockId: string) => void;
 }): CaretAuthority {
-  const handles = new Map<string, BlockFocusHandle>();
+  const handles = new Map<string, RegisteredHandle>();
   let container: HTMLElement | null = null;
   let flight: Flight | null = null;
   /**
@@ -354,6 +430,17 @@ export function createCaretAuthority({
    * a newer request — bounded by construction.
    */
   let queued: { id: string; policy: LandPolicy } | null = null;
+  /** `afterLive` work waiting for a woken line's editor, by block. */
+  const afterLiveQueue = new Map<
+    string,
+    ((h: BlockFocusHandle | null) => void)[]
+  >();
+  const handleListeners = new Set<() => void>();
+  let version = 0;
+  function handlesChanged(): void {
+    version++;
+    handleListeners.forEach((l) => l());
+  }
   let listening = false;
 
   // ---- Capturing intent -----------------------------------------------------
@@ -465,6 +552,7 @@ export function createCaretAuthority({
       misses: 0,
     };
     queued = null;
+    wake(blockId);
     startCapturing(el);
     focusElement(el, { reveal: false });
     releaseCaret(el);
@@ -495,6 +583,12 @@ export function createCaretAuthority({
     if (!replay) return;
     void (async () => {
       for (let i = 0; i < entries.length; i++) {
+        // The yield comes FIRST, so even the first entry replays outside
+        // whatever called this — including the landing's own commit: a
+        // policy's caret placement (`focusRestoringSelection`) is a pending
+        // Lexical update that commits on a microtask, and a buffered Tab
+        // replayed before it read no selection and was dropped.
+        await Promise.resolve();
         // A replayed key can claim the NEXT flight (a replayed Enter re-enters
         // `split()`), and everything after it belongs to that new target — which
         // is exactly the "alpha Enter bravo" case, with no special case for it.
@@ -503,7 +597,7 @@ export function createCaretAuthority({
           return;
         }
         replay([entries[i]!]);
-        // YIELD ONE MICROTASK PER ENTRY. A live keystroke sequence lets everything
+        // ...and ONE MICROTASK PER ENTRY (the yield at the loop's top). A live keystroke sequence lets everything
         // the editor DEFERS run between keystrokes, because each keystroke is its
         // own task: the markdown block shortcut converts from a `queueMicrotask`
         // (an update listener may not mutate during its own update), split defers
@@ -517,7 +611,6 @@ export function createCaretAuthority({
         // yielding to the editor cannot let the user overtake the buffer: the
         // ordering guarantee is unchanged, and deferred work now interleaves
         // exactly where it would have had the keys never been buffered.
-        await Promise.resolve();
       }
     })();
   }
@@ -527,7 +620,8 @@ export function createCaretAuthority({
     if (!failed) return;
     flight = null;
     stopCapturing();
-    const origin = failed.originId ? handles.get(failed.originId) : null;
+    const registered = failed.originId ? handles.get(failed.originId) : null;
+    const origin = registered && !isDormant(registered) ? registered : null;
     const replayedInto = origin?.replayInput ? failed.originId : null;
     if (origin) replayInto(origin, failed.buffer);
     // An EMPTY buffer means nothing was misrouted and nothing had to be
@@ -601,9 +695,21 @@ export function createCaretAuthority({
   return {
     land(blockId, policy) {
       const handle = handles.get(blockId);
-      if (handle) {
+      if (handle && !isDormant(handle)) {
         queued = null;
         policy(handle, {});
+        return;
+      }
+      // A dormant line: its editor mounts on the claim's wake, and the caret
+      // waits for it under the claim — the same mount gap as a new block's.
+      // With no surface to route input through, it is queued (and woken).
+      if (handle) {
+        if (container === null) {
+          queued = { id: blockId, policy };
+          wake(blockId);
+          return;
+        }
+        claim(blockId, policy, container);
         return;
       }
       // The block already exists, so its host is either caret-less (a void row)
@@ -626,12 +732,19 @@ export function createCaretAuthority({
       }
       claim(blockId, policy, container, input);
       const handle = handles.get(blockId);
-      if (handle) landFlight(handle);
+      if (handle && !isDormant(handle)) landFlight(handle);
     },
 
     landIfMounted(blockId, policy) {
       const handle = handles.get(blockId);
       if (!handle) return false;
+      if (isDormant(handle)) {
+        if (container === null) {
+          queued = { id: blockId, policy };
+          wake(blockId);
+        } else claim(blockId, policy, container);
+        return true;
+      }
       policy(handle, {});
       return true;
     },
@@ -644,16 +757,63 @@ export function createCaretAuthority({
       return handles.get(blockId) ?? null;
     },
 
+    isDormant(blockId) {
+      const handle = handles.get(blockId);
+      return handle !== undefined && isDormant(handle);
+    },
+
+    afterLive(blockId, fn) {
+      const handle = handles.get(blockId);
+      if (!handle || !isDormant(handle)) {
+        fn(handle ?? null);
+        return;
+      }
+      const waiting = afterLiveQueue.get(blockId) ?? [];
+      waiting.push(fn);
+      afterLiveQueue.set(blockId, waiting);
+      handle.wake();
+    },
+
+    subscribeHandles(listener) {
+      handleListeners.add(listener);
+      return () => {
+        handleListeners.delete(listener);
+      };
+    },
+
+    handlesVersion: () => version,
+
     registerHandle(id, handle) {
       handles.set(id, handle);
-      if (flight?.targetId === id) landFlight(handle);
-      else if (queued?.id === id) {
-        const { policy } = queued;
-        queued = null;
-        policy(handle, {});
+      handlesChanged();
+      if (!isDormant(handle)) {
+        if (flight?.targetId === id) landFlight(handle);
+        else if (queued?.id === id) {
+          const { policy } = queued;
+          queued = null;
+          policy(handle, {});
+        }
+        const waiting = afterLiveQueue.get(id);
+        if (waiting) {
+          afterLiveQueue.delete(id);
+          for (const fn of waiting) fn(handle);
+        }
       }
       return () => {
+        if (handles.get(id) !== handle) return;
         handles.delete(id);
+        handlesChanged();
+        // A line hands over between its static and live surface inside one
+        // commit (release, then register). Still unhandled a microtask later,
+        // the block is gone: whatever waited for its editor resolves empty.
+        if (afterLiveQueue.has(id)) {
+          queueMicrotask(() => {
+            if (handles.has(id)) return;
+            const waiting = afterLiveQueue.get(id);
+            afterLiveQueue.delete(id);
+            for (const fn of waiting ?? []) fn(null);
+          });
+        }
       };
     },
 

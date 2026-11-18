@@ -82,6 +82,7 @@ import {
 } from "../../core";
 import { fromNodes, toNodes } from "../internal/optimistic-block-ops";
 import { liveRunsOf } from "../internal/live-runs";
+import { usePageBlockDocsHold } from "../internal/use-collab-block-doc";
 import { arrivalSteps } from "../internal/arrival-steps";
 import { useBlockDocs } from "../internal/use-block-docs";
 import type { BlockDocs } from "../internal/collab-session";
@@ -253,6 +254,12 @@ function isInsideEditingHost(target: EventTarget | null): boolean {
     target instanceof Element &&
     target.closest('[contenteditable="true"]') !== null
   );
+}
+
+/** Holds one page's block docs open while its lines are on screen. */
+function PageBlockDocsHold({ pageId }: { pageId: string }) {
+  usePageBlockDocsHold(pageId);
+  return null;
 }
 
 /**
@@ -712,6 +719,10 @@ function SelectionLayer({
     deleteSpan,
     replaceSpan,
     arrivedRemotely,
+    liveTextEditors,
+    serverSync,
+    subscribeTextReads,
+    textReadsVersion,
   } = useBlockEditor();
   const { selectedIds } = useMultiSelect();
   // The editor's own transport: a pasted / dropped file uploads to the host
@@ -1073,6 +1084,25 @@ function SelectionLayer({
   // document — which is how the selection bar's button copies, since it renders
   // outside the container and its event never reaches `onCopy` below.
   const textSpanRef = useLatestRef(textSpan);
+
+  // A text span's START line is where every edit of the span lands its text
+  // (`commitSpanEdit` splices that line's open content doc), so it holds a
+  // live editor for as long as the span lasts — woken the moment the span is
+  // drawn, well before a key can act on it. The end line is only read.
+  // The pages whose lines are on screen: each holds its block docs open
+  // (`PageBlockDocsHold`).
+  const textPageIds = useMemo(
+    () => [
+      ...new Set(
+        flat.flatMap((f) => (f.block.pageId === null ? [] : [f.block.pageId])),
+      ),
+    ],
+    [flat],
+  );
+  const spanStartId = textSpan?.from.blockId ?? null;
+  useEffect(() => {
+    liveTextEditors.pin("span", spanStartId ? [spanStartId] : []);
+  }, [liveTextEditors, spanStartId]);
 
   /**
    * The forest a text span copies as: the lines it covers, its START line
@@ -2598,11 +2628,18 @@ function SelectionLayer({
                   passage. A selected CONTAINER needs no special case either: it
                   paints over its frame span, which is what covers a zero-height
                   anchor row's box. */}
+                {serverSync
+                  ? textPageIds.map((id) => (
+                      <PageBlockDocsHold key={id} pageId={id} />
+                    ))
+                  : null}
                 <SelectionBands bands={selectionBands} />
                 {spanPaint && (
                   <TextSpanHighlight
                     lines={spanPaint.lines}
                     readsOf={textReadsOf}
+                    subscribeReads={subscribeTextReads}
+                    readsVersion={textReadsVersion}
                   />
                 )}
                 {flat.map((f, i) => (

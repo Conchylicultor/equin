@@ -99,7 +99,7 @@ await withBrowser(async (h) => {
     // tree entry is the last. Clicking the wrong one silently doesn't navigate.
     await page.locator(`text=${SCRATCH_TITLE}`).last().click();
     await page.waitForURL(`**/pages/page/${pageId}`);
-    await page.waitForSelector('[contenteditable="true"]');
+    await page.waitForSelector("[data-block-text]");
 
     /**
      * Click a block near its RIGHT edge, past the end of its text. Never at its
@@ -124,7 +124,7 @@ await withBrowser(async (h) => {
      * `DataTransfer` exercises exactly the same path.
      */
     async function pasteUrl(): Promise<void> {
-      let block = page.locator('[contenteditable="true"]').last();
+      let block = page.locator("[data-block-text]").last();
       await clickRightEdge(block);
       await page.keyboard.press("End");
       // Clear whatever is there. `Ctrl+A` is scoped by ContentScope and can
@@ -136,7 +136,7 @@ await withBrowser(async (h) => {
         await page.keyboard.press("Backspace");
       await page.waitForTimeout(200);
 
-      block = page.locator('[contenteditable="true"]').last();
+      block = page.locator("[data-block-text]").last();
       await clickRightEdge(block);
       await page.keyboard.press("End");
       await page.waitForTimeout(200);
@@ -179,13 +179,11 @@ await withBrowser(async (h) => {
         );
 
     const blockText = async (): Promise<string> =>
-      (
-        await page.locator('[contenteditable="true"]').last().innerText()
-      ).trim();
+      (await page.locator("[data-block-text]").last().innerText()).trim();
 
     /** The href of the block's link, or null when it holds none. */
     const linkHref = async (): Promise<string | null> => {
-      const link = page.locator('[contenteditable="true"]').last().locator("a");
+      const link = page.locator("[data-block-text]").last().locator("a");
       return (await link.count()) > 0
         ? link.first().getAttribute("href")
         : null;
@@ -270,11 +268,11 @@ await withBrowser(async (h) => {
       beforeEnter === 0,
     );
 
-    const blocksBefore = await page.locator('[contenteditable="true"]').count();
+    const blocksBefore = await page.locator("[data-block-text]").count();
     await page.keyboard.press("Enter");
     await page.waitForTimeout(600);
     r.ok("Enter closes the menu", (await page.locator(MENU).count()) === 0);
-    const blocksAfter = await page.locator('[contenteditable="true"]').count();
+    const blocksAfter = await page.locator("[data-block-text]").count();
     r.ok(
       `Enter did not split the block (${blocksBefore} → ${blocksAfter} editable blocks)`,
       blocksAfter === blocksBefore,

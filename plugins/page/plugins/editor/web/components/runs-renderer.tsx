@@ -1,15 +1,8 @@
 import { Fragment, type CSSProperties, type ReactNode } from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { matchTokens } from "@plugins/primitives/plugins/text-editor/plugins/token-extension/core";
-import {
-  blockTextRenderableExtensions,
-  colorCssValue,
-} from "@plugins/page/plugins/editor/web";
-import {
-  runsOf,
-  type RichText,
-  type TextRun,
-} from "@plugins/page/plugins/editor/core";
+import { colorCssValue, runsOf, type RichText, type TextRun } from "../../core";
+import { blockTextRenderableExtensions } from "../internal/block-text-extensions";
 
 /**
  * Faithful, non-editable rendering of the editor's `RichText` runs model.
@@ -29,6 +22,12 @@ import {
  * exported value); they are the inline-format contract and change in lockstep
  * with that config.
  */
+
+/**
+ * Marks a rendered inline token as ONE atomic leaf of the text's linear offset
+ * basis, carrying the length of its spelling (`static-text-geometry.ts`).
+ */
+export const TOKEN_LENGTH_ATTR = "data-token-length";
 
 // Lexical theme.text mark classes (block-text-editor.tsx initialConfig.theme).
 const MARK_UNDERLINE = "underline";
@@ -167,8 +166,15 @@ export function RunsRenderer({ value }: RunsRendererProps) {
             // A family answering `null` does not claim these characters after
             // all — paint the raw token, never nothing.
             const rendered = seg.render();
+            // An atomic leaf of the linear offset basis: the token counts as
+            // its whole spelling, whatever its chip draws — the same length
+            // Lexical's decorator node reports. `static-text-geometry.ts`
+            // walks text by these marks, so a caret or span over this DOM
+            // lands at the offsets the live editor would.
             return (
-              <Fragment key={si}>{rendered ?? renderText(seg.text)}</Fragment>
+              <span key={si} {...{ [TOKEN_LENGTH_ATTR]: seg.text.length }}>
+                {rendered ?? renderText(seg.text)}
+              </span>
             );
           }
           return <Fragment key={si}>{renderText(seg.text)}</Fragment>;

@@ -212,7 +212,7 @@ await withBrowser(async (h) => {
         key
       ];
       const now = document.querySelector(
-        `[data-block-id="${id}"] [contenteditable="true"]`,
+        `[data-block-id="${id}"] [data-block-text]`,
       );
       return probe !== undefined && probe.isConnected && probe === now;
     },

@@ -91,8 +91,8 @@ await withBrowser(async (h) => {
         .map((el) => ({
           id: el.getAttribute("data-block-id"),
           text:
-            el.querySelector<HTMLElement>('[contenteditable="true"]')
-              ?.innerText ?? null,
+            el.querySelector<HTMLElement>("[data-block-text]")?.innerText ??
+            null,
         }))
         .filter(
           (b): b is { id: string; text: string } =>
@@ -192,7 +192,7 @@ await withBrowser(async (h) => {
       await pageB.evaluate(() =>
         [
           ...document.querySelectorAll<HTMLElement>(
-            '[data-block-id] [contenteditable="true"]',
+            "[data-block-id] [data-block-text]",
           ),
         ].map((el) => el.innerText),
       )

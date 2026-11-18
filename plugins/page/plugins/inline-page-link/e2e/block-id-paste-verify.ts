@@ -41,7 +41,7 @@ interface Row {
 }
 
 function blockEl(page: Page, blockId: string): Locator {
-  return page.locator(`[data-block-id="${blockId}"] [contenteditable="true"]`);
+  return page.locator(`[data-block-id="${blockId}"] [data-block-text]`);
 }
 
 async function textOf(block: Locator): Promise<string> {

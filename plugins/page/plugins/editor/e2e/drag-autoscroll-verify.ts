@@ -141,7 +141,7 @@ await withBrowser(async (h) => {
         const el = document.elementFromPoint(x, clientY);
         if (!el || !surface.contains(el)) continue;
         if (el.closest("button")) continue;
-        if (el.closest('[contenteditable="true"]')) continue;
+        if (el.closest("[data-block-text]")) continue;
         const isBackground =
           el === surface ||
           el.hasAttribute("data-block-id") ||
@@ -401,7 +401,7 @@ await withBrowser(async (h) => {
 
   const nearEdgeRow = await page.evaluate((targetY) => {
     const els = [
-      ...document.querySelectorAll('[data-block-id] [contenteditable="true"]'),
+      ...document.querySelectorAll("[data-block-id] [data-block-text]"),
     ];
     let best: { left: number; right: number; centerY: number } | null = null;
     let bestDist = Infinity;
@@ -503,7 +503,7 @@ await withBrowser(async (h) => {
   );
   const caretLanded = await page.evaluate(() => {
     const el = document.activeElement;
-    return el !== null && el.closest('[contenteditable="true"]') !== null;
+    return el !== null && el.closest("[data-block-text]") !== null;
   });
   r.ok(
     "click-to-edit still works there (the click was not eaten)",

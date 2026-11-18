@@ -53,11 +53,9 @@ await withBrowser(async (h) => {
 
   const blockTexts = (): Promise<string[]> =>
     page.evaluate(() =>
-      [
-        ...document.querySelectorAll(
-          '[data-block-id] [contenteditable="true"]',
-        ),
-      ].map((el) => (el.textContent ?? "").trim()),
+      [...document.querySelectorAll("[data-block-id] [data-block-text]")].map(
+        (el) => (el.textContent ?? "").trim(),
+      ),
     );
   const block = (i: number) => editableBlocks(page).nth(i);
   const clipboardText = (): Promise<string> =>

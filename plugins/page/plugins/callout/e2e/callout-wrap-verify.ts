@@ -139,7 +139,7 @@ await withBrowser(async (h) => {
   );
 
   const originEl = page
-    .locator(`[data-block-id="${originId}"] [contenteditable="true"]`)
+    .locator(`[data-block-id="${originId}"] [data-block-text]`)
     .first();
   r.ok(
     "wrap: the origin is still a TEXT block holding its text",

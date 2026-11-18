@@ -154,6 +154,10 @@ export {
   blockTextRenderableExtensions,
   colorCssValue,
 } from "./internal/block-text-extensions";
+// The one runs → static React rendering, shared by the editor's dormant lines
+// (`StaticBlockText`) and every read-only surface.
+export { RunsRenderer } from "./components/runs-renderer";
+export type { RunsRendererProps } from "./components/runs-renderer";
 export { registerBlockPasteHandler } from "./internal/block-paste-handlers";
 // The one read of a transfer's text, exported so a contributed block-text
 // plugin classifying its own paste/drop uses the same `text/plain` →

@@ -47,10 +47,8 @@ export async function caretLinear(page: Page): Promise<number> {
     if (!sel || sel.rangeCount === 0 || !sel.anchorNode) return -1;
     const anchor = sel.anchorNode;
     const editable =
-      anchor.parentElement?.closest?.('[contenteditable="true"]') ??
-      (anchor instanceof Element
-        ? anchor.closest('[contenteditable="true"]')
-        : null);
+      anchor.parentElement?.closest?.("[data-block-text]") ??
+      (anchor instanceof Element ? anchor.closest("[data-block-text]") : null);
     if (!editable) return -1;
     const range = document.createRange();
     range.selectNodeContents(editable);

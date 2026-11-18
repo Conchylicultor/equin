@@ -64,7 +64,7 @@ await withBrowser(async (h) => {
   // "it converted" is read as "the row kept its id and no longer has a text
   // surface" — a place block is void.
   const row = page.locator(`[data-block-id="${doc.blockId}"]`);
-  const editables = await row.locator('[contenteditable="true"]').count();
+  const editables = await row.locator("[data-block-text]").count();
   console.log(
     `[3] block ${doc.blockId} kept its id and has ${editables} text surface(s) — a ${PLACE_TYPE} block should have 0`,
   );

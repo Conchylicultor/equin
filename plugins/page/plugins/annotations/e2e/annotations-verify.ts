@@ -153,9 +153,7 @@ async function geometry(page: Page): Promise<Geometry> {
       if (id === null) continue;
       order.push(id);
       const rect = el.getBoundingClientRect();
-      const editable = el.querySelector<HTMLElement>(
-        '[contenteditable="true"]',
-      );
+      const editable = el.querySelector<HTMLElement>("[data-block-text]");
       rows[id] = {
         top: rect.top,
         bottom: rect.bottom,
@@ -553,7 +551,7 @@ await withBrowser(async (h) => {
   // Clicking into the trailing paragraph below also clears the reveal: that row
   // reports no frames on pointer-enter, which is how a card stops naming itself.
   const editable = page
-    .locator(`[data-block-id="${seeded.typing}"] [contenteditable="true"]`)
+    .locator(`[data-block-id="${seeded.typing}"] [data-block-text]`)
     .first();
   await editable.click();
   await page.keyboard.type("/");
@@ -610,12 +608,12 @@ await withBrowser(async (h) => {
     "TODO trigger: the prefix was stripped, the rest of the line survived",
     (await blockText(
       page
-        .locator(`[data-block-id="${seeded.typing}"] [contenteditable="true"]`)
+        .locator(`[data-block-id="${seeded.typing}"] [data-block-text]`)
         .first(),
     )) === "write the delivery filter",
     await blockText(
       page
-        .locator(`[data-block-id="${seeded.typing}"] [contenteditable="true"]`)
+        .locator(`[data-block-id="${seeded.typing}"] [data-block-text]`)
         .first(),
     ),
   );

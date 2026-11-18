@@ -184,9 +184,7 @@ async function geometry(page: Page, insetRowId: string): Promise<Geometry> {
       if (id === null) continue;
       order.push(id);
       const rect = el.getBoundingClientRect();
-      const editable = el.querySelector<HTMLElement>(
-        '[contenteditable="true"]',
-      );
+      const editable = el.querySelector<HTMLElement>("[data-block-text]");
       rows[id] = {
         top: rect.top,
         bottom: rect.bottom,
@@ -357,9 +355,7 @@ function firstLineInside(g: Geometry, box: FrameBox): string | undefined {
 /** A block's rendered text, read off its own editable surface. */
 async function textOf(page: Page, blockId: string): Promise<string> {
   return blockText(
-    page
-      .locator(`[data-block-id="${blockId}"] [contenteditable="true"]`)
-      .first(),
+    page.locator(`[data-block-id="${blockId}"] [data-block-text]`).first(),
   );
 }
 
@@ -367,7 +363,7 @@ async function textOf(page: Page, blockId: string): Promise<string> {
 async function fontSizeOf(page: Page, blockId: string): Promise<number> {
   return page.evaluate((id) => {
     const el = document.querySelector<HTMLElement>(
-      `[data-block-id="${id}"] [contenteditable="true"]`,
+      `[data-block-id="${id}"] [data-block-text]`,
     );
     return el ? parseFloat(getComputedStyle(el).fontSize) : -1;
   }, blockId);
@@ -395,7 +391,7 @@ async function storedRows(page: Page, pageId: string): Promise<StoredRow[]> {
 /** Put the caret at the end of a block's text by clicking past its last glyph. */
 async function caretToEnd(page: Page, blockId: string): Promise<boolean> {
   const editable = page
-    .locator(`[data-block-id="${blockId}"] [contenteditable="true"]`)
+    .locator(`[data-block-id="${blockId}"] [data-block-text]`)
     .first();
   const box = await editable.boundingBox();
   if (!box) return false;
@@ -409,7 +405,7 @@ async function caretToEnd(page: Page, blockId: string): Promise<boolean> {
 /** Put the caret at offset 0 by clicking the text's very left edge. */
 async function caretToStart(page: Page, blockId: string): Promise<boolean> {
   const editable = page
-    .locator(`[data-block-id="${blockId}"] [contenteditable="true"]`)
+    .locator(`[data-block-id="${blockId}"] [data-block-text]`)
     .first();
   const box = await editable.boundingBox();
   if (!box) return false;
@@ -1068,9 +1064,7 @@ await withBrowser(async (h) => {
         // Caret at offset 0: `atWordBoundary` gates the `/` trigger and index 0 is
         // a boundary, so the block's own text survives to the other side.
         const originEditable = page
-          .locator(
-            `[data-block-id="${seeded.wrapMe}"] [contenteditable="true"]`,
-          )
+          .locator(`[data-block-id="${seeded.wrapMe}"] [data-block-text]`)
           .first();
         const caretBefore = await caretState(originEditable);
         // `/human` is the card's own name now; `/context` and `/user` still

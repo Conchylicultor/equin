@@ -230,12 +230,12 @@ await withBrowser(async (h) => {
   await text(box, "Echo inside");
   const after = await text(pageId, "Foxtrot after");
   await page
-    .locator(`[data-block-id="${after}"] [contenteditable="true"]`)
+    .locator(`[data-block-id="${after}"] [data-block-text]`)
     .waitFor({ state: "visible", timeout: 30_000 });
   await page.waitForTimeout(1000);
   const lineBox = async (id: string) => {
     const b = await page
-      .locator(`[data-block-id="${id}"] [contenteditable="true"]`)
+      .locator(`[data-block-id="${id}"] [data-block-text]`)
       .boundingBox();
     if (!b) throw new Error(`no bounding box for ${id}`);
     return b;

@@ -175,13 +175,11 @@ await withBrowser(async (h) => {
   console.log("BLOCK_A:", idA);
 
   const editorOf = (id: string): Locator =>
-    pageA.locator(`[data-block-id="${id}"] [contenteditable="true"]`).first();
+    pageA.locator(`[data-block-id="${id}"] [data-block-text]`).first();
   const textOf = async (id: string): Promise<string> =>
     norm(await editorOf(id).innerText());
   const rendered = (id: string): Promise<number> =>
-    pageA
-      .locator(`[data-block-id="${id}"]:has([contenteditable="true"])`)
-      .count();
+    pageA.locator(`[data-block-id="${id}"]:has([data-block-text])`).count();
   const paragraphsOf = (id: string): Promise<number> =>
     editorOf(id).locator("p").count();
   const boldOf = (id: string): Promise<number> =>

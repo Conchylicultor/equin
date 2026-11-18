@@ -102,7 +102,7 @@ async function geometry(page: Page): Promise<Geometry> {
         height: rect.height,
         contentLeft:
           rect.left + parseFloat(getComputedStyle(el).paddingLeft || "0"),
-        editable: el.querySelector('[contenteditable="true"]') !== null,
+        editable: el.querySelector("[data-block-text]") !== null,
       };
     }
 
@@ -234,7 +234,7 @@ async function convertVia(
   query: string,
 ): Promise<void> {
   await page
-    .locator(`[data-block-id="${blockId}"] [contenteditable="true"]`)
+    .locator(`[data-block-id="${blockId}"] [data-block-text]`)
     .first()
     .click();
   await page.keyboard.press("End");
@@ -269,7 +269,7 @@ await withBrowser(async (h) => {
 
   // --- 2. `/quote` WRAPS ------------------------------------------------------
   await page
-    .locator(`[data-block-id="${originId}"] [contenteditable="true"]`)
+    .locator(`[data-block-id="${originId}"] [data-block-text]`)
     .first()
     .click();
   await page.keyboard.type("The best way to predict the future", { delay: 15 });
@@ -289,9 +289,7 @@ await withBrowser(async (h) => {
   r.eq(
     "the origin's text is intact",
     await blockText(
-      page
-        .locator(`[data-block-id="${originId}"] [contenteditable="true"]`)
-        .first(),
+      page.locator(`[data-block-id="${originId}"] [data-block-text]`).first(),
     ),
     "The best way to predict the future",
   );

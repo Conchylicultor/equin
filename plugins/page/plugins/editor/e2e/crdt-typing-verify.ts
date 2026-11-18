@@ -87,7 +87,7 @@ await withBrowser(async (h) => {
   const { page: pageB } = await h.session({ label: "B" });
   await pageB.goto(pageUrl);
   const blockB = pageB
-    .locator(`[data-block-id="${blockId}"] [contenteditable="true"]`)
+    .locator(`[data-block-id="${blockId}"] [data-block-text]`)
     .first();
   await blockB.waitFor({ state: "visible", timeout: ELEMENT_TIMEOUT_MS });
   // Was a fixed `waitForTimeout(5000)`. A second context measured 6.2-6.4s to

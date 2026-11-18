@@ -54,8 +54,9 @@
  * block stops and the painted span begins. Never a local tint: a selection
  * colour belongs to the theme, and two spellings of it would drift.
  *
- * The span's ranges always lie in a block's Lexical root (`domRangeOf` builds
- * them from its editor), so the highlight rule is scoped to that root and its
+ * The span's ranges always lie in a block's text root — its Lexical root, or a
+ * dormant line's static root (`domRangeOf` builds them from either), so the
+ * highlight rule is scoped to those roots and its
  * text inherits it through highlight inheritance. Unscoped, `::highlight()`
  * matches every element of the document, each of which then computes the
  * highlight style on every style recalc (~40 ms per full recalc of a
@@ -65,6 +66,7 @@
   background-color: var(--text-selection);
 }
 
-[data-lexical-editor]::highlight(page-text-span) {
+[data-lexical-editor]::highlight(page-text-span),
+[data-static-text]::highlight(page-text-span) {
   background-color: var(--text-selection);
 }

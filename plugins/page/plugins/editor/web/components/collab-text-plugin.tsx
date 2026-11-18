@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect } from "react";
 import { CollaborationPlugin } from "@lexical/react/LexicalCollaborationPlugin";
 import { LexicalCollaboration } from "@lexical/react/LexicalCollaborationContext";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
@@ -14,12 +14,7 @@ import {
   useLatestRef,
 } from "@plugins/primitives/plugins/latest-ref/web";
 import { useReportSync } from "@plugins/primitives/plugins/sync-status/web";
-import {
-  runsLength,
-  runsOf,
-  type Block,
-  type BlockTextVariant,
-} from "../../core";
+import { runsLength, runsOf, type Block } from "../../core";
 import { useBlockEditor } from "../block-editor-context";
 import {
   $xmlBasisContentLength,
@@ -244,7 +239,10 @@ function useHydrationVerification(doc: CollabBlockDoc): void {
 }
 
 /** Server-synced content-doc binding: the CRDT transport (subscription + FK gate). */
-function ServerCollabTextPlugin({ block, textVariant }: CollabTextPluginProps) {
+function ServerCollabTextPlugin({
+  block,
+  onReadyChange,
+}: CollabTextPluginProps) {
   // Text history: each closed local editing run in this block's content doc —
   // the owner's run tracker groups them (a 500 ms idle window) and keeps
   // remote applies, replays and `untracked` surgeries out — arrives as DATA
@@ -274,11 +272,16 @@ function ServerCollabTextPlugin({ block, textVariant }: CollabTextPluginProps) {
   );
   useHydrationGuard(block, doc);
   useHydrationVerification(doc);
-  return <CollabBinding block={block} doc={doc} textVariant={textVariant} />;
+  return (
+    <CollabBinding block={block} doc={doc} onReadyChange={onReadyChange} />
+  );
 }
 
 /** In-memory content-doc binding (`persist={false}`): a purely local `Y.Doc`, no network. */
-function LocalCollabTextPlugin({ block, textVariant }: CollabTextPluginProps) {
+function LocalCollabTextPlugin({
+  block,
+  onReadyChange,
+}: CollabTextPluginProps) {
   const { projectText, recordTextEdit } = useBlockEditor();
   const onRunsEdit = useEventCallback(recordTextEdit);
   const doc = useLocalCollabBlockDoc(
@@ -296,7 +299,9 @@ function LocalCollabTextPlugin({ block, textVariant }: CollabTextPluginProps) {
   // any commit arrives and this listener is a no-op — which is exactly what
   // makes `stalled` structurally unreachable on this transport.
   useHydrationVerification(doc);
-  return <CollabBinding block={block} doc={doc} textVariant={textVariant} />;
+  return (
+    <CollabBinding block={block} doc={doc} onReadyChange={onReadyChange} />
+  );
 }
 
 /**
@@ -338,10 +343,26 @@ function isUndoRedoKey(event: KeyboardEvent): boolean {
 function CollabBinding({
   block,
   doc,
-  textVariant,
+  onReadyChange,
 }: CollabTextPluginProps & { doc: CollabBlockDoc }) {
   const { providerFactory, saveState, retrySave } = doc;
   const [editor] = useLexicalComposerContext();
+
+  // READY = this editor's text may be shown in place of the block's static
+  // line: its session proved what it renders (`hydrated`), or gave up with a
+  // visible Retry (`stalled`), or this owner's text has been on screen before
+  // (`everRendered` — a rehydrate, a frame move). Until then the renderer
+  // keeps the static line on screen and this editor hidden, so a waking block
+  // never flashes empty (`BlockTextRenderer`). LAYOUT effects, so the swap
+  // commits before the frame paints; the cleanup reports the editor gone.
+  const ready =
+    doc.hydration.kind === "hydrated" ||
+    doc.hydration.kind === "stalled" ||
+    doc.everRendered;
+  useLayoutEffect(() => {
+    onReadyChange(ready);
+  }, [ready, onReadyChange]);
+  useLayoutEffect(() => () => onReadyChange(false), [onReadyChange]);
 
   // One reporter per block; the surface's store aggregates them
   // (error > syncing > saved > idle), so a single dirty block keeps the cloud
@@ -412,7 +433,7 @@ function CollabBinding({
       {/* The only thing this plugin renders. `LexicalComposer` emits no DOM, so
           it lands in `TextBlockLayout`'s `relative` leaf cell — the same
           positioned ancestor Lexical's own placeholder resolves against. */}
-      <HydrationPlaceholder block={block} doc={doc} textVariant={textVariant} />
+      <HydrationPlaceholder doc={doc} />
     </>
   );
 }
@@ -420,8 +441,11 @@ function CollabBinding({
 /** What a text block hands its content-doc binding. */
 interface CollabTextPluginProps {
   block: Block;
-  /** The block type's typography, so the hydration skeleton matches its line. */
-  textVariant: BlockTextVariant;
+  /**
+   * Told whether this editor's text may replace the block's static line yet
+   * (and `false` when it unmounts). See `CollabBinding`.
+   */
+  onReadyChange: (ready: boolean) => void;
 }
 
 /**
@@ -431,14 +455,11 @@ interface CollabTextPluginProps {
  * `LiveStateYjsProvider` (subscription + doc-init/doc-update); the in-memory
  * (`persist={false}`) path binds a purely local `Y.Doc` that never networks.
  */
-export function CollabTextPlugin({
-  block,
-  textVariant,
-}: CollabTextPluginProps) {
+export function CollabTextPlugin(props: CollabTextPluginProps) {
   const { serverSync } = useBlockEditor();
   return serverSync ? (
-    <ServerCollabTextPlugin block={block} textVariant={textVariant} />
+    <ServerCollabTextPlugin {...props} />
   ) : (
-    <LocalCollabTextPlugin block={block} textVariant={textVariant} />
+    <LocalCollabTextPlugin {...props} />
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import type { BlockTextReads } from "../internal/caret-authority";
 
 /**
@@ -64,10 +64,24 @@ function syncRegistry(): void {
 export function TextSpanHighlight({
   lines,
   readsOf,
+  subscribeReads,
+  readsVersion,
 }: {
   lines: readonly SpanLinePaint[];
   readsOf: (blockId: string) => BlockTextReads | null;
+  /**
+   * Every registration and release of a line's text surface — a dormant line
+   * woken into its editor, a live one put back to static — which replaces the
+   * DOM the Ranges point into: the painter repaints and re-subscribes on it.
+   */
+  subscribeReads: (listener: () => void) => () => void;
+  readsVersion: () => number;
 }) {
+  const version = useSyncExternalStore(
+    subscribeReads,
+    readsVersion,
+    readsVersion,
+  );
   useEffect(() => {
     const key = Symbol("text-span");
     const paint = () => {
@@ -92,6 +106,6 @@ export function TextSpanHighlight({
       painters.delete(key);
       syncRegistry();
     };
-  }, [lines, readsOf]);
+  }, [lines, readsOf, version]);
   return null;
 }

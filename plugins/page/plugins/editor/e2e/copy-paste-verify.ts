@@ -58,11 +58,9 @@ await withBrowser(async (h) => {
 
   const blockTexts = (): Promise<string[]> =>
     page.evaluate(() =>
-      [
-        ...document.querySelectorAll(
-          '[data-block-id] [contenteditable="true"]',
-        ),
-      ].map((el) => (el.textContent ?? "").trim()),
+      [...document.querySelectorAll("[data-block-id] [data-block-text]")].map(
+        (el) => (el.textContent ?? "").trim(),
+      ),
     );
 
   r.eq("setup: three typed blocks", (await blockTexts()).slice(0, 3), [
@@ -198,7 +196,7 @@ await withBrowser(async (h) => {
   const beforeF = await blockTexts();
   await page.evaluate(() => {
     const el = document.querySelector(
-      '[data-block-id] [contenteditable="true"]',
+      "[data-block-id] [data-block-text]",
     ) as HTMLElement | null;
     if (!el) throw new Error("no editable block");
     const dt = new DataTransfer();
@@ -224,7 +222,7 @@ await withBrowser(async (h) => {
   );
   const rootParagraphs = await page.evaluate(
     () =>
-      document.querySelector('[data-block-id] [contenteditable="true"]')
+      document.querySelector("[data-block-id] [data-block-text]")
         ?.childElementCount ?? -1,
   );
   r.eq("F: the block's root still holds ONE paragraph", rootParagraphs, 1);
@@ -300,7 +298,7 @@ await withBrowser(async (h) => {
   await editableBlocks(page).last().click();
   await page.evaluate(() => {
     const host = [
-      ...document.querySelectorAll('[data-block-id] [contenteditable="true"]'),
+      ...document.querySelectorAll("[data-block-id] [data-block-text]"),
     ].at(-1);
     const walker =
       host && document.createTreeWalker(host, NodeFilter.SHOW_TEXT);

@@ -11,9 +11,16 @@
 import type { Locator, Page } from "playwright";
 import { pathUrl } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
-/** Every editable block in the open document, in document order. */
+/**
+ * Every text block's visible text root in the open document, in document
+ * order: its live editor, or — for a DORMANT line, drawn as static text until
+ * an edit intent wakes it — its static line (`data-block-text` marks whichever
+ * is on screen). A click on either lands the caret where it falls.
+ */
+export const BLOCK_TEXT_SELECTOR = "[data-block-id] [data-block-text]";
+
 export function editableBlocks(page: Page): Locator {
-  return page.locator('[data-block-id] [contenteditable="true"]');
+  return page.locator(BLOCK_TEXT_SELECTOR);
 }
 
 /** The `data-block-id` of the block containing this contenteditable. */
@@ -42,10 +49,12 @@ export async function blockText(block: Locator): Promise<string> {
  * byte-identical copy of, and their expectations are pinned against it.
  */
 export function blockTexts(page: Page): Promise<string[]> {
-  return page.evaluate(() =>
-    [
-      ...document.querySelectorAll('[data-block-id] [contenteditable="true"]'),
-    ].map((el) => (el.textContent ?? "").trim()),
+  return page.evaluate(
+    (selector) =>
+      [...document.querySelectorAll(selector)].map((el) =>
+        (el.textContent ?? "").trim(),
+      ),
+    BLOCK_TEXT_SELECTOR,
   );
 }
 

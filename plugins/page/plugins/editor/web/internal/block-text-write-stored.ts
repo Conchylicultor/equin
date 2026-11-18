@@ -27,6 +27,7 @@ import {
 } from "./collab-session";
 import { spliceOpenBlockDoc } from "./block-text-write";
 import { undoConflictReportSink } from "./undo-conflict-report";
+import { projectableRunsOf, type DocSourcedRuns } from "./doc-sourced-runs";
 
 /**
  * Replay host B — the STORED doc — and the one entry point that picks a host
@@ -83,6 +84,11 @@ export interface StoredSpliceResult {
   readonly before: RichText;
   /** The runs the doc holds after it (coalesced `runs(before)`). */
   readonly after: RichText;
+  /**
+   * The written doc read back to runs — the row's `data.text` projection of
+   * it. No live editor projects a stored-only doc, so the caller does.
+   */
+  readonly projected: DocSourcedRuns;
 }
 
 /**
@@ -114,7 +120,8 @@ export async function spliceStoredBlockDoc(
   const state = base64ToBytes(stored.state);
   const before = currentRunsOf(state);
   const after = coalesce(runs(before));
-  if (runsEqual(before, after)) return { before, after };
+  if (runsEqual(before, after))
+    return { before, after, projected: projectedRunsOf(state) };
   const delta = editYDocState(
     state,
     () => $spliceRunsInto(after, opts.extensions),
@@ -129,7 +136,22 @@ export async function spliceStoredBlockDoc(
   } catch (err) {
     throw new BlockTextReplayError(blockId, err);
   }
-  return { before, after };
+  return { before, after, projected: projectedRunsOf(state, delta) };
+}
+
+/** What a stored state (plus a delta written onto it) projects to. */
+function projectedRunsOf(
+  state: Uint8Array,
+  delta?: Uint8Array,
+): DocSourcedRuns {
+  const doc = new Doc();
+  applyUpdate(doc, state);
+  if (delta) applyUpdate(doc, delta);
+  try {
+    return projectableRunsOf(doc);
+  } finally {
+    doc.destroy();
+  }
 }
 
 /** The runs a stored state holds — read through the registry-bound bridge. */
@@ -172,6 +194,12 @@ export interface ApplyBlockRunsArgs {
   readonly rowRuns: () => RichText;
   /** Memory mode's write, for a block with no live owner: set the row's text. */
   readonly writeRow: (runs: RichText) => void;
+  /**
+   * Server mode, no owner: the stored doc was written, and nothing else will
+   * carry the edit to the row — no editor holds the doc to project it. The
+   * row's `data.text` is what a dormant line SHOWS, so the replay projects it.
+   */
+  readonly projectRow: (runs: DocSourcedRuns) => void;
   /** Is the row in server truth (`serverIds`) right now? */
   readonly rowPresent: () => boolean;
   /**
@@ -264,7 +292,7 @@ async function applyThroughOwner(
 /** Host B. The `expected` check runs against the AUTHORITATIVE runs it reads. */
 async function applyThroughStore(args: ApplyBlockRunsArgs): Promise<void> {
   const { fetchEndpoint } = args.docs.server;
-  await spliceStoredBlockDoc(
+  const { projected } = await spliceStoredBlockDoc(
     fetchEndpoint,
     args.blockId,
     args.rowRuns(),
@@ -273,6 +301,7 @@ async function applyThroughStore(args: ApplyBlockRunsArgs): Promise<void> {
       return args.runs;
     },
   );
+  args.projectRow(projected);
 }
 
 function docHoldsContent(owner: BlockDocOwner): boolean {

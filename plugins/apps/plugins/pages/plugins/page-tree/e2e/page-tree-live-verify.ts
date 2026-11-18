@@ -195,7 +195,7 @@ await withBrowser(async (h) => {
   {
     const at = frames.length;
     const editable = page.locator(
-      `[data-block-id="${para.id}"] [contenteditable="true"]`,
+      `[data-block-id="${para.id}"] [data-block-text]`,
     );
     await editable.click();
     await page.keyboard.press("End");

@@ -2,8 +2,6 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { ReadOnlyBlocks } from "./components/read-only-blocks";
 export type { ReadOnlyBlocksProps } from "./components/read-only-blocks";
-export { RunsRenderer } from "./components/runs-renderer";
-export type { RunsRendererProps } from "./components/runs-renderer";
 export { buildForest } from "./build-forest";
 export type { ForestBlock } from "./build-forest";
 export type { ReadOnlyNode, BlockDiffKind } from "./node";

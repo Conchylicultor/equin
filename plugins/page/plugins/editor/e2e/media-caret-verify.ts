@@ -71,7 +71,7 @@ async function caretPlace(page: Page): Promise<CaretPlace> {
     return {
       blockId:
         el?.closest("[data-block-id]")?.getAttribute("data-block-id") ?? null,
-      inText: el !== null && el.closest('[contenteditable="true"]') !== null,
+      inText: el !== null && el.closest("[data-block-text]") !== null,
       inTextControl: tag === "TEXTAREA" || tag === "INPUT",
       onCaretHost: el?.dataset.caretHost !== undefined,
       label: el?.getAttribute("aria-label") ?? null,
@@ -219,7 +219,7 @@ await withBrowser(async (h) => {
     // The whole bug, in one assertion: `navigate()` used to walk past a block
     // with no registered handle, so this landed on whatever came after.
     await page
-      .locator(`[data-block-id="${doc.blockId}"] [contenteditable="true"]`)
+      .locator(`[data-block-id="${doc.blockId}"] [data-block-text]`)
       .first()
       .click();
     await page.waitForTimeout(400);

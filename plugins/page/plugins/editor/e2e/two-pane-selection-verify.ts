@@ -114,7 +114,7 @@ await withBrowser(async (h) => {
         const pane = surfaces.findIndex((s) => s.contains(el));
         if (pane < 0) return -1;
         if (el.closest("button")) return -1;
-        if (el.closest('[contenteditable="true"]')) return -1;
+        if (el.closest("[data-block-text]")) return -1;
         const background =
           el === surfaces[pane] ||
           el.hasAttribute("data-block-id") ||

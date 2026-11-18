@@ -55,7 +55,7 @@ await withBrowser(async (h) => {
   const contentLeftOf = (i: number): Promise<number> =>
     page.evaluate((n) => {
       const editables = document.querySelectorAll(
-        '[data-block-id] [contenteditable="true"]',
+        "[data-block-id] [data-block-text]",
       );
       return editables[n]?.getBoundingClientRect().left ?? -1;
     }, i);

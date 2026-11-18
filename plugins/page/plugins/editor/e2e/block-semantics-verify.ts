@@ -185,7 +185,7 @@ await withBrowser(async (h) => {
   );
 
   const caret = await caretState(
-    page.locator(`${inBlock} [contenteditable="true"]`).first(),
+    page.locator(`${inBlock} [data-block-text]`).first(),
   );
   r.note(`caret after the conversion: ${JSON.stringify(caret)}`);
   r.ok(

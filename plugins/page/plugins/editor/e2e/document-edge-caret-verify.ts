@@ -46,7 +46,7 @@ async function caretAt(page: Page): Promise<Probe> {
     const anchor = sel.anchorNode;
     const el =
       anchor?.nodeType === 1 ? (anchor as Element) : anchor?.parentElement;
-    const editable = el?.closest('[contenteditable="true"]');
+    const editable = el?.closest("[data-block-text]");
     const blockEl = editable?.closest("[data-block-id]");
     if (!editable || !blockEl) return { block: null, offset: -1, length: -1 };
     const before = document.createRange();

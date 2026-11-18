@@ -88,8 +88,12 @@ import { serializeForest } from "./serialize-blocks";
 import { useCutClaims } from "./internal/cut-claims";
 import { landCaret, landCaretAtOwnEdge } from "./internal/caret-landing";
 import { createCaretAuthority } from "./internal/caret-authority";
+import {
+  createLiveTextEditors,
+  type LiveTextEditors,
+} from "./internal/live-text-editors";
 import type {
-  BlockFocusHandle,
+  RegisteredHandle,
   BlockTextReads,
   FlightInput,
 } from "./internal/caret-authority";
@@ -307,13 +311,28 @@ function spliceOwnerOf(docs: BlockDocs, blockId: string): BlockDocOwner {
         "cannot be cut at the insertion point",
     );
   }
+  // A just-woken line's owner exists before its doc has arrived: a splice
+  // into that empty doc would be computed against nothing and duplicate the
+  // text when the stored state merges in. The callers' lines are live long
+  // before a key can reach them (a span pins its start line the moment it is
+  // drawn), so this is a broken assumption, never a wait to absorb.
+  if (!owner.docAuthoritative) {
+    throw new Error(
+      `splice: block "${blockId}"'s content doc has not arrived yet, so its ` +
+        "text cannot be cut at the insertion point",
+    );
+  }
   return owner;
 }
 
 // The handle type is declared BY the caret authority, which owns the registry it
 // is registered into — the provider cannot reach a handle except through the
 // authority's narrow surface, and that is the point (see `caret-authority.ts`).
-export type { BlockFocusHandle } from "./internal/caret-authority";
+export type {
+  BlockFocusHandle,
+  DormantTextHandle,
+  RegisteredHandle,
+} from "./internal/caret-authority";
 
 /**
  * Carry the row's existing text projection across a row write.
@@ -487,7 +506,14 @@ interface BlockEditorContextValue {
   serverSync: boolean;
   focusedBlockId: string | null;
   setFocusedBlockId: (id: string | null) => void;
-  registerFocusHandle: (id: string, handle: BlockFocusHandle) => () => void;
+  registerFocusHandle: (id: string, handle: RegisteredHandle) => () => void;
+  /**
+   * Which text blocks render a live editor (the rest are dormant static
+   * lines) — read per block with `useIsLiveTextBlock`, pinned by the surface
+   * for the state a static line cannot hold (a text span's ends). See
+   * `internal/live-text-editors.ts`.
+   */
+  liveTextEditors: LiveTextEditors;
   /**
    * Hand the caret authority the block list's interaction surface (the focusable
    * container `useBlockSelection` owns). While a landing is outstanding the
@@ -575,6 +601,12 @@ interface BlockEditorContextValue {
     edge: "start" | "end",
     opts?: CaretLandOptions,
   ) => boolean;
+  /**
+   * Land the caret at linear `focus` in `id`'s text, or — when `anchor`
+   * differs — select `[anchor, focus]`: a click or an in-line drag the user made
+   * in a DORMANT line's static text, carried into its editor once it wakes.
+   */
+  selectText: (id: string, anchor: number, focus: number) => void;
   /**
    * Reorder/reparent `id` to sit immediately `zone` of `targetId`. Positional
    * intent, not a rank — the store owns the rank (the server mints it on the
@@ -684,6 +716,13 @@ interface BlockEditorContextValue {
    * content or places a caret, so the surface can hold it freely.
    */
   textReadsOf: (blockId: string) => BlockTextReads | null;
+  /**
+   * Every handle registration and release (a line swapping between its
+   * static and live text surface), as a version to subscribe to: whoever
+   * holds DOM Ranges from `textReadsOf` re-derives them when it moves.
+   */
+  subscribeTextReads: (listener: () => void) => () => void;
+  textReadsVersion: () => number;
   /**
    * Delete the text span `[from, to)` — `from` and `to` in visible order, as
    * `normalizeSpan` hands them out — and land the caret at the join.
@@ -1213,9 +1252,18 @@ export function BlockEditorProviderInner({
   );
   const getOriginId = useEventCallback(() => focusedBlockId);
   const isLiveRow = useEventCallback((id: string) => liveIds.has(id));
+  const [liveTextEditors] = useState(createLiveTextEditors);
   const [authority] = useState(() =>
-    createCaretAuthority({ getOriginId, isLiveRow }),
+    createCaretAuthority({
+      getOriginId,
+      isLiveRow,
+      wake: liveTextEditors.wake,
+    }),
   );
+  // The caret's block keeps its live editor for as long as it holds the caret.
+  useEffect(() => {
+    liveTextEditors.pin("caret", focusedBlockId ? [focusedBlockId] : []);
+  }, [liveTextEditors, focusedBlockId]);
 
   // Push-based flight bound, never a timer: every commit is a fresh view of what
   // the surface RENDERS, so a claimed landing whose block never becomes a visible
@@ -1229,7 +1277,7 @@ export function BlockEditorProviderInner({
   });
 
   const registerFocusHandle = useCallback(
-    (id: string, handle: BlockFocusHandle) =>
+    (id: string, handle: RegisteredHandle) =>
       authority.registerHandle(id, handle),
     [authority],
   );
@@ -1284,6 +1332,18 @@ export function BlockEditorProviderInner({
         if (caretOffset !== undefined && handle.focusOffset) {
           handle.focusOffset(caretOffset, { ...opts, ...land });
         } else handle.focus({ ...opts, ...land });
+      });
+    },
+    [authority],
+  );
+
+  const selectText = useCallback(
+    (id: string, anchor: number, focus: number) => {
+      authority.land(id, (handle, land) => {
+        if (anchor !== focus && handle.selectOffsets)
+          handle.selectOffsets(anchor, focus, land);
+        else if (handle.focusOffset) handle.focusOffset(focus, land);
+        else handle.focus(land);
       });
     },
     [authority],
@@ -1375,6 +1435,16 @@ export function BlockEditorProviderInner({
       const rowOf = (): Block | undefined =>
         liveRowsRef.current.find((b) => b.id === blockId) ??
         rowsRef.current.find((b) => b.id === blockId);
+      // A DORMANT line has no open doc, so a replay would go through the
+      // server — failing offline, and splicing a stored state that may not yet
+      // hold what this tab last flushed. Wake it and replay into its live doc
+      // (host A), as when every line was live. `afterLive` resolves empty if
+      // the block goes, and the replay then takes its no-owner path.
+      if (authority.isDormant(blockId)) {
+        await new Promise<void>((resolve) =>
+          authority.afterLive(blockId, () => resolve()),
+        );
+      }
       await applyBlockRuns({
         docs,
         blockId,
@@ -1403,6 +1473,24 @@ export function BlockEditorProviderInner({
             deleteIds: [],
           });
         },
+        // Server mode, no owner (a dormant line): the doc was written through
+        // the server, and its projection is what the line shows.
+        projectRow: (runs) => {
+          const row = rowOf();
+          if (!row || runsEqual(runsOfNode(row), runs)) return;
+          dispatchPatch({
+            creates: [],
+            updates: [
+              {
+                id: blockId,
+                changes: {
+                  data: { ...((row.data as object | null) ?? {}), text: runs },
+                },
+              },
+            ],
+            deleteIds: [],
+          });
+        },
         rowPresent: () => serverIdsRef.current.has(blockId),
         // The render-fresh rows — the same set the waiter effect reads, so
         // "wait for it" and "reject, it was rolled back" judge one fact.
@@ -1417,6 +1505,7 @@ export function BlockEditorProviderInner({
       serverIdsRef,
       waitRowPresent,
       docs,
+      authority,
     ],
   );
 
@@ -2368,8 +2457,44 @@ export function BlockEditorProviderInner({
       // only at dispatch time would leave the text appended to the target while
       // the source row — still holding it — stays.
       const before = rowsRef.current;
-      const { after, vars } = predictOp(op, before, opCtx);
+      const predicted = predictOp(op, before, opCtx);
+      const { after, vars } = predicted;
       if (!admitsRows(before, after)) return;
+      // Drive the target's bound editor (append + caret at the live join),
+      // then dispatch the structural merge with the combined entry.
+      const appendThenDispatch = (
+        append: (runs: RichText) => void,
+        before: Block[],
+        after: Block[],
+        vars: typeof predicted.vars,
+      ): void => {
+        // The target's runs before the append come from its DOC (the
+        // authority, memoized), never from its ~1 s-lagged row. The append
+        // runs inside `untracked` (surgery uses `discrete: true`, so the
+        // binding's transaction lands synchronously inside the scope): the
+        // run tracker must not ALSO record it as typing on top of this
+        // entry. A throw propagates out of the microtask BEFORE the
+        // dispatch — the source row is never removed.
+        const targetOwner = blockDocOwnerOf(docs, target.id);
+        const targetBefore = targetOwner
+          ? targetOwner.runsNow()
+          : runsOfNode(target);
+        const targetAfter = mergeRuns(targetBefore, mergingRuns);
+        if (targetOwner) targetOwner.untracked(() => append(mergingRuns));
+        else append(mergingRuns);
+        const entryId = newHistoryEntryId();
+        store.dispatch(vars, dropRejectedEntry(entryId));
+        recordEntry({
+          label: OP_LABELS.merge,
+          focusId: sourceId,
+          before,
+          after,
+          id: entryId,
+          runsEdits: [
+            { blockId: target.id, before: targetBefore, after: targetAfter },
+          ],
+        });
+      };
       if (targetHandle?.appendRunsAtEnd) {
         // Mounted target: drive its bound editor (append + caret at the live
         // join). Append-FIRST ordering (issue #7): the append rides a microtask
@@ -2382,33 +2507,25 @@ export function BlockEditorProviderInner({
         // the pre-merge rows; the dispatch is kept explicit here (not
         // `applyOverlay`) precisely because its ordering is deferred.
         const append = targetHandle.appendRunsAtEnd;
-        queueMicrotask(() => {
-          // The target's runs before the append come from its DOC (the
-          // authority, memoized), never from its ~1 s-lagged row. The append
-          // runs inside `untracked` (surgery uses `discrete: true`, so the
-          // binding's transaction lands synchronously inside the scope): the
-          // run tracker must not ALSO record it as typing on top of this
-          // entry. A throw propagates out of the microtask BEFORE the
-          // dispatch — the source row is never removed.
-          const targetOwner = blockDocOwnerOf(docs, target.id);
-          const targetBefore = targetOwner
-            ? targetOwner.runsNow()
-            : runsOfNode(target);
-          const targetAfter = mergeRuns(targetBefore, mergingRuns);
-          if (targetOwner) targetOwner.untracked(() => append(mergingRuns));
-          else append(mergingRuns);
-          const entryId = newHistoryEntryId();
-          store.dispatch(vars, dropRejectedEntry(entryId));
-          recordEntry({
-            label: OP_LABELS.merge,
-            focusId: sourceId,
-            before,
-            after,
-            id: entryId,
-            runsEdits: [
-              { blockId: target.id, before: targetBefore, after: targetAfter },
-            ],
-          });
+        queueMicrotask(() => appendThenDispatch(append, before, after, vars));
+      } else if (authority.isDormant(target.id)) {
+        // A DORMANT target (static text, no editor): the caret is moving into
+        // it, so this is a landing — the authority wakes it and holds the
+        // keyboard (buffering what the user types) until its editor's text is
+        // on screen, and the merge then runs as the mounted one does, against
+        // the rows as they are THEN. The caret lands at the join, and only
+        // then does the buffer replay into it.
+        authority.land(target.id, (handle, land) => {
+          const now = rowsRef.current;
+          const re = predictOp(op, now, opCtx);
+          if (handle.appendRunsAtEnd && admitsRows(now, re.after)) {
+            appendThenDispatch(handle.appendRunsAtEnd, now, re.after, re.vars);
+            land.onLanded?.();
+          } else {
+            // The page moved under the wait and the merge no longer applies:
+            // the caret still lands in the line it was headed for.
+            handle.focus(land);
+          }
         });
       } else {
         // Unmounted target (virtualized offscreen): lossless doc-level
@@ -3275,6 +3392,18 @@ export function BlockEditorProviderInner({
         // absorbed failure). Fall back to `runsOfNode` ONLY when the block has no
         // handle: a text-less block (divider/image/file/embed) registers none,
         // and its empty runs are the TRUE answer, not a lagged miss.
+        //
+        // A DORMANT next line answers `readRuns` from its row — the projection
+        // that lags its doc (another writer's last second of typing). So it is
+        // woken first and the merge runs off its live runs once its editor is
+        // on screen. The caret never leaves this block, and anything typed
+        // meanwhile lands before the join either way.
+        if (authority.isDormant(next.id)) {
+          authority.afterLive(next.id, (live) => {
+            if (live?.readRuns) mergeBlock(next.id, live.readRuns());
+          });
+          return;
+        }
         const nextHandle = authority.surgeryOf(next.id);
         const runs = nextHandle?.readRuns
           ? nextHandle.readRuns()
@@ -3391,6 +3520,7 @@ export function BlockEditorProviderInner({
       focusedBlockId,
       setFocusedBlockId,
       registerFocusHandle,
+      liveTextEditors,
       attachContainer: authority.attachContainer,
       makeBlockAPI,
       convertBlocks,
@@ -3401,6 +3531,7 @@ export function BlockEditorProviderInner({
       rowsRef,
       focusBlock,
       focusBlockBoundary,
+      selectText,
       move,
       indentBlocks,
       outdentBlocks,
@@ -3413,6 +3544,8 @@ export function BlockEditorProviderInner({
       splice,
       insertionPointAt,
       textReadsOf: authority.surgeryOf,
+      subscribeTextReads: authority.subscribeHandles,
+      textReadsVersion: authority.handlesVersion,
       deleteSpan,
       replaceSpan,
       insert,
@@ -3444,6 +3577,7 @@ export function BlockEditorProviderInner({
       focusedBlockId,
       setFocusedBlockId,
       registerFocusHandle,
+      liveTextEditors,
       authority,
       makeBlockAPI,
       convertBlocks,
@@ -3453,6 +3587,7 @@ export function BlockEditorProviderInner({
       setRows,
       focusBlock,
       focusBlockBoundary,
+      selectText,
       move,
       indentBlocks,
       outdentBlocks,

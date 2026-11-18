@@ -1,6 +1,7 @@
 import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { layerClasses } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import { insetClass } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
@@ -66,6 +67,7 @@ import {
   placeCaretAtBoundary,
   placeCaretAtColumn,
   placeCaretAtOffset,
+  placeSelectionAtOffsets,
 } from "../internal/caret-geometry";
 import {
   appendRunsAtJoin,
@@ -76,6 +78,7 @@ import {
 import type { FlightInput } from "../internal/caret-authority";
 import type { KeystrokeKey } from "../internal/keystroke-intent";
 import { TEXT_VARIANT_CLASS } from "./text-variant-class";
+import { BLOCK_TEXT_ATTR } from "../internal/static-text-geometry";
 import { BLOCK_TEXT_THEME } from "../internal/block-text-theme";
 
 /**
@@ -240,10 +243,22 @@ export function BlockTextEditor({
   placeholder,
   contentClassName,
   textVariant,
+  ready,
+  onReadyChange,
 }: {
   block: Block;
   isFocused: boolean;
   editor: BlockEditorAPI;
+  /**
+   * Whether this editor's text is on screen. Until it is, the block's static
+   * line stands in for it (`BlockTextRenderer`): the editable is laid out of
+   * flow, invisible and click-through, and the block registers no live handle
+   * — a landing waits on the dormant line's claim instead of placing a caret
+   * into text that has not arrived.
+   */
+  ready: boolean;
+  /** Reported by the content binding (`CollabBinding`). */
+  onReadyChange: (ready: boolean) => void;
   /** Shown when the block is empty and focused. */
   placeholder?: ReactNode;
   /** Extra classes for the editable content (e.g. strikethrough when done). */
@@ -278,6 +293,7 @@ export function BlockTextEditor({
   );
 
   useEffect(() => {
+    if (!ready) return;
     return registerFocusHandle(block.id, {
       focus: (opts) => {
         const ed = lexicalEditorRef.current;
@@ -327,6 +343,13 @@ export function BlockTextEditor({
         focusHydratingAware(ed, scroll, opts, () =>
           placeCaretAtOffset(ed, n, scroll),
         );
+      },
+      // Registered only once ready, so the text the offsets name is there.
+      selectOffsets: (anchor, focus, opts) => {
+        const ed = lexicalEditorRef.current;
+        if (!ed) return;
+        placeSelectionAtOffsets(ed, anchor, focus, opts?.scroll ?? false);
+        opts?.onLanded?.();
       },
       // Everything the user typed while this editor was mounting. Registering it
       // is what makes this block a legal flight target at all — a handle without
@@ -386,7 +409,7 @@ export function BlockTextEditor({
         return ed.registerUpdateListener(() => listener());
       },
     });
-  }, [block.id, registerFocusHandle]);
+  }, [block.id, registerFocusHandle, ready]);
 
   return (
     // `LexicalComposer` emits no DOM, so these all render directly inside
@@ -401,8 +424,15 @@ export function BlockTextEditor({
               insetClass({ r: BLOCK_INSET }),
               TEXT_VARIANT_CLASS[textVariant],
               contentClassName,
+              // Not ready: out of flow and unseen under the static line that
+              // stands in for it, so the swap moves nothing.
+              !ready && cn(layerClasses({ decorative: true }), "invisible"),
             )}
             onFocus={() => editor.onFocus()}
+            // The block's visible text root, static or live — one attribute
+            // for whoever reads a line's text (`BLOCK_TEXT_ATTR`). Absent
+            // while the static line still stands in for this editor.
+            {...(ready ? { [BLOCK_TEXT_ATTR]: "" } : {})}
           />
         }
         placeholder={
@@ -442,7 +472,7 @@ export function BlockTextEditor({
       {/* Per-block CRDT binding: content syncs through the block's Y.Doc,
           split/merge are content-doc-aware, and text edits ride the
           unified undo stack as the run tracker's data entries. */}
-      <CollabTextPlugin block={block} textVariant={textVariant} />
+      <CollabTextPlugin block={block} onReadyChange={onReadyChange} />
       <KeyboardPlugin blockId={block.id} editor={editor} />
       {/* Crossing an inline decorator (a `@date` chip, an inline page link, an
           inline formula) in ONE arrow press. Mounted AFTER KeyboardPlugin so it

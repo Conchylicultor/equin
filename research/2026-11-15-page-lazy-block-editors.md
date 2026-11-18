@@ -1,4 +1,4 @@
-# Page editor: mount cost per block, not per visible/edited block — design (decision pending)
+# Page editor: mount cost per block, not per visible/edited block — design (D5 = A, implemented)
 
 Task: task-1794734284-dsg300 (follow-up of task-1794732771-gu0udt, report-1794458547-ysdj00;
 report-1794732984-y4wspi is the Supervisors-pane click landing on the same open).
@@ -154,3 +154,49 @@ Enter inserted the second page.
 - The existing editor e2e suite (`plugins/page/plugins/editor/e2e/*-verify.ts`: caret, span,
   clipboard, crdt, drag, merge/split), every one passing.
 - An exhibit pixel diff, static vs live, for each text block type.
+
+## Decision and implementation (2026-11-18)
+
+The user chose **A** (D5 = A). Implemented as *dormant lines* — rules in
+`plugins/page/plugins/editor/CLAUDE.md` § "A line is static until it is edited":
+
+- `internal/live-text-editors.ts`: a block is live while woken (the 8 most
+  recent) or pinned (the caret's block, a text span's start line).
+- `StaticBlockText` renders the row text through `RunsRenderer` (moved from
+  `read-only-view` into the editor) and registers a `DormantTextHandle` (reads
+  over static DOM via `internal/static-text-geometry.ts`, plus `wake`).
+- The caret authority treats a landing on a dormant line as a claim (wake +
+  buffered keyboard); the live editor registers its handle only once its text is
+  on screen (`ready`), and swaps with the static line in one layout commit.
+- Merge into a dormant line runs as the flight's policy; an undo replayed into a
+  dormant line (stored-doc host) now projects the row itself; the page's block
+  docs are held page-wide so a woken editor hydrates in the same task.
+- Fixed on the way: the authority's replay ran its FIRST buffered entry
+  synchronously, before the landing's selection committed (a fast Enter→Tab
+  lost the indent once registration moved to `ready`).
+
+Option D (patching Lexical's selection read) was not needed: no page keeps more
+than ~9 editors live.
+
+### Measured (headless, darwinbg, machine load 10–17: ratios, not absolutes)
+
+4 alternating runs each, opening the page beside a conversation (the
+Supervisors-pane click path):
+
+| page | worst frame (median) | long-frame total | contenteditables | elements |
+|---|---|---|---|---|
+| 604-block page, main | 6.07 s | 9.3 s | 1084 | 37.1k |
+| 604-block page, A | 3.13 s (−48%) | 5.1 s | 0 | 31.9k |
+| 208-line fixture, main | 1.34 s | 3.0 s | 208 | 13.4k |
+| 208-line fixture, A | 0.67 s (−50%) | 1.45 s | 0 | 12.3k |
+
+With tracing on a quieter machine, the 604-block open's long frame went from
+1,742 ms to 928 ms. What remains is two forced full-document style recalcs
+(~240 ms each at 47k elements, first readers `findScrollParent` and an
+after-layout reader). They scale with DOM size, not with editors, and are the
+follow-up listed above.
+
+`e2e/dormant-lines-verify.ts` covers click-to-caret, arrow into, merge into,
+no move on wake, a remote edit on a dormant line and eviction. A pixel diff of
+static vs. live rendering (marks, link, chip, soft break, heading, lists, to-do,
+wrapping) showed 0 differing pixels.

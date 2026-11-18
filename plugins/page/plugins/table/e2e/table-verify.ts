@@ -80,9 +80,9 @@ await withBrowser(async (h) => {
     ["pear", "5"],
   ]);
   const rawPipes = await page.evaluate(() =>
-    [
-      ...document.querySelectorAll('[data-block-id] [contenteditable="true"]'),
-    ].some((el) => (el.textContent ?? "").includes("|")),
+    [...document.querySelectorAll("[data-block-id] [data-block-text]")].some(
+      (el) => (el.textContent ?? "").includes("|"),
+    ),
   );
   r.ok("1b: no paragraph holds raw pipes", !rawPipes);
   r.eq(

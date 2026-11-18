@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import { plainOf, type RichText } from "@plugins/page/plugins/editor/core";
-import { RunsRenderer } from "@plugins/page/plugins/read-only-view/web";
+import { RunsRenderer } from "@plugins/page/plugins/editor/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { columnWidths, type TableAlign, type TableData } from "../../core";
 

@@ -195,7 +195,7 @@ async function splitBackFromEnd(
   fromEnd: number,
 ): Promise<{ offset: number; length: number }> {
   const editable = page
-    .locator(`[data-block-id="${blockId}"] [contenteditable="true"]`)
+    .locator(`[data-block-id="${blockId}"] [data-block-text]`)
     .first();
   const box = await editable.boundingBox();
   if (!box)

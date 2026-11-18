@@ -105,13 +105,13 @@ const textOfRuns = (runs: NormRun[]): string =>
 async function editableIds(page: Page): Promise<string[]> {
   return page.evaluate(() =>
     [...document.querySelectorAll("[data-block-id]")]
-      .filter((el) => el.querySelector('[contenteditable="true"]'))
+      .filter((el) => el.querySelector("[data-block-text]"))
       .map((el) => el.getAttribute("data-block-id") ?? ""),
   );
 }
 
 const editableOf = (page: Page, blockId: string) =>
-  page.locator(`[data-block-id="${blockId}"] [contenteditable="true"]`).first();
+  page.locator(`[data-block-id="${blockId}"] [data-block-text]`).first();
 
 /**
  * The text of every `<tag>` Lexical rendered inside a block — the DOM proof of

@@ -40,7 +40,7 @@ const readAll = (page: Page): Promise<string[]> =>
   page.evaluate(() =>
     [
       ...document.querySelectorAll<HTMLElement>(
-        '[data-block-id] [contenteditable="true"]',
+        "[data-block-id] [data-block-text]",
       ),
     ].map((el) => el.innerText),
   );

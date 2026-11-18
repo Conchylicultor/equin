@@ -41,13 +41,13 @@ import {
   type FrameGeometry,
   type BlockDecoration,
   type BlockFootProps,
+  RunsRenderer,
 } from "@plugins/page/plugins/editor/web";
 import { PAGE_BLOCK_TYPE } from "@plugins/page/plugins/editor/core";
 import type {
   BlockHandle,
   BlockTextVariant,
 } from "@plugins/page/plugins/editor/core";
-import { RunsRenderer } from "./runs-renderer";
 import { PlaceholderCard } from "./placeholder-card";
 import type { BlockDiffKind, ReadOnlyNode } from "../node";
 import { symbol } from "@plugins/ui/plugins/icons/core";

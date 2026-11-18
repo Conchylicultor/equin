@@ -232,7 +232,7 @@ await withBrowser(async (h) => {
         ({ x, y }) =>
           !!document
             .elementFromPoint(x, y)
-            ?.closest('[contenteditable="true"]')
+            ?.closest("[data-block-text]")
             ?.textContent?.includes("charlie"),
         word3,
       ),

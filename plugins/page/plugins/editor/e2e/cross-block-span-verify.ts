@@ -288,7 +288,7 @@ await withBrowser(async (h) => {
     await page.evaluate(() => {
       const sel = window.getSelection();
       const block = document.querySelectorAll(
-        '[data-block-id] [contenteditable="true"]',
+        "[data-block-id] [data-block-text]",
       )[0];
       return !!sel && sel.isCollapsed && !!block?.contains(sel.anchorNode);
     }),

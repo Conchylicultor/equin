@@ -5,7 +5,7 @@ import type { RichText } from "@plugins/page/plugins/editor/core";
 // in the block-text registry this renderer reads. It is the SUBJECT of the token
 // tests below, not a fixture — see them for why.
 import "@plugins/page/plugins/inline-date/web";
-import { RunsRenderer } from "../components/runs-renderer";
+import { RunsRenderer } from "@plugins/page/plugins/editor/web";
 
 // Focused unit pin for the faithful runs → React mapping: the mark / color /
 // link / soft-break behavior, plus the registry-driven token split.

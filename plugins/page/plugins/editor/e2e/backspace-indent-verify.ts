@@ -64,7 +64,7 @@ function shape(rs: Row[]): string {
  */
 async function caretToStartOf(page: Page, id: string): Promise<void> {
   const block = page
-    .locator(`[data-block-id="${id}"] [contenteditable="true"]`)
+    .locator(`[data-block-id="${id}"] [data-block-text]`)
     .first();
   await block.click({ position: { x: 2, y: 8 } });
   await page.waitForTimeout(200);

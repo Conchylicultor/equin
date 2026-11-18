@@ -158,7 +158,7 @@ await withBrowser(async (h) => {
     });
     await freshPage.goto(pageUrl);
     const blockAfter = freshPage
-      .locator(`[data-block-id="${blockId}"] [contenteditable="true"]`)
+      .locator(`[data-block-id="${blockId}"] [data-block-text]`)
       .first();
     await blockAfter.waitFor({
       state: "visible",

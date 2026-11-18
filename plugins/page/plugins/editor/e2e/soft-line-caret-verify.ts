@@ -47,7 +47,7 @@ async function caretAt(page: Page): Promise<CaretProbe> {
         ? (container as Element)
         : container.parentElement;
     const blockEl = el?.closest("[data-block-id]");
-    const editable = el?.closest('[contenteditable="true"]');
+    const editable = el?.closest("[data-block-text]");
 
     const usable = (rc: DOMRect | undefined) =>
       rc && (rc.width !== 0 || rc.height !== 0) ? rc : null;
