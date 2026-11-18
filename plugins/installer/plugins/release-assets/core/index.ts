@@ -7,6 +7,5 @@ export {
   INTERNAL_ARGS_MARKER,
   RELEASE_FILES,
   RELEASE_WORKFLOW,
-  ReleaseManifest,
 } from "./internal/assets";
 export type { InstallerPlatform } from "./internal/assets";

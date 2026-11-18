@@ -464,18 +464,18 @@ torch.
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/font-family --font-mono`
-  - Imported by: 39 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 40 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×15
     - `framework` ×6
     - `apps` ×5
     - `companions` ×2
     - `database` ×2
+    - `installer` ×2
     - `integrations` ×2
     - `media` ×2
     - `packages` ×2
     - `conversations/runtime-sdk`
     - `debug/profiling/tab-memory`
-    - `installer/window`
 - Deps:
   - Exports (types):
     - `BundleSpec`

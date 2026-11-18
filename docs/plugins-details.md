@@ -36335,18 +36335,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/font-family --font-mono`
-        - Imported by: 39 plugins — full list in [`plugins/infra/plugins/deps/REFERENCE.md`](../plugins/infra/plugins/deps/REFERENCE.md)
+        - Imported by: 40 plugins — full list in [`plugins/infra/plugins/deps/REFERENCE.md`](../plugins/infra/plugins/deps/REFERENCE.md)
           - `infra` ×15
           - `framework` ×6
           - `apps` ×5
           - `companions` ×2
           - `database` ×2
+          - `installer` ×2
           - `integrations` ×2
           - `media` ×2
           - `packages` ×2
           - `conversations/runtime-sdk`
           - `debug/profiling/tab-memory`
-          - `installer/window`
       - Deps:
         - Exports (types):
           - `BundleSpec`
@@ -36447,6 +36447,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/web-artifacts/blocker-scan`
               - `infra/codesign`
               - `infra/deps/download/github-release-updater`
+              - `installer`
               - `media/ffmpeg`
               - `media/film`
           - Deps:
@@ -40833,7 +40834,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `spawnPassthrough`
           - `spawnToFile`
       - Cross-plugin:
-        - Imported by: 108 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
+        - Imported by: 109 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
           - `infra` ×33
           - `framework` ×32
           - `apps` ×9
@@ -40842,6 +40843,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build` ×3
           - `code-explorer` ×2
           - `conversations` ×2
+          - `installer` ×2
           - `plugin-meta` ×2
           - `primitives` ×2
           - `release` ×2
@@ -40849,7 +40851,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `auth/apple-signing`
           - `backup`
           - `hints/ask`
-          - `installer/window`
           - `integrations/github-events`
           - `review/plugin-changes`
           - `stats/commits`
@@ -41346,6 +41347,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `timingFromEvents`
       - `WaitHolder`
       - `WaitOn`
+  - Deps:
+    - Uses:
+      - `infra/deps.defineDep`
+      - `infra/deps.ensureDepViaCli`
+      - `infra/deps/download.download`
+      - `infra/deps/download.downloadedFile`
   - Cross-plugin:
     - Imported by:
       - `framework/cli/bootstrap`
@@ -41372,6 +41379,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `reportInstallStall`
       - `reportInstallWait`
       - `requestFollow`
+  - Test helpers:
+    - Deps: `@plugins/installer/deps/testing`
+      - `installShBashes` — Every bash install.sh's tests must pass under, wherever they run: GNU bash 3.2 and 5.2 built from pinned source (the `installer-test-bashes` dependency, installed on first use), plus `/bin/bash` — the shell `curl … | bash` actually runs here (Apple's patched 3.2 on a Mac, the distribution's 5.x on Linux).
+      - Types: `InstallShBash`
   - Plugins:
     - **`release-assets`** — Watches the release workflow on GitHub (GitHubEvents.Watch: the product repo's installer-release.yml and its Releases), so a failed release run files a report naming the re-publish command, and the releases row reads what GitHub published.
       - Server:
@@ -41391,10 +41402,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RELEASE_FILES`
           - `RELEASE_WORKFLOW`
           - `releaseManifest`
-          - `ReleaseManifest`
           - `sha256Sums`
       - Cross-plugin:
         - Imported by: `upstream`
+      - Test helpers:
+        - Core: `@plugins/installer/plugins/release-assets/core/testing`
+          - `ReleaseManifest` — `release.json`: what one release published.
     - **`waits`** — How a `./equin` command run as an install step reports a wait on another task, naming its holder from the op log: installGrantHooks (a host CPU grant wait — any CLI admission, a build's or a dependency install's under `./equin start`), reportLockWait (a lock another run holds), and the stall rule that pauses the install when that holder stopped making progress.
       - Cli:
         - Uses:

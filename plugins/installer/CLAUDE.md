@@ -193,6 +193,24 @@ own (next section): fix wording in the step engine, and every view changes.
   leaves the variable as it was). Write `${a}━`, never `$a━`: 3.2 reads a
   non-ASCII byte after `$name` as part of the name.
 
+## Tests run under every bash
+
+install.sh's behaviour tests (the dry-run stream test, the stage-0 test) run
+their whole suite once per bash `installShBashes()` (`deps/testing`) returns:
+GNU bash **3.2.57** and **5.2.37** built from their pinned, sha256-checked GNU
+tarballs (the `installer-test-bashes` dependency, `deps/`: built on first use,
+~2 min each, then shared by every checkout), plus `/bin/bash` — what `curl … |
+bash` runs on this machine. So a Mac (only 3.2 of its own) still tests bash 5,
+and a Linux (only 5.x) still tests 3.2. A bash that cannot be installed, or
+whose binary is not its pinned version, throws: nothing is ever skipped. A new
+install.sh test file gets the same with `describe.each` over it.
+
+What it caught on its first run, both bash ≥ 5 only: the terminal view quitting
+on the first quiet second (74226cbf93's bug — reverting that fix fails two
+tests under 5.2, none under 3.2), and a Stop (SIGINT) sent to a paused install
+ignored until the next decision — bash 5 can miss a trapped signal that lands
+as a blocking `read` starts, so `read_decision` reads a tick at a time.
+
 ## The checkout's own steps (`--attach`)
 
 An install of ref X runs X's own steps on X's code. The running script — a
@@ -257,9 +275,8 @@ fails that step's first attempt; `EQUIN_INSTALL_DRY_RUN_PACE=<s>` slows it down
 for watching a renderer; `EQUIN_INSTALL_DRY_RUN_VIEW_EXIT=<step>` makes the
 terminal view exit at that step's start. Held to the schema by
 `window/cli/internal/dry-run-stream.test.ts` (window mode, events.jsonl,
-timing.json, the plain view), run under `/bin/bash` with `HOME` a temp dir;
-the plain view's quiet-stretch and dying-view cases run under every bash the
-machine has (`/bin/bash`, the one on PATH, Homebrew's).
+timing.json, the plain view), with `HOME` a temp dir, under every bash (§
+Tests run under every bash).
 
 ## Stage 0: which equin, and which view (`install.sh`, top)
 
@@ -307,7 +324,7 @@ read (none published, no network: main's tip), or the release predates the
 hand-off (`release.json` `handoff: null`: its tag). Run from a checkout
 (`./install.sh`), stage 0 is skipped and that checkout is installed.
 `--stage0-only` prints the decision instead (the stage-0 test,
-`release-assets/core/internal/stage0.test.ts`, against a local fake release
+`cli/internal/stage0.test.ts`, against a local fake release
 server via `EQUIN_RELEASES_URL`). Release side:
 [`release-assets`](plugins/release-assets/CLAUDE.md).
 
@@ -593,6 +610,12 @@ service's build (§ One build of main per install) covers the other order.
     - `timingFromEvents`
     - `WaitHolder`
     - `WaitOn`
+- Deps:
+  - Uses:
+    - `infra/deps.defineDep`
+    - `infra/deps.ensureDepViaCli`
+    - `infra/deps/download.download`
+    - `infra/deps/download.downloadedFile`
 - Cross-plugin:
   - Imported by:
     - `framework/cli/bootstrap`
@@ -619,6 +642,10 @@ service's build (§ One build of main per install) covers the other order.
     - `reportInstallStall`
     - `reportInstallWait`
     - `requestFollow`
+- Test helpers:
+  - Deps: `@plugins/installer/deps/testing`
+    - `installShBashes` — Every bash install.sh's tests must pass under, wherever they run: GNU bash 3.2 and 5.2 built from pinned source (the `installer-test-bashes` dependency, installed on first use), plus `/bin/bash` — the shell `curl … | bash` actually runs here (Apple's patched 3.2 on a Mac, the distribution's 5.x on Linux).
+    - Types: `InstallShBash`
 - Sub-plugins:
   - **`release-assets`** — Watches the release workflow on GitHub (GitHubEvents.Watch: the product repo's installer-release.yml and its Releases), so a failed release run files a report naming the re-publish command, and the…
   - **`waits`** — How a `./equin` command run as an install step reports a wait on another task, naming its holder from the op log: installGrantHooks (a host CPU grant wait — any CLI admission, a build's or a…

@@ -1991,10 +1991,21 @@ pause() {
 
 # read_decision <word…>: DECISION = the next decision on the control FIFO that
 # is one of the words. `eof` (the window closed) is quit.
+#
+# Read a tick at a time, never in one blocking `read`: bash >= 5 can miss a
+# trapped signal (the window's Stop, Ctrl-C) that lands just as `read` starts —
+# it then waits for the next line, so a paused install ignored its Stop until
+# a decision came (1 run in 20 under bash 5.2; never under 3.2). A `read -t`
+# that times out runs the pending trap, so a Stop takes effect within a second.
 read_decision() {
-  local line w
+  local line w rc
   DECISION=quit
-  while IFS= read -r -u "$CF_FD" line; do
+  RL_PART=""
+  while :; do
+    rc=0; read_tick 1 <&"$CF_FD" || rc=$?
+    [ "$rc" != 2 ] || continue
+    [ "$rc" = 0 ] || return 0 # EOF
+    line=$RL_LINE
     [ "$line" != "eof" ] || return 0
     for w in "$@"; do
       if [ "$line" = "$w" ]; then DECISION=$line; return 0; fi

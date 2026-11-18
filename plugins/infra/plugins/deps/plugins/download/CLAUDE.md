@@ -47,6 +47,7 @@ const path = downloadedFile(ready, "data.csv.gz"); // throws on an undeclared na
     - `framework/tooling/web-artifacts/blocker-scan`
     - `infra/codesign`
     - `infra/deps/download/github-release-updater`
+    - `installer`
     - `media/ffmpeg`
     - `media/film`
 - Deps:

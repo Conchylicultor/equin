@@ -6,16 +6,18 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
-import { releaseManifest, sha256Sums } from "./assemble";
+import { installShBashes } from "@plugins/installer/deps/testing";
 import {
+  releaseManifest,
+  sha256Sums,
   ATTACH_MARKER,
   HANDOFF_MARKER,
   INSTALLER_BINARIES,
   type InstallerPlatform,
   INTERNAL_ARGS_MARKER,
   RELEASE_FILES,
-  ReleaseManifest,
-} from "./assets";
+} from "@plugins/installer/plugins/release-assets/core";
+import { ReleaseManifest } from "@plugins/installer/plugins/release-assets/core/testing";
 
 /**
  * install.sh's stage 0 against a local stand-in for GitHub Releases, its
@@ -26,6 +28,8 @@ import {
  */
 
 const SCRIPT = join(REPO_ROOT, "install.sh");
+/** Piped into every bash a `curl … | bash` meets (installShBashes). */
+const BASHES = (await installShBashes()).map((b) => [b.label, b.path] as const);
 const COMMIT = "0".repeat(40);
 const ALL = Object.keys(INSTALLER_BINARIES) as InstallerPlatform[];
 
@@ -145,6 +149,7 @@ afterAll(() => {
   rmSync(home, { recursive: true, force: true });
 });
 
+describe.each(BASHES)("under %s", (_label, BASH) => {
 /** install.sh's one default-view switch (`DEFAULT_VIEW=…`), as a line. */
 const DEFAULT_VIEW_LINE = /^DEFAULT_VIEW=(terminal|auto)$/m;
 
@@ -171,7 +176,7 @@ async function stage0(
   // Piped, as under `curl | bash`: run from a file in this checkout, the
   // script would install the checkout and skip stage 0. A clean environment:
   // none of the guesses (SSH, CI, a sandboxed shell) unless a test sets one.
-  const child = spawn("/bin/bash", ["-s", "--", "--stage0-only", ...args], {
+  const child = spawn(BASH, ["-s", "--", "--stage0-only", ...args], {
     cwd: home,
     stdio: ["pipe", "pipe", "pipe"],
     env: {
@@ -480,4 +485,5 @@ describe("install.sh stage 0", () => {
       "this release has no install window for this system",
     );
   });
+});
 });

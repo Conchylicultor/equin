@@ -26,6 +26,7 @@ export const depsEntries: CollectedEntry[] = [
   { pluginPath: "infra/plugins/host/plugins/io-health/plugins/monitor", id: "infra.host.io-health.monitor", loader: () => import("@plugins/infra/plugins/host/plugins/io-health/plugins/monitor/deps"), dependsOn: [] },
   { pluginPath: "infra/plugins/launcher", id: "infra.launcher", loader: () => import("@plugins/infra/plugins/launcher/deps"), dependsOn: ["infra/plugins/codesign"] },
   { pluginPath: "infra/plugins/safe-fetch/plugins/browser-fetch", id: "infra.safe-fetch.browser-fetch", loader: () => import("@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/deps"), dependsOn: [] },
+  { pluginPath: "installer", id: "installer", loader: () => import("@plugins/installer/deps"), dependsOn: [] },
   { pluginPath: "installer/plugins/window", id: "installer.window", loader: () => import("@plugins/installer/plugins/window/deps"), dependsOn: [] },
   { pluginPath: "integrations/plugins/youtube", id: "integrations.youtube", loader: () => import("@plugins/integrations/plugins/youtube/deps"), dependsOn: [] },
   { pluginPath: "media/plugins/ffmpeg", id: "media.ffmpeg", loader: () => import("@plugins/media/plugins/ffmpeg/deps"), dependsOn: [] },
