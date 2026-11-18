@@ -290,7 +290,10 @@ export function watchPaths<T>(
     };
     rooms.set(spec.key, room);
     const created = room;
-    void runTracked("transcript-watcher:resolve", () => refreshRoom(created));
+    void runTracked("transcript-watcher:resolve", () => refreshRoom(created), {
+      outlivesBootHook:
+        "a room's own setup for its first subscriber (resolving the transcript chain it follows, then following it) — whoever subscribes starts it, a tab or the turn emitter's follow at boot; not a pass over anything the boot owes",
+    });
   } else if (room.lastSignature !== "") {
     // Late subscriber: deliver the current snapshot immediately. Both halves are
     // read here (and written in `processRoom`) together, so they can never be

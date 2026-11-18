@@ -12,7 +12,10 @@ import {
   createCoalescer,
   createKeyedCoalescer,
 } from "@plugins/packages/plugins/coalesce/core";
-import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import {
+  runInRootContext,
+  runTracked,
+} from "@plugins/infra/plugins/runtime-profiler/core";
 import {
   createNewDirWatches,
   ignoreForSubdir,
@@ -281,10 +284,16 @@ export async function createFileWatcher(
   let lastFlushAt = 0;
   // One reaction at a time; batches landing mid-run fold into one trailing
   // call. The `bg` span covers the reaction's awaited work, not only its
-  // synchronous body.
+  // synchronous body. In the root context: a reaction is an entry of its
+  // own, answering a change on disk — never the work of whatever context
+  // armed the watch or triggered the run (a boot hook still running when the
+  // first change lands would otherwise be charged with it).
   const changes = createCoalescer<parcel.Event>({
     name: `watch:${name}`,
-    run: (events) => runTracked(`watch:${name}`, () => onChange(events)),
+    run: (events) =>
+      runInRootContext(() =>
+        runTracked(`watch:${name}`, () => onChange(events)),
+      ),
   });
   const losses =
     onLost === undefined
@@ -292,7 +301,11 @@ export async function createFileWatcher(
       : createKeyedCoalescer<string, unknown>({
           name: `watch:${name}:lost`,
           run: (dir, errors) =>
-            runTracked(`watch:${name}:lost`, () => onLost(dir, errors.at(-1))),
+            runInRootContext(() =>
+              runTracked(`watch:${name}:lost`, () =>
+                onLost(dir, errors.at(-1)),
+              ),
+            ),
         });
 
   function flush(): void {
