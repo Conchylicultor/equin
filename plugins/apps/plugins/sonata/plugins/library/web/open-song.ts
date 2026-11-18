@@ -1,5 +1,6 @@
 import { openPane } from "@plugins/primitives/plugins/pane/web";
 import { sonataPlayerPane } from "./panes";
+import { requestPlayOnOpen } from "./play-on-open";
 
 /**
  * Imperative counterpart to {@link useSongLink}: open a song into the player
@@ -11,8 +12,10 @@ import { sonataPlayerPane } from "./panes";
  * call exactly: `mode:"root"` replaces the route with the player and the
  * optimistic title rides in `input` so the header shows immediately. Source
  * hydration runs in the player pane's `useResolve` hook (`useSonataPlayerResolve`).
+ * Like `useSongLink`, the opened song starts playing once it loads.
  */
 export function openSongImperative(song: { id: string; title: string }): void {
+  requestPlayOnOpen(song.id);
   openPane(
     sonataPlayerPane,
     { songId: song.id },

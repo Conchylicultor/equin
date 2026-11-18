@@ -321,8 +321,9 @@ function SongLoader({
     if (target !== undefined) {
       requestSeekOnLoad((loaded) => barStartBeat(loaded, target));
     }
-    // An opener that handed the song over playing (a file preview) asked for
-    // it to keep playing: consumed by the same content reset as the seek.
+    // An in-app opener (a library card, a create / import, a file preview
+    // handing its song over playing) asked for it to play: consumed by the same
+    // content reset as the seek. A reload or a shared link names none — paused.
     if (takePlayOnOpen(songId)) requestPlayOnLoad();
     placedForRef.current = placementKey(songId, target);
     // The song id travels WITH its content: loading it hands the song's

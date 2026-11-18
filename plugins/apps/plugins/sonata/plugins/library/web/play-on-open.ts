@@ -1,7 +1,7 @@
 /**
- * The one-shot "open this song playing" intent: an opener that hands a song
- * over while it was playing (a file preview's Open in Sonata) names it just
- * before navigating, and the player surface's loader consumes it when it loads
+ * The one-shot "open this song playing" intent: an in-app opener (a library
+ * card, a source's create / import, a file preview's Open in Sonata while it
+ * was playing) names it just before navigating, and the player surface's loader consumes it when it loads
  * that song — arming play-on-load beside the bar seek. In memory, never in the
  * URL: a reload or a shared link opens a song paused.
  */
