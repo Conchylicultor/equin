@@ -31,7 +31,19 @@ export type AdoptRequest = z.infer<typeof AdoptRequestSchema>;
  * The deploy files it as a `restart-skip-cannot-judge` report.
  */
 export const AdoptVerdictSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("adopted") }),
+  z.object({
+    kind: z.literal("adopted"),
+    /**
+     * The checkout the adopting process runs from (its `REPO_ROOT`) — where a
+     * respawn must boot it, which may be another checkout than the deploy's
+     * (main's previous slot). The deploy points the spec there rather than
+     * trusting the previous spec, which another writer may have moved.
+     * Optional: a process on older code answers without it, and a reply read
+     * across code generations must still parse (the caller then restarts
+     * rather than guess where it runs).
+     */
+    root: z.string().min(1).optional(),
+  }),
   z.object({ kind: z.literal("restart"), reason: z.string() }),
   z.object({ kind: z.literal("cannot-judge"), reason: z.string() }),
 ]);

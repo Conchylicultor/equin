@@ -512,7 +512,7 @@ func main() {
 	// ready before the first request lands. PG is up by this point, so
 	// central's plugins can connect immediately. (Adopted: already running —
 	// Ensure returns it.)
-	if wt := reg.Get("central"); wt != nil {
+	if wt := reg.Get(centralNamespace); wt != nil {
 		go func() {
 			if _, err := wt.Ensure(ctx, StartDeploy, "eager central start"); err != nil {
 				slog.Warn("eager central spawn failed", "err", err)

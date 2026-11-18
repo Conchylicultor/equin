@@ -1040,7 +1040,7 @@ func (w *Worktree) Snapshot() WorktreeStatus {
 // `57P03 the database system is starting up`. Same magic name as
 // `central-routes.json`'s `"backend": "central"`.
 func (w *Worktree) Pinned() bool {
-	return w.Name == "central"
+	return w.Name == centralNamespace
 }
 
 // ShouldSweep reports whether the sweeper should tear this worktree down now.
@@ -1124,7 +1124,7 @@ const mainNamespace = "singularity"
 // interactive / always-on backends.
 func (w *Worktree) demotes(reason StartReason) bool {
 	return reason != StartBrowser && w.cfg.Taskpolicy != "" &&
-		w.Name != mainNamespace && w.Name != "central"
+		w.Name != mainNamespace && w.Name != centralNamespace
 }
 
 // backendLaunch returns what a backend is told at spawn beyond the declared

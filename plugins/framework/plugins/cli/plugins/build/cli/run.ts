@@ -66,7 +66,7 @@ import {
   namespaceUrl,
   type Namespace,
 } from "@plugins/infra/plugins/namespace/core";
-import { join, resolve } from "path";
+import { join, relative, resolve } from "path";
 import { parseMigrationAnswers } from "@plugins/framework/plugins/cli/plugins/migrations/cli";
 import { formatChangedSources } from "@plugins/framework/plugins/tooling/plugins/format/core";
 import {
@@ -104,6 +104,7 @@ import {
 } from "@plugins/infra/plugins/spawn/core";
 import {
   claimHandedBuildSlot,
+  clearUnservedAt,
   servedMainRoot,
   serveSlot,
   stampUnservedSlots,
@@ -1980,10 +1981,6 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
           command: centralCommand,
         };
         const previousCentral = await readWorktreeSpec("central");
-        const centralSwitching =
-          previousCentral.kind === "spec" &&
-          (await comparablePath(previousCentral.spec.server)) !==
-            (await comparablePath(centralDir));
 
         // 6d. Restart central so it picks up freshly-merged main code. Only
         // done when building main — agent worktrees never change central's
@@ -2014,21 +2011,66 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
             commit: headAtStart,
           });
           endSpan();
+          // A central on code from before the verdict named its root cannot
+          // say where it runs, so its spec cannot be pointed there: restart it
+          // from this tree rather than trust the previous spec.
+          if (
+            centralAdoption.kind === "adopted" &&
+            centralAdoption.root === undefined
+          ) {
+            centralAdoption = {
+              kind: "restart",
+              reason: "central's adopt answer names no root (it predates it)",
+            };
+          }
         }
-        if (centralAdoption?.kind === "adopted" && centralSwitching) {
-          console.log(
-            `Central kept: it runs code identical to this tree's (no restart); its spec keeps naming ${previousCentral.kind === "spec" ? previousCentral.spec.server : "?"}.`,
-          );
+        // Where central's spec must point: the tree central runs from when it
+        // adopted the deploy — read from ITS answer, never from the previous
+        // spec, which another writer may have moved (a worktree build from
+        // before main's slots rewrites it to the repo root on every build:
+        // 2026-11-17, central kept running from slot-3 while its spec named
+        // the root, so slot-3 read as draining) — else this tree.
+        const centralRunsFrom =
+          centralAdoption?.kind === "adopted" &&
+          centralAdoption.root !== undefined
+            ? join(centralAdoption.root, relative(mainRoot, centralDir))
+            : centralDir;
+        if (
+          (await comparablePath(centralRunsFrom)) !==
+          (await comparablePath(centralDir))
+        ) {
+          // Adopted from another checkout: nothing runs from this tree.
+          const named =
+            previousCentral.kind === "spec" &&
+            (await comparablePath(previousCentral.spec.server)) ===
+              (await comparablePath(centralRunsFrom));
+          if (named) {
+            console.log(
+              `Central kept: it runs code identical to this tree's (no restart); its spec keeps naming ${centralRunsFrom}.`,
+            );
+          } else {
+            await writeWorktreeSpec({
+              ...centralSpec,
+              server: centralRunsFrom,
+            });
+            // The slot central runs from serves it again: a stamp written
+            // while the spec named another tree would read its later release
+            // as a slow drain.
+            await clearUnservedAt(centralRunsFrom);
+            console.log(
+              `Central kept: it runs code identical to this tree's (no restart). Its spec named ${previousCentral.kind === "spec" ? previousCentral.spec.server : "nothing"}, not the tree it runs from; it names ${centralRunsFrom} again.`,
+            );
+          }
         } else {
           // Central (re)spawned from this tree boots holding it shared: hand
           // the slot over first (see `handOver`).
           await handOver();
           await writeWorktreeSpec(centralSpec);
-          // Central's spec was the last thing naming the slot main left: it
-          // serves no app now, and starts draining.
-          if (movesCentral && (await isMainSlotCheckout(root)))
-            await stampUnservedSlots(readDrainReportAfterMs(root));
         }
+        // Central's spec was the last thing naming the slot main left: it
+        // serves no app now, and starts draining.
+        if (movesCentral && (await isMainSlotCheckout(root)))
+          await stampUnservedSlots(readDrainReportAfterMs(root));
         if (centralAdoption?.kind === "adopted") {
           console.log(
             "Central kept: it already runs this tree's code (no restart).",

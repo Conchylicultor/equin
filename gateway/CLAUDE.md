@@ -249,6 +249,15 @@ A registered worktree re-reads its spec when — and only when — the file on d
 
 When a change applies (see `UpdateSpec`'s docblock): `web` on the **next request** (`handleStatic` re-reads it per request, no respawn); `server`/`command` on the **next spawn** — `Ensure`/`Restart` snapshot the spec before `startBackend`, so refreshing alone restarts nothing.
 
+### Central's spec names a main slot, or nothing changes (`central_spec_guard.go`)
+
+On a gateway that deploys main (`-main-checkout`), once main's `current` link (`-main-slots-current`) resolves to a slot, a `central` spec whose `server` is outside that slot's pool is **refused**: only main's own build writes central's spec, and it always names a slot. A worktree that branched before main's slots still rewrites central's spec to the repo root on every build (on 2026-11-17 one moved it off slot-3, where central kept running: slot-3 read as draining and a false `main-slot-drain-slow` report was filed). Old checkouts run their old code until they rebase, so the guard lives here, on the receiving side.
+
+- Central registered: its spec stays as loaded (a respawn boots what it ran); main's next build rewrites the file to the tree central reports running from (`build/cli/run.ts`, the adopt verdict's `root`).
+- Not registered (booting over a refused file): a `server` inside main's checkout is read as the same path in main's served slot; anything else is registered as written, logged at error (an unregistered central would be stopped at a handover — `adopt.go`).
+- A refused revision is logged once (the reconcile tick re-reads it quietly).
+- No main deploy, or no slot serving main yet: no guard — central legitimately runs from the checkout then.
+
 ### Self-healing stale registrations (dead `spec.Server`)
 
 The registry subdir (`~/.equin/worktrees/<name>/`, holding `spec.json` + logs) is a *different* path from `spec.Server` (the git worktree's server dir, e.g. `<repo>/.claude/worktrees/<name>/plugins/.../server-core`). The subdir can outlive the worktree it points at — `worktree-cleanup` or a manual `git worktree remove` can delete the git worktree while leaving the registry subdir behind. Such a registration is born-dead: it can only ever fail to spawn (`cmd.Dir = spec.Server` does not exist).
@@ -281,6 +290,7 @@ gateway/
 ├── lifecycle.go   # The lifecycle as one value: the phase union and the spawnAttempt every waiter shares
 ├── handler_panic.go # A request-handler panic recovered into a 500 and filed as a gateway-panic report
 ├── deploy_spec.go # Spec parsing/validation, the restart route's candidate body, its commit to memory + spec.json
+├── central_spec_guard.go # Central's spec refused outside main's slot pool once main serves from it
 ├── registry.go    # Map of worktrees: dir-level fsnotify watch + lazy Resolve + periodic Reconcile, idle sweeper, stale-socket sweep
 ├── supervisor.go  # Generic service supervisor: start commands, readiness probes, watchdog
 ├── logrelay.go    # Relay mode (`gateway -log-relay <path>`): a supervised daemon's output through a rotating writer

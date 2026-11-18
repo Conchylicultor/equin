@@ -79,14 +79,14 @@ const EAGER = ["app/a.ts", "node_modules/fake-pkg/index.js"];
 test("nothing moved: adopted", async () => {
   await write(CHECKOUT);
   const p = await startProcess(EAGER);
-  expect(await judgeAdoption(p, deploy())).toEqual({ kind: "adopted" });
+  expect(await judgeAdoption(p, deploy())).toEqual({ kind: "adopted", root });
 });
 
 test("a web-only change (outside the backend's closure): adopted", async () => {
   await write(CHECKOUT);
   const p = await startProcess(EAGER);
   await write({ "web/page.tsx": `export const Page = () => "new";\n` });
-  expect(await judgeAdoption(p, deploy())).toEqual({ kind: "adopted" });
+  expect(await judgeAdoption(p, deploy())).toEqual({ kind: "adopted", root });
 });
 
 test("an edit inside a lazily imported module not loaded yet: restart", async () => {
@@ -195,7 +195,7 @@ async function withWorker(p: ProcessView): Promise<ProcessView> {
 test("a live worker whose code is untouched since it spawned: adopted", async () => {
   await write(CHECKOUT);
   const p = await withWorker(await startProcess(EAGER));
-  expect(await judgeAdoption(p, deploy())).toEqual({ kind: "adopted" });
+  expect(await judgeAdoption(p, deploy())).toEqual({ kind: "adopted", root });
 });
 
 test("an edit in a live worker's code — outside the backend's own closure: restart", async () => {
@@ -232,7 +232,7 @@ test("a lazy import only a page's import map answers (a demo's browser host): ad
     "app/a.ts": `export const a = 1;\nexport const host = () => import("@browser-host/apps/plugins/demo");\n`,
   });
   const p = await startProcess(EAGER);
-  expect(await judgeAdoption(p, deploy())).toEqual({ kind: "adopted" });
+  expect(await judgeAdoption(p, deploy())).toEqual({ kind: "adopted", root });
 });
 
 // ── Another checkout: main's slots ────────────────────────────────────────
@@ -265,7 +265,7 @@ test("another checkout with the same code: adopted", async () => {
   });
   expect(
     await judgeAdoption(p, deploy({ entry: join(other, "bin/index.ts") })),
-  ).toEqual({ kind: "adopted" });
+  ).toEqual({ kind: "adopted", root });
 });
 
 test("another checkout whose closure differs (a lazy module): restart", async () => {

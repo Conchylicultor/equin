@@ -195,6 +195,24 @@ export async function clearUnserved(slot: AppPath): Promise<void> {
 }
 
 /**
+ * An app is served again from the slot holding `path` (central's spec put
+ * back on the slot central kept running from, after a foreign writer moved
+ * it): that slot's unserved stamp goes, so its holders' later release is not
+ * read as a slow drain past a switch that never was. A path outside the pool
+ * clears nothing.
+ */
+export async function clearUnservedAt(path: string): Promise<void> {
+  await withSlotPool(async () => {
+    const resolved = (await realpathIfExists(path)) ?? resolve(path);
+    for (const slot of await listSlots()) {
+      const at = (await realpathIfExists(slot.path)) ?? resolve(slot.path);
+      if (resolved === at || resolved.startsWith(`${at}/`))
+        await clearUnserved(slot.path);
+    }
+  });
+}
+
+/**
  * Record that main's own app is now served from `slot`. Main's only — the
  * guard bootstrap, which cannot resolve the data root its link lives in,
  * takes the most recently marked stamped slot as main's served one.

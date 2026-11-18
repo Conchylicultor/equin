@@ -250,6 +250,13 @@ a normal wait:
   failure (or its composition registry failing in stage 1) is that target's:
   the others still deploy, central and the deployed-phase steps still follow
   main's own app, and the verdict is failed (`build/cli`'s `fan-out.ts`).
+- **Central's spec names where central runs**, read from central's adopt
+  answer (restart-skip's `root`), never from the previous spec: a worktree
+  build from before the slots rewrites central's spec to the repo root on
+  every build, and trusting it kept slot-3 reading as draining (2026-11-17).
+  A main build that finds the spec naming another tree rewrites it and clears
+  that slot's unserved stamp (`clearUnservedAt`); the gateway refuses such a
+  spec meanwhile (`gateway/central_spec_guard.go`).
 - **Central's spec** moves only with a build that deployed main's own app. On
   a fresh machine (no central spec yet) a slot build writes it only once it
   has handed the slot over (`hand-over.ts`): a central spawned from a slot
@@ -309,6 +316,7 @@ a normal wait:
     - `claimHandedBuildSlot`
     - `clearSlotHanded`
     - `clearUnserved`
+    - `clearUnservedAt`
     - `currentLinkFor`
     - `currentLinksDir`
     - `DRAIN_SLOW_REPORT_KIND`

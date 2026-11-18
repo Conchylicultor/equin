@@ -159,7 +159,7 @@ export async function judgeAdoption(
     const reason = `the child ${child.label}: ${why.reason}`;
     return why.blind ? cannotJudge(reason) : restart(reason);
   }
-  return { kind: "adopted" };
+  return { kind: "adopted", root: p.root };
 }
 
 /**

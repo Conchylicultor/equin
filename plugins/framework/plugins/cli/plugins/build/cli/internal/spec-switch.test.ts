@@ -129,7 +129,7 @@ describe("a deploy from another slot that fails with the previous backend servin
 
 describe("switchSpec: a switch the running backend adopts", () => {
   test("keeps the spec on the checkout it runs from, and hands nothing over", async () => {
-    const w = world(specIn(SLOT_A), { kind: "adopted" });
+    const w = world(specIn(SLOT_A), { kind: "adopted", root: "/slots/slot-1" });
     const switched = await switchSpec({ ...w.deps, spec: specIn(SLOT_B) });
     expect(switched).toEqual({ kind: "kept", servedFrom: SLOT_A });
     expect(w.events).toEqual(["ask"]);

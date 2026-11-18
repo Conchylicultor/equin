@@ -67,6 +67,11 @@ type Registry struct {
 
 	mu     sync.RWMutex
 	byName map[string]*Worktree
+
+	// The last central spec revision guardCentralSpec refused
+	// (central_spec_guard.go), so its refusal is logged once.
+	refusedMu         sync.Mutex
+	refusedCentralRev specRev
 }
 
 func NewRegistry(cfg *Config) *Registry {
@@ -422,6 +427,13 @@ func (r *Registry) loadFile(path string) {
 			slog.Warn("failed to load spec", "path", path, "err", err)
 		}
 		return
+	}
+	// Central's spec may only name main's slot pool once main serves from it:
+	// a build from before the slots writes the repo root (central_spec_guard.go).
+	if name == centralNamespace {
+		if spec = r.guardCentralSpec(spec); spec == nil {
+			return
+		}
 	}
 	// Never register a spec whose backing worktree is already gone — the
 	// build creates ~/.equin/worktrees/<name> (logs, spec.json) at a

@@ -37467,6 +37467,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `claimHandedBuildSlot`
               - `clearSlotHanded`
               - `clearUnserved`
+              - `clearUnservedAt`
               - `currentLinkFor`
               - `currentLinksDir`
               - `DRAIN_SLOW_REPORT_KIND`

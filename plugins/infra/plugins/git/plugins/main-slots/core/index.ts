@@ -4,6 +4,7 @@
 // exec child's boot, the guard hook). Never import it from `web/`.
 export {
   clearUnserved,
+  clearUnservedAt,
   currentLinkFor,
   currentLinksDir,
   isInSlotPool,
