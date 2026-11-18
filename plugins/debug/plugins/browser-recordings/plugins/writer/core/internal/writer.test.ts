@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   MANIFEST_FILE,
+  MAX_MANIFEST_STEPS,
   RECORDED_CALLS_FILE,
   RecordingManifestSchema,
 } from "@plugins/debug/plugins/browser-recordings/core";
@@ -49,7 +50,36 @@ describe("openRecording", () => {
     );
     expect(manifest.toolUseId).toBe("toolu_1");
     expect(manifest.steps[0]?.frame).toBe(a);
-    expect((await readdir(join(rec.dir, "frames"))).length).toBe(2);
+    // The frame no kept step shows is not kept either.
+    expect(await readdir(join(rec.dir, "frames"))).toEqual([
+      a.slice(a.lastIndexOf("/") + 1),
+    ]);
+  });
+
+  test("a frame only omitted steps showed is deleted with them", async () => {
+    root = await mkdtemp(join(tmpdir(), "rec-"));
+    const rec = openRecording({
+      root: asAppPath(root),
+      toolUseId: "toolu_1",
+      source: { kind: "e2e", script: "film.ts" },
+      name: "film",
+    });
+    const steps = [];
+    for (let i = 0; i < MAX_MANIFEST_STEPS + 10; i++) {
+      const frame = await rec.frame(new Uint8Array([i % 256, i >> 8]), "jpeg");
+      steps.push({ title: "evaluate", startMs: i, durationMs: 1, frame });
+    }
+    const manifest = await rec.close(steps);
+    expect(manifest.omitted?.calls).toBe(10);
+    const kept = manifest.steps.flatMap((s) =>
+      s.frame === undefined
+        ? []
+        : [s.frame.slice(s.frame.lastIndexOf("/") + 1)],
+    );
+    expect((await readdir(join(rec.dir, "frames"))).sort()).toEqual(
+      [...new Set(kept)].sort(),
+    );
+    expect(kept.length).toBe(MAX_MANIFEST_STEPS);
   });
 
   test("a prune removes call directories empty for a minute, never a fresh one", async () => {

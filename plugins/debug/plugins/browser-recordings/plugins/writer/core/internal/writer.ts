@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdir, rename, rm, rmdir, writeFile } from "node:fs/promises";
+import { mkdir, rename, rm, rmdir, unlink, writeFile } from "node:fs/promises";
 import { readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, dirname, join } from "node:path";
 import { TOOL_USE_ID_RE } from "@plugins/framework/plugins/tooling/plugins/guards/plugins/tool-use-id/core";
@@ -47,7 +47,8 @@ export interface Recording {
   /**
    * Write the manifest — the recording becomes visible — and prune old runs.
    * Its steps are bounded (`boundSteps`): repeats folded, at most
-   * `MAX_MANIFEST_STEPS` kept.
+   * `MAX_MANIFEST_STEPS` kept — and the run's frames with them: a frame no
+   * kept step shows is deleted.
    */
   close(steps: readonly RecordingStep[]): Promise<RecordingManifest>;
 }
@@ -93,7 +94,7 @@ export function openRecording(opts: {
       return path;
     },
     async close(steps) {
-      await Promise.all(stored.values());
+      const written = await Promise.all(stored.values());
       const manifest: RecordingManifest = {
         v: 2,
         source,
@@ -103,6 +104,12 @@ export function openRecording(opts: {
         // Bounded here, where it is written: the manifest is read whole.
         ...boundSteps(steps),
       };
+      // The frames bounded with it: a frame only an omitted step showed is
+      // never listed, opened or read again, so it goes with its step. A long
+      // run otherwise kept every frame it ever took (a 90-minute promo-film
+      // recording: 10k full-resolution frames, 6 GB, 2,000 of them referenced).
+      const kept = new Set(manifest.steps.flatMap((s) => s.frame ?? []));
+      for (const file of written) if (!kept.has(file)) await unlink(file);
       await mkdir(dir, { recursive: true });
       await writeFile(
         join(dir, MANIFEST_FILE),

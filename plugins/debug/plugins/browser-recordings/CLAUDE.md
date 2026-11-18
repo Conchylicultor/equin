@@ -30,7 +30,11 @@ same frame, none failed — a script's poll loop) fold into one step with a
 are kept, the calls between counted in `omitted`. Before it, the promo film's
 settle loop (`page.evaluate` of the clock's `busy()` every 10 ms) wrote a
 105 MB manifest of 268,535 steps. The server refuses a manifest over 16 MB
-(one from before the bound) loudly instead of parsing it.
+(one from before the bound) loudly instead of parsing it. The frames are
+bounded with the steps: at close, a frame no kept step shows is deleted
+(unbounded, a 90-minute film recording kept 10k frames, 6 GB, for 2,000
+steps). While it runs, a run still writes every frame — any may land in the
+kept tail.
 
 Every recording on the machine prunes this one root when it closes — each
 `browser_*` call of every agent, each e2e run — so prunes overlap all the time.
