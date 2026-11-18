@@ -332,6 +332,8 @@ async function applyNewLines(
       "exit-returned": "process.exit returned",
       watchdog: "it was still running after the grace period",
       sigterm: "a SIGTERM arrived before it was gone",
+      wedged:
+        "its JavaScript was stuck past the exit watchdog's grace period (the watchdog process killed it)",
     }[stall.trigger];
     const cli = stall.cli
       ? `CLI pid ${String(stall.cli.pid)} (exit ${String(stall.cli.exitCode)}, signal ${String(stall.cli.signalCode)})`
@@ -342,7 +344,7 @@ async function applyNewLines(
     await recordReport({
       kind: "crash",
       source: "server-caught",
-      message: `SDK agent ${id}: its exit stalled after "${stall.reason}" — ${why}, at step "${stall.stage}" (${stall.runtime}; ${cli}) — so it SIGKILLed its CLI and itself; ${sample}`,
+      message: `SDK agent ${id}: its exit stalled after "${stall.reason}" — ${why}, at step "${stall.stage}" (${stall.runtime}; ${cli}) — so its CLI and it were SIGKILLed; ${sample}`,
       data: { errorType: "SdkAgentExitStalled", label: "runtime-sdk.exit" },
     });
   }

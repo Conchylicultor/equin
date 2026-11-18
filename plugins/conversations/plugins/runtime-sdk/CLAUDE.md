@@ -158,7 +158,18 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   mid-exit run the hard exit, which samples the process (`/usr/bin/sample` →
   `exit-stall-*.txt`), writes `exit_stalled` (reported as
   `SdkAgentExitStalled`), then SIGKILLs the CLI (spawned by the agent via
-  `spawnClaudeCodeProcess`, so it holds the handle) and itself. The backend's
+  `spawnClaudeCodeProcess`, so it holds the handle) and itself. That hard exit
+  is JavaScript, so it cannot end an exit that wedged the JavaScript thread —
+  inside `process.exit`, after the `exit` listener removed the pid file, where
+  no backend can see the agent any more (conv-1794147656-9o6et2, ten days).
+  That is the **exit watchdog**'s (`bin/exit-watchdog.ts`): a bash helper
+  started before the pid file is written, holding the read end of a FIFO only
+  the agent writes. EOF (the agent died, however) → it exits; armed (one
+  `writeSync` from `shutdown` and the `exit` listener, before the pid file
+  goes) and still open after 30 s → it samples the agent, appends
+  `exit_stalled` (`trigger: "wedged"`) and SIGKILLs the agent's children and
+  it. A child's `stdin.write` would not do: in an exit listener it is
+  buffered and never sent. The backend's
   `stopAgent` waits for the process (pid-file watch), not the event, and a kill
   there (`SdkAgentKilled`) or a launch finding a live predecessor
   (`SdkAgentDuplicate`) is reported too. Why:
@@ -167,9 +178,11 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   the hourly main-only `runtime-sdk.orphan-agents`). Every backend reaches an
   agent through its pid file, so a process the file no longer names (absent,
   or naming another pid) is invisible to all of them — it ran until reboot.
-  That happens when the exit stalls after the `exit` listener removed the
-  file and the hard exit never fires (2026-10-20; conv-1794147656-9o6et2 on
-  2026-11-08, found alive ten days later with its Claude Code). The sweep
+  That happened when the exit stalled after the `exit` listener removed the
+  file and the hard exit never fired (2026-10-20; conv-1794147656-9o6et2 on
+  2026-11-08, found alive ten days later with its Claude Code) — now the exit
+  watchdog's to end; the sweep stays as the backstop for an agent started
+  before it, or one whose watchdog died. The sweep
   finds agents by argv (`--pid-file <locks/sdk-agents>/<ns>/<id>.pid`, one
   `ps`), and SIGKILLs each one older than 10 min (ten times the launch's
   60 s wait for `started`, so never a start in progress) that its pid file

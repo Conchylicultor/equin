@@ -572,6 +572,7 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `listWorktreeDirsAsync`
     - `listWorktreeDirsSync`
     - `LSOF`
+    - `MKFIFO`
     - `PGREP`
     - `PLUGINS_DIR`
     - `pruneWorktreeBuildArtifactsSync`

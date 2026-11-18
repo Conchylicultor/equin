@@ -40042,6 +40042,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `listWorktreeDirsAsync`
           - `listWorktreeDirsSync`
           - `LSOF`
+          - `MKFIFO`
           - `PGREP`
           - `PLUGINS_DIR`
           - `pruneWorktreeBuildArtifactsSync`

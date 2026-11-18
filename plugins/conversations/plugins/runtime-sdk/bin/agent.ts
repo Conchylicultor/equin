@@ -45,6 +45,7 @@ import { SecretStore } from "@plugins/infra/plugins/secrets/server";
 import { centralSecretStore } from "@plugins/infra/plugins/secrets/cli";
 import { basename, dirname, join } from "node:path";
 import { promptContent } from "./prompt-content";
+import { startExitWatchdog, type ExitWatchdog } from "./exit-watchdog";
 import { parseArgs } from "node:util";
 import { ZodError, z } from "zod";
 import {
@@ -735,6 +736,14 @@ const listening = new Promise<void>((resolve) => {
 // file already gone, so no backend could see or stop it. The cause did not
 // reproduce, so the exit cannot depend on it: a stalled exit is ended here, and
 // reported with what it takes to find the cause.
+//
+// The hard exit below is JavaScript, so it cannot end an exit that wedged the
+// JavaScript thread itself — inside process.exit, after the `exit` listener
+// removed the pid file (conv-1794147656-9o6et2, 2026-11-08: ten days alive,
+// invisible to every backend). That case is the exit watchdog's, a helper
+// process armed before the pid file can go (`exit-watchdog.ts`): past
+// WEDGED_EXIT_GRACE_S it samples this process, writes `exit_stalled`
+// (`wedged`) and SIGKILLs the CLI and it.
 
 /** How long process.exit may take before the hard exit ends the process. */
 const EXIT_GRACE_MS = 5_000;
@@ -743,11 +752,56 @@ const SAMPLE_TIMEOUT_MS = 5_000;
 /** The shutdown step reached, for an `exit_stalled` report. */
 let stage = "running";
 let exitReason = "";
+/**
+ * How long the exit watchdog waits once armed: past the in-process watchdog
+ * and its sample (EXIT_GRACE_MS + SAMPLE_TIMEOUT_MS), so the hard exit, with
+ * its fuller report, always gets the first try.
+ */
+const WEDGED_EXIT_GRACE_S = 30;
+/** Started before the pid file is written; null until then. */
+let exitWatchdog: ExitWatchdog | null = null;
+
+/**
+ * Arm the exit watchdog: from here, this process is gone within
+ * WEDGED_EXIT_GRACE_S whatever its JavaScript does. Its stall line is
+ * rendered now, since by the time it is needed nothing here may run.
+ */
+function armExitWatchdog(armedAt: string, reason: string): void {
+  if (!exitWatchdog) return;
+  const samplePath = join(dir, `exit-stall-wedged-${Date.now()}.txt`);
+  const tail = (sampled: boolean): string =>
+    JSON.stringify({
+      t: Date.now(),
+      kind: "agent",
+      payload: {
+        event: "exit_stalled",
+        trigger: "wedged",
+        reason,
+        stage: armedAt,
+        runtime: `bun ${process.versions.bun ?? "?"}`,
+        cli: cli && {
+          pid: cli.pid ?? null,
+          exitCode: cli.exitCode,
+          signalCode: cli.signalCode,
+        },
+        samplePath: sampled ? samplePath : null,
+        sampleError: sampled ? null : "the exit watchdog's sample failed",
+      },
+    } satisfies EventBody & { t: number }).slice(1);
+  exitWatchdog.arm({
+    eventsPath,
+    seqFloor: seq,
+    samplePath,
+    sampledTail: tail(true),
+    unsampledTail: tail(false),
+  });
+}
 
 function shutdown(reason: string): void {
   if (closed) return;
   closed = true;
   exitReason = reason;
+  armExitWatchdog("shutdown began", reason);
   setTimeout(() => hardExit("watchdog", reason), EXIT_GRACE_MS);
   stage = "log";
   log(`● exiting: ${reason}`);
@@ -769,7 +823,12 @@ function shutdown(reason: string): void {
 process.on("SIGTERM", () =>
   closed ? hardExit("sigterm", exitReason) : shutdown("SIGTERM"),
 );
-process.on("exit", removeExitFiles);
+// Armed before the pid file goes: an exit that did not come through
+// `shutdown` (an uncaught throw) is bounded too.
+process.on("exit", () => {
+  armExitWatchdog("exit listeners", exitReason || "exit without shutdown");
+  removeExitFiles();
+});
 
 /**
  * What the agent leaves only while it lives: its pid file. The named claude
@@ -854,9 +913,14 @@ markStarted();
 // The pid file is what says "running" to every backend counting agents (and
 // on which account); a crash leaves it behind, so readers check the pid is
 // alive.
+// Before the pid file: whenever it is gone, the exit was armed first.
+exitWatchdog = startExitWatchdog({
+  graceSeconds: WEDGED_EXIT_GRACE_S,
+  sampleBin: SAMPLE,
+});
 mkdirSync(dirname(pidPath), { recursive: true });
 writeFileSync(pidPath, agentPidFileText(process.pid, args.account));
-log(`● agent ${process.pid} · ${dir}`);
+log(`● agent ${process.pid} · ${dir} · exit watchdog ${exitWatchdog.pid}`);
 log(
   `● scheduling tier: ${tier.kind}${tier.kind === "unsupported" ? ` (${tier.reason})` : ""} · commands ${shellPrefix === null ? "inherit it" : "run darwinbg"}`,
 );

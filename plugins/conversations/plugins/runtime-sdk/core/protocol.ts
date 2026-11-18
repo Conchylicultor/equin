@@ -197,7 +197,9 @@ export const AgentLifecycleSchema = z.discriminatedUnion("event", [
   // before it SIGKILLs the CLI and the agent; the backend reports it.
   z.object({
     event: z.literal("exit_stalled"),
-    trigger: z.enum(["exit-returned", "watchdog", "sigterm"]),
+    // `wedged`: written by the exit watchdog, a helper process, when the
+    // JavaScript thread itself was stuck past the grace (bin/exit-watchdog.ts).
+    trigger: z.enum(["exit-returned", "watchdog", "sigterm", "wedged"]),
     reason: z.string(),
     /** The shutdown step reached. */
     stage: z.string(),
