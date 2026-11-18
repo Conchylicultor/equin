@@ -259,7 +259,8 @@ and an out-of-composition read has no spelling inside the demo.
   (`OnDemandPlugins`): the page root's view leaves them out
   (`excludingReader` — no root mount, app or action-bar item of theirs
   reaches the page; `pageWide` slots excepted), `useScopePlugins(composition,
-  enabled)` loads them (`pending` → `ready`; `ready` at once when the scope
+  enabled)` loads them (`pending` → `ready`, or `failed` with a `retry` that
+  loads them again; `ready` at once when the scope
   needs none, as on main), and a `PluginScope` narrows the WHOLE registry at
   the root, its parent scope below it. A scope rendered before its on-demand
   plugins are loaded throws; one contributing a `Core.Boot` task is refused

@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Files crash tasks for plugins whose chunk failed to load, each after a load probe: the tab walks the failing plugin's static import graph through its own import map and asks the server for each file, so the report says what failed (a 404 file of its build — named as missingFile, the server re-checks it as retired — every file served, a network error, another status) instead of the browser's one ambiguous message.
+- Description: Files crash tasks for plugins whose chunk failed to load, each after a load probe: the tab walks the static import graph of the module the browser named (Chromium's message carries its URL; none named — WebKit, Firefox — is unprobed), resolved through its own import map, and asks the server for each file, so the report says what failed (a 404 file of its build — named as missingFile, the server re-checks it as retired — every file served, a network error, another status) instead of the browser's one ambiguous message.
 - Web:
   - Contributes: `ReportSinks.Collector` "framework.web-sdk"
   - Uses:

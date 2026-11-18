@@ -6,8 +6,9 @@ import { z } from "zod";
 // file a rebuild retired, a network error while the gateway restarts, and a
 // server failing to serve a file it should — and they name at most the entry,
 // never the file of its graph that failed. So the tab walks the failing
-// module's own static import graph, as ITS import map resolves it (the build it
-// booted), asking the server for each file:
+// module's own static import graph — from the module URL the browser named,
+// its imports resolved by ITS import map (the build it booted) — asking the
+// server for each file:
 //
 // - `missing` — the server answered 404 for a file of that graph. A static
 //   import that 404s fails the whole graph, so this file is a sufficient cause.
@@ -17,8 +18,16 @@ import { z } from "zod";
 //   evaluation error, a transient fetch failure). Nothing explains it.
 // - `unreachable` / `status` — the server did not answer, or answered another
 //   status. Proves nothing; the failure stays loud.
-// - `unprobed` — the failing module is not an artifact file of this page's
-//   import map (a dev server), so there is nothing to ask about.
+// - `unprobed` — the browser named no module URL (WebKit, Firefox), or the
+//   module is not an artifact file of this origin, so there is nothing to ask
+//   about.
+//
+// It starts from the URL, never from the plugin's `@plugins/<p>/web`
+// specifier: the link (web-artifacts) rewrote the registry's loaders to chunk
+// URLs and maps no `@plugins/*` specifier, so a specifier lookup answers "not
+// in the import map" for every failure and probes nothing (equin.ai's
+// active-data burst, report-1794951421-c3g90t, read as a module the page was
+// never given).
 //
 // Only `missing` ever quiets a report, and only once the server agrees.
 
@@ -79,7 +88,7 @@ function artifactFileOf(
  * served (or unreachable) an hour ago may be retired now.
  */
 export function createLoadProbe(io: LoadProbeIo): {
-  probe: (specifier: string) => Promise<LoadProbe>;
+  probe: (moduleUrl: string) => Promise<LoadProbe>;
 } {
   const answers = new Map<string, Promise<FileAnswer>>();
   const metas = new Map<
@@ -103,14 +112,10 @@ export function createLoadProbe(io: LoadProbeIo): {
     return p;
   };
 
-  async function probe(specifier: string): Promise<LoadProbe> {
+  async function probe(moduleUrl: string): Promise<LoadProbe> {
     const map = io.importMap();
     if (map === null)
       return { kind: "unprobed", why: "the page has no import map" };
-    const entry = map.get(specifier);
-    if (entry === undefined) {
-      return { kind: "unprobed", why: `${specifier} is not in the import map` };
-    }
     const resolve = (spec: string, from: URL): URL | null => {
       if (spec.startsWith("./") || spec.startsWith("../")) {
         return new URL(spec, from);
@@ -118,9 +123,12 @@ export function createLoadProbe(io: LoadProbeIo): {
       const mapped = map.get(spec);
       return mapped === undefined ? null : new URL(mapped, io.origin);
     };
-    const entryUrl = new URL(entry, io.origin);
+    const entryUrl = new URL(moduleUrl, io.origin);
     if (artifactFileOf(entryUrl, io.origin) === null) {
-      return { kind: "unprobed", why: `${entry} is not an artifact file` };
+      return {
+        kind: "unprobed",
+        why: `${entryUrl.pathname} is not an artifact file of this origin`,
+      };
     }
 
     type Unproven = Exclude<LoadProbe, { kind: "missing" | "served" }>;
@@ -215,6 +223,15 @@ export function describeLoadProbe(p: LoadProbe): string {
     case "unprobed":
       return `not probed: ${p.why}`;
   }
+}
+
+/**
+ * The module URL a failed dynamic import's message names, or null. Chromium
+ * names it ("Failed to fetch dynamically imported module: <url>"); WebKit
+ * ("Importing a module script failed.") and Firefox do not.
+ */
+export function failedModuleUrlOf(message: string): string | null {
+  return /\bhttps?:\/\/[^\s"'<>]+/.exec(message)?.[0] ?? null;
 }
 
 /** The page's own probe IO: its import map, and the server via fetch. */

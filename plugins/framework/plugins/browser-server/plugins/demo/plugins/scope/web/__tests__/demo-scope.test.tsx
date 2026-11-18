@@ -46,8 +46,10 @@ import {
 } from "react";
 import { z } from "zod";
 import {
+  createPluginRegistry,
   PluginProvider,
   type LoadedPlugin,
+  type OnDemandPlugins,
 } from "@plugins/framework/plugins/web-sdk/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {
@@ -707,6 +709,60 @@ describe("<DemoScope>", () => {
       window.removeEventListener("error", onError);
       localStorage.clear();
     }
+  });
+
+  it("a page drawing the boot draws the scope's on-demand plugins that did not load in its own box — never thrown — and Try again loads them", async () => {
+    console.error = () => {};
+    // The standalone site: the scope's plugin is the page's only on demand,
+    // and its first load loses a module on the visitor's network.
+    const registry = createPluginRegistry();
+    const loaded = new Set<string>();
+    let loads = 0;
+    const onDemand: OnDemandPlugins = {
+      ids: new Set(SCOPE_PLUGINS),
+      isLoaded: (id) => loaded.has(id),
+      load() {
+        loads += 1;
+        if (loads === 1) {
+          return Promise.reject(
+            new Error("[plugins] 1 on-demand plugin(s) failed to load"),
+          );
+        }
+        registry.append(PLUGINS);
+        for (const p of PLUGINS) loaded.add(p.id);
+        return Promise.resolve();
+      },
+    };
+    let retry: (() => void) | null = null;
+    const view = await renderAsync(
+      <PluginProvider
+        registry={registry}
+        composition={{ id: "page", home: null }}
+        onDemand={onDemand}
+      >
+        <Boundary>
+          <DemoScope
+            scenario={scenarioOf(storyServer, "lost-plugin")}
+            resume
+            boot={(state) => {
+              if (state.kind === "failed") retry = state.retry;
+              return state.kind === "failed" ? <p>could not start</p> : null;
+            }}
+          >
+            <p>in the demo</p>
+          </DemoScope>
+        </Boundary>
+      </PluginProvider>,
+    );
+    await waitFor(() =>
+      expect(view.getByText("could not start")).toBeTruthy(),
+    );
+    // Drawn, not thrown: the page around it stands.
+    expect(view.queryByTestId("boundary")).toBeNull();
+    act(() => retry!());
+    await waitFor(() => expect(view.getByText("in the demo")).toBeTruthy());
+    expect(loads).toBe(2);
+    localStorage.clear();
   });
 
   it("a host declining because the same host serves elsewhere sends the tab there: it joins, no screen", async () => {

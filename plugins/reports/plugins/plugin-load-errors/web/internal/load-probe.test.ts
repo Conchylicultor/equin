@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   createLoadProbe,
+  failedModuleUrlOf,
   type FileAnswer,
   type LoadProbeIo,
 } from "./load-probe";
@@ -43,18 +44,22 @@ function io(opts: {
   };
 }
 
+// The linked page: no `@plugins/*` specifier is mapped — a plugin loads by its
+// chunk's URL, which imports boot chunks by `@chunk/<id>`, lazy ones by
+// relative URL, and vendors by name.
 const map = {
-  "@plugins/a/web": "/artifacts/a.web.1/index.js",
-  "@plugins/b/core": "/artifacts/b.core.1/index.js",
+  "@chunk/b": "/artifacts/b.core.1/index.js",
   react: "/artifacts/set.v/react.js",
 };
 const meta = {
   "a.web.1": {
-    "index.js": ["@plugins/b/core", "react", "./chunk.mjs"],
+    "index.js": ["@chunk/b", "react", "./chunk.mjs"],
     "chunk.mjs": [],
   },
   "b.core.1": { "index.js": ["react"] },
 };
+// The module the browser said it failed to fetch.
+const A = `${ORIGIN}/artifacts/a.web.1/index.js`;
 
 describe("createLoadProbe", () => {
   test("a 404 anywhere in the failing module's static graph is the missing file", async () => {
@@ -69,7 +74,7 @@ describe("createLoadProbe", () => {
         },
       }),
     );
-    expect(await probe("@plugins/a/web")).toEqual({
+    expect(await probe(A)).toEqual({
       kind: "missing",
       path: "/artifacts/b.core.1/index.js",
     });
@@ -86,7 +91,7 @@ describe("createLoadProbe", () => {
         "/artifacts/set.v/react.js": 200,
       },
     });
-    expect(await createLoadProbe(fleet).probe("@plugins/a/web")).toEqual({
+    expect(await createLoadProbe(fleet).probe(A)).toEqual({
       kind: "served",
       files: 4,
     });
@@ -98,7 +103,7 @@ describe("createLoadProbe", () => {
     expect(
       await createLoadProbe(
         io({ map, meta, files: { "/artifacts/a.web.1/index.js": "down" } }),
-      ).probe("@plugins/a/web"),
+      ).probe(A),
     ).toEqual({
       kind: "unreachable",
       path: "/artifacts/a.web.1/index.js",
@@ -107,7 +112,7 @@ describe("createLoadProbe", () => {
     expect(
       await createLoadProbe(
         io({ map, meta, files: { "/artifacts/a.web.1/index.js": 502 } }),
-      ).probe("@plugins/a/web"),
+      ).probe(A),
     ).toEqual({
       kind: "status",
       path: "/artifacts/a.web.1/index.js",
@@ -115,13 +120,25 @@ describe("createLoadProbe", () => {
     });
   });
 
-  test("a module outside the import map is not probed", async () => {
+  test("a module that is not an artifact file of this origin is not probed", async () => {
+    const probe = createLoadProbe(io({ map, meta, files: {} }));
+    expect((await probe.probe("https://elsewhere.test/artifacts/a/index.js")).kind).toBe(
+      "unprobed",
+    );
+    expect((await probe.probe(`${ORIGIN}/src/main.tsx`)).kind).toBe("unprobed");
+  });
+});
+
+describe("failedModuleUrlOf", () => {
+  test("Chromium names the module it failed to fetch", () => {
     expect(
-      (
-        await createLoadProbe(io({ map, meta, files: {} })).probe(
-          "@plugins/z/web",
-        )
-      ).kind,
-    ).toBe("unprobed");
+      failedModuleUrlOf(
+        "Failed to fetch dynamically imported module: https://equin.ai/artifacts/chunk.5a206f14d1ab4fee/index.js",
+      ),
+    ).toBe("https://equin.ai/artifacts/chunk.5a206f14d1ab4fee/index.js");
+  });
+
+  test("WebKit names none", () => {
+    expect(failedModuleUrlOf("Importing a module script failed.")).toBeNull();
   });
 });

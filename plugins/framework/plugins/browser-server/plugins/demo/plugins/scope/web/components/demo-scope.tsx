@@ -386,11 +386,12 @@ type ScopeState =
  *   visit: entering downloads the server and its data);
  * - `starting` — the visitor entered and the host is still booting,
  *   `progress` its worker's report so far (`null` until the first arrives);
- * - `failed` — the host could not boot (most often a module of its server
- *   that the visitor's network lost on the way: a dropped connection, a
- *   content blocker). The failure is already reported (`reportError`, as an
- *   uncaught error is); `retry` boots a fresh host, which fetches what was
- *   lost again. The page draws it in the demo's own box, so a demo that
+ * - `failed` — the host could not boot, or the scope's own web plugins did
+ *   not load (most often a module the visitor's network lost on the way: a
+ *   dropped connection, a content blocker). The failure is already reported
+ *   (`reportError`, as an uncaught error is; a plugin by the loader's
+ *   plugin-load report); `retry` boots a fresh host, or loads the plugins
+ *   again — fetching what was lost again. The page draws it in the demo's own box, so a demo that
  *   failed never takes the page around it down.
  */
 export type DemoBoot =
@@ -671,7 +672,18 @@ export function DemoScope({
     if (boot === undefined) throw state.error;
     return boot({ kind: "failed", error: state.error, retry });
   }
-  if (scopePlugins.kind === "failed") throw scopePlugins.error;
+  // The scope's on-demand plugins that did not load (a module of theirs the
+  // visitor's network lost): drawn in the demo's box like a failed host, never
+  // the page's error boundary — on the website that is the whole site's. The
+  // loader already reported each plugin; `retry` asks for them again.
+  if (scopePlugins.kind === "failed") {
+    if (boot === undefined) throw scopePlugins.error;
+    return boot({
+      kind: "failed",
+      error: scopePlugins.error,
+      retry: scopePlugins.retry,
+    });
+  }
   if (state.kind === "stopped") return <HostStopped why={state.why} />;
   if (
     transport === null ||

@@ -62,7 +62,15 @@ const ScopeRootsContext = createContext<ReactNode>(null);
 
 /** Where loading a scope's on-demand plugins is (`useScopePlugins`). */
 export type ScopePluginsState =
-  { kind: "pending" } | { kind: "ready" } | { kind: "failed"; error: unknown };
+  | { kind: "pending" }
+  | { kind: "ready" }
+  /**
+   * One of them failed to load (most often a module the visitor's network
+   * lost). Already reported, per plugin, by the loader; `retry` asks for the
+   * ones still missing again — a failed module fetch is not kept, so the
+   * browser fetches it anew.
+   */
+  | { kind: "failed"; error: unknown; retry(): void };
 
 /**
  * Loads the on-demand plugins `composition`'s scope needs, once `enabled`:
@@ -70,7 +78,8 @@ export type ScopePluginsState =
  * a test's provider), else `pending` until they are in the registry. A page
  * renders `<PluginScope composition>` only once this is `ready`; the scope
  * throws otherwise. `enabled` is the caller's "start now" (a demo's gate:
- * nothing downloads before the visitor asks).
+ * nothing downloads before the visitor asks). A failed load stays `failed`
+ * until its `retry`.
  */
 export function useScopePlugins(
   composition: ScopedComposition,
@@ -92,6 +101,8 @@ export function useScopePlugins(
     of: readonly string[];
     state: ScopePluginsState;
   } | null>(null);
+  // Bumped by a failed load's `retry`: loads the missing set again.
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     if (!enabled || onDemand === null || missing.length === 0) return;
     let live = true;
@@ -100,13 +111,24 @@ export function useScopePlugins(
         if (live) setSettled({ of: missing, state: { kind: "ready" } });
       },
       (error: unknown) => {
-        if (live) setSettled({ of: missing, state: { kind: "failed", error } });
+        if (!live) return;
+        setSettled({
+          of: missing,
+          state: {
+            kind: "failed",
+            error,
+            retry: () => {
+              setSettled(null);
+              setAttempt((a) => a + 1);
+            },
+          },
+        });
       },
     );
     return () => {
       live = false;
     };
-  }, [enabled, onDemand, missing]);
+  }, [enabled, onDemand, missing, attempt]);
   if (missing.length === 0) return { kind: "ready" };
   return settled !== null && settled.of === missing
     ? settled.state

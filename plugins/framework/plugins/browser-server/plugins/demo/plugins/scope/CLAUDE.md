@@ -33,7 +33,12 @@ seed — so the unchanged app reads demo data through `useLive` /
   (report-1795030621-pibl6l). `retry` connects again: the failed worker
   retired itself, so the next one boots fresh and fetches its modules again
   (Chrome does not keep a failed module fetch). Without `boot`, it throws to
-  the error boundary.
+  the error boundary. The same holds for the scope's on-demand web plugins
+  (`useScopePlugins`, the standalone site's demo): one that does not load is
+  drawn `failed` in the box (each plugin already filed by the loader's
+  plugin-load report), and `retry` loads them again — before, it threw to the
+  page's error boundary, so a chunk lost after Enter equin took equin.ai's
+  homepage down with it (report-1794951421-c3g90t).
 - **A gate, where the page draws the boot** (`boot={(state) => …}`,
   `DemoBoot`: `gate` → `starting` with the worker's `HostProgress`). The
   visitor enters through the gate on every visit. Behind it, the scope asks

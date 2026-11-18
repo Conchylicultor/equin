@@ -47,13 +47,15 @@ function setup() {
   registry.append([OWN]);
   const loaded = new Set<string>();
   let release: () => void = () => {};
+  let fail: (error: Error) => void = () => {};
   const asked: string[][] = [];
   const onDemand: OnDemandPlugins = {
     ids: new Set([SCOPED.id]),
     isLoaded: (id) => loaded.has(id),
     load(ids) {
       asked.push([...ids]);
-      return new Promise<void>((resolve) => {
+      return new Promise<void>((resolve, reject) => {
+        fail = reject;
         release = () => {
           registry.append([SCOPED]);
           loaded.add(SCOPED.id);
@@ -72,11 +74,23 @@ function setup() {
       {children}
     </PluginProvider>
   );
-  return { page, asked, release: () => release() };
+  return {
+    page,
+    asked,
+    release: () => release(),
+    fail: (error: Error) => fail(error),
+  };
 }
 
 function Demo({ enabled }: { enabled: boolean }) {
   const state = useScopePlugins(SCOPE, enabled);
+  if (state.kind === "failed") {
+    return (
+      <button type="button" data-testid="demo" onClick={state.retry}>
+        failed
+      </button>
+    );
+  }
   if (state.kind !== "ready")
     return <span data-testid="demo">{state.kind}</span>;
   return (
@@ -117,6 +131,21 @@ describe("on-demand plugins", () => {
     expect(screen.getByTestId("demo").textContent).toBe("own,scoped");
     // …outside it, the page is what it was: the loaded plugin reaches nothing.
     expect(screen.getByTestId("page").textContent).toBe("own");
+  });
+
+  it("a failed load stays failed until its retry, which loads the plugins again", async () => {
+    const { page, asked, release, fail } = setup();
+    render(page(<Demo enabled />));
+    expect(asked).toEqual([["demo.scoped"]]);
+    await act(async () => fail(new Error("Failed to fetch")));
+    expect(screen.getByTestId("demo").textContent).toBe("failed");
+    expect(asked).toHaveLength(1);
+
+    await act(async () => screen.getByTestId("demo").click());
+    expect(asked).toEqual([["demo.scoped"], ["demo.scoped"]]);
+    expect(screen.getByTestId("demo").textContent).toBe("pending");
+    await act(async () => release());
+    expect(screen.getByTestId("demo").textContent).toBe("own,scoped");
   });
 
   it("another root-level scope counts a loaded on-demand plugin as left out on purpose, never scoped out", async () => {

@@ -3,15 +3,10 @@ import { report } from "@plugins/reports/web";
 import {
   createLoadProbe,
   describeLoadProbe,
+  failedModuleUrlOf,
   pageLoadProbeIo,
   type LoadProbe,
 } from "./load-probe";
-
-// The specifier the registry's loader imports a plugin by — `import("@plugins/
-// <path>/web")` in every generated registry entry.
-function webSpecifierOf(pluginPath: string): string {
-  return `@plugins/${pluginPath}/web`;
-}
 
 function buildReport(info: PluginLoadReport, probe: LoadProbe | Error) {
   const { pluginPath, message } = info;
@@ -51,11 +46,21 @@ let burst: {
 // `PluginLoadReport` per failed plugin chunk; this probes why it failed and
 // files it as a crash report.
 export function collectPluginLoadError(info: PluginLoadReport): void {
+  const moduleUrl = failedModuleUrlOf(info.message);
+  if (moduleUrl === null) {
+    void report(
+      buildReport(info, {
+        kind: "unprobed",
+        why: "the browser named no module URL",
+      }),
+    );
+    return;
+  }
   burst ??= { probe: createLoadProbe(pageLoadProbeIo()), open: 0 };
   const current = burst;
   current.open++;
   void current.probe
-    .probe(webSpecifierOf(info.pluginPath))
+    .probe(moduleUrl)
     .catch((err: unknown) =>
       err instanceof Error ? err : new Error(String(err)),
     )
