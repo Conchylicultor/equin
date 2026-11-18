@@ -130,6 +130,14 @@ async function reclaimLocked(
     if (s.state === "free" || s.state === "draining")
       await reapDeadHolders(s.path);
     for (const report of await drainRecordsOf(s)) {
+      // A record is written by the RELEASING process, with the code it
+      // booted with: one that predates a kind's role (a central started
+      // before central pinned its slot) notes a drain this code says it
+      // cannot owe. Only a `drains` holder is ever filed; the rest go.
+      if (slotHolderRole(report.payload.kind) !== "drains") {
+        await unlink(report.file);
+        continue;
+      }
       if (!(await file(report.payload))) continue;
       filed.push(report.payload);
       await unlink(report.file);

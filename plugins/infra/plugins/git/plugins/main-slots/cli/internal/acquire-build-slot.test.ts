@@ -46,6 +46,7 @@ import {
 } from "@plugins/infra/plugins/namespace/core";
 import {
   holdSlotLeaseSync,
+  renderDrainRecord,
   SLOT_DRAIN_LOG_DIR,
   SLOT_HANDED_FILE,
   SLOT_LEASES_DIR,
@@ -1495,5 +1496,33 @@ describe("central pins its slot", () => {
     await central.release();
     const drainLog = join((await checkoutAdminDir(slot))!, SLOT_DRAIN_LOG_DIR);
     expect(existsSync(drainLog)).toBe(false);
+  });
+
+  test("a drain record a central on older code left at its exit is dropped, never filed", async () => {
+    const { root, first } = await repo("repo");
+    const slot = await slotAt(root, first);
+    const drainLog = join((await checkoutAdminDir(slot))!, SLOT_DRAIN_LOG_DIR);
+    mkdirSync(drainLog, { recursive: true });
+    const record = (kind: "central" | "exec-child", pid: number): string =>
+      renderDrainRecord({
+        kind,
+        label: kind,
+        pid,
+        heldPastSwitchMs: 134_000,
+        thresholdMs: THRESHOLD_MS,
+        slot,
+        commit: first,
+        releasedAt: new Date().toISOString(),
+        foundDead: false,
+      });
+    writeFileSync(join(drainLog, "1.0.json"), record("central", 1));
+    writeFileSync(join(drainLog, "2.0.json"), record("exec-child", 2));
+    const reports = collector();
+    await reclaimSlots({
+      drainReportAfterMs: THRESHOLD_MS,
+      fileDrainSlow: reports.file,
+    });
+    expect(reports.filed.map((r) => r.kind)).toEqual(["exec-child"]);
+    expect(readdirSync(drainLog)).toEqual([]);
   });
 });

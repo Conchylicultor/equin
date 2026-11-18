@@ -242,7 +242,11 @@ a normal wait:
   Fingerprint `(kind, label)`: one row per job, its occurrences counted. The
   report names the job — what to make faster, or stop from outliving its app.
 - Only `drains` holders are reported: never `build-relay` (it causes the
-  switch), never central (it pins its slot).
+  switch), never central (it pins its slot). Reclaim checks the role again
+  when it files a drain record and deletes a record of any other kind: the
+  record is written by the releasing process with the code it booted with,
+  and a central started before central pinned its slot still noted one at
+  its exit (2026-11-18).
 
 ## The deploy across slots
 
