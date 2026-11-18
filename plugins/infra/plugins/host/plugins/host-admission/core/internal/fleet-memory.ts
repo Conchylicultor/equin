@@ -27,10 +27,12 @@ import { HolderReadingSchema, type HolderReading } from "./holders";
 // - **The rest of the machine, by measurement.** `otherBytes` is the RAM held
 //   by every process that is not an agent op (Chrome, backends, agents,
 //   Postgres, the agent browser, everything else): what processes hold
-//   machine-wide (vm_stat's anonymous + compressor pages) less the ops'
-//   footprint, as main's owner sampler reads it every 30 s — not a sum of
+//   machine-wide (packages/host-memory: macOS's anonymous + compressor pages,
+//   Linux's AnonPages + Shmem) less the ops' footprint, as main's owner sampler reads it every 30 s — not a sum of
 //   footprints, which count compressed pages uncompressed and over-counted the
-//   machine by ~11 GB on 2026-11-13. `wiredBytes` is the kernel's wired memory;
+//   machine by ~11 GB on 2026-11-13. `wiredBytes` is the kernel's own memory (macOS
+//   wired pages; Linux what is neither free, on a page LRU nor
+//   reclaimable slab);
 //   the file cache is reclaimable and not charged. What is left of RAM is what
 //   the fleet can have.
 // - **The fleet, holder by holder: what each share is reserved, or what it
@@ -63,7 +65,7 @@ export const FleetMemoryReadingSchema = z.object({
   sampledAt: z.number(),
   /** Physical memory of the host. */
   ramBytes: z.number().positive(),
-  /** Kernel wired memory (vm_stat "Pages wired down"): in no process's footprint. */
+  /** Kernel memory in no process's footprint (host-memory `kernelBytes`: macOS wired pages, Linux RAM neither free, on a page LRU nor reclaimable slab). */
   wiredBytes: z.number().nonnegative(),
   /** RAM held by every process that is not an agent op: processes' anonymous + compressor pages, less `opsBytes`. */
   otherBytes: z.number().nonnegative(),

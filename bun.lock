@@ -5378,6 +5378,10 @@
       "name": "@equin/plugin-packages-heap-pacing",
       "version": "0.0.1",
     },
+    "plugins/packages/plugins/host-memory": {
+      "name": "@equin/plugin-packages-host-memory",
+      "version": "0.0.1",
+    },
     "plugins/packages/plugins/host-semaphore": {
       "name": "@equin/plugin-packages-host-semaphore",
       "version": "0.0.1",
@@ -5507,10 +5511,6 @@
     },
     "plugins/packages/plugins/value-patch": {
       "name": "@equin/plugin-packages-value-patch",
-      "version": "0.0.1",
-    },
-    "plugins/packages/plugins/vm-stat": {
-      "name": "@equin/plugin-packages-vm-stat",
       "version": "0.0.1",
     },
     "plugins/packages/plugins/wall-clock": {
@@ -10885,6 +10885,8 @@
 
     "@equin/plugin-packages-heap-pacing": ["@equin/plugin-packages-heap-pacing@workspace:plugins/packages/plugins/heap-pacing"],
 
+    "@equin/plugin-packages-host-memory": ["@equin/plugin-packages-host-memory@workspace:plugins/packages/plugins/host-memory"],
+
     "@equin/plugin-packages-host-semaphore": ["@equin/plugin-packages-host-semaphore@workspace:plugins/packages/plugins/host-semaphore"],
 
     "@equin/plugin-packages-image-size": ["@equin/plugin-packages-image-size@workspace:plugins/packages/plugins/image-size"],
@@ -10948,8 +10950,6 @@
     "@equin/plugin-packages-timed-fs": ["@equin/plugin-packages-timed-fs@workspace:plugins/packages/plugins/timed-fs"],
 
     "@equin/plugin-packages-value-patch": ["@equin/plugin-packages-value-patch@workspace:plugins/packages/plugins/value-patch"],
-
-    "@equin/plugin-packages-vm-stat": ["@equin/plugin-packages-vm-stat@workspace:plugins/packages/plugins/vm-stat"],
 
     "@equin/plugin-packages-wall-clock": ["@equin/plugin-packages-wall-clock@workspace:plugins/packages/plugins/wall-clock"],
 

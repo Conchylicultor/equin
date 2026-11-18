@@ -90,8 +90,8 @@ export type HealthSample = z.infer<typeof HealthSampleSchema>;
 // One host-level sample. Sampled only on the main backend (the host is shared).
 export const HostSampleSchema = z.object({
   sampledAt: z.number(),
-  // Memory available without swapping (on macOS free + speculative + inactive
-  // pages, vm_stat), not merely unused pages. Named before it meant that; kept
+  // Memory available without swapping (packages/host-memory: on macOS free +
+  // speculative + inactive pages, on Linux MemAvailable), not merely unused pages. Named before it meant that; kept
   // so the persisted JSONL history still parses.
   freeMemMb: z.number(),
   totalMemMb: z.number(),
@@ -99,10 +99,10 @@ export const HostSampleSchema = z.object({
   loadAvg1: z.number(),
   loadAvg5: z.number(),
   loadAvg15: z.number(),
-  swapInPagesPerSec: z.number(), // macOS vm_stat Swapins delta; 0 elsewhere
+  swapInPagesPerSec: z.number(), // macOS vm_stat Swapins / Linux pswpin delta
   swapOutPagesPerSec: z.number(),
-  // macOS memory-compressor activity (vm_stat Compressions/Decompressions
-  // deltas; 0 elsewhere). The pressure channel swap-in is blind to: macOS
+  // Memory-compressor activity (macOS vm_stat Compressions/Decompressions,
+  // Linux zswap's zswpout/zswpin deltas; 0 without a compressor). The pressure channel swap-in is blind to: macOS
   // compresses long before it touches the swapfile, and each decompression is
   // a page fault that blocks the faulting thread synchronously (see
   // research/perfs/2026-07-11-compressor-thrash-subscription-replay-storm.md,
@@ -115,7 +115,7 @@ export const HostSampleSchema = z.object({
   // pre-cutover line on this field anyway).
   compressorMb: z.number().optional(),
   // Wall-clock jump (machine sleep) marker — same contract as
-  // HealthSampleSchema.wallJumpMs above. On a stamped tick the vm_stat rate
+  // HealthSampleSchema.wallJumpMs above. On a stamped tick the counter rate
   // deltas are averaged over the true elapsed window (which spans the suspend),
   // not the nominal cadence, so a sleep can never fabricate a rate spike.
   wallJumpMs: z.number().optional(),

@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-packages-host-memory",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The host's memory, one shape on macOS and Linux: readHostMemory() reads vm_stat on macOS, /proc/meminfo and /proc/vmstat on Linux, into what the system can hand out (available), kernel memory no process carries (macOS wired; Linux what is neither free, on a page LRU nor reclaimable slab), the RAM processes hold (macOS anonymous + compressor; Linux AnonPages + Shmem), the compressor's size and the swap / compression counters — or unsupported on another OS."
+}

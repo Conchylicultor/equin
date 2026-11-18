@@ -1,16 +1,16 @@
 import { cpus, freemem, loadavg, totalmem } from "node:os";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
-import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import type { HostSample } from "../../core";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
+import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 import {
-  availableMemBytes,
-  parseVmStat,
-  type VmStat,
-} from "@plugins/packages/plugins/vm-stat/core";
+  readHostMemory,
+  type HostMemory,
+  type HostMemoryCounters,
+  type HostMemoryIo,
+} from "@plugins/packages/plugins/host-memory/core";
 import { detectWallJumpMs } from "./wall-jump";
 import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/server";
-
-const VM_STAT_TIMEOUT_MS = 5_000;
 
 // Host-level sampler. Runs only on the main backend (the host is a shared
 // resource — one sampler suffices). Appends to the main worktree's
@@ -36,28 +36,26 @@ const channel = defineLogSink({
   description:
     "PERF sink: host-level health samples (load average, memory, swap) for the Debug → Health charts.",
 });
-// Wall-time of the previous tick: the true denominator for the vm_stat rate
+// Wall-time of the previous tick: the true denominator for the counter rate
 // deltas (a late tick divided by the nominal cadence would inflate the rates —
 // after a sleep, catastrophically so), and the wall-jump detection baseline.
 let lastTickAt = 0;
-let prev: {
-  swapins: number;
-  swapouts: number;
-  compressions: number;
-  decompressions: number;
-} | null = null;
+let prev: HostMemoryCounters | null = null;
 
-// macOS-only swap/compressor detail. Returns null elsewhere (host is the user's
-// Mac); the sample then reports 0 for the swap fields.
-async function readVmStat(): Promise<VmStat | null> {
-  if (process.platform !== "darwin") return null;
-  // Bounded well under the sampler's own cadence: a `vm_stat` that has not
-  // answered within five seconds is not going to produce a reading worth this
-  // tick, and letting it run would let successive ticks pile up children.
-  const result = await spawnCaptured(["vm_stat"], {
-    timeoutMs: VM_STAT_TIMEOUT_MS,
-  });
-  return parseVmStat(result.stdout);
+// The host's memory (macOS vm_stat, Linux /proc/meminfo + /proc/vmstat). On an
+// OS host-memory cannot read, null: the sample then reports 0 for the swap and
+// compressor fields and `os.freemem()` for free memory.
+// `vm_stat` is bounded well under the sampler's own cadence: one that has not
+// answered within five seconds is not going to produce a reading worth this
+// tick, and letting it run would let successive ticks pile up children.
+const memoryIo: HostMemoryIo = {
+  run: async (argv) => (await spawnExpectOk(argv, { timeoutMs: 5_000 })).stdout,
+  readText: (path) => readFile(path, "utf8"),
+};
+
+async function readMemory(): Promise<HostMemory | null> {
+  const read = await readHostMemory(process.platform, memoryIo);
+  return read.kind === "read" ? read.memory : null;
 }
 
 // Per-core CPU time counters at the previous tick. `os.cpus()` hands back
@@ -100,37 +98,30 @@ async function tick(): Promise<void> {
   // by 10 s and fabricates a rate spike.
   const elapsedSec = Math.max((now - lastTickAt) / 1000, 1);
   lastTickAt = now;
-  const vm = await readVmStat();
+  const memory = await readMemory();
   let swapIn = 0;
   let swapOut = 0;
   let compressionsPerSec = 0;
   let decompressionsPerSec = 0;
   let compressorMb = 0;
-  if (vm) {
-    const swapins = vm.map["Swapins"] ?? 0;
-    const swapouts = vm.map["Swapouts"] ?? 0;
-    const compressions = vm.map["Compressions"] ?? 0;
-    const decompressions = vm.map["Decompressions"] ?? 0;
-    if (prev) {
-      swapIn = Math.max(0, (swapins - prev.swapins) / elapsedSec);
-      swapOut = Math.max(0, (swapouts - prev.swapouts) / elapsedSec);
-      compressionsPerSec = Math.max(
-        0,
-        (compressions - prev.compressions) / elapsedSec,
-      );
-      decompressionsPerSec = Math.max(
-        0,
-        (decompressions - prev.decompressions) / elapsedSec,
-      );
+  if (memory) {
+    // Null where the OS does not state them: no rates, and no baseline for
+    // the next tick either.
+    const counters = memory.counters;
+    const rate = (a: number, b: number) => Math.max(0, (a - b) / elapsedSec);
+    if (prev && counters) {
+      swapIn = rate(counters.swapIns, prev.swapIns);
+      swapOut = rate(counters.swapOuts, prev.swapOuts);
+      compressionsPerSec = rate(counters.compressions, prev.compressions);
+      decompressionsPerSec = rate(counters.decompressions, prev.decompressions);
     }
-    prev = { swapins, swapouts, compressions, decompressions };
-    compressorMb =
-      ((vm.map["Pages occupied by compressor"] ?? 0) * vm.pageSize) / 1_048_576;
+    prev = counters;
+    compressorMb = memory.compressorBytes / 1_048_576;
   }
   const total = totalmem();
   // Available, not merely unused: on macOS `os.freemem()` is `Pages free`, near
-  // zero whenever the cache is warm. Elsewhere it already reads MemAvailable.
-  const free = vm ? availableMemBytes(vm) : freemem();
+  // zero whenever the cache is warm.
+  const free = memory ? memory.availableBytes : freemem();
   // This is the persisted host loadavg (10s cadence, health-host channel — the
   // single source for compressor/swap/freeMem, tail-read by the sentinel). The
   // sentinel worker deliberately keeps its OWN fresh loadavg() syscall on its

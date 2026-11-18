@@ -1,6 +1,6 @@
-// Pure `vm_stat` output parsing: the host sampler (debug/health-monitor) reads
-// its pressure counters, main's owner sampler (debug/sentinel/machine-usage) the
-// wired and process memory it hands host admission. No imports, so every runtime can.
+// Pure macOS `vm_stat` output parsing: the macOS half of the host memory
+// reading (`host-memory.ts`), beside Linux's `/proc/meminfo` (`proc-meminfo.ts`).
+// No imports, so every runtime can.
 
 export interface VmStat {
   pageSize: number;

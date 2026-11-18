@@ -44159,6 +44159,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HEAVY_PROCESS_RAM_BYTES`
           - `JSC_RAM_SIZE_ENV`
           - `pacedHeapEnv`
+    - **`host-memory`** — The host's memory, one shape on macOS and Linux: readHostMemory() reads vm_stat on macOS, /proc/meminfo and /proc/vmstat on Linux, into what the system can hand out (available), kernel memory no process carries (macOS wired; Linux what is neither free, on a page LRU nor reclaimable slab), the RAM processes hold (macOS anonymous + compressor; Linux AnonPages + Shmem), the compressor's size and the swap / compression counters — or unsupported on another OS.
+      - Cross-plugin:
+        - Imported by:
+          - `debug/health-monitor`
+          - `debug/sentinel/machine-usage`
+      - Core:
+        - Exports (types):
+          - `HostMemory`
+          - `HostMemoryCounters`
+          - `HostMemoryIo`
+          - `HostMemoryPlatform`
+          - `HostMemoryRead`
+        - Exports (values): `readHostMemory`
     - **`host-semaphore`** — Cross-process concurrency primitive: createHostSemaphore bounds work across processes via flock slot files (the host-wide twin of packages/semaphore).
       - Server:
         - Uses:
@@ -44859,11 +44872,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TIMED_FS_CALLS`
           - `withFsCallTally`
       - Cross-plugin:
-        - Imported by: 190 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+        - Imported by: 191 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
           - `infra` ×59
           - `framework` ×29
           - `apps` ×16
-          - `debug` ×15
+          - `debug` ×16
           - `conversations` ×13
           - `backup` ×11
           - `build` ×7
@@ -44908,18 +44921,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `applyValuePatch`
           - `diffValue`
-    - **`vm-stat`** — macOS vm_stat output, parsed: parseVmStat (page size and every counter), availableMemBytes (free + speculative + inactive — what the system can hand out without swapping) and wiredMemBytes (kernel wired memory, which no process footprint carries).
-      - Cross-plugin:
-        - Imported by:
-          - `debug/health-monitor`
-          - `debug/sentinel/machine-usage`
-      - Core:
-        - Exports (types): `VmStat`
-        - Exports (values):
-          - `availableMemBytes`
-          - `parseVmStat`
-          - `processMemBytes`
-          - `wiredMemBytes`
     - **`wall-clock`** — Wall clock ↔ UTC instant for an IANA zone, without a timezone database: a wall time's candidate instants are enumerated from the offsets either side of it and each verified against Intl, so a clock change resolves the same way in every zone rather than by the sign of its offset. Also reads a clock face back out of an instant, and answers when the local day began.
       - Cross-plugin:
         - Imported by:

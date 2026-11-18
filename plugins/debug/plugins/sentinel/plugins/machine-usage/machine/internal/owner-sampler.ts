@@ -8,10 +8,10 @@ import {
 } from "@plugins/infra/plugins/host/plugins/host-admission/server";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 import {
-  parseVmStat,
-  processMemBytes,
-  wiredMemBytes,
-} from "@plugins/packages/plugins/vm-stat/core";
+  readHostMemory,
+  type HostMemoryIo,
+} from "@plugins/packages/plugins/host-memory/core";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { summarizeOwners, type CpuBaseline } from "../../core";
@@ -30,8 +30,12 @@ import { createHolderLedger, measureHolderTrees } from "./holder-ledger";
 // CPU-s (measured 2026-11-06).
 const SAMPLE_INTERVAL_MS = 30_000;
 
-// Bounded well under the cadence, like the host sampler's own vm_stat.
-const VM_STAT_MS = 5_000;
+// The host's memory counters (vm_stat bounded well under the cadence, like
+// the host sampler's).
+const memoryIo: HostMemoryIo = {
+  run: async (argv) => (await spawnExpectOk(argv, { timeoutMs: 5_000 })).stdout,
+  readText: (path) => readFile(path, "utf8"),
+};
 
 const channel = defineLogSink({
   id: "health-owners",
@@ -78,8 +82,9 @@ async function tick(): Promise<void> {
 // Every grant acquire sizes the fleet's window from it (host-admission's
 // `fleetWindow`), so the 30 s cadence is admission's too.
 //
-// "Everything else" is the RAM processes hold machine-wide (vm_stat's anonymous
-// + compressor pages) less the ops' share — NOT the sum of the other processes'
+// "Everything else" is the RAM processes hold machine-wide (host-memory's
+// `processBytes`: macOS's anonymous + compressor pages, Linux's AnonPages +
+// Shmem) less the ops' share — NOT the sum of the other processes'
 // footprints. A footprint counts compressed pages at their uncompressed size,
 // so that sum over-counted by what the compressor saves: on 2026-11-13 it read
 // ~55 GB for the rest of the machine while processes held ~49 GB in all, and
@@ -115,18 +120,23 @@ async function publishFleetReading({
   const charged = holders.filter(
     (h) => listed.has(h.pid) && after.has(`${h.pid}:${h.since}`),
   );
-  const vm = parseVmStat(
-    (await spawnExpectOk(["vm_stat"], { timeoutMs: VM_STAT_MS })).stdout,
-  );
+  const read = await readHostMemory(process.platform, memoryIo);
+  // Loud: admission without this reading stays on its one-slot floor, and a
+  // silent skip would read as "main's sampler is not running".
+  if (read.kind === "unsupported")
+    throw new Error(
+      `[machine-usage] host memory is not measured on ${read.platform}: host admission has no fleet reading`,
+    );
+  const memory = read.memory;
   await publishFleetMemory({
     sampledAt: Date.now(),
     ramBytes: totalmem(),
-    wiredBytes: wiredMemBytes(vm),
+    wiredBytes: memory.kernelBytes,
     // Floored at 0: ops whose footprints exceed what processes hold in all
     // (their pages compressed or shared) leave the rest of the machine nothing
     // to charge — the fleet is then charged that whole footprint, which
     // already exceeds the real total, so the window stays bounded.
-    otherBytes: Math.max(0, processMemBytes(vm) - opsBytes),
+    otherBytes: Math.max(0, memory.processBytes - opsBytes),
     opsBytes,
     heldUnits,
     holders: await holderLedger.observe(

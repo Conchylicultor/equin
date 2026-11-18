@@ -123,5 +123,10 @@
     "at": "2026-11-17T11:05:26.996Z",
     "from": "primitives.persistent-draft",
     "to": "primitives.kept-state"
+  },
+  {
+    "at": "2026-11-18T14:06:00.079Z",
+    "from": "packages.vm-stat",
+    "to": "packages.host-memory"
   }
 ]
