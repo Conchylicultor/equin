@@ -555,19 +555,45 @@ export function statusText(view: InstallView, now: number): string {
     .sort((a, b) => b.at - a.at)[0];
   if (count === undefined || count.total === null) return `${leaf.doing}…`;
   if (count.unit === "%") return `${leaf.doing} · ${count.done}%`;
-  return `${leaf.doing} · ${count.done} of ${count.total}`;
+  return `${leaf.doing} · ${countText(count.done, count.total, count.unit)}`;
+}
+
+/**
+ * What a count counts, in the user's words (no internal names: cargo's
+ * crates are the "components" equin compiles). Exhaustive over the units, so
+ * a new one does not compile until it has words.
+ */
+const UNIT_WORDS: Record<Exclude<ProgressUnit, "%">, string> = {
+  crates: "components compiled",
+  plugins: "plugins built",
+  packages: "packages installed",
+};
+
+/** `1,088 of 1,385 components compiled`. */
+function countText(
+  done: number,
+  total: number,
+  unit: Exclude<ProgressUnit, "%">,
+): string {
+  const n = (x: number): string => x.toLocaleString("en-US");
+  return `${n(done)} of ${n(total)} ${UNIT_WORDS[unit]}`;
 }
 
 /**
  * The caption under the bar: `Step N of G` (plan groups), then `Paused`
- * after a failure, else the time remaining when every step left has an
+ * after a failure (`Still waiting` through a stall), else the time remaining when every step left has an
  * estimate. Returned as parts, so the renderer draws the separator.
  */
 export function captionParts(view: InstallView, now: number): string[] {
   const group = currentGroup(view);
   if (group === null) return [];
   const parts = [`Step ${group.index + 1} of ${group.count}`];
-  if (view.phase === "failed" || view.phase === "paused") parts.push("Paused");
+  // One state, one word: a stall is not a pause (its step keeps running),
+  // so it reads as the screen's own title does.
+  if (view.phase === "paused" && view.pause?.blocking === false)
+    parts.push("Still waiting");
+  else if (view.phase === "failed" || view.phase === "paused")
+    parts.push("Paused");
   else {
     const left = remainingSeconds(view, now);
     if (left !== null) parts.push(remainingText(left));

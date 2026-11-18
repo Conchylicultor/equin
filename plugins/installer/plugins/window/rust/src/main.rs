@@ -19,10 +19,12 @@ mod askpass;
 mod bootstrap;
 mod child;
 mod clock;
+#[cfg(target_os = "macos")]
+mod dock;
 mod probe;
 
 use std::borrow::Cow;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io::Write;
 use std::process::Command;
 
@@ -50,6 +52,8 @@ enum UserEvent {
     Exited(i32),
     /// A message from the page.
     Ipc(String),
+    /// The page finished loading (shows the window if `ready` has not).
+    Loaded,
     /// A signal sent to this process.
     Signal(libc::c_int),
     /// sudo asks for the password (askpass.rs): show the sheet, answer on the stream.
@@ -245,10 +249,19 @@ fn main() {
         });
     }
 
+    // The Dock shows equin's icon, not a bare executable's.
+    #[cfg(target_os = "macos")]
+    dock::set_icon();
+
+    // Hidden until the page has drawn (its `ready`): a webview paints white
+    // until its first frame, which on a cold Mac takes seconds.
+    let (r, g, b, a) = BACKGROUND;
     let mut builder = WindowBuilder::new()
         .with_title("equin installer")
         .with_inner_size(LogicalSize::new(WIDTH, HEIGHT))
-        .with_resizable(false);
+        .with_resizable(false)
+        .with_visible(false)
+        .with_background_color((r, g, b, a));
     #[cfg(target_os = "macos")]
     {
         use tao::platform::macos::WindowBuilderExtMacOS;
@@ -264,12 +277,20 @@ fn main() {
     });
 
     let ipc_proxy = proxy.clone();
+    let load_proxy = proxy.clone();
     let webview = WebViewBuilder::new()
         .with_background_color(BACKGROUND)
         .with_devtools(cfg!(debug_assertions))
         .with_custom_protocol("installer".into(), |_id, request| serve_page(&request))
         .with_ipc_handler(move |request: Request<String>| {
             send(&ipc_proxy, UserEvent::Ipc(request.into_body()))
+        })
+        // The backstop for `ready`: a page that loaded but never said ready
+        // (its script threw) is still shown, broken, never left invisible.
+        .with_on_page_load_handler(move |load, _url| {
+            if matches!(load, wry::PageLoadEvent::Finished) {
+                send(&load_proxy, UserEvent::Loaded);
+            }
         })
         .with_url("installer://app/");
     #[cfg(target_os = "linux")]
@@ -285,13 +306,14 @@ fn main() {
         child::signal_group(child_pid, libc::SIGINT);
         std::process::exit(1);
     });
-    window.set_focus();
 
     let mut state = State {
         backlog: Vec::new(),
         sent: 0,
         page_ready: false,
+        shown: false,
         labels: HashMap::new(),
+        with_subs: HashSet::new(),
         done_url: None,
         saw_exit: false,
         exit_code: None,
@@ -323,6 +345,7 @@ fn main() {
                     finish(code);
                 }
             }
+            Event::UserEvent(UserEvent::Loaded) => show(&window, &mut state.shown),
             Event::UserEvent(UserEvent::Signal(sig)) => {
                 state.stopping = true;
                 match state.exit_code {
@@ -339,6 +362,7 @@ fn main() {
             }
             Event::UserEvent(UserEvent::Ipc(body)) => match serde_json::from_str::<PageCommand>(&body) {
                 Ok(PageCommand::Ready) => {
+                    show(&window, &mut state.shown);
                     state.page_ready = true;
                     state.sent = 0;
                     if let Some((prompt, _)) = &state.password {
@@ -431,8 +455,12 @@ struct State {
     /// How many of them the page has.
     sent: usize,
     page_ready: bool,
+    /// The window is on screen (it opens hidden until the page has drawn).
+    shown: bool,
     /// Step labels from the plan, for the terminal's lines.
     labels: HashMap<String, String>,
+    /// The steps that have sub-steps (their terminal line is a heading).
+    with_subs: HashSet<String>,
     /// The `done` event's URL — the only URL Open equin opens.
     done_url: Option<String>,
     saw_exit: bool,
@@ -454,7 +482,8 @@ impl State {
         self.backlog.push(line);
     }
 
-    /// One plain line per step on the terminal that started the install.
+    /// One plain line per step on the terminal that started the install,
+    /// written when the step ends (never a "started" line too).
     fn terminal_line(&mut self, event: &Value) {
         let text = |v: &Value, k: &str| v.get(k).and_then(Value::as_str).unwrap_or("").to_string();
         match event.get("type").and_then(Value::as_str) {
@@ -463,7 +492,11 @@ impl State {
                 // own: their labels too, so their lines read as words.
                 for step in event.get("steps").and_then(Value::as_array).into_iter().flatten() {
                     self.labels.insert(text(step, "id"), text(step, "label"));
-                    for sub in step.get("substeps").and_then(Value::as_array).into_iter().flatten() {
+                    let subs = step.get("substeps").and_then(Value::as_array);
+                    if subs.is_some_and(|s| !s.is_empty()) {
+                        self.with_subs.insert(text(step, "id"));
+                    }
+                    for sub in subs.into_iter().flatten() {
                         self.labels.insert(text(sub, "id"), text(sub, "label"));
                     }
                 }
@@ -475,9 +508,14 @@ impl State {
                 let indent = if sub { "    " } else { "  " };
                 // A skipped step was done by an earlier run; a skipped sub-step had nothing to do.
                 let skipped = if sub { "nothing to do" } else { "already done" };
-                let label = self.labels.get(&id).cloned().unwrap_or(id);
+                let label = self.labels.get(&id).cloned().unwrap_or_else(|| id.clone());
+                // One line per step, once it has ended: the window shows what
+                // runs now. A step with sub-steps is their heading instead:
+                // its name when it starts, their ✓ lines under it.
+                let headed = self.with_subs.contains(&id);
                 let line = match text(event, "state").as_str() {
-                    "start" => format!("{indent}… {label}"),
+                    "start" if headed => format!("{indent}{label}"),
+                    "done" if headed => return,
                     "done" => format!("{indent}✓ {label}"),
                     "skipped" => format!("{indent}✓ {label} ({skipped})"),
                     "failed" => format!("{indent}✗ {label}: stopped; see the window"),
@@ -490,7 +528,7 @@ impl State {
                 if event.get("blocking").and_then(Value::as_bool) == Some(true) {
                     println!("  ! Paused: {title}. The window says what to do.");
                 } else {
-                    println!("  ! {title}. The install keeps waiting; the window says more.");
+                    println!("  ! {title}. The install keeps going; the window says more.");
                 }
             }
             Some("done") => {
@@ -533,6 +571,16 @@ pub(crate) fn serve_page(request: &Request<Vec<u8>>) -> Response<Cow<'static, [u
             .body(Cow::Borrowed(&b"not found"[..]))
             .expect("a static response")
     }
+}
+
+/// Put the window on screen, once.
+fn show(window: &tao::window::Window, shown: &mut bool) {
+    if *shown {
+        return;
+    }
+    *shown = true;
+    window.set_visible(true);
+    window.set_focus();
 }
 
 fn send(proxy: &EventLoopProxy<UserEvent>, event: UserEvent) {

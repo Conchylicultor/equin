@@ -1199,10 +1199,12 @@ ev_lines() {
 # and nothing more. Written while the step runs, so one event under PIPE_BUF.
 stall_pause() {
   local mins=$(($2 / 60)) doing quiet title text
-  r_idx_plan "$1"; doing=$PD_DOING
-  if [ "$mins" -ge 2 ]; then quiet="$mins minutes"; elif [ "$mins" = 1 ]; then quiet="a minute"; else quiet="$2 seconds"; fi
+  r_idx_plan "$1"; doing=$PD_DOING_CAP
+  if [ "$mins" -ge 2 ]; then quiet="$mins minutes"; elif [ "$mins" = 1 ]; then quiet="a minute"; elif [ "$2" = 1 ]; then quiet="a second"; else quiet="$2 seconds"; fi
   P_STEP=$1 P_KIND=stall P_TITLE="No progress for $quiet" P_OPT=0 P_MANUAL=""
-  P_TEXT="equin is ${doing:-working} and hasn't shown any progress for $quiet. It may still finish, so the install keeps waiting. If it stays stuck, Fix with Claude can look at what it is doing."
+  # Its subject is the step's own words ("Starting equin's services"), never
+  # "equin is <doing>": the doing already names equin.
+  P_TEXT="${doing:-This step} hasn't shown any progress for $quiet. It may still finish, so the install keeps going. If it stays stuck, Fix with Claude can look at what it is doing."
   P_EV=("no output and no progress for ${2}s")
   write_pause_files
   json_str "$P_TITLE"; title=$JSON_STR
@@ -2334,6 +2336,18 @@ r_on_step() {
   esac
 }
 
+# unit_words <unit>: UW = what a count counts, in the user's words — the
+# window's page says the same (model.ts UNIT_WORDS): cargo's crates are the
+# "components" equin compiles (no internal names).
+unit_words() {
+  case "$1" in
+    crates) UW="components compiled" ;;
+    plugins) UW="plugins built" ;;
+    packages) UW="packages installed" ;;
+    *) UW=$1 ;;
+  esac
+}
+
 r_on_progress() {
   local i q pct
   r_idx "$1"; i=$RI
@@ -2347,7 +2361,7 @@ r_on_progress() {
   pct=$(($2 * 100 / $3))
   r_name "$i"
   local text="$NM: $pct%"
-  [ "$4" = "%" ] || text="$text ($2/$3 $4)"
+  [ "$4" = "%" ] || { unit_words "$4"; text="$text ($2 of $3 $UW)"; }
   r_remaining
   if [ -n "$REM" ]; then r_left "$REM"; text="$text · $LF"; fi
   r_plain "$text"
@@ -2756,8 +2770,11 @@ r_sub_rows() {
     if [ "${S_ST[i]}" = "active" ] || [ "${S_ST[i]}" = "failed" ]; then
       if [ -n "${S_PD[i]}" ]; then
         if [ "${S_PU[i]}" = "%" ]; then cnt="${S_PD[i]}%"
-        elif [ -n "${S_PT[i]}" ]; then cnt="${S_PD[i]}/${S_PT[i]} ${S_PU[i]}"
-        else cnt="${S_PD[i]} ${S_PU[i]}"; fi
+        else
+          unit_words "${S_PU[i]}"
+          if [ -n "${S_PT[i]}" ]; then cnt="${S_PD[i]} of ${S_PT[i]} $UW"
+          else cnt="${S_PD[i]} $UW"; fi
+        fi
       fi
     fi
     case "${S_ST[i]}" in

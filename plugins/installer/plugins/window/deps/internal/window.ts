@@ -19,8 +19,14 @@ export const installerWindow = defineDep({
     crate: "plugins/installer/plugins/window/rust",
     bin: "equin-installer",
     embed: {
-      // The page, the protocol it draws, and the npm code bundled with it.
-      inputs: [`${PAGE_SOURCES}/**`, "plugins/installer/core/**", "bun.lock"],
+      // The page, the protocol it draws, and the npm code bundled with it;
+      // the Dock icon rust/src/dock.rs compiles in (include_bytes!).
+      inputs: [
+        `${PAGE_SOURCES}/**`,
+        "plugins/installer/core/**",
+        "bun.lock",
+        "plugins/framework/plugins/web-core/web/public/icon_512x512.png",
+      ],
       build: (ctx, scratch) => writePage(ctx.root, scratch),
     },
   }),

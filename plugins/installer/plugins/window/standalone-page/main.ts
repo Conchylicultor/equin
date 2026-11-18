@@ -405,7 +405,8 @@ function renderPaused(body: HTMLElement, pause: Pause): void {
       }),
     );
   }
-  body.append(barBelow(true));
+  // A stall's step still runs: its bar is not drawn paused.
+  body.append(barBelow(!stall));
   if (!showLog)
     body.append(errorBox(pause.title, pause.text, pause.evidence, stall));
 }

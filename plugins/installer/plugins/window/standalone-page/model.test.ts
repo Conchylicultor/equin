@@ -159,9 +159,20 @@ describe("installer page model", () => {
       "Building the interface",
     ]);
     expect(statusText(view, now(7))).toBe(
-      "Building the interface · 137 of 312",
+      "Building the interface · 137 of 312 plugins built",
     );
     expect(currentGroup(view)).toEqual({ index: 2, count: 3 });
+  });
+
+  test("a count says what it counts, in the user's words", () => {
+    const view = fold([
+      plan(),
+      step(0, "clone", "start"),
+      count(1, "clone", 1088, 1385, "crates"),
+    ]);
+    expect(statusText(view, now(2))).toMatch(
+      / · 1,088 of 1,385 components compiled$/,
+    );
   });
 
   test("a count with no total yet, or one from before the step started, is not shown", () => {
@@ -394,6 +405,10 @@ describe("installer page model: pauses, Fix with Claude, notices", () => {
     ]);
     expect(view.phase).toBe("paused");
     expect(view.pause?.blocking).toBe(false);
+    expect(captionParts(view, now(701))).toEqual([
+      "Step 2 of 3",
+      "Still waiting",
+    ]);
     applyLine(view, ev(720, { type: "resolved", how: "progress" }));
     expect(view.phase).toBe("running");
     expect(currentStep(view)?.step.id).toBe("clone");

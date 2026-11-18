@@ -360,7 +360,7 @@ describe("install.sh pauses: diagnosis, decisions, Fix with Claude", () => {
       step: "toolchain",
       kind: "stall",
       blocking: false,
-      title: "No progress for 1 seconds",
+      title: "No progress for a second",
     });
     const at = events.indexOf(stall!);
     expect(events.slice(at).find((e) => e.type === "resolved")).toMatchObject({
@@ -587,7 +587,7 @@ describe("install.sh --dry-run, plain terminal view", () => {
     );
     expect(stamped).toContainEqual(
       expect.stringMatching(
-        /\[5\/5\] build › build the interface: 25% \(296\/1184 plugins\)$/,
+        /\[5\/5\] build › build the interface: 25% \(296 of 1184 plugins built\)$/,
       ),
     );
     expect(stamped).toContainEqual(

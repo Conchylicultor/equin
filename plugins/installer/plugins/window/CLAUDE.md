@@ -65,7 +65,18 @@ binary through the curl stage 0 (`install.sh`), or directly.
   stderr becomes a `log` event with `step: null`, and an `exit` event when the
   script died before its EXIT trap could write one. All of them go through the
   same backlog, read after the event pipe's EOF.
-- **The terminal** gets one plain line per step, plus the done URL.
+- **The terminal** gets one plain line per step, written when it ends
+  (`✓` / `✗`; never a "started" line too) — a step with sub-steps is their
+  heading instead (its name as it starts, their lines under it) — plus the
+  done URL.
+- **The window opens hidden** and is shown on the page's `ready` (backstop:
+  the page's load finished, so a page whose script threw still shows): a
+  WKWebView paints white until its first frame, seconds on a cold Mac.
+- **The Dock icon** (`rust/src/dock.rs`, macOS): a bare executable has no
+  bundle, so the Dock would show the generic "exec" square; the binary sets
+  `NSApplication`'s icon from equin's own PNG (web-core's
+  `icon_512x512.png`, compiled in with `include_bytes!` and an identity input
+  of the dependency).
 
 ## The page (`standalone-page/`)
 
@@ -91,7 +102,9 @@ binary through the curl stage 0 (`install.sh`), or directly.
 - **Paused / fixing / done** (the mockup's, pixel for pixel — `moment.ts`
   writes each mockup moment; 0 differing pixels for the failed states and
   done, the fixing card differs only in its sentence, which says the prompt
-  is on the clipboard): "Installation paused" (a stall: "Still waiting"),
+  is on the clipboard): "Installation paused" (a stall: "Still waiting" —
+  one state, one word: its caption says "Still waiting" too, never "Paused",
+  and its bar is not drawn paused, since its step still runs),
   Fix with Claude (split button; where it opens is the page's choice, else
   the last `fixing` event's — the page stores nothing), Report issue
   (`installIssueUrl`), the bar paused, and the diagnosis box until Show log.
@@ -108,7 +121,9 @@ binary through the curl stage 0 (`install.sh`), or directly.
   answers (`password` / `password-cancel`); nothing is written anywhere.
 - **Running state** (the mockup's, pixel for pixel): the status line is what
   runs now — the running sub-step, else its step — as `<doing> · <done> of
-  <total>` when the tool gave a count (`progress`), else `<doing>…`; an open
+  <total> <unit words>` when the tool gave a count (`progress`; `UNIT_WORDS`:
+  crates are "components compiled", the same words install.sh's terminal view
+  uses), else `<doing>…`; an open
   `wait` says what it waits for instead (no internal names). The caption is
   `Step N of G` over the plan's **groups**, then the time left.
 - **Time** (`model.ts`, tested): steps with sub-steps are timed by their
