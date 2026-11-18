@@ -108,14 +108,22 @@ Two cases the retry covers by construction, both closed on 2026-11-18:
 - **A killed CHILD.** A host OOM kill usually takes a build's child, not the
   build: the biggest process is a type-check worker (or a batch it runs) or a
   check pass. Each layer carries the fact up typed, never as a bare exit code:
-  the spawn site throws `ChildKilledError` (`infra/spawn`), a first-party child
-  that saw one exits `128 + signo`, a check that failed only that way carries
-  `killedBy`, `./equin check` exits `128 + signo` when every failure is one,
+  the spawn primitives record every child a signal ended (`watchChildKills`,
+  `infra/spawn`; `spawnExpectOk`'s error carries it as `ChildKilledError`), a
+  first-party child that saw one exits `128 + signo`, the check runner marks
+  any check whose failure saw a killed child `killedBy` — whatever it spawned
+  (git, ESLint, the layout suite's `bun test`), with no code of its own — `./equin check` exits `128 + signo` when every failure is one,
   the build step's outcome is `killed`, and a build whose failure is made only
   of killed steps exits `128 + signo` (`buildFailureEnd`,
   `framework/cli/build`'s `cli/internal/failure-end.ts`) — a `killed` row in
   the ledger, retried like a build that took the signal itself. One real
   failure beside it (a type error, a failing check) keeps the build `failed`.
+  A top-level `./equin check` that joined an in-flight run adopts the
+  leader's kill too (`DirectOpContext.markKilled` → `JoinedRun.killedBy`)
+  and exits `128 + signo`; a check flight never shares a killed check's
+  failure (a joiner runs it itself). Not covered: a grandchild (Chromium under
+  the layout suite's `bun test`) whose death its parent reports as an
+  ordinary failure.
 - **A composition killed mid-publish.** The `composition.json` marker is
   two-phase (`infra/worktree`'s `claimingMarker` / `markerServes`): the claim
   a build stamps before it publishes is `publishing` and keeps the last

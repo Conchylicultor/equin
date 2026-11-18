@@ -355,7 +355,7 @@ takes a `debt` exemption on the check's id.
     - `infra/request-origin/agent-write-ledger` (1 debt)
     - `infra/runtime-profiler` (1 debt)
     - `infra/safe-fetch` (1 debt)
-    - `infra/spawn` (4 debt)
+    - `infra/spawn` (5 debt)
     - `infra/spawn/daemon` (1 debt)
     - `infra/spawn/daemon/bundle` (1 debt)
     - `infra/ssh` (2 debt)

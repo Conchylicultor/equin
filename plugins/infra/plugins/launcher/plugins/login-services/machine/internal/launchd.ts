@@ -68,13 +68,7 @@ function launchdService(id: LoginServiceId): LoginService {
     if (res.exitCode === LAUNCHCTL_NO_SUCH_SERVICE)
       return { kind: "not-loaded" };
     if (res.exitCode !== 0) {
-      throw new SpawnFailedError(
-        argv,
-        res.exitCode,
-        res.signalCode,
-        res.stdout,
-        res.stderr,
-      );
+      throw new SpawnFailedError(argv, res);
     }
     // Top-level properties are indented by exactly one tab; nested blocks
     // (environment, endpoints, …) by more, so anchoring on one tab reads the

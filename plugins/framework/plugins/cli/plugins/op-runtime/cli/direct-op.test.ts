@@ -49,7 +49,7 @@ function terminalOf(records: OpEvent[]): OpSummary | undefined {
  */
 type FlightScript =
   | { kind: "lead" }
-  | { kind: "join"; outcome: "success" | "failed" }
+  | { kind: "join"; outcome: "success" | "failed"; killedBy?: string }
   | { kind: "join-then-lead" }
   | { kind: "busy" };
 
@@ -145,7 +145,12 @@ function makeHarness(
       if (script.kind === "join") {
         o.onJoin?.(LEADER);
         // Only what the schema accepts is ever adopted.
-        const verdict = o.schema.parse({ outcome: script.outcome });
+        const verdict = o.schema.parse({
+          outcome: script.outcome,
+          ...(script.killedBy === undefined
+            ? {}
+            : { killedBy: script.killedBy }),
+        });
         if (!o.adoptable(verdict)) throw new Error("expected adoptable");
         return { role: "joined", leader: LEADER, verdict };
       }
@@ -467,6 +472,50 @@ describe("withDirectOp — run-level single-flight (opts.flight)", () => {
     expect(h.events.indexOf("flight")).toBeLessThan(
       h.events.indexOf("acquire:background:normal:2"),
     );
+  });
+
+  test("a leader's `failed` its body marked killed is published as killed", async () => {
+    const h = makeHarness({ flight: { kind: "lead" } });
+    const outcome = await withDirectOp(
+      "check",
+      { max: 1, flight: adoptInto([]) },
+      async (_grant, ctx) => {
+        ctx.markKilled("SIGKILL");
+        return "failed";
+      },
+      h.deps,
+    );
+    expect(outcome).toBe("failed");
+    expect(h.published).toEqual([{ outcome: "failed", killedBy: "SIGKILL" }]);
+  });
+
+  test("a joiner adopts a killed failure as killed; a plain one as a verdict", async () => {
+    const adopted = async (killedBy?: string) => {
+      const h = makeHarness({
+        flight: { kind: "join", outcome: "failed", killedBy },
+      });
+      let seen: string | null | undefined;
+      await withDirectOp(
+        "check",
+        {
+          max: 1,
+          flight: {
+            key: "same-work",
+            adopt: (j) => {
+              seen = j.killedBy;
+              return j.outcome;
+            },
+          },
+        },
+        async () => {
+          throw new Error("a joiner must not run the body");
+        },
+        h.deps,
+      );
+      return seen;
+    };
+    expect(await adopted("SIGKILL")).toBe("SIGKILL");
+    expect(await adopted()).toBeNull();
   });
 
   test("an `error` outcome is not a verdict: nothing is published", async () => {

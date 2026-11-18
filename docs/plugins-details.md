@@ -33106,7 +33106,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/request-origin/agent-write-ledger` (1 debt)
               - `infra/runtime-profiler` (1 debt)
               - `infra/safe-fetch` (1 debt)
-              - `infra/spawn` (4 debt)
+              - `infra/spawn` (5 debt)
               - `infra/spawn/daemon` (1 debt)
               - `infra/spawn/daemon/bundle` (1 debt)
               - `infra/ssh` (2 debt)
@@ -33157,15 +33157,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values): `parseRuntimeException`
         - **`checks`** — Check runner and built-in checks for ./equin check
           - Core:
-            - Uses: 93 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
+            - Uses: 94 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
               - `framework/tooling` ×12
               - `packages/timed-fs` ×11
               - `plugin-meta/plugin-records` ×9
               - `reports/check-thread-stall` ×8
               - `framework/tooling/exempt` ×7
+              - `infra/spawn` ×5
               - `infra/stack-sampler` ×5
               - `infra/host-fs/user-path` ×4
-              - `infra/spawn` ×4
               - `packages/shared-work` ×4
               - `framework/tooling/checks/source-analysis` ×3
               - `infra/launcher/env-names` ×3
@@ -40831,6 +40831,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/spawn-priority.spawnAtTier`
           - `packages/timed-fs.readFile`
         - Exports (types):
+          - `ChildKillWatch`
           - `ChildResourceUsage`
           - `LeftBehindProcess`
           - `SpawnBaseOptions`
@@ -40856,6 +40857,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SpawnFailedError`
           - `spawnPassthrough`
           - `spawnToFile`
+          - `watchChildKills`
       - Cross-plugin:
         - Imported by: 109 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
           - `infra` ×33
@@ -40882,7 +40884,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from:
           - `spawn-safety/no-raw-bun-spawn` — `.` (sanctioned)
-          - `boundaries/no-platform-api` — `core/internal/git-roots.ts`, `core/internal/resource-usage.ts`, `core/internal/spawn-captured.ts`, `core/internal/spawn-passthrough.ts` (debt)
+          - `boundaries/no-platform-api` — `core/internal/git-roots.ts`, `core/internal/kill-watch.ts`, `core/internal/resource-usage.ts`, `core/internal/spawn-captured.ts`, `core/internal/spawn-passthrough.ts` (debt)
           - `user-path/no-unproven-claim` — `core/internal/git-roots.ts` (sanctioned)
         - Exempted by:
           - `framework/cli/migrations` (0 debt)

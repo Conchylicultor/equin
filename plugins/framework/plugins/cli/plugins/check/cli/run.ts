@@ -234,6 +234,8 @@ function checkFlight(
   scope: CheckScope[] | undefined,
   alwaysRun: boolean,
   treeHash: string | null,
+  /** The adopted failure's kill signal (`JoinedRun.killedBy`), for the exit code. */
+  onKilled: (signal: string | null) => void,
 ): DirectOpFlight<"check"> | undefined {
   if (treeHash === null) return undefined;
   return {
@@ -243,7 +245,7 @@ function checkFlight(
       alwaysRun,
       treeHash,
     }),
-    adopt: ({ outcome, leader }, ctx) => {
+    adopt: ({ outcome, killedBy, leader }, ctx) => {
       // The leader's transcript is complete: its `done —` trailer is written
       // before the run returns, and the verdict is published after that.
       const transcript = worktreeArtifacts.checkLog(ctx.slug, leader.id);
@@ -271,6 +273,9 @@ function checkFlight(
       // Last line, so it survives `./equin check | tail`.
       if (outcome !== "success")
         console.error(`\nFull check output: ${transcript}`);
+      // A leader whose failure was only killed processes judged nothing; nor
+      // did this joiner, which exits the same way (`128 + signo`).
+      onKilled(killedBy);
       return outcome;
     },
   };
@@ -436,7 +441,9 @@ const run: CliAction<
       // so a reporting run never joins one.
       flight:
         treeHash && !fileReports
-          ? checkFlight(checks, scope, alwaysRun, treeHash.value)
+          ? checkFlight(checks, scope, alwaysRun, treeHash.value, (signal) => {
+              killedBy = signal;
+            })
           : undefined,
     },
     async (grant, ctx) => {
@@ -547,7 +554,9 @@ const run: CliAction<
       // killer took a type-check worker) judged nothing: it exits the way a
       // killed process does, `128 + signo`, so a build reading it records no
       // verdict rather than a failed one (op-runtime's check-subprocess).
+      // Said to the op too, so a run that joined this one exits the same way.
       if (!ok) killedBy = passKilledBy(failures.map((f) => f.result));
+      if (killedBy !== null) ctx.markKilled(killedBy);
       return ok ? "success" : "failed";
     },
   );

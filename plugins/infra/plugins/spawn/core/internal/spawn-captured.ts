@@ -13,6 +13,8 @@ import { join } from "node:path";
 import { holdParentLifeline } from "@plugins/packages/plugins/flock/core";
 import { spawnAtTier } from "@plugins/packages/plugins/spawn-priority/core";
 import { armAwakeDeadline } from "./awake-deadline";
+import { ChildKilledError } from "./child-killed";
+import { noteChildEnded } from "./kill-watch";
 import { childEnv } from "./child-env";
 import { killProcessGroup } from "./group-signal";
 import { trackLiveChild } from "./live-children";
@@ -24,21 +26,42 @@ import type { ChildResourceUsage, SpawnOptions, SpawnResult } from "./types";
 /**
  * A `spawnExpectOk` child that exited non-zero (or on a signal). Carries the
  * full capture so the caller's error path never has to re-run the command.
+ *
+ * Built from the spawn RESULT, so it can tell how a signal death came about: a
+ * child a signal ended that our own deadline did not (the OOM killer, a crash,
+ * someone else's kill) carries a `ChildKilledError` as its `cause` — no verdict
+ * from the child, and `killedByOf` finds it up any stack that wraps this.
  */
 export class SpawnFailedError extends Error {
+  readonly exitCode: number;
+  readonly signalCode: string | null;
+  readonly timedOut: boolean;
+  readonly stdout: string;
+  readonly stderr: string;
   constructor(
     readonly argv: string[],
-    readonly exitCode: number,
-    readonly signalCode: string | null,
-    readonly stdout: string,
-    readonly stderr: string,
+    ended: Pick<
+      SpawnResult,
+      "exitCode" | "signalCode" | "timedOut" | "stdout" | "stderr"
+    >,
   ) {
-    const cause = signalCode ? `signal ${signalCode}` : `exit ${exitCode}`;
+    const { exitCode, signalCode, timedOut, stdout, stderr } = ended;
+    const how = signalCode ? `signal ${signalCode}` : `exit ${exitCode}`;
     const detail = stderr.trim() || stdout.trim();
+    const killed =
+      signalCode !== null && !timedOut
+        ? new ChildKilledError(`\`${argv.join(" ")}\``, signalCode, detail)
+        : undefined;
     super(
-      `Command failed (${cause}): ${argv.join(" ")}${detail ? `\n${detail}` : ""}`,
+      `Command failed (${how}${timedOut ? ", timed out" : ""}): ${argv.join(" ")}${detail ? `\n${detail}` : ""}`,
+      killed === undefined ? undefined : { cause: killed },
     );
     this.name = "SpawnFailedError";
+    this.exitCode = exitCode;
+    this.signalCode = signalCode;
+    this.timedOut = timedOut;
+    this.stdout = stdout;
+    this.stderr = stderr;
   }
 }
 
@@ -305,10 +328,14 @@ async function spawnCapturedNow(
     const stderrBytes = opts.mergeStderr
       ? new Uint8Array(0)
       : new Uint8Array(await readFile(errPath));
+    // A signal death our bound did not cause, recorded in any kill watch
+    // (`watchChildKills`) before the result can be read as a plain failure.
+    const signalCode = signalName(proc.signalCode);
+    noteChildEnded(argv, { signalCode, timedOut });
     // rusage is only populated once the child has exited.
     return makeResult(
       exitCode,
-      signalName(proc.signalCode),
+      signalCode,
       timedOut,
       stdoutBytes,
       stderrBytes,
@@ -326,13 +353,7 @@ export async function spawnExpectOk(
 ): Promise<SpawnResult> {
   const result = await spawnCaptured(argv, opts);
   if (result.exitCode !== 0) {
-    throw new SpawnFailedError(
-      argv,
-      result.exitCode,
-      result.signalCode,
-      result.stdout,
-      result.stderr,
-    );
+    throw new SpawnFailedError(argv, result);
   }
   return result;
 }

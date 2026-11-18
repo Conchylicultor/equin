@@ -1,6 +1,9 @@
 import { sharedWork } from "@plugins/packages/plugins/shared-work/core";
 import { judgeOwnFileCalls, meterOwnFileCalls } from "./whole-tree-read";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
+import {
+  getWorktreeRoot,
+  watchChildKills,
+} from "@plugins/infra/plugins/spawn/core";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
 import {
   envName,
@@ -44,6 +47,7 @@ import {
   loadExemptions,
   type ResolvedExemption,
 } from "@plugins/framework/plugins/tooling/plugins/exempt/core";
+import { withKillsSeen } from "./killed-pass";
 import {
   thrownOutcome,
   type CheckObservation,
@@ -519,12 +523,19 @@ export async function runChecks(
     base: Omit<CheckContext, "exempt" | "inScope">,
   ): Promise<CheckResult> => {
     const session = openCheckExemptions(check, base.repo, loadRunExemptions);
+    // Every child the body spawns that dies of a signal (the spawn primitives
+    // record it): a failure that saw one is no verdict (`withKillsSeen`), so
+    // a check that only reads `exitCode !== 0` is still read right — and a
+    // check flight never publishes it as one.
+    const kills = watchChildKills();
     // The body's own file calls, judged against its declaration: an O(tree)
     // body is either declared (`wholeTreeRead`) or fails (`whole-tree-read.ts`).
-    const { result, own } = await meterOwnFileCalls(() =>
-      check.run({ ...base, ...session.ctx }),
+    const { result, own } = await kills.run(() =>
+      meterOwnFileCalls(() => check.run({ ...base, ...session.ctx })),
     );
-    return session.finish(judgeOwnFileCalls(check, own, result));
+    return session.finish(
+      withKillsSeen(judgeOwnFileCalls(check, own, result), kills.kills),
+    );
   };
 
   // Shadow mode (opt-in via the env var): an input-keyed check logs the
@@ -856,10 +867,17 @@ export async function runChecks(
           progress.checkStarted(check.id);
           const observations: CheckObservation[] = [];
           let outcome: CheckOutcome | undefined;
+          // Every child the check spawns that dies of a signal, recorded by
+          // the spawn primitives. A body that RETURNS is read against them in
+          // `runBody` (before a flight publishes its verdict); this watch is
+          // for a body that throws.
+          const kills = watchChildKills();
           try {
             // Its file calls counted as its own, written on its `end`.
-            outcome = await progress.inCheck(check.id, () =>
-              runOne(check, wallStart, observations, slot),
+            outcome = await kills.run(() =>
+              progress.inCheck(check.id, () =>
+                runOne(check, wallStart, observations, slot),
+              ),
             );
             return outcome;
           } catch (err) {
@@ -875,11 +893,15 @@ export async function runChecks(
             // is swallowed — the run still fails, just with a name on it. (This
             // also catches the per-check cache bookkeeping around the body; the
             // stack says which threw.)
-            outcome = thrownOutcome(check, err, {
+            const thrown = thrownOutcome(check, err, {
               wallStart,
               durationMs: Math.round(performance.now() - wallStart),
               observations,
             });
+            outcome = {
+              ...thrown,
+              result: withKillsSeen(thrown.result, kills.kills),
+            };
             return outcome;
           } finally {
             // In a `finally` so the end is recorded on every path, a thrown

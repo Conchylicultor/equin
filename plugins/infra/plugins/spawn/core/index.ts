@@ -33,3 +33,5 @@ export {
   authoredSignalOf,
   childSignalOf,
 } from "./internal/child-killed";
+export { watchChildKills } from "./internal/kill-watch";
+export type { ChildKillWatch } from "./internal/kill-watch";

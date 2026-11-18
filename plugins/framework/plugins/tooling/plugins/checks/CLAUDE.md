@@ -683,15 +683,15 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
 
 - Description: Check runner and built-in checks for ./equin check
 - Core:
-  - Uses: 93 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 94 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework/tooling` ×12
     - `packages/timed-fs` ×11
     - `plugin-meta/plugin-records` ×9
     - `reports/check-thread-stall` ×8
     - `framework/tooling/exempt` ×7
+    - `infra/spawn` ×5
     - `infra/stack-sampler` ×5
     - `infra/host-fs/user-path` ×4
-    - `infra/spawn` ×4
     - `packages/shared-work` ×4
     - `framework/tooling/checks/source-analysis` ×3
     - `infra/launcher/env-names` ×3

@@ -146,8 +146,10 @@ spawns that are meant to outlive a call, each sanctioned by an exemption.
   `timedOut` is `true` iff OUR deadline fired and we killed the child (never
   inferred from `signalCode` — anyone can SIGTERM a child).
 - **`spawnExpectOk(argv, opts)`** — the same, but THROWS `SpawnFailedError`
-  (carrying argv/exitCode/signalCode/stdout/stderr) on non-zero exit, so a
-  failed command can never be read as empty success.
+  (carrying argv/exitCode/signalCode/timedOut/stdout/stderr) on non-zero exit, so a
+  failed command can never be read as empty success. Built from the spawn
+  result (`new SpawnFailedError(argv, result)`), so a child a signal ended
+  that our deadline did not carries a `ChildKilledError` as its `cause`.
 - **`spawnPassthrough(argv, { cwd, env, tier, stdin, onSpawn, processGroup }?)`** —
   exec-shaped spawn: stdout/stderr `"inherit"`, stdin `"ignore"` unless
   `stdin: "inherit"` (only for a child that must be indistinguishable from the
@@ -169,6 +171,15 @@ spawns that are meant to outlive a call, each sanctioned by an exemption.
   authored code — only for a child whose codes this repo writes). The chain
   type-check batch → worker → check → build uses it so an OOM kill reaches the
   build ledger as `killed`, not `failed` (`build/converge` § Termination).
+- **`watchChildKills()`** — `{ kills, run(fn) }`: every child spawned inside
+  `run` (any async depth; nested watches each see it, concurrent ones only
+  their own) that a signal ended, as `ChildKilledError`s. Recorded by
+  `spawnCaptured` / `spawnPassthrough` / `spawnToFile` themselves, so a caller
+  that only reads `exitCode !== 0` still cannot drop the fact; not recorded:
+  a child our own `timeoutMs` ended (`timedOut`, a deadline verdict), an
+  aborted call, or a first-party child's authored `128 + signo` (its spawner
+  throws for that). The check runner watches each check body and reads a
+  failure that saw a kill as `killedBy` (`checks`' `withKillsSeen`).
 - **`getWorktreeRoot(cwd?)` / `getMainRepoRoot(cwd?)`** — THE canonical git
   root helpers (`git rev-parse --show-toplevel` /
   `dirname(resolve(git rev-parse --git-common-dir))`), collapsing the ~51-file
@@ -316,6 +327,7 @@ presence only — **no re-exports**; import from `core/`.
     - `packages/spawn-priority.spawnAtTier`
     - `packages/timed-fs.readFile`
   - Exports (types):
+    - `ChildKillWatch`
     - `ChildResourceUsage`
     - `LeftBehindProcess`
     - `SpawnBaseOptions`
@@ -341,6 +353,7 @@ presence only — **no re-exports**; import from `core/`.
     - `SpawnFailedError`
     - `spawnPassthrough`
     - `spawnToFile`
+    - `watchChildKills`
 - Cross-plugin:
   - Imported by: 109 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×33
@@ -367,7 +380,7 @@ presence only — **no re-exports**; import from `core/`.
 - Exemptions:
   - Exempts itself from:
     - `spawn-safety/no-raw-bun-spawn` — `.` (sanctioned)
-    - `boundaries/no-platform-api` — `core/internal/git-roots.ts`, `core/internal/resource-usage.ts`, `core/internal/spawn-captured.ts`, `core/internal/spawn-passthrough.ts` (debt)
+    - `boundaries/no-platform-api` — `core/internal/git-roots.ts`, `core/internal/kill-watch.ts`, `core/internal/resource-usage.ts`, `core/internal/spawn-captured.ts`, `core/internal/spawn-passthrough.ts` (debt)
     - `user-path/no-unproven-claim` — `core/internal/git-roots.ts` (sanctioned)
   - Exempted by:
     - `framework/cli/migrations` (0 debt)

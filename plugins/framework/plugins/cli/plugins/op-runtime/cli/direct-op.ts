@@ -87,6 +87,14 @@ export interface DirectOpContext<K extends OpKind> {
    * Always false when `nested` (a nested op acquires and records nothing).
    */
   opportunistic: boolean;
+  /**
+   * The body's `failed` is no verdict on the work: a process it ran was killed
+   * by `signal` (the OOM killer, a crash) and that is the whole failure. Call
+   * it before returning `failed`; a joiner then adopts the failure as killed
+   * (`JoinedRun.killedBy`) and can exit the way a killed run does, instead of
+   * reading it as a verdict.
+   */
+  markKilled: (signal: string) => void;
 }
 
 /**
@@ -98,6 +106,8 @@ export type SharedOutcome = "success" | "failed";
 
 const SharedVerdictSchema = z.object({
   outcome: z.enum(["success", "failed"]),
+  /** Set on a `failed` whose body called `markKilled`: no verdict, a kill. */
+  killedBy: z.string().optional(),
 });
 type SharedVerdict = z.infer<typeof SharedVerdictSchema>;
 
@@ -108,6 +118,11 @@ function isSharedOutcome(outcome: string): outcome is SharedOutcome {
 /** What a joiner learns about the in-flight run whose verdict it adopted. */
 export interface JoinedRun {
   outcome: SharedOutcome;
+  /**
+   * The signal the leader's `failed` was only (`DirectOpContext.markKilled`):
+   * no verdict on the work. `null` for a real verdict.
+   */
+  killedBy: string | null;
   /** The run that produced the verdict: its op id (`opId`), pid and start. */
   leader: FlightLeader;
 }
@@ -483,6 +498,8 @@ export async function withDirectOp<K extends OpKind>(
     await deps.preferOomKill();
   }
 
+  // What the body said its failure was (`markKilled`), shared with joiners.
+  let killedBy: string | null = null;
   const ctx: DirectOpContext<K> = {
     slug,
     branch,
@@ -491,6 +508,9 @@ export async function withDirectOp<K extends OpKind>(
     nested,
     profiler,
     opportunistic,
+    markKilled: (signal) => {
+      killedBy = signal;
+    },
   };
 
   try {
@@ -570,7 +590,12 @@ export async function withDirectOp<K extends OpKind>(
       publish: (v: SharedVerdict) => void,
     ): Promise<OutcomeByKind[K]> => {
       const outcome = await run();
-      if (isSharedOutcome(outcome)) publish({ outcome });
+      if (isSharedOutcome(outcome))
+        publish(
+          outcome === "failed" && killedBy !== null
+            ? { outcome, killedBy }
+            : { outcome },
+        );
       return outcome;
     };
 
@@ -608,7 +633,14 @@ export async function withDirectOp<K extends OpKind>(
 
     profiler?.waitEnd("acquired");
     const outcome = flight.adopt(
-      { outcome: result.verdict.outcome, leader: result.leader },
+      {
+        outcome: result.verdict.outcome,
+        killedBy:
+          result.verdict.outcome === "failed"
+            ? (result.verdict.killedBy ?? null)
+            : null,
+        leader: result.leader,
+      },
       ctx,
     );
     profiler?.complete(outcome);

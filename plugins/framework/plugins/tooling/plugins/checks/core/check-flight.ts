@@ -49,9 +49,10 @@ export function gateSlot(gate: Semaphore): GateSlot {
  * per-publish nonce), so "failures always re-run" still holds for every later
  * run.
  *
- * `inconclusive` is in the schema only so that a stray one can be REFUSED
- * (`adoptable`) rather than stripped by the parse into a hard failure: a leader
- * never publishes one.
+ * `inconclusive` and `killedBy` are in the schema only so that a stray one can
+ * be REFUSED (`adoptable`) rather than stripped by the parse into a hard
+ * failure: a leader never publishes either. A killed check is no verdict — a
+ * joiner runs it itself, as it would after an inconclusive one.
  */
 const SharedCheckVerdictSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("pass") }),
@@ -62,6 +63,7 @@ const SharedCheckVerdictSchema = z.discriminatedUnion("kind", [
       message: z.string(),
       hint: z.string().optional(),
       inconclusive: z.literal(true).optional(),
+      killedBy: z.string().optional(),
     }),
     observations: z.array(
       z.object({ line: z.string(), stream: z.enum(["stdout", "stderr"]) }),
@@ -104,8 +106,8 @@ export interface CheckFlightArgs {
  *
  * **Leading** (the key is free): run the body holding the slot, and publish a
  * pass (`{kind:"pass"}`, after the body's own cache record) or a fatal failure
- * (`{kind:"fail", result, observations}`). An inconclusive result, or a body
- * that throws, publishes nothing — a joiner then runs the check itself.
+ * (`{kind:"fail", result, observations}`). An inconclusive or killed result, or
+ * a body that throws, publishes nothing — a joiner then runs the check itself.
  *
  * **Joining** (another run is in it): the slot is RELEASED for the wait, so
  * this run's other checks keep going, and re-taken only when there is work to
@@ -148,7 +150,9 @@ export async function runCheckFlight(
       }),
       id: args.runId,
       schema: SharedCheckVerdictSchema,
-      adoptable: (v) => v.kind === "pass" || v.result.inconclusive !== true,
+      adoptable: (v) =>
+        v.kind === "pass" ||
+        (v.result.inconclusive !== true && v.result.killedBy === undefined),
       onJoin: (leader) => {
         joined = true;
         args.slot.release();
@@ -158,13 +162,16 @@ export async function runCheckFlight(
     async (publish) => {
       if (joined) {
         // The leader published nothing adoptable (it died, threw, or came
-        // back inconclusive): run it ourselves, with our slot back.
+        // back inconclusive or killed): run it ourselves, with our slot back.
         args.onJoinEnd(false);
         await args.slot.acquire();
       }
       const outcome = await args.run();
       if (outcome.result.ok) publish({ kind: "pass" });
-      else if (!outcome.result.inconclusive)
+      else if (
+        !outcome.result.inconclusive &&
+        outcome.result.killedBy === undefined
+      )
         publish({
           kind: "fail",
           result: outcome.result,

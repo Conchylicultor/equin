@@ -187,13 +187,7 @@ async function isAncestor(
   });
   if (r.exitCode === 0) return true;
   if (r.exitCode === 1) return false;
-  throw new SpawnFailedError(
-    argv,
-    r.exitCode,
-    r.signalCode,
-    r.stdout,
-    r.stderr,
-  );
+  throw new SpawnFailedError(argv, r);
 }
 
 /**
@@ -253,13 +247,7 @@ export async function fetchUpstreamStatus(
         url: upstream.url,
         detail: failure.detail,
       };
-    throw new SpawnFailedError(
-      argv,
-      fetched.exitCode,
-      fetched.signalCode,
-      fetched.stdout,
-      fetched.stderr,
-    );
+    throw new SpawnFailedError(argv, fetched);
   }
 
   const where = { remote: upstream.remote, url: upstream.url };

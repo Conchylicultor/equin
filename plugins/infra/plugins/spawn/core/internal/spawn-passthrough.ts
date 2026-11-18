@@ -8,6 +8,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { holdParentLifeline } from "@plugins/packages/plugins/flock/core";
 import { spawnAtTier } from "@plugins/packages/plugins/spawn-priority/core";
+import { noteChildEnded } from "./kill-watch";
 import { childEnv } from "./child-env";
 import { trackLiveChild } from "./live-children";
 import { killProcessGroup } from "./group-signal";
@@ -122,9 +123,12 @@ async function runToCompletion(
         }
         // Otherwise the exit reaper still covers the group until it is ended below.
       }
+      const signalCode = signalName(proc.signalCode);
+      // No bound of ours ends a passthrough child: any signal is a kill.
+      noteChildEnded(argv, { signalCode, timedOut: false });
       const result: SpawnPassthroughResult = {
         exitCode,
-        signalCode: signalName(proc.signalCode),
+        signalCode,
         resourceUsage: await readResourceUsage(proc, peak),
       };
       if (!ownGroup) return result;
