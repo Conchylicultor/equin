@@ -159,7 +159,8 @@ function harness(opts: { duress?: boolean } = {}) {
     start: (string | null)[];
     end: HoldResult[];
     requeues: number;
-  } = { start: [], end: [], requeues: 0 };
+    noLongerAlone: number;
+  } = { start: [], end: [], requeues: 0, noLongerAlone: 0 };
   const deps: ValveDeps = {
     isUnderDuress: () => {
       duressChecks++;
@@ -185,6 +186,9 @@ function harness(opts: { duress?: boolean } = {}) {
     onHoldEnd: (result) => holds.end.push(result),
     onRequeue: () => {
       holds.requeues++;
+    },
+    onNoLongerAlone: () => {
+      holds.noLongerAlone++;
     },
   };
   return {
@@ -267,7 +271,12 @@ describe("admitThroughGate", () => {
     const other = h.gate.take("shared");
     const hold = await admitThroughGate({ gated: true }, h.deps);
     expect(hold?.mode).toBe("shared");
-    expect(h.holds).toEqual({ start: [], end: [], requeues: 0 });
+    expect(h.holds).toEqual({
+      start: [],
+      end: [],
+      requeues: 0,
+      noLongerAlone: 0,
+    });
     await hold?.release();
     await other.release();
   });
@@ -280,8 +289,71 @@ describe("admitThroughGate", () => {
       start: ["cluster-onset: decompressionsPerSec"],
       end: ["acquired"],
       requeues: 0,
+      noLongerAlone: 0,
     });
+    expect(h.gate.state()).toEqual({ shared: 0, exclusive: true });
     await hold?.release();
+    expect(h.gate.state()).toEqual({ shared: 0, exclusive: false });
+  });
+
+  // 2026-11-18: a build admitted alone in a 6-minute duress episode hung in its
+  // check pass; ten agent builds waited an hour behind it on a calm host.
+  test("admitted alone, duress clears: holds shared from then on, waiters start beside it", async () => {
+    const h = harness({ duress: true });
+    const alone = await admitThroughGate({ gated: true }, h.deps);
+    expect(alone?.mode).toBe("exclusive");
+    const waiter = track(admitThroughGate({ gated: true }, h.deps));
+    await tick();
+    expect(waiter.done()).toBe(false);
+
+    h.setDuress(false);
+    const beside = await waiter.promise;
+    expect(beside?.mode).toBe("shared");
+    for (let i = 0; i < 5; i++) await tick();
+    expect(alone?.mode).toBe("shared");
+    expect(h.holds.noLongerAlone).toBe(1);
+    expect(h.gate.state()).toEqual({ shared: 2, exclusive: false });
+    // Back under duress, it no longer counts as the one build allowed to run.
+    expect(mustRequeue(alone, true)).toBe(true);
+
+    await alone?.release();
+    await beside?.release();
+    expect(h.gate.state()).toEqual({ shared: 0, exclusive: false });
+  });
+
+  test("admitted alone, released while the duress lasts: the watch ends, nothing is retaken", async () => {
+    const h = harness({ duress: true });
+    const alone = await admitThroughGate({ gated: true }, h.deps);
+    await tick();
+    await alone?.release();
+    h.setDuress(false);
+    for (let i = 0; i < 5; i++) await tick();
+    expect(h.holds.noLongerAlone).toBe(0);
+    expect(h.gate.state()).toEqual({ shared: 0, exclusive: false });
+  });
+
+  test("admitted alone, released while the shared retake waits: nothing is left held", async () => {
+    const h = harness({ duress: true });
+    const alone = await admitThroughGate({ gated: true }, h.deps);
+    // Another exclusive holder wins the gap between release and retake.
+    const realTry = h.deps.gate.tryLock;
+    let other: GateHold | null = null;
+    h.deps.gate.tryLock = (mode) => {
+      if (mode === "shared" && other === null) {
+        other = h.gate.take("exclusive");
+        return null;
+      }
+      return realTry(mode);
+    };
+    h.setDuress(false);
+    for (let i = 0; i < 5; i++) await tick();
+    expect(alone?.mode).toBe("shared");
+    expect(h.gate.state()).toEqual({ shared: 0, exclusive: true });
+
+    await alone?.release();
+    await (other as GateHold | null)?.release();
+    for (let i = 0; i < 5; i++) await tick();
+    expect(h.gate.state()).toEqual({ shared: 0, exclusive: false });
   });
 
   test("under duress, waits for the running build to finish — no timeout", async () => {
@@ -484,7 +556,7 @@ describe("mustRequeue", () => {
     expect(mustRequeue(shared, false)).toBe(false);
   });
 
-  test("admitted alone ⇒ never requeued, so the loop terminates", () => {
+  test("still holding the gate alone ⇒ not requeued", () => {
     expect(mustRequeue(exclusive, true)).toBe(false);
   });
 

@@ -1066,7 +1066,9 @@ const REQUEUE = Symbol("requeue");
  * and must not then start beside the others — so the re-check runs INSIDE the
  * grant, the moment the slots are held. On a hit `fn` does not run, the share
  * and the gate are released, and the build is admitted again — exclusively
- * this time, which `mustRequeue` never re-checks, so the loop terminates. ONE
+ * this time, which `mustRequeue` does not re-check while the hold is still
+ * exclusive (it goes shared when the latch clears), so the loop ends at the
+ * first admission the latch does not change under. ONE
  * grant spans every target, so a build never queues for a second grant while
  * holding the gate or a first one — the deadlock a per-target acquire had to
  * avoid cannot be written.

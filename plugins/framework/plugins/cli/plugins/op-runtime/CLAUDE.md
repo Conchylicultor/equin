@@ -77,12 +77,18 @@ holds the gate and finishes, so the line always moves.
   (`data-dirs/`): calm admission takes it **shared**, duress admission
   **exclusive** (granted once every running agent build has released it).
   Duress waiters queue for it in a `packages/ticket-line` FIFO.
+- An exclusive hold excludes only **while the duress lasts**: when the latch
+  clears, the build swaps it for a shared one (`aloneWhileDuress`) and the
+  builds behind it start. It used to last to the build's verdict — on
+  2026-11-18 a build admitted alone in a 6-minute episode hung in its check
+  pass and ten agent builds waited an hour on a calm host. A build that hangs
+  while the duress LASTS still stops the line; that is the hang's to fix.
 - Taken **before** the host CPU grant, once per build right after its
   `.build.lock`, and released with the grant at the verdict (build's
   `withBuildAdmission`). The build re-checks duress once its grant is held: a build admitted
   shared that now sees duress releases grant and gate and is admitted again,
-  exclusively (`mustRequeue`) — an exclusive admission is never re-checked, so the
-  loop terminates.
+  exclusively (`mustRequeue`) — a hold that is still exclusive is never
+  re-checked; one that went shared on a cleared latch is.
 - Main (interactive lane), the detached auto-build and push are not gated
   (`valveGates`). When the machine watcher is down the latch cannot go up, and
   the build says so (`checkValveGuard`).

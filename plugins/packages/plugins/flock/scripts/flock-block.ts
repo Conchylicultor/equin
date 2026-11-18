@@ -37,6 +37,7 @@ const { symbols: ffi } = dlopen(
 );
 const LOCK_SH = 1;
 const LOCK_EX = 2;
+const LOCK_UN = 8;
 const op = shared === true ? LOCK_SH : LOCK_EX;
 
 // Open (never close) the lock fd, then block THIS thread only until we hold it.
@@ -50,4 +51,26 @@ if (rc !== 0) {
 }
 
 // We hold the lock. Tell the main thread; it relays "granted\n" to the parent.
+if (shared === true) {
+  // Pass the wake on. macOS wakes ONE blocked flock waiter per release and
+  // parks the rest behind the one it woke (xnu's F_WAKE1_SAFE: right for
+  // exclusive waiters, which could not all be granted anyway). Shared waiters
+  // CAN all be granted, yet each of the parked ones is woken only when the one
+  // before it releases — so N shared waiters behind one exclusive holder were
+  // granted one per holder lifetime, not together (2026-11-18: ten agent
+  // builds waiting shared at the build gate ran one after the other for
+  // minutes each on an idle host). Releasing and retaking the lock here wakes
+  // the next parked waiter, which does the same: the whole chain is granted
+  // in milliseconds. "granted" is posted only after the retake, so the caller
+  // never holds less than it was told; an exclusive waiter that wins the gap
+  // just makes the retake wait its turn like any other shared wait.
+  ffi.flock(fd, LOCK_UN);
+  const again = ffi.flock(fd, LOCK_SH);
+  if (again !== 0) {
+    throw new Error(
+      `flock-block: retaking flock(LOCK_SH) on ${file} returned ${again}`,
+    );
+  }
+}
+
 parentPort.postMessage("granted");

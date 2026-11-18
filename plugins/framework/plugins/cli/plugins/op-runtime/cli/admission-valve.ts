@@ -48,8 +48,12 @@ import { buildProfilerStart } from "./profiler";
 // The mechanism is one host-wide readers/writer flock, `gate.lock`:
 //  - calm admission takes it SHARED — calm builds never exclude each other;
 //  - duress admission takes it EXCLUSIVE — granted only once every running agent
-//    build has released it, and it keeps every other agent build out until it
-//    finishes;
+//    build has released it, and it keeps every other agent build out WHILE THE
+//    DURESS LASTS: the moment the latch clears, the build swaps its exclusive
+//    hold for a shared one (`aloneWhileDuress`) and calm builds start beside
+//    it. An exclusive hold used to last to the build's verdict; on 2026-11-18 a
+//    build admitted alone in a 6-minute duress episode then hung in its check
+//    pass, and ten agent builds waited an hour on a calm, idle host;
 //  - duress waiters queue for the exclusive lock in a first-come-first-served
 //    `ticket-line`, so they are admitted in arrival order (a bare flock wakes an
 //    arbitrary waiter). A build's place is the moment it first reached the gate,
@@ -104,6 +108,10 @@ export type GateMode = "shared" | "exclusive";
 
 /** The gate, held across the build (released with its grant). */
 export interface GateHold {
+  /**
+   * How the gate is held NOW — an admission made alone reads `shared` once the
+   * duress it was made under has cleared (`aloneWhileDuress`).
+   */
   readonly mode: GateMode;
   /** Idempotent. */
   release(): Promise<void>;
@@ -169,6 +177,11 @@ export interface ValveDeps {
    * the lock back and goes round again, keeping its place in line.
    */
   onRequeue(): void;
+  /**
+   * The duress this build was admitted alone under has cleared: it holds the
+   * gate shared from here on, so calm builds start beside it.
+   */
+  onNoLongerAlone(): void;
 }
 
 /** The hold reason while a calm build waits for an exclusive build to finish. */
@@ -209,7 +222,13 @@ export async function admitThroughGate(
   };
   const admitted = (hold: GateHold, result: HoldResult): GateAdmission => {
     if (heldOn !== undefined) deps.onHoldEnd(result);
-    return { mode: hold.mode, release: () => hold.release(), place };
+    return {
+      get mode() {
+        return hold.mode;
+      },
+      release: () => hold.release(),
+      place,
+    };
   };
 
   try {
@@ -217,7 +236,7 @@ export async function admitThroughGate(
       if (await deps.isUnderDuress()) {
         holdStart(await deps.duressReason());
         const alone = await exclusiveUnlessCleared(deps, line);
-        if (alone) return admitted(alone, "acquired");
+        if (alone) return admitted(aloneWhileDuress(deps, alone), "acquired");
         continue;
       }
       let shared = deps.gate.tryLock("shared");
@@ -312,10 +331,17 @@ async function exclusiveUnlessCleared(
   })();
   try {
     if ((await Promise.race([line.head(), cleared])) === null) return null;
-    return (
+    const alone =
       deps.gate.tryLock("exclusive") ??
-      (await deps.gate.waitLock("exclusive", clear.signal))
-    );
+      (await deps.gate.waitLock("exclusive", clear.signal));
+    // Granted because the build running alone let go on a cleared latch: the
+    // latch is read again rather than trusting the watch above to have fired
+    // first, and a calm build goes round to be admitted shared.
+    if (!(await deps.isUnderDuress())) {
+      await alone.release();
+      return null;
+    }
+    return alone;
   } catch (err) {
     if (err instanceof DuressCleared) return null;
     throw err;
@@ -325,12 +351,77 @@ async function exclusiveUnlessCleared(
   }
 }
 
+/** Why the watch of an exclusive hold stopped: the build released the gate. */
+class GateReleased extends Error {
+  constructor() {
+    super("gate released");
+  }
+}
+
 /**
- * The post-grant re-check: a build admitted SHARED while calm that now holds
- * its CPU grant under duress must not start beside the others — release grant
- * and gate and be admitted again (exclusively). An exclusive admission is never
- * re-checked: it is the one build allowed to run, which is what makes the
- * caller's retry loop terminate.
+ * An exclusive hold that excludes only while the duress lasts. The gate exists
+ * to run agent builds one at a time on a host in trouble; once the latch
+ * clears there is nothing left to protect, so the hold is swapped for a shared
+ * one and the builds waiting behind it start. Without this the exclusion
+ * lasted to the holder's verdict — minutes of an idle host per episode, and
+ * without bound when the holder hangs.
+ *
+ * The swap is release-then-retake (the exclusive lock may be held by a
+ * `flock-wait` child, which cannot convert it): in between the build holds
+ * nothing, and reads as `shared` — so the caller's post-grant re-check
+ * (`mustRequeue`) sends it back in line if duress trips again before it
+ * starts. If an exclusive waiter wins the gap, the shared retake waits for it;
+ * that waiter sees the same calm latch and swaps too.
+ *
+ * Event-driven like every other latch wait: `waitForWake`, never a poll.
+ */
+function aloneWhileDuress(deps: ValveDeps, exclusive: GateHold): GateHold {
+  let current: GateHold | null = exclusive;
+  let mode: GateMode = "exclusive";
+  const stop = new AbortController();
+  const watching = (async () => {
+    while (!stop.signal.aborted) {
+      if (await deps.isUnderDuress()) {
+        await deps.waitForWake(stop.signal);
+        continue;
+      }
+      mode = "shared";
+      current = null;
+      await exclusive.release();
+      if (stop.signal.aborted) return;
+      deps.onNoLongerAlone();
+      try {
+        current =
+          deps.gate.tryLock("shared") ??
+          (await deps.gate.waitLock("shared", stop.signal));
+      } catch (err) {
+        if (!(err instanceof GateReleased)) throw err;
+      }
+      return;
+    }
+  })();
+  let released: Promise<void> | undefined;
+  return {
+    get mode() {
+      return mode;
+    },
+    release: () =>
+      (released ??= (async () => {
+        stop.abort(new GateReleased());
+        await watching;
+        await current?.release();
+      })()),
+  };
+}
+
+/**
+ * The post-grant re-check: a build that holds the gate SHARED — admitted while
+ * calm, or admitted alone under a duress that has since cleared — and now holds
+ * its CPU grant under duress must not start beside the others: release grant
+ * and gate and be admitted again (exclusively). A build still holding the gate
+ * exclusively is never re-checked: it is the one build allowed to run. The
+ * caller's retry loop ends at the first admission the latch does not change
+ * under.
  */
 export function mustRequeue(
   hold: GateHold | null,
@@ -406,6 +497,11 @@ export function createValveDeps(): ValveDeps {
       closeHoldSpan();
       console.log(
         "build admission: duress tripped again before this build started — back in line",
+      );
+    },
+    onNoLongerAlone: () => {
+      console.log(
+        "build admission: duress cleared — no longer running alone, other agent builds may start",
       );
     },
   };

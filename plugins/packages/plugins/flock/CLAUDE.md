@@ -39,6 +39,16 @@ script is named that way, so a self-contained daemon bundle carries them): they
 are loaded by path and stay independently runnable. The one lock file arrives via
 `FLOCK_WAIT_FILE`.
 
+**A granted shared waiter passes the wake on.** macOS wakes ONE blocked flock
+waiter per release and parks the others behind the one it woke — right for
+exclusive waiters, wrong for shared ones, which could all hold the lock: each
+parked waiter was granted only when the one before it *released*. So
+`flock-block.ts`, once granted a shared lock, releases and retakes it before
+reporting `granted`; that wakes the next parked waiter, which does the same, and
+the whole chain is granted in milliseconds (`wait.test.ts`). Found 2026-11-18:
+ten agent builds waiting shared at the build gate ran one after the other on an
+idle host.
+
 **Why the blocking flock sits on a worker thread, not the child's main
 thread.** A child blocked on its *main* thread could not observe stdin EOF or
 signals while parked; if its parent were SIGKILLed nobody would be left to
