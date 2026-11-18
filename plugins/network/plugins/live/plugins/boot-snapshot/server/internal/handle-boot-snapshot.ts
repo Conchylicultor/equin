@@ -217,9 +217,13 @@ export async function assembleBootSnapshot(opts: {
   return { resources, tuples, timings, persistedReadMs };
 }
 
-export const handleBootSnapshot = implement(bootSnapshot, ({ req }) =>
-  assembleBootSnapshot({
-    webPlugins: composedWebPlugins(),
-    caller: admittedAs(req),
-  }),
-);
+export const handleBootSnapshot = implement(bootSnapshot, async ({ req }) => {
+  const caller = admittedAs(req);
+  return {
+    ...(await assembleBootSnapshot({
+      webPlugins: composedWebPlugins(),
+      caller,
+    })),
+    caller,
+  };
+});

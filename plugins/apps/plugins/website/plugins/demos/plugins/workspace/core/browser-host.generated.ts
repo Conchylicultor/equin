@@ -484,6 +484,7 @@ export const browserHost = {
     "fields.variant.config",
     "framework.browser-server",
     "framework.cli.build.experimental-marks",
+    "framework.principal",
     "fullscreen",
     "hints",
     "history.dialog",

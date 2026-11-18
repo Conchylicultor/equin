@@ -1,7 +1,10 @@
 /**
  * A request to an endpoint answered non-2xx; `body` is the reply, JSON-parsed
- * when it parses. The message defaults to `HTTP <status>` (a page's toast
- * prefers the body's own message); a caller off the page names the request.
+ * when it parses. `readEndpointResponse` words the message to name the request
+ * (`HTTP <status> from <route>: <why>` — `describeRefusal`), so an unhandled
+ * one says what was refused; a page's toast still prefers the body's own
+ * message (`getEndpointErrorMessage`). The bare `HTTP <status>` default is for
+ * a caller that has no route to name.
  */
 export class EndpointError extends Error {
   constructor(

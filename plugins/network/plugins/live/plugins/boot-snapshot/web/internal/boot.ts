@@ -3,6 +3,7 @@ import {
   sendEndpointRequest,
   readEndpointResponse,
 } from "@plugins/infra/plugins/endpoints/core";
+import { recordPagePrincipal } from "@plugins/framework/plugins/principal/web";
 import { pageTransport } from "@plugins/primitives/plugins/networking/plugins/page-transport/web";
 import { recordBootSpan } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
 import { report } from "@plugins/reports/web";
@@ -66,12 +67,16 @@ export async function runBootSnapshot(): Promise<void> {
   const head = takeHeadRequest();
   const reqStart =
     head.kind === "taken" ? head.request.startMs : performance.now();
-  const { resources, tuples, timings } = await readEndpointResponse(
+  const { caller, resources, tuples, timings } = await readEndpointResponse(
     bootSnapshot,
     await (head.kind === "taken"
       ? head.request.response
       : sendEndpointRequest(pageTransport.fetch, bootSnapshot, {})),
   );
+  // Who the page's server takes this page for, recorded before anything
+  // renders: a deployed site's visitor page then never sends a write its
+  // server only takes from the owner.
+  if (caller !== undefined) recordPagePrincipal(caller);
   const reqMs = performance.now() - reqStart;
   recordBootSpan({
     id: "boot-snapshot",

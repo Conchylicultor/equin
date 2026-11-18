@@ -170,6 +170,38 @@ export async function sendEndpointRequest<
 }
 
 /**
+ * A non-2xx reply in words that name the request: `HTTP <status> from <route>`
+ * and, when the body says why, its words (`message`, else `reason`, else the
+ * plain-text body, first line, capped). An error that escapes unhandled (a
+ * fire-and-forget write's rejection) reaches Reports with only its message and
+ * an async stack that stops at this module, so the route must be in it — a bare
+ * `HTTP 403` named neither the request nor why (report-1795019821-zmuh6o).
+ */
+function describeRefusal(route: string, status: number, body: unknown): string {
+  const head = `HTTP ${status} from ${route}`;
+  const why = refusalWords(body);
+  return why === null ? head : `${head}: ${why}`;
+}
+
+const REFUSAL_WORDS_MAX = 200;
+
+function refusalWords(body: unknown): string | null {
+  let words: string | null = null;
+  if (typeof body === "string") words = body;
+  else if (body !== null && typeof body === "object") {
+    const b = body as { message?: unknown; reason?: unknown; error?: unknown };
+    if (typeof b.message === "string") words = b.message;
+    else if (typeof b.reason === "string") words = b.reason;
+    else if (typeof b.error === "string") words = b.error;
+  }
+  const line = words?.trim().split("\n", 1)[0]?.trim() ?? "";
+  if (line === "") return null;
+  return line.length > REFUSAL_WORDS_MAX
+    ? `${line.slice(0, REFUSAL_WORDS_MAX)}…`
+    : line;
+}
+
+/**
  * An endpoint's reply, read through its contract: a non-2xx throws
  * `EndpointError` (refined to `EndpointAgentWriteRefusedError` for main's
  * agent-write refusal), carrying the body —
@@ -185,7 +217,10 @@ export async function readEndpointResponse<
 >(
   endpoint: AnyEndpointDef<Route, TParams, TBody, TResponse, TQuery>,
   res: Response,
-  /** The error message for a non-2xx; omitted = `HTTP <status>`. */
+  /**
+   * The error message for a non-2xx; omitted = {@link describeRefusal} (the
+   * status, the route and the reply's own words).
+   */
   describe?: (status: number, rawBody: string | null) => string,
 ): Promise<EndpointAnswer<TResponse>> {
   if (!res.ok) {
@@ -205,7 +240,9 @@ export async function readEndpointResponse<
         // Not JSON — keep the text, which is exactly what HttpError sends.
       }
     }
-    const message = describe?.(res.status, rawBody);
+    const message =
+      describe?.(res.status, rawBody) ??
+      describeRefusal(endpoint.route, res.status, errorBody);
     if (isAgentWriteRefusal(res.status, errorBody)) {
       throw new EndpointAgentWriteRefusedError(res.status, errorBody, message);
     }

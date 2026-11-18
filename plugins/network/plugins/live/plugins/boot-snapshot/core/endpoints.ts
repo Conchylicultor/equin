@@ -35,6 +35,13 @@ export const bootSnapshot = defineEndpoint({
       "every page of a deployed site boots from it; it carries the boot resources of the composition the site runs",
   },
   response: z.object({
+    // Who the page's server took this request for — the same verdict that
+    // picked the resources below. The page records it (`framework/principal`'s
+    // `recordPagePrincipal`), so it never sends a write its server refuses a
+    // visitor (`useWriteAvailability`, `infra/endpoints`). Optional: a backend
+    // older than the field answers without it, and the page then knows nothing
+    // (its server's gate stays the authority).
+    caller: z.enum(["owner", "visitor"]).optional(),
     resources: z.record(z.string(), z.unknown()),
     tuples: z.record(
       z.string(),

@@ -32512,7 +32512,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `computeLoadWaves`
           - `topoSortPlugins`
-    - **`principal`** — Who a request is: the principal (owner | anonymous) the gateway stamps on every proxied request (X-Equin-Principal), read fail-closed by principalOf; EndpointAccess (owner by default, { public: reason } opt-in); gateByPrincipal — the socket hosts' per-route gate, on only when the gateway declares it stamps (--principal-stamped on the backend's argv; ungated and loudly so behind an older gateway), answering an anonymous caller of an owner route 403 cross-site-refused before the handler runs — the anonymous WebSocket refusal, and each host's route table. Plus the Go↔TS header sync check and the lint rule that keeps origin / Sec-Fetch-* reads out of handlers.
+    - **`principal`** — Who a request is: the principal the gateway stamps on every proxied request (X-Equin-Principal), read fail-closed by principalOf; EndpointAccess (owner by default; { public } / { visitor } / { content } opt-ins); gateByPrincipal, the socket hosts' per-route gate. Web half: who the page's own server takes this page for (owner | visitor), recorded once by the page's boot snapshot — pagePrincipal() / recordPagePrincipal().
       - Core:
         - Uses:
           - `infra/namespace.CONTENT_ITEM_RE`
@@ -32551,9 +32551,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/deploy/deploy-secrets/approvals`
           - `debug/backend-liveness`
           - `framework/server-core`
+          - `infra/endpoints`
           - `infra/launcher`
           - `infra/launcher/gateway-drift`
           - `network/live/boot-snapshot`
+      - Web:
+        - Exports (types): `PagePrincipal`
+        - Exports (values):
+          - `pagePrincipal`
+          - `recordPagePrincipal`
     - **`product-name`** — The product's own name, as data: PRODUCT_NAME (`equin`, always lowercase — what every person and agent reads) and LEGACY_PRODUCT_NAMES (the names it went by before, never written again), enforced by the product-name:legacy check over every tracked file; and LEGACY_IDS, the identifiers built from the old name that are kept for good (stored state, cross-version contracts), the one place they are spelled — enforced by product-name:legacy-id (and its mirrors by product-name:legacy-ids-in-sync). A dependency-free leaf, so a browser bundle, a server or a script can import it.
       - Cross-plugin:
         - Imported by: 71 plugins — full list in [`plugins/framework/plugins/product-name/REFERENCE.md`](../plugins/framework/plugins/product-name/REFERENCE.md)
@@ -36852,9 +36858,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `toolchain`
           - Cli:
             - Exports (values): `upgradeThisWorktree`
-    - **`endpoints`** — Typed endpoint contract primitive. useFetchEndpoint (a FetchEndpoint bound to the subtree's transport; fetchEndpointOver(t) for sanctioned page-level code) and useEndpointMutation send writes only — a GET def is a tsc error (the derived read marker; & WriteEndpoint) and throws if cast through (every server read is a live resource, read with useLive, or useLiveReader in an event handler); useAssetSrc turns an AssetPath (a GET endpoint's asset) into what an element loads over the subtree's transport (the path, a blob URL, or unavailable); useAssetUrl / assetUrlOver hand a sink that loads by URL on its own (a library's fetch, an HTML string) an AssetPath's or AssetBase's URL, unavailable, or fetch-only (served, but no URL reaches it); assetFetchOver hands a library that takes a fetch hook the asset's base and a fetch over the transport; contentUrlOver hands a content frame a ContentPath's URL on the transport's content serving (the content host, off every app origin, for the page's own server; an in-browser server's frame Service Worker, declared safe), unavailable, or unsupported. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; callEndpoint() calls one from off the page (a backend, the CLI) through its contract; useFetchEndpoint / useEndpointMutation consume it on the client. Typed endpoint contract primitive, central half: implementCentral() creates central's handler of an endpoint declared needsMachine — central runs only on the computer, so it serves what a host without one answers not available.
+    - **`endpoints`** — Typed endpoint contract primitive. useFetchEndpoint (a FetchEndpoint bound to the subtree's transport; fetchEndpointOver(t) for sanctioned page-level code) and useEndpointMutation send writes only — a GET def is a tsc error (the derived read marker; & WriteEndpoint) and throws if cast through (every server read is a live resource, read with useLive, or useLiveReader in an event handler); useWriteAvailability says whether this subtree may send a write (needsMachine on a transport without the computer, or an owner-only route from a page its server took for a deployed site's visitor); useAssetSrc turns an AssetPath (a GET endpoint's asset) into what an element loads over the subtree's transport (the path, a blob URL, or unavailable); useAssetUrl / assetUrlOver hand a sink that loads by URL on its own (a library's fetch, an HTML string) an AssetPath's or AssetBase's URL, unavailable, or fetch-only (served, but no URL reaches it); assetFetchOver hands a library that takes a fetch hook the asset's base and a fetch over the transport; contentUrlOver hands a content frame a ContentPath's URL on the transport's content serving (the content host, off every app origin, for the page's own server; an in-browser server's frame Service Worker, declared safe), unavailable, or unsupported. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; callEndpoint() calls one from off the page (a backend, the CLI) through its contract; useFetchEndpoint / useEndpointMutation consume it on the client. Typed endpoint contract primitive, central half: implementCentral() creates central's handler of an endpoint declared needsMachine — central runs only on the computer, so it serves what a host without one answers not available.
       - Web:
         - Uses:
+          - `framework/principal.pagePrincipal`
           - `primitives/networking.fetchWithRetry`
           - `primitives/networking.FetchWithRetryOptions`
           - `primitives/networking.RequestTiming`
@@ -36888,6 +36895,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useEndpointMutation`
           - `useFetchEndpoint`
           - `useMachineAvailability`
+          - `useWriteAvailability`
       - Core:
         - Uses:
           - `framework/product-name.PRODUCT_NAME`
@@ -43205,6 +43213,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Contributes: `Core.Boot`
             - Uses:
+              - `framework/principal.recordPagePrincipal`
               - `network/live/live-state.hydrateResource`
               - `network/live/live-state.resourceDescriptorByKey`
               - `primitives/networking/page-transport.pageTransport`

@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import type { Audience } from "@plugins/audience/core";
 import {
   useFetchEndpoint,
-  useMachineAvailability,
+  useWriteAvailability,
 } from "@plugins/infra/plugins/endpoints/web";
 import { createNotification } from "../../shared/endpoints";
 import type { NotificationVariant } from "../../shared/schema";
@@ -93,11 +93,14 @@ export type Toast = (args: ToastArgs) => void;
  *
  * Persisting is a fire-and-forget side-write of a toast already on screen.
  * It is declared `needsMachine` (D4): under a transport without the computer
- * (the demo) the toast stays ephemeral — shown, never written anywhere.
+ * (the demo) the toast stays ephemeral — shown, never written anywhere. So it
+ * is on a deployed site's public page: the bell is its owner's, and the site's
+ * server refuses a visitor's write to it (the reconnect toast after every site
+ * deploy used to escape as an unhandled `HTTP 403`).
  */
 export function useToast(): Toast {
   const fetchEndpoint = useFetchEndpoint();
-  const persist = useMachineAvailability(createNotification).available;
+  const persist = useWriteAvailability(createNotification).available;
   const toastNotification = useToastNotification();
   return useCallback(
     (args: ToastArgs) => {

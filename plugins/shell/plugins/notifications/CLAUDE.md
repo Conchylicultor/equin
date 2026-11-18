@@ -209,9 +209,14 @@ the machine half) — so a toast the user had no time to read is in the bell
   `reports/optimistic-rejection` emits into its own report sink, drained by a
   page-root `RejectionToasts` (the sink holds what arrives before it mounts).
 - The endpoint is `needsMachine` (D4,
-  `research/2026-10-22-global-demo-scope-sealed.md`): under a transport with no
-  computer behind it (the demo) the toast is shown and written nowhere, no
-  request made — the one unrecorded case.
+  `research/2026-10-22-global-demo-scope-sealed.md`) and owner-only: `useToast`
+  asks `useWriteAvailability(createNotification)` (`infra/endpoints`), so under
+  a transport with no computer behind it (the demo), and on a deployed site's
+  public page (its server took the page for a visitor at boot —
+  `framework/principal`'s `pagePrincipal`), the toast is shown and written
+  nowhere, no request made — the two unrecorded cases. (Before, every toast on
+  equin.ai — the reconnect toast after each site deploy — sent a write the
+  site refused, escaping as an unhandled `HTTP 403`.)
 
 ## The pane: Debug → Notifications
 

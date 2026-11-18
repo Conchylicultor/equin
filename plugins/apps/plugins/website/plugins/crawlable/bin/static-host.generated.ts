@@ -140,6 +140,7 @@ export const staticHosts: Record<string, StaticHost> = {
       "fields/plugins/variant/plugins/config",
       "framework/plugins/browser-server",
       "framework/plugins/browser-server/plugins/demo/plugins/scope",
+      "framework/plugins/principal",
       "ids",
       "infra/plugins/background/plugins/catalog",
       "infra/plugins/endpoints",

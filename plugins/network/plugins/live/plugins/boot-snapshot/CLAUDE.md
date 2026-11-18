@@ -135,6 +135,7 @@ How it works:
 - Web:
   - Contributes: `Core.Boot`
   - Uses:
+    - `framework/principal.recordPagePrincipal`
     - `network/live/live-state.hydrateResource`
     - `network/live/live-state.resourceDescriptorByKey`
     - `primitives/networking/page-transport.pageTransport`
