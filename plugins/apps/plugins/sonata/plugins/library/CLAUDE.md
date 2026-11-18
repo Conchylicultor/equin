@@ -153,11 +153,13 @@ to the demo's server.
 
 Because a `createOption.onSelect` is plain data (no component, no hooks), the
 open-after-create step can't use the `useSongLink` hook. Sources call
-`openSongImperative(song)` instead — the imperative twin exported from this
-plugin's web barrel (`open-song.ts`), which writes to the live pane store via the
-imperative `openPane` (mirroring `useSongLink`'s exact `mode:"root"` + `input`
-call). `useSongLink` is kept for `SongLibrary`'s `rowActivation`, which runs
-inside a component where the caller-aware context store is correct.
+`ctx.openSong(song)` instead — `useOpenSong()`'s opener (`open-song.ts`), bound
+by the library where it renders (the same `mode:"root"` + hint open as
+`useSongLink`), and handed on to a source's dialog as a prop. There is no free
+song opener: a free open reaches only the page's tab set, so inside the
+website's live demo it opened the demo's song in the page around it, and the
+page's `navigate()` refused `/sonata/song/…` (report-1795037821-n9tglr).
+`useSongLink` is kept for `SongLibrary`'s `rowActivation`.
 
 ## One surface, one cover seam (`Library.Cover`)
 
@@ -335,8 +337,8 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `Pane.Register` "sonata-library"
     - `Pane.Register` "sonata-player"
     - `Pane.Register` "sonata-song-peek"
-  - Uses: 101 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/pane` ×15
+  - Uses: 100 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×14
     - `network/live` ×7
     - `primitives/data-view` ×7
     - `apps/sonata/shell` ×6
@@ -382,6 +384,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `shell/notifications.useToast`
     - `ui/icons.Icon`
   - Exports (types):
+    - `OpenSong`
     - `SongCoverAnswer`
     - `SongLinkValue`
     - `SourceContext`
@@ -389,13 +392,13 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `SourceHydration`
   - Exports (values):
     - `Library`
-    - `openSongImperative`
     - `requestPlayOnOpen`
     - `sonataLibraryPane`
     - `sonataPlayerPane`
     - `sonataSongLink`
     - `songPeekPane`
     - `useCurrentSong`
+    - `useOpenSong`
     - `useSectionPaneCollapsed`
     - `useSongLink`
 - Server:

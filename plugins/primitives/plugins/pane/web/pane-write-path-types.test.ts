@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { openPane, Pane, type, type OpenPaneFn } from "./pane";
+import { Pane, type, type OpenPaneFn } from "./pane";
 import { paneTarget } from "./pane-target";
 import type { ResolveResult } from "./resolve";
 import { defineApp, defineRoute } from "../core";
@@ -8,7 +8,7 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 // ---------------------------------------------------------------------------
 // Compile-time regression guard for the pane "write path" typing.
 //
-// `openPane` (and `useToggle`) check the `params` argument against the target
+// An open (and `useToggle`) checks the `params` argument against the target
 // pane's full param set:
 //   - a PARAMFUL pane requires exactly its declared params (no missing, no
 //     extra keys),
@@ -28,6 +28,9 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 // `@ts-expect-error` must correspond to a real error (tsc fails on an UNUSED
 // directive), and every positive case must compile. The function is NEVER
 // invoked at runtime, so the live store is never touched.
+//
+// `openPane` is `useOpenPane()`'s opener, typed: there is no free one.
+const openPane = null as unknown as OpenPaneFn;
 // ---------------------------------------------------------------------------
 
 const Dummy = () => null;

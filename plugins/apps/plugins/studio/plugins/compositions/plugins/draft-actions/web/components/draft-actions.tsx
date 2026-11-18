@@ -8,7 +8,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { openPane } from "@plugins/primitives/plugins/pane/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
   compositionsPane,
   compositionDetailPane,
@@ -91,6 +91,7 @@ function DraftActionsBody({
   const { deleteComposition } = useDeleteComposition();
   // Null only for a root pane; `compositionDetailPane` always has ancestors, so
   // the fallback is there to make the expression total.
+  const openPane = useOpenPane();
   const close =
     compositionDetailPane.useClose() ??
     (() => openPane(compositionsPane, {}, { mode: "root" }));

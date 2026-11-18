@@ -33,7 +33,7 @@ import {
   beatToSeconds,
   scoreEndBeat,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { openSongImperative } from "@plugins/apps/plugins/sonata/plugins/library/web";
+import type { OpenSong } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { compile } from "../compile";
 import { extractUgTabId, UgFetchError, type UgSearchResult } from "../../core";
 import { createUltimateGuitarSong } from "../../shared/endpoints";
@@ -113,7 +113,14 @@ const TYPE_OPTIONS = [
  * (which would crash the dialog mid-import); a failed search is the read's
  * error arm (`ResourceErrorInline`, with Retry).
  */
-export function UgImportDialog({ onClose }: { onClose: () => void }) {
+export function UgImportDialog({
+  onClose,
+  openSong,
+}: {
+  onClose: () => void;
+  /** The library's song opener (`SourceContext.openSong`), bound to its surface. */
+  openSong: OpenSong;
+}) {
   const fetchEndpoint = useFetchEndpoint();
   const readLive = useLiveReader();
   const queryKept = useKept(ugImportQuery, "");
@@ -205,12 +212,12 @@ export function UgImportDialog({ onClose }: { onClose: () => void }) {
           },
         );
         onClose();
-        openSongImperative(song);
+        openSong(song);
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
       }
     },
-    [onClose, fetchEndpoint, readLive],
+    [onClose, openSong, fetchEndpoint, readLive],
   );
 
   const importResult = useCallback(

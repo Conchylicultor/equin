@@ -19,6 +19,7 @@ import {
 } from "../core";
 import { Library, type SongLinkValue } from "./slots";
 import { useCurrentSong } from "./use-current-song";
+import { useOpenSong } from "./open-song";
 
 /** The player route's params, as the pane hands them over. */
 export interface PlayerParams {
@@ -202,6 +203,7 @@ export function SongLinkImport({
   const fetchEndpoint = useFetchEndpoint();
   const readLive = useLiveReader();
   const openDialog = useOpenDialog();
+  const openSong = useOpenSong();
   const [failure, setFailure] = useState<string | null>(null);
   const title =
     params.title === undefined ? UNTITLED : fromLinkText(params.title);
@@ -214,7 +216,7 @@ export function SongLinkImport({
 
   const add = async () => {
     setFailure(null);
-    const ctx = { fetchEndpoint, readLive, openDialog };
+    const ctx = { fetchEndpoint, readLive, openDialog, openSong };
     try {
       await creator.part.create?.(ctx, {
         id: songId,

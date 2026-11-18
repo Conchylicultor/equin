@@ -9,7 +9,6 @@ import {
 import {
   AppNavBoundary,
   appNavSink,
-  openPane as openPaneImperative,
   Pane,
   PaneInstanceContext,
   routeHomeApp,
@@ -305,14 +304,6 @@ describe("useOpenPane: a guest beside a host pane stays here", () => {
     ]);
     fireEvent.click(button);
     expect(navigated).toEqual([]);
-    expect(shape()).toEqual(["home-host-list"]);
-  });
-});
-
-describe("openPane (imperative): the same rule", () => {
-  it("a root open of another app's pane navigates to its home", () => {
-    openPaneImperative(guestPane, { step: "6" }, { mode: "root" });
-    expect(navigated).toEqual(["/guest/acc/setup/6"]);
     expect(shape()).toEqual(["home-host-list"]);
   });
 });

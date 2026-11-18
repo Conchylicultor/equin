@@ -12,6 +12,7 @@ import {
   type CreateOption,
 } from "@plugins/primitives/plugins/data-view/web";
 import type { Song, SongId, SongLinkKey } from "../core";
+import type { OpenSong } from "./open-song";
 
 /**
  * Extension seams the song library exposes:
@@ -28,7 +29,7 @@ import type { Song, SongId, SongLinkKey } from "../core";
  *    source" affordance the library binds and maps into the gallery's
  *    `creators` (a toolbar "+" menu, since there are N sources). Its `onSelect`
  *    runs fully imperatively (no React hooks): create the song, then
- *    `openSongImperative`. It runs outside React, so the library hands it the
+ *    `ctx.openSong`. It runs outside React, so the library hands it the
  *    fetcher bound to the surface's transport (`ctx.fetchEndpoint`) — for its
  *    writes; a read is live, never fetched.
  *    Adding a new source = a new contribution here, with zero library or
@@ -76,11 +77,15 @@ export type SourceHydration =
  * - `openDialog` — the dialog opener of the surface's render origin: a dialog
  *   a source opens renders where the library is (inside the demo, against the
  *   demo's server), never in the page around it.
+ * - `openSong` — opens a song into the player in the surface's tab set (inside
+ *   the demo, the demo's), starting it: what a create affordance calls once
+ *   its song is made. There is no free opener to reach for instead.
  */
 export interface SourceContext {
   fetchEndpoint: FetchEndpoint;
   readLive: LiveReader;
   openDialog: OpenDialog;
+  openSong: OpenSong;
 }
 
 /**
@@ -131,7 +136,7 @@ export const Library = {
     /**
      * Optional create affordance for this source, mapped by the library into the
      * data-view `creators` (toolbar "+" menu). Plain data — `onSelect` runs
-     * imperatively (create + `openSongImperative`), no React hooks.
+     * imperatively (create + `ctx.openSong`), no React hooks.
      */
     createOption?: SourceCreateOption;
   }>({ docLabel: (c) => c.sourceId }),

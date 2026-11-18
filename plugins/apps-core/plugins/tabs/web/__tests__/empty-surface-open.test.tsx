@@ -8,7 +8,6 @@ import {
 import { Apps, setFocusedApp } from "@plugins/apps-core/web";
 import {
   Pane,
-  openPane,
   setLiveStore,
   useOpenPane,
   useSyncPaneRegistry,
@@ -166,26 +165,6 @@ afterEach(() => {
 });
 
 describe("opening a pane on an empty surface", () => {
-  it("through the imperative openPane, opens a tab on the home app", async () => {
-    await mount();
-    await closeEveryTab();
-    const pushSpy = vi.spyOn(window.history, "pushState");
-
-    await act(async () => {
-      openPane(guestPane, {}, { mode: "root" });
-    });
-
-    expect(hook.current.tabs.tabs).toHaveLength(1);
-    expect(focused()?.appId).toBe("pages");
-    expect(
-      focused()
-        ?.store.getRoute()
-        .map((s) => s.paneId),
-    ).toEqual([guestPane._internal.id]);
-    expect(window.location.pathname).toBe("/pages/guest");
-    expect(pushSpy).toHaveBeenCalledTimes(1);
-  });
-
   it("through useOpenPane outside every surface, opens a tab too", async () => {
     await mount();
     await closeEveryTab();
@@ -237,7 +216,7 @@ describe("opening a pane on an empty surface", () => {
     expect(hook.current.tabs.tabs).toHaveLength(0);
 
     await act(async () => {
-      openPane(guestPane, {}, { mode: "root" });
+      hook.current.open(guestPane, {}, { mode: "root" });
     });
 
     expect(hook.current.tabs.tabs).toHaveLength(1);
@@ -253,7 +232,7 @@ describe("opening a pane on an empty surface", () => {
     });
     const tabId = hook.current.tabs.focusedTabId;
     await act(async () => {
-      openPane(guestPane, {}, { mode: "root" });
+      hook.current.open(guestPane, {}, { mode: "root" });
     });
 
     expect(hook.current.tabs.tabs).toHaveLength(1);

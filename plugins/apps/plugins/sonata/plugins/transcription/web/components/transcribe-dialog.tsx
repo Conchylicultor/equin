@@ -4,7 +4,7 @@ import { DialogTitle } from "@plugins/primitives/plugins/css/plugins/ui-kit/web"
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { LaunchAgentForm } from "@plugins/primitives/plugins/launch/web";
 import { workspaceLaunchOption } from "@plugins/conversations/plugins/workspace/plugins/launch-option/core";
-import { openSongImperative } from "@plugins/apps/plugins/sonata/plugins/library/web";
+import type { OpenSong } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { prepareTranscription } from "../../shared/endpoints";
 
 /** The transcription decides where its agent runs; the user does not. */
@@ -19,7 +19,14 @@ const OWNED_OPTIONS = [workspaceLaunchOption];
  * it through the standard task launch; the new song opens and shows as
  * transcribing until the agent submits its score.
  */
-export function TranscribeDialog({ onClose }: { onClose: () => void }) {
+export function TranscribeDialog({
+  onClose,
+  openSong,
+}: {
+  onClose: () => void;
+  /** The library's song opener (`SourceContext.openSong`), bound to its surface. */
+  openSong: OpenSong;
+}) {
   const fetchEndpoint = useFetchEndpoint();
   // The song `getRequest` prepared, opened once the launch is filed.
   const prepared = useRef<{ id: string; title: string } | null>(null);
@@ -51,7 +58,7 @@ export function TranscribeDialog({ onClose }: { onClose: () => void }) {
           const song = prepared.current;
           if (!song) throw new Error("[transcription] launched without a song");
           onClose();
-          openSongImperative(song);
+          openSong(song);
         }}
       />
     </>

@@ -13,8 +13,7 @@ import {
 } from "@plugins/wish/core";
 import { openWish } from "@plugins/wish/web";
 import { conversationRowAnchor } from "@plugins/conversations/plugins/conversations-view/plugins/data-view/core";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { openPane } from "@plugins/primitives/plugins/pane/web";
+import { conversationRoute } from "@plugins/conversations/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -186,7 +185,7 @@ export const homeTour = defineTour<HomeTourData>({
           // Clicking the row (`via: "anchor"`) already opened it.
           const convId = ctl.data.conversationId;
           if (ctl.via === "button" && ctl.data.ready && convId)
-            openPane(conversationPane, { convId }, { mode: "root" });
+            ctl.navigate(conversationRoute.link(agentManagerApp, { convId }));
           ctl.end("completed");
         },
       },

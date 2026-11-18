@@ -33,8 +33,6 @@ MIDI for playback is its row in the lookup-only live collection `sonata.midi`
   - Uses:
     - `apps/sonata/document.SonataDocument`
     - `apps/sonata/library.Library`
-    - `apps/sonata/library.openSongImperative`
-    - `apps/sonata/library.SourceCreateOption`
     - `infra/attachments.uploadAttachment`
     - `network/live.FieldPresentation`
     - `network/live.mapRow`

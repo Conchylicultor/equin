@@ -7,14 +7,15 @@ import {
   type LoadedPlugin,
 } from "@plugins/framework/plugins/web-sdk/core";
 import {
-  openPane,
   Pane,
   PaneInstanceContext,
   parseUrl,
   setLiveStore,
   usePaneMatch,
   usePaneViewParam,
+  useOpenPane,
   useSyncPaneRegistry,
+  type OpenPaneFn,
   type PaneStore,
 } from "@plugins/primitives/plugins/pane/web";
 import type { PaneViewParam } from "../pane";
@@ -42,16 +43,19 @@ let mounts = 0;
 let seenPage: string | undefined;
 let setParams: ((p: { page?: string }) => void) | null = null;
 let bound: PaneViewParam | null = null;
+let openPane: OpenPaneFn | null = null;
 
 function LibIndex() {
   const params = libIndexPane.useParams();
   const set = libIndexPane.useSetParams();
   const view = usePaneViewParam("lib");
+  const open = useOpenPane();
   // Published after every render (no deps): what the instance last rendered.
   useEffect(() => {
     seenPage = params.page;
     setParams = set;
     bound = view;
+    openPane = open;
   });
   useEffect(() => {
     mounts++;
@@ -109,6 +113,7 @@ beforeEach(() => {
   seenPage = undefined;
   setParams = null;
   bound = null;
+  openPane = null;
   window.history.replaceState(null, "", "/lib;page=x");
   store = createTestSurfaceStore();
 });
@@ -214,13 +219,13 @@ describe("an index pane's keyed params", () => {
     expect(mounts).toBe(1);
   });
 
-  it("openPane at the root lands on the bare root with them", () => {
+  it("a root open lands on the bare root with them", () => {
     window.history.replaceState(null, "", "/lib");
     store = createTestSurfaceStore();
     mount();
     expect(seenPage).toBeUndefined();
 
-    act(() => openPane(libIndexPane, { page: "z" }, { mode: "root" }));
+    act(() => openPane!(libIndexPane, { page: "z" }, { mode: "root" }));
 
     expect(store.getRoute()).toEqual([]);
     expect(store.getIndexParams()).toEqual({ page: "z" });

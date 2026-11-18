@@ -86,7 +86,6 @@ Manual check: `scripts/smoke.sh` (needs the dep installed).
     - `Sonata.Section` "Transcription" → `TranscriptionSection`
   - Uses:
     - `apps/sonata/library.Library`
-    - `apps/sonata/library.openSongImperative`
     - `apps/sonata/library.useCurrentSong`
     - `apps/sonata/shell.Sonata`
     - `conversations/agent-thread.AgentThread`

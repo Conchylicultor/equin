@@ -1763,9 +1763,22 @@ export function usePaneStore(): PaneStore {
  * orphan whose silent commits caused global chrome to write dead URLs.
  */
 function useStoreOrLive(): PaneStore {
+  const tabSet = useContext(TabSetStoreContext);
   // eslint-disable-next-line install-sink/no-render-phase-peek -- deliberately a sample, not a subscription (see above): the sink is re-pointed by TabsProvider's one-shot wiring DURING its own render, so subscribing here would notify an already-mounted subscriber mid-render. The callers do a global imperative op and re-render for their own reasons; anything that must re-render on route changes belongs inside a surface.
-  return useContext(PaneStoreContext) ?? liveStoreSink.peek();
+  return useContext(PaneStoreContext) ?? tabSet?.() ?? liveStoreSink.peek();
 }
+
+/**
+ * The focused store of the tab set a subtree belongs to, when that set is not
+ * the page's: an embedded tab set (an `AppEmbed`, the website's live demo)
+ * provides it around its whole subtree, so an op made outside every pane
+ * surface inside it — a dialog or toast raised in the embed's render origin,
+ * a provider above the app's panes — lands in the embed's focused tab, never
+ * in the page's live store (whose route belongs to the page around the embed).
+ * `null` (the default): the page's own set, whose focused store is the live
+ * one. A getter, read at call time: the focused tab changes without a render.
+ */
+export const TabSetStoreContext = createContext<(() => PaneStore) | null>(null);
 
 /**
  * The same resolution as {@link useStoreOrLive}, deferred to CALL time.
@@ -1779,7 +1792,11 @@ function useStoreOrLive(): PaneStore {
  */
 export function useStoreResolver(): () => PaneStore {
   const store = useContext(PaneStoreContext);
-  return useCallback(() => store ?? liveStoreSink.peek(), [store]);
+  const tabSet = useContext(TabSetStoreContext);
+  return useCallback(
+    () => store ?? tabSet?.() ?? liveStoreSink.peek(),
+    [store, tabSet],
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -4154,40 +4171,21 @@ export function usePaneRoute(basePath: string): PaneMatch | null {
   return null;
 }
 
-// ---------------------------------------------------------------------------
-// openPane — imperative (non-hook) open. Targets the live store, matching the
-// historical module-global behavior for the ~40 imperative call sites.
-// The non-positional open logic itself lives on the store (`openPaneImpl`).
-// ---------------------------------------------------------------------------
-
 /**
  * `root` starts a fresh route at the target; `push` / `swap` are relative to
  * the caller pane; `append` puts the target after the route's last pane
  * whoever the caller is (replacing a last pane of the same kind) — see
  * {@link computeOpen}.
+ *
+ * There is no module-level `openPane`: an open is always made through
+ * {@link useOpenPane}, bound where its caller renders. A free open could only
+ * reach the PAGE's live store and the page's navigator, so from inside an
+ * embedded tab set (the website's live demo) it opened the embedded app's
+ * pane in the page around it — `navigate()` refusing an app path the page
+ * does not have. Code outside React that opens a pane is handed the bound
+ * opener by the component that owns it.
  */
 export type PaneOpenMode = "root" | "push" | "swap" | "append";
-
-export function openPane<
-  Params = Record<string, string>,
-  Options extends object = NoOptions,
-  HintT extends object = NoHint,
->(
-  target: PaneObject<Params, any, Options, HintT>,
-  params: NoInfer<Params>,
-  opts: { mode: "root"; options?: Partial<Options>; hint?: HintT },
-): void {
-  liveStoreSink
-    .peek()
-    .openPaneImpl(target._internal, params as Record<string, string>, {
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- overload narrows mode to "root" but the check keeps this future-proof for additional modes
-      root: opts.mode === "root",
-      options: opts.options as PaneOptions | undefined,
-      hint: opts.hint as PaneHintBag | undefined,
-      // Imperative: no subtree, so no boundary — the installed navigator.
-      crossApp: navigateApp,
-    });
-}
 
 // ---------------------------------------------------------------------------
 // useOpenPane — caller-aware pane navigation hook. Operates on the surface it

@@ -2,10 +2,7 @@ import {
   beatToSeconds,
   scoreEndBeat,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import {
-  openSongImperative,
-  type SourceCreateOption,
-} from "@plugins/apps/plugins/sonata/plugins/library/web";
+import type { SourceCreateOption } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { compile, type ChordGridRaw } from "../../core";
 import { STARTER_TEXT } from "../examples";
 import { createChordGridSong } from "../../shared/endpoints";
@@ -19,7 +16,7 @@ const gridViewIcon = symbol("grid-view");
  * and mapped by the library into the data-view `creators` "+" menu. Creates a
  * new song pre-filled with a starter progression (the grid is authored, not
  * imported), computes its metrics client-side via `compile`, persists it, then
- * opens it immediately (via the imperative `openSongImperative`) so the user
+ * opens it immediately (`ctx.openSong`, bound by the library to its surface) so the user
  * lands in the editor. Fully imperative — no React hooks: the library hands it
  * the surface's fetcher.
  *
@@ -33,7 +30,7 @@ export const chordGridCreateOption: SourceCreateOption = {
   label: "New Chord Grid",
   description: "Author a chord progression and hear it voiced.",
   icon: <Icon icon={gridViewIcon} className="size-4" />,
-  onSelect: async ({ fetchEndpoint }) => {
+  onSelect: async ({ fetchEndpoint, openSong }) => {
     const score = compile(STARTER);
     const endBeat = scoreEndBeat(score);
     const song = await fetchEndpoint(
@@ -49,6 +46,6 @@ export const chordGridCreateOption: SourceCreateOption = {
         },
       },
     );
-    openSongImperative(song);
+    openSong(song);
   },
 };

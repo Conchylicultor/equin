@@ -35,8 +35,6 @@ Swing (`meta.swing`) is read here but applied at playback only — see
   - Uses:
     - `apps/sonata/document.SonataDocument`
     - `apps/sonata/library.Library`
-    - `apps/sonata/library.openSongImperative`
-    - `apps/sonata/library.SourceCreateOption`
     - `infra/attachments.uploadAttachment`
     - `network/live.mapRow`
     - `network/live.useLive`

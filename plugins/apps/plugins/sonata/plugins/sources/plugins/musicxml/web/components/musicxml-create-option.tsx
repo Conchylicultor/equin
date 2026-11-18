@@ -1,7 +1,4 @@
-import {
-  openSongImperative,
-  type SourceCreateOption,
-} from "@plugins/apps/plugins/sonata/plugins/library/web";
+import type { SourceCreateOption } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { importMusicXmlFile } from "../import-musicxml";
@@ -32,9 +29,9 @@ export const musicXmlCreateOption: SourceCreateOption = {
   label: "Import MusicXML",
   description: "Upload a .musicxml file (MuseScore, Dorico, Sibelius export).",
   icon: <Icon icon={uploadIcon} className="size-4" />,
-  onSelect: async ({ fetchEndpoint }) => {
+  onSelect: async ({ fetchEndpoint, openSong }) => {
     const file = await pickFile(MUSICXML_ACCEPT);
     if (!file) return;
-    openSongImperative(await importMusicXmlFile(fetchEndpoint, file));
+    openSong(await importMusicXmlFile(fetchEndpoint, file));
   },
 };

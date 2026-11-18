@@ -18,7 +18,7 @@ import { useLoadDocument } from "@plugins/apps/plugins/sonata/plugins/document/w
 import { useSonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import type { SongHydration } from "./hydrate-sources";
 import { SongHydrator } from "./song-hydrator";
-import { openSongImperative } from "./open-song";
+import { useOpenSong } from "./open-song";
 
 interface SongRef {
   id: string;
@@ -136,6 +136,7 @@ function PlayOnReady({
   onSettled: () => void;
 }): null {
   const loadDocument = useLoadDocument();
+  const openSong = useOpenSong();
   const { requestPlayOnLoad } = useSession();
   // Acts once: the answer may re-render (a live source change) before the
   // host unmounts.
@@ -159,11 +160,11 @@ function PlayOnReady({
     actedRef.current = true;
     onSettled();
     if (next.kind === "open") {
-      openSongImperative(song);
+      openSong(song);
       return;
     }
     loadDocument({ kind: "library", songId: song.id }, next.rawMap);
     requestPlayOnLoad();
-  }, [next, song, onSettled, loadDocument, requestPlayOnLoad]);
+  }, [next, song, onSettled, loadDocument, openSong, requestPlayOnLoad]);
   return null;
 }

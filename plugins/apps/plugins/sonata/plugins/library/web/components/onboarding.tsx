@@ -25,7 +25,7 @@ const libraryMusicIcon = symbol("library-music");
  *
  * Every card is derived purely from `Library.Source.useContributions()` — one
  * card per source that carries a `createOption`. Clicking a card runs that
- * source's `createOption.onSelect` (create the song + `openSongImperative` →
+ * source's `createOption.onSelect` (create the song + `ctx.openSong` →
  * straight into the player); nothing here knows what a source *is*. Adding or
  * removing a source changes the landing with zero edits here (the
  * collection–consumer separation — the whole point of the onboarding).

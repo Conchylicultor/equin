@@ -256,12 +256,18 @@ Why: `research/2026-07-10-global-pane-input-hint-vs-options.md`.
 
 ## Navigate
 
-No `pane.open()`. Two forms, both taking the **full ancestor + own** params:
+No `pane.open()`, and no module-level `openPane`: one form, **`useOpenPane()`**,
+taking the **full ancestor + own** params — caller-aware, all modes. **Legal
+everywhere**: resolves, at click time, the surface's store, else the focused
+store of the tab set it renders in (`TabSetStoreContext`, provided by an
+embedded tab set — a dialog raised inside an `AppEmbed` opens in the embed),
+else the page's **focused tab's** store.
 
-- **`openPane`** (module-level) — targets the live store; type accepts **only**
-  `{ mode: "root" }` (no caller position).
-- **`useOpenPane()`** — caller-aware, all modes. **Legal everywhere**: resolves
-  the surface's store, else the **focused tab's** store, at click time.
+Code outside React that opens a pane is handed the bound opener by the
+component that owns it (Sonata's `SourceContext.openSong`), as with
+`openDialog`. A free open could only reach the page's tab set: inside the
+website's live demo it opened the demo's pane in the page around it, whose
+`navigate()` has no such app (report-1795037821-n9tglr).
 
 Also on `PaneObject`:
 
@@ -577,7 +583,7 @@ export const downloadsPane = Pane.define({ …, actions: WebsiteHeader });
 
 ## Router
 
-Navigation (`openPane`, `useOpenPane()`, `restoreRoute`):
+Navigation (`useOpenPane()`, `restoreRoute`):
 
 1. mutates the route store;
 2. derives the URL (`buildRouteUrl()`);
@@ -689,7 +695,7 @@ route. `routeHomeApp(route)` = the root pane's home; every way onto a surface
 enforces it:
 
 - **Opening** — when the computed route's head belongs to another app,
-  `useOpenPane()` / `openPane()` hand the same route, rooted at that app, to
+  `useOpenPane()` hands the same route, rooted at that app, to
   the cross-app navigator (an embed's `AppNavBoundary` first); the link's href
   is that URL.
   - So `openPane.link(settingsPane, {}, { mode: "root" })` is right from any
@@ -1013,7 +1019,6 @@ out of the way: **what it opens takes its column**.
     - `definePaneHeaderSlot`
     - `defineRoute`
     - `morphOriginProps`
-    - `openPane`
     - `Pane`
     - `PaneBasePathContext`
     - `PaneBox`
@@ -1049,6 +1054,7 @@ out of the way: **what it opens takes its column**.
     - `setLiveStore`
     - `stripBasePath`
     - `SurfaceChromeContext`
+    - `TabSetStoreContext`
     - `type`
     - `useAppNavBoundary`
     - `useCurrentPane`
@@ -1084,8 +1090,8 @@ out of the way: **what it opens takes its column**.
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --spacing`
-  - Imported by: 220 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×80
+  - Imported by: 219 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×79
     - `conversations` ×33
     - `debug` ×29
     - `active-data` ×14

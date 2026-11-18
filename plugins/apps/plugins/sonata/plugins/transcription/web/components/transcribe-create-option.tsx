@@ -18,8 +18,11 @@ export const transcribeCreateOption: SourceCreateOption = {
   description:
     "An agent turns sheet music in a video, photos or a PDF into a song.",
   icon: <Icon icon={transcribeIcon} className="size-4" />,
-  onSelect: ({ openDialog }) =>
-    openDialog((close) => <TranscribeDialog onClose={close} />, {
-      size: "lg",
-    }),
+  onSelect: ({ openDialog, openSong }) =>
+    openDialog(
+      (close) => <TranscribeDialog onClose={close} openSong={openSong} />,
+      {
+        size: "lg",
+      },
+    ),
 };

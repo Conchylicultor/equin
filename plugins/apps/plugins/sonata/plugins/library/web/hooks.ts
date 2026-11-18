@@ -21,7 +21,7 @@ import { requestPlayOnOpen } from "./play-on-open";
  *
  * Used by the gallery cards (a component, so the caller-aware context store is
  * correct). Sources' `createOption.onSelect` paths are plain data with no
- * component to host a hook — they call `openSongImperative` instead.
+ * component to host a hook — they are handed `useOpenSong`'s opener instead.
  */
 export function useSongLink(): (song: {
   id: string;

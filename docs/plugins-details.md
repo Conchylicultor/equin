@@ -5650,11 +5650,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Core.Root` → `ActionBarTracker`
             - Uses:
               - `conversations.useConversations`
-              - `conversations/conversation-view.conversationPane`
               - `hints.Hints`
               - `hints.setTourData`
               - `hints.useTourRun`
-              - `primitives/pane.openPane`
               - `shell/global-action-bar.useActionBarPinned`
               - `ui/icons.Icon`
               - `wish.openWish`
@@ -9225,8 +9223,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "sonata-library"
               - `Pane.Register` "sonata-player"
               - `Pane.Register` "sonata-song-peek"
-            - Uses: 101 symbols — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
-              - `primitives/pane` ×15
+            - Uses: 100 symbols — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
+              - `primitives/pane` ×14
               - `network/live` ×7
               - `primitives/data-view` ×7
               - `apps/sonata/shell` ×6
@@ -9272,6 +9270,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `shell/notifications.useToast`
               - `ui/icons.Icon`
             - Exports (types):
+              - `OpenSong`
               - `SongCoverAnswer`
               - `SongLinkValue`
               - `SourceContext`
@@ -9279,13 +9278,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SourceHydration`
             - Exports (values):
               - `Library`
-              - `openSongImperative`
               - `requestPlayOnOpen`
               - `sonataLibraryPane`
               - `sonataPlayerPane`
               - `sonataSongLink`
               - `songPeekPane`
               - `useCurrentSong`
+              - `useOpenSong`
               - `useSectionPaneCollapsed`
               - `useSongLink`
           - Server:
@@ -11000,11 +10999,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `FieldPresentation.Register` "exposure:sonata_songs_ext_chord_grid"
                   - `Library.Cover` "chord-grid"
                   - `Library.SongLink` "grid"
-                - Uses: 30 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/REFERENCE.md)
-                  - `apps/sonata/library` ×4
+                - Uses: 28 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/REFERENCE.md)
                   - `apps/sonata/document` ×3
                   - `network/live` ×3
                   - `primitives/kept-state` ×3
+                  - `apps/sonata/library` ×2
                   - `apps/sonata/session` ×2
                   - `music/chord-box` ×2
                   - `primitives/collapsible` ×2
@@ -11086,8 +11085,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses:
                   - `apps/sonata/document.SonataDocument`
                   - `apps/sonata/library.Library`
-                  - `apps/sonata/library.openSongImperative`
-                  - `apps/sonata/library.SourceCreateOption`
                   - `infra/attachments.uploadAttachment`
                   - `network/live.FieldPresentation`
                   - `network/live.mapRow`
@@ -11273,8 +11270,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses:
                   - `apps/sonata/document.SonataDocument`
                   - `apps/sonata/library.Library`
-                  - `apps/sonata/library.openSongImperative`
-                  - `apps/sonata/library.SourceCreateOption`
                   - `infra/attachments.uploadAttachment`
                   - `network/live.mapRow`
                   - `network/live.useLive`
@@ -11331,12 +11326,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `FieldPresentation.Register` "exposure:sonata_songs_ext_ultimate_guitar"
                   - `Library.Cover` "ultimate-guitar"
                   - `Library.SongLink` "ug"
-                - Uses: 48 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/REFERENCE.md)
+                - Uses: 47 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/REFERENCE.md)
                   - `network/live/live-state` ×6
                   - `primitives/css/ui-kit` ×6
                   - `network/live` ×4
                   - `apps/sonata/document` ×3
-                  - `apps/sonata/library` ×3
+                  - `apps/sonata/library` ×2
                   - `infra/endpoints` ×2
                   - `primitives/css/layer` ×2
                   - `primitives/kept-state` ×2
@@ -11745,7 +11740,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Sonata.Section` "Transcription" → `TranscriptionSection`
             - Uses:
               - `apps/sonata/library.Library`
-              - `apps/sonata/library.openSongImperative`
               - `apps/sonata/library.useCurrentSong`
               - `apps/sonata/shell.Sonata`
               - `conversations/agent-thread.AgentThread`
@@ -12093,7 +12087,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/ui-kit.Input`
                   - `primitives/kept-state.useKept`
                   - `primitives/loading.Loading`
-                  - `primitives/pane.openPane`
+                  - `primitives/pane.useOpenPane`
                   - `ui/icons.Icon`
             - **`entry-points`** — Entry-point editor section in the composition detail pane: the draft's entry plugins, with add / remove.
               - Web:
@@ -14375,8 +14369,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/dom/static-render`
     - **`tabs`** — Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, which tabs stay mounted (useResidentTabs: those on screen plus the most recently focused hidden ones; the rest are unloaded), whether a surface is on screen (useSurfaceShown: the focused tab, or any open tab in a mode that paints unfocused tabs — the desktop's windows, minimized included) and whether it shows apps side by side (useSurfaceShowsAppsSideBySide: leaving it closes its app), the focused tab's title as a module signal (useFocusedTabTitle, readable outside TabsProvider), and the surface-written placement-capabilities registry — one per tab set: the page's own, or an embedded one (TabsProvider embedded={{ at, onLeave, onLocationChange?, browserTabUrl? }}, an AppEmbed's: seeded, never live, persisting nothing, publishing no page-global signal, behind its own navigation boundary), found from outside React by peekFocusedTabSet().
       - Web:
-        - Uses: 51 symbols — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
-          - `primitives/pane` ×21
+        - Uses: 52 symbols — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+          - `primitives/pane` ×22
           - `apps-core` ×9
           - `primitives/scope/app-instance` ×5
           - `primitives/embed` ×3
@@ -18535,11 +18529,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xl`
           - `ui/tokens/density --space-xs`
           - `ui/tokens/type-scale --measure-reading`
-        - Imported by: 65 plugins — full list in [`plugins/conversations/plugins/conversation-view/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/REFERENCE.md)
+        - Imported by: 64 plugins — full list in [`plugins/conversations/plugins/conversation-view/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/REFERENCE.md)
           - `conversations` ×49
           - `active-data` ×5
           - `tasks` ×5
-          - `apps/home/tour`
           - `debug/profiling/ops`
           - `hints/ask`
           - `primitives/launch`
@@ -56817,7 +56810,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `definePaneHeaderSlot`
           - `defineRoute`
           - `morphOriginProps`
-          - `openPane`
           - `Pane`
           - `PaneBasePathContext`
           - `PaneBox`
@@ -56853,6 +56845,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `setLiveStore`
           - `stripBasePath`
           - `SurfaceChromeContext`
+          - `TabSetStoreContext`
           - `type`
           - `useAppNavBoundary`
           - `useCurrentPane`
@@ -56888,8 +56881,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --spacing`
-        - Imported by: 220 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `apps` ×80
+        - Imported by: 219 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `apps` ×79
           - `conversations` ×33
           - `debug` ×29
           - `active-data` ×14

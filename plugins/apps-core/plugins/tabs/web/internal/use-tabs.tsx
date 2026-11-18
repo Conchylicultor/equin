@@ -22,6 +22,7 @@ import {
   setHistoryAdapter,
   appNavSink,
   AppNavBoundary,
+  TabSetStoreContext,
   type AppNavigator,
   type HistoryMode,
   type ParsedRoute,
@@ -1899,6 +1900,20 @@ export function TabsProvider({
     if (path !== "/") navigate(path);
   }, [page, followed, appsRef, navigate, setMode, focusTab]);
 
+  // An embedded set's focused store, for an op made outside every pane
+  // surface inside it (a dialog in the embed's render origin): its live
+  // store's twin — the focused tab's, else the empty-surface store. The page's
+  // own set needs none: its focused store IS the live one.
+  const tabSetStore = useCallback((): PaneStore => {
+    const focused = tabsRef.current.find((t) => t.tabId === focusedRef.current);
+    const store = focused?.store ?? emptyStoreRef.current;
+    if (store === null)
+      throw new Error(
+        "An embedded tab set has neither a focused tab nor an empty-surface store.",
+      );
+    return store;
+  }, []);
+
   const provided = (
     <PlacementRegistryProvider value={registry}>
       <TabsContext.Provider value={api}>{children}</TabsContext.Provider>
@@ -1907,7 +1922,11 @@ export function TabsProvider({
   return page ? (
     provided
   ) : (
-    <AppNavBoundary navigator={boundary}>{provided}</AppNavBoundary>
+    <AppNavBoundary navigator={boundary}>
+      <TabSetStoreContext.Provider value={tabSetStore}>
+        {provided}
+      </TabSetStoreContext.Provider>
+    </AppNavBoundary>
   );
 }
 
