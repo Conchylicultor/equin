@@ -7,16 +7,53 @@ import {
 } from "react";
 
 /**
- * How the bar reads a width.
+ * How the bar reads a width: the element's LAYOUT border-box width, in its own
+ * CSS pixels, fractional.
  *
- * `getBoundingClientRect().width`, never `offsetWidth`: the integer-rounding
- * loops this primitive replaces under-reported by up to 1px per item, which is
- * exactly how a row ends up permanently one pixel too wide and one item too
- * narrow.
+ * Never `offsetWidth`: the integer-rounding loops this primitive replaces
+ * under-reported by up to 1px per item, which is exactly how a row ends up
+ * permanently one pixel too wide and one item too narrow.
+ *
+ * And never `getBoundingClientRect().width` either — that is the VISUAL width,
+ * scaled by every transform on the element or an ancestor. Everything else the
+ * fit reads is in layout pixels (the gap, the inset, the yield floor's `em`, all
+ * from computed style), and the bar's one change signal, the `ResizeObserver`,
+ * watches the layout box: a transform changing fires nothing. So a visual read
+ * taken under a transform — a desktop window opening from `scale(0.96)`, or
+ * restored from `scale(0.2)` — mixed two currencies in one sum and was then
+ * cached as `exact` with nothing ever coming to correct it: once the window
+ * settled at scale 1, an occupant measured at 96% of its real width was fitted
+ * at that width and the row overflowed its box (the `row-overflow` Sonata's
+ * library pane filed on equin.ai's phone demo). The same trap
+ * `dom/element-size` already closed for its consumers.
+ *
+ * Read off the computed `width`, which is the used width for any element that
+ * generates a box. Every element the bar measures is a flex container or a flex
+ * item (blockified), so it always has one; an element that generates no box
+ * (`hidden`, a `display: none` subtree) resolves to `auto`, read as 0 — the same
+ * answer a rect gave it.
  */
 export type MeasureWidth = (el: Element) => number;
 
-const domMeasureWidth: MeasureWidth = (el) => el.getBoundingClientRect().width;
+const domMeasureWidth: MeasureWidth = (el) => layoutWidthPx(el);
+
+/**
+ * `el`'s layout border-box width (transforms excluded), or 0 when it generates
+ * no box. See {@link MeasureWidth}.
+ */
+export function layoutWidthPx(el: Element): number {
+  const style = getComputedStyle(el);
+  const width = Number.parseFloat(style.width);
+  if (!Number.isFinite(width)) return 0;
+  if (style.boxSizing === "border-box") return width;
+  return (
+    width +
+    lengthPx(style.paddingLeft) +
+    lengthPx(style.paddingRight) +
+    lengthPx(style.borderLeftWidth) +
+    lengthPx(style.borderRightWidth)
+  );
+}
 
 /**
  * Does this element generate a box at all?

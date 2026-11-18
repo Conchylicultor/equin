@@ -115,8 +115,11 @@ Edges (pinned in `web/__tests__/row-inset.test.tsx`):
 > boxes relayed (`0`: nothing above can give room; `n`: recompose the offending
 > `<div>` onto `Fill`).
 
-Because the bar is `min-w-0 flex-1`, `barRoot.getBoundingClientRect().width`
-**is** its given width — no ancestor walk.
+Because the bar is `min-w-0 flex-1`, its layout width
+(`layoutWidthPx`) **is** its given width — no ancestor walk. Every width the bar
+reads is a LAYOUT width (transforms excluded), the currency of its gap, inset,
+yield floor and `ResizeObserver`: a visual rect read under an opening window's
+`scale(0.96)` was cached and fitted at 96% once the window settled.
 
 The budget subtracts the root's own padding/border (`readRowMetrics`'s
 `insetPx`) because occupants are laid out and judged (`measureRowOverflow`) in

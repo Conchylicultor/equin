@@ -81,6 +81,7 @@ import {
 import { DEFAULT_LADDER, formFor, inlineRungsOf, yieldRankOf } from "./ladder";
 import {
   foreignCellCount,
+  layoutWidthPx,
   readRowMetrics,
   useLayoutMeasured,
   useMeasureBundle,
@@ -198,7 +199,7 @@ export type AdaptiveBarProps = AdaptiveBarBaseProps &
 
 /**
  * The bar DEFINES itself as the grow cell of its row, and that is a contract,
- * not a style choice: `barRoot.getBoundingClientRect().width` is the width the
+ * not a style choice: the root's layout width (`layoutWidthPx`) is the width the
  * bar was GIVEN, read with no ancestor-walking, no mutate-reflow-restore, and no
  * forced recalculation per sibling. (The fit's budget is that minus the root's
  * own padding and border — `readRowMetrics`'s `insetPx` — because the occupants
@@ -573,7 +574,7 @@ function AdaptiveBarShell({
   const nestedInBar = !collapsed && parentBar !== null;
 
   // The bar asks for its own room. Its whole premise is that
-  // `root.getBoundingClientRect().width` is a width it was GIVEN, which holds
+  // the root's layout width is a width it was GIVEN, which holds
   // only if every box between it and its row relays the grow — so it says so
   // from where it is rendered rather than relying on a `fill: true` declared on
   // a contribution several files away, which is a thing two of two consumers
@@ -2201,11 +2202,20 @@ function measureRowOverflow(
   order: readonly { anchor: HTMLElement; entry: BarItemEntry }[],
   trigger: HTMLElement | null,
 ): number {
+  // Judged in the row's own LAYOUT pixels, the currency the fit decided in
+  // (`layoutWidthPx`): the rects are visual, so under an ancestor transform (a
+  // window opening from `scale(0.96)`) they are mapped back by the row's own
+  // scale — else the padding (a computed, untransformed length) and the 1px
+  // tolerance would be read against scaled edges.
   const rect = root.getBoundingClientRect();
   const style = getComputedStyle(root);
+  const layoutWidth = layoutWidthPx(root);
+  const scale =
+    layoutWidth > 0 && rect.width > 0 ? rect.width / layoutWidth : 1;
+  const toLayout = (x: number): number => (x - rect.left) / scale;
   const box = {
-    left: rect.left + px(style.paddingLeft) + px(style.borderLeftWidth),
-    right: rect.right - px(style.paddingRight) - px(style.borderRightWidth),
+    left: px(style.paddingLeft) + px(style.borderLeftWidth),
+    right: layoutWidth - px(style.paddingRight) - px(style.borderRightWidth),
   };
 
   const spans: Span[] = [];
@@ -2217,7 +2227,7 @@ function measureRowOverflow(
     // `display: none` slots.
     if (el.getClientRects().length === 0) return;
     const r = el.getBoundingClientRect();
-    spans.push({ left: r.left, right: r.right });
+    spans.push({ left: toLayout(r.left), right: toLayout(r.right) });
   };
   // The other filter, and it is per-KIND because "still in the row" is asked
   // differently of the two. An occupant is in the row when it is docked at its
