@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from "react";
-import { ANIMATION_HOST } from "@plugins/reports/plugins/render-loop/core";
+import { AnimationHost } from "@plugins/reports/plugins/render-loop/web";
 import { WebsiteBand } from "@plugins/apps/plugins/website/plugins/shell/web";
 import { SkillsGraph } from "@plugins/apps/plugins/website/plugins/pages/plugins/story/plugins/skills-graph/web";
 import {
@@ -447,15 +447,7 @@ function NewFriction() {
     () => (ref.current ? mountNewFriction(ref.current) : undefined),
     [],
   );
-  return (
-    <div className="nest" ref={ref} {...ANIMATION_HOST}>
-      <div className="r">
-        <span>Me</span>
-        <div className="ln" />
-        <span className="hl">Friction</span>
-      </div>
-    </div>
-  );
+  return <AnimationHost className="nest" ref={ref} />;
 }
 
 /** The friction chain: click a friction and it becomes the next objective; the last one unwinds the stack. */
@@ -465,7 +457,7 @@ function FrictionChain() {
     () => (ref.current ? mountFrictionChain(ref.current) : undefined),
     [],
   );
-  return <div className="nest chain" ref={ref} {...ANIMATION_HOST} />;
+  return <AnimationHost className="nest chain" ref={ref} />;
 }
 
 /** The backlog: the same tasks pile up on the left, and are done and gone on the right. */
@@ -475,24 +467,5 @@ function Backlog() {
     () => (ref.current ? mountBacklog(ref.current) : undefined),
     [],
   );
-  return (
-    <div className="sides" ref={ref} {...ANIMATION_HOST}>
-      <div className="side">
-        <h4>
-          Task list <span data-n="">0 open</span>
-        </h4>
-        <div className="rowsbox" data-list="" />
-        <div className="more" data-more="" hidden />
-      </div>
-      <div className="side">
-        <h4>
-          Agents + no friction{" "}
-          <span className="hl" data-n="">
-            0 open
-          </span>
-        </h4>
-        <div className="rowsbox" data-list="" />
-      </div>
-    </div>
-  );
+  return <AnimationHost className="sides" ref={ref} />;
 }

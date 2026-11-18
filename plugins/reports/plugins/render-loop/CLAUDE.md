@@ -21,11 +21,14 @@ named (the app's background commits are not a loop's cause); an empty
 
 An intended imperative animation (a rAF loop drawing an SVG scene) writes
 thousands of attributes a second while the user is idle, which is exactly a
-loop's shape. Its host declares itself with `ANIMATION_HOST` (core:
-`<div {...ANIMATION_HOST} />`): records on its descendants that React does
-not own are skipped. React-owned nodes inside the host are still watched, so
-a real re-render loop there still fires — declare the host on the element the
-imperative code fills, never on a React subtree.
+loop's shape. It draws inside `<AnimationHost>` (web: `<AnimationHost ref={…}
+className="…" />`): records on its descendants that React does not own are
+skipped. The host takes **no children** — React renders the empty box and the
+script builds everything inside it, skeleton included. A React-rendered node
+inside a host stays watched (a re-render loop there must still fire), so a
+script writing into one reads as a loop: the story's Backlog figure kept its
+counters and row lists in React and filed a 19/s cascade until it built them
+itself. With no `children` prop, that shape has no spelling.
 
 Every node's classification (skipped, or its culprit meta) is computed on its
 first record and cached in a WeakMap: the observer's per-record cost is O(1)
@@ -74,6 +77,8 @@ does not own.
     - `primitives/ui-context.nearestSource`
     - `reports.report`
     - `reports.Reports`
+  - Exports (types): `AnimationHostProps`
+  - Exports (values): `AnimationHost`
 - Server:
   - Contributes: `report-kind` "render-loop"
   - Uses: `reports.ReportKind`
@@ -93,7 +98,6 @@ does not own.
     - `RenderLoopInitiator`
     - `RenderLoopPayload`
   - Exports (values):
-    - `ANIMATION_HOST`
     - `ANIMATION_HOST_ATTR`
     - `holdPlayback`
     - `playbackHeld`

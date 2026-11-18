@@ -38,7 +38,7 @@
  * high-rate loop can't burst redundant reports before the async hash resolves).
  * Idle per-signature counters and per-root windows are GC'd.
  *
- * **Animation hosts** — an element declared with `ANIMATION_HOST` (core) is
+ * **Animation hosts** — an element rendered as `<AnimationHost>` (web) is
  * drawn by an imperative animation: writes to its descendants that React does
  * not own are its frames, not a loop, and are skipped. React-owned nodes inside
  * it are still watched, so a real re-render loop there still fires.

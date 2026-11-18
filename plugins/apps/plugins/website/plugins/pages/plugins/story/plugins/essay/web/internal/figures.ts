@@ -1,8 +1,9 @@
 import { createInViewWatcher } from "@plugins/primitives/plugins/dom/plugins/in-view/web";
 
 /* The essay's three small scripted figures, ported verbatim from the prototype's inline script
-   (`proto-1794207359-w7ez6h`): each owns the box React rendered for it from mount on, runs only while on
-   screen, and gets a still under reduced motion. Each mount answers its disposer. */
+   (`proto-1794207359-w7ez6h`): each owns the empty box React rendered for it (an `<AnimationHost>`) from
+   mount on — its skeleton included, so React owns nothing inside it for the script to write into — runs
+   only while on screen, and gets a still under reduced motion. Each mount answers its disposer. */
 
 const reducedMotion = () =>
   matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -152,16 +153,27 @@ export function mountFrictionChain(box: HTMLElement): () => void {
 
 /* "Me → Friction": once on screen, a new friction lands on the line. */
 export function mountNewFriction(fig: HTMLElement): () => void {
+  const r = document.createElement("div");
+  r.className = "r";
+  const me = document.createElement("span");
+  me.textContent = "Me";
+  const ln = document.createElement("div");
+  ln.className = "ln";
+  const friction = document.createElement("span");
+  friction.className = "hl";
+  friction.textContent = "Friction";
+  r.append(me, ln, friction);
+  fig.replaceChildren(r);
   const add = () => {
-    if (fig.querySelector(".on")) return;
+    if (ln.querySelector(".on")) return;
     const t = document.createElement("span");
     t.className = "on appear";
     t.textContent = "New friction";
-    fig.querySelector(".ln")!.append(t);
+    ln.append(t);
   };
   if (reducedMotion()) {
     add();
-    return () => {};
+    return () => fig.replaceChildren();
   }
   let t: ReturnType<typeof setTimeout> | undefined;
   const stop = whileVisible(
@@ -174,6 +186,7 @@ export function mountNewFriction(fig: HTMLElement): () => void {
   return () => {
     stop();
     clearTimeout(t);
+    fig.replaceChildren();
   };
 }
 
@@ -202,16 +215,33 @@ const POOL = [
   "Copy link to a block",
   "Offline banner",
 ];
+/** One side of the backlog: its heading with the open count, and the box its rows land in. */
+function backlogSide(heading: string, highlight: boolean) {
+  const side = document.createElement("div");
+  side.className = "side";
+  const h = document.createElement("h4");
+  const n = document.createElement("span");
+  n.dataset.n = "";
+  if (highlight) n.className = "hl";
+  n.textContent = "0 open";
+  h.append(heading + " ", n);
+  const list = document.createElement("div");
+  list.className = "rowsbox";
+  side.append(h, list);
+  return { side, n, list };
+}
 export function mountBacklog(fig: HTMLElement): () => void {
-  const [L, R] = fig.querySelectorAll<HTMLElement>(".side") as unknown as [
-    HTMLElement,
-    HTMLElement,
-  ];
+  const L = backlogSide("Task list", false),
+    R = backlogSide("Agents + no friction", true);
+  const more = document.createElement("div");
+  more.className = "more";
+  more.hidden = true;
+  L.side.append(more);
+  fig.replaceChildren(L.side, R.side);
   const SHOWN = 5,
     DAYS_PER_SEC = 3;
-  const lList = L.querySelector<HTMLElement>("[data-list]")!,
-    rList = R.querySelector<HTMLElement>("[data-list]")!;
-  const more = L.querySelector<HTMLElement>("[data-more]")!;
+  const lList = L.list,
+    rList = R.list;
   interface Open {
     title: string;
     born: number;
@@ -264,8 +294,8 @@ export function mountBacklog(fig: HTMLElement): () => void {
     el.classList.add("exit");
     later(() => el.remove(), 480);
   }
-  function count(side: HTMLElement, n: number) {
-    side.querySelector("[data-n]")!.textContent = n + " open";
+  function count(side: { n: HTMLElement }, n: number) {
+    side.n.textContent = n + " open";
   }
   function arrive() {
     const title = POOL[k++ % POOL.length]!;
@@ -337,7 +367,7 @@ export function mountBacklog(fig: HTMLElement): () => void {
     count(L, 14);
     more.hidden = false;
     more.textContent = `+ ${14 - SHOWN} more`;
-    return () => {};
+    return () => fig.replaceChildren();
   }
   const stop = whileVisible(
     fig,
@@ -361,8 +391,6 @@ export function mountBacklog(fig: HTMLElement): () => void {
     clearTimeout(ageTimer);
     for (const t of timers) clearTimeout(t);
     open = [];
-    lList.replaceChildren();
-    rList.replaceChildren();
-    more.hidden = true;
+    fig.replaceChildren();
   };
 }

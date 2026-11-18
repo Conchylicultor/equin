@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef } from "react";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
-import { ANIMATION_HOST } from "@plugins/reports/plugins/render-loop/core";
+import { AnimationHost } from "@plugins/reports/plugins/render-loop/web";
 import type { HeadFigure as Figure } from "../internal/kit";
 
 /**
@@ -29,5 +29,5 @@ export function HeadFigureHost({
 
   useResizeObserver(hostRef, () => figureRef.current?.layout());
 
-  return <div ref={hostRef} {...ANIMATION_HOST} />;
+  return <AnimationHost ref={hostRef} />;
 }

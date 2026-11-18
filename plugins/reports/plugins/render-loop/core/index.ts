@@ -2,7 +2,6 @@ export {
   RenderLoopPayloadSchema,
   renderLoopFingerprint,
   RENDER_LOOP,
-  ANIMATION_HOST,
   ANIMATION_HOST_ATTR,
 } from "./render-loop-kind";
 export { holdPlayback, playbackHeld } from "./playback";

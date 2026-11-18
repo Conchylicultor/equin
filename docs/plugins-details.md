@@ -13397,6 +13397,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/dom/in-view.createInViewWatcher`
                       - `primitives/dom/in-view.InViewWatcher`
                       - `primitives/dom/scroll-reveal.focusElement`
+                      - `reports/render-loop.AnimationHost`
                     - Exports (values):
                       - `ClaudeAfter`
                       - `ClaudeBefore`
@@ -13424,6 +13425,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/dom/in-view.createInViewWatcher`
                       - `primitives/overlay/image-viewer.ImageGallery`
                       - `primitives/overlay/image-viewer.useImageViewerTrigger`
+                      - `reports/render-loop.AnimationHost`
                   - Cross-plugin:
                     - Uses tokens:
                       - `ui/tokens/color-palette --border`
@@ -13439,6 +13441,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `apps/website/shell.websitePagePart`
                       - `primitives/dom/element-size.useResizeObserver`
                       - `primitives/dom/in-view.createInViewWatcher`
+                      - `reports/render-loop.AnimationHost`
                     - Exports (values):
                       - `MindOverload`
                       - `ReviewDesk`
@@ -13451,6 +13454,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `apps/website/shell.websitePagePart`
                       - `primitives/dom/element-size.useResizeObserver`
                       - `primitives/dom/in-view.createInViewWatcher`
+                      - `reports/render-loop.AnimationHost`
                     - Exports (values): `SkillsGraph`
                   - Cross-plugin:
                     - Imported by: `apps/website/pages/story/essay`
@@ -13476,6 +13480,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/pane.Pane`
                   - `primitives/pane.useOpenPane`
                   - `primitives/slot-render.defineRenderSlot`
+                  - `reports/render-loop.AnimationHost`
                 - Exports (values):
                   - `visionPane`
                   - `WebsiteVision`
@@ -60394,6 +60399,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/ui-context.nearestSource`
           - `reports.report`
           - `reports.Reports`
+        - Exports (types): `AnimationHostProps`
+        - Exports (values): `AnimationHost`
       - Server:
         - Contributes: `report-kind` "render-loop"
         - Uses: `reports.ReportKind`
@@ -60413,7 +60420,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RenderLoopInitiator`
           - `RenderLoopPayload`
         - Exports (values):
-          - `ANIMATION_HOST`
           - `ANIMATION_HOST_ATTR`
           - `holdPlayback`
           - `playbackHeld`

@@ -40,6 +40,7 @@ its palette is the picture's own, the same in either mode, declared once on
     - `primitives/dom/in-view.createInViewWatcher`
     - `primitives/dom/in-view.InViewWatcher`
     - `primitives/dom/scroll-reveal.focusElement`
+    - `reports/render-loop.AnimationHost`
   - Exports (values):
     - `ClaudeAfter`
     - `ClaudeBefore`

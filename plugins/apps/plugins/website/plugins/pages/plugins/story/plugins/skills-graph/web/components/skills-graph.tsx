@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef } from "react";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
-import { ANIMATION_HOST } from "@plugins/reports/plugins/render-loop/core";
+import { AnimationHost } from "@plugins/reports/plugins/render-loop/web";
 import {
   mountSkillsGraph,
   type SkillsGraphHandle,
@@ -33,5 +33,5 @@ export function SkillsGraph() {
   useResizeObserver(hostRef, () => graphRef.current?.layout());
 
   // An animation host: the graph's run plays on its own rAF loop while on screen.
-  return <div ref={hostRef} {...ANIMATION_HOST} />;
+  return <AnimationHost ref={hostRef} />;
 }

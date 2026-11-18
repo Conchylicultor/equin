@@ -17,6 +17,7 @@ shadow root and owns it; the component re-lays it out on a width change.
     - `apps/website/shell.websitePagePart`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/dom/in-view.createInViewWatcher`
+    - `reports/render-loop.AnimationHost`
   - Exports (values): `SkillsGraph`
 - Cross-plugin:
   - Imported by: `apps/website/pages/story/essay`

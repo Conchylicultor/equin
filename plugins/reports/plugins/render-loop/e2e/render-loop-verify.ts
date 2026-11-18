@@ -4,7 +4,7 @@
 //   1. an imperative no-op attribute loop (a rAF rewriting one attribute to its
 //      own value, no React involved) is filed — with attribution saying no
 //      component re-renders at a loop's rate;
-//   2. the same loop inside an `ANIMATION_HOST` element is NOT filed;
+//   2. the same loop inside an animation host (`<AnimationHost>`) element is NOT filed;
 //   3. (optional, --vision) the Vision zoom left playing on its last chapter
 //      files nothing.
 //

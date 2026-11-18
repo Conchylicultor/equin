@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from "react";
-import { ANIMATION_HOST } from "@plugins/reports/plugins/render-loop/core";
+import { AnimationHost } from "@plugins/reports/plugins/render-loop/web";
 import { App, type FigureMode } from "../internal/app";
 
 /**
@@ -19,7 +19,7 @@ function DataViewFigure({ mode }: { mode: FigureMode }) {
 
   // An animation host: a hovered feature line keeps its highlight box on its
   // target frame by frame (a search field growing, a list scrolling under it).
-  return <div ref={hostRef} {...ANIMATION_HOST} />;
+  return <AnimationHost ref={hostRef} />;
 }
 
 /**

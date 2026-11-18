@@ -43,6 +43,7 @@ the design reference: port a change from it rather than editing the copy here.
     - `primitives/dom/in-view.createInViewWatcher`
     - `primitives/overlay/image-viewer.ImageGallery`
     - `primitives/overlay/image-viewer.useImageViewerTrigger`
+    - `reports/render-loop.AnimationHost`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`

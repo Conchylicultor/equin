@@ -117,7 +117,7 @@ function attributionLines(data: RenderLoopPayload): string[] {
   }
   if (data.initiators == null || data.initiators.length === 0) {
     return [
-      `- **React commits:** ~${data.reactCommitsPerSec}/sec, none from a component re-rendering at a loop's rate — the writes come from imperative code (a rAF loop, a third-party library), not a React re-render. If the subtree is an intended animation, declare its host with \`ANIMATION_HOST\` (render-loop core).`,
+      `- **React commits:** ~${data.reactCommitsPerSec}/sec, none from a component re-rendering at a loop's rate — the writes come from imperative code (a rAF loop, a third-party library), not a React re-render. If the subtree is an intended animation, draw it inside \`<AnimationHost>\` (render-loop web), with the script building everything inside it.`,
     ];
   }
   const lines = [`- **React commits:** ~${data.reactCommitsPerSec}/sec`];

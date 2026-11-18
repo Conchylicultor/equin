@@ -135,6 +135,7 @@ renders below the zoom.
     - `primitives/pane.Pane`
     - `primitives/pane.useOpenPane`
     - `primitives/slot-render.defineRenderSlot`
+    - `reports/render-loop.AnimationHost`
   - Exports (values):
     - `visionPane`
     - `WebsiteVision`

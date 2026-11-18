@@ -72,15 +72,12 @@ export const RENDER_LOOP = {
 } as const;
 
 /**
- * Declares an element whose subtree an imperative animation draws (a rAF loop
- * writing an SVG scene, a canvas overlay's DOM): its descendants' writes are
- * the animation's frames, not a render loop, so the detector does not count
- * them. React-rendered descendants are still watched — only nodes React does
- * not own are skipped — so a real re-render loop inside the host still fires.
- * Spread on the host element: `<div {...ANIMATION_HOST} />`.
+ * The attribute marking an animation host — an element whose subtree an
+ * imperative animation draws, its descendants' writes skipped unless React owns
+ * them. Rendered only by the web barrel's `<AnimationHost>`, which takes no
+ * children, so a host holds no React node for the animation to write into.
  */
 export const ANIMATION_HOST_ATTR = "data-animation-host";
-export const ANIMATION_HOST = { [ANIMATION_HOST_ATTR]: "" } as const;
 
 /** One React component found starting the re-renders behind a loop. */
 export const RenderLoopInitiatorSchema = z.object({
