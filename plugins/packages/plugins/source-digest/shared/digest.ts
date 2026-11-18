@@ -622,6 +622,9 @@ export function prewarmSourceDigests(): void {
     if (set.urls().length === 0) continue;
     const paths = pathsOf([set]);
     // Never rejects (a settled result), so nothing is left unhandled.
-    void runTracked("source-digest:prewarm", () => digestOf(paths));
+    void runTracked("source-digest:prewarm", () => digestOf(paths), {
+      outlivesBootHook:
+        "a digest must read the module files as close as possible to when this process imported them, so it names the code that runs (an edit landing later would stamp state with code this process does not run); started before ready, each ~0.2 s",
+    });
   }
 }

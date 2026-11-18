@@ -3915,7 +3915,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`fullscreen-budget`** — The desktop.fullscreen-budget job: after each of main's successful builds, measures the elements the desktop ↔ full screen switch restyles (enter and exit, one window and four, on the demo's seeded data) and files an interaction-budget report naming the commit range when a case is over budget.
           - Machine:
             - Uses: `build.onRunTerminal`
-            - Register: `defineSupervisedJob('desktop.fullscreen-budget')`
+            - Register:
+              - `defineSupervisedJob('desktop.fullscreen-budget')`
+              - `defineWarmup('fullscreen-budget.latest-deploy')`
         - **`launcher`** — The desktop's ⌘K launcher: a centred dialog over the windows listing every app as a grid (an empty query) or the matching apps and window commands (a query), with arrow-key selection, Shift+Enter for a new window and a right-click menu to keep an app in the dock. Exposes open / close / toggle for the shelf's launcher button.
           - Web:
             - Contributes:
@@ -17171,7 +17173,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `report-kind` "conversation-stuck-turn"
       - `report-kind` "held-turn-undelivered"
       - `resource.declare` "conversations.partial-message"
-    - Uses: 90 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+    - Uses: 91 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
       - `tasks/tasks-core` ×27
       - `conversations/turn-ledger` ×15
       - `conversations/transcript-watcher` ×8
@@ -17194,6 +17196,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `database/fork-point.databaseForkedAt`
       - `infra/attachments.getAttachment`
       - `infra/paths.claudeTranscriptPath`
+      - `infra/warmup.defineWarmup`
       - `reports/engine.recordReport`
       - `shell/notifications.recordNotification`
       - `tasks/task-category.setTaskCategory`
@@ -17245,6 +17248,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `defineJob('tasks.maybe-launch-on-armed')`
       - `defineJob('conversations.notify-created')`
       - `defineJob('conversations.turn-emitter.reconcile')`
+      - `defineWarmup('conversations.turn-emitter-replay')`
       - `defineJob('conversations.spawn')`
       - `defineJob('conversations.deliver-held-turns')`
       - `defineTriggerEvent('conversation.turn-completed')`
@@ -29305,7 +29309,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `report-kind` "worktree-reap-failed"
           - `resource.declare` "debug.worktree-cleanup.worktrees"
           - `resource.declare` "debug.worktree-cleanup.worktrees:meta"
-        - Uses: 43 symbols — full list in [`plugins/debug/plugins/worktree-cleanup/REFERENCE.md`](../plugins/debug/plugins/worktree-cleanup/REFERENCE.md)
+        - Uses: 44 symbols — full list in [`plugins/debug/plugins/worktree-cleanup/REFERENCE.md`](../plugins/debug/plugins/worktree-cleanup/REFERENCE.md)
           - `infra/worktree` ×15
           - `database/admin` ×4
           - `infra/worktree/reclaim` ×4
@@ -29317,10 +29321,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live` ×2
           - `conversations/workspace.announceWorkspacesReclaimed`
           - `infra/ndjson-stream.ndjsonResponse`
+          - `infra/warmup.defineWarmup`
           - `infra/worktree/backend-hold.holdBackendDown`
           - `primitives/log-channels.defineLogSink`
           - `reports.ReportKind`
-        - Register: `defineSupervisedJob('worktree-cleanup.reap-stale')`
+        - Register:
+          - `defineSupervisedJob('worktree-cleanup.reap-stale')`
+          - `defineWarmup('worktree-cleanup.reap-catch-up')`
         - Resources:
           - `debug.worktree-cleanup.worktrees` (keyed, window, notified)
           - `debug.worktree-cleanup.worktrees:meta` (push, notified)
@@ -38912,6 +38919,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `UNSAFE_sweepStuckLocks`
         - Register:
           - `defineJob('jobs.dead-gc')`
+          - `defineWarmup('jobs.reconcile-dead')`
           - `defineTimer('jobs.stuck-lock-sweep')`
       - Test helpers:
         - Server: `@plugins/infra/plugins/jobs/server/testing`
@@ -40514,6 +40522,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses: `infra/launcher/env-names.readEnv`
         - Exports (types):
           - `Aggregate`
+          - `BootHookScope`
           - `EntryContext`
           - `EntryCost`
           - `FlightSpan`
@@ -40527,6 +40536,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LoopStall`
           - `OriginClass`
           - `ParentBreakdown`
+          - `RunTrackedOptions`
           - `SlowSpan`
           - `SlowSpanHandler`
           - `SlowWait`
@@ -40554,6 +40564,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `getRuntimeProfile`
           - `getSelfMeter`
           - `installBackgroundLaneRuntime`
+          - `installBootHookScopeRuntime`
           - `installLoaderReadSetSink`
           - `installProfilingSuppressionRuntime`
           - `installRootContextRuntime`
@@ -40572,6 +40583,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `registerGateGauge`
           - `resetRuntimeProfile`
           - `resolveGateGauges`
+          - `runBootHook`
           - `runInBackgroundLane`
           - `runInRootContext`
           - `runTracked`
@@ -41061,12 +41073,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WarmupHost`
           - `warmupRunOf`
       - Cross-plugin:
-        - Imported by: 30 plugins — full list in [`plugins/infra/plugins/warmup/REFERENCE.md`](../plugins/infra/plugins/warmup/REFERENCE.md)
-          - `apps` ×7
+        - Imported by: 34 plugins — full list in [`plugins/infra/plugins/warmup/REFERENCE.md`](../plugins/infra/plugins/warmup/REFERENCE.md)
+          - `apps` ×8
           - `tasks` ×7
-          - `infra` ×5
-          - `conversations` ×3
-          - `debug` ×2
+          - `infra` ×6
+          - `conversations` ×4
+          - `debug` ×3
           - `database/lock-watch`
           - `page/links`
           - `plugin-meta/plugin-tree`
@@ -62526,7 +62538,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `automationConfigRegistration`
           - `defineAutomation`
           - `tasksOrigin`
-        - Register: `defineJob('automations.task-status')`
+        - Register:
+          - `defineJob('automations.task-status')`
+          - `defineWarmup('automations.launch-sync')`
         - Resources:
           - `automations.catalog` (push, notified, whole: every registered automation — declared in code, bounded by the composition, whole: the tasks one launch-kind automation holds a slot for — at most its concurrency, whole: what one automation watches — e.g. one per dependency updater, declared in code, whole: one automation's prompt variables — a handful, declared in code, capped: TRIGGER_KINDS.length)
           - `automations.launch-decisions.all` (keyed)

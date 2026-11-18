@@ -197,8 +197,13 @@ export default {
   onReady() {
     startListener();
     assertChangelogRetained(ChangelogRetention.getContributions());
-    void runTracked("change-feed:remove-unfed-triggers", () =>
-      removeUnfedTriggers(),
+    void runTracked(
+      "change-feed:remove-unfed-triggers",
+      () => removeUnfedTriggers(),
+      {
+        outlivesBootHook:
+          "waits for the previous backend (and its children) to exit after the swap, then drops the triggers only that older code fed — a no-op unless a deploy stopped feeding a table; the old process's exit, not the replay, is what it waits on",
+      },
     );
   },
   async onShutdown() {

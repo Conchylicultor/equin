@@ -60,13 +60,6 @@ export class PrototypeRecords {
   /** `null` until the first refresh of `"all"`: nothing to compose from yet. */
   private records: Map<string, FolderRecord> | null = null;
   /**
-   * Resolves once the first refresh of `"all"` settles, whenever it starts: a list
-   * read before the watcher loaded the records (a sub landing during boot)
-   * waits for them rather than failing — a failed loader would stay failed,
-   * since nothing re-notifies the list once the baseline lands.
-   */
-  private firstLoad = Promise.withResolvers<void>();
-  /**
    * Folder reads at once: a first list after boot reads every folder (~300
    * files), which must not open them all together.
    */
@@ -90,7 +83,6 @@ export class PrototypeRecords {
    */
   reset(): void {
     this.records = null;
-    this.firstLoad = Promise.withResolvers<void>();
   }
 
   /** Every prototype name in the records, sorted. */
@@ -108,14 +100,7 @@ export class PrototypeRecords {
    * each apply an older listing over a newer one.
    */
   async refresh(scope: RecordsScope): Promise<RecordsRefresh> {
-    if (scope === "all") {
-      const first = this.records === null;
-      const all = this.refreshAll();
-      if (!first) return all;
-      // Settled either way: the caller owns (and reports) a failure; a list
-      // waiting on a baseline that failed then finds no records and throws.
-      return all.finally(() => this.firstLoad.resolve());
-    }
+    if (scope === "all") return this.refreshAll();
     if (this.records === null) throw notLoaded();
     const records = this.records;
     const names = [...scope].filter(isPrototypeDirName);
@@ -196,17 +181,13 @@ export class PrototypeRecords {
    * Each folder's references are judged against the names in the records now.
    */
   async list(): Promise<PrototypeMeta[]> {
-    // A read landing before the boot baseline is read waits for it. The
-    // baseline is the watcher's work, and the wait holds no read-admit slot
-    // (a use-scoped slot is held only around the read's own file calls).
-    if (this.records === null) await this.firstLoad.promise;
-    if (this.records === null)
-      throw new Error(
-        "the prototypes records' first load failed (reported by the files watcher) — the next refresh of the tree retries it",
-      );
+    // Loading the records is the caller's (the server's list loads them on
+    // demand, `ensurePrototypeRecords`): with none, there is nothing to
+    // compose from.
+    const records = this.records;
+    if (records === null) throw notLoaded();
     const names = this.names();
     const nonTokenNames = nonTokenNamesOf(names);
-    const records = this.records;
     const scanned = await Promise.all(
       names.map((name) => {
         const record = records.get(name);
@@ -264,6 +245,6 @@ function sameNames(a: readonly string[], b: readonly string[]): boolean {
 
 function notLoaded(): Error {
   return new Error(
-    "the prototypes records are read before their first refresh — the files watcher (started in onReady) loads them",
+    "the prototypes records are read before their first refresh of the whole tree — load them first (the server's ensurePrototypeRecords)",
   );
 }

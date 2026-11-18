@@ -1059,6 +1059,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `UNSAFE_sweepStuckLocks`
   - Register:
     - `defineJob('jobs.dead-gc')`
+    - `defineWarmup('jobs.reconcile-dead')`
     - `defineTimer('jobs.stuck-lock-sweep')`
 - Test helpers:
   - Server: `@plugins/infra/plugins/jobs/server/testing`

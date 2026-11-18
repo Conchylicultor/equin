@@ -405,7 +405,9 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `automationConfigRegistration`
     - `defineAutomation`
     - `tasksOrigin`
-  - Register: `defineJob('automations.task-status')`
+  - Register:
+    - `defineJob('automations.task-status')`
+    - `defineWarmup('automations.launch-sync')`
   - Resources:
     - `automations.catalog` (push, notified, whole: every registered automation — declared in code, bounded by the composition, whole: the tasks one launch-kind automation holds a slot for — at most its concurrency, whole: what one automation watches — e.g. one per dependency updater, declared in code, whole: one automation's prompt variables — a handful, declared in code, capped: TRIGGER_KINDS.length)
     - `automations.launch-decisions.all` (keyed)

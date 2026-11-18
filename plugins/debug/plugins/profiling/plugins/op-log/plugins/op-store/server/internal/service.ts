@@ -96,7 +96,10 @@ export async function startOpStore(): Promise<void> {
     },
     onLost: () => passes.run(),
   });
-  passes.trigger();
+  // Awaited, not triggered: the catch-up pass for a write that landed before
+  // the subscription is this start's own work — left running, it ran on into
+  // the restart replay as untracked boot work.
+  await passes.run();
   if (isMain()) deadOpSweepTimer.start();
 }
 

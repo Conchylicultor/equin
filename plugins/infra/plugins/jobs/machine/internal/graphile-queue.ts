@@ -4,7 +4,6 @@ import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { connectionString } from "@plugins/database/plugins/admin/server";
 import { executeRows, queryOne } from "@plugins/database/plugins/sql-rows/core";
-import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { settledRunAt } from "../../core";
 import type {
   JobQueueImpl,
@@ -20,7 +19,6 @@ import { _jobWaits } from "../../server/internal/tables";
 import { graphileSpecFor } from "./graphile-routing";
 import { dyingRunIds, unmarkRunDying } from "./dying-runs";
 import { announceRunDead } from "../../server/internal/run-death";
-import { reconcileDeadJobs } from "./dead-job-gc";
 import { graphileJobReads } from "./jobs-list";
 import {
   ANY_QUEUE_CHANGE,
@@ -330,12 +328,8 @@ export const graphileQueue: JobQueueImpl = {
   async start() {
     await startWorkers();
     startStuckLockSweeper();
-    // Immediate boot purge of the permanently-failed backlog (idempotent; the
-    // scheduled deadJobGcJob keeps it bounded thereafter). Runs after the
-    // onReadyBlocking migration barrier, so dead_jobs exists. Fire-and-forget:
-    // a failure surfaces as an unhandled rejection (the reports plugin files
-    // it) rather than being swallowed into an invisible boot-time no-op.
-    void runTracked("jobs:reconcile-dead", () => reconcileDeadJobs());
+    // The boot purge of the dead backlog is a warm-up
+    // (`reconcileDeadJobsWarmup`): it runs once the restart replay settled.
   },
   schedule: installScheduledCronItems,
   refreshSchedules: refreshJobSchedules,

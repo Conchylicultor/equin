@@ -310,7 +310,10 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
   function start(): void {
     if (started) return;
     started = true;
-    void runTracked("change-feed:connect", () => connect());
+    void runTracked("change-feed:connect", () => connect(), {
+      outlivesBootHook:
+        "the LISTEN connection every live read's recompute arrives through: a session for the process's life, opened from the first instant (the replay's reads need it — live-state-snapshot waits on it)",
+    });
 
     // Liveness watchdog: if the socket is gone (handlers missed, or a reconnect
     // attempt is overdue), re-establish it. Push-adjacent, not change-polling.

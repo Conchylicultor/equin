@@ -21,6 +21,8 @@ export {
   runInBackgroundLane,
   runInRootContext,
   runTracked,
+  runBootHook,
+  installBootHookScopeRuntime,
   profilerNowMs,
   getSelfMeter,
   getRuntimeProfile,
@@ -39,6 +41,8 @@ export {
   __pushBand,
 } from "./recorder";
 export type {
+  BootHookScope,
+  RunTrackedOptions,
   OriginClass,
   SpanKind,
   SpanMeasure,

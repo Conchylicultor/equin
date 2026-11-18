@@ -16,6 +16,7 @@ import {
 import { orphanedAttemptReport } from "./internal/orphaned-attempt-report";
 import {
   startTurnEmitter,
+  turnEmitterReplayWarmup,
   turnEmitterReconcileJob,
 } from "./internal/turn-emitter";
 import {
@@ -144,6 +145,7 @@ export default {
     maybeLaunchOnArmedJob,
     notifyConversationCreatedJob,
     turnEmitterReconcileJob,
+    turnEmitterReplayWarmup,
     spawnConversationJob,
     deliverHeldTurnsJob,
     conversationTurnCompleted,

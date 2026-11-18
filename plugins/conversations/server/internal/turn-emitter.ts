@@ -9,6 +9,7 @@ import { db } from "@plugins/database/server";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
+import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import type { BootStep } from "@plugins/framework/plugins/server-core/core";
 import {
@@ -27,8 +28,21 @@ import {
 import { databaseForkedAt } from "@plugins/database/plugins/fork-point/server";
 import { isOwnConversation } from "./conversation-ownership";
 
-// conversationId → unsubscribe
-const subscriptions = new Map<string, () => void>();
+/** One followed conversation: how to stop following it, and how to announce a turn. */
+interface Followed {
+  unsubscribe: () => void;
+  announce: (turn: TurnEnd) => void;
+}
+
+const subscriptions = new Map<string, Followed>();
+
+/**
+ * Conversations the boot started following whose waiter replay has not run:
+ * the `conversations.turn-emitter-replay` warm-up runs it once the restart
+ * replay settled (it ran detached from the boot hook, one transcript read per
+ * waited-on conversation, inside the replay).
+ */
+const bootReplayPending = new Set<string>();
 
 // Every reconcile — the boot one and each per-conversation one — runs through
 // this one-at-a-time gate and reads the DB inside its turn. Otherwise the boot
@@ -52,15 +66,17 @@ function reconcile(conversationId: string): Promise<void> {
       row !== null &&
       isActiveStatus(row.status) &&
       isOwnConversation(row, forkedAt);
-    const unsub = subscriptions.get(conversationId);
-    if (active && !unsub) {
-      subscriptions.set(
-        conversationId,
-        subscribeToConversation(conversationId),
+    const followed = subscriptions.get(conversationId);
+    if (active && !followed) {
+      const next = subscribeToConversation(conversationId);
+      subscriptions.set(conversationId, next);
+      void runTracked("conversations:turn-emitter-replay", () =>
+        replayForWaiter(conversationId, next.announce),
       );
-    } else if (!active && unsub) {
-      unsub();
+    } else if (!active && followed) {
+      followed.unsubscribe();
       subscriptions.delete(conversationId);
+      bootReplayPending.delete(conversationId);
     }
   });
 }
@@ -78,11 +94,13 @@ export function startTurnEmitter(step: BootStep): Promise<void> {
         isOwnConversation(c, forkedAt) &&
         !subscriptions.has(c.id),
     );
-    // Subscribing returns at once (what it reads runs detached): this step is
-    // the time the loop itself holds the event loop.
+    // Subscribing returns at once: this step is the time the loop itself
+    // holds the event loop. The waiter replay is the warm-up's.
     await step("subscribe", async () => {
-      for (const c of followed)
+      for (const c of followed) {
         subscriptions.set(c.id, subscribeToConversation(c.id));
+        bootReplayPending.add(c.id);
+      }
     });
   });
 }
@@ -110,7 +128,7 @@ export const turnEmitterReconcileJob = defineJob({
 // turn whose Stop hooks are still running needs. A turn that ended while the
 // backend was down is not announced, as before — except to a durable workflow
 // still waiting on this conversation, which gets the latest one replayed.
-function subscribeToConversation(conversationId: string): () => void {
+function subscribeToConversation(conversationId: string): Followed {
   const tracker = createTurnEndTracker();
   // Turns this subscription announced: the waiter replay and the append stream
   // can both reach the latest turn.
@@ -142,11 +160,37 @@ function subscribeToConversation(conversationId: string): () => void {
       }
     },
   );
-  void runTracked("conversations:turn-emitter-replay", () =>
-    replayForWaiter(conversationId, announce),
-  );
-  return unsubscribe;
+  return { unsubscribe, announce };
 }
+
+/** The boot's waiter replay (see {@link bootReplayPending}). */
+export const turnEmitterReplayWarmup = defineWarmup({
+  name: "conversations.turn-emitter-replay",
+  description:
+    "Hands a turn that ended while the app was down to the durable workflow still waiting on that conversation, so the workflow goes on.",
+  scope: "worktree",
+  run: async () => {
+    const ids = [...bootReplayPending];
+    bootReplayPending.clear();
+    // Each conversation's replay on its own: one that fails must not drop
+    // the others' (a workflow waiting on them would never get its turn).
+    const failures: unknown[] = [];
+    for (const id of ids) {
+      const followed = subscriptions.get(id);
+      if (followed === undefined) continue;
+      await runTracked("conversations:turn-emitter-replay", () =>
+        replayForWaiter(id, followed.announce),
+      ).catch((err: unknown) => {
+        failures.push(err);
+      });
+    }
+    if (failures.length > 0)
+      throw new AggregateError(
+        failures,
+        `[turn-emitter] ${failures.length} of ${ids.length} waiter replays failed`,
+      );
+  },
+});
 
 /**
  * The backward read of a file met for the first time: its lines back to the

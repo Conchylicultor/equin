@@ -25,9 +25,11 @@ import {
   installProfilingSuppressionRuntime,
   installBackgroundLaneRuntime,
   installRootContextRuntime,
+  installBootHookScopeRuntime,
   installLoaderReadSetSink,
   recordEntrySpan,
   runTracked,
+  runBootHook,
   recordSpan,
   beginWait,
   beginDeferredWait,
@@ -35,6 +37,7 @@ import {
   runInRootContext,
   getRuntimeProfile,
   registerGateGauge,
+  type BootHookScope,
   type EntryContext,
   type EntryCost,
   type SpanKind,
@@ -126,6 +129,17 @@ installLeaseContextRuntime({
 installFsUse((start) => usingSlot("fs", start));
 installSpawnUse((start) => usingSlot("spawn", start));
 
+// Separate ALS for the boot-hook scope: which boot hook started the running
+// code, so the work a hook leaves running when it returns is named however deep
+// in its call chain it was started (`runBootHook`, read by server-core's boot
+// phases). A runTracked declared `outlivesBootHook` runs with no scope.
+const bootHookAls = new AsyncLocalStorage<BootHookScope | undefined>();
+
+installBootHookScopeRuntime({
+  run: (scope, fn) => bootHookAls.run(scope, fn),
+  current: () => bootHookAls.getStore(),
+});
+
 // The root context, captured here — at module eval, outside every scope above —
 // so `runInRootContext` (a change producer's coalescing timer and flush) runs
 // there whoever triggered it.
@@ -196,6 +210,7 @@ setProfilerHooks({
   beginWait,
   gateWaitHooks,
   runInRootContext,
+  runBootHook,
   registerGateGauge: (layer: string, read: () => unknown): void =>
     registerGateGauge(layer, read as () => GateReading),
   getRuntimeProfile: () => {

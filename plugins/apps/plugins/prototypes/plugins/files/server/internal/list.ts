@@ -6,6 +6,7 @@ import {
 import { listPrototypeDirNames } from "../../shared/read-folder";
 import type { PrototypeMeta } from "../../core";
 import { prototypeRecords } from "./tree-records";
+import { ensurePrototypeRecords } from "./watcher";
 
 // The lister (`shared/list-metas.ts`, shared with `./equin prototype list`)
 // over the app's file root — the server's spelling of it. `handlers.ts`,
@@ -15,9 +16,11 @@ import { prototypeRecords } from "./tree-records";
 /**
  * Every prototype in the tree, as the gallery lists it — composed from the
  * records the watcher keeps (`tree-records.ts`): no file system call but the
- * first read of a folder that moved since the last list.
+ * first read of a folder that moved since the last list — and, for the first
+ * reader after boot, the records' load itself (on demand, in this read).
  */
-export function listPrototypeMetas(): Promise<PrototypeMeta[]> {
+export async function listPrototypeMetas(): Promise<PrototypeMeta[]> {
+  await ensurePrototypeRecords();
   return prototypeRecords.list();
 }
 

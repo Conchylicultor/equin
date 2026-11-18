@@ -22,6 +22,11 @@ like `defineJob`.
   pool and event loop; the boot profile shows the wait as its
   `replaySettle` span. Interactive reads never wait on it. A browser host
   has no restart replay and drains at once.
+- **A boot hook may not leave a pass running instead.** Work an `onReady` /
+  `onAllReady` / `onReadyBlocking` starts with `runTracked` and leaves running
+  when it returns is reported (`BootHookLeftWorkRunning`, runtime-profiler's
+  `runBootHook`): a catch-up pass belongs here, a result a read needs is
+  computed by that read.
 - **Admission is the host's answer** — the `WarmupHost` host service
   (`warmup.host`): `runs(scope)` and `withSlot(fn)`. Never `isMain()`: a browser
   host's namespace is its composition name, so `isMain()` is false there and
@@ -78,12 +83,12 @@ like `defineJob`.
     - `WarmupHost`
     - `warmupRunOf`
 - Cross-plugin:
-  - Imported by: 30 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×7
+  - Imported by: 34 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×8
     - `tasks` ×7
-    - `infra` ×5
-    - `conversations` ×3
-    - `debug` ×2
+    - `infra` ×6
+    - `conversations` ×4
+    - `debug` ×3
     - `database/lock-watch`
     - `page/links`
     - `plugin-meta/plugin-tree`

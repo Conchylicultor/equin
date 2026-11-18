@@ -9,7 +9,8 @@ import {
   computeLoadWaves,
   topoSortPlugins,
 } from "@plugins/framework/plugins/plugin-loader/core";
-import { setBootMode, setRegisteringPlugin } from "./boot-mode";
+import { getBootMode, setBootMode, setRegisteringPlugin } from "./boot-mode";
+import { runBootHook } from "./profiler-hooks";
 import { assertHostServices } from "./host-service";
 import { collectContributions } from "./contributions";
 import { reportServerError } from "./error-reporter";
@@ -429,7 +430,10 @@ async function runGraphPhase(
       );
       try {
         for (const h of handlers) h.attach();
-        await fn?.call(p, ctx);
+        if (fn) {
+          const { leftRunning } = await runBootHook(() => fn.call(p, ctx));
+          reportLeftRunning(p, hook, leftRunning);
+        }
       } catch (err) {
         if (hook === "onReadyBlocking") {
           console.error(`[plugin.${p.id}] ${hook} failed`, err);
@@ -475,6 +479,35 @@ function reportPostReadyHookFailure(
   reportServerError({
     message: `[plugin.${p.id}] ${hook} failed: ${err instanceof Error ? err.message : describeThrown(err)}`,
     ...crashFieldsOf(err, `plugin-hook:${p.id}:${hook}`),
+  });
+}
+
+/**
+ * A boot hook returned and left `runTracked` work running (`runBootHook`):
+ * printed and filed as a report, one row per plugin and hook. On a serving
+ * desktop backend that work runs inside the restart replay — every reopened tab
+ * re-reading its live data through the same gates, pool, disk and event loop —
+ * so it competes with reads the user is waiting on, untracked by the replay
+ * gate the settled phase waits on (`whenReplaySettled`). A catch-up pass is a
+ * `defineWarmup` (drained once the replay settled); a result a tab's read needs
+ * is computed on demand by that read; a long-lived service the backend needs
+ * from its first request declares `runTracked(…, { outlivesBootHook: "<why>" })`.
+ *
+ * `serve` only: the replay is the desktop backend's (a browser host has none,
+ * and `exec` runs no serving phase but the barrier).
+ */
+function reportLeftRunning(
+  p: LoadedServerPlugin,
+  hook: "onReadyBlocking" | "onReady" | "onAllReady",
+  leftRunning: readonly string[],
+): void {
+  if (leftRunning.length === 0 || getBootMode() !== "serve") return;
+  const message = `[plugin.${p.id}] ${hook} returned with background work still running (${leftRunning.join(", ")}): boot work runs during the restart replay and competes with every reopened tab's reads — make it a defineWarmup, compute it on demand in the read that needs it, or declare runTracked(…, { outlivesBootHook: "<why>" }) for a long-lived service`;
+  console.error(message);
+  reportServerError({
+    message,
+    errorType: "BootHookLeftWorkRunning",
+    scope: `boot-hook-left-running:${p.id}:${hook}`,
   });
 }
 
@@ -531,8 +564,12 @@ async function runAllReadyPhase(ordered: LoadedServerPlugin[]): Promise<void> {
         "onAllReady",
         p.id,
       );
+      const onAllReady = p.onAllReady;
       try {
-        await p.onAllReady(ctx);
+        const { leftRunning } = await runBootHook(() =>
+          onAllReady.call(p, ctx),
+        );
+        reportLeftRunning(p, "onAllReady", leftRunning);
       } catch (err) {
         reportPostReadyHookFailure(p, "onAllReady", err);
       } finally {

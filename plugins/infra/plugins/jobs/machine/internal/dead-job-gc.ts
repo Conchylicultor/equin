@@ -9,6 +9,7 @@ import { ownedWorkflowRunIds } from "../../server/internal/run-identity";
 import { ANY_QUEUE_CHANGE, emitQueueActivity } from "./slot-ledger";
 import { deleteWorkflowLogs } from "../../server/internal/workflow-log";
 import { _deadJobs } from "../../server/internal/tables";
+import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 
 const PurgedRowSchema = z.object({
   id: z.string(),
@@ -121,5 +122,20 @@ export const deadJobGcJob = defineJob({
   event: z.never(),
   dedup: "singleton",
   schedule: { cron: "0 * * * *", perWorktree: true },
+  run: () => reconcileDeadJobs(),
+});
+
+/**
+ * The boot purge of the dead backlog a fork or a long-down backend arrives
+ * with — once the restart replay settled, not inside it: it used to be a
+ * `void runTracked` from the queue's start, one transaction against the queue
+ * and the archive racing every reopened tab's reads. The hourly
+ * `deadJobGcJob` keeps it bounded thereafter.
+ */
+export const reconcileDeadJobsWarmup = defineWarmup({
+  name: "jobs.reconcile-dead",
+  description:
+    "Archives and removes the jobs that used up their retries, so the queue a backend boots with holds no dead backlog.",
+  scope: "worktree",
   run: () => reconcileDeadJobs(),
 });

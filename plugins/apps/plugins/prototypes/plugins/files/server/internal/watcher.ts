@@ -5,7 +5,6 @@ import {
   type DataWatch,
 } from "@plugins/infra/plugins/paths/plugins/data-files/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
-import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { createCoalescer } from "@plugins/packages/plugins/coalesce/core";
 import { yieldMacrotask } from "@plugins/packages/plugins/macrotask-yield/core";
 import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
@@ -60,7 +59,7 @@ const listeners: ((changed: readonly string[]) => void)[] = [];
 
 /**
  * The watcher's work in flight — each delivered change until its handling
- * settles, and the boot baseline — and who waits for it to reach zero
+ * settles, and the records' first load — and who waits for it to reach zero
  * ({@link settlePrototypesWatcher}).
  */
 let busy = 0;
@@ -75,23 +74,65 @@ function tracked<T>(work: Promise<T>): Promise<T> {
 }
 
 /**
- * The boot baseline — the records' first refresh of the whole tree. A promise
- * because it is read after the watch subscribes: a refresh awaits it, so the
- * first comparison is against the real tree, never an empty one that would
- * read every prototype as just added.
+ * The records' first load — the first refresh of the whole tree — while it is
+ * in flight or once it succeeded; `null` before anyone asked (or after it
+ * failed, so the next asker retries).
+ *
+ * ON DEMAND, never at boot: the first reader that needs the records (a list
+ * read — a tab's own subscription — or a delivered change, which compares
+ * against them) loads them, inside its own span. Started from `onReady` it was
+ * untracked background work running through the restart replay (5.2 s on main
+ * at 12:40:51Z, 2026-11-18), on the file capacity every replayed read waits on
+ * — and a backend nobody opens the gallery on never needs it.
  */
-let baselineRead: Promise<void> = Promise.resolve();
+let firstLoad: Promise<void> | null = null;
 
 /**
- * The prototypes a tree change named while the boot baseline was being read
- * (`"all"` for a rescan), or `null` outside that window. An edit landing
- * after the subscribe but before its folder is listed is already IN the
- * baseline, so the signature gate alone would read it as no change; the first
- * refresh counts these as changed regardless. Handed over to
- * {@link absorbedAtBoot} when the baseline settles.
+ * Resolves once the watch is live (`startPrototypesWatcher` subscribed), so
+ * the first load always reads a tree the watch already covers. Created at
+ * module load: a reopened tab's list read can arrive between the backend
+ * turning ready and files' `onReady` — it waits here, never fails (a failed
+ * loader stays failed: nothing re-notifies the list once the watch is up).
+ * Re-armed on stop. Never rejects (no waiter may be needed): a failed
+ * subscribe settles it as failed, and each waiter throws its error.
+ */
+type WatchStart = { ok: true } | { ok: false; error: unknown };
+let watchLive = Promise.withResolvers<WatchStart>();
+
+/**
+ * The prototypes a tree change named while the records were not loaded yet
+ * (`"all"` for a rescan) — from the subscribe until the first load succeeds —
+ * or `null` outside that window. An edit landing after the subscribe but
+ * before its folder is listed by the first load is already IN the records, so
+ * the signature gate alone would read it as no change; the first refresh counts
+ * these as changed regardless. Handed over to {@link absorbedAtBoot} when the
+ * first load succeeds.
  */
 let seenDuringBaseline: Set<string> | "all" | null = null;
 let absorbedAtBoot: Set<string> | "all" | null = null;
+
+/**
+ * Load the records if no one has yet: one load at a time for every asker, its
+ * failure thrown to each of them (a list read fails with it, loudly) and
+ * retried by the next. Each asker waits inside its own span — a tab's read
+ * charges the load to that read, never to an orphan background pass.
+ */
+export async function ensurePrototypeRecords(): Promise<void> {
+  const live = await watchLive.promise;
+  if (!live.ok) throw live.error;
+  firstLoad ??= tracked(
+    prototypeRecords.refresh("all").then(
+      () => {
+        endBaselineWindow();
+      },
+      (err: unknown) => {
+        firstLoad = null;
+        throw err;
+      },
+    ),
+  );
+  return firstLoad;
+}
 
 /**
  * Subscribe to "something under `prototypes/` changed".
@@ -135,11 +176,10 @@ export function onPrototypesChanged(
  * folder's bytes and composes the rest from the records.
  */
 async function refreshOnce(scope: RecordsScope): Promise<void> {
-  await baselineRead;
-  // A baseline that failed loaded nothing to refresh a part of: re-derive all.
-  const { moved, listChanged } = await prototypeRecords.refresh(
-    prototypeRecords.loaded() ? scope : "all",
-  );
+  // The first change compares against the tree as it stood once loaded; what
+  // it named during the load is counted as moved (`seenDuringBaseline`).
+  await ensurePrototypeRecords();
+  const { moved, listChanged } = await prototypeRecords.refresh(scope);
   const changed = withAbsorbed(moved);
   if (changed.length === 0 && !listChanged) return;
 
@@ -268,49 +308,23 @@ export async function startPrototypesWatcher(): Promise<void> {
   if (started) return;
   started = true;
 
-  // The tree as it stands at boot is the baseline, so the first genuine edit is
-  // what re-broadcasts — not the first tick after start. It is read AFTER the
-  // watch is live and not awaited here: `onReady` returns once subscribed (the
-  // read is one listing per prototype, each queued behind every other boot
-  // hook on the event loop — 2 s of wall at boot for ~20 ms of work). A refresh
-  // awaits the baseline before comparing, so it never compares against an
-  // empty tree. An edit delivered while the baseline is read may already be in
-  // it, so the prototypes such a change names count as changed on the first
-  // refresh (`seenDuringBaseline`); and, read after the subscribe, no edit can
-  // land between the baseline and the watch unseen.
-  const baseline = Promise.withResolvers<void>();
-  baselineRead = baseline.promise;
+  // Subscribe only: the records load on demand (`ensurePrototypeRecords`),
+  // after the watch is live, so no edit can land between the load and the
+  // watch unseen. Until that load succeeds, every change's prototypes are
+  // remembered and count as changed on the first refresh.
   seenDuringBaseline = new Set();
-
   try {
     subscription = await prototypesFiles.watch(onTreeChange);
   } catch (err) {
     started = false;
     seenDuringBaseline = null;
-    baseline.resolve();
+    // Whoever waits for the watch fails with why; a later start re-arms it.
+    const failed = watchLive;
+    watchLive = Promise.withResolvers<WatchStart>();
+    failed.resolve({ ok: false, error: err });
     throw err;
   }
-  baseline.resolve(
-    tracked(
-      runTracked("prototypes:baseline", () =>
-        prototypeRecords.refresh("all"),
-      ).then(
-        () => {
-          endBaselineWindow();
-        },
-        (err: unknown) => {
-          // Loud, and not fatal to the watcher: with no records loaded the
-          // next refresh re-derives the whole tree (a list read meanwhile
-          // fails with this error, never answers an empty gallery).
-          reportServerError({
-            message: `[prototypes] reading the tree's boot baseline failed: ${err instanceof Error ? err.message : String(err)}`,
-            errorType: "PrototypesBaselineFailed",
-          });
-          endBaselineWindow();
-        },
-      ),
-    ),
-  );
+  watchLive.resolve({ ok: true });
 }
 
 function endBaselineWindow(): void {
@@ -348,7 +362,8 @@ export async function settlePrototypesWatcher(): Promise<void> {
 export async function stopPrototypesWatcher(): Promise<void> {
   if (!started) return;
   started = false;
-  baselineRead = Promise.resolve();
+  firstLoad = null;
+  watchLive = Promise.withResolvers<WatchStart>();
   prototypeRecords.reset();
   seenDuringBaseline = null;
   absorbedAtBoot = null;

@@ -525,7 +525,9 @@ function onSignal(signal: RuntimeSignal): void {
 function startDrain(): void {
   if (booted && !draining) {
     draining = true;
-    void runTracked("conversations:status-reconcile", () =>
+    void runTracked(
+      "conversations:status-reconcile",
+      () =>
       drain().catch((err: unknown) => {
         // Transient = central is restarting / catching up. The undrained
         // signals stay pending for the next one, and the sweep re-derives
@@ -534,6 +536,10 @@ function startDrain(): void {
         if (isTransientDbError(err)) return;
         throw err;
       }),
+      {
+        outlivesBootHook:
+          "the live drain of agent-status signals, event-driven: it runs while signals keep arriving, the same drain every later signal starts — the boot only releases the signals held during its own (awaited) reconcile",
+      },
     );
   }
 }

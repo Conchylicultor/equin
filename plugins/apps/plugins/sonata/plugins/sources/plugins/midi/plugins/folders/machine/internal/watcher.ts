@@ -135,13 +135,27 @@ export async function startMidiFolderWatcher(): Promise<void> {
       reconfigure({ reconcile: true }),
     );
   });
+  const first: { mount: Promise<void> | null } = { mount: null };
   configSub = watchConfig(midiFoldersConfig, () => {
-    const reconcileNow = !firstCall;
-    firstCall = false;
+    if (firstCall) {
+      firstCall = false;
+      first.mount = runTracked("midi-folders:mount", () =>
+        reconfigure({ reconcile: false }),
+      );
+      return;
+    }
     void runTracked("midi-folders:reconfigure", () =>
-      reconfigure({ reconcile: reconcileNow }),
+      reconfigure({ reconcile: true }),
     );
   });
+  // The first mount (a probe per folder, a watch per readable one) is this
+  // start's own work, awaited: left running, it ran on into the restart
+  // replay as untracked boot work.
+  if (first.mount === null)
+    throw new Error(
+      "[midi-folders] watchConfig did not call back on registration: no first mount",
+    );
+  await first.mount;
 }
 
 export async function stopMidiFolderWatcher(): Promise<void> {

@@ -1041,9 +1041,113 @@ export function runInRootContext<T>(fn: () => T): T {
 export function runTracked<T>(
   label: string,
   fn: () => T | Promise<T>,
-  opts?: EntrySpanOptions,
+  opts?: RunTrackedOptions,
 ): Promise<T> {
-  return recordEntrySpan("bg", label, fn, undefined, undefined, opts);
+  if (opts?.outlivesBootHook !== undefined) {
+    // A declared service: its own run, and everything it starts, is not the
+    // boot hook's work — run it outside the hook's scope.
+    const { outlivesBootHook: _reason, ...entryOpts } = opts;
+    return bootHookScopeRuntime.run(undefined, () =>
+      recordEntrySpan("bg", label, fn, undefined, undefined, entryOpts),
+    );
+  }
+  const scope = bootHookScopeRuntime.current();
+  if (scope === undefined || scope.returned)
+    return recordEntrySpan("bg", label, fn, undefined, undefined, opts);
+  // Started by a boot hook still running: counted until it settles, so the
+  // hook's return can name what it left running (`runBootHook`). Counted
+  // inside the body — a handler branched off the returned promise would mark
+  // it handled, and a detached run's rejection would no longer surface as
+  // the unhandled rejection its caller relies on.
+  const id = nextBootWorkId++;
+  scope.running.set(id, label);
+  return recordEntrySpan(
+    "bg",
+    label,
+    async () => {
+      try {
+        return await fn();
+      } finally {
+        scope.running.delete(id);
+      }
+    },
+    undefined,
+    undefined,
+    opts,
+  );
+}
+
+/** {@link runTracked}'s options: an entry's, plus the boot-hook declaration. */
+export interface RunTrackedOptions extends EntrySpanOptions {
+  /**
+   * Why this work may run past the boot hook (`onReadyBlocking` / `onReady` /
+   * `onAllReady`) that starts it — for a long-lived service the backend needs
+   * from its first request (the change feed's LISTEN connection), never for a
+   * catch-up pass. Without it, work a boot hook leaves running when it returns
+   * is reported (`runBootHook`): boot work runs inside the restart replay,
+   * competing with every reopened tab's reads. A catch-up pass is a
+   * `defineWarmup` (infra/warmup: drained once the replay settled); a result a
+   * read needs is computed on demand by that read.
+   */
+  outlivesBootHook?: string;
+}
+
+// --- Boot-hook scope ---
+//
+// Which boot hook the running code was started by, so work a hook starts and
+// leaves running when it returns is caught however deep in its call chain it
+// was started — a lint rule cannot follow a hook into the helpers it calls
+// (`runTracked` there is reached through other files). Same injection shape as
+// the runtimes above: core stays Node-free, the server installs an
+// AsyncLocalStorage-backed runtime at boot, and a host with none (the web)
+// tracks nothing.
+
+/** One boot hook's run: whether it returned, and its `runTracked` work still running. */
+export interface BootHookScope {
+  returned: boolean;
+  running: Map<number, string>;
+}
+
+interface BootHookScopeRuntime {
+  run<T>(scope: BootHookScope | undefined, fn: () => T): T;
+  current(): BootHookScope | undefined;
+}
+
+let bootHookScopeRuntime: BootHookScopeRuntime = {
+  run: (_scope, fn) => fn(),
+  current: () => undefined,
+};
+
+let nextBootWorkId = 0;
+
+export function installBootHookScopeRuntime(rt: BootHookScopeRuntime): void {
+  bootHookScopeRuntime = rt;
+}
+
+/**
+ * Run one boot hook in its own scope, and answer the labels of the
+ * `runTracked` work it started and left running when it returned — the work
+ * that outlives the hook (a `void runTracked(…)`, a first pass started and not
+ * awaited), still running a macrotask after it returned. Work it awaited has
+ * settled by then; work declared
+ * `outlivesBootHook` is not counted; work started after it returned (a timer's
+ * tick, a watch delivery) is not the hook's. A hook that throws throws here.
+ */
+export async function runBootHook(
+  fn: () => void | Promise<void>,
+): Promise<{ leftRunning: string[] }> {
+  const scope: BootHookScope = { returned: false, running: new Map() };
+  try {
+    await bootHookScopeRuntime.run(scope, fn);
+  } finally {
+    scope.returned = true;
+  }
+  // One macrotask later: work that had nothing to do (a `void runTracked` whose
+  // body returns at once still settles a few microtasks after a sync hook
+  // returned) is gone; work waiting on I/O or a timer is not.
+  if (scope.running.size > 0)
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  return { leftRunning: [...new Set(scope.running.values())].sort() };
 }
 
 // --- Slow-span push seam ---

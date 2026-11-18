@@ -161,7 +161,10 @@ export function createFolderStatusStore(deps: {
       // bug: a non-errno throw — surfaces as an unhandled rejection rather
       // than leaving the folder `checking` forever in silence (the race
       // above consumed `all`, so nothing else would see it).
-      void runTracked("midi-folders:late-probe", () => all);
+      void runTracked("midi-folders:late-probe", () => all, {
+        outlivesBootHook:
+          "no work of its own: it only waits on folder probes that did not answer in time (a hung mount), to publish their answer whenever it comes",
+      });
     }
     return publish();
   }

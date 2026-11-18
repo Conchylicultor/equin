@@ -1,6 +1,6 @@
 import type { MachinePluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { JobQueue } from "@plugins/infra/plugins/jobs/server";
-import { deadJobGcJob } from "./internal/dead-job-gc";
+import { deadJobGcJob, reconcileDeadJobsWarmup } from "./internal/dead-job-gc";
 import { jobsForkExclusions } from "./internal/fork-exclusion";
 import { graphileQueue } from "./internal/graphile-queue";
 import { queueStampPart } from "./internal/queue-stamp-part";
@@ -59,7 +59,7 @@ export default {
   description:
     "The desktop's job queue: graphile-worker in this backend's database — the hold-class runner ladder, the advisory job lock, cron schedules, the stuck-lock sweeper and the dead-job GC — plus the queue's introspection (backlog, pulse, slot ledger, run stats).",
   loadBearing: true,
-  register: [deadJobGcJob, stuckLockSweeperTimer],
+  register: [deadJobGcJob, reconcileDeadJobsWarmup, stuckLockSweeperTimer],
   contributions: [
     JobQueue.provide(graphileQueue),
     queueStampPart,

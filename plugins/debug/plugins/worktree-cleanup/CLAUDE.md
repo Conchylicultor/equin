@@ -221,7 +221,7 @@ the panel until it is given something to say.
     - `report-kind` "worktree-reap-failed"
     - `resource.declare` "debug.worktree-cleanup.worktrees"
     - `resource.declare` "debug.worktree-cleanup.worktrees:meta"
-  - Uses: 43 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/worktree` ×15
     - `database/admin` ×4
     - `infra/worktree/reclaim` ×4
@@ -233,10 +233,13 @@ the panel until it is given something to say.
     - `network/live` ×2
     - `conversations/workspace.announceWorkspacesReclaimed`
     - `infra/ndjson-stream.ndjsonResponse`
+    - `infra/warmup.defineWarmup`
     - `infra/worktree/backend-hold.holdBackendDown`
     - `primitives/log-channels.defineLogSink`
     - `reports.ReportKind`
-  - Register: `defineSupervisedJob('worktree-cleanup.reap-stale')`
+  - Register:
+    - `defineSupervisedJob('worktree-cleanup.reap-stale')`
+    - `defineWarmup('worktree-cleanup.reap-catch-up')`
   - Resources:
     - `debug.worktree-cleanup.worktrees` (keyed, window, notified)
     - `debug.worktree-cleanup.worktrees:meta` (push, notified)

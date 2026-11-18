@@ -2,7 +2,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { Trigger } from "@plugins/infra/plugins/events/server";
 import { taskStatusChanged } from "@plugins/tasks/plugins/tasks-core/server";
 import { automationTaskStatusJob } from "./internal/attention";
-import { watchAutomationConfigs } from "./internal/watch";
+import { launchSyncWarmup, watchAutomationConfigs } from "./internal/watch";
 import { launchDecisionsServed } from "./internal/live";
 import { decideLaunchEndpoint, taskApprovalEndpoint } from "../core";
 import { LiveColumns } from "@plugins/network/plugins/live/server";
@@ -57,7 +57,7 @@ export default {
     [decideLaunchEndpoint.route]: handleDecideLaunch,
     [taskApprovalEndpoint.route]: handleTaskApproval,
   },
-  register: [automationTaskStatusJob],
+  register: [automationTaskStatusJob, launchSyncWarmup],
   onAllReady: () => {
     watchAutomationConfigs();
   },

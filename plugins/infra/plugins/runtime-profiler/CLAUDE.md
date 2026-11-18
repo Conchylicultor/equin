@@ -427,6 +427,39 @@ The live-state HTTP fallback records as `http` `GET /api/resources/<key>` (the r
 `byParent` breakdown (count desc) and summed `waitTotalMs`/`childTotalMs`/`selfTotalMs`, and
 each `slowest` span with its `parent` and per-span `waitMs`/`childMs`/`selfMs`.
 
+## Boot work a hook leaves running (`runBootHook`, `outlivesBootHook`)
+
+server-core runs each boot hook (`onReadyBlocking`, `onReady`, `onAllReady`) through
+`runBootHook` (the profiler seam): the hook runs in a boot-hook scope (its own
+AsyncLocalStorage, installed by `server/internal/install.ts`), every `runTracked` started
+inside it — however deep in the hook's call chain — is counted until it settles, and the
+labels still running a macrotask after the hook returned come back as `leftRunning`. On a
+serving desktop backend (`serve`) server-core files them as a `BootHookLeftWorkRunning`
+error report, one row per plugin and hook: that work runs inside the restart replay
+(every reopened tab re-reading its live data), competing with reads the user waits on,
+and the replay gate the settled phase waits on (`whenReplaySettled`) never sees it.
+
+What a flagged site becomes:
+
+- **A catch-up pass** (a first pass, a backfill, a purge) → `defineWarmup`
+  (`infra/warmup`), drained once the replay settled.
+- **A result a tab's read needs** → computed on demand by that read (prototypes' records,
+  `ensurePrototypeRecords`), never a boot task the read waits on.
+- **The hook's own setup** (a watcher's first mount, a catch-up pass between a first pass
+  and a subscription) → awaited by the hook.
+- **A long-lived service, or work that must start at boot** (the change feed's LISTEN
+  connection, a digest of the modules this process imported, a contract waiting for the
+  previous backend to exit) → `runTracked(label, fn, { outlivesBootHook: "<why>" })`. Its
+  run, and everything it starts, runs outside the hook's scope. The reason is the
+  justification a reviewer reads.
+
+Why runtime and not a lint rule: the launch is usually in a helper in another file
+(`startXWatcher` → `void runTracked(…)`), and the type-check lint sees other files as
+`.d.ts`, so no rule can follow a hook into its callees. Work started after the hook
+returned (a timer's tick, a watch delivery) is not counted; a promise detached WITHOUT
+`runTracked` is invisible to it (`detached-work-safety/no-untracked-detached-work` already
+makes `void <call>` in server code a `runTracked`).
+
 ## Monitoring self-meter (`getSelfMeter`)
 
 Every observability write runs inside `runWithoutProfiling`, so monitoring's own cost is
@@ -577,6 +610,7 @@ remaining allocations are one flat band array per completed entry span, and what
   - Uses: `infra/launcher/env-names.readEnv`
   - Exports (types):
     - `Aggregate`
+    - `BootHookScope`
     - `EntryContext`
     - `EntryCost`
     - `FlightSpan`
@@ -590,6 +624,7 @@ remaining allocations are one flat band array per completed entry span, and what
     - `LoopStall`
     - `OriginClass`
     - `ParentBreakdown`
+    - `RunTrackedOptions`
     - `SlowSpan`
     - `SlowSpanHandler`
     - `SlowWait`
@@ -617,6 +652,7 @@ remaining allocations are one flat band array per completed entry span, and what
     - `getRuntimeProfile`
     - `getSelfMeter`
     - `installBackgroundLaneRuntime`
+    - `installBootHookScopeRuntime`
     - `installLoaderReadSetSink`
     - `installProfilingSuppressionRuntime`
     - `installRootContextRuntime`
@@ -635,6 +671,7 @@ remaining allocations are one flat band array per completed entry span, and what
     - `registerGateGauge`
     - `resetRuntimeProfile`
     - `resolveGateGauges`
+    - `runBootHook`
     - `runInBackgroundLane`
     - `runInRootContext`
     - `runTracked`

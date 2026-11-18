@@ -1,3 +1,5 @@
+import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
+import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import { z } from "zod";
 import {
   defineSupervisedJob,
@@ -251,3 +253,17 @@ export async function enqueueReapIfOverdue(now: number): Promise<void> {
   if (last !== null && last.startedAt.getTime() >= lastTick) return;
   await worktreeReapJob.enqueue({});
 }
+
+// Catch up after boot only when main was down across an hourly tick (the cron
+// does not backfill) — once the restart replay settled. The reap job is
+// main-only (DBs + the registry are global cluster resources).
+export const reapCatchUpWarmup = defineWarmup({
+  name: "worktree-cleanup.reap-catch-up",
+  description:
+    "Queues the stale-worktree reap when main was down across its hourly run, so a missed run is not skipped.",
+  scope: "host",
+  run: async () => {
+    if (!isMain()) return;
+    await enqueueReapIfOverdue(Date.now());
+  },
+});

@@ -64,27 +64,10 @@ async function list(t: Awaited<ReturnType<typeof seeded>>) {
 }
 
 describe("PrototypeRecords", () => {
-  test("a list before the first refresh of the tree waits for it", async () => {
+  test("a list before the first refresh of the tree fails loudly", () => {
     const t = tree();
-    await t.write(`${A}/index.html`, "<title>A</title>");
     const records = new PrototypeRecords(t.mount);
-    const early = records.list();
-    await records.refresh("all");
-    expect((await early).map((m) => m.title)).toEqual(["A"]);
-  });
-
-  test("a list waiting on a first refresh that failed fails", async () => {
-    const t = tree();
-    const broken: Mount = {
-      ...t.mount,
-      list: () => Promise.reject(new Error("disk gone")),
-    };
-    const records = new PrototypeRecords(broken);
-    const early = records.list();
-    const refreshing = records.refresh("all");
-    await Promise.allSettled([refreshing, early]);
-    expect(refreshing).rejects.toThrow("disk gone");
-    expect(early).rejects.toThrow(/first load failed/);
+    expect(records.list()).rejects.toThrow(/before their first refresh/);
   });
 
   test("the baseline reads no bytes; the first list reads every folder once", async () => {

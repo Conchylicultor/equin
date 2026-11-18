@@ -235,14 +235,21 @@ export default {
     await driver.settleOwnerBoot({ kind: "recorded" });
     const deferred = takeDeferredContract();
     if (deferred === null) return;
-    void runTracked("database:deferred-contract", async () => {
-      try {
-        await runDeferredContract(deferred.owner, deferred.file);
-      } catch (err) {
-        settleDeferredContract({ kind: "failed", error: err });
-        throw err;
-      }
-      settleDeferredContract({ kind: "settled" });
-    });
+    void runTracked(
+      "database:deferred-contract",
+      async () => {
+        try {
+          await runDeferredContract(deferred.owner, deferred.file);
+        } catch (err) {
+          settleDeferredContract({ kind: "failed", error: err });
+          throw err;
+        }
+        settleDeferredContract({ kind: "settled" });
+      },
+      {
+        outlivesBootHook:
+          "waits for every process running older code to disconnect (the previous backend draining after the swap), then runs the contract phase that older code still needed; only a deploy whose migration has a contract phase defers one",
+      },
+    );
   },
 } satisfies ServerPluginDefinition;

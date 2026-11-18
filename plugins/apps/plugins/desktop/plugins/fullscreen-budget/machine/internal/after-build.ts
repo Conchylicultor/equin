@@ -1,6 +1,10 @@
 import { and, desc, eq, gt } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
+import {
+  isMain,
+  runtimeNamespace,
+} from "@plugins/infra/plugins/runtime-identity/core";
+import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import { latestSupervisedRun } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import { isMainCompositionBuild } from "@plugins/build/core";
 import { buildStatusOf } from "@plugins/build/plugins/build-status/core";
@@ -77,3 +81,16 @@ export async function measureLatestDeploy(): Promise<void> {
   const latest = rows.find((r) => isMainCompositionBuild(r.targets));
   if (latest !== undefined) await measureIfDeployed(latest);
 }
+
+// A deploy whose marker landed while no backend listened, measured once the
+// restart replay settled. Main only: the guard is about what main serves.
+export const measureLatestDeployWarmup = defineWarmup({
+  name: "fullscreen-budget.latest-deploy",
+  description:
+    "Measures the desktop ↔ full screen switch for main's latest deploy if no backend measured it, so a deploy made while main was down is still checked.",
+  scope: "host",
+  run: async () => {
+    if (!isMain()) return;
+    await measureLatestDeploy();
+  },
+});

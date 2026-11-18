@@ -123,6 +123,10 @@ export interface ProfilerHooks {
   registerGateGauge(layer: string, read: () => unknown): void;
   /** Run `fn` outside every entry, lane and suppression scope (the profiler's `runInRootContext`). */
   runInRootContext<T>(fn: () => T): T;
+  /** Run one boot hook, answering the tracked work it left running when it returned (the profiler's `runBootHook`). */
+  runBootHook(
+    fn: () => void | Promise<void>,
+  ): Promise<{ leftRunning: string[] }>;
 }
 
 let hooks: ProfilerHooks | null = null;
@@ -225,4 +229,18 @@ export function registerGateGauge(layer: string, read: () => unknown): void {
  */
 export function runInRootContext<T>(fn: () => T): T {
   return hooks ? hooks.runInRootContext(fn) : fn();
+}
+
+/**
+ * Run one boot hook (`onReadyBlocking` / `onReady` / `onAllReady`) and answer
+ * the labels of the `runTracked` work it started and left running when it
+ * returned. Before the profiler is installed (or on a host without one),
+ * nothing is tracked: the answer is empty.
+ */
+export async function runBootHook(
+  fn: () => void | Promise<void>,
+): Promise<{ leftRunning: string[] }> {
+  if (hooks) return hooks.runBootHook(fn);
+  await fn();
+  return { leftRunning: [] };
 }

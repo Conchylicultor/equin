@@ -211,6 +211,11 @@ export interface ServerPluginDefinition {
    * Never fatal, for any plugin: the backend already serves, so a rejection is
    * filed as a report (one row per plugin and hook) and the backend goes on —
    * an exit would only respawn it into the same failure, a crash loop.
+   *
+   * Start, do not catch up: on a serving desktop backend this runs inside the
+   * restart replay, so `runTracked` work the hook leaves running when it
+   * returns is reported (`BootHookLeftWorkRunning`) — a catch-up pass is a
+   * `defineWarmup`, a long-lived service declares `outlivesBootHook`.
    */
   onReady?: (ctx: BootHookContext) => void | Promise<void>;
   /**
