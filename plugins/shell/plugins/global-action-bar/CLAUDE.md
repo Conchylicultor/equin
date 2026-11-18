@@ -43,9 +43,17 @@ capsule is exactly padding + controls tall: 2px + 32px + 2px = 36px. Items sit
 2px apart (`gap-2xs`), with no tail padding — the capsule's own padding is the
 edge. Collapsed, nothing invisible may take a gap: the panel itself has no gap
 (the reveal strip, a zero-width flex item while closed, opens its own 2px lead
-with `pl-2xs` only when open), and the glance slot renders under
+on the dot's side only when open), and the glance slot renders under
 `SlotItemLayout orientation="host-owned"` so a glance with nothing to show
 generates no box — the idle / building capsule is exactly the 36px circle.
+
+The row grows away from the screen edge the bar sits nearer, and the **dot
+stays at that edge** (`triggerAt="end"` at home, so the row opens to its
+left; glance chips sit on the dot's far side). The pointer that opens the bar
+is on the dot, so the dot must not slide out from under it: with the dot
+leading the row, opening at home carried it ~300px left and left the row's
+last item — the element picker — under the pointer, so a second click meant
+for the health report armed the picker.
 
 Both hosts set one resting tone on their row (`BAR_TONE`, the muted
 foreground): every ghost control inherits it and brightens to the text colour

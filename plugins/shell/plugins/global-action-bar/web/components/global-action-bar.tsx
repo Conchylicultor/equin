@@ -91,25 +91,37 @@ function LeadItem({
  *
  * The probes stay mounted either way, so collapsing shows the current answer at
  * once.
+ *
+ * The dot is the trigger's edge-side end: the glance chips sit on the side
+ * away from the screen edge the bar grows from, so hiding them on open leaves
+ * the dot where it was.
  */
-function FloatingTrigger({ open }: { open: boolean }) {
+function FloatingTrigger({
+  open,
+  growFrom,
+}: {
+  open: boolean;
+  growFrom: GrowFrom;
+}) {
   const { probes, activities } = useBarActivities();
+  const glances = open ? null : (
+    // Each glance draws its own box (the Reload tray), so the row's flex
+    // items are the chips themselves: a glance that has nothing to show
+    // (no reload due) generates no box at all and takes no gap — the
+    // collapsed capsule stays the 36px circle around the dot.
+    <SlotItemLayout orientation="host-owned">
+      <ActionBar.Glance.Render controlSize={FLOATING_SIZE} />
+    </SlotItemLayout>
+  );
   return (
     <Stack direction="row" gap="2xs" align="center">
       {probes}
+      {growFrom === "right" && glances}
       <LeadItem
         size={FLOATING_SIZE}
         activities={open ? undefined : activities}
       />
-      {open ? null : (
-        // Each glance draws its own box (the Reload tray), so the row's flex
-        // items are the chips themselves: a glance that has nothing to show
-        // (no reload due) generates no box at all and takes no gap — the
-        // collapsed capsule stays the 36px circle around the dot.
-        <SlotItemLayout orientation="host-owned">
-          <ActionBar.Glance.Render controlSize={FLOATING_SIZE} />
-        </SlotItemLayout>
-      )}
+      {growFrom === "left" && glances}
     </Stack>
   );
 }
@@ -362,8 +374,9 @@ function FloatingBar({
 /**
  * Floating overlay host (mounted at `Core.Root`, outside any transformed
  * ancestor). Renders only when **unpinned** — i.e. in fullscreen (solo) mode: a top-right `z-popover` overlay
- * collapsed to the health dot that hover-expands the action row leftward;
- * clicking the dot opens the health report.
+ * collapsed to the health dot that hover-expands the action row leftward
+ * (the dot stays in the corner, under the pointer); clicking the dot opens the
+ * health report.
  * Mounting in the root stacking context, one band above the solo placement's
  * `z-overlay` container, keeps it visible in every placement mode, including
  * solo (the headline fix).
@@ -390,8 +403,15 @@ export function FloatingActionBarHost() {
           <FloatingAction
             // `relative` so the morphing panel anchors to this hitbox.
             className="relative"
-            // The open row grows away from the screen edge the bar is nearer.
+            // The open row grows away from the screen edge the bar is nearer,
+            // and the dot stays at that edge: it is where the pointer is when
+            // the bar opens (hover or a press on the collapsed dot), so it
+            // must not slide out from under it. With the dot leading the row,
+            // opening at home moved it ~300px left and put the row's last
+            // item — the element picker — under the pointer, so the click
+            // meant for the health report armed the picker instead.
             anchor={growFrom === "right" ? "top-right" : "top-left"}
+            triggerAt={growFrom === "right" ? "end" : "start"}
             // Moved, the bar is the collapsed dot (and stays so after the drop
             // until the pointer comes back to it).
             suppressed={dragging}
@@ -406,10 +426,20 @@ export function FloatingActionBarHost() {
             // on the capsule's centre line — the dot, the glance chips and the
             // row's items alike — as the panel widens.
             align="center"
-            trigger={(open) => <FloatingTrigger open={open} />}
+            trigger={(open) => (
+              <FloatingTrigger open={open} growFrom={growFrom} />
+            )}
           >
-            {/* eslint-disable-next-line layout/no-adhoc-layout -- animated max-width hover-reveal strip (clipped while collapsed) */}
-            <FloatingActionFadeIn className="flex max-w-0 items-center gap-2xs overflow-hidden group-data-open/fa:pl-2xs whitespace-nowrap transition-[max-width] duration-200 group-data-open/fa:max-w-[80rem]">
+            <FloatingActionFadeIn
+              // eslint-disable-next-line layout/no-adhoc-layout -- animated max-width hover-reveal strip (clipped while collapsed)
+              className={cn(
+                "flex max-w-0 items-center gap-2xs overflow-hidden whitespace-nowrap transition-[max-width] duration-200 group-data-open/fa:max-w-[80rem]",
+                // The strip's 2px lead, on the side facing the dot.
+                growFrom === "right"
+                  ? "group-data-open/fa:pr-2xs"
+                  : "group-data-open/fa:pl-2xs",
+              )}
+            >
               <KeepScope segment={BAR_KEEP_SEGMENT}>
                 <ActionBar.Item.Render controlSize={FLOATING_SIZE}>
                   {renderItemForAudience}
