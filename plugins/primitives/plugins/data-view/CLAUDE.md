@@ -56,6 +56,11 @@ result). No `readiness` = static, ready rows.
 - `error` → `errorState` (default `<ResourceErrorInline variant="block"/>`).
 - `loading` → `loadingState`.
 - Only `ready` reaches the view — so `emptyState` means only "ready, zero rows".
+- **`emptyState` speaks about the data, never about a narrowing.** While a
+  search or a complete filter rule is active, the body hands the view
+  `NarrowedEmptyState` instead ("Nothing matches “q”." + Clear search / Clear
+  filter, part `dv.narrowed-empty`), so a filter hiding every row never reads
+  as "No prototypes yet".
 - There is **no boolean `loading` prop** (it cannot say a read failed).
 
 A needsMachine read's `unavailable` arm is handled by the shell (its `message`

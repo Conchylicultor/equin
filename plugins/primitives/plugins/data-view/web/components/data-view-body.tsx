@@ -158,6 +158,7 @@ import {
 } from "../internal/live-tree/use-live-tree";
 import { attachRoots } from "../internal/attach";
 import { HiddenRowsFooter } from "./hidden-rows-footer";
+import { NarrowedEmptyState } from "./narrowed-empty-state";
 import type { CollectionActivation } from "../internal/fold-activations";
 import {
   DataViewControlsProvider,
@@ -1560,6 +1561,26 @@ function DataViewBodyInner<TRow>(
           activeSupportsManualOrder &&
           activeState.sort.length > 0;
 
+        const onQueryChange =
+          search?.onQueryChange ??
+          ((next: string) => viewModel.setQuery(activeViewId, next));
+        // Zero rows under a search or a filter says nothing about the data:
+        // the surface's `emptyState` ("No prototypes yet") would claim it is
+        // empty, so the view is handed what hides the rows instead, with the
+        // way to take it off.
+        const trimmedQuery = activeState.query.trim();
+        const viewEmptyState =
+          trimmedQuery !== "" || filterController.ruleCount > 0 ? (
+            <NarrowedEmptyState
+              query={trimmedQuery}
+              filtered={filterController.ruleCount > 0}
+              onClearSearch={() => onQueryChange("")}
+              onClearFilter={() => viewModel.setFilter(activeViewId, null)}
+            />
+          ) : (
+            emptyState
+          );
+
         // The host passes RAW rows; each view applies the processing matching its own
         // semantics (gallery/list call `useFlatRows`, the table nests over a hierarchy).
         const renderProps: DataViewRenderProps<unknown> = {
@@ -1639,7 +1660,7 @@ function DataViewBodyInner<TRow>(
           // The flat read's placeholders, drawn around the view below — a grid
           // view keeps its cards' columns across a release above them.
           placeholders: flatPlaceholders ?? undefined,
-          emptyState,
+          emptyState: viewEmptyState,
           itemActions:
             allItemActions as DataViewRenderProps<unknown>["itemActions"],
           hasChildren: liveHasChildren ?? hasChildren,
@@ -1698,9 +1719,6 @@ function DataViewBodyInner<TRow>(
           promotedSettings,
         };
 
-        const onQueryChange =
-          search?.onQueryChange ??
-          ((next: string) => viewModel.setQuery(activeViewId, next));
         const body = (
           <>
             {/* One density for every view type, so a row's controls and decorations

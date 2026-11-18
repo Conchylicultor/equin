@@ -61,6 +61,7 @@ export const DATA_VIEW_PARTS = [
   "dv.title-cell-subtitle",
   // Body
   "dv.hidden-rows",
+  "dv.narrowed-empty",
 ] as const;
 
 export type DataViewPart = (typeof DATA_VIEW_PARTS)[number];

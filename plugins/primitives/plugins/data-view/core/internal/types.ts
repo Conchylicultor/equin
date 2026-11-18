@@ -1651,7 +1651,10 @@ export interface DataViewRenderProps<TRow> {
   placeholders?: DataViewPagePlaceholders;
   /** Empty-state node, rendered only on confirmed-empty (`rows.length === 0`).
    *  Views NEVER see a loading state — the host renders the skeleton itself and
-   *  skips `renderIsolated` while loading, so empty here always means empty. */
+   *  skips `renderIsolated` while loading, so empty here always means empty.
+   *  While a search or filter narrows the view it is the host's "Nothing
+   *  matches" state (with Clear search / Clear filter), never the surface's
+   *  `emptyState` — which claims the data itself is empty. */
   emptyState?: ReactNode;
   /** Per-item action slot descriptor; views render `<itemActions.Row …/>` in
    *  their own trailing affordance (type-erased; views re-cast at the boundary). */
@@ -2536,6 +2539,9 @@ export interface DataViewBaseProps<TRow> extends PlacementSpec {
   quickFilters?: readonly QuickFilter[];
   /** Currently-selected row id (tree highlight + auto-expand-to-selected). */
   selectedRowId?: string;
+  /** What the view says when the data is empty ("No prototypes yet"). Drawn
+   *  only when nothing narrows the view: under a search or a filter the body
+   *  draws "Nothing matches…" with the way to clear it instead. */
   emptyState?: ReactNode;
   /** Override the loading render; default is each view's own skeleton shape. */
   loadingState?: ReactNode;
