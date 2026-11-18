@@ -836,13 +836,13 @@ est_s() {
     mise) echo 1 ;;
     clone) echo 16 ;;
     toolchain) echo 17 ;;
-    start) echo 638 ;;
-    build) echo 2 ;;
-    build.database) echo 0 ;;
-    build.deps) echo 0 ;;
-    build.codegen) echo 0 ;;
-    build.interface) echo 0 ;;
-    build.deploy) echo 0 ;;
+    start) echo 122 ;;
+    build) echo 572 ;;
+    build.database) echo 1 ;;
+    build.deps) echo 1 ;;
+    build.codegen) echo 23 ;;
+    build.interface) echo 523 ;;
+    build.deploy) echo 11 ;;
     *) echo "install.sh: no estimate entry for step '$1'" >&2; exit 2 ;;
   esac
 }

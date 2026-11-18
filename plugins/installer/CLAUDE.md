@@ -417,14 +417,12 @@ no time, and no total is shown while any remaining step has none.
 Current values (2026-11-18), all from clean installs in fresh macOS VMs
 (Tart, 4 CPU / 8 GB): `tools`, `mise`, `clone`, `toolchain` from three
 release installs (`--only` those four); `start`, `build` and its sub-steps
-from two `--ref main` installs at a2559eaca1 (`--only` those) — start 670 s
-and 606 s, build 2 s with every sub-step skipped. On a fresh install the
-service's first boot deploys main while `./equin start` still runs, and
-start's next login-service install (the disk-speed monitor) waits ~8–9 min
-for a host CPU grant — admission is unmeasured on a fresh machine, so it runs
-on a 1-slot floor, and that build holds the slot — so the build's time is
-booked to `start` and the build step finds main already deployed (§ One
-build of main per install). Remeasure start and build when that moves.
+from two `--ref main` installs at c15ff3541d / 5a990409f1 (`--only` those),
+once `start` built the services' programs before the gateway: start 122 s
+both, build 564 s and 579 s (database 1, deps 1, codegen 23, interface ~523,
+deploy 11). In both, the install's own build step took the deploy lock before
+the service's first-boot run started, so it built main itself; following the
+service's build (§ One build of main per install) covers the other order.
 
 ## Sub-plugins
 
