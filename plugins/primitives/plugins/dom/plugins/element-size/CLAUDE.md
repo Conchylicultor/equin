@@ -129,7 +129,7 @@ different need, extend the primitive rather than allowlisting a copy.
     - `useResizeObserver`
     - `useResizeObserverSet`
 - Cross-plugin:
-  - Imported by: 52 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 51 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×26
     - `apps` ×16
     - `shell` ×2
@@ -140,7 +140,6 @@ different need, extend the primitive rather than allowlisting a copy.
     - `layouts/miller`
     - `page/editor`
     - `screenshot`
-    - `ui/ambient-field`
 - Exemptions:
   - Exempts itself from: `resize-observer-safety/no-raw-resize-observer` — `web/internal/element-size.ts` (sanctioned)
 - Sub-plugins:

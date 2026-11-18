@@ -50968,7 +50968,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/read-only-view`
               - `primitives/data-view`
               - `primitives/pane`
-              - `ui/ambient-field`
         - **`pin`** — Point-anchored absolute positioning primitive: <Pin to offset> places a child at a corner/edge-center/center of a relative parent. Sibling of Overlay.
           - Web:
             - Uses:
@@ -51888,13 +51887,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 480 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 479 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×114
               - `apps` ×110
               - `conversations` ×55
               - `page` ×27
               - `debug` ×25
-              - `ui` ×23
+              - `ui` ×22
               - `tasks` ×20
               - `fields` ×13
               - `apps-core` ×11
@@ -53583,7 +53582,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useResizeObserver`
               - `useResizeObserverSet`
           - Cross-plugin:
-            - Imported by: 52 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
+            - Imported by: 51 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
               - `primitives` ×26
               - `apps` ×16
               - `shell` ×2
@@ -53594,7 +53593,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `layouts/miller`
               - `page/editor`
               - `screenshot`
-              - `ui/ambient-field`
           - Exemptions:
             - Exempts itself from: `resize-observer-safety/no-raw-resize-observer` — `web/internal/element-size.ts` (sanctioned)
           - Plugins:
@@ -53647,7 +53645,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/dom/auto-scroll`
               - `primitives/outline/scroll-spy`
               - `primitives/pane`
-              - `ui/ambient-field`
           - Exemptions:
             - Exempts itself from: `intersection-observer-safety/no-raw-intersection-observer` — `web/internal/in-view.ts` (sanctioned)
         - **`layout-host`** — Which way the box laying a node out flows its children: useHostFlowAxis(sentinelRef, { followResize? }) reads it in the frame's after-layout phase (no forced style recalc on the commit path) — the host being the nearest ancestor that draws a box (skipping display: contents wrappers, whose width is 0 and which never resize), and row only for a row flex container (computed flex-direction alone says row for every element). Shared by the slot renderer and the reorder middleware so neither misreads a wrapped host.
@@ -65203,17 +65200,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`ui`** — Umbrella for pluggable UI components with switchable visual variants.
   - Plugins:
-    - **`ambient-field`** — <AmbientField>: a living, barely-there background behind its children — hairline strands (iron filings) following a slowly turning flow, drawn on a canvas. Each pointer stroke is a magnet of its own random kind (a pole or a vortex, either sign, its own strength and reach) that turns the strands near it, then fades.
-      - Web:
-        - Uses:
-          - `primitives/css/overlay.Overlay`
-          - `primitives/css/ui-kit.cn`
-          - `primitives/dom/element-size.useResizeObserver`
-          - `primitives/dom/in-view.useInView`
-        - Exports (types): `AmbientFieldProps`
-        - Exports (values): `AmbientField`
-      - Cross-plugin:
-        - Uses tokens: `ui/tokens/color-palette --primary-text`
     - **`breadcrumb-separator`** — Breadcrumb-separator region (chevron / slash). Contributes its variant-region host into BreadcrumbSlots.Separator.
       - Web:
         - Slots: `BreadcrumbSeparator.Variant`
@@ -66656,14 +66642,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ColorPaletteTokenValues`
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
-            - Tokens used by: 561 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 560 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×123
               - `conversations` ×97
               - `primitives` ×79
               - `debug` ×42
               - `page` ×34
               - `plugin-meta` ×28
-              - `ui` ×28
+              - `ui` ×27
               - `tasks` ×18
               - `reports` ×17
               - `fields` ×12

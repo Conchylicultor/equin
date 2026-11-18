@@ -84,7 +84,6 @@ allowlisting a copy.
     - `primitives/dom/auto-scroll`
     - `primitives/outline/scroll-spy`
     - `primitives/pane`
-    - `ui/ambient-field`
 - Exemptions:
   - Exempts itself from: `intersection-observer-safety/no-raw-intersection-observer` — `web/internal/in-view.ts` (sanctioned)
 
