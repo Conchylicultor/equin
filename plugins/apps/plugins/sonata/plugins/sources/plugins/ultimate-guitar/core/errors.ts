@@ -8,6 +8,7 @@ export type UgFetchErrorKind =
   | "invalid-url"
   | "not-found"
   | "signature-rejected"
+  | "client-outdated"
   | "bad-request"
   | "upstream"
   | "malformed-response"

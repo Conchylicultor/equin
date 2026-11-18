@@ -32,6 +32,7 @@ export const ugTabServed = serveValue(ugTab, {
           case "not-found":
             throw ugTab.refuse(err.kind, err.message);
           case "signature-rejected":
+          case "client-outdated":
           case "bad-request":
           case "upstream":
           case "malformed-response":

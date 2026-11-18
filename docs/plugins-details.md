@@ -11324,9 +11324,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `FieldPresentation.Register` "exposure:sonata_songs_ext_ultimate_guitar"
                   - `Library.Cover` "ultimate-guitar"
                   - `Library.SongLink` "ug"
-                - Uses: 47 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/REFERENCE.md)
+                - Uses: 48 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/REFERENCE.md)
+                  - `network/live/live-state` ×6
                   - `primitives/css/ui-kit` ×6
-                  - `network/live/live-state` ×5
                   - `network/live` ×4
                   - `apps/sonata/document` ×3
                   - `apps/sonata/library` ×3

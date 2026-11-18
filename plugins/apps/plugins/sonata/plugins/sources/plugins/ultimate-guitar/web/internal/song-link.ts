@@ -10,8 +10,8 @@ import {
 import { UgSourceRawSchema } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/core";
 import { UG_SOURCE_ID } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/tab/core";
 import { createUltimateGuitarSong } from "../../shared/endpoints";
-import { ugTab } from "../../shared/resources";
 import { compile } from "../compile";
+import { readUgTab } from "./ug-unavailable";
 
 /** The tab a link's `;ug=` names, as the import dialog spells a tab id. */
 function tabUrl(tabId: string): string {
@@ -40,7 +40,7 @@ export const ugSongLink = Library.SongLink({
   key: "ug",
   useValue: useUgLinkValue,
   create: async ({ fetchEndpoint, readLive }, { id, title, value }) => {
-    const answer = await readLive(ugTab, { url: tabUrl(value) });
+    const answer = await readUgTab(readLive, tabUrl(value));
     if (answer.status === "refused" || answer.status === "unavailable") {
       throw new Error(answer.message);
     }

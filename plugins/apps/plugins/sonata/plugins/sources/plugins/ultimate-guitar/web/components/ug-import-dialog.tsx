@@ -37,7 +37,8 @@ import { openSongImperative } from "@plugins/apps/plugins/sonata/plugins/library
 import { compile } from "../compile";
 import { extractUgTabId, UgFetchError, type UgSearchResult } from "../../core";
 import { createUltimateGuitarSong } from "../../shared/endpoints";
-import { ugSearch, ugTab } from "../../shared/resources";
+import { ugSearch } from "../../shared/resources";
+import { readUgTab, ugReadError } from "../internal/ug-unavailable";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -182,7 +183,7 @@ export function UgImportDialog({ onClose }: { onClose: () => void }) {
       if (target.length === 0) return;
       setError(null);
       try {
-        const answer = await readLive(ugTab, { url: target });
+        const answer = await readUgTab(readLive, target);
         // A bad URL or a missing tab is the answer, shown as the alert line —
         // as is a host that cannot reach UG (a browser host).
         if (answer.status === "refused" || answer.status === "unavailable") {
@@ -319,7 +320,7 @@ export function UgImportDialog({ onClose }: { onClose: () => void }) {
             // A refusal shows the server's message (no Retry: the answer
             // stands); a UG failure offers Retry.
             <ResourceErrorInline
-              error={filtered.error}
+              error={ugReadError(filtered.error)}
               refetch={filtered.refetch}
               variant="block"
             />

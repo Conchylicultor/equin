@@ -17,12 +17,16 @@ import type { UgTab } from "@plugins/apps/plugins/sonata/plugins/sources/plugins
  *   deviceId = first 16 chars of a random 16-byte hex string
  *   apiKey   = md5( deviceId + "<UTC yyyy-mm-dd>:<UTC hour int, no leading 0>createLog()" )
  * If UG returns 498 ("Token expired/invalid"), the signing scheme rotated and
- * the headers below need updating.
+ * the headers below need updating. If it returns 426 (Upgrade Required, empty
+ * body), UG raised its minimum app version: bump the version in
+ * `UG_USER_AGENT`. In Nov 2026 the floor moved past 4.11.1 (4.12.0+ answered;
+ * 7.0.0 was verified against tab 373651 and a `wonderwall` search, same
+ * response shape).
  */
 
 const UG_API_BASE = "https://api.ultimate-guitar.com/api/v1/tab/info";
 const UG_SEARCH_API_BASE = "https://api.ultimate-guitar.com/api/v1/tab/search";
-const UG_USER_AGENT = "UGT_ANDROID/4.11.1 (Pixel; 8.1.0)";
+const UG_USER_AGENT = "UGT_ANDROID/7.0.0 (Pixel; 8.1.0)";
 const FETCH_TIMEOUT_MS = 15_000;
 
 /** Tolerant view of the flat UG mobile-API response — only the fields we map. */
@@ -114,8 +118,8 @@ async function signedUgGet(apiUrl: string, context: string): Promise<Response> {
 
 /**
  * Classify a non-2xx UG mobile-API status into a `UgFetchError`. Handles the
- * statuses common to every route (400 → bad-request, 498 → signature-rejected,
- * other → upstream). Callers with route-specific statuses (e.g. fetch's 404)
+ * statuses common to every route (400 → bad-request, 426 → client-outdated,
+ * 498 → signature-rejected, other → upstream). Callers with route-specific statuses (e.g. fetch's 404)
  * must handle those *before* delegating here. Never returns.
  */
 function throwForUgStatus(status: number, context: string): never {
@@ -124,6 +128,11 @@ function throwForUgStatus(status: number, context: string): never {
       throw new UgFetchError(
         "bad-request",
         `Ultimate Guitar rejected the request (400 Bad Request) for ${context} — the required mobile-API headers/params may have changed.`,
+      );
+    case 426:
+      throw new UgFetchError(
+        "client-outdated",
+        `Ultimate Guitar refused our client as too old (426 Upgrade Required) for ${context} — UG raised its minimum app version; bump the version in UG_USER_AGENT (ug-client.ts).`,
       );
     case 498:
       throw new UgFetchError(

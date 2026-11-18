@@ -37,13 +37,13 @@ import {
   UgSourceRawSchema,
   type UgSourceRaw,
 } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/core";
-import { ugTab } from "../shared/resources";
 import {
   defineKept,
   useKept,
 } from "@plugins/primitives/plugins/kept-state/web";
 import { z } from "zod";
 import { collectUnrecognisedChords } from "./compile";
+import { readUgTab } from "./internal/ug-unavailable";
 
 interface Props {
   raw?: unknown;
@@ -109,7 +109,7 @@ export function UltimateGuitarLoader({ raw, onRaw }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const answer = await readLive(ugTab, { url: trimmed });
+      const answer = await readUgTab(readLive, trimmed);
       // A bad URL or a missing tab is the answer, shown as the alert line —
       // as is a host that cannot reach UG (a browser host).
       if (answer.status === "refused" || answer.status === "unavailable") {
