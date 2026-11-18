@@ -27165,6 +27165,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `advanceSleeps`
               - `applyOpEvent`
+              - `BEHIND_LONE_BUILD_REASON`
               - `emptyOpState`
               - `foldOpLines`
               - `isOpEvent`

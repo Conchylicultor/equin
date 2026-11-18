@@ -8,6 +8,7 @@ import {
   toOpRecord,
 } from "./internal/fold";
 import {
+  BEHIND_LONE_BUILD_REASON,
   WAIT_KINDS,
   type OpEvent,
   type OpFoldState,
@@ -430,6 +431,16 @@ describe("WAIT_KINDS", () => {
     expect(WAIT_KINDS["duress-valve"].sentence("loadRatio")).toBe(
       "held: host under duress (loadRatio)",
     );
+  });
+
+  test("waiting behind a build admitted alone does not claim the host is under duress", () => {
+    const sentence = WAIT_KINDS["duress-valve"].sentence(
+      BEHIND_LONE_BUILD_REASON,
+    );
+    expect(sentence).toBe(
+      "held: waiting for an agent build that started alone under duress",
+    );
+    expect(sentence).not.toContain("host under duress");
   });
 });
 

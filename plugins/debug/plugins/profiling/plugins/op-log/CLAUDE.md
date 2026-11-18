@@ -223,6 +223,7 @@ through `foldOpLines`. The before/after ruler of
   - Exports (values):
     - `advanceSleeps`
     - `applyOpEvent`
+    - `BEHIND_LONE_BUILD_REASON`
     - `emptyOpState`
     - `foldOpLines`
     - `isOpEvent`

@@ -14,6 +14,15 @@ import type { OpKind } from "@plugins/infra/plugins/worktree/core";
 // Import it from there; this barrel deliberately does not re-export it.
 
 /**
+ * The `duress-valve` wait's reason while the host is CALM and the build only
+ * waits for a build admitted alone under an earlier duress to release the
+ * gate. The gate (op-runtime's admission valve) writes it; `WAIT_KINDS` words
+ * it. Every other reason of that wait is the duress latch's trip cause.
+ */
+export const BEHIND_LONE_BUILD_REASON =
+  "an agent build admitted under duress is running";
+
+/**
  * The distinct resources an op can block on, declared once as data (like
  * `OP_KINDS`). Which one an op is parked in IS the diagnosis:
  * `push-mutex` = self-queued behind another push; `build-lock` = queued behind
@@ -45,8 +54,14 @@ export const WAIT_KINDS = {
   },
   "duress-valve": {
     label: "Duress valve",
+    // Two causes share this wait, and only one of them is duress: a build also
+    // waits here, on a calm host, for a build that was admitted alone to let
+    // go of the gate. Saying "host under duress" for that one told the user
+    // the machine was in trouble for an hour while it sat idle (2026-11-18).
     sentence: (reason: string | null) =>
-      `held: host under duress${reason ? ` (${reason})` : ""}`,
+      reason === BEHIND_LONE_BUILD_REASON
+        ? "held: waiting for an agent build that started alone under duress"
+        : `held: host under duress${reason ? ` (${reason})` : ""}`,
   },
   "in-flight": {
     label: "In-flight run",

@@ -30,6 +30,7 @@ import {
   type Ticket,
   type TicketPlace,
 } from "@plugins/packages/plugins/ticket-line/core";
+import { BEHIND_LONE_BUILD_REASON } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
 import type { Lane } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { agentBuildGateDir } from "../data-dirs";
 import { buildProfilerStart } from "./profiler";
@@ -185,8 +186,7 @@ export interface ValveDeps {
 }
 
 /** The hold reason while a calm build waits for an exclusive build to finish. */
-export const EXCLUSIVE_RUNNING_REASON =
-  "an agent build admitted under duress is running";
+export const EXCLUSIVE_RUNNING_REASON = BEHIND_LONE_BUILD_REASON;
 
 class DuressCleared extends Error {
   constructor() {
@@ -480,7 +480,7 @@ export function createValveDeps(): ValveDeps {
         "duressHold",
         "build:queue",
         reason === EXCLUSIVE_RUNNING_REASON
-          ? `held: ${reason}`
+          ? "held: waiting for an agent build that started alone under duress"
           : "held: host under duress",
         { wait: true },
       );

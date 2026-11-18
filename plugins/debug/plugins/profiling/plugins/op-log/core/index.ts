@@ -26,7 +26,7 @@ export type {
   WaitKindMeta,
   WaitResult,
 } from "./internal/types";
-export { WAIT_KINDS } from "./internal/types";
+export { BEHIND_LONE_BUILD_REASON, WAIT_KINDS } from "./internal/types";
 export {
   linePositionText,
   waitLineOf,
