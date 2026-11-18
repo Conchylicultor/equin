@@ -247,6 +247,7 @@ through `foldOpLines`. The before/after ruler of
     - `framework/cli/build`
     - `framework/cli/op-runtime`
     - `framework/cli/push`
+    - `installer/waits`
 - Server:
   - Exports (values):
     - `appendOpLog`

@@ -557,22 +557,24 @@ EOF
     "./equin url printed nothing"
 
   STATUS="$(data_root)/worktrees/singularity/build-status.json"
-  before="$(grep -o '"buildId": *"[^"]*"' "$STATUS" 2>/dev/null || true)"
   say "Building equin (the long step: about 10 minutes)"
-  # --skip-checks: this deploys main, whose tree already passed the full check
-  # pass when it was pushed (the cheap alwaysRun subset still runs). The full
-  # pass is an authoring gate, and some of it needs headless Chromium (the
-  # layout-geometry suite) — an on-demand dependency (infra/deps) installed the
-  # first time a check, an e2e script or an agent's browser asks for it, never
-  # to launch the app.
-  run_step build ./equin build --allow-main --skip-checks
+  # ONE build of this tree, not two. `./equin start` brought equin's
+  # background service up, and its first boot already deploys main the way
+  # every later update is deployed: a convergence run (`./equin build
+  # --allow-main --converge`; a first deploy runs without the full check pass,
+  # build/converge cli/internal/plan.ts). This step is that same run: it waits
+  # for the service's (its deploy lock — a wait naming the build that holds
+  # it) and finds main deployed, or deploys it itself when the service's run
+  # has not started yet. Only when that left this version undeployed (its
+  # build failed: a convergence run decides a commit once) does the step build
+  # it here, so the failure is this step's own output.
+  run_step build deploy_main "$STATUS"
   [ "$STEP_RC" = "0" ] || fail "equin did not finish building, so it cannot open yet; what went wrong is in the output above. Run the installer again to retry (cd $INSTALL_DIR && ./install.sh)." \
     "./equin build exited non-zero"
   # The receipt is the authority on whether it deployed, not the exit code.
-  after="$(grep -o '"buildId": *"[^"]*"' "$STATUS" 2>/dev/null || true)"
-  if [ -z "$after" ] || [ "$after" = "$before" ] || ! grep -q '"status": *"ok"' "$STATUS"; then
+  if ! deployed_at_head "$STATUS"; then
     fail "equin did not finish building, so it cannot open yet; what went wrong is in the output above. Run the installer again to retry (cd $INSTALL_DIR && ./install.sh)." \
-      "no new ok deploy receipt in $STATUS"
+      "no ok deploy receipt for $(git rev-parse HEAD) in $STATUS"
   fi
 
   # ── 7. Done ────────────────────────────────────────────────────────────────
@@ -592,6 +594,37 @@ EOF
 # Each runs inside run_step's subshell, under `set -e`: it may print anything
 # (that is the step's log) and fails by exiting non-zero. State the rest of the
 # install needs (PATH, the current directory) is set by main(), never here.
+
+# deployed_at_head <receipt>: main's deploy receipt says ok, for this
+# checkout's HEAD — whoever built it (the service's first-boot run, or this
+# install).
+deployed_at_head() {
+  grep -q '"status": *"ok"' "$1" 2>/dev/null &&
+    grep -q "\"commit\": *\"$(git rev-parse HEAD)\"" "$1"
+}
+
+# deploy_main <receipt>: the build step's body (see the step).
+deploy_main() {
+  local before
+  before="$(grep -o '"buildId": *"[^"]*"' "$1" 2>/dev/null || true)"
+  # Its own failure (the gateway follow after the builds, say) is not the
+  # install's verdict: the receipt is.
+  ./equin build --allow-main --converge || echo "The deploy run exited non-zero; checking whether equin deployed anyway."
+  deployed_at_head "$1" && return 0
+  # A build of this version ran during this step and did not deploy (here,
+  # or in the background service's run): building the same tree again would
+  # fail the same way, twice as slowly. Its log says why; running the
+  # installer again builds it here, in this step's output.
+  if [ "$(grep -o '"buildId": *"[^"]*"' "$1" 2>/dev/null || true)" != "$before" ]; then
+    echo "The build of this version did not deploy. Its log: $(grep -o '"logPath": *"[^"]*"' "$1" | sed 's/.*: *"//; s/"$//')"
+    return 1
+  fi
+  echo "This version of equin is not deployed yet; building it here."
+  # --skip-checks: this deploys main, whose tree already passed the full check
+  # pass when it was pushed (the cheap alwaysRun subset still runs) — the same
+  # call a first convergence run makes (build/converge plan.ts).
+  ./equin build --allow-main --skip-checks
+}
 
 install_xcode_tools() {
   # In the window: Apple's own dialog, which asks for whatever it needs

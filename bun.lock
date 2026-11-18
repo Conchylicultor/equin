@@ -5116,6 +5116,10 @@
       "name": "@equin/plugin-installer-release-assets",
       "version": "0.0.1",
     },
+    "plugins/installer/plugins/waits": {
+      "name": "@equin/plugin-installer-waits",
+      "version": "0.0.1",
+    },
     "plugins/installer/plugins/window": {
       "name": "@equin/plugin-installer-window",
       "version": "0.0.1",
@@ -10718,6 +10722,8 @@
     "@equin/plugin-installer": ["@equin/plugin-installer@workspace:plugins/installer"],
 
     "@equin/plugin-installer-release-assets": ["@equin/plugin-installer-release-assets@workspace:plugins/installer/plugins/release-assets"],
+
+    "@equin/plugin-installer-waits": ["@equin/plugin-installer-waits@workspace:plugins/installer/plugins/waits"],
 
     "@equin/plugin-installer-window": ["@equin/plugin-installer-window@workspace:plugins/installer/plugins/window"],
 

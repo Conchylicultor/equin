@@ -2,7 +2,10 @@ import {
   inheritedGrant,
   withHostGrant,
 } from "@plugins/infra/plugins/host/plugins/host-admission/server";
-import type { Lane } from "@plugins/infra/plugins/host/plugins/host-admission/core";
+import type {
+  GrantHooks,
+  Lane,
+} from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import {
   getMainRepoRoot,
@@ -21,12 +24,18 @@ import {
  * parent's own slots — on a host whose whole fleet is one unit (an 8 GB box:
  * `B = 1`), for ever, since the parent was waiting on this child.
  */
-function admitIn(lane: Lane) {
+function admitIn(lane: Lane, hooks?: GrantHooks) {
   return <T>(fn: () => Promise<T>): Promise<T> => {
     const inherited = inheritedGrant();
     if (inherited) return inherited.run(fn);
     return withHostGrant(
-      { lane, priority: "normal", max: 1, work: "job" },
+      {
+        lane,
+        priority: "normal",
+        max: 1,
+        work: "job",
+        ...(hooks === undefined ? {} : { hooks }),
+      },
       () => fn(),
     );
   };
@@ -51,8 +60,11 @@ export const admitBackground = admitIn("background");
  * be the one with no free slot (2026-11-16 onboarding audit: a 16 GB Mac's
  * measured window kept its one slot for interactive work).
  */
-export async function admitForCaller<T>(fn: () => Promise<T>): Promise<T> {
-  return admitIn(await callerLane())(fn);
+export async function admitForCaller<T>(
+  fn: () => Promise<T>,
+  hooks?: GrantHooks,
+): Promise<T> {
+  return admitIn(await callerLane(), hooks)(fn);
 }
 
 async function callerLane(): Promise<Lane> {

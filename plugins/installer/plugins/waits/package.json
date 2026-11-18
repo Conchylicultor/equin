@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-installer-waits",
+  "private": true,
+  "version": "0.0.1",
+  "description": "How a `./equin` command run as an install step reports a wait on another task, naming its holder from the op log: installGrantHooks (a host CPU grant wait — any CLI admission, a build's or a dependency install's under `./equin start`), reportLockWait (a lock another run holds), and the stall rule that pauses the install when that holder stopped making progress."
+}

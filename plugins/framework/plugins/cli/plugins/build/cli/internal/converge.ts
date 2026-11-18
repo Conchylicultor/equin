@@ -38,6 +38,8 @@ const GATEWAY_FOLLOW_MODULE =
 interface GatewayFollowModule {
   followMainGateway: typeof followMainGateway;
 }
+import { finishBuildSubSteps } from "@plugins/installer/cli";
+import { reportLockWait } from "@plugins/installer/plugins/waits/cli";
 import { readCheckoutCompositions } from "./build-targets";
 import { waitForArtifactLock } from "./app-artifacts";
 
@@ -139,9 +141,17 @@ export async function runConvergence(opts: ConvergeOptions): Promise<number> {
     console.log(`[converge ${new Date().toISOString()}] ${line}`);
   const namespace = await actAsCheckoutNamespace(root);
   const lockStartedAt = Date.now();
-  const deployLock = await waitForFlock(
-    worktreeArtifacts.deployLock(namespace),
-  );
+  // Run as an install's build step, the wait for the gateway's own run (a
+  // fresh install's first boot converges at once) is reported naming that
+  // run's build (installer/waits) — the install reuses its work rather than
+  // building the same tree twice.
+  const lockWait = reportLockWait("build");
+  let deployLock: Awaited<ReturnType<typeof waitForFlock>>;
+  try {
+    deployLock = await waitForFlock(worktreeArtifacts.deployLock(namespace));
+  } finally {
+    lockWait.end();
+  }
   const lockWaitMs = Date.now() - lockStartedAt;
   if (lockWaitMs >= 1000)
     log(
@@ -238,6 +248,7 @@ async function convergeBuilds(
   const recorder = createBuildRunRecorder(namespace);
   try {
     let previous: string | null = null;
+    let built = false;
     for (;;) {
       await waitForArtifactLock(root);
       const decision = await decideConvergence({
@@ -256,6 +267,7 @@ async function convergeBuilds(
       const build = convergenceBuild(decision);
       if (build === null) {
         log(`converged at ${head}: nothing to build`);
+        if (!built) builtElsewhere();
         return 0;
       }
       const { targets, key } = build;
@@ -283,12 +295,20 @@ async function convergeBuilds(
         // holds the build lock, so the next run waits behind it; nothing is
         // lost because the ref edge that matters re-runs this.
         log(`a live build of ${namespace} holds the slot — stopping`);
+        if (!built) builtElsewhere();
         return 0;
       }
-      log(`building ${targets.join(", ")} at ${head} — ${buildId}`);
+      log(
+        `building ${targets.join(", ")} at ${head} — ${buildId}` +
+          (build.skipChecks
+            ? " (first deploy: without the full check pass)"
+            : ""),
+      );
       const buildArgs = [
         "build",
         "--allow-main",
+        // Before --composition, whose variadic would swallow it.
+        ...(build.skipChecks ? ["--skip-checks"] : []),
         // After --allow-main: commander's variadic is greedy to the next flag.
         ...build.compositionArgs,
       ];
@@ -343,6 +363,7 @@ async function convergeBuilds(
       // the ways it can end without one (a throw, an early exit, a signal), so
       // the next decision sees this attempt. First writer wins.
       if (claim === "claimed") await recorder.closeRun(buildId, exitCode);
+      built = true;
       log(`build ${buildId} exited ${exitCode}`);
       // No ledger to record the attempt in, so the ledger cannot end the loop:
       // one build, then stop. The next edge decides against the ledger this
@@ -352,6 +373,16 @@ async function convergeBuilds(
   } finally {
     await recorder.close();
   }
+}
+
+/**
+ * This run built nothing: another run (the gateway's own, on an install's
+ * first boot) did. Run as an install's build step, its sub-steps are then
+ * none of this step's work — reported skipped, so the view closes them rather
+ * than leaving them pending. A no-op outside an install.
+ */
+function builtElsewhere(): void {
+  finishBuildSubSteps(true);
 }
 
 function slotSha(head: string | null): string {

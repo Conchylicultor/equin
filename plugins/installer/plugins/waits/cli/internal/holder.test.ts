@@ -5,7 +5,7 @@ import {
   STALL_WAIT_MS,
   judgeHolder,
   stallWords,
-} from "./install-waits";
+} from "./holder";
 
 const T0 = Date.parse("2026-11-17T12:00:00Z");
 const MIN = 60_000;

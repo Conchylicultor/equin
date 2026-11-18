@@ -27030,6 +27030,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/build`
               - `framework/cli/op-runtime`
               - `framework/cli/push`
+              - `installer/waits`
           - Server:
             - Exports (values):
               - `appendOpLog`
@@ -31748,16 +31749,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `INSTALL_VERB`
         - **`build`** — `./equin build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
           - Cli:
-            - Uses: 72 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
+            - Uses: 70 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
               - `framework/cli/op-runtime` ×32
-              - `installer` ×6
-              - `debug/profiling/op-log` ×4
               - `framework/cli/bootstrap` ×4
               - `framework/tooling/web-artifacts` ×4
               - `framework/cli/migrations` ×3
               - `framework/tooling/web-artifacts/served-addresses` ×3
+              - `installer/waits` ×3
+              - `installer` ×3
               - `plugin-meta/plugin-records` ×3
               - `build/converge` ×2
+              - `debug/profiling/op-log` ×2
               - `infra/git/main-slots` ×2
               - `build/central-build-id.centralBuildOf`
               - `build/run-ledger.createBuildRunRecorder`
@@ -41040,6 +41042,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `framework/cli/op-runtime`
       - `framework/cli/start`
       - `installer/release-assets`
+      - `installer/waits`
       - `installer/window`
   - Exemptions:
     - Exempts itself from: `paths:no-hardcoded-paths` — `core/internal/report.test.ts` (sanctioned)
@@ -41067,6 +41070,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `releaseManifest`
           - `ReleaseManifest`
           - `sha256Sums`
+    - **`waits`** — How a `./equin` command run as an install step reports a wait on another task, naming its holder from the op log: installGrantHooks (a host CPU grant wait — any CLI admission, a build's or a dependency install's under `./equin start`), reportLockWait (a lock another run holds), and the stall rule that pauses the install when that holder stopped making progress.
+      - Cli:
+        - Uses:
+          - `debug/profiling/op-log.readOpRecords`
+          - `installer.installEventsOn`
+          - `installer.reportInstallResolved`
+          - `installer.reportInstallStall`
+          - `installer.reportInstallWait`
+        - Exports (types): `OpenInstallWait`
+        - Exports (values):
+          - `HOLDER_QUIET_MS`
+          - `installGrantHooks`
+          - `judgeHolder`
+          - `reportHostGrantWait`
+          - `reportLockWait`
+          - `STALL_WAIT_MS`
+          - `stallWords`
+      - Cross-plugin:
+        - Imported by: `framework/cli/build`
     - **`window`** — The installer window: equin-installer, a small wry/tao Rust app (rust/) that runs install.sh as its child — events on fd 3, decisions on fd 4 — and draws the stream in a page bundled into the binary (standalone-page/). Built locally as the installer-window dependency; `./equin installer window` runs it over this checkout's install.sh.
       - Cli:
         - Uses: `infra/jobs/supervised-job.cliExecContext`
