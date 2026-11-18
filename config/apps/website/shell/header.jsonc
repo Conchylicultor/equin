@@ -38,7 +38,8 @@
   // that leaves the site, and last the header's one call to action: Wish, which
   // lets the reader try the gesture the site is about.
   //
-  // The Guide is hidden while its page is a placeholder: nothing on the site
+  // The Guide is hidden while its page is a placeholder (GUIDE_READY in the guide
+  // plugin's core is false: it also hides the ? menu entry and the sitemap entry): nothing on the site
   // links an empty page. Unhide it once the guide is written.
   //
   // On a phone what does not fit goes behind the header's ☰ (WebsiteChrome's

@@ -13241,7 +13241,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by:
                   - `apps/website/landing/layers`
                   - `apps/website/pages/apps`
-            - **`guide`** — The getting-started guide of the equin website: the /about/guide pane on the first tasks, agents and changes once equin is installed (a placeholder heading for now), its Guide nav link, and the WebsiteGuide.Section slot the guide is written into. The getting-started guide of the equin website on the server: its sitemap entry (WebsitePages.Page).
+            - **`guide`** — The getting-started guide of the equin website: the /about/guide pane on the first tasks, agents and changes once equin is installed (a placeholder heading for now), its Guide nav link, and the WebsiteGuide.Section slot the guide is written into. The getting-started guide of the equin website on the server: its sitemap entry (WebsitePages.Page), listed only once the guide is written (GUIDE_READY).
               - Web:
                 - Slots: `WebsiteGuide.Section`
                 - Contributes:
@@ -13261,11 +13261,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `guidePane`
                   - `WebsiteGuide`
               - Server:
-                - Contributes: `apps.website.crawlable.page` "/about/guide"
                 - Uses: `apps/website/crawlable.WebsitePages`
               - Core:
                 - Uses: `apps/website/crawlable.defineWebsitePage`
-                - Exports (values): `guidePage`
+                - Exports (values):
+                  - `GUIDE_READY`
+                  - `guidePage`
               - Cross-plugin:
                 - Imported by: `hints/help-menu`
             - **`privacy`** — The privacy page of the equin website and the consent prompt that links to it: the /about/privacy pane (this browser's choice, what a visit records, the two ways a return is recognised — a random key kept in the browser when the visitor accepts, else the daily hash — and how long it is kept), its Privacy link in the footer, and the prompt floating over every page (Website.Layer) until the browser answers Reject or Accept. The privacy page of the equin website on the server: its sitemap entry (WebsitePages.Page).

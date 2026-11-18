@@ -15,7 +15,7 @@ running" steps link here too.
 
 ## Plugin reference
 
-- Description: The getting-started guide of the equin website: the /about/guide pane on the first tasks, agents and changes once equin is installed (a placeholder heading for now), its Guide nav link, and the WebsiteGuide.Section slot the guide is written into. The getting-started guide of the equin website on the server: its sitemap entry (WebsitePages.Page).
+- Description: The getting-started guide of the equin website: the /about/guide pane on the first tasks, agents and changes once equin is installed (a placeholder heading for now), its Guide nav link, and the WebsiteGuide.Section slot the guide is written into. The getting-started guide of the equin website on the server: its sitemap entry (WebsitePages.Page), listed only once the guide is written (GUIDE_READY).
 - Web:
   - Slots: `WebsiteGuide.Section`
   - Contributes:
@@ -35,11 +35,12 @@ running" steps link here too.
     - `guidePane`
     - `WebsiteGuide`
 - Server:
-  - Contributes: `apps.website.crawlable.page` "/about/guide"
   - Uses: `apps/website/crawlable.WebsitePages`
 - Core:
   - Uses: `apps/website/crawlable.defineWebsitePage`
-  - Exports (values): `guidePage`
+  - Exports (values):
+    - `GUIDE_READY`
+    - `guidePage`
 - Cross-plugin:
   - Imported by: `hints/help-menu`
 
