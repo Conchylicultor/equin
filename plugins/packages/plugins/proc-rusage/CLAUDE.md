@@ -1,12 +1,13 @@
 # proc-rusage
 
-One process's kernel usage record on macOS — `proc_pid_rusage(RUSAGE_INFO_V4)`
-through `bun:ffi`, lazily, like `packages/thread-cpu-clock` — and the ONE way
-this repo reads how much memory a process needs:
+One process's kernel usage record — on macOS `proc_pid_rusage(RUSAGE_INFO_V4)`
+through `bun:ffi`, lazily, like `packages/thread-cpu-clock`; on Linux procfs
+(`core/internal/proc-linux.ts`) — and the ONE way this repo reads how much
+memory a process needs:
 
 ```ts
-const r = readProcRusage(pid);
-// { kind: "read", memory: { physFootprintBytes, residentSizeBytes, peakPhysFootprintBytes },
+const r = readProcRusageSync(pid); // or: await readProcRusage(pid) — see Linux below
+// { kind: "read", memory: { physFootprintBytes, residentSizeBytes, peakPhysFootprintBytes, sharedPages },
 //   cpu: { ownNs, reapedChildrenNs } } | { kind: "refused" } | { kind: "unsupported" }
 ```
 
@@ -20,6 +21,30 @@ const r = readProcRusage(pid);
   `process-memory/no-rss-memory` lint (`lint/`) rejects `maxRSS` and
   `memoryUsage().rss`; a host with no footprint at all is the one sanctioned
   fallback, declared in the reader's `exempt/index.ts`.
+- **Linux** (`core/internal/proc-linux.ts`) has two readings, because the
+  one in the host's terms costs a page-table walk:
+  - `readProcRusageSync` — the kernel's counters in `/proc/<pid>/status`,
+    O(1): `RssAnon + RssShmem`, a shared page counted whole in each process.
+    For one process on its own (this process's footprint on every profiler
+    span, a child's peak at exit).
+  - `readProcRusage` (async) — `smaps_rollup`'s `Pss_Anon + Pss_Shmem`, a
+    shared page charged 1/N to each of its N mappers, so a set of processes'
+    sum is in the same terms as the host's `AnonPages + Shmem`
+    (packages/host-memory) and can be subtracted from it. `ps`'s RSS cannot:
+    it adds file-backed pages and counts a shared page once per mapper. The
+    kernel walks the page tables to answer, so it is read off the thread. A
+    kernel whose rollup does not split Pss answers `unsupported`. On macOS it
+    is the same one syscall as the sync read.
+  - Linux keeps no peak of either, only of the resident size (`VmHWM`), so
+    the peak is the memory now plus how far the resident size fell since its
+    peak (`VmHWM − VmRSS`) — `VmHWM` alone counts a shared segment whole in
+    every process of a fork tree. An estimate, usually high.
+  - A process with no address space (kernel thread, zombie, exiting mid-read)
+    is `refused`. Times are clock ticks (USER_HZ, 100).
+- **`sharedPages`**: `whole` (macOS, and Linux's counters — every mapper is
+  charged the whole page, so summing a Postgres fork tree counts its shared
+  segment per backend, which machine-usage's fork-memory walk corrects on
+  macOS) or `proportional` (Linux's Pss — the sum is already right).
 - **A child's peak** (`PeakFootprint`: measured, or unmeasured with why): a
   parent cannot read it — Bun reaps the child before the parent's code runs —
   so the child reports its own as it exits. `peakFootprintReportEnv` puts
@@ -35,10 +60,11 @@ const r = readProcRusage(pid);
   a short-lived process (a hook, a `git`, an `rg`) leaves once it exited; `ps`
   has no column for it. On 2026-11-06 the gateway's own CPU was 337 s and its
   reaped children's 17,600 s.
-- Times are mach absolute-time units in the struct (125/3 ns on Apple
+- macOS times are mach absolute-time units in the struct (125/3 ns on Apple
   silicon), scaled by `mach_timebase_info`.
 - `refused`: the kernel will not tell one account about another's process, or
-  the pid is gone. `unsupported`: not macOS. Never read either as zero.
+  the pid is gone. `unsupported`: neither macOS nor Linux. Never read either
+  as zero.
 
 Readers: `server-core`'s host probes (`bin/phys-footprint.ts`: this process's
 footprint, `peerProcUsage`), the machine-usage owner breakdown (host
@@ -49,7 +75,7 @@ orchestrator's own peak and the build-progress log.
 
 ## Plugin reference
 
-- Description: One process's kernel usage record on macOS (proc_pid_rusage, read through bun:ffi): its physical footprint, lifetime peak footprint and resident size, and its CPU time — its own and that of every child it reaped, in ns. A child's peak footprint, reported by the child at exit (PeakFootprint). Says so where it cannot tell.
+- Description: One process's kernel usage record on macOS (proc_pid_rusage, read through bun:ffi) and Linux (procfs: the O(1) status counters RssAnon + RssShmem read sync, or — async, a page-table walk — smaps_rollup's Pss_Anon + Pss_Shmem, in the terms of the host's AnonPages + Shmem; the peak: that plus VmHWM − VmRSS): its physical footprint, lifetime peak footprint and resident size, how shared pages are charged (whole or proportional), and its CPU time — its own and that of every child it reaped, in ns. A child's peak footprint, reported by the child at exit (PeakFootprint). Says so where it cannot tell.
 - Core:
   - Uses:
     - `infra/host-fs/user-path.AppPath`
@@ -60,6 +86,7 @@ orchestrator's own peak and the build-progress log.
     - `infra/launcher/env-names.unsetEnv`
     - `infra/paths/repo-root.scriptPath`
     - `packages/timed-fs.readFile`
+    - `packages/timed-fs.readFileSync`
   - Exports (types):
     - `PeakFootprint`
     - `ProcRusage`
@@ -71,6 +98,7 @@ orchestrator's own peak and the build-progress log.
     - `peakFootprintText`
     - `readPeakFootprintReport`
     - `readProcRusage`
+    - `readProcRusageSync`
 - Cross-plugin:
   - Imported by:
     - `debug/sentinel/machine-usage`
@@ -79,7 +107,7 @@ orchestrator's own peak and the build-progress log.
     - `framework/cli/op-runtime`
     - `infra/spawn`
 - Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `core/internal/proc-rusage.ts`, `core/internal/peak-footprint.ts` (debt)
+  - Exempts itself from: `boundaries/no-platform-api` — `core/internal/proc-rusage.ts`, `core/internal/proc-linux.ts`, `core/internal/peak-footprint.ts` (debt)
   - Exempted by: `debug/heap-snapshot` (0 debt)
 
 <!-- AUTOGENERATED:END -->

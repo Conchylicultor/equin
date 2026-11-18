@@ -1,10 +1,15 @@
-import { readProcRusage } from "@plugins/packages/plugins/proc-rusage/core";
+import {
+  readProcRusage,
+  readProcRusageSync,
+} from "@plugins/packages/plugins/proc-rusage/core";
 import type {
   PeerUsage,
   ProcMemory,
 } from "@plugins/framework/plugins/server-core/core";
 
-// macOS phys_footprint — the real per-process memory the kernel charges against
+// A process's memory as the kernel charges it — macOS phys_footprint; on Linux
+// procfs's Pss of anonymous + shared memory, in the same terms as the host's
+// AnonPages + Shmem (packages/proc-rusage). macOS's footprint is the real per-process memory the kernel charges against
 // the memory-pressure limit, and the number Activity Monitor shows. This is the
 // metric to trust: `process.memoryUsage().rss` on macOS over-counts ~6× because
 // it includes resident-but-clean/reserved pages (JSC bmalloc, the 65 GB JS-VM
@@ -16,31 +21,34 @@ import type {
 // hands on.
 
 /**
- * Physical memory metrics of `pid` (defaults to this process) from one
- * `proc_pid_rusage` syscall — the desktop's memory probe, installed into
+ * Physical memory metrics of `pid` (defaults to this process) from its usage
+ * record (`proc_pid_rusage` on macOS, procfs on Linux) — the desktop's memory probe, installed into
  * `core`'s `procMemory()` by `./host-probes` (bun:ffi exists on this host only).
  *
- * Returns `null` on non-macOS platforms (no phys_footprint equivalent; callers
- * fall back to `process.memoryUsage().rss`). On macOS a refused read throws — a
- * broken FFI binding must fail loudly, never silently degrade.
+ * Returns `null` on an OS with neither (callers fall back to
+ * `process.memoryUsage().rss`). A refused read of this process throws — a
+ * broken binding must fail loudly, never silently degrade.
  */
-export function macProcMemory(pid: number = process.pid): ProcMemory | null {
-  const read = readProcRusage(pid);
+export function hostProcMemory(pid: number = process.pid): ProcMemory | null {
+  const read = readProcRusageSync(pid);
   if (read.kind === "unsupported") return null;
   if (read.kind === "refused") {
-    throw new Error(`proc_pid_rusage(${pid}) failed`);
+    throw new Error(
+      `[server-core] reading process ${pid}'s usage record was refused`,
+    );
   }
   return read.memory;
 }
 
 /**
- * Another process's memory and CPU — `core`'s `peerProcUsage()`. The kernel
- * refuses another account's process (EPERM) and one that exited since it was
- * listed (ESRCH): both are answers here. A broken binding still fails loudly
- * through `macProcMemory` on this process, which every caller reads first.
+ * Another process's memory and CPU — `core`'s `peerProcUsage()`, shared pages
+ * charged proportionally where the OS can (Linux's Pss, read off the thread).
+ * The kernel refuses another account's process and one that exited since it
+ * was listed: both are answers here. A broken binding still fails loudly
+ * through `hostProcMemory` on this process, which every caller reads first.
  */
-export function macPeerProcUsage(pid: number): PeerUsage {
-  const read = readProcRusage(pid);
+export async function hostPeerProcUsage(pid: number): Promise<PeerUsage> {
+  const read = await readProcRusage(pid);
   switch (read.kind) {
     case "unsupported":
       return { kind: "unsupported" };

@@ -42,7 +42,7 @@
  * a run touched are listed (and a dirty `git status` is a finding to report).
  */
 import { writeFileSync } from "fs";
-import { readProcRusage } from "@plugins/packages/plugins/proc-rusage/core";
+import { readProcRusageSync } from "@plugins/packages/plugins/proc-rusage/core";
 import { statSync } from "@plugins/packages/plugins/timed-fs/core";
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { join, resolve } from "path";
@@ -133,7 +133,7 @@ const rows: Row[] = [];
 
 /** This process's physical footprint now, MB (`packages/proc-rusage`); NaN off macOS. */
 function footprintMbNow(): number {
-  const read = readProcRusage(process.pid);
+  const read = readProcRusageSync(process.pid);
   return read.kind === "read"
     ? read.memory.physFootprintBytes / 1048576
     : Number.NaN;

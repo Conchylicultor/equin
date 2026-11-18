@@ -35,8 +35,10 @@ async function read(baseline: CpuBaseline | null) {
   const browser = await readAgentBrowserStatus();
   const procs = parsePs(ps.stdout);
   const memBytes = new Map<number, number>();
-  for (const p of procs) {
-    const r = readProcRusage(p.pid);
+  // The proportional reading (Linux's Pss), as the owner sampler reads it.
+  const reads = await Promise.all(procs.map((p) => readProcRusage(p.pid)));
+  for (const [i, p] of procs.entries()) {
+    const r = reads[i]!;
     if (r.kind !== "read") continue;
     memBytes.set(p.pid, r.memory.physFootprintBytes);
     p.cpuTimeMs = r.cpu.ownNs / 1e6;

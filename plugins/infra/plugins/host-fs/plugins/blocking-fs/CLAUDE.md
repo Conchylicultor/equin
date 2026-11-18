@@ -128,6 +128,7 @@ task that removes it: `./equin exempt list --rule blocking-fs/no-sync-fs
     - `debug/boot-events` (0 debt)
     - `debug/paging-probe` (0 debt)
     - `debug/profiling/fs-wait` (0 debt)
+    - `debug/sentinel/machine-usage` (0 debt)
     - `framework/cli` (0 debt)
     - `framework/cli/release` (0 debt)
     - `framework/cli/test` (0 debt)

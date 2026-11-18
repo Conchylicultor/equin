@@ -28,7 +28,7 @@ export default createRule({
         "allocator pages the process already freed and shared library text (a type-check " +
         "worker: 1.8 GB maxRSS for a 1.15 GB footprint; a Bun backend's rss is ~6x its " +
         "footprint), and `process.resourceUsage().maxRSS` is in KiB besides. Read the " +
-        "physical footprint instead: `readProcRusage(pid)` from " +
+        "physical footprint instead: `readProcRusageSync(pid)` from " +
         "@plugins/packages/plugins/proc-rusage/core (`memory.physFootprintBytes`, and " +
         "`memory.peakPhysFootprintBytes` for the lifetime peak), `procMemory()` / " +
         "`peerProcUsage()` from server-core, or a child's `resourceUsage.peakFootprint` " +

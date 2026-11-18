@@ -1,7 +1,8 @@
 import { dlopen, ptr } from "bun:ffi";
+import { readLinuxProcRusage, readLinuxProcRusageSync } from "./proc-linux";
 
-// One process's kernel usage record: libproc's proc_pid_rusage(RUSAGE_INFO_V4),
-// which takes a pid directly (no mach_task_self() dance) and fills a
+// One process's kernel usage record on macOS (Linux's: `./proc-linux.ts`):
+// libproc's proc_pid_rusage(RUSAGE_INFO_V4), which takes a pid directly (no mach_task_self() dance) and fills a
 // rusage_info_v4 struct (v1's fields at the same offsets, then v2-v4's):
 //
 //   struct rusage_info_v1 {            // offset
@@ -65,6 +66,13 @@ export type ProcRusage =
         residentSizeBytes: number;
         /** The highest `physFootprintBytes` the process has had, over its life. */
         peakPhysFootprintBytes: number;
+        /**
+         * How a page several processes map is charged: `whole` to each of them
+         * (macOS's footprint — a fork tree's shared segment counts once per
+         * process, so summing its members over-counts), or `proportional`, 1/N
+         * to each (Linux's Pss — a sum counts every page once).
+         */
+        sharedPages: "whole" | "proportional";
       };
       /** CPU time, ns: the process's own (user + system), and its reaped children's. */
       cpu: { ownNs: number; reapedChildrenNs: number };
@@ -76,7 +84,7 @@ export type ProcRusage =
     }
   /** The kernel refused: another account's process, or one gone since. */
   | { kind: "refused" }
-  /** Not macOS: no such record. */
+  /** Neither macOS nor Linux: no such record. */
   | { kind: "unsupported" };
 
 interface Binding {
@@ -107,8 +115,20 @@ function bind(): Binding {
   return binding;
 }
 
-/** One `proc_pid_rusage` read of `pid`. */
-export function readProcRusage(pid: number): ProcRusage {
+/**
+ * `pid`'s usage record, read now on this thread: one `proc_pid_rusage` on
+ * macOS; on Linux procfs's counters (`./proc-linux.ts`: shared pages counted
+ * whole in each process, no page walk); `unsupported` elsewhere. For one
+ * process on its own; a set of processes summed against the host's memory
+ * reads `readProcRusage`.
+ */
+export function readProcRusageSync(pid: number): ProcRusage {
+  if (process.platform === "linux") return readLinuxProcRusageSync(pid);
+  return readDarwinProcRusage(pid);
+}
+
+/** One `proc_pid_rusage` of `pid` (a syscall, no file read); `unsupported` off macOS. */
+function readDarwinProcRusage(pid: number): ProcRusage {
   if (process.platform !== "darwin") return { kind: "unsupported" };
   const { procPidRusage, nsPerTick } = bind();
   const buf = new Uint8Array(BUF_BYTES);
@@ -124,6 +144,7 @@ export function readProcRusage(pid: number): ProcRusage {
       physFootprintBytes: u64(PHYS_FOOTPRINT_OFFSET),
       residentSizeBytes: u64(RESIDENT_SIZE_OFFSET),
       peakPhysFootprintBytes: u64(LIFETIME_MAX_PHYS_FOOTPRINT_OFFSET),
+      sharedPages: "whole",
     },
     cpu: {
       ownNs: ns(USER_TIME_OFFSET) + ns(SYSTEM_TIME_OFFSET),
@@ -132,4 +153,17 @@ export function readProcRusage(pid: number): ProcRusage {
     },
     startedNs: ns(PROC_START_ABSTIME_OFFSET),
   };
+}
+
+/**
+ * `pid`'s usage record with shared pages charged so that a sum over processes
+ * counts each page once where the OS can say so: Linux's proportional reading
+ * (`./proc-linux.ts`: smaps_rollup's Pss, a page-table walk read off the
+ * thread; `unsupported` on a kernel that does not split it). macOS has no
+ * proportional figure: its footprint (`sharedPages: "whole"`), the one syscall
+ * `readProcRusageSync` makes.
+ */
+export async function readProcRusage(pid: number): Promise<ProcRusage> {
+  if (process.platform === "linux") return readLinuxProcRusage(pid);
+  return readDarwinProcRusage(pid);
 }

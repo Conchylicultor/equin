@@ -1,5 +1,5 @@
 import { defineFileSink } from "@plugins/infra/plugins/file-sink/core";
-import { readProcRusage } from "@plugins/packages/plugins/proc-rusage/core";
+import { readProcRusageSync } from "@plugins/packages/plugins/proc-rusage/core";
 import { buildProgressLogDir } from "@plugins/framework/plugins/cli/data-dirs";
 
 // Host-global, exactly like the check-progress log next door
@@ -85,7 +85,7 @@ export type BuildProgressRecord =
  * (no footprint), null — unknown, never a 0 that would read as a measurement.
  */
 function footprintMb(): number | null {
-  const read = readProcRusage(process.pid);
+  const read = readProcRusageSync(process.pid);
   if (read.kind === "refused")
     throw new Error("proc_pid_rusage refused this process's own pid");
   if (read.kind === "unsupported") return null;

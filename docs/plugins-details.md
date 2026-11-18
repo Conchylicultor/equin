@@ -28201,7 +28201,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/profiling/tab-memory`
               - `debug/sentinel/health-row`
           - Exemptions:
-            - Exempts itself from: `timer/no-unlisted-timer` — `machine/internal/owner-sampler.ts` (sanctioned)
+            - Exempts itself from:
+              - `timer/no-unlisted-timer` — `machine/internal/owner-sampler.ts` (sanctioned)
+              - `blocking-fs/no-sync-fs` — `machine/internal/fork-memory/entry.ts` (sanctioned)
           - Machine:
             - Register:
               - `defineTimer('machine-usage.owner-sampler')`
@@ -33106,7 +33108,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/flock` (2 debt)
               - `packages/host-semaphore` (1 debt)
               - `packages/owned-fd` (0 debt)
-              - `packages/proc-rusage` (2 debt)
+              - `packages/proc-rusage` (3 debt)
               - `packages/signal-origin` (2 debt)
               - `packages/single-flight` (1 debt)
               - `packages/sleep-clock` (1 debt)
@@ -38540,6 +38542,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/boot-events` (0 debt)
               - `debug/paging-probe` (0 debt)
               - `debug/profiling/fs-wait` (0 debt)
+              - `debug/sentinel/machine-usage` (0 debt)
               - `framework/cli` (0 debt)
               - `framework/cli/release` (0 debt)
               - `framework/cli/test` (0 debt)
@@ -44378,7 +44381,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `judgePidFile`
           - `psProbeArgv`
           - `readPsProbe`
-    - **`proc-rusage`** — One process's kernel usage record on macOS (proc_pid_rusage, read through bun:ffi): its physical footprint, lifetime peak footprint and resident size, and its CPU time — its own and that of every child it reaped, in ns. A child's peak footprint, reported by the child at exit (PeakFootprint). Says so where it cannot tell.
+    - **`proc-rusage`** — One process's kernel usage record on macOS (proc_pid_rusage, read through bun:ffi) and Linux (procfs: the O(1) status counters RssAnon + RssShmem read sync, or — async, a page-table walk — smaps_rollup's Pss_Anon + Pss_Shmem, in the terms of the host's AnonPages + Shmem; the peak: that plus VmHWM − VmRSS): its physical footprint, lifetime peak footprint and resident size, how shared pages are charged (whole or proportional), and its CPU time — its own and that of every child it reaped, in ns. A child's peak footprint, reported by the child at exit (PeakFootprint). Says so where it cannot tell.
       - Core:
         - Uses:
           - `infra/host-fs/user-path.AppPath`
@@ -44389,6 +44392,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/launcher/env-names.unsetEnv`
           - `infra/paths/repo-root.scriptPath`
           - `packages/timed-fs.readFile`
+          - `packages/timed-fs.readFileSync`
         - Exports (types):
           - `PeakFootprint`
           - `ProcRusage`
@@ -44400,6 +44404,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `peakFootprintText`
           - `readPeakFootprintReport`
           - `readProcRusage`
+          - `readProcRusageSync`
       - Cross-plugin:
         - Imported by:
           - `debug/sentinel/machine-usage`
@@ -44408,7 +44413,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/cli/op-runtime`
           - `infra/spawn`
       - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `core/internal/proc-rusage.ts`, `core/internal/peak-footprint.ts` (debt)
+        - Exempts itself from: `boundaries/no-platform-api` — `core/internal/proc-rusage.ts`, `core/internal/proc-linux.ts`, `core/internal/peak-footprint.ts` (debt)
         - Exempted by: `debug/heap-snapshot` (0 debt)
     - **`process-name`** — What a process is called in Activity Monitor and ps: processName(kind, id?) spells `equin · <kind> · <id>`, and cloneNamedBinary gives an executable that name as an APFS clone (same signed bytes, no disk cost, a file of its own — never a hardlink, whose many names let macOS's exec scan be handed a deleted one and SIGKILL the process — left alone while current, else swapped in with one rename) — macOS names a process by the file it executed, and process.title changes nothing. Also the checkout's Bun record (refreshCheckoutBun / checkoutBun) the build names backends from, and the checkout's `verbs` link to the machine-wide process-names data dir, where `./equin` runs each CLI verb as `equin · <verb>` — one clone per verb machine-wide, since macOS scans every fresh executable name on its first exec.
       - Core:

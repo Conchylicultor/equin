@@ -1,19 +1,26 @@
 // How much physical memory a process holds — read through a probe the HOST
 // installs, because the only honest reading needs the computer: on macOS it is
-// `proc_pid_rusage`'s phys_footprint over bun:ffi (`bin/phys-footprint.ts`,
-// installed by `bin/host-probes.ts` in both boot modes). `core` runs on every
+// `proc_pid_rusage`'s phys_footprint over bun:ffi, on Linux procfs's Pss of
+// anonymous + shared memory (packages/proc-rusage, read by
+// `bin/phys-footprint.ts`, installed by `bin/host-probes.ts` in both boot
+// modes). `core` runs on every
 // host, so it holds the shape and the delegate, never the syscall.
 //
 // Until a probe is installed — a browser host, a test that boots no `bin/` —
-// every read answers `null`, the same "no phys_footprint here" answer a
-// non-macOS desktop gives, which every consumer already handles (they fall
+// every read answers `null`, the same "no footprint here" answer a desktop on
+// another OS gives, which every consumer already handles (they fall
 // back to `process.memoryUsage().rss`).
 
 export interface ProcMemory {
-  /** ri_phys_footprint — the kernel's memory-pressure charge, INCLUDING the
-   * process's compressed private pages. */
+  /** macOS: ri_phys_footprint — the kernel's memory-pressure charge, INCLUDING
+   * the process's compressed private pages. Linux: its anonymous and
+   * shared-memory pages in RAM — RssAnon + RssShmem from the kernel's counters
+   * (`procMemory`), or smaps_rollup's Pss_Anon + Pss_Shmem (`peerProcUsage`),
+   * in the terms of the host's AnonPages + Shmem. */
   physFootprintBytes: number;
-  /** ri_resident_size — pages physically in RAM right now, EXCLUDING pages
+  /** ri_resident_size (Linux: VmRSS, file pages included — so the
+   * squeezed-out difference below is macOS's only) —
+   * pages physically in RAM right now, EXCLUDING pages
    * sitting in the compressor / swapped out. `physFootprintBytes −
    * residentSizeBytes` therefore approximates the process's squeezed-out bytes
    * — the direct paging-victimhood signal (see
@@ -23,8 +30,18 @@ export interface ProcMemory {
    * difference negative and meaningless. */
   residentSizeBytes: number;
   /** ri_lifetime_max_phys_footprint — the highest `physFootprintBytes` the
-   * process has had over its life, kept after it gives the memory back. */
+   * process has had over its life, kept after it gives the memory back.
+   * Linux keeps no such peak: the memory now plus how far the resident size
+   * fell since its peak (VmHWM − VmRSS), an estimate, usually high (packages/proc-rusage
+   * `proc-linux.ts`). */
   peakPhysFootprintBytes: number;
+  /**
+   * How a page several processes map is charged: `whole` to each (macOS's
+   * footprint, Linux's counters — summing a fork tree's members counts its
+   * shared segment once per member), or `proportional`, 1/N to each (Linux's
+   * Pss — a sum counts every page once).
+   */
+  sharedPages: "whole" | "proportional";
 }
 
 /** A host's reading of `pid`'s memory (this process when omitted); `null` where
@@ -67,8 +84,10 @@ export interface ProcCpu {
 }
 
 /**
- * Another process's memory and CPU, read the same way, where refusal is an
- * ANSWER: the kernel will not tell one account about another account's
+ * Another process's memory and CPU, where refusal is an ANSWER — its memory
+ * charged so a sum over processes counts a shared page once where the OS can
+ * say so (Linux's Pss: `sharedPages: "proportional"`, a page-table walk the
+ * kernel does per process, hence async; macOS's footprint, `whole`): the kernel will not tell one account about another account's
  * process, and a pid listed a moment ago may have exited since. Distinct from
  * `procMemory`, whose failure on its own process means a broken probe and
  * throws.
@@ -80,7 +99,7 @@ export type PeerUsage =
   /** This host has no phys_footprint equivalent (or installed no probe). */
   | { kind: "unsupported" };
 
-export type PeerUsageProbe = (pid: number) => PeerUsage;
+export type PeerUsageProbe = (pid: number) => Promise<PeerUsage>;
 
 let peerProbe: PeerUsageProbe | null = null;
 
@@ -93,7 +112,7 @@ export function installPeerUsageProbe(fn: PeerUsageProbe): void {
 }
 
 /** Memory and CPU of another process — see `PeerUsage`. */
-export function peerProcUsage(pid: number): PeerUsage {
+export async function peerProcUsage(pid: number): Promise<PeerUsage> {
   return peerProbe === null ? { kind: "unsupported" } : peerProbe(pid);
 }
 

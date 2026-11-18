@@ -11,7 +11,7 @@ import {
   asAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { readProcRusage } from "./proc-rusage";
+import { readProcRusageSync } from "./proc-rusage";
 
 // A child's PEAK physical footprint — how much memory the run needed, as the
 // kernel charges it — reported by the child itself as it exits.
@@ -37,7 +37,7 @@ export type PeakFootprint =
       /**
        * `not-requested` — the spawner did not ask (the child is not a bun
        * script); `no-report` — asked, but the child wrote none (killed by a
-       * signal, or not a bun process after all); `unsupported` — not macOS.
+       * signal, or not a bun process after all); `unsupported` — neither macOS nor Linux.
        */
       why: "not-requested" | "no-report" | "unsupported";
     };
@@ -98,8 +98,8 @@ export function armPeakFootprintReportSync(): void {
   armed = { reportPath, baseBunOptions };
   process.on("exit", () => {
     if (armed === null) return; // handed off to a re-exec
-    const read = readProcRusage(process.pid);
-    // Not macOS: no report, which the parent reads as `unsupported`.
+    const read = readProcRusageSync(process.pid);
+    // No record on this OS: no report, which the parent reads as `unsupported`.
     if (read.kind !== "read") return;
     const tmp = asAppPath(`${armed.reportPath}.${process.pid}.tmp`);
     writeFileSync(
@@ -132,7 +132,7 @@ export function handOffPeakFootprintReport(): Record<string, string> {
 export async function readPeakFootprintReport(
   reportPath: string,
 ): Promise<PeakFootprint> {
-  if (process.platform !== "darwin")
+  if (process.platform !== "darwin" && process.platform !== "linux")
     return { kind: "unmeasured", why: "unsupported" };
   // Written to a temporary name and renamed into place, so the file is
   // either absent or whole.

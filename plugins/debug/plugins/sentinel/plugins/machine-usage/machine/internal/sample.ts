@@ -33,12 +33,16 @@ async function agentBrowserRoot(): Promise<number | null> {
 /**
  * Fills in what the kernel tells about each process beyond `ps`: its CPU time
  * at ns precision and that of the children it reaped (`reapedChildrenMs`),
- * and returns each process's memory. A Postgres process's is its private
- * memory, the cluster's shared segment charged once to its postmaster
- * (measured on the fork-memory worker); any other's is its physical footprint
- * (what Activity Monitor shows; `ps`'s resident size over-counts Bun ~6×),
- * else, for a process the kernel will not report on (another account's, or
- * exited since `ps` listed it), its resident size. This process is read first
+ * and returns each process's memory: what the host's memory probe reads
+ * (macOS's physical footprint, what Activity Monitor shows — `ps`'s resident
+ * size over-counts Bun ~6×; Linux's Pss of anonymous + shared memory, in the
+ * terms of the host's AnonPages + Shmem it is subtracted from), else, for a
+ * process the kernel will not report on (another account's, or exited since
+ * `ps` listed it), its resident size. Where the reading charges a shared page
+ * whole to every process mapping it (macOS), a Postgres process's memory is
+ * its private memory instead, the cluster's shared segment charged once to
+ * its postmaster (measured on the fork-memory worker); a proportional reading
+ * (Linux) already counts that segment once. This process is read first
  * through the throwing probe, so a broken binding fails the read instead of
  * degrading every process to `ps`'s numbers.
  *
@@ -55,17 +59,22 @@ async function readKernelUsage(procs: PsProcess[]): Promise<{
     return { memBytesOf: (p) => p.rssBytes, peakBytesOf: (p) => p.rssBytes };
   const memBytes = new Map<number, number>();
   const peakBytes = new Map<number, number>();
-  for (const p of procs) {
-    const read = peerProcUsage(p.pid);
-    if (read.kind !== "read") continue;
+  let sharedWhole = false;
+  const reads = await Promise.all(procs.map((p) => peerProcUsage(p.pid)));
+  procs.forEach((p, i) => {
+    const read = reads[i]!;
+    if (read.kind !== "read") return;
     memBytes.set(p.pid, read.memory.physFootprintBytes);
     peakBytes.set(p.pid, read.memory.peakPhysFootprintBytes);
+    if (read.memory.sharedPages === "whole") sharedWhole = true;
     p.cpuTimeMs = read.cpu.ownNs / 1e6;
     p.reapedChildrenMs = read.cpu.reapedChildrenNs / 1e6;
-  }
+  });
   // Read after the footprints, so a process the walk measured wins.
-  const forked = await measureForkTrees(postgresForkTrees(procs));
-  for (const [pid, bytes] of forked) memBytes.set(pid, bytes);
+  if (sharedWhole) {
+    const forked = await measureForkTrees(postgresForkTrees(procs));
+    for (const [pid, bytes] of forked) memBytes.set(pid, bytes);
+  }
   const memBytesOf = (p: PsProcess): number =>
     memBytes.get(p.pid) ?? p.rssBytes;
   return {

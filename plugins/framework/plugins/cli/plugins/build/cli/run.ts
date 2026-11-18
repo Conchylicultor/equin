@@ -37,7 +37,7 @@ import {
 } from "@plugins/build/plugins/restart-skip/core";
 import { namedBackendCommand } from "./internal/named-backend";
 import {
-  readProcRusage,
+  readProcRusageSync,
   type PeakFootprint,
 } from "@plugins/packages/plugins/proc-rusage/core";
 import { checkoutBun } from "@plugins/packages/plugins/process-name/machine";
@@ -1361,7 +1361,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
       const flushFootprint = (): void => {
         if (footprintFlushed) return;
         footprintFlushed = true;
-        const self = readProcRusage(process.pid);
+        const self = readProcRusageSync(process.pid);
         // Our own process refused is a broken binding, never an answer.
         if (self.kind === "refused")
           throw new Error("proc_pid_rusage refused this process's own pid");

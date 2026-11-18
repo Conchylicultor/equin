@@ -43,6 +43,14 @@ nearest ancestor still alive). Measured: 88 % of the host's busy time
 attributed. Missed: another account's processes' children, orphans launchd
 reaps, the kernel itself.
 
+**On Linux, memory is each process's Pss** (server-core's `peerProcUsage`,
+packages/proc-rusage: `smaps_rollup`'s `Pss_Anon + Pss_Shmem`, read off the
+thread) — a shared page charged 1/N to each of its N mappers, so a sum counts
+the Postgres segment once and is in the terms of the host's
+`AnonPages + Shmem` it is subtracted from; no fork-tree walk runs (the
+readings say `sharedPages: "proportional"`). The rest of this section is
+macOS's.
+
 **Memory is the physical footprint — except Postgres's, counted once.** A
 footprint charges a process for every page of shared memory it has mapped, so
 summing a Postgres cluster's footprints counts its shared segment
@@ -150,7 +158,9 @@ so Postgres is the only owner measured this way:
     - `debug/profiling/tab-memory`
     - `debug/sentinel/health-row`
 - Exemptions:
-  - Exempts itself from: `timer/no-unlisted-timer` — `machine/internal/owner-sampler.ts` (sanctioned)
+  - Exempts itself from:
+    - `timer/no-unlisted-timer` — `machine/internal/owner-sampler.ts` (sanctioned)
+    - `blocking-fs/no-sync-fs` — `machine/internal/fork-memory/entry.ts` (sanctioned)
 - Machine:
   - Register:
     - `defineTimer('machine-usage.owner-sampler')`

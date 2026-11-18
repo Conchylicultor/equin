@@ -5,7 +5,7 @@ const ruleTester = createRuleTester();
 
 ruleTester.run("no-rss-memory", rule, {
   valid: [
-    { code: `const r = readProcRusage(process.pid);` },
+    { code: `const r = readProcRusageSync(process.pid);` },
     { code: `const { heapUsed } = process.memoryUsage();` },
     { code: `const cpu = process.resourceUsage().userCPUTime;` },
     // A `ps` row's own field: not a memoryUsage() read.

@@ -1,4 +1,4 @@
-import { readProcRusage } from "@plugins/packages/plugins/proc-rusage/core";
+import { readProcRusageSync } from "@plugins/packages/plugins/proc-rusage/core";
 import { createForkTreeMeter } from "./fork-tree-meter";
 import { readProcRegion, regionPageBytes } from "./proc-regions";
 import type { MainToWorkerFrame, WorkerToMainFrame } from "./protocol";
@@ -15,7 +15,7 @@ declare const self: Worker;
 const meter = createForkTreeMeter({
   readRegion: readProcRegion,
   readStamp: (pid) => {
-    const r = readProcRusage(pid);
+    const r = readProcRusageSync(pid);
     return r.kind === "read"
       ? { startedAt: r.startedNs, footprintBytes: r.memory.physFootprintBytes }
       : null;

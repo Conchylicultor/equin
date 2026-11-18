@@ -366,7 +366,7 @@ takes a `debt` exemption on the check's id.
     - `packages/flock` (2 debt)
     - `packages/host-semaphore` (1 debt)
     - `packages/owned-fd` (0 debt)
-    - `packages/proc-rusage` (2 debt)
+    - `packages/proc-rusage` (3 debt)
     - `packages/signal-origin` (2 debt)
     - `packages/single-flight` (1 debt)
     - `packages/sleep-clock` (1 debt)

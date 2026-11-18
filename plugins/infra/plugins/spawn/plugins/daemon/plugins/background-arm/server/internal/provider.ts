@@ -4,7 +4,10 @@ import type {
 } from "@plugins/infra/plugins/background/plugins/catalog/core";
 import { defineBackgroundKind } from "@plugins/infra/plugins/background/plugins/catalog/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
-import { peerProcUsage } from "@plugins/framework/plugins/server-core/core";
+import {
+  peerProcUsage,
+  type PeerUsage,
+} from "@plugins/framework/plugins/server-core/core";
 import {
   backoffPolicy,
   daemonRecentRuns,
@@ -27,20 +30,25 @@ const STATE_WORDS: Record<DaemonState, string> = {
   exited: "exited",
 };
 
-/** CPU and uptime per pid, from one `ps` over every pid listed. */
+/** CPU and uptime per pid, from one `ps` over every pid listed, and each
+ * pid's memory as the kernel charges it. */
 type Usage =
   | {
       kind: "read";
       byPid: Map<number, { cpu: number; uptime: string }>;
+      memory: Map<number, PeerUsage>;
     }
   | { kind: "unavailable"; why: string };
 
 async function readUsage(pids: number[]): Promise<Usage> {
-  if (pids.length === 0) return { kind: "read", byPid: new Map() };
-  const res = await spawnCaptured(
-    ["ps", "-o", "pid=,%cpu=,etime=", "-p", pids.join(",")],
-    { timeoutMs: PS_TIMEOUT_MS },
-  );
+  if (pids.length === 0)
+    return { kind: "read", byPid: new Map(), memory: new Map() };
+  const [res, reads] = await Promise.all([
+    spawnCaptured(["ps", "-o", "pid=,%cpu=,etime=", "-p", pids.join(",")], {
+      timeoutMs: PS_TIMEOUT_MS,
+    }),
+    Promise.all(pids.map((pid) => peerProcUsage(pid))),
+  ]);
   if (res.timedOut) {
     return {
       kind: "unavailable",
@@ -58,7 +66,11 @@ async function readUsage(pids: number[]): Promise<Usage> {
       uptime: etime,
     });
   }
-  return { kind: "read", byPid };
+  return {
+    kind: "read",
+    byPid,
+    memory: new Map(pids.map((pid, i) => [pid, reads[i]!])),
+  };
 }
 
 function clock(d: Date): string {
@@ -82,8 +94,7 @@ function usagePid(i: DaemonInstanceInfo): number | null {
  * `ps`'s resident size, which also counts freed allocator pages and shared
  * library text (~6x a Bun process's footprint).
  */
-function memoryWords(pid: number): string {
-  const read = peerProcUsage(pid);
+function memoryWords(read: PeerUsage): string {
   switch (read.kind) {
     case "read":
       return `${Math.round(read.memory.physFootprintBytes / 1048576)} MB`;
@@ -100,7 +111,9 @@ function usageWords(i: DaemonInstanceInfo, usage: Usage): string | null {
   if (usage.kind === "unavailable") return `memory unknown (${usage.why})`;
   const u = usage.byPid.get(pid);
   if (u === undefined) return "memory unknown (not in ps)";
-  const mem = memoryWords(pid);
+  const read = usage.memory.get(pid);
+  if (read === undefined) return "memory unknown (not read)";
+  const mem = memoryWords(read);
   if (i.arm === "worker") {
     return `${mem} · ${u.cpu.toFixed(1)}% CPU (the whole backend)`;
   }
