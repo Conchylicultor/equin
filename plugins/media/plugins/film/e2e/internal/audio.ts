@@ -13,7 +13,8 @@
 
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { Composition } from "./composition";
+import type { AudioClip } from "./assets";
+import type { FilmAudio } from "./composition";
 import { ease } from "./easing";
 import type { Key, Track } from "./tracks";
 
@@ -79,7 +80,9 @@ async function run(argv: string[], what: string): Promise<string> {
 }
 
 export interface MixInput {
-  comp: Composition;
+  audio: FilmAudio;
+  /** A placed clip's audio, by its manifest name: its absolute file and its length. */
+  clip(name: string): AudioClip;
   from: number;
   to: number;
   /** The page-rendered SFX WAV spanning [from, to). */
@@ -119,14 +122,14 @@ const STEREO =
   "aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo";
 
 export async function mixAudio({
-  comp,
+  audio,
+  clip: clipOf,
   from,
   to,
   sfxWav,
   ffmpeg,
   work,
 }: MixInput): Promise<string> {
-  const audio = comp.audio ?? {};
   const dur = to - from;
   const args = ["-y", "-hide_banner", "-loglevel", "error"];
   const filters: string[] = [];
@@ -176,9 +179,7 @@ export async function mixAudio({
     input++;
   }
   for (const clip of audio.clips ?? []) {
-    const ac = comp.assets.manifest.audio[clip.audio];
-    if (!ac)
-      throw new Error(`film: the manifest has no audio clip "${clip.audio}"`);
+    const ac = clipOf(clip.audio);
     let offset = clip.offset ?? 0;
     let at = clip.at - from;
     let len = clip.duration ?? ac.duration - offset;
@@ -189,7 +190,7 @@ export async function mixAudio({
     }
     len = Math.min(len, dur - at);
     if (len <= 0) continue;
-    args.push("-i", join(comp.assets.dir, ac.file));
+    args.push("-i", ac.file);
     const fi = clip.fadeIn ?? 0.01;
     const fo = clip.fadeOut ?? 0.05;
     const label = `[c${input}]`;

@@ -67,6 +67,9 @@ const videoCodecArgs = (o: VideoOptions): string[] => [
 
 const AUDIO_CODEC = ["-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2"];
 
+/** The web version's audio: AAC 128k. */
+const WEB_AUDIO_CODEC = ["-c:a", "aac", "-b:a", "128k"];
+
 const QUIET = ["-n", "-hide_banner", "-loglevel", "error"];
 
 export function encoderArgs(o: EncoderOptions): string[] {
@@ -134,6 +137,40 @@ export function concatArgs(o: {
     "-c:v",
     "copy",
     ...AUDIO_CODEC,
+    "-movflags",
+    "+faststart",
+    "-t",
+    String(o.duration),
+    "-f",
+    "mp4",
+    o.out,
+  ];
+}
+
+/**
+ * An existing film's video, bit for bit (-c:v copy), under another
+ * soundtrack: a remix. `web` encodes the audio as the web version does.
+ */
+export function remuxArgs(o: {
+  video: string;
+  audio: string;
+  duration: number;
+  out: string;
+  web: boolean;
+}): string[] {
+  return [
+    ...QUIET,
+    "-i",
+    o.video,
+    "-i",
+    o.audio,
+    "-map",
+    "0:v",
+    "-map",
+    "1:a",
+    "-c:v",
+    "copy",
+    ...(o.web ? WEB_AUDIO_CODEC : AUDIO_CODEC),
     "-movflags",
     "+faststart",
     "-t",
@@ -220,10 +257,7 @@ export function webEncodeArgs(o: { input: string; out: string }): string[] {
     "2500k",
     "-bufsize",
     "5000k",
-    "-c:a",
-    "aac",
-    "-b:a",
-    "128k",
+    ...WEB_AUDIO_CODEC,
     "-movflags",
     "+faststart",
     "-f",

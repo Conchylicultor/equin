@@ -218,6 +218,15 @@ checkout, and needs the promo-film build.
   `FILM_MUSIC_TRACKS` — each candidate's file, measured beat grid (the montage
   and end card land on it) and `sectionStart` (whole bars, chosen so the film
   ends on the track's own ending) — leaving `FILM_MUSIC` as it is.
+- **Another music on a finished film, without rendering:** `e2e/remix.ts
+  --film ~/Downloads/showcase/equin-v<N>.mp4 --music <slug>` (media/film's
+  `remixFilm` over the film's kept `equin-v<N>.sound/`) writes
+  `equin-v<N>-music-<slug>.mp4` (+ `-web.mp4`): the film's video untouched,
+  its clicks and SFX as rendered, the new track's bar put where the film's
+  track had one (the montage's first window, `MusicBed.barAt`) under the
+  film's gain automation. The cuts stay on the old track's grid — for cuts on
+  the new one's, `film.ts --music <slug>` re-renders. Only films rendered
+  since the engine kept their sound (v22 and earlier have none).
 
 ### Re-recording one segment
 

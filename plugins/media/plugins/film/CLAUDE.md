@@ -41,6 +41,28 @@ whichever page renders it. So any split gives the same pictures.
   before any frame renders. `filmServer` bundles the renderer once for every
   page.
 
+## A film's sound, and remixing it (`sound.ts`, `soundtrack.ts`, `remix.ts`)
+
+- **Every render keeps its sound beside it**: `<name>.sound/` next to
+  `<name>.mp4` holds `sound.json` (the rendered range and the composition's
+  whole `FilmAudio` — music bed, placed clips, every SFX cue, levels) and a
+  copy of each placed clip's file. It is everything the soundtrack is mixed
+  from and nothing of the picture, so it outlives the recordings (temp dirs
+  get swept). The music bed's file is referenced, not copied. Refused up front
+  when it exists, like the film.
+- **One soundtrack path**: `makeSoundtrack` (SFX synthesized in a film page
+  from the cues of `[from, to)`, then `mixAudio`) is what both a render and a
+  remix call — a remix's clicks and levels are the render's.
+- **`remixFilm({ film, out, music })`** swaps the music bed without rendering
+  a frame: it reads `<film>.sound/`, makes the soundtrack with
+  `music(filmBed)` as the bed, and muxes it over the film's own video
+  (`remuxArgs`, `-c:v copy` — the video bytes are the film's); a film with a
+  `-web.mp4` gets its remix's web version the same way (that video, the web
+  audio codec). The remix keeps its own `<out>.sound/`. Never over an
+  existing file. Cuts stay where the film's render put them; a script that
+  timed cuts to its bed's beat records where (`MusicBed.barAt`) so a remix
+  can put a bar of the new bed there.
+
 ## The recorder (`e2e/internal/record.ts`)
 
 `record(page, opts, script)` drives a real page on a virtual clock

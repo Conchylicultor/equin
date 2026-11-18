@@ -54,16 +54,17 @@ export interface FilmServer {
  * A server for `comp` and its files, the renderer bundled once for every page
  * it routes (a parallel render opens one page per chunk). `samples`: recorded
  * sounds the SFX synth plays, by the name it fetches them under
- * (`SAMPLE_PREFIX` + name) → absolute path.
+ * (`SAMPLE_PREFIX` + name) → absolute path. A `null` composition serves a
+ * page that only synthesizes sound (a remix): no composition, no assets.
  */
 export async function filmServer(
-  comp: Composition,
+  comp: Composition | null,
   samples: Record<string, string> = {},
 ): Promise<FilmServer> {
   const renderer = await bundlePageScript("main.ts");
-  const json = JSON.stringify(comp);
+  const json = comp === null ? null : JSON.stringify(comp);
   const fonts = interDir();
-  const assets = comp.assets.dir;
+  const assets = comp?.assets.dir ?? null;
   return {
     async serve(page) {
       await page.route(`${FILM_ORIGIN}/**`, async (route) => {
@@ -84,14 +85,15 @@ export async function filmServer(
           return send(STAGE_HTML, "text/html; charset=utf-8");
         if (path === "/__film/renderer.js")
           return send(renderer, "text/javascript; charset=utf-8");
-        if (path === "/__film/composition.json")
+        if (path === "/__film/composition.json" && json !== null)
           return send(json, "application/json");
         const sample = path.startsWith(SAMPLE_PREFIX)
           ? samples[path.slice(SAMPLE_PREFIX.length)]
           : undefined;
         if (sample !== undefined)
           return send(readFileSync(sample), "audio/wav");
-        const file = path.startsWith("/__film/assets/")
+        const file =
+          path.startsWith("/__film/assets/") && assets !== null
           ? under(assets, path.slice("/__film/assets/".length))
           : path.startsWith("/__film/fonts/inter/")
             ? under(fonts, path.slice("/__film/fonts/inter/".length))

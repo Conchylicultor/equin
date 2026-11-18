@@ -162,6 +162,19 @@ export function filmMusicBeat(music: FilmMusic): BeatGrid | null {
   return music.kind === "file" ? (music.beat ?? null) : null;
 }
 
+/**
+ * How far past its `sectionStart` a music starts so that film time `barAt`
+ * falls on one of its bars (its section starts on a bar): 0 without a beat
+ * grid. film.ts puts the montage's first window there; a remix the same
+ * instant of the film it remixes.
+ */
+export function musicStartFor(music: FilmMusic, barAt: number): number {
+  const grid = filmMusicBeat(music);
+  if (!grid) return 0;
+  const bar = (4 * 60) / grid.bpm;
+  return (((grid.firstBeat - barAt) % bar) + bar) % bar;
+}
+
 /** The music file and where film t=0 starts in it. */
 export async function resolveFilmMusic(music: FilmMusic): Promise<{
   file: string;

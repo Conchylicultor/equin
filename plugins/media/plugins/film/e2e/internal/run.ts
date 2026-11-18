@@ -35,7 +35,6 @@ import { basename, dirname, join } from "node:path";
 import type { Page } from "playwright";
 import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import { resolveFfmpeg } from "@plugins/media/plugins/ffmpeg/deps";
-import { resolveMouseSounds } from "../../deps";
 import {
   defaultWorkers,
   frameCount,
@@ -49,10 +48,8 @@ import {
   usage,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
-import { mixAudio } from "./audio";
 import { checkComposition } from "./builders";
 import type { Composition } from "./composition";
-import { cuesInRange } from "./cues";
 import {
   chunkEncoderArgs,
   concatArgs,
@@ -65,6 +62,8 @@ import {
 } from "./encode";
 import type { FilmWindowApi } from "./page/main";
 import { filmServer, STAGE_URL } from "./serve";
+import { compClip, soundDirOf, writeFilmSound } from "./sound";
+import { makeSoundtrack, soundSamples } from "./soundtrack";
 
 export interface FilmContext {
   preview: boolean;
@@ -188,6 +187,12 @@ export async function runFilm(script: FilmScript): Promise<void> {
     usage(
       `film: ${webOut} already exists — a render never writes over a film (its web version included).`,
     );
+  // Its sound, kept beside every film so the soundtrack can be remixed (sound.ts).
+  const soundDir = stillsRequested() ? null : soundDirOf(out);
+  if (soundDir && existsSync(soundDir))
+    usage(
+      `film: ${soundDir} already exists — a render never writes over a film (its sound included).`,
+    );
 
   const from = Number(arg("from", "0"));
   const to = Number(arg("to", String(comp.duration)));
@@ -218,12 +223,7 @@ export async function runFilm(script: FilmScript): Promise<void> {
 
   await withBrowser(async (h) => {
     // The click is a recorded sound: installed only for a film that clicks.
-    const samples: Record<string, string> = {};
-    if (!stills && (comp.audio?.sfx ?? []).some((c) => c.kind === "click")) {
-      const mouse = await resolveMouseSounds();
-      samples["mouse-press.wav"] = mouse.press;
-      samples["mouse-release.wav"] = mouse.release;
-    }
+    const samples = stills ? {} : await soundSamples(comp.audio);
     const server = await filmServer(comp, samples);
 
     /** A film page, ready: every image decoded, every font loaded. */
@@ -304,22 +304,16 @@ export async function runFilm(script: FilmScript): Promise<void> {
     if (!ff)
       throw new Error("film: unreachable — ffmpeg not resolved for a render");
 
+    if (!soundDir)
+      throw new Error("film: unreachable — no sound dir for a render");
     // Sound first: the SFX bus synthesized in this page, then the mix.
     const dur = to - from;
-    const cues = cuesInRange(comp.audio?.sfx ?? [], from, to);
-    const wav = await first.page.evaluate(
-      ([c, d]) =>
-        (window as unknown as { __film: FilmWindowApi }).__film.renderSfx(c, d),
-      [cues, dur] as const,
-    );
-    const sfxWav = join(work, "sfx.wav");
-    writeFileSync(sfxWav, Buffer.from(wav, "base64"));
-    console.log(`sfx: ${cues.length} cues → ${sfxWav}`);
-    const audio = await mixAudio({
-      comp,
+    const audio = await makeSoundtrack({
+      page: first.page,
+      audio: comp.audio ?? {},
+      clip: compClip(comp),
       from,
       to,
-      sfxWav,
       ffmpeg: ff.ffmpeg,
       work,
     });
@@ -410,6 +404,8 @@ export async function runFilm(script: FilmScript): Promise<void> {
     } finally {
       rmSync(partial, { force: true });
     }
+    writeFilmSound(soundDir, comp, from, to);
+    console.log(`wrote ${soundDir} (what its soundtrack is mixed from)`);
     const secs = (Date.now() - started) / 1000;
     console.log(
       `wrote ${out} (${video.width}×${video.height} @ ${FPS} fps, ${dur.toFixed(2)} s): ${n} frames on ${ranges.length} page(s) in ${secs.toFixed(1)} s, ${((secs / n) * 1000).toFixed(0)} ms/frame`,
@@ -419,7 +415,7 @@ export async function runFilm(script: FilmScript): Promise<void> {
 }
 
 /** `<name>-web.mp4` beside `<name>.mp4`: the film's web version. */
-function webVersionOf(out: string): string {
+export function webVersionOf(out: string): string {
   return out.replace(/(\.[a-z0-9]+)?$/i, () => "-web.mp4");
 }
 

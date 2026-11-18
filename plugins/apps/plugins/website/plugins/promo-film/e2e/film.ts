@@ -95,6 +95,8 @@ await runFilm({
   flags: { captions: "adds the section captions (bottom-left)" },
   options: {
     music: `renders the newest version with another track: ${Object.keys(FILM_MUSIC_TRACKS).join(" | ")}`,
+    // Read by recDir() (session-kit), checked above; declared so the engine knows it.
+    "rec-dir": "the dir e2e/record.ts recorded into (required)",
   },
   async build(ctx) {
     const slug = ctx.option("music");

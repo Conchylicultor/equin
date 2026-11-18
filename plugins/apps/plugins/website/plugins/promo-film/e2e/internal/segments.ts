@@ -224,7 +224,7 @@ async function post(
 }
 
 /**
- * Show Circle in the launchers, right after Browser: the instance's app layout
+ * Show Circle in the launchers, last: the instance's app layout
  * as it reads now (the seed's, Circle hidden there) with the `hidden` flag
  * dropped, written back through the Config pane's write. Never a reset to the
  * committed layout: Circle is film-only, so main's layout does not name it and
@@ -1012,7 +1012,12 @@ const sonata: SegmentFn = async ({ h }) => {
     await r.click(fileRow(page, MIDI), { duration: 0.5 });
     await r.mark("midi");
     await r.hold(1.6);
-    const openIn = page.getByRole("button", { name: "Open in Sonata" }).first();
+    // Exact: the preview's header is itself a button whose name is all its
+    // text, Open in Sonata included — a substring match picks it first.
+    const openIn = page.getByRole("button", {
+      name: "Open in Sonata",
+      exact: true,
+    });
     await r.move(openIn, { duration: 0.6 });
     await r.hold(0.2);
     await r.click(openIn, { duration: 0.15 });
@@ -1217,7 +1222,7 @@ const prototype: SegmentFn = async ({ h }) => {
     await homeViaLauncher(r, page, { x: 170, y: 120 });
     await r.hold(0.3);
     // The app the agent built arrives: Circle's tile, live in the gallery
-    // right after Browser (the app layout's own `hidden` flag the seed set,
+    // after every other app, so none moves (the app layout's own `hidden` flag the seed set,
     // dropped through the Config pane's write).
     await showCircle(page);
     const tile = page.locator('[role="button"][data-row-key="circle"]');

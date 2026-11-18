@@ -67,6 +67,8 @@ export {
   viewWindow,
 } from "./internal/builders";
 export { runFilm } from "./internal/run";
+export type { RemixOptions } from "./internal/remix";
+export { remixFilm } from "./internal/remix";
 export type {
   RecordOptions,
   Recorder,

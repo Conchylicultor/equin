@@ -44,7 +44,12 @@ import {
   type CamKeys,
   type Scene,
 } from "./kit";
-import { filmMusicBeat, resolveFilmMusic, type FilmMusic } from "./music";
+import {
+  filmMusicBeat,
+  musicStartFor,
+  resolveFilmMusic,
+  type FilmMusic,
+} from "./music";
 import { outro, titleCard } from "./outro";
 import { place, recDuration, recMark, type Knot, type Placed } from "./place";
 import { SEGMENTS } from "./segments";
@@ -578,8 +583,7 @@ export async function buildFilm(opts: {
   // plays on the beat. Without a beat grid, the plain frame grid.
   const grid = filmMusicBeat(opts.music);
   const period = grid ? 60 / grid.bpm : 0;
-  const bar = 4 * period;
-  const musicStart = grid ? (((grid.firstBeat - ft) % bar) + bar) % bar : 0;
+  const musicStart = musicStartFor(opts.music, ft);
   const SIXTEENTH = grid ? period / (grid.subdivision ?? 4) : 60 / 172 / 4;
   /** `x` on the music's note grid (film time), then on the frame grid. */
   const onGrid = (x: number, q = SIXTEENTH): number => {
@@ -739,6 +743,8 @@ export async function buildFilm(opts: {
   const music = {
     ...resolved,
     sectionStart: resolved.sectionStart + musicStart,
+    // The montage's first window is on a bar: a remix puts another track's there.
+    ...(grid ? { barAt: ft } : {}),
   };
   console.log(
     `music: ${resolved.file} from ${music.sectionStart.toFixed(2)} s; the film ends ${(music.sectionStart + duration).toFixed(2)} s into it`,

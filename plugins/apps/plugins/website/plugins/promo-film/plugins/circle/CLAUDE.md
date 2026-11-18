@@ -16,9 +16,10 @@ page is the prototype, framed full surface in its light theme.
 - **Hidden until "implement it".** The committed app layout
   (`config/apps-core/app.jsonc`) is main's and does not name Circle; the
   film's seed writes the promo-film instance's own (user layer) with Circle
-  placed after Browser and hidden (the layout's own `hidden` flag), and the
+  placed last and hidden (the layout's own `hidden` flag), and the
   "implement it" time-lapse drops the flag — the Config pane's own write, the
-  seed's `filmAppLayout` — so the tile appears in Home after Browser. No
+  seed's `filmAppLayout` — so the tile appears in Home after every other app,
+  moving none of them. No
   setting of its own: hiding an app from the launchers is what the layout
   already does.
 - **Why a composition exclusion, not a launcher setting.** A launcher-only

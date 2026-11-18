@@ -257,11 +257,11 @@ export async function seedPromoFilm(): Promise<PromoFilmSeedReport> {
     filmAppLayout(layoutItems(APP_LAYOUT), "hidden"),
     {
       writer: systemOrigin(
-        "promo-film seed: Circle after Browser, hidden until the film shows it",
+        "promo-film seed: Circle last, hidden until the film shows it",
       ),
     },
   );
-  note("config", "Circle after Browser, hidden");
+  note("config", "Circle last, hidden");
 
   // Home is a stand-in folder of the film's own (the machine's real home is
   // never shown); Files opens on its Music/Piano folder (its start folder).

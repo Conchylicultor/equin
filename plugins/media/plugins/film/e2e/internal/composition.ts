@@ -230,6 +230,12 @@ export interface MusicBed {
   sectionStart: number;
   /** dB; ≤ -90 is silence. Linear in dB between keys. */
   gainDb?: Track;
+  /**
+   * The film time the script put one of the bed's bars on (cuts timed to its
+   * beat), when it did. Not read by the mix: kept in the film's sound so a
+   * remix can put a bar of another bed at the same instant.
+   */
+  barAt?: number;
 }
 
 /** A manifest audio clip placed at `at` (film seconds). */

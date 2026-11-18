@@ -107,11 +107,12 @@ seed` → record, and get the same state. Design:
   Config pane's own write; Circle starts hidden from the launchers the same
   way (the app layout's own `hidden` flag, user layer — `APP_LAYOUT`). Circle
   is film-only, so main's committed layout does not name it: the seed writes
-  the committed layout with Circle placed right after Browser, hidden, and the
+  the committed layout with Circle placed last, hidden, and the
   film's "implement it" (and the desktop segment) writes the layout it reads
   back with the flag dropped — both through `filmAppLayout` (`core/`), so
-  Circle keeps its place. Never a reset to the committed layout: that would
-  leave Circle to the reorder safety net, appended last.
+  Circle keeps its place — last, so its tile's arrival moves no other app.
+  Never a reset to the committed layout: that would leave Circle to the
+  reorder safety net.
   `PIANO_SHOP_LIST` / `PIANO_SHOPS_ADDED` (core) are the real Google places
   of the Buying a piano page, the user's and the ones the film's Wish adds.
 - **An agent run the film's Wish asks for**: `POST /api/promo-film/agent-run`

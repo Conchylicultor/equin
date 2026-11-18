@@ -329,6 +329,8 @@ export async function record(
       return c.busy();
     });
 
+  /** What the settle in progress is waiting on (its last poll), for the slow-phase log. */
+  let settleWaitingOn: string[] = [];
   /** Wait, clock frozen, until the page has nothing in flight and has stopped changing. */
   const settle = async (): Promise<void> => {
     const t0 = Date.now();
@@ -348,7 +350,7 @@ export async function record(
       if (reqs.length)
         why.push(`${reqs.length} request(s): ${reqs.slice(0, 3).join(", ")}`);
       if (b.awaitingReplyMs !== null && b.awaitingReplyMs < st.replyMs)
-        why.push("a message awaiting its reply");
+        why.push(`a message awaiting its reply (last sent: ${b.lastSent})`);
       if (b.images) why.push(`${b.images} image(s) loading`);
       if (b.fontsLoading) why.push("fonts loading");
       // A reply may come in several messages: after a recent send, wait until they stop.
@@ -358,6 +360,7 @@ export async function record(
       )
         why.push("messages arriving");
       if (waited && b.sinceMutationMs < st.quietMs) why.push("DOM changing");
+      settleWaitingOn = why;
       if (why.length === 0) return;
       waited = true;
       if (now - t0 > st.timeoutMs)
@@ -408,7 +411,7 @@ export async function record(
     // stall is visible as one (and how long it lasted) rather than as silence.
     const watch = setInterval(() => {
       console.log(
-        `  record: frame ${frameNo} ${k} still running after ${((Date.now() - t0) / 1000).toFixed(0)} s`,
+        `  record: frame ${frameNo} ${k} still running after ${((Date.now() - t0) / 1000).toFixed(0)} s${k === "settle" ? ` — waiting on ${settleWaitingOn.join("; ")}` : ""}`,
       );
     }, SLOW_PHASE_MS);
     try {

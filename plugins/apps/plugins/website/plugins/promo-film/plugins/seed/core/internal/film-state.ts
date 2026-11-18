@@ -22,9 +22,6 @@ export const PLACES_HOURS_CONFIG = {
 export const APP_LAYOUT = "apps-core/app.jsonc";
 /** Circle in that layout — hidden by the seed, shown at the film's "implement it". */
 export const CIRCLE_APP_ITEM = "apps.website.promo-film.circle:circle";
-/** The app Circle follows in the film's layout (Circle is film-only, so the
- *  committed layout, main's, does not name it). */
-export const CIRCLE_AFTER_ITEM = "apps.browser.shell:browser";
 
 /** Whether a layout node is the item `key` (its bare or `{ item }` form). */
 function isItem(node: unknown, key: string): boolean {
@@ -38,28 +35,23 @@ function isItem(node: unknown, key: string): boolean {
 
 /**
  * The film's app layout: `items` (any layout of {@link APP_LAYOUT} — the
- * committed one, or the film instance's own) with Circle placed right after
- * Browser, carrying the layout's own `hidden` flag or not. Wherever (and
- * whether) `items` had Circle, the result has it in that one place — so the
- * seed's hide and the film's show write the same order. Throws when Browser is
- * not a top-level item.
+ * committed one, or the film instance's own) with Circle placed last,
+ * carrying the layout's own `hidden` flag or not. Wherever (and whether)
+ * `items` had Circle, the result has it in that one place — so the seed's hide
+ * and the film's show write the same order. Last, so its arrival moves no
+ * other app: an app's tile placed among the others pushes every one after it
+ * along, and one wrapping to the next row slides across the grid (v22-picnic,
+ * 1:38: Deploy across "New app" in four frames, read as a flicker).
  */
 export function filmAppLayout(
   items: readonly unknown[],
   circle: "hidden" | "shown",
 ): unknown[] {
-  const rest = items.filter((n) => !isItem(n, CIRCLE_APP_ITEM));
-  const at = rest.findIndex((n) => isItem(n, CIRCLE_AFTER_ITEM));
-  if (at < 0)
-    throw new Error(
-      `[promo-film] ${CIRCLE_AFTER_ITEM} is not a top-level item of ${APP_LAYOUT}`,
-    );
   return [
-    ...rest.slice(0, at + 1),
+    ...items.filter((n) => !isItem(n, CIRCLE_APP_ITEM)),
     circle === "hidden"
       ? { item: CIRCLE_APP_ITEM, hidden: true }
       : CIRCLE_APP_ITEM,
-    ...rest.slice(at + 1),
   ];
 }
 

@@ -12,16 +12,23 @@
 //   MessageChannel tasks still run in real time — so data the app fetches
 //   while the clock stands still lands "instantly", in the frame being drawn.
 //
-// The page also tracks what it is still waiting for (`busy()`): a message sent
-// to a socket or worker port with no reply yet, images not decoded, fonts
+// The page also tracks what it is still waiting for (`busy()`): a message it
+// sent on its own (not one answering a message it received) to a socket or
+// worker port with no reply yet, images not decoded, fonts
 // loading, the DOM still changing — the recorder waits on it, clock frozen,
 // before it captures a frame.
 
 export interface ClockBusy {
-  /** Messages sent to a WebSocket / worker port with no message back since (and how long ago, real ms). */
+  /**
+   * A message the page sent on its own to a WebSocket / worker port with no
+   * message back since (and how long ago, real ms). A send made while
+   * answering a received message is a reply and awaits nothing.
+   */
   awaitingReplyMs: number | null;
   /** Real ms since the page last sent a message on an instrumented channel. */
   sinceSendMs: number;
+  /** That last message: its channel (and URL) and the start of its data — what a settle that times out names. */
+  lastSent: string | null;
   /** Real ms since the last message received on any instrumented channel. */
   sinceReceiveMs: number;
   /** Images intersecting the viewport that have not finished loading. */
@@ -494,11 +501,33 @@ export function installClock(): void {
   let lastSend = -Infinity;
   let lastRecv = -Infinity;
   let lastMutation = N.perfNow();
+  // A message the page sends while handling one it received — in the task
+  // that delivered it, its microtasks included — answers that message (a
+  // heartbeat's pong, a mark around a received frame): it awaits nothing.
+  // Only a send the page starts on its own (a click, an effect, a subscribe
+  // in a later task) waits for a reply. Otherwise a peer that talks on a
+  // real-time timer (the stall watchdog's 1 Hz ping, answered with a pong and
+  // marks) keeps every frame "awaiting a reply" while the clock stands still.
+  // This listener is added first on every instrumented channel, so it opens
+  // the window before the app's handlers run; a private channel's message —
+  // the next task, after this task's microtasks and before any task the app
+  // queues afterwards — closes it.
+  let answering = false;
+  const answered = new MessageChannel();
+  answered.port1.onmessage = () => {
+    answering = false;
+  };
   const onRecv = (): void => {
     lastRecv = N.perfNow();
+    if (answering) return;
+    answering = true;
+    answered.port2.postMessage(null);
   };
-  const onSend = (): void => {
+  let lastSent: string | null = null;
+  const onSend = (channel: string, data: unknown): void => {
+    if (answering) return;
     lastSend = N.perfNow();
+    lastSent = `${channel}: ${describeMessage(data)}`;
   };
   const NativeWS = window.WebSocket;
   const wsSend = NativeWS.prototype.send;
@@ -506,7 +535,7 @@ export function installClock(): void {
     this: WebSocket,
     ...a: Parameters<WebSocket["send"]>
   ) {
-    onSend();
+    onSend(`WebSocket ${this.url}`, a[0]);
     return wsSend.apply(this, a);
   };
   w.WebSocket = new Proxy(NativeWS, {
@@ -517,13 +546,13 @@ export function installClock(): void {
     },
   });
   /** A worker's port: what the page sends it and what comes back are channel traffic. */
-  const watchPort = (port: MessagePort | Worker): void => {
+  const watchPort = (port: MessagePort | Worker, channel: string): void => {
     port.addEventListener("message", onRecv);
     const post = port.postMessage.bind(port) as (...a: unknown[]) => void;
     (
       port as unknown as { postMessage: (...a: unknown[]) => void }
     ).postMessage = (...a: unknown[]) => {
-      onSend();
+      onSend(channel, a[0]);
       post(...a);
     };
   };
@@ -531,7 +560,7 @@ export function installClock(): void {
     w.SharedWorker = new Proxy(window.SharedWorker, {
       construct(target, args: unknown[], nt) {
         const sw = Reflect.construct(target, args, nt) as SharedWorker;
-        watchPort(sw.port);
+        watchPort(sw.port, `SharedWorker ${String(args[0])}`);
         return sw;
       },
     });
@@ -539,7 +568,7 @@ export function installClock(): void {
   w.Worker = new Proxy(window.Worker, {
     construct(target, args: unknown[], nt) {
       const wk = Reflect.construct(target, args, nt) as Worker;
-      watchPort(wk);
+      watchPort(wk, `Worker ${String(args[0])}`);
       return wk;
     },
   });
@@ -646,6 +675,7 @@ export function installClock(): void {
       return {
         awaitingReplyMs: lastSend > lastRecv ? now - lastSend : null,
         sinceSendMs: now - lastSend,
+        lastSent,
         sinceReceiveMs: now - lastRecv,
         images,
         fontsLoading: document.fonts.status === "loading",
@@ -656,4 +686,19 @@ export function installClock(): void {
     virtual: () => isVirtual,
   };
   window.__filmClock = api;
+}
+
+/** The start of a message, for a log line: text as is, anything else as JSON (or its type). */
+function describeMessage(data: unknown): string {
+  let text: string;
+  if (typeof data === "string") text = data;
+  else {
+    try {
+      text = JSON.stringify(data) ?? String(data);
+    } catch (err) {
+      if (!(err instanceof TypeError)) throw err;
+      text = Object.prototype.toString.call(data);
+    }
+  }
+  return text.length > 160 ? `${text.slice(0, 160)}…` : text;
 }
