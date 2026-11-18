@@ -325,7 +325,11 @@ fn main() {
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Wait;
         match event {
-            Event::UserEvent(UserEvent::Event(line)) => state.event(line),
+            Event::UserEvent(UserEvent::Event(line)) => {
+                if state.event(line) == After::Forward {
+                    bring_forward(&window);
+                }
+            }
             Event::UserEvent(UserEvent::Output { stream, line }) => {
                 let event = json!({
                     "v": 1, "t": clock::now_iso(), "type": "log",
@@ -472,14 +476,21 @@ struct State {
 }
 
 impl State {
-    fn event(&mut self, line: String) {
-        match serde_json::from_str::<Value>(&line) {
-            Ok(event) => self.terminal_line(&event),
+    fn event(&mut self, line: String) -> After {
+        let after = match serde_json::from_str::<Value>(&line) {
+            Ok(event) => {
+                self.terminal_line(&event);
+                after(&event)
+            }
             // Not ours to judge: the page parses every line against the
             // schema and shows a protocol error loudly.
-            Err(e) => eprintln!("equin-installer: the install wrote a line that is not JSON ({e})"),
-        }
+            Err(e) => {
+                eprintln!("equin-installer: the install wrote a line that is not JSON ({e})");
+                After::Nothing
+            }
+        };
         self.backlog.push(line);
+        after
     }
 
     /// One plain line per step on the terminal that started the install,
@@ -570,6 +581,43 @@ pub(crate) fn serve_page(request: &Request<Vec<u8>>) -> Response<Cow<'static, [u
             .status(404)
             .body(Cow::Borrowed(&b"not found"[..]))
             .expect("a static response")
+    }
+}
+
+/// What the window itself does on an event, beyond drawing it.
+#[derive(PartialEq)]
+enum After {
+    Nothing,
+    /// Apple's developer-tools installer is done (its wait ended): its
+    /// dialog — brought in front of the window so the user could click
+    /// Install — now says "The software was installed" and stays there
+    /// until clicked, over the steps and progress. Come back above it.
+    Forward,
+}
+
+fn after(event: &Value) -> After {
+    let field = |k: &str| event.get(k).and_then(Value::as_str);
+    if field("type") == Some("wait") && field("on") == Some("apple-installer") && field("state") == Some("end") {
+        After::Forward
+    } else {
+        After::Nothing
+    }
+}
+
+/// Bring the window back in front of another app's window. `set_focus`
+/// activates the app, which macOS 14+ may refuse to an app in the background
+/// (cooperative activation); `orderFrontRegardless` puts the window above
+/// the others whether or not the app becomes active. Apple's dialog stays
+/// open behind it, for the user to dismiss — never clicked for them.
+fn bring_forward(window: &tao::window::Window) {
+    window.set_focus();
+    #[cfg(target_os = "macos")]
+    {
+        use tao::platform::macos::WindowExtMacOS;
+        // SAFETY: tao's ns_window is the live NSWindow it owns for as long
+        // as `window` lives, and this runs on the main thread (the event loop).
+        let ns_window = unsafe { &*(window.ns_window() as *const objc2_app_kit::NSWindow) };
+        ns_window.orderFrontRegardless();
     }
 }
 

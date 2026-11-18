@@ -332,7 +332,11 @@ what skipping costs — raw lines only in `evidence` and the log.
   (`xcode-select --install`, waited out every 5 s — an OS dialog has no
   change signal), brought to the front once it appears (`open -a`: it opens
   behind the window, which takes focus as it opens), never `sudo
-  softwareupdate`. **Linux in the window**: `sudo
+  softwareupdate`. When the tools are in (the `apple-installer` wait's
+  `end`), the window comes back above Apple's finished dialog ("The
+  software was installed", which stays until clicked): `orderFrontRegardless`,
+  since macOS may refuse to activate a background app. Apple's dialog is left
+  for the user to dismiss, never clicked for them. **Linux in the window**: `sudo
   -A` with an askpass wrapper running the window's binary (`--askpass`), which
   asks the window over its socket for a password sheet.
 - **Reproducing each on purpose** (dry run): `EQUIN_INSTALL_DRY_RUN_FAIL=
