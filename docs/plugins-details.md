@@ -9139,8 +9139,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSongSetting`
               - `useWriteSongSetting`
           - Cross-plugin:
-            - Imported by: 27 plugins — full list in [`plugins/apps/plugins/sonata/plugins/document/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/document/REFERENCE.md)
-              - `apps` ×27
+            - Imported by: 28 plugins — full list in [`plugins/apps/plugins/sonata/plugins/document/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/document/REFERENCE.md)
+              - `apps` ×28
         - **`fixtures`** — Sonata fixtures, server half: writeSongFixtures writes SongFixtures through each source's real write path — a chord grid through the chord-grid source's create write (measured as the editor does), a MIDI or MusicXML file through its source's import into a song created under the fixture's id. Derives nothing else.
           - Server:
             - Uses:
@@ -9549,16 +9549,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/color-palette --background`
               - `ui/tokens/shape --spacing`
-        - **`now-playing`** — The playing Sonata song in the browser's media session (media/media-session): Chrome's media controls and the OS's Now Playing / media keys show its title with the Sonata icon, a scrubber over the tempo-scaled song, and play / pause / seek driving the playback session. A Sonata.PlaybackEffect, so it follows the song when it plays on with no Sonata page shown (Sonata's background music source leaves the session to it).
+        - **`now-playing`** — A Sonata player's song in the browser's media session (media/media-session): Chrome's media controls and the OS's Now Playing / media keys show its name (a library song's live title, a file's name — from the song document) with the Sonata icon, a scrubber over the tempo-scaled song, and play / pause / seek driving the playback session. A SonataSession.Effect, so every player claims it — the Sonata app's (following its song when it plays on with no Sonata page shown; Sonata's background music source leaves the session to it), a file preview's and a mini player's — and the one that started playing last owns the session.
           - Web:
-            - Contributes: `Sonata.PlaybackEffect` "now-playing" → `SonataNowPlaying`
+            - Contributes: `SonataSession.Effect` "now-playing" → `SonataNowPlaying`
             - Uses:
-              - `apps/sonata/library.useCurrentSong`
+              - `apps/sonata/document.SongIdentity`
+              - `apps/sonata/document.useSongDocument`
+              - `apps/sonata/session.SonataSession`
               - `apps/sonata/session.useCursorApi`
               - `apps/sonata/session.useSession`
-              - `apps/sonata/shell.Sonata`
               - `media/media-session.useMediaSession`
               - `network/live.rowOrStale`
+              - `network/live.useLive`
         - **`pedal`** — Sustain-pedal UI umbrella for Sonata: the piano-roll pedal lane.
           - Plugins:
             - **`lane`** — Sonata piano-roll sustain-pedal lane: a scroll-synced strip marking pedal-down spans along the falling-note timeline.
@@ -10827,6 +10829,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SonataSession.Effect` ← `apps.sonata.audio.engine`
               - `SonataSession.Effect` ← `apps.sonata.audio.live-play`
               - `SonataSession.Effect` ← `apps.sonata.audio.metronome`
+              - `SonataSession.Effect` ← `apps.sonata.now-playing`
             - Uses:
               - `primitives/kept-state.defineKept`
               - `primitives/kept-state.useKept`
@@ -10878,10 +10881,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Sonata.ViewOption`
               - `Sonata.ViewSection`
               - `Sonata.Section`
-            - Slot contributors: 42 contributors — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
+            - Slot contributors: 41 contributors — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
               - `Sonata.Section` ×12
               - `Sonata.ViewOption` ×8
-              - `Sonata.PlaybackEffect` ×7
+              - `Sonata.PlaybackEffect` ×6
               - `Sonata.Hud` ×5
               - `Sonata.Effect` ×2
               - `Sonata.TransportOverlay` ×2

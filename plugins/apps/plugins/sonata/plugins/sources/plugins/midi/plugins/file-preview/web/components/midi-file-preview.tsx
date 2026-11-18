@@ -93,7 +93,10 @@ function ParsedPreview({
   const key = locationKey(file);
   // A file document: no library song, so no persisted settings — every
   // setting reads its default and nothing can be written for it.
-  const identity = useMemo(() => ({ kind: "file" as const, key }), [key]);
+  const identity = useMemo(
+    () => ({ kind: "file" as const, key, name }),
+    [key, name],
+  );
   const rawById = useMemo(() => ({ [MIDI_SOURCE_ID]: bytes }), [bytes]);
   if (error !== null) {
     return (

@@ -152,6 +152,7 @@ A wrapper declares the contexts it provides as relay tokens (`relays`, from
     - `SonataSession.Effect` ← `apps.sonata.audio.engine`
     - `SonataSession.Effect` ← `apps.sonata.audio.live-play`
     - `SonataSession.Effect` ← `apps.sonata.audio.metronome`
+    - `SonataSession.Effect` ← `apps.sonata.now-playing`
   - Uses:
     - `primitives/kept-state.defineKept`
     - `primitives/kept-state.useKept`

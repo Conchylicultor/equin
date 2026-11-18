@@ -61,10 +61,10 @@ finds it as it is.
     - `Sonata.ViewOption`
     - `Sonata.ViewSection`
     - `Sonata.Section`
-  - Slot contributors: 42 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 41 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `Sonata.Section` ×12
     - `Sonata.ViewOption` ×8
-    - `Sonata.PlaybackEffect` ×7
+    - `Sonata.PlaybackEffect` ×6
     - `Sonata.Hud` ×5
     - `Sonata.Effect` ×2
     - `Sonata.TransportOverlay` ×2

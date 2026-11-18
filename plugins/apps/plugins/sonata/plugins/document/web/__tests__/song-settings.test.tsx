@@ -609,7 +609,9 @@ describe("a file document: its settings are its defaults, read-only", () => {
     ]);
     const { doc, load, pitches } = renderDocument(plugins);
 
-    act(() => load({ kind: "file", key: "song" }, { fixture: 60 }));
+    act(() =>
+      load({ kind: "file", key: "song", name: "song.mid" }, { fixture: 60 }),
+    );
     expect(mounts.count).toBe(0);
     expect(doc().content.kind).toBe("ready");
     // The transpose default (0) — never the library song "song"'s 7.
@@ -631,7 +633,9 @@ describe("a file document: its settings are its defaults, read-only", () => {
     renderSurface(plugins, [<Capture key="c" />, <Probe key="p" />]);
     expect(last(songs)).toEqual({ kind: "none" });
 
-    act(() => handles.loadDocument({ kind: "file", key: "x" }, {}));
+    act(() =>
+      handles.loadDocument({ kind: "file", key: "x", name: "x.mid" }, {}),
+    );
     expect(last(seen)).toEqual({ kind: "settled", value: 0 });
     expect(last(songs)).toEqual({ kind: "none" });
     // A write naming the file's key as a song id is not a library song's.

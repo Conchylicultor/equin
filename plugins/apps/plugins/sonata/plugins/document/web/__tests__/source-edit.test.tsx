@@ -102,7 +102,7 @@ describe("useSourceEdit: an edit comes with its own song", () => {
 
   it("a file document's edits are never reported (nothing of it is persisted)", () => {
     const s = renderStore();
-    s.load({ kind: "file", key: "f" }, { grid: "f0" });
+    s.load({ kind: "file", key: "f", name: "f.mid" }, { grid: "f0" });
     s.edit("grid", "f1");
     expect(s.edits.at(-1)).toEqual({ kind: "unedited" });
     expect(s.loads.at(-1)).toEqual({ kind: "none" });
