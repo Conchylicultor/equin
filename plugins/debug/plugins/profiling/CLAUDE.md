@@ -10,6 +10,7 @@
     - `Profiling.Section`
     - `profilingPane.Actions`
   - Slot contributors:
+    - `Profiling.Section` ← `conversations.launch-timeline`
     - `Profiling.Section` ← `debug.profiling.boot`
     - `Profiling.Section` ← `debug.profiling.ops`
     - `Profiling.Section` ← `debug.profiling.runtime`
@@ -75,6 +76,7 @@
     - `ui/tokens/font-family --font-mono`
   - Imported by:
     - `build/build-profiling`
+    - `conversations/launch-timeline`
     - `debug/boot-profile`
     - `debug/profiling/boot`
     - `debug/profiling/build`

@@ -17171,7 +17171,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `report-kind` "conversation-stuck-turn"
       - `report-kind` "held-turn-undelivered"
       - `resource.declare` "conversations.partial-message"
-    - Uses: 88 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+    - Uses: 90 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
       - `tasks/tasks-core` ×27
       - `conversations/turn-ledger` ×15
       - `conversations/transcript-watcher` ×8
@@ -17180,6 +17180,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `conversations/workspace` ×3
       - `infra/claude-cli/availability` ×3
       - `tasks/auto-start` ×3
+      - `conversations/launch-timeline` ×2
       - `database` ×2
       - `infra/endpoints` ×2
       - `infra/events` ×2
@@ -22780,6 +22781,85 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/tasks-core._conversations`
           - `tasks/tasks-core.conversationStatusChanged`
         - Register: `defineJob('conversations.idle-blocker.notify')`
+    - **`launch-timeline`** — Agent launches in Debug → Profiling: per-stretch p50 / p90 of the newest launch records (request → spawn → checkout child start, boot, checkout → agent started → CLI ready → first token → first message, and the totals), split by spare / fresh checkout, and each checkout step's. One record per agent launch (conversations_ext_launch): from the request to the first streamed token and the first complete message — the spawn job opens it (openLaunch), the worktree.prepare child marks its start, boot, every checkout step and its end (markCheckoutBooted / markCheckoutEnded), and the sdk runtime marks what the agent's events report (markAgentLaunchPhase: started, CLI ready, first token, first message). First-wins marks; served as the conversations.launches window.
+      - Web:
+        - Contributes: `Profiling.Section` → `LaunchesSection`
+        - Uses:
+          - `debug/profiling.formatDuration`
+          - `debug/profiling.Profiling`
+          - `network/live.useLive`
+          - `network/live/live-state.ResourceErrorInline`
+          - `primitives/css/spacing.Inset`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.SectionLabel`
+          - `primitives/data-table.ColumnDef`
+          - `primitives/data-table.DataTable`
+          - `primitives/loading.Loading`
+      - Server:
+        - Contributes:
+          - `resource.declare` "conversations.launches"
+          - `resource.declare` "conversations.launches:groups"
+          - `resource.declare` "conversations.launches:rows"
+        - Uses:
+          - `database.db`
+          - `infra/entity-extensions.defineExtension`
+          - `network/live.serveCollection`
+          - `tasks/tasks-core._conversations`
+        - DB schema: `plugins/conversations/plugins/launch-timeline/server/internal/tables.ts`
+        - Entity extension of: `tasks/tasks-core` (table `conversations_ext_launch`)
+        - Exports (values):
+          - `abandonLaunch`
+          - `markAgentLaunchPhase`
+          - `markCheckoutBooted`
+          - `markCheckoutEnded`
+          - `openLaunch`
+        - Resources:
+          - `conversations.launches` (keyed, window)
+          - `conversations.launches:groups` (push)
+          - `conversations.launches:rows` (keyed, point)
+      - Core:
+        - Uses:
+          - `fields.nullable`
+          - `fields/date/config.dateField`
+          - `fields/int/config.intField`
+          - `fields/json/config.jsonField`
+          - `fields/text/config.enumTextField`
+          - `fields/text/config.textField`
+          - `infra/entity-extensions.defineExtensionShape`
+          - `network/live.liveCollection`
+          - `packages/list-bound.cappedList`
+        - Exports (types):
+          - `AgentLaunchPhase`
+          - `CheckoutSourceKind`
+          - `CheckoutStep`
+          - `LaunchInstant`
+          - `LaunchMarks`
+          - `LaunchPhase`
+          - `LaunchRecord`
+          - `LaunchSample`
+          - `LaunchSegment`
+          - `Percentiles`
+          - `SegmentStats`
+        - Exports (values):
+          - `AGENT_LAUNCH_PHASES`
+          - `CHECKOUT_SOURCES`
+          - `CheckoutStepSchema`
+          - `checkoutStepStats`
+          - `conversationLaunches`
+          - `instantOf`
+          - `LAUNCH_PHASE_IDS`
+          - `LAUNCH_PHASES`
+          - `LAUNCH_SEGMENTS`
+          - `LaunchMarksSchema`
+          - `launchShape`
+          - `MAX_CHECKOUT_STEPS`
+          - `percentiles`
+          - `segmentStats`
+      - Cross-plugin:
+        - Imported by:
+          - `conversations`
+          - `conversations/runtime-sdk`
+          - `conversations/workspace/worktree`
     - **`model-provider`** — Model pickers and labels over the live model catalog: useModelCatalog (the pushed, preloaded catalog), useVisibleModels / useModelItems / ModelSelect / ModelChoiceLabel (families with today's version as a hint, pinned versions the user turned on), and the corruption reporter for malformed stored models. Model ids, families and choices: the id grammar every concrete version follows (flag, label and family derive from the id alone), the catalog shape and its pure readers (resolveModel, choiceHint, selectableChoices), and the model-provider config.
       - Web:
         - Contributes:
@@ -24226,11 +24306,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`worktree`** — The worktree workspace: a conversation runs in its attempt's git checkout of this repo (`.claude/worktrees/<id>`), with a forked DB and config dir — checked out by the supervised worktree.prepare job (a detached child a restart does not kill) that the spawn job requests and waits on, resumable while the checkout exists. Keeps git's fsmonitor daemon running for exactly the checkouts whose attempt is still retained (worktree.fsmonitor-reconcile, main only: on a conversation closing, at start and every 10 minutes).
           - Server:
             - Contributes: `trigger` "worktree.fsmonitor-on-conversation-ended"
-            - Uses: 31 symbols — full list in [`plugins/conversations/plugins/workspace/plugins/worktree/REFERENCE.md`](../plugins/conversations/plugins/workspace/plugins/worktree/REFERENCE.md)
+            - Uses: 33 symbols — full list in [`plugins/conversations/plugins/workspace/plugins/worktree/REFERENCE.md`](../plugins/conversations/plugins/workspace/plugins/worktree/REFERENCE.md)
               - `infra/worktree` ×10
               - `infra/jobs/supervised-job` ×5
               - `infra/git/fsmonitor` ×3
               - `infra/jobs` ×3
+              - `conversations/launch-timeline` ×2
               - `tasks/tasks-core` ×2
               - `config_v2.getConfig`
               - `conversations/workspace.Workspace`
@@ -24319,9 +24400,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadedDatabaseConfig`
       - `readDatabaseConfigSync`
   - Cross-plugin:
-    - Imported by: 180 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 181 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×48
-      - `conversations` ×21
+      - `conversations` ×22
       - `tasks` ×20
       - `infra` ×18
       - `page` ×14
@@ -26843,6 +26924,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Profiling.Section`
           - `profilingPane.Actions`
         - Slot contributors:
+          - `Profiling.Section` ← `conversations.launch-timeline`
           - `Profiling.Section` ← `debug.profiling.boot`
           - `Profiling.Section` ← `debug.profiling.ops`
           - `Profiling.Section` ← `debug.profiling.runtime`
@@ -26908,6 +26990,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/font-family --font-mono`
         - Imported by:
           - `build/build-profiling`
+          - `conversations/launch-timeline`
           - `debug/boot-profile`
           - `debug/profiling/boot`
           - `debug/profiling/build`
@@ -29272,10 +29355,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Fields.Identity` ×35
     - Exports (values): `Fields`
   - Cross-plugin:
-    - Imported by: 143 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
+    - Imported by: 144 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
       - `fields` ×65
       - `apps` ×24
-      - `conversations` ×11
+      - `conversations` ×12
       - `tasks` ×7
       - `infra` ×6
       - `debug` ×5
@@ -29704,9 +29787,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `DateFieldDef`
             - Exports (values): `dateField`
           - Cross-plugin:
-            - Imported by: 68 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
+            - Imported by: 69 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
               - `apps` ×17
-              - `conversations` ×11
+              - `conversations` ×12
               - `infra` ×7
               - `tasks` ×7
               - `debug` ×5
@@ -30380,10 +30463,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `intField`
               - `intSample`
           - Cross-plugin:
-            - Imported by: 66 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
+            - Imported by: 67 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
               - `apps` ×19
               - `debug` ×14
-              - `conversations` ×8
+              - `conversations` ×9
               - `infra` ×6
               - `tasks` ×6
               - `backup` ×4
@@ -30454,9 +30537,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Imported by: 44 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
+            - Imported by: 45 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
               - `apps` ×9
-              - `conversations` ×7
+              - `conversations` ×8
               - `debug` ×5
               - `infra` ×5
               - `tasks` ×5
@@ -31348,9 +31431,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 117 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+            - Imported by: 118 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
               - `apps` ×32
-              - `conversations` ×21
+              - `conversations` ×22
               - `tasks` ×16
               - `infra` ×8
               - `page` ×8
@@ -37005,10 +37088,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineExtensionShape`
           - `EXTENSION_TIMESTAMPS`
       - Cross-plugin:
-        - Imported by: 47 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
+        - Imported by: 48 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
           - `apps` ×17
           - `tasks` ×14
-          - `conversations` ×12
+          - `conversations` ×13
           - `page` ×3
           - `plugin-meta/plugin-health`
       - Exemptions:
@@ -42920,9 +43003,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 361 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 362 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×91
-          - `conversations` ×73
+          - `conversations` ×74
           - `debug` ×36
           - `tasks` ×32
           - `infra` ×25
@@ -43339,9 +43422,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 320 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+            - Imported by: 321 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `apps` ×85
-              - `conversations` ×49
+              - `conversations` ×50
               - `debug` ×31
               - `ui` ×26
               - `tasks` ×25
@@ -44106,11 +44189,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wholeRecord`
           - `wholeTuple`
       - Cross-plugin:
-        - Imported by: 138 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
+        - Imported by: 139 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
           - `apps` ×30
           - `debug` ×21
+          - `conversations` ×17
           - `infra` ×17
-          - `conversations` ×16
           - `tasks` ×10
           - `build` ×5
           - `integrations` ×4
@@ -51416,9 +51499,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 455 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 456 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×108
-              - `conversations` ×79
+              - `conversations` ×80
               - `primitives` ×55
               - `debug` ×39
               - `ui` ×32
@@ -51651,9 +51734,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 435 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 436 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×111
-              - `conversations` ×83
+              - `conversations` ×84
               - `primitives` ×48
               - `debug` ×39
               - `page` ×25
@@ -52244,6 +52327,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/jsonl-viewer/tool-call/query-db`
           - `conversations/conversation-view/jsonl-viewer/tool-call/runtime-profile`
           - `conversations/conversation-view/jsonl-viewer/tool-call/timeline`
+          - `conversations/launch-timeline`
           - `debug/boot-profile`
           - `debug/heap-snapshot`
           - `debug/profiling/boot`
@@ -55105,9 +55189,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 240 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 241 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×72
-          - `conversations` ×25
+          - `conversations` ×26
           - `ui` ×24
           - `debug` ×20
           - `primitives` ×20
@@ -65173,8 +65257,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TRAILER_LOG_FORMAT`
           - `UNATTRIBUTED_TRAILER_KEY`
       - Cross-plugin:
-        - Imported by: 128 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
-          - `conversations` ×51
+        - Imported by: 129 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `conversations` ×52
           - `tasks` ×41
           - `debug` ×6
           - `active-data` ×5
@@ -65194,6 +65278,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wish`
         - Extended by:
           - `conversations/context-usage` (table `conversations_ext_context_usage`)
+          - `conversations/launch-timeline` (table `conversations_ext_launch`)
           - `conversations/conversation-view/notes` (table `conversations_ext_notes`)
           - `apps/places/ask` (table `conversations_ext_places_ask`)
           - `conversations/conversation-preprompt` (table `conversations_ext_preprompt`)

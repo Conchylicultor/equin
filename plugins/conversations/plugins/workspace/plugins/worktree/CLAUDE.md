@@ -58,11 +58,12 @@ Design: [`research/2026-10-28-global-supervised-worktree-checkout.md`](../../../
 - Description: The worktree workspace: a conversation runs in its attempt's git checkout of this repo (`.claude/worktrees/<id>`), with a forked DB and config dir — checked out by the supervised worktree.prepare job (a detached child a restart does not kill) that the spawn job requests and waits on, resumable while the checkout exists. Keeps git's fsmonitor daemon running for exactly the checkouts whose attempt is still retained (worktree.fsmonitor-reconcile, main only: on a conversation closing, at start and every 10 minutes).
 - Server:
   - Contributes: `trigger` "worktree.fsmonitor-on-conversation-ended"
-  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/worktree` ×10
     - `infra/jobs/supervised-job` ×5
     - `infra/git/fsmonitor` ×3
     - `infra/jobs` ×3
+    - `conversations/launch-timeline` ×2
     - `tasks/tasks-core` ×2
     - `config_v2.getConfig`
     - `conversations/workspace.Workspace`

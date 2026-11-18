@@ -1,6 +1,6 @@
 {
-  "id": "611e13e0-08ff-4851-8432-6ea3d403187f",
-  "prevId": "2cefce02-bbc5-4da0-b3a6-2070c7122962",
+  "id": "efd44da8-075d-4d7c-9598-83c148ffbc1d",
+  "prevId": "611e13e0-08ff-4851-8432-6ea3d403187f",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -7480,6 +7480,95 @@
         "conversations_ext_queue_parent_id_conversations_id_fk": {
           "name": "conversations_ext_queue_parent_id_conversations_id_fk",
           "tableFrom": "conversations_ext_queue",
+          "tableTo": "conversations",
+          "columnsFrom": [
+            "parent_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.conversations_ext_launch": {
+      "name": "conversations_ext_launch",
+      "schema": "",
+      "columns": {
+        "parent_id": {
+          "name": "parent_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "attempt_id": {
+          "name": "attempt_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "requested_at": {
+          "name": "requested_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "marks": {
+          "name": "marks",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "checkout_steps": {
+          "name": "checkout_steps",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "checkout_source": {
+          "name": "checkout_source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "abandoned_at": {
+          "name": "abandoned_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "agent_pid": {
+          "name": "agent_pid",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "conversations_ext_launch_parent_id_conversations_id_fk": {
+          "name": "conversations_ext_launch_parent_id_conversations_id_fk",
+          "tableFrom": "conversations_ext_launch",
           "tableTo": "conversations",
           "columnsFrom": [
             "parent_id"

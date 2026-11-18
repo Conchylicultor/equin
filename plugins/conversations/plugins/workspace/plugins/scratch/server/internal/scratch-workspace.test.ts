@@ -61,6 +61,7 @@ describe("scratchWorkspace.prepare", () => {
       step: () => Promise.reject(new Error("scratch prepare must not step")),
       waitFor: () => Promise.reject(new Error("scratch prepare must not wait")),
       sleep: () => Promise.reject(new Error("scratch prepare must not sleep")),
+      conversationId: "conv-1",
     };
     await scratchWorkspace.prepare(at, ctx);
     await scratchWorkspace.prepare(at, ctx);

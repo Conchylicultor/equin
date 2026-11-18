@@ -49,8 +49,13 @@ export const worktreeWorkspace: WorkspaceImpl<"worktree"> = {
   //
   // `signal` is the spawn dispatch's deadline, bounding the git reads of
   // `checkoutState`.
-  async prepare({ attemptId, path }, { signal, step, waitFor, sleep }) {
-    const input = { attemptId, path };
+  async prepare(
+    { attemptId, path },
+    { signal, step, waitFor, sleep, conversationId },
+  ) {
+    // `conversationId` names the launch record the child marks; the run is
+    // still found by its lock (the attempt).
+    const input = { attemptId, path, conversationId };
     await prepareWorktree({ step, waitFor, sleep }, attemptId, {
       kindId: worktreePrepareJob.kind.id,
       checkoutState: async () =>

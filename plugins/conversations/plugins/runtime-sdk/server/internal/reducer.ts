@@ -3,6 +3,7 @@ import {
   ContextUsageSchema,
   type ContextUsage,
 } from "@plugins/conversations/plugins/context-usage/core";
+import type { AgentLaunchPhase } from "@plugins/conversations/plugins/launch-timeline/core";
 import type { AgentEvent, AgentLifecycle, OpenRequest } from "../../core";
 
 // Event lines → the conversation's projection, plus the side effects the
@@ -138,7 +139,18 @@ export type AgentEffect =
    */
   | { kind: "context-measured"; usage: ContextUsage }
   /** The agent could not measure its context window: reported. */
-  | { kind: "context-unmeasured"; seq: number; error: string };
+  | { kind: "context-unmeasured"; seq: number; error: string }
+  /**
+   * The process `pid` reached a launch phase at `at` (its own clock): marked
+   * on the conversation's launch record (launch-timeline), which keeps only
+   * the launch's own process's.
+   */
+  | {
+      kind: "launch-phase";
+      phase: AgentLaunchPhase;
+      pid: number;
+      at: Date;
+    };
 
 /** Lines the file skipped over: more rotations than the sink keeps were missed. */
 export interface SeqGap {
@@ -228,6 +240,11 @@ export function reduceEvents(
   const gaps: SeqGap[] = [];
   const malformed: MalformedEvent[] = [];
   const stalls: ExitStall[] = [];
+  // A phase of the running process; none is known before its `started`.
+  const launchPhase = (phase: AgentLaunchPhase, at: Date): void => {
+    if (s.agentPid !== null)
+      effects.push({ kind: "launch-phase", phase, pid: s.agentPid, at });
+  };
   for (const e of events) {
     if (e.seq <= s.cursorSeq) continue;
     if (e.seq > s.cursorSeq + 1) {
@@ -261,10 +278,23 @@ export function reduceEvents(
             s.turnIds = p.turnIds === true;
             s.stoppedAt = null;
             s.stopError = null;
+            effects.push({
+              kind: "launch-phase",
+              phase: "agent-started",
+              pid: p.pid,
+              at,
+            });
             break;
           case "ready":
             s.cliVersion = p.cliVersion;
             s.cliReady = true;
+            launchPhase("cli-ready", at);
+            break;
+          case "first_token":
+            launchPhase("first-token", at);
+            break;
+          case "first_message":
+            launchPhase("first-message", at);
             break;
           case "turn_started":
             s.working = true;

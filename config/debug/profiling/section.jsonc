@@ -1,4 +1,4 @@
-// @hash a77f3a20088f
+// @hash 792c0d66e7f0
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -10,6 +10,7 @@
   "items": [
     "debug.profiling.boot:boot",
     "debug.profiling.ops:ops",
+    "conversations.launch-timeline:launches",
     "debug.profiling.runtime:runtime"
   ]
 }

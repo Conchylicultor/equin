@@ -1,4 +1,4 @@
-// @hash a77f3a20088f
+// @hash 792c0d66e7f0
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,6 +7,7 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
+    "conversations.launch-timeline:launches",
     "debug.profiling.boot:boot",
     "debug.profiling.ops:ops",
     "debug.profiling.runtime:runtime"

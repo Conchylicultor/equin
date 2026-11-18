@@ -156,6 +156,11 @@ const envelope = { seq: z.number().int(), t: z.number() };
  *   holds it in its command queue until the next tool boundary (folded into
  *   the running turn) or the turn's end; the agent follows that queue through
  *   the CLI's `command_lifecycle` messages (bin/agent.ts);
+ * - `first_token` / `first_message` — this process's first streamed frame of
+ *   a model reply, and its first complete top-level assistant message: once
+ *   each per process, the launch's last two instants (conversations/
+ *   launch-timeline). Streamed frames are never on disk, so this line is the
+ *   only record of when the first one came;
  * - `exited` — the process is going away.
  */
 export const AgentLifecycleSchema = z.discriminatedUnion("event", [
@@ -175,6 +180,8 @@ export const AgentLifecycleSchema = z.discriminatedUnion("event", [
     turnIds: z.literal(true).optional(),
   }),
   z.object({ event: z.literal("ready"), cliVersion: z.string().nullable() }),
+  z.object({ event: z.literal("first_token") }),
+  z.object({ event: z.literal("first_message") }),
   z.object({
     event: z.literal("turn_started"),
     /** The `turn` command's (or the launch prompt's) `turnId`, echoed. */

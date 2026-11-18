@@ -12,6 +12,10 @@ import {
   spawnFailures,
 } from "@plugins/conversations/plugins/spawn-failure/server";
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
+import {
+  abandonLaunch,
+  openLaunch,
+} from "@plugins/conversations/plugins/launch-timeline/server";
 import { Runtime } from "./runtime";
 import { spawnSystemPrompt } from "./spawn-system-prompt";
 import { requestStatusReconcile } from "./status-reconciler";
@@ -80,6 +84,8 @@ export const spawnConversationJob = defineJob({
     ) {
       await recordSpawnFailure(conversationId, "job", death.error);
     }
+    // No agent of this launch will start: a later one (a resume) is not it.
+    await abandonLaunch(conversationId);
     requestStatusReconcile([conversationId]);
   },
   run: async ({
@@ -108,6 +114,9 @@ export const spawnConversationJob = defineJob({
       // leave a process working for a conversation nothing shows or reaps.
       const row = await getConversation(conversationId);
       if (!row || row.status === "done") return;
+      // The launch record: every phase from here to the first token lands on
+      // it (launch-timeline). Opened once — a retry keeps the first run's.
+      await openLaunch(conversationId, attemptId, row.createdAt);
       const workspace = Workspace.get(spec.kind);
       // The workspace's `prepare` (git worktree add) MUST precede
       // `runtime.create`: the agent's cwd must exist.
@@ -115,7 +124,13 @@ export const spawnConversationJob = defineJob({
       // The job's context goes down whole: its deadline for the work, and its
       // step / wait log for a kind that waits on a supervised child (which
       // suspends this job, through the catch below).
-      await workspace.prepare(at, ctx);
+      await workspace.prepare(at, {
+        signal: ctx.signal,
+        step: ctx.step,
+        waitFor: ctx.waitFor,
+        sleep: ctx.sleep,
+        conversationId,
+      });
       step = "runtime";
       const runtime = Runtime.get(runtimeId);
       // A retry whose earlier attempt already started the session: `create`
@@ -151,6 +166,7 @@ export const spawnConversationJob = defineJob({
       // failure, from where Resume works once Claude Code is back.
       if (err instanceof ClaudeCodeUnavailableError) {
         await recordSpawnFailure(conversationId, step, err.message);
+        await abandonLaunch(conversationId);
         await recordReport({
           kind: "claude-code-unavailable-at-spawn",
           source: "server-caught",

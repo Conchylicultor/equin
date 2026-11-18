@@ -784,8 +784,8 @@ serves them.
     - `TRAILER_LOG_FORMAT`
     - `UNATTRIBUTED_TRAILER_KEY`
 - Cross-plugin:
-  - Imported by: 128 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×51
+  - Imported by: 129 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×52
     - `tasks` ×41
     - `debug` ×6
     - `active-data` ×5
@@ -805,6 +805,7 @@ serves them.
     - `wish`
   - Extended by:
     - `conversations/context-usage` (table `conversations_ext_context_usage`)
+    - `conversations/launch-timeline` (table `conversations_ext_launch`)
     - `conversations/conversation-view/notes` (table `conversations_ext_notes`)
     - `apps/places/ask` (table `conversations_ext_places_ask`)
     - `conversations/conversation-preprompt` (table `conversations_ext_preprompt`)

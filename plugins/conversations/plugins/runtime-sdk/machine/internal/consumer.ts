@@ -1,6 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import type { RuntimeSignal } from "@plugins/conversations/server";
 import { recordContextUsage } from "@plugins/conversations/plugins/context-usage/server";
+import { markAgentLaunchPhase } from "@plugins/conversations/plugins/launch-timeline/server";
 import {
   acquireDirWatch,
   defineFileWatcher,
@@ -481,6 +482,9 @@ async function runEffect(id: string, effect: AgentEffect): Promise<void> {
           label: "runtime-sdk.context-usage",
         },
       });
+      return;
+    case "launch-phase":
+      await markAgentLaunchPhase(id, effect.pid, effect.phase, effect.at);
       return;
   }
 }

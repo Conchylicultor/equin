@@ -863,15 +863,36 @@ log(
 if (options.prompt !== null)
   pushInput(options.prompt.text, options.prompt.turnId);
 
+// The launch's last two instants (launch-timeline), once per process: its
+// first streamed content — never on disk otherwise — and its first complete
+// top-level reply (a failed request's synthetic message is not one).
+let firstToken = false;
+let firstMessage = false;
 for await (const msg of session) {
   // Nothing is numbered after `exited`.
   if (closed) break;
   if (msg.type === "stream_event") {
     const frame = partialFrameOf(msg);
-    if (frame) pushFrame(frame);
+    if (frame) {
+      // Content, not the `message_start` header that precedes it.
+      if (!firstToken && frame.type !== "start") {
+        firstToken = true;
+        emit({ kind: "agent", payload: { event: "first_token" } });
+      }
+      pushFrame(frame);
+    }
     continue;
   }
   emit({ kind: "sdk", payload: msg });
+  if (
+    !firstMessage &&
+    msg.type === "assistant" &&
+    msg.parent_tool_use_id === null &&
+    msg.error === undefined
+  ) {
+    firstMessage = true;
+    emit({ kind: "agent", payload: { event: "first_message" } });
+  }
   followCliQueue(msg);
   recordUsage(msg, Date.now());
   logMessage(msg);

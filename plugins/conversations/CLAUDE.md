@@ -76,7 +76,7 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `report-kind` "conversation-stuck-turn"
     - `report-kind` "held-turn-undelivered"
     - `resource.declare` "conversations.partial-message"
-  - Uses: 88 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 90 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×27
     - `conversations/turn-ledger` ×15
     - `conversations/transcript-watcher` ×8
@@ -85,6 +85,7 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `conversations/workspace` ×3
     - `infra/claude-cli/availability` ×3
     - `tasks/auto-start` ×3
+    - `conversations/launch-timeline` ×2
     - `database` ×2
     - `infra/endpoints` ×2
     - `infra/events` ×2
@@ -412,6 +413,7 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
   - **`effort-provider`** — Registry mapping thinking-mode (effort) levels to Claude CLI delivery (--effort flag / --settings ultracode) and display metadata. Reusable EffortSelect picker.
   - **`hibernation`** — Records conversation selection so idle hibernation can reset the idle timer and transparently resume. Idle-conversation hibernation, portable half: the global hibernation config, and the viewed…
   - **`idle-blocker`** — Idle blocker `agents`: any conversation starting or working (isAgentBusy) keeps the host busy; every conversation.statusChanged that crosses that line asks the idle signal to re-evaluate.
+  - **`launch-timeline`** — Agent launches in Debug → Profiling: per-stretch p50 / p90 of the newest launch records (request → spawn → checkout child start, boot, checkout → agent started → CLI ready → first token → first…
   - **`model-provider`** [exempt] — Model pickers and labels over the live model catalog: useModelCatalog (the pushed, preloaded catalog), useVisibleModels / useModelItems / ModelSelect / ModelChoiceLabel (families with today's…
     - Plugins:
       - **`catalog`** — The model catalog every launch reads: getModelCatalog() over the ModelCatalogSource host service (the desktop's discovered catalog.json, or the code baseline on a host without the computer), and the…

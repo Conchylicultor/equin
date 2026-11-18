@@ -74,7 +74,10 @@ export interface WorkspaceAt<S extends WorkspaceSpec = WorkspaceSpec> {
 export type WorkspacePrepareCtx = Pick<
   JobCtx,
   "signal" | "step" | "waitFor" | "sleep"
->;
+> & {
+  /** The conversation this preparation launches (its launch record's key). */
+  conversationId: string;
+};
 
 /** Whether a conversation's workspace can take a `claude --resume`. */
 export type Resumability =

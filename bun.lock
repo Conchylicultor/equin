@@ -2643,6 +2643,10 @@
       "name": "@equin/plugin-conversations-idle-blocker",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/launch-timeline": {
+      "name": "@equin/plugin-conversations-launch-timeline",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/model-provider": {
       "name": "@equin/plugin-conversations-model-provider",
       "version": "0.0.1",
@@ -9580,6 +9584,8 @@
     "@equin/plugin-conversations-hibernation": ["@equin/plugin-conversations-hibernation@workspace:plugins/conversations/plugins/hibernation"],
 
     "@equin/plugin-conversations-idle-blocker": ["@equin/plugin-conversations-idle-blocker@workspace:plugins/conversations/plugins/idle-blocker"],
+
+    "@equin/plugin-conversations-launch-timeline": ["@equin/plugin-conversations-launch-timeline@workspace:plugins/conversations/plugins/launch-timeline"],
 
     "@equin/plugin-conversations-model-provider": ["@equin/plugin-conversations-model-provider@workspace:plugins/conversations/plugins/model-provider"],
 

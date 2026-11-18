@@ -12,6 +12,11 @@ import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { spareRefillJob } from "@plugins/infra/plugins/worktree/plugins/spare-pool/server";
 import { compositionsConfig } from "@plugins/plugin-meta/plugins/composition/core";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
+import {
+  markCheckoutBooted,
+  markCheckoutEnded,
+} from "@plugins/conversations/plugins/launch-timeline/server";
+import type { CheckoutStep } from "@plugins/conversations/plugins/launch-timeline/core";
 
 // The checkout's transcript, at `logs/worktree-prepare.jsonl` of the backend
 // that supervises it (its only writer, tailing the child's output).
@@ -38,7 +43,13 @@ export const worktreePrepareJob = defineSupervisedJob({
   name: "worktree.prepare",
   description:
     "Checks out a new agent's git worktree (from a spare, or fresh) and installs it, in a process of its own so a restart does not interrupt it.",
-  input: z.object({ attemptId: z.string(), path: z.string() }),
+  input: z.object({
+    attemptId: z.string(),
+    path: z.string(),
+    // The launch whose record the child marks (launch-timeline). Absent on a
+    // run requested before the field existed: it marks nothing.
+    conversationId: z.string().optional(),
+  }),
   channel: prepareLog,
   lock: (input) => input.attemptId,
   // Each child boots the plugin graph and opens database connections through
@@ -49,21 +60,30 @@ export const worktreePrepareJob = defineSupervisedJob({
   admission: "worktree-prepare",
   // No signal: the child is bounded by git's own timeouts and install's, and
   // nothing else holds it.
-  async run({ attemptId, path }, { log }) {
+  async run({ attemptId, path, conversationId }, { log }) {
     // A checkout claims the namespace of its own name, so `setupWorktree`
     // refuses one a composition already holds. The manifest is read through
     // the config registry here (the child boots the plugin graph, config
     // included) rather than inside `infra/worktree`, which must stay importable
     // from the CLI.
     log(`checkout ${attemptId} at ${path}: starting`);
+    // The launch record (launch-timeline): when this process started — before
+    // its worktree-prepare slot wait and its boot — and when its body began.
+    // Written before the checkout, so a hung one shows it got this far.
+    if (conversationId !== undefined)
+      await markCheckoutBooted(conversationId, {
+        childStartedAt: Math.round(performance.timeOrigin),
+        bootedAt: Date.now(),
+      });
     // Each step as it ends (a hung one shows where it hung), then the whole
     // split on the result line — the record every launch leaves of where its
-    // checkout's time went.
-    const steps = recordSetupSteps((s) =>
-      log(`checkout ${attemptId} step: ${describeSetupStep(s)}`),
-    );
-    const { source, tree, depStore, fsmonitor, untrackedCache } =
-      await setupWorktree(
+    // checkout's time went — and on the launch record, placed by its end.
+    const ended: CheckoutStep[] = [];
+    const steps = recordSetupSteps((s) => {
+      ended.push({ ...s, endAt: Date.now() });
+      log(`checkout ${attemptId} step: ${describeSetupStep(s)}`);
+    });
+    const { source, tree, depStore, fsmonitor, untrackedCache } = await setupWorktree(
       attemptId,
       path,
       new Set(getConfig(compositionsConfig).manifests.map((m) => m.id)),
@@ -71,6 +91,12 @@ export const worktreePrepareJob = defineSupervisedJob({
       runtimeNamespace(),
       steps.onStep,
     );
+    if (conversationId !== undefined)
+      await markCheckoutEnded(conversationId, {
+        endedAt: Date.now(),
+        steps: ended,
+        source,
+      });
     log(
       `checkout ${attemptId}: ${source}; ${tree === null ? "" : `${describeTreeStart(tree)}; `}${describeAdoption(depStore)}; fsmonitor: ${typeof fsmonitor === "string" ? fsmonitor : "kind" in fsmonitor ? `FAILED (${fsmonitor.error})` : `${fsmonitor.daemon}, token ${fsmonitor.token.kind}`}; untracked cache: ${untrackedCache}; steps: ${steps.summary()}`,
     );

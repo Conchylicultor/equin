@@ -178,7 +178,7 @@ describe("reduceEvents", () => {
 
   test("a turn the agent took carries its ledger id and transcript uuid", () => {
     const { effects } = reduceEvents(EMPTY_PROJECTION, stream.slice(0, 2));
-    expect(effects).toEqual([
+    expect(effects.filter((e) => e.kind !== "launch-phase")).toEqual([
       { kind: "turns-dropped", at: new Date(stream[0]!.t) },
       {
         kind: "prompt-submitted",
@@ -197,7 +197,9 @@ describe("reduceEvents", () => {
       turnStarted(3, "follow-up", "p-f", "turn-f"),
     ]);
     expect(state.turnIds).toBe(false);
-    expect(effects.map((e) => e.kind)).toEqual([
+    expect(
+      effects.filter((e) => e.kind !== "launch-phase").map((e) => e.kind),
+    ).toEqual([
       "turns-dropped",
       "prompt-submitted-by-text",
       "prompt-submitted",
@@ -212,7 +214,11 @@ describe("reduceEvents", () => {
       turnStarted(3, "where from?", "p-x", null),
     ]);
     expect(state.turnIds).toBe(true);
-    expect(effects.filter((e) => e.kind !== "turns-dropped")).toEqual([
+    expect(
+      effects.filter(
+        (e) => e.kind !== "turns-dropped" && e.kind !== "launch-phase",
+      ),
+    ).toEqual([
       {
         kind: "turn-without-id",
         seq: 3,
@@ -220,6 +226,31 @@ describe("reduceEvents", () => {
         text: "where from?",
       },
     ]);
+  });
+
+  test("a process's launch phases are effects carrying its pid and its clock", () => {
+    const events: AgentEvent[] = [
+      started(1, 7),
+      {
+        seq: 2,
+        t: at(),
+        kind: "agent",
+        payload: { event: "ready", cliVersion: "2" },
+      },
+      { seq: 3, t: at(), kind: "agent", payload: { event: "first_token" } },
+      { seq: 4, t: at(), kind: "agent", payload: { event: "first_message" } },
+    ];
+    const { effects } = reduceEvents(EMPTY_PROJECTION, events);
+    expect(effects.filter((e) => e.kind === "launch-phase")).toEqual(
+      (
+        ["agent-started", "cli-ready", "first-token", "first-message"] as const
+      ).map((phase, i) => ({
+        kind: "launch-phase",
+        phase,
+        pid: 7,
+        at: new Date(events[i]!.t),
+      })),
+    );
   });
 
   test("a seq jump past the cursor is reported as a gap, then applied", () => {
