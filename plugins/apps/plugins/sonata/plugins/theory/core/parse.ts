@@ -99,6 +99,8 @@ const HEADS: ReadonlyArray<{ suffix: string; quality: string }> = [
   { suffix: "major7", quality: "maj7" },
   { suffix: "M7", quality: "maj7" },
   { suffix: "minmaj7", quality: "minmaj7" },
+  { suffix: "mmaj7", quality: "minmaj7" },
+  { suffix: "m(maj7)", quality: "minmaj7" },
   { suffix: "mM7", quality: "minmaj7" },
   { suffix: "min7", quality: "min7" },
   { suffix: "m7b5", quality: "halfdim7" },
@@ -129,9 +131,38 @@ const HEADS: ReadonlyArray<{ suffix: string; quality: string }> = [
   { suffix: "", quality: "maj" },
 ];
 
-const HEADS_BY_LENGTH = [...HEADS].sort(
-  (a, b) => b.suffix.length - a.suffix.length,
-);
+/**
+ * Quality words that read the same in any case: `Maj7`, `MAJ7`, `Min7`, `Dim`,
+ * `Sus4` are all common spellings of the same head. Only these multi-letter
+ * words fold case — the single letters `m` (minor) and `M` (major) mean
+ * different things, so they stay exact (`CM7` ≠ `Cm7`, `mMaj7` ≠ `MMaj7`).
+ * Longest first, so `major` is read as one word rather than `maj` + `or`.
+ */
+const CASELESS_WORDS = ["major", "maj", "min", "dim", "aug", "sus", "dom"];
+
+/**
+ * A head suffix as a prefix matcher: its caseless words match in any case,
+ * every other character exactly.
+ */
+function headMatcher(suffix: string): RegExp {
+  let source = "";
+  let i = 0;
+  while (i < suffix.length) {
+    const word = CASELESS_WORDS.find((w) => suffix.startsWith(w, i));
+    if (word) {
+      for (const ch of word) source += `[${ch}${ch.toUpperCase()}]`;
+      i += word.length;
+    } else {
+      source += suffix[i]!.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      i += 1;
+    }
+  }
+  return new RegExp(`^${source}`);
+}
+
+const HEADS_BY_LENGTH = [...HEADS]
+  .sort((a, b) => b.suffix.length - a.suffix.length)
+  .map((h) => ({ ...h, matcher: headMatcher(h.suffix) }));
 
 // ---------------------------------------------------------------------------
 // Body & symbol parsing
@@ -147,7 +178,7 @@ interface ParsedBody {
 
 /** Parse the body (everything after the root, no slash bass) or `null`. */
 function parseBody(body: string): ParsedBody | null {
-  const head = HEADS_BY_LENGTH.find((h) => body.startsWith(h.suffix));
+  const head = HEADS_BY_LENGTH.find((h) => h.matcher.test(body));
   if (!head) return null; // unreachable — the "" head always matches.
 
   // The head names the base quality; the shared modifier grammar realises the

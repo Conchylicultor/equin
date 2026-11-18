@@ -80,8 +80,17 @@ type Modifier =
 const MODIFIER =
   /^(?:sus2|sus4|sus|(?:no|omit)(3|5)|add(2|4|6|9|11|13)|([+#♯b♭-])(2|4|5|6|9|11|13)|(6|9|11|13))/;
 
+/**
+ * The modifier words, which read the same in any case (`Sus4`, `Add9`, `No3`).
+ * Folded on their own rather than with an `i` flag on `MODIFIER`, which would
+ * also let a capital `B` pass for the flat accidental `b`.
+ */
+const MODIFIER_WORD = /^(?:sus|add|omit|no)/i;
+
 function matchModifier(rest: string): Modifier | null {
-  const m = MODIFIER.exec(rest);
+  const m = MODIFIER.exec(
+    rest.replace(MODIFIER_WORD, (w) => w.toLowerCase()),
+  );
   if (!m) return null;
   const len = m[0].length;
   if (m[0] === "sus2") return { kind: "sus", deg: 2, len };
