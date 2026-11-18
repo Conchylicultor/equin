@@ -146,6 +146,16 @@ any checkout that must never change under it (the embedded Postgres, PgBouncer):
   `<holder>-running`, so a pin moved while the daemon runs never hands the
   bytes under it to the sweep.
 - `./equin deps list` prints the pinned identity.
+- **Versions and blocked moves.** A source may read its version
+  (`DepSource.version`: `declared(root)` from a checkout, `installed(dir)` from
+  a payload — package-copy reads the lock's and the copy's own `package.json`).
+  A pin may then declare `switchBlocked(from, to)`: why a move is not a plain
+  switch (Postgres: across a major, the data must be migrated). `pinDep`
+  refuses a blocked move before installing anything.
+- **`pinStatus(dep, { root })`** is the read-only view: unpinned, or the pinned
+  install, the running one when another, and what `root` declares (same /
+  differs with `blocked` / failed). The health report's Pinned binaries row
+  (`pin-drift` sub-plugin) shows it against main's checkout.
 
 ## Sealed installs (release bundles)
 
@@ -429,8 +439,8 @@ torch.
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/font-family --font-mono`
-  - Imported by: 38 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra` ×14
+  - Imported by: 39 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra` ×15
     - `framework` ×6
     - `apps` ×5
     - `companions` ×2
@@ -444,6 +454,7 @@ torch.
 - Deps:
   - Exports (types):
     - `BundleSpec`
+    - `DeclaredAgainstPin`
     - `DefineDepSpec`
     - `Dep`
     - `DepPin`
@@ -457,10 +468,13 @@ torch.
     - `PinDrift`
     - `PinMove`
     - `PinnedDep`
+    - `PinnedInstall`
+    - `PinStatus`
     - `Ready`
     - `ReadyNow`
     - `RemoveOutcome`
     - `SealOutcome`
+    - `SourceVersion`
     - `SweepReport`
     - `TargetedSource`
   - Exports (values):
@@ -477,6 +491,7 @@ torch.
     - `linkSealedDep`
     - `pinDep`
     - `pinnedDep`
+    - `pinStatus`
     - `readyNow`
     - `removeDep`
     - `sealDep`
@@ -492,6 +507,7 @@ torch.
   - **`mise`** — The mise toolchain as an updater: contributes `mise` to the updater registry, so the Dependency upgrades automation includes it in the batched upgrade task and `./equin deps upgrade mise` (alias…
   - **`npm`** — The `npm` updater: moves every npm package a workspace package.json declares (its range and bun.lock) to the newest release past a 3-day cooldown, lockstep groups together, honouring reviewed holds…
   - **`package-copy`** — The package-copy installer kind of infra/deps: npmPackageCopy({ workspace, package }) (its deps barrel) declares a copy of one npm package the checkout's bun install put in a workspace's…
+  - **`pin-drift`** — The health report's Pinned binaries row: attention while a pinned dependency (a host daemon's binaries — Postgres, PgBouncer) lags what main's checkout declares, or its live daemon still runs a pin…
   - **`playwright-browser`** — The playwright-browser installer kind of infra/deps: playwrightBrowser({ browser: "chromium" }) (its deps barrel) declares the browser build the workspace's playwright-core pins — identity = that…
   - **`python`** — The python installer kind of infra/deps (pythonEnv, runPython, PythonEntryError) over uv, with its caches as declared data dirs Its uv-updater sub-plugin keeps every python/ project's uv.lock and…
   - **`rust`** — The rust installer kind of infra/deps, on top of the build kind: cargoBuild({ crate, bin }) (its deps barrel) builds a plugin's rust/ crate with cargo build --release --locked under the mise-pinned…

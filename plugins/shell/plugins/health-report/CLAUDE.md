@@ -160,6 +160,7 @@ probes, is mounted per page.
     - `HealthReport.Row` ← `database.query-deadline`
     - `HealthReport.Row` ← `debug.queue-health`
     - `HealthReport.Row` ← `debug.sentinel.health-row`
+    - `HealthReport.Row` ← `infra.deps.pin-drift`
     - `HealthReport.Row` ← `infra.health.connection-row`
     - `HealthReport.Row` ← `infra.host.io-health`
     - `HealthReport.Row` ← `infra.launcher.gateway-drift`
@@ -218,6 +219,7 @@ probes, is mounted per page.
     - `database/query-deadline`
     - `debug/queue-health`
     - `debug/sentinel/health-row`
+    - `infra/deps/pin-drift`
     - `infra/health/connection-row`
     - `infra/host/io-health`
     - `infra/launcher/gateway-drift`

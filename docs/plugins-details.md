@@ -36128,8 +36128,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/font-family --font-mono`
-        - Imported by: 38 plugins — full list in [`plugins/infra/plugins/deps/REFERENCE.md`](../plugins/infra/plugins/deps/REFERENCE.md)
-          - `infra` ×14
+        - Imported by: 39 plugins — full list in [`plugins/infra/plugins/deps/REFERENCE.md`](../plugins/infra/plugins/deps/REFERENCE.md)
+          - `infra` ×15
           - `framework` ×6
           - `apps` ×5
           - `companions` ×2
@@ -36143,6 +36143,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Deps:
         - Exports (types):
           - `BundleSpec`
+          - `DeclaredAgainstPin`
           - `DefineDepSpec`
           - `Dep`
           - `DepPin`
@@ -36156,10 +36157,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PinDrift`
           - `PinMove`
           - `PinnedDep`
+          - `PinnedInstall`
+          - `PinStatus`
           - `Ready`
           - `ReadyNow`
           - `RemoveOutcome`
           - `SealOutcome`
+          - `SourceVersion`
           - `SweepReport`
           - `TargetedSource`
         - Exports (values):
@@ -36176,6 +36180,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `linkSealedDep`
           - `pinDep`
           - `pinnedDep`
+          - `pinStatus`
           - `readyNow`
           - `removeDep`
           - `sealDep`
@@ -36348,6 +36353,40 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `database/embedded/binaries`
               - `database/pgbouncer/binary`
+        - **`pin-drift`** — The health report's Pinned binaries row: attention while a pinned dependency (a host daemon's binaries — Postgres, PgBouncer) lags what main's checkout declares, or its live daemon still runs a pin moved since; expanded, each one's pinned and declared versions and the `./equin deps pin <id>` command that switches it — or, for a move its pin refuses (a Postgres major), why it is blocked.
+          - Web:
+            - Contributes: `HealthReport.Row` "Pinned binaries" → `PinDriftDetail`
+            - Uses:
+              - `network/live.useLive`
+              - `network/live/live-state.ResourceView`
+              - `primitives/copy-to-clipboard.CopyButton`
+              - `primitives/css/inline.Inline`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `shell/health-report.HealthReport`
+          - Server:
+            - Contributes: `resource.declare` "deps.pin-drift"
+            - Resources: `deps.pin-drift` (push, notified, whole: one row per dependency declaring a pin — the host daemons' binaries, a closed handful)
+          - Machine:
+            - Uses: `network/live.serveValue`
+            - Register:
+              - `defineRefReaction('deps.pin-drift (refs/heads/main)')`
+              - `defineFileWatcher('deps.pinned')`
+          - Core:
+            - Uses:
+              - `network/live.liveValue`
+              - `packages/list-bound.wholeList`
+            - Exports (types):
+              - `PinDrift`
+              - `PinnedDepRow`
+              - `PinnedInstallView`
+            - Exports (values):
+              - `pinDrift`
+              - `PinDriftSchema`
+              - `PinnedDepRowSchema`
+              - `pinSwitchCommand`
+          - Cross-plugin:
+            - Uses tokens: `ui/tokens/font-family --font-mono`
         - **`playwright-browser`** — The playwright-browser installer kind of infra/deps: playwrightBrowser({ browser: "chromium" }) (its deps barrel) declares the browser build the workspace's playwright-core pins — identity = that version (resolved through this plugin's module graph) plus the platform — installed by the workspace's own playwright CLI with PLAYWRIGHT_BROWSERS_PATH = the install's env/, which then records the headed and headless-shell executables as Playwright reports them in env/executables.json (what isIntact checks); launchChromium(ready, opts) launches the recorded binary for the mode.
           - Core:
             - Uses:
@@ -37140,8 +37179,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Register: `file-sink-exit-flush`
     - **`file-watcher`** — defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, depth, mainOnly) whose start({dirs, label, onChange, onLost}) — start({files, …}) for a writesWhileOpen one, which follows writes to the named files only (kqueue on darwin, one descriptor per file; every follow of a directory shares one subscription) — opens instances over one @parcel/watcher engine (debounce + ceiling flush; no timer — a dropped event is reported to onLost, the one backstop). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: refcounted native watches, a dir under a watched root riding its watch (a watcher never moved off a live root: a root opening above leaves it where it is), with subtree or children (depth-1 listing) scope — a children request with no root above it opening only a single-directory watch (depth children), never a recursive one. On macOS a children watch is kqueue's (a descriptor on the dir and each entry, budgeted — a dir past the budget rides FSEvents), so watching / or ~ puts nothing on fseventsd; every other FSEvents watch with no ignore rides the process's stream pool — one stream per watched root, a dir under an open recursive stream riding it, whatever declaration asks (fsEventsStreams reads it).
       - Cross-plugin:
-        - Imported by: 43 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
-          - `infra` ×15
+        - Imported by: 44 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
+          - `infra` ×16
           - `debug` ×10
           - `build` ×5
           - `conversations` ×4
@@ -37333,6 +37372,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build/serve-composition`
               - `conversations/conversation-view/commits-graph`
               - `debug/tests`
+              - `infra/deps/pin-drift`
               - `infra/launcher/gateway-drift`
               - `infra/launcher/login-services`
               - `plugin-meta/plugin-health`
@@ -38246,8 +38286,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/sweep.ts` (debt)
         - **`user-path`** — Which host paths a synchronous fs call may touch: AppPath (a path the app owns — its data dirs, its checkout; the only kind a sync fs call in runtime code may take) and UserPath (one the user or their config chose), with the type-aware lint that refuses a sync fs call on any path not proven app-owned — so a macOS Files & Folders prompt can never freeze a backend's JS thread, whether or not anyone marked the user's path.
           - Cross-plugin:
-            - Imported by: 116 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
-              - `infra` ×44
+            - Imported by: 117 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
+              - `infra` ×45
               - `framework` ×20
               - `apps` ×8
               - `debug` ×7
@@ -39581,8 +39621,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 144 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
-          - `infra` ×36
+        - Imported by: 145 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+          - `infra` ×37
           - `framework` ×24
           - `apps` ×18
           - `debug` ×15
@@ -40251,8 +40291,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SPAN_MEASURES`
           - `waitSplit`
       - Cross-plugin:
-        - Imported by: 78 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
-          - `infra` ×23
+        - Imported by: 79 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
+          - `infra` ×24
           - `debug` ×21
           - `apps` ×7
           - `conversations` ×6
@@ -40472,9 +40512,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `spawnPassthrough`
           - `spawnToFile`
       - Cross-plugin:
-        - Imported by: 104 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
+        - Imported by: 105 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
           - `framework` ×32
-          - `infra` ×30
+          - `infra` ×31
           - `apps` ×9
           - `database` ×5
           - `debug` ×5
@@ -42510,12 +42550,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 358 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 359 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×90
           - `conversations` ×73
           - `debug` ×36
           - `tasks` ×32
-          - `infra` ×24
+          - `infra` ×25
           - `page` ×15
           - `active-data` ×14
           - `build` ×10
@@ -42929,7 +42969,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 319 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+            - Imported by: 320 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `apps` ×85
               - `conversations` ×49
               - `debug` ×31
@@ -42937,7 +42977,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×25
               - `page` ×16
               - `primitives` ×16
-              - `infra` ×10
+              - `infra` ×11
               - `build` ×9
               - `active-data` ×5
               - `plugin-meta` ×5
@@ -43690,11 +43730,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wholeRecord`
           - `wholeTuple`
       - Cross-plugin:
-        - Imported by: 135 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
+        - Imported by: 136 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
           - `apps` ×30
           - `debug` ×21
+          - `infra` ×17
           - `conversations` ×16
-          - `infra` ×16
           - `tasks` ×10
           - `build` ×5
           - `stats` ×4
@@ -49851,13 +49891,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CopyButton`
           - `useCopyToClipboard`
       - Cross-plugin:
-        - Imported by: 37 plugins — full list in [`plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md`](../plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md)
+        - Imported by: 38 plugins — full list in [`plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md`](../plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md)
           - `apps` ×10
           - `conversations` ×5
           - `primitives` ×5
           - `page` ×4
           - `debug` ×3
-          - `infra` ×2
+          - `infra` ×3
           - `review` ×2
           - `build/build-logs`
           - `code-explorer/commit-detail`
@@ -50375,7 +50415,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 121 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 122 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `apps` ×23
               - `reports` ×21
               - `debug` ×20
@@ -50385,7 +50425,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×5
               - `build` ×4
               - `plugin-meta` ×4
-              - `infra` ×2
+              - `infra` ×3
               - `ui` ×2
               - `active-data/go`
               - `audience/developer-mark`
@@ -50979,7 +51019,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 453 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 454 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×108
               - `conversations` ×79
               - `primitives` ×55
@@ -50989,8 +51029,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta` ×16
               - `tasks` ×16
               - `fields` ×9
+              - `infra` ×8
               - `apps-core` ×7
-              - `infra` ×7
               - `stats` ×6
               - `build` ×5
               - `auth` ×4
@@ -51214,7 +51254,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 433 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 434 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×111
               - `conversations` ×83
               - `primitives` ×48
@@ -51224,7 +51264,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×16
               - `plugin-meta` ×15
               - `fields` ×11
-              - `infra` ×8
+              - `infra` ×9
               - `stats` ×6
               - `build` ×5
               - `auth` ×4
@@ -60580,6 +60620,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HealthReport.Row` ← `database.query-deadline`
           - `HealthReport.Row` ← `debug.queue-health`
           - `HealthReport.Row` ← `debug.sentinel.health-row`
+          - `HealthReport.Row` ← `infra.deps.pin-drift`
           - `HealthReport.Row` ← `infra.health.connection-row`
           - `HealthReport.Row` ← `infra.host.io-health`
           - `HealthReport.Row` ← `infra.launcher.gateway-drift`
@@ -60638,6 +60679,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/query-deadline`
           - `debug/queue-health`
           - `debug/sentinel/health-row`
+          - `infra/deps/pin-drift`
           - `infra/health/connection-row`
           - `infra/host/io-health`
           - `infra/launcher/gateway-drift`
@@ -66542,15 +66584,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `FontFamilyTokenValues`
             - Exports (values): `fontFamilyGroup`
           - Cross-plugin:
-            - Tokens used by: 158 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
+            - Tokens used by: 159 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
               - `conversations` ×39
               - `apps` ×25
               - `plugin-meta` ×23
               - `debug` ×20
               - `primitives` ×14
               - `reports` ×7
+              - `infra` ×5
               - `tasks` ×5
-              - `infra` ×4
               - `fields` ×3
               - `page` ×3
               - `ui` ×3

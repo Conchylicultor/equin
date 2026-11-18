@@ -1,4 +1,4 @@
-// @hash 71e278bdc91b
+// @hash 70c9c81a315c
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -34,6 +34,8 @@
     "reports.resource-errors:live-reads",
     // The infrastructure the page runs on, ending with the front door's own currency.
     "infra.launcher.gateway-drift:gateway",
+    // The database daemons' binaries the gateway runs, against what main declares.
+    "infra.deps.pin-drift:pinned-deps",
     // The server agents launched from here call back into.
     "infra.mcp.health:mcp-server",
     // A tool agents use, not the app itself.

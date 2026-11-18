@@ -118,6 +118,14 @@ export function npmPackageCopy(opts: {
     },
 
     isIntact: (dir) => exists(join(dir, PACKAGE_DIR, "package.json")),
+
+    // The version the lock names, and the one the copy's own package.json
+    // carries — so a pin reads "18.1.0 → 18.6.0", not two identities.
+    version: {
+      declared: async (root) =>
+        (await lockEntry(root, packageName(hostTarget()))).version,
+      installed: (dir) => readVersion(join(dir, PACKAGE_DIR)),
+    },
   };
 }
 

@@ -28,6 +28,7 @@ export type {
   DepTarget,
   InstallContext,
   Ready,
+  SourceVersion,
   TargetedSource,
 } from "./internal/dep";
 export { depState, ensureDep, readyNow, removeDep } from "./internal/ensure";
@@ -38,8 +39,15 @@ export type { SealOutcome } from "./internal/seal";
 export { SEALED_MANIFEST } from "./internal/sealed";
 export { heldDep, holdDep } from "./internal/hold";
 export type { HeldDep, HoldDepOptions } from "./internal/hold";
-export { holdRunningDep, pinDep, pinnedDep } from "./internal/pin";
-export type { PinDrift, PinMove, PinnedDep } from "./internal/pin";
+export { holdRunningDep, pinDep, pinnedDep, pinStatus } from "./internal/pin";
+export type {
+  DeclaredAgainstPin,
+  PinDrift,
+  PinMove,
+  PinnedDep,
+  PinnedInstall,
+  PinStatus,
+} from "./internal/pin";
 export { sweepUnusedDeps } from "./internal/sweep";
 export type { SweepReport } from "./internal/sweep";
 export {

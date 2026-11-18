@@ -17,6 +17,28 @@ function serverPackage(target: DepTarget): string {
   return `@embedded-postgres/${tag}`;
 }
 
+/** The PostgreSQL major of an `@embedded-postgres` version (`18.1.0-beta.16` → 18). */
+function pgMajor(version: string): number {
+  const major = Number(version.split(".")[0]);
+  if (!Number.isInteger(major)) {
+    throw new Error(`pg: ${JSON.stringify(version)} names no PostgreSQL major`);
+  }
+  return major;
+}
+
+/**
+ * A move across PostgreSQL majors is not a switch: a data dir opens only with
+ * the major that wrote it, so the cluster's start refuses the new binaries
+ * until the data is migrated (pg_upgrade) — and no upgrade procedure exists
+ * yet. Within a major, pinning is the whole move.
+ */
+function majorUpgrade(from: string, to: string): string | null {
+  const [a, b] = [pgMajor(from), pgMajor(to)];
+  return a === b
+    ? null
+    : `PostgreSQL ${a} → ${b} is a major upgrade: the cluster's data must be migrated (pg_upgrade) first, and no upgrade procedure exists yet — choosing one is the user's decision`;
+}
+
 /**
  * The embedded cluster's server binaries (`postgres`, `initdb`, `pg_ctl` and
  * their libraries): a copy of this platform's `@embedded-postgres` package
@@ -44,6 +66,7 @@ export const postgresBinaries = defineDep({
     holder: "machine-postgres",
     appliesAt:
       "the cluster's next full restart (a reattach keeps the running postmaster)",
+    switchBlocked: majorUpgrade,
   },
 });
 

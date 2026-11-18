@@ -4676,6 +4676,10 @@
       "name": "@equin/plugin-infra-deps-package-copy",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/deps/plugins/pin-drift": {
+      "name": "@equin/plugin-infra-deps-pin-drift",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/deps/plugins/playwright-browser": {
       "name": "@equin/plugin-infra-deps-playwright-browser",
       "version": "0.0.1",
@@ -10498,6 +10502,8 @@
     "@equin/plugin-infra-deps-npm-lock-resolutions": ["@equin/plugin-infra-deps-npm-lock-resolutions@workspace:plugins/infra/plugins/deps/plugins/npm/plugins/lock-resolutions"],
 
     "@equin/plugin-infra-deps-package-copy": ["@equin/plugin-infra-deps-package-copy@workspace:plugins/infra/plugins/deps/plugins/package-copy"],
+
+    "@equin/plugin-infra-deps-pin-drift": ["@equin/plugin-infra-deps-pin-drift@workspace:plugins/infra/plugins/deps/plugins/pin-drift"],
 
     "@equin/plugin-infra-deps-playwright-browser": ["@equin/plugin-infra-deps-playwright-browser@workspace:plugins/infra/plugins/deps/plugins/playwright-browser"],
 

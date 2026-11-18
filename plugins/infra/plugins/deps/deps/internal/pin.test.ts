@@ -19,7 +19,7 @@ import { execContextForTests } from "@plugins/infra/plugins/jobs/plugins/supervi
 import { defineDep, type DepSource } from "./dep";
 import { removeDep } from "./ensure";
 import { heldDep } from "./hold";
-import { holdRunningDep, pinDep, pinnedDep } from "./pin";
+import { holdRunningDep, pinDep, pinnedDep, pinStatus } from "./pin";
 import { sweepDeps } from "./sweep";
 
 let base: string;
@@ -135,5 +135,101 @@ describe("pinned dependencies", () => {
     expect(pinnedDep(unpinned, exec, { root, store })).rejects.toThrow(
       /declares no pin/,
     );
+  });
+
+  describe("versioned, with a blocked move", () => {
+    // The version file's text is the version; a move across its first digit is blocked.
+    const versioned = defineDep({
+      id: "pin-versioned",
+      owner: "infra/deps",
+      description: "",
+      sizeHint: "",
+      source: {
+        ...source,
+        version: {
+          declared: (r) => readFile(join(r, "version"), "utf8"),
+          installed: (dir) => readFile(join(dir, "v"), "utf8"),
+        },
+      },
+      updates: { none: "test" },
+      pin: {
+        holder: "machine-pin-versioned",
+        appliesAt: "the next restart",
+        switchBlocked: (from, to) =>
+          from[0] === to[0] ? null : `major ${from[0]} → ${to[0]}`,
+      },
+    });
+
+    test("pinStatus reads unpinned, then the pin against what the checkout declares", async () => {
+      expect(await pinStatus(versioned, { root, store })).toEqual({
+        kind: "unpinned",
+      });
+      version("1.0");
+      const first = (await pinnedDep(versioned, exec, { root, store })).ready;
+      await holdRunningDep(first, { store });
+      expect(await pinStatus(versioned, { root, store })).toEqual({
+        kind: "pinned",
+        pinned: { identity: first.identity, version: "1.0" },
+        running: null,
+        declared: { kind: "same" },
+      });
+
+      version("1.1");
+      const minor = await pinStatus(versioned, { root, store });
+      expect(minor.kind === "pinned" && minor.declared).toMatchObject({
+        kind: "differs",
+        install: { version: "1.1" },
+        blocked: null,
+      });
+
+      // Switched: the pin is 1.1, the daemon still runs 1.0 until it restarts.
+      await pinDep(versioned, exec, { root, store });
+      const moved = await pinStatus(versioned, { root, store });
+      expect(moved).toMatchObject({
+        kind: "pinned",
+        pinned: { version: "1.1" },
+        running: { identity: first.identity, version: "1.0" },
+        declared: { kind: "same" },
+      });
+
+      version("2.0");
+      const major = await pinStatus(versioned, { root, store });
+      expect(major.kind === "pinned" && major.declared).toMatchObject({
+        kind: "differs",
+        install: { version: "2.0" },
+        blocked: "major 1 → 2",
+      });
+    });
+
+    test("pinDep refuses a blocked move, before installing it", async () => {
+      version("1.0");
+      await pinnedDep(versioned, exec, { root, store });
+      version("2.0");
+      expect(pinDep(versioned, exec, { root, store })).rejects.toThrow(
+        /not moving the pin from 1\.0 to 2\.0 — major 1 → 2/,
+      );
+      const held = await heldDep(versioned, "machine-pin-versioned", {
+        store,
+      });
+      expect(held.kind === "held" && payload(held.ready.dir)).toBe("1.0");
+    });
+
+    test("a pin that compares versions needs a source that reads them", () => {
+      expect(() =>
+        defineDep({
+          id: "pin-unversioned",
+          owner: "infra/deps",
+          description: "",
+          sizeHint: "",
+          source,
+          updates: { none: "test" },
+          pin: {
+            holder: "machine-x",
+            appliesAt: "never",
+            switchBlocked: () => null,
+          },
+        }),
+      ).toThrow(/reads none/);
+    });
   });
 });

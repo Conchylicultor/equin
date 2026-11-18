@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-infra-deps-pin-drift",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Pinned-dependency drift, shown: the health report's Pinned binaries row — every pinned dependency (a host daemon's binaries: Postgres, PgBouncer) against what main's checkout declares, with the command that switches it, and a move a pin refuses (a Postgres major) shown as blocked."
+}

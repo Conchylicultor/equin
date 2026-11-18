@@ -1,7 +1,7 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { ExecContext } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
-import type { Dep, DepPin, DepSource, Ready } from "./dep";
+import type { Dep, DepPin, DepSource, Ready, SourceVersion } from "./dep";
 import { ensureDep } from "./ensure";
 import { heldDep, holdDep } from "./hold";
 import { currentIdentity, type DepStore } from "./store";
@@ -119,9 +119,25 @@ export async function pinDep<S extends DepSource>(
   opts: PinOptions = {},
 ): Promise<PinMove<S>> {
   const pin = pinOf(dep);
+  const root = opts.root ?? REPO_ROOT;
   const before = await heldDep(dep, pin.holder, { store: opts.store });
+  // Refused before installing anything: a blocked move (a Postgres major)
+  // would only pin bytes the daemon's next start cannot run.
+  if (before.kind === "held" && pin.switchBlocked !== undefined) {
+    const version = versionOf(dep);
+    const [from, to] = await Promise.all([
+      version.installed(before.ready.dir),
+      version.declared(root),
+    ]);
+    const blocked = pin.switchBlocked(from, to);
+    if (blocked !== null) {
+      throw new Error(
+        `${dep.id}: not moving the pin from ${from} to ${to} — ${blocked}`,
+      );
+    }
+  }
   const to = await ensureDep(dep, exec, {
-    root: opts.root ?? REPO_ROOT,
+    root,
     store: opts.store,
     log: opts.log,
   });
@@ -139,4 +155,109 @@ export async function holdRunningDep(
   opts: { store?: DepStore } = {},
 ): Promise<void> {
   await holdDep(ready, runningHolder(pinOf(ready.dep)), opts);
+}
+
+function versionOf(dep: Dep<DepSource>): SourceVersion {
+  const version = dep.source.version;
+  if (version === undefined) {
+    throw new Error(
+      `${dep.id}: its ${dep.source.kind} source reads no version (DepSource.version)`,
+    );
+  }
+  return version;
+}
+
+/** One install of a pinned dependency, as {@link pinStatus} names it. */
+export interface PinnedInstall {
+  readonly identity: string;
+  /** Its version (`DepSource.version`), or null when the source reads none. */
+  readonly version: string | null;
+}
+
+/**
+ * What a checkout declares against the pin: the pinned install itself, another
+ * one — `blocked` saying why moving to it is not a plain switch (the pin's
+ * `switchBlocked`), null when `./equin deps pin` is the whole move — or
+ * underivable (the checkout cannot say).
+ */
+export type DeclaredAgainstPin =
+  | { kind: "same" }
+  | { kind: "differs"; install: PinnedInstall; blocked: string | null }
+  | { kind: "failed"; message: string };
+
+/**
+ * Where a pinned dependency stands, read only (nothing installed, held or
+ * moved): nothing pinned yet (the daemon's next fresh start pins the
+ * checkout's install), or the pinned install, the one the running daemon was
+ * started from when that is another (`running`: a pin moved since, taking
+ * effect at the pin's `appliesAt`; null when the same or never recorded), and
+ * what the checkout at `root` declares against it.
+ */
+export type PinStatus =
+  | { kind: "unpinned" }
+  | {
+      kind: "pinned";
+      pinned: PinnedInstall;
+      running: PinnedInstall | null;
+      declared: DeclaredAgainstPin;
+    };
+
+/** Where `dep`'s pin stands against the checkout at `root` (see {@link PinStatus}). */
+export async function pinStatus(
+  dep: Dep<DepSource>,
+  opts: { root: AppPath; store?: DepStore },
+): Promise<PinStatus> {
+  const pin = pinOf(dep);
+  const version = dep.source.version;
+  const [held, running] = await Promise.all([
+    heldDep(dep, pin.holder, { store: opts.store }),
+    heldDep(dep, runningHolder(pin), { store: opts.store }),
+  ]);
+  if (held.kind === "none") return { kind: "unpinned" };
+  const pinned: PinnedInstall = {
+    identity: held.ready.identity,
+    version: (await version?.installed(held.ready.dir)) ?? null,
+  };
+  const runningInstall =
+    running.kind === "held" && running.ready.identity !== pinned.identity
+      ? {
+          identity: running.ready.identity,
+          version: (await version?.installed(running.ready.dir)) ?? null,
+        }
+      : null;
+  let declared: DeclaredAgainstPin;
+  try {
+    const install = await declaredInstall(dep, opts.root);
+    declared =
+      install.identity === pinned.identity
+        ? { kind: "same" }
+        : {
+            kind: "differs",
+            install,
+            blocked:
+              pin.switchBlocked !== undefined &&
+              pinned.version !== null &&
+              install.version !== null
+                ? pin.switchBlocked(pinned.version, install.version)
+                : null,
+          };
+  } catch (err) {
+    declared = { kind: "failed", message: messageOf(err) };
+  }
+  return { kind: "pinned", pinned, running: runningInstall, declared };
+}
+
+async function declaredInstall(
+  dep: Dep<DepSource>,
+  root: AppPath,
+): Promise<PinnedInstall> {
+  const [{ identity }, version] = await Promise.all([
+    currentIdentity(dep, root),
+    dep.source.version?.declared(root) ?? null,
+  ]);
+  return { identity, version };
+}
+
+function messageOf(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
 }

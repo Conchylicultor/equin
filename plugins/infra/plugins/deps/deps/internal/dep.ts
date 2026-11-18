@@ -142,6 +142,21 @@ export interface DepSource<K extends string = string> {
    * produce `target` here (a C compiler with no cross sysroot).
    */
   forTarget?(target: DepTarget): TargetedSource;
+  /**
+   * The version of what this source installs, for people: as a checkout
+   * declares it (`declared(root)`, e.g. its lock entry) and as an install
+   * holds it (`installed(dir)`, read from the payload itself). Lets a pinned
+   * dependency say "18.1.0 → 18.6.0" rather than two identity hashes, and is
+   * what a pin's `switchBlocked` compares. Each throws when it cannot read
+   * the version — never a stand-in. Omitted: the identity alone names it.
+   */
+  readonly version?: SourceVersion;
+}
+
+/** How a source reads its version (see {@link DepSource.version}). */
+export interface SourceVersion {
+  declared(root: string): Promise<string>;
+  installed(dir: AppPath): Promise<string>;
 }
 
 /** How a declaration states it stays current when its source has no updater. */
@@ -189,6 +204,14 @@ export interface DepPin {
   readonly holder: string;
   /** When a moved pin takes effect, for people: "the cluster's next full restart". */
   readonly appliesAt: string;
+  /**
+   * Why moving the pin from version `from` to version `to` is NOT a plain
+   * switch (a Postgres major: the cluster's data must be migrated first), or
+   * null when it is. `pinDep` refuses a blocked move, and the pinned-deps
+   * health row shows it as blocked rather than offering the switch. Needs the
+   * source's `version` (checked by `defineDep`).
+   */
+  readonly switchBlocked?: (from: string, to: string) => string | null;
 }
 
 export type DefineDepSpec<S extends DepSource> = {
@@ -251,17 +274,26 @@ export function defineDep<S extends DepSource>(spec: DefineDepSpec<S>): Dep<S> {
     source: spec.source,
     updates,
     bundle: bundleOf(spec.id, spec as { bundle?: BundleSpec }),
-    pin: pinOf(spec.id, spec.pin),
+    pin: pinOf(spec.id, spec.pin, spec.source),
   };
 }
 
 const HOLDER = /^[a-z][a-z0-9-]*$/;
 
-function pinOf(id: string, pin: DepPin | undefined): DepPin | null {
+function pinOf(
+  id: string,
+  pin: DepPin | undefined,
+  source: DepSource,
+): DepPin | null {
   if (pin === undefined) return null;
   if (!HOLDER.test(pin.holder) || pin.appliesAt.trim() === "") {
     throw new Error(
       `defineDep(${id}): pin.holder must match ${HOLDER} and pin.appliesAt must say when a moved pin takes effect.`,
+    );
+  }
+  if (pin.switchBlocked !== undefined && source.version === undefined) {
+    throw new Error(
+      `defineDep(${id}): pin.switchBlocked compares versions, but its ${source.kind} source reads none (DepSource.version).`,
     );
   }
   return pin;

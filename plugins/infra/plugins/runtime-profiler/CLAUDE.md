@@ -644,8 +644,8 @@ remaining allocations are one flat band array per completed entry span, and what
     - `SPAN_MEASURES`
     - `waitSplit`
 - Cross-plugin:
-  - Imported by: 78 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra` ×23
+  - Imported by: 79 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra` ×24
     - `debug` ×21
     - `apps` ×7
     - `conversations` ×6
