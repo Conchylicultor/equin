@@ -15,8 +15,9 @@ export const RENDER_LOOP = {
   NOOP_ATTR_PER_SEC: 30,
   // No qualifying user interaction within this window → "idle".
   IDLE_MS: 2000,
-  // Per-(signature, attr) ring of recent attribute values used to detect
-  // oscillation (a small set of values cycled, vs monotonic progress).
+  // Per-(element, attr) ring of recent attribute values used to detect
+  // oscillation (a small set of values cycled, vs monotonic progress). Per
+  // element: siblings sharing a signature each settling once is not a cycle.
   VALUE_RING: 8,
   // Oscillation: at most this many distinct values in the ring …
   MAX_DISTINCT_VALUES: 4,

@@ -76,6 +76,7 @@ import {
 import type { RenderLoopInitiator, RenderLoopPayload } from "../../core";
 import { AggregateWindow } from "./aggregate-thrash";
 import { culpritMeta, type CulpritMeta } from "./culprit-signature";
+import { isOscillating } from "./oscillation";
 
 type MutationClass = RenderLoopPayload["mutationClass"];
 
@@ -102,8 +103,11 @@ interface SignatureState {
   // or null when the rate is currently below threshold.
   aboveSince: number | null;
   lastEventAt: number;
-  // Ring of recent attribute values for oscillation detection (gate 4a).
-  valueRing: string[];
+  // Each element's own ring of its recent values of this attribute, for
+  // oscillation detection (gate 4a). Per element, never per signature: siblings
+  // share a signature (a strip of thumbnails, a list of rows), and many of them
+  // each settling once on the same value is not one of them cycling.
+  valueRings: WeakMap<Element, string[]>;
   // Time-stamped rings of recent ADDED / REMOVED childList shapes (gate 4b).
   // React's reconciler tears down + remounts as TWO separate records on the same
   // parent (a removeChild then an insertBefore), so a rebuild is a shape that
@@ -271,21 +275,18 @@ export function installRenderLoopDetector(): () => void {
       state.sampleValues.add(current);
       return "noop-attr";
     }
-    // Oscillation: maintain a small ring of recent values; fire if a tiny set of
-    // values is being cycled with at least one revisited (excludes monotonic
-    // progress bars / timers, which never revisit a value).
-    state.valueRing.push(current);
-    if (state.valueRing.length > RENDER_LOOP.VALUE_RING) state.valueRing.shift();
-    const counts = new Map<string, number>();
-    for (const v of state.valueRing) counts.set(v, (counts.get(v) ?? 0) + 1);
-    const distinct = counts.size;
-    const maxRepeat = Math.max(...counts.values());
-    if (
-      state.valueRing.length >= RENDER_LOOP.MIN_VALUE_REPEAT &&
-      distinct <= RENDER_LOOP.MAX_DISTINCT_VALUES &&
-      maxRepeat >= RENDER_LOOP.MIN_VALUE_REPEAT
-    ) {
-      for (const v of state.valueRing) state.sampleValues.add(v);
+    // Oscillation: the element cycles a tiny set of values, revisiting one —
+    // judged on its own history (see `valueRings`). Excludes monotonic progress
+    // bars / timers, which never revisit a value.
+    let ring = state.valueRings.get(target);
+    if (ring === undefined) {
+      ring = [];
+      state.valueRings.set(target, ring);
+    }
+    ring.push(current);
+    if (ring.length > RENDER_LOOP.VALUE_RING) ring.shift();
+    if (isOscillating(ring)) {
+      for (const v of ring) state.sampleValues.add(v);
       return "oscillating-attr";
     }
     return null;
@@ -376,7 +377,7 @@ export function installRenderLoopDetector(): () => void {
         events: [],
         aboveSince: null,
         lastEventAt: 0,
-        valueRing: [],
+        valueRings: new WeakMap(),
         addedShapes: [],
         removedShapes: [],
         wasted: false,
