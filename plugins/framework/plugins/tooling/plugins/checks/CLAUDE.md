@@ -570,6 +570,44 @@ The watch names who held the thread. It does not give a check's true cost.
 `--jobs 1` is still the tool for isolating one check (see the fan-out section
 above).
 
+## A pass that hangs is killed by its own watchdog thread
+
+The thread watch above measures a stall when the late tick finally fires — so
+a thread that never yields again records nothing. On 2026-11-18 a build's pass
+spun one core in a native loop inside bun for 65 minutes: no `stall` record,
+no report, and the build held the agent-build gate until someone killed it by
+hand. A thread cannot report its own freeze; the **hang watch**
+(`core/hang-watch.ts`) watches it from outside.
+
+- `openProgressRun` opens it beside the thread watch: a **worker thread** of
+  the same process (`scripts/hang-watch-worker.ts`), handed a shared beat
+  counter the main thread bumps once a second from an ordinary timer, and the
+  main thread's CPU clock (`packages/thread-cpu-clock`'s `threadCpuHandle` /
+  `readThreadCpuOf` — readable from another thread). `finish()` stops it.
+- Every 5 s the worker judges (`judgeHang`, `core/hang-judge.ts`, pure): no
+  beat since it last looked, and the main thread **held its core**
+  `HANG_HELD_MS` (5 min of its OWN CPU time) meanwhile → **hung**. Held, never
+  wall time: a pass the OS starves (background priority under host duress)
+  accrues it only as fast as it actually runs, so a slow pass is never judged
+  hung however long it takes; a spinning one is, whatever the host is doing.
+  A thread blocked in a syscall accrues none either and is not judged (a wait
+  has no CPU to tell a hang from a slow peer by).
+- On a verdict the worker (`cli/internal/hung-run.ts`) captures the main
+  thread's native stack (macOS `sample`, whole capture in the
+  `check-progress` logs dir's `hang-sample.txt`), reads what was in flight
+  back from the run's own progress records, writes the run's `hung` record
+  (`check --status` prints it), files a `check-pass-hung` report
+  (`reports/check-thread-stall`, an error) through the outbox, prints one
+  line on stderr — and **SIGKILLs the process**. Whatever waited on the pass
+  (a build, a push, the agent-build gate) gets a failure instead of forever.
+  A recording failure is printed in the report's place; the kill happens
+  regardless.
+
+Where the platform has no thread CPU clock (neither darwin nor Linux) the
+watch is not armed. The worker itself shares the process: a runtime fault
+that hangs every thread would hang it too — the one case still left to a
+human.
+
 ## A check gets its files from `ctx.repo()`, and never blocks the thread
 
 The watch above names the culprit of nearly every stall: a **blocking** call —
@@ -645,26 +683,26 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
 
 - Description: Check runner and built-in checks for ./equin check
 - Core:
-  - Uses: 89 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 92 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework/tooling` ×12
     - `packages/timed-fs` ×11
     - `plugin-meta/plugin-records` ×9
+    - `reports/check-thread-stall` ×8
     - `framework/tooling/exempt` ×7
-    - `reports/check-thread-stall` ×7
     - `infra/stack-sampler` ×5
     - `infra/host-fs/user-path` ×4
     - `packages/shared-work` ×4
     - `framework/tooling/checks/source-analysis` ×3
     - `infra/launcher/env-names` ×3
     - `infra/spawn` ×3
+    - `packages/thread-cpu-clock` ×3
     - `plugin-meta/parse-utils` ×3
     - `infra/git/private-index` ×2
+    - `infra/paths/repo-root` ×2
     - `infra/paths` ×2
     - `packages/macrotask-yield` ×2
-    - `packages/thread-cpu-clock` ×2
     - `reports/outbox/file` ×2
     - `infra/file-sink.defineFileSink`
-    - `infra/paths/repo-root.REPO_ROOT`
     - `packages/flock.flockTry`
     - `packages/owned-fd.openOwnedFdSync`
     - `packages/semaphore.createSemaphore`
@@ -748,7 +786,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `imperative-create-table-allowlisted` — `cli/internal/grep-index-store.ts` (sanctioned)
     - `repo-walk-safety/no-adhoc-repo-walk` — `core/scripts/fix-shared-to-relative.ts` (sanctioned)
     - `user-path/no-unproven-claim` — `core/tree-hash.ts` (sanctioned)
-    - `boundaries/no-platform-api` — `core/cache.ts`, `core/content-hash.ts`, `core/discover.ts`, `core/grep-code.ts`, `core/progress-log.ts`, `core/read-set.ts`, `core/scan-context.ts`, `core/shared-wall.ts`, `core/thread-attribution.ts`, `core/thrown-outcome.ts`, `core/transcript.ts`, `core/tree-hash.ts`, `core/whole-tree-read.ts` (debt)
+    - `boundaries/no-platform-api` — `core/cache.ts`, `core/content-hash.ts`, `core/discover.ts`, `core/grep-code.ts`, `core/hang-watch.ts`, `core/progress-log.ts`, `core/read-set.ts`, `core/scan-context.ts`, `core/shared-wall.ts`, `core/thread-attribution.ts`, `core/thrown-outcome.ts`, `core/transcript.ts`, `core/tree-hash.ts`, `core/whole-tree-read.ts` (debt)
     - `repo-walk-safety/no-adhoc-repo-listing` — `core/repo-set.ts` (sanctioned)
     - `repo-walk-safety/no-adhoc-repo-listing` — `core/repo-files.ts` (sanctioned)
     - `repo-walk-safety/no-adhoc-repo-listing` — `core/tree-hash.ts` (sanctioned)

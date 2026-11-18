@@ -9,6 +9,7 @@ import {
   reconstructRuns,
   startProgressRun,
   type ProgressRecord,
+  type ProgressRunDeps,
 } from "./progress-log";
 import type { StallReportSink } from "./stall-report";
 import { STALL_MS } from "./thread-watch";
@@ -51,6 +52,9 @@ const noReports: StallReportSink = {
   mergeBase: async () => ({ ok: false, reason: "test" }),
 };
 
+/** Never a watchdog over the test process. */
+const noHangWatch: ProgressRunDeps["hangWatch"] = () => ({ stop: () => {} });
+
 function fakeSampler(batch: StackSample[]): StackSampler {
   return { drain: () => batch };
 }
@@ -68,7 +72,12 @@ describe("startProgressRun", () => {
     const { records, write } = recorder();
     const run = startProgressRun(
       { scope: null, requested: ["no-such-check"] },
-      { write, sampler: fakeSampler([]), reports: noReports },
+      {
+        write,
+        sampler: fakeSampler([]),
+        reports: noReports,
+        hangWatch: noHangWatch,
+      },
     );
     const summary = run.finish(false);
     expect(records.map((r) => r.phase)).toEqual(["run", "thread", "done"]);
@@ -95,7 +104,12 @@ describe("startProgressRun", () => {
     const { records, write } = recorder();
     const run = startProgressRun(
       { scope: null, requested: null },
-      { write, sampler: fakeSampler([IN_CHECK_X]), reports: noReports },
+      {
+        write,
+        sampler: fakeSampler([IN_CHECK_X]),
+        reports: noReports,
+        hangWatch: noHangWatch,
+      },
     );
     run.checkStarted("x");
     const wallStart = performance.now();
@@ -344,7 +358,12 @@ describe("reconstructRuns", () => {
     const { records, write } = recorder();
     const run = startProgressRun(
       { scope: null, requested: null },
-      { write, sampler: fakeSampler([]), reports: noReports },
+      {
+        write,
+        sampler: fakeSampler([]),
+        reports: noReports,
+        hangWatch: noHangWatch,
+      },
     );
     run.checkStarted("a");
     run.checkStarted("b");
@@ -376,7 +395,12 @@ describe("reconstructRuns", () => {
     const { records, write } = recorder();
     const run = startProgressRun(
       { scope: null, requested: null },
-      { write, sampler: fakeSampler([]), reports: noReports },
+      {
+        write,
+        sampler: fakeSampler([]),
+        reports: noReports,
+        hangWatch: noHangWatch,
+      },
     );
     run.checkStarted("a");
     run.checkStarted("b");

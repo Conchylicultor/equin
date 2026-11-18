@@ -29,6 +29,7 @@ export default [
       "core/content-hash.ts",
       "core/discover.ts",
       "core/grep-code.ts",
+      "core/hang-watch.ts",
       "core/progress-log.ts",
       "core/read-set.ts",
       "core/scan-context.ts",

@@ -33041,7 +33041,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/test` (1 debt)
               - `framework/tooling` (1 debt)
               - `framework/tooling/boundaries` (2 debt)
-              - `framework/tooling/checks` (13 debt)
+              - `framework/tooling/checks` (14 debt)
               - `framework/tooling/checks/type-check` (16 debt)
               - `framework/tooling/codegen` (19 debt)
               - `framework/tooling/codegen/composition-registries` (1 debt)
@@ -33140,26 +33140,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values): `parseRuntimeException`
         - **`checks`** — Check runner and built-in checks for ./equin check
           - Core:
-            - Uses: 89 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
+            - Uses: 92 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
               - `framework/tooling` ×12
               - `packages/timed-fs` ×11
               - `plugin-meta/plugin-records` ×9
+              - `reports/check-thread-stall` ×8
               - `framework/tooling/exempt` ×7
-              - `reports/check-thread-stall` ×7
               - `infra/stack-sampler` ×5
               - `infra/host-fs/user-path` ×4
               - `packages/shared-work` ×4
               - `framework/tooling/checks/source-analysis` ×3
               - `infra/launcher/env-names` ×3
               - `infra/spawn` ×3
+              - `packages/thread-cpu-clock` ×3
               - `plugin-meta/parse-utils` ×3
               - `infra/git/private-index` ×2
+              - `infra/paths/repo-root` ×2
               - `infra/paths` ×2
               - `packages/macrotask-yield` ×2
-              - `packages/thread-cpu-clock` ×2
               - `reports/outbox/file` ×2
               - `infra/file-sink.defineFileSink`
-              - `infra/paths/repo-root.REPO_ROOT`
               - `packages/flock.flockTry`
               - `packages/owned-fd.openOwnedFdSync`
               - `packages/semaphore.createSemaphore`
@@ -33243,7 +33243,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `imperative-create-table-allowlisted` — `cli/internal/grep-index-store.ts` (sanctioned)
               - `repo-walk-safety/no-adhoc-repo-walk` — `core/scripts/fix-shared-to-relative.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/tree-hash.ts` (sanctioned)
-              - `boundaries/no-platform-api` — `core/cache.ts`, `core/content-hash.ts`, `core/discover.ts`, `core/grep-code.ts`, `core/progress-log.ts`, `core/read-set.ts`, `core/scan-context.ts`, `core/shared-wall.ts`, `core/thread-attribution.ts`, `core/thrown-outcome.ts`, `core/transcript.ts`, `core/tree-hash.ts`, `core/whole-tree-read.ts` (debt)
+              - `boundaries/no-platform-api` — `core/cache.ts`, `core/content-hash.ts`, `core/discover.ts`, `core/grep-code.ts`, `core/hang-watch.ts`, `core/progress-log.ts`, `core/read-set.ts`, `core/scan-context.ts`, `core/shared-wall.ts`, `core/thread-attribution.ts`, `core/thrown-outcome.ts`, `core/transcript.ts`, `core/tree-hash.ts`, `core/whole-tree-read.ts` (debt)
               - `repo-walk-safety/no-adhoc-repo-listing` — `core/repo-set.ts` (sanctioned)
               - `repo-walk-safety/no-adhoc-repo-listing` — `core/repo-files.ts` (sanctioned)
               - `repo-walk-safety/no-adhoc-repo-listing` — `core/tree-hash.ts` (sanctioned)
@@ -44764,8 +44764,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/thread-cpu-clock.ts` (debt)
       - Core:
-        - Exports (types): `ThreadCpuReading`
-        - Exports (values): `readThreadCpu`
+        - Exports (types):
+          - `ThreadCpuHandle`
+          - `ThreadCpuReading`
+        - Exports (values):
+          - `readThreadCpu`
+          - `readThreadCpuOf`
+          - `threadCpuHandle`
     - **`thread-pool`**
       - Cross-plugin:
         - Imported by:
@@ -59553,12 +59558,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `caretFlightFingerprint`
           - `CaretFlightPayloadSchema`
-    - **`check-thread-stall`** — Check-thread-stall report kind's Debug → Reports summary view: one line naming how long the check thread stalled, its top owner and what it was mostly doing. The report itself is filed by the check runner through the report outbox — no collector here. Check-thread-stall report kind: validates the check runner's thread-stall payloads (trigger stall = one stall whose code held the thread ≥ 2 s — held, not merely late: a starved thread files nothing —, fingerprinted by its top owner; trigger total = a run whose stalls add up to ≥ 20 s held, one row), filed through the report outbox, and renders a task naming the owner, its stacks, the held-vs-starved split and the run's transcript. Warning, re-arms every 6 h.
+    - **`check-thread-stall`** — Check-thread-stall and check-pass-hung report kinds' Debug → Reports summary views: one line naming how long the check thread stalled, its top owner and what it was mostly doing — or, for a hung pass, how long its thread held its core, what was in flight, and that it was killed. Both are filed by the check runner through the report outbox — no collector here. Check-thread-stall report kind: validates the check runner's thread-stall payloads (trigger stall = one stall whose code held the thread ≥ 2 s — held, not merely late: a starved thread files nothing —, fingerprinted by its top owner; trigger total = a run whose stalls add up to ≥ 20 s held, one row), filed through the report outbox, and renders a task naming the owner, its stacks, the held-vs-starved split and the run's transcript. Warning, re-arms every 6 h. Also the check-pass-hung kind: a pass whose main thread held its core 5 min without yielding, killed by its own watchdog thread — one row, an error, its task naming the checks in flight and the main thread's native stack.
       - Web:
-        - Contributes: `Reports.KindView` → `CheckThreadStallSummary`
+        - Contributes:
+          - `Reports.KindView` → `CheckThreadStallSummary`
+          - `Reports.KindView` → `CheckPassHungSummary`
         - Uses: `reports.Reports`
       - Server:
-        - Contributes: `report-kind` "check-thread-stall"
+        - Contributes:
+          - `report-kind` "check-pass-hung"
+          - `report-kind` "check-thread-stall"
         - Uses:
           - `reports.ReportKind`
           - `reports.ReportRow`
@@ -59566,15 +59575,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by: `framework/tooling/checks`
       - Core:
         - Exports (types):
+          - `CheckPassHungPayload`
           - `CheckThreadStallOwner`
           - `CheckThreadStallPayload`
         - Exports (values):
+          - `CHECK_PASS_HUNG_KIND`
           - `CHECK_THREAD_STALL_KIND`
+          - `checkPassHungFingerprint`
+          - `checkPassHungMessage`
+          - `CheckPassHungPayloadSchema`
           - `checkThreadStallFingerprint`
           - `checkThreadStallMessage`
           - `CheckThreadStallPayloadSchema`
           - `dominantKind`
           - `formatSeconds`
+          - `HANG_HELD_MS`
           - `NO_SAMPLES_OWNER`
           - `STALL_REPORT_MS`
           - `TOTAL_REPORT_MS`

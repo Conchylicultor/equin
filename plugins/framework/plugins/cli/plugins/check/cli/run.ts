@@ -152,6 +152,16 @@ function printProgress(): void {
     // "running for" times are the process's, not the checks'.
     const stalls = stallLine(run);
     if (stalls !== null) console.log(stalls);
+    // Its watchdog killed it: no `done` will ever come, and what was in flight
+    // below is what the main thread had started when it stopped yielding.
+    if (run.hung !== null)
+      console.log(
+        `  KILLED as hung at ${run.hung.at}: its thread held its core ${Math.round(run.hung.heldMs / 1000)}s ` +
+          `without running a timer (${Math.round(run.hung.silentMs / 1000)}s wall)` +
+          (run.hung.sampleFile !== null
+            ? `; native stack: ${run.hung.sampleFile}`
+            : ""),
+      );
     // A run with no `selected` record yet never got past bootstrap — it has zero
     // outstanding CHECKS, which without this branch would print as a healthy
     // "0/0 settled" and say nothing about the git spawn it is actually stuck in.

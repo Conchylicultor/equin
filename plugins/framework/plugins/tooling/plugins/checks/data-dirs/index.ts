@@ -52,7 +52,19 @@ export const checkProgressLogDir = defineDataDir({
   // anything a future one needs — a dropped log re-runs the checks, it does not
   // change their verdict.
   reclaim: { kind: "safe" },
-  logs: [{ pattern: "check-progress.jsonl", bound: { kind: "file-sink" } }],
+  logs: [
+    { pattern: "check-progress.jsonl", bound: { kind: "file-sink" } },
+    {
+      // The native stack of the latest pass the hang watch killed
+      // (`core/hang-watch.ts`): `sample`'s whole capture, rewritten per hang.
+      pattern: "hang-sample.txt",
+      bound: {
+        kind: "truncate-on-start",
+        reason:
+          "rewritten whole by each hang the watch kills (one `sample` capture, ~100 KB); a hang is rare, and its report carries the main thread's stack itself",
+      },
+    },
+  ],
 });
 
 /**

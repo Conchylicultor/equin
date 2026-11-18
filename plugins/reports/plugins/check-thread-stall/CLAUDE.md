@@ -31,6 +31,19 @@ chronic cost, not an outage. The row keeps the latest example — worktree, run
 id, transcript path, the top 3 owners with their stacks, the waiting-vs-working
 split, held vs starved, and CPU.
 
+## `check-pass-hung` — a pass its watchdog killed
+
+The second kind here. A check pass whose main thread held its core
+`HANG_HELD_MS` (5 min of its own CPU time) without running one timer is
+killed by its hang watch (checks' section "A pass that hangs is killed by its
+own watchdog thread"), which files this first. Its own kind, not a third
+trigger: a stall is a slow pass (warning, chronic), a hang is a pass that
+would never have finished — an **error**, the build or push on it failed.
+One row (`check-pass-hung`), its count the recurrence; the payload names the
+checks in flight, the newest one started, settled vs selected, held vs wall
+time, and the main thread's native stack (macOS `sample`, the full capture's
+path beside it).
+
 ## How it is filed
 
 The check runner is a CLI process with no server, so it files through the
@@ -46,12 +59,16 @@ stays zod-only: no React, no server code.
 
 ## Plugin reference
 
-- Description: Check-thread-stall report kind's Debug → Reports summary view: one line naming how long the check thread stalled, its top owner and what it was mostly doing. The report itself is filed by the check runner through the report outbox — no collector here. Check-thread-stall report kind: validates the check runner's thread-stall payloads (trigger stall = one stall whose code held the thread ≥ 2 s — held, not merely late: a starved thread files nothing —, fingerprinted by its top owner; trigger total = a run whose stalls add up to ≥ 20 s held, one row), filed through the report outbox, and renders a task naming the owner, its stacks, the held-vs-starved split and the run's transcript. Warning, re-arms every 6 h.
+- Description: Check-thread-stall and check-pass-hung report kinds' Debug → Reports summary views: one line naming how long the check thread stalled, its top owner and what it was mostly doing — or, for a hung pass, how long its thread held its core, what was in flight, and that it was killed. Both are filed by the check runner through the report outbox — no collector here. Check-thread-stall report kind: validates the check runner's thread-stall payloads (trigger stall = one stall whose code held the thread ≥ 2 s — held, not merely late: a starved thread files nothing —, fingerprinted by its top owner; trigger total = a run whose stalls add up to ≥ 20 s held, one row), filed through the report outbox, and renders a task naming the owner, its stacks, the held-vs-starved split and the run's transcript. Warning, re-arms every 6 h. Also the check-pass-hung kind: a pass whose main thread held its core 5 min without yielding, killed by its own watchdog thread — one row, an error, its task naming the checks in flight and the main thread's native stack.
 - Web:
-  - Contributes: `Reports.KindView` → `CheckThreadStallSummary`
+  - Contributes:
+    - `Reports.KindView` → `CheckThreadStallSummary`
+    - `Reports.KindView` → `CheckPassHungSummary`
   - Uses: `reports.Reports`
 - Server:
-  - Contributes: `report-kind` "check-thread-stall"
+  - Contributes:
+    - `report-kind` "check-pass-hung"
+    - `report-kind` "check-thread-stall"
   - Uses:
     - `reports.ReportKind`
     - `reports.ReportRow`
@@ -59,15 +76,21 @@ stays zod-only: no React, no server code.
   - Imported by: `framework/tooling/checks`
 - Core:
   - Exports (types):
+    - `CheckPassHungPayload`
     - `CheckThreadStallOwner`
     - `CheckThreadStallPayload`
   - Exports (values):
+    - `CHECK_PASS_HUNG_KIND`
     - `CHECK_THREAD_STALL_KIND`
+    - `checkPassHungFingerprint`
+    - `checkPassHungMessage`
+    - `CheckPassHungPayloadSchema`
     - `checkThreadStallFingerprint`
     - `checkThreadStallMessage`
     - `CheckThreadStallPayloadSchema`
     - `dominantKind`
     - `formatSeconds`
+    - `HANG_HELD_MS`
     - `NO_SAMPLES_OWNER`
     - `STALL_REPORT_MS`
     - `TOTAL_REPORT_MS`

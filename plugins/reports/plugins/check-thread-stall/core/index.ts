@@ -13,3 +13,11 @@ export type {
   CheckThreadStallOwner,
   CheckThreadStallPayload,
 } from "./internal/kind";
+export {
+  CHECK_PASS_HUNG_KIND,
+  CheckPassHungPayloadSchema,
+  HANG_HELD_MS,
+  checkPassHungFingerprint,
+  checkPassHungMessage,
+} from "./internal/hung";
+export type { CheckPassHungPayload } from "./internal/hung";

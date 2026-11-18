@@ -24,8 +24,10 @@ import {
   withSharedWallMeter,
   type SharedWallMeter,
 } from "./shared-wall";
+import type { HangWatch } from "./hang-watch";
 import { openStallReporter, type StallReportSink } from "./stall-report";
 import type { OwnerShare, StallKind } from "./thread-attribution";
+import { openHangWatch } from "./hang-watch";
 import {
   openThreadWatch,
   type StallCpu,
@@ -192,6 +194,19 @@ export type ProgressRecord =
     })
   | (RecordBase & { phase: "stall" } & ProgressStall)
   | (RecordBase & { phase: "thread" } & ProgressThread)
+  /**
+   * The run's watchdog thread judged it hung — its main thread held its core
+   * `heldMs` without running a timer — and is killing it (`hang-watch.ts`).
+   * Written FROM the watchdog: the main thread writes nothing again, so this is
+   * the run's last line, standing where its `done` would have.
+   */
+  | (RecordBase & {
+      phase: "hung";
+      heldMs: number;
+      silentMs: number;
+      /** The native stack capture, or null when none was taken. */
+      sampleFile: string | null;
+    })
   | (RecordBase & {
       phase: "done";
       elapsedMs: number;
@@ -368,6 +383,31 @@ function appendToSink(record: ProgressRecord): void {
   progressSink.appendSync(JSON.stringify(record));
 }
 
+/**
+ * Write a run's `hung` record — from its watchdog thread, the only one still
+ * running (`hung-run.ts`). The envelope is the run's own, handed over by the
+ * main thread when the watch opened.
+ */
+export function writeHungRecord(args: {
+  runId: string;
+  pid: number;
+  worktree: string;
+  heldMs: number;
+  silentMs: number;
+  sampleFile: string | null;
+}): void {
+  appendToSink({
+    t: new Date().toISOString(),
+    runId: args.runId,
+    pid: args.pid,
+    worktree: args.worktree,
+    phase: "hung",
+    heldMs: args.heldMs,
+    silentMs: args.silentMs,
+    sampleFile: args.sampleFile,
+  });
+}
+
 /** A live run's handle: the record writers plus the heartbeat's stop. */
 export interface ProgressRun {
   /**
@@ -451,6 +491,16 @@ export interface ProgressRunDeps {
    * the host-global outbox — which main would drain into real reports.
    */
   reports: StallReportSink;
+  /**
+   * Opens the run's hang watch (`hang-watch.ts`) — a worker thread that kills
+   * the process when its main thread hangs. Required for the same reason as
+   * `reports`: a test must not arm a watchdog over the test process.
+   */
+  hangWatch: (args: {
+    runId: string;
+    worktree: string;
+    transcript: string | null;
+  }) => HangWatch;
 }
 
 /**
@@ -488,6 +538,7 @@ export function openProgressRun(args: ProgressRunArgs): ProgressRun {
       file: fileReportFromProcess,
       mergeBase: () => mergeBaseWithMain(REPO_ROOT),
     },
+    hangWatch: openHangWatch,
   });
 }
 
@@ -588,6 +639,14 @@ export function startProgressRun(
     },
   });
 
+  // Outside the thread both watches above run on: the one thing that notices
+  // when that thread never yields again (`hang-watch.ts`).
+  const hang = deps.hangWatch({
+    runId,
+    worktree,
+    transcript: args.transcriptPath ?? null,
+  });
+
   return {
     runId,
     async bootstrap(step, fn) {
@@ -682,6 +741,7 @@ export function startProgressRun(
     },
     finish(allOk) {
       clearInterval(heartbeat);
+      hang.stop();
       // Stopped BEFORE `done`, so its last tick (and any stall that tick
       // closes) lands inside the run, and `thread` is the run's second-to-last
       // line on every path — the early exits included.
@@ -827,6 +887,13 @@ export interface CheckRunProgress {
     | null;
   /** Present iff the run reached its `done` record. */
   done: { at: string; elapsedMs: number; allOk: boolean } | null;
+  /** Present iff its watchdog killed the run as hung (the `hung` record). */
+  hung: {
+    at: string;
+    heldMs: number;
+    silentMs: number;
+    sampleFile: string | null;
+  } | null;
 }
 
 /**
@@ -909,6 +976,7 @@ export function reconstructRuns(
         stalls: [],
         thread: null,
         done: null,
+        hung: null,
       });
       startsByRun.set(record.runId, new Map());
       bootstrapByRun.set(record.runId, new Map());
@@ -982,6 +1050,8 @@ export function reconstructRuns(
         cpu: cpu ?? null,
         held: held ?? null,
       };
+    } else if (record.phase === "hung") {
+      run.hung = { at: record.t, ...fieldsOf(record) };
     } else if (record.phase === "done") {
       run.done = {
         at: record.t,

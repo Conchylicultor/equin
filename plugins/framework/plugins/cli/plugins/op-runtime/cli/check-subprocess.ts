@@ -200,7 +200,10 @@ export async function runCheckSubprocess(
       // owns a shorter deadline: the human at the terminal is the deadline, and
       // killing a check that was still making progress would only make the
       // command unusable. Bounding the pieces (each check's own git/worker
-      // spawns) is where a real wedge is actually caught.
+      // spawns) is where a real wedge is actually caught — and a child whose
+      // thread stops making progress altogether is killed by its own hang
+      // watch (checks' `core/hang-watch.ts`), judged on held CPU, never on a
+      // deadline: it exits non-zero here like any failed pass.
       unbounded:
         "this child is the whole `./equin check` run; its duration is the work's, and the CLI invocation above it owns no shorter deadline",
     });
