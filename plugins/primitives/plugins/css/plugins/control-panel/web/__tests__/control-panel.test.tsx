@@ -795,6 +795,12 @@ describe("ControlPanel — hint is a tooltip, never a line", () => {
     // it generates no box in the grid: no track opened, no row height added.
     expect(description?.closest('[data-cp-cell="label"]')).not.toBeNull();
     expect(description?.className).toContain("sr-only");
+    // The label cell is its containing block, so the truncating cell clips it:
+    // otherwise it sits after the label's FULL text, past the panel's edge
+    // under a long label, and widens the panel's scroll width.
+    expect(description?.closest('[data-cp-cell="label"]')?.className).toContain(
+      "relative",
+    );
     // …and it is hidden from the NAME computation, or the row would be called
     // "Reverb Applies to new sessions only." — the `getByRole` above is the
     // assertion that says so.

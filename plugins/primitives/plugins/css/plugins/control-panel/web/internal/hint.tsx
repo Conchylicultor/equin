@@ -51,7 +51,12 @@ export interface HintedLabelCellProps {
  * tooltip, and assistive tech gets an `aria-describedby` pointing at a zero-box
  * `sr-only` sibling inside the cell. `sr-only` is `position: absolute`, so the
  * description generates no box in the grid and cannot widen the label track or
- * push the row onto a second line. A tooltip alone would be invisible on touch
+ * push the row onto a second line. The cell is its containing block
+ * (`relative`): an absolute box sits at its static position — right after the
+ * label's FULL text — and is clipped only by an overflow its containing block
+ * is inside, so with the panel as its containing block a long truncated label
+ * (a song title) left the 1px description far past the panel's edge, widening
+ * its scroll width (the Background music panel's overflow fault, 2026-11-17). A tooltip alone would be invisible on touch
  * and unreachable by a screen reader; a description alone would be invisible to
  * everyone else.
  *
@@ -94,7 +99,11 @@ export function HintedLabelCell({
   const cell = (
     <span
       data-cp-cell="label"
-      className={cn(wrap ? "whitespace-normal py-xs" : "truncate", className)}
+      className={cn(
+        "relative",
+        wrap ? "whitespace-normal py-xs" : "truncate",
+        className,
+      )}
     >
       {children}
       {mark != null ? <> {mark}</> : null}
