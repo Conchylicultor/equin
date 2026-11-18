@@ -31,7 +31,10 @@ const fetchEndpoint = fetchEndpointOver(pageTransport);
  * Passive telemetry, the same contract as the slow-op beacon: `report: false`
  * so a failed beacon never toasts or files a report about itself, and the
  * rejection is NOT caught — it surfaces as an unhandled rejection in the
- * console, which is loud without breaking anything the visitor sees.
+ * console, which is loud without breaking anything the visitor sees. The crash
+ * collector files it only when the page's host still answers HTTP: a beacon
+ * that got no answer while the host did not answer either is the visitor's
+ * network (reports/crash `fetch-no-answer.ts`).
  */
 function send(body: CollectBody) {
   return fetchEndpoint(

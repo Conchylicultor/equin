@@ -6,6 +6,8 @@ import { WedgeWatchdog } from "./components/wedge-watchdog";
 export { wedgeReportSink } from "./internal/wedge-report-sink";
 export type { WedgeReport } from "./internal/wedge-report-sink";
 export { PUSH_STALL_MS } from "./internal/push-stall";
+export { reachHost } from "./internal/client";
+export type { HostReach } from "./internal/client";
 
 export default {
   description:

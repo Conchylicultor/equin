@@ -37958,9 +37958,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/networking/page-transport.pageTransport`
           - `shell/notifications.Toast`
           - `shell/notifications.useToast`
-        - Exports (types): `WedgeReport`
+        - Exports (types):
+          - `HostReach`
+          - `WedgeReport`
         - Exports (values):
           - `PUSH_STALL_MS`
+          - `reachHost`
           - `wedgeReportSink`
       - Server:
         - Uses:
@@ -59759,6 +59762,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Reports.KindView` → `CrashSummary`
         - Uses:
           - `infra/endpoints.EndpointAgentWriteRefusedError`
+          - `infra/health.reachHost`
           - `infra/health.wedgeReportSink`
           - `primitives/dom/element-size/resize-loop-trace.claimsResizeLoopError`
           - `primitives/dom/element-size/resize-loop-trace.resizeLoopReportSink`

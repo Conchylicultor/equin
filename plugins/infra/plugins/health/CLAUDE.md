@@ -59,9 +59,12 @@ Watches this page's connection to its backends and says so.
     - `primitives/networking/page-transport.pageTransport`
     - `shell/notifications.Toast`
     - `shell/notifications.useToast`
-  - Exports (types): `WedgeReport`
+  - Exports (types):
+    - `HostReach`
+    - `WedgeReport`
   - Exports (values):
     - `PUSH_STALL_MS`
+    - `reachHost`
     - `wedgeReportSink`
 - Server:
   - Uses:

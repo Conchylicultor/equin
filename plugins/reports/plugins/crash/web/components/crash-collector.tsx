@@ -3,11 +3,13 @@ import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { report } from "@plugins/reports/web";
 import { claimsResizeLoopError } from "@plugins/primitives/plugins/dom/plugins/element-size/plugins/resize-loop-trace/web";
 import { EndpointAgentWriteRefusedError } from "@plugins/infra/plugins/endpoints/web";
+import { reachHost } from "@plugins/infra/plugins/health/web";
 import { RawApiRequestError } from "@plugins/primitives/plugins/networking/plugins/request-guard/web";
 import {
   describeErrorEvent,
   describeRejection,
 } from "../internal/describe-caught";
+import { fileUnlessOffline } from "../internal/fetch-no-answer";
 
 // A Core.Root side-effect component (the old reports ReportCollector, now owned
 // by the crash kind). It owns the two browser crash signals that are window
@@ -51,16 +53,29 @@ export function CrashCollector() {
       // Filed through the request guard's sink already (see onError).
       if (e.reason instanceof RawApiRequestError) return;
       const err = e.reason instanceof Error ? e.reason : null;
-      void report({
-        kind: "crash",
-        source: "browser-rejection",
-        message: describeRejection(e),
-        url: window.location.href,
-        userAgent: navigator.userAgent,
-        // No Error object: no type either, so the message is the identity.
-        data:
-          err === null ? { errorType: null, stack: null } : crashFieldsOf(err),
-      });
+      // Read now: the page may have moved on by the time the host answers.
+      const message = describeRejection(e);
+      const url = window.location.href;
+      // A fetch that got no answer is filed only when this page's host
+      // answers HTTP — otherwise it is the visitor's network, not the page
+      // (`internal/fetch-no-answer.ts`).
+      void fileUnlessOffline(
+        e.reason,
+        () =>
+          void report({
+            kind: "crash",
+            source: "browser-rejection",
+            message,
+            url,
+            userAgent: navigator.userAgent,
+            // No Error object: no type either, so the message is the identity.
+            data:
+              err === null
+                ? { errorType: null, stack: null }
+                : crashFieldsOf(err),
+          }),
+        reachHost,
+      );
     };
 
     window.addEventListener("error", onError);
