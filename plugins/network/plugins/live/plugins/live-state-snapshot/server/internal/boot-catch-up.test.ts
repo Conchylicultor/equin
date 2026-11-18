@@ -92,6 +92,12 @@ async function prunedThrough(seq: number, xid: string): Promise<void> {
   await pruneChangelog(t.db);
 }
 
+// Every key is routed from `t`, the table `changelog` writes; the boot floor
+// is above every row, so only the floored keys' rows are owed.
+const ROUTED_FROM_T = (keys: Iterable<string>) =>
+  new Map([...keys].map((k) => [k, ["t"]]));
+const ABOVE_EVERY_ROW = "1000000";
+
 function recorder(aliasKeys: string[], invalid: readonly string[] = []) {
   const recomputed: string[] = [];
   const seeded: Array<{ key: string; value: unknown; position: string }> = [];
@@ -124,6 +130,8 @@ function recorder(aliasKeys: string[], invalid: readonly string[] = []) {
         floors.push(replay?.floors);
       },
       healedRollups: [] as readonly string[],
+      routedTables: ROUTED_FROM_T,
+      bootFloor: ABOVE_EVERY_ROW,
     },
   };
 }
@@ -356,7 +364,34 @@ describe("runBootCatchUp", () => {
     );
     expect(r.seeded).toEqual([]);
     expect(r.recomputed.sort()).toEqual(["alias", "trigger"]);
-    expect(r.routed).toHaveLength(1); // the probe's floor (100) still replays
+    // Both keys recompute from a read after the boot floor: no floor is left,
+    // so nothing below the boot floor is owed to anyone.
+    expect(r.routed).toEqual([]);
+  });
+
+  test("the replay reads only the rows a floored key is routed from, plus every table since the boot floor", async () => {
+    await row("alias", "100", null, [{ id: "a1" }]);
+    await changelog(1, "90"); // below the alias's floor
+    await changelog(2, "120"); // `t`: owed to the alias
+    await t.db.execute(sql`
+      INSERT INTO ${sql.raw(LIVE_STATE_CHANGELOG_TABLE)} (seq, xid, t, op, ids)
+      VALUES (3, 130::numeric, 'unread', 'U', ARRAY['u1']::text[]),
+             (4, 500::numeric, 'unread', 'U', ARRAY['u2']::text[]),
+             (5, 510::numeric, 't', 'U', ARRAY['x2']::text[])
+    `);
+    const r = recorder(["alias"]);
+    const verdict = await runBootCatchUp(t.db, exp(["alias"]), {
+      ...r.rt,
+      // The boot started at 400: a tuple loaded since is owed every table's
+      // rows from there, the alias only `t`'s from its floor.
+      bootFloor: "400",
+    });
+    expect(verdict).toBe("replay");
+    expect(r.routed.map((c) => [c.table, c.ids])).toEqual([
+      ["t", ["x"]],
+      ["unread", ["u2"]],
+      ["t", ["x2"]],
+    ]);
   });
 
   test("no usable row: every persisted key recomputes, nothing replays", async () => {

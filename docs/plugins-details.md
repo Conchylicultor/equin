@@ -32552,6 +32552,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reportServerError`
           - `Resource`
           - `routedTableRequirements`
+          - `routedTablesOf`
           - `routeTableChange`
           - `SchemaNotReadyError`
           - `scopedResourceTables`
@@ -43051,6 +43052,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `config_v2.ConfigV2`
               - `database.db`
+              - `database.snapshotWatermark`
               - `database/derived-tables.reconciledRollups`
               - `infra/jobs.defineJob`
               - `network/live/change-feed.ChangelogRetention`

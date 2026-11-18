@@ -22,7 +22,12 @@ import {
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { persistSnapshot } from "./persist";
 import type { L2Expectation } from "./persist";
-import { probeCatchUp, replayCatchUp } from "./catch-up";
+import {
+  probeCatchUp,
+  readChangelogOwed,
+  replayCatchUp,
+  replayReach,
+} from "./catch-up";
 import { pruneChangelog, readPruneHorizon } from "./changelog-horizon";
 
 // Real-DB invariant suite for the cold-boot catch-up driver: the probe's
@@ -74,15 +79,22 @@ async function seedFloor(position: string, key = `floor-${position}`) {
   });
 }
 
-// The boot's catch-up: probe, then replay from the probe's floor.
+// The boot's catch-up: probe, then replay what each probed floor is owed —
+// here every key is routed from every table, and the boot floor is above
+// every row, so the replay reads every row from the lowest floor.
 async function runCatchUp(
   route: (c: FeedChange, replay?: ReplayScope) => void,
 ): Promise<void> {
   const probe = await probeCatchUp(t.db, expectation());
   if (probe.kind === "replay") {
-    await replayCatchUp(t.db, probe.floor, probe.positions, route);
+    const everyTable = new Map(
+      [...probe.positions.keys()].map((k) => [k, TABLES]),
+    );
+    const reach = replayReach(probe.positions, everyTable, "1000000");
+    await replayCatchUp(t.db, reach, probe.positions, route);
   }
 }
+const TABLES = ["ta", "tb", "tc", "td", "at", "below", "hosts", "side"];
 
 interface ChangelogSeed {
   seq: number;
@@ -461,5 +473,59 @@ describe("the prune horizon", () => {
     const seeded = await reseed();
     expect(seeded).not.toBeNull();
     expect(BigInt(seeded!)).toBeGreaterThan(0n);
+  });
+});
+
+describe("replayReach + readChangelogOwed", () => {
+  test("a table's rows from the lowest floor of the keys routed from it; any other table's from the boot floor", async () => {
+    const floors = new Map([
+      ["k1", "200"],
+      ["k2", "300"],
+      ["idle", "100"], // routed from no table
+    ]);
+    const routed = new Map([
+      ["k1", ["ta", "tb"]],
+      ["k2", ["tb"]],
+      ["idle", []],
+    ]);
+    const reach = replayReach(floors, routed, "400");
+    expect(reach).toEqual({
+      boot: "400",
+      tables: new Map([
+        ["ta", "200"],
+        ["tb", "200"],
+      ]),
+    });
+    for (const [seq, xid, table] of [
+      [1, "100", "ta"], // below every floor
+      [2, "150", "tc"], // a table nobody is routed from, before the boot
+      [3, "200", "ta"], // == k1's floor: in
+      [4, "250", "tb"], // in
+      [5, "350", "tc"], // still before the boot: out
+      [6, "400", "tc"], // == the boot floor: in
+      [7, "450", "ta"], // in
+    ] as const) {
+      await insertChangelog({
+        seq,
+        xid,
+        t: table,
+        op: "U",
+        ids: [String(seq)],
+      });
+    }
+    const rows = await readChangelogOwed(t.db, reach, "test");
+    expect(rows.map((r) => r.ids)).toEqual([["3"], ["4"], ["6"], ["7"]]);
+  });
+
+  test("a floor above the boot floor never hides a row since the boot", async () => {
+    const reach = replayReach(
+      new Map([["k", "500"]]),
+      new Map([["k", ["ta"]]]),
+      "400",
+    );
+    expect(reach.tables).toEqual(new Map([["ta", "400"]]));
+    await insertChangelog({ seq: 1, xid: "450", t: "ta", op: "U", ids: ["1"] });
+    const rows = await readChangelogOwed(t.db, reach, "test");
+    expect(rows.map((r) => r.ids)).toEqual([["1"]]);
   });
 });

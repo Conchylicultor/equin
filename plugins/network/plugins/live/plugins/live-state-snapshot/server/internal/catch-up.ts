@@ -62,6 +62,74 @@ export async function readChangelogSince(
   });
 }
 
+/**
+ * Which changelog rows a boot catch-up owes anyone (`replayReach`), so the
+ * replay reads only those instead of every row since the oldest floor:
+ *
+ * - a floored persisted key is owed the rows at or after ITS floor of the
+ *   tables the router delivers to it (`routedTablesOf`) — any other row
+ *   reaches none of its tuples, and one below its floor is skipped anyway
+ *   (`ReplayScope`);
+ * - every other target — a tuple loaded in this process (a subscription, a
+ *   persisted key recomputed at boot) — read the database after `boot`, a
+ *   watermark taken before this process could load any tuple, so it is owed
+ *   at most the rows at or after `boot`, of any table. (A tuple handed over by
+ *   the epoch handoff is the handoff's replay's, from its own cut.)
+ *
+ * Without it, three keys idle since the hourly compact held the read floor up
+ * to an hour back, and every boot read the whole hour of the changelog — 22k
+ * rows, 2.1 MB at 8 KB per event-loop turn (report-1794917942-xkfvpj) — to
+ * route ~1% of it.
+ */
+export interface ReplayReach {
+  /** Every table's rows at or after this xid are read (see above). */
+  boot: string;
+  /** A table some floored key is routed from → the lowest such floor (never above `boot`). */
+  tables: ReadonlyMap<string, string>;
+}
+
+/** The rows a boot replay owes (see `ReplayReach`). */
+export function replayReach(
+  floors: ReadonlyMap<string, string>,
+  routedTables: ReadonlyMap<string, readonly string[]>,
+  boot: string,
+): ReplayReach {
+  const tables = new Map<string, string>();
+  for (const [key, floor] of floors) {
+    for (const table of routedTables.get(key) ?? []) {
+      tables.set(table, minPosition(tables.get(table) ?? boot, floor));
+    }
+  }
+  return { boot, tables };
+}
+
+/** The changelog rows `reach` owes, in the order they were written. */
+export async function readChangelogOwed(
+  db: NodePgDatabase,
+  reach: ReplayReach,
+  label: string,
+): Promise<ChangelogRow[]> {
+  const tables = [...reach.tables.keys()];
+  const floors = [...reach.tables.values()];
+  // The lowest floor bounds the xid index scan; the per-table floor filters it.
+  const read = floors.reduce((a, b) => minPosition(a, b), reach.boot);
+  return executeRows(db, {
+    query: drizzleSql`
+      SELECT xid::text AS xid, t, op, ids, keys, unchanged
+      FROM ${drizzleSql.raw(LIVE_STATE_CHANGELOG_TABLE)} c
+      WHERE c.xid >= ${read}::numeric
+        AND c.xid >= COALESCE(
+          (SELECT f.floor
+           FROM unnest(${drizzleSql.param(tables)}::text[], ${drizzleSql.param(floors)}::numeric[]) AS f(t, floor)
+           WHERE f.t = c.t),
+          ${reach.boot}::numeric)
+      ORDER BY seq
+    `,
+    row: ChangelogRowSchema,
+    label: `${label}/changelog-replay`,
+  });
+}
+
 // One usable row's catch-up floor (`position`, an xid8-family numeric cast to
 // text — never through a JS number).
 const PositionRowSchema = z.object({
@@ -190,9 +258,9 @@ export async function probeCatchUp(
   return { kind: "replay", floor, positions };
 }
 
-// Bounded cold-boot catch-up: replay only the changelog rows committed at or
-// after the probe's floor. Usually empty after a short deploy. Each replayed row
-// flows through the recompute cascade → push to subscribers → re-persist,
+// Bounded cold-boot catch-up: replay only the changelog rows someone is owed
+// (`reach`, see `ReplayReach`). Usually few after a short deploy. Each replayed
+// row flows through the recompute cascade → push to subscribers → re-persist,
 // advancing the floor.
 //
 // It routes every replayed row through `routeChange` (every entry through its
@@ -206,24 +274,24 @@ export async function probeCatchUp(
 // `floors` is each persisted key's own floor: a row below a key's floor is not
 // routed to that key's `{}` (its value already reflects it), so a key gets only
 // the rows since its own position — never the whole history since the oldest
-// one. A key absent from it (recomputed at boot) gets every row.
+// one. A key absent from it (recomputed at boot) gets every row read.
 export async function replayCatchUp(
   db: NodePgDatabase,
-  floor: string,
+  reach: ReplayReach,
   floors: ReadonlyMap<string, string>,
   route: ReplayRoute = routeChange,
 ): Promise<void> {
-  const rows = await readChangelogSince(db, floor, "replayCatchUp");
+  const rows = await readChangelogOwed(db, reach, "replayCatchUp");
 
   if (rows.length === 0) {
     log.publish(
-      "[live-state-snapshot] catch-up: no changelog rows since floor — already current",
+      `[live-state-snapshot] catch-up: no changelog rows owed — already current (boot floor xid ${reach.boot}, per-key floors: ${formatFloors(floors)})`,
     );
     return;
   }
 
   log.publish(
-    `[live-state-snapshot] catch-up: replaying ${rows.length} changelog row(s) since floor xid ${floor} (per-key floors: ${formatFloors(floors)})`,
+    `[live-state-snapshot] catch-up: replaying ${rows.length} changelog row(s) of ${reach.tables.size} routed table(s) and every table since boot floor xid ${reach.boot} (per-key floors: ${formatFloors(floors)})`,
   );
   for (const row of rows) replayChange(row, route, floors);
 }

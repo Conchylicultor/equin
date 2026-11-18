@@ -235,10 +235,17 @@ export async function readPersistedSnapshots(
 }
 
 // The compact job's targets: every persisted key WITHOUT a usable row whose
-// `position_at` is within the last hour — a missing row, an unusable one, and a
-// NULL `position_at` (a row only floor persists ever wrote) all count. Their
-// FULL recompute replaces the row, so the global catch-up floor (and the
-// changelog prune pinned to it) advances at least hourly.
+// `position_at` is within the last half hour — a missing row, an unusable one,
+// and a NULL `position_at` (a row only floor persists ever wrote) all count.
+// Their FULL recompute replaces the row, so the global catch-up floor (and the
+// changelog prune pinned to it) advances at every hourly run.
+//
+// The window is SHORTER than the job's hourly period on purpose: a row the
+// previous run replaced (a few hundred ms after its :30) is a hair under an
+// hour old at the next :30, so an hour-long window skipped every idle key one
+// run in two — the floor, and the changelog behind it, reached two hours back
+// (33k rows replayed at a main restart, report-1794917942-xkfvpj).
+const COMPACT_FRESH = "30 minutes";
 export async function compactTargets(
   db: NodePgDatabase,
   exp: L2Expectation,
@@ -250,7 +257,7 @@ export async function compactTargets(
       FROM ${drizzleSql.raw(LIVE_STATE_SNAPSHOT_TABLE)}
       WHERE params_key = '{}'
         AND ${usableRowSql(exp)}
-        AND position_at >= now() - interval '1 hour'
+        AND position_at >= now() - ${drizzleSql.raw(`interval '${COMPACT_FRESH}'`)}
     `,
     row: ResourceKeyRowSchema,
     label: "compactTargets",

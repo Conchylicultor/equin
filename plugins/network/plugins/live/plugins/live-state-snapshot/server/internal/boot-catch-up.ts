@@ -15,6 +15,7 @@ import {
   probeCatchUp,
   readUsablePositions,
   replayCatchUp,
+  replayReach,
 } from "./catch-up";
 import type { ReplayRoute } from "./catch-up";
 import { isPrunedPast, readPruneHorizon } from "./changelog-horizon";
@@ -34,6 +35,19 @@ export interface BootCatchUpRuntime {
   seed: (key: string, value: unknown, base: PersistedBase) => SeedOutcome;
   /** Route one replayed changelog row (change-feed's `routeChange`). */
   route?: ReplayRoute;
+  /**
+   * The tables the router delivers to each key (`routedTablesOf`): a floored
+   * key is owed only its tables' rows (`ReplayReach`).
+   */
+  routedTables: (
+    keys: Iterable<string>,
+  ) => ReadonlyMap<string, readonly string[]>;
+  /**
+   * A watermark taken before this process could load any tuple
+   * (`bootFloor`, in `onReadyBlocking`): every row at or after it is read,
+   * whatever its table — what a tuple loaded in this process may still miss.
+   */
+  bootFloor: string;
   /**
    * The rollups this boot's committed reconcile HEALED (derived-tables'
    * `reconciledRollups()`, rows upserted or deleted). A heal rewrites rollup
@@ -193,12 +207,13 @@ export async function runBootCatchUp(
   //
   // The seed rows are read AFTER the probe, in another statement — and during a
   // hot swap the previous backend may still floor-persist meanwhile, LOWERING a
-  // row's position below the probe's floor. So the replay floor is the lowest
-  // of the probe's and every seeded position (a commit in between would
+  // row's position below the probe's floor. So a seeded key's floor is the
+  // lower of the probe's and its seeded position (a commit in between would
   // otherwise never be replayed for that alias), and a seeded row whose
   // position the changelog was pruned past is recomputed instead of seeded,
   // exactly as the backstop treats it.
-  let replayFloor = probe.kind === "replay" ? probe.floor : undefined;
+  // Whether anything was probed or seeded — else there is no replay at all.
+  let replaying = probe.kind === "replay";
   if (seedKeys.length > 0) {
     const rows = await readPersistedSnapshots(db, seedKeys, exp);
     // Read after the rows, never the probe's: a prune since the probe would
@@ -233,22 +248,19 @@ export async function runBootCatchUp(
         key,
         probed === undefined ? row.position : minPosition(probed, row.position),
       );
-      replayFloor =
-        replayFloor === undefined
-          ? row.position
-          : minPosition(replayFloor, row.position);
+      replaying = true;
     }
   }
 
-  // 4c. Replay from the lowest floor anything seeded or probed stands on.
-  if (replayFloor !== undefined) {
+  // 4c. Replay what each floor anything seeded or probed stands on is owed.
+  if (replaying) {
     // A hot swap's previous backend may have rewritten a NON-alias row since
     // the probe — a replace from an older flight leaves a lower position, and
     // boot-snapshot may serve that row. Re-read every key still holding a
     // floor and keep the lower position, as the seed read does for aliases:
     // a key's floor is only ever the lowest this boot read for it.
-    // The replay floor follows it (a lowered row's commits must be READ, not
-    // only routed), and a row lowered past the prune horizon is recomputed,
+    // The key's floor follows it (a lowered row's commits must be READ, not
+    // only routed — the replay reads from each key's floor), and a row lowered past the prune horizon is recomputed,
     // exactly as a seeded alias's is.
     const reread = await readUsablePositions(db, exp);
     const reHorizon = reread.size === 0 ? null : await readPruneHorizon(db);
@@ -260,9 +272,17 @@ export async function runBootCatchUp(
         continue;
       }
       floors.set(key, position);
-      replayFloor = minPosition(replayFloor, position);
     }
-    await replayCatchUp(db, replayFloor, floors, rt.route);
+    // Read only what someone is owed: each floored key's routed tables from
+    // its floor, and every table from the boot floor (`ReplayReach`). The
+    // lowest floor alone would read every row since the oldest one — up to
+    // the hour since the compact, of every table.
+    const reach = replayReach(
+      floors,
+      rt.routedTables(floors.keys()),
+      rt.bootFloor,
+    );
+    await replayCatchUp(db, reach, floors, rt.route);
   }
   return probe.kind;
 }

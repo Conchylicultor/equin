@@ -117,6 +117,7 @@ export {
   recomputeResource,
   routeTableChange,
   scopedResourceTables,
+  routedTablesOf,
   unfedResourceTables,
   relationResourceReads,
   unroutedResourceKeys,

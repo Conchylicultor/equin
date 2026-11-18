@@ -406,7 +406,7 @@ describe("readPersistedSnapshots", () => {
 });
 
 describe("compactTargets", () => {
-  test("persisted keys without a usable row replaced in the last hour", async () => {
+  test("persisted keys without a usable row replaced in the last half hour", async () => {
     await replace("fresh", "{}", {}, "1", ["t"]);
     await replace("stale", "{}", {}, "1", ["t"]);
     await t.db.execute(
@@ -423,6 +423,20 @@ describe("compactTargets", () => {
     expect(targets.sort()).toEqual(
       ["floor-only", "missing", "other-def", "stale"].sort(),
     );
+  });
+
+  test("a row the previous hourly run replaced is a target of the next one", async () => {
+    // Replaced a hair under an hour before this run (the previous :30's
+    // recompute lands a few hundred ms after it): an hour-long window took it
+    // as fresh, and an idle key was compacted only every other hour.
+    await replace("idle", "{}", {}, "1", ["t"]);
+    await replace("fresh", "{}", {}, "1", ["t"]);
+    await t.db.execute(
+      sql`UPDATE ${sql.raw(LIVE_STATE_SNAPSHOT_TABLE)} SET position_at = now() - interval '59 minutes 59 seconds' WHERE resource_key = 'idle'`,
+    );
+    expect(await compactTargets(t.db, exp(["idle", "fresh"]))).toEqual([
+      "idle",
+    ]);
   });
 
   test("no persisted key → no target, no query", async () => {

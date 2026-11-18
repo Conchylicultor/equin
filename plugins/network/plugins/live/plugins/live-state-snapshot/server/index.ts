@@ -3,6 +3,7 @@ import {
   dropPendingPersists,
   persistedKeys,
   recomputeResource,
+  routedTablesOf,
   scopedResourceTables,
   seedPersistedSnapshot,
   unboundedWindowKeys,
@@ -12,7 +13,7 @@ import {
   producedTableNames,
   relationBases,
 } from "@plugins/network/plugins/live/plugins/change-feed/server";
-import { db } from "@plugins/database/server";
+import { db, snapshotWatermark } from "@plugins/database/server";
 import { ConfigV2 } from "@plugins/config_v2/server";
 import { liveStateHandoffConfig } from "../core";
 import { LIVE_STATE_SNAPSHOT_TABLE } from "@plugins/database/plugins/derived-views/core";
@@ -22,6 +23,7 @@ import {
   bootRoutedCut,
 } from "./internal/boot-routed-cut";
 import { runBootCatchUp } from "./internal/boot-catch-up";
+import { bootFloor } from "./internal/boot-floor";
 import { healedRollups } from "./internal/healed-rollups";
 import { l2Expectation } from "./internal/expectation";
 import { liveStateCompactJob } from "./internal/compact";
@@ -107,6 +109,9 @@ export default {
     // code wrote. Without the init no hook is installed, so the child
     // persists nothing (the degraded init's state).
     if (schema.kind === "owner") {
+      // The boot floor (`ReplayReach`): taken before readiness flips, so
+      // before this process serves — and loads — any tuple.
+      bootFloor.set(await snapshotWatermark(db));
       await initSnapshotSubsystem(
         db,
         produced,
@@ -155,6 +160,8 @@ export default {
       healedRollups: healedRollups(),
       aliasKeys: unboundedWindowKeys(),
       recompute: recomputeResource,
+      routedTables: routedTablesOf,
+      bootFloor: bootFloor.get(),
       seed: (key, value, base) => seedPersistedSnapshot(key, "{}", value, base),
     });
     // Every change committed before the session is routed now (replayed, or

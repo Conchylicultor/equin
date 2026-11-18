@@ -2862,6 +2862,15 @@ export interface ResourceRuntime {
    */
   scopedResourceTables: () => ScopedResourceTable[];
   /**
+   * For each key, the tables `routeTableChange` delivers to it right now —
+   * every table the router indexes the entry under (its routes, follows,
+   * relation bases and drift bases). A change to any other table reaches
+   * none of the key's tuples, so a changelog replay that only owes these keys
+   * may skip every other table's rows (live-state-snapshot's boot catch-up).
+   * A key with no routed entry maps to no table.
+   */
+  routedTablesOf: (keys: Iterable<string>) => Map<string, string[]>;
+  /**
    * Every table a reach plan reads outside the change feed by declaration
    * (`ReachPlan.unfed`), with its resource key — change-feed's boot check
    * refuses one the feed does cover (its writes would be missed, not declared
@@ -11964,6 +11973,17 @@ export function createResourceRuntime(
     return out;
   }
 
+  // The tables the router delivers to each key (see the interface): read off
+  // `routedByTable` itself, so it is exactly what `routeTableChange` walks.
+  function routedTablesOf(keys: Iterable<string>): Map<string, string[]> {
+    const out = new Map<string, string[]>();
+    for (const key of keys) out.set(key, []);
+    for (const [table, entries] of routedByTable) {
+      for (const entry of entries) out.get(entry.key)?.push(table);
+    }
+    return out;
+  }
+
   // Every table a reach plan reads outside the change feed by declaration
   // (`ReachPlan.unfed`) — what change-feed's boot check holds to its opt-outs.
   function unfedResourceTables(): UnfedResourceTable[] {
@@ -12161,6 +12181,7 @@ export function createResourceRuntime(
     recomputeResource,
     notifyStatsFor,
     scopedResourceTables,
+    routedTablesOf,
     unfedResourceTables,
     relationResourceReads,
     unroutedResourceKeys,

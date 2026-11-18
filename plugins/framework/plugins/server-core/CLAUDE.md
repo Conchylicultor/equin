@@ -690,6 +690,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `reportServerError`
     - `Resource`
     - `routedTableRequirements`
+    - `routedTablesOf`
     - `routeTableChange`
     - `SchemaNotReadyError`
     - `scopedResourceTables`

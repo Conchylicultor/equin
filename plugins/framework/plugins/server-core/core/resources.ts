@@ -785,6 +785,9 @@ export const {
   // entry) — the change-feed cross-checks these against the tables it installed
   // triggers on at boot to reject a route no change can ever reach.
   scopedResourceTables,
+  // The tables the router delivers to each key — live-state-snapshot's boot
+  // catch-up reads only the changelog rows some persisted key is owed.
+  routedTablesOf,
   // Every table a reach plan reads outside the change feed by declaration —
   // the change-feed refuses one it covers (a write it reports would be missed).
   unfedResourceTables,

@@ -18,6 +18,7 @@
   - Uses:
     - `config_v2.ConfigV2`
     - `database.db`
+    - `database.snapshotWatermark`
     - `database/derived-tables.reconciledRollups`
     - `infra/jobs.defineJob`
     - `network/live/change-feed.ChangelogRetention`
@@ -200,8 +201,13 @@ singleton, `instant`. Only an `advance` raises an alias row's position (and
 only once it is proven settled under a cut), an idle legacy key never
 re-persists, while catch-up and the prune both read the GLOBAL
 `min(position)` — so every persisted key without a usable row REPLACED in the last
-hour (`position_at`; a missing, unusable or floor-only row counts) is
-`recomputeResource`d here, which replaces its row with a fresh floor. It runs in
+half hour (`position_at`; a missing, unusable or floor-only row counts) is
+`recomputeResource`d here, which replaces its row with a fresh floor. The
+window is shorter than the hourly period on purpose: the previous run's
+replace lands a few hundred ms after its `:30`, so with an hour-long window
+an idle key was a hair under an hour old at the next run and skipped — compacted
+only every other hour, holding the floor (and the changelog behind it) two
+hours back (`persist.test.ts` pins it). It runs in
 the serving backend (a per-worktree job), where `recomputeResource` is in-process.
 
 ## Boot flow
@@ -269,6 +275,20 @@ and every OTHER key re-derived that whole hour at each boot (median 9k rows on
 main). An alias's own floor is raised past its last FULL rebuild by `advance`
 persists (research/2026-10-30-global-boot-catch-up-per-key-floors.md, part B),
 so its replay is only what came after its last settled cut.
+
+**The replay reads only what someone is owed (`ReplayReach`, `catch-up.ts`).**
+Routing by per-key floors is not enough: the READ from the lowest floor still
+pulled every row since it — an idle key at the compact's position held it up to
+an hour back, so every restart read the whole hour of every table (22k–34k rows,
+2.1–2.4 MB at 8 KB per event-loop turn: 1.5–4.2 s, report-1794917942-xkfvpj),
+to route ~1% of it. The read is scoped instead: a floored key is owed the rows
+at or after its floor of the tables the router delivers to it (server-core's
+`routedTablesOf`, read off the runtime's `routedByTable` — exactly what
+`routeTableChange` walks); every other target — a tuple loaded in this process,
+a key recomputed at boot — read the database after the **boot floor** (a
+watermark `onReadyBlocking` takes before readiness flips, `./internal/boot-floor`),
+so it is owed only the rows at or after it, of any table. A tuple the epoch
+handoff hands over is the handoff's replay's, from its own cut.
 
 `onShutdown` drops the armed trailing floor persists (`dropPendingPersists`): their
 changes are in the changelog and each row's floor still predates them.
