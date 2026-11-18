@@ -163,6 +163,18 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   there (`SdkAgentKilled`) or a launch finding a live predecessor
   (`SdkAgentDuplicate`) is reported too. Why:
   [`research/2026-10-21-conversations-sdk-agent-exit-guarantee.md`](../../../../research/2026-10-21-conversations-sdk-agent-exit-guarantee.md).
+- **No agent process outlives its pid file** (`machine/internal/orphan-agents.ts`,
+  the hourly main-only `runtime-sdk.orphan-agents`). Every backend reaches an
+  agent through its pid file, so a process the file no longer names (absent,
+  or naming another pid) is invisible to all of them — it ran until reboot.
+  That happens when the exit stalls after the `exit` listener removed the
+  file and the hard exit never fires (2026-10-20; conv-1794147656-9o6et2 on
+  2026-11-08, found alive ten days later with its Claude Code). The sweep
+  finds agents by argv (`--pid-file <locks/sdk-agents>/<ns>/<id>.pid`, one
+  `ps`), and SIGKILLs each one older than 10 min (ten times the launch's
+  60 s wait for `started`, so never a start in progress) that its pid file
+  does not name, CLI first (`killAgentPid`), reported as `SdkAgentOrphaned`.
+  The agent's directory goes with its workspace as usual.
 - `core/protocol.ts` — the wire: commands, replies, event lines, `PROTOCOL_VERSION`.
   An addition an older peer can ignore does not bump the version (an agent
   refuses a `hello` of any other version, so a bump would cut the backend off
@@ -444,6 +456,7 @@ Gotchas the spike hit:
     - `defineJob('runtime-sdk.auto-resume')`
     - `defineJob('runtime-sdk.agent-dirs-reclaim')`
     - `defineJob('runtime-sdk.warm-claude-clones')`
+    - `defineJob('runtime-sdk.orphan-agents')`
   - Routes:
     - `POST /api/claude-usage/refresh`
     - `POST /api/runtime-sdk/resume-stopped`

@@ -2,6 +2,7 @@ import { databaseForkedAt } from "@plugins/database/plugins/fork-point/server";
 import { dirname } from "node:path";
 import { z } from "zod";
 import {
+  getConversation,
   listConversationsForInfra,
   updateConversation,
   markConversationGone,
@@ -30,6 +31,7 @@ import { Runtime, type RuntimeInspection, type RuntimeSignal } from "./runtime";
 import { deliverHeldTurnsJob } from "./deliver-held-turns-job";
 import { spawnConversationJob } from "./spawn-job";
 import { spawnsHoldingStarting } from "./spawn-handover";
+import { isOwnConversation } from "./conversation-ownership";
 import {
   inlineLaunchesInFlight as inlineLaunchesInFlightOf,
   inlineLaunchMark,
@@ -459,6 +461,62 @@ async function reconcileRows(
 }
 
 /**
+ * How long a closed conversation's own close may take to stop its agent
+ * before the sweep does: every close stops it straight after marking the row
+ * `done` (exit_clean's finalize, the close endpoint's teardown), bounded by the
+ * runtime's own stop (the sdk runtime's: 15 s, then SIGKILL). Past this, that
+ * stop did not happen.
+ */
+const CLOSE_STOP_GRACE_MS = 60_000;
+
+/**
+ * Stop every agent still running for a `done` conversation — the backstop for
+ * a close whose own stop never ran. `done` rows are not planned (a close is
+ * final, `planConversationUpdate`) and not even read here (`rows` are the
+ * active ones), so before this nothing ever looked at them again: an
+ * exit_clean finalize that failed before its stop (2026-11-08:
+ * conv-1794151725-hdw3rp, its `git log` killed mid-run, the job dead after
+ * its retries) left the agent and its Claude Code running for ten days.
+ *
+ * Read from the full `list()` the runtimes answered — every agent alive in
+ * this backend's namespace, whatever its row's status — so it costs nothing
+ * while every live agent belongs to an active row. A conversation an inline
+ * launch has touched since `mark` (a resume of a closed conversation turns it
+ * `starting` before it launches) is left to that launch.
+ */
+async function stopAgentsOfClosed(
+  rows: readonly Conversation[],
+  live: LiveSnapshot,
+  mark: number,
+): Promise<void> {
+  const active = new Set(rows.map((r) => r.id));
+  const strays = [...live.next.keys()].filter((id) => !active.has(id));
+  if (strays.length === 0) return;
+  const launching = inlineLaunchesInFlightOf(strays, mark);
+  const now = Date.now();
+  for (const id of strays) {
+    if (launching.has(id)) continue;
+    const row = await getConversation(id);
+    if (row === null || row.status !== "done") continue;
+    if (!isOwnConversation(row, live.forkedAt)) continue;
+    // A row closed before `statusSince` was recorded: long ago.
+    const closedAt = row.statusSince ?? row.endedAt;
+    const closedForMs = closedAt === null ? null : now - closedAt.getTime();
+    if (closedForMs !== null && closedForMs < CLOSE_STOP_GRACE_MS) continue;
+    await Runtime.get(row.runtime).delete(id);
+    await recordReport({
+      kind: "crash",
+      source: "server-caught",
+      message: `Conversation ${id} was closed ${closedForMs === null ? "at an unrecorded time" : `${String(Math.round(closedForMs / 60_000))} min ago`} but its agent was still running — its close never stopped it; stopped now`,
+      data: {
+        errorType: "AgentOutlivedClose",
+        label: "conversations.status.stopClosed",
+      },
+    });
+  }
+}
+
+/**
  * Today's whole-world reconcile: every live session against every active row.
  * `step` times its parts when the boot hook runs it (`startStatusReconciler`).
  */
@@ -474,6 +532,7 @@ function reconcileAll(step: BootStep): Promise<void> {
       collectLive(rows, mark, inner),
     );
     await reconcileRows(rows, live, step);
+    await step("stop-closed", () => stopAgentsOfClosed(rows, live, mark));
     // The gate runs one reconcile at a time, so no older mark is still read.
     pruneInlineLaunchStamps(mark);
   });

@@ -368,6 +368,16 @@ function sigkill(pid: number): void {
 }
 
 /**
+ * SIGKILL the agent process `pid` — its CLI first, which would otherwise
+ * outlive it holding the session. The caller has established `pid` is an
+ * agent (its pid file, or its argv).
+ */
+export async function killAgentPid(pid: number): Promise<void> {
+  for (const child of await childPids(pid)) sigkill(child);
+  sigkill(pid);
+}
+
+/**
  * Kill an agent that would not stop on its own (it does not answer its socket,
  * or did not exit after `shutdown`) — its CLI first, which would otherwise
  * outlive it holding the session — then drop its record. Idempotent: an agent
@@ -376,10 +386,7 @@ function sigkill(pid: number): void {
  */
 export async function killAgentProcess(id: string): Promise<number | null> {
   const pid = await livePid(id);
-  if (pid !== null) {
-    for (const child of await childPids(pid)) sigkill(child);
-    sigkill(pid);
-  }
+  if (pid !== null) await killAgentPid(pid);
   // What it would have removed on a clean exit.
   await rm(agentPidPath(id), { force: true });
   await rm(agentSocketPath(id), { force: true });
