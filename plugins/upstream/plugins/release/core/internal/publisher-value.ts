@@ -132,5 +132,11 @@ export const cutReleaseEndpoint = defineEndpoint({
     z.object({ kind: z.literal("released"), detail: z.string() }),
     z.object({ kind: z.literal("refused"), detail: z.string() }),
   ]),
+  // A publish to GitHub, not a local write: a CLI process start (0.4–1 s),
+  // a fetch of the publish remote (0.8–1.5 s) and the tag push (1–1.5 s) —
+  // 3.5–4 s per release measured on 2026-11-18, up to 6 s under load. The
+  // global 2 s bar filed every release as slow (report-1794938037-tclb00);
+  // this one still catches a hung fetch or push.
+  slowThresholdMs: 10_000,
   needsMachine: { feature: "Releases" },
 });
