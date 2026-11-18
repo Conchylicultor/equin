@@ -30,22 +30,44 @@ describe("parseChordSymbol — non-slash", () => {
   });
 
   it("reads quality words in any case", () => {
-    expect(parseChordSymbol("CMaj7")).toMatchObject({ quality: "maj7", symbol: "Cmaj7" });
+    expect(parseChordSymbol("CMaj7")).toMatchObject({
+      quality: "maj7",
+      symbol: "Cmaj7",
+    });
     expect(parseChordSymbol("CMAJ7")).toMatchObject({ quality: "maj7" });
     expect(parseChordSymbol("FMaj9")).toMatchObject({ quality: "maj9" });
     expect(parseChordSymbol("AMin7")).toMatchObject({ quality: "min7" });
     expect(parseChordSymbol("BDim")).toMatchObject({ quality: "dim" });
     expect(parseChordSymbol("GSus4")).toMatchObject({ quality: "sus4" });
-    expect(parseChordSymbol("G7Sus4")).toMatchObject({ quality: "dom7", symbol: "G7sus4" });
-    expect(parseChordSymbol("CAdd9")).toMatchObject({ quality: "maj", symbol: "Cadd9" });
+    expect(parseChordSymbol("G7Sus4")).toMatchObject({
+      quality: "dom7",
+      symbol: "G7sus4",
+    });
+    expect(parseChordSymbol("CAdd9")).toMatchObject({
+      quality: "maj",
+      symbol: "Cadd9",
+    });
     expect(parseChordSymbol("CMajor")).toMatchObject({ quality: "maj" });
   });
 
   it("parses every minor-major 7th spelling", () => {
-    for (const s of ["DmMaj7", "Dmmaj7", "DmM7", "Dm(maj7)", "DminMaj7", "Dminmaj7"]) {
-      expect(parseChordSymbol(s)).toMatchObject({ root: 2, quality: "minmaj7" });
+    for (const s of [
+      "DmMaj7",
+      "Dmmaj7",
+      "DmM7",
+      "Dm(maj7)",
+      "DminMaj7",
+      "Dminmaj7",
+    ]) {
+      expect(parseChordSymbol(s)).toMatchObject({
+        root: 2,
+        quality: "minmaj7",
+      });
     }
-    expect(parseChordSymbol("DmMaj7/A")).toMatchObject({ quality: "minmaj7", bass: 9 });
+    expect(parseChordSymbol("DmMaj7/A")).toMatchObject({
+      quality: "minmaj7",
+      bass: 9,
+    });
   });
 
   it("keeps the single letters m and M case-sensitive", () => {

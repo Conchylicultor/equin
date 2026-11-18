@@ -88,9 +88,7 @@ const MODIFIER =
 const MODIFIER_WORD = /^(?:sus|add|omit|no)/i;
 
 function matchModifier(rest: string): Modifier | null {
-  const m = MODIFIER.exec(
-    rest.replace(MODIFIER_WORD, (w) => w.toLowerCase()),
-  );
+  const m = MODIFIER.exec(rest.replace(MODIFIER_WORD, (w) => w.toLowerCase()));
   if (!m) return null;
   const len = m[0].length;
   if (m[0] === "sus2") return { kind: "sus", deg: 2, len };
