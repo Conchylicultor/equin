@@ -4,6 +4,8 @@ export {
   finishBuildSubSteps,
   followableBy,
   installEventsOn,
+  installLeftOut,
+  reportInstallDiagnosis,
   reportInstallNotice,
   reportInstallProgress,
   reportInstallResolved,

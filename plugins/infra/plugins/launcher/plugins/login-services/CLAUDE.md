@@ -283,6 +283,7 @@ folder needs only its boundary row, not a barrel's doc and shipping policy.
 - Machine:
   - Exports (types):
     - `DefineLoginServiceSpec`
+    - `HostDesktop`
     - `InstalledComponent`
     - `InstalledJob`
     - `LoginService`
@@ -303,6 +304,7 @@ folder needs only its boundary row, not a barrel's doc and shipping policy.
     - `BundleWriteRefusedError`
     - `declaredLoginServices`
     - `defineLoginService`
+    - `hostDesktop`
     - `installedAppComponents`
     - `installServiceExecutable`
     - `loginService`

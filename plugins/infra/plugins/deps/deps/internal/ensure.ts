@@ -32,6 +32,7 @@ import {
   type ReadyFile,
 } from "./state";
 import { sealedLookup } from "./sealed";
+import { assertSystemPackages } from "./system-packages";
 import {
   currentIdentity,
   defaultStore,
@@ -112,6 +113,10 @@ export async function installInCache(
   const paths = installPaths(store, dep.id, identity);
 
   if (await isInstalled(source, paths)) return { identity, paths };
+  // What the OS must provide (a native build's libraries), checked before
+  // anything is built: a missing one fails here naming it, never as the build
+  // tool's own error halfway in.
+  await assertSystemPackages(dep);
 
   const fd = await waitLock(paths.lock, () =>
     say(

@@ -107,6 +107,13 @@ held), `failed.json`, `last-used`, `holds/`. The lock is `locks/deps/<id>-<ident
 - **Once per machine.** Slow path: take the flock (waiting re-tries `flockTry`
   every 500 ms — only ever in an out-of-process context), re-check, install
   under `exec.admit` (one background unit of `withHostGrant`).
+- **`systemPackages: { linux: { apt, forUser } }`** on a declaration: what
+  the OS must provide (a native build's libraries — the menu-bar helper's GTK
+  and WebKitGTK). `checkSystemPackages(dep)` answers present / missing (apt
+  names) / unchecked (no dpkg); the engine checks it before an install and
+  throws `MissingSystemPackagesError` naming them, never the build tool's
+  error halfway in. `./equin start --system-packages` lists them for
+  install.sh, which installs them — no list of its own.
 - **`admission: { none: "<why>" }`** on a source skips `exec.admit`: for an
   install too small to be worth a grant that a caller awaits on the way INTO
   an op of its own (the signal-origin shim, before `build` / `check` / `push`
@@ -498,8 +505,11 @@ torch.
     - `SealOutcome`
     - `SourceVersion`
     - `SweepReport`
+    - `SystemPackages`
+    - `SystemPackagesCheck`
     - `TargetedSource`
   - Exports (values):
+    - `checkSystemPackages`
     - `declaredDep`
     - `declaredDeps`
     - `defineDep`
@@ -512,6 +522,7 @@ torch.
     - `hostTarget`
     - `liftPinStay`
     - `linkSealedDep`
+    - `MissingSystemPackagesError`
     - `PIN_LAG_MAX_DAYS`
     - `pinDecisionDue`
     - `pinDep`

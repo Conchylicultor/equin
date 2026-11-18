@@ -1,8 +1,11 @@
 import {
   installEventsOn,
+  installLeftOut,
+  reportInstallDiagnosis,
   reportInstallNotice,
   reportInstallProgress,
 } from "@plugins/installer/cli";
+import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import { writeFileSync } from "node:fs";
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { defineFileSink } from "@plugins/infra/plugins/file-sink/core";
@@ -13,7 +16,12 @@ import {
   getMainRepoRoot,
   getWorktreeRoot,
 } from "@plugins/infra/plugins/spawn/core";
-import { ensureDep, type DepProgress } from "@plugins/infra/plugins/deps/deps";
+import {
+  checkSystemPackages,
+  ensureDep,
+  MissingSystemPackagesError,
+  type DepProgress,
+} from "@plugins/infra/plugins/deps/deps";
 import { cliExecContext } from "@plugins/infra/plugins/jobs/plugins/supervised-job/cli";
 import {
   adoptGatewayLaunch,
@@ -57,7 +65,9 @@ import {
   type GatewayLaunchOptions,
 } from "@plugins/infra/plugins/launcher/server";
 import {
+  defineNotice,
   InstallerNoticeError,
+  type InstallerNotice,
   joinNames,
   plainTextProblems,
   renderNotice,
@@ -66,6 +76,7 @@ import {
   appsBlockedNotice,
   BundleWriteRefusedError,
   declaredLoginServices,
+  hostDesktop,
   loginServiceManager,
   machineMacosAppHost,
   reconcileLoginService,
@@ -141,8 +152,10 @@ function openStartLog(verbose: boolean): (line: string) => void {
 
 type Opts = {
   force?: boolean;
+  leaveOut?: string;
   logLevel: string;
   only?: string;
+  systemPackages?: boolean;
   port?: string;
   verbose?: boolean;
 };
@@ -170,6 +183,9 @@ type Steps = {
   port: PortPlan;
 };
 
+/** The line `--system-packages` answers on (install.sh's `start_services` reads it). */
+const SYSTEM_PACKAGES_MARK = "system-packages:";
+
 const run: CliAction<[], Opts> = async (opts) => {
   // `--only` is resolved first: a typo fails before anything is installed,
   // built or restarted.
@@ -182,6 +198,21 @@ const run: CliAction<[], Opts> = async (opts) => {
     : null;
   const gatewayLabel = gatewayService?.id.label ?? GATEWAY_SERVICE.label;
   const selected = selectServices(opts.only, gatewayLabel, declared);
+  const parts = await partsHere(
+    declared.filter((d) => selected(d.id)),
+    leaveOutIds(opts.leaveOut, declared),
+  );
+  // install.sh asks this before the start step runs: what the OS must
+  // provide for the parts this start would add here, so it installs them
+  // (one sudo) from the declarations, never from a list of its own.
+  if (opts.systemPackages) {
+    // One marked line: anything else on stdout (a dependency install's
+    // output) never reaches apt.
+    const missing =
+      manager === null ? [] : await missingSystemPackages(parts.add);
+    console.log(`${SYSTEM_PACKAGES_MARK}${missing.join(" ")}`);
+    return;
+  }
   // One equin per account: a second checkout of the repo would share this
   // account's database, address and background service, so starting it would
   // take over the equin running from another one (`instance-owner`). Asked
@@ -224,6 +255,7 @@ const run: CliAction<[], Opts> = async (opts) => {
     log,
     port: await planPort(opts, gatewayService),
   };
+  if (manager !== null) sayLeftOut(parts);
   // Named however the run ends — done, refused, or failed — since a failure is
   // when someone reads it. (The refused-gateway exit names it itself.)
   try {
@@ -231,7 +263,7 @@ const run: CliAction<[], Opts> = async (opts) => {
       manager,
       gatewayService,
       gateway: selected(gatewayLabel),
-      declared: declared.filter((d) => selected(d.id)),
+      declared: parts.add,
     });
   } finally {
     details(`start log ${START_LOG}`);
@@ -258,6 +290,16 @@ async function startSelected(
   // for anything but itself.
   const ensuredDeps =
     manager === null ? null : await ensureServiceDeps(declared, steps);
+  // In an install, a part that could not be prepared stops `start` HERE,
+  // before the gateway: fixed and tried again, the retry builds with nothing
+  // else on the machine (started, the gateway's first boot deploys main, and
+  // the retry's build would queue minutes behind it for the host's build
+  // slot — 2026-11-18, Linux VMs: 32 s to 5 min). Skip starts equin without
+  // it. Run by hand, equin itself comes first: the gateway starts (or
+  // restarts, `--force`) and `start` fails on the part afterwards — an
+  // optional part never holds the app.
+  const failed = ensuredDeps?.failed ?? [];
+  if (failed.length > 0 && installEventsOn()) failParts(failed);
   if (gateway) {
     // Under the lock main's follow-main step swaps the gateway with, so a
     // person's start never interleaves with an automatic restart.
@@ -283,7 +325,195 @@ async function startSelected(
     }
   }
   // Then every login service a plugin declares — none named here.
-  await startDeclaredLoginServices(manager, declared, ensuredDeps, opts, steps);
+  await startDeclaredLoginServices(
+    manager,
+    declared.filter((d) => !failed.some((f) => f.decl === d)),
+    ensuredDeps?.ready ?? null,
+    opts,
+    steps,
+  );
+  if (failed.length > 0) failParts(failed);
+}
+
+/**
+ * The parts `start` could not prepare: the notice on the terminal, the same
+ * words as the install step's own diagnosis (its pause, with Skip), exit 1.
+ */
+function failParts(failed: readonly FailedPart[]): never {
+  const notice = partsFailedNotice(failed);
+  console.error(renderNotice(notice));
+  reportInstallDiagnosis({
+    title: notice.title,
+    text: pauseText(notice, failed),
+    leaveOut: failed.map((f) => f.decl.id),
+    evidence: notice.evidence,
+  });
+  details(`start log ${START_LOG}`);
+  process.exit(1);
+}
+
+/**
+ * The selected login services, split by what this start does with each:
+ * `add` them, leave them out because this machine has no desktop to show a
+ * `graphical` one on (nothing is built, registered or asked of the OS for
+ * it), or leave them out because the person chose to (`--leave-out`, or an
+ * install's Skip: `EQUIN_INSTALL_LEFT_OUT`).
+ */
+type PartsHere = {
+  add: LoginServiceDeclaration[];
+  noDesktop: {
+    decls: LoginServiceDeclaration[];
+    why: string;
+    evidence: string;
+  };
+  chosen: LoginServiceDeclaration[];
+};
+
+async function partsHere(
+  selected: readonly LoginServiceDeclaration[],
+  leaveOut: ReadonlySet<string>,
+): Promise<PartsHere> {
+  const desktop = await hostDesktop();
+  const parts: PartsHere = {
+    add: [],
+    noDesktop: {
+      decls: [],
+      why: desktop.desktop ? "" : desktop.why,
+      evidence: desktop.desktop ? "" : desktop.evidence,
+    },
+    chosen: [],
+  };
+  for (const decl of selected) {
+    if (leaveOut.has(decl.id)) parts.chosen.push(decl);
+    else if (!desktop.desktop && decl.session === "graphical")
+      parts.noDesktop.decls.push(decl);
+    else parts.add.push(decl);
+  }
+  return parts;
+}
+
+/**
+ * `--leave-out <ids>` plus the parts an install's Skip left out, each a
+ * declared login service id; an unknown one throws, listing the known ones.
+ */
+function leaveOutIds(
+  flag: string | undefined,
+  declared: readonly LoginServiceDeclaration[],
+): ReadonlySet<string> {
+  const ids = [
+    ...(flag ?? "")
+      .split(",")
+      .map((id) => id.trim())
+      .filter((id) => id !== ""),
+    ...installLeftOut(),
+  ];
+  const known = declared.map((d) => d.id);
+  const unknown = ids.filter((id) => !known.includes(id));
+  if (unknown.length > 0)
+    throw new Error(
+      `--leave-out: unknown service${unknown.length > 1 ? "s" : ""} ${unknown.join(", ")}. Known: ${known.join(", ")}.`,
+    );
+  return new Set(ids);
+}
+
+/** What `start` leaves out, said once, before anything is built. */
+function sayLeftOut(parts: PartsHere): void {
+  const { noDesktop, chosen } = parts;
+  if (noDesktop.decls.length > 0) {
+    console.log(
+      `Left out ${listNames(noDesktop.decls)}: ${noDesktop.why}. equin works without ${noDesktop.decls.length > 1 ? "them" : "it"}, in your browser.`,
+    );
+    details(noDesktop.decls.map((d) => d.id).join(", "), noDesktop.evidence);
+  }
+  if (chosen.length > 0) {
+    console.log(
+      `Left out ${listNames(chosen)}, as you chose. To add ${chosen.length > 1 ? "them" : "it"} later, run \`./equin start\` again.`,
+    );
+    details(`left out: ${chosen.map((d) => d.id).join(", ")}`);
+  }
+}
+
+/** The OS packages the parts' programs need and this machine lacks (apt names). */
+async function missingSystemPackages(
+  decls: readonly LoginServiceDeclaration[],
+): Promise<string[]> {
+  const missing = new Set<string>();
+  for (const decl of decls) {
+    const check = await checkSystemPackages(decl.dep);
+    if (check.kind === "missing") for (const p of check.apt) missing.add(p);
+  }
+  return [...missing];
+}
+
+type FailedPart = { decl: LoginServiceDeclaration; error: unknown };
+
+/**
+ * The parts `start` could not prepare, as the installer notice a person
+ * reads: what each gives them, why it failed in their words (the OS libraries
+ * it needs, or a build that failed — its output only in the evidence), and
+ * that it is optional.
+ */
+function partsFailedNotice(failed: readonly FailedPart[]): InstallerNotice {
+  const decls = failed.map((f) => f.decl);
+  const names = listNames(decls);
+  const missing = failed.flatMap((f) =>
+    f.error instanceof MissingSystemPackagesError ? [f.error] : [],
+  );
+  const apt = [...new Set(missing.flatMap((m) => m.apt))];
+  const them = failed.length > 1 ? "them" : "it";
+  return defineNotice({
+    title: `equin couldn't add ${names}`,
+    doing: `It was adding ${names}. ${decls.map((d) => d.forUser.gives).join(" ")}`,
+    blocked:
+      missing.length === failed.length
+        ? `${failed.length > 1 ? "They need" : "It needs"} ${joinNames([...new Set(missing.map((m) => m.forUser))])}, which aren't installed on this computer.`
+        : `${failed.length > 1 ? "They are" : "It is"} built on this computer, and that build failed.`,
+    now: [
+      apt.length > 0
+        ? `Install what ${failed.length > 1 ? "they need" : "it needs"} with \`sudo apt-get install ${apt.join(" ")}\`, then run \`./equin start\` again.`
+        : "Fix what stopped the build (its last lines are in the details), then run `./equin start` again.",
+      `Or start equin without ${them}: \`./equin start --leave-out ${decls.map((d) => d.id).join(",")}\`.`,
+    ],
+    ifSkipped: {
+      optional: true,
+      stillWorks: `equin works without ${them}, in your browser.`,
+      addLater: `To add ${them} later, run \`./equin start\` again.`,
+    },
+    evidence: failed.flatMap((f) => [
+      `${f.decl.id} (${f.decl.dep.id}):`,
+      ...errorTail(f.error),
+    ]),
+  });
+}
+
+/**
+ * The same notice as an install's pause: one paragraph, its actions the
+ * pause's own buttons (Try again, Skip, Fix with Claude).
+ */
+function pauseText(
+  notice: InstallerNotice,
+  failed: readonly FailedPart[],
+): string {
+  const missing = failed.flatMap((f) =>
+    f.error instanceof MissingSystemPackagesError ? [f.error] : [],
+  );
+  const apt = [...new Set(missing.flatMap((m) => m.apt))];
+  const them = failed.length > 1 ? "them" : "it";
+  const act =
+    apt.length > 0
+      ? `Install ${them === "it" ? "what it needs" : "what they need"} with \`sudo apt-get install ${apt.join(" ")}\`, then Try again.`
+      : "Fix with Claude reads what went wrong first; Try again builds it again.";
+  return `${notice.doing} ${notice.blocked} ${act} It's optional: Skip starts equin without ${them}, and equin works in your browser. ${notice.ifSkipped.optional ? notice.ifSkipped.addLater : ""}`.trim();
+}
+
+/** An error's last lines, the home folder as `~` (evidence a person may share). */
+function errorTail(error: unknown): string[] {
+  const text = error instanceof Error ? error.message : String(error);
+  return text
+    .split("\n")
+    .filter((l) => l.trim() !== "")
+    .slice(-20)
+    .map((l) => l.split(HOME_DIR).join("~"));
 }
 
 /**
@@ -434,15 +664,15 @@ async function reportStaleGateway(
  * Each selected login service's dependency, ensured from the MAIN checkout — a
  * CLI may build in the foreground — in declaration order, before the gateway
  * starts (see `startSelected`). A failed one is kept as its error, not thrown
- * here: the gateway (equin itself) still starts, and `start` fails naming it
- * once the rest is up (`startDeclaredLoginServices`).
+ * here: `startSelected` decides when `start` fails on it — before the gateway
+ * in an install, after it by hand.
  */
 async function ensureServiceDeps(
   declared: readonly LoginServiceDeclaration[],
   steps: Steps,
-): Promise<Map<LoginServiceDeclaration, EnsuredDep>> {
+): Promise<EnsuredDeps> {
   const root = await getMainRepoRoot();
-  const ensured = new Map<LoginServiceDeclaration, EnsuredDep>();
+  const ensured: EnsuredDeps = { ready: new Map(), failed: [] };
   for (const decl of declared) {
     try {
       const ready = await ensureDep(decl.dep, cliExecContext(), {
@@ -456,18 +686,20 @@ async function ensureServiceDeps(
             }
           : {}),
       });
-      ensured.set(decl, { ok: true, ready });
+      ensured.ready.set(decl, ready);
     } catch (error) {
-      // Whatever it was, it is thrown after the gateway is up — never lost.
-      ensured.set(decl, { ok: false, error });
+      // Whatever it was, `start` fails on it as a notice naming the part
+      // (`startSelected`: before the gateway in an install) — never lost.
+      ensured.failed.push({ decl, error });
     }
   }
   return ensured;
 }
 
-type EnsuredDep =
-  | { ok: true; ready: Awaited<ReturnType<typeof ensureDep>> }
-  | { ok: false; error: unknown };
+type EnsuredDeps = {
+  ready: Map<LoginServiceDeclaration, Awaited<ReturnType<typeof ensureDep>>>;
+  failed: FailedPart[];
+};
 
 /**
  * Every login service a plugin declares (`login-services/index.ts`, collected
@@ -480,7 +712,7 @@ type EnsuredDep =
 async function startDeclaredLoginServices(
   manager: LoginServiceManager | null,
   declared: readonly LoginServiceDeclaration[],
-  ensuredDeps: Map<LoginServiceDeclaration, EnsuredDep> | null,
+  ensuredDeps: EnsuredDeps["ready"] | null,
   opts: Opts,
   steps: Steps,
 ): Promise<void> {
@@ -496,18 +728,12 @@ async function startDeclaredLoginServices(
     decl: LoginServiceDeclaration;
     err: BundleWriteRefusedError;
   }[] = [];
-  const failed: { decl: LoginServiceDeclaration; error: unknown }[] = [];
   for (const decl of declared) {
-    const ensured = ensuredDeps?.get(decl);
-    if (ensured === undefined)
+    const ready = ensuredDeps?.get(decl);
+    if (ready === undefined)
       throw new Error(
         `${decl.id}: its dependency was not ensured before the gateway started`,
       );
-    if (!ensured.ok) {
-      failed.push({ decl, error: ensured.error });
-      continue;
-    }
-    const ready = ensured.ready;
     try {
       const { service, outcome } = await reconcileLoginService(
         manager,
@@ -554,13 +780,6 @@ async function startDeclaredLoginServices(
       without: "the menu-bar icon and app shortcuts",
     });
   }
-  // A program that failed to build, raised now that equin itself is up.
-  if (failed.length === 1) throw failed[0]!.error;
-  if (failed.length > 1)
-    throw new AggregateError(
-      failed.map((f) => f.error),
-      `${listNames(failed.map((f) => f.decl))} could not be prepared`,
-    );
 }
 
 /** "a, b and c", by the names a person knows them by. */

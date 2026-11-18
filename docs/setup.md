@@ -58,7 +58,8 @@ notes inline). Every step is a prerequisite of the next.
 
 ```sh
 # 1. Xcode command-line tools: git, and the C linker Rust builds with.
-#    (Linux: git, curl and build-essential through apt, one sudo; plus lingering.)
+#    (Linux: git, curl and build-essential through apt, one sudo; plus lingering.
+#     On a desktop, the menu-bar icon's GTK/WebKitGTK libraries before start.)
 xcode-select --install
 
 # 2. mise, activated in your shell: it installs the exact Bun, Go, tmux and Rust

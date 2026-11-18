@@ -106,6 +106,30 @@ unchanged job (`--force` reloads anyway). A
 systemd's `graphical-session.target`) and needs no lingering. With no service
 manager none is started, and `start` says so.
 
+**Parts left out.** A `graphical` service on a machine with no desktop
+(login-services' `hostDesktop`: Linux with no display outside SSH, no display
+manager and no desktop session installed — a headless server; not
+`systemctl get-default`, which is `graphical.target` on Ubuntu Server too) is
+left out: nothing built,
+registered or asked of the OS, one line saying so. `--leave-out <ids>` (and an
+install's Skip, `EQUIN_INSTALL_LEFT_OUT`) leaves out the named ones; a later
+plain `start` adds them. `--system-packages` prints, and exits, the apt
+packages the services this start would add still need (`Dep.systemPackages`)
+on one `system-packages:` line — install.sh installs them before the start
+step, reading only that line.
+
+**A part that cannot be prepared** (every dependency is ensured before the
+gateway) ends `start` with exit 1 and an installer notice naming it
+(optional; the OS libraries it lacks, or the failed build's lines as
+evidence; how to skip it), written also as the install step's own diagnosis.
+**In an install it stops before the gateway**: Try again then builds it with
+nothing else running — started, the gateway's first boot would deploy main
+and the retry would wait behind that build for the host's slot (32 s to
+5 min, 2026-11-18 Linux VMs) — and Skip re-runs `start` without it. **Run by
+hand, equin comes first**: the gateway starts (or restarts, `--force`), the
+other services are added, and only then does `start` fail on the part — an
+optional part never holds the app.
+
 `--only <ids>` (comma-separated: `<gateway-label>` and/or declared ids)
 restricts `start` to those services — the gateway half runs only when it is
 named — and with `--force` restarts just them:
@@ -202,6 +226,8 @@ There is nobody left for it to report to, and the daemon it spawned is unaffecte
     - `infra/launcher/gateway-drift.withGatewayFollowLock`
     - `infra/launcher/instance-owner.assertThisInstance`
     - `installer.installEventsOn`
+    - `installer.installLeftOut`
+    - `installer.reportInstallDiagnosis`
     - `installer.reportInstallNotice`
     - `installer.reportInstallProgress`
 

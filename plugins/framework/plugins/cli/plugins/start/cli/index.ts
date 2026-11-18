@@ -20,8 +20,10 @@ export default defineCliCommand<
   [],
   {
     force?: boolean;
+    leaveOut?: string;
     logLevel: string;
     only?: string;
+    systemPackages?: boolean;
     port?: string;
     verbose?: boolean;
   }
@@ -34,6 +36,16 @@ export default defineCliCommand<
     {
       flags: "--only <ids>",
       description: `Comma-separated services to start (the gateway's ${GATEWAY_SERVICE.label} — ${LEGACY_IDS.launchdLabel} on an install data-dir migrate has not moved yet — or a declared login service id); with --force, restarts only those`,
+    },
+    {
+      flags: "--leave-out <ids>",
+      description:
+        "Comma-separated declared login services to leave out of this start (an optional part that cannot be added here); a later plain start adds them",
+    },
+    {
+      flags: "--system-packages",
+      description:
+        "Print the OS packages (apt names, space-separated) the login services this start would add here still need, and exit — what install.sh installs before the start step",
     },
     {
       flags: "--port <port>",

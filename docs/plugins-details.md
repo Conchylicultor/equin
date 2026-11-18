@@ -32250,6 +32250,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/launcher/gateway-drift.withGatewayFollowLock`
               - `infra/launcher/instance-owner.assertThisInstance`
               - `installer.installEventsOn`
+              - `installer.installLeftOut`
+              - `installer.reportInstallDiagnosis`
               - `installer.reportInstallNotice`
               - `installer.reportInstallProgress`
         - **`stop`** — `./equin stop` — stop the gateway daemon (and with it every backend); `--disable` also stops it starting at login.
@@ -36355,8 +36357,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SealOutcome`
           - `SourceVersion`
           - `SweepReport`
+          - `SystemPackages`
+          - `SystemPackagesCheck`
           - `TargetedSource`
         - Exports (values):
+          - `checkSystemPackages`
           - `declaredDep`
           - `declaredDeps`
           - `defineDep`
@@ -36369,6 +36374,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hostTarget`
           - `liftPinStay`
           - `linkSealedDep`
+          - `MissingSystemPackagesError`
           - `PIN_LAG_MAX_DAYS`
           - `pinDecisionDue`
           - `pinDep`
@@ -39479,6 +39485,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Machine:
             - Exports (types):
               - `DefineLoginServiceSpec`
+              - `HostDesktop`
               - `InstalledComponent`
               - `InstalledJob`
               - `LoginService`
@@ -39499,6 +39506,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `BundleWriteRefusedError`
               - `declaredLoginServices`
               - `defineLoginService`
+              - `hostDesktop`
               - `installedAppComponents`
               - `installServiceExecutable`
               - `loginService`
@@ -40136,6 +40144,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/promo-film`
               - `code-explorer/file-resolve`
               - `debug/sentinel`
+              - `framework/cli/start`
               - `framework/tooling/guards`
               - `infra/file-watcher`
               - `infra/host-account`
@@ -41324,6 +41333,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `finishBuildSubSteps`
       - `followableBy`
       - `installEventsOn`
+      - `installLeftOut`
+      - `reportInstallDiagnosis`
       - `reportInstallNotice`
       - `reportInstallProgress`
       - `reportInstallResolved`

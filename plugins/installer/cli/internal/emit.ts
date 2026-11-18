@@ -474,3 +474,48 @@ export function reportInstallNotice(notice: {
   if (reportingStep() === null) return;
   emitInstallEvent({ type: "notice", ...notice });
 }
+
+// ── A step's own diagnosis ───────────────────────────────────────────────────
+
+/**
+ * A step command's own diagnosis of why it fails, for the pause install.sh
+ * shows when the step exits non-zero (its `diagnose` reads it before its
+ * generic "didn't finish"). The command knows what failed in the user's terms
+ * — an optional part it could not add — where install.sh only sees an exit
+ * status. `title` / `text` follow the installer message rules (build them
+ * from an `InstallerNotice`); `leaveOut` names the optional parts a Skip
+ * leaves out: install.sh then runs the step again with them in
+ * `EQUIN_INSTALL_LEFT_OUT` (`installLeftOut`). Written to the file install.sh
+ * names in `EQUIN_INSTALL_DIAGNOSIS`, one `key<TAB>value` per line; outside
+ * an install, a no-op.
+ */
+export function reportInstallDiagnosis(diagnosis: {
+  title: string;
+  text: string;
+  leaveOut: readonly string[];
+  evidence: readonly string[];
+}): void {
+  const path = readEnv("INSTALL_DIAGNOSIS");
+  if (path === undefined || path === "") return;
+  const one = (v: string) => v.replace(/[\t\r\n]+/g, " ").trim();
+  const lines = [
+    `title\t${one(diagnosis.title)}`,
+    `text\t${one(diagnosis.text)}`,
+    `leave-out\t${diagnosis.leaveOut.map(one).join(",")}`,
+    ...diagnosis.evidence
+      .flatMap((e) => e.split("\n"))
+      .map(one)
+      .filter((e) => e !== "")
+      .map((e) => `evidence\t${e}`),
+  ];
+  writeFileSync(path, `${lines.join("\n")}\n`);
+}
+
+/** The optional parts the person skipped during this install (`EQUIN_INSTALL_LEFT_OUT`). */
+export function installLeftOut(): string[] {
+  const raw = readEnv("INSTALL_LEFT_OUT") ?? "";
+  return raw
+    .split(",")
+    .map((id) => id.trim())
+    .filter((id) => id !== "");
+}

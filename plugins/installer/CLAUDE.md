@@ -309,6 +309,14 @@ what skipping costs — raw lines only in `evidence` and the log.
     The **build slot** ([`waits`](plugins/waits), `judgeHolder`): waited past
     2 min AND the holder (the op log's oldest working op) showed no progress
     for 10 min — a deadline re-armed only when the holder moved.
+  - **the step's own** — the failed command wrote its own diagnosis
+    (installer/cli `reportInstallDiagnosis`, to the file
+    `EQUIN_INSTALL_DIAGNOSIS` names; `own_diagnosis` reads it): its title,
+    text and evidence, in the person's terms. When it names `leave-out`
+    parts, the pause is optional and **Skip runs the step again without
+    them** (`EQUIN_INSTALL_LEFT_OUT`, accumulated in `LEFT_OUT`) rather than
+    leaving the step out whole. `./equin start` writes one for a part it could
+    not prepare (§ One build of main per install).
   - **unknown** — anything else: "<doing> didn't finish", the step's last 20
     lines; it never guesses. Tools on macOS in the window: "Apple's developer
     tools weren't installed" (Try again opens Apple's dialog again).
@@ -364,8 +372,9 @@ what skipping costs — raw lines only in `evidence` and the log.
   1)(allow default)'` is the sandbox rule, vanish (a program deleted right
   after it was made) with a process named `JamfProtect` running is the
   security rule (`cc` a sleeping C program named so), quiet with
-  `EQUIN_INSTALL_STALL_S=1` the watchdog; `EQUIN_INSTALL_DRY_RUN_OPTIONAL=
-  <step>` offers Skip, `EQUIN_INSTALL_DRY_RUN_NOTICE=1` the part left out.
+  `EQUIN_INSTALL_STALL_S=1` the watchdog, `<step>:part` an optional part of
+  the step failing with the step's own diagnosis until a Skip leaves it out;
+  `EQUIN_INSTALL_DRY_RUN_OPTIONAL=<step>` offers Skip, `EQUIN_INSTALL_DRY_RUN_NOTICE=1` the part left out.
   The stream test runs all but security (it needs the fake product).
 
 ## `./equin` as an install step (`cli/`, `bin/`)
@@ -406,8 +415,28 @@ every program a login service runs (the menu-bar icon, the disk-speed check)
 BEFORE it starts the gateway: built after, one would queue for the host's
 build slot behind main's whole first build (2026-11-18: a 5 s compile waited
 ~9 min, booked to `start`), since admission on a fresh machine runs on its
-1-slot floor. A program that fails to build no longer stops the gateway: `start`
-fails naming it once equin itself is up.
+1-slot floor.
+
+In an install, a program that fails to build stops `start` BEFORE the
+gateway (by hand, `start` brings the gateway up first), as an
+installer notice (what the part gives, why it failed in the user's words —
+the OS libraries it lacks, or a failed build with its output as evidence —
+and that it is optional) and as the start step's own diagnosis: Try again
+rebuilds it with nothing else on the machine (were the gateway up, its first
+boot's build of main would hold the build slot and the retry would queue
+behind it: 32 s to 5 min on the 2026-11-18 Linux VMs); Skip runs `start`
+again with the part left out (`--leave-out`, here `EQUIN_INSTALL_LEFT_OUT`).
+
+**What the parts need from the OS** is declared by each part's dependency
+(`Dep.systemPackages`, apt names — the menu-bar icon's GTK / WebKitGTK); the
+start step's body (`start_services`) asks `./equin start --system-packages`
+and apt-installs what is missing (one sudo) before `./equin start`. A failed
+apt install does not stop the step: `start` then fails on the part, with the
+packages named. `--system-packages` answers on one marked line, each name checked before
+it reaches apt; apt waits out a dpkg lock (a fresh machine's own updates). A
+machine with no desktop (`hostDesktop`: no display outside SSH, no display
+manager, no desktop session installed) never builds or registers a
+`graphical` service — `start` says it left it out.
 
 The install's build step is the same convergence run (`./equin build
 --allow-main --converge`): it waits on the deploy lock for the service's run
@@ -528,6 +557,8 @@ service's build (§ One build of main per install) covers the other order.
     - `finishBuildSubSteps`
     - `followableBy`
     - `installEventsOn`
+    - `installLeftOut`
+    - `reportInstallDiagnosis`
     - `reportInstallNotice`
     - `reportInstallProgress`
     - `reportInstallResolved`

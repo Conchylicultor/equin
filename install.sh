@@ -633,7 +633,7 @@ checkout_steps() {
   # No Claude Code install: the app runs the build the Agent SDK ships (with
   # the toolchain's dependencies), and the user signs in from the app.
   say "Starting equin in the background, with its own database"
-  run_step start ./equin start
+  run_step start start_services
   if [ "$STEP_RC" != "0" ]; then
     fail "equin could not start; what stopped it is just above. Once that is sorted, run the installer again: it picks up where it stopped (cd $INSTALL_DIR && ./install.sh)." \
       "./equin start exited non-zero"
@@ -764,22 +764,24 @@ xcode_dialog() {
   xcode-select -p >/dev/null 2>&1 || { echo "Apple's installer closed without installing the developer tools."; exit 1; }
 }
 
-# sudo_once: ask for the password now, as a wait the terminal view stops
+# sudo_once [why]: ask for the password now, as a wait the terminal view stops
 # redrawing for (the prompt is on the terminal, below its status block); the
 # step's later sudo calls reuse it. In the window on Linux the window asks
 # (sudo's askpass: the window's own binary, `--askpass`, which asks the window
 # over its socket to show a password sheet) — the password goes to sudo only.
 sudo_once() {
+  local rc=0
   if sudo -n true 2>/dev/null; then return 0; fi
   step_ev "\"type\":\"wait\",\"step\":\"$EQUIN_INSTALL_STEP\",\"state\":\"start\",\"on\":\"password\""
   if [ "$MODE" = "window" ] && [ -n "${EQUIN_INSTALLER_BIN:-}" ] && [ -n "${EQUIN_INSTALLER_ASKPASS:-}" ]; then
     printf '#!/bin/sh\nexec %s --askpass "$@"\n' "$(q "$EQUIN_INSTALLER_BIN")" >"$RUN_DIR/askpass"
     chmod +x "$RUN_DIR/askpass"
-    SUDO_ASKPASS="$RUN_DIR/askpass" sudo -A -p "equin needs your password to install git and a C compiler, and to keep running while nobody is logged in. It is used for this only and never stored." -v
+    SUDO_ASKPASS="$RUN_DIR/askpass" sudo -A -p "${1:-equin needs your password to install git and a C compiler, and to keep running while nobody is logged in.} It is used for this only and never stored." -v || rc=$?
   else
-    sudo -v
+    sudo -v || rc=$?
   fi
   step_ev "\"type\":\"wait\",\"step\":\"$EQUIN_INSTALL_STEP\",\"state\":\"end\",\"on\":\"password\""
+  return "$rc"
 }
 
 # prepare_linux <" pkg pkg…" or ""> <linger: 1 already on, 0 to enable>
@@ -795,6 +797,44 @@ prepare_linux() {
     say "Letting equin keep running while nobody is logged in, and start when the machine boots (asks for your password)"
     sudo loginctl enable-linger "$(id -un)"
   fi
+}
+
+# start_services: the start step's body. First what the OS must provide for
+# the parts `./equin start` adds here — declared by those parts themselves
+# (Dep.systemPackages; the menu-bar icon's GTK and WebKitGTK on a desktop),
+# asked of `./equin start --system-packages`, never listed here — then start.
+# A failed package install does not stop the step: start then fails on that
+# optional part with its own diagnosis (what it gives, the packages it lacks,
+# Skip).
+start_services() {
+  local out pkgs="" p
+  if [ "$OS" != "Darwin" ] && command -v apt-get >/dev/null 2>&1; then
+    out="$(./equin start --system-packages)"
+    # Its one marked line; any other output (a dependency install's) is not
+    # a package name.
+    pkgs="$(printf '%s\n' "$out" | sed -n 's/^system-packages://p' | tail -n 1)"
+    printf '%s\n' "$out" | grep -q '^system-packages:' || {
+      echo "./equin start --system-packages answered no system-packages: line:"; printf '%s\n' "$out"; return 1; }
+    for p in $pkgs; do
+      case "$p" in
+        *[!a-z0-9.+:-]*|[!a-z0-9]*) echo "./equin start --system-packages named \"$p\", which is not a package name"; return 1 ;;
+      esac
+    done
+  fi
+  if [ -n "$pkgs" ]; then
+    say "Installing the libraries equin's desktop icon is built with (asks for your password)"
+    echo "apt packages: $pkgs"
+    # A lock held by the system's own updates on a fresh machine is waited
+    # out; an update error from another source does not stop the install.
+    # shellcheck disable=SC2086 # one word per package
+    if sudo_once "equin needs your password to install the libraries its desktop icon is built with." &&
+      { sudo apt-get -o DPkg::Lock::Timeout=300 update -qq || echo "apt-get update reported errors; installing anyway."; } &&
+      sudo DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=300 install -y -qq $pkgs; then :
+    else
+      echo "Those packages did not install; equin starts anyway and says what is missing."
+    fi
+  fi
+  ./equin start
 }
 
 install_mise() {
@@ -864,6 +904,9 @@ RUN_DIR=""
 FIFO=""
 CFIFO=""
 PAUSE_QUIT=0
+# The optional parts the person skipped (comma-separated ids), handed to every
+# later step attempt as EQUIN_INSTALL_LEFT_OUT (run_step).
+LEFT_OUT=""
 DONE_SENT=0
 FAIL_MSG=""
 FAIL_DETAILS=""
@@ -1483,7 +1526,10 @@ write_timing() {
 # diagnosed and paused (`pause`): the person decides — retry runs it again
 # (every step checks before it acts), quit gives up, skip leaves out an
 # optional step (STEP_OPTIONAL=1). The command's own `./equin` reports
-# (sub-steps, progress, waits) reach the hub through EQUIN_INSTALL_EVENTS.
+# (sub-steps, progress, waits) reach the hub through EQUIN_INSTALL_EVENTS; its
+# own diagnosis of a failure through EQUIN_INSTALL_DIAGNOSIS (`own_diagnosis`)
+# — when that names optional parts, Skip runs the step again without them
+# (EQUIN_INSTALL_LEFT_OUT, which accumulates in LEFT_OUT).
 #
 # Its status is STEP_RC, and run_step itself always returns 0: NEVER call it
 # as a condition (`run_step … || fail`, `if run_step …`). There bash ignores
@@ -1501,11 +1547,13 @@ run_step() {
     STEP_ATTEMPT=$((STEP_ATTEMPT + 1))
     ev_step "$id" start
     STEP_LOG0=$(wc -l <"$RUN_DIR/install.log")
+    rm -f "$RUN_DIR/step-diagnosis"
     t0=$SECONDS
     set +e
     (
       eval "exec $CLOSE_FDS"
-      export EQUIN_INSTALL_EVENTS="$FIFO" EQUIN_INSTALL_STEP="$id"
+      export EQUIN_INSTALL_EVENTS="$FIFO" EQUIN_INSTALL_STEP="$id" \
+        EQUIN_INSTALL_DIAGNOSIS="$RUN_DIR/step-diagnosis" EQUIN_INSTALL_LEFT_OUT="$LEFT_OUT"
       set -e
       "$@"
     ) 2>&1 | "$reader" "$id"
@@ -1518,10 +1566,18 @@ run_step() {
     fi
     ev_step "$id" failed "$(((SECONDS - t0) * 1000))"
     diagnose "$id" "$STEP_RC"
-    pause "$id" "$D_KIND" "$D_TITLE" "$D_TEXT" "${STEP_OPTIONAL:-0}" "$D_MANUAL" ${D_EV[@]+"${D_EV[@]}"}
+    local optional=${STEP_OPTIONAL:-0}
+    [ -z "$D_LEAVE_OUT" ] || optional=1
+    pause "$id" "$D_KIND" "$D_TITLE" "$D_TEXT" "$optional" "$D_MANUAL" ${D_EV[@]+"${D_EV[@]}"}
     case "$DECISION" in
       retry) continue ;;
-      skip) ev_step "$id" skipped; STEP_RC=0 ;;
+      # An optional PART of the step (its own diagnosis named it): the step
+      # runs again without it, rather than being left out whole.
+      skip) if [ -n "$D_LEAVE_OUT" ]; then
+          LEFT_OUT="${LEFT_OUT:+$LEFT_OUT,}$D_LEAVE_OUT"
+          continue
+        fi
+        ev_step "$id" skipped; STEP_RC=0 ;;
       *) PAUSE_QUIT=1 ;;
     esac
     STEP_OPTIONAL=0
@@ -1595,6 +1651,7 @@ diagnose() {
   tail="$(step_tail 20)"
   r_idx_plan "$step"; doing=$PD_DOING
   D_MANUAL=""
+  D_LEAVE_OUT=""
   D_EV=()
   # Apple's installer closed without installing the tools (window mode).
   if [ "$step" = "tools" ] && [ "$OS" = "Darwin" ] && ! xcode-select -p >/dev/null 2>&1; then
@@ -1605,6 +1662,10 @@ diagnose() {
     D_EV+=("xcode-select -p: no developer tools found (step exit $rc)")
     return 0
   fi
+  # The step's command said itself what failed (an optional part it could not
+  # add, say): its words, in the person's terms — ahead of the rules below,
+  # which read only the output's last lines.
+  own_diagnosis && return 0
   # sandbox: killed outright (SIGKILL), under a sandboxing parent.
   if [ "$rc" = 137 ] || [ "$rc" = 9 ] || printf '%s\n' "$tail" | grep -qE 'SIGKILL|signal: 9|Killed: 9'; then
     who="$(sandboxed)"
@@ -1635,6 +1696,26 @@ diagnose() {
   D_TEXT="equin stopped while ${doing:-working}: the last lines it printed are below. Fix with Claude reads the whole log and explains what went wrong before changing anything. Trying again picks up where it stopped."
   evidence_lines "$tail" 20
   D_EV+=("step exit $rc")
+}
+
+# own_diagnosis: the failed step's command's own diagnosis, when it wrote one
+# (installer/cli reportInstallDiagnosis: `key<TAB>value` lines — title, text,
+# leave-out, evidence…) into EQUIN_INSTALL_DIAGNOSIS. Sets D_* like diagnose;
+# 1 when there is none. Its title and text already follow the message rules.
+own_diagnosis() {
+  local file="$RUN_DIR/step-diagnosis" k v
+  [ -s "$file" ] || return 1
+  D_KIND=unknown D_TITLE="" D_TEXT=""
+  while IFS=$'\t' read -r k v; do
+    case "$k" in
+      title) D_TITLE=$v ;;
+      text) D_TEXT=$v ;;
+      leave-out) D_LEAVE_OUT=$v ;;
+      evidence) redact "$v"; D_EV+=("${RD:0:300}") ;;
+    esac
+  done <"$file"
+  [ -n "$D_TITLE" ] && [ -n "$D_TEXT" ] || { D_LEAVE_OUT=""; D_EV=(); return 1; }
+  return 0
 }
 
 # sandbox_check: before any step, the sandbox rule's fact on its own — a
@@ -3007,8 +3088,25 @@ dry_step() {
     dry_notice skipped
   fi
   local fail=${EQUIN_INSTALL_DRY_RUN_FAIL:-}
+  # <step>:part — an optional part of the step fails on every attempt until
+  # it is left out, with the step's own diagnosis, as `./equin start` writes
+  # it (installer/cli reportInstallDiagnosis).
+  if [ "$fail" = "$1:part" ]; then
+    case ",${EQUIN_INSTALL_LEFT_OUT:-}," in
+      *,dev.equin.menu-bar,*) ;;
+      *)
+        printf 'title\t%s\ntext\t%s\nleave-out\t%s\nevidence\t%s\n' \
+          "equin couldn't add the equin icon in your menu bar" \
+          "It was adding the equin icon in your menu bar. It needs the GTK and WebKitGTK libraries, which aren't installed on this computer. It's optional: Skip starts equin without it." \
+          "dev.equin.menu-bar" \
+          "dev.equin.menu-bar (menu-bar-helper): missing libgtk-3-dev (dry run)" >"$EQUIN_INSTALL_DIAGNOSIS"
+        echo "$1: an optional part failed (dry run)" >&2
+        false ;;
+    esac
+  fi
   if [ "$1" = "${fail%%:*}" ] && [ "$STEP_ATTEMPT" = "1" ]; then
     case "$fail" in
+      *:part) ;; # above
       *:sigkill) # killed outright, as a protected shell kills a compiler
         echo "$1: error: could not compile \`ring\` (build script)"
         exec sh -c 'kill -9 $$' ;; # bash 3.2 has no BASHPID: the step's own process dies

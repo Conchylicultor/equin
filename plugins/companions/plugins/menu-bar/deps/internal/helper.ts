@@ -103,4 +103,23 @@ export const menuBarHelper = defineDep({
         })
       : cargoBuild({ crate: CRATE, bin: BIN }),
   updates: { none: "built from this checkout's own source" },
+  // Linux: Tauri links the desktop's own toolkit (GTK, WebKitGTK and the
+  // libraries under it), found through pkg-config. install.sh installs them
+  // from this list (`./equin start --system-packages`) on a machine with a
+  // desktop; a headless one never builds the helper at all.
+  systemPackages: {
+    linux: {
+      apt: [
+        "pkg-config",
+        "libgtk-3-dev",
+        "libwebkit2gtk-4.1-dev",
+        "libsoup-3.0-dev",
+        "libjavascriptcoregtk-4.1-dev",
+        // tao's dbus crate links libdbus (pkg-config dbus-1) directly.
+        "libdbus-1-dev",
+      ],
+      forUser:
+        "the GTK and WebKitGTK libraries your desktop draws windows with",
+    },
+  },
 });

@@ -85,6 +85,10 @@ export const RUNTIME_WITHHELD_ENV = {
     "the FIFO an install's events go to (installer), set by install.sh for the `./equin` commands it runs as steps, which report their sub-steps, progress and waits through it (installer/cli emitInstallEvent)",
   INSTALL_STEP:
     "the install step a command runs as (installer: tools, start, build…), set by install.sh beside INSTALL_EVENTS so what the command reports is filed under that step",
+  INSTALL_DIAGNOSIS:
+    "the file a command run as an install step writes its own diagnosis of a failure to (installer: title, text, whether it is optional and which parts a Skip leaves out), set by install.sh beside INSTALL_EVENTS and read by its pause when the step fails",
+  INSTALL_LEFT_OUT:
+    "the optional parts (login service ids, comma-separated) the person chose to Skip during an install, set by install.sh for the start step so `./equin start` runs without them",
   INSTALLER_PAGE:
     "the bundled installer page the installer window's crate compiles in (installer/window rust/build.rs), set by its dependency build for that one cargo run",
   PEAK_FOOTPRINT_REPORT:

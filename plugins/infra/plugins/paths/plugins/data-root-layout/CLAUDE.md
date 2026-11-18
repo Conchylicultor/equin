@@ -36,6 +36,7 @@
     - `apps/website/promo-film`
     - `code-explorer/file-resolve`
     - `debug/sentinel`
+    - `framework/cli/start`
     - `framework/tooling/guards`
     - `infra/file-watcher`
     - `infra/host-account`

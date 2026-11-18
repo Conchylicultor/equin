@@ -275,6 +275,58 @@ describe("install.sh pauses: diagnosis, decisions, Fix with Claude", () => {
     ]);
   });
 
+  test("a step's own diagnosis of an optional part: its words, Skip runs the step again without the part", async () => {
+    const { events, code, home } = await answering(
+      [{ after: '"type":"pause"', decision: "skip" }],
+      { INSTALL_DRY_RUN_FAIL: "start:part" },
+    );
+    expect(code).toBe(0);
+    const [pause] = pauses(events);
+    expect(pause).toMatchObject({
+      step: "start",
+      kind: "unknown",
+      title: "equin couldn't add the equin icon in your menu bar",
+      optional: true,
+    });
+    expect(pause!.text).toContain("GTK and WebKitGTK");
+    expect(pause!.evidence).toEqual([
+      "dev.equin.menu-bar (menu-bar-helper): missing libgtk-3-dev (dry run)",
+    ]);
+    expect(events.find((e) => e.type === "resolved")).toMatchObject({
+      how: "skip",
+    });
+    // Not left out whole: started again without the part, and done.
+    expect(stepStates(events, "start")).toEqual([
+      "start",
+      "failed",
+      "start",
+      "done",
+    ]);
+    expect(events.at(-1)).toMatchObject({ type: "exit", code: 0 });
+    expect(readFileSync(join(runDir(home), "events.jsonl"), "utf8")).toContain(
+      '"type":"done"',
+    );
+  }, 30_000);
+
+  test("Try again on an optional part keeps failing on it until it is skipped", async () => {
+    const retried = await answering(
+      [
+        { after: '"type":"pause"', decision: "retry" },
+        { after: '"type":"pause"', decision: "skip" },
+      ],
+      { INSTALL_DRY_RUN_FAIL: "start:part" },
+    );
+    expect(retried.code).toBe(0);
+    expect(stepStates(retried.events, "start")).toEqual([
+      "start",
+      "failed",
+      "start",
+      "failed",
+      "start",
+      "done",
+    ]);
+  }, 30_000);
+
   test("the resume script (what Claude runs once it fixed it) answers the waiting install", async () => {
     const home = tempHome();
     const { child, result } = startDryRun(

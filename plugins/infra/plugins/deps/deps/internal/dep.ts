@@ -214,6 +214,26 @@ export interface DepPin {
   readonly switchBlocked?: (from: string, to: string) => string | null;
 }
 
+/**
+ * What an install needs from the operating system that no installer kind
+ * provides: the libraries a native build links against (the menu-bar icon's
+ * GTK and WebKitGTK on Linux). Declared beside the dependency so whoever
+ * prepares a machine (install.sh, through `./equin start --system-packages`)
+ * installs them from the declaration, never from a list of its own. Linux
+ * only, by Debian / Ubuntu package name: apt is the one package manager the
+ * installer drives. Checked before an install (`checkSystemPackages`): a
+ * missing one fails it as a `MissingSystemPackagesError`, naming them, rather
+ * than as the build tool's own error halfway in.
+ */
+export interface SystemPackages {
+  readonly linux: {
+    /** Debian / Ubuntu package names. */
+    readonly apt: readonly string[];
+    /** What they are, in a person's words: "the GTK and WebKitGTK libraries". */
+    readonly forUser: string;
+  };
+}
+
 export type DefineDepSpec<S extends DepSource> = {
   /** Stable id: the cache dir name and the CLI argument. `^[a-z][a-z0-9-]*$`. */
   id: string;
@@ -225,6 +245,8 @@ export type DefineDepSpec<S extends DepSource> = {
   source: S;
   /** Run from a pinned install, switched only on purpose (see {@link DepPin}). */
   pin?: DepPin;
+  /** What the install needs from the operating system (see {@link SystemPackages}). */
+  systemPackages?: SystemPackages;
 } & UpdatesSpec<S> &
   BundleField<S>;
 
@@ -240,6 +262,8 @@ export interface Dep<S extends DepSource = DepSource> {
   readonly bundle: BundleSpec | null;
   /** Run from a pinned install (see {@link DepPin}). `null`: from the checkout's current identity. */
   readonly pin: DepPin | null;
+  /** What the install needs from the operating system (see {@link SystemPackages}). `null`: nothing. */
+  readonly systemPackages: SystemPackages | null;
 }
 
 const DEP_ID = /^[a-z][a-z0-9-]*$/;
@@ -275,6 +299,7 @@ export function defineDep<S extends DepSource>(spec: DefineDepSpec<S>): Dep<S> {
     updates,
     bundle: bundleOf(spec.id, spec as { bundle?: BundleSpec }),
     pin: pinOf(spec.id, spec.pin, spec.source),
+    systemPackages: spec.systemPackages ?? null,
   };
 }
 

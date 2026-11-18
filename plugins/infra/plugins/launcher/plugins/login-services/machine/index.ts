@@ -21,6 +21,8 @@ export type {
   ServiceForUser,
 } from "./internal/define";
 export { declaredLoginServices } from "./internal/registry";
+export { hostDesktop } from "./internal/desktop";
+export type { HostDesktop } from "./internal/desktop";
 export { loginService, loginServiceManager } from "./internal/host";
 export { reconcileLoginService, reloadService } from "./internal/reconcile";
 export {
