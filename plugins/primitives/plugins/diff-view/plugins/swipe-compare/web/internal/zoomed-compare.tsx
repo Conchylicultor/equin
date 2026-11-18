@@ -240,7 +240,7 @@ function Viewport({
   children: (box: Box) => ReactNode;
 }): ReactElement {
   const { dispatch } = zoom;
-  const [sizeRef, size] = useElementSize<HTMLDivElement>();
+  const [sizeRef, size] = useElementSize((s) => s);
   const el = useRef<HTMLDivElement | null>(null);
   const ref = useCallback(
     (node: HTMLDivElement | null) => {

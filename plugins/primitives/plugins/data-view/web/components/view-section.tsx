@@ -111,7 +111,7 @@ export function ViewSection(props: {
     actions,
     children,
   } = props;
-  const [headerRef, { height: headerHeight }] = useElementSize();
+  const [headerRef, headerHeight] = useElementSize((s) => s.height);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const searching = query.length > 0;
   const { description } = presentation;

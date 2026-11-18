@@ -96,12 +96,13 @@ function OutlineRailBody({
   // dash count, so asking it how much room it has would be circular. The rail is
   // absolutely positioned, so its offset parent is exactly the host that spans
   // the surface.
-  const [railRef, hostSize] = useElementSize<HTMLElement>(
-    (el) => el.offsetParent,
+  const [railRef, hostHeight] = useElementSize(
+    (s) => s.height,
+    (el: HTMLElement) => el.offsetParent,
   );
   const capacity = Math.max(
     0,
-    Math.floor((hostSize.height - RAIL_RESERVE_PX) / DASH_STEP_PX),
+    Math.floor((hostHeight - RAIL_RESERVE_PX) / DASH_STEP_PX),
   );
 
   const jump = useCallback(

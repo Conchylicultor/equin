@@ -109,7 +109,7 @@ export function IsleView() {
   const world = useIsleWorld();
   const time = useTimeOfDay(world.kind === "ready" ? world.time : "auto");
   const stageRef = useRef<HTMLDivElement | null>(null);
-  const [measure, size] = useElementSize<HTMLDivElement>();
+  const [measure, size] = useElementSize((s) => s);
   const engineRef = useRef<IsleEngine | null>(null);
   const [drawn, setDrawn] = useState(false);
   const [started, setStarted] = useState(startedThisPage);

@@ -58,7 +58,7 @@ export function FloatingHeaderScroll({
   useInView(topRef, (entry) => setAtTop(entry.isIntersecting), {
     root: scrollRef,
   });
-  const [barRef, barSize] = useElementSize<HTMLDivElement>();
+  const [barRef, barHeight] = useElementSize((s) => s.height);
   const bar = (
     <Sticky
       ref={barRef}
@@ -78,8 +78,8 @@ export function FloatingHeaderScroll({
       ref={scrollRef}
       style={
         {
-          scrollPaddingTop: barSize.height,
-          "--pane-header-height": `${barSize.height}px`,
+          scrollPaddingTop: barHeight,
+          "--pane-header-height": `${barHeight}px`,
         } as CSSProperties
       }
     >

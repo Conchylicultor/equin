@@ -160,20 +160,30 @@ export function useResizeObserver(
  * `useResizeObserver`'s. Horizontal writing modes: `width` is the inline size,
  * `height` the block one.
  *
+ * `select` projects the size onto what the caller reads (`(s) => s.height`, a
+ * breakpoint stage `(s) => s.width < 360`, or `(s) => s` for both axes), and
+ * the hook commits a new size only when that projection changes. A caller can
+ * therefore not re-render for an axis or a pixel it never reads: a DataView
+ * reading only its toolbar's height used to re-render — every row, its search
+ * input included — on each frame of a window resize, as the width moved.
+ * `select` is read through a latest ref, so an inline arrow is fine.
+ *
  * `target` lets you attach the ref to one node but measure another — e.g.
- * `useElementSize((el) => el.offsetParent)` measures the offset parent while
+ * `useElementSize((s) => s, (el) => el.offsetParent)` measures the offset parent while
  * the ref stays on the anchor child. It may read layout, so it is resolved in
  * the after-layout phase and observed from there: its first notification comes
  * in a later broadcast of the same step. Whatever that commit resizes at or
  * above the broadcast, after-layout answers in the same phase.
  */
-export function useElementSize<T extends HTMLElement = HTMLElement>(
+export function useElementSize<R, T extends HTMLElement = HTMLElement>(
+  select: (size: ElementSize) => R,
   target?: (el: T) => Element | null | undefined,
-): [(node: T | null) => void, ElementSize] {
-  const [size, setSize] = useState<ElementSize>({ width: 0, height: 0 });
+): [(node: T | null) => void, R] {
+  const [size, setSize] = useState<ElementSize>(UNMEASURED);
   const [node, setNode] = useState<T | null>(null);
   const setRef = useCallback((next: T | null) => setNode(next), []);
   const resolveTarget = useEventCallback(target ?? ((el: T) => el));
+  const project = useEventCallback(select);
   const resolves = target !== undefined;
 
   useLayoutEffect(() => {
@@ -185,8 +195,10 @@ export function useElementSize<T extends HTMLElement = HTMLElement>(
       rafId = null;
       const next = latest;
       if (next === null) return;
+      // A size whose projection is unchanged commits nothing: the caller
+      // re-renders only when what it reads moves.
       setSize((prev) =>
-        prev.width === next.width && prev.height === next.height ? prev : next,
+        sameProjection(project(prev), project(next)) ? prev : next,
       );
     };
     const observer = new ResizeObserver((entries) => {
@@ -220,9 +232,34 @@ export function useElementSize<T extends HTMLElement = HTMLElement>(
       observer.disconnect();
       if (rafId !== null) cancelAnimationFrame(rafId);
     };
-  }, [node, resolves, resolveTarget]);
+  }, [node, resolves, resolveTarget, project]);
 
-  return [setRef, size];
+  return [setRef, select(size)];
+}
+
+const UNMEASURED: ElementSize = { width: 0, height: 0 };
+
+/** Equal projections: the same value, or plain objects / arrays whose
+ * entries are each the same value (so `(s) => s` and `(s) => [s.width, s.height]`
+ * still skip a delivery that changed nothing). */
+function sameProjection(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true;
+  if (
+    typeof a !== "object" ||
+    typeof b !== "object" ||
+    a === null ||
+    b === null
+  )
+    return false;
+  const ka = Object.keys(a);
+  const kb = Object.keys(b);
+  if (ka.length !== kb.length) return false;
+  return ka.every((k) =>
+    Object.is(
+      (a as Record<string, unknown>)[k],
+      (b as Record<string, unknown>)[k],
+    ),
+  );
 }
 
 /**

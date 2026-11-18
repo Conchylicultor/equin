@@ -83,7 +83,7 @@ function Strong({ children }: { children: ReactNode }): ReactNode {
 function AxisRow(): ReactNode {
   const lane = useContext(LaneWindowContext);
   // The bar track narrows with its column: only the labels that fit are drawn.
-  const [trackRef, track] = useElementSize<HTMLDivElement>();
+  const [trackRef, track] = useElementSize((s) => s);
   if (lane === null) return null;
   const ticks =
     track.width > 0 ? labelledTicks(lane.axisMaxS, track.width) : [];

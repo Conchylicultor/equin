@@ -5,8 +5,13 @@ idiom, hand-rolled inconsistently across the repo before this primitive.
 
 ## API
 
-- `useElementSize<T>(target?)` → `[callbackRef, { width, height }]`
-  Reactive LAYOUT size: the border box in the element's own CSS pixels
+- `useElementSize(select, target?)` → `[callbackRef, select(size)]`
+  `select` projects the `{ width, height }` onto what the caller reads
+  (`(s) => s.height`, a breakpoint stage, `(s) => s` for both axes); a new
+  measure commits only when the projection changes (`Object.is`, or shallow
+  for a plain object / array), so a caller never re-renders for an axis or a
+  pixel it does not read — a DataView that read only its toolbar's height
+  re-rendered every frame of a window resize as the width moved. Reactive LAYOUT size: the border box in the element's own CSS pixels
   (fractional), read from the `ResizeObserver`'s own entries. Attach the
   returned callback ref to the node; `{0,0}` until first measure. Never the
   visual size (`getBoundingClientRect`): the observer does not fire when a
@@ -112,7 +117,7 @@ different need, extend the primitive rather than allowlisting a copy.
 
 ## Plugin reference
 
-- Description: Element-size ResizeObserver idiom as a primitive: useElementSize() reactively measures an element's layout size (callback ref; the observer's own border-box size, so a transform never freezes a wrong value; its first delivery shares the after-layout root's broadcast, so the commit it makes may change layout at any depth), useResizeObserver(target, onResize, {debounce, deps}) is the substrate, and useResizeObserverSet(onResize) observes a changing set of elements (windowed rows) through one observer — initial measure after layout and before paint (dom/after-layout: no forced recalc on the commit path), RAF-debounced resize callbacks, every observation started through after-layout's observeInPhase and every commit made through its commitInPhase (an observation is never held back into a 'ResizeObserver loop', and what a commit inside a delivery resizes above it is answered in the same phase), auto cleanup. The single sanctioned home for the hand-rolled ResizeObserver-for-size idiom.
+- Description: Element-size ResizeObserver idiom as a primitive: useElementSize(select) reactively measures an element's layout size, projected by select onto what the caller reads and committed only when that projection changes (callback ref; the observer's own border-box size, so a transform never freezes a wrong value; its first delivery shares the after-layout root's broadcast, so the commit it makes may change layout at any depth), useResizeObserver(target, onResize, {debounce, deps}) is the substrate, and useResizeObserverSet(onResize) observes a changing set of elements (windowed rows) through one observer — initial measure after layout and before paint (dom/after-layout: no forced recalc on the commit path), RAF-debounced resize callbacks, every observation started through after-layout's observeInPhase and every commit made through its commitInPhase (an observation is never held back into a 'ResizeObserver loop', and what a commit inside a delivery resizes above it is answered in the same phase), auto cleanup. The single sanctioned home for the hand-rolled ResizeObserver-for-size idiom.
 - Web:
   - Uses:
     - `primitives/dom/after-layout.afterLayout`

@@ -158,7 +158,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   // `useElementSize` hands back a callback ref; we also mirror the node into
   // state so the native wheel listener below can attach to the live element
   // (the size hook owns measurement, but doesn't expose the node).
-  const [sizeRef, lane] = useElementSize<HTMLDivElement>();
+  const [sizeRef, lane] = useElementSize((s) => s);
   const [laneEl, setLaneEl] = useState<HTMLDivElement | null>(null);
   const laneRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -179,8 +179,8 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   const cover = useDisplayCover();
   const notesWidth = Math.max(0, lane.width - cover.right);
 
-  const [hudSizeRef, hudSize] = useElementSize();
-  const topInset = hudSize.height > 0 ? hudSize.height + HUD_EDGE_CLEARANCE : 0;
+  const [hudSizeRef, hudHeight] = useElementSize((s) => s.height);
+  const topInset = hudHeight > 0 ? hudHeight + HUD_EDGE_CLEARANCE : 0;
 
   // Synthesia-style note-name labels (opt-in). Spelling follows the score's key
   // signature so accidentals read in-key (Eb vs D#), matching the keyboard below.

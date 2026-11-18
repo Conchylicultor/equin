@@ -83,8 +83,8 @@ export function BandSurface(props: {
     children,
     backdrop,
   } = props;
-  const [asideRef, { width: asideWidth }] = useElementSize();
-  const [asideEndRef, { width: asideEndWidth }] = useElementSize();
+  const [asideRef, asideWidth] = useElementSize((s) => s.width);
+  const [asideEndRef, asideEndWidth] = useElementSize((s) => s.width);
   const hasAside = aside !== undefined;
   const hasAsideEnd = asideEnd !== undefined;
   if (hasAsideEnd && !overlay) {

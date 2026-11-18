@@ -426,7 +426,7 @@ export function DataTable<TRow>({
   // Measure the sticky column-header row so group headers can stack directly
   // below it: their sticky `top` is `stickyHeaderOffset + this height`. Synchronous
   // initial measure (element-size) → correct on first paint, before any scroll.
-  const [headerRef, { height: headerHeight }] = useElementSize();
+  const [headerRef, headerHeight] = useElementSize((s) => s.height);
 
   // In grouped mode the body rows come from each group (pre-sorted by the host
   // pipeline), not `data`; count them for the empty check.

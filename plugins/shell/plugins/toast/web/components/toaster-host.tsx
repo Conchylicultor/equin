@@ -29,8 +29,7 @@ export function ToasterHost() {
 }
 
 function Toasts() {
-  const [actionsRef, { height: actionsHeight }] =
-    useElementSize<HTMLDivElement>();
+  const [actionsRef, actionsHeight] = useElementSize((s) => s.height);
 
   // The strip is a reserved band, not an overlay: the stack's own bottom offset
   // grows by exactly what the strip measures, so the actions can never paint

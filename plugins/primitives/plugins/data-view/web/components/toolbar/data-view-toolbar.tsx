@@ -89,6 +89,23 @@ const NARROW_SEARCH_WIDTH_CLASS =
   "w-[var(--search-width-narrow,var(--search-width))]";
 
 /**
+ * Where the band's width falls among the breakpoints above — all the toolbar
+ * reads of its width, so the band's measure commits only when it crosses one.
+ * A raw pixel width re-rendered the toolbar (its search input included) on
+ * every frame of a window resize while nothing it draws changed.
+ * `unmeasured` until the first measure (0): the wide row, as before.
+ */
+type BandStage = "unmeasured" | "compact" | "narrow-search" | "narrow" | "wide";
+
+function bandStage({ width }: { width: number }): BandStage {
+  if (width <= 0) return "unmeasured";
+  if (width < COMPACT_BREAKPOINT) return "compact";
+  if (width < NARROW_SEARCH_BREAKPOINT) return "narrow-search";
+  if (width < NARROW_BREAKPOINT) return "narrow";
+  return "wide";
+}
+
+/**
  * The toolbar's search well (the `filled` field), from the data-view token
  * group: its fill, corners and where its text starts (`searchFill`,
  * `searchRadius`, `searchTextStart`), and its glyph's size and ink
@@ -192,7 +209,7 @@ export function DataViewToolbar({
   onSearchSubmit,
   asideInset = "0px",
 }: DataViewToolbarProps): ReactNode {
-  const [measureRef, { width }] = useElementSize();
+  const [measureRef, stage] = useElementSize(bandStage);
   // The band is both the shell's measured sticky element and this toolbar's
   // own width probe — one element, two refs — so the arrangement's layout box
   // is its own and the measurement never depends on what an arrangement renders.
@@ -204,9 +221,10 @@ export function DataViewToolbar({
     [measureRef, stickyRef],
   );
   const searchRef = useRef<HTMLInputElement>(null);
-  const compact =
-    density === "compact" || (width > 0 && width < COMPACT_BREAKPOINT);
-  const narrow = width > 0 && width < NARROW_BREAKPOINT;
+  const compact = density === "compact" || stage === "compact";
+  // Below NARROW_SEARCH_BREAKPOINT (the compact stage included, as before).
+  const narrowSearch = stage === "compact" || stage === "narrow-search";
+  const narrow = narrowSearch || stage === "narrow";
   // `/` focuses the search, in every wide arrangement (each renders the field
   // inline); the compact fold keeps it behind its options trigger, so there
   // is no field to focus. Surface-scoped, so two surfaces in two tabs never
@@ -261,8 +279,7 @@ export function DataViewToolbar({
   // the wide row's `filled` well, until the band narrows (where the field's
   // lane is too short to spend on it). `bare` draws its own.
   const keyHint =
-    appearance === "filled" &&
-    !(width > 0 && width < NARROW_SEARCH_BREAKPOINT) ? (
+    appearance === "filled" && !narrowSearch ? (
       <Kbd className={SEARCH_HINT_CLASS}>/</Kbd>
     ) : undefined;
   // The field's text takes the type the theme picks (`DATA_VIEW_PICKS.search`,
@@ -309,7 +326,7 @@ export function DataViewToolbar({
               appearance === "filled" && SEARCH_GLYPH_CLASS,
               searchSuggestions !== undefined
                 ? "w-80"
-                : width > 0 && width < NARROW_SEARCH_BREAKPOINT
+                : narrowSearch
                   ? "w-search-narrow"
                   : narrow
                     ? NARROW_SEARCH_WIDTH_CLASS

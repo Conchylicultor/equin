@@ -178,7 +178,7 @@ function NotationInner({ score }: NotationProps) {
       }));
   }, [score.tracks, trackEntries, hiddenTrackIds]);
 
-  const [sizeRef, size] = useElementSize<HTMLDivElement>();
+  const [sizeRef, width] = useElementSize((s) => s.width);
   const playheadRef = useRef<HTMLDivElement | null>(null);
 
   // One entry per mounted (drawn) system, keyed by system index — the anchors +
@@ -215,9 +215,8 @@ function NotationInner({ score }: NotationProps) {
   // PURE layout plan (no DOM/Renderer) — safe in a memo. Each mounted system
   // draws itself from this; recomputes on model / width change.
   const plan = useMemo<EngravePlan | null>(
-    () =>
-      !hasNotes || size.width <= 0 ? null : planEngraving(model, size.width),
-    [model, size.width, hasNotes],
+    () => (!hasNotes || width <= 0 ? null : planEngraving(model, width)),
+    [model, width, hasNotes],
   );
   const planRef = useLatestRef(plan);
 

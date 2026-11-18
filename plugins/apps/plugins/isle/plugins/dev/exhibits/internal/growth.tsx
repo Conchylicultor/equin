@@ -281,7 +281,7 @@ function GrowthCanvas(props: {
   onMove(placement: Placement): void;
 }) {
   const { model, world, workers } = props;
-  const [measure, size] = useElementSize<HTMLDivElement>();
+  const [measure, size] = useElementSize((s) => s);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const engineRef = useRef<IsleEngine | null>(null);
   // as the app's title card does: input begins once the world is drawn

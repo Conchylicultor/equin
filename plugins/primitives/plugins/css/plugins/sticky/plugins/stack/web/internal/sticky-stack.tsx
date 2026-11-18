@@ -179,7 +179,7 @@ export function StickyStackItem({
   // The item heads its own branch (when it has one): that key is not its
   // ancestor.
   const ancestors = chain.at(-1) === itemKey ? chain.slice(0, -1) : chain;
-  const [measureRef, { height }] = useElementSize();
+  const [measureRef, height] = useElementSize((s) => s.height);
 
   // The item is both the stack's measurement target and (possibly) a caller's ref
   // target, and a DOM node takes one `ref` — so the two compose.

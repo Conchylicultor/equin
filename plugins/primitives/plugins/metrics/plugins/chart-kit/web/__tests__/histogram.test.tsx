@@ -4,7 +4,9 @@ vi.mock(
   "@plugins/primitives/plugins/dom/plugins/element-size/web",
   async (importOriginal) => ({
     ...(await importOriginal<object>()),
-    useElementSize: () => [() => {}, { width: 446, height: 210 }],
+    useElementSize: (
+      select: (s: { width: number; height: number }) => unknown,
+    ) => [() => {}, select({ width: 446, height: 210 })],
   }),
 );
 

@@ -223,7 +223,7 @@ export function SketchKeys({
   // keyboard's own box, so its size IS the keyboard's size — no reaching for a
   // parent, and no measurement at all under the other two skins, which never
   // mount this component.
-  const [boxRef, { width, height }] = useElementSize<HTMLElement>();
+  const [boxRef, { width, height }] = useElementSize((s) => s);
 
   // `useId` is per component instance, so two keyboards on one page (the roll
   // and a readout chip) never collide on a gradient id. Its React-generated ids

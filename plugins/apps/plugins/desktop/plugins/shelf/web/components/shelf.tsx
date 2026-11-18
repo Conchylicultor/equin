@@ -89,8 +89,8 @@ export function Shelf({ tabIds }: { tabIds: string[] }) {
   const { desktops, activeDesktopId } = useDesktops();
   const overview = useOverviewActive();
 
-  const [layerRef, { width: deskW, height: deskH }] = useElementSize();
-  const [dockRef, { height: dockH }] = useElementSize<HTMLDivElement>();
+  const [layerRef, { width: deskW, height: deskH }] = useElementSize((s) => s);
+  const [dockRef, dockH] = useElementSize((s) => s.height);
 
   // The work area: the dock's height plus the gap stays free at the bottom.
   useEffect(

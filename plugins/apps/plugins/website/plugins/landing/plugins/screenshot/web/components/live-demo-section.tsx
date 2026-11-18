@@ -59,7 +59,7 @@ const FOOT_ROOM = 56;
 export function LiveDemoSection(): ReactNode {
   const { entered, gateEntries } = useDemoState();
   const { consumeReturn } = useDemoActions();
-  const [columnRef, column] = useElementSize<HTMLDivElement>();
+  const [columnRef, column] = useElementSize((s) => s);
   // A static render has no window; its frame is never grown (no click runs),
   // and only the grown frame reads the window's size.
   const viewport = useViewportSize(NO_WINDOW);

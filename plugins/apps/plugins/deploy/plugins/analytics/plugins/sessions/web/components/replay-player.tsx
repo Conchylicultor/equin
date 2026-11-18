@@ -386,7 +386,7 @@ function Stage({
   frame: ReactNode;
   children: ReactNode;
 }): ReactNode {
-  const [ref, room] = useElementSize<HTMLDivElement>();
+  const [ref, room] = useElementSize((s) => s);
   const scale = Math.max(
     0.05,
     Math.min(

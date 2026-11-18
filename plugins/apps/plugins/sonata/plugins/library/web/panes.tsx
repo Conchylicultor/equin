@@ -511,8 +511,8 @@ function ImmersivePlayer() {
   const right = useDockReserve(collapsed ? RAIL_RESERVE : PANEL_RESERVE);
   // The capsule is the lowest of the top chrome: a display that does not bleed
   // starts under it, so its first row is never drawn beneath the glass.
-  const [capsuleRef, capsule] = useElementSize();
-  const top = CAPSULE_TOP + capsule.height;
+  const [capsuleRef, capsuleHeight] = useElementSize((s) => s.height);
+  const top = CAPSULE_TOP + capsuleHeight;
   return (
     <Clip className="relative isolate h-full bg-background text-foreground">
       {/* The whole window: a display that bleeds (the piano roll) runs its

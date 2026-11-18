@@ -62,7 +62,7 @@ export function Histogram({
     }
   }
   const n = bins.length;
-  const [ref, { width }] = useElementSize<HTMLDivElement>();
+  const [ref, width] = useElementSize((s) => s.width);
   const W = Math.max(width, MIN_WIDTH);
   const iw = W - MARGIN.l - MARGIN.r;
   const ih = height - MARGIN.t - MARGIN.b;

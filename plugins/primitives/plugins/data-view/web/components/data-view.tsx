@@ -316,7 +316,7 @@ export function DataViewShellFrame(props: {
   // two stacked sticky bands never overlap regardless of the toolbar's (dynamic)
   // height. Mirrors the `--chrome-mask` cross-plugin CSS-var convention. The ref
   // crosses into the body, which attaches it to the toolbar's `<Sticky>`.
-  const [toolbarRef, { height: toolbarHeight }] = useElementSize();
+  const [toolbarRef, toolbarHeight] = useElementSize((s) => s.height);
 
   // The surface's own views are not known yet (the config document has not
   // arrived — a cold boot whose snapshot failed, a WS still catching up). We

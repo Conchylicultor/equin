@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 
 /**
@@ -18,16 +18,24 @@ export function useHeldHeight(
   host: HTMLElement | null,
   showingView: boolean,
 ): number | null {
-  const [height, setHeight] = useState<number | null>(null);
+  // The latest measure lives in a ref while the view shows: nothing renders
+  // it then, and committing it re-rendered the whole body — every row — on
+  // each frame the rows box resized (a window being resized reflows a card
+  // grid every frame). It becomes state only when the body leaves the view,
+  // the one render that reads it, before that frame paints.
+  const lastHeight = useRef<number | null>(null);
+  const [held, setHeld] = useState<number | null>(null);
   useResizeObserver(
     () => host,
     () => {
       if (!showingView || host === null) return;
-      const next = host.getBoundingClientRect().height;
-      setHeight((prev) => (prev === next ? prev : next));
+      lastHeight.current = host.getBoundingClientRect().height;
     },
     // Re-measure as the view comes back (its first frame is the room it takes).
     { deps: [host, showingView] },
   );
-  return height;
+  useLayoutEffect(() => {
+    if (!showingView) setHeld(lastHeight.current);
+  }, [showingView]);
+  return held;
 }

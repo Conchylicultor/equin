@@ -94,7 +94,7 @@ function CanvasBoard({
   browserWindow: Room;
 }): ReactElement {
   const { canvas } = usePrototypeDetail();
-  const [roomRef, room] = useElementSize<HTMLDivElement>();
+  const [roomRef, room] = useElementSize((s) => s);
   // Each prototype frame's extent, for Whole page: the frames are fitted to
   // the tallest page.
   const [extents, setExtents] = useState<ReadonlyMap<FrameId, PageExtent>>(

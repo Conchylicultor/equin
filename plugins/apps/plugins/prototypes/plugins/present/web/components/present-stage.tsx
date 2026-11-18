@@ -127,7 +127,7 @@ function PresentedFrame({
   const { canvas } = usePrototypeDetail();
   const chrome = usePresentChrome();
   const root = usePresentRoot();
-  const [roomRef, room] = useElementSize<HTMLDivElement>();
+  const [roomRef, room] = useElementSize((s) => s);
   const browserWindow = useWindowSize();
   // The shown frame's extent, for Whole page. Keyed by frame so flipping to
   // another frame never fits it to the previous one's page.
