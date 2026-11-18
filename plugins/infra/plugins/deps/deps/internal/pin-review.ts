@@ -210,8 +210,7 @@ export async function reviewPin(
       ? stays.filter((h) => h.version !== undefined)
       : stays;
   const stay =
-    heldBy(comparable, dep.id, declaredKey(declared), compareVersions) ??
-    null;
+    heldBy(comparable, dep.id, declaredKey(declared), compareVersions) ?? null;
   const decision: PinDecision =
     stay !== null
       ? holdState(stay, today) === "active"
