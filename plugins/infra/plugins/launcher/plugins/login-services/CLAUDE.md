@@ -188,11 +188,11 @@ responsible process); agents disclaim (`packages/spawn-disclaim`).
   expires (2026-10-31).
 - **Every job running from the bundle names it** — `AssociatedBundleIdentifiers
   [dev.equin]`, derived by the launchd renderer from argv[0]
-  (`appBundleIdOfProgram`), so no caller can forget it. It is how a legacy
-  plist names its app to macOS's Background Task Management (`man
-  launchd.plist`; Login Items, the "… can run in the background"
-  notification). Without it a fresh install's notifications named the bare
-  executables, `gateway` and `equin-desktop`.
+  (`appBundleIdOfProgram`), so no caller can forget it (`man launchd.plist`).
+  **Ignored while the bundle has no Team ID** (measured, macOS 26): Background
+  Task Management files every agent under "Unknown Developer" and names it by
+  its executable's FILE NAME — the "… can run in the background" notification
+  and Login Items say `gateway`, `equin-desktop`, one per agent.
 - **A stable path**, not the per-build deps cache: components rebuild on their
   own, and a menu-bar rebuild must not restart the gateway. Never under `/tmp`:
   LaunchServices disables a bundle there (no Settings row, `tccutil` fails).

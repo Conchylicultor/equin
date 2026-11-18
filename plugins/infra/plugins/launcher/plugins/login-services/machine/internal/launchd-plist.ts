@@ -31,11 +31,12 @@ import { appBundleIdOfProgram } from "./macos-app-plist";
  *
  * A job whose program is an executable of `equin.app` carries
  * `AssociatedBundleIdentifiers` naming the bundle — derived from the program,
- * so no caller can forget it. It is how a legacy plist names its app to
- * macOS's Background Task Management (`man launchd.plist`: System Settings →
- * Login Items). Without it a fresh install's "… can run in the background"
- * notifications named the bare executables (`gateway`, `equin-desktop`) — an
- * internal name, the first thing a new user sees of equin's background part.
+ * so no caller can forget it: how a legacy plist names its app to macOS's
+ * Background Task Management (`man launchd.plist`). Measured on macOS 26: BTM
+ * ignores it for our self-signed bundle (no Team ID) — every agent is filed
+ * under "Unknown Developer" and named by its executable's file name in the
+ * "… can run in the background" notification and Login Items. It takes effect
+ * only for a bundle signed with a Team ID.
  */
 export function renderLaunchAgentPlist(spec: LoginServiceSpec): string {
   const str = (v: string) => `<string>${escapeXml(v)}</string>`;
