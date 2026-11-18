@@ -133,6 +133,44 @@ describe("useViewModel — the URL derived from the active view", () => {
     expect(second.result.current.model.activeId).toBe("failures");
   });
 
+  it("picks the default view when the URL reaches the hook a render late", () => {
+    // The pane's address can land a render after the device store: a binding
+    // whose writes apply only on `flush`.
+    let pending: { v: string | undefined } | null = null;
+    let apply: (v: string | undefined) => void = () => {};
+    const { result } = renderHook(() => {
+      const [value, setValue] = useState<string | undefined>("failures");
+      apply = setValue;
+      const url = useMemo(
+        () => ({
+          value,
+          set: (v: string | undefined) => {
+            pending = { v };
+          },
+        }),
+        [value],
+      );
+      return useViewModel<ViewTypeMeta>(
+        storageKey,
+        descriptorMap,
+        entries,
+        undefined,
+        undefined,
+        { activeViewUrl: url },
+      );
+    });
+    expect(result.current.activeId).toBe("failures");
+
+    act(() => result.current.setActiveView("recent"));
+    act(() => {
+      const write = pending;
+      pending = null;
+      if (write !== null) apply(write.v);
+    });
+    expect(result.current.activeId).toBe("recent");
+    expect(pending).toBeNull();
+  });
+
   it("rewrites an unknown URL id to the view actually shown", () => {
     const { result, writes } = renderBound("gone");
     expect(result.current.model.activeId).toBe("recent");

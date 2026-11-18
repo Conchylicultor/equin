@@ -344,11 +344,18 @@ export function useViewModel<T extends ViewTypeMeta>(
   // A view the URL opened becomes this device's selection too: should the
   // address later stop naming it (a link opened beside it), the surface keeps
   // showing it rather than jumping back to the previous device-local pick.
+  // Edge-triggered on the URL's value, never level-triggered: a pick writes
+  // the store and the URL together, but the address can reach this hook a
+  // render later than the store. Level-triggered, that render (the URL still
+  // naming the previous view, the store the new one) persisted the previous
+  // view back over the pick — and a pick of the static default, which leaves
+  // the URL empty, then resolved to that stale view for good.
   const { activeViewId: persistedId, setActiveView: persist } = active;
+  const adoptedUrlViewId = useRef<string | undefined | null>(null);
   useEffect(() => {
-    if (activeId !== "" && activeId === urlViewId && persistedId !== activeId) {
-      persist(activeId);
-    }
+    if (activeId === "" || urlViewId === adoptedUrlViewId.current) return;
+    adoptedUrlViewId.current = urlViewId;
+    if (activeId === urlViewId && persistedId !== activeId) persist(activeId);
   }, [activeId, urlViewId, persistedId, persist]);
 
   // What the URL says for `id` on screen: `activeViewUrlValue`, and under
