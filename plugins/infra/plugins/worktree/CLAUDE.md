@@ -132,6 +132,16 @@ every path settles (fresh add, claimed spare — whose switch may move `bun.lock
 gate. Without it, a checkout's first program (the guard hook, not `./equin`)
 resolved npm packages by walking up into main's `node_modules`.
 
+## A checkout's files come before its install (`onWritten`)
+
+`setupWorktree` takes a REQUIRED `onWritten`, called once the checkout's files
+are written and locked (every path: a claimed spare, a cold add, an existing
+checkout converged) and before its install, fsmonitor and index refresh. The
+`worktree.prepare` child uses it to wake the spawn, which starts its agent's
+process in the files while the rest runs (`conversations/workspace/worktree`).
+Whatever needs `node_modules` — a guard hook, `./equin` — still waits for
+`setupWorktree` to return.
+
 ## Every checkout records where its time went (`server/internal/setup-steps.ts`)
 
 `setupWorktree` / `createSpareWorktree` take a REQUIRED `onStep`, called as each

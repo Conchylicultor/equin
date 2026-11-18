@@ -44,8 +44,10 @@ import {
 // A held turn — sent while its conversation was `starting` — is delivered by
 // exactly one of two paths:
 //
-//   A. The launch message (spawn-job.ts → launchWithHeldTurn): the oldest held
-//      turn is the launch prompt.
+//   A. The launch message: the oldest held turn is the launch prompt — typed
+//      into the agent the spawn started early, once its workspace is ready
+//      (spawn-job.ts → typeLaunchTurn), or carried by an inline launch's
+//      start (lifecycle.ts → launchWithHeldTurn).
 //   B. The flush once the agent can take input (deliver-held-turns-job.ts →
 //      deliverHeldTurns), oldest first, through the ordinary verified send.
 //
@@ -210,6 +212,38 @@ export async function deliverHeldTurns(conversationId: string): Promise<void> {
  * the claimed turn would never reach the agent.
  */
 export async function launchWithHeldTurn(
+  conversationId: string,
+  launch: (prompt: OutgoingTurn | undefined) => Promise<void>,
+): Promise<void> {
+  await withOldestHeldTurn(conversationId, launch);
+}
+
+/**
+ * Path A, for an agent the spawn started early — in its workspace's files,
+ * before the workspace was ready (`WorkspacePrepareCtx.filesReady`). The
+ * conversation is still `starting`, so every turn is held; once the workspace
+ * is ready the spawn types the oldest one — the launch prompt — into the
+ * running agent itself, as a launch would have carried it. The rest wait for
+ * the flush the status flip out of `starting` triggers (path B).
+ *
+ * A retry that finds nothing held (an earlier attempt typed it, or Stop took
+ * it back) types nothing.
+ */
+export async function typeLaunchTurn(
+  conversationId: string,
+  runtime: Pick<ConversationRuntime, "send">,
+): Promise<void> {
+  await withOldestHeldTurn(conversationId, async (prompt) => {
+    if (prompt !== undefined) await runtime.send(conversationId, prompt);
+  });
+}
+
+/**
+ * Claim the oldest held turn (held → typing) and hand it to `use` as the
+ * conversation's terminal writer; `typed` once `use` returns, back to held
+ * when it throws. `use(undefined)` when nothing is held.
+ */
+async function withOldestHeldTurn(
   conversationId: string,
   launch: (prompt: OutgoingTurn | undefined) => Promise<void>,
 ): Promise<void> {

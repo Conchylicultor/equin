@@ -91,8 +91,13 @@ export interface PlanContext {
    * queued, waiting out a retry, running, or suspended waiting on its
    * workspace (a worktree checkout) (`spawnConversationJob.inFlight`,
    * read BEFORE the runtime is asked, so a spawn that finished in between is
-   * seen live). While it is, a "starting" row with no session is the job's to
-   * settle, however long it takes.
+   * seen live) and has not handed the row over yet (`spawn-handover.ts`: it
+   * did as its last act, once it typed the launch prompt). While it is, a
+   * "starting" row is the job's to settle, however long it takes — with no
+   * session, and with one: the spawn starts its agent in the workspace's
+   * files while the workspace is still being prepared (a checkout's install),
+   * and the row stays `starting` until it is ready, so every turn sent
+   * meanwhile is held, never typed into an agent whose tools cannot run yet.
    */
   spawnInFlight: boolean;
   /**
@@ -293,6 +298,16 @@ function planLive(
   info: RuntimeInfo,
   ctx: PlanContext,
 ): UpdatePlan {
+  // Started early by its spawn, in a workspace still being prepared: the
+  // launch is not over until the spawn hands the row over, so it stays
+  // `starting` (every turn held) — the spawn types the launch prompt once the
+  // workspace is ready, then hands over, and the next reconcile takes it up.
+  // An agent that died meanwhile too: the spawn's retry starts another (or
+  // its `onDead` settles the row). Moved to `gone`, the retry's new agent
+  // would read as a resurrection and get the held turns flushed into it
+  // before the workspace was ready.
+  if (row.status === "starting" && ctx.spawnInFlight) return { kind: "noop" };
+
   if (info.dead) {
     if (row.status === "gone") return { kind: "noop" };
     return row.closeRequested

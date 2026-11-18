@@ -23,10 +23,27 @@ deploy. So `prepare` never makes it:
   `max_client_conn` refusals, three launches lost).
 - **`prepare`** (`prepare-wait.ts`, `prepareWorktree`) — a durable
   observe-before-wait loop in the spawn job: a run open → wait on `runEnded`
-  (30 s bound); a run THIS spawn requested exited 0 and the checkout reads
+  (30 s bound; on `checkoutProgress` until the files are there, below); a run THIS spawn requested exited 0 and the checkout reads
   `complete` (`checkoutState`, read-only) → done; otherwise request a run
   (`ctx.step("prepare:request:<n>")`) and wait for it. The checkout on disk is
   the authority, the event only a wake-up.
+- **The agent starts in the files, not in the installed checkout.** Once
+  `checkoutState` reads `complete` (a claimed spare switched, a cold add's
+  tree written — the child discards only an `unfinished` checkout, so a
+  complete one stays), the loop calls `filesReady` (the spawn starts the agent
+  process, with no prompt) and goes on waiting for the run's end. Claude
+  Code's own startup (~4 s, the same in an empty dir) then overlaps the
+  child's install, fsmonitor and index refresh instead of following them
+  (`research/2026-11-17-global-launch-and-build-latency-benchmark.md`, fix 6).
+  Until the files are there, each wait is on **`worktree.checkoutProgress`**
+  (`tables-checkout-progress.ts`, filtered by attempt): the child emits it
+  from `setupWorktree`'s `onWritten` (files written and locked, before the
+  install), and the job's `onEnded` on every run end — so a run that fails
+  before writing them wakes the spawn too. After, on `runEnded`. Nothing
+  reaches the agent before the run ended: the conversation stays `starting`
+  while its spawn is in flight, so every turn is held (conversations' CLAUDE.md,
+  "Status reconciliation"), and a launch that fails for good stops the agent
+  it started (the spawn's `onDead`).
 - **Nothing is installed in the spawn — a resume included.** A resume's
   existing checkout is re-locked and installed (non-frozen) by a prepare run
   too: `setupWorktree`'s `existing` path. It used to be adopted in process
@@ -58,28 +75,32 @@ Design: [`research/2026-10-28-global-supervised-worktree-checkout.md`](../../../
 - Description: The worktree workspace: a conversation runs in its attempt's git checkout of this repo (`.claude/worktrees/<id>`), with a forked DB and config dir — checked out by the supervised worktree.prepare job (a detached child a restart does not kill) that the spawn job requests and waits on, resumable while the checkout exists. Keeps git's fsmonitor daemon running for exactly the checkouts whose attempt is still retained (worktree.fsmonitor-reconcile, main only: on a conversation closing, at start and every 10 minutes).
 - Server:
   - Contributes: `trigger` "worktree.fsmonitor-on-conversation-ended"
-  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/worktree` ×10
     - `infra/jobs/supervised-job` ×5
     - `infra/git/fsmonitor` ×3
     - `infra/jobs` ×3
     - `conversations/launch-timeline` ×2
+    - `infra/events` ×2
     - `tasks/tasks-core` ×2
     - `config_v2.getConfig`
     - `conversations/workspace.Workspace`
     - `database/admin.databaseExists`
     - `database/fork.databaseForkJob`
-    - `infra/events.Trigger`
     - `infra/warmup.defineWarmup`
     - `infra/worktree/spare-pool.spareRefillJob`
     - `primitives/log-channels.defineLogSink`
+  - DB schema: `plugins/conversations/plugins/workspace/plugins/worktree/server/internal/tables-checkout-progress.ts`
   - Register:
+    - `defineTriggerEvent('worktree.checkoutProgress')`
     - `defineSupervisedJob('worktree.prepare')`
     - `defineJob('worktree.fsmonitor-reconcile')`
     - `defineJob('worktree.fsmonitor-on-conversation-ended')`
     - `defineWarmup('worktree.fsmonitor-reconcile')`
 - Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/worktree-workspace.ts` (debt)
+  - Exempts itself from:
+    - `boundaries/no-platform-api` — `server/internal/worktree-workspace.ts` (debt)
+    - `ids:pk-declared` — `server/internal/tables-checkout-progress.ts` (debt)
 - Test helpers:
   - Server: `@plugins/conversations/plugins/workspace/plugins/worktree/server/testing`
     - `worktreeWorkspace`

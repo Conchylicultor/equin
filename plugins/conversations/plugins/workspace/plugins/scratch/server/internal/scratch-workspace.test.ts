@@ -44,7 +44,7 @@ beforeEach(async () => {
 });
 
 describe("scratchWorkspace.prepare", () => {
-  test("writes CLAUDE.md, then runs the profile's prepare; idempotent", async () => {
+  test("writes CLAUDE.md, runs the profile's prepare, then says its files are ready; idempotent", async () => {
     const path = join(tmp, "att-1");
     const at = {
       attemptId: "att-1",
@@ -62,10 +62,21 @@ describe("scratchWorkspace.prepare", () => {
       waitFor: () => Promise.reject(new Error("scratch prepare must not wait")),
       sleep: () => Promise.reject(new Error("scratch prepare must not sleep")),
       conversationId: "conv-1",
+      filesReady: () => {
+        order.push("files-ready");
+        return Promise.resolve();
+      },
     };
     await scratchWorkspace.prepare(at, ctx);
     await scratchWorkspace.prepare(at, ctx);
-    expect(order).toEqual(["# note\nx", "prepare:x", "# note\nx", "prepare:x"]);
+    expect(order).toEqual([
+      "# note\nx",
+      "prepare:x",
+      "files-ready",
+      "# note\nx",
+      "prepare:x",
+      "files-ready",
+    ]);
     // The trust of the session's cwd is asserted before anything is written.
     expect(trusted).toEqual([path, path]);
   });

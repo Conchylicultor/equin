@@ -24,7 +24,7 @@ on this machine, so the clocks compare.
 | `prepare-booted` | same | its run body starts (slot held, graph booted) |
 | steps | the child, `markCheckoutEnded` | each `setupWorktree` step (gate-wait, claim, switch, add, tree-write, lock, dep-store, install, index-refresh) |
 | `prepare-ended` | same | `setupWorktree` returned |
-| `agent-started` | runtime-sdk's consumer, `markAgentLaunchPhase` | the agent's `started` line |
+| `agent-started` | runtime-sdk's consumer, `markAgentLaunchPhase` | the agent's `started` line — since fix 6, as soon as the checkout's files exist, so usually BEFORE `prepare-ended` (the install and index refresh overlap the agent's start; the launch prompt is typed once `prepare-ended`) |
 | `cli-ready` | same | its `ready` line (Claude Code's initialize) |
 | `first-token` | same | its `first_token` line: the first streamed content frame (not `message_start`), once per process |
 | `first-message` | same | its `first_message` line: the first complete top-level assistant message (not a failed request's), once per process |

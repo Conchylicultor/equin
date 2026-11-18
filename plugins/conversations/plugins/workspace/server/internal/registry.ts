@@ -77,6 +77,15 @@ export type WorkspacePrepareCtx = Pick<
 > & {
   /** The conversation this preparation launches (its launch record's key). */
   conversationId: string;
+  /**
+   * The workspace's files are in place: the agent PROCESS may start in it now
+   * (Claude Code's own startup, ~4 s, runs while `prepare` finishes what only
+   * the first turn needs — a checkout's install). Every kind calls it before
+   * `prepare` returns — the spawn refuses a `prepare` that did not — and may
+   * call it again on a replay: it is idempotent. Nothing reaches the agent
+   * before `prepare` returns: its launch prompt and every turn stay held.
+   */
+  filesReady: () => Promise<void>;
 };
 
 /** Whether a conversation's workspace can take a `claude --resume`. */
@@ -106,7 +115,9 @@ export interface WorkspaceImpl<K extends WorkspaceKind = WorkspaceKind> {
   /** Writes on the launch's transaction, committing with the new attempt. */
   onCommit(tx: EnqueueTx, at: WorkspaceAt<SpecOf<K>>): Promise<void>;
   /**
-   * Makes the workspace exist, before the first session starts in it. Runs in
+   * Makes the workspace exist, before the first turn reaches it — calling
+   * `ctx.filesReady()` as soon as its files are there, so the agent's process
+   * starts while the rest is prepared. Runs in
    * the durable spawn job, so it must be idempotent — and, since the job's
    * steps replay across retries, every `ctx.step` / `ctx.waitFor` name it uses
    * must be deterministic.

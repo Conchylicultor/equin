@@ -44,14 +44,15 @@ export const worktreeWorkspace: WorkspaceImpl<"worktree"> = {
   // The checkout is made, locked and installed by the supervised
   // `worktree.prepare` child, which a backend restart does not kill — a
   // resume's existing checkout too; this only requests it and waits, durably
-  // (see `prepareWorktree`). Nothing here spawns: a child of the backend dies
+  // (see `prepareWorktree`). Its files come first: once they read complete,
+  // `filesReady` starts the agent while the child still installs. Nothing here spawns: a child of the backend dies
   // with every restart that overlaps it.
   //
   // `signal` is the spawn dispatch's deadline, bounding the git reads of
   // `checkoutState`.
   async prepare(
     { attemptId, path },
-    { signal, step, waitFor, sleep, conversationId },
+    { signal, step, waitFor, sleep, conversationId, filesReady },
   ) {
     // `conversationId` names the launch record the child marks; the run is
     // still found by its lock (the attempt).
@@ -64,6 +65,7 @@ export const worktreeWorkspace: WorkspaceImpl<"worktree"> = {
       request: async () => {
         await worktreePrepareJob.enqueue(input);
       },
+      filesReady,
     });
   },
 

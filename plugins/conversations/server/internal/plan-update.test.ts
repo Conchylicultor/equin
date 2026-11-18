@@ -74,6 +74,54 @@ describe("planConversationUpdate — done is never overwritten", () => {
   });
 });
 
+describe("planConversationUpdate — an agent its spawn started early", () => {
+  // The spawn starts the agent in the workspace's files while the workspace
+  // is still being prepared, and types the launch prompt only once it is.
+  test("live, its spawn still in flight → stays starting (every turn held)", () => {
+    expect(
+      planConversationUpdate(
+        row({ status: "starting", claudeSessionId: null }),
+        live({ workingOn: null }),
+        ctx({ spawnInFlight: true }),
+      ),
+    ).toEqual({ kind: "noop" });
+  });
+
+  test("handed over (no longer in flight) → the agent came up", () => {
+    expect(
+      planConversationUpdate(
+        row({ status: "starting", claudeSessionId: null }),
+        live({ workingOn: "turn" }),
+        ctx({ spawnInFlight: false }),
+      ),
+    ).toMatchObject({
+      kind: "patch",
+      patch: { status: "working" },
+      agentCameUp: true,
+    });
+  });
+
+  test("dead while its spawn waits → still starting: its retry starts another agent, never one taken up as resurrected", () => {
+    expect(
+      planConversationUpdate(
+        row({ status: "starting" }),
+        live({ dead: true }),
+        ctx({ spawnInFlight: true }),
+      ),
+    ).toEqual({ kind: "noop" });
+  });
+
+  test("dead once its spawn is over → gone", () => {
+    expect(
+      planConversationUpdate(
+        row({ status: "starting" }),
+        live({ dead: true }),
+        ctx({ spawnInFlight: false }),
+      ),
+    ).toEqual({ kind: "gone", stuckStartingMs: null });
+  });
+});
+
 describe("planConversationUpdate — live session", () => {
   test("in sync → noop", () => {
     expect(planConversationUpdate(row(), live(), ctx())).toEqual({

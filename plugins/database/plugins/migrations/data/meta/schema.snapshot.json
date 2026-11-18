@@ -1,6 +1,6 @@
 {
-  "id": "9fa186b0-9a2e-4edc-a9ba-ee37b1485dbd",
-  "prevId": "e33ba18d-3f06-40c9-9c95-45c224b6d2a8",
+  "id": "5e5de393-5537-46c3-ad6a-ac76c52ba1f4",
+  "prevId": "9fa186b0-9a2e-4edc-a9ba-ee37b1485dbd",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -18499,6 +18499,89 @@
           "columns": [
             {
               "expression": "conversation_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "enabled",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.worktree_checkoutProgress_triggers": {
+      "name": "worktree_checkoutProgress_triggers",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "job_name": {
+          "name": "job_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "job_with": {
+          "name": "job_with",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "enabled": {
+          "name": "enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "one_shot": {
+          "name": "one_shot",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "declared": {
+          "name": "declared",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "attempt_id": {
+          "name": "attempt_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "worktree_checkoutProgress_triggers_attemptId_idx": {
+          "name": "worktree_checkoutProgress_triggers_attemptId_idx",
+          "columns": [
+            {
+              "expression": "attempt_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

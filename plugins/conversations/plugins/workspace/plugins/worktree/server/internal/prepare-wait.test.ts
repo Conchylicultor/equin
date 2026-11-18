@@ -27,6 +27,11 @@ function world(opts: {
   state: CheckoutState;
   outcomes?: Outcome[];
   openRun?: boolean;
+  /**
+   * An "ok" run writes the checkout's files at one wake and ends at the next
+   * (the install between), instead of both at once.
+   */
+  writesFirst?: boolean;
 }) {
   let state = opts.state;
   const outcomes = [...(opts.outcomes ?? [])];
@@ -47,8 +52,21 @@ function world(opts: {
   };
   if (opts.openRun) startRun();
 
+  let written = false;
   const advance = (): void => {
+    if (
+      run?.open &&
+      opts.writesFirst &&
+      !written &&
+      (outcomes[0] ?? "ok") === "ok"
+    ) {
+      written = true;
+      state = "complete";
+      log.push(`written:${run.id}`);
+      return;
+    }
     if (run?.open) {
+      written = false;
       const outcome = outcomes.shift() ?? "ok";
       if (outcome === "ok") {
         state = "complete";
@@ -92,6 +110,10 @@ function world(opts: {
       pendingRequest = true;
       return Promise.resolve();
     },
+    filesReady: () => {
+      log.push("files-ready");
+      return Promise.resolve();
+    },
   };
 
   const ctx = {
@@ -118,10 +140,12 @@ function world(opts: {
 }
 
 describe("prepareWorktree", () => {
-  test("a complete checkout (a resume) is still installed by a prepare run — nothing in process", async () => {
+  test("a complete checkout (a resume) is still installed by a prepare run — nothing in process — its files ready at once", async () => {
     const w = world({ state: "complete" });
     await prepareWorktree(w.ctx, "att-1", w.deps);
     expect(w.log).toEqual([
+      // The files are already there: the agent may start before any run.
+      "files-ready",
       "request",
       'wait:{"kindId":"worktreeprepare"}',
       "claimed:run-0",
@@ -135,19 +159,56 @@ describe("prepareWorktree", () => {
     await prepareWorktree(w.ctx, "att-1", w.deps);
     expect(w.log).toEqual([
       "request",
-      // Not claimed yet: wait for any run of the kind.
-      'wait:{"kindId":"worktreeprepare"}',
+      // Before its files: wait for the attempt's checkout to move.
+      'wait:{"attemptId":"att-1"}',
       "claimed:run-0",
-      // Open: wait for THAT run.
+      'wait:{"attemptId":"att-1"}',
+      "ended:run-0",
+      "files-ready",
+    ]);
+  });
+
+  test("the files are ready while the run still installs — then the run is waited on to its end", async () => {
+    const w = world({ state: "absent", writesFirst: true });
+    await prepareWorktree(w.ctx, "att-1", w.deps);
+    expect(w.log).toEqual([
+      "request",
+      'wait:{"attemptId":"att-1"}',
+      "claimed:run-0",
+      'wait:{"attemptId":"att-1"}',
+      "written:run-0",
+      // The checkout reads complete under an open run: the agent starts now.
+      "files-ready",
+      // From here on, the run's end.
       'wait:{"kindId":"worktreeprepare","runId":"run-0"}',
       "ended:run-0",
     ]);
+  });
+
+  test("files ready is called once per walk, however many passes see them", async () => {
+    const w = world({
+      state: "unfinished",
+      writesFirst: true,
+      outcomes: [{ error: "install" }, "ok"],
+    });
+    // A failed run leaves the written files complete (its install failed).
+    const checkoutState = w.deps.checkoutState;
+    w.deps.checkoutState = async () =>
+      (await checkoutState()) === "unfinished" &&
+      w.log.includes("written:run-0")
+        ? "complete"
+        : checkoutState();
+    await prepareWorktree(w.ctx, "att-1", w.deps);
+    expect(w.log.filter((l) => l === "files-ready")).toHaveLength(1);
+    expect(w.log.filter((l) => l === "request")).toHaveLength(2);
+    expect(w.log.at(-1)).toBe("ended:run-1");
   });
 
   test("an open run is waited on — never raced — and one this spawn did not request does not stand for its own", async () => {
     const w = world({ state: "complete", openRun: true });
     await prepareWorktree(w.ctx, "att-1", w.deps);
     expect(w.log).toEqual([
+      "files-ready",
       'wait:{"kindId":"worktreeprepare","runId":"run-0"}',
       "ended:run-0",
       "request",
@@ -171,6 +232,8 @@ describe("prepareWorktree", () => {
       (await checkoutState()) === "unfinished" ? "complete" : checkoutState();
     await prepareWorktree(w.ctx, "att-1", w.deps);
     expect(w.log.filter((l) => l === "request")).toHaveLength(2);
+    // Complete from the start: its files were ready before any run.
+    expect(w.log[0]).toBe("files-ready");
     expect(w.log.at(-1)).toBe("ended:run-1");
   });
 
@@ -201,7 +264,7 @@ describe("prepareWorktree", () => {
     });
     await prepareWorktree(w.ctx, "att-1", w.deps);
     expect(w.log.filter((l) => l === "request")).toHaveLength(2);
-    expect(w.log.at(-1)).toBe("ended:run-1");
+    expect(w.log.slice(-2)).toEqual(["ended:run-1", "files-ready"]);
   });
 
   test("a replay re-reads its memoized request instead of making it again", async () => {
@@ -235,7 +298,7 @@ describe("prepareWorktree", () => {
     expect(thrown).toBe(suspend);
     await prepareWorktree(w.ctx, "att-1", w.deps);
     expect(w.log.filter((l) => l === "request")).toHaveLength(1);
-    expect(w.log.at(-1)).toBe("ended:run-0");
+    expect(w.log.slice(-2)).toEqual(["ended:run-0", "files-ready"]);
   });
 
   test("a run refused a database connection (EX_TEMPFAIL) is re-requested after a pause, without spending a request", async () => {
@@ -249,7 +312,7 @@ describe("prepareWorktree", () => {
       `sleep:${String(tempfailBackoffMs(0))}`,
       `sleep:${String(tempfailBackoffMs(1))}`,
     ]);
-    expect(w.log.at(-1)).toBe("ended:run-2");
+    expect(w.log.slice(-2)).toEqual(["ended:run-2", "files-ready"]);
   });
 
   test("EX_TEMPFAIL runs do not count against the failure budget", async () => {

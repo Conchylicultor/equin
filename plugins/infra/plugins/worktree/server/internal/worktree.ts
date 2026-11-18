@@ -1630,6 +1630,13 @@ export async function setupWorktree(
   compositionIds: ReadonlySet<string>,
   minter: Namespace,
   onStep: OnSetupStep,
+  /**
+   * Called once the checkout's files are written and locked — before its
+   * install, fsmonitor and index refresh. A caller can start work that needs
+   * only the files (a launch starts its agent's process) while the rest runs;
+   * whatever needs `node_modules` waits for `setupWorktree` to return.
+   */
+  onWritten: () => Promise<void>,
   signal?: AbortSignal,
 ): Promise<WorktreeSetup> {
   const repoRoot = await ensureMainWorktreeRoot(signal);
@@ -1653,6 +1660,7 @@ export async function setupWorktree(
       onStep,
       signal,
     );
+    await onWritten();
     // Every path ends installed — this one too: it covers a checkout made
     // before checkouts installed themselves, and a retry whose install failed.
     // ~140 ms of freshness check when already installed. Not frozen: its
@@ -1718,6 +1726,8 @@ export async function setupWorktree(
     signal,
     onStep,
   );
+  // Outside the gate too: the files are there, whatever waits on them goes on.
+  await onWritten();
   // Outside the gate: it serialises git mutations host-wide, and the install is
   // guarded by the checkout's own `.install.lock`. A claimed spare is already
   // installed, but its switch may have moved `bun.lock` (a frozen re-install);

@@ -42,6 +42,21 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
   coming: gone (or hibernated, when there is a session to resume). The 30 s
   `STARTING_TIMEOUT_MS` this replaced called launches waiting on their checkout
   "Couldn't start" (2026-11-04 12:24Z / 12:52Z).
+- **A spawn holds its row `starting` until it hands it over — with or
+  without a session.** The spawn starts its agent as soon as the workspace's
+  files exist (`WorkspacePrepareCtx.filesReady`: a checkout's files, before
+  its install), so Claude Code's startup overlaps the rest of `prepare`. While
+  the spawn is in flight a live agent does not move the row (`planLive`), so
+  every turn is held (turn-ledger's `isComingUp`) and no tool call can run
+  guards against a half-installed checkout. Once `prepare` returned the spawn
+  types the oldest held turn — the launch prompt — into the agent
+  (`typeLaunchTurn`), then hands the row over (`spawn-handover.ts`: an
+  in-process mark that takes it out of `spawnInFlight` before the queue
+  completes the run) and asks for a reconcile, which flips it live and
+  flushes whatever else was held. A spawn that dies for good stops the agent
+  it started before anything else (`onDead`): left running, the reconcile
+  would take it up as live and flush the held prompt into a workspace that
+  never got ready.
 - **A spawn's end is announced, not discovered.** `conversations.spawn`'s
   `onDead` (`infra/jobs`) fires once its run will never come — last attempt
   failed, worker killed on the last attempt, the wake-up from its checkout

@@ -17,6 +17,7 @@ import {
   markCheckoutEnded,
 } from "@plugins/conversations/plugins/launch-timeline/server";
 import type { CheckoutStep } from "@plugins/conversations/plugins/launch-timeline/core";
+import { checkoutProgress } from "./tables-checkout-progress";
 
 // The checkout's transcript, at `logs/worktree-prepare.jsonl` of the backend
 // that supervises it (its only writer, tailing the child's output).
@@ -91,6 +92,16 @@ export const worktreePrepareJob = defineSupervisedJob({
         // This backend: its database is where the attempt row lives.
         runtimeNamespace(),
         steps.onStep,
+        // The files are there: the spawn waiting on them starts its agent now,
+        // while this child installs (`prepareWorktree`'s `filesReady`). The
+        // child's one enqueue (the spawn's `jobs.resume`, as an exec child may:
+        // jobs' queue-stamp part). Thrown when it fails, like this child's
+        // launch-record writes: a database this child cannot write to fails
+        // its run, which the spawn requests again.
+        async () => {
+          log(`checkout ${attemptId}: files written`);
+          await checkoutProgress.emit({ attemptId });
+        },
       );
     if (conversationId !== undefined)
       await markCheckoutEnded(conversationId, {
@@ -104,9 +115,15 @@ export const worktreePrepareJob = defineSupervisedJob({
   },
   // A checkout was made — from a spare (the pool is now one short) or cold
   // (the pool was empty) — so top the pool back up for the next launch. Here
-  // rather than in the child, which never enqueues; idempotent (the refill is
-  // one job-wide run).
-  async onEnded(_runId, terminal) {
+  // rather than in the child, which enqueues nothing but the one wake-up
+  // (`checkoutProgress`, its files written); idempotent (the refill is one
+  // job-wide run).
+  //
+  // Whatever the outcome, the attempt's checkout moved: a spawn still waiting
+  // for its files (a run that failed before writing them) looks again now
+  // rather than at its wait's timeout.
+  async onEnded(_runId, terminal, { input }) {
+    await checkoutProgress.emit({ attemptId: input.attemptId });
     if (terminal.exitCode === 0) await spareRefillJob.enqueue({});
   },
 });

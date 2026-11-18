@@ -41,7 +41,7 @@ In `plugins/conversations/plugins/workspace/plugins/worktree/server/internal/pre
 
 - `defineSupervisedJob({ name: "worktree.prepare", input: { attemptId, path }, lock: (i) => i.attemptId, channel: <new log sink "worktree-prepare">, run, onEnded })`, built-in ledger, `runAttempts` default 1 (the spawn owns the ladder, §3).
 - `run` (child): `setupWorktree(attemptId, path, compositionIds)` exactly as `prepare` calls it today — spare claim or cold add, `convergeExistingCheckout`'s discard of a cut-off one, then `installCheckout(frozen)`. No `signal` (the child is bounded by git's `ADD_TIMEOUT_MS` and install's 20 min; nothing else holds it).
-- `onEnded` (backend): on exit 0, `spareRefillJob.enqueue({})` — moved out of `prepare` so the child never enqueues.
+- `onEnded` (backend): on exit 0, `spareRefillJob.enqueue({})` — moved out of `prepare`. (Since 2026-11-18 the child emits one wake-up, `worktree.checkoutProgress`, once its files are written — the spawn starts its agent then; see the worktree workspace CLAUDE.md.)
 - A failed run dead-letters (built-in-ledger policy) — the loud surface, alongside the spawn's own `conversation-spawn-failed` report.
 
 ### 2. `infra/worktree`: a read-only checkout state

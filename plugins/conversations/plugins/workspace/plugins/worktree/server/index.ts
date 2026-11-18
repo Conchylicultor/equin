@@ -8,6 +8,7 @@ import {
   fsmonitorReconcileWarmup,
 } from "./internal/fsmonitor-job";
 import { worktreePrepareJob } from "./internal/prepare-job";
+import { checkoutProgress } from "./internal/tables-checkout-progress";
 import { worktreeWorkspace } from "./internal/worktree-workspace";
 
 export default {
@@ -23,6 +24,7 @@ export default {
   ],
   register: [
     Workspace.define(worktreeWorkspace),
+    checkoutProgress,
     worktreePrepareJob,
     fsmonitorReconcileJob,
     fsmonitorOnConversationEndedJob,

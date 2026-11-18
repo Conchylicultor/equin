@@ -29,6 +29,7 @@ import {
 import { Runtime, type RuntimeInspection, type RuntimeSignal } from "./runtime";
 import { deliverHeldTurnsJob } from "./deliver-held-turns-job";
 import { spawnConversationJob } from "./spawn-job";
+import { spawnsHoldingStarting } from "./spawn-handover";
 import {
   inlineLaunchesInFlight as inlineLaunchesInFlightOf,
   inlineLaunchMark,
@@ -82,7 +83,10 @@ type LiveEntry = RuntimeInspection & { runtime: string };
 interface LiveSnapshot {
   next: Map<string, LiveEntry>;
   failedRuntimes: Set<string>;
-  /** The "starting" rows whose spawn job was still coming just before the runtimes were asked. */
+  /**
+   * The "starting" rows whose spawn job was still coming just before the
+   * runtimes were asked, and had not handed the row over (`spawn-handover.ts`).
+   */
   spawnsInFlight: ReadonlySet<string>;
   /** The rows with an inline launch running in this backend, read at the same point. */
   inlineLaunchesInFlight: ReadonlySet<string>;
@@ -104,10 +108,13 @@ async function collectLive(
 ): Promise<LiveSnapshot> {
   // Asked FIRST: a spawn that finishes after this read has a session the
   // runtimes below report, so a starting row is never seen with neither.
-  const spawnsInFlight = await step("spawns-in-flight", () =>
-    spawnConversationJob.inFlight(
-      rows.filter((r) => r.status === "starting").map((r) => r.id),
+  const starting = rows.filter((r) => r.status === "starting").map((r) => r.id);
+  const spawnsInFlight = spawnsHoldingStarting(
+    starting,
+    await step("spawns-in-flight", () =>
+      spawnConversationJob.inFlight(starting),
     ),
+    rows.filter((r) => r.status !== "starting").map((r) => r.id),
   );
   const inlineLaunchesInFlight = inlineLaunchesInFlightOf(
     rows

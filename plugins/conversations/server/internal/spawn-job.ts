@@ -19,7 +19,8 @@ import {
 import { Runtime } from "./runtime";
 import { spawnSystemPrompt } from "./spawn-system-prompt";
 import { requestStatusReconcile } from "./status-reconciler";
-import { launchWithHeldTurn } from "./turns";
+import { handOverStarting } from "./spawn-handover";
+import { typeLaunchTurn } from "./turns";
 
 // Durable, self-healing conversation spawn. Mirrors `databaseForkJob`: the
 // enqueue is a committed graphile-worker row, so an interrupted spawn (backend
@@ -74,7 +75,14 @@ export const spawnConversationJob = defineJob({
   // status reconciler is asked about this row now. By then the run no longer
   // counts as `inFlight`, so the reconcile moves the row to `gone` showing the
   // failure — never a row left `starting` with nothing coming for it.
-  onDead: async ({ input: { conversationId }, death }) => {
+  onDead: async ({ input: { conversationId, runtimeId }, death }) => {
+    // Its agent may already run: the spawn starts it in the workspace's files
+    // before the workspace is ready. Stopped first — left running, the next
+    // reconcile would take the row up as a live agent and flush the held
+    // launch prompt into a workspace that never became ready.
+    const runtime = Runtime.get(runtimeId);
+    if (await runtime.isRunning(conversationId))
+      await runtime.delete(conversationId);
     // `failed`: the body's catch below recorded its last attempt's failure,
     // with the step that threw — kept, unless that write itself failed. Every
     // other death bypassed the body.
@@ -118,8 +126,37 @@ export const spawnConversationJob = defineJob({
       // it (launch-timeline). Opened once — a retry keeps the first run's.
       await openLaunch(conversationId, attemptId, row.createdAt);
       const workspace = Workspace.get(spec.kind);
-      // The workspace's `prepare` (git worktree add) MUST precede
-      // `runtime.create`: the agent's cwd must exist.
+      const runtime = Runtime.get(runtimeId);
+      // The agent's process starts as soon as the workspace's files exist
+      // (its cwd), not once the workspace is ready: Claude Code's own startup
+      // (~4 s, the same in an empty dir) then runs while the workspace's
+      // `prepare` finishes what only the first turn needs — a checkout's
+      // install and index refresh. It starts with no prompt, and the row
+      // stays `starting` (plan-update: a spawn in flight holds it), so every
+      // turn — the launch prompt and anything sent meanwhile — stays held:
+      // nothing reaches the agent, and no tool call runs its guards, before
+      // the workspace is ready.
+      //
+      // Idempotent: called again on a replay of `prepare` (each wake of a
+      // suspended spawn re-walks it), and a retry whose earlier attempt
+      // already started the agent finds it running.
+      let filesReady = false;
+      const startAgent = async (): Promise<void> => {
+        step = "runtime";
+        if (!(await runtime.isRunning(conversationId))) {
+          // Composed at the spawn, never at enqueue: a job retried after a
+          // restart starts on what is true now (system-prompt).
+          const appendSystemPrompt = await spawnSystemPrompt(conversationId);
+          await runtime.create(
+            conversationId,
+            worktreePath,
+            workspace.launch(at, { conversationId }),
+            { ...create, appendSystemPrompt },
+          );
+        }
+        filesReady = true;
+        step = "worktree";
+      };
       // Both are idempotent, so a mid-step crash re-runs the whole body safely.
       // The job's context goes down whole: its deadline for the work, and its
       // step / wait log for a kind that waits on a supervised child (which
@@ -130,31 +167,28 @@ export const spawnConversationJob = defineJob({
         waitFor: ctx.waitFor,
         sleep: ctx.sleep,
         conversationId,
+        filesReady: startAgent,
       });
-      step = "runtime";
-      const runtime = Runtime.get(runtimeId);
-      // A retry whose earlier attempt already started the session: `create`
-      // would no-op, so a held turn claimed here would never reach the agent.
-      // Leave every held turn to the flush the status flip triggers.
-      if (!(await runtime.isRunning(conversationId))) {
-        // Path A of held-turn delivery (turns.ts): the oldest held turn — the
-        // launch's own prompt (kind `launch`), else one the user sent while
-        // this was starting — becomes the launch message, so Claude starts on
-        // it directly instead of idling at an empty prompt.
-        // Composed at the spawn, never at enqueue: a job retried after a
-        // restart starts on what is true now (system-prompt).
-        const appendSystemPrompt = await spawnSystemPrompt(conversationId);
-        await launchWithHeldTurn(conversationId, (prompt) =>
-          runtime.create(
-            conversationId,
-            worktreePath,
-            workspace.launch(at, { conversationId }),
-            { ...create, appendSystemPrompt, prompt },
-          ),
+      if (!filesReady) {
+        throw new Error(
+          `The ${spec.kind} workspace's prepare returned without calling filesReady, so no agent was started for ${conversationId} — every workspace kind must call it before its prepare returns`,
         );
       }
-      // A session runs: an earlier attempt's failure no longer describes it.
+      step = "runtime";
+      // A session runs in a ready workspace: an earlier attempt's failure no
+      // longer describes it. Before the prompt, so nothing after it can fail
+      // this attempt — `onDead` stops the agent of a launch that died, which
+      // must never be one that already took its prompt.
       await clearSpawnFailure(conversationId);
+      // The workspace is ready: the oldest held turn — the launch's own
+      // prompt (kind `launch`), else one the user sent while this was
+      // starting — goes to the agent now (path A of held-turn delivery,
+      // turns.ts). The rest wait for the flush the status flip triggers.
+      await typeLaunchTurn(conversationId, runtime);
+      // Done with the row: the reconciler takes it out of `starting` now,
+      // rather than once the queue completes this run.
+      handOverStarting(conversationId);
+      requestStatusReconcile([conversationId]);
     } catch (err) {
       // A suspend is the workspace's `prepare` waiting on its checkout, not a
       // failure: passed through untouched, before anything is recorded.

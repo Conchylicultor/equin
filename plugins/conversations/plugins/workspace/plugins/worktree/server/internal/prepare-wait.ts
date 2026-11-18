@@ -9,6 +9,10 @@ import {
 } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import type { CheckoutState } from "@plugins/infra/plugins/worktree/server";
 import {
+  checkoutProgress,
+  type CheckoutProgressPayload,
+} from "./tables-checkout-progress";
+import {
   SUPERVISED_EXIT_SCHEMA_NOT_READY,
   SUPERVISED_EXIT_TEMPFAIL,
 } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
@@ -65,6 +69,13 @@ export interface PrepareDeps {
   request(): Promise<void>;
   /** The prepare job's supervised-run kind id, which `runEnded` filters on. */
   readonly kindId: string;
+  /**
+   * The checkout's files are on disk (`checkoutState` reads `complete`): the
+   * agent process may start in it while the child still installs it. Called
+   * at most once per walk of the loop, before it returns — again on a replay,
+   * so it must be idempotent.
+   */
+  filesReady(): Promise<void>;
 }
 
 /**
@@ -74,6 +85,14 @@ export interface PrepareDeps {
  *
  * Observe before waiting (`release`'s `awaitRelease` shape): each pass reads
  * the newest run and the checkout, and only then suspends.
+ *
+ * Two moments, one loop. The checkout's FILES come first: once
+ * `checkoutState` reads `complete` (a claimed spare switched, a cold add's
+ * tree written — the child discards only an `unfinished` one, so a complete
+ * one stays) `deps.filesReady()` is called, and the agent starts in it while
+ * the child goes on installing. Until then each wait is on the attempt's
+ * `checkoutProgress` (its files written, or its run ended), after it on the
+ * run's `runEnded`. The loop itself still returns only once the run is over.
  *
  * - A run is open → wait for it to end. Checked FIRST: a checkout can read
  *   complete while its child still installs it, and nothing here may race the
@@ -116,24 +135,32 @@ export async function prepareWorktree(
   let requests = 0;
   let tempfails = 0;
   let pendingWakes = 0;
+  let filesReady = false;
   for (let i = 0; ; i++) {
     const run = await deps.latestRun();
+    // Read after the run, so a run that ended in between is never taken for
+    // one whose files are still being written.
+    const state = await deps.checkoutState();
+    if (!filesReady && state === "complete") {
+      await deps.filesReady();
+      filesReady = true;
+    }
     if (run?.open) {
-      await wait(ctx, deps.kindId, run.id, i);
+      await (filesReady
+        ? wait(ctx, deps.kindId, run.id, i)
+        : waitProgress(ctx, attemptId, i));
       continue;
     }
     const ours = request !== null && run !== null && run.id !== request.after;
-    if (
-      ours &&
-      run.exitCode === 0 &&
-      (await deps.checkoutState()) === "complete"
-    )
-      return;
+    if (ours && run.exitCode === 0 && state === "complete") return;
     if (request !== null && !ours && pendingWakes < MAX_PENDING_WAKES) {
       // Requested, not claimed yet: wait for any run of the kind to end — ours
-      // ends with one, and a timeout is a re-look.
+      // ends with one, and a timeout is a re-look. Before its files, for the
+      // attempt's checkout to move instead: the run writing them says so.
       pendingWakes++;
-      await wait(ctx, deps.kindId, null, i);
+      await (filesReady
+        ? wait(ctx, deps.kindId, null, i)
+        : waitProgress(ctx, attemptId, i));
       continue;
     }
     if (
@@ -209,5 +236,23 @@ async function wait(
     where: runId === null ? { kindId } : { kindId, runId },
     timeoutMs: PREPARE_WAIT_MS,
     name: `prepare:wait:${i}`,
+  });
+}
+
+/**
+ * Wait for the attempt's checkout to move — its files written, or its run
+ * ended (`checkoutProgress`). A wake-up only, like `runEnded`: the next pass
+ * reads the disk and the run row. Its own names (`prepare:files:<i>`), so a
+ * replay never meets a `runEnded` wait under the same name.
+ */
+async function waitProgress(
+  ctx: Pick<JobCtx, "waitFor">,
+  attemptId: string,
+  i: number,
+): Promise<void> {
+  await ctx.waitFor<CheckoutProgressPayload>(checkoutProgress, {
+    where: { attemptId },
+    timeoutMs: PREPARE_WAIT_MS,
+    name: `prepare:files:${i}`,
   });
 }
