@@ -4,13 +4,14 @@
 
 ## Plugin reference
 
-- Description: Pairs React.lazy with its own Suspense boundary so a heavy component is code-split off the eager plugin-boot wave, loading on first mount instead.
+- Description: Pairs React.lazy with its own Suspense boundary so a heavy component is code-split off the eager plugin-boot wave, loading on first mount instead. HoldLazyMount: under it, a lazy component mounting by a deferred render (a pane navigation) suspends that render instead of drawing its fallback, so the previous screen stays until its chunk is in.
 - Web:
   - Uses:
     - `primitives/css/center.Center`
     - `primitives/loading.Loading`
   - Exports (types): `LazyComponentOptions`
   - Exports (values):
+    - `HoldLazyMount`
     - `lazyComponent`
     - `useLazyReady`
 - Cross-plugin:
@@ -26,6 +27,7 @@
     - `page/math/render`
     - `primitives/graph-canvas`
     - `primitives/markdown`
+    - `primitives/pane`
     - `primitives/syntax-highlight/code-preview/mermaid`
     - `primitives/text-editor`
 - Test helpers:

@@ -3,7 +3,10 @@ import {
   createElement,
   useCallback,
   useContext,
+  useDeferredValue,
+  useEffect,
   useMemo,
+  useState,
   useSyncExternalStore,
   type ComponentType,
   type ReactNode,
@@ -1892,8 +1895,34 @@ function SurfaceMatchProvider({
   children: ReactNode;
 }): ReactNode {
   const match = usePaneRoute(basePath);
-  return createElement(PaneMatchContext.Provider, { value: match }, children);
+  // The surface draws the route DEFERRED: a navigation first commits with the
+  // panes on screen unchanged, then renders the new ones in a background
+  // render. A pane whose code is not in yet suspends that render (its lazy
+  // components mount under `PaneInstance`'s `HoldLazyMount`), so React keeps
+  // the previous screen until the new one can draw — never the new pane's
+  // chrome with a spinner in place of its body.
+  const shown = useDeferredValue(match);
+  // Whether this surface has drawn once: only a pane mounted AFTER that is a
+  // navigation, held as above. Panes of the surface's first draw keep their
+  // own loading states — holding them would hold the whole page.
+  const [drawn, setDrawn] = useState(false);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- a commit fact: "this surface has been on screen", known only once it committed; it switches the pane-mount hold on for every later navigation.
+    setDrawn(true);
+  }, []);
+  return createElement(
+    SurfaceDrawnContext.Provider,
+    { value: drawn },
+    createElement(PaneMatchContext.Provider, { value: shown }, children),
+  );
 }
+
+/**
+ * Whether the enclosing pane surface has been on screen once (see
+ * {@link SurfaceMatchProvider}); read by `PaneInstance` to hold the lazy
+ * components of a pane mounted by a navigation.
+ */
+export const SurfaceDrawnContext = createContext(false);
 
 // ---------------------------------------------------------------------------
 // Imperative (non-hook) route API — delegates to the live store. Keeps the

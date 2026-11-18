@@ -1,8 +1,11 @@
 import {
+  createContext,
+  createElement,
   lazy,
   Suspense,
   use,
   useCallback,
+  useContext,
   useState,
   useSyncExternalStore,
   type ComponentType,
@@ -40,6 +43,38 @@ export interface LazyComponentOptions {
    * Omitted: load on first mount.
    */
   preload?: "idle" | "first-paint";
+}
+
+/**
+ * Whether a lazy component mounting here suspends the enclosing render rather
+ * than drawing its own fallback. See {@link HoldLazyMount}.
+ */
+const HoldContext = createContext(false);
+
+/**
+ * While `active`, a lazy component whose chunk is not in yet and that MOUNTS
+ * under here does not draw its fallback: it suspends the render it mounts in,
+ * past its own boundary. For a host that mounts a whole new screen in a
+ * deferred render (a pane navigation — `primitives/pane`'s surface renders a
+ * `useDeferredValue` of its route): React then abandons that render and keeps
+ * the previous screen on display until the chunk lands, instead of committing
+ * the new screen with a spinner in place of its content.
+ *
+ * Only for a subtree mounted by a deferred or transition render: in an urgent
+ * render the suspension would hide the nearest revealed Suspense boundary
+ * above (or hold the whole root). So a host turns it on only while its
+ * subtree first mounts, and off once it has committed — a lazy component
+ * mounting later (a dialog opened by a click) draws its own fallback as ever.
+ * A lazy component reads it once, when it mounts.
+ */
+export function HoldLazyMount({
+  active,
+  children,
+}: {
+  active: boolean;
+  children: ReactNode;
+}): ReactNode {
+  return createElement(HoldContext.Provider, { value: active }, children);
 }
 
 /**
@@ -118,6 +153,10 @@ export function lazyComponent<P extends object>(
       opts.fallback
     );
   const LazyBoundary = function LazyBoundary(props: P) {
+    // Read once, at mount, like `Loaded` below: an instance never switches
+    // between suspending past itself and its own boundary.
+    const holdHere = useContext(HoldContext);
+    const [hold] = useState(() => holdHere);
     // An instance mounted after the chunk loaded renders it directly: through
     // `React.lazy` it would still suspend once (lazy learns of a resolved
     // promise a microtask late) and wait out React's 300 ms Suspense reveal
@@ -134,7 +173,13 @@ export function lazyComponent<P extends object>(
     // suspend on the load here instead (the prerender waits for Suspense) and
     // render the component. `load` is memoized, so every retry reads the same
     // promise; a failed load throws, like `useLazyReady`.
-    if (renderMode() === "static") {
+    //
+    // Mounted by a deferred render under an active `HoldLazyMount`, the same:
+    // the suspension reaches past this component to the render that mounted
+    // it, which React abandons, keeping the previous screen until the chunk
+    // is in. The retry mounts this instance afresh, reading the loaded
+    // component above.
+    if (hold || renderMode() === "static") {
       const { default: Component } = use(load());
       return <Component {...props} />;
     }

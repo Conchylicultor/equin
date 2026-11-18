@@ -17,8 +17,9 @@ import { pathShowsPage } from "../../shared/page-path";
  *   whole;
  * - anywhere else, once the page being shown is idle (`preload: "idle"`):
  *   off the first paint, but in before a visitor clicks to the page — loaded
- *   on first mount instead, the page went blank behind the lazy fallback
- *   (header included) for ~0.4–0.7 s on every first visit of a page.
+ *   on first mount instead, a click to a page not visited yet would keep the
+ *   current page on screen ~0.4–0.7 s while its code downloads (the pane
+ *   surface holds a navigation until the new pane can draw).
  *
  * `load` imports the module holding the component and answers it
  * (`() => import("./components/x-body").then((m) => m.XBody)`).

@@ -54612,13 +54612,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/tests`
               - `runs`
               - `tasks/task-triage`
-    - **`lazy-component`** — Pairs React.lazy with its own Suspense boundary so a heavy component is code-split off the eager plugin-boot wave, loading on first mount instead.
+    - **`lazy-component`** — Pairs React.lazy with its own Suspense boundary so a heavy component is code-split off the eager plugin-boot wave, loading on first mount instead. HoldLazyMount: under it, a lazy component mounting by a deferred render (a pane navigation) suspends that render instead of drawing its fallback, so the previous screen stays until its chunk is in.
       - Web:
         - Uses:
           - `primitives/css/center.Center`
           - `primitives/loading.Loading`
         - Exports (types): `LazyComponentOptions`
         - Exports (values):
+          - `HoldLazyMount`
           - `lazyComponent`
           - `useLazyReady`
       - Cross-plugin:
@@ -54634,6 +54635,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/math/render`
           - `primitives/graph-canvas`
           - `primitives/markdown`
+          - `primitives/pane`
           - `primitives/syntax-highlight/code-preview/mermaid`
           - `primitives/text-editor`
       - Test helpers:
@@ -56100,7 +56102,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `welcomePane.Actions` "title" → `PaneTitleItem`
           - `workflow-node.actions` "title" → `PaneTitleItem`
           - `worktreeCleanupPane.Actions` "title" → `PaneTitleItem`
-        - Uses: 46 symbols — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Uses: 47 symbols — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `primitives/css/ui-kit` ×4
           - `primitives/slot-render` ×4
           - `network/live/live-state` ×3
@@ -56128,6 +56130,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/hover-reveal.hoverRevealGroup`
           - `primitives/icon-button.IconButton`
           - `primitives/latest-ref.useLatestRef`
+          - `primitives/lazy-component.HoldLazyMount`
           - `primitives/loading.Loading`
           - `primitives/overlay/tooltip.TooltipDoc`
           - `primitives/pane/route-prefix.splitRoutePrefix`

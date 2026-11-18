@@ -924,7 +924,7 @@ out of the way: **what it opens takes its column**.
     - `welcomePane.Actions` "title" → `PaneTitleItem`
     - `workflow-node.actions` "title" → `PaneTitleItem`
     - `worktreeCleanupPane.Actions` "title" → `PaneTitleItem`
-  - Uses: 46 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 47 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×4
     - `primitives/slot-render` ×4
     - `network/live/live-state` ×3
@@ -952,6 +952,7 @@ out of the way: **what it opens takes its column**.
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
+    - `primitives/lazy-component.HoldLazyMount`
     - `primitives/loading.Loading`
     - `primitives/overlay/tooltip.TooltipDoc`
     - `primitives/pane/route-prefix.splitRoutePrefix`
