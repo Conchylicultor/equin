@@ -4,6 +4,7 @@ import {
   flip,
   offset,
   shift,
+  size,
   useFloating,
 } from "@floating-ui/react-dom";
 import { OverlayPanel } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -13,6 +14,12 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 export interface OverflowPanelProps {
   open: boolean;
+  /**
+   * The element the panel spans: placed under it and exactly as wide (a site's
+   * menu under its header row). `null`: the panel hangs off the trigger, as
+   * wide as its contents.
+   */
+  span: HTMLElement | null;
   /** The `⋯` trigger the panel positions against. */
   anchor: HTMLElement | null;
   /** Accessible name for the panel — the bar's own label. */
@@ -32,6 +39,16 @@ export interface OverflowPanelProps {
    * outside, surface inside — the order every other popup has.
    */
   regionAttrs: PortalForwardedAttrs;
+  /**
+   * The bar's POPUP attributes — what a popover opened from the bar would wear:
+   * the enclosing APP theme scope, without a region-only sub-theme. Stamped on
+   * the overlay root, with the region's on a box inside it, so the two nest as
+   * they do on the page: the app scope's colours, then the sub-theme's sizes
+   * over them. A sub-theme sets no colours, so the region attributes alone (a
+   * sub-theme scope standing where the app scope should be) left the panel in
+   * the default palette — grey rows on a grey panel under a blue site.
+   */
+  popupAttrs: PortalForwardedAttrs;
   /**
    * Whether an occupant parked in the panel has a popup of its own open (a
    * popover its button opened). That popup is the innermost layer: it owns Esc
@@ -72,10 +89,12 @@ export interface OverflowPanelProps {
  */
 export function OverflowPanel({
   open,
+  span,
   anchor,
   label,
   dockRef,
   regionAttrs,
+  popupAttrs,
   hasOpenChildPopup,
   onDismiss,
 }: OverflowPanelProps): ReactElement {
@@ -99,8 +118,25 @@ export function OverflowPanel({
     // both elements set and no `whileElementsMounted`, Floating UI still
     // positions once on mount — one async state update, so one commit, per
     // closed panel. A sidebar of collapsed rows is one panel per row.
-    elements: { reference: open ? anchor : null, floating: floatingEl },
-    middleware: [offset(4), flip({ padding: 9 }), shift({ padding: 8 })],
+    // A spanning panel takes its reference's box: under it, and its width.
+    elements: {
+      reference: open ? (span ?? anchor) : null,
+      floating: floatingEl,
+    },
+    middleware: [
+      offset(4),
+      flip({ padding: 9 }),
+      shift({ padding: 8 }),
+      ...(span === null
+        ? []
+        : [
+            size({
+              apply({ rects, elements }) {
+                elements.floating.style.width = `${rects.reference.width}px`;
+              },
+            }),
+          ]),
+    ],
   });
 
   // Esc and outside-press close. Both are document-level and capture-phase so
@@ -139,8 +175,15 @@ export function OverflowPanel({
       // panel inside it takes pointers, and only while open.
       className="pointer-events-none"
       aria-hidden={!open}
-      {...regionAttrs}
+      {...popupAttrs}
     >
+      {/* The region's scope inside the app's, outside the panel surface — see
+          `popupAttrs`. A `display: contents` box: it scopes, it lays nothing
+          out. It stamps only what DIFFERS from the overlay root's: a repeated
+          `data-color-scheme` beside a sub-theme scope would re-root the
+          scheme's default palette there (a sub-theme defines no colours), the
+          very thing the nesting is for. */}
+      <div className="contents" {...attrsBeyond(regionAttrs, popupAttrs)}>
       <OverlayPanel
         ref={setFloatingEl}
         role="dialog"
@@ -164,6 +207,17 @@ export function OverflowPanel({
       >
         <Stack ref={dockRef} gap="2xs" align="stretch" />
       </OverlayPanel>
+      </div>
     </ViewportOverlay>
+  );
+}
+
+/** The attributes of `inner` that `outer` does not already carry, as is. */
+function attrsBeyond(
+  inner: PortalForwardedAttrs,
+  outer: PortalForwardedAttrs,
+): PortalForwardedAttrs {
+  return Object.fromEntries(
+    Object.entries(inner).filter(([name, value]) => outer[name] !== value),
   );
 }

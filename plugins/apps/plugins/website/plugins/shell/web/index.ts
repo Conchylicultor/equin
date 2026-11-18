@@ -16,7 +16,11 @@ import {
 } from "./internal/theme";
 
 export { Website, WebsiteHeader } from "./slots";
-export { WebsiteNavLink } from "./components/website-nav-link";
+export {
+  WebsiteNavLead,
+  WebsiteNavLink,
+  WebsiteNavPill,
+} from "./components/website-nav-link";
 export { WebsiteArrow } from "./components/website-arrow";
 export { WebsiteBand } from "./components/website-band";
 export { WebsiteHero } from "./components/website-hero";

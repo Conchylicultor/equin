@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import {
@@ -8,18 +7,17 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { WebsiteArrow } from "@plugins/apps/plugins/website/plugins/shell/web";
-import { guidePane } from "@plugins/apps/plugins/website/plugins/pages/plugins/guide/web";
-import { DownloadLink, LocalAppLink } from "./download-link";
+import { LocalAppLink } from "./download-link";
 
 /**
- * "Once it is running": the three things to do after the install, as one
- * numbered sequence — open it, learn the basics, make it yours. No boxes: a
- * number, a title and a line each, so the three read as steps rather than as
- * three more cards.
+ * "Once it is running": the things to do after the install, as one numbered
+ * sequence — open it, make it yours. No boxes: a number, a title and a line
+ * each, so they read as steps rather than as more cards.
+ *
+ * "Learn the basics" (a step linking the guide) comes back once the guide page
+ * has something in it; while it is a placeholder the site links it nowhere.
  */
 export function DownloadNextSteps() {
-  const openPane = useOpenPane();
   return (
     <Stack gap="xl" className="website-download-next">
       <Text
@@ -34,22 +32,8 @@ export function DownloadNextSteps() {
           equin lives at <LocalAppLink />, and comes back on its own after a
           restart.
         </Step>
-        <Step
-          n={2}
-          title="Learn the basics"
-          action={
-            <Text variant="label">
-              <DownloadLink {...openPane.link(guidePane, {}, { mode: "root" })}>
-                Read the guide
-                <WebsiteArrow />
-              </DownloadLink>
-            </Text>
-          }
-        >
-          Tasks, agents and apps, in ten minutes.
-        </Step>
-        <Step n={3} title="Make it yours">
-          Press Improve in any app and describe the change you want. An agent
+        <Step n={2} title="Make it yours">
+          Press Wish in any app and describe the change you want. An agent
           builds it.
         </Step>
       </Grid>
@@ -60,12 +44,10 @@ export function DownloadNextSteps() {
 function Step({
   n,
   title,
-  action,
   children,
 }: {
   n: number;
   title: string;
-  action?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -87,7 +69,6 @@ function Step({
             {children}
           </Text>
         </Stack>
-        {action}
       </Stack>
     </Stack>
   );

@@ -36,6 +36,8 @@ afterEach(() => {
 function panel(open: boolean, anchor: HTMLElement) {
   return (
     <OverflowPanel
+      span={null}
+      popupAttrs={{}}
       open={open}
       anchor={anchor}
       label="More"

@@ -8,8 +8,8 @@ it), and **For your agent**, the same install as a prompt, copyable or opened
 straight into Claude Code / the Claude app through their deep links (the prompt
 is typed in; nothing runs until the reader presses Enter). Then the caveats as bullets —
 the first install builds every app (~15 minutes), and the apps were tuned
-for one person — and "Once it is running": open it, read the guide, press
-Improve. Last, for a reader not ready to install, one card opens the
+for one person — and "Once it is running": open it, press Wish (no guide step
+while the guide page is a placeholder). Last, for a reader not ready to install, one card opens the
 demo page (`/about/demo`, the demo at its own start —
 this page names no place inside it), saying its agents are off: they need equin
 on the reader's machine.
@@ -23,7 +23,7 @@ installer beside another's source. The installer's steps are written out in
 
 ## Plugin reference
 
-- Description: The download page of the equin website: the /about/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it runs, a closing card opening the homepage's live demo full screen for a reader not ready to install (agents off there), and its Download nav link. The download page of the equin website on the server: its sitemap entry (WebsitePages.Page).
+- Description: The download page of the equin website: the /about/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it runs, a closing card opening the homepage's live demo full screen for a reader not ready to install (agents off there), and its header pill (▶ Demo | Download: the live demo, or this page). The download page of the equin website on the server: its sitemap entry (WebsitePages.Page).
 - Web:
   - Contributes:
     - `Pane.Register` "website-download"
@@ -32,14 +32,13 @@ installer beside another's source. The installer's steps are written out in
     - `ThemeEngine.SubTheme` "equin download tabs"
     - `ThemeEngine.SubTheme` "equin download"
   - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps/website/shell` ×7
+    - `apps/website/shell` ×8
     - `primitives/collapsible` ×4
     - `primitives/css/spacing` ×3
     - `primitives/pane` ×3
     - `primitives/css/ui-kit` ×2
     - `apps-core/tabs.useAppLinkProps`
     - `apps/deploy/analytics/collect.track`
-    - `apps/website/pages/guide.guidePane`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/card.Card`
     - `primitives/css/center.Center`
@@ -70,6 +69,7 @@ installer beside another's source. The installer's steps are written out in
     - `ui/tokens/color-palette --muted`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --primary`
+    - `ui/tokens/color-palette --primary-text`
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/font-family --font-sans`
     - `ui/tokens/shape --spacing`

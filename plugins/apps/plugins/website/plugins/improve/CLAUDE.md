@@ -69,9 +69,9 @@ Verify with `e2e/improve-verify.ts` after `./equin build`.
 - Description: The website's Wish button: the header's call to action, a popover where a visitor describes a change to the page, watches a scripted replay of what equin would do with it, and files it as a prefilled GitHub issue.
 - Web:
   - Contributes: `WebsiteHeader` "improve" → `ImproveNavItem`
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/website/shell` ×3
     - `primitives/css/ui-kit` ×3
-    - `apps/website/shell` ×2
     - `primitives/css/spacing` ×2
     - `primitives/kept-state` ×2
     - `apps/deploy/analytics/collect.track`

@@ -61,6 +61,11 @@ export interface FitItem {
   /** Current rung index, or `null` if currently evicted. */
   currentRung: number | null;
   /**
+   * The cohort this item leaves the row with (`ShrinkLadder.cohort`), or
+   * `null`: once any member is evicted, every evictable, unpinned member is.
+   */
+  cohort?: string | null;
+  /**
    * How many forms the widget DECLARED, which is ≥ `inlineWidths.length`.
    *
    * Read by {@link passBudget} alone — never by `assign`, which may only ever
@@ -411,6 +416,29 @@ export function assign(input: FitInput): FitResult {
   );
   if (promoting.length > 0 && !(total() + hysteresisPx <= available)) {
     for (const p of promoting) place(p, clampCurrent(p.item));
+  }
+
+  // Cohorts leave together: a member evicted above takes the rest of its
+  // cohort with it. Evicting only ever frees width (the trigger is already
+  // paid for, since a member is out), so the placement still fits — this pass
+  // cannot undo what the search proved. A pinned member stays where it is: a
+  // pin protects a live interaction from being moved.
+  const leftCohorts = new Set<string>();
+  for (const p of states) {
+    if (p.rung === null && p.item.cohort != null)
+      leftCohorts.add(p.item.cohort);
+  }
+  if (leftCohorts.size > 0) {
+    for (const p of states) {
+      if (
+        p.rung !== null &&
+        p.item.cohort != null &&
+        leftCohorts.has(p.item.cohort) &&
+        p.item.evictable &&
+        !frozen.has(p.item.id)
+      )
+        place(p, null);
+    }
   }
 
   const placement = new Map<string, number | null>();

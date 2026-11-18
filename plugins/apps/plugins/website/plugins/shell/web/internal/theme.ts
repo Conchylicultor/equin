@@ -30,6 +30,9 @@ const colorPalette = colorPaletteGroup.fragment({
     // property dots, every hover.
     primary: AZURE,
     primaryForeground: WHITE,
+    // The brand as TEXT on the near-black page — the wordmark's full stop, the
+    // header's ▶: a lighter azure, since AZURE itself reads dim at glyph size.
+    primaryText: "oklch(0.7137 0.1434 254.62)",
     // The filled control is the FOREGROUND, inverted — a white pill with black
     // type — not the accent. `secondary` carries that inverted fill so the
     // accent stays the thing you act on.
@@ -202,6 +205,10 @@ const density = densityGroup.fragment(
     // 12px — a small control's inline padding: the quiet nav links. The
     // call-to-action pill adds the shape's pill extra on top (see `shape`).
     controlPadSm: "0.75rem",
+    // 20px — a small control's glyph: the header's icon links (GitHub, the
+    // phone's ☰) stand as tall as the words beside them. A glyph that should
+    // read smaller (Wish's sparkle, the pill's ▶) sizes itself.
+    controlIconSm: "1.25rem",
     chromeBarH: "3rem",
     // 72px — the site header.
     chromePaneH: "4.5rem",
@@ -228,12 +235,12 @@ const density = densityGroup.fragment(
  * One radius token sized so the card corner (`rounded-2xl`, 1.8×) lands on the
  * design's 20px; a button's `rounded-lg` (1×) then sits at 11px.
  *
- * The pill extra is what the header's call-to-action pill pads beyond the nav
- * links beside it: 12px (`controlPadSm`) + 6px = the mock's 18px, while the
- * links keep 12px, so the nav words sit the mock's ~29px apart.
+ * The pill extra is what a pill pads beyond the nav links beside it, at each
+ * rounded end: 12px (`controlPadSm`) + 4px = the mock's 16px for the Wish pill
+ * (and the outer ends of the Demo | Download pill), while the links keep 12px.
  */
 const shape = shapeGroup.fragment(
-  both({ radius: "0.6944rem", spacing: "0.25rem", pillPadExtra: "0.375rem" }),
+  both({ radius: "0.6944rem", spacing: "0.25rem", pillPadExtra: "0.25rem" }),
 );
 
 /**

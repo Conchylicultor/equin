@@ -19,6 +19,8 @@ describe("OverflowPanel region attributes", () => {
     let dock: HTMLElement | null = null;
     render(
       <OverflowPanel
+        span={null}
+        popupAttrs={{}}
         open
         anchor={anchor}
         label="More"
@@ -36,5 +38,39 @@ describe("OverflowPanel region attributes", () => {
     expect(panel?.hasAttribute("data-theme-scope")).toBe(false);
     expect(panel?.querySelector("[data-theme-scope]")).toBeNull();
     expect(dock).not.toBeNull();
+  });
+
+  it("nests a region-only sub-theme INSIDE the app scope, so the panel keeps the app's colours", () => {
+    const anchor = document.createElement("button");
+    document.body.appendChild(anchor);
+    render(
+      <OverflowPanel
+        span={null}
+        popupAttrs={{
+          "data-theme-scope": "app:site",
+          "data-color-scheme": "dark",
+        }}
+        open
+        anchor={anchor}
+        label="Menu"
+        dockRef={() => {}}
+        regionAttrs={{
+          "data-theme-scope": "sub:document",
+          "data-color-scheme": "dark",
+        }}
+        hasOpenChildPopup={() => false}
+        onDismiss={() => {}}
+      />,
+    );
+    const panel = document.querySelector("[data-overlay-panel]");
+    const sub = panel?.closest('[data-theme-scope="sub:document"]');
+    expect(sub).not.toBeNull();
+    // The sub-theme's scope sits inside the app's, as it does on the page.
+    expect(
+      sub?.parentElement?.closest('[data-theme-scope="app:site"]'),
+    ).not.toBeNull();
+    // The scheme is the app scope's alone: repeated on the sub-theme's box it
+    // would re-root the scheme's default palette there.
+    expect(sub?.hasAttribute("data-color-scheme")).toBe(false);
   });
 });

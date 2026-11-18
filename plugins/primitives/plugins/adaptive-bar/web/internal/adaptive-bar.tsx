@@ -56,6 +56,7 @@ import {
   cn,
   SingleLineProvider,
   useRegionForwardedAttrs,
+  usePortalForwardedAttrs,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { type SpaceStep } from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -100,7 +101,7 @@ import {
   supportsStatePreservingMove,
 } from "./relocate";
 import { AdaptiveBarYield, yieldFloorPx } from "./bar-yield";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 import { rendersNothing } from "./presence";
 
 const moreHorizIcon = symbol("more-horiz");
@@ -122,6 +123,19 @@ interface AdaptiveBarBaseProps {
   gap?: SpaceStep;
   /** Accessible name of the `⋯` trigger and its panel. Default `"More"`. */
   label?: string;
+  /**
+   * The trigger's glyph. Default `⋯` (more-horiz): what is behind it is
+   * whatever did not fit. A bar whose occupants are a site's navigation calls
+   * the panel a menu (`menu`, ☰) — the same panel, named for what it holds.
+   */
+  overflowIcon?: IconRef;
+  /**
+   * How the panel sits. `"fit"` (default): hung off the trigger, as wide as
+   * what is in it. `"span"`: under the whole bar and exactly as wide — for a
+   * bar whose panel is a site's menu, where the rows read as a sheet under the
+   * header rather than a popover off its corner.
+   */
+  overflowPanel?: "fit" | "span";
   /**
    * Where the occupants sit inside the bar. Default `"start"`; `"end"` packs
    * them against the far edge — a trailing action cluster with the row's slack
@@ -279,6 +293,8 @@ export function AdaptiveBar(props: AdaptiveBarProps): ReactElement {
   const {
     gap = "xs",
     label = "More",
+    overflowIcon = moreHorizIcon,
+    overflowPanel = "fit",
     overflow = "panel",
     align = "start",
     spill = false,
@@ -289,6 +305,8 @@ export function AdaptiveBar(props: AdaptiveBarProps): ReactElement {
     <AdaptiveBarShell
       gap={gap}
       label={label}
+      overflowIcon={overflowIcon}
+      overflowPanel={overflowPanel}
       overflow={overflow}
       align={align}
       spill={spill}
@@ -326,6 +344,8 @@ export function AdaptiveBarCollapsed({
     <AdaptiveBarShell
       gap="xs"
       label={label}
+      overflowIcon={moreHorizIcon}
+      overflowPanel="fit"
       overflow="panel"
       // The collapsed bucket is one `⋯` sitting among its row's other
       // occupants, so it holds no slack to align anything against.
@@ -512,6 +532,8 @@ function collapsedRungOf(placement: Placement, id: string): number | null {
 function AdaptiveBarShell({
   gap,
   label,
+  overflowIcon,
+  overflowPanel,
   overflow,
   align,
   spill,
@@ -521,6 +543,8 @@ function AdaptiveBarShell({
 }: {
   gap: SpaceStep;
   label: string;
+  overflowIcon: IconRef;
+  overflowPanel: "fit" | "span";
   overflow: AdaptiveBarOverflow;
   align: AdaptiveBarAlign;
   spill: boolean;
@@ -572,6 +596,7 @@ function AdaptiveBarShell({
   // (outside the panel surface — see `OverflowPanelProps.regionAttrs`), and the
   // baseline each occupant stamps only its differences from.
   const regionAttrs = useRegionForwardedAttrs();
+  const popupAttrs = usePortalForwardedAttrs();
 
   const [placement, setPlacement] = useState<Placement>(EMPTY_PLACEMENT);
   const [panelOpen, setPanelOpen] = useState(false);
@@ -1477,6 +1502,7 @@ function AdaptiveBarShell({
         declaredRungs,
         evictable: overflow !== "scroll" && !entry.immovable,
         yieldRank: yieldRankOf(entry.ladder),
+        cohort: entry.ladder.cohort,
         pinned:
           entry.holds > 0 ||
           entry.popupOpen ||
@@ -1824,7 +1850,7 @@ function AdaptiveBarShell({
                 className={rigidClass()}
               >
                 <IconButton
-                  icon={moreHorizIcon}
+                  icon={overflowIcon}
                   label={label}
                   aria-haspopup="dialog"
                   aria-expanded={panelOpen}
@@ -1842,10 +1868,12 @@ function AdaptiveBarShell({
           </SingleLineProvider>
           <OverflowPanel
             open={panelOpen}
+            span={overflowPanel === "span" ? root : null}
             anchor={trigger}
             label={label}
             dockRef={setPanelDock}
             regionAttrs={regionAttrs}
+            popupAttrs={popupAttrs}
             hasOpenChildPopup={() =>
               [...entriesRef.current.values()].some(
                 (entry) =>

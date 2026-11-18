@@ -109,12 +109,13 @@ hover.
     - `ThemeEngine.Theme` "equin"
     - `ThemeEngine.SubTheme` "equin document"
     - `ThemeEngine.SubTheme` "equin page heading"
-  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×7
+    - `primitives/action-presentation` ×4
+    - `primitives/css/ui-kit` ×4
     - `primitives/css/spacing` ×3
     - `apps/deploy/analytics/collect` ×2
     - `primitives/css/text` ×2
-    - `primitives/css/ui-kit` ×2
     - `primitives/slot-render` ×2
     - `apps-core.Apps`
     - `layouts/full-pane.FullPane`
@@ -122,6 +123,7 @@ hover.
     - `primitives/css/coords.Placed`
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
+    - `primitives/css/row.Row`
     - `primitives/css/theme-boundary.Theme`
     - `primitives/dom/auto-scroll.findScrollParent`
     - `primitives/dom/scroll-reveal.revealElement`
@@ -141,7 +143,9 @@ hover.
     - `WebsiteFooterLink`
     - `WebsiteHeader`
     - `WebsiteHero`
+    - `WebsiteNavLead`
     - `WebsiteNavLink`
+    - `WebsiteNavPill`
     - `websitePagePart`
     - `WebsiteScrollCue`
     - `WebsiteSoon`
@@ -194,6 +198,8 @@ hover.
     - `ui/tokens/color-palette --primary-foreground`
     - `ui/tokens/color-palette --primary-text`
     - `ui/tokens/density --chrome-pad-x`
+    - `ui/tokens/density --control-height-sm`
+    - `ui/tokens/density --control-pad-sm`
     - `ui/tokens/density --space-2xl`
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-bold`

@@ -32,11 +32,17 @@
   // browser tab and its snapshot, but the page's heading already says it, so the
   // header shows the wordmark alone.
   //
-  // After the spacer, the site's pages — Vision, Apps, Foundations, Story, then
-  // the Guide and Download for a reader ready to run it — then the source on
-  // GitHub, the one destination that leaves the site, and last the header's one
-  // call to action: Improve, which lets the reader try the gesture the site is
-  // about.
+  // After the spacer, the site's pages — Vision, Apps, Foundations, Story — then
+  // one pill for a reader ready to run it, split into ▶ Demo (in the browser)
+  // and Download (on their Mac), then the source on GitHub, the one destination
+  // that leaves the site, and last the header's one call to action: Wish, which
+  // lets the reader try the gesture the site is about.
+  //
+  // The Guide is hidden while its page is a placeholder: nothing on the site
+  // links an empty page. Unhide it once the guide is written.
+  //
+  // On a phone what does not fit goes behind the header's ☰ (WebsiteChrome's
+  // headerOverflow="menu"), in this same order.
   "items": [
     "apps.website.shell:wordmark",
     { "item": "primitives.pane:title", "hidden": true },
@@ -45,7 +51,7 @@
     "apps.website.pages.apps:apps",
     "apps.website.pages.foundations:foundations",
     "apps.website.pages.story:story",
-    "apps.website.pages.guide:guide",
+    { "item": "apps.website.pages.guide:guide", "hidden": true },
     "apps.website.pages.download:download",
     "apps.website.shell:github",
     "apps.website.improve:improve"

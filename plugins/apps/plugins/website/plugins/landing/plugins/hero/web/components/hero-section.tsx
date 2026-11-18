@@ -21,15 +21,15 @@ const LEDE_TAIL =
 const PROPERTIES = [
   {
     name: "Self-evolving",
-    body: "The application modifies itself as your needs evolve.",
+    body: "You describe any change, and an agent edits the app in the background.",
   },
   {
     name: "Integrated",
-    body: "One unified application, rather than many isolated ones.",
+    body: "A monolithic application, where every app integrates with the others.",
   },
   {
     name: "Personal",
-    body: "Built for your own use case, not the average one.",
+    body: "Every user controls the exact apps and features they need.",
   },
 ];
 

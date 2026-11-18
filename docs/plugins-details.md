@@ -12812,9 +12812,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`improve`** — The website's Wish button: the header's call to action, a popover where a visitor describes a change to the page, watches a scripted replay of what equin would do with it, and files it as a prefilled GitHub issue.
           - Web:
             - Contributes: `WebsiteHeader` "improve" → `ImproveNavItem`
-            - Uses: 24 symbols — full list in [`plugins/apps/plugins/website/plugins/improve/REFERENCE.md`](../plugins/apps/plugins/website/plugins/improve/REFERENCE.md)
+            - Uses: 25 symbols — full list in [`plugins/apps/plugins/website/plugins/improve/REFERENCE.md`](../plugins/apps/plugins/website/plugins/improve/REFERENCE.md)
+              - `apps/website/shell` ×3
               - `primitives/css/ui-kit` ×3
-              - `apps/website/shell` ×2
               - `primitives/css/spacing` ×2
               - `primitives/kept-state` ×2
               - `apps/deploy/analytics/collect.track`
@@ -13146,7 +13146,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/website`
                   - `apps/website/landing/layers`
                   - `apps/website/readme`
-            - **`download`** — The download page of the equin website: the /about/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it runs, a closing card opening the homepage's live demo full screen for a reader not ready to install (agents off there), and its Download nav link. The download page of the equin website on the server: its sitemap entry (WebsitePages.Page).
+            - **`download`** — The download page of the equin website: the /about/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it runs, a closing card opening the homepage's live demo full screen for a reader not ready to install (agents off there), and its header pill (▶ Demo | Download: the live demo, or this page). The download page of the equin website on the server: its sitemap entry (WebsitePages.Page).
               - Web:
                 - Contributes:
                   - `Pane.Register` "website-download"
@@ -13155,14 +13155,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ThemeEngine.SubTheme` "equin download tabs"
                   - `ThemeEngine.SubTheme` "equin download"
                 - Uses: 35 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/download/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/download/REFERENCE.md)
-                  - `apps/website/shell` ×7
+                  - `apps/website/shell` ×8
                   - `primitives/collapsible` ×4
                   - `primitives/css/spacing` ×3
                   - `primitives/pane` ×3
                   - `primitives/css/ui-kit` ×2
                   - `apps-core/tabs.useAppLinkProps`
                   - `apps/deploy/analytics/collect.track`
-                  - `apps/website/pages/guide.guidePane`
                   - `primitives/copy-to-clipboard.CopyButton`
                   - `primitives/css/card.Card`
                   - `primitives/css/center.Center`
@@ -13193,6 +13192,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --muted`
                   - `ui/tokens/color-palette --muted-foreground`
                   - `ui/tokens/color-palette --primary`
+                  - `ui/tokens/color-palette --primary-text`
                   - `ui/tokens/font-family --font-mono`
                   - `ui/tokens/font-family --font-sans`
                   - `ui/tokens/shape --spacing`
@@ -13267,9 +13267,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses: `apps/website/crawlable.defineWebsitePage`
                 - Exports (values): `guidePage`
               - Cross-plugin:
-                - Imported by:
-                  - `apps/website/pages/download`
-                  - `hints/help-menu`
+                - Imported by: `hints/help-menu`
             - **`privacy`** — The privacy page of the equin website and the consent prompt that links to it: the /about/privacy pane (this browser's choice, what a visit records, the two ways a return is recognised — a random key kept in the browser when the visitor accepts, else the daily hash — and how long it is kept), its Privacy link in the footer, and the prompt floating over every page (Website.Layer) until the browser answers Reject or Accept. The privacy page of the equin website on the server: its sitemap entry (WebsitePages.Page).
               - Web:
                 - Contributes:
@@ -13585,12 +13583,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ThemeEngine.Theme` "equin"
               - `ThemeEngine.SubTheme` "equin document"
               - `ThemeEngine.SubTheme` "equin page heading"
-            - Uses: 32 symbols — full list in [`plugins/apps/plugins/website/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/website/plugins/shell/REFERENCE.md)
+            - Uses: 39 symbols — full list in [`plugins/apps/plugins/website/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/website/plugins/shell/REFERENCE.md)
               - `primitives/pane` ×7
+              - `primitives/action-presentation` ×4
+              - `primitives/css/ui-kit` ×4
               - `primitives/css/spacing` ×3
               - `apps/deploy/analytics/collect` ×2
               - `primitives/css/text` ×2
-              - `primitives/css/ui-kit` ×2
               - `primitives/slot-render` ×2
               - `apps-core.Apps`
               - `layouts/full-pane.FullPane`
@@ -13598,6 +13597,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/coords.Placed`
               - `primitives/css/fill.Fill`
               - `primitives/css/inline.Inline`
+              - `primitives/css/row.Row`
               - `primitives/css/theme-boundary.Theme`
               - `primitives/dom/auto-scroll.findScrollParent`
               - `primitives/dom/scroll-reveal.revealElement`
@@ -13617,7 +13617,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `WebsiteFooterLink`
               - `WebsiteHeader`
               - `WebsiteHero`
+              - `WebsiteNavLead`
               - `WebsiteNavLink`
+              - `WebsiteNavPill`
               - `websitePagePart`
               - `WebsiteScrollCue`
               - `WebsiteSoon`
@@ -13670,6 +13672,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --primary-foreground`
               - `ui/tokens/color-palette --primary-text`
               - `ui/tokens/density --chrome-pad-x`
+              - `ui/tokens/density --control-height-sm`
+              - `ui/tokens/density --control-pad-sm`
               - `ui/tokens/density --space-2xl`
               - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-weight-bold`
@@ -49389,6 +49393,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/tab-bar`
           - `apps/prototypes/canvas`
           - `apps/website/improve`
+          - `apps/website/shell`
           - `primitives/adaptive-bar`
           - `primitives/icon-button`
     - **`adaptive-bar`** — Overflow as relocation, not transformation: a bar that asks each widget for a smaller form of itself and moves the rest — as themselves, ONE live instance each, never rendered twice — into an always-mounted panel. Each occupant owns one stable portal container the bar re-parents imperatively, so a relocated slider is still the same slider mid-drag; measurement reads the real nodes, and every policy (which forms exist, how eagerly to yield) comes from the widget through action-presentation rather than from the host.
@@ -49403,6 +49408,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.OverlayPanel`
           - `primitives/css/ui-kit.SingleLineProvider`
+          - `primitives/css/ui-kit.usePortalForwardedAttrs`
           - `primitives/css/ui-kit.useRegionForwardedAttrs`
           - `primitives/css/viewport-overlay.ViewportOverlay`
           - `primitives/css/yield.yieldClass`
@@ -50902,8 +50908,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/density` ×4
               - `ui/tokens/shape` ×2
-            - Imported by: 73 plugins — full list in [`plugins/primitives/plugins/css/plugins/row/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/row/REFERENCE.md)
-              - `apps` ×15
+            - Imported by: 74 plugins — full list in [`plugins/primitives/plugins/css/plugins/row/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/row/REFERENCE.md)
+              - `apps` ×16
               - `ui` ×14
               - `page` ×11
               - `primitives` ×9

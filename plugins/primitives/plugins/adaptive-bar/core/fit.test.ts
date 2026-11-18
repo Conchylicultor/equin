@@ -659,3 +659,51 @@ describe("passBudget — how many rounds a search may legitimately take", () => 
     expect(passBudget(items)).toBe(16);
   });
 });
+
+describe("assign — cohorts leave together", () => {
+  test("one member evicted takes every evictable member of its cohort", () => {
+    // Room for wish + one page: the fit alone would keep page "a" inline.
+    const r = placed(
+      fit({
+        available: 250,
+        items: [
+          item({ id: "a", cohort: "pages" }),
+          item({ id: "b", cohort: "pages" }),
+          item({ id: "c", cohort: "pages" }),
+          item({ id: "wish", yieldRank: -1 }),
+        ],
+      }),
+    );
+    expect(r).toEqual({ a: null, b: null, c: null, wish: 0 });
+  });
+
+  test("a cohort that fits stays inline", () => {
+    const r = placed(
+      fit({
+        available: 1000,
+        items: [
+          item({ id: "a", cohort: "pages" }),
+          item({ id: "b", cohort: "pages" }),
+        ],
+      }),
+    );
+    expect(r).toEqual({ a: 0, b: 0 });
+  });
+
+  test("items outside the cohort, and pinned members, stay where the fit put them", () => {
+    const r = placed(
+      fit({
+        available: 200,
+        items: [
+          item({ id: "a", cohort: "pages", pinned: true }),
+          item({ id: "b", cohort: "pages" }),
+          item({ id: "c", cohort: "pages" }),
+          item({ id: "other" }),
+        ],
+      }),
+    );
+    // The fit evicts from the end (ties go to the later item): "other" and "c"
+    // leave, so "b" follows its cohort; pinned "a" stays put.
+    expect(r).toEqual({ a: 0, b: null, c: null, other: null });
+  });
+});

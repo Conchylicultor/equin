@@ -482,6 +482,16 @@ The search takes the eagerest occupant
 **all the way to its floor** (compact, then out) before touching anyone else —
 deliberately not round-robin.
 
+### `cohort`: items that leave together
+
+A widget may name a `cohort` in its ladder (`useActionForm({ cohort })`). After
+the search, one evicted member takes every other evictable, unpinned member of
+its cohort with it (`assign`'s last pass, before the placement map). Evicting
+only frees width — the trigger is already paid for — so the pass cannot break a
+fit the search proved. For a set that only reads whole: a site's page links
+(`apps/website/shell`'s `WEBSITE_NAV_LADDER`), where half the pages inline and
+half in the panel reads as two broken navigations.
+
 ### The `null` that is not a missing key
 
 | state in the placement map | means |
@@ -511,6 +521,7 @@ deliberately not round-robin.
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.OverlayPanel`
     - `primitives/css/ui-kit.SingleLineProvider`
+    - `primitives/css/ui-kit.usePortalForwardedAttrs`
     - `primitives/css/ui-kit.useRegionForwardedAttrs`
     - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/css/yield.yieldClass`

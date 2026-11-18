@@ -8,7 +8,10 @@ import { keptPart } from "@plugins/primitives/plugins/kept-state/core";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useActionForm } from "@plugins/primitives/plugins/action-presentation/web";
-import { WebsiteNavLink } from "@plugins/apps/plugins/website/plugins/shell/web";
+import {
+  WebsiteNavLead,
+  WebsiteNavLink,
+} from "@plugins/apps/plugins/website/plugins/shell/web";
 import { track } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
 import { EMPTY_DRAFT, ImprovePanel, type ImproveDraft } from "./improve-panel";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -67,34 +70,36 @@ export function ImproveNavItem() {
   const setDraft = draftBinding[1];
   const [picking, setPicking] = useState(false);
   return (
-    <InlinePopover
-      resetOnClose
-      open={open}
-      onOpenChange={(next) => {
-        if (next && !open) track("improve_open");
-        setOpen(next);
-      }}
-      align="end"
-      width="2xl"
-      padding="lg"
-      contentClassName={picking ? cn("hidden") : undefined}
-      trigger={
-        <WebsiteNavLink
-          label="Wish"
-          emphasis="strong"
-          icon={<Icon icon={autoAwesomeIcon} />}
-        />
-      }
-    >
-      <ImprovePanel
-        draft={keptPart(draftBinding)}
-        picking={picking}
-        onPickingChange={setPicking}
-        onFiled={() => {
-          setOpen(false);
-          setDraft(EMPTY_DRAFT);
+    <WebsiteNavLead>
+      <InlinePopover
+        resetOnClose
+        open={open}
+        onOpenChange={(next) => {
+          if (next && !open) track("improve_open");
+          setOpen(next);
         }}
-      />
-    </InlinePopover>
+        align="end"
+        width="2xl"
+        padding="lg"
+        contentClassName={picking ? cn("hidden") : undefined}
+        trigger={
+          <WebsiteNavLink
+            label="Wish"
+            emphasis="strong"
+            icon={<Icon icon={autoAwesomeIcon} className="size-3.5" />}
+          />
+        }
+      >
+        <ImprovePanel
+          draft={keptPart(draftBinding)}
+          picking={picking}
+          onPickingChange={setPicking}
+          onFiled={() => {
+            setOpen(false);
+            setDraft(EMPTY_DRAFT);
+          }}
+        />
+      </InlinePopover>
+    </WebsiteNavLead>
   );
 }

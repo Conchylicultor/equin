@@ -16,6 +16,8 @@ function mount(childPopupOpen: boolean) {
   const onDismiss = vi.fn();
   render(
     <OverflowPanel
+      span={null}
+      popupAttrs={{}}
       open
       anchor={anchor}
       label="More"

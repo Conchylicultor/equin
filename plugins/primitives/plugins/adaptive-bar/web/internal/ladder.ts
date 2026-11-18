@@ -13,6 +13,7 @@ import type {
 export const DEFAULT_LADDER: Required<ShrinkLadder> = {
   shrinksTo: [],
   yields: "normal",
+  cohort: null,
 };
 
 /**

@@ -1,0 +1,59 @@
+/*
+ * The site header's one rhythm: the mock puts 28px between every two things in
+ * the nav, words or boxes. A quiet link carries its share as its own inline
+ * padding (`controlPadSm`, 12px, its hover target), and the bar adds its 4px
+ * gap — 12 + 4 + 12 between two words. A BOXED item (the Demo | Download pill,
+ * the Wish pill) has a visible edge, so its padding is inside the box; these
+ * give it the same 12px outside the box, so a box sits as far from a word as a
+ * word does.
+ *
+ * Read from the control-padding token rather than spelled, so the header's
+ * rhythm moves with the link padding it must agree with.
+ */
+
+/* Between two neighbours: the pill. */
+.website-nav-boxed {
+  padding-inline: var(--control-pad-sm);
+}
+
+/* The last item, against the header's trailing edge: Wish keeps the edge the
+   bands below it share, so only its leading side takes the space. */
+.website-nav-lead {
+  padding-inline-start: var(--control-pad-sm);
+}
+
+/* An icon in the nav (GitHub): its square button already insets the glyph by
+   half of what the box has over it, so it takes the rest of a word's padding —
+   the glyph then sits as far from its neighbours as a word does. */
+.website-nav-icon {
+  padding-inline: calc(
+    var(--control-pad-sm) - (var(--control-height-sm) - 1.25rem) / 2
+  );
+}
+
+/*
+ * A row of the header's ☰ menu: the page's own type, not a menu item's — the
+ * menu is the site's navigation, read at the size and weight of the header's
+ * words (16px, medium, the page foreground), with a thumb-sized row. What comes
+ * after the pages (the demo, the download, the source) a step quieter.
+ */
+.website-menu-row {
+  padding-block: 0.6875rem;
+  padding-inline: 0.875rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--foreground);
+  /* The page's antialiasing (WebsiteChrome): the menu is drawn outside it. */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+.website-menu-row-muted {
+  font-size: 0.9375rem;
+  color: var(--muted-foreground);
+}
+/* The label's `Text` leaf (kept for its truncation) takes the row's type. */
+.website-menu-row * {
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+}

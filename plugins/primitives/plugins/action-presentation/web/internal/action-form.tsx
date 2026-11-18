@@ -23,6 +23,14 @@ export interface ShrinkLadder {
   shrinksTo?: readonly Exclude<ActionForm, "full">[];
   /** Default `"normal"`. `"never"` pins the widget at full. */
   yields?: YieldEagerness;
+  /**
+   * Items that only make sense whole leave the row together: once one item of
+   * a cohort is relocated, every item of it is — a site's page links, where a
+   * menu holding half the pages and a row holding the other half reads as two
+   * broken navigations. A name, shared by the cohort's members. Default `null`
+   * (no cohort: the item leaves on its own).
+   */
+  cohort?: string | null;
 }
 
 /**
@@ -147,14 +155,19 @@ export function useActionForm(ladder?: ShrinkLadder): ActionForm {
   // never re-derives the defaults itself.
   const shrinksTo = ladder?.shrinksTo ?? NO_RUNGS;
   const yields = ladder?.yields ?? "normal";
+  const cohort = ladder?.cohort ?? null;
 
   // Callers pass an object literal inline (`useActionForm({ shrinksTo: ["row"] })`),
   // so object identity churns every render and is useless as an effect dep. The
   // ladder's VALUE is a short string, so serialize it and key the effect on
   // that; the effect then reads the value itself off the latest ref, which the
   // key is a faithful serialization of.
-  const ladderKey = `${shrinksTo.join(",")}|${yields}`;
-  const ladderRef = useLatestRef<Required<ShrinkLadder>>({ shrinksTo, yields });
+  const ladderKey = `${shrinksTo.join(",")}|${yields}|${cohort ?? ""}`;
+  const ladderRef = useLatestRef<Required<ShrinkLadder>>({
+    shrinksTo,
+    yields,
+    cohort,
+  });
 
   useEffect(() => {
     if (!channel) return;

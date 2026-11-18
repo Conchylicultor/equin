@@ -10,8 +10,7 @@ import {
 import "./download.css";
 
 /**
- * A link inside a sentence of the download page — the local app's address, the
- * guide. The `inline` aspect of a `link` button, like the homepage's story
+ * A link inside a sentence of the download page — the local app's address. The `inline` aspect of a `link` button, like the homepage's story
  * link: it takes the sentence's size and flow, underlined in the quiet grey,
  * and comes up to full foreground on hover.
  */

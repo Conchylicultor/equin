@@ -16,7 +16,9 @@ as, never a place — a widget rendered as itself inside a floating panel is sti
 `"full"`, and is never told where it is. `yields`
 (`"never" | "late" | "normal" | "early"`) says how eagerly it gives up room
 *relative to its neighbours*, because the bar cannot rank its own occupants: they
-come from different plugins and it can name none of them.
+come from different plugins and it can name none of them. `cohort` (a name,
+default none) says which neighbours it leaves WITH: once one member of a cohort
+is relocated, all are (see adaptive-bar's `cohort`).
 
 ## The invariant: you only get a form you offered
 
@@ -143,6 +145,7 @@ second mount. `ActionPresenceScope` / `useReportActionPresence` went with it.
     - `apps-core/tab-bar`
     - `apps/prototypes/canvas`
     - `apps/website/improve`
+    - `apps/website/shell`
     - `primitives/adaptive-bar`
     - `primitives/icon-button`
 

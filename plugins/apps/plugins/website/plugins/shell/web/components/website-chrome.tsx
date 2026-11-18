@@ -42,15 +42,21 @@ export function WebsiteChrome({
   children: ReactNode;
 }) {
   return (
+    // Grayscale antialiasing, as the design draws its type: the platform's
+    // default (subpixel on macOS) sets the site's light-on-dark words a weight
+    // heavier than the mock.
     <Theme
       name={subThemeScope(equinDocumentTheme)}
       surface="canvas"
-      className="h-full"
+      className="h-full antialiased"
     >
       <PaneChrome
         pane={pane}
         floatingHeader
         headerGlass={headerGlass}
+        // The header's items are the site's pages, so what does not fit (on a
+        // phone, nearly all of them) is the site's menu: a ☰, not a `⋯`.
+        headerOverflow="menu"
         headerTheme={headerTheme && subThemeScope(headerTheme)}
       >
         <WebsitePageKeyProvider pane={pane}>

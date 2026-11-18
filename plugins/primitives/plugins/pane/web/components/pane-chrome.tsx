@@ -32,6 +32,7 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const closeIcon = symbol("close");
 const arrowBackIcon = symbol("arrow-back");
+const menuIcon = symbol("menu");
 
 /**
  * How the header is drawn. `"bar"` (the default) is the full-width header row
@@ -73,12 +74,21 @@ type HeaderPresentation =
        * Default false.
        */
       headerGlass?: boolean;
+      /**
+       * What the header's overflow trigger is. `"more"` (the default): a `⋯`
+       * named More actions — the header's actions that did not fit. `"menu"`: a ☰
+       * named Menu, for a header whose items are a site's navigation (the
+       * website's pages), where the panel behind it IS the site's menu — so it
+       * spans the header row rather than hanging off the ☰.
+       */
+      headerOverflow?: "more" | "menu";
     }
   | {
       header: "card";
       floatingHeader?: never;
       headerTheme?: never;
       headerGlass?: never;
+      headerOverflow?: never;
     };
 
 /**
@@ -233,6 +243,7 @@ export function PaneChrome({
   floatingHeader = false,
   headerTheme,
   headerGlass = false,
+  headerOverflow = "more",
   inset = "chrome",
   children,
 }: PaneChromeProps) {
@@ -322,7 +333,13 @@ export function PaneChrome({
               title's yielding cell holds the leftover in front of them, so a
               header with a title reads exactly as it always has and a header
               without one costs nothing. */}
-      <AdaptiveBar gap="xs" label="More actions" align="end">
+      <AdaptiveBar
+        gap="xs"
+        align="end"
+        {...(headerOverflow === "menu"
+          ? { label: "Menu", overflowIcon: menuIcon, overflowPanel: "span" }
+          : { label: "More actions" })}
+      >
         <PaneTitleContext.Provider value={titleValue}>
           <pane.Actions.Render>
             {(item) => renderHeaderItem(item, titleOnly)}
