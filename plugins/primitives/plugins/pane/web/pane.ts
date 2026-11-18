@@ -1901,7 +1901,17 @@ function SurfaceMatchProvider({
   // components mount under `PaneInstance`'s `HoldLazyMount`), so React keeps
   // the previous screen until the new one can draw — never the new pane's
   // chrome with a spinner in place of its body.
-  const shown = useDeferredValue(match);
+  //
+  // The held panes are only ever the SAME app's: a deferred match is shown
+  // while it was resolved for the base path the surface has now. An app switch
+  // in one tab keeps this provider (same store) and changes only `basePath` —
+  // the new app's shell renders at once, so holding the old app's panes would
+  // draw them under a shell whose providers they cannot read (Sonata's player
+  // under the Places shell: "scoped-store: hook used outside its <Provider>").
+  // A switch draws the new app's panes in the same render as its shell.
+  const resolved = useMemo(() => ({ basePath, match }), [basePath, match]);
+  const deferred = useDeferredValue(resolved);
+  const shown = deferred.basePath === basePath ? deferred.match : match;
   // Whether this surface has drawn once: only a pane mounted AFTER that is a
   // navigation, held as above. Panes of the surface's first draw keep their
   // own loading states — holding them would hold the whole page.

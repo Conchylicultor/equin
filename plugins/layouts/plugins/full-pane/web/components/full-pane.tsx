@@ -52,7 +52,16 @@ export function FullPane() {
           id={active.pane.id}
           pluginId={paneOwnerFor(active.pane)}
         >
-          <PluginErrorBoundary slot="layouts.full-pane" label={active.pane.id}>
+          {/* Keyed by the pane: a crash belongs to the pane that threw, so
+              moving to another pane gives it a fresh boundary — never the
+              last pane's error relabelled with this one's id. (A different
+              pane is a different component, so the key remounts nothing that
+              would have stayed.) */}
+          <PluginErrorBoundary
+            key={active.pane.id}
+            slot="layouts.full-pane"
+            label={active.pane.id}
+          >
             {/* `PaneBox` is the pane's own box: it stamps the pane id and the
                 home app's theme scope on the element AND forwards both across
                 portals, so popovers opened from this pane still report their
