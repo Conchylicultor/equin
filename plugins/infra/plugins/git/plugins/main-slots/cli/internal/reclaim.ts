@@ -6,9 +6,9 @@ import {
 import { readdir, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { checkoutAdminDir } from "@plugins/infra/plugins/paths/core";
 import {
-  drainsByDesign,
   parseDrainRecord,
   SLOT_DRAIN_LOG_DIR,
+  slotHolderRole,
 } from "@plugins/infra/plugins/git/plugins/main-slots/plugins/boot-lease/core";
 import {
   reapDeadHolders,
@@ -193,7 +193,7 @@ function stillHolding(s: SlotState, now: Date): DrainSlowPayload[] {
   const heldPastSwitchMs = now.getTime() - Date.parse(s.unserved.at);
   if (heldPastSwitchMs <= s.unserved.reportAfterMs) return [];
   return s.holders
-    .filter((h) => !drainsByDesign(h.kind))
+    .filter((h) => slotHolderRole(h.kind) === "drains")
     .map((h) => ({
       kind: h.kind,
       label: h.label,

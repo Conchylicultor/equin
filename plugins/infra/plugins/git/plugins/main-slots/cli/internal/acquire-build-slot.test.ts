@@ -1406,3 +1406,87 @@ describe("review fixes", () => {
     await got.lease.release();
   });
 });
+
+describe("central pins its slot", () => {
+  // Central keeps the slot it booted from until a deploy restarts it, and its
+  // spec is no proof of where it runs (a build on a pre-slots branch rewrites
+  // it to the repo root): its slot serves while it holds it, never drains.
+
+  /** A slot central runs from, its spec naming another tree (no link, no spec names it). */
+  async function centralSlot(root: AppPath, sha: string): Promise<{
+    slot: AppPath;
+    central: Awaited<ReturnType<typeof acquireSharedLease>>;
+  }> {
+    const slot = await slotAt(root, sha);
+    const central = await acquireSharedLease(slot, "central", "central");
+    // Stamped by a reader that did not know central pins it: an old stamp
+    // must not make it a drain either.
+    await stampUnserved(slot, {
+      at: new Date(Date.now() - 60_000),
+      reportAfterMs: THRESHOLD_MS,
+    });
+    return { slot, central };
+  }
+
+  test("central's slot serves, pinned by central, whatever links and specs say", async () => {
+    const { root, first } = await repo("repo");
+    const { slot, central } = await centralSlot(root, first);
+    const s = (await slotStates()).find((x) => x.path === slot)!;
+    expect(s.state).toBe("serving");
+    expect(s.servedBy).toEqual([]);
+    expect(s.pinnedBy.map((h) => [h.kind, h.label])).toEqual([
+      ["central", "central"],
+    ]);
+    await central.release();
+    expect(await stateOf(slot)).toBe("free");
+  });
+
+  test("a deploy is not blocked by central plus two short drains", async () => {
+    const { root, first, second } = await repo("repo");
+    const { slot: c, central } = await centralSlot(root, first);
+    const [a, b] = (await freshSlots(root, first, 2)) as [AppPath, AppPath];
+    const jobA = await acquireSharedLease(a, "exec-child", "run");
+    const jobB = await acquireSharedLease(b, "exec-child", "worktree.spare-refill");
+    for (const s of [a, b])
+      await stampUnserved(s, { at: new Date(), reportAfterMs: THRESHOLD_MS });
+    expect(await stateOf(c)).toBe("serving");
+    expect(await stateOf(a)).toBe("draining");
+    expect(await stateOf(b)).toBe("draining");
+
+    // The default leak limit (3): two drains are under it, so a slot is made.
+    let exhausted = false;
+    const got = await acquireBuildSlot(second, {
+      repoRoot: root,
+      installDeps: noInstall,
+      onExhausted: () => {
+        exhausted = true;
+      },
+    });
+    expect(exhausted).toBe(false);
+    expect(got.created).toBe(true);
+    expect([c, a, b]).not.toContain(got.slot);
+    await got.lease.release();
+    await jobA.release();
+    await jobB.release();
+    await central.release();
+  });
+
+  test("central is never reported as a slow drain, holding or released", async () => {
+    const { root, first } = await repo("repo");
+    const { slot, central } = await centralSlot(root, first);
+    const reports = collector();
+    await reclaimSlots({
+      drainReportAfterMs: THRESHOLD_MS,
+      fileDrainSlow: reports.file,
+    });
+    expect(reports.filed).toEqual([]);
+    expect(await stateOf(slot)).toBe("serving");
+    // The stale stamp is gone: a co-holder's release is no slow drain.
+    expect(await readUnserved(slot)).toBeNull();
+    const job = await acquireSharedLease(slot, "exec-child", "run");
+    await job.release();
+    await central.release();
+    const drainLog = join((await checkoutAdminDir(slot))!, SLOT_DRAIN_LOG_DIR);
+    expect(existsSync(drainLog)).toBe(false);
+  });
+});

@@ -46,10 +46,29 @@ and the free one. Plans and measurements:
 
 | State | Defined by |
 |---|---|
-| **serving** | an app's `current` link names it, or a namespace's spec does (a deploy whose new backend took over and then failed: the gateway respawns from the spec) |
+| **serving** | an app's `current` link names it, or a namespace's spec does (a deploy whose new backend took over and then failed: the gateway respawns from the spec), or a holder that **pins** its slot runs from it (central — see below) |
 | **building** | handed to a build (its hander lock held), or its lock held exclusively, or held shared with a live build among its holders (a build after its handover, until it exits) |
 | **draining** | serves no app, but its lock is held shared (old backends, their children) |
 | **free** | none of these: its lock is unheld, whatever records say |
+
+**Each holder kind has a role** (`slotHolderRole`, boot-lease — a table total
+over the kinds, so a new kind does not compile until it picks one): `pins` (the
+holder is an app living in the slot: the slot serves while it holds it),
+`drains` (must let go soon after the slot's last app left; past the threshold
+it is a slow drain) or `outlives` (holds past the switch it causes by design:
+`build-relay`). **Central pins.** One per machine, it keeps the slot it booted
+from until a deploy restarts it — an adopted deploy keeps it there for as many
+builds as its code is unchanged — and its spec is no proof of where it runs: a
+build on a branch from before slots rewrites central's spec to the repo root on
+every build. Read off links and specs alone, central's slot was "draining" for
+as long as central lived, counted toward `DRAINING_SLOT_LIMIT` with the short
+drains around it, and stalled main's deploy (2026-11-18). Pinned, it is never a
+drain: not counted against the limit, never reported slow, and never stamped
+unserved while central holds it (`stampUnservedSlots` clears a stamp a serving
+slot still carries; the slot central leaves is stamped by the reclaim that
+ends the deploy restarting it). An old central slow to exit keeps its slot
+serving only until the gateway's stop grace kills it. A pinning record counts only while the slot's
+lock is held (an unheld slot lists no holders).
 
 Held or not is the LOCK's answer, never the records': `probeSlotLock` (a
 non-blocking exclusive try, let go at once; refused, a shared try tells shared
@@ -222,7 +241,8 @@ a normal wait:
   draining slot still holding past the threshold ("still holding").
   Fingerprint `(kind, label)`: one row per job, its occurrences counted. The
   report names the job — what to make faster, or stop from outliving its app.
-- `build-relay` holders are never reported (they cause the switch).
+- Only `drains` holders are reported: never `build-relay` (it causes the
+  switch), never central (it pins its slot).
 
 ## The deploy across slots
 

@@ -11,7 +11,6 @@ export type { SlotLeaseHold } from "./internal/hold-sync";
 export {
   detachedHeadOf,
   drainRecordFor,
-  drainsByDesign,
   MAIN_SLOT_SERVED_FILE,
   parseDrainRecord,
   parseUnserved,
@@ -26,6 +25,7 @@ export {
   parseHolder,
   renderHolder,
   SLOT_HOLDER_KINDS,
+  slotHolderRole,
   SLOT_LEASES_DIR,
   SLOT_LOCK_FILE,
 } from "./internal/layout";

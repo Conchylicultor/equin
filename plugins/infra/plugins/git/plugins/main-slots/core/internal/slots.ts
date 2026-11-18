@@ -36,6 +36,7 @@ import {
   parseUnserved,
   renderUnserved,
   SLOT_UNSERVED_FILE,
+  slotHolderRole,
   type SlotHolder,
   type UnservedStamp,
 } from "@plugins/infra/plugins/git/plugins/main-slots/plugins/boot-lease/core";
@@ -385,6 +386,12 @@ export interface SlotState extends MainSlot {
   /** The apps living in it: whose `current` link or spec names it. */
   servedBy: Namespace[];
   /**
+   * The live holders that pin it (`slotHolderRole` `pins`: central) — apps
+   * running from it whatever links and specs say, so it serves while they
+   * hold it.
+   */
+  pinnedBy: SlotHolder[];
+  /**
    * Who holds it, as its records name them (records of dead pids pruned) —
    * names only: the state is decided by the lock itself ({@link SlotState.lock}),
    * and an unheld slot lists none.
@@ -401,7 +408,9 @@ export interface SlotState extends MainSlot {
  *
  * - **serving** — an app's `current` link names it, or a namespace's spec
  *   does (a deploy whose new backend took over and then failed its health
- *   probe: the gateway respawns from the spec);
+ *   probe: the gateway respawns from the spec), or a holder that pins its
+ *   slot runs from it (central — never a drain, so never counted against the
+ *   leak limit, whatever its spec says);
  * - **building** — handed to a build, or held by one: its lock held
  *   exclusively, or shared by a build after its handover (until it exits);
  * - **draining** — serves no app, but its lock is held shared (processes it
@@ -440,8 +449,11 @@ async function stateOf(
   const handed = await readSlotHanded(slot.path);
   const lock = handed === null ? await probeSlotLock(slot.path) : null;
   const holders = lock === "unheld" ? [] : await readSlotHolders(slot.path);
+  // Records name, the lock decides: a pinning record counts only on a slot
+  // whose lock is held (an unheld one lists no holders).
+  const pinnedBy = holders.filter((h) => slotHolderRole(h.kind) === "pins");
   const state: SlotStateKind =
-    by.length > 0
+    by.length > 0 || pinnedBy.length > 0
       ? "serving"
       : handed !== null ||
           lock === "exclusive" ||
@@ -450,13 +462,18 @@ async function stateOf(
         : lock === "shared"
           ? "draining"
           : "free";
-  return { ...slot, state, servedBy: by, holders, handed, lock };
+  return { ...slot, state, servedBy: by, pinnedBy, holders, handed, lock };
 }
 
 /**
  * Stamp every slot that serves no app and is not being built, and has no
  * stamp yet, as unserved at `now` — called whenever an app may have left a
- * slot (`serveSlot`, a build moving central's spec, `reclaimSlots`).
+ * slot (`serveSlot`, a build moving central's spec, `reclaimSlots`). A
+ * serving slot still carrying a stamp loses it: an app lives there (central
+ * pinned a slot an older reader stamped), and a stale stamp would time its
+ * co-holders' drains, and its drain once the app leaves, from the wrong
+ * instant. A slot central leaves is stamped by the reclaim ending the deploy
+ * that restarted it.
  */
 export async function stampUnservedSlots(
   drainReportAfterMs: number,
@@ -464,7 +481,11 @@ export async function stampUnservedSlots(
 ): Promise<void> {
   await withSlotPool(async () => {
     for (const s of await slotStates()) {
-      if (s.state === "serving" || s.state === "building") continue;
+      if (s.state === "serving") {
+        if (s.unserved !== null) await clearUnserved(s.path);
+        continue;
+      }
+      if (s.state === "building") continue;
       if (s.unserved !== null) continue;
       // A holder already dead when its app left never held past the switch:
       // drop its record now, unreported, so a later reap of a record found

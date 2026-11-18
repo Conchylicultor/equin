@@ -10,13 +10,16 @@ it loads code from the slot. See the parent `main-slots` for what a slot is.
   reads as `null`), the main-slot stamp, main's `main-slot-served` marker,
   the unserved stamp (`main-slot-unserved`, `{at, reportAfterMs}`), the handoff
   mark (`main-slot-handed`), the drain records (`drain-log/`), and the closed
-  set of holder kinds (`SLOT_HOLDER_KINDS`; `drainsByDesign` names the kind
-  that outlives its slot's switch on purpose, `build-relay`). One spelling for
+  set of holder kinds (`SLOT_HOLDER_KINDS`) with each one's role
+  (`slotHolderRole`, total over the kinds: `central` pins its slot,
+  `build-relay` outlives its slot's switch on purpose, every other kind
+  drains). One spelling for
   main-slots' own leases, this hold, and the guard bootstrap's copy
   (`tooling/guards/bin/bootstrap.ts`, which may import nothing from the repo;
   its test holds the copy to these values).
 - **`drainRecordFor`** (pure): the drain record a release owes, or `null` —
-  no stamp (the slot still serves), a `build-relay`, or within the threshold.
+  no stamp (the slot still serves), a holder that does not drain (central,
+  `build-relay`), or within the threshold.
   `noteLeaseReleaseSync` (`core/internal/drain-sync.ts`) writes it with plain
   `fs`, on the release paths that load nothing else; `releaseRecordSync` is a
   record's whole end (note, then unlink) — also a lifetime lease's, from its
@@ -61,7 +64,6 @@ it loads code from the slot. See the parent `main-slots` for what a slot is.
     - `checkoutRootOfSync`
     - `detachedHeadOf`
     - `drainRecordFor`
-    - `drainsByDesign`
     - `holdSlotLeaseSync`
     - `MAIN_SLOT_SERVED_FILE`
     - `MAIN_SLOT_STAMP`
@@ -80,6 +82,7 @@ it loads code from the slot. See the parent `main-slots` for what a slot is.
     - `SLOT_LOCK_FILE`
     - `SLOT_UNSERVED_FILE`
     - `slotHandedLockFile`
+    - `slotHolderRole`
 - Cross-plugin:
   - Imported by:
     - `infra/git/main-slots`

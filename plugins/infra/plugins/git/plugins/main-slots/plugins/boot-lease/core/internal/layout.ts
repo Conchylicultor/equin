@@ -65,7 +65,8 @@ export const SLOT_DRAIN_LOG_DIR = "drain-log";
 /**
  * Who holds a slot — a closed set, so a report can say what each holder is.
  *
- * - `backend` / `central` — a serving runtime, for its whole life;
+ * - `backend` — a namespace's serving runtime, for its whole life;
+ * - `central` — THE central runtime (one per machine), for its whole life;
  * - `exec-child` — a `./equin` process running from the slot (a supervised
  *   child of the backend, main's convergence run), for its whole life;
  * - `agent-boot` / `guard` — an agent host booting, a guard hook loading:
@@ -89,14 +90,42 @@ export const SLOT_HOLDER_KINDS = [
   "build-relay",
 ] as const;
 
-/**
- * Holder kinds that outlive their slot's switch by design: never reported as
- * a slow drain, at release or at reclaim.
- */
-export function drainsByDesign(kind: SlotHolderKind): boolean {
-  return kind === "build-relay";
-}
 export type SlotHolderKind = (typeof SLOT_HOLDER_KINDS)[number];
+
+/**
+ * What a live holder's lease means for its slot:
+ *
+ * - `pins` — the holder IS an app living in the slot: the slot serves while
+ *   it holds it, whatever links and specs say. Central: one per machine, it
+ *   keeps the slot it booted from until a deploy restarts it (an adopted
+ *   deploy keeps it there for as many builds as its code is unchanged), and
+ *   its spec is no proof of where it runs — a build on a branch from before
+ *   slots rewrites it to the repo root on every build. Counted as draining,
+ *   its slot filled the leak limit and stalled main's deploys (2026-11-18).
+ * - `drains` — must let go soon after its slot's last app left: past the
+ *   threshold it is a slow drain, reported;
+ * - `outlives` — holds past the switch it causes, by design (`build-relay`):
+ *   draining, never reported.
+ */
+export type SlotHolderRole = "pins" | "drains" | "outlives";
+
+/**
+ * Every holder kind's role — total over {@link SLOT_HOLDER_KINDS}, so a new
+ * kind does not compile until it says whether it pins, drains or outlives.
+ */
+const SLOT_HOLDER_ROLES = {
+  backend: "drains",
+  central: "pins",
+  "exec-child": "drains",
+  "agent-boot": "drains",
+  guard: "drains",
+  build: "drains",
+  "build-relay": "outlives",
+} as const satisfies Record<SlotHolderKind, SlotHolderRole>;
+
+export function slotHolderRole(kind: SlotHolderKind): SlotHolderRole {
+  return SLOT_HOLDER_ROLES[kind];
+}
 
 export type SlotLeaseMode = "shared" | "exclusive";
 
@@ -214,7 +243,8 @@ export function parseDrainRecord(file: string, text: string): DrainRecord {
 
 /**
  * The drain record a release at `now` leaves, or `null` when it owes none:
- * the slot still serves (no stamp), or the holder let go within the
+ * the slot still serves (no stamp), the holder does not drain (it pins its
+ * slot, or outlives the switch by design), or it let go within the
  * threshold. Pure — both release paths (sync and async) decide with it.
  */
 export function drainRecordFor(i: {
@@ -226,7 +256,8 @@ export function drainRecordFor(i: {
   /** The holder was found dead at `now`, not released (see {@link DrainRecord.foundDead}). */
   foundDead?: boolean;
 }): DrainRecord | null {
-  if (i.stamp === null || drainsByDesign(i.holder.kind)) return null;
+  if (i.stamp === null || slotHolderRole(i.holder.kind) !== "drains")
+    return null;
   const heldPastSwitchMs = i.now.getTime() - Date.parse(i.stamp.at);
   if (heldPastSwitchMs <= i.stamp.reportAfterMs) return null;
   return {
