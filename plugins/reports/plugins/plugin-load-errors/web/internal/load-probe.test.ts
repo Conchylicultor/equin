@@ -122,9 +122,9 @@ describe("createLoadProbe", () => {
 
   test("a module that is not an artifact file of this origin is not probed", async () => {
     const probe = createLoadProbe(io({ map, meta, files: {} }));
-    expect((await probe.probe("https://elsewhere.test/artifacts/a/index.js")).kind).toBe(
-      "unprobed",
-    );
+    expect(
+      (await probe.probe("https://elsewhere.test/artifacts/a/index.js")).kind,
+    ).toBe("unprobed");
     expect((await probe.probe(`${ORIGIN}/src/main.tsx`)).kind).toBe("unprobed");
   });
 });

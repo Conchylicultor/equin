@@ -739,6 +739,7 @@ describe("<DemoScope>", () => {
         registry={registry}
         composition={{ id: "page", home: null }}
         onDemand={onDemand}
+        scopeRoots={null}
       >
         <Boundary>
           <DemoScope
@@ -754,9 +755,7 @@ describe("<DemoScope>", () => {
         </Boundary>
       </PluginProvider>,
     );
-    await waitFor(() =>
-      expect(view.getByText("could not start")).toBeTruthy(),
-    );
+    await waitFor(() => expect(view.getByText("could not start")).toBeTruthy());
     // Drawn, not thrown: the page around it stands.
     expect(view.queryByTestId("boundary")).toBeNull();
     act(() => retry!());
