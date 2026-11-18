@@ -176,6 +176,7 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/sonata/plugins/lyric-line",
   "apps/plugins/sonata/plugins/lyrics-hud",
   "apps/plugins/sonata/plugins/notation",
+  "apps/plugins/sonata/plugins/now-playing",
   "apps/plugins/sonata/plugins/pedal/plugins/lane",
   "apps/plugins/sonata/plugins/piano-keyboard",
   "apps/plugins/sonata/plugins/piano-roll",

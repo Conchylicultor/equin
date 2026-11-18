@@ -40,8 +40,8 @@ Three pure pieces every loop consumer shares, so nobody re-derives the maths:
 ## Plugin reference
 
 - Cross-plugin:
-  - Imported by: 38 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×38
+  - Imported by: 39 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×39
 - Core:
   - Exports (types):
     - `ActiveNoteIndex`

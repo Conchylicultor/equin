@@ -11,6 +11,7 @@ import {
   useMusicSnapshot,
 } from "../internal/store";
 import { gainOf, useVolume } from "../internal/volume";
+import { ServiceMediaSession } from "./service-media-session";
 
 /**
  * The service's page root: joins the browser's other pages, follows the
@@ -45,6 +46,12 @@ export function BackgroundMusicRoot(): ReactNode {
           gain={gain}
         />
         {isCurrent ? <LabelProbe source={source} /> : null}
+        {isCurrent && !source.ownsMediaSession ? (
+          <ServiceMediaSession
+            source={source}
+            playing={current?.playing ?? false}
+          />
+        ) : null}
       </PluginErrorBoundary>
     );
   });

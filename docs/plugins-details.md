@@ -9356,8 +9356,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×5
               - `ui/tokens/shape` ×2
               - `ui/tokens/shadow --shadow-cover`
-            - Imported by: 22 plugins — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
-              - `apps` ×21
+            - Imported by: 23 plugins — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
+              - `apps` ×22
               - `active-data/song`
             - Extended by:
               - `apps/sonata/sources/chord-grid` (table `sonata_songs_ext_chord_grid`)
@@ -9549,6 +9549,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/color-palette --background`
               - `ui/tokens/shape --spacing`
+        - **`now-playing`** — The playing Sonata song in the browser's media session (media/media-session): Chrome's media controls and the OS's Now Playing / media keys show its title with the Sonata icon, a scrubber over the tempo-scaled song, and play / pause / seek driving the playback session. A Sonata.PlaybackEffect, so it follows the song when it plays on with no Sonata page shown (Sonata's background music source leaves the session to it).
+          - Web:
+            - Contributes: `Sonata.PlaybackEffect` "now-playing" → `SonataNowPlaying`
+            - Uses:
+              - `apps/sonata/library.useCurrentSong`
+              - `apps/sonata/session.useCursorApi`
+              - `apps/sonata/session.useSession`
+              - `apps/sonata/shell.Sonata`
+              - `media/media-session.useMediaSession`
+              - `network/live.rowOrStale`
         - **`pedal`** — Sustain-pedal UI umbrella for Sonata: the piano-roll pedal lane.
           - Plugins:
             - **`lane`** — Sonata piano-roll sustain-pedal lane: a scroll-synced strip marking pedal-down spans along the falling-note timeline.
@@ -10705,8 +10715,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `swingUnitLabel`
         - **`score`**
           - Cross-plugin:
-            - Imported by: 38 plugins — full list in [`plugins/apps/plugins/sonata/plugins/score/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/score/REFERENCE.md)
-              - `apps` ×38
+            - Imported by: 39 plugins — full list in [`plugins/apps/plugins/sonata/plugins/score/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/score/REFERENCE.md)
+              - `apps` ×39
           - Core:
             - Exports (types):
               - `ActiveNoteIndex`
@@ -10851,8 +10861,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useCursorSelector`
               - `useSession`
           - Cross-plugin:
-            - Imported by: 34 plugins — full list in [`plugins/apps/plugins/sonata/plugins/session/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/session/REFERENCE.md)
-              - `apps` ×34
+            - Imported by: 35 plugins — full list in [`plugins/apps/plugins/sonata/plugins/session/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/session/REFERENCE.md)
+              - `apps` ×35
         - **`shell`** — App shell for Sonata. Registers the /sonata app entry (SonataLayout: one SonataPlayerScope around the pane router), derives the app's song — the one loaded in the player (useSonataApp) — and defines the app-level Sonata.{Overlay,TransportOverlay,TransportEdge,PitchAxis,Home,Provider,Effect,PlaybackEffect,Hud,ViewOption,Section} slots, and the app's own dark-only theme (the immersive player's blue-black night, sky accent, the chord colours, Manrope), which the sonata app selects.
           - Web:
             - Slots:
@@ -10868,10 +10878,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Sonata.ViewOption`
               - `Sonata.ViewSection`
               - `Sonata.Section`
-            - Slot contributors: 41 contributors — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
+            - Slot contributors: 42 contributors — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
               - `Sonata.Section` ×12
               - `Sonata.ViewOption` ×8
-              - `Sonata.PlaybackEffect` ×6
+              - `Sonata.PlaybackEffect` ×7
               - `Sonata.Hud` ×5
               - `Sonata.Effect` ×2
               - `Sonata.TransportOverlay` ×2
@@ -10925,8 +10935,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shadow --shadow-cover-hover`
               - `ui/tokens/shadow --shadow-float`
               - `ui/tokens/shadow --shadow-popover`
-            - Imported by: 34 plugins — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
-              - `apps` ×34
+            - Imported by: 35 plugins — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
+              - `apps` ×35
         - **`songsheet`** — Sonata Display: a chord-over-lyrics songsheet. Renders the score's lyric lines with chords printed over each column, grouped by section, highlighting and auto-scrolling the line under the playback cursor. A reading view (no time-axis / pitch-plane capabilities); click a line to seek.
           - Web:
             - Contributes: `SonataPlayer.Display` "Songsheet" → `Songsheet`
@@ -13960,7 +13970,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `parseAppIconFile`
           - `WebAppManifestSchema`
       - Cross-plugin:
-        - Imported by: `companions/menu-bar`
+        - Imported by:
+          - `apps/sonata/now-playing`
+          - `companions/menu-bar`
+          - `music/background`
     - **`app-preload`** — Starts the active app's code downloading at t0: a DocumentHead.Fragment that puts, per app base path, a <link rel=modulepreload> for every module of that app's deferred plugins — read from the served dist's .app-preloads.json, which web-artifacts' compose writes — so the boot's priority batch is in the HTTP cache by the time it is imported, instead of being fetched after the eager tier. Desktop-only: the head is published by document-head's machine half, from the dist the gateway serves. In every served composition through the served-baseline row.
       - Server:
         - Contributes:
@@ -36766,8 +36779,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 271 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×79
+        - Imported by: 274 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+          - `apps` ×80
           - `conversations` ×36
           - `infra` ×23
           - `debug` ×21
@@ -36793,6 +36806,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `backup`
           - `code-explorer`
           - `hints`
+          - `media/media-session`
+          - `music/background`
           - `release`
           - `search/engine`
           - `wish`
@@ -42223,6 +42238,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `frameCount`
           - `frameTime`
           - `splitFrames`
+    - **`media-session`** — The browser's media session for music played through Web Audio: useMediaSession({ title, artist, artwork, playing, position, actions }) lists the caller's music in Chrome's media controls and the OS's Now Playing / media keys — a detached, looping, near-silent <audio> keeps the session open (Chrome lists only pages a media element plays in) while navigator.mediaSession carries the metadata, play state, scrubber position and action handlers. One session per page: the claim that most recently started playing owns it, the previous taking it back when it goes.
+      - Web:
+        - Uses:
+          - `infra/endpoints.useAssetSrcs`
+          - `primitives/latest-ref.useLatestRef`
+        - Exports (types):
+          - `MediaArtwork`
+          - `MediaPosition`
+          - `MediaSessionActions`
+          - `MediaSessionClaim`
+        - Exports (values): `useMediaSession`
+      - Cross-plugin:
+        - Imported by:
+          - `apps/sonata/now-playing`
+          - `music/background`
     - **`player`** — Themed video / audio player in place of the browser's native controls: a floating glass control pill (play, volume, time, seek, settings, full screen) that fades while playing, a vertical volume capsule, a settings panel with a fine speed dial (0.25–3×), presets, loop and picture in picture (a Document Picture-in-Picture window holding the whole player, falling back to the video's own), centre feedback and the YouTube-style keyboard. Audio draws the same controls as a static bar.
       - Web:
         - Contributes:
@@ -42320,11 +42350,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ConfigV2.WebRegister` "config"
           - `Core.Root` → `BackgroundMusicRoot`
           - `ActionBar.Item` → `MusicButton`
-        - Uses: 23 symbols — full list in [`plugins/music/plugins/background/REFERENCE.md`](../plugins/music/plugins/background/REFERENCE.md)
+        - Uses: 24 symbols — full list in [`plugins/music/plugins/background/REFERENCE.md`](../plugins/music/plugins/background/REFERENCE.md)
           - `config_v2` ×4
           - `apps-core/tabs` ×2
           - `primitives/css/control-panel` ×2
           - `apps-core/app-icon.AppIconTile`
+          - `media/media-session.useMediaSession`
           - `network/live/live-state.foldResource`
           - `primitives/css/fill.Fill`
           - `primitives/css/slider.Slider`
@@ -42803,8 +42834,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 360 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `apps` ×90
+        - Imported by: 361 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `apps` ×91
           - `conversations` ×73
           - `debug` ×36
           - `tasks` ×32
@@ -54732,13 +54763,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `seekPredicate`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 89 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+        - Imported by: 90 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
           - `primitives` ×34
           - `apps` ×25
           - `page` ×5
           - `conversations` ×3
           - `apps-core` ×2
           - `map` ×2
+          - `media` ×2
           - `network` ×2
           - `shell` ×2
           - `build/serve-composition`
@@ -54748,7 +54780,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hints`
           - `infra/claude-cli/sign-in`
           - `integrations/youtube`
-          - `media/player`
           - `music/background`
           - `reorder`
           - `reports/main-thread-stall`

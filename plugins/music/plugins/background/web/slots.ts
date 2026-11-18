@@ -41,6 +41,13 @@ export interface BackgroundMusicSource {
    * set): the panel shows no device slider for it, and `gain` is not applied.
    */
   readonly ownVolume?: boolean;
+  /**
+   * The source puts its music in the browser's media session itself (a
+   * Sonata song: its scrubber and seeking), so the service does not. Default:
+   * the service does, with the source's title, its app's name and icon, and
+   * play / pause / stop.
+   */
+  readonly ownsMediaSession?: boolean;
 }
 
 export const BackgroundMusic = {

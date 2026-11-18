@@ -14,11 +14,12 @@
     - `ConfigV2.WebRegister` "config"
     - `Core.Root` → `BackgroundMusicRoot`
     - `ActionBar.Item` → `MusicButton`
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `config_v2` ×4
     - `apps-core/tabs` ×2
     - `primitives/css/control-panel` ×2
     - `apps-core/app-icon.AppIconTile`
+    - `media/media-session.useMediaSession`
     - `network/live/live-state.foldResource`
     - `primitives/css/fill.Fill`
     - `primitives/css/slider.Slider`

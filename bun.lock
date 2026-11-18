@@ -1147,6 +1147,10 @@
         "vexflow": "^5.0.0",
       },
     },
+    "plugins/apps/plugins/sonata/plugins/now-playing": {
+      "name": "@equin/plugin-apps-sonata-now-playing",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/sonata/plugins/pedal": {
       "name": "@equin/plugin-apps-sonata-pedal",
       "version": "0.0.1",
@@ -5254,6 +5258,10 @@
         "@fontsource-variable/inter": "^5.3.0",
       },
     },
+    "plugins/media/plugins/media-session": {
+      "name": "@equin/plugin-media-media-session",
+      "version": "0.0.1",
+    },
     "plugins/media/plugins/player": {
       "name": "@equin/plugin-media-player",
       "version": "0.0.1",
@@ -8835,6 +8843,8 @@
 
     "@equin/plugin-apps-sonata-notation": ["@equin/plugin-apps-sonata-notation@workspace:plugins/apps/plugins/sonata/plugins/notation"],
 
+    "@equin/plugin-apps-sonata-now-playing": ["@equin/plugin-apps-sonata-now-playing@workspace:plugins/apps/plugins/sonata/plugins/now-playing"],
+
     "@equin/plugin-apps-sonata-pedal": ["@equin/plugin-apps-sonata-pedal@workspace:plugins/apps/plugins/sonata/plugins/pedal"],
 
     "@equin/plugin-apps-sonata-pedal-lane": ["@equin/plugin-apps-sonata-pedal-lane@workspace:plugins/apps/plugins/sonata/plugins/pedal/plugins/lane"],
@@ -10806,6 +10816,8 @@
     "@equin/plugin-media-ffmpeg": ["@equin/plugin-media-ffmpeg@workspace:plugins/media/plugins/ffmpeg"],
 
     "@equin/plugin-media-film": ["@equin/plugin-media-film@workspace:plugins/media/plugins/film"],
+
+    "@equin/plugin-media-media-session": ["@equin/plugin-media-media-session@workspace:plugins/media/plugins/media-session"],
 
     "@equin/plugin-media-player": ["@equin/plugin-media-player@workspace:plugins/media/plugins/player"],
 

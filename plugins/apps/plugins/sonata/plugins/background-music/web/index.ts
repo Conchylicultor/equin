@@ -24,6 +24,8 @@ export default {
       usePlayer: useSonataBackgroundPlayer,
       useAvailable: useSonataBackgroundAvailable,
       ownVolume: true,
+      // apps/sonata/now-playing claims it, with a scrubber and seeking.
+      ownsMediaSession: true,
     }),
     Sonata.PlaybackEffect({ id: "music-title", component: PublishSongLabel }),
   ],
