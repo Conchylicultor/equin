@@ -1,4 +1,9 @@
-import { useContext, type CSSProperties, type ReactNode } from "react";
+import {
+  useContext,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { clipClasses } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
@@ -10,6 +15,7 @@ import { thumbnailShape, type Size, type ThumbnailShape } from "../../core";
 import { GalleryContext } from "../internal/gallery-store";
 import { useViewerMember } from "../internal/use-image-viewer-trigger";
 import { useImageLoad } from "../internal/use-image-load";
+import { pickSrc, pixelRatio } from "../internal/pick-src";
 import { ImageGallery } from "./image-gallery";
 import { MissingImage } from "./missing-image";
 import type { ViewerImage } from "../internal/types";
@@ -64,6 +70,9 @@ function reservedBox(known: Size, shape: ThumbnailShape): CSSProperties {
     aspectRatio: `${width} / ${height}`,
   };
 }
+
+/** A chip image's long edge at most, in CSS px (`max-w-32`). */
+const CHIP_EDGE = 128;
 
 /** A chip's button: one fixed height (the chip image's cap, `max-h-16`), so a
  *  strip of chips is as tall before its images load as after. */
@@ -126,7 +135,19 @@ export function ViewerThumbnail(props: ViewerThumbnailProps) {
 
 function Thumbnail({ image, size = "inline", children }: ViewerThumbnailProps) {
   const { attach, open } = useViewerMember<HTMLImageElement>(image);
-  const { load, imgKey, imgProps, retry } = useImageLoad(image.src);
+  const chip = size === "chip";
+  // A chip draws the caller's resized copy when it offers one (a strip of
+  // chips over full-size originals downloads and decodes every one of them);
+  // its size never shows, so a copy needs no known size. A copy that fails to
+  // load falls back to the original.
+  const copy = chip
+    ? pickSrc(image, CHIP_EDGE * pixelRatio(), false)
+    : image.src;
+  const [failedCopy, setFailedCopy] = useState<string | null>(null);
+  const src = failedCopy === copy ? image.src : copy;
+  const loaded = useImageLoad(src);
+  if (loaded.load.kind === "failed" && src !== image.src) setFailedCopy(copy);
+  const { load, imgKey, imgProps, retry } = loaded;
   const known: Size | null =
     image.width && image.height
       ? { width: image.width, height: image.height }
@@ -134,7 +155,6 @@ function Thumbnail({ image, size = "inline", children }: ViewerThumbnailProps) {
         ? load.size
         : null;
   const shape: ThumbnailShape = known ? thumbnailShape(known) : "normal";
-  const chip = size === "chip";
 
   if (load.kind === "failed") {
     // No <img>, so `attach` is handed null and the image leaves its gallery:
@@ -180,7 +200,7 @@ function Thumbnail({ image, size = "inline", children }: ViewerThumbnailProps) {
         <img
           key={imgKey}
           ref={attach}
-          src={image.src}
+          src={src}
           alt={image.alt ?? image.name}
           draggable={false}
           {...imgProps}

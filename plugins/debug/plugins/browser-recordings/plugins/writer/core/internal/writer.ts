@@ -16,6 +16,7 @@ import {
   type RecordingSource,
   type RecordingStep,
 } from "@plugins/debug/plugins/browser-recordings/core";
+import { boundSteps } from "./bound-steps";
 
 /** How many runs the recordings directory keeps, newest first, across all calls. */
 const KEEP_RUNS = 200;
@@ -43,7 +44,11 @@ export interface Recording {
    * costs one file.
    */
   frame(image: Uint8Array, format: FrameFormat): Promise<string>;
-  /** Write the manifest — the recording becomes visible — and prune old runs. */
+  /**
+   * Write the manifest — the recording becomes visible — and prune old runs.
+   * Its steps are bounded (`boundSteps`): repeats folded, at most
+   * `MAX_MANIFEST_STEPS` kept.
+   */
   close(steps: readonly RecordingStep[]): Promise<RecordingManifest>;
 }
 
@@ -95,7 +100,8 @@ export function openRecording(opts: {
         toolUseId,
         startedAt: startedAt.toISOString(),
         endedAt: new Date().toISOString(),
-        steps: [...steps],
+        // Bounded here, where it is written: the manifest is read whole.
+        ...boundSteps(steps),
       };
       await mkdir(dir, { recursive: true });
       await writeFile(

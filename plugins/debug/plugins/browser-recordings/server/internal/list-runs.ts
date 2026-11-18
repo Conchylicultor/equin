@@ -1,4 +1,8 @@
-import { readdir, readFile } from "@plugins/packages/plugins/timed-fs/core";
+import {
+  readdir,
+  readFile,
+  stat,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { join, sep } from "node:path";
 import { TOOL_USE_ID_RE } from "@plugins/framework/plugins/tooling/plugins/guards/plugins/tool-use-id/core";
 import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
@@ -13,6 +17,44 @@ import {
   RecordingManifestSchema,
   type BrowserRecordingRun,
 } from "../../core";
+import { summarizeRun } from "./summarize";
+
+/**
+ * The largest manifest this reads. The writer keeps at most
+ * `MAX_MANIFEST_STEPS` steps, so a bounded manifest is a few MB at most; one
+ * larger was written before that bound (a 105 MB one held 268,535 steps) and
+ * is refused loudly rather than parsed on every subscribe.
+ */
+const MAX_MANIFEST_BYTES = 16 * 1024 * 1024;
+
+/** One run's manifest, read and summarized for its filmstrip; null while it has none (still running). */
+async function readRun(runDir: string): Promise<BrowserRecordingRun | null> {
+  const file = join(runDir, MANIFEST_FILE);
+  let size: number;
+  try {
+    ({ size } = await stat(file));
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw err;
+  }
+  if (size > MAX_MANIFEST_BYTES)
+    throw new Error(
+      `${file} is ${(size / 1e6).toFixed(0)} MB, over the ${MAX_MANIFEST_BYTES / 1e6} MB a bounded manifest can reach: it was recorded before the writer bounded its steps`,
+    );
+  const manifest = RecordingManifestSchema.parse(
+    JSON.parse(await readFile(file, "utf8")),
+  );
+  const { strip, ...run } = summarizeRun(manifest, runDir);
+  // Each thumbnail's file version names its resized copy (cached for good).
+  // At most MAX_STRIP_FRAMES stats per run.
+  const versioned = await Promise.all(
+    strip.map(async (f) => {
+      const { mtimeMs, size } = await stat(f.frame);
+      return { ...f, version: { mtimeMs, size } };
+    }),
+  );
+  return { ...run, strip: versioned };
+}
 
 function callDir(toolUseId: string): string {
   if (!TOOL_USE_ID_RE.test(toolUseId))
@@ -40,18 +82,8 @@ async function listRuns({
   }
   const runs: BrowserRecordingRun[] = [];
   for (const name of names) {
-    const runDir = join(dir, name);
-    let text: string;
-    try {
-      text = await readFile(join(runDir, MANIFEST_FILE), "utf8");
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code === "ENOENT") continue;
-      throw err;
-    }
-    runs.push({
-      ...RecordingManifestSchema.parse(JSON.parse(text)),
-      dir: runDir,
-    });
+    const run = await readRun(join(dir, name));
+    if (run !== null) runs.push(run);
   }
   return { runs: runs.sort((a, b) => a.startedAt.localeCompare(b.startedAt)) };
 }

@@ -1,5 +1,6 @@
 export {
   MANIFEST_FILE,
+  MAX_MANIFEST_STEPS,
   RECORDED_CALLS_FILE,
   RecordedCallsIndexSchema,
   RecordingManifestSchema,
@@ -14,8 +15,12 @@ export {
   isRecordedToolCall,
   RECORDED_BROWSER_TOOLS,
 } from "./internal/recorded-call";
-export { browserRecordedCalls, browserRecordingRuns } from "./internal/live";
-export type { BrowserRecordingRun } from "./internal/live";
+export {
+  browserRecordedCalls,
+  browserRecordingRuns,
+  MAX_STRIP_FRAMES,
+} from "./internal/live";
+export type { BrowserRecordingRun, StripFrame } from "./internal/live";
 export {
   BROWSER_RECORDING_KIND,
   extractBrowserRecordings,

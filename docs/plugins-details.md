@@ -25900,12 +25900,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `conversations/conversation-view/artifacts.ConversationArtifacts`
           - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
+          - `infra/endpoints.assetUrlOver`
           - `network/live.useLive`
           - `network/live/live-state.ResourceErrorInline`
+          - `primitives/css/rigid.Rigid`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/loading.Loading`
+          - `primitives/networking.useTransport`
           - `primitives/overlay/image-viewer.AssetThumbnail`
           - `primitives/overlay/image-viewer.ImageGallery`
           - `primitives/overlay/image-viewer.ThumbnailPlaceholder`
@@ -25920,17 +25923,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.serveValue`
         - Resources:
           - `browser-recordings.recorded-calls` (push, notified, whole: the calls the recordings directory still holds a run for — the writer keeps its newest 200 runs)
-          - `browser-recordings.runs` (push, notified, whole: the runs one tool call drove — one for a browser_* call or an e2e script, a few when a call reran it, whole: one drive's steps — a scripted e2e flow or a single browser_* call, tens of steps, written once when the run ends)
+          - `browser-recordings.runs` (push, notified, whole: the runs one tool call drove — one for a browser_* call or an e2e script, a few when a call reran it, capped: MAX_STRIP_FRAMES)
       - Core:
         - Uses:
           - `framework/cli/cli-name.CLI_NAME_PATTERN`
           - `network/live.liveValue`
+          - `packages/list-bound.cappedList`
           - `packages/list-bound.wholeList`
         - Exports (types):
           - `BrowserRecordingRun`
           - `RecordingManifest`
           - `RecordingSource`
           - `RecordingStep`
+          - `StripFrame`
         - Exports (values):
           - `BROWSER_RECORDING_KIND`
           - `browserRecordedCalls`
@@ -25938,6 +25943,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `extractBrowserRecordings`
           - `isRecordedToolCall`
           - `MANIFEST_FILE`
+          - `MAX_MANIFEST_STEPS`
+          - `MAX_STRIP_FRAMES`
           - `RECORDED_BROWSER_TOOLS`
           - `RECORDED_CALLS_FILE`
           - `RecordedCallsIndexSchema`
@@ -25947,6 +25954,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/density --space-sm`
+          - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
         - Imported by:
           - `debug/browser-recordings/writer`
@@ -25959,6 +25967,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Core:
             - Uses:
               - `debug/browser-recordings.MANIFEST_FILE`
+              - `debug/browser-recordings.MAX_MANIFEST_STEPS`
               - `debug/browser-recordings.RECORDED_CALLS_FILE`
               - `debug/browser-recordings.RecordingManifest`
               - `debug/browser-recordings.RecordingSource`
@@ -36743,12 +36752,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 269 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 270 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×79
           - `conversations` ×36
           - `infra` ×23
+          - `debug` ×21
           - `tasks` ×21
-          - `debug` ×20
           - `page` ×19
           - `primitives` ×15
           - `ui` ×8
@@ -50906,11 +50915,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Rigid`
               - `rigidClass`
           - Cross-plugin:
-            - Imported by: 146 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+            - Imported by: 147 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
               - `apps` ×35
               - `conversations` ×29
               - `primitives` ×20
-              - `debug` ×13
+              - `debug` ×14
               - `page` ×8
               - `tasks` ×8
               - `ui` ×6
@@ -55420,14 +55429,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useTransport`
           - `useTransportScoped`
       - Cross-plugin:
-        - Imported by: 43 plugins — full list in [`plugins/primitives/plugins/networking/REFERENCE.md`](../plugins/primitives/plugins/networking/REFERENCE.md)
+        - Imported by: 44 plugins — full list in [`plugins/primitives/plugins/networking/REFERENCE.md`](../plugins/primitives/plugins/networking/REFERENCE.md)
           - `apps` ×11
           - `primitives` ×7
           - `conversations` ×5
           - `network` ×5
+          - `debug` ×3
           - `framework` ×3
           - `auth` ×2
-          - `debug` ×2
           - `infra` ×2
           - `page` ×2
           - `ui` ×2

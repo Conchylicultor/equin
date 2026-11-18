@@ -266,14 +266,14 @@ built on them — see
     - `useTransport`
     - `useTransportScoped`
 - Cross-plugin:
-  - Imported by: 43 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 44 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×11
     - `primitives` ×7
     - `conversations` ×5
     - `network` ×5
+    - `debug` ×3
     - `framework` ×3
     - `auth` ×2
-    - `debug` ×2
     - `infra` ×2
     - `page` ×2
     - `ui` ×2

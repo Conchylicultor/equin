@@ -1,22 +1,31 @@
-import { fileUrl } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
+import { Fragment } from "react";
+import {
+  computerResizedAsset,
+  fileUrl,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/core";
+import { assetUrlOver } from "@plugins/infra/plugins/endpoints/web";
+import { useTransport } from "@plugins/primitives/plugins/networking/web";
 import { AssetThumbnail } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import type { BrowserRecordingRun, RecordingStep } from "../../core";
+import { Rigid } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import type { BrowserRecordingRun, StripFrame } from "../../core";
+
+const count = (n: number): string => n.toLocaleString("en-US");
 
 /**
- * One run's filmstrip: a frame per step (the page as the step ended), the
- * failing step ringed. The strip opens no gallery of its own: its frames join
- * the enclosing one (the transcript's, the artifacts popover's), so ← / → in
- * the viewer walk on to the next call's screenshots. An e2e run is
+ * One run's filmstrip: a frame per run of steps on the same picture (the page
+ * as the step ended), the failing step ringed — at most `MAX_STRIP_FRAMES`,
+ * the server's cut (first and last halves) marked where it skips. Each
+ * thumbnail draws a small resized copy of the full-resolution frame; the
+ * viewer opens the original. The strip opens no gallery of its own: its frames
+ * join the enclosing one (the transcript's, the artifacts popover's), so ← / →
+ * in the viewer walk on to the next call's screenshots. An e2e run is
  * captioned with its script; a browser_* call's frame is the call's own
  * picture, its card already says what it did.
  */
 export function RunStrip({ run }: { run: BrowserRecordingRun }) {
-  const { steps } = run;
-  const frames = distinctFrames(steps);
-  const failed = steps.filter((s) => s.error !== undefined).length;
   const source =
     run.source.kind === "e2e"
       ? (run.source.script.split("/").at(-1) ?? run.source.script)
@@ -25,32 +34,30 @@ export function RunStrip({ run }: { run: BrowserRecordingRun }) {
     <Stack gap="2xs" data-browser-recording={run.dir}>
       {run.source.kind === "e2e" ? (
         <Text variant="caption" tone="muted">
-          Recording · {source} · {steps.length} steps
-          {failed > 0 ? ` · ${failed} failed` : ""}
+          Recording · {source} · {count(run.calls)} steps
+          {run.failed > 0 ? ` · ${count(run.failed)} failed` : ""}
+          {run.omittedCalls > 0
+            ? ` · ${count(run.omittedCalls)} not kept (over the recording's bound)`
+            : ""}
         </Text>
       ) : null}
       <Scroll axis="x">
-        <Stack direction="row" gap="xs">
-          {frames.map(({ frame, step, index }) => (
-            <span
-              key={frame}
-              title={`${index + 1}. ${step.title}${step.error ? `\n${step.error}` : ""}`}
-              className={
-                step.error !== undefined
-                  ? "rounded-md ring-2 ring-destructive"
-                  : undefined
-              }
-            >
-              <AssetThumbnail
-                size="chip"
-                // A frame is a PNG the recorder wrote on the computer's disk.
-                asset={fileUrl({ fs: "computer", path: frame })}
-                image={{
-                  name: `${index + 1}/${steps.length} · ${step.title}`,
-                  sourceLabel: source,
-                }}
-              />
-            </span>
+        <Stack direction="row" gap="xs" align="center">
+          {run.strip.map((frame, i) => (
+            <Fragment key={frame.frame}>
+              {run.stripGap?.at === i ? (
+                <Rigid as="span" className="px-xs">
+                  <Text
+                    variant="caption"
+                    tone="muted"
+                    className="whitespace-nowrap"
+                  >
+                    … {count(run.stripGap.frames)} more frames …
+                  </Text>
+                </Rigid>
+              ) : null}
+              <Frame frame={frame} run={run} source={source} />
+            </Fragment>
           ))}
         </Stack>
       </Scroll>
@@ -58,25 +65,50 @@ export function RunStrip({ run }: { run: BrowserRecordingRun }) {
   );
 }
 
-/**
- * One thumbnail per picture: consecutive steps that ended on the same frame
- * (a wait, an evaluate) fold into the last of them — or the failing one.
- */
-function distinctFrames(
-  steps: readonly RecordingStep[],
-): { frame: string; step: RecordingStep; index: number }[] {
-  const out: { frame: string; step: RecordingStep; index: number }[] = [];
-  steps.forEach((step, index) => {
-    if (step.frame === undefined) return;
-    const prev = out.at(-1);
-    if (prev?.frame === step.frame) {
-      if (prev.step.error === undefined) {
-        prev.step = step;
-        prev.index = index;
+function Frame({
+  frame,
+  run,
+  source,
+}: {
+  frame: StripFrame;
+  run: BrowserRecordingRun;
+  source: string;
+}) {
+  const transport = useTransport();
+  const asset = fileUrl({ fs: "computer", path: frame.frame });
+  const original = assetUrlOver(transport, asset);
+  return (
+    <span
+      title={`${frame.step}. ${frame.title}${frame.error ? `\n${frame.error}` : ""}`}
+      className={
+        frame.error !== undefined
+          ? "rounded-md ring-2 ring-destructive"
+          : undefined
       }
-      return;
-    }
-    out.push({ frame: step.frame, step, index });
-  });
-  return out;
+    >
+      <AssetThumbnail
+        size="chip"
+        // A frame is an image the recorder wrote on the computer's disk.
+        asset={asset}
+        image={{
+          name: `${frame.step}/${run.steps} · ${frame.title}`,
+          sourceLabel: source,
+          // The host's resized copy (cached for the file's version): a
+          // thumbnail never downloads and decodes the full-size frame.
+          // Offered only where a URL reaches the host's files at all.
+          ...(original.kind === "ready"
+            ? {
+                resized: (edge: number) => {
+                  const copy = assetUrlOver(
+                    transport,
+                    computerResizedAsset(frame.frame, edge, frame.version),
+                  );
+                  return copy.kind === "ready" ? copy.url : original.url;
+                },
+              }
+            : {}),
+        }}
+      />
+    </span>
+  );
 }

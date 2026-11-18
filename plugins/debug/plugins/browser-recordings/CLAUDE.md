@@ -23,6 +23,15 @@ never pulls `node:fs`): frames as they come, the manifest LAST — a run without
 one is invisible — then the newest 200 runs are kept. No Playwright trace and
 no DOM snapshots: nobody opens them.
 
+**Bounded where it is written.** The manifest is read whole by the server, so
+the writer bounds it (`boundSteps`): consecutive identical calls (same title,
+same frame, none failed — a script's poll loop) fold into one step with a
+`repeat` count, and past `MAX_MANIFEST_STEPS` only the first and last halves
+are kept, the calls between counted in `omitted`. Before it, the promo film's
+settle loop (`page.evaluate` of the clock's `busy()` every 10 ms) wrote a
+105 MB manifest of 268,535 steps. The server refuses a manifest over 16 MB
+(one from before the bound) loudly instead of parsing it.
+
 Every recording on the machine prunes this one root when it closes — each
 `browser_*` call of every agent, each e2e run — so prunes overlap all the time.
 They run one at a time under an flock on `<root>/.prune.lock`; a close that
@@ -65,7 +74,12 @@ tool-call renderer hosts `JsonlViewerTool.Footer` inside every card (always
 shown under its header, so the screenshot reads as part of the call); this
 plugin's footer reads the `browser-recordings.runs` live value for a recorded
 call and draws one filmstrip per run (consecutive steps on the same frame fold
-into one thumbnail, a failing step is ringed). A strip opens no gallery of its own: its frames
+into one thumbnail, a failing step is ringed). The value never carries a run's
+steps: the server summarizes each manifest (`server/internal/summarize.ts` —
+counts, and at most `MAX_STRIP_FRAMES` frames, the first and last halves with
+the gap named) and stats each strip frame for its version, so every chip draws
+host-fs's resized copy (`computerResizedAsset`, cached for good) rather than
+the 2560-px original; the viewer opens the original. A strip opens no gallery of its own: its frames
 join the transcript's, so the viewer's ← / → walk from one call's screenshot to
 the next (the artifact section is one gallery too). The same strips are gathered as the
 conversation's Browser recordings artifact. Pushed: the server watches the
@@ -88,12 +102,15 @@ inside one `browser_batch` (one frame per call).
   - Uses:
     - `conversations/conversation-view/artifacts.ConversationArtifacts`
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
+    - `infra/endpoints.assetUrlOver`
     - `network/live.useLive`
     - `network/live/live-state.ResourceErrorInline`
+    - `primitives/css/rigid.Rigid`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/loading.Loading`
+    - `primitives/networking.useTransport`
     - `primitives/overlay/image-viewer.AssetThumbnail`
     - `primitives/overlay/image-viewer.ImageGallery`
     - `primitives/overlay/image-viewer.ThumbnailPlaceholder`
@@ -108,17 +125,19 @@ inside one `browser_batch` (one frame per call).
     - `network/live.serveValue`
   - Resources:
     - `browser-recordings.recorded-calls` (push, notified, whole: the calls the recordings directory still holds a run for — the writer keeps its newest 200 runs)
-    - `browser-recordings.runs` (push, notified, whole: the runs one tool call drove — one for a browser_* call or an e2e script, a few when a call reran it, whole: one drive's steps — a scripted e2e flow or a single browser_* call, tens of steps, written once when the run ends)
+    - `browser-recordings.runs` (push, notified, whole: the runs one tool call drove — one for a browser_* call or an e2e script, a few when a call reran it, capped: MAX_STRIP_FRAMES)
 - Core:
   - Uses:
     - `framework/cli/cli-name.CLI_NAME_PATTERN`
     - `network/live.liveValue`
+    - `packages/list-bound.cappedList`
     - `packages/list-bound.wholeList`
   - Exports (types):
     - `BrowserRecordingRun`
     - `RecordingManifest`
     - `RecordingSource`
     - `RecordingStep`
+    - `StripFrame`
   - Exports (values):
     - `BROWSER_RECORDING_KIND`
     - `browserRecordedCalls`
@@ -126,6 +145,8 @@ inside one `browser_batch` (one frame per call).
     - `extractBrowserRecordings`
     - `isRecordedToolCall`
     - `MANIFEST_FILE`
+    - `MAX_MANIFEST_STEPS`
+    - `MAX_STRIP_FRAMES`
     - `RECORDED_BROWSER_TOOLS`
     - `RECORDED_CALLS_FILE`
     - `RecordedCallsIndexSchema`
@@ -135,6 +156,7 @@ inside one `browser_batch` (one frame per call).
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`
     - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --radius`
   - Imported by:
     - `debug/browser-recordings/writer`

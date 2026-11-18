@@ -1,11 +1,57 @@
 import { z } from "zod";
-import { wholeList } from "@plugins/packages/plugins/list-bound/core";
+import {
+  cappedList,
+  wholeList,
+} from "@plugins/packages/plugins/list-bound/core";
 import { liveValue } from "@plugins/network/plugins/live/core";
-import { RecordingManifestSchema } from "./manifest";
+import { RecordingSourceSchema } from "./manifest";
 
-export const BrowserRecordingRunSchema = RecordingManifestSchema.extend({
+/**
+ * The most thumbnails one run's filmstrip shows. A run with more distinct
+ * frames (a film session films thousands) shows its first and last halves and
+ * says how many it skipped: a strip is a glance at what the drive did, and
+ * every thumbnail is a request and a decoded bitmap.
+ */
+export const MAX_STRIP_FRAMES = 80;
+
+/** One thumbnail of a run's filmstrip: the page as a step ended. */
+const StripFrameSchema = z.object({
+  /** Absolute path of the frame on the computer's disk. */
+  frame: z.string(),
+  /** The frame file's version (mtime and size) — what its resized copy is named by. */
+  version: z.object({ mtimeMs: z.number(), size: z.number() }),
+  /** The step it shows (the last of the consecutive steps that ended on it, or the failing one). */
+  title: z.string(),
+  /** That step's 1-based position among the run's recorded steps. */
+  step: z.number().int(),
+  error: z.string().optional(),
+});
+export type StripFrame = z.infer<typeof StripFrameSchema>;
+
+/**
+ * One run, as its filmstrip draws it — a summary and a bounded strip, never
+ * the run's steps (the manifest stays on the server).
+ */
+const BrowserRecordingRunSchema = z.object({
   /** The run's directory, absolute. */
   dir: z.string(),
+  source: RecordingSourceSchema,
+  startedAt: z.string(),
+  /** The calls the drive made, repeats and steps the manifest dropped included. */
+  calls: z.number().int(),
+  /** The recorded steps (a repeat folded into one) — what `StripFrame.step` counts. */
+  steps: z.number().int(),
+  /** The calls that failed. */
+  failed: z.number().int(),
+  /** The calls the manifest dropped to stay bounded — none for any normal run. */
+  omittedCalls: z.number().int(),
+  /** Distinct consecutive frames of the run — the strip shows at most {@link MAX_STRIP_FRAMES}. */
+  frames: z.number().int(),
+  strip: cappedList(StripFrameSchema, { max: MAX_STRIP_FRAMES }),
+  /** Where the strip skips frames: `frames` were not shown between `strip[at - 1]` and `strip[at]`. */
+  stripGap: z
+    .object({ at: z.number().int(), frames: z.number().int() })
+    .nullable(),
 });
 export type BrowserRecordingRun = z.infer<typeof BrowserRecordingRunSchema>;
 
