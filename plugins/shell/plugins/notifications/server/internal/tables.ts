@@ -29,7 +29,17 @@ const notificationsEntity = defineEntity(
       stateTone: { generated: () => sql`state ->> 'tone'` },
     },
     indexes: (t) => [
-      index("notifications_dismissed_idx").on(t.dismissed),
+      // The collection's window (`resources.ts`: `dismissed = $1`, ordered by
+      // `createdAt` desc nulls last, `id` asc as tiebreak) read off this index
+      // in order, a page's rows only: without it every load scanned and sorted
+      // the whole table (main, 2026-11-18: 13k rows for a 200-row page, ~6 ms
+      // idle and up to 0.5–1.7 s under a restart replay, holding a read slot).
+      // Leading with `dismissed`, it also serves every `dismissed`-only filter.
+      index("notifications_window_idx").on(
+        t.dismissed,
+        t.createdAt.desc().nullsLast(),
+        t.id,
+      ),
       index("notifications_created_at_idx").on(t.createdAt),
       index("notifications_last_seen_at_idx").on(t.lastSeenAt),
       uniqueIndex("notifications_dedup_key_idx").on(t.dedupKey),

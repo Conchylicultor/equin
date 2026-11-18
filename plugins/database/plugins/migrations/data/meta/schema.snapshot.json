@@ -1,6 +1,6 @@
 {
-  "id": "7191e1bd-f84b-4772-82db-c4873ab29e2c",
-  "prevId": "9099812d-e204-46df-816c-9bb3f6b1a628",
+  "id": "2cefce02-bbc5-4da0-b3a6-2070c7122962",
+  "prevId": "7191e1bd-f84b-4772-82db-c4873ab29e2c",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -15046,11 +15046,23 @@
         }
       },
       "indexes": {
-        "notifications_dismissed_idx": {
-          "name": "notifications_dismissed_idx",
+        "notifications_window_idx": {
+          "name": "notifications_window_idx",
           "columns": [
             {
               "expression": "dismissed",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
