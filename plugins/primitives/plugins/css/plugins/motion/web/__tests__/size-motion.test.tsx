@@ -45,14 +45,23 @@ class DrivenResizeObserver {
 let box = { w: 300, h: 80 };
 let animate: ReturnType<typeof vi.fn>;
 
-function Probe({ lines }: { lines: number }): ReactElement {
+function Probe({
+  lines,
+  loading = false,
+}: {
+  lines: number;
+  /** Render a loading placeholder (what `<Loading>` draws) instead of the lines. */
+  loading?: boolean;
+}): ReactElement {
   const ref = useRef<HTMLDivElement>(null);
   useSizeMotion(ref, true);
   return (
     <div ref={ref} data-testid="surface">
-      {Array.from({ length: lines }, (_, i) => (
-        <p key={i}>line {i}</p>
-      ))}
+      {loading ? (
+        <div role="status" aria-busy="true" />
+      ) : (
+        Array.from({ length: lines }, (_, i) => <p key={i}>line {i}</p>)
+      )}
     </div>
   );
 }
@@ -124,6 +133,23 @@ describe("useSizeMotion", () => {
     const [keyframes] = animate.mock.calls[0] as [Keyframe[]];
     expect(keyframes[0]!.height).toBe("160px");
     expect(keyframes[1]!.height).toBe("200px");
+  });
+
+  it("lands the content replacing a loading placeholder at once", async () => {
+    // A menu opening on a skeleton taller than its real rows: tweening from
+    // the skeleton's box read as the menu opening too big and shrinking.
+    box = { w: 300, h: 120 };
+    const { rerender } = render(<Probe lines={0} loading />);
+    box = { w: 300, h: 80 };
+    rerender(<Probe lines={3} />);
+    await flushMutations();
+    expect(animate).not.toHaveBeenCalled();
+
+    // Past the placeholder, content changes tween again.
+    box = { w: 300, h: 100 };
+    rerender(<Probe lines={4} />);
+    await flushMutations();
+    expect(animate).toHaveBeenCalledTimes(1);
   });
 
   it("lands a resize with no content change at once", () => {

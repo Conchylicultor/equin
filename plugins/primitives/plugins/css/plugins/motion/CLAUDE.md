@@ -74,7 +74,10 @@ component may carry the transition itself (`SheetContent`).
   clipped meanwhile.
 - While something inside already animates layout (a `FoldMotion` fold, a row
   glide), it does not tween — the surface follows the inner motion.
-- Never from or to an empty box; never under reduced motion.
+- Never from or to an empty box; never away from a loading placeholder (a box
+  holding an `aria-busy` region — every `<Loading>` variant): its size is the
+  skeleton's guess, so a menu that opens on a skeleton would otherwise open
+  too big and shrink to its real rows. Never under reduced motion.
 
 ## `<Arrival>`
 

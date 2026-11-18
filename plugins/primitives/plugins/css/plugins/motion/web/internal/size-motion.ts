@@ -18,6 +18,10 @@ interface Box {
   /** The corner radius as drawn — capped at half the shorter side, so a
    *  pill's `9999px` reads as the half-height it paints. */
   r: number;
+  /** The box held a loading placeholder (an `aria-busy` region — every
+   *  `<Loading>` variant is one): its size is the placeholder's guess, not
+   *  the content's, so the content landing in it lands at once. */
+  loading: boolean;
 }
 
 function measure(el: HTMLElement): Box {
@@ -25,7 +29,10 @@ function measure(el: HTMLElement): Box {
   const w = el.offsetWidth;
   const h = el.offsetHeight;
   const r = Number.parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0;
-  return { w, h, r: Math.min(r, w / 2, h / 2) };
+  const loading =
+    el.matches('[aria-busy="true"]') ||
+    el.querySelector('[aria-busy="true"]') !== null;
+  return { w, h, r: Math.min(r, w / 2, h / 2), loading };
 }
 
 const LAYOUT_PROPERTY =
@@ -128,6 +135,7 @@ function tween(w: Watch, el: HTMLElement, from: Box, to: Box): void {
     w.rest = now;
     if (
       !sameBox(target, now) &&
+      !target.loading &&
       performance.now() - w.changedAt < SIZE_MS + CONTENT_WINDOW_MS
     ) {
       tween(w, el, target, now);
@@ -152,6 +160,10 @@ function onContentChange(w: Watch): void {
   const from = w.rest;
   w.rest = to;
   if (from === null || sameBox(from, to)) return;
+  // A placeholder's box is a guess at the content's: tweening from it is the
+  // panel opening at the skeleton's size and then shrinking (or growing) to
+  // its real one. The content lands at once — it IS the first real size.
+  if (from.loading) return;
   if (from.w === 0 || from.h === 0 || to.w === 0 || to.h === 0) return;
   if (prefersReducedMotion() || othersMoveLayout(w, el)) return;
   tween(w, el, from, to);
@@ -186,7 +198,9 @@ function onResize(w: Watch): void {
  *   content change that arrived meanwhile is caught up in a second tween.
  * - Something inside already moving the layout (a fold) means the surface
  *   just follows it frame by frame — two tweens of one size would fight.
- * - Never from or to an empty box, and never under reduced motion.
+ * - Never from or to an empty box, never away from a loading placeholder
+ *   (the content landing in a skeleton is the surface's first real size),
+ *   and never under reduced motion.
  */
 export function useSizeMotion(
   target: RefObject<HTMLElement | null>,
