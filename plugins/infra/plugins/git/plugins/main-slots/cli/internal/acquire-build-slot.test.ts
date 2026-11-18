@@ -1062,7 +1062,7 @@ describe("lifetime and boot leases", () => {
     if (held.kind === "held") await held.lease.release();
   });
 
-  test("the synchronous boot lease (O_SHLOCK) is the same lock, with a record", async () => {
+  test("the synchronous boot lease (a blocking shared flock) is the same lock, with a record", async () => {
     const { root, first } = await repo("repo");
     const a = await slotAt(root, first);
     expect(holdSlotLeaseSync(root, "exec-child", "x").kind).toBe("not-a-slot");

@@ -37804,13 +37804,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `core/internal/handoff.ts`, `core/internal/lease.ts`, `core/internal/pool-lock.ts`, `core/internal/slots.ts` (debt)
           - Plugins:
-            - **`boot-lease`** — A main slot's lease file layout (the tree.lock flock, the holder records beside it, the main-slot stamp) and holdSlotLeaseSync — the shared lease a process takes on the slot it runs from BEFORE it loads code from it (an open with O_SHLOCK, the same flock main-slots' leases take), with its holder record, for entry points that cannot load main-slots' core first: the CLI bootstrap (every ./equin run from a slot), the agent host's boot.
+            - **`boot-lease`** — A main slot's lease file layout (the tree.lock flock, the holder records beside it, the main-slot stamp) and holdSlotLeaseSync — the shared lease a process takes on the slot it runs from BEFORE it loads code from it (a blocking shared flock(2), the same lock main-slots' leases take, on macOS and Linux), with its holder record, for entry points that cannot load main-slots' core first: the CLI bootstrap (every ./equin run from a slot), the agent host's boot.
               - Core:
                 - Uses:
                   - `framework/product-name.LEGACY_IDS`
                   - `infra/host-fs/user-path.AppPath`
                   - `infra/host-fs/user-path.asAppPath`
                   - `infra/host-fs/user-path.joinAppPath`
+                  - `packages/flock.flockSharedSync`
                   - `packages/owned-fd.openOwnedFdSync`
                   - `packages/timed-fs.existsSync`
                   - `packages/timed-fs.readFileSync`
@@ -37829,7 +37830,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `holdSlotLeaseSync`
                   - `MAIN_SLOT_SERVED_FILE`
                   - `MAIN_SLOT_STAMP`
-                  - `O_SHLOCK_DARWIN`
                   - `parseDrainRecord`
                   - `parseHolder`
                   - `parseUnserved`
@@ -44139,13 +44139,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `exitWithParent`
           - `flockRelease`
+          - `flockSharedSync`
           - `flockTry`
           - `flockTryShared`
           - `holdParentLifeline`
           - `waitForFlock`
       - Cross-plugin:
-        - Imported by: 29 plugins — full list in [`plugins/packages/plugins/flock/REFERENCE.md`](../plugins/packages/plugins/flock/REFERENCE.md)
-          - `infra` ×12
+        - Imported by: 30 plugins — full list in [`plugins/packages/plugins/flock/REFERENCE.md`](../plugins/packages/plugins/flock/REFERENCE.md)
+          - `infra` ×13
           - `framework` ×7
           - `packages` ×4
           - `apps/chord/song-index`

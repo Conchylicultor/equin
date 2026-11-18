@@ -25,9 +25,11 @@ it loads code from the slot. See the parent `main-slots` for what a slot is.
   record's whole end (note, then unlink) — also a lifetime lease's, from its
   process's exit handler.
 - **`holdSlotLeaseSync(root, kind, label)`**: `not-a-slot` unless `root` is a
-  stamped main slot; else one `open(…, O_SHLOCK)` of the lock file (blocking
-  the thread while a build holds the slot exclusively — macOS only, the only
-  host slots exist on) and a holder record, ended on `release()` or by an
+  stamped main slot; else one shared `flock(2)` of the lock file
+  (packages/flock's `flockSharedSync`, blocking the thread while a build holds
+  the slot exclusively — the same call on macOS and Linux; it was macOS's
+  `open(…, O_SHLOCK)`, which left every Linux main deploy failing) and a
+  holder record, ended on `release()` or by an
   exit handler (with its drain note). Light by construction (node builtins
   plus a few leaf barrels), because its callers take it before loading the
   code it protects:
@@ -42,13 +44,14 @@ it loads code from the slot. See the parent `main-slots` for what a slot is.
 
 ## Plugin reference
 
-- Description: A main slot's lease file layout (the tree.lock flock, the holder records beside it, the main-slot stamp) and holdSlotLeaseSync — the shared lease a process takes on the slot it runs from BEFORE it loads code from it (an open with O_SHLOCK, the same flock main-slots' leases take), with its holder record, for entry points that cannot load main-slots' core first: the CLI bootstrap (every ./equin run from a slot), the agent host's boot.
+- Description: A main slot's lease file layout (the tree.lock flock, the holder records beside it, the main-slot stamp) and holdSlotLeaseSync — the shared lease a process takes on the slot it runs from BEFORE it loads code from it (a blocking shared flock(2), the same lock main-slots' leases take, on macOS and Linux), with its holder record, for entry points that cannot load main-slots' core first: the CLI bootstrap (every ./equin run from a slot), the agent host's boot.
 - Core:
   - Uses:
     - `framework/product-name.LEGACY_IDS`
     - `infra/host-fs/user-path.AppPath`
     - `infra/host-fs/user-path.asAppPath`
     - `infra/host-fs/user-path.joinAppPath`
+    - `packages/flock.flockSharedSync`
     - `packages/owned-fd.openOwnedFdSync`
     - `packages/timed-fs.existsSync`
     - `packages/timed-fs.readFileSync`
@@ -67,7 +70,6 @@ it loads code from the slot. See the parent `main-slots` for what a slot is.
     - `holdSlotLeaseSync`
     - `MAIN_SLOT_SERVED_FILE`
     - `MAIN_SLOT_STAMP`
-    - `O_SHLOCK_DARWIN`
     - `parseDrainRecord`
     - `parseHolder`
     - `parseUnserved`

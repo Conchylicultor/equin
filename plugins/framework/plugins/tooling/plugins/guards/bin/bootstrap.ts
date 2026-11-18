@@ -19,6 +19,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, isAbsolute, join, relative } from "node:path";
+import { dlopen } from "bun:ffi";
 
 /** What the bootstrap prints and how it exits. */
 export type BootstrapResult =
@@ -86,8 +87,8 @@ export function assertCheckoutInstalled(script: string): void {
 // A guard run from one of main's slots (infra/git/main-slots) — a scratch
 // agent's, whose GUARDS_ROOT is main's `current` link — loads its code from a
 // checkout a build may check out again once nothing holds it. So before the
-// dynamic import, the bootstrap holds the slot shared: one `open(…, O_SHLOCK)`
-// of the slot's lock file (the flock every main-slots lease takes; a build's
+// dynamic import, the bootstrap holds the slot shared: one blocking shared
+// flock(2) of the slot's lock file (packages/flock's `flockSharedSync`, copied) (the flock every main-slots lease takes; a build's
 // exclusive lease waits for it, and it waits for a build) and a holder record
 // beside it, kind `guard`. Copies of main-slots/boot-lease's layout, because
 // this file may import nothing from the repo; `bootstrap.test.ts` holds each
@@ -103,12 +104,31 @@ export const SLOT_LEASES_DIR = "leases";
 export const MAIN_SLOT_STAMP = "main-slot";
 /** boot-lease's `MAIN_SLOT_SERVED_FILE`. */
 export const MAIN_SLOT_SERVED_FILE = "main-slot-served";
-/** boot-lease's `O_SHLOCK_DARWIN`. */
-export const O_SHLOCK_DARWIN = 0x10;
 /** boot-lease's `SLOT_UNSERVED_FILE`. */
 export const SLOT_UNSERVED_FILE = "main-slot-unserved";
 /** boot-lease's `SLOT_DRAIN_LOG_DIR`. */
 export const SLOT_DRAIN_LOG_DIR = "drain-log";
+
+/**
+ * packages/flock's `flockSharedSync`: a blocking shared flock(2) on `fd`, the
+ * same call on macOS and Linux (it was macOS's `open(…, O_SHLOCK)`, which
+ * Linux ignores: 0x10 is no open flag there, so a guard took no lock at all).
+ * Granted, it releases and retakes the lock so the next parked shared waiter
+ * wakes too (macOS wakes one waiter per release).
+ */
+export function flockSharedSync(fd: number): void {
+  const { symbols } = dlopen(
+    process.platform === "darwin" ? "libc.dylib" : "libc.so.6",
+    { flock: { args: ["i32", "i32"], returns: "i32" } },
+  );
+  const LOCK_SH = 1;
+  const LOCK_UN = 8;
+  if (symbols.flock(fd, LOCK_SH) !== 0)
+    throw new Error(`flock(LOCK_SH) on fd ${fd} failed`);
+  symbols.flock(fd, LOCK_UN);
+  if (symbols.flock(fd, LOCK_SH) !== 0)
+    throw new Error(`retaking flock(LOCK_SH) on fd ${fd} failed`);
+}
 
 /** The admin dir (`<git dir>/<lock dir>`) of the checkout at `root`, or null for no checkout. */
 export function adminDirOf(root: string): string | null {
@@ -141,9 +161,15 @@ export function holdGuardLease(script: string): GuardLease {
     return { slot: null, release: () => {} };
   const fd = openSync(
     join(admin, SLOT_LOCK_FILE),
-    constants.O_RDONLY | constants.O_CREAT | O_SHLOCK_DARWIN,
+    constants.O_RDONLY | constants.O_CREAT,
     0o644,
   );
+  try {
+    flockSharedSync(fd);
+  } catch (err) {
+    closeSync(fd);
+    throw err;
+  }
   const leases = join(admin, SLOT_LEASES_DIR);
   mkdirSync(leases, { recursive: true });
   const file = join(leases, `${process.pid}.g1.json`);

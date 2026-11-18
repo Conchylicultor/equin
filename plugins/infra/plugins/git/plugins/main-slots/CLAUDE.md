@@ -149,7 +149,7 @@ Who holds a slot:
   path an agent launch bakes in (its `GUARDS_ROOT`, the stop-gate and
   compaction hook commands) names main's `current` link instead of a slot
   (`durableCheckoutRoot`); the guard
-  bootstrap holds it (`O_SHLOCK`, kind `guard`) while the hook runs, and its
+  bootstrap holds it (a blocking shared flock, kind `guard`) while the hook runs, and its
   main fallback runs main's served slot (the most recent `main-slot-served`
   marker, written for main's own app only).
 - **A build** — exclusive from its claim, shared from its handover, until it

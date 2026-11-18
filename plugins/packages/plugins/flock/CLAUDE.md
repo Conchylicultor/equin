@@ -39,6 +39,14 @@ script is named that way, so a self-contained daemon bundle carries them): they
 are loaded by path and stay independently runnable. The one lock file arrives via
 `FLOCK_WAIT_FILE`.
 
+**The one blocking in-process acquire: `flockSharedSync`, at boot.** A process
+that has not loaded its code yet has no event loop to freeze, so it may block
+its thread: the main-slot boot lease (`infra/git/main-slots/boot-lease`, the CLI
+bootstrap and the agent host) takes the slot's lock shared this way before it
+loads the code the lock protects. It replaced macOS's `open(…, O_SHLOCK)`, which
+Linux does not have (2026-11-18: every Linux main deploy failed on it). It
+passes the wake on like a shared waiter below.
+
 **A granted shared waiter passes the wake on.** macOS wakes ONE blocked flock
 waiter per release and parks the others behind the one it woke — right for
 exclusive waiters, wrong for shared ones, which could all hold the lock: each
@@ -94,13 +102,14 @@ coalescing; `checkout-lock.ts` builds a size-1 mutex.
   - Exports (values):
     - `exitWithParent`
     - `flockRelease`
+    - `flockSharedSync`
     - `flockTry`
     - `flockTryShared`
     - `holdParentLifeline`
     - `waitForFlock`
 - Cross-plugin:
-  - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra` ×12
+  - Imported by: 30 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra` ×13
     - `framework` ×7
     - `packages` ×4
     - `apps/chord/song-index`

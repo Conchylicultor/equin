@@ -21,7 +21,6 @@ export {
   SLOT_UNSERVED_FILE,
   slotHandedLockFile,
   MAIN_SLOT_STAMP,
-  O_SHLOCK_DARWIN,
   parseHolder,
   renderHolder,
   SLOT_HOLDER_KINDS,

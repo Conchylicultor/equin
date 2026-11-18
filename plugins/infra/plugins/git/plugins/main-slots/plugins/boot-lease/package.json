@@ -2,5 +2,5 @@
   "name": "@equin/plugin-infra-git-main-slots-boot-lease",
   "version": "0.0.1",
   "private": true,
-  "description": "A main slot's lease file layout (the tree.lock flock, the holder records beside it, the main-slot stamp) and holdSlotLeaseSync — the shared lease a process takes on the slot it runs from BEFORE it loads code from it (an open with O_SHLOCK, the same flock main-slots' leases take), with its holder record, for entry points that cannot load main-slots' core first: the CLI bootstrap (every ./equin run from a slot), the agent host's boot."
+  "description": "A main slot's lease file layout (the tree.lock flock, the holder records beside it, the main-slot stamp) and holdSlotLeaseSync — the shared lease a process takes on the slot it runs from BEFORE it loads code from it (a blocking shared flock(2), the same lock main-slots' leases take, on macOS and Linux), with its holder record, for entry points that cannot load main-slots' core first: the CLI bootstrap (every ./equin run from a slot), the agent host's boot."
 }

@@ -278,11 +278,3 @@ export function detachedHeadOf(text: string): string | null {
   const t = text.trim();
   return /^[0-9a-f]{40,64}$/.test(t) ? t : null;
 }
-
-/**
- * `open(2)`'s O_SHLOCK on macOS: the open itself takes a shared flock(2) on
- * the file — the same lock `flock(LOCK_SH)` takes, so it shares with every
- * other shared holder and waits behind an exclusive one. Not in Bun's
- * `fs.constants`; Bun's `openSync` passes the numeric flag through.
- */
-export const O_SHLOCK_DARWIN = 0x10;

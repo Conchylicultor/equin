@@ -17,10 +17,10 @@ import {
   statSync,
 } from "@plugins/packages/plugins/timed-fs/core";
 import { openOwnedFdSync } from "@plugins/packages/plugins/owned-fd/core";
+import { flockSharedSync } from "@plugins/packages/plugins/flock/core";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import {
   MAIN_SLOT_STAMP,
-  O_SHLOCK_DARWIN,
   renderHolder,
   SLOT_LEASES_DIR,
   SLOT_LOCK_FILE,
@@ -30,8 +30,9 @@ import {
 import { noteLeaseReleaseSync } from "./drain-sync";
 
 // The shared lease, taken SYNCHRONOUSLY and before the process loads code from
-// the slot: one `open(…, O_SHLOCK)` of the slot's lock file — the flock every
-// main-slots lease takes — then its holder record. For the entry points that
+// the slot: a shared flock(2) of the slot's lock file, blocking (packages/flock's
+// `flockSharedSync`) — the flock every main-slots lease takes, on macOS and
+// Linux alike — then its holder record. For the entry points that
 // run before any code they could tear (the CLI bootstrap, the agent host's
 // boot): main-slots' own core loads the whole paths barrel first. Each call is
 // its own process's thread (`*Sync`).
@@ -72,7 +73,7 @@ let recordSeq = 0;
 
 /**
  * Hold the main slot at `root` SHARED, waiting (the thread blocks in the
- * open) while a build holds it exclusively. `not-a-slot` when `root` is not
+ * flock) while a build holds it exclusively. `not-a-slot` when `root` is not
  * a stamped main slot. The lease lasts until `release()` or the process's
  * exit (the kernel drops the lock with the descriptor; the record is removed
  * by an exit handler, and a SIGKILLed holder's is skipped and pruned by
@@ -86,17 +87,18 @@ export function holdSlotLeaseSync(
   const admin = slotAdminDirSync(root);
   if (admin === null || !existsSync(joinAppPath(admin, MAIN_SLOT_STAMP)))
     return { kind: "not-a-slot", root };
-  if (process.platform !== "darwin") {
-    throw new Error(
-      `main-slots: ${root} is a main slot, but its boot lease opens with O_SHLOCK, which only macOS has (${process.platform})`,
-    );
-  }
   mkdirSync(admin, { recursive: true });
   const fd = openOwnedFdSync(
     joinAppPath(admin, SLOT_LOCK_FILE),
-    constants.O_RDONLY | constants.O_CREAT | O_SHLOCK_DARWIN,
+    constants.O_RDONLY | constants.O_CREAT,
     0o644,
   );
+  try {
+    flockSharedSync(fd.fd);
+  } catch (err) {
+    fd.close();
+    throw err;
+  }
   const leases = joinAppPath(admin, SLOT_LEASES_DIR);
   mkdirSync(leases, { recursive: true });
   const record: SlotHolder = {

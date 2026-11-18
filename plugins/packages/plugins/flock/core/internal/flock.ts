@@ -36,11 +36,12 @@ function flock(fd: number, op: number): number {
  * errno, so the two are not distinguishable here; callers turn a persistent
  * `false` into a loud timeout rather than waiting forever.
  *
- * Non-blocking on purpose, and the only acquire this primitive offers: a
+ * Non-blocking on purpose, and the only in-process acquire for running code: a
  * synchronous FFI `flock(LOCK_EX)` has no yield point, so it freezes the thread
  * it runs on until the lock frees — never acceptable on an event loop. Callers
  * that must *wait* poll this, or (host-semaphore) push the blocking wait onto a
- * worker thread.
+ * worker thread; a process's boot, which has no event loop yet, may block in
+ * `flockSharedSync`.
  *
  * The lock is owned by the open file description, so it is released by
  * `flockRelease` OR by closing the fd OR **by the process dying** — SIGKILL,
@@ -63,6 +64,28 @@ export function flockTry(fd: number): boolean {
  */
 export function flockTryShared(fd: number): boolean {
   return flock(fd, LOCK_SH | LOCK_NB) === 0;
+}
+
+/**
+ * Take a SHARED lock on `fd`, BLOCKING the calling thread until no exclusive
+ * holder is left — for a process's boot, before it has an event loop to
+ * freeze: the main-slot boot lease (`infra/git/main-slots/boot-lease`), taken
+ * before the process loads the code the lock protects. Anywhere else, wait in
+ * a child (`waitForFlock`) instead.
+ *
+ * The same `flock(2)` on macOS and Linux (it replaced macOS's
+ * `open(…, O_SHLOCK)`, which Linux does not have). Once granted it passes the
+ * wake on like `flock-block.ts` (release and retake): macOS wakes one parked
+ * waiter per release, and shared waiters parked behind one build would
+ * otherwise be granted one per holder lifetime instead of together. Throws
+ * when flock fails (a broken fd — never "someone holds it": this waits).
+ */
+export function flockSharedSync(fd: number): void {
+  if (flock(fd, LOCK_SH) !== 0)
+    throw new Error(`flock(LOCK_SH) on fd ${fd} failed`);
+  flock(fd, LOCK_UN);
+  if (flock(fd, LOCK_SH) !== 0)
+    throw new Error(`retaking flock(LOCK_SH) on fd ${fd} failed`);
 }
 
 /**
