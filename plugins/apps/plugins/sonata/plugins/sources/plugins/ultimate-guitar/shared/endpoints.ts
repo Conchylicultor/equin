@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import { songIdKind } from "@plugins/apps/plugins/sonata/plugins/library/core";
 import { UgTabSchema } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/tab/core";
 
 /**
@@ -17,9 +18,21 @@ export type CreateUltimateGuitarSongBody = z.infer<
   typeof CreateUltimateGuitarSongBodySchema
 >;
 
+/**
+ * The create body: the tab and its metrics, plus — for a song created from a
+ * share link — the id and title it has on the library it was shared from (so
+ * the link opens it here too, under the name its sharer gave it). A fresh id
+ * and the tab's song name when absent.
+ */
+export const NewUltimateGuitarSongBodySchema =
+  CreateUltimateGuitarSongBodySchema.extend({
+    id: songIdKind.schema.optional(),
+    title: z.string().optional(),
+  });
+
 export const createUltimateGuitarSong = defineEndpoint({
   route: "POST /api/sonata/songs/ultimate-guitar",
-  body: CreateUltimateGuitarSongBodySchema,
+  body: NewUltimateGuitarSongBodySchema,
   response: z.object({ id: z.string(), title: z.string() }),
 });
 

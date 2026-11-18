@@ -51,8 +51,9 @@ import {
 } from "../core";
 import {
   SongLinkImport,
-  SongLinkMirror,
+  carriesSongLink,
   useLinkCreator,
+  withoutLink,
   type PlayerParams,
 } from "./song-link";
 import type { SongHydration } from "./hydrate-sources";
@@ -430,6 +431,19 @@ function SonataPlayerSurface(): ReactElement {
   useBarSeek(songId, bar, hydrated, placedForRef);
   const row = useLive(songLibrary, { id: songId });
 
+  // A share link has done its work once its song is in the library (it was
+  // already, or the reader just added it): the address goes back to the
+  // song's plain one, so it never carries a copy of the song that the song's
+  // own edits would leave behind.
+  const linked = carriesSongLink(params);
+  const songFound = row.status === "ready" && row.found;
+  const paramsRef = useLatestRef(params);
+  useEffect(() => {
+    if (linked && songFound) {
+      setParams(withoutLink(paramsRef.current), { replace: true });
+    }
+  }, [linked, songFound, paramsRef, setParams]);
+
   // A link to a song this library does not have (the resolve gate let it
   // through because the link can recreate it): offer to add it.
   if (row.status === "ready" && !row.found) {
@@ -471,9 +485,6 @@ function SonataPlayerSurface(): ReactElement {
         setParams({ ...params, songId, lens: lens ?? undefined })
       }
     >
-      {/* The address is a link to the song as it is now (its grid, its
-          groove, …), so it can be shared. */}
-      <SongLinkMirror songId={songId} params={params} setParams={setParams} />
       <ImmersivePlayer />
     </PlayerDisplayBinding>
   );

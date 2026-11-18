@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import type { FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import type { LiveReader } from "@plugins/network/plugins/live/web";
 import type { OpenDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
@@ -70,12 +71,15 @@ export type SourceHydration =
  *
  * - `fetchEndpoint` — the fetcher of the surface's transport. For writes only —
  *   it refuses a read (a GET) at compile time; reads are live (`useHydration`).
+ * - `readLive` — the surface's live reader, for the one answer an imperative
+ *   step needs (a share link's tab fetched before its song is created).
  * - `openDialog` — the dialog opener of the surface's render origin: a dialog
  *   a source opens renders where the library is (inside the demo, against the
  *   demo's server), never in the page around it.
  */
 export interface SourceContext {
   fetchEndpoint: FetchEndpoint;
+  readLive: LiveReader;
   openDialog: OpenDialog;
 }
 
@@ -107,9 +111,9 @@ export type SourceCreateOption = Omit<
 
 /**
  * What a `Library.SongLink` contribution's link part reads for the open song:
- * not known yet (its data is still loading — the address is not rewritten
- * meanwhile), or known — the text to carry, or `null` to carry none (the
- * song's own default, which a link need not spell).
+ * not known yet (its data is still loading — no link is offered meanwhile),
+ * or known — the text to carry, or `null` to carry none (the song's own
+ * default, which a link need not spell).
  */
 export type SongLinkValue =
   { known: false } | { known: true; value: string | null };
@@ -132,17 +136,19 @@ export const Library = {
     createOption?: SourceCreateOption;
   }>({ docLabel: (c) => c.sourceId }),
   /**
-   * The song's shareable link, one part per contribution: each owns one key
-   * of the player route ({@link SongLinkKey}) — what it writes there, and what
+   * The song's share link, one part per contribution: each owns one key of
+   * the player route ({@link SongLinkKey}) — what it writes there, and what
    * it does with a link's value when the link names a song this library does
    * not have. The library collects them generically and never names one.
    *
    * - `useValue` — run inside the player while the song is loaded: the text
    *   this part of the song spells in its link (`null`: none — the default).
-   *   The library mirrors every part into the address (a replace, debounced),
-   *   with the song's title beside them once a `create` part has a value.
-   * - `create` — set on the part that can bring a song into being (a chord
-   *   grid): creates the song with the link's id, title and this value.
+   *   The player's Share button copies a link with every part, and the song's
+   *   title beside them — offered only once a `create` part has a value (a
+   *   song another library can be given).
+   * - `create` — set on a part that can bring a song into being (a chord grid,
+   *   an Ultimate Guitar tab): creates the song with the link's id, title and
+   *   this value.
    * - `apply` — writes this part's link value onto a song just created from
    *   the link. A value it cannot read is skipped (a link is typed, pasted or
    *   stale — like `;bar`), so the song still opens.

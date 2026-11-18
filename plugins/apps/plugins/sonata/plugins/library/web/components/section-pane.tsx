@@ -26,6 +26,7 @@ import {
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { useSectionPaneCollapsed } from "./panels-toggle";
+import { ShareSongButton } from "../song-link";
 import { prefersReducedMotion } from "@plugins/primitives/plugins/css/plugins/motion/web";
 import { DOCK_EASE, DOCK_MS } from "../internal/dock-motion";
 import {
@@ -259,6 +260,7 @@ function SectionPanel() {
               </Text>
             </Fill>
             <ControlSizeProvider size="lg">
+              <ShareSongButton />
               <IconButton
                 icon={closeIcon}
                 label="Collapse to the rail"

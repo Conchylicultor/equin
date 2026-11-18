@@ -12,8 +12,8 @@ them without a `shell → library` import that would cycle with the existing
   standard chrome titled "Library"). Renders the gallery via
   `Sonata.Home` inside `PaneChrome`.
 - `sonataPlayerPane` — player pane at
-  `/sonata/song/:songId;bar;lens;title;grid;groove` (the last three: the
-  song's link, below). `bar` and `lens`
+  `/sonata/song/:songId;bar;lens;title;grid;ug;groove` (the last four: the
+  song's share link, below). `bar` and `lens`
   are keyed (named) views of the song, absent by default: `;bar=12` opens it
   with the playhead at that bar (`sonataSongLink(id, bar)`), and `;lens` is the
   display lens (`…;lens=notation`, absent for the default lens) — the surface
@@ -27,23 +27,25 @@ them without a `shell → library` import that would cycle with the existing
   reopened from the now-playing bar) is NOT reloaded: a reload would rebuild
   its timeline and the session's content reset would stop and rewind it.
 
-### The song's link (`Library.SongLink`, `song-link.tsx`)
+### The song's share link (`Library.SongLink`, `song-link.tsx`)
 
-The player URL carries the song's shareable content, so the address bar is a
-link that opens the same song elsewhere:
-`/sonata/song/<id>;title=…;grid=…;groove=…` (keys: `SONG_LINK_KEYS`, core).
+The address of an open song is always its plain one
+(`/sonata/song/<id>`, plus `;bar` / `;lens`) — it never follows the song's
+edits. Sharing is explicit: the **Share** button in the section panel's "Song"
+header copies a link that carries the song's content and confirms it with a
+toast: `/sonata/song/<id>;title=…;grid=…;ug=…;groove=…` (keys:
+`SONG_LINK_KEYS`, core).
 
 - **Each part is a contribution.** `Library.SongLink({ key, useValue, create?,
   apply? })` — the chord-grid source owns `grid` (the grid text, read from the
-  loaded document so an edit reaches the address as it is typed) and can
-  `create` the song; rhythm-controls owns `groove` (the accompaniment in
-  readable words, e.g. `stride~R.block.basic-2~L.stride.basic-4`; omitted
-  while it is the default or not playing) and `apply`s it.
-  The library names none of them.
-- **Mirror.** `SongLinkMirror` (mounted with the hydrated player) reads every
-  part and rewrites the CURRENT history entry (debounced 400 ms; a content
-  change is not a navigation), once every part knows its value. `;title` rides
-  along once a `create` part has a value. `;bar` / `;lens` are kept.
+  loaded document) and can `create` the song; Ultimate Guitar owns `ug` (the
+  tab id; its `create` fetches the tab from UG through `ctx.readLive`);
+  rhythm-controls owns `groove` (the accompaniment in readable words, e.g.
+  `stride~R.block.basic-2~L.stride.basic-4`; omitted while it is the default or
+  not playing) and `apply`s it. The library names none of them.
+- **Share button** (`ShareSongButton`): reads every part; shown only once every
+  part knows its value AND a `create` part has one — a song another library
+  can be given (a chord grid, a UG tab; never a MIDI file).
 - **Open.** A song this library HAS keeps its stored content — the stored
   song is never older than a link to it from this library, so a link never
   overwrites it. A song it does NOT have, named by a link carrying a `create`
@@ -51,6 +53,8 @@ link that opens the same song elsewhere:
   holds the parts, settles) and the surface shows `SongLinkImport` — the
   title and an "Add to library" button that creates the song under the link's
   id, then hands every other part its value. Asked, never done on open.
+  Once the song is in the library (already, or just added), the surface
+  replaces the address with the plain one (`withoutLink`).
 
 ### Hydration (`Library.Source.useHydration`, `SongHydrator`)
 
@@ -306,12 +310,12 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `sonataLibraryPane.Actions`
     - `sonataPlayerPane.Actions`
     - `songPeekPane.Actions`
-  - Slot contributors: 26 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 27 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `sonataPlayerPane.Actions` ×7
     - `Library.Cover` ×5
     - `Library.Source` ×5
+    - `Library.SongLink` ×3
     - `songPeekPane.Actions` ×3
-    - `Library.SongLink` ×2
     - `sonataLibraryPane.Actions` ×2
     - `Library.Notice` ← `apps.sonata.sources.midi.folders`
     - `Library.SongActions` ← `apps.sonata.library`
@@ -327,12 +331,12 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `Pane.Register` "sonata-library"
     - `Pane.Register` "sonata-player"
     - `Pane.Register` "sonata-song-peek"
-  - Uses: 99 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 101 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×15
+    - `network/live` ×7
     - `primitives/data-view` ×7
     - `apps/sonata/shell` ×6
     - `network/live/live-state` ×6
-    - `network/live` ×6
     - `primitives/css/ui-kit` ×6
     - `apps/sonata/player` ×5
     - `apps/sonata/document` ×4
@@ -371,6 +375,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `primitives/overlay/imperative-dialog.useOpenDialog`
     - `primitives/relative-time.formatRelativeTime`
     - `primitives/slot-render.defineRenderSlot`
+    - `shell/notifications.useToast`
     - `ui/icons.Icon`
   - Exports (types):
     - `SongCoverAnswer`

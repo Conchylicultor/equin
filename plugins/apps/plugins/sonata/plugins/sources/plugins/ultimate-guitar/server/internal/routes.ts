@@ -14,14 +14,17 @@ import { ugTabSaved } from "./tables-tab-saved";
 
 /**
  * Create a UG-backed song. Writes the generic song row (library helper) then
- * this source's extension row (the full UgTab). No attachment.
+ * this source's extension row (the full UgTab). No attachment. A share link's
+ * id and title, when given, are the song's.
  */
 export const handleCreateUltimateGuitarSong = implement(
   createUltimateGuitarSong,
   async ({ body }) => {
-    const { durationSec, endBeat, ...tab } = body;
+    const { durationSec, endBeat, id: linkId, title: linkTitle, ...tab } = body;
+    const title = linkTitle ?? tab.songName;
     const id = await createSongRow({
-      title: tab.songName,
+      ...(linkId !== undefined && { id: linkId }),
+      title,
       composer: tab.artistName || null,
       durationSec,
       endBeat,
@@ -29,7 +32,7 @@ export const handleCreateUltimateGuitarSong = implement(
     });
     await songUltimateGuitar.upsert(id, tab);
     await ugTabSaved.emit({ songId: id });
-    return { id, title: tab.songName };
+    return { id, title };
   },
 );
 

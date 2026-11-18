@@ -1,18 +1,22 @@
 import { type ReactNode, useCallback, useEffect, useState } from "react";
-import { rowOrStale, useLive } from "@plugins/network/plugins/live/web";
+import { rowOrStale, useLiveReader } from "@plugins/network/plugins/live/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useOpenDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
-import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { sonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/core";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
   SONG_LINK_KEYS,
-  songLibrary,
+  sonataPlayerRoute,
   type SongId,
   type SongLinkKey,
 } from "../core";
 import { Library, type SongLinkValue } from "./slots";
+import { useCurrentSong } from "./use-current-song";
 
 /** The player route's params, as the pane hands them over. */
 export interface PlayerParams {
@@ -21,6 +25,7 @@ export interface PlayerParams {
   lens?: string;
   title?: string;
   grid?: string;
+  ug?: string;
   groove?: string;
 }
 
@@ -31,66 +36,47 @@ type SongLinkPart = ReturnType<
 /** The song link's own keys (the shareable content) with their values. */
 type LinkParams = Partial<Record<SongLinkKey | "title", string>>;
 
-/** How long the address waits for the edits to settle before it is rewritten. */
-const MIRROR_DEBOUNCE_MS = 400;
-
 /** A link's title when it carries none. */
 const UNTITLED = "Shared song";
 
+const shareIcon = symbol("share");
+
+/** Whether `params` carry any of the song link's own keys (a share link). */
+export function carriesSongLink(params: PlayerParams): boolean {
+  return (
+    params.title !== undefined ||
+    SONG_LINK_KEYS.some((key) => params[key] !== undefined)
+  );
+}
+
 /**
- * The params with the song link's own keys replaced by `link` — `bar` and
- * `lens` (views of the song) kept as they are.
+ * The params with the song link's own keys dropped — `bar` and `lens` (views
+ * of the song) kept: the plain address of the song a share link opened.
  */
-export function withLink(params: PlayerParams, link: LinkParams): PlayerParams {
+export function withoutLink(params: PlayerParams): PlayerParams {
   return {
     songId: params.songId,
     ...(params.bar !== undefined && { bar: params.bar }),
     ...(params.lens !== undefined && { lens: params.lens }),
-    ...link,
   };
 }
 
-/** The song link's own keys of `params`. */
-function linkOf(params: PlayerParams): LinkParams {
-  const out: LinkParams = {};
-  for (const key of [...SONG_LINK_KEYS, "title"] as const) {
-    const value = params[key];
-    if (value !== undefined) out[key] = value;
-  }
-  return out;
-}
-
-function sameLink(a: LinkParams, b: LinkParams): boolean {
-  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
-  for (const key of keys) {
-    if (a[key as keyof LinkParams] !== b[key as keyof LinkParams]) return false;
-  }
-  return true;
-}
-
 /**
- * Keeps the address a link to the open song as it is now: every
- * `Library.SongLink` part's value (`;grid`, `;groove`, …), and the song's title
- * once a part that can recreate the song (`create`) has one — so the address
- * bar can be copied and opened on another library. Rewrites the current
- * history entry (a song's content changing is not a navigation), debounced so
- * typing in the grid does not rewrite it per keystroke, and only once every
- * part knows its value (a part still loading never drops its key).
+ * The open song's Share button: copies a link that recreates the song on
+ * another library — every `Library.SongLink` part's value (`;grid`, `;ug`,
+ * `;groove`, …) and the song's title — and says so with a toast. Shown only
+ * for a song a link can recreate (a `create` part has a value: a chord grid,
+ * an Ultimate Guitar tab), and only once every part knows its value, so a
+ * link never leaves out a part still loading. The address bar itself stays
+ * the song's plain address.
  *
  * Each part reads through its own hook, so each is one {@link LinkPartReader}
  * element reporting its value up — a contributed set cannot be looped over
  * with hooks.
  */
-export function SongLinkMirror({
-  songId,
-  params,
-  setParams,
-}: {
-  songId: SongId;
-  params: PlayerParams;
-  setParams: (next: PlayerParams, opts: { replace: true }) => void;
-}): ReactNode {
+export function ShareSongButton(): ReactNode {
   const parts = Library.SongLink.useContributions();
+  const toast = useToast();
   const [values, setValues] = useState<
     Partial<Record<SongLinkKey, SongLinkValue>>
   >({});
@@ -108,44 +94,54 @@ export function SongLinkMirror({
     });
   }, []);
 
-  const title = rowOrStale(useLive(songLibrary, { id: songId }))?.title;
+  const song = rowOrStale(useCurrentSong());
 
-  // The link the song spells now, or null while a part (or the title it
-  // needs) is not known yet.
-  let next: LinkParams | null = {};
+  // The link the song spells now, or null while a part (or the song) is not
+  // known yet, or when no part can recreate the song elsewhere.
+  let link: LinkParams | null = {};
   let recreatable = false;
   for (const part of parts) {
     const value = values[part.key];
     if (value === undefined || !value.known) {
-      next = null;
+      link = null;
       break;
     }
     if (value.value === null) continue;
-    next[part.key] = value.value;
+    link[part.key] = value.value;
     if (part.create !== undefined) recreatable = true;
   }
-  if (next !== null && recreatable) {
-    if (title === undefined) next = null;
-    else next.title = title;
-  }
+  if (!recreatable || song === undefined || song === null) link = null;
 
-  const paramsRef = useLatestRef(params);
-  const nextKey = next === null ? null : JSON.stringify(next);
-  useEffect(() => {
-    if (nextKey === null) return;
-    const link = JSON.parse(nextKey) as LinkParams;
-    if (sameLink(link, linkOf(paramsRef.current))) return;
-    const timer = setTimeout(() => {
-      setParams(withLink(paramsRef.current, link), { replace: true });
-    }, MIRROR_DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [nextKey, paramsRef, setParams]);
+  const copy = async () => {
+    if (link === null || song === undefined || song === null) return;
+    const path = sonataPlayerRoute.link(sonataApp, {
+      songId: song.id,
+      title: song.title,
+      ...link,
+    });
+    const url = new URL(path, window.location.href).href;
+    await navigator.clipboard.writeText(url);
+    toast({
+      type: "sonata-song-link-copied",
+      variant: "success",
+      title: "Link copied",
+      description: `Opening it restores “${song.title}” as it is now.`,
+      category: "confirmations",
+    });
+  };
 
   return (
     <>
       {parts.map((part) => (
         <LinkPartReader key={part.key} part={part} report={report} />
       ))}
+      {link !== null && (
+        <IconButton
+          icon={shareIcon}
+          label="Copy a link to this song"
+          onClick={copy}
+        />
+      )}
     </>
   );
 }
@@ -202,6 +198,7 @@ export function SongLinkImport({
   const parts = Library.SongLink.useContributions();
   const creator = useLinkCreator(params);
   const fetchEndpoint = useFetchEndpoint();
+  const readLive = useLiveReader();
   const openDialog = useOpenDialog();
   const [failure, setFailure] = useState<string | null>(null);
   const title = params.title ?? UNTITLED;
@@ -214,7 +211,7 @@ export function SongLinkImport({
 
   const add = async () => {
     setFailure(null);
-    const ctx = { fetchEndpoint, openDialog };
+    const ctx = { fetchEndpoint, readLive, openDialog };
     try {
       await creator.part.create?.(ctx, {
         id: songId,
