@@ -5,10 +5,12 @@ export {
   ChainSchema,
   CHAIN_CAP,
   DeploymentStateSchema,
+  MAX_NO_VERDICT_ATTEMPTS,
   NO_CHAIN,
   sameCommit,
 } from "./model";
 export type {
+  AutoBuildDecision,
   BuildAttempt,
   Carrier,
   CarrierId,
@@ -17,5 +19,5 @@ export type {
   Deployment,
   DeploymentState,
 } from "./model";
-export { convergenceOf, deploymentOf, wantsBuild } from "./derive";
+export { wantsBuild, convergenceOf, deploymentOf } from "./derive";
 export { deployment } from "./resource";

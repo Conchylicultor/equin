@@ -19,12 +19,26 @@ precondition of "main gets redeployed": the fix 2baf0e2a3b sat on main for
 eleven minutes while main had no backend, until a person reloaded the gateway.
 Those jobs and `reconcileDeployment` are deleted, not kept as a second runner.
 
-**No retry per commit.** A HEAD whose automatic build failed is decided, not
-re-run (`wantsBuild`'s termination); the next push is the next attempt. So
-while successive commits each fail to boot, main stays down until the first one
-that boots — healed by a push, never by a person. A convergence run that itself
-fails (cannot decide, cannot start) is a `main-deploy-failed` report the
-gateway files; nothing retries it before the next edge.
+**No retry of a verdict; a bounded retry of a kill.** A HEAD whose automatic
+build FAILED is decided, not re-run (`wantsBuild`'s termination); the next push
+— or a manual Build — is the next attempt. So while successive commits each fail
+to boot, main stays down until the first one that boots — healed by a push,
+never by a person. A build that ended WITHOUT a verdict (killed by a signal —
+the OOM killer, a shutdown — interrupted, or superseded) judged nothing, so the
+next convergence run retries the same commit, up to `MAX_NO_VERDICT_ATTEMPTS`
+(3) attempts in a row; the run that spends the last one fails, and the gateway
+files `main-deploy-failed`. A pass that builds nothing says why: "converged" only when
+the served dist names HEAD, else the failed run and the commit still served
+(2026-11-18: a killed and a failed build were each logged "converged at <sha>"
+while main served the deploy before). A convergence run that itself fails
+(cannot decide, cannot start) is a `main-deploy-failed` report the gateway
+files; nothing retries it before the next edge.
+
+**Retrying main's current commit by hand.** The Build button (the action bar's
+build popover, or Debug → Builds) on main, or `./equin build --allow-main` in
+main's checkout: either builds `refs/heads/main` in a free slot
+(`framework/cli/build`'s slot relay), bypassing `wantsBuild`, and its row is the
+next attempt the convergence decision reads.
 
 **What the backend still does for the loop** (`machine/`) is optional and only
 what a backend alone sees: the `compositions` config changing, the
@@ -218,8 +232,11 @@ The convergence run is `wait out the build lock → decide → claim → build �
 close the row → decide again`. A finished build cannot ask for itself again
 because its attempt is in the ledger before the next decision: the build closes
 its own row on every verdict, and the run closes it (first writer wins) when the
-build ended without one. `lastClosedRun` then names this build's commit and
-`wantsBuild` answers no — for an ok build and a failed one alike.
+build ended without one. `recentClosedRuns` then names this build's commit and
+`wantsBuild` answers no — for an ok build and a failed one alike. A build that
+ended with no verdict is the one exception, and it stays bounded: this run
+stops rather than retry it, the next run retries it, and the
+`MAX_NO_VERDICT_ATTEMPTS`-th such attempt in a row ends the retries.
 
 The two other edges of the same argument:
 

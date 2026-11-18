@@ -25,6 +25,11 @@ function agoIso(ms: number): string {
   return new Date(NOW.getTime() - ms).toISOString();
 }
 
+/** The bit: does an automatic edge rebuild the composition now? */
+function wants(i: CompositionRebuildInputs): boolean {
+  return compositionWantsRebuild(i).kind === "build";
+}
+
 function inputs(
   over: Partial<CompositionRebuildInputs> = {},
 ): CompositionRebuildInputs {
@@ -34,7 +39,7 @@ function inputs(
     // every rate limit satisfied, and each test moves the ONE field it is about.
     marker: { commit: A, builtAt: agoIso(30 * 24 * HOUR) },
     head: B,
-    lastAttempt: null,
+    attempts: [],
     now: NOW,
     ...over,
   };
@@ -42,27 +47,25 @@ function inputs(
 
 describe("the mode decides whether any edge may act", () => {
   test("`off` never builds — the composition is not served at all", () => {
-    expect(compositionWantsRebuild(inputs({ mode: "off" }))).toBe(false);
+    expect(wants(inputs({ mode: "off" }))).toBe(false);
   });
 
   test("`manual` never builds — served, but hand-driven", () => {
     // The distinction the interval record keeps: `manual` is `null` (no edge
     // may act), not `0` (act at the first edge). Collapsing them would make
     // "served" imply "rebuilt", which is the mode nobody could opt out of.
-    expect(compositionWantsRebuild(inputs({ mode: "manual" }))).toBe(false);
+    expect(wants(inputs({ mode: "manual" }))).toBe(false);
   });
 
   test("`push` builds at the first edge once the commit has moved", () => {
-    expect(compositionWantsRebuild(inputs({ mode: "push" }))).toBe(true);
+    expect(wants(inputs({ mode: "push" }))).toBe(true);
   });
 
   test("an unknown mode throws rather than picking one", () => {
     // A stored value outside the union is a broken invariant, not an input:
     // defaulting would quietly rebuild (or quietly stop rebuilding) something
     // nobody asked for.
-    expect(() =>
-      compositionWantsRebuild(inputs({ mode: "nightly" })),
-    ).toThrow();
+    expect(() => wants(inputs({ mode: "nightly" }))).toThrow();
   });
 });
 
@@ -73,9 +76,7 @@ describe("an automatic trigger never MINTS a namespace", () => {
     // switching a never-served composition to `push` must not stand up an app
     // that has never existed.
     for (const mode of ["push", "hourly", "daily", "weekly"]) {
-      expect(compositionWantsRebuild(inputs({ mode, marker: null }))).toBe(
-        false,
-      );
+      expect(wants(inputs({ mode, marker: null }))).toBe(false);
     }
   });
 });
@@ -83,14 +84,12 @@ describe("an automatic trigger never MINTS a namespace", () => {
 describe("convergence — the same policy main's own auto-build runs", () => {
   test("the marker's commit IS this checkout's HEAD ⇒ no build", () => {
     expect(
-      compositionWantsRebuild(
-        inputs({ marker: { commit: B, builtAt: agoIso(30 * 24 * HOUR) } }),
-      ),
+      wants(inputs({ marker: { commit: B, builtAt: agoIso(30 * 24 * HOUR) } })),
     ).toBe(false);
   });
 
   test("behind, `push`, nothing attempted ⇒ build", () => {
-    expect(compositionWantsRebuild(inputs({ lastAttempt: null }))).toBe(true);
+    expect(wants(inputs({ attempts: [] }))).toBe(true);
   });
 
   test("TERMINATION: this target already attempted ⇒ no build, ok or failed", () => {
@@ -99,18 +98,38 @@ describe("convergence — the same policy main's own auto-build runs", () => {
     // property is the whole reason this function has no termination clause of
     // its own.
     expect(
-      compositionWantsRebuild(
-        inputs({ lastAttempt: { commit: B, ok: false } }),
+      wants(
+        inputs({ attempts: [{ id: "build-b", commit: B, outcome: "failed" }] }),
       ),
     ).toBe(false);
     expect(
-      compositionWantsRebuild(inputs({ lastAttempt: { commit: B, ok: true } })),
+      wants(
+        inputs({ attempts: [{ id: "build-b", commit: B, outcome: "ok" }] }),
+      ),
     ).toBe(false);
+  });
+
+  test("a killed attempt at this target is retried, as main's own is", () => {
+    expect(
+      compositionWantsRebuild(
+        inputs({
+          attempts: [{ id: "build-b", commit: B, outcome: "no-verdict" }],
+        }),
+      ),
+    ).toEqual({ kind: "build", retry: 1 });
+  });
+
+  test("the composition's own clauses answer `not-due`, not a policy reason", () => {
+    expect(compositionWantsRebuild(inputs({ mode: "off" }))).toEqual({
+      kind: "not-due",
+    });
   });
 
   test("an attempt for the PREVIOUS commit does not stop the rebuild", () => {
     expect(
-      compositionWantsRebuild(inputs({ lastAttempt: { commit: A, ok: true } })),
+      wants(
+        inputs({ attempts: [{ id: "build-a", commit: A, outcome: "ok" }] }),
+      ),
     ).toBe(true);
   });
 
@@ -118,27 +137,25 @@ describe("convergence — the same policy main's own auto-build runs", () => {
     // Markers written before the `commit` field cannot name one. An unresolved
     // pin reads as `behind`, never as converged, so the namespace rebuilds and
     // the build stamps a marker that can answer next time.
+    expect(wants(inputs({ marker: { builtAt: agoIso(30 * 24 * HOUR) } }))).toBe(
+      true,
+    );
     expect(
-      compositionWantsRebuild(
-        inputs({ marker: { builtAt: agoIso(30 * 24 * HOUR) } }),
-      ),
-    ).toBe(true);
-    expect(
-      compositionWantsRebuild(
+      wants(
         inputs({ marker: { commit: null, builtAt: agoIso(30 * 24 * HOUR) } }),
       ),
     ).toBe(true);
   });
 
   test("no HEAD ⇒ no build — nothing to converge toward", () => {
-    expect(compositionWantsRebuild(inputs({ head: null }))).toBe(false);
+    expect(wants(inputs({ head: null }))).toBe(false);
   });
 });
 
 describe("the rate limit is the entire content of a cadence", () => {
   test("hourly, built 10 minutes ago ⇒ not due", () => {
     expect(
-      compositionWantsRebuild(
+      wants(
         inputs({
           mode: "hourly",
           marker: { commit: A, builtAt: agoIso(10 * 60 * 1000) },
@@ -149,7 +166,7 @@ describe("the rate limit is the entire content of a cadence", () => {
 
   test("hourly, built 2 hours ago and behind ⇒ due", () => {
     expect(
-      compositionWantsRebuild(
+      wants(
         inputs({
           mode: "hourly",
           marker: { commit: A, builtAt: agoIso(2 * HOUR) },
@@ -160,17 +177,13 @@ describe("the rate limit is the entire content of a cadence", () => {
 
   test("daily and weekly hold a composition that hourly would release", () => {
     const twoHoursAgo = { commit: A, builtAt: agoIso(2 * HOUR) };
-    expect(
-      compositionWantsRebuild(inputs({ mode: "daily", marker: twoHoursAgo })),
-    ).toBe(false);
-    expect(
-      compositionWantsRebuild(inputs({ mode: "weekly", marker: twoHoursAgo })),
-    ).toBe(false);
+    expect(wants(inputs({ mode: "daily", marker: twoHoursAgo }))).toBe(false);
+    expect(wants(inputs({ mode: "weekly", marker: twoHoursAgo }))).toBe(false);
   });
 
   test("`push` is rate limit ZERO, not 'no rate limit' — a marker stamped this instant still builds", () => {
     expect(
-      compositionWantsRebuild(
+      wants(
         inputs({
           mode: "push",
           marker: { commit: A, builtAt: NOW.toISOString() },
@@ -184,7 +197,7 @@ describe("the rate limit is the entire content of a cadence", () => {
     // comparison, so a composition that genuinely IS behind still waits out its
     // cadence. Without this the cadences would collapse into `push`.
     expect(
-      compositionWantsRebuild(
+      wants(
         inputs({
           mode: "weekly",
           marker: { commit: A, builtAt: agoIso(HOUR) },
@@ -197,9 +210,7 @@ describe("the rate limit is the entire content of a cadence", () => {
     // A marker-less composition has no `builtAt` to measure from, so reaching
     // the rate limit at all would mean choosing a fallback instant — and every
     // choice of one either mints the namespace or strands it.
-    expect(
-      compositionWantsRebuild(inputs({ mode: "weekly", marker: null })),
-    ).toBe(false);
+    expect(wants(inputs({ mode: "weekly", marker: null }))).toBe(false);
   });
 
   test("an unparseable builtAt is treated as DUE, never as stranded", () => {
@@ -208,7 +219,7 @@ describe("the rate limit is the entire content of a cadence", () => {
     // The convergence clause still gates it, so a converged namespace with a
     // corrupt instant does not build.
     expect(
-      compositionWantsRebuild(
+      wants(
         inputs({
           mode: "weekly",
           marker: { commit: A, builtAt: "not a date" },
@@ -216,7 +227,7 @@ describe("the rate limit is the entire content of a cadence", () => {
       ),
     ).toBe(true);
     expect(
-      compositionWantsRebuild(
+      wants(
         inputs({
           mode: "weekly",
           marker: { commit: B, builtAt: "not a date" },

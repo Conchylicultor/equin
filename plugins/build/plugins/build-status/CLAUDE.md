@@ -55,6 +55,7 @@ disappearing.
     - `build/build-fix`
     - `build/build-info`
     - `build/build-termination`
+    - `build/converge`
     - `build/runs-arm`
     - `framework/cli/build`
 - Core:

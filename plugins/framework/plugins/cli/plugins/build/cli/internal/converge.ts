@@ -26,7 +26,12 @@ import {
 import {
   convergenceBuild,
   decideConvergence,
+  describeNothingToBuild,
 } from "@plugins/build/plugins/converge/cli";
+import {
+  buildStatusOf,
+  killedSignalName,
+} from "@plugins/build/plugins/build-status/core";
 import type {
   GatewayFollowOutcome,
   followMainGateway,
@@ -75,15 +80,25 @@ export interface ConvergeOptions {
  * the compositions — is ONE build (`convergenceBuild`: one slot, one row with
  * every target); the run loops until the decision is empty.
  *
- * Why it terminates: `wantsBuild` refuses a target already attempted, ok or
- * failed, and the row of the build that just ran is closed before the next
- * decision (by the build itself, else here). A HEAD whose build failed is
- * therefore DECIDED, not retried — the next push is the next attempt. A pass
- * that would repeat the build it just ran is a broken ledger, and throws.
+ * Why it terminates: `wantsBuild` refuses a target whose build gave a verdict,
+ * ok or failed, and the row of the build that just ran is closed before the
+ * next decision (by the build itself, else here). A HEAD whose build failed is
+ * therefore DECIDED, not retried — the next push (or a manual Build) is the
+ * next attempt. A build that ended with no verdict (killed by the OOM killer,
+ * interrupted, superseded) is retried by the NEXT run, a bounded number of
+ * times (`MAX_NO_VERDICT_ATTEMPTS`), never by this one; the run that spends
+ * the last one fails, so the gateway files a `main-deploy-failed` report. A pass
+ * that would repeat the build it just ran for any other reason is a broken
+ * ledger, and throws.
+ *
+ * A pass that builds nothing says why (`describeNothingToBuild`): "converged"
+ * only when the served dist names HEAD, else the failed run and the commit
+ * still served.
  *
  * The exit status is about the RUN, not the builds it started: 0 when it
- * converged (whatever each build's verdict — that is in the ledger and the
- * bell), non-zero only when it could not decide or start. The gateway files a
+ * converged or decided (whatever each build's verdict — that is in the ledger,
+ * the bell and a failed main build's `build-failed` report), non-zero when it
+ * could not decide or start, or when it spent a commit's last no-verdict retry. The gateway files a
  * non-zero exit as a `main-deploy-failed` report.
  *
  * It converges THE CHECKOUT IT RUNS IN — its own app, and on main's checkout
@@ -271,8 +286,10 @@ async function convergeBuilds(
     if (!followed) finishBuildSubSteps(true);
   };
   try {
-    let previous: string | null = null;
     let built = false;
+    // `<head> <target>` of every build this run made, and their run ids.
+    const builtHere = new Set<string>();
+    const ranHere = new Set<string>();
     for (;;) {
       await waitForArtifactLock(root);
       const decision = await decideConvergence({
@@ -290,18 +307,46 @@ async function convergeBuilds(
       // pass: a build is of one commit.
       const build = convergenceBuild(decision);
       if (build === null) {
-        log(`converged at ${head}: nothing to build`);
+        const said = describeNothingToBuild(decision);
         if (!built) builtElsewhere();
+        if (said.level === "error" && built) {
+          // This run spent the commit's last no-verdict retry: nothing
+          // automatic will try it again, so fail the run and the gateway files
+          // it (`main-deploy-failed`) where people look. Once — a later run
+          // deciding the same says so in its log only, or every trigger (the
+          // quarter-hourly composition tick) would file it again.
+          console.error(`[converge] ${said.line}`);
+          return 1;
+        }
+        log(said.line);
         return 0;
       }
-      const { targets, key } = build;
-      if (key === previous) {
-        throw new Error(
-          `[converge] the build of ${targets.join(", ")} at ${head} just ran, and the decision ` +
-            "still wants it: its attempt is not in the ledger, so this loop would not terminate.",
+      const { targets } = build;
+      const head40 = decision.head ?? "-";
+      const again = targets.filter((t) => builtHere.has(`${head40} ${t}`));
+      if (again.length > 0) {
+        // A target this run already built at this HEAD is wanted again. Fine
+        // only as a retry of the very build this run made, ended with no
+        // verdict (killed, interrupted, superseded) — and not here: whatever
+        // ended it (the host's memory, a shutdown) is likely still true this
+        // second. The next convergence trigger retries it, boundedly
+        // (`wantsBuild`'s MAX_NO_VERDICT_ATTEMPTS). Anything else means the
+        // ledger lost this run's attempt, and the loop would not terminate.
+        const retriesOwnBuild = again.every((t) =>
+          decision.retries.some((r) => r.target === t && ranHere.has(r.newest)),
         );
+        if (!retriesOwnBuild) {
+          throw new Error(
+            `[converge] the build of ${again.join(", ")} at ${head} just ran, and the decision ` +
+              "still wants it: its attempt is not in the ledger, so this loop would not terminate.",
+          );
+        }
+        log(
+          `the build of ${again.join(", ")} at ${head} ended without a verdict: ` +
+            "not retried in this run — the next convergence trigger retries it",
+        );
+        return 0;
       }
-      previous = key;
       // Main's build is of ONE commit, checked out into a slot: refuse before
       // claiming a row when git named none.
       if (checkout.kind === "main") slotSha(decision.head);
@@ -322,7 +367,15 @@ async function convergeBuilds(
         if (!built) builtElsewhere();
         return 0;
       }
-      log(`building ${targets.join(", ")} at ${head} — ${buildId}`);
+      const retrying = targets.filter((t) =>
+        decision.retries.some((r) => r.target === t),
+      );
+      log(
+        `building ${targets.join(", ")} at ${head} — ${buildId}` +
+          (retrying.length > 0
+            ? ` (retrying ${retrying.join(", ")}: an earlier build of this commit ended without a verdict)`
+            : ""),
+      );
       const buildArgs = [
         "build",
         "--allow-main",
@@ -381,7 +434,9 @@ async function convergeBuilds(
       // the next decision sees this attempt. First writer wins.
       if (claim === "claimed") await recorder.closeRun(buildId, exitCode);
       built = true;
-      log(`build ${buildId} exited ${exitCode}`);
+      ranHere.add(buildId);
+      for (const t of targets) builtHere.add(`${head40} ${t}`);
+      log(`build ${buildId} exited ${exitCode}${describeExit(exitCode)}`);
       // No ledger to record the attempt in, so the ledger cannot end the loop:
       // one build, then stop. The next edge decides against the ledger this
       // build created.
@@ -389,6 +444,23 @@ async function convergeBuilds(
     }
   } finally {
     await recorder.close();
+  }
+}
+
+/** What a build's exit code says, in the status words its run badge uses. */
+function describeExit(exitCode: number): string {
+  const status = buildStatusOf({ finishedAt: new Date(), exitCode });
+  switch (status) {
+    case "success":
+    case "running":
+      return "";
+    case "failed":
+      return " (failed)";
+    case "killed":
+      return ` (killed: ${killedSignalName(exitCode)} — not a verdict on the code)`;
+    case "interrupted":
+    case "superseded":
+      return ` (${status} — not a verdict on the code)`;
   }
 }
 

@@ -27,6 +27,7 @@ import {
 import {
   closeRunOn,
   lastClosedRunOn,
+  recentClosedRunsOn,
   recordRunCommitOn,
 } from "../../shared/recorder";
 import { _buildRuns } from "./tables";
@@ -173,5 +174,37 @@ describe("lastClosedRunOn", () => {
         "claimed-at",
       ),
     ).toEqual({ kind: "none" });
+  });
+});
+
+describe("recentClosedRunsOn", () => {
+  test("the newest closed runs, newest first, up to the limit", async () => {
+    // What the convergence decision reads: two killed attempts at fff behind
+    // a failed one at eee, and an open run that is not an attempt yet.
+    for (const [commit, exitCode, at] of [
+      ["eee", 1, 1000],
+      ["fff", 143, 2000],
+      ["fff", 137, 3000],
+      ["ggg", null, 4000],
+    ] as const)
+      await run({
+        targets: [MAIN_COMPOSITION_ID],
+        commit,
+        exitCode,
+        startedAt: new Date(at),
+      });
+    const recent = await recentClosedRunsOn(
+      t.db,
+      NS,
+      { includes: MAIN_COMPOSITION_ID },
+      2,
+    );
+    expect(recent.kind).toBe("runs");
+    if (recent.kind !== "runs") return;
+    expect(recent.runs.map((r) => [r.commitHash, r.exitCode])).toEqual([
+      ["fff", 137],
+      ["fff", 143],
+    ]);
+    expect(recent.runs[0]?.finishedAt).toBeInstanceOf(Date);
   });
 });

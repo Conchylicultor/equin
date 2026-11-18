@@ -15614,6 +15614,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build/build-fix`
           - `build/build-info`
           - `build/build-termination`
+          - `build/converge`
           - `build/runs-arm`
           - `framework/cli/build`
       - Core:
@@ -15684,6 +15685,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `convergenceBuild`
           - `decideConvergence`
+          - `describeNothingToBuild`
       - Cross-plugin:
         - Imported by: `framework/cli/build`
     - **`deployment`** — The client half of the deployment description: `useDeployment()` composes THIS tab's own baked pin in beside the server's two deployable carriers, and `<DeploymentChain/>` renders the four arms — one commit row when converged, the chain with a carrier chip on each carrier's own commit when behind, and the raw pins plus the reason when there is no line to draw. Also eagerly registers the boot-critical build.deployment resource descriptor so boot-snapshot can hydrate it before first paint.
@@ -15735,6 +15737,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/live-state.unresolved`
           - `primitives/commit-list.CommitRowSchema`
         - Exports (types):
+          - `AutoBuildDecision`
           - `BuildAttempt`
           - `Carrier`
           - `CarrierId`
@@ -15752,6 +15755,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `deployment`
           - `deploymentOf`
           - `DeploymentStateSchema`
+          - `MAX_NO_VERDICT_ATTEMPTS`
           - `NO_CHAIN`
           - `sameCommit`
           - `wantsBuild`
@@ -31929,16 +31933,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `INSTALL_VERB`
         - **`build`** — `./equin build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
           - Cli:
-            - Uses: 73 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
+            - Uses: 74 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
               - `framework/cli/op-runtime` ×32
               - `installer` ×5
               - `framework/cli/bootstrap` ×4
               - `framework/tooling/web-artifacts` ×4
+              - `build/converge` ×3
               - `framework/cli/migrations` ×3
               - `framework/tooling/web-artifacts/served-addresses` ×3
               - `installer/waits` ×3
               - `plugin-meta/plugin-records` ×3
-              - `build/converge` ×2
               - `debug/profiling/op-log` ×2
               - `infra/git/main-slots` ×2
               - `build/central-build-id.centralBuildOf`

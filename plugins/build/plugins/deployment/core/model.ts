@@ -163,19 +163,59 @@ export const DeploymentStateSchema = z.discriminatedUnion("kind", [
 export type DeploymentState = z.infer<typeof DeploymentStateSchema>;
 
 /**
- * What the last build attempt was FOR, read straight off `build_runs`
- * (`commitHash` + `exitCode`) — there is no new storage behind this.
+ * One closed build attempt, read straight off `build_runs` (`id`,
+ * `commitHash`, and `exitCode` read as a status) — there is no new storage
+ * behind this.
  *
- * `ok` is carried but deliberately NOT consulted by {@link wantsBuild}: a build
- * that failed and a build that succeeded both consume the target they were for.
- * Retrying a failure automatically is exactly the loop the termination clause
- * exists to prevent, so the outcome must not enter the decision. It is on the
- * type so the fact stays visible at the call site instead of being invisible.
+ * `outcome` says whether the attempt is a VERDICT on the code it built:
+ *
+ * - `ok` / `failed` are. A target whose build gave one is consumed: retrying
+ *   a deterministic failure automatically is exactly the loop the termination
+ *   clause of {@link wantsBuild} exists to prevent.
+ * - `no-verdict` is a build that ended without judging the code — killed by a
+ *   signal from outside (the OOM killer, a host shutdown), interrupted (its
+ *   process vanished), or superseded. The same commit may be tried again, a
+ *   bounded number of times (`MAX_NO_VERDICT_ATTEMPTS`).
  */
 export interface BuildAttempt {
+  /** The run's id — what its run-detail pane opens. */
+  id: string;
   commit: string | null;
-  ok: boolean;
+  outcome: "ok" | "failed" | "no-verdict";
 }
+
+/**
+ * How many attempts at ONE commit may end without a verdict before the
+ * convergence run stops trying it. Three: one killed build is routinely the
+ * host (memory pressure, a sleep), three in a row is something a person has to
+ * look at — and each attempt costs a full build.
+ */
+export const MAX_NO_VERDICT_ATTEMPTS = 3;
+
+/**
+ * Why an automatic build is, or is not, wanted — the reason, not just the
+ * bit, so the convergence run never says "converged" about a deployment that
+ * is not (2026-11-18: a killed and a failed build were both logged as
+ * "converged at <sha>: nothing to build" while main served an older commit).
+ *
+ * - `build` — wanted. `retry` is how many earlier attempts at this commit ended
+ *   without a verdict (0 for a first attempt).
+ * - `converged` — every deployable carrier is at the target.
+ * - `unknown` — nothing to converge toward, or nothing materialized to compare.
+ * - `failed` — the target's newest verdict is a failed build: decided, not
+ *   retried; the next push (or a manual Build) is the next attempt.
+ * - `built` — the target's build passed, yet a carrier is not at it (a mixed
+ *   boot): not rebuilt automatically, see {@link wantsBuild}.
+ * - `retries-spent` — the target's last {@link MAX_NO_VERDICT_ATTEMPTS}
+ *   attempts all ended without a verdict.
+ */
+export type AutoBuildDecision =
+  | { kind: "build"; retry: number }
+  | { kind: "converged" }
+  | { kind: "unknown" }
+  | { kind: "failed"; attempt: BuildAttempt }
+  | { kind: "built"; attempt: BuildAttempt }
+  | { kind: "retries-spent"; attempts: BuildAttempt[] };
 
 // Git's own shortest unambiguous abbreviation. Below this a prefix match is not
 // evidence of anything.

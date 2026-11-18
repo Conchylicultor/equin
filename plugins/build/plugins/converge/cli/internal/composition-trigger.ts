@@ -4,7 +4,10 @@ import {
 } from "@plugins/network/plugins/live/plugins/live-state/core";
 import { autoRebuildIntervalMs } from "@plugins/plugin-meta/plugins/composition/core";
 import { wantsBuild } from "@plugins/build/plugins/deployment/core";
-import type { BuildAttempt } from "@plugins/build/plugins/deployment/core";
+import type {
+  AutoBuildDecision,
+  BuildAttempt,
+} from "@plugins/build/plugins/deployment/core";
 
 /**
  * Everything the rebuild question is asked about, as plain data.
@@ -23,9 +26,19 @@ export interface CompositionRebuildInputs {
   marker: { commit?: string | null; builtAt: string } | null;
   /** This checkout's HEAD — the target the composition converges toward. */
   head: string | null;
-  lastAttempt: BuildAttempt | null;
+  /** This composition's newest closed build attempts, newest first (`wantsBuild`). */
+  attempts: readonly BuildAttempt[];
   now: Date;
 }
+
+/**
+ * A composition's answer: `not-due` when its own clauses (mode, nothing
+ * served, rate limit, no head) say no edge acts now, else main's own policy's
+ * answer (`wantsBuild`) — a reason, so the run can say why it built nothing.
+ */
+export type CompositionWant = { kind: "not-due" } | AutoBuildDecision;
+
+const NOT_DUE: CompositionWant = { kind: "not-due" };
 
 /**
  * Should an automatic edge rebuild this composition right now?
@@ -43,21 +56,25 @@ export interface CompositionRebuildInputs {
  * inherits the same guarantees, already unit-tested next door:
  *
  * - **converged ⇒ no build** — the marker's commit is this checkout's HEAD.
- * - **termination** — a target already attempted, ok OR failed, is not
- *   re-attempted, so a composition that cannot build does not rebuild for ever.
+ * - **termination** — a target whose build gave a verdict, ok OR failed, is
+ *   not re-attempted, and one killed from outside is retried only a bounded
+ *   number of times, so a composition that cannot build does not rebuild for
+ *   ever.
  *   That is why there is no second termination clause here; adding one would be
  *   a competing spelling of the property, which is how the 2026-08-19 incident
  *   started.
  *
  * The arms below run in this order, and the order is the content:
  */
-export function compositionWantsRebuild(i: CompositionRebuildInputs): boolean {
+export function compositionWantsRebuild(
+  i: CompositionRebuildInputs,
+): CompositionWant {
   // 1. A mode that is never automatic. `off` is not served at all and `manual`
   //    is served but hand-driven; both say "no edge may act", which is a
   //    different statement from "not due yet" — the `null` vs `0` distinction
   //    `AUTO_REBUILD_INTERVAL_MS` exists to keep unspellable.
   const intervalMs = autoRebuildIntervalMs(i.mode);
-  if (intervalMs === null) return false;
+  if (intervalMs === null) return NOT_DUE;
 
   // 2. Nothing is served at this namespace. An automatic trigger must never
   //    MINT one: claiming a namespace provisions a gateway registry dir, a
@@ -65,7 +82,7 @@ export function compositionWantsRebuild(i: CompositionRebuildInputs): boolean {
   //    pressing Serve. A guard, not an optimisation — without it, switching a
   //    never-served composition to `push` would silently stand up an app
   //    nobody asked to exist.
-  if (i.marker === null) return false;
+  if (i.marker === null) return NOT_DUE;
 
   // 3. The rate limit — the whole content of a mode. Measured from the last
   //    build's own recorded instant, so a cadence cannot drift with how often
@@ -79,11 +96,11 @@ export function compositionWantsRebuild(i: CompositionRebuildInputs): boolean {
   //    comparison then declines to repeat.
   const builtAtMs = Date.parse(i.marker.builtAt);
   if (!Number.isNaN(builtAtMs) && i.now.getTime() - builtAtMs < intervalMs)
-    return false;
+    return NOT_DUE;
 
   // 4. No target to converge toward — the arm `wantsBuild` opens with, stated
   //    here too because the marker-as-carrier below needs a resolved head.
-  if (i.head === null) return false;
+  if (i.head === null) return NOT_DUE;
 
   // 5. The SAME policy main's own auto-build runs, over a deployment whose one
   //    deployable carrier IS the marker. The composition's namespace serves a
@@ -118,6 +135,6 @@ export function compositionWantsRebuild(i: CompositionRebuildInputs): boolean {
         },
       ],
     },
-    i.lastAttempt,
+    i.attempts,
   );
 }

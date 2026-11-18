@@ -6,6 +6,7 @@ import {
   closeRunOn,
   insertRunOn,
   lastClosedRunOn,
+  recentClosedRunsOn,
   recordRunCommitOn,
   type BuildRunRecorder,
 } from "../../shared/recorder";
@@ -35,8 +36,8 @@ export function createBuildRunRecorder(namespace: Namespace): BuildRunRecorder {
       recordRunCommitOn((await open()).db, id, commitHash),
     closeRun: async (id, exitCode) =>
       closeRunOn((await open()).db, id, exitCode),
-    lastClosedRun: async (target) =>
-      lastClosedRunOn((await open()).db, namespace, target),
+    recentClosedRuns: async (target, limit) =>
+      recentClosedRunsOn((await open()).db, namespace, target, limit),
     lastClosedRunOf: async (target, commit) =>
       lastClosedRunOn((await open()).db, namespace, target, commit),
     close: async () => {

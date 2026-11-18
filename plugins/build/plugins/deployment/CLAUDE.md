@@ -32,15 +32,24 @@ in both, and git-watcher already tracks both refs. The exception is a main SLOT
 without db / config / git singletons (`core/derive.test.ts`):
 
 - `convergenceOf(d)` → `converged | behind | diverged | unknown`
-- `wantsBuild(d, lastAttempt)` → the ENTIRE auto-build policy
+- `wantsBuild(d, attempts)` → the ENTIRE auto-build policy, as a reason:
+  `build` (with how many earlier no-verdict attempts it retries), or why not —
+  `converged`, `unknown`, `failed`, `built` (passed, a carrier still not at
+  it), `retries-spent`
 
-Two properties live there and nowhere else:
+Three properties live there and nowhere else:
 
-- **Termination.** `lastAttempt.commit === target` ⇒ no build. Without it a
-  commit that cannot build rebuilds for ever, because a failed build leaves the
-  carriers behind permanently. It is stated as its own fact rather than encoded
-  in the choice of what to compare against — that encoding is what produced the
-  2026-08-19 incident.
+- **Termination.** The target's newest attempt with a VERDICT — ok or failed —
+  ⇒ no build. Without it a commit that cannot build rebuilds for ever, because
+  a failed build leaves the carriers behind permanently. It is stated as its
+  own fact rather than encoded in the choice of what to compare against — that
+  encoding is what produced the 2026-08-19 incident.
+- **No verdict, bounded retry.** A build killed from outside (OOM, shutdown),
+  interrupted or superseded judged nothing (`BuildAttempt.outcome:
+  "no-verdict"`, from `build-status`'s `buildStatusOf`): the same target is
+  attempted again, up to `MAX_NO_VERDICT_ATTEMPTS` (3) in a row, then
+  `retries-spent`. Before 2026-11-18 such a build consumed the target, and main
+  kept serving its previous deploy until the next push.
 - **Deployable only.** `wantsBuild` ranges over `d.deployable`. A stale tab
   produces a reload affordance, never a build.
 
@@ -276,6 +285,7 @@ convergence mechanisms all missing it) and the design.
     - `network/live/live-state.unresolved`
     - `primitives/commit-list.CommitRowSchema`
   - Exports (types):
+    - `AutoBuildDecision`
     - `BuildAttempt`
     - `Carrier`
     - `CarrierId`
@@ -293,6 +303,7 @@ convergence mechanisms all missing it) and the design.
     - `deployment`
     - `deploymentOf`
     - `DeploymentStateSchema`
+    - `MAX_NO_VERDICT_ATTEMPTS`
     - `NO_CHAIN`
     - `sameCommit`
     - `wantsBuild`

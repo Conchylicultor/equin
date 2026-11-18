@@ -1,9 +1,10 @@
-import { sameCommit } from "./model";
+import { MAX_NO_VERDICT_ATTEMPTS, sameCommit } from "./model";
 import {
   resolved,
   unresolved,
 } from "@plugins/network/plugins/live/plugins/live-state/core";
 import type {
+  AutoBuildDecision,
   BuildAttempt,
   ConvergenceKind,
   Deployment,
@@ -45,19 +46,32 @@ export function convergenceOf(d: Deployment): ConvergenceKind {
 }
 
 /**
- * The ENTIRE auto-build policy, as a pure function of durable state.
+ * The ENTIRE auto-build policy, as a pure function of durable state: whether
+ * an automatic build is wanted, and when it is not, why.
  *
- * The point of extracting it is that the two properties the design rests on are
- * decidable here, with no db / config / git singleton in reach:
+ * `attempts` is the target app's newest closed build attempts, newest first —
+ * at least {@link MAX_NO_VERDICT_ATTEMPTS} of them when there are that many
+ * (fewer are read as "that is all there is").
+ *
+ * The properties the design rests on are decidable here, with no db / config /
+ * git singleton in reach:
  *
  * **Termination.** A build that fails leaves the deployable carriers behind
  * permanently, so "not converged ⇒ build" alone would rebuild the same broken
- * commit for ever. The second clause stops that by asking whether this target
- * has ALREADY been attempted — stated as its own fact, rather than encoded in
- * the choice of which commit to compare against. That encoding is what produced
+ * commit for ever. So a target whose build gave a VERDICT (ok or failed) is
+ * not attempted again — stated as its own fact, rather than encoded in the
+ * choice of which commit to compare against. That encoding is what produced
  * the original bug: the old decision compared against the commit the finished
  * build claimed, and the dist's pin recorded a commit the bundle was not built
  * from, so the two agreed while the app served the wrong bytes.
+ *
+ * **A build with no verdict is retried, boundedly.** A build killed from
+ * outside (the OOM killer, a shutdown), interrupted or superseded said nothing
+ * about the code; consuming the target with it left main on its previous
+ * deploy until the next push (2026-11-18, a fresh Linux VM). So such a target
+ * is attempted again — up to {@link MAX_NO_VERDICT_ATTEMPTS} attempts in a
+ * row, then `retries-spent`. The bound is what keeps termination: a commit
+ * whose build is killed every time (it runs the host out of memory) stops.
  *
  * **It ranges over the DEPLOYABLE carriers only.** `d.deployable` never contains
  * the tab; a stale tab produces a reload affordance, never a build. Otherwise a
@@ -70,38 +84,44 @@ export function convergenceOf(d: Deployment): ConvergenceKind {
  */
 export function wantsBuild(
   d: Deployment,
-  lastAttempt: BuildAttempt | null,
-): boolean {
-  if (!d.target.resolved) return false;
+  attempts: readonly BuildAttempt[],
+): AutoBuildDecision {
+  if (!d.target.resolved) return { kind: "unknown" };
   const kind = convergenceOf(d);
-  if (kind === "converged" || kind === "unknown") return false;
-  // Already tried this target — ok or failed, the outcome deliberately does not
-  // enter it (see BuildAttempt.ok). A `null` commit on the attempt means the row
-  // cannot say what it was for, which is not evidence that this target was
-  // attempted, so it does not stop the build; the build it mints records a
-  // commit, so the chain still terminates after exactly one extra run.
-  //
-  // ABSOLUTE — no carrier state exempts a target from it, and in particular an
-  // `unresolved` pin does not. It is tempting to exempt one: a mixed-boot server
-  // is not converged, and a rebuild + restart is what would clear it. But if a
-  // pin is unresolvable for a PERSISTENT reason rather than a transient one (the
-  // module-eval sample fails while `target` still resolves), that exemption is an
-  // unbounded loop — every build restarts the backend, the new process fails the
-  // sample again, and it rebuilds for ever. Termination is the only thing
-  // standing between this reconciler and that loop, so it does not get holes.
+  if (kind === "unknown") return { kind: "unknown" };
+  if (kind === "converged") return { kind: "converged" };
+  const target = d.target.value;
+  // The attempts AT this target: the newest ones, up to the first that was for
+  // another commit. An attempt with a `null` commit cannot say what it was for,
+  // which is not evidence that this target was attempted, so it ends the run
+  // too; the build it mints records a commit, so the chain still terminates.
+  const atTarget: BuildAttempt[] = [];
+  for (const a of attempts) {
+    if (a.commit === null || !sameCommit(a.commit, target)) break;
+    atTarget.push(a);
+  }
+  // The newest verdict at this target decides — ABSOLUTE, no carrier state
+  // exempts a target from it, and in particular an `unresolved` pin does not.
+  // It is tempting to exempt one: a mixed-boot server is not converged, and a
+  // rebuild + restart is what would clear it. But if a pin is unresolvable for
+  // a PERSISTENT reason rather than a transient one (the module-eval sample
+  // fails while `target` still resolves), that exemption is an unbounded loop —
+  // every build restarts the backend, the new process fails the sample again,
+  // and it rebuilds for ever.
   //
   // What that costs: a mixed-boot server is NOT self-healing through auto-build.
   // It stays mixed until the target next moves. Acceptable, because the state is
-  // now loudly visible rather than silent (the chain renders it as not
-  // converged — the entire point of this redesign), and a manual Build bypasses
-  // `wantsBuild` by design, so a human has a one-click escape hatch.
-  if (
-    lastAttempt !== null &&
-    lastAttempt.commit !== null &&
-    sameCommit(lastAttempt.commit, d.target.value)
-  )
-    return false;
-  return true;
+  // loudly visible (the chain renders it as not converged), and a manual Build
+  // bypasses this by design, so a human has a one-click escape hatch.
+  const noVerdict: BuildAttempt[] = [];
+  for (const a of atTarget) {
+    if (a.outcome === "ok") return { kind: "built", attempt: a };
+    if (a.outcome === "failed") return { kind: "failed", attempt: a };
+    noVerdict.push(a);
+  }
+  if (noVerdict.length >= MAX_NO_VERDICT_ATTEMPTS)
+    return { kind: "retries-spent", attempts: noVerdict };
+  return { kind: "build", retry: noVerdict.length };
 }
 
 /**

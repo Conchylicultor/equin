@@ -19,8 +19,9 @@ is the policy, run by the commit being deployed:
   `cli/internal/converge.ts`).
   `convergenceBuild` turns a decision into the pass's ONE build: every app
   due at the decided HEAD (main's own first, then the compositions) as one
-  invocation and one `build_runs` row — its `(head, targets)` key is the
-  loop-termination check. On main it runs in a slot: `runInBuildSlot`
+  invocation and one `build_runs` row; a target the run already built at
+  that HEAD is never built again by the same run (a lost ledger write
+  throws). On main it runs in a slot: `runInBuildSlot`
   (`infra/git/main-slots`) checks the decided commit (the target:
   `refs/heads/main`) out into a free slot no push writes into, hands it to
   `<slot>/equin build`, and that build points each target's
@@ -81,15 +82,40 @@ whose backend does not come up rolls its dist back. What it cannot see (a mixed
 boot, a crash on the same code later) is nothing a rebuild of the same commit
 fixes, and `wantsBuild`'s termination refuses that rebuild anyway.
 
-## Termination, and no retry
+## Termination, and which builds are retried
 
-`wantsBuild` refuses a target already attempted, ok or failed, and the run
-closes the row of the build it started before deciding again. A HEAD whose
-build failed is decided, not retried: the next push is the next attempt. So a
-string of commits that each fail to boot keeps main down until the first one
-that boots — a push heals it, never a person. A pass that would repeat the
-build it just ran means the ledger lost the attempt, and the run throws (a
-`main-deploy-failed` report) instead of looping.
+`wantsBuild` refuses a target whose build gave a VERDICT, ok or failed, and the
+run closes the row of the build it started before deciding again. A HEAD whose
+build failed is decided, not retried: the next push (or a manual Build — the
+build popover or Debug → Builds on main, or `./equin build --allow-main` in
+main's checkout) is the next attempt. So a string of commits that each fail to
+boot keeps main down until the first one that boots — a push heals it, never a
+person. A failed build of main is a `build-failed` report and a bell
+(`build/failure-report`), and the run's log says it: `deploy of <head> failed
+(<run>): still serves <older>`.
+
+A build with NO verdict — killed by a signal (the OOM killer, a shutdown),
+interrupted, superseded — judged nothing, so it does not consume the target:
+the NEXT convergence run retries it (never the same run: what ended it is
+likely still true that second), up to `MAX_NO_VERDICT_ATTEMPTS` (3) attempts in
+a row. The run that spends the last one says so and exits non-zero, so the
+gateway files `main-deploy-failed` once; until a push or a manual Build, each
+later trigger says so in its log only (the quarter-hourly composition tick
+would otherwise file it ~96 times a day).
+
+Two limits of the retry: a killed composition build that got as far as
+stamping its `composition.json` marker reads as converged (the marker is its
+carrier), so it is not retried; and a host OOM kill usually takes a build's
+child (vite, tsc), not the build itself — the build then reports a failed step
+and exits 1, a `failed` verdict that is not retried. On 2026-11-18 the build
+itself took the signal (exit 143). Before 2026-11-18 such a build consumed the target, and
+on a fresh Linux VM an OOM-killed build left main on its previous deploy while
+the log said "converged".
+
+A pass that builds nothing says why (`describeNothingToBuild`): "converged"
+only when the served dist names HEAD. A pass that would repeat the build it
+just ran, other than such a retry, means the ledger lost the attempt, and the
+run throws (a `main-deploy-failed` report) instead of looping.
 
 **Not main only.** `--converge` converges the checkout it runs in; only the
 composition half is main's. The gateway runs it for main alone, and in any
@@ -127,6 +153,7 @@ proof used: a throwaway clone standing in for main
   - Exports (values):
     - `convergenceBuild`
     - `decideConvergence`
+    - `describeNothingToBuild`
 - Cross-plugin:
   - Imported by: `framework/cli/build`
 

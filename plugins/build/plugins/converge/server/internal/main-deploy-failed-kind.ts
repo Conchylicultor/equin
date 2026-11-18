@@ -40,7 +40,9 @@ function renderDescription(row: ReportRow, d: MainDeployFailedPayload): string {
       "whether main (or a served composition) is behind a commit it has not attempted and builds " +
       "it. This one failed before it could say the deployment is converged — so a push to main " +
       "may not have been deployed. A failed BUILD is not this report: it ends the run normally " +
-      "and is in the build history.",
+      "and is in the build history. One run of it is: the one whose build of a commit ended " +
+      "without a verdict (killed, interrupted) for the third time in a row — the last lines " +
+      "name those runs, and nothing automatic tries that commit again.",
   );
   lines.push("");
   if (d.spawnError !== null) lines.push(`**Could not start:** ${d.spawnError}`);

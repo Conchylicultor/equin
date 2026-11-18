@@ -76,11 +76,14 @@ export interface BuildRunRecorder {
   /** Stamp a run terminal, first-writer-wins (guarded `where(isNull(finishedAt))`). */
   closeRun(id: string, exitCode: number): Promise<void>;
   /**
-   * The newest CLOSED run of this namespace that answers for `target` — what
-   * the convergence decision reads as "already attempted". See
-   * {@link lastClosedRunOn}.
+   * The newest `limit` CLOSED runs of this namespace that answer for
+   * `target`, newest first — what the convergence decision reads as the
+   * attempts already made. See {@link recentClosedRunsOn}.
    */
-  lastClosedRun(target: AttemptTarget): Promise<LastClosedRun>;
+  recentClosedRuns(
+    target: AttemptTarget,
+    limit: number,
+  ): Promise<RecentClosedRuns>;
   /**
    * The newest CLOSED run of this namespace for `target` that built `commit` —
    * "did the build of THIS commit pass", whatever ran after it. See
@@ -123,6 +126,22 @@ export type LastClosedRun =
     }
   | { kind: "none" }
   | { kind: "missing-ledger" };
+
+/** One closed run, as {@link RecentClosedRuns} lists it. */
+export interface ClosedRun {
+  /** The run's id — what its run-detail pane opens. */
+  id: string;
+  commitHash: string | null;
+  exitCode: number | null;
+  finishedAt: Date;
+}
+
+/**
+ * A target's newest closed runs, newest first, or `missing-ledger` — its own
+ * arm for the reason {@link LastClosedRun}'s is.
+ */
+export type RecentClosedRuns =
+  { kind: "runs"; runs: ClosedRun[] } | { kind: "missing-ledger" };
 
 /** The index the claiming INSERT contends on — see `server/internal/tables.ts`. */
 const INFLIGHT_UQ = "build_runs_inflight_uniq";
@@ -323,21 +342,23 @@ export async function recordRunCommitOn(
 }
 
 /**
- * `lastClosedRun`'s body over any drizzle handle: the newest run of
- * `namespace` with `finished_at` set whose `targets` match `target`.
+ * `recentClosedRuns`'s body over any drizzle handle: the newest `limit` runs of
+ * `namespace` with `finished_at` set whose `targets` match `target` (and, given
+ * `commit`, that built exactly it), newest first.
  *
- * Closed rows only, so the outcome is an outcome rather than a guess about a
+ * Closed rows only, so each outcome is an outcome rather than a guess about a
  * run still in flight. Scoped to `namespace`: a worktree DB is forked from
  * main's and inherits its rows. Hand SQL like every statement here — it names
  * only the columns it reads.
  */
-export async function lastClosedRunOn(
+export async function recentClosedRunsOn(
   db: NodePgDatabase,
   namespace: Namespace,
   target: AttemptTarget,
+  limit: number,
   /** Only runs that built this exact commit (a full sha, as the CLI records it). */
   commit?: string,
-): Promise<LastClosedRun> {
+): Promise<RecentClosedRuns> {
   const targetMatch =
     "only" in target
       ? sql`"targets" = ${sql.param([target.only])}`
@@ -348,31 +369,56 @@ export async function lastClosedRunOn(
       : sql`${targetMatch} and "commit_hash" = ${commit}`;
   try {
     const rows = await executeRows(db, {
-      label: "build_runs: last closed run",
+      label: "build_runs: recent closed runs",
       row: z.object({
         id: z.string(),
         commit_hash: z.string().nullable(),
         exit_code: z.number().int().nullable(),
+        finished_at: z.coerce.date(),
       }),
       query: sql`
-        select "id", "commit_hash", "exit_code" from "build_runs"
+        select "id", "commit_hash", "exit_code", "finished_at" from "build_runs"
         where "namespace" = ${namespace} and "finished_at" is not null and ${match}
         order by "started_at" desc
-        limit 1
+        limit ${limit}
       `,
     });
-    const row = rows[0];
-    if (row === undefined) return { kind: "none" };
     return {
-      kind: "run",
-      id: row.id,
-      commitHash: row.commit_hash,
-      exitCode: row.exit_code,
+      kind: "runs",
+      runs: rows.map((row) => ({
+        id: row.id,
+        commitHash: row.commit_hash,
+        exitCode: row.exit_code,
+        finishedAt: row.finished_at,
+      })),
     };
   } catch (err) {
     if (isMissingLedger(err)) return { kind: "missing-ledger" };
     throw err;
   }
+}
+
+/**
+ * `lastClosedRunOf`'s body over any drizzle handle: the newest of
+ * {@link recentClosedRunsOn}.
+ */
+export async function lastClosedRunOn(
+  db: NodePgDatabase,
+  namespace: Namespace,
+  target: AttemptTarget,
+  /** Only runs that built this exact commit (a full sha, as the CLI records it). */
+  commit?: string,
+): Promise<LastClosedRun> {
+  const recent = await recentClosedRunsOn(db, namespace, target, 1, commit);
+  if (recent.kind === "missing-ledger") return recent;
+  const row = recent.runs[0];
+  if (row === undefined) return { kind: "none" };
+  return {
+    kind: "run",
+    id: row.id,
+    commitHash: row.commitHash,
+    exitCode: row.exitCode,
+  };
 }
 
 /**
