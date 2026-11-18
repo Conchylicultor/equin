@@ -11,7 +11,9 @@
  *     as blob URLs, never from the page's origin). The tile and the song are
  *     activated by a bare `click` event, no pointer-down: pointing into the
  *     embed would hand it the keyboard, which it must hold from its mount on;
- *  2. opens "Song without Words, Op. 85 No. 1" and plays two notes on its keyboard: the first the
+ *  2. opens "Song without Words, Op. 85 No. 1" — it plays as it opens (3.) —
+ *     pauses it with the transport's button, so only the keys start voices,
+ *     and plays two notes on its keyboard: the first the
  *     moment the keyboard shows (before the samples are in, as a visitor
  *     would) — it must still start a sampled voice (an
  *     `AudioBufferSourceNode` started) once they are, never stay silent — and
@@ -20,12 +22,14 @@
  *     harness opens a new one per run), so the mirror's cache is empty and
  *     the worker fetches each sample from the instrument's public CDN (all
  *     answered), while the page itself requests no sample at all;
- *  3. presses Space twice: the transport plays, then pauses (the play button
- *     reads Pause, then Play) — the embedded app's surface-scoped shortcuts
- *     answer as in a tab, not the host page's. On the warm pass (4.) Space
- *     comes right after the song opens, before any click into the demo: the
- *     embed is the page's whole surface, so it has the keyboard from its
- *     mount (`AppEmbed fillsPage`) — a key click first would hand it over;
+ *  3. the song plays as it opens — a library card's click is the ask to hear
+ *     it (`sonata/library`'s play-on-open) — and Space twice flips the
+ *     transport and back (the play button's label follows) — the
+ *     embedded app's surface-scoped shortcuts answer as in a tab, not the
+ *     host page's. On the warm pass (4.) Space comes right after the song has
+ *     loaded, before any click into the demo: the embed is the page's whole
+ *     surface, so it has the keyboard from its mount (`AppEmbed fillsPage`) —
+ *     a key click first would hand it over;
  *  4. leaves the demo until its worker has ended, and does 1–3 again in the
  *     same context: the mirror's cache is the host's `data-files` store, kept
  *     in IndexedDB (`browser-server/host-storage`), so the piano sounds again
@@ -195,26 +199,36 @@ await withBrowser(async (h) => {
   const cdnRequests = () =>
     worker.requests.filter((req) => new URL(req.url).host === SAMPLE_CDN);
 
-  /** Space plays the song, Space pauses it; `when` says what came before. */
-  const spaceToggles = async (pass: string, when: string): Promise<void> => {
-    const transport = (label: string): Locator =>
-      embedRoot(page).getByRole("button", { name: label, exact: true });
-    await renders(
-      `${pass}: the transport rests on Play`,
-      () => transport("Play").count(),
-      (n) => n > 0,
-    );
+  const transport = (label: "Play" | "Pause"): Locator =>
+    embedRoot(page).getByRole("button", { name: label, exact: true });
+
+  /**
+   * Space twice from a settled transport: `playing` pauses then plays again,
+   * paused plays then pauses again; `when` says what came before. The state
+   * it starts from is asserted by the caller, so neither press can pass on a
+   * transport that had not settled yet.
+   */
+  const spaceToggles = async (
+    pass: string,
+    when: string,
+    { playing }: { playing: boolean },
+  ): Promise<void> => {
+    const [first, then] = playing
+      ? (["Play", "Pause"] as const)
+      : (["Pause", "Play"] as const);
+    const verb = (label: "Play" | "Pause"): string =>
+      label === "Play" ? "pauses" : "plays";
     await page.keyboard.press("Space");
     await renders(
-      `${pass}: Space, ${when}, starts the song (the button reads Pause)`,
-      () => transport("Pause").count(),
+      `${pass}: Space, ${when}, ${verb(first)} the song (the button reads ${first})`,
+      () => transport(first).count(),
       (n) => n > 0,
     );
-    await snap(page, OUT, `${pass}-3-playing`);
+    await snap(page, OUT, `${pass}-3-space`);
     await page.keyboard.press("Space");
     await renders(
-      `${pass}: Space pauses it again (the button reads Play)`,
-      () => transport("Play").count(),
+      `${pass}: Space ${verb(then)} it again (the button reads ${then})`,
+      () => transport(then).count(),
       (n) => n > 0,
     );
   };
@@ -275,12 +289,28 @@ await withBrowser(async (h) => {
       .getByText(STARTER, { exact: true })
       .first()
       .dispatchEvent("click");
-    if (spaceFirst) await spaceToggles(pass, "with no click into the demo");
     const keyboard = embedRoot(page).locator(`[data-pitch="${KEYS[0]}"]`);
     await keyboard.first().waitFor({ timeout: RENDER_TIMEOUT_MS });
     await renders(
       `${pass}: the song opens with its keyboard`,
       () => keyboard.count(),
+      (n) => n > 0,
+    );
+    // Opened from its library card, the song starts playing once it loads.
+    await renders(
+      `${pass}: the song opened from its card plays (the button reads Pause)`,
+      () => transport("Pause").count(),
+      (n) => n > 0,
+    );
+    if (spaceFirst)
+      await spaceToggles(pass, "with no click into the demo", {
+        playing: true,
+      });
+    // Paused before the notes: the song's own voices would count as theirs.
+    await transport("Pause").first().click();
+    await renders(
+      `${pass}: the transport's button pauses the song (the button reads Play)`,
+      () => transport("Play").count(),
       (n) => n > 0,
     );
     // The first key goes down as soon as the keyboard shows — before the
@@ -318,7 +348,8 @@ await withBrowser(async (h) => {
     await snap(page, OUT, `${pass}-2-played`);
 
     // ── 3. Space plays, Space pauses ──────────────────────────────────────
-    if (!spaceFirst) await spaceToggles(pass, "after the notes");
+    if (!spaceFirst)
+      await spaceToggles(pass, "after the notes", { playing: false });
   };
 
   // ── cold: a fresh context, the mirror fetches from the CDN ────────────────
