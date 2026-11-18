@@ -145,13 +145,23 @@ export function createNameHost(input: NameHostInput): NameHost {
 
   const host: ts.CompilerHost = {
     ...base,
+    // What `tsc` itself parses: JSDoc in a `.ts` / `.d.ts` file only where it
+    // holds `@see` / `@link`, every JSDoc in a JS file — what a type error can
+    // depend on. The default (ParseAll) turns every `/** … */` of every source,
+    // served contract and lib / npm `.d.ts` into nodes no diagnostic, emit or
+    // rule here reads: 90 MB of a cold batch's 2.6 GB live heap and ~4 s of
+    // parse CPU per program
+    // (research/2026-11-18-global-type-check-batch-working-set.md).
+    jsDocParsingMode: ts.JSDocParsingMode.ParseForTypeErrors,
     fileExists: (f) => virtual.has(canonical(f)) || base.fileExists(f),
     readFile: (f) => virtual.get(canonical(f))?.text ?? base.readFile(f),
     getSourceFile(fileName, languageVersionOrOptions, onError) {
       const v = virtual.get(canonical(fileName));
       const format =
         typeof languageVersionOrOptions === "object"
-          ? `${languageVersionOrOptions.languageVersion}/${languageVersionOrOptions.impliedNodeFormat}`
+          ? // The JSDoc mode too: a tree parsed without JSDoc must never
+            // reach a host that asked for it.
+            `${languageVersionOrOptions.languageVersion}/${languageVersionOrOptions.impliedNodeFormat}/${languageVersionOrOptions.jsDocParsingMode}`
           : `${languageVersionOrOptions}`;
       if (v !== undefined) {
         return cache.get(

@@ -80,6 +80,11 @@ Motivation: a cold run as one program over ~12.7k files cost 213–327 CPU-s and
 - **Rejected: building batch programs one after another in the worker.** It kept 11–15 GB resident; only a fresh process is bounded by K.
 - **Rejected: parallel batches.** Every program re-pays the environment (lib, `@types`, npm types: ~10–15 CPU-s); three at once cost +54–125 % CPU.
 - **Why linting before the key exists is safe.** A typed result is a function of its key, so linting early and deciding later gives the same outcome.
+- **What a batch's memory is** (heaviest batch, live): parse 0.86 GB, bind 0.26, checker types 1.46 (55 %). The part every program shares (lib, `@types`, `.d.ts` roots, globals) is 0.23 GB; the rest is what its own sources import. A source's own closure is a median 358 files beyond that, but barrels make 2,000 of them overlap little.
+- **Rejected: sharing the environment across batches.** It would save the ~16–22 s of parse + bind CPU per batch, but a holder of every batch's parsed files holds their union, more than any one batch: it moves no peak.
+- **Rejected: locality-aware batch order.** Simulated on the real graph: path locality loads 17 % more in total (max 15k files); greedy least-new-closure −5 % total, but the top of the graph lands in one larger last batch. Dependency order already groups low-level libraries, and the batch holding `web.generated.ts` loads the whole web graph at any K.
+- **What does move a peak, and costs CPU:** fewer sources (K 1000: 4.2 → 3.6 GB, +15 %) and tighter pacing (2 GB: → 2.9 GB, +38 % together). A choice for small hosts (research/2026-11-18-global-type-check-batch-working-set.md).
+- **Why `ParseForTypeErrors`.** It is `tsc`'s own mode; `ParseAll` made every `/** … */` of sources, contracts and npm `.d.ts` into nodes nothing here reads: −90 MB live (−3.5 %) and −4 s of parse CPU per program. `full-check.ts` keeps `ParseAll`, so `dual` compares the two.
 
 ## The lint cache is keyed on what the rules read, and exemptions apply when it is read
 
