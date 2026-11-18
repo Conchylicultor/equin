@@ -342,12 +342,24 @@ that failure is the step's own output. Done = main's receipt `ok` for HEAD.
 
 ## Estimates (`core/estimates.json`)
 
-`./equin installer estimates [--from <dir…>]` takes each step's median over
-every real install's `timing.json` (this machine's run dirs, plus timing files
-collected elsewhere; dry runs never count) and writes `core/estimates.json`
-and install.sh's generated `estimates` block (`--from-json` rewrites only the
-block). `installer:estimates-in-sync` holds the two equal. Until a clean
-install is measured every value is null, and no renderer shows a time.
+`./equin installer estimates [--from <dir…>] [--only <step…>]` takes each
+step's median over every finished real install run (this machine's run dirs,
+plus run dirs collected elsewhere — a VM's, say): its `timing.json`, else the
+`events.jsonl` it is read from (`timingFromEvents`: each step's last `done`
+time, only for a stream that reached `done`). Dry runs never count (their plan
+says `dryRun`). `--only` measures just the listed steps and leaves every other
+one null — for runs that predate a change to those steps. It writes
+`core/estimates.json` and install.sh's generated `estimates` block
+(`--from-json` rewrites only the block). `installer:estimates-in-sync` holds
+the two equal. A null step shows no time, and no total is shown while any
+remaining step has none.
+
+Current values (2026-11-18): `tools`, `mise`, `clone`, `toolchain` from three
+clean installs in fresh macOS VMs (4 CPU / 8 GB; `--only` those four).
+`start` and `build` (with its sub-steps) stay null: those runs predate the
+fix that made a fresh install build main once without the check pass
+(0e1c3cbe53), so their ~24 min `start` measured the bug. Regenerate them from
+a clean install of a release that includes it.
 
 ## Sub-plugins
 
@@ -399,6 +411,7 @@ install is measured every value is null, and no renderer shows a time.
     - `ProgressUnit`
     - `redactPaths`
     - `renderEstimatesBlock`
+    - `timingFromEvents`
     - `WaitHolder`
     - `WaitOn`
 - Cross-plugin:

@@ -41033,6 +41033,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ProgressUnit`
       - `redactPaths`
       - `renderEstimatesBlock`
+      - `timingFromEvents`
       - `WaitHolder`
       - `WaitOn`
   - Cross-plugin:

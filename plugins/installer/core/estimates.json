@@ -1,15 +1,15 @@
 {
-  "installs": 0,
+  "installs": 3,
   "steps": {
-    "tools": null,
-    "mise": null,
-    "clone": null,
-    "toolchain": null,
+    "tools": 211,
+    "mise": 1,
+    "clone": 16,
+    "toolchain": 17,
     "start": null,
     "build": null,
+    "build.database": null,
     "build.deps": null,
     "build.codegen": null,
-    "build.database": null,
     "build.interface": null,
     "build.deploy": null
   }

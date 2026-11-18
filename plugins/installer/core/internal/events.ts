@@ -225,6 +225,11 @@ export const InstallEvent = z.discriminatedUnion("type", [
     /** `<os>-<arch>`, lower case (`darwin-arm64`, `linux-x86_64`). */
     platform: z.string().min(1),
     mode: InstallMode,
+    /**
+     * A `--dry-run`'s stream (scripted steps, nothing changed): its timings
+     * are never a median's input. Absent on a real install.
+     */
+    dryRun: z.literal(true).optional(),
     /** The groups the steps belong to, in run order. */
     groups: z.array(PlanGroup).min(1),
     steps: z.array(PlanStep).min(1),

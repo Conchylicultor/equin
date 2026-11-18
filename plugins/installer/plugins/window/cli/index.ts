@@ -35,7 +35,10 @@ export default defineCliCommand({
       ],
       run: () => import("./internal/window"),
     }),
-    defineCliCommand<[], { from?: string[]; fromJson?: boolean }>({
+    defineCliCommand<
+      [],
+      { from?: string[]; only?: string[]; fromJson?: boolean }
+    >({
       name: "estimates",
       description:
         "Regenerate the install's per-step time estimates (installer/core/estimates.json and install.sh's copy) as medians of real installs' timing files",
@@ -43,7 +46,12 @@ export default defineCliCommand({
         {
           flags: "--from <dir...>",
           description:
-            "Also read <run>/timing.json under these dirs (timing files collected from other machines)",
+            "Also read the install run dirs under these dirs (<run>/timing.json, else <run>/events.jsonl — runs collected from other machines)",
+        },
+        {
+          flags: "--only <step...>",
+          description:
+            "Measure only these step ids; every other step's estimate is null (its measured runs predate a change to it)",
         },
         {
           flags: "--from-json",

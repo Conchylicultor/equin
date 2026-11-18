@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { InstallStepId } from "./events";
+import { InstallStepId, type InstallEvent } from "./events";
 import estimatesJson from "../estimates.json";
 
 /**
@@ -60,4 +60,38 @@ export function estimatesFrom(
     }),
   ) as InstallEstimates["steps"];
   return { installs: timings.length, steps };
+}
+
+/**
+ * The timing an install's own event stream records (`<run>/events.jsonl`),
+ * for a run that left no `timing.json` — an install whose run dir was copied
+ * off another machine before its timing file existed, say. The same reading
+ * install.sh's `write_timing` makes: each step's last `done` time (a retry
+ * keeps its last), only for a stream that reached `done` (a finished
+ * install). A stream that did not is an error, never an empty timing.
+ */
+export function timingFromEvents(
+  events: readonly InstallEvent[],
+): { ok: true; timing: InstallTiming } | { ok: false; error: string } {
+  const plan = events[0];
+  if (plan?.type !== "plan")
+    return { ok: false, error: "the stream does not start with its plan" };
+  const done = events.find((e) => e.type === "done");
+  if (done === undefined)
+    return { ok: false, error: "the install never finished (no done event)" };
+  const steps: InstallTiming["steps"] = {};
+  for (const e of events)
+    if (e.type === "step" && e.state === "done" && e.ms !== undefined)
+      steps[e.id] = e.ms;
+  return {
+    ok: true,
+    timing: {
+      v: 1,
+      dryRun: plan.dryRun === true,
+      release: plan.release,
+      platform: plan.platform,
+      at: done.t,
+      steps,
+    },
+  };
 }

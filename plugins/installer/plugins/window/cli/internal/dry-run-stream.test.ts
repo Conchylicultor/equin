@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Readable, Writable } from "node:stream";
 import {
+  INSTALL_ESTIMATES,
   InstallStepId,
   InstallTiming,
   parseInstallEventLine,
@@ -594,9 +595,20 @@ describe("install.sh --dry-run, plain terminal view", () => {
         /\[5\/5\] build › build the interface: Waiting for another task to finish · a check started \d+ min ago$/,
       ),
     );
-    // No estimate is measured yet: no "usually", no time left.
-    expect(out).not.toContain("usually");
-    expect(out).not.toContain("left");
+    // A step says how long it usually takes only when it has a measured
+    // estimate; no time left is shown while a remaining step has none.
+    const saysUsually = (label: string) =>
+      stamped
+        .find((l) => l.includes(`] ${label}: started`))
+        ?.includes("(usually");
+    expect(saysUsually("download equin")).toBe(
+      INSTALL_ESTIMATES.steps.clone !== null,
+    );
+    expect(saysUsually("start equin's services")).toBe(
+      INSTALL_ESTIMATES.steps.start !== null,
+    );
+    if (Object.values(INSTALL_ESTIMATES.steps).includes(null))
+      expect(out).not.toContain("left");
     expect(stamped.at(-1)).toMatch(
       /^\d\d:\d\d:\d\d equin is ready · installed in \d+s · http:\/\/equin\.localhost:9000$/,
     );

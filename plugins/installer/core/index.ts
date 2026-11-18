@@ -27,6 +27,7 @@ export {
   InstallEstimates,
   InstallTiming,
   estimatesFrom,
+  timingFromEvents,
 } from "./internal/estimates";
 export {
   ESTIMATES_BEGIN,

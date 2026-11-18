@@ -9,11 +9,15 @@ import {
 } from "@plugins/packages/plugins/timed-fs/core";
 import {
   INSTALL_ESTIMATES,
+  InstallStepId,
   InstallTiming,
   estimatesFrom,
   findEstimatesBlock,
+  parseInstallEventLine,
   renderEstimatesBlock,
+  timingFromEvents,
   type InstallEstimates,
+  type InstallEvent,
 } from "@plugins/installer/core";
 import { installRunsDir } from "@plugins/installer/data-dirs";
 
@@ -21,22 +25,43 @@ const ESTIMATES_JSON = "plugins/installer/core/estimates.json";
 
 /**
  * `./equin installer estimates` — the per-step medians every install shows
- * its time left from: read each real install's `timing.json` (this machine's
- * install runs, plus `--from <dir>` for timing files collected elsewhere),
- * take each step's median, and write `installer/core/estimates.json` and
- * install.sh's generated copy of it. A dry run's timings are never counted.
+ * its time left from: read each real install's run dir (this machine's
+ * install runs, plus `--from <dir>` for run dirs collected elsewhere) — its
+ * `timing.json`, else the `events.jsonl` it was read from — take each step's
+ * median, and write `installer/core/estimates.json` and install.sh's
+ * generated copy of it. A dry run's timings are never counted.
+ * `--only <step…>` measures only those steps: every other one is null (the
+ * runs' times for it are not to be trusted — a fix changed that step since).
  * `--from-json` rewrites only install.sh's block from the committed JSON.
  */
-const run: CliAction<[], { from?: string[]; fromJson?: boolean }> = async (
-  opts,
-) => {
+const run: CliAction<
+  [],
+  { from?: string[]; only?: string[]; fromJson?: boolean }
+> = async (opts) => {
   let estimates: InstallEstimates = INSTALL_ESTIMATES;
   if (opts.fromJson !== true) {
     const dirs = [installRunsDir.path, ...(opts.from ?? [])];
-    const timings = (await Promise.all(dirs.map(readTimings))).flat();
+    const only =
+      opts.only === undefined
+        ? undefined
+        : new Set(opts.only.map((id) => InstallStepId.parse(id)));
+    const timings = (await Promise.all(dirs.map(readTimings)))
+      .flat()
+      .map((t) =>
+        only === undefined
+          ? t
+          : {
+              ...t,
+              steps: Object.fromEntries(
+                Object.entries(t.steps).filter(([id]) =>
+                  only.has(InstallStepId.parse(id)),
+                ),
+              ),
+            },
+      );
     if (timings.length === 0)
       throw new Error(
-        `no install timing files in ${dirs.join(", ")} — a real install writes <run>/timing.json when it finishes`,
+        `no finished install runs in ${dirs.join(", ")} — a real install writes <run>/events.jsonl, and <run>/timing.json when it finishes`,
       );
     estimates = estimatesFrom(timings);
     await writeFile(
@@ -58,24 +83,51 @@ const run: CliAction<[], { from?: string[]; fromJson?: boolean }> = async (
   console.log("install.sh: estimates block written");
 };
 
-/** Every real install's timing under `dir` (one `<run>/timing.json` each). */
+/**
+ * Every finished real install's timing under `dir`: one per `<run>/` holding
+ * a `timing.json`, else an `events.jsonl` that reached `done`.
+ */
 async function readTimings(dir: string): Promise<InstallTiming[]> {
   if (!(await exists(dir))) return [];
   const out: InstallTiming[] = [];
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
-    const path = join(dir, entry.name, "timing.json");
-    if (!(await exists(path))) continue;
+    const timing = await readRunTiming(join(dir, entry.name));
+    if (timing !== undefined && !timing.dryRun) out.push(timing);
+  }
+  return out;
+}
+
+/** One run dir's timing; undefined for a dir that is no finished install run. */
+async function readRunTiming(
+  runDir: string,
+): Promise<InstallTiming | undefined> {
+  const timingPath = join(runDir, "timing.json");
+  if (await exists(timingPath)) {
     const parsed = InstallTiming.safeParse(
-      JSON.parse(await readFile(path, "utf8")),
+      JSON.parse(await readFile(timingPath, "utf8")),
     );
     if (!parsed.success)
       throw new Error(
-        `${path} is not an install timing file: ${parsed.error.message}`,
+        `${timingPath} is not an install timing file: ${parsed.error.message}`,
       );
-    if (!parsed.data.dryRun) out.push(parsed.data);
+    return parsed.data;
   }
-  return out;
+  const eventsPath = join(runDir, "events.jsonl");
+  if (!(await exists(eventsPath))) return undefined;
+  const events: InstallEvent[] = [];
+  const lines = (await readFile(eventsPath, "utf8")).split("\n");
+  for (const [i, line] of lines.entries()) {
+    if (line === "") continue;
+    const parsed = parseInstallEventLine(line);
+    if (!parsed.ok) throw new Error(`${eventsPath}:${i + 1}: ${parsed.error}`);
+    events.push(parsed.event);
+  }
+  const timing = timingFromEvents(events);
+  if (timing.ok) return timing.timing;
+  // An unfinished run (it failed, or was stopped) measured nothing whole.
+  console.log(`${eventsPath}: skipped — ${timing.error}`);
+  return undefined;
 }
 
 export default run;
