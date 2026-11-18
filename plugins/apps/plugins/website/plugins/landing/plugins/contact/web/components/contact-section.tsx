@@ -2,15 +2,20 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { WebsiteBand } from "@plugins/apps/plugins/website/plugins/shell/web";
-import { ISSUES_URL } from "@plugins/apps/plugins/website/plugins/shell/core";
+import {
+  DISCORD_URL,
+  ISSUES_URL,
+} from "@plugins/apps/plugins/website/plugins/shell/core";
 import { brand } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { ContactReach } from "./contact-reach";
 import { MailAddress } from "./mail-address";
 
 const githubIcon = brand("github");
+const discordIcon = brand("discord");
 
 const CARD_CLASS = "rounded-2xl shadow-none";
 
@@ -21,8 +26,8 @@ const CARD_CLASS = "rounded-2xl shadow-none";
  * sentence (with a copy icon on hover), and "Get in touch" grows the card into
  * a message form that the site's own server stores and emails on
  * (`apps/deploy/site-messages/intake`). Someone using equin files their bug,
- * feature request or question on GitHub, where it can be tracked. Two readers,
- * two different destinations.
+ * feature request on GitHub, where it can be tracked — or comes to talk on
+ * Discord. Two readers, two different destinations.
  *
  * The filled button is the site's INVERTED fill (the foreground colour with dark
  * type — `secondary` in the site's palette), the other an outline; the brand
@@ -57,24 +62,42 @@ export function ContactSection() {
                 Have feedback?
               </Text>
               <Text as="p" variant="body" tone="muted">
-                Send your bug reports, feature requests and questions on GitHub.
+                Send your bug reports and feature requests on GitHub, or come
+                talk on Discord.
               </Text>
             </Stack>
-            <Button
-              variant="outline"
-              className="font-semibold"
-              render={
-                <a
-                  href={ISSUES_URL}
-                  // GitHub opens beside the site.
-                  target="_blank"
-                  rel="noreferrer noopener"
-                />
-              }
-            >
-              <Icon icon={githubIcon} />
-              Open an issue
-            </Button>
+            <Cluster gap="sm">
+              <Button
+                variant="outline"
+                className="font-semibold"
+                render={
+                  <a
+                    href={ISSUES_URL}
+                    // GitHub opens beside the site.
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  />
+                }
+              >
+                <Icon icon={githubIcon} />
+                Open an issue
+              </Button>
+              <Button
+                variant="outline"
+                className="font-semibold"
+                render={
+                  <a
+                    href={DISCORD_URL}
+                    // Discord opens beside the site.
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  />
+                }
+              >
+                <Icon icon={discordIcon} />
+                Join the Discord
+              </Button>
+            </Cluster>
           </Stack>
         </Card>
       </Grid>

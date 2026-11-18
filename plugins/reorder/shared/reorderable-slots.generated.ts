@@ -153,6 +153,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "apps.website.shell.footer-link", pluginId: "apps.website.shell", configName: "footer-link" },
   { slotId: "apps.website.shell.header", pluginId: "apps.website.shell", configName: "header" },
   { slotId: "apps.website.shell.layer", pluginId: "apps.website.shell", configName: "layer" },
+  { slotId: "apps.website.shell.learn-entry", pluginId: "apps.website.shell", configName: "learn-entry" },
   { slotId: "apps.website.shell.section", pluginId: "apps.website.shell", configName: "section" },
   { slotId: "auth.accounts-account.actions", pluginId: "auth", configName: "accounts-account.actions" },
   { slotId: "auth.accounts.actions", pluginId: "auth", configName: "accounts.actions" },

@@ -35,18 +35,19 @@ equin".
 
 ## Plugin reference
 
-- Description: The story page of the equin website: the /about/story pane answering 'how did equin come to be?', its Story nav link, and the WebsiteStory.Section slot the story is written into. The story page of the equin website on the server: its sitemap entry (WebsitePages.Page).
+- Description: The story page of the equin website: the /about/story pane answering 'how did equin come to be?', its entry in the header's Learn menu, and the WebsiteStory.Section slot the story is written into. The story page of the equin website on the server: its sitemap entry (WebsitePages.Page).
 - Web:
   - Slots: `WebsiteStory.Section`
   - Slot contributors: `WebsiteStory.Section` ← `apps.website.pages.story.essay`
   - Contributes:
     - `Pane.Register` "website-story"
-    - `WebsiteHeader` "story" → `StoryNavItem`
+    - `Website.LearnEntry` "Story" → `StoryNavItem`
   - Uses:
+    - `apps/website/shell.Website`
     - `apps/website/shell.WebsiteChrome`
     - `apps/website/shell.WebsiteHeader`
     - `apps/website/shell.WebsiteHero`
-    - `apps/website/shell.WebsiteNavLink`
+    - `apps/website/shell.WebsiteLearnLink`
     - `apps/website/shell.websitePagePart`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`

@@ -36,7 +36,7 @@ const out = arg("out", "/tmp/site-chrome");
 const MEASURE_PX = 1040;
 
 /** The header's quiet nav links, in reading order (`header.jsonc`). */
-const NAV_WORDS = ["Apps", "Story"];
+const NAV_WORDS = ["Apps", "Download"];
 
 /** A CSS colour's alpha, from the `rgb()` / `rgba()` / `color()` a computed style returns. */
 function alphaOf(color: string): number {
@@ -70,10 +70,10 @@ async function headerPaint(
   page: Page,
 ): Promise<{ background: string; rule: string; found: boolean }> {
   return page.evaluate(() => {
-    const story = [...document.querySelectorAll("button")].find(
-      (b) => b.textContent?.trim() === "Story",
+    const apps = [...document.querySelectorAll("button")].find(
+      (b) => b.textContent?.trim() === "Apps",
     );
-    let el: HTMLElement | null = story ?? null;
+    let el: HTMLElement | null = apps ?? null;
     while (el && getComputedStyle(el).position !== "sticky") {
       el = el.parentElement;
     }

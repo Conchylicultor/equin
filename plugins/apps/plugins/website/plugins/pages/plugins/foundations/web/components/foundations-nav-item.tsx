@@ -1,16 +1,17 @@
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { WebsiteNavLink } from "@plugins/apps/plugins/website/plugins/shell/web";
+import { WebsiteLearnLink } from "@plugins/apps/plugins/website/plugins/shell/web";
 import { foundationsPane } from "../panes";
 
 /**
- * "Foundations" entry in the shared site header. Opens the technical
+ * "Foundations" in the shared site header's Learn menu. Opens the technical
  * foundations page.
  */
 export function FoundationsNavItem() {
   const openPane = useOpenPane();
   return (
-    <WebsiteNavLink
+    <WebsiteLearnLink
       label="Foundations"
+      gloss="The infra and harness behind the apps"
       {...openPane.link(foundationsPane, {}, { mode: "root" })}
     />
   );

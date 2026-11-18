@@ -1,4 +1,4 @@
-// @hash 0957f0c8ea5f
+// @hash 1d5c63e8c367
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -10,12 +10,13 @@
     "apps.website.improve:improve",
     "apps.website.pages.apps:apps",
     "apps.website.pages.download:download",
-    "apps.website.pages.foundations:foundations",
+    "apps.website.pages.download:demo",
     "apps.website.pages.guide:guide",
-    "apps.website.pages.story:story",
     "apps.website.pages.vision:vision",
     "apps.website.shell:wordmark",
+    "apps.website.shell:learn",
     "apps.website.shell:github",
+    "apps.website.shell:discord",
     "primitives.pane:title"
   ]
 }

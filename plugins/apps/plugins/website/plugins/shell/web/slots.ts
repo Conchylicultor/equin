@@ -62,6 +62,16 @@ export const Website = {
     docLabel: (p) => p.label,
   }),
   /**
+   * The pages the header's Learn menu holds — the ones that explain equin
+   * rather than show it (Foundations, Story). Each renders one
+   * `WebsiteLearnLink`: in the header it is an entry of the hover panel, on a
+   * phone a row of the ☰ menu. Their order is the slot's reorder config
+   * (`config/apps/website/shell/learn-entry.jsonc`).
+   */
+  LearnEntry: defineRenderSlot<{ label: string; component: ComponentType }>({
+    docLabel: (p) => p.label,
+  }),
+  /**
    * The footer's quiet links, beside the address and the source — a page that
    * belongs in the small print rather than in the header (Privacy). Each
    * renders one `WebsiteFooterLink`.

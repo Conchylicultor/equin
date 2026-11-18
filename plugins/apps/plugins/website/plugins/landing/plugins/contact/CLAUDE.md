@@ -50,7 +50,7 @@ form either: it hands the visitor's idea off to GitHub as a prefilled issue.
 - Description: Getting in touch: the homepage's closing band — for anyone who wants to support the vision, the address in the sentence (copy on hover) and a Get in touch button that grows the card into a message form the site's server stores and emails on (sent, rate-limited and failed states said inline); for bug reports, feature requests and questions, GitHub issues.
 - Web:
   - Contributes: `Website.Section` "Contact" → `ContactSection`
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×4
     - `apps/website/shell` ×3
     - `infra/endpoints` ×2
@@ -62,6 +62,7 @@ form either: it hands the visitor's idea off to GitHub as a prefilled issue.
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/card.Card`
     - `primitives/css/center.Center`
+    - `primitives/css/cluster.Cluster`
     - `primitives/css/coords.Placed`
     - `primitives/css/grid.Grid`
     - `primitives/css/rigid.rigidClass`

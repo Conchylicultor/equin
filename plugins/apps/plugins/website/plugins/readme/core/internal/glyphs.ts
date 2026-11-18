@@ -1,4 +1,5 @@
 import type { IconifyJSON } from "@iconify/types";
+import type { ReadmeGlyphs } from "./files";
 import type { GlyphBody } from "./shelf";
 
 /**
@@ -11,5 +12,17 @@ export function glyphsFrom(set: IconifyJSON): GlyphBody {
     const icon = set.icons[name];
     if (!icon) throw new Error(`The icon set has no "${name}" glyph.`);
     return icon.body;
+  };
+}
+
+/** The icon sets the README draws from, by package — the caller's reader (core does no I/O). */
+export function readmeGlyphs(
+  read: (
+    pkg: "@iconify-json/material-symbols" | "@iconify-json/simple-icons",
+  ) => IconifyJSON,
+): ReadmeGlyphs {
+  return {
+    symbol: glyphsFrom(read("@iconify-json/material-symbols")),
+    brand: glyphsFrom(read("@iconify-json/simple-icons")),
   };
 }

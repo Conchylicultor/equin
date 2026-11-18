@@ -5,88 +5,93 @@
   @keyframes pop { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: none; } }
   @media (prefers-reduced-motion: reduce) { *, *::before { animation: none !important; } }
 </style>
-<g class="pop" style="animation-delay:0.00s; transform-origin:61.4px 50px">
+<g class="pop" style="animation-delay:0.00s; transform-origin:58.7px 50px">
   <defs><linearGradient id="shelf-t0" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="oklch(0.480 0.13 228)"/><stop offset="1" stop-color="oklch(0.760 0.13 228)"/></linearGradient></defs>
-  <rect x="33.4" y="22" width="56" height="56" rx="15" fill="url(#shelf-t0)"/>
-  <g transform="translate(47.4 36) scale(1.1667)" fill="#fff"><path  d="M2 22V4q0-.825.588-1.412T4 2h16q.825 0 1.413.588T22 4v12q0 .825-.587 1.413T20 18H6z"/></g>
-  <text x="61.4" y="102" text-anchor="middle" class="n"><tspan x="61.4" dy="0">Agent</tspan><tspan x="61.4" dy="15">manager</tspan></text>
+  <rect x="30.7" y="22" width="56" height="56" rx="15" fill="url(#shelf-t0)"/>
+  <g transform="translate(44.7 36) scale(1.1667)" fill="#fff"><path  d="M2 22V4q0-.825.588-1.412T4 2h16q.825 0 1.413.588T22 4v12q0 .825-.587 1.413T20 18H6z"/></g>
+  <text x="58.7" y="102" text-anchor="middle" class="n"><tspan x="58.7" dy="0">Agent</tspan><tspan x="58.7" dy="15">manager</tspan></text>
 </g>
-<g class="pop" style="animation-delay:0.07s; transform-origin:144.3px 50px">
+<g class="pop" style="animation-delay:0.07s; transform-origin:136.0px 50px">
   <defs><linearGradient id="shelf-t1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="oklch(0.440 0.17 292)"/><stop offset="1" stop-color="oklch(0.720 0.17 292)"/></linearGradient></defs>
-  <rect x="116.3" y="22" width="56" height="56" rx="15" fill="url(#shelf-t1)"/>
-  <g transform="translate(130.3 36) scale(1.1667)" fill="#fff"><path  d="M3 3h8v8H3zm10 0h8v8h-8zM3 13h8v8H3zm13 0h2v3h3v2h-3v3h-2v-3h-3v-2h3z"/></g>
-  <text x="144.3" y="102" text-anchor="middle" class="n"><tspan x="144.3" dy="0">Prototypes</tspan></text>
+  <rect x="108.0" y="22" width="56" height="56" rx="15" fill="url(#shelf-t1)"/>
+  <g transform="translate(122.0 36) scale(1.1667)" fill="#fff"><path  d="M3 3h8v8H3zm10 0h8v8h-8zM3 13h8v8H3zm13 0h2v3h3v2h-3v3h-2v-3h-3v-2h3z"/></g>
+  <text x="136.0" y="102" text-anchor="middle" class="n"><tspan x="136.0" dy="0">Prototypes</tspan></text>
 </g>
-<g class="pop" style="animation-delay:0.14s; transform-origin:227.1px 50px">
+<g class="pop" style="animation-delay:0.14s; transform-origin:213.3px 50px">
   <defs><linearGradient id="shelf-t2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="oklch(0.440 0.11 190)"/><stop offset="1" stop-color="oklch(0.720 0.11 190)"/></linearGradient></defs>
-  <rect x="199.1" y="22" width="56" height="56" rx="15" fill="url(#shelf-t2)"/>
-  <g transform="translate(213.1 36) scale(1.1667)" fill="#fff"><path  d="M6.5 20q-2.275 0-3.887-1.575T1 14.575q0-1.95 1.175-3.475T5.25 9.15q.625-2.3 2.5-3.725T12 4q2.925 0 4.963 2.038T19 11q1.725.2 2.863 1.488T23 15.5q0 1.875-1.312 3.188T18.5 20z"/></g>
-  <text x="227.1" y="102" text-anchor="middle" class="n"><tspan x="227.1" dy="0">Deploy</tspan></text>
+  <rect x="185.3" y="22" width="56" height="56" rx="15" fill="url(#shelf-t2)"/>
+  <g transform="translate(199.3 36) scale(1.1667)" fill="#fff"><path  d="M6.5 20q-2.275 0-3.887-1.575T1 14.575q0-1.95 1.175-3.475T5.25 9.15q.625-2.3 2.5-3.725T12 4q2.925 0 4.963 2.038T19 11q1.725.2 2.863 1.488T23 15.5q0 1.875-1.312 3.188T18.5 20z"/></g>
+  <text x="213.3" y="102" text-anchor="middle" class="n"><tspan x="213.3" dy="0">Deploy</tspan></text>
 </g>
-<g class="pop" style="animation-delay:0.21s; transform-origin:310.0px 50px">
+<g class="pop" style="animation-delay:0.21s; transform-origin:290.7px 50px">
   <defs><linearGradient id="shelf-t3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="oklch(0.360 0.17 248)"/><stop offset="1" stop-color="oklch(0.640 0.17 248)"/></linearGradient></defs>
-  <rect x="282.0" y="22" width="56" height="56" rx="15" fill="url(#shelf-t3)"/>
-  <g transform="translate(296.0 36) scale(1.1667)" fill="#fff"><path  d="M8 18h8v-2H8zm0-4h8v-2H8zm-2 8q-.825 0-1.412-.587T4 20V4q0-.825.588-1.412T6 2h8l6 6v12q0 .825-.587 1.413T18 22zm7-13h5l-5-5z"/></g>
-  <text x="310.0" y="102" text-anchor="middle" class="n"><tspan x="310.0" dy="0">Pages</tspan></text>
+  <rect x="262.7" y="22" width="56" height="56" rx="15" fill="url(#shelf-t3)"/>
+  <g transform="translate(276.7 36) scale(1.1667)" fill="#fff"><path  d="M8 18h8v-2H8zm0-4h8v-2H8zm-2 8q-.825 0-1.412-.587T4 20V4q0-.825.588-1.412T6 2h8l6 6v12q0 .825-.587 1.413T18 22zm7-13h5l-5-5z"/></g>
+  <text x="290.7" y="102" text-anchor="middle" class="n"><tspan x="290.7" dy="0">Pages</tspan></text>
 </g>
-<g class="pop" style="animation-delay:0.28s; transform-origin:392.9px 50px">
+<g class="pop" style="animation-delay:0.28s; transform-origin:368.0px 50px">
   <defs><linearGradient id="shelf-t4" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="oklch(0.520 0.14 158)"/><stop offset="1" stop-color="oklch(0.800 0.14 158)"/></linearGradient></defs>
-  <rect x="364.9" y="22" width="56" height="56" rx="15" fill="url(#shelf-t4)"/>
-  <g transform="translate(378.9 36) scale(1.1667)" fill="#fff"><path  d="M5 21q-.825 0-1.412-.587T3 19V5q0-.825.588-1.412T5 3h14q.825 0 1.413.588T21 5v14q0 .825-.587 1.413T19 21zm0-2h3.25v-4.5H8q-.425 0-.712-.288T7 13.5V5H5zm10.75 0H19V5h-2v8.5q0 .425-.288.713T16 14.5h-.25zm-6 0h4.5v-4.5H14q-.425 0-.712-.288T13 13.5V5h-2v8.5q0 .425-.288.713T10 14.5h-.25z"/></g>
-  <text x="392.9" y="102" text-anchor="middle" class="n"><tspan x="392.9" dy="0">Sonata</tspan></text>
+  <rect x="340.0" y="22" width="56" height="56" rx="15" fill="url(#shelf-t4)"/>
+  <g transform="translate(354.0 36) scale(1.1667)" fill="#fff"><path  d="M5 21q-.825 0-1.412-.587T3 19V5q0-.825.588-1.412T5 3h14q.825 0 1.413.588T21 5v14q0 .825-.587 1.413T19 21zm0-2h3.25v-4.5H8q-.425 0-.712-.288T7 13.5V5H5zm10.75 0H19V5h-2v8.5q0 .425-.288.713T16 14.5h-.25zm-6 0h4.5v-4.5H14q-.425 0-.712-.288T13 13.5V5h-2v8.5q0 .425-.288.713T10 14.5h-.25z"/></g>
+  <text x="368.0" y="102" text-anchor="middle" class="n"><tspan x="368.0" dy="0">Sonata</tspan></text>
 </g>
-<g class="pop" style="animation-delay:0.35s; transform-origin:475.7px 50px">
+<g class="pop" style="animation-delay:0.35s; transform-origin:445.3px 50px">
   <defs><linearGradient id="shelf-t5" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="oklch(0.480 0.17 44)"/><stop offset="1" stop-color="oklch(0.760 0.17 44)"/></linearGradient></defs>
-  <rect x="447.7" y="22" width="56" height="56" rx="15" fill="url(#shelf-t5)"/>
-  <g transform="translate(461.7 36) scale(1.1667)" fill="#fff"><path  d="M12.725 17.275Q12 16.55 12 15.5t.725-1.775T14.5 13t1.775.725T17 15.5t-.725 1.775T14.5 18t-1.775-.725M5 22q-.825 0-1.412-.587T3 20V6q0-.825.588-1.412T5 4h1V2h2v2h8V2h2v2h1q.825 0 1.413.588T21 6v14q0 .825-.587 1.413T19 22zm0-2h14V10H5z"/></g>
-  <text x="475.7" y="102" text-anchor="middle" class="n"><tspan x="475.7" dy="0">Events</tspan></text>
+  <rect x="417.3" y="22" width="56" height="56" rx="15" fill="url(#shelf-t5)"/>
+  <g transform="translate(431.3 36) scale(1.1667)" fill="#fff"><path  d="M12.725 17.275Q12 16.55 12 15.5t.725-1.775T14.5 13t1.775.725T17 15.5t-.725 1.775T14.5 18t-1.775-.725M5 22q-.825 0-1.412-.587T3 20V6q0-.825.588-1.412T5 4h1V2h2v2h8V2h2v2h1q.825 0 1.413.588T21 6v14q0 .825-.587 1.413T19 22zm0-2h14V10H5z"/></g>
+  <text x="445.3" y="102" text-anchor="middle" class="n"><tspan x="445.3" dy="0">Events</tspan></text>
 </g>
-<g class="pop" style="animation-delay:0.42s; transform-origin:558.6px 50px">
+<g class="pop" style="animation-delay:0.42s; transform-origin:522.7px 50px">
   <defs><linearGradient id="shelf-t6" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="oklch(0.440 0.18 140)"/><stop offset="1" stop-color="oklch(0.720 0.18 140)"/></linearGradient></defs>
-  <rect x="530.6" y="22" width="56" height="56" rx="15" fill="url(#shelf-t6)"/>
-  <g transform="translate(544.6 36) scale(1.1667)" fill="#fff"><path  d="M13.413 11.413Q14 10.825 14 10t-.587-1.412T12 8t-1.412.588T10 10t.588 1.413T12 12t1.413-.587M12 22q-4.025-3.425-6.012-6.362T4 10.2q0-3.75 2.413-5.975T12 2t5.588 2.225T20 10.2q0 2.5-1.987 5.438T12 22"/></g>
-  <text x="558.6" y="102" text-anchor="middle" class="n"><tspan x="558.6" dy="0">Maps</tspan></text>
+  <rect x="494.7" y="22" width="56" height="56" rx="15" fill="url(#shelf-t6)"/>
+  <g transform="translate(508.7 36) scale(1.1667)" fill="#fff"><path  d="M13.413 11.413Q14 10.825 14 10t-.587-1.412T12 8t-1.412.588T10 10t.588 1.413T12 12t1.413-.587M12 22q-4.025-3.425-6.012-6.362T4 10.2q0-3.75 2.413-5.975T12 2t5.588 2.225T20 10.2q0 2.5-1.987 5.438T12 22"/></g>
+  <text x="522.7" y="102" text-anchor="middle" class="n"><tspan x="522.7" dy="0">Maps</tspan></text>
 </g>
-<g class="pop" style="animation-delay:0.49s; transform-origin:641.4px 50px">
+<g class="pop" style="animation-delay:0.49s; transform-origin:600.0px 50px">
   <defs><linearGradient id="shelf-t7" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="oklch(0.500 0.17 348)"/><stop offset="1" stop-color="oklch(0.780 0.17 348)"/></linearGradient></defs>
-  <rect x="613.4" y="22" width="56" height="56" rx="15" fill="url(#shelf-t7)"/>
-  <g transform="translate(627.4 36) scale(1.1667)" fill="#fff"><path  d="M16 20q-1.25 0-2.125-.875T13 17t.875-2.125T16 14q.275 0 .525.038T17 14.2V6h5v2h-3v9q0 1.25-.875 2.125T16 20M3 16v-2h8v2zm0-4v-2h12v2zm0-4V6h12v2z"/></g>
-  <text x="641.4" y="102" text-anchor="middle" class="n"><tspan x="641.4" dy="0">Chord</tspan></text>
+  <rect x="572.0" y="22" width="56" height="56" rx="15" fill="url(#shelf-t7)"/>
+  <g transform="translate(586.0 36) scale(1.1667)" fill="#fff"><path  d="M16 20q-1.25 0-2.125-.875T13 17t.875-2.125T16 14q.275 0 .525.038T17 14.2V6h5v2h-3v9q0 1.25-.875 2.125T16 20M3 16v-2h8v2zm0-4v-2h12v2zm0-4V6h12v2z"/></g>
+  <text x="600.0" y="102" text-anchor="middle" class="n"><tspan x="600.0" dy="0">Chord</tspan></text>
 </g>
-<g class="pop" style="animation-delay:0.56s; transform-origin:724.3px 50px">
+<g class="pop" style="animation-delay:0.56s; transform-origin:677.3px 50px">
   <defs><linearGradient id="shelf-t8" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="oklch(0.380 0.17 268)"/><stop offset="1" stop-color="oklch(0.660 0.17 268)"/></linearGradient></defs>
-  <rect x="696.3" y="22" width="56" height="56" rx="15" fill="url(#shelf-t8)"/>
-  <g transform="translate(710.3 36) scale(1.1667)" fill="#fff"><path  d="M8.1 21.213q-1.825-.788-3.175-2.138T2.788 15.9T2 12t.788-3.9t2.137-3.175T8.1 2.788T12 2t3.9.788t3.175 2.137T21.213 8.1T22 12t-.788 3.9t-2.137 3.175t-3.175 2.138T12 22t-3.9-.788M11 19.95V18q-.825 0-1.412-.587T9 16v-1l-4.8-4.8q-.075.45-.137.9T4 12q0 3.025 1.988 5.3T11 19.95m6.9-2.55q1.025-1.125 1.563-2.512T20 12q0-2.45-1.362-4.475T15 4.6V5q0 .825-.587 1.413T13 7h-2v2q0 .425-.288.713T10 10H8v2h6q.425 0 .713.288T15 13v3h1q.65 0 1.175.388T17.9 17.4"/></g>
-  <text x="724.3" y="102" text-anchor="middle" class="n"><tspan x="724.3" dy="0">Browser</tspan></text>
+  <rect x="649.3" y="22" width="56" height="56" rx="15" fill="url(#shelf-t8)"/>
+  <g transform="translate(663.3 36) scale(1.1667)" fill="#fff"><path  d="M8.1 21.213q-1.825-.788-3.175-2.138T2.788 15.9T2 12t.788-3.9t2.137-3.175T8.1 2.788T12 2t3.9.788t3.175 2.137T21.213 8.1T22 12t-.788 3.9t-2.137 3.175t-3.175 2.138T12 22t-3.9-.788M11 19.95V18q-.825 0-1.412-.587T9 16v-1l-4.8-4.8q-.075.45-.137.9T4 12q0 3.025 1.988 5.3T11 19.95m6.9-2.55q1.025-1.125 1.563-2.512T20 12q0-2.45-1.362-4.475T15 4.6V5q0 .825-.587 1.413T13 7h-2v2q0 .425-.288.713T10 10H8v2h6q.425 0 .713.288T15 13v3h1q.65 0 1.175.388T17.9 17.4"/></g>
+  <text x="677.3" y="102" text-anchor="middle" class="n"><tspan x="677.3" dy="0">Browser</tspan></text>
 </g>
-<g class="pop" style="animation-delay:0.63s; transform-origin:807.1px 50px">
+<g class="pop" style="animation-delay:0.63s; transform-origin:754.7px 50px">
   <defs><linearGradient id="shelf-t9" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="oklch(0.540 0.15 66)"/><stop offset="1" stop-color="oklch(0.820 0.15 66)"/></linearGradient></defs>
-  <rect x="779.1" y="22" width="56" height="56" rx="15" fill="url(#shelf-t9)"/>
-  <g transform="translate(793.1 36) scale(1.1667)" fill="#fff"><path  d="M4 20q-.825 0-1.412-.587T2 18V6q0-.825.588-1.412T4 4h6l2 2h8q.825 0 1.413.588T22 8v10q0 .825-.587 1.413T20 20z"/></g>
-  <text x="807.1" y="102" text-anchor="middle" class="n"><tspan x="807.1" dy="0">Files</tspan></text>
+  <rect x="726.7" y="22" width="56" height="56" rx="15" fill="url(#shelf-t9)"/>
+  <g transform="translate(740.7 36) scale(1.1667)" fill="#fff"><path  d="M4 20q-.825 0-1.412-.587T2 18V6q0-.825.588-1.412T4 4h6l2 2h8q.825 0 1.413.588T22 8v10q0 .825-.587 1.413T20 20z"/></g>
+  <text x="754.7" y="102" text-anchor="middle" class="n"><tspan x="754.7" dy="0">Files</tspan></text>
 </g>
-<g class="pop" style="animation-delay:0.70s; transform-origin:890.0px 50px">
+<g class="pop" style="animation-delay:0.70s; transform-origin:832.0px 50px">
   <defs><linearGradient id="shelf-t10" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="oklch(0.520 0.12 208)"/><stop offset="1" stop-color="oklch(0.800 0.12 208)"/></linearGradient></defs>
-  <rect x="862.0" y="22" width="56" height="56" rx="15" fill="url(#shelf-t10)"/>
-  <g transform="translate(876.0 36) scale(1.1667)" fill="#fff"><path  d="M8 21v-2h2v-2H4q-.825 0-1.412-.587T2 15V5q0-.825.588-1.412T4 3h16q.825 0 1.413.588T22 5v10q0 .825-.587 1.413T20 17h-6v2h2v2z"/></g>
-  <text x="890.0" y="102" text-anchor="middle" class="n"><tspan x="890.0" dy="0">Desktop</tspan></text>
+  <rect x="804.0" y="22" width="56" height="56" rx="15" fill="url(#shelf-t10)"/>
+  <g transform="translate(818.0 36) scale(1.1667)" fill="#fff"><path  d="M8 21v-2h2v-2H4q-.825 0-1.412-.587T2 15V5q0-.825.588-1.412T4 3h16q.825 0 1.413.588T22 5v10q0 .825-.587 1.413T20 17h-6v2h2v2z"/></g>
+  <text x="832.0" y="102" text-anchor="middle" class="n"><tspan x="832.0" dy="0">Desktop</tspan></text>
 </g>
-<g class="pop" style="animation-delay:0.77s; transform-origin:972.9px 50px">
+<g class="pop" style="animation-delay:0.77s; transform-origin:909.3px 50px">
   <defs><linearGradient id="shelf-t11" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="oklch(0.580 0.11 172)"/><stop offset="1" stop-color="oklch(0.860 0.11 172)"/></linearGradient></defs>
-  <rect x="944.9" y="22" width="56" height="56" rx="15" fill="url(#shelf-t11)"/>
-  <g transform="translate(958.9 36) scale(1.1667)" fill="#fff"><path  d="M3 13.5L11 2v11.5zm9.5 0q.3-.7.65-2.45t.35-3.55t-.337-3.7T12.5 1q1.525.45 3.038 1.675T18.261 5.6t1.975 3.738T21 13.5zM9 19q-.9 0-1.675-.425T6 17.5q-.35.375-.763.7t-.912.525q-.875-.65-1.487-1.612T2 15h20q-.225 1.15-.837 2.113t-1.488 1.612q-.5-.2-.913-.525T18 17.5q-.575.65-1.338 1.075T15 19t-1.675-.425T12 17.5q-.55.65-1.325 1.075T9 19m-7 4v-2h1q.8 0 1.563-.25T6 20q.675.5 1.438.738T9 20.975t1.55-.238T12 20q.675.5 1.438.738t1.562.237t1.55-.238T18 20q.7.5 1.45.75T21 21h1v2h-1q-.775 0-1.525-.187T18 22.25q-.725.375-1.475.563T15 23t-1.525-.187T12 22.25q-.725.375-1.475.563T9 23t-1.525-.187T6 22.25q-.725.375-1.475.563T3 23z"/></g>
-  <text x="972.9" y="102" text-anchor="middle" class="n"><tspan x="972.9" dy="0">Isle</tspan></text>
+  <rect x="881.3" y="22" width="56" height="56" rx="15" fill="url(#shelf-t11)"/>
+  <g transform="translate(895.3 36) scale(1.1667)" fill="#fff"><path  d="M3 13.5L11 2v11.5zm9.5 0q.3-.7.65-2.45t.35-3.55t-.337-3.7T12.5 1q1.525.45 3.038 1.675T18.261 5.6t1.975 3.738T21 13.5zM9 19q-.9 0-1.675-.425T6 17.5q-.35.375-.763.7t-.912.525q-.875-.65-1.487-1.612T2 15h20q-.225 1.15-.837 2.113t-1.488 1.612q-.5-.2-.913-.525T18 17.5q-.575.65-1.338 1.075T15 19t-1.675-.425T12 17.5q-.55.65-1.325 1.075T9 19m-7 4v-2h1q.8 0 1.563-.25T6 20q.675.5 1.438.738T9 20.975t1.55-.238T12 20q.675.5 1.438.738t1.562.237t1.55-.238T18 20q.7.5 1.45.75T21 21h1v2h-1q-.775 0-1.525-.187T18 22.25q-.725.375-1.475.563T15 23t-1.525-.187T12 22.25q-.725.375-1.475.563T9 23t-1.525-.187T6 22.25q-.725.375-1.475.563T3 23z"/></g>
+  <text x="909.3" y="102" text-anchor="middle" class="n"><tspan x="909.3" dy="0">Isle</tspan></text>
 </g>
-<g class="pop" style="animation-delay:0.84s; transform-origin:1055.7px 50px">
+<g class="pop" style="animation-delay:0.84s; transform-origin:986.7px 50px">
   <defs><linearGradient id="shelf-t12" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="oklch(0.340 0.2 308)"/><stop offset="1" stop-color="oklch(0.620 0.2 308)"/></linearGradient></defs>
-  <rect x="1027.7" y="22" width="56" height="56" rx="15" fill="url(#shelf-t12)"/>
-  <g transform="translate(1041.7 36) scale(1.1667)" fill="#fff"><path  d="M5 21q-.85 0-1.425-.575T3 19v-3.8q1.2 0 2.1-.762T6 12.5q0-1.15-.9-1.9T3 9.8V6q0-.825.588-1.412T5 4h3.05q.175-1.275 1.15-2.137T11.5 1q1.3 0 2.275.863T14.95 4H18q.825 0 1.413.588T20 6v3.35q.9.45 1.45 1.3T22 12.5q0 1.025-.55 1.875T20 15.65V19q0 .85-.587 1.425T18 21z"/></g>
-  <text x="1055.7" y="102" text-anchor="middle" class="n"><tspan x="1055.7" dy="0">Studio</tspan></text>
+  <rect x="958.7" y="22" width="56" height="56" rx="15" fill="url(#shelf-t12)"/>
+  <g transform="translate(972.7 36) scale(1.1667)" fill="#fff"><path  d="M5 21q-.85 0-1.425-.575T3 19v-3.8q1.2 0 2.1-.762T6 12.5q0-1.15-.9-1.9T3 9.8V6q0-.825.588-1.412T5 4h3.05q.175-1.275 1.15-2.137T11.5 1q1.3 0 2.275.863T14.95 4H18q.825 0 1.413.588T20 6v3.35q.9.45 1.45 1.3T22 12.5q0 1.025-.55 1.875T20 15.65V19q0 .85-.587 1.425T18 21z"/></g>
+  <text x="986.7" y="102" text-anchor="middle" class="n"><tspan x="986.7" dy="0">Studio</tspan></text>
 </g>
-<g class="pop" style="animation-delay:0.91s; transform-origin:1138.6px 50px">
+<g class="pop" style="animation-delay:0.91s; transform-origin:1064.0px 50px">
   <defs><linearGradient id="shelf-t13" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="oklch(0.440 0.21 326)"/><stop offset="1" stop-color="oklch(0.720 0.21 326)"/></linearGradient></defs>
-  <rect x="1110.6" y="22" width="56" height="56" rx="15" fill="url(#shelf-t13)"/>
-  <g transform="translate(1124.6 36) scale(1.1667)" fill="#fff"><path  d="M2 22L7 8l9 9zm12.55-9.45L13.5 11.5l5.6-5.6q.8-.8 1.925-.8t1.925.8l.6.6l-1.05 1.05l-.6-.6q-.35-.35-.875-.35t-.875.35zm-4-4L9.5 7.5l.6-.6q.35-.35.35-.85t-.35-.85l-.65-.65L10.5 3.5l.65.65q.8.8.8 1.9t-.8 1.9zm2 2L11.5 9.5l3.6-3.6q.35-.35.35-.875t-.35-.875l-1.6-1.6l1.05-1.05l1.6 1.6q.8.8.8 1.925t-.8 1.925zm4 4L15.5 13.5l1.6-1.6q.8-.8 1.925-.8t1.925.8l1.6 1.6l-1.05 1.05l-1.6-1.6q-.35-.35-.875-.35t-.875.35z"/></g>
-  <text x="1138.6" y="102" text-anchor="middle" class="n"><tspan x="1138.6" dy="0">Tap Tap</tspan><tspan x="1138.6" dy="15">Party</tspan></text>
+  <rect x="1036.0" y="22" width="56" height="56" rx="15" fill="url(#shelf-t13)"/>
+  <g transform="translate(1050.0 36) scale(1.1667)" fill="#fff"><path  d="M2 22L7 8l9 9zm12.55-9.45L13.5 11.5l5.6-5.6q.8-.8 1.925-.8t1.925.8l.6.6l-1.05 1.05l-.6-.6q-.35-.35-.875-.35t-.875.35zm-4-4L9.5 7.5l.6-.6q.35-.35.35-.85t-.35-.85l-.65-.65L10.5 3.5l.65.65q.8.8.8 1.9t-.8 1.9zm2 2L11.5 9.5l3.6-3.6q.35-.35.35-.875t-.35-.875l-1.6-1.6l1.05-1.05l1.6 1.6q.8.8.8 1.925t-.8 1.925zm4 4L15.5 13.5l1.6-1.6q.8-.8 1.925-.8t1.925.8l1.6 1.6l-1.05 1.05l-1.6-1.6q-.35-.35-.875-.35t-.875.35z"/></g>
+  <text x="1064.0" y="102" text-anchor="middle" class="n"><tspan x="1064.0" dy="0">Tap Tap</tspan><tspan x="1064.0" dy="15">Party</tspan></text>
+</g>
+<g class="pop" style="animation-delay:0.98s; transform-origin:1141.3px 50px">
+  <rect x="1114.3" y="23" width="54" height="54" rx="15" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+  <g transform="translate(1127.3 36) scale(1.1667)" fill="#e6edf3"><path  d="M16.175 13H5q-.425 0-.712-.288T4 12t.288-.712T5 11h11.175l-4.9-4.9q-.3-.3-.288-.7t.313-.7q.3-.275.7-.288t.7.288l6.6 6.6q.15.15.213.325t.062.375t-.062.375t-.213.325l-6.6 6.6q-.275.275-.687.275T11.3 19.3q-.3-.3-.3-.712t.3-.713z"/></g>
+  <text x="1141.3" y="102" text-anchor="middle" class="n"><tspan x="1141.3" dy="0">All apps</tspan></text>
 </g>
 </svg>

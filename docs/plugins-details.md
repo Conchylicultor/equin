@@ -12867,7 +12867,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`contact`** — Getting in touch: the homepage's closing band — for anyone who wants to support the vision, the address in the sentence (copy on hover) and a Get in touch button that grows the card into a message form the site's server stores and emails on (sent, rate-limited and failed states said inline); for bug reports, feature requests and questions, GitHub issues.
               - Web:
                 - Contributes: `Website.Section` "Contact" → `ContactSection`
-                - Uses: 27 symbols — full list in [`plugins/apps/plugins/website/plugins/landing/plugins/contact/REFERENCE.md`](../plugins/apps/plugins/website/plugins/landing/plugins/contact/REFERENCE.md)
+                - Uses: 28 symbols — full list in [`plugins/apps/plugins/website/plugins/landing/plugins/contact/REFERENCE.md`](../plugins/apps/plugins/website/plugins/landing/plugins/contact/REFERENCE.md)
                   - `primitives/css/ui-kit` ×4
                   - `apps/website/shell` ×3
                   - `infra/endpoints` ×2
@@ -12879,6 +12879,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/copy-to-clipboard.CopyButton`
                   - `primitives/css/card.Card`
                   - `primitives/css/center.Center`
+                  - `primitives/css/cluster.Cluster`
                   - `primitives/css/coords.Placed`
                   - `primitives/css/grid.Grid`
                   - `primitives/css/rigid.rigidClass`
@@ -13167,16 +13168,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/website`
                   - `apps/website/landing/layers`
                   - `apps/website/readme`
-            - **`download`** — The download page of the equin website: the /about/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it runs, a closing card opening the homepage's live demo full screen for a reader not ready to install (agents off there), and its header pill (▶ Demo | Download: the live demo, or this page). The download page of the equin website on the server: its sitemap entry (WebsitePages.Page).
+            - **`download`** — The download page of the equin website: the /about/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it runs, a closing card opening the homepage's live demo full screen for a reader not ready to install (agents off there), and its two header items: Download (a page link to this page) and ▶ Demo (the live demo, an outlined pill beside Wish). The download page of the equin website on the server: its sitemap entry (WebsitePages.Page).
               - Web:
                 - Contributes:
                   - `Pane.Register` "website-download"
                   - `WebsiteHeader` "download" → `DownloadNavItem`
+                  - `WebsiteHeader` "demo" → `DemoNavItem`
                   - `ThemeEngine.SubTheme` "equin download note"
                   - `ThemeEngine.SubTheme` "equin download tabs"
                   - `ThemeEngine.SubTheme` "equin download"
-                - Uses: 35 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/download/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/download/REFERENCE.md)
-                  - `apps/website/shell` ×8
+                - Uses: 34 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/download/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/download/REFERENCE.md)
+                  - `apps/website/shell` ×7
                   - `primitives/collapsible` ×4
                   - `primitives/css/spacing` ×3
                   - `primitives/pane` ×3
@@ -13220,19 +13222,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/type-scale --font-weight-normal`
                   - `ui/tokens/type-scale --font-weight-semibold`
                 - Imported by: `apps/website/pages/apps`
-            - **`foundations`** — The technical foundations page of the equin website: the /about/foundations pane drawing what equin brings on top of Claude as an iceberg — ten layers from the apps at sea level down to the loop that builds them, each piece a pill that opens in place into a card (many with a live drawing), with a depth gauge, a Components / Harness filter and Expand all — and its Foundations nav link. The technical foundations page of the equin website on the server: its sitemap entry (WebsitePages.Page).
+            - **`foundations`** — The technical foundations page of the equin website: the /about/foundations pane drawing what equin brings on top of Claude as an iceberg — ten layers from the apps at sea level down to the loop that builds them, each piece a pill that opens in place into a card (many with a live drawing), with a depth gauge, a Components / Harness filter and Expand all — and its entry in the header's Learn menu. The technical foundations page of the equin website on the server: its sitemap entry (WebsitePages.Page).
               - Web:
                 - Contributes:
                   - `Pane.Register` "website-foundations"
-                  - `WebsiteHeader` "foundations" → `FoundationsNavItem`
+                  - `Website.LearnEntry` "Foundations" → `FoundationsNavItem`
                   - `ThemeEngine.SubTheme` "iceberg sea header"
                   - `ThemeEngine.SubTheme` "iceberg sky header"
                 - Uses:
                   - `apps/deploy/analytics/collect.observeSectionReach`
                   - `apps/deploy/analytics/collect.track`
+                  - `apps/website/shell.Website`
                   - `apps/website/shell.WebsiteChrome`
                   - `apps/website/shell.WebsiteHeader`
-                  - `apps/website/shell.WebsiteNavLink`
+                  - `apps/website/shell.WebsiteLearnLink`
                   - `apps/website/shell.websitePagePart`
                   - `apps/website/shell.WebsiteScrollCue`
                   - `primitives/dom/auto-scroll.findScrollParent`
@@ -13329,18 +13332,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --muted-foreground`
                   - `ui/tokens/color-palette --primary`
                   - `ui/tokens/color-palette --success`
-            - **`story`** — The story page of the equin website: the /about/story pane answering 'how did equin come to be?', its Story nav link, and the WebsiteStory.Section slot the story is written into. The story page of the equin website on the server: its sitemap entry (WebsitePages.Page).
+            - **`story`** — The story page of the equin website: the /about/story pane answering 'how did equin come to be?', its entry in the header's Learn menu, and the WebsiteStory.Section slot the story is written into. The story page of the equin website on the server: its sitemap entry (WebsitePages.Page).
               - Web:
                 - Slots: `WebsiteStory.Section`
                 - Slot contributors: `WebsiteStory.Section` ← `apps.website.pages.story.essay`
                 - Contributes:
                   - `Pane.Register` "website-story"
-                  - `WebsiteHeader` "story" → `StoryNavItem`
+                  - `Website.LearnEntry` "Story" → `StoryNavItem`
                 - Uses:
+                  - `apps/website/shell.Website`
                   - `apps/website/shell.WebsiteChrome`
                   - `apps/website/shell.WebsiteHeader`
                   - `apps/website/shell.WebsiteHero`
-                  - `apps/website/shell.WebsiteNavLink`
+                  - `apps/website/shell.WebsiteLearnLink`
                   - `apps/website/shell.websitePagePart`
                   - `primitives/pane.defineRoute`
                   - `primitives/pane.Pane`
@@ -13557,7 +13561,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by: `apps/website/promo-film`
               - Structure:
                 - Non-standard folders: `data/`
-        - **`readme`** — The repo README's images: the animated hero (the logo drawing itself in, beside a living plugin network), the app shelf and the Try the demo card, rendered as SVG from the logo, the apps catalog and the website's tile colours, and held in sync by a check.
+        - **`readme`** — The repo README's images: the animated hero (the logo drawing itself in, beside a living plugin network), the link pills (Watch the film, Try the demo, Install, Discord), the app shelf and the Try the demo card, rendered as SVG (the pills and the shelf once per GitHub theme) from the logo, the apps catalog and the website's tile colours, and held in sync by a check.
           - Core:
             - Uses:
               - `apps/website/app-tiles.oklchCss`
@@ -13566,17 +13570,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/seeded-random.mulberry32`
               - `ui/logo.LOGO`
               - `ui/logo.logoMarkSvg`
-            - Exports (types): `GlyphBody`
+            - Exports (types):
+              - `GlyphBody`
+              - `ReadmeGlyphs`
             - Exports (values):
-              - `glyphsFrom`
               - `README_ASSET_DIR`
               - `README_FILES`
-        - **`shell`** — App shell for the Website (equin public site). Registers the /about app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, the Website.Layer slot for what floats over every page and the Website.Resident slot for what must outlive a page switch (both rendered by the app's surface) and the Website.FooterLink slot for the footer's small print, and contributes the site's own theme (equin: palette, chart ramp, font), which the website app selects, plus the equin-document sub-theme (type scale, density, shape) every page wears and the equin-page-hero sub-theme an inner page's heading wears. The website's landing page on the server: its sitemap entry (WebsitePages.Page).
+              - `readmeGlyphs`
+        - **`shell`** — App shell for the Website (equin public site). Registers the /about app entry, owns the shared site header (wordmark, the Learn menu over the Website.LearnEntry slot, the GitHub and Discord links) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, the Website.Layer slot for what floats over every page and the Website.Resident slot for what must outlive a page switch (both rendered by the app's surface) and the Website.FooterLink slot for the footer's small print (beside the address and the GitHub and Discord links), and contributes the site's own theme (equin: palette, chart ramp, font), which the website app selects, plus the equin-document sub-theme (type scale, density, shape) every page wears and the equin-page-hero sub-theme an inner page's heading wears. The website's landing page on the server: its sitemap entry (WebsitePages.Page).
           - Web:
             - Slots:
               - `Website.Section`
               - `Website.Layer`
               - `Website.Resident`
+              - `Website.LearnEntry`
               - `Website.FooterLink`
               - `WebsiteHeader`
             - Slot contributors:
@@ -13587,31 +13594,34 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Website.Section` ← `apps.website.landing.story-link`
               - `Website.Layer` ← `apps.website.pages.privacy`
               - `Website.Resident` ← `apps.website.live-demo`
+              - `Website.LearnEntry` ← `apps.website.pages.foundations`
+              - `Website.LearnEntry` ← `apps.website.pages.story`
               - `Website.FooterLink` ← `apps.website.pages.privacy`
               - `WebsiteHeader` ← `apps.website.improve`
               - `WebsiteHeader` ← `apps.website.pages.apps`
               - `WebsiteHeader` ← `apps.website.pages.download`
-              - `WebsiteHeader` ← `apps.website.pages.foundations`
               - `WebsiteHeader` ← `apps.website.pages.guide`
-              - `WebsiteHeader` ← `apps.website.pages.story`
               - `WebsiteHeader` ← `apps.website.pages.vision`
               - `WebsiteHeader` ← `apps.website.shell`
               - `WebsiteHeader` ← `primitives.pane`
             - Contributes:
               - `Apps.App` "equin" → `WebsiteLayout`
               - `WebsiteHeader` "wordmark" → `WebsiteWordmark`
+              - `WebsiteHeader` "learn" → `WebsiteLearnMenu`
               - `WebsiteHeader` "github" → `WebsiteGithubLink`
+              - `WebsiteHeader` "discord" → `WebsiteDiscordLink`
               - `Pane.Register` "website-landing"
               - `ThemeEngine.Theme` "equin"
               - `ThemeEngine.SubTheme` "equin document"
               - `ThemeEngine.SubTheme` "equin page heading"
-            - Uses: 39 symbols — full list in [`plugins/apps/plugins/website/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/website/plugins/shell/REFERENCE.md)
+            - Uses: 38 symbols — full list in [`plugins/apps/plugins/website/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/website/plugins/shell/REFERENCE.md)
               - `primitives/pane` ×7
-              - `primitives/action-presentation` ×4
-              - `primitives/css/ui-kit` ×4
+              - `primitives/action-presentation` ×3
               - `primitives/css/spacing` ×3
               - `apps/deploy/analytics/collect` ×2
               - `primitives/css/text` ×2
+              - `primitives/css/ui-kit` ×2
+              - `primitives/overlay/hover-popover` ×2
               - `primitives/slot-render` ×2
               - `apps-core.Apps`
               - `layouts/full-pane.FullPane`
@@ -13639,9 +13649,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `WebsiteFooterLink`
               - `WebsiteHeader`
               - `WebsiteHero`
+              - `WebsiteLearnLink`
               - `WebsiteNavLead`
               - `WebsiteNavLink`
-              - `WebsiteNavPill`
               - `websitePagePart`
               - `WebsiteScrollCue`
               - `WebsiteSoon`
@@ -13669,6 +13679,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `CONTACT_EMAIL`
               - `CONTACT_MAILTO`
+              - `DISCORD_URL`
               - `INSTALL_COMMAND`
               - `isLocalAppUrl`
               - `isPublicSiteUrl`
@@ -13697,6 +13708,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --control-height-sm`
               - `ui/tokens/density --control-pad-sm`
               - `ui/tokens/density --space-2xl`
+              - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-weight-bold`
               - `ui/tokens/type-scale --font-weight-normal`
@@ -50484,8 +50496,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ClusterProps`
             - Exports (values): `Cluster`
           - Cross-plugin:
-            - Imported by: 68 plugins — full list in [`plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md)
-              - `apps` ×26
+            - Imported by: 69 plugins — full list in [`plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md)
+              - `apps` ×27
               - `debug` ×12
               - `conversations` ×7
               - `plugin-meta` ×6
@@ -55984,6 +55996,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps-core/app-launcher`
+              - `apps/website/shell`
               - `primitives/collapsible`
           - Core:
             - Exports (types):
@@ -58936,8 +58949,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 302 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×302
+    - Contributes: 303 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×303
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -58961,8 +58974,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 301 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×301
+    - Contributes: 302 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×302
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:

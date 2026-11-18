@@ -406,6 +406,7 @@ export const ICON_MANIFEST: {
   ],
   brands: [
     "apple",
+    "discord",
     "github",
     "google",
     "googlemaps",

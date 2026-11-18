@@ -5,15 +5,18 @@
 </a>
 
 <p>
-<a href="https://equin.ai"><b>equin.ai</b></a> &nbsp;·&nbsp;
-<a href="https://equin.ai/">▶ Watch the film</a> &nbsp;·&nbsp;
-<a href="https://equin.ai/vision">Vision</a> &nbsp;·&nbsp;
-<a href="https://equin.ai/apps">Apps</a> &nbsp;·&nbsp;
-<a href="#-install">Install</a>
+<a href="https://equin.ai">equin.ai</a>
+</p>
+
+<p>
+<a href="https://equin.ai/"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/readme/pill-film.svg" /><img alt="Watch the film" src="docs/readme/pill-film-light.svg" height="36" /></picture></a>
+<a href="https://equin.ai/demo"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/readme/pill-demo.svg" /><img alt="Try the demo" src="docs/readme/pill-demo-light.svg" height="36" /></picture></a>
+<a href="#-install"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/readme/pill-install.svg" /><img alt="Install" src="docs/readme/pill-install-light.svg" height="36" /></picture></a>
+<a href="https://discord.gg/QYE8qSsfSQ"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/readme/pill-discord.svg" /><img alt="Discord" src="docs/readme/pill-discord-light.svg" height="36" /></picture></a>
 </p>
 
 <a href="https://equin.ai/apps">
-<img alt="The apps equin ships" src="docs/readme/apps.svg" width="100%" />
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/readme/apps.svg" /><img alt="The apps equin ships" src="docs/readme/apps-light.svg" width="100%" /></picture>
 </a>
 
 </div>
@@ -79,3 +82,7 @@ If a step fails, fix it and run the installer again. When it is done, give me th
 ```
 
 Then open the address the installer prints — `http://equin.localhost:<port>`, where the port is 8700 unless something else holds it (then the next free one up to 8709); `./equin url` prints it again. And start your first wish.
+
+## 💬 Community
+
+Questions, ideas, or something you built with equin? Come say hi on [Discord](https://discord.gg/QYE8qSsfSQ).

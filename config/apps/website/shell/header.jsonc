@@ -1,4 +1,4 @@
-// @hash 0957f0c8ea5f
+// @hash 1d5c63e8c367
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -6,6 +6,16 @@
 //   Divider (rule): { "type": "divider", "id": "<unique-id>" } — a hairline rule between the items either side of it, turned to the slot's flow (flat in a column such as a sidebar's footer rows, upright in a row such as a toolbar).
 //   Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
 //   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
+// Arrange "items" for how this slot ACTUALLY renders — a sidebar is a
+// vertical list, a toolbar a horizontal bar, a pane a stack of blocks.
+// Look at the surface, then order for that reading direction.
+// Node forms:
+// Item: "<key>" (terse; <key> is "<pluginId>:<id>")
+// Hide: { "item": "<key>", "hidden": true }
+// Spacer (gap): { "type": "spacer", "id": "<unique-id>" } — grows to push every item after it to the far end of the row (title left, chips right); at most one per slot. Use it instead of a second slot.
+// Divider (rule): { "type": "divider", "id": "<unique-id>" } — a hairline rule between the items either side of it, turned to the slot's flow (flat in a column such as a sidebar's footer rows, upright in a row such as a toolbar).
+// Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+// Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
 // Arrange "items" for how this slot ACTUALLY renders — a sidebar is a
 // vertical list, a toolbar a horizontal bar, a pane a stack of blocks.
 // Look at the surface, then order for that reading direction.
@@ -32,11 +42,13 @@
   // browser tab and its snapshot, but the page's heading already says it, so the
   // header shows the wordmark alone.
   //
-  // After the spacer, the site's pages — Vision, Apps, Foundations, Story — then
-  // one pill for a reader ready to run it, split into ▶ Demo (in the browser)
-  // and Download (on their Mac), then the source on GitHub, the one destination
-  // that leaves the site, and last the header's one call to action: Wish, which
-  // lets the reader try the gesture the site is about.
+  // After the spacer, three kinds of thing, each drawn one way: the site's
+  // pages as quiet words — Vision, Apps, the Learn menu (Foundations, Story:
+  // the pages that explain equin), Download — then the two destinations that
+  // leave the site as icons, the source on GitHub and the community on Discord,
+  // and last the two actions as one pill shape: ▶ Demo (the real app in this
+  // browser, outlined) and the header's one call to action, Wish (filled),
+  // which lets the reader try the gesture the site is about.
   //
   // The Guide is hidden while its page is a placeholder (GUIDE_READY in the guide
   // plugin's core is false: it also hides the ? menu entry and the sitemap entry): nothing on the site
@@ -50,11 +62,12 @@
     { "type": "spacer", "id": "spacer-1" },
     "apps.website.pages.vision:vision",
     "apps.website.pages.apps:apps",
-    "apps.website.pages.foundations:foundations",
-    "apps.website.pages.story:story",
+    "apps.website.shell:learn",
     { "item": "apps.website.pages.guide:guide", "hidden": true },
     "apps.website.pages.download:download",
     "apps.website.shell:github",
+    "apps.website.shell:discord",
+    "apps.website.pages.download:demo",
     "apps.website.improve:improve"
   ]
 }

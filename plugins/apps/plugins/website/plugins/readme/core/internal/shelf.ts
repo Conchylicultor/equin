@@ -3,7 +3,7 @@ import {
   oklchCss,
   websiteTileStops,
 } from "@plugins/apps/plugins/website/plugins/app-tiles/core";
-import { FONT, INK, REDUCED_MOTION, esc, f1 } from "./style";
+import { FONT, INKS, REDUCED_MOTION, esc, f1, type Theme } from "./style";
 
 /** The widest label, in characters, kept on one line under a tile. */
 const LABEL_CHARS = 10;
@@ -29,14 +29,17 @@ export type GlyphBody = (name: string) => string;
 /**
  * The app shelf under the banner: every app equin ships (the website's apps
  * catalog, the ones not built yet left out), each its website tile — its glyph
- * on its colour's deep-to-base gradient — popping in one after the other.
+ * on its colour's deep-to-base gradient — popping in one after the other, then
+ * an outlined "All apps" arrow tile saying the shelf opens the full gallery.
+ * Its labels and that last tile sit on the page, so it is drawn per theme.
  */
-export function shelfSvg(glyph: GlyphBody): string {
+export function shelfSvg(glyph: GlyphBody, theme: Theme): string {
+  const ink = INKS[theme];
   const apps = APPS.filter((a) => !a.soon);
   const W = 1200;
   const H = 160;
   const S = 56;
-  const step = (W - 40) / apps.length;
+  const step = (W - 40) / (apps.length + 1);
   const tiles = apps.map((app, i) => {
     const cx = 20 + step * i + step / 2;
     const x = cx - S / 2;
@@ -57,9 +60,17 @@ export function shelfSvg(glyph: GlyphBody): string {
     .join("")}</text>
 </g>`;
   });
+  const cx = 20 + step * apps.length + step / 2;
+  const y = 22;
+  const g = 14 / 12;
+  tiles.push(`<g class="pop" style="animation-delay:${(apps.length * 0.07).toFixed(2)}s; transform-origin:${f1(cx)}px ${y + S / 2}px">
+  <rect x="${f1(cx - S / 2 + 1)}" y="${y + 1}" width="${S - 2}" height="${S - 2}" rx="15" fill="${ink.card}" stroke="${ink.border}" stroke-width="2"/>
+  <g transform="translate(${f1(cx - 14)} ${y + S / 2 - 14}) scale(${g.toFixed(4)})" fill="${ink.fg}">${glyph("arrow-forward-rounded").replace(/fill="currentColor"/g, "")}</g>
+  <text x="${f1(cx)}" y="${y + S + 24}" text-anchor="middle" class="n"><tspan x="${f1(cx)}" dy="0">All apps</tspan></text>
+</g>`);
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
 <style>
-  text { ${FONT} } .n { font-size: 13px; fill: ${INK.muted}; }
+  text { ${FONT} } .n { font-size: 13px; fill: ${ink.muted}; }
   .pop { animation: pop .6s cubic-bezier(.3,1.6,.5,1) both; }
   @keyframes pop { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: none; } }
   ${REDUCED_MOTION}

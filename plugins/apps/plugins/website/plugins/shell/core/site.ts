@@ -34,6 +34,12 @@ export const CONTACT_MAILTO = `mailto:${CONTACT_EMAIL}`;
 export const ISSUES_URL = `${SOURCE_REPO_URL}/issues/new`;
 
 /**
+ * The project's community: its Discord server's invite. The site links it from
+ * the header (beside the source), the footer and the feedback card.
+ */
+export const DISCORD_URL = "https://discord.gg/QYE8qSsfSQ";
+
+/**
  * The one command that installs equin on a Mac: the repository's own
  * `install.sh`, piped from its `main` branch. Derived from the same repository
  * as `SOURCE_REPO_URL`, so the page cannot offer one repository's installer beside

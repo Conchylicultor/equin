@@ -2,6 +2,7 @@ export { websiteApp } from "./app";
 export {
   CONTACT_EMAIL,
   CONTACT_MAILTO,
+  DISCORD_URL,
   INSTALL_COMMAND,
   ISSUES_URL,
   isLocalAppUrl,

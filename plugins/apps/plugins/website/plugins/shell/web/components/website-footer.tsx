@@ -3,15 +3,16 @@ import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { insetClass } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { CONTACT_EMAIL, CONTACT_MAILTO } from "../../core";
+import { CONTACT_EMAIL, CONTACT_MAILTO, DISCORD_URL } from "../../core";
 import { SOURCE_REPO_URL } from "@plugins/framework/plugins/product-name/core";
 import { WebsiteBand } from "./website-band";
 import { WordmarkText } from "./website-wordmark";
 import { Website } from "../slots";
-import { brand } from "@plugins/ui/plugins/icons/core";
+import { brand, type IconRef } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const githubIcon = brand("github");
+const discordIcon = brand("discord");
 
 /**
  * The site-wide footer, rendered at the end of every website pane's content
@@ -19,7 +20,7 @@ const githubIcon = brand("github");
  *
  * Two ends. The wordmark signs the document off at the leading edge, small and
  * in the tertiary grey. The trailing edge is where the site can be reached: the
- * one address, and the source on GitHub — after the small print a page
+ * one address, the source on GitHub and the community on Discord — after the small print a page
  * contributes (`Website.FooterLink`: Privacy). There is nothing to sell and nothing to
  * download, so there is no reason for a footer with columns — and because every
  * page wears this one, the way to write is never more than a scroll away, which
@@ -45,23 +46,52 @@ export function WebsiteFooter() {
           >
             <Text variant="caption">{CONTACT_EMAIL}</Text>
           </a>
-          {/* The anchor must ITSELF be the padded box (a wrapper would make the
-              ring bigger than the click target), and `Inset` names no `href` —
-              so this is the class-helper half of the own-it/don't rule. */}
-          <a
-            href={SOURCE_REPO_URL}
-            target="_blank"
-            rel="noreferrer noopener"
-            aria-label="Source on GitHub"
-            className={cn(
-              insetClass({ pad: "sm" }),
-              "border-border text-muted-foreground hover:border-muted-foreground hover:text-foreground rounded-full border",
-            )}
-          >
-            <Icon icon={githubIcon} className="size-4.5" />
-          </a>
+          {/* The two off-site rings sit as one pair, closer than the words. */}
+          <Inline gap="sm">
+            <FooterIconLink
+              href={SOURCE_REPO_URL}
+              icon={githubIcon}
+              label="Source on GitHub"
+            />
+            <FooterIconLink
+              href={DISCORD_URL}
+              icon={discordIcon}
+              label="Community on Discord"
+            />
+          </Inline>
         </Inline>
       </Cluster>
     </WebsiteBand>
+  );
+}
+
+/**
+ * One off-site destination at the footer's end, as a round outlined icon. The
+ * anchor must ITSELF be the padded box (a wrapper would make the ring bigger
+ * than the click target), and `Inset` names no `href` — so this is the
+ * class-helper half of the own-it/don't rule.
+ */
+function FooterIconLink({
+  href,
+  icon,
+  label,
+}: {
+  href: string;
+  icon: IconRef;
+  label: string;
+}) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer noopener"
+      aria-label={label}
+      className={cn(
+        insetClass({ pad: "sm" }),
+        "border-border text-muted-foreground hover:border-muted-foreground hover:text-foreground rounded-full border",
+      )}
+    >
+      <Icon icon={icon} className="size-4.5" />
+    </a>
   );
 }

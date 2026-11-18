@@ -33,13 +33,20 @@ and the three chrome pieces a page is built out of.
 - **`WebsiteChrome`** — what a pane renders instead of `PaneChrome`: the header,
   the page's bands, then the footer. Going through it is what makes "one footer
   per page" structural rather than remembered. The footer carries the wordmark, the
-  email and the GitHub link; both are site-level facts in `core/site.ts` (the
-  contact band's cards read the same address), so neither is declared twice.
+  email and the GitHub and Discord links; the address and the Discord invite are
+  site-level facts in `core/site.ts` (the contact band's cards read the same
+  ones), so neither is declared twice.
 - **`WebsiteHeader`** — ONE pane-header slot, borrowed by all four panes via
   `Pane.define({ actions: WebsiteHeader })`. Declared here and only here; the
   borrowing panes must stay out of their own `slots:` records. Nav order lives in
   `config/apps/website/shell/header.jsonc` — the wordmark ahead of the spacer, the
-  destinations packed against the trailing edge.
+  destinations packed against the trailing edge, in three looks only: quiet
+  words for the pages, icons for what leaves the site (GitHub, Discord), and one
+  pill shape for the actions (▶ Demo outlined, Wish filled).
+- **Learn menu** — `WebsiteLearnMenu`, the header's "Learn ▾": the pages that
+  explain equin rather than show it, contributed to `Website.LearnEntry` (each a
+  `WebsiteLearnLink`: its name over a one-line gloss). A hover panel
+  (`overlay/hover-popover`) in the header, plain rows of the ☰ menu on a phone.
 
 The wordmark's full stop is the only place the brand colour appears as identity
 rather than as an affordance. That is what lets a link, a button and the hero's
@@ -75,12 +82,13 @@ hover.
 
 ## Plugin reference
 
-- Description: App shell for the Website (equin public site). Registers the /about app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, the Website.Layer slot for what floats over every page and the Website.Resident slot for what must outlive a page switch (both rendered by the app's surface) and the Website.FooterLink slot for the footer's small print, and contributes the site's own theme (equin: palette, chart ramp, font), which the website app selects, plus the equin-document sub-theme (type scale, density, shape) every page wears and the equin-page-hero sub-theme an inner page's heading wears. The website's landing page on the server: its sitemap entry (WebsitePages.Page).
+- Description: App shell for the Website (equin public site). Registers the /about app entry, owns the shared site header (wordmark, the Learn menu over the Website.LearnEntry slot, the GitHub and Discord links) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, the Website.Layer slot for what floats over every page and the Website.Resident slot for what must outlive a page switch (both rendered by the app's surface) and the Website.FooterLink slot for the footer's small print (beside the address and the GitHub and Discord links), and contributes the site's own theme (equin: palette, chart ramp, font), which the website app selects, plus the equin-document sub-theme (type scale, density, shape) every page wears and the equin-page-hero sub-theme an inner page's heading wears. The website's landing page on the server: its sitemap entry (WebsitePages.Page).
 - Web:
   - Slots:
     - `Website.Section`
     - `Website.Layer`
     - `Website.Resident`
+    - `Website.LearnEntry`
     - `Website.FooterLink`
     - `WebsiteHeader`
   - Slot contributors:
@@ -91,31 +99,34 @@ hover.
     - `Website.Section` ← `apps.website.landing.story-link`
     - `Website.Layer` ← `apps.website.pages.privacy`
     - `Website.Resident` ← `apps.website.live-demo`
+    - `Website.LearnEntry` ← `apps.website.pages.foundations`
+    - `Website.LearnEntry` ← `apps.website.pages.story`
     - `Website.FooterLink` ← `apps.website.pages.privacy`
     - `WebsiteHeader` ← `apps.website.improve`
     - `WebsiteHeader` ← `apps.website.pages.apps`
     - `WebsiteHeader` ← `apps.website.pages.download`
-    - `WebsiteHeader` ← `apps.website.pages.foundations`
     - `WebsiteHeader` ← `apps.website.pages.guide`
-    - `WebsiteHeader` ← `apps.website.pages.story`
     - `WebsiteHeader` ← `apps.website.pages.vision`
     - `WebsiteHeader` ← `apps.website.shell`
     - `WebsiteHeader` ← `primitives.pane`
   - Contributes:
     - `Apps.App` "equin" → `WebsiteLayout`
     - `WebsiteHeader` "wordmark" → `WebsiteWordmark`
+    - `WebsiteHeader` "learn" → `WebsiteLearnMenu`
     - `WebsiteHeader` "github" → `WebsiteGithubLink`
+    - `WebsiteHeader` "discord" → `WebsiteDiscordLink`
     - `Pane.Register` "website-landing"
     - `ThemeEngine.Theme` "equin"
     - `ThemeEngine.SubTheme` "equin document"
     - `ThemeEngine.SubTheme` "equin page heading"
-  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×7
-    - `primitives/action-presentation` ×4
-    - `primitives/css/ui-kit` ×4
+    - `primitives/action-presentation` ×3
     - `primitives/css/spacing` ×3
     - `apps/deploy/analytics/collect` ×2
     - `primitives/css/text` ×2
+    - `primitives/css/ui-kit` ×2
+    - `primitives/overlay/hover-popover` ×2
     - `primitives/slot-render` ×2
     - `apps-core.Apps`
     - `layouts/full-pane.FullPane`
@@ -143,9 +154,9 @@ hover.
     - `WebsiteFooterLink`
     - `WebsiteHeader`
     - `WebsiteHero`
+    - `WebsiteLearnLink`
     - `WebsiteNavLead`
     - `WebsiteNavLink`
-    - `WebsiteNavPill`
     - `websitePagePart`
     - `WebsiteScrollCue`
     - `WebsiteSoon`
@@ -173,6 +184,7 @@ hover.
   - Exports (values):
     - `CONTACT_EMAIL`
     - `CONTACT_MAILTO`
+    - `DISCORD_URL`
     - `INSTALL_COMMAND`
     - `isLocalAppUrl`
     - `isPublicSiteUrl`
@@ -201,6 +213,7 @@ hover.
     - `ui/tokens/density --control-height-sm`
     - `ui/tokens/density --control-pad-sm`
     - `ui/tokens/density --space-2xl`
+    - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-bold`
     - `ui/tokens/type-scale --font-weight-normal`

@@ -84,19 +84,20 @@ variables.
 
 ## Plugin reference
 
-- Description: The technical foundations page of the equin website: the /about/foundations pane drawing what equin brings on top of Claude as an iceberg — ten layers from the apps at sea level down to the loop that builds them, each piece a pill that opens in place into a card (many with a live drawing), with a depth gauge, a Components / Harness filter and Expand all — and its Foundations nav link. The technical foundations page of the equin website on the server: its sitemap entry (WebsitePages.Page).
+- Description: The technical foundations page of the equin website: the /about/foundations pane drawing what equin brings on top of Claude as an iceberg — ten layers from the apps at sea level down to the loop that builds them, each piece a pill that opens in place into a card (many with a live drawing), with a depth gauge, a Components / Harness filter and Expand all — and its entry in the header's Learn menu. The technical foundations page of the equin website on the server: its sitemap entry (WebsitePages.Page).
 - Web:
   - Contributes:
     - `Pane.Register` "website-foundations"
-    - `WebsiteHeader` "foundations" → `FoundationsNavItem`
+    - `Website.LearnEntry` "Foundations" → `FoundationsNavItem`
     - `ThemeEngine.SubTheme` "iceberg sea header"
     - `ThemeEngine.SubTheme` "iceberg sky header"
   - Uses:
     - `apps/deploy/analytics/collect.observeSectionReach`
     - `apps/deploy/analytics/collect.track`
+    - `apps/website/shell.Website`
     - `apps/website/shell.WebsiteChrome`
     - `apps/website/shell.WebsiteHeader`
-    - `apps/website/shell.WebsiteNavLink`
+    - `apps/website/shell.WebsiteLearnLink`
     - `apps/website/shell.websitePagePart`
     - `apps/website/shell.WebsiteScrollCue`
     - `primitives/dom/auto-scroll.findScrollParent`

@@ -42,6 +42,7 @@ close, re-entry always cancels the pending close). `floating-action`'s
 - Cross-plugin:
   - Imported by:
     - `apps-core/app-launcher`
+    - `apps/website/shell`
     - `primitives/collapsible`
 - Core:
   - Exports (types):

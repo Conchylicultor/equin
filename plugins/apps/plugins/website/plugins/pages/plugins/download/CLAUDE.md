@@ -23,16 +23,17 @@ installer beside another's source. The installer's steps are written out in
 
 ## Plugin reference
 
-- Description: The download page of the equin website: the /about/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it runs, a closing card opening the homepage's live demo full screen for a reader not ready to install (agents off there), and its header pill (▶ Demo | Download: the live demo, or this page). The download page of the equin website on the server: its sitemap entry (WebsitePages.Page).
+- Description: The download page of the equin website: the /about/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it runs, a closing card opening the homepage's live demo full screen for a reader not ready to install (agents off there), and its two header items: Download (a page link to this page) and ▶ Demo (the live demo, an outlined pill beside Wish). The download page of the equin website on the server: its sitemap entry (WebsitePages.Page).
 - Web:
   - Contributes:
     - `Pane.Register` "website-download"
     - `WebsiteHeader` "download" → `DownloadNavItem`
+    - `WebsiteHeader` "demo" → `DemoNavItem`
     - `ThemeEngine.SubTheme` "equin download note"
     - `ThemeEngine.SubTheme` "equin download tabs"
     - `ThemeEngine.SubTheme` "equin download"
-  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps/website/shell` ×8
+  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/website/shell` ×7
     - `primitives/collapsible` ×4
     - `primitives/css/spacing` ×3
     - `primitives/pane` ×3

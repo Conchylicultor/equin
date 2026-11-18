@@ -1,15 +1,16 @@
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { WebsiteNavLink } from "@plugins/apps/plugins/website/plugins/shell/web";
+import { WebsiteLearnLink } from "@plugins/apps/plugins/website/plugins/shell/web";
 import { storyPane } from "../panes";
 
 /**
- * "Story" entry in the shared site header. Opens the story page.
+ * "Story" in the shared site header's Learn menu. Opens the story page.
  */
 export function StoryNavItem() {
   const openPane = useOpenPane();
   return (
-    <WebsiteNavLink
+    <WebsiteLearnLink
       label="Story"
+      gloss="How equin came to be"
       {...openPane.link(storyPane, {}, { mode: "root" })}
     />
   );

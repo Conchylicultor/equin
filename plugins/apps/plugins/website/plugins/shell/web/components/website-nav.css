@@ -2,27 +2,23 @@
  * The site header's one rhythm: the mock puts 28px between every two things in
  * the nav, words or boxes. A quiet link carries its share as its own inline
  * padding (`controlPadSm`, 12px, its hover target), and the bar adds its 4px
- * gap — 12 + 4 + 12 between two words. A BOXED item (the Demo | Download pill,
- * the Wish pill) has a visible edge, so its padding is inside the box; these
- * give it the same 12px outside the box, so a box sits as far from a word as a
- * word does.
+ * gap — 12 + 4 + 12 between two words. A BOXED item (the Demo and Wish pills)
+ * has a visible edge, so its padding is inside the box; the lead below gives it
+ * the same 12px outside the box, so a box sits as far from a word as a word
+ * does.
  *
  * Read from the control-padding token rather than spelled, so the header's
  * rhythm moves with the link padding it must agree with.
  */
 
-/* Between two neighbours: the pill. */
-.website-nav-boxed {
-  padding-inline: var(--control-pad-sm);
-}
-
-/* The last item, against the header's trailing edge: Wish keeps the edge the
-   bands below it share, so only its leading side takes the space. */
+/* A pill at the trailing end (Demo, then Wish): Wish keeps the edge the bands
+   below it share, so only its leading side takes the space — and the two
+   pills, each spaced on that side only, sit as one pair. */
 .website-nav-lead {
   padding-inline-start: var(--control-pad-sm);
 }
 
-/* An icon in the nav (GitHub): its square button already insets the glyph by
+/* An icon in the nav (GitHub, Discord): its square button already insets the glyph by
    half of what the box has over it, so it takes the rest of a word's padding —
    the glyph then sits as far from its neighbours as a word does. */
 .website-nav-icon {
@@ -56,4 +52,23 @@
   font-size: inherit;
   font-weight: inherit;
   color: inherit;
+}
+
+/*
+ * The Learn menu's panel: one entry per page it holds, its name over a line
+ * saying what the page is — a menu read like the header, not a list of
+ * commands. Each entry is the whole link, hovering to the panel's fill.
+ */
+.website-learn-entry {
+  display: block;
+  width: 100%;
+  text-align: start;
+  cursor: pointer;
+  padding: 0.5625rem 0.75rem;
+  border-radius: calc(var(--radius) * 0.75);
+  line-height: 1.35;
+}
+.website-learn-entry:hover,
+.website-learn-entry:focus-visible {
+  background: var(--hover-fill);
 }
