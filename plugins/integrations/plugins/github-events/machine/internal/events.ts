@@ -30,6 +30,9 @@ export const RunSchema = z.object({
   status: z.string().nullable(),
   conclusion: z.string().nullable(),
   html_url: z.string(),
+  created_at: z.string(),
+  /** When this attempt started (a re-run's is its own; `created_at` is the first's). */
+  run_started_at: z.string().nullable().optional(),
   updated_at: z.string(),
   repository: RepositorySchema,
 });
@@ -127,6 +130,9 @@ export function runFacts(
     conclusion: run.conclusion,
     url: run.html_url,
     githubUpdatedAt: new Date(run.updated_at),
+    startedAt: new Date(run.run_started_at ?? run.created_at),
+    // GitHub sends no completion time: a completed run's last update is it.
+    finishedAt: run.status === "completed" ? new Date(run.updated_at) : null,
   };
 }
 

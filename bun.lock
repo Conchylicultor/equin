@@ -5156,6 +5156,10 @@
       "name": "@equin/plugin-integrations-github-events",
       "version": "0.0.1",
     },
+    "plugins/integrations/plugins/github-events/plugins/runs-arm": {
+      "name": "@equin/plugin-integrations-github-events-runs-arm",
+      "version": "0.0.1",
+    },
     "plugins/integrations/plugins/github-issues": {
       "name": "@equin/plugin-integrations-github-issues",
       "version": "0.0.1",
@@ -10774,6 +10778,8 @@
     "@equin/plugin-integrations": ["@equin/plugin-integrations@workspace:plugins/integrations"],
 
     "@equin/plugin-integrations-github-events": ["@equin/plugin-integrations-github-events@workspace:plugins/integrations/plugins/github-events"],
+
+    "@equin/plugin-integrations-github-events-runs-arm": ["@equin/plugin-integrations-github-events-runs-arm@workspace:plugins/integrations/plugins/github-events/plugins/runs-arm"],
 
     "@equin/plugin-integrations-github-issues": ["@equin/plugin-integrations-github-issues@workspace:plugins/integrations/plugins/github-issues"],
 

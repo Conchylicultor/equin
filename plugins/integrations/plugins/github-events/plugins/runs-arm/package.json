@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-integrations-github-events-runs-arm",
+  "description": "The GitHub arm of the merged run space: every watched workflow's runs (the release publish included) as rows of the runs list.",
+  "private": true,
+  "version": "0.0.1"
+}

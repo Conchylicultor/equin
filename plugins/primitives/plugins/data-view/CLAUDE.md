@@ -2396,13 +2396,13 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `DataViewSlots.ValueCodec`
     - `DataViewSlots.Grouping`
     - `DataViewSlots.ColumnConfig`
-  - Slot contributors: 64 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 66 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `DataViewSlots.Cell` ×16
-    - `DataViewSlots.CollectionItemAction` ×11
+    - `DataViewSlots.CollectionItemAction` ×12
     - `DataViewSlots.Filter` ×9
     - `DataViewSlots.CellEditor` ×6
+    - `DataViewSlots.CollectionRowActivation` ×5
     - `DataViewSlots.View` ×5
-    - `DataViewSlots.CollectionRowActivation` ×4
     - `DataViewSlots.Grouping` ×4
     - `DataViewSlots.ValueCodec` ×3
     - `DataViewSlots.Setting` ×2

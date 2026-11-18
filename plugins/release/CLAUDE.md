@@ -553,6 +553,7 @@ remote is built here.
     - `auth/apple-signing`
     - `framework/cli/deploy`
     - `framework/cli/release`
+    - `integrations/github-events/runs-arm`
     - `release/runs-arm`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/preview-manager.ts`, `server/internal/run-logs-resource.ts`, `server/internal/run-state.ts`, `server/internal/transcript.ts` (debt)

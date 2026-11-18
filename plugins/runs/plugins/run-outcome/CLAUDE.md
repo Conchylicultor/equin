@@ -52,6 +52,7 @@ Own plugin, not `runs/core`, so `runs/web` can import the chip without
     - `apps/deploy/deployments/runs-arm`
     - `backup/runs-arm`
     - `build/runs-arm`
+    - `integrations/github-events/runs-arm`
     - `release/runs-arm`
     - `runs`
 

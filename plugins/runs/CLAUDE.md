@@ -227,6 +227,7 @@ row, or on a failed re-read the row as last seen).
     - `build`
     - `build/build-fix`
     - `build/runs-arm`
+    - `integrations/github-events/runs-arm`
     - `release/runs-arm`
 - Sub-plugins:
   - **`run-outcome`** — The shared run-outcome display: the colour/label metadata, the derived filter options, and the dot / chip / badge every run kind renders its outcome through — so a build row and a backup row cannot…

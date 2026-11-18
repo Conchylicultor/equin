@@ -46,6 +46,11 @@ export type FailedJob = z.infer<typeof FailedJobSchema>;
  *   may grow, so text, never an enum that would refuse a new one.
  * - `githubUpdatedAt` — the run's `updated_at`: a delivery older than the
  *   stored one never overwrites it (deliveries can arrive out of order).
+ * - `startedAt` — when this attempt started (`run_started_at`, else the run's
+ *   `created_at`); `finishedAt` — when it completed (its `updated_at` once
+ *   `status` is `completed`; GitHub sends no completion time of its own),
+ *   null while it is queued or in progress. The pair the runs union's
+ *   `startedAt` / `finishedAt` (and its "Took") read.
  * - `reportedAt` — when its failure was filed as a `github-run-failed`
  *   report: at most once per attempt.
  */
@@ -70,6 +75,8 @@ export const githubRunFields = {
     default: [],
   }),
   githubUpdatedAt: dateField({ label: "Updated on GitHub" }),
+  startedAt: dateField({ label: "Started" }),
+  finishedAt: nullable(dateField({ label: "Finished" })),
   reportedAt: nullable(dateField({ label: "Reported" })),
 } satisfies FieldsRecord;
 export const githubRunsEntityRef = entityRef("github_runs", githubRunFields);

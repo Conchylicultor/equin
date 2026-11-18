@@ -28,6 +28,7 @@ const workflowRun = {
   html_url: "https://github.com/equinai/equin/actions/runs/19456123987",
   run_attempt: 1,
   created_at: "2026-11-18T09:00:00Z",
+  run_started_at: "2026-11-18T09:00:04Z",
   updated_at: "2026-11-18T09:06:12Z",
   repository,
   head_repository: repository,
@@ -98,7 +99,25 @@ describe("GitHub payloads", () => {
       conclusion: "failure",
       url: "https://github.com/equinai/equin/actions/runs/19456123987",
       githubUpdatedAt: new Date("2026-11-18T09:06:12Z"),
+      startedAt: new Date("2026-11-18T09:00:04Z"),
+      finishedAt: new Date("2026-11-18T09:06:12Z"),
     });
+  });
+
+  test("a run in flight has no finish; one without run_started_at starts at its creation", () => {
+    const { run_started_at: _started, ...queued } = {
+      ...workflowRun,
+      status: "queued",
+      conclusion: null,
+    };
+    const facts = runFacts(
+      RunListSchema.parse({ workflow_runs: [queued] }).workflow_runs[0]!,
+      {
+        headIsRunName: false,
+      },
+    );
+    expect(facts.startedAt).toEqual(new Date("2026-11-18T09:00:00Z"));
+    expect(facts.finishedAt).toBeNull();
   });
 
   test("a manual run's head is its run-name, when the watch says so", () => {

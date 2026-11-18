@@ -1,6 +1,6 @@
 {
-  "id": "e33ba18d-3f06-40c9-9c95-45c224b6d2a8",
-  "prevId": "611e13e0-08ff-4851-8432-6ea3d403187f",
+  "id": "9fa186b0-9a2e-4edc-a9ba-ee37b1485dbd",
+  "prevId": "e33ba18d-3f06-40c9-9c95-45c224b6d2a8",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -12915,6 +12915,18 @@
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "finished_at": {
+          "name": "finished_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         },
         "reported_at": {
           "name": "reported_at",

@@ -25372,6 +25372,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/claude-cli`
           - `infra/events`
           - `infra/jobs`
+          - `integrations/github-events/runs-arm`
           - `network/live/query-resource`
           - `page/links`
           - `release/runs-arm`
@@ -41534,7 +41535,36 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/client-tools/publish-watch`
           - `database/pgbouncer/publish-watch`
           - `installer/release-assets`
+          - `integrations/github-events/runs-arm`
           - `upstream`
+      - Plugins:
+        - **`runs-arm`** — The GitHub arm's presence on the merged run surface: a row opens its run on GitHub, a failed one offers Investigate, and the workflow / ref / repository / commit / status columns only a GitHub run has (off by default — the label says the workflow and ref). The GitHub arm of the merged run space: binds `github_runs` (every watched workflow's run attempts — the release publish included) into the runs union, its outcome from GitHub's status and conclusion, its label the workflow and the ref it ran on, its message the failed jobs.
+          - Web:
+            - Contributes:
+              - `DataViewSlots.CollectionRowActivation` "runs:open"
+              - `FieldPresentation.Register` "arm:runs:github"
+              - `DataViewSlots.CollectionItemAction` "runs:investigate:github" → `CollectionInvestigate`
+            - Uses:
+              - `network/live.FieldPresentation`
+              - `primitives/css/badge.Badge`
+              - `runs.investigateRuns`
+              - `runs.runLinks`
+          - Server:
+            - Uses:
+              - `database/sql-projection.nullable`
+              - `database/sql-projection.parsed`
+              - `integrations/github-events._githubRuns`
+              - `runs.runsServed`
+            - Register: `serveArm('runs:github')`
+          - Core:
+            - Uses:
+              - `integrations/github-events.githubRunFields`
+              - `integrations/github-events.githubRunsEntityRef`
+              - `network/live.liveArm`
+              - `runs.runs`
+            - Exports (values):
+              - `GITHUB_RUN_KIND`
+              - `githubRunArm`
     - **`github-issues`** — GitHub new-issue links: buildIssueUrl turns a written request (its <ui-context> picks made readable, each raw tag kept in a collapsed block), the page it is about and the host's own note lines into a prefilled issues/new link held under GitHub's length cap.
       - Core:
         - Uses: `primitives/ui-context.splitUiContext`
@@ -42647,8 +42677,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `FieldPresentation.Register`
           - `ClientFields.Resolve`
-        - Slot contributors: 44 contributors — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `FieldPresentation.Register` ×41
+        - Slot contributors: 45 contributors — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `FieldPresentation.Register` ×42
           - `ClientFields.Resolve` ×3
         - Uses:
           - `network/live/live-state.PagedResourceResult`
@@ -43035,7 +43065,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 362 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 363 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×91
           - `conversations` ×74
           - `debug` ×36
@@ -43045,9 +43075,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data` ×14
           - `build` ×10
           - `primitives` ×8
+          - `integrations` ×5
           - `stats` ×5
           - `code-explorer` ×4
-          - `integrations` ×4
           - `plugin-meta` ×4
           - `review` ×4
           - `auth` ×3
@@ -43728,7 +43758,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `liveSetOverBudgetSink`
               - `SQL_TYPE_RE`
           - Cross-plugin:
-            - Imported by: 30 plugins — full list in [`plugins/network/plugins/live/plugins/query-resource/REFERENCE.md`](../plugins/network/plugins/live/plugins/query-resource/REFERENCE.md)
+            - Imported by: 31 plugins — full list in [`plugins/network/plugins/live/plugins/query-resource/REFERENCE.md`](../plugins/network/plugins/live/plugins/query-resource/REFERENCE.md)
               - `apps` ×7
               - `page` ×4
               - `conversations` ×3
@@ -43739,6 +43769,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `active-data`
               - `backup/runs-arm`
               - `build/runs-arm`
+              - `integrations/github-events/runs-arm`
               - `release/runs-arm`
               - `reports/live-set-budget`
               - `runs`
@@ -50474,7 +50505,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×6
               - `ui/tokens/shape` ×3
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 191 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 192 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×39
               - `debug` ×39
               - `conversations` ×28
@@ -50488,6 +50519,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields` ×3
               - `page` ×3
               - `apps-core` ×2
+              - `integrations` ×2
               - `runs` ×2
               - `shell` ×2
               - `auth`
@@ -50496,7 +50528,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2/settings`
               - `database/query-deadline`
               - `hints/ask`
-              - `integrations/google-maps/usage`
               - `release/runs-arm`
               - `stats/responsiveness`
           - Core:
@@ -52390,13 +52421,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.ValueCodec`
           - `DataViewSlots.Grouping`
           - `DataViewSlots.ColumnConfig`
-        - Slot contributors: 64 contributors — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Slot contributors: 66 contributors — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `DataViewSlots.Cell` ×16
-          - `DataViewSlots.CollectionItemAction` ×11
+          - `DataViewSlots.CollectionItemAction` ×12
           - `DataViewSlots.Filter` ×9
           - `DataViewSlots.CellEditor` ×6
+          - `DataViewSlots.CollectionRowActivation` ×5
           - `DataViewSlots.View` ×5
-          - `DataViewSlots.CollectionRowActivation` ×4
           - `DataViewSlots.Grouping` ×4
           - `DataViewSlots.ValueCodec` ×3
           - `DataViewSlots.Setting` ×2
@@ -58963,6 +58994,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `auth/apple-signing`
       - `framework/cli/deploy`
       - `framework/cli/release`
+      - `integrations/github-events/runs-arm`
       - `release/runs-arm`
   - Exemptions:
     - Exempts itself from: `boundaries/no-platform-api` — `server/internal/preview-manager.ts`, `server/internal/run-logs-resource.ts`, `server/internal/run-state.ts`, `server/internal/transcript.ts` (debt)
@@ -60751,6 +60783,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `build`
       - `build/build-fix`
       - `build/runs-arm`
+      - `integrations/github-events/runs-arm`
       - `release/runs-arm`
   - Plugins:
     - **`run-outcome`** — The shared run-outcome display: the colour/label metadata, the derived filter options, and the dot / chip / badge every run kind renders its outcome through — so a build row and a backup row cannot disagree about what `failed` looks like.
@@ -60784,6 +60817,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/deploy/deployments/runs-arm`
           - `backup/runs-arm`
           - `build/runs-arm`
+          - `integrations/github-events/runs-arm`
           - `release/runs-arm`
           - `runs`
 
