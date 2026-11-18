@@ -1933,7 +1933,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `serveValueOn`
     - `sliceRange`
 - Cross-plugin:
-  - Imported by: 359 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 360 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×90
     - `conversations` ×73
     - `debug` ×36
@@ -1945,10 +1945,10 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `primitives` ×8
     - `stats` ×5
     - `code-explorer` ×4
+    - `integrations` ×4
     - `plugin-meta` ×4
     - `review` ×4
     - `auth` ×3
-    - `integrations` ×3
     - `reports` ×3
     - `ui` ×3
     - `apps-core` ×2

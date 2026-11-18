@@ -326,7 +326,7 @@ presence only — **no re-exports**; import from `core/`.
     - `spawnPassthrough`
     - `spawnToFile`
 - Cross-plugin:
-  - Imported by: 105 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 106 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework` ×32
     - `infra` ×31
     - `apps` ×9
@@ -343,6 +343,7 @@ presence only — **no re-exports**; import from `core/`.
     - `backup`
     - `hints/ask`
     - `installer/window`
+    - `integrations/github-events`
     - `review/plugin-changes`
     - `stats/commits`
     - `tasks`

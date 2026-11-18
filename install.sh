@@ -19,7 +19,8 @@
 # Stage 0. Piped (`curl … | bash`), this file is main's, and its first job is
 # to hand the install to the release it installs: it downloads that release's
 # own install.sh (and the installer window for this system) from the tag's
-# GitHub Release, checks every file against the Release's SHA256SUMS, and
+# GitHub Release, checks every file against the Release's SHA256SUMS (the
+# window: INSTALLER-SHA256SUMS, attached after the Release), and
 # runs it — in the window, or in this terminal when the window can't show
 # (`stage0`). A release cut before the window existed is installed by this
 # script's own steps, and so is main when the release's script can't hand
@@ -115,7 +116,7 @@ RELEASE_TAG_ERE='^v([0-9]{4})\.([0-9]{2})\.([0-9]{2})(\.([0-9]+))?$'
 # in the window or in this terminal. Returns (instead of exec'ing) only to
 # install with THIS script's steps: when the release predates the hand-off or
 # could not be downloaded; it then sets CHECKOUT and says why. A file that does
-# not match SHA256SUMS stops the install: nothing unverified ever runs.
+# not match its sums file stops the install: nothing unverified ever runs.
 stage0() {
   local base want manifest tag dir key bin
   base="${EQUIN_RELEASES_URL:-https://github.com/equinai/equin/releases}"
@@ -182,16 +183,22 @@ stage0() {
   esac
   bin=""
   if [ "$VIEW" != terminal ] && [ -n "$key" ]; then
-    bin="$(json_field "$key" "$dir/release.json")"
-    if [ -n "$bin" ]; then
-      if stage0_get "$base/download/$tag" "$bin" "$dir"; then
-        stage0_verify "$dir" "$bin"
-        chmod +x "$dir/$bin"
-        bin="$dir/$bin"
-      else
-        STAGE0_NO_WINDOW="the window could not be downloaded"
-        bin=""
+    if [ "$(json_field installers "$dir/release.json")" = 1 ]; then
+      # release.json v2: the binaries are attached after the Release is
+      # published, INSTALLER-SHA256SUMS last — present means every binary it
+      # lists is there; absent, not attached (yet), or their build failed.
+      rm -f "$dir/INSTALLER-SHA256SUMS"
+      if ! stage0_get "$base/download/$tag" INSTALLER-SHA256SUMS "$dir"; then
+        STAGE0_NO_WINDOW="this release's installer window isn't published (yet)"
+      elif grep -qE "^[0-9a-f]{64}  \*?equin-installer-$key\$" "$dir/INSTALLER-SHA256SUMS"; then
+        # release-assets' INSTALLER_BINARIES: equin-installer-<platform key>.
+        bin="equin-installer-$key"
       fi
+      stage0_window "$bin" INSTALLER-SHA256SUMS
+    else
+      # release.json v1: the binary is listed under its platform key, and in
+      # SHA256SUMS.
+      stage0_window "$(json_field "$key" "$dir/release.json")" SHA256SUMS
     fi
   fi
 
@@ -203,6 +210,22 @@ stage0() {
   fi
   echo "  Installing equin ${tag#v} in this terminal ($VIEW_WHY)."
   stage0_exec bash "$dir/install.sh" "${handoff[@]}" ${INSTALL_ARGS[@]+"${INSTALL_ARGS[@]}"}
+}
+
+# stage0_window <binary name or ""> <sums file>: download this platform's
+# window binary into $dir, verify it against the sums file, and set bin to its
+# path; bin empty (and STAGE0_NO_WINDOW saying why) when there is none or it
+# could not be downloaded. Uses stage0's base, tag and dir.
+stage0_window() {
+  bin=""
+  [ -n "$1" ] || return 0
+  if stage0_get "$base/download/$tag" "$1" "$dir"; then
+    stage0_verify "$dir" "$1" "$2"
+    chmod +x "$dir/$1"
+    bin="$dir/$1"
+  else
+    STAGE0_NO_WINDOW="the window could not be downloaded"
+  fi
 }
 
 # stage0_exec <command…>: hand the install over (with --stage0-only, print
@@ -243,18 +266,19 @@ stage0_get() {
   curl -fsSL --retry 2 -o "$3/$2.part" "$1/$2" 2>/dev/null && mv "$3/$2.part" "$3/$2"
 }
 
-# stage0_verify <dir> <file>: the file's sha256 is the one SHA256SUMS lists
-# for it, or the install stops — a damaged or changed download is never run.
+# stage0_verify <dir> <file> [sums file]: the file's sha256 is the one the
+# sums file (in <dir>; default SHA256SUMS) lists for it, or the install stops —
+# a damaged or changed download is never run.
 stage0_verify() {
   # shasum first: macOS's /sbin/sha256sum is BSD's, which reads no list on
   # stdin; Linux without perl's shasum has GNU's sha256sum.
-  local line sum="shasum -a 256"
+  local line sums="${3:-SHA256SUMS}" sum="shasum -a 256"
   command -v shasum >/dev/null 2>&1 || sum=sha256sum
-  line="$(grep -E "^[0-9a-f]{64}  \*?$2\$" "$1/SHA256SUMS" || true)"
+  line="$(grep -E "^[0-9a-f]{64}  \*?$2\$" "$1/$sums" || true)"
   if [ -z "$line" ] || ! (cd "$1" && printf '%s\n' "$line" | $sum -c --status >/dev/null 2>&1); then
     rm -f "$1/$2"
     fail "The download was damaged or changed, so the installer stopped. Nothing was installed. Run the installer again; if it stops here again, tell us: https://github.com/equinai/equin/issues" \
-      "$2 does not match the release's SHA256SUMS (${line:-no entry for it}), in $1"
+      "$2 does not match the release's $sums (${line:-no entry for it}), in $1"
   fi
 }
 

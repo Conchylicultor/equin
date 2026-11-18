@@ -223,8 +223,14 @@ hand over to the release it installs (`stage0`):
    REST API: no rate limit), or `download/<tag>/…` for `--ref <tag>`.
 2. **Download** into `~/.equin/install/bin/<tag>/` — `SHA256SUMS`,
    `release.json`, the tag's `install.sh`, and this platform's window binary
-   unless `--terminal` — all from that one tag.
-3. **Verify** each against `SHA256SUMS` (`shasum -a 256 -c`, else GNU
+   unless `--terminal` — all from that one tag. The window: for a v2
+   manifest (`installers: 1`) `INSTALLER-SHA256SUMS` first — attached after
+   the Release is published, last; absent (404), the terminal view, "this
+   release's installer window isn't published (yet)" — then
+   `equin-installer-<platform key>` if it lists one; for v1, the binary
+   `release.json` names under the platform key.
+3. **Verify** each against `SHA256SUMS` (the v2 window: against
+   `INSTALLER-SHA256SUMS`) (`shasum -a 256 -c`, else GNU
    `sha256sum -c`: macOS's `/sbin/sha256sum` is BSD's and reads no list).
    A mismatch or a missing entry stops the install; the file is deleted,
    never run.
@@ -428,7 +434,8 @@ service's build (§ One build of main per install) covers the other order.
 
 - `window` — the native installer window (`equin-installer`).
 - `release-assets` — what a release tag publishes (the GitHub Actions
-  workflow, `release.json`, `SHA256SUMS`) and its checks.
+  workflow: the Release first — `release.json`, `SHA256SUMS` — then the
+  window's binaries and `INSTALLER-SHA256SUMS` attached) and its checks.
 - `waits` — a `./equin` step's waits, reported naming their holder, and the
   stall rule.
 
@@ -502,7 +509,7 @@ service's build (§ One build of main per install) covers the other order.
     - `reportInstallWait`
     - `requestFollow`
 - Sub-plugins:
-  - **`release-assets`** — What a release tag publishes for the curl install: the GitHub Actions workflow (.github/workflows/installer-release.yml) that builds the installer window per release tag, the asset names and…
+  - **`release-assets`** — Watches the release workflow on GitHub (GitHubEvents.Watch: the product repo's installer-release.yml and its Releases), so a failed release run files a report naming the re-publish command, and the…
   - **`waits`** — How a `./equin` command run as an install step reports a wait on another task, naming its holder from the op log: installGrantHooks (a host CPU grant wait — any CLI admission, a build's or a…
   - **`window`** — The installer window: equin-installer, a small wry/tao Rust app (rust/) that runs install.sh as its child — events on fd 3, decisions on fd 4 — and draws the stream in a page bundled into the binary…
 

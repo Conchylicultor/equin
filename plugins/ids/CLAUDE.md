@@ -190,7 +190,7 @@ is reported by the schema file that exports it, which is where its plugin's
     - `parseKindLabel`
     - `storedIdSchema`
 - Cross-plugin:
-  - Imported by: 52 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 53 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×15
     - `conversations` ×8
     - `tasks` ×5
@@ -205,6 +205,7 @@ is reported by the schema file that exports it, which is where its plugin's
     - `database/table-mirror/replica`
     - `debug/tests`
     - `history/engine`
+    - `integrations/github-events`
     - `plugin-meta/plugin-health`
     - `shell/notifications`
     - `tag-tree/engine`

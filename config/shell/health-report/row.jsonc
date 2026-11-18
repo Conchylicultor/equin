@@ -1,4 +1,4 @@
-// @hash 70c9c81a315c
+// @hash c3d15d46bf83
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -18,6 +18,8 @@
     "upstream:updates",
     // The checkout that publishes releases (where the row above is absent): what is unreleased.
     "upstream:releases",
+    // Whether GitHub's news reaches the publisher at all: the releases row above reads it.
+    "integrations.github-events:github-events",
     // "Can this app run an agent at all": the first thing a new user needs answered.
     "conversations.runtime-sdk:claude-code",
     // Can I reach the server ...

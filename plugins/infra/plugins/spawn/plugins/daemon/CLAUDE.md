@@ -191,6 +191,7 @@ declaration (tsc): nothing here can respawn what it is not the parent of.
     - `infra/mcp/browser`
     - `infra/paths/root-migration`
     - `infra/spawn/daemon/background-arm`
+    - `integrations/github-events`
     - `plugin-meta/plugin-tree`
     - `release`
 - Exemptions:

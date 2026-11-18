@@ -1,9 +1,11 @@
 import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
+import { INSTALLER_BINARIES } from "@plugins/installer/plugins/release-assets/core";
 import {
   nextReleaseTag,
   releaseVersion,
+  type GitHubPublication,
   type PublisherStatus,
   type Releasability,
 } from "@plugins/upstream/plugins/release/core";
@@ -145,11 +147,83 @@ export function commitLineParts(line: CommitLine): {
 }
 
 /**
+ * Where the newest release stands on GitHub, as the row says it.
+ *
+ * - `health` — `ok`, `attention` (it failed: the row is coloured), or
+ *   `unknown` (not connected: nothing about GitHub is claimed).
+ * - `pulsing` — GitHub is still working on it.
+ * - `words` — what the row adds after the release ("Publishing on GitHub…").
+ * - `runUrl` — the release run to open, when there is one.
+ */
+export interface GitHubPublicationView {
+  health: "ok" | "attention" | "unknown";
+  pulsing: boolean;
+  words: string;
+  runUrl: string | null;
+}
+
+/** Every installer binary the release must carry, from release-assets' contract. */
+const INSTALLER_ASSETS: readonly string[] = Object.values(INSTALLER_BINARIES);
+
+/**
+ * What GitHub published of the newest release tag (the publication the
+ * machine read from GitHub's pushed events):
+ *
+ * | GitHub | row |
+ * |---|---|
+ * | not connected | unknown "GitHub not connected" |
+ * | Release public, every installer binary attached | ok "On GitHub" |
+ * | Release public, the run failed | attention "On GitHub without the installer window" |
+ * | Release public, the run in progress | ok, pulsing "On GitHub · installer building" |
+ * | Release public, no run seen / the run passed without them | ok "On GitHub · no installer window" |
+ * | no public Release, the run failed | attention "GitHub release failed" |
+ * | no public Release, a run seen | ok, pulsing "Publishing on GitHub…" |
+ * | no run, no Release | ok, pulsing "Waiting for GitHub" |
+ */
+export function githubPublication(g: GitHubPublication): GitHubPublicationView {
+  if (g.kind === "not-connected")
+    return {
+      health: "unknown",
+      pulsing: false,
+      words: "GitHub not connected",
+      runUrl: null,
+    };
+  const runUrl = g.run?.url ?? null;
+  const running = g.run !== null && g.run.status !== "completed";
+  const failed =
+    g.run !== null &&
+    g.run.status === "completed" &&
+    g.run.conclusion !== "success";
+  const view = (
+    health: GitHubPublicationView["health"],
+    pulsing: boolean,
+    words: string,
+  ): GitHubPublicationView => ({ health, pulsing, words, runUrl });
+  const release = g.release;
+  if (release !== null && !release.draft) {
+    if (INSTALLER_ASSETS.every((a) => release.assets.includes(a)))
+      return view("ok", false, "On GitHub");
+    if (failed)
+      return view("attention", false, "On GitHub without the installer window");
+    if (running) return view("ok", true, "On GitHub · installer building");
+    return view("ok", false, "On GitHub · no installer window");
+  }
+  if (failed) return view("attention", false, "GitHub release failed");
+  if (g.run !== null) return view("ok", true, "Publishing on GitHub…");
+  return view("ok", true, "Waiting for GitHub");
+}
+
+/**
  * The row's health. Unreleased commits are a publisher's normal state, not a
- * problem: the row is `ok` whatever it holds — the Release button lives in the
- * glance, not behind a warning colour. A failed build of the served commit
- * stays `ok` too: the build surfaces report that failure, and the commit line
- * says why the release is held back. A build in flight pulses.
+ * problem: they leave the row `ok` — the Release button lives in the glance,
+ * not behind a warning colour. A failed build of the served commit stays `ok`
+ * too: the build surfaces report that failure, and the commit line says why
+ * the release is held back. A build in flight pulses.
+ *
+ * What GitHub did with the newest release is the one thing that colours it:
+ * a failed publication is `attention`, one in progress pulses, and while
+ * GitHub is not connected the row is `unknown` — it never claims "published"
+ * on stale news.
  */
 export function releasesHealth(read: Read<PublisherStatus>): HealthStatus {
   if (read.status === "unavailable") return { state: "absent" };
@@ -158,11 +232,30 @@ export function releasesHealth(read: Read<PublisherStatus>): HealthStatus {
     return { state: "unknown", summary: "Couldn't read the releases" };
   const status = read.data;
   if (status.kind === "not-publisher") return { state: "absent" };
-  const words = {
-    title: RELEASES_TITLE,
-    summary: releasesSubtitle(status.latest),
-  };
-  return status.unreleased > 0 && status.releasable.kind === "building"
-    ? { state: "ok", ...words, transitioning: true }
-    : { state: "ok", ...words };
+  const subtitle = releasesSubtitle(status.latest);
+  const building =
+    status.unreleased > 0 && status.releasable.kind === "building";
+  if (status.github === null)
+    return withPulse(
+      { state: "ok", title: RELEASES_TITLE, summary: subtitle },
+      building,
+    );
+  const gh = githubPublication(status.github);
+  const summary = `${subtitle} · ${gh.words}`;
+  if (gh.health === "unknown") return { state: "unknown", summary };
+  return withPulse(
+    { state: gh.health, title: RELEASES_TITLE, summary },
+    building || gh.pulsing,
+  );
+}
+
+function withPulse(
+  status: {
+    state: "ok" | "attention";
+    title: string;
+    summary: string;
+  },
+  pulsing: boolean,
+): HealthStatus {
+  return pulsing ? { ...status, transitioning: true } : status;
 }

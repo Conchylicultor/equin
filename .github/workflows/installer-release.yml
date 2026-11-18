@@ -1,21 +1,39 @@
-# Builds the equin installer window for a release tag and publishes it, with
-# the tag's install.sh, release.json, SHA256SUMS and build-provenance records,
-# as that tag's GitHub Release — every file at once.
+# Publishes a release tag's GitHub Release, then builds the equin installer
+# window for it and attaches the binaries — in two phases:
+#
+# 1. `publish` (right after `validate`, ~1 min after the tag): the tag's
+#    install.sh, release.json and SHA256SUMS, with their build-provenance
+#    records (provenance.intoto.jsonl), published at once (draft → public).
+#    These files are never changed afterwards: a client reading release.json
+#    and SHA256SUMS on either side of a rewrite would see a mismatch.
+# 2. `attach` (after the window's builds): the binaries, their own provenance
+#    (installer-provenance.intoto.jsonl) and INSTALLER-SHA256SUMS, uploaded to
+#    the existing Release — INSTALLER-SHA256SUMS last, so its presence means
+#    every binary it lists is there.
+#
+# So a failed installer build no longer blocks the Release: the curl install's
+# stage 0 finds no INSTALLER-SHA256SUMS and installs in the terminal view.
 #
 # - Runs on every pushed tag; only release tags (`./equin version cut`:
 #   v<YYYY.MM.DD>[.N]) go further, any other tag ends here without error.
-# - Run by hand (Actions → Installer release → Run workflow) to rebuild an
-#   existing tag (`replace` swaps out its current Release), or with `publish`
-#   off to only build any ref and keep the binaries as run artifacts.
+# - Run by hand (Actions → Installer release → Run workflow) to (re)attach the
+#   installer to an existing Release (its core files are left alone), with
+#   `replace` to republish the Release from scratch, or with `publish` off to
+#   only build any ref and keep the binaries as run artifacts.
 # - A tag cut before the installer window existed has no crate to build: its
 #   Release carries install.sh, release.json and SHA256SUMS only, and the curl
 #   install's stage 0 installs it in the terminal view.
 #
 # Contract (asset names, release.json, the hand-off marker):
 # plugins/installer/plugins/release-assets. Design:
-# research/2026-11-17-global-installer-window.md §6.
+# research/2026-11-17-global-installer-window.md §6, and
+# research/2026-11-18-global-github-release-events.md §4 (the two phases).
 
 name: Installer release
+# The run's title is the ref it builds — a manual run of a tag is dispatched
+# FROM main, and equin's github-events reads the tag from here
+# (GitHubWatch.headIsRunName).
+run-name: ${{ inputs.ref || github.ref_name }}
 
 on:
   push:
@@ -27,11 +45,11 @@ on:
         required: true
         type: string
       publish:
-        description: "Publish the tag's GitHub Release (off: build only, binaries kept as run artifacts)"
+        description: "Publish the tag's GitHub Release, or attach the installer to it if it exists (off: build only, binaries kept as run artifacts)"
         type: boolean
         default: true
       replace:
-        description: "Replace the tag's existing GitHub Release"
+        description: "Replace the tag's existing GitHub Release (off: an existing Release keeps its files, and only gets the installer attached)"
         type: boolean
         default: false
 
@@ -113,6 +131,89 @@ jobs:
             echo "publish=$publish"
             echo "latest=$latest"
           } | tee -a "$GITHUB_OUTPUT"
+
+  publish:
+    name: Publish the Release
+    needs: validate
+    if: needs.validate.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      TAG: ${{ needs.validate.outputs.ref }}
+      COMMIT: ${{ needs.validate.outputs.commit }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      # The workflow's own commit, for the assembling code: a manual rebuild of
+      # a tag cut before it still assembles with today's code. The tag's files
+      # are read from git.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Does the Release exist?
+        id: existing
+        env:
+          REPLACE: ${{ inputs.replace || false }}
+        run: |
+          set -euo pipefail
+          create=true
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            if [ "$REPLACE" = true ]; then
+              echo "::notice::$TAG already has a Release: replacing it (replace is on)."
+            else
+              echo "::notice::$TAG already has a Release: its files are left as they are (turn replace on to republish it); only the installer is attached."
+              create=false
+            fi
+          fi
+          echo "create=$create" | tee -a "$GITHUB_OUTPUT"
+      - if: steps.existing.outputs.create == 'true'
+        id: versions
+        run: echo "bun=$(TOOL=bun; eval "$READ_TOOL_VERSION")" | tee -a "$GITHUB_OUTPUT"
+      - if: steps.existing.outputs.create == 'true'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ steps.versions.outputs.bun }}
+      - if: steps.existing.outputs.create == 'true'
+        run: bun install --frozen-lockfile --ignore-scripts
+      - name: Assemble release.json and SHA256SUMS
+        if: steps.existing.outputs.create == 'true'
+        env:
+          WINDOW: ${{ needs.validate.outputs.window }}
+        run: |
+          set -euo pipefail
+          ASSETS="$RUNNER_TEMP/assets"
+          mkdir -p "$ASSETS"
+          git show "$COMMIT:install.sh" > "$ASSETS/install.sh"
+          installers=()
+          if [ "$WINDOW" = true ]; then installers=(--installers); fi
+          bun plugins/installer/plugins/release-assets/scripts/assemble.ts \
+            --mode core --tag "$TAG" --commit "$COMMIT" --dir "$ASSETS" \
+            ${installers[@]+"${installers[@]}"}
+      - id: attest
+        if: steps.existing.outputs.create == 'true'
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: ${{ runner.temp }}/assets/*
+      - name: Publish (draft, every file, then public)
+        if: steps.existing.outputs.create == 'true'
+        env:
+          LATEST: ${{ needs.validate.outputs.latest }}
+          BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+        run: |
+          set -euo pipefail
+          ASSETS="$RUNNER_TEMP/assets"
+          cp "$BUNDLE" "$ASSETS/provenance.intoto.jsonl"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release delete "$TAG" --yes
+          fi
+          # A draft is invisible, so `releases/latest` never names a Release
+          # whose files are still uploading: it turns public with all of them.
+          gh release create "$TAG" "$ASSETS"/* --draft --verify-tag --notes-from-tag \
+            --title "equin ${TAG#v}"
+          gh release edit "$TAG" --draft=false --latest="$LATEST"
+          gh release view "$TAG"
 
   page:
     name: Installer page
@@ -251,7 +352,9 @@ jobs:
           set +e
           EQUIN_INSTALL_DRY_RUN_PACE=0 dbus-run-session -- xvfb-run -a timeout 60 "$bin" --script install.sh -- --dry-run | tee "$RUNNER_TEMP/window.out"
           set -e
-          grep -q '✓ Build equin' "$RUNNER_TEMP/window.out"
+          # The last step's line: every event before it reached the window.
+          # (A step with sub-steps prints as a bare heading, never a ✓ line.)
+          grep -qE '✓ Start equin$' "$RUNNER_TEMP/window.out"
       - name: Without webkit2gtk, the probe fails (stage 0 then uses the terminal)
         run: |
           set +e
@@ -266,14 +369,12 @@ jobs:
           path: ${{ runner.temp }}/dist/${{ env.ASSET }}
           if-no-files-found: error
 
-  release:
-    name: Publish the Release
-    needs: [validate, page, macos, linux]
-    # A tag without the window skips the three builds; one with it needs all.
-    if: >-
-      !cancelled() && needs.validate.result == 'success' && needs.validate.outputs.publish == 'true'
-      && (needs.validate.outputs.window != 'true'
-          || (needs.macos.result == 'success' && needs.linux.result == 'success'))
+  attach:
+    name: Attach the installer
+    needs: [validate, publish, macos, linux]
+    # Only after the Release is published and every platform built: a partial
+    # set would be a window for some systems and none for others.
+    if: needs.validate.outputs.window == 'true' && needs.validate.outputs.publish == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -281,59 +382,45 @@ jobs:
       attestations: write
     env:
       TAG: ${{ needs.validate.outputs.ref }}
-      COMMIT: ${{ needs.validate.outputs.commit }}
       GH_TOKEN: ${{ github.token }}
     steps:
-      # The workflow's own commit, for the assembling code: a manual rebuild of
-      # a tag cut before it still assembles with today's code. The tag's files
-      # are read from git.
+      # The workflow's own commit, for the assembling code (as in publish).
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
       - id: versions
         run: echo "bun=$(TOOL=bun; eval "$READ_TOOL_VERSION")" | tee -a "$GITHUB_OUTPUT"
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ steps.versions.outputs.bun }}
       - run: bun install --frozen-lockfile --ignore-scripts
-      - if: needs.validate.outputs.window == 'true'
-        uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@v8
         with:
           pattern: equin-installer-*
           merge-multiple: true
-          path: ${{ runner.temp }}/assets
-      - name: Assemble release.json and SHA256SUMS
+          path: ${{ runner.temp }}/installers
+      - name: Assemble INSTALLER-SHA256SUMS
         run: |
           set -euo pipefail
-          ASSETS="$RUNNER_TEMP/assets"
-          mkdir -p "$ASSETS"
-          chmod +x "$ASSETS"/equin-installer-* 2>/dev/null || true
-          git show "$COMMIT:install.sh" > "$ASSETS/install.sh"
+          chmod +x "$RUNNER_TEMP/installers"/equin-installer-*
           bun plugins/installer/plugins/release-assets/scripts/assemble.ts \
-            --tag "$TAG" --commit "$COMMIT" --dir "$ASSETS"
+            --mode installer --dir "$RUNNER_TEMP/installers"
       - id: attest
         uses: actions/attest-build-provenance@v4
         with:
-          subject-path: ${{ runner.temp }}/assets/*
-      - name: Publish (draft, every file, then public)
+          subject-path: ${{ runner.temp }}/installers/*
+      - name: Upload (binaries, provenance, INSTALLER-SHA256SUMS last)
         env:
-          LATEST: ${{ needs.validate.outputs.latest }}
-          REPLACE: ${{ inputs.replace || false }}
           BUNDLE: ${{ steps.attest.outputs.bundle-path }}
         run: |
           set -euo pipefail
-          ASSETS="$RUNNER_TEMP/assets"
-          cp "$BUNDLE" "$ASSETS/provenance.intoto.jsonl"
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            if [ "$REPLACE" != true ]; then
-              echo "::error::$TAG already has a Release. Run the workflow by hand with replace on to rebuild it."
-              exit 1
-            fi
-            gh release delete "$TAG" --yes
+          DIR="$RUNNER_TEMP/installers"
+          cp "$BUNDLE" "$RUNNER_TEMP/installer-provenance.intoto.jsonl"
+          # INSTALLER-SHA256SUMS last: stage 0 reads its presence as "every
+          # binary it lists is uploaded". A re-run first removes it, so no
+          # client pairs the old sums with a new binary mid-upload.
+          if gh release view "$TAG" --json assets --jq '.assets[].name' | grep -qx INSTALLER-SHA256SUMS; then
+            gh release delete-asset "$TAG" INSTALLER-SHA256SUMS --yes
           fi
-          # A draft is invisible, so `releases/latest` never names a Release
-          # whose files are still uploading: it turns public with all of them.
-          gh release create "$TAG" "$ASSETS"/* --draft --verify-tag --notes-from-tag \
-            --title "equin ${TAG#v}"
-          gh release edit "$TAG" --draft=false --latest="$LATEST"
+          gh release upload "$TAG" --clobber "$DIR"/equin-installer-*
+          gh release upload "$TAG" --clobber "$RUNNER_TEMP/installer-provenance.intoto.jsonl"
+          gh release upload "$TAG" --clobber "$DIR/INSTALLER-SHA256SUMS"
           gh release view "$TAG"

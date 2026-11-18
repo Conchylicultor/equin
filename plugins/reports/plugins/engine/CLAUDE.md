@@ -320,7 +320,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
 - Machine:
   - Uses: `infra/endpoints.implementMachine`
 - Cross-plugin:
-  - Imported by: 35 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 36 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×14
     - `conversations` ×5
     - `infra` ×4
@@ -330,6 +330,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `backup`
     - `build/failure-report`
     - `framework/cli/push`
+    - `integrations/github-events`
     - `page/place/google`
     - `tasks/reports-investigation`
 - Exemptions:

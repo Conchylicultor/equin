@@ -4,6 +4,8 @@ import {
   ATTACH_MARKER,
   HANDOFF_MARKER,
   INSTALLER_BINARIES,
+  INSTALLER_BINARY_PREFIX,
+  RELEASE_FILES,
   RELEASE_WORKFLOW,
 } from "../core";
 
@@ -60,13 +62,15 @@ const tagGrammar: Check = {
 
 /**
  * The names stage 0 downloads are the names the workflow publishes: every
- * installer binary named in the workflow, and install.sh still carrying the
- * hand-off marker the workflow records in release.json.
+ * installer binary named in the workflow, the installer sums file spelled by
+ * both (the workflow uploads it last; stage 0 fetches it and derives each
+ * binary's name as the prefix plus its platform key), and install.sh still
+ * carrying the hand-off marker the workflow records in release.json.
  */
 const assetNames: Check = {
   id: "release-assets:asset-names",
   description:
-    "The release workflow builds every INSTALLER_BINARIES asset, and install.sh carries the hand-off and attach markers (every attach marker it spells the current one)",
+    "The release workflow builds every INSTALLER_BINARIES asset, it and install.sh spell the installer sums file, install.sh spells the binary prefix, and install.sh carries the hand-off and attach markers (every attach marker it spells the current one)",
   async run(ctx) {
     const repo = await ctx.repo();
     const problems: string[] = [];
@@ -77,6 +81,18 @@ const assetNames: Check = {
       for (const [platform, name] of Object.entries(INSTALLER_BINARIES))
         if (!workflow.includes(platform) && !workflow.includes(name))
           problems.push(`${RELEASE_WORKFLOW} builds no ${name} (${platform})`);
+    for (const [file, text] of [
+      [RELEASE_WORKFLOW, workflow],
+      [INSTALL_SCRIPT, script],
+    ] as const)
+      if (text !== null && !text.includes(RELEASE_FILES.installerSums))
+        problems.push(
+          `${file} never names ${RELEASE_FILES.installerSums}: the workflow attaches it last, and stage 0 verifies the window against it`,
+        );
+    if (script !== null && !script.includes(`${INSTALLER_BINARY_PREFIX}$key`))
+      problems.push(
+        `${INSTALL_SCRIPT} no longer spells '${INSTALLER_BINARY_PREFIX}$key': stage 0 names a v2 release's window binary as INSTALLER_BINARY_PREFIX plus its platform key`,
+      );
     if (script === null) problems.push(`${INSTALL_SCRIPT} is missing`);
     else if (!script.split("\n").includes(HANDOFF_MARKER))
       problems.push(

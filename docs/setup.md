@@ -10,7 +10,7 @@ curl -fsSL https://raw.githubusercontent.com/equinai/equin/main/install.sh | bas
 
 It installs the **newest release** (a tag on `main`: the script, and the
 installer window, are downloaded from that release and checked against its
-`SHA256SUMS` before anything runs; with no release published yet, `main`'s
+checksum files before anything runs; with no release published yet, `main`'s
 tip, saying so). Or `./install.sh` from inside a clone or
 fork you already have, which installs that checkout. It runs the steps
 below, skipping whatever is already done, so re-running it resumes where it

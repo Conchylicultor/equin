@@ -15,6 +15,7 @@ import {
 } from "@plugins/upstream/plugins/release/core";
 import {
   commitLineParts,
+  githubPublication,
   releasesBody,
   type CommitLine,
   type Publisher,
@@ -99,13 +100,42 @@ export function ReleasesBodyView({
   onRelease: () => Promise<void>;
 }) {
   const body = releasesBody(status, now);
+  const runUrl = openableRun(status);
   return (
     <Stack gap="sm">
       <CommitLineView line={body.line} />
-      {body.action === null ? null : (
-        <ReleaseActions action={body.action} onRelease={onRelease} />
+      {body.action === null && runUrl === null ? null : (
+        <Line className="gap-sm">
+          {body.action === null ? null : (
+            <ReleaseActions action={body.action} onRelease={onRelease} />
+          )}
+          {runUrl === null ? null : <OpenRun url={runUrl} />}
+        </Line>
       )}
     </Stack>
+  );
+}
+
+/**
+ * The GitHub run worth opening: the newest release's run while GitHub is
+ * still on it or after it failed — not once all is published.
+ */
+function openableRun(status: Publisher): string | null {
+  if (status.github === null) return null;
+  const gh = githubPublication(status.github);
+  return gh.health === "attention" || gh.pulsing ? gh.runUrl : null;
+}
+
+/** "Open run": the release workflow's run on GitHub, in a new tab. */
+function OpenRun({ url }: { url: string }) {
+  return (
+    <Button
+      variant="ghost"
+      tooltip="The release workflow's run on GitHub"
+      render={<a href={url} target="_blank" rel="noopener noreferrer" />}
+    >
+      Open run
+    </Button>
   );
 }
 
@@ -129,7 +159,7 @@ function ReleaseActions({
   onRelease: () => Promise<void>;
 }) {
   return (
-    <Line className="gap-sm">
+    <>
       <Button
         variant="secondary"
         disabled={!action.enabled}
@@ -141,7 +171,7 @@ function ReleaseActions({
       {action.failedRunId === null ? null : (
         <OpenBuild runId={action.failedRunId} />
       )}
-    </Line>
+    </>
   );
 }
 

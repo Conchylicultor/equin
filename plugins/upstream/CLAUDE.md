@@ -253,13 +253,17 @@ that cannot run on this database).
     - `tasks/task-category.TaskCategory`
   - DB schema: `plugins/upstream/server/internal/tables.ts`
   - Resources:
-    - `upstream.publisher-status` (push, notified)
+    - `upstream.publisher-status` (push, notified, capped: PUBLICATION_ASSETS_MAX)
     - `upstream.release-status` (push, notified)
 - Machine:
   - Uses:
     - `build/run-ledger.inflightRunOn`
     - `build/run-ledger.lastClosedRunOn`
     - `infra/endpoints.implementMachine`
+    - `integrations/github-events.forwarderStatusOf`
+    - `integrations/github-events.githubEventsStatusServed`
+    - `integrations/github-events.newestRunOf`
+    - `integrations/github-events.releaseOf`
     - `network/live.serveValue`
   - Register:
     - `defineJob('upstream.detect-updates')`

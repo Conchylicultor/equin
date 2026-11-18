@@ -24272,7 +24272,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadedDatabaseConfig`
       - `readDatabaseConfigSync`
   - Cross-plugin:
-    - Imported by: 179 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 180 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×48
       - `conversations` ×21
       - `tasks` ×20
@@ -24287,12 +24287,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `stats` ×3
       - `backup` ×2
       - `framework` ×2
+      - `integrations` ×2
       - `reports` ×2
       - `apps-core/app-usage`
       - `code-explorer`
       - `hints`
       - `history/engine`
-      - `integrations/google-maps/usage`
       - `plugin-meta/plugin-health`
       - `release`
       - `search/engine`
@@ -24393,6 +24393,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `pgClientBin`
           - `PgClientToolMissingError`
+      - Plugins:
+        - **`publish-watch`** — Watches the daily Build and Publish workflow of equinai/pg-client-embedded on GitHub (GitHubEvents.Watch): a failed publish of the @equin/pg-client-* packages client-tools vendors files a github-run-failed report — the next Postgres upgrade would have nothing to pin.
+          - Server:
+            - Contributes: `github-events.watch` "equinai/pg-client-embedded build-and-publish.yml"
+            - Uses: `integrations/github-events.GitHubEvents`
     - **`connection`** — Every backend database connection, built one way: createDbPool / createDbClient give each pool or standalone client a name from the closed pool-name set and a pg.Client subclass that bounds connect() and every query() with a deadline (60 s, widened per scope by withQueryDeadline). A call with no reply rejects with QueryDeadlineExceededError (pool, phase, sql, origin), and its connection is closed — handed back to its pool as broken and its socket destroyed, so Postgres rolls back its transaction and PgBouncer frees its slot — and announced on queryDeadlineSink. A session the server ends for idling inside its transaction (25P03) is announced on idleTransactionEndedSink with the origin and statement of the transaction's last statement, and every later call on that connection fails with IdleTransactionEndedError. Every connection logs in as application_name equin:<pool> (equin-cli:<pool> from a process with no runtime namespace, which reports nothing). Every pool also carries its own connection-error listeners (pool and per client), which report a broken connection once instead of letting it crash the process — so a library handed the pool (graphile-worker) installs none of its own.
       - Core:
         - Uses: `framework/product-name.PRODUCT_NAME`
@@ -25091,6 +25096,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/deps.defineDep`
               - `infra/deps/package-copy.npmPackageCopy`
             - Exports (values): `pgbouncerBinary`
+        - **`publish-watch`** — Watches the daily Build and Publish workflow of equinai/pgbouncer-embedded on GitHub (GitHubEvents.Watch): a failed publish of the @equin/pgbouncer-* packages files a github-run-failed report — the next PgBouncer upgrade would have nothing to pin.
+          - Server:
+            - Contributes: `github-events.watch` "equinai/pgbouncer-embedded build-and-publish.yml"
+            - Uses: `integrations/github-events.GitHubEvents`
     - **`pglite`** (excluded) — The PGlite database driver: provides the DatabaseDriver host service with Postgres compiled to WASM, for a host without the computer's Postgres cluster (the browser composition, the portable boot test) — in memory, or in IndexedDB when the host's declared storage is persistent (browser-server/host-storage). Never booted by the desktop, which provides its own driver.
       - Server:
         - Contributes: `host-service:database.driver` "database.driver"
@@ -29214,7 +29223,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Fields.Identity` ×35
     - Exports (values): `Fields`
   - Cross-plugin:
-    - Imported by: 142 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
+    - Imported by: 143 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
       - `fields` ×65
       - `apps` ×24
       - `conversations` ×11
@@ -29230,6 +29239,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `hints`
       - `history/engine`
       - `ids`
+      - `integrations/github-events`
       - `network/live`
       - `plugin-meta/plugin-health`
       - `release`
@@ -29387,7 +29397,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boolField`
               - `boolSample`
           - Cross-plugin:
-            - Imported by: 87 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
+            - Imported by: 88 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
               - `apps` ×29
               - `debug` ×13
               - `backup` ×11
@@ -29395,13 +29405,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×5
               - `infra` ×3
               - `shell` ×3
+              - `integrations` ×2
               - `page` ×2
               - `stats` ×2
               - `audience`
               - `build`
               - `framework/cli/build/experimental-marks`
               - `history/engine`
-              - `integrations/gmail`
               - `music/background`
               - `network/live/live-state-snapshot`
               - `plugin-meta/composition`
@@ -29645,7 +29655,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `DateFieldDef`
             - Exports (values): `dateField`
           - Cross-plugin:
-            - Imported by: 67 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
+            - Imported by: 68 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
               - `apps` ×17
               - `conversations` ×11
               - `infra` ×7
@@ -29658,6 +29668,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build/run-ledger`
               - `hints`
               - `history/engine`
+              - `integrations/github-events`
               - `plugin-meta/plugin-health`
               - `release`
               - `reports`
@@ -30320,17 +30331,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `intField`
               - `intSample`
           - Cross-plugin:
-            - Imported by: 65 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
+            - Imported by: 66 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
               - `apps` ×19
               - `debug` ×14
               - `conversations` ×8
               - `infra` ×6
               - `tasks` ×6
               - `backup` ×4
+              - `integrations` ×2
               - `active-data`
               - `build/run-ledger`
               - `fields/object/config`
-              - `integrations/google-maps/usage`
               - `primitives/usage-rank`
               - `release`
               - `reports`
@@ -30394,7 +30405,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Imported by: 43 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
+            - Imported by: 44 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
               - `apps` ×9
               - `conversations` ×7
               - `debug` ×5
@@ -30405,6 +30416,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `active-data`
               - `apps-core/app-launcher`
               - `history/engine`
+              - `integrations/github-events`
               - `primitives/data-view`
               - `reports`
               - `shell/notifications`
@@ -31287,7 +31299,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 116 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+            - Imported by: 117 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
               - `apps` ×32
               - `conversations` ×21
               - `tasks` ×16
@@ -31304,6 +31316,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `backup`
               - `hints`
               - `history/engine`
+              - `integrations/github-events`
               - `release`
               - `reports`
               - `review/code-review`
@@ -32376,7 +32389,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/boot-snapshot`
     - **`product-name`** — The product's own name, as data: PRODUCT_NAME (`equin`, always lowercase — what every person and agent reads) and LEGACY_PRODUCT_NAMES (the names it went by before, never written again), enforced by the product-name:legacy check over every tracked file; and LEGACY_IDS, the identifiers built from the old name that are kept for good (stored state, cross-version contracts), the one place they are spelled — enforced by product-name:legacy-id (and its mirrors by product-name:legacy-ids-in-sync). A dependency-free leaf, so a browser bundle, a server or a script can import it.
       - Cross-plugin:
-        - Imported by: 70 plugins — full list in [`plugins/framework/plugins/product-name/REFERENCE.md`](../plugins/framework/plugins/product-name/REFERENCE.md)
+        - Imported by: 71 plugins — full list in [`plugins/framework/plugins/product-name/REFERENCE.md`](../plugins/framework/plugins/product-name/REFERENCE.md)
           - `infra` ×16
           - `framework` ×12
           - `apps` ×10
@@ -32385,13 +32398,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives` ×4
           - `apps-core` ×2
           - `backup` ×2
+          - `installer` ×2
           - `packages` ×2
           - `page` ×2
           - `reports` ×2
           - `upstream` ×2
           - `auth`
           - `debug/sentinel/machine-usage`
-          - `installer`
           - `network/live/resource-protocol`
           - `screenshot`
           - `stats/commits`
@@ -32600,7 +32613,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withNotifyBatch`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 123 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
+        - Imported by: 124 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
           - `infra` ×29
           - `conversations` ×14
           - `debug` ×14
@@ -32610,10 +32623,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network` ×5
           - `reports` ×5
           - `framework` ×3
+          - `integrations` ×3
           - `page` ×3
           - `primitives` ×3
           - `build` ×2
-          - `integrations` ×2
           - `ui` ×2
           - `apps-core`
           - `backup`
@@ -35079,7 +35092,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `parseKindLabel`
       - `storedIdSchema`
   - Cross-plugin:
-    - Imported by: 52 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
+    - Imported by: 53 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
       - `apps` ×15
       - `conversations` ×8
       - `tasks` ×5
@@ -35094,6 +35107,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `database/table-mirror/replica`
       - `debug/tests`
       - `history/engine`
+      - `integrations/github-events`
       - `plugin-meta/plugin-health`
       - `shell/notifications`
       - `tag-tree/engine`
@@ -36752,7 +36766,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 270 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 271 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×79
           - `conversations` ×36
           - `infra` ×23
@@ -36764,8 +36778,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports` ×6
           - `auth` ×5
           - `framework` ×4
+          - `integrations` ×4
           - `build` ×3
-          - `integrations` ×3
           - `network` ×3
           - `active-data` ×2
           - `apps-core` ×2
@@ -36863,7 +36877,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `entityRef`
           - `wireSchema`
       - Cross-plugin:
-        - Imported by: 55 plugins — full list in [`plugins/infra/plugins/entities/REFERENCE.md`](../plugins/infra/plugins/entities/REFERENCE.md)
+        - Imported by: 56 plugins — full list in [`plugins/infra/plugins/entities/REFERENCE.md`](../plugins/infra/plugins/entities/REFERENCE.md)
           - `apps` ×11
           - `conversations` ×9
           - `infra` ×7
@@ -36876,6 +36890,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build/run-ledger`
           - `hints`
           - `history/engine`
+          - `integrations/github-events`
           - `plugin-meta/plugin-health`
           - `release`
           - `reports`
@@ -37696,6 +37711,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/push`
               - `framework/cli/upstream`
               - `framework/cli/version`
+              - `integrations/github-events`
               - `upstream`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `core/internal/commit-identity.ts`, `core/internal/publish-target.ts` (debt)
@@ -39190,7 +39206,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `renderGatewayPortRecord`
               - `servedGatewayPort`
           - Cross-plugin:
-            - Imported by: 37 plugins — full list in [`plugins/infra/plugins/launcher/plugins/gateway-port/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/gateway-port/REFERENCE.md)
+            - Imported by: 38 plugins — full list in [`plugins/infra/plugins/launcher/plugins/gateway-port/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/gateway-port/REFERENCE.md)
               - `debug` ×7
               - `framework` ×6
               - `apps` ×5
@@ -39199,8 +39215,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `auth` ×2
               - `build` ×2
               - `companions` ×2
+              - `integrations` ×2
               - `primitives` ×2
-              - `integrations/google-maps`
               - `map/google`
               - `reports/live-state-stale-drop`
           - Machine:
@@ -39565,7 +39581,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `namespaceUrl`
           - `resolveNamespaceAlias`
       - Cross-plugin:
-        - Imported by: 85 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
+        - Imported by: 86 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
           - `framework` ×15
           - `apps` ×13
           - `infra` ×12
@@ -39582,6 +39598,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `backup`
           - `companions/browser-extension`
           - `installer/window`
+          - `integrations/github-events`
           - `upstream`
       - Exemptions:
         - Exempts itself from:
@@ -39948,6 +39965,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/launcher/login-services`
               - `infra/paths`
               - `infra/paths/root-migration`
+              - `integrations/github-events`
               - `media/film`
               - `plugin-meta/barrel-import`
               - `toolchain`
@@ -40252,7 +40270,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `getTableGrowthBounds`
           - `markCascadeBounded`
       - Cross-plugin:
-        - Imported by: 24 plugins — full list in [`plugins/infra/plugins/retention/REFERENCE.md`](../plugins/infra/plugins/retention/REFERENCE.md)
+        - Imported by: 25 plugins — full list in [`plugins/infra/plugins/retention/REFERENCE.md`](../plugins/infra/plugins/retention/REFERENCE.md)
           - `apps` ×6
           - `debug` ×6
           - `infra` ×3
@@ -40260,6 +40278,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations` ×2
           - `apps-core/app-usage`
           - `history/engine`
+          - `integrations/github-events`
           - `primitives/usage-rank`
           - `reports/engine`
       - Test helpers:
@@ -40281,7 +40300,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runtimeNamespace`
           - `servingSocketPath`
       - Cross-plugin:
-        - Imported by: 79 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
+        - Imported by: 80 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
           - `infra` ×18
           - `debug` ×15
           - `build` ×9
@@ -40295,6 +40314,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports` ×2
           - `companions/browser-extension`
           - `config_v2`
+          - `integrations/github-events`
           - `plugin-meta/barrel-import`
           - `primitives/log-channels/log-files`
           - `shell/document-head`
@@ -40595,7 +40615,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `spawnPassthrough`
           - `spawnToFile`
       - Cross-plugin:
-        - Imported by: 105 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
+        - Imported by: 106 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
           - `framework` ×32
           - `infra` ×31
           - `apps` ×9
@@ -40612,6 +40632,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `backup`
           - `hints/ask`
           - `installer/window`
+          - `integrations/github-events`
           - `review/plugin-changes`
           - `stats/commits`
           - `tasks`
@@ -40684,6 +40705,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/mcp/browser`
               - `infra/paths/root-migration`
               - `infra/spawn/daemon/background-arm`
+              - `integrations/github-events`
               - `plugin-meta/plugin-tree`
               - `release`
           - Exemptions:
@@ -41125,7 +41147,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `reportInstallWait`
       - `requestFollow`
   - Plugins:
-    - **`release-assets`** — What a release tag publishes for the curl install: the GitHub Actions workflow (.github/workflows/installer-release.yml) that builds the installer window per release tag, the asset names and release.json it attaches, and the check holding the workflow's tag regex to the release tag grammar.
+    - **`release-assets`** — Watches the release workflow on GitHub (GitHubEvents.Watch: the product repo's installer-release.yml and its Releases), so a failed release run files a report naming the re-publish command, and the releases row reads what GitHub published.
+      - Server:
+        - Contributes: `github-events.watch` "equinai/equin installer-release.yml"
+        - Uses:
+          - `integrations/github-events.GitHubEvents`
+          - `integrations/github-events.workflowFileOf`
       - Core:
         - Uses: `installer.INSTALL_PROTOCOL_VERSION`
         - Exports (types): `InstallerPlatform`
@@ -41133,11 +41160,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ATTACH_MARKER`
           - `HANDOFF_MARKER`
           - `INSTALLER_BINARIES`
+          - `INSTALLER_BINARY_PREFIX`
           - `RELEASE_FILES`
           - `RELEASE_WORKFLOW`
           - `releaseManifest`
           - `ReleaseManifest`
           - `sha256Sums`
+      - Cross-plugin:
+        - Imported by: `upstream`
     - **`waits`** — How a `./equin` command run as an install step reports a wait on another task, naming its holder from the op log: installGrantHooks (a host CPU grant wait — any CLI admission, a build's or a dependency install's under `./equin start`), reportLockWait (a lock another run holds), and the stall rule that pauses the install when that holder stopped making progress.
       - Cli:
         - Uses:
@@ -41174,6 +41204,122 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`integrations`** — Umbrella for third-party service integrations that consume an auth connection (Gmail, …).
   - Plugins:
+    - **`github-events`** — GitHub events in the browser: the health report's GitHub events row (on the publisher's main only — absent elsewhere): connected once GitHub pinged every watched repo's forwarder, pulsing while one connects, attention while one reconnects or gave up (naming why) or while forwarding is not set up (with the command that sets it up); and the github-run-failed report kind's Debug → Reports summary line. GitHub events, every host's half: the GitHubEvents.Watch contribution (repo, workflow file, releases?, remedy? — an open set each repo's owner contributes, read through githubWatches / watchedRepos / watchFor), the github_runs table (one row per run attempt of a watched workflow: status, conclusion, head, failed jobs and steps, reported_at) and github_releases (one per release of a watched repo: draft, asset names), served as the github-events.runs / github-events.releases live windows and swept after 180 days / 2 years, and the github-run-failed report kind (fingerprint repo + workflow + head; its task names the failed jobs and steps, the run, `gh run view <id> --log-failed`, and the watch's own remedy).
+      - Web:
+        - Contributes:
+          - `HealthReport.Row` "GitHub events"
+          - `Reports.KindView` → `GitHubRunFailedSummary`
+        - Uses:
+          - `network/live.useLive`
+          - `reports.Reports`
+          - `shell/health-report.HealthReport`
+      - Server:
+        - Contributes:
+          - `resource.declare` "github-events.releases"
+          - `resource.declare` "github-events.releases:groups"
+          - `resource.declare` "github-events.releases:rows"
+          - `resource.declare` "github-events.runs"
+          - `resource.declare` "github-events.runs:groups"
+          - `resource.declare` "github-events.runs:rows"
+          - `resource.declare` "github-events.status"
+          - `report-kind` "github-run-failed"
+        - Uses:
+          - `infra/entities.defineEntity`
+          - `infra/retention.defineRetention`
+          - `network/live.serveCollection`
+          - `reports.ReportKind`
+          - `reports.ReportRow`
+        - DB schema: `plugins/integrations/plugins/github-events/server/internal/tables.ts`
+        - Exports (types):
+          - `GitHubWatch`
+          - `WatchedRunFailure`
+        - Exports (values):
+          - `_githubReleases`
+          - `_githubRuns`
+          - `GitHubEvents`
+          - `githubWatches`
+          - `releasesWatched`
+          - `watchedRepos`
+          - `watchFor`
+          - `workflowFileOf`
+        - Register:
+          - `defineJob('retention.github_runs')`
+          - `defineJob('retention.github_releases')`
+        - Resources:
+          - `github-events.releases` (keyed, window)
+          - `github-events.releases:groups` (push)
+          - `github-events.releases:rows` (keyed, point)
+          - `github-events.runs` (keyed, window)
+          - `github-events.runs:groups` (push)
+          - `github-events.runs:rows` (keyed, point)
+          - `github-events.status` (push, notified, capped: WATCHED_REPOS_MAX)
+      - Machine:
+        - Uses:
+          - `infra/endpoints.machineHandler`
+          - `network/live.serveValue`
+        - Exports (values):
+          - `forwarderStatusOf`
+          - `githubEventsStatusServed`
+          - `newestRunOf`
+          - `releaseOf`
+        - Register: `defineDaemon('github-events.forwarder')`
+        - Routes: `POST /api/github-events/deliveries`
+      - Core:
+        - Uses:
+          - `fields.FieldsRecord`
+          - `fields.fieldsToZodObject`
+          - `fields.nullable`
+          - `fields/bool/config.boolField`
+          - `fields/date/config.dateField`
+          - `fields/int/config.intField`
+          - `fields/json/config.jsonField`
+          - `fields/text/config.textField`
+          - `ids.externalIdField`
+          - `infra/endpoints.defineEndpoint`
+          - `infra/entities.entityRef`
+          - `network/live.liveCollection`
+          - `network/live.liveValue`
+          - `packages/list-bound.cappedList`
+        - Exports (types):
+          - `FailedJob`
+          - `ForwarderState`
+          - `ForwarderStatus`
+          - `GitHubEventsStatus`
+          - `GitHubRelease`
+          - `GitHubRun`
+          - `GitHubRunFailedPayload`
+        - Exports (values):
+          - `FAILED_JOBS_MAX`
+          - `FAILED_STEPS_MAX`
+          - `FailedJobSchema`
+          - `ForwarderStateSchema`
+          - `ForwarderStatusSchema`
+          - `GITHUB_RUN_FAILED_KIND`
+          - `githubDeliveryEndpoint`
+          - `githubEventsStatus`
+          - `GitHubEventsStatusSchema`
+          - `githubReleaseFields`
+          - `githubReleaseKey`
+          - `githubReleases`
+          - `GitHubReleaseSchema`
+          - `githubReleasesEntityRef`
+          - `githubRunFailedFingerprint`
+          - `githubRunFailedMessage`
+          - `GitHubRunFailedPayloadSchema`
+          - `githubRunFields`
+          - `githubRunKey`
+          - `githubRuns`
+          - `GitHubRunSchema`
+          - `githubRunsEntityRef`
+          - `isReportableFailure`
+          - `RELEASE_ASSETS_MAX`
+          - `WATCHED_REPOS_MAX`
+      - Cross-plugin:
+        - Imported by:
+          - `database/client-tools/publish-watch`
+          - `database/pgbouncer/publish-watch`
+          - `installer/release-assets`
+          - `upstream`
     - **`github-issues`** — GitHub new-issue links: buildIssueUrl turns a written request (its <ui-context> picks made readable, each raw tag kept in a collapsed block), the page it is about and the host's own note lines into a prefilled issues/new link held under GitHub's length cap.
       - Core:
         - Uses: `primitives/ui-context.splitUiContext`
@@ -42657,7 +42803,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 359 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 360 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×90
           - `conversations` ×73
           - `debug` ×36
@@ -42669,10 +42815,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives` ×8
           - `stats` ×5
           - `code-explorer` ×4
+          - `integrations` ×4
           - `plugin-meta` ×4
           - `review` ×4
           - `auth` ×3
-          - `integrations` ×3
           - `reports` ×3
           - `ui` ×3
           - `apps-core` ×2
@@ -43661,7 +43807,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `withDeadline`
     - **`error-subject`** — What an error is about, carried by the error: SubjectError (a shared throw site — the migration runner, the trigger installer — names the one subject it failed for), errorSubject(err) (the subjects along the cause chain plus the innermost class code, ENOENT / SQLSTATE) and crashFieldsOf(err, scope?) — the errorType / stack / scope every crash filer derives from an error, so a shared throw site's failures land on one report row per cause instead of one for all. Enforced by error-subject/crash-fields-of.
       - Cross-plugin:
-        - Imported by: 31 plugins — full list in [`plugins/packages/plugins/error-subject/REFERENCE.md`](../plugins/packages/plugins/error-subject/REFERENCE.md)
+        - Imported by: 32 plugins — full list in [`plugins/packages/plugins/error-subject/REFERENCE.md`](../plugins/packages/plugins/error-subject/REFERENCE.md)
           - `infra` ×8
           - `database` ×6
           - `conversations` ×5
@@ -43670,6 +43816,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug` ×2
           - `framework` ×2
           - `network` ×2
+          - `integrations/github-events`
           - `tasks/tasks-core`
       - Exemptions:
         - Exempts itself from: `error-subject/crash-fields-of` — `core/internal/error-subject.ts` (sanctioned)
@@ -43806,12 +43953,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types): `KeyedMutex`
         - Exports (values): `createKeyedMutex`
       - Cross-plugin:
-        - Imported by: 22 plugins — full list in [`plugins/packages/plugins/keyed-mutex/REFERENCE.md`](../plugins/packages/plugins/keyed-mutex/REFERENCE.md)
+        - Imported by: 23 plugins — full list in [`plugins/packages/plugins/keyed-mutex/REFERENCE.md`](../plugins/packages/plugins/keyed-mutex/REFERENCE.md)
           - `infra` ×11
           - `conversations` ×5
           - `apps` ×2
           - `config_v2`
           - `debug/sentinel/status-file`
+          - `integrations/github-events`
           - `plugin-meta/plugin-records`
           - `reports/engine`
     - **`list-bound`** — A list's bound, declared in its zod schema: cappedList / cappedRecord (a checked max) and wholeList / wholeRecord (loaded whole, with a written reason), tagged on the schema itself (zod-introspect's defineSchemaTag, stamped by clone) so the tag survives zod's clones and wrappers; listShapeOf walks (over zod-introspect's SchemaNode) every array, record, map and set a schema reaches and reports each one's bound and the bare ones, listBoundsOf refuses a bare one.
@@ -43838,17 +43986,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wholeRecord`
           - `wholeTuple`
       - Cross-plugin:
-        - Imported by: 136 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
+        - Imported by: 138 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
           - `apps` ×30
           - `debug` ×21
           - `infra` ×17
           - `conversations` ×16
           - `tasks` ×10
           - `build` ×5
+          - `integrations` ×4
           - `stats` ×4
           - `ui` ×4
           - `fields` ×3
-          - `integrations` ×3
           - `page` ×3
           - `plugin-meta` ×3
           - `primitives` ×3
@@ -43864,6 +44012,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `review/plugin-changes`
           - `search/engine`
           - `shell/notifications`
+          - `upstream/release`
       - Test helpers:
         - Core: `@plugins/packages/plugins/list-bound/core/testing`
           - `withRawListBoundTag` — `schema` tagged with `raw` exactly as given — no marker's checks — for a test proving a malformed tag (`{ reason: "" }`, `{ size: 3 }`) fails loudly where the schema is walked.
@@ -44424,7 +44573,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TIMED_FS_CALLS`
           - `withFsCallTally`
       - Cross-plugin:
-        - Imported by: 188 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+        - Imported by: 189 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
           - `infra` ×58
           - `framework` ×29
           - `apps` ×16
@@ -44437,9 +44586,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta` ×5
           - `reports` ×4
           - `config_v2` ×3
+          - `integrations` ×3
           - `release` ×3
           - `installer` ×2
-          - `integrations` ×2
           - `primitives` ×2
           - `apps-core/app-preload`
           - `code-explorer`
@@ -58919,8 +59068,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).
   - Web:
     - Slots: `Reports.KindView`
-    - Slot contributors: 50 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `Reports.KindView` ×50
+    - Slot contributors: 51 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `Reports.KindView` ×51
     - Contributes:
       - `IdKinds.Kind` "report|crash"
       - `ConfigV2.WebRegister` "reports"
@@ -59063,7 +59212,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `versionSkewCode`
       - `versionSkewExplains`
   - Cross-plugin:
-    - Imported by: 90 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 91 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×34
       - `debug` ×21
       - `conversations` ×7
@@ -59076,6 +59225,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `active-data/report`
       - `auth`
       - `backup`
+      - `integrations/github-events`
       - `network/live/boot-snapshot`
       - `page/place/google`
       - `plugin-meta/plugin-records/write-lost`
@@ -59329,7 +59479,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Machine:
         - Uses: `infra/endpoints.implementMachine`
       - Cross-plugin:
-        - Imported by: 35 plugins — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
+        - Imported by: 36 plugins — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
           - `debug` ×14
           - `conversations` ×5
           - `infra` ×4
@@ -59339,6 +59489,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `backup`
           - `build/failure-report`
           - `framework/cli/push`
+          - `integrations/github-events`
           - `page/place/google`
           - `tasks/reports-investigation`
       - Exemptions:
@@ -60756,6 +60907,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HealthReport.Row` ← `infra.launcher.gateway-drift`
           - `HealthReport.Row` ← `infra.mcp.browser`
           - `HealthReport.Row` ← `infra.mcp.health`
+          - `HealthReport.Row` ← `integrations.github-events`
           - `HealthReport.Row` ← `primitives.dom.web-storage.health`
           - `HealthReport.Row` ← `reports.resource-errors`
           - `HealthReport.Row` ← `tasks.worktree-identity`
@@ -60815,6 +60967,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/launcher/gateway-drift`
           - `infra/mcp/browser`
           - `infra/mcp/health`
+          - `integrations/github-events`
           - `primitives/dom/web-storage/health`
           - `reports/resource-errors`
           - `tasks/worktree-identity`
@@ -67604,13 +67757,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `tasks/task-category.TaskCategory`
     - DB schema: `plugins/upstream/server/internal/tables.ts`
     - Resources:
-      - `upstream.publisher-status` (push, notified)
+      - `upstream.publisher-status` (push, notified, capped: PUBLICATION_ASSETS_MAX)
       - `upstream.release-status` (push, notified)
   - Machine:
     - Uses:
       - `build/run-ledger.inflightRunOn`
       - `build/run-ledger.lastClosedRunOn`
       - `infra/endpoints.implementMachine`
+      - `integrations/github-events.forwarderStatusOf`
+      - `integrations/github-events.githubEventsStatusServed`
+      - `integrations/github-events.newestRunOf`
+      - `integrations/github-events.releaseOf`
       - `network/live.serveValue`
     - Register:
       - `defineJob('upstream.detect-updates')`
@@ -67659,7 +67816,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/product-name.PRODUCT_NAME`
           - `infra/endpoints.defineEndpoint`
           - `network/live.liveValue`
+          - `packages/list-bound.cappedList`
         - Exports (types):
+          - `GitHubPublication`
           - `PublisherStatus`
           - `Releasability`
           - `ReleaseStatus`
@@ -67670,9 +67829,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `compareReleases`
           - `CUT_REFUSED_EXIT_CODE`
           - `cutReleaseEndpoint`
+          - `GitHubPublicationSchema`
           - `newestReleaseTag`
           - `nextReleaseTag`
           - `parseReleaseTag`
+          - `PUBLICATION_ASSETS_MAX`
           - `PublisherStatusSchema`
           - `ReleasabilitySchema`
           - `RELEASE_TAG_ERE`
@@ -67688,6 +67849,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `framework/cli/upstream`
           - `framework/cli/version`
+          - `installer/release-assets`
           - `upstream`
 
 - **`wish`** — The Wish toolbar button: the entry point for anything the user wants done — a fix, a change, a new app. Files a task under "Wishes" with the current URL. Companion actions join it as segments of one split pill via WishSlots.Segment; WishSlots.HeaderAction adds actions to its popover header (Ask equin), WishSlots.FooterAction to its footer beside Launch (File on GitHub). WishField is the same wish as a companion’s section — the task composer with its own ↑, filing one task under Wishes about the page the DraftPage around it names, confirming inline (“Filed — an agent is on …”). On a phone the same field is the Wish sheet of the phone action button (PhoneActions.Action “wish”). Task category of the Wish toolbar button. Files tasks stamped "Wishes" via the shared task-draft-form primitive.

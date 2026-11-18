@@ -166,6 +166,7 @@ probes, is mounted per page.
     - `HealthReport.Row` ← `infra.launcher.gateway-drift`
     - `HealthReport.Row` ← `infra.mcp.browser`
     - `HealthReport.Row` ← `infra.mcp.health`
+    - `HealthReport.Row` ← `integrations.github-events`
     - `HealthReport.Row` ← `primitives.dom.web-storage.health`
     - `HealthReport.Row` ← `reports.resource-errors`
     - `HealthReport.Row` ← `tasks.worktree-identity`
@@ -225,6 +226,7 @@ probes, is mounted per page.
     - `infra/launcher/gateway-drift`
     - `infra/mcp/browser`
     - `infra/mcp/health`
+    - `integrations/github-events`
     - `primitives/dom/web-storage/health`
     - `reports/resource-errors`
     - `tasks/worktree-identity`

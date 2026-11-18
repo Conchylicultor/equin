@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-database-pgbouncer-publish-watch",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Watches the daily Build and Publish workflow of equinai/pgbouncer-embedded on GitHub (GitHubEvents.Watch), so a failed publish of the @equin/pgbouncer-* packages files a report. A leaf child: database imports pgbouncer, and github-events stands on database, so the watch cannot sit in pgbouncer's own barrel."
+}

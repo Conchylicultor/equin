@@ -43,6 +43,7 @@
     - `infra/launcher/login-services`
     - `infra/paths`
     - `infra/paths/root-migration`
+    - `integrations/github-events`
     - `media/film`
     - `plugin-meta/barrel-import`
     - `toolchain`

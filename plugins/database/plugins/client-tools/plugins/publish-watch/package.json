@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-database-client-tools-publish-watch",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Watches the daily Build and Publish workflow of equinai/pg-client-embedded on GitHub (GitHubEvents.Watch), so a failed publish of the @equin/pg-client-* packages files a report. A leaf child: database imports client-tools, and github-events stands on database, so the watch cannot sit in client-tools' own barrel."
+}

@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-integrations-github-events",
+  "private": true,
+  "version": "0.0.1",
+  "description": "GitHub runs and releases pushed into equin: on the publisher's main, one `gh webhook forward` per watched repo (GitHubEvents.Watch, contributed by the plugin owning each repo) posts workflow_run / workflow_job / release deliveries to an HMAC-verified endpoint, caught up from the REST API on every (re)connect; stored as github_runs and github_releases (live collections), a failed watched run filed once per attempt as a github-run-failed report, and the forwarders' state shown as the GitHub events health row."
+}

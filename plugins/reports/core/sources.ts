@@ -77,6 +77,10 @@ export const SERVER_REPORT_SOURCES = [
   // distinction is the whole content of the report: the process decided its
   // state was unrecoverable and said so before leaving.
   "server-fatal",
+  // A watched GitHub workflow run failed (integrations/github-events): told by
+  // main's backend from GitHub's own delivery (or the catch-up listing of a
+  // forwarder start). Another system's verdict, not an error anyone caught.
+  "server-github-events",
   // A report filed by a process with NO server — a CLI run, a supervised child —
   // through the report outbox (plugins/reports/plugins/outbox), and recorded by
   // main's drain. Server-only so the browser endpoint cannot claim it: nothing

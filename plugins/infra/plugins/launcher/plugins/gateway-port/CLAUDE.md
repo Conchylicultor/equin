@@ -77,7 +77,7 @@ The menu-bar helper's `LEGACY_PORT` is its one declared exemption.
     - `renderGatewayPortRecord`
     - `servedGatewayPort`
 - Cross-plugin:
-  - Imported by: 37 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 38 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×7
     - `framework` ×6
     - `apps` ×5
@@ -86,8 +86,8 @@ The menu-bar helper's `LEGACY_PORT` is its one declared exemption.
     - `auth` ×2
     - `build` ×2
     - `companions` ×2
+    - `integrations` ×2
     - `primitives` ×2
-    - `integrations/google-maps`
     - `map/google`
     - `reports/live-state-stale-drop`
 - Machine:

@@ -39,7 +39,7 @@
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
-  - Imported by: 43 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 44 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×9
     - `conversations` ×7
     - `debug` ×5
@@ -50,6 +50,7 @@
     - `active-data`
     - `apps-core/app-launcher`
     - `history/engine`
+    - `integrations/github-events`
     - `primitives/data-view`
     - `reports`
     - `shell/notifications`

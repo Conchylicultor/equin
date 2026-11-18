@@ -56,9 +56,11 @@ pub fn fetch(release_ref: Option<&str>) -> Result<Fetched, String> {
     let manifest: ReleaseManifest = serde_json::from_slice(&manifest_bytes).map_err(|e| {
         format!("equin-installer: the release's description could not be read ({e}); from {manifest_url}")
     })?;
-    if manifest.v != 1 {
+    // v2 differs from v1 only in how the window's binaries are listed, which
+    // the bootstrap never reads (it is the window already).
+    if !matches!(manifest.v, 1 | 2) {
         return Err(format!(
-            "This installer is too old for the newest equin release. Download the installer again.\n  details: release.json v{} (this binary reads v1)",
+            "This installer is too old for the newest equin release. Download the installer again.\n  details: release.json v{} (this binary reads v1 and v2)",
             manifest.v
         ));
     }

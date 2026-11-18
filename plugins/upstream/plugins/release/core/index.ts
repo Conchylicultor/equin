@@ -20,11 +20,14 @@ export type { ReleaseStatus } from "./internal/status-value";
 export {
   CUT_REFUSED_EXIT_CODE,
   cutReleaseEndpoint,
+  GitHubPublicationSchema,
+  PUBLICATION_ASSETS_MAX,
   PublisherStatusSchema,
   ReleasabilitySchema,
   upstreamPublisherStatus,
 } from "./internal/publisher-value";
 export type {
+  GitHubPublication,
   PublisherStatus,
   Releasability,
 } from "./internal/publisher-value";

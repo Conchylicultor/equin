@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import { cappedList } from "@plugins/packages/plugins/list-bound/core";
 
 /**
  * Whether the commit main serves can be released now — the same questions
@@ -40,6 +41,42 @@ export const ReleasabilitySchema = z.discriminatedUnion("kind", [
 ]);
 export type Releasability = z.infer<typeof ReleasabilitySchema>;
 
+/** The most asset names the publication keeps (a release attaches ~10). */
+export const PUBLICATION_ASSETS_MAX = 100;
+
+/**
+ * What GitHub says of the newest release tag — read on main from the GitHub
+ * events GitHub pushed (integrations/github-events), never fetched.
+ *
+ * - `not-connected` — no forwarder of the product repo is connected now
+ *   (`reason`: not set up, connecting, reconnecting…): GitHub's state is not
+ *   known, so nothing about it is claimed.
+ * - `connected`     — `run`: the release workflow's newest run of the tag
+ *   (`null`: none seen yet); `release`: the tag's GitHub Release (`null`:
+ *   none yet), `draft` until published, with the names of its assets.
+ */
+export const GitHubPublicationSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("not-connected"), reason: z.string() }),
+  z.object({
+    kind: z.literal("connected"),
+    run: z
+      .object({
+        status: z.string(),
+        conclusion: z.string().nullable(),
+        url: z.string(),
+      })
+      .nullable(),
+    release: z
+      .object({
+        draft: z.boolean(),
+        assets: cappedList(z.string(), { max: PUBLICATION_ASSETS_MAX }),
+        url: z.string(),
+      })
+      .nullable(),
+  }),
+]);
+export type GitHubPublication = z.infer<typeof GitHubPublicationSchema>;
+
 /**
  * The releases of the checkout that publishes them (no upstream — the author's
  * main), as its health row reads them.
@@ -49,7 +86,8 @@ export type Releasability = z.infer<typeof ReleasabilitySchema>;
  *   absent.
  * - `publisher`     — `latest`, the newest release on local `main` (`null`:
  *   none cut yet) and when it was cut (ISO); `unreleased`, the commits on
- *   `main` since it; `releasable`, whether the commit main serves can be cut.
+ *   `main` since it; `releasable`, whether the commit main serves can be cut;
+ *   `github`, what GitHub published of `latest` (`null` while none is cut).
  */
 export const PublisherStatusSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("not-publisher") }),
@@ -58,6 +96,7 @@ export const PublisherStatusSchema = z.discriminatedUnion("kind", [
     latest: z.object({ tag: z.string(), taggedAt: z.string() }).nullable(),
     unreleased: z.number().int().nonnegative(),
     releasable: ReleasabilitySchema,
+    github: GitHubPublicationSchema.nullable(),
   }),
 ]);
 export type PublisherStatus = z.infer<typeof PublisherStatusSchema>;

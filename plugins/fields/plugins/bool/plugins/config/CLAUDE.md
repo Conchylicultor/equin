@@ -36,7 +36,7 @@ a config_v2 `FieldDef<boolean>` carrying the canonical `fields/` bool token
     - `boolField`
     - `boolSample`
 - Cross-plugin:
-  - Imported by: 87 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 88 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×29
     - `debug` ×13
     - `backup` ×11
@@ -44,13 +44,13 @@ a config_v2 `FieldDef<boolean>` carrying the canonical `fields/` bool token
     - `tasks` ×5
     - `infra` ×3
     - `shell` ×3
+    - `integrations` ×2
     - `page` ×2
     - `stats` ×2
     - `audience`
     - `build`
     - `framework/cli/build/experimental-marks`
     - `history/engine`
-    - `integrations/gmail`
     - `music/background`
     - `network/live/live-state-snapshot`
     - `plugin-meta/composition`

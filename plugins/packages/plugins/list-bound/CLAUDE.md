@@ -95,17 +95,17 @@ tuples, intersections, malformed tags).
     - `wholeRecord`
     - `wholeTuple`
 - Cross-plugin:
-  - Imported by: 136 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 138 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×30
     - `debug` ×21
     - `infra` ×17
     - `conversations` ×16
     - `tasks` ×10
     - `build` ×5
+    - `integrations` ×4
     - `stats` ×4
     - `ui` ×4
     - `fields` ×3
-    - `integrations` ×3
     - `page` ×3
     - `plugin-meta` ×3
     - `primitives` ×3
@@ -121,6 +121,7 @@ tuples, intersections, malformed tags).
     - `review/plugin-changes`
     - `search/engine`
     - `shell/notifications`
+    - `upstream/release`
 - Test helpers:
   - Core: `@plugins/packages/plugins/list-bound/core/testing`
     - `withRawListBoundTag` — `schema` tagged with `raw` exactly as given — no marker's checks — for a test proving a malformed tag (`{ reason: "" }`, `{ size: 3 }`) fails loudly where the schema is walked.
