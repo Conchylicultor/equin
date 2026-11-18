@@ -151,13 +151,15 @@ already-effective onsets (`effectiveOnsets(pattern)`, rotation applied) and maps
   - Contributes:
     - `ConfigV2.WebRegister` "groove-presets"
     - `SonataDocument.SongSetting` "rhythm-sync" → `RhythmObserver`
-  - Uses: 56 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Library.SongLink` "groove"
+  - Uses: 58 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×11
     - `apps/sonata/document` ×9
     - `network/live/live-state` ×6
     - `apps/sonata/primitives/rhythm-circle` ×3
     - `config_v2` ×3
     - `primitives/sortable-list` ×3
+    - `apps/sonata/library` ×2
     - `apps/sonata/session` ×2
     - `apps/sonata/track-mixer` ×2
     - `primitives/css/control-panel` ×2

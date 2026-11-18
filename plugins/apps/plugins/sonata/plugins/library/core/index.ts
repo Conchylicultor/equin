@@ -1,6 +1,7 @@
 export { songIdKind } from "./id-kind";
 export type { SongId } from "./id-kind";
-export { sonataPlayerRoute } from "./player-route";
+export { SONG_LINK_KEYS, sonataPlayerRoute } from "./player-route";
+export type { SongLinkKey } from "./player-route";
 export { SongSchema, songsEntityRef } from "./schemas";
 
 export { songLibrary } from "./resources";

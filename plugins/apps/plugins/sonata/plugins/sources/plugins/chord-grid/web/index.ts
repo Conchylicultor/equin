@@ -14,6 +14,7 @@ import { ChordGridEditorSection } from "./components/chord-grid-editor-section";
 import { ChordGridPersistObserver } from "./components/chord-grid-persist-observer";
 import { chordGridPresentation } from "./internal/presentation";
 import { chordGridCover } from "./internal/cover";
+import { chordGridSongLink } from "./internal/song-link";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
@@ -48,5 +49,6 @@ export default {
     }),
     chordGridPresentation,
     chordGridCover,
+    chordGridSongLink,
   ],
 } satisfies PluginDefinition;

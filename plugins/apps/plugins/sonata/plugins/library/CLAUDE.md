@@ -11,7 +11,9 @@ them without a `shell → library` import that would cycle with the existing
 - `sonataLibraryPane` — index pane at bare `/sonata` (`appIndex: true`,
   standard chrome titled "Library"). Renders the gallery via
   `Sonata.Home` inside `PaneChrome`.
-- `sonataPlayerPane` — player pane at `/sonata/song/:songId;bar;lens`. Both
+- `sonataPlayerPane` — player pane at
+  `/sonata/song/:songId;bar;lens;title;grid;groove` (the last three: the
+  song's link, below). `bar` and `lens`
   are keyed (named) views of the song, absent by default: `;bar=12` opens it
   with the playhead at that bar (`sonataSongLink(id, bar)`), and `;lens` is the
   display lens (`…;lens=notation`, absent for the default lens) — the surface
@@ -24,6 +26,30 @@ them without a `shell → library` import that would cycle with the existing
   reload restores it. A song already loaded (playing in the background,
   reopened from the now-playing bar) is NOT reloaded: a reload would rebuild
   its timeline and the session's content reset would stop and rewind it.
+
+### The song's link (`Library.SongLink`, `song-link.tsx`)
+
+The player URL carries the song's shareable content, so the address bar is a
+link that opens the same song elsewhere:
+`/sonata/song/<id>;title=…;grid=…;groove=…` (keys: `SONG_LINK_KEYS`, core).
+
+- **Each part is a contribution.** `Library.SongLink({ key, useValue, create?,
+  apply? })` — the chord-grid source owns `grid` (the grid text, read from the
+  loaded document so an edit reaches the address as it is typed) and can
+  `create` the song; rhythm-controls owns `groove` (the accompaniment as a
+  versioned base64url tuple, omitted while it is the default) and `apply`s it.
+  The library names none of them.
+- **Mirror.** `SongLinkMirror` (mounted with the hydrated player) reads every
+  part and rewrites the CURRENT history entry (debounced 400 ms; a content
+  change is not a navigation), once every part knows its value. `;title` rides
+  along once a `create` part has a value. `;bar` / `;lens` are kept.
+- **Open.** A song this library HAS keeps its stored content — the stored
+  song is never older than a link to it from this library, so a link never
+  overwrites it. A song it does NOT have, named by a link carrying a `create`
+  part: the resolve gate answers `found` (pending until the deferred tier, which
+  holds the parts, settles) and the surface shows `SongLinkImport` — the
+  title and an "Add to library" button that creates the song under the link's
+  id, then hands every other part its value. Asked, never done on open.
 
 ### Hydration (`Library.Source.useHydration`, `SongHydrator`)
 
@@ -272,17 +298,19 @@ the title — a chord-grid save endpoint physically cannot carry one.
 - Web:
   - Slots:
     - `Library.Source`
+    - `Library.SongLink`
     - `Library.Cover`
     - `Library.SongActions`
     - `Library.Notice`
     - `sonataLibraryPane.Actions`
     - `sonataPlayerPane.Actions`
     - `songPeekPane.Actions`
-  - Slot contributors: 24 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 26 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `sonataPlayerPane.Actions` ×7
     - `Library.Cover` ×5
     - `Library.Source` ×5
     - `songPeekPane.Actions` ×3
+    - `Library.SongLink` ×2
     - `sonataLibraryPane.Actions` ×2
     - `Library.Notice` ← `apps.sonata.sources.midi.folders`
     - `Library.SongActions` ← `apps.sonata.library`
@@ -345,6 +373,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `ui/icons.Icon`
   - Exports (types):
     - `SongCoverAnswer`
+    - `SongLinkValue`
     - `SourceContext`
     - `SourceCreateOption`
     - `SourceHydration`
@@ -420,10 +449,12 @@ the title — a chord-grid save endpoint physically cannot carry one.
   - Exports (types):
     - `Song`
     - `SongId`
+    - `SongLinkKey`
     - `UpdateSongBody`
   - Exports (values):
     - `deleteSong`
     - `sonataPlayerRoute`
+    - `SONG_LINK_KEYS`
     - `songAttachmentLinks`
     - `songAttachmentLinksEntityRef`
     - `songIdKind`

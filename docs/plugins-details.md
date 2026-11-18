@@ -9188,17 +9188,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Slots:
               - `Library.Source`
+              - `Library.SongLink`
               - `Library.Cover`
               - `Library.SongActions`
               - `Library.Notice`
               - `sonataLibraryPane.Actions`
               - `sonataPlayerPane.Actions`
               - `songPeekPane.Actions`
-            - Slot contributors: 24 contributors — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
+            - Slot contributors: 26 contributors — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
               - `sonataPlayerPane.Actions` ×7
               - `Library.Cover` ×5
               - `Library.Source` ×5
               - `songPeekPane.Actions` ×3
+              - `Library.SongLink` ×2
               - `sonataLibraryPane.Actions` ×2
               - `Library.Notice` ← `apps.sonata.sources.midi.folders`
               - `Library.SongActions` ← `apps.sonata.library`
@@ -9261,6 +9263,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons.Icon`
             - Exports (types):
               - `SongCoverAnswer`
+              - `SongLinkValue`
               - `SourceContext`
               - `SourceCreateOption`
               - `SourceHydration`
@@ -9336,10 +9339,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types):
               - `Song`
               - `SongId`
+              - `SongLinkKey`
               - `UpdateSongBody`
             - Exports (values):
               - `deleteSong`
               - `sonataPlayerRoute`
+              - `SONG_LINK_KEYS`
               - `songAttachmentLinks`
               - `songAttachmentLinksEntityRef`
               - `songIdKind`
@@ -10581,13 +10586,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes:
                   - `ConfigV2.WebRegister` "groove-presets"
                   - `SonataDocument.SongSetting` "rhythm-sync" → `RhythmObserver`
-                - Uses: 56 symbols — full list in [`plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/REFERENCE.md)
+                  - `Library.SongLink` "groove"
+                - Uses: 58 symbols — full list in [`plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/REFERENCE.md)
                   - `primitives/css/ui-kit` ×11
                   - `apps/sonata/document` ×9
                   - `network/live/live-state` ×6
                   - `apps/sonata/primitives/rhythm-circle` ×3
                   - `config_v2` ×3
                   - `primitives/sortable-list` ×3
+                  - `apps/sonata/library` ×2
                   - `apps/sonata/session` ×2
                   - `apps/sonata/track-mixer` ×2
                   - `primitives/css/control-panel` ×2
@@ -10980,9 +10987,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `Sonata.PlaybackEffect` "chord-grid-persist" → `ChordGridPersistObserver`
                   - `FieldPresentation.Register` "exposure:sonata_songs_ext_chord_grid"
                   - `Library.Cover` "chord-grid"
-                - Uses: 29 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/REFERENCE.md)
+                  - `Library.SongLink` "grid"
+                - Uses: 30 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/REFERENCE.md)
+                  - `apps/sonata/library` ×4
                   - `apps/sonata/document` ×3
-                  - `apps/sonata/library` ×3
                   - `network/live` ×3
                   - `primitives/kept-state` ×3
                   - `apps/sonata/session` ×2

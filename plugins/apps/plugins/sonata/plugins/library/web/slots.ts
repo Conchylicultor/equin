@@ -10,7 +10,7 @@ import {
   type CoverContent,
   type CreateOption,
 } from "@plugins/primitives/plugins/data-view/web";
-import type { Song } from "../core";
+import type { Song, SongId, SongLinkKey } from "../core";
 
 /**
  * Extension seams the song library exposes:
@@ -105,6 +105,15 @@ export type SourceCreateOption = Omit<
   onSelect: (ctx: SourceContext) => void | Promise<unknown>;
 };
 
+/**
+ * What a `Library.SongLink` contribution's link part reads for the open song:
+ * not known yet (its data is still loading — the address is not rewritten
+ * meanwhile), or known — the text to carry, or `null` to carry none (the
+ * song's own default, which a link need not spell).
+ */
+export type SongLinkValue =
+  { known: false } | { known: true; value: string | null };
+
 export const Library = {
   Source: defineSlot<{
     /** Stable id of the source (matches its `SonataDocument.Source` id / `rawById` key). */
@@ -122,6 +131,38 @@ export const Library = {
      */
     createOption?: SourceCreateOption;
   }>({ docLabel: (c) => c.sourceId }),
+  /**
+   * The song's shareable link, one part per contribution: each owns one key
+   * of the player route ({@link SongLinkKey}) — what it writes there, and what
+   * it does with a link's value when the link names a song this library does
+   * not have. The library collects them generically and never names one.
+   *
+   * - `useValue` — run inside the player while the song is loaded: the text
+   *   this part of the song spells in its link (`null`: none — the default).
+   *   The library mirrors every part into the address (a replace, debounced),
+   *   with the song's title beside them once a `create` part has a value.
+   * - `create` — set on the part that can bring a song into being (a chord
+   *   grid): creates the song with the link's id, title and this value.
+   * - `apply` — writes this part's link value onto a song just created from
+   *   the link. A value it cannot read is skipped (a link is typed, pasted or
+   *   stale — like `;bar`), so the song still opens.
+   *
+   * A song this library HAS keeps its own content: a link only fills in a song
+   * that is missing (the stored song is never older than a link to it from
+   * this library, so it wins).
+   */
+  SongLink: defineSlot<{
+    key: SongLinkKey;
+    useValue: Hook<() => SongLinkValue>;
+    create?: (
+      ctx: SourceContext,
+      song: { id: SongId; title: string; value: string },
+    ) => Promise<void>;
+    apply?: (
+      ctx: SourceContext,
+      song: { id: SongId; value: string },
+    ) => Promise<void>;
+  }>({ docLabel: (c) => c.key }),
   /**
    * The cover seam: each contribution answers for the songs it knows
    * (`cover(song)`, a hook-free read of the row — it is called per card per

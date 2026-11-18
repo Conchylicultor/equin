@@ -6,6 +6,7 @@ import {
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { groovePresetsConfig } from "../shared/groove-presets";
 import { RhythmObserver } from "./components/rhythm-observer";
+import { grooveSongLink } from "./song-link";
 
 export { RhythmControls } from "./components/rhythm-controls";
 
@@ -29,5 +30,6 @@ export default {
       setting: grooveSetting,
       component: RhythmObserver,
     }),
+    grooveSongLink,
   ],
 } satisfies PluginDefinition;

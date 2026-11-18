@@ -43,7 +43,18 @@ import {
   Inset,
   Stack,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { sonataPlayerRoute, songIdKind, songLibrary } from "../core";
+import {
+  SONG_LINK_KEYS,
+  sonataPlayerRoute,
+  songIdKind,
+  songLibrary,
+} from "../core";
+import {
+  SongLinkImport,
+  SongLinkMirror,
+  useLinkCreator,
+  type PlayerParams,
+} from "./song-link";
 import type { SongHydration } from "./hydrate-sources";
 import { SongHydrator } from "./song-hydrator";
 import { SonataLibrarySurface } from "./components/library-surface";
@@ -204,15 +215,23 @@ function useSongTitle(
  * Resolve hook: gate the pane on the song's row existing. Hydration itself runs
  * in the surface ({@link SongLoader}), which can render what it finds.
  */
-function useSonataPlayerResolve({
-  songId: songIdParam,
-}: {
-  songId: string;
-  bar?: string;
-}): ResolveResult {
+function useSonataPlayerResolve(params: PlayerParams): ResolveResult {
   // `key` upgrades an old bare-uuid link (`/sonata/song/<uuid>`, from before
   // the `song-` rewrite) so it resolves.
-  return resolveRow(useLive(songLibrary, { id: songIdKind.key(songIdParam) }));
+  const result = resolveRow(
+    useLive(songLibrary, { id: songIdKind.key(params.songId) }),
+  );
+  const creator = useLinkCreator(params);
+  const deferredComplete = useDeferredLoadComplete();
+  if (result.status !== "missing") return result;
+  // A song this library does not have, named by a link that carries its
+  // content: the surface offers to add it (`SongLinkImport`). The parts that
+  // can create one load in the deferred tier, so a link waits for it before
+  // it is called missing.
+  if (creator !== null) return { status: "found" };
+  if (!deferredComplete && SONG_LINK_KEYS.some((k) => params[k] !== undefined))
+    return { status: "pending" };
+  return result;
 }
 
 /**
@@ -408,6 +427,17 @@ function SonataPlayerSurface(): ReactElement {
   const deferredComplete = useDeferredLoadComplete();
   const placedForRef = useRef<string | null>(null);
   useBarSeek(songId, bar, hydrated, placedForRef);
+  const row = useLive(songLibrary, { id: songId });
+
+  // A link to a song this library does not have (the resolve gate let it
+  // through because the link can recreate it): offer to add it.
+  if (row.status === "ready" && !row.found) {
+    return (
+      <PlayerMessage>
+        <SongLinkImport songId={songId} params={params} />
+      </PlayerMessage>
+    );
+  }
 
   if (!hydrated) {
     if (!deferredComplete)
@@ -437,13 +467,12 @@ function SonataPlayerSurface(): ReactElement {
     <PlayerDisplayBinding
       displayId={params.lens ?? null}
       onDisplayChange={(lens) =>
-        setParams({
-          songId,
-          ...(params.bar !== undefined && { bar: params.bar }),
-          ...(lens !== null && { lens }),
-        })
+        setParams({ ...params, songId, lens: lens ?? undefined })
       }
     >
+      {/* The address is a link to the song as it is now (its grid, its
+          groove, …), so it can be shared. */}
+      <SongLinkMirror songId={songId} params={params} setParams={setParams} />
       <ImmersivePlayer />
     </PlayerDisplayBinding>
   );

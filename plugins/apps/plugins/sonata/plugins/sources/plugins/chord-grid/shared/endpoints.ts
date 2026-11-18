@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import { songIdKind } from "@plugins/apps/plugins/sonata/plugins/library/core";
 
 /**
  * Create a chord-grid–backed song. Unlike MIDI (an imported, immutable file),
@@ -9,6 +10,12 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
  * `sonata_songs_ext_chord_grid` row. Returns enough to open the song immediately.
  */
 export const CreateChordGridSongBodySchema = z.object({
+  /**
+   * The id to create the song under — a shared link's (the song keeps the id
+   * it has on the library it was shared from, so the link opens it here too).
+   * A fresh one when absent.
+   */
+  id: songIdKind.schema.optional(),
   title: z.string(),
   composer: z.string().nullable(),
   chordText: z.string(),

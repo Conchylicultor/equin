@@ -15,11 +15,11 @@ import {
 } from "../../shared/endpoints";
 import { songChordGrid } from "./tables";
 
-/** A new chord-grid song: the create body, and optionally its id. */
-export interface NewChordGridSong extends CreateChordGridSongBody {
-  /** A caller-chosen id (a fixture's); a fresh one by default. */
-  id?: SongId;
-}
+/**
+ * A new chord-grid song: the create body, its id optional (a fixture's, or a
+ * shared link's; a fresh one by default).
+ */
+export type NewChordGridSong = CreateChordGridSongBody;
 
 /**
  * Create a chord-grid–backed song. Writes the generic song row (library helper)
