@@ -738,6 +738,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `framework/cli/test`
     - `framework/cli/test/digest`
     - `framework/tooling/checks/cache-prune`
+    - `framework/tooling/checks/grep-index-prune`
     - `framework/tooling/checks/registry`
     - `framework/tooling/checks/type-check`
     - `framework/tooling/checks/type-check/backstop`
@@ -753,7 +754,10 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `repo-walk-safety/no-adhoc-repo-listing` — `core/tree-hash.ts` (sanctioned)
     - `blocking-fs/sync-named` — `core/cache.ts`, `core/content-hash.ts`, `core/progress-log.ts`, `core/scripts/fix-shared-to-relative.ts`, `core/thread-attribution.ts`, `core/transcript.ts`, `core/tree-hash.ts` (sanctioned)
 - Cli:
-  - Exports (values): `openGrepIndexStore`
+  - Exports (types): `GrepIndexPruneResult`
+  - Exports (values):
+    - `openGrepIndexStore`
+    - `pruneGrepIndex`
 - Test helpers:
   - Core: `@plugins/framework/plugins/tooling/plugins/checks/core/testing`
     - `createReadSetRepo` — Create the repo holding `files` (repo-relative path → content), committed.
@@ -780,6 +784,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
   - **`fields-eager-in-sync`**
   - **`format-clean`**
   - **`generated-artifacts-normalized`**
+  - **`grep-index-prune`** — The daily checks.grep-index-prune job: on main, deletes the shared grep index's rows unread for 14 days — a page at a time, off every check run's path.
   - **`host-audit`** — The hourly checks.host-audit job: runs the host-scoped checks on main and files a host-check report per failure — the one place a verdict about the shared machine is delivered, since no worktree's…
   - **`host-budget`**
   - **`host-pools-declared`**

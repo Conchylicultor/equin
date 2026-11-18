@@ -24,7 +24,13 @@ import { sourceFactsDir } from "../data-dirs";
 // One row per (scanner, path): the stamp it was read under, its sha256 and
 // imports. A row whose stamp is not the file's present one is simply not used
 // (and replaced by the next read). Rows unread for KEEP_DAYS are dropped — a
-// removed worktree's files, a retired scanner.
+// removed worktree's files, a retired scanner — by `pruneSourceFacts`, which
+// the daily source-digest.prune job runs (main only). It used to run inside
+// the first open of each UTC day: one DELETE scanning the whole table (2.8M
+// rows, 1.4 GB, no index on `used`), so every process opening the store just
+// after midnight raced for that write and the losers threw "database is
+// locked" past their busy timeout — a build's verdict depended on the time of
+// day (2026-11-18).
 
 const KEEP_DAYS = 14;
 
@@ -40,7 +46,6 @@ const Row = z.object({
   imports: z.string(),
   used: z.number(),
 });
-const MetaRow = z.object({ value: z.string() });
 
 function today(): number {
   return Math.floor(Date.now() / 86_400_000);
@@ -74,34 +79,32 @@ const pending = new Map<string, { stamp: string; facts: StoredFacts }>();
 const touched = new Set<string>();
 let flushQueued = false;
 
+/**
+ * The host's facts database, its schema made. Every write on it is one short
+ * transaction (a walk batch's new rows, or one page of the prune's deletes): a
+ * writer waits only for another process's equally short one.
+ */
+async function openFactsDb(path?: string): Promise<Database> {
+  const file = path ?? `${await sourceFactsDir.ensure()}/facts.sqlite`;
+  const db = new Database(file, { create: true });
+  db.exec("PRAGMA journal_mode = WAL");
+  db.exec("PRAGMA synchronous = NORMAL");
+  db.exec("PRAGMA busy_timeout = 5000");
+  db.exec(
+    "CREATE TABLE IF NOT EXISTS facts (scanner TEXT NOT NULL, path TEXT NOT NULL, stamp TEXT NOT NULL, sha256 TEXT NOT NULL, imports TEXT NOT NULL, used INTEGER NOT NULL, PRIMARY KEY (scanner, path)) WITHOUT ROWID",
+  );
+  db.exec(
+    "CREATE TABLE IF NOT EXISTS meta (name TEXT PRIMARY KEY, value TEXT NOT NULL) WITHOUT ROWID",
+  );
+  return db;
+}
+
 function open(scannerModule: string): Promise<Open> {
   opened ??= (async () => {
     const scanner = await scannerOf(scannerModule);
-    const dir = await sourceFactsDir.ensure();
-    const db = new Database(`${dir}/facts.sqlite`, { create: true });
-    db.exec("PRAGMA journal_mode = WAL");
-    db.exec("PRAGMA synchronous = NORMAL");
-    // Every write is one short transaction (a walk batch's new rows); a
-    // writer waits only for another process's equally short one.
-    db.exec("PRAGMA busy_timeout = 5000");
-    db.exec(
-      "CREATE TABLE IF NOT EXISTS facts (scanner TEXT NOT NULL, path TEXT NOT NULL, stamp TEXT NOT NULL, sha256 TEXT NOT NULL, imports TEXT NOT NULL, used INTEGER NOT NULL, PRIMARY KEY (scanner, path)) WITHOUT ROWID",
-    );
-    db.exec(
-      "CREATE TABLE IF NOT EXISTS meta (name TEXT PRIMARY KEY, value TEXT NOT NULL) WITHOUT ROWID",
-    );
-    const day = today();
-    const pruned = MetaRow.nullable().parse(
-      db.query("SELECT value FROM meta WHERE name = 'pruned'").get(),
-    );
-    if (pruned === null || Number(pruned.value) < day) {
-      db.transaction(() => {
-        db.query("DELETE FROM facts WHERE used < ?").run(day - KEEP_DAYS);
-        db.query(
-          "INSERT INTO meta (name, value) VALUES ('pruned', ?) ON CONFLICT (name) DO UPDATE SET value = excluded.value",
-        ).run(String(day));
-      })();
-    }
+    // No maintenance here: the prune is the daily source-digest.prune job's
+    // (`pruneSourceFacts`), off every reader's path.
+    const db = await openFactsDb();
     return {
       db,
       scanner,
@@ -181,4 +184,82 @@ function queueFlush(store: Open): void {
       for (const path of uses) store.touch.run(day, store.scanner, path);
     })();
   });
+}
+
+/** Rows the prune reads per page, and deletes per transaction at most. */
+const PRUNE_PAGE = 1000;
+
+export interface PruneResult {
+  rowsRead: number;
+  rowsDeleted: number;
+  /** Write transactions taken, and the longest one held the lock. */
+  transactions: number;
+  longestHoldMs: number;
+}
+
+const KeyPage = z.array(
+  z.object({ scanner: z.string(), path: z.string(), used: z.number() }),
+);
+
+/**
+ * Deletes the rows unread for {@link KEEP_DAYS} without ever holding the store
+ * long: the rows are read a page at a time in primary-key order (a WAL read,
+ * no lock), and only a page's stale rows are deleted, in one short
+ * transaction each, re-checked under the lock (a walk may have read or
+ * rewritten the row since). O(rows) to read, O(what it deletes) to write.
+ *
+ * Then stamps the old daily marker, so a checkout still on the code that
+ * pruned inside its first open of the day does not run that whole-table
+ * DELETE again today.
+ */
+export async function pruneSourceFacts(opts?: {
+  path?: string;
+  /** Today, as a day number (tests). */
+  day?: number;
+}): Promise<PruneResult> {
+  const db = await openFactsDb(opts?.path);
+  const day = opts?.day ?? today();
+  const cutoff = day - KEEP_DAYS;
+  const page = db.query(
+    "SELECT scanner, path, used FROM facts WHERE (scanner, path) > (?, ?) ORDER BY scanner, path LIMIT ?",
+  );
+  const del = db.query(
+    "DELETE FROM facts WHERE scanner = ? AND path = ? AND used < ?",
+  );
+  const result: PruneResult = {
+    rowsRead: 0,
+    rowsDeleted: 0,
+    transactions: 0,
+    longestHoldMs: 0,
+  };
+  let after = { scanner: "", path: "" };
+  try {
+    for (;;) {
+      const rows = KeyPage.parse(
+        page.all(after.scanner, after.path, PRUNE_PAGE),
+      );
+      const last = rows.at(-1);
+      if (last === undefined) break;
+      result.rowsRead += rows.length;
+      after = last;
+      const stale = rows.filter((r) => r.used < cutoff);
+      if (stale.length === 0) continue;
+      const start = performance.now();
+      db.transaction(() => {
+        for (const r of stale)
+          result.rowsDeleted += del.run(r.scanner, r.path, cutoff).changes;
+      })();
+      result.transactions++;
+      result.longestHoldMs = Math.max(
+        result.longestHoldMs,
+        performance.now() - start,
+      );
+    }
+    db.query(
+      "INSERT INTO meta (name, value) VALUES ('pruned', ?) ON CONFLICT (name) DO UPDATE SET value = excluded.value",
+    ).run(String(day));
+  } finally {
+    db.close();
+  }
+  return result;
 }

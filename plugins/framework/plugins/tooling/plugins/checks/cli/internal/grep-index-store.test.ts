@@ -1,9 +1,10 @@
+import { Database } from "bun:sqlite";
 import { afterAll, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { foldKeyOf } from "../../core";
-import { openGrepIndexStore } from "./grep-index-store";
+import { openGrepIndexStore, pruneGrepIndex } from "./grep-index-store";
 
 const dir = mkdtempSync(join(tmpdir(), "grep-index-store-"));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
@@ -72,4 +73,39 @@ test("folds round-trip per scope by (path, id), survive a reopen, and keep the f
   expect(reopened.folds("s1", [keys[1]!])).toEqual(
     new Map([[foldKeyOf(keys[1]!), "v1"]]),
   );
+});
+
+test("the prune deletes only rows unread for 14 days, across pages, and stamps the marker", () => {
+  const path = join(dir, "prune.sqlite");
+  const store = openGrepIndexStore({ path });
+  // 2,500 answers (three pages) and one fold, all read today.
+  const blobs = Array.from({ length: 2500 }, (_, i) =>
+    i.toString(16).padStart(40, "0"),
+  );
+  store.record(
+    "q",
+    blobs.map((b) => [b, true] as [string, boolean]),
+  );
+  store.recordFolds("s", [[{ path: "a/b", id: A }, "v"]]);
+  const day = Math.floor(Date.now() / 86_400_000);
+  // Seen from 15 days ahead, every row written today is stale.
+  const ahead = pruneGrepIndex({ path, day: day + 15 });
+  expect(ahead.rowsRead).toBe(2501);
+  expect(ahead.rowsDeleted).toBe(2501);
+  expect(ahead.transactions).toBeGreaterThan(1);
+  expect(openGrepIndexStore({ path }).answers("q", blobs.slice(0, 3))).toEqual(
+    new Map(),
+  );
+
+  store.record("q", [[A, true]]);
+  const sameDay = pruneGrepIndex({ path, day });
+  expect(sameDay.rowsDeleted).toBe(0);
+  expect(openGrepIndexStore({ path }).answers("q", [A])).toEqual(
+    new Map([[A, true]]),
+  );
+  const db = new Database(path, { readonly: true });
+  expect(
+    db.query("SELECT value FROM meta WHERE name = 'pruned'").get(),
+  ).toEqual({ value: String(day) });
+  db.close();
 });

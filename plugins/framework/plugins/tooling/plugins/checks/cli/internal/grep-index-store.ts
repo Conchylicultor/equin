@@ -10,7 +10,12 @@ import { checkGrepIndexDir } from "../../data-dirs";
  * An answer never goes stale — its key names everything it is a function of —
  * so the only maintenance is reclaiming the ones nobody asks for any more: a row
  * keeps the day it was last read, refreshed at most once a day, and rows unread
- * for {@link KEEP_DAYS} are deleted, at most once a day per database.
+ * for {@link KEEP_DAYS} are deleted by {@link pruneGrepIndex}, which the daily
+ * checks.grep-index-prune job runs (main only). It used to run inside the
+ * first open of each UTC day — whole-table DELETEs over a GB-sized file — so
+ * the check runs opening the store just after midnight raced for that write
+ * and waited behind it (the same race as source-digest's facts store,
+ * 2026-11-18).
  *
  * Compact on purpose: one row per (query, blob) — ~100 queries × every blob
  * version the host has seen — so a query is an integer and a blob its raw bytes.
@@ -22,7 +27,6 @@ const KEEP_DAYS = 14;
 // Under SQLite's default bound on host parameters per statement (32766).
 const BATCH = 500;
 
-const MetaRow = z.object({ value: z.string() });
 const QueryRow = z.object({ id: z.number() });
 const FoldRows = z.array(
   z.object({
@@ -47,12 +51,13 @@ function today(): number {
 const hex = (bytes: Uint8Array): string => Buffer.from(bytes).toString("hex");
 const raw = (blob: string): Uint8Array => Buffer.from(blob, "hex");
 
-export function openGrepIndexStore(opts?: { path?: string }): GrepIndexStore {
-  const path =
-    opts?.path ??
+/** The grep index database, its schema made. */
+function openGrepIndexDb(path?: string): Database {
+  const file =
+    path ??
     (checkGrepIndexDir.ensureSync(),
     checkGrepIndexDir.file("grep-index.sqlite"));
-  const db = new Database(path, { create: true });
+  const db = new Database(file, { create: true });
   db.exec("PRAGMA journal_mode = WAL");
   db.exec("PRAGMA synchronous = NORMAL");
   db.exec("PRAGMA busy_timeout = 30000");
@@ -68,19 +73,14 @@ export function openGrepIndexStore(opts?: { path?: string }): GrepIndexStore {
   db.exec(
     "CREATE TABLE IF NOT EXISTS meta (name TEXT PRIMARY KEY, value TEXT NOT NULL) WITHOUT ROWID",
   );
+  return db;
+}
+
+export function openGrepIndexStore(opts?: { path?: string }): GrepIndexStore {
+  const db = openGrepIndexDb(opts?.path);
+  // No maintenance here: the prune is the daily checks.grep-index-prune job's
+  // (`pruneGrepIndex`), off every check run's path.
   const day = today();
-  const pruned = MetaRow.nullable().parse(
-    db.query("SELECT value FROM meta WHERE name = ?").get("pruned"),
-  );
-  if (pruned === null || Number(pruned.value) < day) {
-    db.transaction(() => {
-      db.query("DELETE FROM answers WHERE used < ?").run(day - KEEP_DAYS);
-      db.query("DELETE FROM folds WHERE used < ?").run(day - KEEP_DAYS);
-      db.query(
-        "INSERT INTO meta (name, value) VALUES ('pruned', ?) ON CONFLICT (name) DO UPDATE SET value = excluded.value",
-      ).run(String(day));
-    })();
-  }
 
   const queryIds = new Map<string, number>();
   const queryId = (key: string): number => {
@@ -180,4 +180,114 @@ export function openGrepIndexStore(opts?: { path?: string }): GrepIndexStore {
       })();
     },
   };
+}
+
+/** Rows the prune reads per page, and deletes per transaction at most. */
+const PRUNE_PAGE = 1000;
+
+export interface GrepIndexPruneResult {
+  rowsRead: number;
+  rowsDeleted: number;
+  /** Write transactions taken, and the longest one held the lock. */
+  transactions: number;
+  longestHoldMs: number;
+}
+
+/** A pruned table: its name and primary-key columns, in key order. */
+const PRUNED_TABLES = [
+  { table: "answers", key: ["query", "blob"] },
+  { table: "folds", key: ["scope", "path", "id"] },
+] as const;
+
+type KeyValue = number | string | Uint8Array;
+const PruneRows = z.array(
+  z.record(
+    z.string(),
+    z.union([z.number(), z.string(), z.instanceof(Uint8Array)]),
+  ),
+);
+
+/** A row's key, in key order — every column the page selected. */
+function keyOfRow(
+  row: Record<string, KeyValue>,
+  key: readonly string[],
+): KeyValue[] {
+  return key.map((c) => {
+    const v = row[c];
+    if (v === undefined)
+      throw new Error(`[grep-index] prune page row lacks key column ${c}`);
+    return v;
+  });
+}
+
+/**
+ * Deletes the rows unread for {@link KEEP_DAYS} without ever holding the store
+ * long: each table is read a page at a time in primary-key order (a WAL read,
+ * no lock), and only a page's stale rows are deleted, in one short
+ * transaction each, re-checked under the lock (a check run may have read the
+ * row since). O(rows) to read, O(what it deletes) to write.
+ *
+ * Then stamps the old daily marker, so a checkout still on the code that
+ * pruned inside its first open of the day does not run those whole-table
+ * DELETEs again today.
+ */
+export function pruneGrepIndex(opts?: {
+  path?: string;
+  /** Today, as a day number (tests). */
+  day?: number;
+}): GrepIndexPruneResult {
+  const db = openGrepIndexDb(opts?.path);
+  const day = opts?.day ?? today();
+  const cutoff = day - KEEP_DAYS;
+  const result: GrepIndexPruneResult = {
+    rowsRead: 0,
+    rowsDeleted: 0,
+    transactions: 0,
+    longestHoldMs: 0,
+  };
+  try {
+    for (const { table, key } of PRUNED_TABLES) {
+      const cols = key.join(", ");
+      const marks = key.map(() => "?").join(", ");
+      const first = db.query(
+        `SELECT ${cols}, used FROM ${table} ORDER BY ${cols} LIMIT ?`,
+      );
+      const next = db.query(
+        `SELECT ${cols}, used FROM ${table} WHERE (${cols}) > (${marks}) ORDER BY ${cols} LIMIT ?`,
+      );
+      const del = db.query(
+        `DELETE FROM ${table} WHERE ${key.map((c) => `${c} = ?`).join(" AND ")} AND used < ?`,
+      );
+      let after: KeyValue[] | null = null;
+      for (;;) {
+        const rows = PruneRows.parse(
+          after === null
+            ? first.all(PRUNE_PAGE)
+            : next.all(...after, PRUNE_PAGE),
+        );
+        const last = rows.at(-1);
+        if (last === undefined) break;
+        result.rowsRead += rows.length;
+        after = keyOfRow(last, key);
+        const stale = rows.filter((r) => Number(r.used) < cutoff);
+        if (stale.length === 0) continue;
+        const start = performance.now();
+        db.transaction(() => {
+          for (const r of stale)
+            result.rowsDeleted += del.run(...keyOfRow(r, key), cutoff).changes;
+        })();
+        result.transactions++;
+        result.longestHoldMs = Math.max(
+          result.longestHoldMs,
+          performance.now() - start,
+        );
+      }
+    }
+    db.query(
+      "INSERT INTO meta (name, value) VALUES ('pruned', ?) ON CONFLICT (name) DO UPDATE SET value = excluded.value",
+    ).run(String(day));
+  } finally {
+    db.close();
+  }
+  return result;
 }

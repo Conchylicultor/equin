@@ -31676,12 +31676,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readMergeMarkers`
           - `resolveGitDir`
       - Cross-plugin:
-        - Imported by: 43 plugins — full list in [`plugins/framework/plugins/cli/REFERENCE.md`](../plugins/framework/plugins/cli/REFERENCE.md)
-          - `framework` ×29
+        - Imported by: 45 plugins — full list in [`plugins/framework/plugins/cli/REFERENCE.md`](../plugins/framework/plugins/cli/REFERENCE.md)
+          - `framework` ×30
           - `infra` ×7
           - `apps` ×3
           - `plugin-meta` ×2
           - `installer/window`
+          - `packages/source-digest/prune`
           - `toolchain`
       - Exemptions:
         - Exempts itself from:
@@ -31841,14 +31842,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CLI_NAMES`
               - `isCliName`
           - Cross-plugin:
-            - Imported by: 31 plugins — full list in [`plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md)
-              - `framework` ×9
+            - Imported by: 33 plugins — full list in [`plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md)
+              - `framework` ×10
               - `infra` ×8
               - `debug` ×4
               - `apps` ×2
               - `build` ×2
               - `plugin-meta` ×2
               - `database/admin`
+              - `packages/source-digest/prune`
               - `primitives/css/layout-harness`
               - `release`
               - `upstream`
@@ -33050,6 +33052,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/test`
               - `framework/cli/test/digest`
               - `framework/tooling/checks/cache-prune`
+              - `framework/tooling/checks/grep-index-prune`
               - `framework/tooling/checks/registry`
               - `framework/tooling/checks/type-check`
               - `framework/tooling/checks/type-check/backstop`
@@ -33065,7 +33068,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `repo-walk-safety/no-adhoc-repo-listing` — `core/tree-hash.ts` (sanctioned)
               - `blocking-fs/sync-named` — `core/cache.ts`, `core/content-hash.ts`, `core/progress-log.ts`, `core/scripts/fix-shared-to-relative.ts`, `core/thread-attribution.ts`, `core/transcript.ts`, `core/tree-hash.ts` (sanctioned)
           - Cli:
-            - Exports (values): `openGrepIndexStore`
+            - Exports (types): `GrepIndexPruneResult`
+            - Exports (values):
+              - `openGrepIndexStore`
+              - `pruneGrepIndex`
           - Test helpers:
             - Core: `@plugins/framework/plugins/tooling/plugins/checks/core/testing`
               - `createReadSetRepo` — Create the repo holding `files` (repo-relative path → content), committed.
@@ -33110,6 +33116,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`fields-eager-in-sync`**
             - **`format-clean`**
             - **`generated-artifacts-normalized`**
+            - **`grep-index-prune`** — The daily checks.grep-index-prune job: on main, deletes the shared grep index's rows unread for 14 days — a page at a time, off every check run's path.
+              - Server:
+                - Uses:
+                  - `infra/jobs/supervised-job.defineSupervisedJob`
+                  - `primitives/log-channels.defineLogSink`
+                - Register: `defineSupervisedJob('checks.grep-index-prune')`
+              - Cli:
+                - Uses: `framework/tooling/checks.pruneGrepIndex`
             - **`host-audit`** — The hourly checks.host-audit job: runs the host-scoped checks on main and files a host-check report per failure — the one place a verdict about the shared machine is delivered, since no worktree's check pass asserts it.
               - Server:
                 - Uses:
@@ -38809,8 +38823,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `takeRunErrorPath`
               - `writeRunErrorSync`
           - Cross-plugin:
-            - Imported by: 35 plugins — full list in [`plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md`](../plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md)
-              - `framework` ×10
+            - Imported by: 37 plugins — full list in [`plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md`](../plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md)
+              - `framework` ×11
               - `infra` ×7
               - `apps` ×5
               - `build` ×3
@@ -38820,6 +38834,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/workspace/worktree`
               - `database/fork`
               - `installer/window`
+              - `packages/source-digest/prune`
               - `release`
           - Exemptions:
             - Exempts itself from:
@@ -40054,15 +40069,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `REPO_ROOT_MODULE`
               - `scriptPath`
           - Cross-plugin:
-            - Imported by: 61 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
-              - `framework` ×14
+            - Imported by: 63 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
+              - `framework` ×15
               - `infra` ×10
               - `apps` ×7
               - `build` ×6
               - `debug` ×4
+              - `packages` ×4
               - `plugin-meta` ×4
               - `conversations` ×3
-              - `packages` ×3
               - `reports` ×3
               - `code-explorer`
               - `config_v2`
@@ -44093,6 +44108,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live`
           - `network/live/live-state-snapshot`
           - `network/live/query-resource`
+          - `packages/source-digest/prune`
           - `page/links`
           - `reports/engine`
           - `stats/commits`
@@ -44121,6 +44137,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `allSourceSets`
           - `defineSourceSet`
+      - Cli:
+        - Exports (types): `PruneResult`
+        - Exports (values): `pruneSourceFacts`
       - Plugins:
         - **`computed-loads`** — How source-digest reads one module's loads: computedLoads(path, text) — the import(…) / require(…) calls whose path is not a literal, counted on Bun's transpiled output — plus the transpiler per extension and the unseen-load count the digest's walk shares. A leaf with no imports, so a file scan of it (boot:closure-digestable's) is keyed by this module, not the digest's whole barrel.
           - Cross-plugin:
@@ -44132,6 +44151,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `isCodeFile`
               - `transpilerFor`
               - `unseenLoads`
+        - **`prune`** — The daily source-digest.prune job: on main, deletes the shared source-facts store's rows unread for 14 days — a page at a time, off every reader's path.
+          - Server:
+            - Uses:
+              - `infra/jobs/supervised-job.defineSupervisedJob`
+              - `primitives/log-channels.defineLogSink`
+            - Register: `defineSupervisedJob('source-digest.prune')`
+          - Cli:
+            - Uses: `packages/source-digest.pruneSourceFacts`
     - **`spawn-disclaim`**
       - Core:
         - Uses: `infra/launcher/env-names.readEnv`
@@ -54810,13 +54837,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 79 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+        - Imported by: 81 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `apps` ×14
           - `debug` ×14
           - `infra` ×12
+          - `framework` ×7
           - `conversations` ×6
           - `database` ×6
-          - `framework` ×6
           - `network` ×4
           - `plugin-meta` ×3
           - `build` ×2
@@ -54827,6 +54854,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `backup`
           - `companions/browser-extension`
           - `integrations/youtube/audio-fetch`
+          - `packages/source-digest/prune`
           - `primitives/log-channels/memory-persistence`
           - `release`
           - `upstream`
