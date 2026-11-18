@@ -110,9 +110,37 @@ export async function writeThreadMinute(m: ThreadMinute): Promise<void> {
       periodMs: m.periodMs,
       owners: m.owners,
     })
-    // Across a restart inside the minute the later process wins: the owner map is
-    // not mergeable in one statement, and half a minute of samples is no loss.
-    .onConflictDoNothing();
+    // Written twice across a restart inside the minute: the stopping process
+    // flushes its partial minute first, then the new one writes its boot. Both
+    // halves are kept — samples and owner counts summed, the period weighted by
+    // samples so `samples × periodMs` (time on the thread) stays the sum of the
+    // two. Doing nothing here dropped the booting half: the restart minute, the
+    // one this table exists to explain (main, 2026-11-17 23:57 UTC, read as 3.8 s
+    // busy while the boot queued 101 reads).
+    .onConflictDoUpdate({
+      target: t.minuteStart,
+      set: {
+        samples: sql`${t.samples} + EXCLUDED.samples`,
+        periodMs: sql`CASE
+          WHEN ${t.periodMs} IS NULL THEN EXCLUDED.period_ms
+          WHEN EXCLUDED.period_ms IS NULL THEN ${t.periodMs}
+          ELSE (${t.samples} * ${t.periodMs} + EXCLUDED.samples * EXCLUDED.period_ms)
+               / nullif(${t.samples} + EXCLUDED.samples, 0)
+        END`,
+        owners: sql`(
+          SELECT coalesce(jsonb_object_agg(u.key, u.n), '{}'::jsonb)
+          FROM (
+            SELECT e.key, sum(e.value::float8) AS n
+            FROM (
+              SELECT * FROM jsonb_each_text(${t.owners})
+              UNION ALL
+              SELECT * FROM jsonb_each_text(EXCLUDED.owners)
+            ) AS e
+            GROUP BY e.key
+          ) AS u
+        )`,
+      },
+    });
 }
 
 export async function insertInteractions(

@@ -1,3 +1,4 @@
+import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import { HttpError } from "@plugins/infra/plugins/endpoints/core";
 import { SYSTEM_ACCOUNT_ID } from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
 import { activeClaudeAccountId } from "@plugins/infra/plugins/claude-cli/plugins/accounts/server";
@@ -18,7 +19,14 @@ let last: ClaudeCodeStatus | null = null;
  * ({@link recheckClaudeCodeNow}).
  */
 let refused = false;
-let inflight: Promise<ClaudeCodeStatus> | null = null;
+/**
+ * One probe at a time. Through `createInflight`, not a hand-held promise: a
+ * caller that joins a probe another caller started (a launch's, a recheck's,
+ * another tab's read) waits on Claude Code processes it is not running, so it
+ * gives back its read-admit slot for the wait. A plain `await` of a shared
+ * promise keeps the slot for the whole probe (1–5 s on a busy host).
+ */
+const probes = createInflight("claude-code-probe");
 const readyListeners = new Set<() => void>();
 const probedListeners = new Set<(status: ClaudeCodeStatus) => void>();
 const changedListeners = new Set<() => void>();
@@ -28,16 +36,11 @@ const changedListeners = new Set<() => void>();
  * launches, the resource loader, a recheck) wait on one pair of processes.
  */
 function probe(): Promise<ClaudeCodeStatus> {
-  inflight ??= (async () => {
-    try {
-      const status = withRefusal(await probeClaudeCode());
-      record(status);
-      return status;
-    } finally {
-      inflight = null;
-    }
-  })();
-  return inflight;
+  return probes.run("probe", async () => {
+    const status = withRefusal(await probeClaudeCode());
+    record(status);
+    return status;
+  });
 }
 
 function withRefusal(probed: ClaudeCodeStatus): ClaudeCodeStatus {

@@ -43640,10 +43640,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/commits-graph`
           - `conversations/runtime-sdk`
           - `infra/asset-mirror`
+          - `infra/claude-cli/availability`
           - `infra/endpoints`
           - `infra/git/git-read-cache`
           - `infra/host-fs`
           - `infra/host-fs/image`
+          - `infra/launcher/gateway-drift`
           - `infra/runtime-profiler`
           - `network/live/live-state`
           - `network/live/resource-runtime`
