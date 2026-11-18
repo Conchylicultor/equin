@@ -66,6 +66,7 @@ import {
   togglePlayback,
 } from "../internal/media-ops";
 import { useMediaState } from "../internal/use-media-state";
+import { useKeptPlayhead } from "../internal/kept-playhead";
 import { ControlPill } from "./control-pill";
 import { SettingsPanel } from "./settings-panel";
 import { VolumeCapsule } from "./volume-capsule";
@@ -92,6 +93,8 @@ export interface PlayerProps {
   src: string;
   label: string;
   autoPlay: boolean;
+  /** The kept playhead's key (`MediaPlayerProps.keep`). */
+  keep: string | null;
   poster?: string;
   onError?(error: MediaError | null): void;
   onPlay?(): void;
@@ -202,7 +205,8 @@ export function Player({
   kind,
   src,
   label,
-  autoPlay,
+  autoPlay: autoPlayAsked,
+  keep,
   poster,
   onError,
   onPlay,
@@ -222,6 +226,10 @@ export function Player({
   const resumeAfterSeek = useRef(false);
 
   const media = useMediaState(el);
+  // A player given back its playhead (a reload, a remount) resumes paused
+  // there: autoplay is for opening, never for coming back.
+  const { resumed } = useKeptPlayhead(el, keep);
+  const autoPlay = autoPlayAsked && !resumed;
   const volume = audibleVolume(media.volume, media.muted);
   const [rate, setRateState] = useState(1);
   const [settle, setSettle] = useState(false);
@@ -257,7 +265,8 @@ export function Player({
   }
   // Fetch the whole file only once it is wanted: on autoplay, or from the
   // first play. Until then the metadata (length, first frame) is enough.
-  const [played, setPlayed] = useState(false);
+  // A resumed player has played: no big play button over where it stopped.
+  const [played, setPlayed] = useState(resumed);
   if (!media.paused && !played) setPlayed(true);
 
   const settingsOpen = settings !== null;

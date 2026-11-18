@@ -37,8 +37,19 @@ export interface MediaPlayerProps {
   src: string;
   /** What is playing, for assistive tech: the file's or the block's name. */
   label: string;
-  /** Start playing on load (a browser that refuses unprompted playback leaves it paused). */
+  /**
+   * Start playing when opened (a browser that refuses unprompted playback
+   * leaves it paused). Not when it comes back — see `keep`.
+   */
   autoPlay?: boolean;
+  /**
+   * The playhead's key among this place's players (the ambient `KeepScope`:
+   * the pane, else the tab) — stable across a reload, and naming the media
+   * (a file's location, a block's id). The player keeps where it stood under
+   * it, so a reload or a remount gives it back there, paused, and never
+   * autoplays again. `null` keeps nothing: every mount is a fresh open.
+   */
+  keep: string | null;
   /** Video: the image shown until the first play, under the big play button (else the first frame). */
   poster?: string;
   /**
@@ -124,6 +135,7 @@ function LiveMediaPlayer({
   src,
   label,
   autoPlay = false,
+  keep,
   poster,
   onError,
   onPlay,
@@ -247,6 +259,7 @@ function LiveMediaPlayer({
           src={src}
           label={label}
           autoPlay={autoPlay}
+          keep={keep}
           poster={poster}
           onError={onError}
           onPlay={onPlay}

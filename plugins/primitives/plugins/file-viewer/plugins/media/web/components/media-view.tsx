@@ -4,6 +4,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   fileUrl,
+  locationKey,
   locationName,
 } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import {
@@ -19,7 +20,9 @@ import type { MediaKind } from "../internal/supports";
 
 /**
  * The themed `MediaPlayer`, playing as soon as it opens (a browser that
- * refuses unprompted playback leaves it paused). The player owns its keys —
+ * refuses unprompted playback leaves it paused) — but only then: its playhead
+ * is kept under the file's location, so a reload (an upgrade into a new build
+ * included) gives the file back where it stood, paused, never playing again. The player owns its keys —
  * Space plays / pauses from anywhere on the surface. The host raw route
  * answers byte ranges, so seeking streams instead of downloading the whole
  * file. A file the player cannot open says why (`mediaFailure`: damaged or
@@ -68,6 +71,7 @@ function LoadedMediaView({
       src={src}
       label={name}
       autoPlay
+      keep={locationKey(file)}
       onError={(error) =>
         setFailed({ src, failure: mediaFailure(kind, error) })
       }

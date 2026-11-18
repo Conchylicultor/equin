@@ -22,7 +22,13 @@ function setup(props: Partial<MediaPlayerProps> = {}) {
       <button type="button" data-testid="outside">
         outside
       </button>
-      <MediaPlayer kind="video" src="clip.mp4" label="Clip" {...props} />
+      <MediaPlayer
+        kind="video"
+        src="clip.mp4"
+        label="Clip"
+        keep={null}
+        {...props}
+      />
     </WithShortcuts>,
   );
   const root = document.querySelector<HTMLElement>("[data-media-player]")!;
@@ -632,7 +638,7 @@ describe("a live playhead (WebKit)", () => {
     const { video, q, rerender } = setup();
     rerender(
       <WithShortcuts>
-        <MediaPlayer kind="video" src="clip.mp4" label="Clip" />
+        <MediaPlayer kind="video" src="clip.mp4" label="Clip" keep={null} />
       </WithShortcuts>,
     );
     act(() => {

@@ -29,6 +29,7 @@ describe("a media player in a static render", () => {
           kind="video"
           src="clip.mp4"
           label="The clip"
+          keep={null}
           poster="poster.png"
         />,
       ),
@@ -52,7 +53,7 @@ describe("a media player in a static render", () => {
   it("an audio player too", () => {
     const html = withoutDom(() =>
       renderToStaticMarkup(
-        <MediaPlayer kind="audio" src="song.mp3" label="Song" />,
+        <MediaPlayer kind="audio" src="song.mp3" label="Song" keep={null} />,
       ),
     );
     const doc = new DOMParser().parseFromString(html, "text/html");

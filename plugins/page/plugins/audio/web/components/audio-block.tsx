@@ -117,6 +117,7 @@ function AttachmentAudio({
         <MediaPlayer
           kind="audio"
           src={src.src}
+          keep={attachmentId}
           label={label}
           onError={(error) =>
             setFailed({ src: src.src, message: playbackFailure(error) })

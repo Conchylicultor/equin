@@ -42455,9 +42455,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ThemeEngine.FixedTheme` "Media player controls"
           - `ThemeEngine.SubTheme` "Media player settings panel"
           - `ThemeEngine.SubTheme` "Media player volume"
-        - Uses: 24 symbols — full list in [`plugins/media/plugins/player/REFERENCE.md`](../plugins/media/plugins/player/REFERENCE.md)
+        - Uses: 26 symbols — full list in [`plugins/media/plugins/player/REFERENCE.md`](../plugins/media/plugins/player/REFERENCE.md)
           - `primitives/css/ui-kit` ×7
           - `primitives/shortcuts` ×3
+          - `primitives/kept-state` ×2
           - `primitives/latest-ref` ×2
           - `primitives/css/slider.Slider`
           - `primitives/css/switch.SwitchIndicator`
@@ -54893,7 +54894,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `writeDraft`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/color-palette --input`
-        - Imported by: 129 plugins — full list in [`plugins/primitives/plugins/kept-state/REFERENCE.md`](../plugins/primitives/plugins/kept-state/REFERENCE.md)
+        - Imported by: 130 plugins — full list in [`plugins/primitives/plugins/kept-state/REFERENCE.md`](../plugins/primitives/plugins/kept-state/REFERENCE.md)
           - `apps` ×38
           - `primitives` ×27
           - `conversations` ×12
@@ -54911,6 +54912,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hints/ask`
           - `integrations/google-maps`
           - `map`
+          - `media/player`
           - `reorder/editor`
           - `search/quick-find`
           - `shell/global-action-bar`

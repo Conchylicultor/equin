@@ -6,7 +6,7 @@ import { clipSrc } from "./clip";
 export default function AudioExhibit() {
   return (
     <Stack direction="col" gap="none" justify="end" className="h-72 p-lg">
-      <MediaPlayer kind="audio" src={clipSrc} label="Test tone" />
+      <MediaPlayer kind="audio" src={clipSrc} label="Test tone" keep={null} />
     </Stack>
   );
 }

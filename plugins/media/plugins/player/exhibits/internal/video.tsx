@@ -8,6 +8,7 @@ export default function VideoExhibit() {
       kind="video"
       src={clipSrc}
       label="Test card"
+      keep={null}
       className="max-w-[1040px]"
     />
   );

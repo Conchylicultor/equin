@@ -35,6 +35,7 @@ export function HeroFilm() {
     <MediaPlayer
       kind="video"
       src={video.src}
+      keep="hero-film"
       poster={poster.kind === "ready" ? poster.src : undefined}
       label={showcaseFilm.label}
       onPlay={() => {

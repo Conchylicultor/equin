@@ -107,6 +107,7 @@ function AttachmentVideo({
         <MediaPlayer
           kind="video"
           src={src.src}
+          keep={attachmentId}
           label={label}
           onError={(error) =>
             setFailed({ src: src.src, message: playbackFailure(error) })

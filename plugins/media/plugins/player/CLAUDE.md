@@ -1,6 +1,6 @@
 # media-player
 
-`<MediaPlayer kind src label autoPlay? poster? onError? onPlay? className? />` — a themed
+`<MediaPlayer kind src label keep autoPlay? poster? onError? onPlay? className? />` — a themed
 video / audio player in place of the browser's native `controls`, which
 cannot be themed, cannot grow a control (a fine speed, loop in the bar) and
 float an unthemable picture in picture. The design is the prototype
@@ -14,11 +14,25 @@ measure for measure, animations included. Plan:
   kind="video"
   src={src}
   label={name}
+  keep={locationKey(file)} // the playhead's key in this place; null keeps nothing
   autoPlay
   onError={(error) => setFailed(describe(error))}  // the caller owns the error UI
   className="max-h-full"
 />
 ```
+
+## Reload: the kept playhead
+
+Where the playhead stood is kept view state (`internal/kept-playhead.ts`,
+`kept-state`'s view tier) under the caller's required `keep` key, in the
+ambient `KeepScope` (the pane, else the tab): exact once paused, sought or
+ended, the current second while playing. A player that finds one on mount —
+a reload, an upgrade into a new build, a remount of a hidden tab — is
+**resumed**: it seeks there, paused, and never autoplays. `autoPlay` means
+"play when opened", so a finished video does not start over on every
+reload. The key names the media (a file's location, an attachment id) —
+another media under the same key would be sought to its time; `null` keeps
+nothing (exhibits, tests).
 
 ## What it draws
 
@@ -156,9 +170,10 @@ so a size or glass option later is one set switched as a whole.
     - `ThemeEngine.FixedTheme` "Media player controls"
     - `ThemeEngine.SubTheme` "Media player settings panel"
     - `ThemeEngine.SubTheme` "Media player volume"
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×7
     - `primitives/shortcuts` ×3
+    - `primitives/kept-state` ×2
     - `primitives/latest-ref` ×2
     - `primitives/css/slider.Slider`
     - `primitives/css/switch.SwitchIndicator`

@@ -26,7 +26,7 @@ afterEach(() => {
 function setup() {
   render(
     <WithShortcuts>
-      <MediaPlayer kind="video" src="clip.mp4" label="Clip" />
+      <MediaPlayer kind="video" src="clip.mp4" label="Clip" keep={null} />
     </WithShortcuts>,
   );
   const root = document.querySelector<HTMLElement>("[data-media-player]")!;
