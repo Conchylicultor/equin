@@ -9,6 +9,8 @@
   - Contributes: `ActionBar.ViewOption` → `FullscreenToggle`
   - Uses:
     - `primitives/css/control-panel.ControlPanel`
+    - `primitives/dom/element-fullscreen.FullscreenSupport`
+    - `primitives/dom/element-fullscreen.useFullscreenSupport`
     - `primitives/dom/render-mode.useBrowserValue`
     - `primitives/icon-button.IconButton`
     - `shell/action-bar.ActionBar`

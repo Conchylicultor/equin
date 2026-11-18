@@ -6592,6 +6592,10 @@
       "name": "@equin/plugin-primitives-dom-dom-selection",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/dom/plugins/element-fullscreen": {
+      "name": "@equin/plugin-primitives-dom-element-fullscreen",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/dom/plugins/element-size": {
       "name": "@equin/plugin-primitives-dom-element-size",
       "version": "0.0.1",
@@ -11452,6 +11456,8 @@
     "@equin/plugin-primitives-dom-device-sizes": ["@equin/plugin-primitives-dom-device-sizes@workspace:plugins/primitives/plugins/dom/plugins/device-sizes"],
 
     "@equin/plugin-primitives-dom-dom-selection": ["@equin/plugin-primitives-dom-dom-selection@workspace:plugins/primitives/plugins/dom/plugins/dom-selection"],
+
+    "@equin/plugin-primitives-dom-element-fullscreen": ["@equin/plugin-primitives-dom-element-fullscreen@workspace:plugins/primitives/plugins/dom/plugins/element-fullscreen"],
 
     "@equin/plugin-primitives-dom-element-size": ["@equin/plugin-primitives-dom-element-size@workspace:plugins/primitives/plugins/dom/plugins/element-size"],
 

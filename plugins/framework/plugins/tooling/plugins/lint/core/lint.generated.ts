@@ -122,6 +122,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "primitives/plugins/data-table", id: "primitives.data-table", loader: () => import("@plugins/primitives/plugins/data-table/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/data-view", id: "primitives.data-view", loader: () => import("@plugins/primitives/plugins/data-view/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/detail-sections", id: "primitives.detail-sections", loader: () => import("@plugins/primitives/plugins/detail-sections/lint"), dependsOn: [] },
+  { pluginPath: "primitives/plugins/dom/plugins/element-fullscreen", id: "primitives.dom.element-fullscreen", loader: () => import("@plugins/primitives/plugins/dom/plugins/element-fullscreen/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/dom/plugins/static-render", id: "primitives.dom.static-render", loader: () => import("@plugins/primitives/plugins/dom/plugins/static-render/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/dom/plugins/web-storage", id: "primitives.dom.web-storage", loader: () => import("@plugins/primitives/plugins/dom/plugins/web-storage/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/embed/plugins/frame", id: "primitives.embed.frame", loader: () => import("@plugins/primitives/plugins/embed/plugins/frame/lint"), dependsOn: [] },

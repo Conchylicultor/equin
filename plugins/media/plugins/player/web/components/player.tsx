@@ -74,6 +74,7 @@ import type { SetRate } from "./speed-dial";
 import "../internal/media-player.css";
 import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { useMediaQuery } from "@plugins/primitives/plugins/dom/plugins/render-mode/web";
+import { fullscreenSupport } from "@plugins/primitives/plugins/dom/plugins/element-fullscreen/web";
 import { TouchControls } from "./touch-controls";
 
 const playIcon = symbol("play-arrow");
@@ -313,8 +314,11 @@ export function Player({
     if (root === null || doc === null) return;
     if (filling) setFilling(false);
     else if (doc.fullscreenElement) void doc.exitFullscreen();
-    else if (doc.fullscreenEnabled) void root.requestFullscreen();
-    else setFilling(true);
+    else {
+      const support = fullscreenSupport(doc);
+      if (support.kind === "supported") void support.request(root);
+      else setFilling(true);
+    }
   };
 
   const openSettings = (open: boolean) => {

@@ -18,10 +18,9 @@ function noDom(): void {
 }
 
 describe("the fullscreen button in a static render", () => {
-  it("draws the not-fullscreen button, without touching the DOM", () => {
+  it("offers no button, without touching the DOM", () => {
     noDom();
-    const html = renderToStaticMarkup(<FullscreenButton />);
-    expect(html).toContain("Full screen");
-    expect(html).not.toContain("Exit full screen");
+    // A static render can request nothing, so it reads fullscreen as unsupported.
+    expect(renderToStaticMarkup(<FullscreenButton />)).toBe("");
   });
 });

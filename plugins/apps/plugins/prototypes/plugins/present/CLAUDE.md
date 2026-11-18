@@ -158,7 +158,7 @@ The routes live in `internal/routes.ts`, apart from the panes.
     - `PrototypeFrameActions` "open-new-tab" → `OpenNewTabAction`
     - `PrototypeFrameActions` "full-screen" → `FullScreenAction`
     - `PrototypeCardActions` "open-new-tab" → `OpenCardNewTabAction`
-  - Uses: 58 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 59 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/prototypes/canvas` ×26
     - `primitives/css/ui-kit` ×3
     - `primitives/hover-reveal` ×2
@@ -175,6 +175,7 @@ The routes live in `internal/routes.ts`, apart from the panes.
     - `primitives/css/text.Text`
     - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/css/z-layers/stack.defineZLayer`
+    - `primitives/dom/element-fullscreen.fullscreenSupport`
     - `primitives/dom/element-size.useElementSize`
     - `primitives/dom/movable.Movable`
     - `primitives/embed/frame.FRAME_ACTIVITY_EVENT`

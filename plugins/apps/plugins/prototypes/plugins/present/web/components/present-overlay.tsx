@@ -3,6 +3,7 @@ import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
 import { useSurfaceFocused } from "@plugins/apps-core/plugins/tabs/web";
+import { fullscreenSupport } from "@plugins/primitives/plugins/dom/plugins/element-fullscreen/web";
 import {
   usePrototypeDetail,
   type CanvasAddAction,
@@ -108,13 +109,17 @@ export function PresentOverlay({
   useEffect(() => {
     const el = rootRef.current;
     if (!el) return;
+    // No element fullscreen here (an iPhone): the presentation fills the
+    // window instead, and Esc still leaves it.
+    const fullscreen = fullscreenSupport();
+    if (fullscreen.kind === "unsupported") return;
     // Still inside the button click's (or the F key's) user activation, so the
     // request is granted.
     const onChange = () => {
       if (document.fullscreenElement === null) exit();
     };
     document.addEventListener("fullscreenchange", onChange);
-    void el.requestFullscreen();
+    void fullscreen.request(el);
     return () => {
       document.removeEventListener("fullscreenchange", onChange);
       if (document.fullscreenElement === el) void document.exitFullscreen();

@@ -665,6 +665,7 @@ export const browserHost = {
     "primitives.dom.auto-scroll",
     "primitives.dom.copy-source-text",
     "primitives.dom.dom-selection",
+    "primitives.dom.element-fullscreen",
     "primitives.dom.element-size",
     "primitives.dom.element-size.resize-loop-trace",
     "primitives.dom.gesture-origin",

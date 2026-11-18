@@ -222,6 +222,7 @@ export const staticHosts: Record<string, StaticHost> = {
       "primitives/plugins/dom/plugins/auto-scroll",
       "primitives/plugins/dom/plugins/copy-source-text",
       "primitives/plugins/dom/plugins/dom-selection",
+      "primitives/plugins/dom/plugins/element-fullscreen",
       "primitives/plugins/dom/plugins/element-size",
       "primitives/plugins/dom/plugins/element-size/plugins/resize-loop-trace",
       "primitives/plugins/dom/plugins/gesture-origin",

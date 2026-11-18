@@ -7,6 +7,10 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { partyConfig } from "../../core";
 import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
+import {
+  useFullscreenSupport,
+  type FullscreenSupport,
+} from "@plugins/primitives/plugins/dom/plugins/element-fullscreen/web";
 
 const lockIcon = symbol("lock");
 const settingsIcon = symbol("tune");
@@ -39,7 +43,8 @@ function useIsLocked(stageRef: RefObject<HTMLDivElement | null>) {
  * The grown-up's corner: the app brand (the launcher to every other app — the
  * stage is a bespoke full surface, so the shell places no brand for it), Lock
  * (the stage full screen, with the keyboard locked so system keys play the toy
- * instead of leaving it) and the party's settings. Hidden while locked — the
+ * instead of leaving it; offered only where the browser has element
+ * fullscreen — an iPhone has none) and the party's settings. Hidden while locked — the
  * child sees only the stage. Sits beside the stage, not inside it, so its
  * buttons keep their own keys.
  */
@@ -49,24 +54,27 @@ export function PartyControls({
   stageRef: RefObject<HTMLDivElement | null>;
 }) {
   const locked = useIsLocked(stageRef);
+  const fullscreen = useFullscreenSupport();
   const [open, setOpen] = useState(false);
   if (locked) return null;
 
-  const lock = () => {
+  const lock = (support: FullscreenSupport & { kind: "supported" }) => {
     const stage = stageRef.current;
     if (!stage) throw new Error("PartyControls: stage not mounted");
-    void stage.requestFullscreen();
+    void support.request(stage);
     focusElement(stage, { reveal: false });
   };
 
   return (
     <div className="kp-controls" onPointerDown={(e) => e.stopPropagation()}>
       <AppShellBrand form="icon" />
-      <IconButton
-        icon={lockIcon}
-        label="Lock full screen (hold Esc to leave)"
-        onClick={lock}
-      />
+      {fullscreen.kind === "supported" && (
+        <IconButton
+          icon={lockIcon}
+          label="Lock full screen (hold Esc to leave)"
+          onClick={() => lock(fullscreen)}
+        />
+      )}
       <ControlPanelPopover
         open={open}
         onOpenChange={(next) => {

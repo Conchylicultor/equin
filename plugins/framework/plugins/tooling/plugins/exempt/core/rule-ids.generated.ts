@@ -55,6 +55,7 @@ export type ExemptableRuleId =
   | "dom-selection-safety/no-raw-selection-range"
   | "drizzle-cli-safety/no-adhoc-drizzle-cli"
   | "e2e-harness/no-networkidle"
+  | "element-fullscreen/no-raw-request-fullscreen"
   | "element-type-safety/no-post-mount-element-type"
   | "endpoints/fetch-endpoint-binding-name"
   | "endpoints/no-asset-path-read"

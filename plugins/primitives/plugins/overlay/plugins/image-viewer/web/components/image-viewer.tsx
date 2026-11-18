@@ -61,6 +61,10 @@ import {
   TopBar,
 } from "./viewer-chrome";
 import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
+import {
+  fullscreenSupport,
+  useFullscreenSupport,
+} from "@plugins/primitives/plugins/dom/plugins/element-fullscreen/web";
 
 export interface ImageViewerProps {
   /** Every image the viewer can step through, in order. */
@@ -617,11 +621,12 @@ function ViewerFrame({
       void document.exitFullscreen();
       return;
     }
-    if (!document.fullscreenEnabled) {
+    const support = fullscreenSupport();
+    if (support.kind === "unsupported") {
       feedback("Full screen isn't allowed here");
       return;
     }
-    root.requestFullscreen().catch((err: unknown) => {
+    support.request(root).catch((err: unknown) => {
       // The one refusal a user can cause: the browser denies the request
       // (no user activation, or a frame without allowfullscreen).
       if (
@@ -756,6 +761,7 @@ function ViewerFrame({
   const failed = ViewStore.useSelector((s) => s.failed, []);
   const layout = ViewStore.useSelector((s) => s.layout, []);
   const slideshow = ViewStore.useSelector((s) => s.slideshow, []);
+  const fullscreen = useFullscreenSupport();
   const strip = ViewStore.useSelector((s) => s.strip, []);
   const area = ViewStore.useSelector((s) => s.area, []);
   const single = layout === "single";
@@ -906,7 +912,9 @@ function ViewerFrame({
             compact={compact}
             onCopy={copy}
             onDownload={download}
-            onSlideshow={toggleSlideshow}
+            onSlideshow={
+              fullscreen.kind === "supported" ? toggleSlideshow : null
+            }
             onClose={requestClose}
           />
           {single && (

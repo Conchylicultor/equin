@@ -170,7 +170,7 @@ so a size or glass option later is one set switched as a whole.
     - `ThemeEngine.FixedTheme` "Media player controls"
     - `ThemeEngine.SubTheme` "Media player settings panel"
     - `ThemeEngine.SubTheme` "Media player volume"
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×7
     - `primitives/shortcuts` ×3
     - `primitives/kept-state` ×2
@@ -179,6 +179,7 @@ so a size or glass option later is one set switched as a whole.
     - `primitives/css/switch.SwitchIndicator`
     - `primitives/css/text.Text`
     - `primitives/css/theme-boundary.Theme`
+    - `primitives/dom/element-fullscreen.fullscreenSupport`
     - `primitives/dom/render-mode.useMediaQuery`
     - `primitives/dom/scroll-reveal.focusElement`
     - `primitives/icon-button.IconButton`

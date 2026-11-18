@@ -112,7 +112,8 @@ export function TopBar({
   compact: boolean;
   onCopy(): Promise<void>;
   onDownload(): void;
-  onSlideshow(): void;
+  /** Null where the browser has no element fullscreen (an iPhone): no Slideshow button. */
+  onSlideshow: (() => void) | null;
   onClose(): void;
 }) {
   const natural = ViewStore.useSelector((s) => s.natural, []);
@@ -183,15 +184,17 @@ export function TopBar({
               capabilities.download) && (
               <Separator orientation="vertical" className="h-4" />
             )}
-            <IconButton
-              icon={slideshowIcon}
-              label="Slideshow"
-              tooltip={keyTooltip(
-                "Slideshow — full screen, no controls",
-                "slideshow",
-              )}
-              onClick={onSlideshow}
-            />
+            {onSlideshow && (
+              <IconButton
+                icon={slideshowIcon}
+                label="Slideshow"
+                tooltip={keyTooltip(
+                  "Slideshow — full screen, no controls",
+                  "slideshow",
+                )}
+                onClick={onSlideshow}
+              />
+            )}
             <IconButton
               icon={closeIcon}
               label="Close"

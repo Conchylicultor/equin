@@ -6107,6 +6107,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2/fields.FieldRenderer`
               - `primitives/app-shell.AppShellBrand`
               - `primitives/css/control-panel.ControlPanelPopover`
+              - `primitives/dom/element-fullscreen.FullscreenSupport`
+              - `primitives/dom/element-fullscreen.useFullscreenSupport`
               - `primitives/dom/reload-readiness.holdReload`
               - `primitives/dom/scroll-reveal.focusElement`
               - `primitives/icon-button.IconButton`
@@ -8501,7 +8503,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeFrameActions` "open-new-tab" → `OpenNewTabAction`
               - `PrototypeFrameActions` "full-screen" → `FullScreenAction`
               - `PrototypeCardActions` "open-new-tab" → `OpenCardNewTabAction`
-            - Uses: 58 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md)
+            - Uses: 59 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md)
               - `apps/prototypes/canvas` ×26
               - `primitives/css/ui-kit` ×3
               - `primitives/hover-reveal` ×2
@@ -8518,6 +8520,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/text.Text`
               - `primitives/css/viewport-overlay.ViewportOverlay`
               - `primitives/css/z-layers/stack.defineZLayer`
+              - `primitives/dom/element-fullscreen.fullscreenSupport`
               - `primitives/dom/element-size.useElementSize`
               - `primitives/dom/movable.Movable`
               - `primitives/embed/frame.FRAME_ACTIVITY_EVENT`
@@ -34764,6 +34767,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Contributes: `ActionBar.ViewOption` → `FullscreenToggle`
     - Uses:
       - `primitives/css/control-panel.ControlPanel`
+      - `primitives/dom/element-fullscreen.FullscreenSupport`
+      - `primitives/dom/element-fullscreen.useFullscreenSupport`
       - `primitives/dom/render-mode.useBrowserValue`
       - `primitives/icon-button.IconButton`
       - `shell/action-bar.ActionBar`
@@ -42540,7 +42545,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ThemeEngine.FixedTheme` "Media player controls"
           - `ThemeEngine.SubTheme` "Media player settings panel"
           - `ThemeEngine.SubTheme` "Media player volume"
-        - Uses: 26 symbols — full list in [`plugins/media/plugins/player/REFERENCE.md`](../plugins/media/plugins/player/REFERENCE.md)
+        - Uses: 27 symbols — full list in [`plugins/media/plugins/player/REFERENCE.md`](../plugins/media/plugins/player/REFERENCE.md)
           - `primitives/css/ui-kit` ×7
           - `primitives/shortcuts` ×3
           - `primitives/kept-state` ×2
@@ -42549,6 +42554,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/switch.SwitchIndicator`
           - `primitives/css/text.Text`
           - `primitives/css/theme-boundary.Theme`
+          - `primitives/dom/element-fullscreen.fullscreenSupport`
           - `primitives/dom/render-mode.useMediaQuery`
           - `primitives/dom/scroll-reveal.focusElement`
           - `primitives/icon-button.IconButton`
@@ -53864,6 +53870,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selectionIsCollapsed`
               - `selectionRange`
               - `selectionRect`
+        - **`element-fullscreen`** — The browser's element fullscreen, only where it exists: fullscreenSupport(doc?) answers unsupported (an iPhone has no element fullscreen; a frame without allowfullscreen may not use it) or supported with request(el) — so a caller must branch before it can ask — and useFullscreenSupport() reads it while rendering, for a control that is not offered where the browser cannot do it. Its lint rule (no-raw-request-fullscreen) sends every other .requestFullscreen() call here.
+          - Web:
+            - Uses: `primitives/dom/render-mode.useBrowserValue`
+            - Exports (types): `FullscreenSupport`
+            - Exports (values):
+              - `fullscreenSupport`
+              - `useFullscreenSupport`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/keyboard-party/party`
+              - `apps/prototypes/present`
+              - `fullscreen`
+              - `media/player`
+              - `primitives/overlay/image-viewer`
+          - Exemptions:
+            - Exempts itself from: `element-fullscreen/no-raw-request-fullscreen` — `web/internal/fullscreen-support.ts` (sanctioned)
+            - Exempted by: `primitives/dom/element-fullscreen` (0 debt)
         - **`element-size`** — Element-size ResizeObserver idiom as a primitive: useElementSize() reactively measures an element's layout size (callback ref; the observer's own border-box size, so a transform never freezes a wrong value; its first delivery shares the after-layout root's broadcast, so the commit it makes may change layout at any depth), useResizeObserver(target, onResize, {debounce, deps}) is the substrate, and useResizeObserverSet(onResize) observes a changing set of elements (windowed rows) through one observer — initial measure after layout and before paint (dom/after-layout: no forced recalc on the commit path), RAF-debounced resize callbacks, every observation started through after-layout's observeInPhase and every commit made through its commitInPhase (an observation is never held back into a 'ResizeObserver loop', and what a commit inside a delivery resizes above it is answered in the same phase), auto cleanup. The single sanctioned home for the hand-rolled ResizeObserver-for-size idiom.
           - Web:
             - Uses:
@@ -54026,8 +54049,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live`
         - **`render-mode`** — Reading the browser while rendering, safely in both modes: useBrowserValue({ name, read, subscribe?, staticValue? }) (live: useSyncExternalStore, re-read on every change; static: staticValue, or a loud NoStaticValueError), useMediaQuery(query, staticValue), useViewportSize(staticValue), and useOwnedElement(name, create) — a DOM node a component mints once, which has no static form. The one place a render-time read of window / document / navigator / matchMedia happens (dom-access-safety/no-render-time-dom).
           - Cross-plugin:
-            - Imported by: 26 plugins — full list in [`plugins/primitives/plugins/dom/plugins/render-mode/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/render-mode/REFERENCE.md)
-              - `primitives` ×11
+            - Imported by: 27 plugins — full list in [`plugins/primitives/plugins/dom/plugins/render-mode/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/render-mode/REFERENCE.md)
+              - `primitives` ×12
               - `apps` ×4
               - `companions/panel`
               - `conversations/conversation-view/jsonl-viewer/steady-reveal`
@@ -56214,7 +56237,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `createHoverIntent`
         - **`image-viewer`** — One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail that always shows the whole image, with a tiny-icon shape and a size badge; a given width / height reserves its box before it loads, and a chip is one fixed height) and useImageViewerTrigger (for callers that keep their own <img>) open it; ThumbnailPlaceholder holds a thumbnail's box while its source is not known yet; an image that does not load shows MissingImage (its name, and whether the file is gone or only unreadable, with Retry) and leaves the gallery — useImageLoad gives a caller with its own <img> the same load state, and useImageProbe answers it off-DOM for a caller that must know before it renders; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-close, wheel/pinch zoom, drag pan, minimap, copy/download/open, a docked thumbnail strip, a grid of every image with a tile-size slider, a control-less full-screen slideshow, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
           - Web:
-            - Uses: 55 symbols — full list in [`plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md)
+            - Uses: 57 symbols — full list in [`plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md)
               - `primitives/css/ui-kit` ×6
               - `primitives/kept-state` ×3
               - `primitives/networking` ×3
@@ -56224,6 +56247,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/motion` ×2
               - `primitives/css/rigid` ×2
               - `primitives/css/spacing` ×2
+              - `primitives/dom/element-fullscreen` ×2
               - `primitives/dom/scroll-reveal` ×2
               - `primitives/hover-reveal` ×2
               - `primitives/announce.announce`
