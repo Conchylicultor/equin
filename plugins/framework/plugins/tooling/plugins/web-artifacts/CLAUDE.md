@@ -126,6 +126,16 @@ Key invariants:
     grant, and the pipeline is admitted for that many units.
   - Omitted, it builds in-process, where Babel (JS) serializes every build on
     the one thread.
+- **Nothing a finished stage used is held into the link.** The link (one
+  rolldown graph of the whole fleet, chained sourcemaps) needs the most memory
+  (a cold one adds ~2.1–2.5 GB); holding more beside it OOM-killed fresh
+  installs on 8 GB machines.
+  - A builder handed to the pipeline is the pipeline's: it calls `close()`
+    after the browser-host stage (the last compile), and again on a failure.
+    A pool's worker threads hold ~1.2 GB until they exit.
+  - The vendor build stops esbuild's service once it returns
+    (`buildThenStop`, `vendors.ts`): every esbuild call runs in ONE Go child
+    that keeps its largest build's heap (~1.5 GB after a cold vendor set).
 - **A Babel contribution runs only on the modules it can change.** Each `vite/`
   contribution (web-core's `BabelContribution`) declares
   `appliesTo({ id, code })`, false only for a module it would leave unchanged.

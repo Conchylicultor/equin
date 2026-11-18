@@ -9,7 +9,8 @@
 // cores saturate the machine; more only add JIT warm-up. Peak memory: 2.9 GB
 // in-process, 4.1 GB with 4 threads (~0.3 GB a thread). The caller clamps the
 // count to its host grant and admits the pipeline for that many units — each
-// thread is a CPU-heavy worker, which is what a unit bounds.
+// thread is a CPU-heavy worker, which is what a unit bounds. The pipeline
+// closes the pool itself once its last compile is done, before the link.
 
 import os from "node:os";
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
@@ -29,7 +30,7 @@ export function createPooledArtifactBuilder(opts: {
   repoRoot: AppPath;
   minify: boolean;
   threads: number;
-}): ArtifactBuilder & { close(): Promise<void> } {
+}): ArtifactBuilder {
   const pool = createThreadPool<ArtifactBuildRequest, ArtifactMeta>({
     url: new URL("../../bin/build-worker.ts", import.meta.url),
     size: opts.threads,

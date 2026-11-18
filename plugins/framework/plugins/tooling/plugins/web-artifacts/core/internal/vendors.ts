@@ -502,6 +502,21 @@ export async function resolveVendorSet(opts: {
   return { resolved, setHash, stats };
 }
 
+/**
+ * One esbuild build, then esbuild's service stopped. The JS API runs every
+ * build in ONE long-lived Go child process, which keeps the heap of its
+ * largest build long after it returns: ~1.5 GB after a cold vendor set, held
+ * through the link (the stage that needs the most memory) until the process
+ * exits. A later esbuild call starts a new service.
+ */
+async function buildThenStop<T>(build: () => Promise<T>): Promise<T> {
+  try {
+    return await build();
+  } finally {
+    await esbuild.stop();
+  }
+}
+
 /** Read a vendor set's stored meta, or null when the set is not in the store. */
 export function readVendorSetMeta(setHash: string): VendorSetMeta | null {
   const metaFile = joinAppPath(vendorSetPath(setHash), "meta.json");
@@ -547,46 +562,48 @@ export async function ensureVendorSet(opts: {
   // Virtual entries: `vendor-entry:<spec>` loads the wrapper with the request's
   // own resolveDir, so plugin-local deps resolve under bun's isolated installs.
   const bySpec = new Map(resolved.map((r) => [r.spec, r] as const));
-  const result = await esbuild.build({
-    entryPoints: resolved.map((r) => ({
-      in: `vendor-entry:${r.spec}`,
-      out: vendorEntryFileName(r.spec).replace(/\.js$/, ""),
-    })),
-    bundle: true,
-    splitting: true,
-    format: "esm",
-    platform: "browser",
-    outdir: tmpDir,
-    chunkNames: "chunks/[name]-[hash]",
-    minify: opts.minify,
-    keepNames: true,
-    sourcemap: true,
-    metafile: true,
-    define: { "process.env.NODE_ENV": JSON.stringify("production") },
-    logLevel: "silent",
-    plugins: [
-      {
-        name: "vendor-entries",
-        setup(b) {
-          b.onResolve({ filter: /^vendor-entry:/ }, (args) => ({
-            path: args.path,
-            namespace: "vendor-entry",
-          }));
-          b.onLoad({ filter: /.*/, namespace: "vendor-entry" }, (args) => {
-            const spec = args.path.slice("vendor-entry:".length);
-            const r = bySpec.get(spec);
-            if (!r)
-              throw new Error(`vendor: unknown virtual entry ${args.path}`);
-            return {
-              contents: r.wrapper,
-              loader: "js",
-              resolveDir: r.resolveDir,
-            };
-          });
+  const result = await buildThenStop(() =>
+    esbuild.build({
+      entryPoints: resolved.map((r) => ({
+        in: `vendor-entry:${r.spec}`,
+        out: vendorEntryFileName(r.spec).replace(/\.js$/, ""),
+      })),
+      bundle: true,
+      splitting: true,
+      format: "esm",
+      platform: "browser",
+      outdir: tmpDir,
+      chunkNames: "chunks/[name]-[hash]",
+      minify: opts.minify,
+      keepNames: true,
+      sourcemap: true,
+      metafile: true,
+      define: { "process.env.NODE_ENV": JSON.stringify("production") },
+      logLevel: "silent",
+      plugins: [
+        {
+          name: "vendor-entries",
+          setup(b) {
+            b.onResolve({ filter: /^vendor-entry:/ }, (args) => ({
+              path: args.path,
+              namespace: "vendor-entry",
+            }));
+            b.onLoad({ filter: /.*/, namespace: "vendor-entry" }, (args) => {
+              const spec = args.path.slice("vendor-entry:".length);
+              const r = bySpec.get(spec);
+              if (!r)
+                throw new Error(`vendor: unknown virtual entry ${args.path}`);
+              return {
+                contents: r.wrapper,
+                loader: "js",
+                resolveDir: r.resolveDir,
+              };
+            });
+          },
         },
-      },
-    ],
-  });
+      ],
+    }),
+  );
   if (result.errors.length > 0) {
     rmSync(tmpDir, { recursive: true, force: true });
     throw new Error(

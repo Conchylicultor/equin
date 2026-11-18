@@ -24,6 +24,14 @@ import {
 export interface ArtifactBuilder {
   /** Build `target` into the store and return its meta. Throws on a failed build. */
   build(target: ArtifactBuildTarget): Promise<ArtifactMeta>;
+  /**
+   * Free what the builder holds (a pool's worker threads, each with its own
+   * heap and Rolldown's native memory). A builder handed to the pipeline is
+   * the pipeline's: it closes it as soon as its last compile is done — before
+   * the link, the stage that needs the most memory — and again on the way out
+   * (a failure), so `close` must be idempotent. A later `build` throws.
+   */
+  close(): Promise<void>;
 }
 
 /** One build, as plain data: what a builder in another thread needs. */

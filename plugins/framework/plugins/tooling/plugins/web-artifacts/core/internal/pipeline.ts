@@ -216,12 +216,23 @@ export interface WebArtifactsPipelineResult {
  * Rolldown work overlaps; their Babel pass does not (one JS thread).
  */
 function inProcessBuilder(repoRoot: AppPath, minify: boolean): ArtifactBuilder {
-  const handle = createArtifactBuildHandler();
+  let handle: ReturnType<typeof createArtifactBuildHandler> | null =
+    createArtifactBuildHandler();
   const gate = createSemaphore(
     Math.min(8, Math.max(2, Math.floor(os.cpus().length / 2))),
   );
   return {
-    build: (target) => gate.run(() => handle({ repoRoot, minify, target })),
+    build: (target) =>
+      gate.run(() => {
+        if (handle === null)
+          throw new Error("web-artifacts: in-process builder used after close");
+        return handle({ repoRoot, minify, target });
+      }),
+    // Drops the handler's context (the Babel contributions) for the collector.
+    close: () => {
+      handle = null;
+      return Promise.resolve();
+    },
   };
 }
 
@@ -244,10 +255,17 @@ export async function runWebArtifactsPipeline(
     (build) => ({ ok: true as const, build }),
     (error: unknown) => ({ ok: false as const, error }),
   );
+  // The pipeline owns the builder from here: `runPipeline` closes it once its
+  // last compile is done, and this closes it on a failure before that.
+  const builder = opts.builder ?? inProcessBuilder(opts.root, opts.minify);
   try {
-    return await runPipeline(opts, lease, centralBuild);
+    return await runPipeline(opts, lease, centralBuild, builder);
   } finally {
-    await lease.release();
+    try {
+      await builder.close();
+    } finally {
+      await lease.release();
+    }
   }
 }
 
@@ -257,6 +275,7 @@ async function runPipeline(
   centralBuild: Promise<
     { ok: true; build: string | null } | { ok: false; error: unknown }
   >,
+  builder: ArtifactBuilder,
 ): Promise<WebArtifactsPipelineResult> {
   const { root, log } = opts;
   const pluginsRoot = joinAppPath(root, "plugins");
@@ -327,8 +346,8 @@ async function runPipeline(
 
   // ── Stage 2: build (webs + entry + registry, then the core closure) ─
   // One builder for every artifact, page and worker alike: the host stage
-  // below builds its closure through the same `ensure`.
-  const builder = opts.builder ?? inProcessBuilder(root, opts.minify);
+  // below builds its closure through the same `ensure`, and is the last to
+  // compile — the builder is closed right after it.
   const metas = new Map<string, ArtifactMeta>(); // dirName → meta
   const counts = { built: 0, reused: 0 };
   const staleAtStart = plan.staleWeb + (plan.entryStale ? 1 : 0);
@@ -454,6 +473,12 @@ async function runPipeline(
       return out;
     },
   );
+
+  // Nothing compiles past this point: free the builder now, not when the
+  // pipeline returns. A pool's worker threads keep their heaps and Rolldown's
+  // native memory until they exit (~1.2 GB for a cold build's 3 threads), and
+  // the link below is the stage that needs the most.
+  await builder.close();
 
   // ── Stage 3: vendors ────────────────────────────────────────────────
   // Every artifact's npm imports, page and worker: one vendor set serves both.

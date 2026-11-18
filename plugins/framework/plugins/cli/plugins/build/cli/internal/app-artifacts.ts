@@ -1310,9 +1310,10 @@ export async function buildAndPublishWebDist(
         threads,
       });
       const result = await grant.run(
-        async () => {
-          try {
-            return await runWebArtifactsPipeline({
+        // The pipeline owns the builder: it closes the pool once its last
+        // compile is done (before the link) and on a failure.
+        async () =>
+          await runWebArtifactsPipeline({
               builder,
               root,
               stagingDir: stagingPath,
@@ -1346,11 +1347,7 @@ export async function buildAndPublishWebDist(
                   endStage(reused === undefined ? undefined : { reused });
                 }
               },
-            });
-          } finally {
-            await builder.close();
-          }
-        },
+          }),
         { units: threads },
       );
       graphHash = result.graphHash;

@@ -66,7 +66,7 @@ const stagingDir = asAppPath(mkdtempSync(join(HOME_DIR, ".bp-cold-staging-")));
 const stages: Array<{ id: string; s: number }> = [];
 const t0 = performance.now();
 let threads = 0;
-let builder: (ArtifactBuilder & { close(): Promise<void> }) | undefined;
+let builder: ArtifactBuilder | undefined;
 if (threadsArg !== "0") {
   const { createPooledArtifactBuilder, idealArtifactBuildThreads } =
     await import("../cli");
@@ -98,7 +98,6 @@ const result = await runWebArtifactsPipeline({
   },
 });
 const total = (performance.now() - t0) / 1000;
-await builder?.close();
 console.log(
   `cold frontend: ${total.toFixed(2)} s (${result.builtArtifacts} built, ${threads > 0 ? `${threads} threads` : "in-process"})`,
 );
