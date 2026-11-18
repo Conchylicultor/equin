@@ -9,7 +9,7 @@
 //
 // The file: `[u32 LE header length][header JSON][payloads…]`. The header holds
 // the snapshot's facts and every store value as JSON, a binary value (a
-// `Uint8Array`, a `Blob`) replaced by `{ "$hostSnapshotPayload": <index> }`
+// `Uint8Array`; a store never holds a `Blob` — `BlobFree`) replaced by `{ "$hostSnapshotPayload": <index> }`
 // pointing at one payload range. Plain data only — a value of any other kind
 // is refused when the snapshot is taken, not discovered when it is loaded.
 
@@ -48,7 +48,8 @@ export interface HostSnapshotRef {
 }
 
 const PAYLOAD = "$hostSnapshotPayload";
-const FORMAT = 1;
+// 2: store values hold bytes, never a Blob (1 decoded a store's Blob back).
+const FORMAT = 2;
 
 interface Header {
   format: number;
@@ -91,14 +92,6 @@ export async function encodeHostSnapshot(
       return value;
     if (value instanceof Uint8Array)
       return { [PAYLOAD]: add(value, "bytes", "") };
-    if (value instanceof Blob)
-      return {
-        [PAYLOAD]: add(
-          new Uint8Array(await value.arrayBuffer()),
-          "blob",
-          value.type,
-        ),
-      };
     if (Array.isArray(value))
       return Promise.all(value.map((v, i) => encode(v, `${path}[${i}]`)));
     if (
@@ -115,7 +108,7 @@ export async function encodeHostSnapshot(
       return out;
     }
     throw new Error(
-      `[host-snapshot] ${path} is not plain data (${Object.prototype.toString.call(value)}): a store value must be JSON, a Uint8Array or a Blob`,
+      `[host-snapshot] ${path} is not plain data (${Object.prototype.toString.call(value)}): a store value must be JSON or a Uint8Array (bytes, never a Blob: WebKit's IndexedDB cannot store one)`,
     );
   };
   const database = add(
@@ -164,28 +157,34 @@ export function decodeHostSnapshot(file: Uint8Array): HostSnapshot {
       `[host-snapshot] a snapshot of format ${String(header.format)}, this code reads ${FORMAT}`,
     );
   const base = 4 + headerLength;
-  const payload = (index: number): Uint8Array | Blob => {
+  const payload = (index: number, kind: "bytes" | "blob") => {
     const p = header.payloads[index];
     if (p === undefined)
       throw new Error(`[host-snapshot] no payload #${index}`);
+    if (p.kind !== kind)
+      throw new Error(
+        `[host-snapshot] payload #${index} is ${p.kind}, read as ${kind}`,
+      );
     // A copy: the value outlives the file's buffer.
-    const bytes = file.slice(base + p.offset, base + p.offset + p.length);
-    return p.kind === "bytes" ? bytes : new Blob([bytes], { type: p.type });
+    return {
+      p,
+      bytes: file.slice(base + p.offset, base + p.offset + p.length),
+    };
   };
   const decode = (value: unknown): unknown => {
     if (Array.isArray(value)) return value.map(decode);
     if (value !== null && typeof value === "object") {
       if (PAYLOAD in value)
-        return payload((value as Record<string, number>)[PAYLOAD]!);
+        return payload((value as Record<string, number>)[PAYLOAD]!, "bytes")
+          .bytes;
       return Object.fromEntries(
         Object.entries(value).map(([k, v]) => [k, decode(v)]),
       );
     }
     return value;
   };
-  const database = payload(header.database);
-  if (!(database instanceof Blob))
-    throw new Error("[host-snapshot] the database payload is not a blob");
+  const db = payload(header.database, "blob");
+  const database = new Blob([db.bytes], { type: db.p.type });
   return {
     takenAt: header.takenAt,
     migrations: header.migrations,

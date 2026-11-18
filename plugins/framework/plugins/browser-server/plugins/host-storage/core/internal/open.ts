@@ -51,8 +51,9 @@ import type {
   HostStorage,
   HostStorageResource,
   HostStore,
+  BlobFree,
 } from "./host-storage";
-import { memoryHostStorage } from "./host-storage";
+import { assertStoreValue, memoryHostStorage } from "./host-storage";
 import {
   acquireOwnership,
   type OwnerIdentity,
@@ -396,7 +397,11 @@ async function openPersistent(
     databaseDir: `idb://${prefix}db`,
     databaseStart,
     origin,
-    store<V>(storeName: string, options: HostStoreOptions<V>): HostStore<V> {
+    store<V>(
+      storeName: string,
+      options: HostStoreOptions<V>,
+      ..._blobFree: BlobFree<V>
+    ): HostStore<V> {
       let store = stores.get(storeName);
       if (store === undefined) {
         let values = (loaded.get(storeName) ?? new Map()) as Map<string, V>;
@@ -420,7 +425,10 @@ async function openPersistent(
         }
         store = {
           loaded: values,
-          put: (key, value) => write((s) => s.put(value, [storeName, key])),
+          put: (key, value) => {
+            assertStoreValue(value, `${storeName}[${key}]`);
+            write((s) => s.put(value, [storeName, key]));
+          },
           delete: (key) => write((s) => s.delete([storeName, key])),
         };
         stores.set(storeName, store);

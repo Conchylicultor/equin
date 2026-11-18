@@ -14,12 +14,7 @@ describe("a host snapshot file", () => {
         transcripts: [
           ["conv-1", { jsonl: new Uint8Array([10, 11]), version: 3 }],
         ],
-        "attachment-blobs": [
-          [
-            "att-1",
-            new Blob([new Uint8Array([7, 8, 9])], { type: "image/png" }),
-          ],
-        ],
+        "attachment-blobs": [["att-1", new Uint8Array([7, 8, 9])]],
         config: [["doc", { content: { a: [1, "x", null, true] }, hash: null }]],
       },
     });
@@ -36,10 +31,11 @@ describe("a host snapshot file", () => {
     expect(transcript.jsonl).toBeInstanceOf(Uint8Array);
     expect([...transcript.jsonl]).toEqual([10, 11]);
     expect(transcript.version).toBe(3);
-    const [[, blob]] = back.stores["attachment-blobs"]! as [[string, Blob]];
-    expect(blob).toBeInstanceOf(Blob);
-    expect(blob.type).toBe("image/png");
-    expect([...new Uint8Array(await blob.arrayBuffer())]).toEqual([7, 8, 9]);
+    const [[, bytes]] = back.stores["attachment-blobs"]! as [
+      [string, Uint8Array],
+    ];
+    expect(bytes).toBeInstanceOf(Uint8Array);
+    expect([...bytes]).toEqual([7, 8, 9]);
     expect(back.stores.config).toEqual([
       ["doc", { content: { a: [1, "x", null, true] }, hash: null }],
     ]);
@@ -53,6 +49,16 @@ describe("a host snapshot file", () => {
       stores: { s: [["k", { when: new Date(0) }]] },
     });
     expect(take).rejects.toThrow(/s\[k\]\.when is not plain data/);
+  });
+
+  test("refuses a Blob in a store value: a store keeps bytes", async () => {
+    const take = encodeHostSnapshot({
+      takenAt: 0,
+      migrations: [],
+      database: new Blob([]),
+      stores: { s: [["k", { file: new Blob([new Uint8Array([1])]) }]] },
+    });
+    expect(take).rejects.toThrow(/s\[k\]\.file is not plain data/);
   });
 
   test("refuses a file of another format", async () => {

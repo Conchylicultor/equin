@@ -23,8 +23,10 @@ import { createCoalescer } from "@plugins/packages/plugins/coalesce/core";
 import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import { browserLocationOf } from "./home-layout";
 
+// A file's content is bytes, never a Blob: the tree is written through to a
+// host store, and WebKit's IndexedDB cannot store a Blob.
 type Node =
-  | { kind: "file"; blob: Blob; mtimeMs: number; birthtimeMs: number }
+  | { kind: "file"; bytes: Uint8Array; mtimeMs: number; birthtimeMs: number }
   | { kind: "dir"; mtimeMs: number; birthtimeMs: number };
 
 /** One root's tree: every path to its node, the root itself at `""` once it exists. */
@@ -65,9 +67,11 @@ class StoredTree extends Map<RelPath, Node> {
   }
 }
 
-function toBlob(data: FileData): Blob {
-  if (data instanceof Blob) return data;
-  return new Blob([data as BlobPart]);
+async function toBytes(data: FileData): Promise<Uint8Array> {
+  if (data instanceof Blob) return new Uint8Array(await data.arrayBuffer());
+  if (typeof data === "string") return new TextEncoder().encode(data);
+  // A copy: the caller may reuse its buffer.
+  return new Uint8Array(data);
 }
 
 /**
@@ -109,7 +113,7 @@ export function createMemoryDataFiles(opts?: {
     return {
       name: path === "" ? "" : relName(path),
       kind: node.kind,
-      size: node.kind === "file" ? node.blob.size : 0,
+      size: node.kind === "file" ? node.bytes.byteLength : 0,
       mtimeMs: node.mtimeMs,
       birthtimeMs: node.birthtimeMs,
     };
@@ -193,10 +197,16 @@ export function createMemoryDataFiles(opts?: {
             `[data-files] read of "${path}" in "${spec.id}": a directory, not a file`,
           );
         }
-        return { kind: "file", blob: node.blob, entry: entryOf(path, node) };
+        return {
+          kind: "file",
+          blob: new Blob([node.bytes as BlobPart]),
+          entry: entryOf(path, node),
+        };
       },
       async write(path, data, _opts) {
         assertNotRoot(spec, path, "write");
+        // Read before the tree: nothing below awaits, so the write lands whole.
+        const bytes = await toBytes(data);
         const t = tree();
         const existing = t.get(path);
         if (existing?.kind === "dir") {
@@ -205,11 +215,10 @@ export function createMemoryDataFiles(opts?: {
           );
         }
         ensureDir(spec, t, relParent(path));
-        const blob = toBlob(data);
         const at = now();
         t.set(path, {
           kind: "file",
-          blob,
+          bytes,
           mtimeMs: at,
           birthtimeMs: existing?.birthtimeMs ?? at,
         });

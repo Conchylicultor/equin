@@ -31757,6 +31757,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/browser-server/host-storage/stored.storagePrefix`
               - `framework/browser-server/host-storage/stored.storesDbName`
             - Exports (types):
+              - `BlobFree`
               - `BrowserHostStorage`
               - `DatabaseStart`
               - `HostSnapshot`

@@ -62,7 +62,11 @@ serveBrowserHost({
   `config` (`config_v2/browser-store`), `transcripts`
   (`conversations/transcript-source/memory`), `attachment-blobs`
   (`infra/attachments/memory-blobs`), `data-files`
-  (`infra/paths/data-files/memory`). The in-process job queue
+  (`infra/paths/data-files/memory`). A store value is plain data and bytes
+  (`Uint8Array`), never a `Blob` (`BlobFree` at compile time,
+  `assertStoreValue` on every `put` and in the snapshot codec): WebKit's
+  IndexedDB refuses to store a Blob from a worker ("Error preparing Blob/File
+  data to be stored in object store"). The in-process job queue
   persists in the database itself (`infra/jobs/in-process`: its rows are
   written in the enqueuing transaction). NOT persisted: the log sink (ring
   only).
@@ -134,6 +138,7 @@ serveBrowserHost({
     - `framework/browser-server/host-storage/stored.storagePrefix`
     - `framework/browser-server/host-storage/stored.storesDbName`
   - Exports (types):
+    - `BlobFree`
     - `BrowserHostStorage`
     - `DatabaseStart`
     - `HostSnapshot`

@@ -3,6 +3,7 @@ export type {
   HostStorage,
   HostStore,
   HostStoreOptions,
+  BlobFree,
 } from "./internal/host-storage";
 export { hostStorage } from "./internal/host-storage";
 export type {

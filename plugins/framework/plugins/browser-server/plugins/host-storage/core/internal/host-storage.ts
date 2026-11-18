@@ -16,14 +16,65 @@
  * One named store of a host's state outside its database: what it held when
  * the storage opened, and the writes that keep it current. A store keeps its
  * own working copy in memory and writes every change through, in order; the
- * storage persists them (or, in memory, drops them). Values must be
- * structured-cloneable (plain data, `Uint8Array`, `Blob`).
+ * storage persists them (or, in memory, drops them). Values are plain data
+ * and bytes (`Uint8Array`) — never a `Blob` (`BlobFree`).
  */
 export interface HostStore<V> {
   /** Everything this store held when the storage opened, by key. */
   readonly loaded: ReadonlyMap<string, V>;
   put(key: string, value: V): void;
   delete(key: string): void;
+}
+
+/**
+ * `true` when a `Blob` sits anywhere in `V` (any member of a union). A host
+ * store refuses such a value at compile time (`BlobFree`): WebKit's IndexedDB
+ * cannot store a Blob from a worker ("Error preparing Blob/File data to be
+ * stored in object store") nor reliably read one back, so bytes are kept as a
+ * `Uint8Array` and a Blob is made from them when read.
+ */
+export type HoldsBlob<V, Depth extends unknown[] = []> = V extends Blob
+  ? true
+  : V extends ArrayBufferView
+    ? false
+    : // Recursive data (a JSON document) is looked into only so deep: below
+      // that, `assertStoreValue` refuses it at runtime.
+      Depth["length"] extends 6
+      ? false
+      : V extends object
+        ? true extends {
+            [K in keyof V]-?: HoldsBlob<V[K], [...Depth, unknown]>;
+          }[keyof V]
+          ? true
+          : false
+        : false;
+
+/** `store`'s trailing check: nothing to pass, unless `V` holds a Blob. */
+export type BlobFree<V> =
+  true extends HoldsBlob<V>
+    ? [error: "a host store value holds a Blob: keep bytes as a Uint8Array"]
+    : [];
+
+/**
+ * Throws when `value` holds a `Blob` anywhere (`path` names where): the
+ * runtime half of `BlobFree`, for a value typed loosely on its way in. A
+ * Blob stores fine in Chromium and fails only on WebKit, so it is refused on
+ * every engine.
+ */
+export function assertStoreValue(value: unknown, path: string): void {
+  if (value === null || typeof value !== "object") return;
+  if (value instanceof Blob) {
+    throw new Error(
+      `[host-storage] ${path} is a Blob: a host store keeps bytes as a Uint8Array — WebKit's IndexedDB cannot store a Blob`,
+    );
+  }
+  if (ArrayBuffer.isView(value)) return;
+  if (Array.isArray(value)) {
+    value.forEach((v, i) => assertStoreValue(v, `${path}[${i}]`));
+    return;
+  }
+  for (const [k, v] of Object.entries(value))
+    assertStoreValue(v, `${path}.${k}`);
 }
 
 /**
@@ -68,7 +119,11 @@ export interface HostStorage {
   /** What the database opens with: what it holds, or a snapshot to load. */
   readonly databaseStart: DatabaseStart;
   /** The named store (one instance per name). */
-  store<V>(name: string, options: HostStoreOptions<V>): HostStore<V>;
+  store<V>(
+    name: string,
+    options: HostStoreOptions<V>,
+    ...blobFree: BlobFree<V>
+  ): HostStore<V>;
   /** Close `resource` with the storage (before it is wiped or handed to another worker). */
   adopt(resource: HostStorageResource): void;
 }
@@ -101,7 +156,13 @@ export function hostStorage(): HostStorage {
 
 const noWrites = new Map<string, never>();
 
-const noStore: HostStore<never> = { loaded: noWrites, put() {}, delete() {} };
+// Its writes go nowhere, but are checked as a persistent store checks them: a
+// Blob refused in a test, not first on a visitor's WebKit.
+const noStore: HostStore<unknown> = {
+  loaded: noWrites,
+  put: (key, value) => assertStoreValue(value, key),
+  delete() {},
+};
 
 // Stateless, so one instance serves every caller: a test process that boots
 // several graphs declares the same storage each time.

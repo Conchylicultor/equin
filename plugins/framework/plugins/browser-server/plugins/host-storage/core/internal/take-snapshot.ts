@@ -10,7 +10,10 @@
 // take never runs initdb.
 
 import {
+  assertStoreValue,
   declareHostStorage,
+  type BlobFree,
+  type HostStoreOptions,
   type HostStorage,
   type HostStorageResource,
   type HostStore,
@@ -36,13 +39,20 @@ export async function takeHostSnapshot(opts: {
     kind: "memory",
     databaseDir: undefined,
     databaseStart: { from: "initialized", dataDir: opts.cluster },
-    store<V>(name: string): HostStore<V> {
+    store<V>(
+      name: string,
+      _options: HostStoreOptions<V>,
+      ..._blobFree: BlobFree<V>
+    ): HostStore<V> {
       let entries = stores.get(name);
       if (entries === undefined) stores.set(name, (entries = new Map()));
       const recorded = entries;
       return {
         loaded: new Map<string, V>(),
-        put: (key, value) => void recorded.set(key, value),
+        put: (key, value) => {
+          assertStoreValue(value, `${name}[${key}]`);
+          recorded.set(key, value);
+        },
         delete: (key) => void recorded.delete(key),
       };
     },
