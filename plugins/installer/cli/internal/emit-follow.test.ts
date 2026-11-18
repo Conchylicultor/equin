@@ -41,13 +41,21 @@ describe("a followed build", () => {
         followableBy(request);
         // Nobody follows yet: tracked, told no one.
         enterBuildSubStep("build.database");
+        Bun.sleepSync(30);
         enterBuildSubStep("build.deps");
         expect(events(stream)).toEqual([]);
 
-        // The install's build step asks (as `requestFollow` writes it).
+        // The install's build step asks (as `requestFollow` writes it),
+        // after the database sub-step ended: that time was its earlier
+        // steps', never its own.
+        Bun.sleepSync(5);
         writeFileSync(
           request,
-          JSON.stringify({ events: stream, pid: process.pid }),
+          JSON.stringify({
+            events: stream,
+            pid: process.pid,
+            since: Date.now(),
+          }),
         );
         reportInstallProgress(5, 10, "packages");
         enterBuildSubStep("build.interface");
@@ -57,6 +65,10 @@ describe("a followed build", () => {
       },
     );
 
+    const database = events(stream).find(
+      (e) => e.id === "build.database" && e.state === "done",
+    );
+    expect(database?.ms).toBe(0);
     const got = events(stream).map((e) =>
       "ms" in e ? { ...e, ms: typeof e.ms } : e,
     );
@@ -92,6 +104,7 @@ describe("a followed build", () => {
       expect(JSON.parse(readFileSync(request, "utf8"))).toEqual({
         events: join(dir, "events.fifo"),
         pid: process.pid,
+        since: expect.any(Number),
       });
       expect(untaken()).toEqual({ followed: false });
 

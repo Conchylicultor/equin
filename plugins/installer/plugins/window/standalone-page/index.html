@@ -115,6 +115,10 @@
   /* Done: what the install went on without, and Add it now. */
   .iw-later { margin-top: 18px; font-size: 13px; color: var(--fg3); } .iw-later .linkbtn { color: var(--fg2); margin-left: 6px; text-decoration: underline; text-underline-offset: 3px; }
 
+  /* Apple's installer dialog is open over the window's middle: the status sits below it. */
+  .iw.apple { align-items: flex-end; }
+  .iw.apple .iw-log, .iw.apple .iw-foot { display: none; }
+
   .iw-foot { position: absolute; left: 0; right: 0; bottom: 18px; display: flex; justify-content: center; }
   .iw-foot[hidden] { display: none; }
 

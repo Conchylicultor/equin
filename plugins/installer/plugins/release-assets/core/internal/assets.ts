@@ -80,6 +80,16 @@ export const HANDOFF_MARKER = "# installer-handoff: 1";
  */
 export const ATTACH_MARKER = `# installer-attach: ${INSTALL_PROTOCOL_VERSION}`;
 
+/**
+ * The line install.sh carries when it reads the install's internal arguments
+ * (`--release`, `--checkout`, `--attach`, `--mode`, `--since`) from
+ * `EQUIN_INSTALL_INTERNAL_ARGS` (one per line) rather than its command line:
+ * a terminal shows the running command line in its title bar, and those are
+ * the install's own plumbing. A script hands them that way only to a script
+ * carrying the line; an older one gets them on its command line.
+ */
+export const INTERNAL_ARGS_MARKER = "# installer-internal-args: env";
+
 /** The fields every `release.json` carries, whatever its version. */
 const manifestBase = {
   /** The release tag (`v<YYYY.MM.DD>[.N]`). */

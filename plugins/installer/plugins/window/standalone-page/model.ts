@@ -125,8 +125,16 @@ export interface InstallView {
   pause: Pause | null;
   /** Fix with Claude was started for the open pause: where, and whether the prompt is on the clipboard. */
   fixing: { readonly target: FixTarget; readonly clipboard: boolean } | null;
-  /** The latest notice of a part left out, if any. */
+  /** The latest notice of a part left out that the person may still allow (macOS refused it), if any. */
   notice: Notice | null;
+  /**
+   * The parts the person chose to leave out (Skip on an optional part's
+   * pause): each the notice that answered a `resolved skip`. No banner, no
+   * Add it now — the done screen names each with what it means.
+   */
+  leftOut: Notice[];
+  /** A Skip was just sent: the next notice, before the step's next event, records what it left out. */
+  skipping: boolean;
   /** From the plan, for a report: the release installed (null: main / a checkout), and `<os>-<arch>`. */
   release: string | null;
   platform: string;
@@ -147,6 +155,8 @@ export function emptyView(): InstallView {
     pause: null,
     fixing: null,
     notice: null,
+    leftOut: [],
+    skipping: false,
     release: null,
     platform: "",
   };
@@ -225,6 +235,7 @@ export function applyEvent(view: InstallView, event: InstallEvent): void {
       view.phase = "running";
       return;
     case "step": {
+      view.skipping = false;
       const found = findLeaf(view, event.id);
       if (found === null) {
         protocolError(view, `step "${event.id}" is not in the plan`);
@@ -288,6 +299,7 @@ export function applyEvent(view: InstallView, event: InstallEvent): void {
     case "resolved":
       view.pause = null;
       view.fixing = null;
+      if (event.how === "skip") view.skipping = true;
       // Retry: its step's start follows; quit: the exit does. A stall's
       // step simply goes on.
       if (view.phase === "paused") view.phase = "running";
@@ -295,15 +307,18 @@ export function applyEvent(view: InstallView, event: InstallEvent): void {
     case "fixing":
       view.fixing = { target: event.target, clipboard: event.clipboard };
       return;
-    case "notice":
-      view.notice = {
+    case "notice": {
+      const notice: Notice = {
         id: event.id,
         state: event.state,
         title: event.title,
         text: event.text,
         without: event.without,
       };
+      if (view.skipping) view.leftOut.push(notice);
+      else view.notice = notice;
       return;
+    }
     case "progress":
       view.progress.set(event.id, {
         done: event.done,

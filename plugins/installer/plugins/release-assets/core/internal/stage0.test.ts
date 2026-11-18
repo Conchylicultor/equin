@@ -12,6 +12,7 @@ import {
   HANDOFF_MARKER,
   INSTALLER_BINARIES,
   type InstallerPlatform,
+  INTERNAL_ARGS_MARKER,
   RELEASE_FILES,
   ReleaseManifest,
 } from "./assets";
@@ -48,12 +49,14 @@ function release(
     built?: InstallerPlatform[];
     manifest?: 1 | 2;
     attached?: boolean;
+    /** Its install.sh reads the internal arguments from the environment. */
+    internalEnv?: boolean;
   } = {},
 ): Files {
   const handoff = opts.handoff ?? true;
   const attach = opts.attach ?? true;
   const built = opts.built ?? ALL;
-  const script = `set -e\n${handoff ? `${HANDOFF_MARKER}\n` : ""}${attach ? `${ATTACH_MARKER}\n` : ""}echo release script\n`;
+  const script = `set -e\n${handoff ? `${HANDOFF_MARKER}\n` : ""}${attach ? `${ATTACH_MARKER}\n` : ""}${opts.internalEnv === true ? `${INTERNAL_ARGS_MARKER}\n` : ""}echo release script\n`;
   const binaries: Files = {};
   for (const p of built)
     binaries[INSTALLER_BINARIES[p]] =
@@ -191,6 +194,21 @@ describe("install.sh stage 0", () => {
     expect(
       requests.slice(1).every((p) => p.startsWith("/download/v2026.12.01/")),
     ).toBe(true);
+  });
+
+  test("a release script that reads them from the environment gets the internal arguments there, off its command line", async () => {
+    published = {
+      latest: "v2026.12.01",
+      tags: { "v2026.12.01": release("v2026.12.01", { internalEnv: true }) },
+    };
+    const r = await stage0(["--dir", "/x y"]);
+    expect(r.code).toBe(0);
+    expect(r.out).toContain(
+      "stage0: internal args: --release v2026.12.01 --checkout v2026.12.01",
+    );
+    expect(r.out).toContain(
+      `stage0: exec bash ${bin("v2026.12.01")}/install.sh --dir /x y\n`,
+    );
   });
 
   test("--window: the window, once its probe opens", async () => {

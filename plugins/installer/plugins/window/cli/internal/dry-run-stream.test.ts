@@ -13,7 +13,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Readable, Writable } from "node:stream";
 import {
-  INSTALL_ESTIMATES,
   InstallStepId,
   InstallTiming,
   parseInstallEventLine,
@@ -302,6 +301,16 @@ describe("install.sh pauses: diagnosis, decisions, Fix with Claude", () => {
       "start",
       "done",
     ]);
+    // The Skip is recorded right after it, before the step runs again: the
+    // part, in the person's words, and what leaving it out means.
+    const resolvedAt = events.findIndex((e) => e.type === "resolved");
+    expect(events[resolvedAt + 1]).toMatchObject({
+      type: "notice",
+      id: "dev.equin.menu-bar",
+      state: "skipped",
+      title: "Installed without the equin icon in your menu bar",
+      without: "the equin icon in your menu bar",
+    });
     expect(events.at(-1)).toMatchObject({ type: "exit", code: 0 });
     expect(readFileSync(join(runDir(home), "events.jsonl"), "utf8")).toContain(
       '"type":"done"',
@@ -512,6 +521,8 @@ describe("install.sh --dry-run event stream", () => {
       JSON.parse(readFileSync(join(dir, "timing.json"), "utf8")),
     );
     expect(timing.dryRun).toBe(true);
+    // The view it was drawn in: what keeps each view's estimates apart.
+    expect(timing.mode).toBe("window");
     // In the order they finished: the build after its sub-steps.
     const ran: string[] = InstallStepId.options.filter(
       (id) => id !== "tools" && id !== "build",
@@ -652,17 +663,27 @@ describe("install.sh --dry-run, plain terminal view", () => {
     );
     // A step says how long it usually takes only when it has a measured
     // estimate; no time left is shown while a remaining step has none.
+    const plan = parseAll(
+      readFileSync(join(runDir(home), "events.jsonl"), "utf8"),
+    )[0];
+    if (plan?.type !== "plan")
+      throw new Error("the stream starts with its plan");
+    // The estimates the plan carried: this platform's and view's set.
+    const estimates = Object.fromEntries(
+      plan.steps.flatMap((step) => [
+        [step.id, step.est_s],
+        ...(step.substeps ?? []).map((sub) => [sub.id, sub.est_s]),
+      ]),
+    ) as Record<string, number | null>;
     const saysUsually = (label: string) =>
       stamped
         .find((l) => l.includes(`] ${label}: started`))
         ?.includes("(usually");
-    expect(saysUsually("download equin")).toBe(
-      INSTALL_ESTIMATES.steps.clone !== null,
-    );
+    expect(saysUsually("download equin")).toBe(estimates.clone !== null);
     expect(saysUsually("start equin's services")).toBe(
-      INSTALL_ESTIMATES.steps.start !== null,
+      estimates.start !== null,
     );
-    if (Object.values(INSTALL_ESTIMATES.steps).includes(null))
+    if (Object.values(estimates).includes(null))
       expect(out).not.toContain("left");
     expect(stamped.at(-1)).toMatch(
       /^\d\d:\d\d:\d\d equin is ready · installed in \d+s · http:\/\/equin\.localhost:9000$/,

@@ -120,9 +120,11 @@ function eventLine(event: InstallEventBody): string {
 // install's view only moves forward. Tracked whether or not anyone listens: a
 // follower that attaches mid-build is told what already happened.
 
+// Times are wall-clock (Date.now()): a follower's request carries the instant
+// its step started, from another process.
 type SubStepState =
   | { state: "running"; at: number }
-  | { state: "done" | "failed"; ms: number }
+  | { state: "done" | "failed"; at: number; end: number }
   | { state: "skipped" };
 const subSteps = new Map<BuildSubStepId, SubStepState>();
 let current: BuildSubStepId | null = null;
@@ -161,7 +163,7 @@ export function enterBuildSubStep(id: BuildSubStepId): void {
       subSteps.set(skipped, { state: "skipped" });
       sendSubStep({ type: "step", id: skipped, state: "skipped" });
     }
-  subSteps.set(id, { state: "running", at: performance.now() });
+  subSteps.set(id, { state: "running", at: Date.now() });
   current = id;
   lastProgress = null;
   sendSubStep({ type: "step", id, state: "start" });
@@ -170,12 +172,10 @@ export function enterBuildSubStep(id: BuildSubStepId): void {
 function endCurrent(state: "done" | "failed"): void {
   if (current === null) return;
   const running = subSteps.get(current);
-  const ms =
-    running?.state === "running"
-      ? Math.round(performance.now() - running.at)
-      : 0;
-  subSteps.set(current, { state, ms });
-  sendSubStep({ type: "step", id: current, state, ms });
+  const end = Date.now();
+  const at = running?.state === "running" ? running.at : end;
+  subSteps.set(current, { state, at, end });
+  sendSubStep({ type: "step", id: current, state, ms: workedMs(at, end) });
   current = null;
 }
 
@@ -212,12 +212,33 @@ interface InstallFollowRequest {
   events: string;
   /** The waiting process: a request whose process is gone is stale. */
   pid: number;
+  /**
+   * When the install's build step started waiting (epoch ms): the part of a
+   * sub-step that ran before it is the earlier steps' time, never the build
+   * step's. Absent in a request written before it existed — one left behind
+   * by an install killed mid-build: stale, never followed (and never a
+   * throw, which would fail every later build of main).
+   */
+  since?: number;
   /** Stamped by the build that took the request: the waiter then knows its build step was shown. */
   followedBy?: number;
 }
 
 let followFile: string | null = null;
 let follower: OwnedFd | null = null;
+/** The attached follower's `since`: its step's time starts there. */
+let followerSince: number | null = null;
+
+/**
+ * How long a sub-step that ran from `at` to `end` worked for the step it is
+ * reported under: for a follower, only the part after its step started — a
+ * service's build that began during the install's start step reports its
+ * database sub-step (done before the install's build step began) as 0, not
+ * as the minute it took under start.
+ */
+function workedMs(at: number, end: number): number {
+  return Math.max(0, Math.round(end - Math.max(at, followerSince ?? at)));
+}
 
 /**
  * Let an install follow this build: `file` is where a waiting install step
@@ -238,7 +259,11 @@ export function followableBy(file: string): void {
 export function requestFollow(file: string): () => { followed: boolean } {
   const events = readEnv("INSTALL_EVENTS");
   if (events === undefined || events === "") return () => ({ followed: false });
-  const request: InstallFollowRequest = { events, pid: process.pid };
+  const request: InstallFollowRequest = {
+    events,
+    pid: process.pid,
+    since: Date.now(),
+  };
   // A fresh install's main namespace may have no dir yet (its first deploy is
   // what makes it).
   mkdirSync(dirname(file), { recursive: true });
@@ -304,6 +329,7 @@ function followerFd(): number | null {
   const request = readRequest(followFile);
   if (
     request === null ||
+    request.since === undefined ||
     request.followedBy !== undefined ||
     !alive(request.pid)
   )
@@ -319,6 +345,7 @@ function followerFd(): number | null {
     throw err;
   }
   follower = adoptFd(fd);
+  followerSince = request.since;
   writeFileAtomic(
     followFile,
     JSON.stringify({ ...request, followedBy: process.pid }),
@@ -343,7 +370,12 @@ function catchUp(): void {
     }
     toFollower({ type: "step", id, state: "start" });
     if (s.state !== "running")
-      toFollower({ type: "step", id, state: s.state, ms: s.ms });
+      toFollower({
+        type: "step",
+        id,
+        state: s.state,
+        ms: workedMs(s.at, s.end),
+      });
   }
 }
 
@@ -372,6 +404,7 @@ function toFollower(event: InstallEventBody): void {
 function dropFollower(): void {
   const held = follower;
   follower = null;
+  followerSince = null;
   held?.close();
   followFile = null;
 }
@@ -484,24 +517,38 @@ export function reportInstallNotice(notice: {
  * — an optional part it could not add — where install.sh only sees an exit
  * status. `title` / `text` follow the installer message rules (build them
  * from an `InstallerNotice`); `leaveOut` names the optional parts a Skip
- * leaves out: install.sh then runs the step again with them in
- * `EQUIN_INSTALL_LEFT_OUT` (`installLeftOut`). Written to the file install.sh
+ * leaves out: install.sh then records the Skip (a `notice`) and runs the step
+ * again with them in `EQUIN_INSTALL_LEFT_OUT` (`installLeftOut`). Written to the file install.sh
  * names in `EQUIN_INSTALL_DIAGNOSIS`, one `key<TAB>value` per line; outside
  * an install, a no-op.
  */
 export function reportInstallDiagnosis(diagnosis: {
   title: string;
   text: string;
-  leaveOut: readonly string[];
+  /**
+   * The optional parts a Skip leaves out, with what they are to the person
+   * (`without`, "the equin icon in your menu bar") and what leaving them out
+   * means (`later`: what still works, how to add them later) — install.sh
+   * sends both as the `notice` that records the Skip, so the done screen
+   * names every part left out.
+   */
+  leaveOut: { ids: readonly string[]; without: string; later: string } | null;
   evidence: readonly string[];
 }): void {
   const path = readEnv("INSTALL_DIAGNOSIS");
   if (path === undefined || path === "") return;
   const one = (v: string) => v.replace(/[\t\r\n]+/g, " ").trim();
+  const leaveOut = diagnosis.leaveOut;
   const lines = [
     `title\t${one(diagnosis.title)}`,
     `text\t${one(diagnosis.text)}`,
-    `leave-out\t${diagnosis.leaveOut.map(one).join(",")}`,
+    ...(leaveOut === null
+      ? []
+      : [
+          `leave-out\t${leaveOut.ids.map(one).join(",")}`,
+          `without\t${one(leaveOut.without)}`,
+          `later\t${one(leaveOut.later)}`,
+        ]),
     ...diagnosis.evidence
       .flatMap((e) => e.split("\n"))
       .map(one)

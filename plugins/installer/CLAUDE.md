@@ -29,7 +29,14 @@ Internal (passed between the install's own processes, never typed):
 `--release`, `--checkout` (stage 0 → the release's script), `--events-fd`,
 `--control-fd` (the window → its child), `--attach <run dir> --mode <view>`
 (an install → the checkout's own script, § The checkout's own steps),
-`--stage0-only` (the stage-0 test).
+`--stage0-only` (the stage-0 test). `--release`, `--checkout`, `--attach`,
+`--mode` and `--since` travel in `EQUIN_INSTALL_INTERNAL_ARGS` (one per
+line, read and unset at the script's start) to a script carrying `#
+installer-internal-args: env` (`internal_args`; an older one gets them on its
+command line): a terminal shows the running command line in its title bar.
+The interactive view also sets the title to "equin installer" and, when it
+ends, clears it and restores the terminal's own (xterm title stack, where the
+terminal keeps one).
 
 **The views.** The window (`equin-installer`, [`window`](plugins/window/CLAUDE.md))
 by default on a desktop; the **interactive terminal** view (a redrawn status
@@ -81,7 +88,8 @@ own (next section): fix wording in the step engine, and every view changes.
   `build.deps`, `build.codegen`, `build.interface`, `build.deploy`).
 - **Estimates are measured, never guessed**: `est_s` comes from install.sh's
   generated `estimates` block (`./equin installer estimates`, from
-  `core/estimates.json`); null means no number is shown for that step.
+  `core/estimates.json`), the set of the platform and view the install runs
+  in (§ Estimates); null means no number is shown for that step.
 - **Messages live in the events**: labels and text come from the step engine,
   never from a renderer — the installer message rules
   (`infra/launcher/installer-notice`) are applied in one place.
@@ -119,7 +127,8 @@ own (next section): fix wording in the step engine, and every view changes.
   to the newest): `events.fifo` while it runs, `events.jsonl` (every event, the
   install's record) and, after a success, `timing.json` (`InstallTiming`: each
   step that ran to done, with its `ms` — a build sub-step skipped inside a
-  finished build as 0; `dryRun: true` from `--dry-run`).
+  finished build as 0; the plan's `release` and `mode`, which tie the times to
+  what ran and to their estimate set; `dryRun: true` from `--dry-run`).
 - **One hub**: a background `tee` reads the FIFO, appends to `events.jsonl`
   and hands each line on — to the window's `--events-fd`, else to the terminal
   view. install.sh keeps one write end open for its whole life (`ev`); the
@@ -209,7 +218,12 @@ and the plan's arrays (`plan_data`):
   per group, the build's sub-steps with their counts while it runs, the
   overall bar, elapsed, time left, the last two log lines and the log path;
   the done screen after. A password prompt (`wait … password`) stops the
-  redraws until it is answered.
+  redraws until it is answered. A pause draws the block's last frame, its box
+  and the menu below; Try again or Skip with nothing else printed meanwhile
+  erases all three and redraws the block in place (one header, no stale box);
+  after Fix with Claude, Report, the log or the manual action
+  (`pause-printed` in the run dir) the box and what was printed stay above
+  the new block.
 - **plain** (CI, a pipe): append-only `HH:MM:SS [n/N] <step>: …` lines —
   started (usually …), every 25 %, waits, done in …, `equin is ready · …`.
   A failed step prints its last lines (`  > `).
@@ -316,7 +330,13 @@ what skipping costs — raw lines only in `evidence` and the log.
     parts, the pause is optional and **Skip runs the step again without
     them** (`EQUIN_INSTALL_LEFT_OUT`, accumulated in `LEFT_OUT`) rather than
     leaving the step out whole. `./equin start` writes one for a part it could
-    not prepare (§ One build of main per install).
+    not prepare (§ One build of main per install). The Skip is recorded:
+    right after its `resolved skip` install.sh sends a `notice` (`skipped`,
+    the part's ids, "Installed without <part>", what that means — the
+    diagnosis's `without` / `later`). A notice that answers a Skip (before the
+    step's next event) is the person's choice: no banner, nothing to allow,
+    no Add it now (`done_wait` skips ids in `LEFT_OUT`); every view's done
+    screen names each one with what it means.
   - **unknown** — anything else: "<doing> didn't finish", the step's last 20
     lines; it never guesses. Tools on macOS in the window: "Apple's developer
     tools weren't installed" (Try again opens Apple's dialog again).
@@ -462,6 +482,15 @@ commit once), so that failure is the step's own output. Done = main's receipt
 
 ## Estimates (`core/estimates.json`)
 
+**One table per estimate set** (`EstimateSet`, `estimateSetOf(platform,
+mode)`; install.sh's `EST_SET`): `macos-window`, `macos-terminal`, `linux`.
+On macOS the view decides how Apple's developer tools come in — Apple's own
+dialog in the window (166–211 s measured), softwareupdate headless in the
+terminal (~80 s) — so each view is measured apart; on Linux every view runs
+apt, so they share one. A run counts only in its own set; a set no run
+measured keeps its committed table. install.sh's block is `est_s <set>
+<step>`.
+
 `./equin installer estimates [--from <dir…>] [--only <step…>]` takes each
 step's median over every finished real install run (this machine's run dirs,
 plus run dirs collected elsewhere — a VM's, say): its `timing.json`, else the
@@ -475,9 +504,15 @@ install.sh's generated `estimates` block (`--from-json` rewrites only the
 block). `installer:estimates-in-sync` holds the two equal. A null step shows
 no time, and no total is shown while any remaining step has none.
 
-Current values (2026-11-18), all from clean installs in fresh macOS VMs
-(Tart, 4 CPU / 8 GB): `tools`, `mise`, `clone`, `toolchain` from three
-release installs (`--only` those four); `start`, `build` and its sub-steps
+Current values (2026-11-18), all from clean installs in fresh VMs (Tart, 4
+CPU / 8 GB). `tools`, `mise`, `clone`, `toolchain`: `macos-window` from three
+window installs (v2026.11.17.2 ×2, v2026.11.18.3), `macos-terminal` from two
+terminal ones (v2026.11.17.2, v2026.11.18.3), `linux` from one Ubuntu arm64
+terminal install of v2026.11.18.3 (with `start` too: 109 s) — `--only` those
+steps. Every set's build sub-steps are macOS's (below): the one Linux run
+predates c4d3c03003's faster first build, and its database sub-step was the
+followed build's whole time (fixed since: a followed build reports only the
+part after the install's step began). macOS `start`, `build` and its sub-steps come
 from two `--ref main` installs at c15ff3541d / 5a990409f1 (`--only` those),
 once `start` built the services' programs before the gateway: start 122 s
 both, build 564 s and 579 s (database 1, deps 1, codegen 23, interface ~523,
@@ -511,6 +546,7 @@ service's build (§ One build of main per install) covers the other order.
     - `BuildSubStepId`
     - `ESTIMATES_BEGIN`
     - `ESTIMATES_END`
+    - `EstimateSet`
     - `estimatesFrom`
     - `findEstimatesBlock`
     - `FixTarget`
@@ -536,6 +572,7 @@ service's build (§ One build of main per install) covers the other order.
     - `ProgressUnit`
     - `redactPaths`
     - `renderEstimatesBlock`
+    - `StepEstimates`
     - `timingFromEvents`
     - `WaitHolder`
     - `WaitOn`

@@ -23,9 +23,11 @@ export {
 } from "./internal/events";
 export type { InstallEventBody } from "./internal/events";
 export {
+  EstimateSet,
   INSTALL_ESTIMATES,
   InstallEstimates,
   InstallTiming,
+  StepEstimates,
   estimatesFrom,
   timingFromEvents,
 } from "./internal/estimates";

@@ -3,6 +3,7 @@ import { RELEASE_TAG_ERE } from "@plugins/upstream/plugins/release/core";
 import {
   ATTACH_MARKER,
   HANDOFF_MARKER,
+  INTERNAL_ARGS_MARKER,
   INSTALLER_BINARIES,
   INSTALLER_BINARY_PREFIX,
   RELEASE_FILES,
@@ -97,6 +98,10 @@ const assetNames: Check = {
     else if (!script.split("\n").includes(HANDOFF_MARKER))
       problems.push(
         `${INSTALL_SCRIPT} has lost its '${HANDOFF_MARKER}' line: stage 0 would no longer hand any new release to its own script`,
+      );
+    if (script !== null && !script.split("\n").includes(INTERNAL_ARGS_MARKER))
+      problems.push(
+        `${INSTALL_SCRIPT} has lost its '${INTERNAL_ARGS_MARKER}' line: the install's internal arguments would go back on the command line a terminal shows in its title`,
       );
     if (script !== null) {
       if (!script.split("\n").includes(ATTACH_MARKER))

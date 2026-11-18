@@ -1,22 +1,62 @@
 import { z } from "zod";
-import { BuildSubStepId, InstallStepId, type InstallEvent } from "./events";
+import {
+  BuildSubStepId,
+  InstallMode,
+  InstallStepId,
+  type InstallEvent,
+} from "./events";
 import estimatesJson from "../estimates.json";
 
 /**
- * Per-step medians from clean installs, in seconds — `core/estimates.json`,
- * written only by `./equin installer estimates` from the timing files real
- * installs leave (`~/.equin/install/<run>/timing.json`). A step with no
- * measured run is null: a renderer then shows no number for it, never a
- * guess. install.sh carries a generated copy (its `estimates` block), held
- * equal to this file by the `installer:estimates-in-sync` check.
+ * Which estimates an install shows: the machines and views whose steps do
+ * different work. On macOS the view decides how Apple's developer tools come
+ * in — the window opens Apple's own dialog (minutes of clicking and waiting),
+ * the terminal runs softwareupdate headless — so each view is measured on its
+ * own. On Linux every view runs the same commands (apt, with sudo or sudo -A),
+ * so they share one set.
  */
-export const InstallEstimates = z.strictObject({
+export const EstimateSet = z.enum(["macos-window", "macos-terminal", "linux"]);
+export type EstimateSet = z.infer<typeof EstimateSet>;
+
+/**
+ * The set an install of `platform` (`<os>-<arch>`, as the plan names it)
+ * drawn in `mode` is estimated with — install.sh's `EST_SET` is the same
+ * choice. An OS equin does not install on is an error, never a fallback.
+ */
+export function estimateSetOf(
+  platform: string,
+  mode: InstallMode,
+): EstimateSet {
+  const os = platform.split("-")[0];
+  if (os === "darwin")
+    return mode === "window" ? "macos-window" : "macos-terminal";
+  if (os === "linux") return "linux";
+  throw new Error(
+    `no estimate set for platform '${platform}' (equin installs on macOS and Linux)`,
+  );
+}
+
+/** One set's per-step medians, in seconds; null where no run measured the step. */
+export const StepEstimates = z.strictObject({
   /**
    * How many timing files the medians were taken over — the most any step's
    * was, when steps were measured in separate passes (`--only`).
    */
   installs: z.number().int().nonnegative(),
   steps: z.record(InstallStepId, z.number().nonnegative().nullable()),
+});
+export type StepEstimates = z.infer<typeof StepEstimates>;
+
+/**
+ * Per-step medians from clean installs, per estimate set — `core/estimates.json`,
+ * written only by `./equin installer estimates` from the timing files real
+ * installs leave (`<run>/timing.json`). A step with no measured run is null: a
+ * renderer then shows no number for it, never a guess. install.sh carries a
+ * generated copy (its `estimates` block), held equal to this file by the
+ * `installer:estimates-in-sync` check.
+ */
+export const InstallEstimates = z.strictObject({
+  sets: z.record(EstimateSet, StepEstimates),
 });
 export type InstallEstimates = z.infer<typeof InstallEstimates>;
 
@@ -37,8 +77,11 @@ export const InstallTiming = z.strictObject({
   v: z.literal(1),
   /** A `--dry-run`'s: scripted timings, never a median's input. */
   dryRun: z.boolean(),
+  /** The release installed (the plan's), or null for a checkout / main's tip. */
   release: z.string().nullable(),
   platform: z.string().min(1),
+  /** How the install was drawn (the plan's): with the platform, its estimate set. */
+  mode: InstallMode,
   /** When the install finished: an ISO-8601 instant. */
   at: z.iso.datetime(),
   steps: z.partialRecord(InstallStepId, z.number().int().nonnegative()),
@@ -54,10 +97,8 @@ function median(values: readonly number[]): number {
     : (sorted[mid - 1]! + sorted[mid]!) / 2;
 }
 
-/** The estimate table medians over `timings` (ms → whole seconds). */
-export function estimatesFrom(
-  timings: readonly InstallTiming[],
-): InstallEstimates {
+/** One set's medians over `timings` (ms → whole seconds). */
+function stepEstimatesFrom(timings: readonly InstallTiming[]): StepEstimates {
   const steps = Object.fromEntries(
     InstallStepId.options.map((id) => {
       const runs = timings
@@ -65,8 +106,26 @@ export function estimatesFrom(
         .filter((ms): ms is number => ms !== undefined);
       return [id, runs.length === 0 ? null : Math.round(median(runs) / 1000)];
     }),
-  ) as InstallEstimates["steps"];
+  ) as StepEstimates["steps"];
   return { installs: timings.length, steps };
+}
+
+/**
+ * The estimate table medians over `timings`, each run counted in its own set
+ * only (`estimateSetOf`): a set no run measured has every step null.
+ */
+export function estimatesFrom(
+  timings: readonly InstallTiming[],
+): InstallEstimates {
+  const sets = Object.fromEntries(
+    EstimateSet.options.map((set) => [
+      set,
+      stepEstimatesFrom(
+        timings.filter((t) => estimateSetOf(t.platform, t.mode) === set),
+      ),
+    ]),
+  ) as InstallEstimates["sets"];
+  return { sets };
 }
 
 /**
@@ -109,6 +168,7 @@ export function timingFromEvents(
       dryRun: plan.dryRun === true,
       release: plan.release,
       platform: plan.platform,
+      mode: plan.mode,
       at: done.t,
       steps,
     },

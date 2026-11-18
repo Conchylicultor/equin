@@ -135,6 +135,14 @@ binary through the curl stage 0 (`install.sh`), or directly.
   worked)`, so a wait holds it still. **Any step left with `est_s: null` → no
   time shown at all** and the bar moves by finished steps (sub-steps as
   fractions of theirs); otherwise the bar is worked / (worked + remaining).
+- **While Apple's installer is open** (the `apple-installer` wait): its
+  dialog sits in the middle of the screen, over this window's logo, status
+  and bar (both are centred), so the page hides the log and moves the status
+  to the window's lower half (`.iw.apple`).
+- **Done**: "equin opens by itself whenever you log in" on macOS, "starts by
+  itself whenever this computer starts" on Linux (the plan's `platform`); each
+  part the person skipped (`view.leftOut`: a notice answering a `resolved
+  skip`) as "Installed without … " with what it means, no button.
 - **A 1 s display clock** redraws the running state in place (the data only
   changes on a push, but the time left and a wait's "started N min ago" are
   text, which a CSS transition cannot move).

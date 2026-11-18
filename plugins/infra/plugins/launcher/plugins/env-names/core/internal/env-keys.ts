@@ -87,6 +87,8 @@ export const RUNTIME_WITHHELD_ENV = {
     "the install step a command runs as (installer: tools, start, build…), set by install.sh beside INSTALL_EVENTS so what the command reports is filed under that step",
   INSTALL_DIAGNOSIS:
     "the file a command run as an install step writes its own diagnosis of a failure to (installer: title, text, whether it is optional and which parts a Skip leaves out), set by install.sh beside INSTALL_EVENTS and read by its pause when the step fails",
+  INSTALL_INTERNAL_ARGS:
+    "the install's internal arguments (--release, --checkout, --attach, --mode, --since, one per line), set by install.sh for the next install.sh it starts (stage 0 → a release's script, an install → the checkout's) so they stay off the command line a terminal shows in its title; read and unset at that script's start",
   INSTALL_LEFT_OUT:
     "the optional parts (login service ids, comma-separated) the person chose to Skip during an install, set by install.sh for the start step so `./equin start` runs without them",
   INSTALLER_PAGE:

@@ -345,7 +345,13 @@ function failParts(failed: readonly FailedPart[]): never {
   reportInstallDiagnosis({
     title: notice.title,
     text: pauseText(notice, failed),
-    leaveOut: failed.map((f) => f.decl.id),
+    leaveOut: {
+      ids: failed.map((f) => f.decl.id),
+      without: listNames(failed.map((f) => f.decl)),
+      later: notice.ifSkipped.optional
+        ? `${notice.ifSkipped.stillWorks} ${notice.ifSkipped.addLater}`
+        : "",
+    },
     evidence: notice.evidence,
   });
   details(`start log ${START_LOG}`);
@@ -477,7 +483,7 @@ function partsFailedNotice(failed: readonly FailedPart[]): InstallerNotice {
     ifSkipped: {
       optional: true,
       stillWorks: `equin works without ${them}, in your browser.`,
-      addLater: `To add ${them} later, run \`./equin start\` again.`,
+      addLater: `To add ${them} later, run \`./equin start\` again in equin's folder.`,
     },
     evidence: failed.flatMap((f) => [
       `${f.decl.id} (${f.decl.dep.id}):`,

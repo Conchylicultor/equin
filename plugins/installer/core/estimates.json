@@ -1,16 +1,52 @@
 {
-  "installs": 3,
-  "steps": {
-    "tools": 211,
-    "mise": 1,
-    "clone": 16,
-    "toolchain": 17,
-    "start": 122,
-    "build": 114,
-    "build.database": 1,
-    "build.deps": 1,
-    "build.codegen": 23,
-    "build.interface": 69,
-    "build.deploy": 11
+  "sets": {
+    "macos-window": {
+      "installs": 3,
+      "steps": {
+        "tools": 211,
+        "mise": 1,
+        "clone": 16,
+        "toolchain": 17,
+        "start": 122,
+        "build": 114,
+        "build.database": 1,
+        "build.deps": 1,
+        "build.codegen": 23,
+        "build.interface": 69,
+        "build.deploy": 11
+      }
+    },
+    "macos-terminal": {
+      "installs": 3,
+      "steps": {
+        "tools": 80,
+        "mise": 2,
+        "clone": 15,
+        "toolchain": 21,
+        "start": 122,
+        "build": 114,
+        "build.database": 1,
+        "build.deps": 1,
+        "build.codegen": 23,
+        "build.interface": 69,
+        "build.deploy": 11
+      }
+    },
+    "linux": {
+      "installs": 3,
+      "steps": {
+        "tools": 18,
+        "mise": 1,
+        "clone": 14,
+        "toolchain": 9,
+        "start": 109,
+        "build": 114,
+        "build.database": 1,
+        "build.deps": 1,
+        "build.codegen": 23,
+        "build.interface": 69,
+        "build.deploy": 11
+      }
+    }
   }
 }

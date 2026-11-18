@@ -37,16 +37,21 @@ export function fleetMemoryUnmeasuredFingerprint(
   return `${FLEET_MEMORY_UNMEASURED_KIND}:${d.cause}`;
 }
 
-/** The one-line summary — the report row's `message` and the acquire's own log line. */
+/**
+ * The one-line summary — the report row's `message` and the acquire's own log
+ * line. A person installing equin reads that line in the install's log while
+ * the install waits (no app runs yet to measure anything), so it says what
+ * happens in plain words first, then the mechanism.
+ */
 export function fleetMemoryUnmeasuredMessage(
   d: Pick<FleetMemoryUnmeasuredPayload, "cause" | "ageMs" | "slots">,
 ): string {
   const why =
     d.cause === "absent"
-      ? "no fleet memory reading was ever written"
-      : `the fleet memory reading is ${Math.round((d.ageMs ?? 0) / 1000)} s old`;
+      ? "nothing has measured it yet"
+      : `its last measurement is ${Math.round((d.ageMs ?? 0) / 1000)} s old`;
   return (
-    `cpu grant admission is unmeasured (${why}: main's owner sampler is not running) — ` +
-    `admitting on the ${d.slots}-slot floor until a reading lands`
+    `heavy work runs at most ${d.slots} task${d.slots === 1 ? "" : "s"} at a time until this computer's free memory is measured: ${why} ` +
+    `(equin's memory sampler, part of the running app, is not running) — cpu grant admission on the ${d.slots}-slot floor`
   );
 }

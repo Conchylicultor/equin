@@ -41300,6 +41300,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `BuildSubStepId`
       - `ESTIMATES_BEGIN`
       - `ESTIMATES_END`
+      - `EstimateSet`
       - `estimatesFrom`
       - `findEstimatesBlock`
       - `FixTarget`
@@ -41325,6 +41326,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ProgressUnit`
       - `redactPaths`
       - `renderEstimatesBlock`
+      - `StepEstimates`
       - `timingFromEvents`
       - `WaitHolder`
       - `WaitOn`
@@ -41369,6 +41371,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HANDOFF_MARKER`
           - `INSTALLER_BINARIES`
           - `INSTALLER_BINARY_PREFIX`
+          - `INTERNAL_ARGS_MARKER`
           - `RELEASE_FILES`
           - `RELEASE_WORKFLOW`
           - `releaseManifest`

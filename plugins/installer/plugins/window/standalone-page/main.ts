@@ -398,7 +398,7 @@ function renderPaused(body: HTMLElement, pause: Pause): void {
         skip:
           pause.optional && pause.blocking
             ? {
-                tip: "Go on without it: the install carries on with the next step.",
+                tip: "Go on without it: the install carries on without what failed here, and says what that means once it's done.",
                 onSkip: () => decide("skip"),
               }
             : null,
@@ -469,6 +469,22 @@ function noticeBanner(body: HTMLElement, notice: Notice): void {
     }),
     errorBox(notice.title, notice.text, [], true),
   );
+}
+
+/**
+ * When equin comes back by itself (the done screen): macOS starts it at login
+ * (a LaunchAgent), Linux at every boot (a lingering systemd user unit) —
+ * the terminal view's "starts at every login / boot".
+ */
+function startsByItself(platform: string): string {
+  return platform.startsWith("darwin-")
+    ? "equin opens by itself whenever you log in."
+    : "equin starts by itself whenever this computer starts.";
+}
+
+/** The done screen's line for a part the person chose to leave out (Skip): what it is, and what that means. */
+function leftOutLine(part: Notice): HTMLElement {
+  return el("div", "iw-later fadein", `${part.title}. ${part.text}`);
 }
 
 /** The done screen's line for a part left out: Add it now, then Add them. */
@@ -550,7 +566,12 @@ function renderBody(): void {
     showLog = state === "running";
     drawnState = state;
   }
-  byId("root").className = `iw ${state}`;
+  // While Apple's installer is open its dialog sits in the middle of the
+  // screen — over this window's logo, status and bar (both are centred). The
+  // status moves below it, in the window's lower half, and the log gives it
+  // the room.
+  const apple = view.phase === "running" && view.wait?.on === "apple-installer";
+  byId("root").className = `iw ${state}${apple ? " apple" : ""}`;
   const notice = bannerNotice();
   if (view.phase === "running" && notice === null) {
     renderRunning(body);
@@ -614,13 +635,14 @@ function renderBody(): void {
     case "done": {
       body.append(
         el("h2", "iw-title fadein", "You're all set"),
-        el("p", "iw-text fadein", "equin opens by itself whenever you log in."),
+        el("p", "iw-text fadein", startsByItself(view.platform)),
       );
       const open = button("Open equin", "pill white big", () =>
         post("open-equin"),
       );
       open.append(arrow());
       body.append(withChildren(el("div", "iw-actions"), [open]));
+      for (const part of view.leftOut) body.append(leftOutLine(part));
       const later = view.notice === null ? null : laterLine(view.notice);
       if (later !== null) body.append(later);
       break;

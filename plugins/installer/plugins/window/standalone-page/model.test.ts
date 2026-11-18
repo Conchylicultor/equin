@@ -458,6 +458,35 @@ describe("installer page model: pauses, Fix with Claude, notices", () => {
     expect(view.notice?.state).toBe("added");
   });
 
+  test("a notice answering a Skip is the person's choice: kept apart, no banner", () => {
+    const leftOut = ev(4, {
+      type: "notice",
+      id: "dev.equin.menu-bar",
+      state: "skipped",
+      title: "Installed without the equin icon in your menu bar",
+      text: "equin works without it, in your browser.",
+      without: "the equin icon in your menu bar",
+    });
+    const view = fold([
+      plan(),
+      step(1, "clone", "start"),
+      step(2, "clone", "failed"),
+      pauseEv(2, true),
+      ev(3, { type: "resolved", how: "skip" }),
+      leftOut,
+      step(4, "clone", "start"),
+      step(5, "clone", "done", 1000),
+    ]);
+    expect(view.notice).toBeNull();
+    expect(view.leftOut.map((n) => n.without)).toEqual([
+      "the equin icon in your menu bar",
+    ]);
+    // Once the step moved on, a notice is no longer the Skip's.
+    applyLine(view, leftOut);
+    expect(view.notice?.id).toBe("dev.equin.menu-bar");
+    expect(view.leftOut).toHaveLength(1);
+  });
+
   test("the plan's release and platform are kept for a report", () => {
     const view = fold([plan()]);
     expect(view.release).toBeNull();
