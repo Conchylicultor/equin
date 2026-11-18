@@ -7,7 +7,10 @@ import {
   exponential,
   withJitter,
 } from "@plugins/packages/plugins/retry/core";
-import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
+import {
+  createSemaphore,
+  usingSlot,
+} from "@plugins/packages/plugins/semaphore/core";
 import {
   recordSpan,
   beginWait,
@@ -434,11 +437,16 @@ export function installQueryWrapper(pool: Pool, background: Pool): void {
     // `QueryDeadlineExceededError` has no `.code`, so a lost statement is never
     // retried. Each attempt's statement has its own clock: a retry only follows
     // a REPLY (the victim's error), so a hang still costs one bound.
+    // Each attempt (a connection checkout and its statement) is one `db` use:
+    // inside a live read it holds the read's use-scoped read-admit slot for
+    // exactly that long, taken before the connection — so the order is always
+    // read-admit → connection, and the backoff between attempts holds nothing
+    // (`packages/semaphore`'s `usingSlot`; outside a read it just runs).
     const runRetrying = () =>
       retryUntil(
         async (attempt) => {
           try {
-            return await runOnce();
+            return await usingSlot("db", runOnce);
           } catch (err) {
             const sqlstate = retryableSqlState(err);
             // Non-retryable errors, and a retryable one that has exhausted the cap,
@@ -475,11 +483,11 @@ export function installQueryWrapper(pool: Pool, background: Pool): void {
     //   - a `flush` entry's own DIRECT queries are now GATED — caller kind
     //     `"flush"` matched neither arm of the old condition, so the flush cycle's
     //     own reads slipped through the gate they exist to sit behind.
-    // Interactive stays UNGATED, matching today's `http` semantics: it is already
-    // bounded upstream by `readLoadGate` (READ_LOAD_CONCURRENCY = 6,
-    // resource-runtime/core/runtime.ts:906) for cold reads and by per-route
-    // endpoint concurrency gates for mutations, and adding a third bound here
-    // would only re-serialize the lane we are trying to keep free.
+    // Interactive takes no lane gate: a live read's statements are bounded by
+    // the read-admission gate itself — each attempt is a `db` use holding the
+    // read's slot (`usingSlot` above; READ_LOAD_CONCURRENCY = 6,
+    // resource-runtime) — and mutations by per-route endpoint concurrency
+    // gates; a third bound here would only re-serialize the lane we keep free.
     // Context-less work (boot, migrations, `warmPool`, the change-feed listener)
     // has no ambient entry and stays UNGATED, so boot can never deadlock on a gate.
     if (inBackground) {
@@ -525,6 +533,13 @@ export function installQueryWrapper(pool: Pool, background: Pool): void {
     // interactive pool: the former have that pool to themselves, and the latter
     // must never be able to wait on a gate at boot. Both still get read-set capture — a loader that reads inside
     // a transaction has a read-set whichever lane it runs in.
+    //
+    // An interactive checkout is NOT a `db` use of a live read's slot: what
+    // runs between the checkout and its release is a transaction body — any
+    // code, not a leaf — and holding the read slot across it could close a
+    // wait-for cycle (the body awaiting a gated read or another read's flight
+    // whose take-back needs that slot). Its statements are bounded by the
+    // interactive pool alone; no served loader opens a transaction today.
     if (currentOriginClass() !== "background") {
       return origConnect().then(wrapClientQueryForReadSet);
     }

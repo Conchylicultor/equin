@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   FS_WAIT_FLOOR_MS,
-  installFsAwait,
+  installFsUse,
   installFsCallGuard,
   installFsWaitMeter,
   onSlowFsCall,
@@ -23,10 +23,11 @@ writeFileSync(join(dir, "b.txt"), "world");
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 // A disk that answers every call FS_WAIT_FLOOR_MS + 20 ms late: the installed
-// await runs as the call is issued, and blocking the thread there keeps node's
-// answer from reaching the caller until then. (A delay added AFTER the call
-// answered is the await's own wait, never the disk's — see the take-back test.)
-const stall = <T>(p: Promise<T>): Promise<T> => {
+// use starts the call, then blocking the thread keeps node's answer from
+// reaching the caller until then. (A delay BEFORE the call starts is the use's
+// own wait — a slot take-back — never the disk's: see the take-back test.)
+const stall = <T>(start: () => Promise<T>): Promise<T> => {
+  const p = start();
   Bun.sleepSync(FS_WAIT_FLOOR_MS + 20);
   return p;
 };
@@ -35,7 +36,7 @@ const seen: SlowFsCall[] = [];
 const off = onSlowFsCall((c) => seen.push(c));
 
 afterEach(() => {
-  installFsAwait((p) => p);
+  installFsUse((start) => start());
   seen.length = 0;
 });
 
@@ -46,7 +47,7 @@ test("a fast call is not handed on, and keeps node's answer", async () => {
 });
 
 test("a call past the floor is handed on with its layer, op and target", async () => {
-  installFsAwait(stall);
+  installFsUse(stall);
   const s = await stat(join(dir, "a.txt"));
   expect(s.isFile()).toBe(true);
   expect(seen).toHaveLength(1);
@@ -59,7 +60,7 @@ test("a call past the floor is handed on with its layer, op and target", async (
 });
 
 test("a failing call still rejects with node's error, and is still timed", async () => {
-  installFsAwait(stall);
+  installFsUse(stall);
   // Awaited by hand, so the timing assertion below runs after it settled.
   // Bun's message is "No such file or directory"; the errno is on `code`.
   const err: unknown = await readFile(join(dir, "missing")).then(
@@ -71,7 +72,7 @@ test("a failing call still rejects with node's error, and is still timed", async
 });
 
 test("a scan is one fs-glob call summing its steps, and lists what Bun.Glob does", async () => {
-  installFsAwait(stall);
+  installFsUse(stall);
   const hits: string[] = [];
   for await (const rel of scanGlob("*.txt", { cwd: dir })) hits.push(rel);
   expect(hits.sort()).toEqual(["a.txt", "b.txt"]);
@@ -80,14 +81,14 @@ test("a scan is one fs-glob call summing its steps, and lists what Bun.Glob does
 });
 
 test("a scan broken out of early is still handed on", async () => {
-  installFsAwait(stall);
+  installFsUse(stall);
   for await (const _ of scanGlob("*.txt", dir)) break;
   expect(seen.map((c) => c.op)).toEqual(["scanGlob"]);
 });
 
 test("an unsubscribed handler hears nothing", async () => {
   off();
-  installFsAwait(stall);
+  installFsUse(stall);
   await stat(dir);
   expect(seen).toEqual([]);
 });
@@ -166,34 +167,26 @@ test("a file call the meter's own end makes is not metered again", () => {
   }
 });
 
-test("a call that returned is over, even while the await still holds its caller (a slot take-back)", async () => {
+test("a slot taken back before the call starts is not the call's time", async () => {
   const log: string[] = [];
-  let returned!: () => void;
-  const callReturned = new Promise<void>((r) => (returned = r));
-  // The backend's await: node answered, then the caller waits to take its
-  // read-admit slot back — here for longer than the floor.
-  installFsAwait((p) =>
-    p.then(async (v) => {
-      await sleep(FS_WAIT_FLOOR_MS + 50);
-      log.push("slot taken back");
-      return v;
-    }),
-  );
+  // The backend's use: the caller first takes its read-admit slot back —
+  // here for longer than the floor — then the file call starts.
+  installFsUse(async (start) => {
+    await sleep(FS_WAIT_FLOOR_MS + 50);
+    log.push("slot taken back");
+    return start();
+  });
   installFsWaitMeter((layer) => {
     log.push(`start ${layer}`);
     return () => {
       log.push(`end ${layer}`);
-      returned();
     };
   });
   try {
-    const pending = stat(join(dir, "a.txt"));
-    await callReturned;
-    // The file call is over before the slot is back: a wait still running
-    // here is the take-back's, not "the file call has not returned".
-    expect(log).toEqual(["start fs-stat", "end fs-stat"]);
-    expect((await pending).isFile()).toBe(true);
-    expect(log).toEqual(["start fs-stat", "end fs-stat", "slot taken back"]);
+    expect((await stat(join(dir, "a.txt"))).isFile()).toBe(true);
+    // The file call is metered from its own start: a wait before it is the
+    // take-back's, never "the file call has not returned".
+    expect(log).toEqual(["slot taken back", "start fs-stat", "end fs-stat"]);
     // Nor is the take-back's time booked as a slow file call.
     expect(seen).toEqual([]);
   } finally {

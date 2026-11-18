@@ -51,19 +51,19 @@ own time, and each needed a manual investigation to blame the filesystem.
   scan walks the whole tree in its first step (12,940 hits, 640 of 644 ms in
   step one), so for it the two agree; a scan of many short steps, like many
   short stats, charges nothing, which is the floor's meaning for every call.
-- **Awaiting.** `installFsAwait(wrap)` sets how every awaited call (and every
-  `scanGlob` step) is awaited. It is the identity until something installs
-  one. A backend installs `whileWaiting` (`packages/semaphore`, from
-  runtime-profiler's server install), so a live read stalled on the disk
-  gives its read-admit slot back while the call is pending and takes it back
-  at the head of the queue. `network/live/resource-runtime/scripts/fs-yield-bench.ts` measured it: behind
-  six reads stalled 2 s, unrelated reads answered in 33–49 ms instead of
-  ~2 s, and a herd of fs-heavy reads showed no thrash. **The call ends when
-  node answers, not when the await resumes the caller**: the meter's end and
-  the `onSlowFsCall` time are taken as the call's own promise settles, before
-  the installed await's tail — so a slot take-back that queues is the read
-  gate's own wait (its `onQueued`, a `read-admit` gate wait), never an
-  `fs-<op>` wait "that has not returned".
+- **The call is a use.** `installFsUse(wrap)` sets how every awaited call (and
+  every `scanGlob` step) is run: `wrap(start)`. It runs `start` as is until
+  something installs one. A backend installs `usingSlot("fs", start)`
+  (`packages/semaphore`, from runtime-profiler's server install; central from
+  its entry): a call inside a live read holds the read's use-scoped read-admit
+  slot for exactly its own length, taking it back first (at the head of the
+  queue) when the read gave it back — so the read gate bounds the reads'
+  concurrent file work and nothing else
+  (`research/2026-11-18-network-read-admit-use-scoped-slots.md`). **The call
+  is metered from when it starts, not when the use is entered**: the meter's
+  start and the `onSlowFsCall` clock begin inside `start`, after any
+  take-back — so a slot take-back that queues is the read gate's own wait
+  (its `onQueued`, a `read-admit` gate wait), never an `fs-<op>` wait.
 - **The call guard.** `installFsCallGuard(guard | null)` installs one guard
   every timed call (and glob scan) passes first, synchronously, before it
   touches the disk; a guard that throws refuses the call at the call site
@@ -141,8 +141,8 @@ its boot journal attribute that.
     - `FS_WAIT_FLOOR_MS`
     - `FS_WAIT_LAYERS`
     - `fsCallsSince`
-    - `installFsAwait`
     - `installFsCallGuard`
+    - `installFsUse`
     - `installFsWaitMeter`
     - `lstat`
     - `lstatSync`

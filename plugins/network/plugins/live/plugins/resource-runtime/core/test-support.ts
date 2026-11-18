@@ -40,6 +40,7 @@ import {
   type ResourceRuntimeOptions,
 } from "./runtime";
 import type { ValuePatchWireOp } from "@plugins/packages/plugins/value-patch/core";
+import { usingSlot } from "@plugins/packages/plugins/semaphore/core";
 import { readAddressedFrame } from "@plugins/primitives/plugins/networking/core";
 
 // Next-macrotask yield: flushes all pending microtasks (the queued flush) AND any
@@ -367,6 +368,11 @@ export function createHarness(
  * the only variable) and the wrong tool for anything about freshness — it cannot
  * express "this flight's SELECT already ran, before the commit". Use
  * `snapshotControllable` for that.
+ *
+ * Its load is a DB statement (`usingSlot("db")`), as a served read's is: it
+ * holds its read-admission slot while parked whether or not the process has a
+ * lease context installed — so a test saturating the gate means the same thing
+ * wherever it runs in a shared test process.
  */
 export function controllable<T>(initial: T) {
   let releaseFn: (() => void) | undefined;
@@ -377,10 +383,11 @@ export function controllable<T>(initial: T) {
     get value(): T {
       return value;
     },
-    loader: async (): Promise<T> => {
-      await blocker;
-      return value;
-    },
+    loader: (): Promise<T> =>
+      usingSlot("db", async () => {
+        await blocker;
+        return value;
+      }),
     block() {
       blocker = new Promise<void>((res) => {
         releaseFn = res;
@@ -429,14 +436,17 @@ export function snapshotControllable<T>(initial: T) {
     get invocations(): number {
       return invocations;
     },
-    loader: async (): Promise<T> => {
-      invocations++;
-      // The read happens HERE — before the park, like a SELECT that has already
-      // returned its rows while the caller is still waiting on something else.
-      const captured = value;
-      await blocker;
-      return captured;
-    },
+    // A DB statement (`usingSlot("db")`), like `controllable`'s.
+    loader: (): Promise<T> =>
+      usingSlot("db", async () => {
+        invocations++;
+        // The read happens HERE — before the park, like a SELECT that has
+        // already returned its rows while the caller is still waiting on
+        // something else.
+        const captured = value;
+        await blocker;
+        return captured;
+      }),
     block() {
       blocker = new Promise<void>((res) => {
         releaseFn = res;

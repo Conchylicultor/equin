@@ -1,8 +1,5 @@
 import type { Mount } from "@plugins/infra/plugins/paths/plugins/data-files/core";
-import {
-  createSemaphore,
-  whileWaiting,
-} from "@plugins/packages/plugins/semaphore/core";
+import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { nonTokenNamesOf, type PrototypeMeta } from "../../core";
 import {
   listingKey,
@@ -199,13 +196,10 @@ export class PrototypeRecords {
    * Each folder's references are judged against the names in the records now.
    */
   async list(): Promise<PrototypeMeta[]> {
-    // A read landing before the boot baseline is read waits for it — through
-    // `whileWaiting`: the baseline is the watcher's work (a stat and a listing
-    // of every folder), not this read's, so the read gives back its read-admit
-    // slot while it waits. A plain await kept it: main, 2026-11-17 23:57 UTC,
-    // prototypes.list held one of the six read slots ~7 s behind a boot
-    // baseline while 101 reads queued.
-    if (this.records === null) await whileWaiting(this.firstLoad.promise);
+    // A read landing before the boot baseline is read waits for it. The
+    // baseline is the watcher's work, and the wait holds no read-admit slot
+    // (a use-scoped slot is held only around the read's own file calls).
+    if (this.records === null) await this.firstLoad.promise;
     if (this.records === null)
       throw new Error(
         "the prototypes records' first load failed (reported by the files watcher) — the next refresh of the tree retries it",

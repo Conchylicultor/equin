@@ -697,29 +697,51 @@ All but the version are co-produced by the starter. A push drain mints
   because that read has not started — it describes the state after the
   joiner registered. A probe already admitted is never joined; an HTTP probe
   keeps its own read. `_debug.<key>.sharedProbes`.
-- **Waiters hold no slot.** The slot is `yieldable` (`packages/semaphore`): a
-  read whose loader joins another caller's in-flight work (`inflight` →
-  `whileWaiting` — a shared memo's compute, another resource's flight) gives it
-  back for the wait and takes it back ahead of every newcomer. The gate bounds
-  reads that run; a slow read delays only the reads that wait on it. Needs the
-  host's lease scope — an AsyncLocalStorage on every Bun host: a worktree
-  server's (`runtime-profiler/server`) and central's (`central-core/bin`). A
-  browser host has no async context, so a wait inside its reads keeps the
-  slot; its one wait on another party — a page input, which the page hands
-  over once its OWN server read lands (72 s, 2026-11-12) — is therefore a
-  state the host reads at once (`pending`), never a promise a read awaits
-  (`framework/browser-server` page inputs). `runtime-read-admit-yield.test.ts`,
-  `scripts/read-admit-bench.ts`,
-  `research/2026-11-03-framework-read-admission-waiters-yield.md`.
+- **A slot covers only its uses.** The read-admit slot is USE-SCOPED
+  (`packages/semaphore`'s `heldFor: ["db", "fs"]`): a read takes it to START
+  (FIFO, key share, point batching, abandonment and the answer trail all hang
+  off that admission), then holds it only while it runs a DB statement or a
+  file call — `usingSlot("db" | "fs")`, called by the DB driver
+  (`database/machine`'s pg-driver: each `pool.query` statement attempt; a
+  transaction's checkout is not a leaf, so not a use) and by timed-fs
+  (installed by the host). A use
+  finding the slot given back takes it back at the head of the queue, FIFO
+  among take-backs. Waiting on anything else — another read's flight, a
+  mutex, a watched memo's pass, a worker thread's reply, a timer — holds
+  nothing, with no call site to remember (there is no API to hold a slot
+  across a wait: only the resource primitives may import `usingSlot`, lint
+  `semaphore/slot-use-site`). So the gate bounds how many reads run DB / file
+  work at once (one slot per read, however many uses it runs together) — and
+  is THE bound on interactive DB statements — not the reads in flight. Deadlock-free by construction: a use is a leaf that waits on no
+  in-process gate but the pg pool's own queue, so every holder finishes.
+- **Child processes take `read-spawn` slots.** A read's `spawnCaptured`
+  children (git, a CLI probe) hold one slot of the separate `read-spawn` gate
+  (`READ_SPAWN_CONCURRENCY` = 6, same key share; lazy — `admit: false`, a read
+  that spawns nothing never waits on it) from its temp dir to its reap, and no
+  read-admit slot: the bound a reconnect herd's spawns used to get from the
+  read gate, without a 3.7 s CLI probe holding a slot DB reads queue behind.
+  Gauge and wait layer `read-spawn` (`readSpawnGateStats`). Main, 2026-11-18:
+  about half of the read-admit holder time was a worker reply, a CLI probe or
+  git, and reads waited 2.8–3.9 s.
+- **Needs the host's lease scope** — an AsyncLocalStorage on every Bun host: a
+  worktree server's (`runtime-profiler/server`) and central's
+  (`central-core/bin`). A browser host has no async context, so its read slot
+  is held for the whole read (no use could find it); its one wait on another
+  party — a page input, which the page hands over once its OWN server read
+  lands (72 s, 2026-11-12) — is therefore a state the host reads at once
+  (`pending`), never a promise a read awaits (`framework/browser-server` page
+  inputs). `runtime-read-admit-uses.test.ts`,
+  `research/2026-11-18-network-read-admit-use-scoped-slots.md` (replacing
+  `research/2026-11-03-framework-read-admission-waiters-yield.md`).
 - **A key's share.** No resource key holds more than `READ_KEY_SHARE` (3)
   of the `READ_LOAD_CONCURRENCY` (6) slots — the gate's `perClass`, each
   read's class its key: a key at its share has its next read passed over
   while every other read keeps its FIFO place. So one slow class cannot take
   the whole gate (main, 2026-11-05: 15 hung `host-fs.peek` loads from one tab
-  held all 6 slots and 121 `reports.list` subs waited 93 s). A hard cap, not
-  fair share: a slot is held for a whole load. ONE gate on purpose: a read
-  yielding its slot to wait gives back its key's share with it, so no
-  per-key gate held across a yield can deadlock two keys.
+  held all 6 slots and 121 `reports.list` subs waited 93 s). Each use takes
+  its slot back within its key's share too. A hard cap, not fair share. ONE
+  gate on purpose: a read between uses gives back its key's share with its
+  slot, so no per-key gate held around it can deadlock two keys.
 - **Point reads queued together load as one (`PointBatch`).** A point
   membership's `batch: { familyOf, maxIds }` promises the loader at any
   family member's params reads exactly `ctx.affectedIds` (query-resource
@@ -1003,10 +1025,10 @@ Out of reach at this seam (DB-backed harness instead):
 ## Plugin reference
 
 - Core:
-  - Uses: 48 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 49 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/resource-protocol` ×19
     - `network/live/resource-runtime/routing` ×19
-    - `packages/semaphore` ×2
+    - `packages/semaphore` ×3
     - `packages/string-hash` ×2
     - `packages/value-patch` ×2
     - `primitives/networking` ×2
@@ -1074,7 +1096,9 @@ Out of reach at this seam (DB-backed harness instead):
     - `framework/server-core`
     - `network/live/query-resource`
 - Exemptions:
-  - Exempts itself from: `live/no-legacy-resource-spelling` — `.` (sanctioned)
+  - Exempts itself from:
+    - `live/no-legacy-resource-spelling` — `.` (sanctioned)
+    - `semaphore/slot-use-site` — `core/test-support.ts` (sanctioned)
 - Test helpers:
   - Core: `@plugins/network/plugins/live/plugins/resource-runtime/core/testing`
     - `buildSnapshot` — Build the id→entry map for a keyed resource's array `value`, in array order.

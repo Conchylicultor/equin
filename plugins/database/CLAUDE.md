@@ -275,9 +275,17 @@ Two gates, both on `createSemaphore`, both read synchronously before any await:
   transactions ate every connection of the then-shared pool. Wait charged as
   `background-tx-acquire`.
 
-Interactive and context-less work runs **ungated** on the interactive pool, so
-boot can never deadlock on a gate. Interactive demand is bounded upstream by
-`readLoadGate` (`READ_LOAD_CONCURRENCY = 6`) and the per-route endpoint
+Interactive and context-less work takes no lane gate on the interactive pool,
+so boot can never deadlock on a gate. A live read's statements are bounded by
+the read-admission gate itself (`READ_LOAD_CONCURRENCY = 6`): each `pool.query`
+statement attempt (connect + query) is a `db` use (`usingSlot`,
+`packages/semaphore`) holding the read's use-scoped slot for exactly that long
+— taken BEFORE the connection, so the order is always read-admit → connection;
+a retry's backoff holds nothing. Outside a read it simply runs. An interactive
+checkout (`db.transaction()`) is NOT a use: its body is arbitrary code, not a
+leaf, and holding the read slot across it could close a wait-for cycle — its
+statements are bounded by the interactive pool alone (no served loader opens a
+transaction). Mutations are bounded by the per-route endpoint
 concurrency gates.
 
 ### The lane-capacity invariant is a deadlock proof
@@ -612,6 +620,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `boundaries/no-platform-api` — `core/internal/config.ts` (debt)
     - `sql-writes:fit:dynamic` — `plugins/pglite/server/internal/pglite-driver.ts` (sanctioned)
     - `sql-writes:fit:hand-written` — `plugins/pglite/server/internal/pglite-driver.ts` (sanctioned)
+    - `semaphore/slot-use-site` — `machine/internal/pg-driver.ts` (sanctioned)
 - Test helpers:
   - Server: `@plugins/database/server/testing`
     - `snapshotWatermark`

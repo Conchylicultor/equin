@@ -1,7 +1,8 @@
 import {
-  runHoldingSlot,
+  leaseContextInstalled,
   runInLeaseScope,
-  type YieldableLease,
+  type SlotUse,
+  type UseLease,
 } from "./lease-scope";
 
 /**
@@ -38,20 +39,31 @@ export interface SlotOptions {
    * `onWait`. `onWait` reports a wait only once it is over, so a caller queued
    * for minutes looks, until then, like a caller busy with its own work; this
    * lets a gate owner show the wait while it is still in progress (the runtime
-   * profiler's `beginWait`). A yieldable slot's take-back that queues is a wait
+   * profiler's `beginWait`). A use-scoped slot's take-back that queues is a wait
    * of its own and is announced the same way.
    */
   onQueued?: () => () => void;
   /**
-   * `run` only: the slot is given back while the body merely WAITS on work
-   * another caller is doing (`whileWaiting` — an `inflight` join is one), and
-   * taken back ahead of every queued newcomer when the wait ends, so a gate full
-   * of waiters can never stall unrelated callers (see `lease-scope.ts`). Each
-   * take-back reports its own queue time through `onWait`. Off by default: a
-   * slot that stands for a held resource (a DB connection, a file handle) must
-   * stay held while its holder waits.
+   * `run` only: a USE-SCOPED slot — held only while the body runs one of
+   * these uses (`usingSlot(use, start)`, called by the resource primitives:
+   * a DB statement, a file call, a child process), and given back the rest of
+   * the time. Waiting on anything else — another caller's flight, a mutex, a
+   * worker thread, a timer — holds nothing, with no call site to remember.
+   * The body's synchronous start runs holding the slot it was admitted with
+   * (`admit`); a use finding the slot given back takes it back at the head of
+   * the queue, FIFO among take-backs, each take-back reporting its queue time
+   * through `onWait`. Without an async context runtime
+   * (`installLeaseContextRuntime`) no use can find its slot, so the slot is
+   * held for the whole body instead. See `lease-scope.ts`.
    */
-  yieldable?: boolean;
+  heldFor?: readonly SlotUse[];
+  /**
+   * With `heldFor`: take a slot to START the body (default true) — admission,
+   * so the gate's FIFO order and classes apply to starting bodies too. `false`:
+   * a lazy gate, taken only by a use, so a body that never makes one never
+   * waits here (and, without an async context runtime, never holds a slot).
+   */
+  admit?: boolean;
   /**
    * Names this caller while it holds capacity, for `stats().holders`: a gate
    * owner passes what the caller is (a resource key and its params), so a slow
@@ -108,7 +120,7 @@ export interface Semaphore {
    * coupling this primitive to a profiler. Reads existing counters; zero
    * hot-path cost.
    *
-   * `holders` lists the LABELLED callers holding weight right now (a yieldable
+   * `holders` lists the LABELLED callers holding weight right now (a use-scoped
    * slot given back for a wait is not held), longest-held first.
    */
   stats(): {
@@ -153,8 +165,19 @@ export function createSemaphore(
   let active = 0;
   /** Held weight per class (`perClass` gates only); a class at 0 is absent. */
   const classActive = new Map<string, number>();
-  type Waiter = { weight: number; cls: string | undefined; admit: () => void };
+  type Waiter = {
+    weight: number;
+    cls: string | undefined;
+    admit: () => void;
+    front: boolean;
+  };
   const waiters: Waiter[] = [];
+  /**
+   * How many waiters at the head of the queue are take-backs (`front`): a
+   * use-scoped slot coming back. They queue ahead of every newcomer, FIFO among
+   * themselves, so a resumed body never overtakes one that resumed earlier.
+   */
+  let frontWaiters = 0;
   /** Labelled callers holding weight now, each with when it took its slot. */
   const holding = new Set<{ label: string; since: number }>();
 
@@ -224,9 +247,9 @@ export function createSemaphore(
       take(weight, cls);
       return Promise.resolve();
     }
-    // `front`: a yielded slot coming back. Its body was admitted before every
-    // caller now queued, so it resumes ahead of them — yielding while waiting
-    // never costs the waiter its place.
+    // `front`: a use-scoped slot coming back. Its body was admitted before
+    // every newcomer, so it resumes ahead of them (behind earlier take-backs) —
+    // giving the slot back while it waited never costs the body its place.
     // Announced before the waiter can be admitted, so its end always follows.
     const admitted = onQueued?.();
     return new Promise<void>((resolve) => {
@@ -236,8 +259,8 @@ export function createSemaphore(
             resolve();
           }
         : resolve;
-      const waiter = { weight, cls, admit };
-      if (front) waiters.unshift(waiter);
+      const waiter = { weight, cls, admit, front };
+      if (front) waiters.splice(frontWaiters++, 0, waiter);
       else waiters.push(waiter);
     });
   }
@@ -266,6 +289,7 @@ export function createSemaphore(
       }
       if (active + next.weight > max) return;
       waiters.splice(i, 1);
+      if (next.front) frontWaiters--;
       take(next.weight, next.cls);
       next.admit();
     }
@@ -298,57 +322,70 @@ export function createSemaphore(
     };
   }
 
-  // A held slot the body may give back while it waits (`SlotOptions.yieldable`).
-  // `waits` counts the body's overlapping waits: the first gives the slot back,
-  // the last takes it back. `end` is the body settling — the slot is freed if
-  // held, and a take-back still queued frees it again the moment it lands.
-  // `holder` is the run's labelled record, already in `holding` (the slot was
-  // just taken): it leaves while the slot is given back and returns with it.
-  function yieldableLease(
+  // A use-scoped slot (`SlotOptions.heldFor`): held while `uses` > 0 (and
+  // through the body's synchronous start when admitted with one), given back
+  // otherwise. The first use to find it given back takes it back at the head
+  // of the queue; concurrent uses share that one take-back and the slot; the
+  // last use to end gives it back. `end` is the body settling: a use it
+  // started and left open (a checked-out connection) keeps the slot until it
+  // ends; otherwise the slot is freed. No use starts after it (`usingSlot`
+  // skips an ended lease).
+  // `holder` is the run's labelled record: in `holding` exactly while held.
+  function useScopedLease(
     weight: number,
     cls: string | undefined,
+    heldFor: readonly SlotUse[],
+    held: boolean,
     onWait: ((waitMs: number) => void) | undefined,
     onQueued: SlotOptions["onQueued"],
-    holder: { label: string; since: number } | undefined,
-  ): YieldableLease & { end(): void } {
-    let held = true;
+    label: string | undefined,
+  ): UseLease & { started(): void; end(): void } {
     let ended = false;
-    let waits = 0;
+    let uses = 0;
     let reclaiming: Promise<void> | undefined;
+    const holder =
+      label === undefined ? undefined : { label, since: performance.now() };
+    if (held && holder) holding.add(holder);
     const giveBack = () => {
       held = false;
       if (holder) holding.delete(holder);
       releaseSlot(weight, cls);
     };
+    const takeBack = () =>
+      (reclaiming ??= (async () => {
+        const t0 = performance.now();
+        await acquireSlot(weight, cls, onQueued, true);
+        onWait?.(performance.now() - t0);
+        reclaiming = undefined;
+        held = true;
+        if (holder) {
+          holder.since = performance.now();
+          holding.add(holder);
+        }
+        // Every use over while the take-back queued.
+        if (uses === 0) giveBack();
+      })());
     return {
       get ended() {
         return ended;
       },
-      beginWait() {
-        waits++;
-        if (waits === 1 && held) giveBack();
+      handles: (use) => heldFor.includes(use),
+      async use<T>(start: () => Promise<T>): Promise<T> {
+        uses++;
+        try {
+          if (!held) await takeBack();
+          return await start();
+        } finally {
+          uses--;
+          if (uses === 0 && held) giveBack();
+        }
       },
-      endWait() {
-        waits--;
-        if (waits > 0 || ended || held) return Promise.resolve();
-        reclaiming ??= (async () => {
-          const t0 = performance.now();
-          await acquireSlot(weight, cls, onQueued, true);
-          onWait?.(performance.now() - t0);
-          reclaiming = undefined;
-          held = true;
-          if (holder) {
-            holder.since = performance.now();
-            holding.add(holder);
-          }
-          // Settled, or waiting again, while the take-back queued.
-          if (ended || waits > 0) giveBack();
-        })();
-        return reclaiming;
+      started() {
+        if (uses === 0 && held) giveBack();
       },
       end() {
         ended = true;
-        if (held) giveBack();
+        if (held && uses === 0) giveBack();
       },
     };
   }
@@ -371,29 +408,37 @@ export function createSemaphore(
     run<T>(fn: () => Promise<T>, opts?: SlotOptions): Promise<T> {
       const weight = weightOf(opts); // throws here, not in the promise
       const cls = classOf(opts);
-      if (opts?.yieldable) {
+      const heldFor = opts?.heldFor;
+      // Without an async context no use could find its slot: an admitted
+      // use-scoped body holds its slot throughout, a lazy one holds none.
+      if (heldFor && !leaseContextInstalled() && opts?.admit === false) {
+        return fn();
+      }
+      if (heldFor && leaseContextInstalled()) {
         return (async () => {
-          // Taken here rather than through `lease`: the slot's one owner is
-          // `held` (its give-backs and `end()`), and so is the holder record.
-          const t0 = performance.now();
-          await acquireSlot(weight, cls, opts.onQueued);
-          opts.onWait?.(performance.now() - t0);
-          const holder =
-            opts.label === undefined
-              ? undefined
-              : { label: opts.label, since: performance.now() };
-          if (holder) holding.add(holder);
-          const held = yieldableLease(
+          const admit = opts?.admit !== false;
+          if (admit) {
+            const t0 = performance.now();
+            await acquireSlot(weight, cls, opts?.onQueued);
+            opts?.onWait?.(performance.now() - t0);
+          }
+          const scoped = useScopedLease(
             weight,
             cls,
-            opts.onWait,
-            opts.onQueued,
-            holder,
+            heldFor,
+            admit,
+            opts?.onWait,
+            opts?.onQueued,
+            opts?.label,
           );
           try {
-            return await runInLeaseScope(held, fn);
+            const running = runInLeaseScope(scoped, fn);
+            // The body now awaits something: unless that is a use, it holds
+            // nothing while it does.
+            scoped.started();
+            return await running;
           } finally {
-            held.end();
+            scoped.end();
           }
         })();
       }
@@ -407,7 +452,7 @@ export function createSemaphore(
       return (async () => {
         const release = await pending;
         try {
-          return await runHoldingSlot(fn);
+          return await fn();
         } finally {
           release();
         }

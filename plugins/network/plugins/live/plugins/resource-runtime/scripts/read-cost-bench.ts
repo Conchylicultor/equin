@@ -10,7 +10,7 @@
  * meta). Then MEMORY reads (an icon sprite, a config value: a memo slice) and
  * IO reads (a 5 ms query) subscribe.
  *
- * - "before": no lease scope (`whileWaiting` is a passthrough — a memo
+ * - "before": no lease scope (a use-scoped read slot is held throughout — a memo
  *   waiter keeps its slot, as `watched-memo`'s pass-1 wait did) and the
  *   memory reads undeclared;
  * - "after": the server's lease scope, and the memory reads declared

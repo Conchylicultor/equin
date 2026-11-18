@@ -10,10 +10,10 @@ into one trailing pass), `refcount-hub` (one change source per key) and
 - **Watched** (`watch(key, onChange)` held): `changes(key, trigger)` opens the
   source; once it is live, pass 1 runs. Each pass is `facts` → `compute(key,
   facts)`. `get` returns the held value — no probe, no spawn
-  (`memo-watched-hit:<name>`); while pass 1 runs it awaits it under
-  `whileWaiting` — holding no yieldable gate slot (the live read gate), the
-  wait charged as `memo-opening:<name>` — since pass 1 is the watch's work,
-  not the reader's.
+  (`memo-watched-hit:<name>`); while pass 1 runs it awaits it — holding no
+  use-scoped gate slot (the live read gate holds one only around a read's own
+  DB / fs / spawn uses), the wait charged as `memo-opening:<name>` — since
+  pass 1 is the watch's work, not the reader's.
 - **Every pass computes** — no skip on an equal signature: a write read
   mid-pass and then undone puts the signature back while the value still
   shows it.
@@ -68,7 +68,6 @@ User: `conversations/conversation-view/code` (`edited-files`).
     - `packages/coalesce.createKeyedCoalescer`
     - `packages/inflight.createInflight`
     - `packages/refcount-hub.createRefcountHub`
-    - `packages/semaphore.whileWaiting`
   - Exports (types):
     - `WatchedMemo`
     - `WatchedMemoOptions`

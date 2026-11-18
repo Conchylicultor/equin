@@ -24321,6 +24321,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `boundaries/no-platform-api` — `core/internal/config.ts` (debt)
       - `sql-writes:fit:dynamic` — `plugins/pglite/server/internal/pglite-driver.ts` (sanctioned)
       - `sql-writes:fit:hand-written` — `plugins/pglite/server/internal/pglite-driver.ts` (sanctioned)
+      - `semaphore/slot-use-site` — `machine/internal/pg-driver.ts` (sanctioned)
   - Test helpers:
     - Server: `@plugins/database/server/testing`
       - `snapshotWatermark`
@@ -31691,6 +31692,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `detached-work-safety/no-raw-set-interval` — `bin/index.ts` (sanctioned)
           - `live/no-legacy-resource-spelling` — `.` (sanctioned)
+          - `semaphore/slot-use-site` — `bin/lease-scope.ts` (sanctioned)
     - **`cli`** — The `./equin` CLI (its old name is kept as a shim): the command declaration contract, the generated-artifact normalize contract, and every built-in command (build, push, check, test, run, release, deploy, and more).
       - Core:
         - Uses:
@@ -40433,6 +40435,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `boundaries/no-platform-api` — `server/internal/install.ts` (debt)
           - `timed-fs/no-untimed-fs-read` — `scripts/fs-meter-bench.ts` (sanctioned)
+          - `semaphore/slot-use-site` — `server/internal/install.ts` (sanctioned)
       - Test helpers:
         - Core: `@plugins/infra/plugins/runtime-profiler/core/testing`
           - `installClock`
@@ -40626,15 +40629,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `getMainRepoRoot`
           - `getWorktreeRoot`
+          - `installSpawnUse`
           - `spawnCaptured`
           - `spawnExpectOk`
           - `SpawnFailedError`
           - `spawnPassthrough`
           - `spawnToFile`
       - Cross-plugin:
-        - Imported by: 106 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
+        - Imported by: 107 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
           - `framework` ×32
-          - `infra` ×31
+          - `infra` ×32
           - `apps` ×9
           - `database` ×5
           - `debug` ×5
@@ -43614,10 +43618,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/metrics`
         - **`resource-runtime`**
           - Core:
-            - Uses: 48 symbols — full list in [`plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md`](../plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md)
+            - Uses: 49 symbols — full list in [`plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md`](../plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md)
               - `network/live/resource-protocol` ×19
               - `network/live/resource-runtime/routing` ×19
-              - `packages/semaphore` ×2
+              - `packages/semaphore` ×3
               - `packages/string-hash` ×2
               - `packages/value-patch` ×2
               - `primitives/networking` ×2
@@ -43685,7 +43689,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/server-core`
               - `network/live/query-resource`
           - Exemptions:
-            - Exempts itself from: `live/no-legacy-resource-spelling` — `.` (sanctioned)
+            - Exempts itself from:
+              - `live/no-legacy-resource-spelling` — `.` (sanctioned)
+              - `semaphore/slot-use-site` — `core/test-support.ts` (sanctioned)
           - Test helpers:
             - Core: `@plugins/network/plugins/live/plugins/resource-runtime/core/testing`
               - `buildSnapshot` — Build the id→entry map for a keyed resource's array `value`, in array order.
@@ -43950,14 +43956,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `IMAGE_SIZE_PREFIX_BYTES`
           - `readImageSize`
     - **`inflight`** — In-flight request deduplicator: createInflight() collapses concurrent callers sharing a key onto one execution, plus a caller-supplied freshness floor (notBefore) that supersedes rather than joins a flight older than a change the caller already knows about.
-      - Core:
-        - Uses: `packages/semaphore.whileWaiting`
-        - Exports (types):
-          - `Inflight`
-          - `InflightJoinMeter`
-        - Exports (values):
-          - `createInflight`
-          - `installInflightJoinMeter`
       - Cross-plugin:
         - Imported by:
           - `apps/chord/video-availability`
@@ -43980,11 +43978,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/watched-memo`
           - `plugin-meta/plugin-tree`
           - `tasks/orchestration/mandate`
-    - **`keyed-mutex`** — Keyed FIFO mutex: createKeyedMutex().run(key, fn) runs fn once every earlier run for the same key has settled, in arrival order, while different keys run concurrently; a key's entry is dropped the moment its queue drains.
       - Core:
-        - Uses: `packages/semaphore.whileWaiting`
-        - Exports (types): `KeyedMutex`
-        - Exports (values): `createKeyedMutex`
+        - Exports (types):
+          - `Inflight`
+          - `InflightJoinMeter`
+        - Exports (values):
+          - `createInflight`
+          - `installInflightJoinMeter`
+    - **`keyed-mutex`** — Keyed FIFO mutex: createKeyedMutex().run(key, fn) runs fn once every earlier run for the same key has settled, in arrival order, while different keys run concurrently; a key's entry is dropped the moment its queue drains.
       - Cross-plugin:
         - Imported by: 23 plugins — full list in [`plugins/packages/plugins/keyed-mutex/REFERENCE.md`](../plugins/packages/plugins/keyed-mutex/REFERENCE.md)
           - `infra` ×11
@@ -43995,6 +43996,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `integrations/github-events`
           - `plugin-meta/plugin-records`
           - `reports/engine`
+      - Core:
+        - Exports (types): `KeyedMutex`
+        - Exports (values): `createKeyedMutex`
     - **`list-bound`** — A list's bound, declared in its zod schema: cappedList / cappedRecord (a checked max) and wholeList / wholeRecord (loaded whole, with a written reason), tagged on the schema itself (zod-introspect's defineSchemaTag, stamped by clone) so the tag survives zod's clones and wrappers; listShapeOf walks (over zod-introspect's SchemaNode) every array, record, map and set a schema reaches and reports each one's bound and the bare ones, listBoundsOf refuses a bare one.
       - Core:
         - Uses:
@@ -44223,18 +44227,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `mulberry32`
     - **`semaphore`**
       - Cross-plugin:
-        - Imported by: 32 plugins — full list in [`plugins/packages/plugins/semaphore/REFERENCE.md`](../plugins/packages/plugins/semaphore/REFERENCE.md)
+        - Imported by: 29 plugins — full list in [`plugins/packages/plugins/semaphore/REFERENCE.md`](../plugins/packages/plugins/semaphore/REFERENCE.md)
           - `infra` ×9
           - `apps` ×6
           - `debug` ×3
           - `framework` ×3
-          - `packages` ×3
           - `conversations` ×2
           - `database` ×2
           - `config_v2`
           - `integrations/youtube/song-videos`
           - `network/live/resource-runtime`
           - `plugin-meta/barrel-import`
+      - Exemptions:
+        - Exempted by:
+          - `database` (0 debt)
+          - `framework/central-core` (0 debt)
+          - `infra/runtime-profiler` (0 debt)
+          - `network/live/resource-runtime` (0 debt)
       - Core:
         - Exports (types):
           - `LeaseContextRuntime`
@@ -44242,10 +44251,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Semaphore`
           - `SlotHolder`
           - `SlotOptions`
+          - `SlotUse`
         - Exports (values):
           - `createSemaphore`
           - `installLeaseContextRuntime`
-          - `whileWaiting`
+          - `usingSlot`
     - **`shared-work`** — Marks work as SHARED — started by one caller, reused by every later one (a per-process memo, a content-keyed record): sharedWork(name, fn) runs fn in the scope a per-unit meter installed with installSharedWorkScope, so the work is counted under its own name and not into whichever unit happened to start it. Portable: with no scope installed it just runs fn.
       - Cross-plugin:
         - Imported by:
@@ -44580,8 +44590,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FS_WAIT_FLOOR_MS`
           - `FS_WAIT_LAYERS`
           - `fsCallsSince`
-          - `installFsAwait`
           - `installFsCallGuard`
+          - `installFsUse`
           - `installFsWaitMeter`
           - `lstat`
           - `lstatSync`
@@ -44694,7 +44704,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/coalesce.createKeyedCoalescer`
           - `packages/inflight.createInflight`
           - `packages/refcount-hub.createRefcountHub`
-          - `packages/semaphore.whileWaiting`
         - Exports (types):
           - `WatchedMemo`
           - `WatchedMemoOptions`

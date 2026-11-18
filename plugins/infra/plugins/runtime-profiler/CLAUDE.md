@@ -666,6 +666,7 @@ remaining allocations are one flat band array per completed entry span, and what
   - Exempts itself from:
     - `boundaries/no-platform-api` — `server/internal/install.ts` (debt)
     - `timed-fs/no-untimed-fs-read` — `scripts/fs-meter-bench.ts` (sanctioned)
+    - `semaphore/slot-use-site` — `server/internal/install.ts` (sanctioned)
 - Test helpers:
   - Core: `@plugins/infra/plugins/runtime-profiler/core/testing`
     - `installClock`

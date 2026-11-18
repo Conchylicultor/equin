@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import { beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import {
   createSemaphore,
   installLeaseContextRuntime,
@@ -14,6 +14,7 @@ beforeAll(() => {
     current: () => als.getStore(),
   });
 });
+afterAll(() => installLeaseContextRuntime(null));
 
 interface Deferred<T> {
   promise: Promise<T>;
@@ -389,14 +390,14 @@ describe("createWatchedMemo — first settles", () => {
     stop();
   });
 
-  test("a get waiting on pass 1 holds no yieldable gate slot", async () => {
+  test("a get waiting on pass 1 holds no use-scoped gate slot", async () => {
     const { w, memo } = world();
     w.gateNext = true;
     const stop = await memo.watch("k", () => {});
     const gate = createSemaphore(1);
-    const got = gate.run(() => memo.get("k"), { yieldable: true });
+    const got = gate.run(() => memo.get("k"), { heldFor: ["db", "fs"] });
     await settle();
-    // Pass 1 is the watch's work: the reader gave its slot back to wait.
+    // Pass 1 is the watch's work: the reader holds no slot while it waits.
     expect(gate.stats().active).toBe(0);
     let ranBeside = false;
     await gate.run(async () => {

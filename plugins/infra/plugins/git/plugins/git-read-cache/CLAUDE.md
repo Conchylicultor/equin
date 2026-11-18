@@ -161,7 +161,7 @@ value derived from one source resubscribing together, each probing in its
 `revalidate` and again in its loader's `get` — would run N separate probes, each
 holding its own read-admission slot under a host file stall. With `shareProbes`
 the concurrent probes of one `(key, inputKey(input))` are one `inflight` flight:
-the rest join it (no yieldable slot held, the time a `signature-join:<name>`
+the rest join it (no use-scoped slot held, the time a `signature-join:<name>`
 wait). jsonl-events uses it: one chain resolve + `lstat` per conversation
 resubscribe instead of two per derived value.
 

@@ -1,4 +1,11 @@
-import { beforeEach, describe, it, expect } from "bun:test";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  it,
+  expect,
+} from "bun:test";
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { Pool, PoolClient } from "pg";
 import {
@@ -17,6 +24,11 @@ import {
   type EntryContext,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import { recordLoaderReadSet } from "@plugins/framework/plugins/server-core/core";
+import {
+  createSemaphore,
+  installLeaseContextRuntime,
+  type LeaseScope,
+} from "@plugins/packages/plugins/semaphore/core";
 import { getReadSetIndex } from "@plugins/framework/plugins/server-core/core/testing";
 import {
   BACKGROUND_QUERY_MAX,
@@ -351,6 +363,76 @@ describe("pool.query lane partition", () => {
       "tasks",
     ]);
     expect([...(index["bg-resource"] ?? [])]).toEqual(["pushes"]);
+  });
+});
+
+// A live read holds its use-scoped read-admit slot only around its own DB
+// work: each statement attempt (connect + query) — taken before the connection
+// (read-admit → connection, never the reverse). research/2026-11-18-network-read-admit-use-scoped-slots.md
+describe("interactive statements are db uses of a live read's slot", () => {
+  const leaseAls = new AsyncLocalStorage<LeaseScope>();
+  beforeAll(() =>
+    installLeaseContextRuntime({
+      run: (scope, fn) => leaseAls.run(scope, fn),
+      current: () => leaseAls.getStore(),
+    }),
+  );
+  afterAll(() => installLeaseContextRuntime(null));
+  const USES = { heldFor: ["db", "fs"] } as const;
+
+  it("a statement holds the read's slot for its length, and only then", async () => {
+    const fake = createFakePool();
+    const reads = createSemaphore(1);
+    const after = deferred();
+    const read = reads.run(
+      () =>
+        interactiveLoader(async () => {
+          await fake.pool.query("select 1");
+          await after.promise; // not DB work: holds nothing
+        }),
+      USES,
+    );
+    await settle();
+    expect(reads.stats().active).toBe(1);
+    expect(fake.blockedCount()).toBe(1);
+    fake.releaseAll();
+    await settle();
+    expect(reads.stats().active).toBe(0);
+    after.resolve();
+    await read;
+  });
+
+  it("caps a herd of reads' statements at the gate's size", async () => {
+    const fake = createFakePool();
+    const reads = createSemaphore(2);
+    const all = Array.from({ length: 6 }, () =>
+      reads.run(
+        () => interactiveLoader(() => fake.pool.query("select 1")),
+        USES,
+      ),
+    );
+    await settle();
+    expect(fake.peakQueriesInFlight()).toBe(2);
+    await drain(fake);
+    await Promise.all(all);
+    expect(fake.peakQueriesInFlight()).toBe(2);
+    expect(reads.stats()).toMatchObject({ active: 0, queued: 0 });
+  });
+
+  it("an interactive checkout takes no slot: a transaction body is not a leaf use", async () => {
+    const fake = createFakePool();
+    const reads = createSemaphore(1);
+    let client: PoolClient | undefined;
+    await reads.run(
+      () =>
+        interactiveLoader(async () => {
+          client = await fake.pool.connect();
+          expect(reads.stats().active).toBe(0);
+        }),
+      USES,
+    );
+    client!.release();
+    expect(reads.stats()).toMatchObject({ active: 0, queued: 0 });
   });
 });
 

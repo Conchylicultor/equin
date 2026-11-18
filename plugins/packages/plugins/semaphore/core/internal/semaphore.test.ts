@@ -544,3 +544,30 @@ describe("onQueued", () => {
     releaseB();
   });
 });
+
+describe("use-scoped slots without an async context (a browser host)", () => {
+  // No `installLeaseContextRuntime` in this file: no use could find its slot,
+  // so releasing it would void the bound — the body holds it throughout.
+  test("an admitted body holds its slot for its whole run", async () => {
+    const gate = createSemaphore(1);
+    let release!: () => void;
+    const waiting = new Promise<void>((r) => (release = r));
+    const body = gate.run(() => waiting, { heldFor: ["db", "fs"] });
+    await new Promise<void>((r) => setImmediate(r));
+    expect(gate.stats()).toMatchObject({ active: 1 });
+    release();
+    await body;
+    expect(gate.stats()).toMatchObject({ active: 0 });
+  });
+
+  test("a lazy body holds nothing", async () => {
+    const gate = createSemaphore(1);
+    expect(
+      await gate.run(() => Promise.resolve("ran"), {
+        heldFor: ["spawn"],
+        admit: false,
+      }),
+    ).toBe("ran");
+    expect(gate.stats()).toMatchObject({ active: 0, queued: 0 });
+  });
+});

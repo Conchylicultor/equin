@@ -7,7 +7,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import {
   FS_WAIT_FLOOR_MS,
-  installFsAwait,
+  installFsUse,
   installFsWaitMeter,
 } from "@plugins/packages/plugins/timed-fs/core";
 import {
@@ -45,9 +45,10 @@ import {
 import { installInflightJoinMeter } from "@plugins/packages/plugins/inflight/core";
 import {
   installLeaseContextRuntime,
-  whileWaiting,
+  usingSlot,
   type LeaseScope,
 } from "@plugins/packages/plugins/semaphore/core";
+import { installSpawnUse } from "@plugins/infra/plugins/spawn/core";
 
 // Stores the EntryContext by identity: AsyncLocalStorage preserves the same
 // object reference across the entry's async continuation, so a gate awaited deep
@@ -103,13 +104,13 @@ installBackgroundLaneRuntime({
   active: () => backgroundLaneAls.getStore() === true,
 });
 
-// Separate ALS for the semaphore's yieldable-slot scope (packages/semaphore,
-// `lease-scope.ts`): which gate slots the running code holds, so a wait on
-// another caller's work (`whileWaiting` — an inflight join) gives them back for
-// the wait. Without it the live read-admission slot is held while its read
-// only waits, and reads waiting on one slow read stall every unrelated one.
-// Installed here, with the server's other ambient contexts, because a server
-// barrel of the semaphore's own would cycle through server-core.
+// Separate ALS for the semaphore's use-scoped slots (packages/semaphore,
+// `lease-scope.ts`): which gate slots the running code may hold, so a leaf use
+// of a resource (`usingSlot`) holds its live read's slot for exactly its own
+// length and nothing else does. Without it a use-scoped gate holds its slot for
+// the whole body. Installed here, with the server's other ambient contexts,
+// because a server barrel of the semaphore's own would cycle through
+// server-core.
 const leaseAls = new AsyncLocalStorage<LeaseScope>();
 
 installLeaseContextRuntime({
@@ -117,16 +118,13 @@ installLeaseContextRuntime({
   current: () => leaseAls.getStore(),
 });
 
-// A read waiting on the disk waits like one waiting on another caller's work:
-// every awaited timed-fs call gives the read-admit slot back while it is
-// pending. Without it, six reads stalled in their own file calls (main,
-// 2026-11-03: the projects-dir glob, a transcript lstat) hold every slot and
-// each unrelated read queues behind the disk. Measured
-// (resource-runtime/scripts/fs-yield-bench.ts): unrelated reads behind six reads
-// stalled 2 s answered at a median of ~2,050 ms holding the slot, 33–49 ms
-// yielding; a herd of 60 reads × 40 stats showed no thrash (67–113 ms held,
-// 66–69 ms yielded), at most 6 calls in flight.
-installFsAwait((pending) => whileWaiting(pending));
+// A file call is a use of the disk: inside a live read it holds the read-admit
+// slot for its own length (taken back first when the read gave it back), so
+// the gate bounds the reads' concurrent file work and nothing else. A child
+// process is a use of the `read-spawn` gate the same way: waiting on it holds
+// no read-admit slot. research/2026-11-18-network-read-admit-use-scoped-slots.md
+installFsUse((start) => usingSlot("fs", start));
+installSpawnUse((start) => usingSlot("spawn", start));
 
 // The root context, captured here — at module eval, outside every scope above —
 // so `runInRootContext` (a change producer's coalescing timer and flush) runs

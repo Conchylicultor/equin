@@ -1,5 +1,3 @@
-import { whileWaiting } from "@plugins/packages/plugins/semaphore/core";
-
 /**
  * How a join is metered when its caller names no layer of its own: shown from
  * the moment a caller joins, charged when the flight settles. Installed by
@@ -155,11 +153,10 @@ export function createInflight(
       // Join only a flight that satisfies the caller's freshness floor. No floor
       // ⇒ `-Infinity` ⇒ every live flight qualifies (the plain deduplicator).
       if (existing && existing.startedAt >= (opts?.notBefore ?? -Infinity)) {
-        // A joiner only waits on work the starter is doing, so it holds no
-        // yieldable gate slot while it does (`whileWaiting`): a gate full of
-        // joiners would otherwise stall every caller that depends on nothing
-        // here. Without such a slot in its context it is the shared promise.
-        const shared = whileWaiting(existing.promise as Promise<T>);
+        // A joiner only waits on work the starter is doing. Inside a
+        // use-scoped gate slot (the live read gate) a wait holds nothing by
+        // default (`packages/semaphore`), so a gate can never fill with joiners.
+        const shared = existing.promise as Promise<T>;
         const onJoin = opts?.onJoin ?? defaultJoin;
         // Joiner path: announced here, synchronously, in the JOINER's own
         // async context (ambient AsyncLocalStorage attribution lands on the

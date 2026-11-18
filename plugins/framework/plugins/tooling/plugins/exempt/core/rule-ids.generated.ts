@@ -189,6 +189,7 @@ export type ExemptableRuleId =
   | "scroll-safety/no-adhoc-scroll-into-view"
   | "scroll-safety/no-adhoc-scroll-write"
   | "scroll-safety/no-scrolling-focus"
+  | "semaphore/slot-use-site"
   | "server-core/no-process-crash-listener"
   | "shared-work-safety/per-run-memo"
   | "shell-toast/no-direct-custom-toast"
@@ -252,6 +253,7 @@ export type SanctionedOnlyRuleId =
   | "networking/no-page-transport"
   | "networking/no-request-guard-capability"
   | "pane/no-pane-header-bar"
+  | "semaphore/slot-use-site"
   | "user-path/no-unproven-claim";
 
 /** What a `kind: "debt"` exemption may name. */

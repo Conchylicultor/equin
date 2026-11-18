@@ -1,5 +1,3 @@
-import { whileWaiting } from "@plugins/packages/plugins/semaphore/core";
-
 /**
  * A per-key FIFO mutex: `run(key, fn)` starts `fn` only once every earlier
  * `run` for the same key has settled, in the order the calls arrived. Different
@@ -15,8 +13,7 @@ import { whileWaiting } from "@plugins/packages/plugins/semaphore/core";
 export interface KeyedMutex {
   /**
    * Run `fn` once every earlier run for `key` has settled. With `signal`, a
-   * call still WAITING when it aborts rejects with `signal.reason` (once it has
-   * its gate slot back, inside a yieldable one) and
+   * call still WAITING when it aborts rejects with `signal.reason` and
    * never runs `fn` — the calls queued behind it still wait for the runs ahead
    * of it, so giving up never lets two runs of one key overlap. An abort once
    * `fn` has started is `fn`'s own business.
@@ -34,18 +31,14 @@ export interface KeyedMutex {
  * Wait for the runs ahead to settle (`"turn"`), or for `signal` to abort
  * first (`"aborted"`).
  *
- * A queued waiter only waits on work another caller is doing, so it waits
- * through `whileWaiting`: inside a yieldable gate slot (a live read) it gives
- * the slot back for the wait and takes it back at the head of the gate's
- * queue. Waiters that kept their slots could fill the gate while the key's
- * holder had yielded its own on a file wait (timed-fs awaits through
- * `whileWaiting`), and the holder's take-back would wait for a slot none of
- * them frees: on main, 2026-11-17, three `cost-at` reads queued on their
- * conversation's key held the resource's whole read share for good.
+ * A queued waiter holds no use-scoped gate slot while it waits (inside the live
+ * read gate a slot is held only around a DB statement, file call or child
+ * process — `packages/semaphore`), so waiters can never fill the gate in front
+ * of the holder's next use (main, 2026-11-17: three `cost-at` reads queued on
+ * their conversation's key held the resource's whole read share for good).
  */
 async function waitForTurn(
   previous: Promise<void>,
-  contended: boolean,
   signal: AbortSignal | undefined,
 ): Promise<"turn" | "aborted"> {
   if (signal?.aborted) return "aborted";
@@ -59,8 +52,7 @@ async function waitForTurn(
   // ordering only: fn's own outcome goes to its caller alone.
   const wait = Promise.race([previous.then(() => "turn" as const), aborted]);
   try {
-    // An uncontended run has nothing to wait for: it keeps its slot.
-    return await (contended ? whileWaiting(wait) : wait);
+    return await wait;
   } finally {
     if (onAbort) signal!.removeEventListener("abort", onAbort);
   }
@@ -81,7 +73,6 @@ export function createKeyedMutex(): KeyedMutex {
     ): Promise<T> {
       const signal = opts?.signal;
       const ahead = tails.get(key);
-      const contended = ahead !== undefined;
       const previous = ahead ?? Promise.resolve();
       let release!: () => void;
       const tail = new Promise<void>((resolve) => {
@@ -95,14 +86,13 @@ export function createKeyedMutex(): KeyedMutex {
       return (async () => {
         let turn: "turn" | "aborted";
         try {
-          turn = await waitForTurn(previous, contended, signal);
+          turn = await waitForTurn(previous, signal);
         } catch (err) {
           // Never leave the key held by a call that will not run.
           void previous.then(settle);
           throw err;
         }
-        // Aborted while waiting — or while taking its gate slot back after
-        // its turn came: it never runs. The calls behind it wait for the runs
+        // Aborted while waiting (or as its turn came): it never runs. The calls behind it wait for the runs
         // ahead of it, so giving up never lets two runs of one key overlap.
         if (turn === "aborted" || signal?.aborted) {
           void previous.then(settle);

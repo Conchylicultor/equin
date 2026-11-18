@@ -24,4 +24,5 @@ export {
   SpawnFailedError,
 } from "./internal/spawn-captured";
 export { spawnPassthrough, spawnToFile } from "./internal/spawn-passthrough";
+export { installSpawnUse } from "./internal/spawn-use";
 export { getWorktreeRoot, getMainRepoRoot } from "./internal/git-roots";

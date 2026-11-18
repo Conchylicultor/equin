@@ -18,6 +18,7 @@ import { killProcessGroup } from "./group-signal";
 import { trackLiveChild } from "./live-children";
 import { peakFootprintRequest, readResourceUsage } from "./resource-usage";
 import { signalName } from "./signal-code";
+import { runSpawnUse } from "./spawn-use";
 import type { ChildResourceUsage, SpawnOptions, SpawnResult } from "./types";
 
 /**
@@ -120,7 +121,16 @@ function makeResult(
  * artifact only, and this function behaves exactly as it did before bounds
  * existed when that is the arm chosen.
  */
-export async function spawnCaptured(
+export function spawnCaptured(
+  argv: string[],
+  opts: SpawnOptions,
+): Promise<SpawnResult> {
+  // One child, from its temp dir to its reap, is one spawn use: inside a live
+  // read it holds a `read-spawn` slot for exactly that long (`installSpawnUse`).
+  return runSpawnUse(() => spawnCapturedNow(argv, opts));
+}
+
+async function spawnCapturedNow(
   argv: string[],
   opts: SpawnOptions,
 ): Promise<SpawnResult> {

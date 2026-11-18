@@ -92,6 +92,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "packages/plugins/error-subject", id: "packages.error-subject", loader: () => import("@plugins/packages/plugins/error-subject/lint"), dependsOn: [] },
   { pluginPath: "packages/plugins/owned-fd", id: "packages.owned-fd", loader: () => import("@plugins/packages/plugins/owned-fd/lint"), dependsOn: [] },
   { pluginPath: "packages/plugins/proc-rusage", id: "packages.proc-rusage", loader: () => import("@plugins/packages/plugins/proc-rusage/lint"), dependsOn: [] },
+  { pluginPath: "packages/plugins/semaphore", id: "packages.semaphore", loader: () => import("@plugins/packages/plugins/semaphore/lint"), dependsOn: [] },
   { pluginPath: "packages/plugins/timed-fs", id: "packages.timed-fs", loader: () => import("@plugins/packages/plugins/timed-fs/lint"), dependsOn: [] },
   { pluginPath: "packages/plugins/zod-introspect", id: "packages.zod-introspect", loader: () => import("@plugins/packages/plugins/zod-introspect/lint"), dependsOn: [] },
   { pluginPath: "page/plugins/editor", id: "page.editor", loader: () => import("@plugins/page/plugins/editor/lint"), dependsOn: [] },

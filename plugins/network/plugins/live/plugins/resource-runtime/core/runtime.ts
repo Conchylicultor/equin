@@ -2259,6 +2259,15 @@ export interface ResourceRuntimeOptions {
     onWait: (waitMs: number) => void;
   };
   /**
+   * The read-spawn gate's wait observers (see `READ_SPAWN_CONCURRENCY`), the
+   * same shape as `readGateWait`: a read's child process queued for a slot.
+   * server: `gateWaitHooks("read-spawn")`; central / before-injection: omitted.
+   */
+  readSpawnGateWait?: {
+    onQueued: () => () => void;
+    onWait: (waitMs: number) => void;
+  };
+  /**
    * A JOINING full load at the read-path single-flight coalescer (see
    * `getResourceValue`) — a caller that found an existing in-flight loader
    * promise for the same (key, params) — announced as it joins; the returned
@@ -2850,6 +2859,17 @@ export interface ResourceRuntime {
     holders: SlotHolder[];
   };
   /**
+   * Occupancy of the read-spawn gate (see `READ_SPAWN_CONCURRENCY`): the
+   * child processes live reads are running now, in the same shape as
+   * `readGateStats`. server-core registers it as the `read-spawn` gauge.
+   */
+  readSpawnGateStats: () => {
+    active: number;
+    queued: number;
+    max: number;
+    holders: SlotHolder[];
+  };
+  /**
    * Every table a registered resource's routed delivery depends on: one row per
    * route of a ROUTED entry (`routes` / `reach` — every table it may read, since
    * only a change to one of them can reach it). The change-feed cross-checks these against the tables it installed
@@ -3102,24 +3122,34 @@ export const SOCKET_LINGER_MS = 30_000;
 // enough that a hung capture is superseded rather than waited on by every read.
 const WATERMARK_SHARE_MS = 100;
 
-// Read-admission concurrency cap. Bounds how many COLD read-path loads (WS
-// sub-ack + HTTP GET fallback) — and the `revalidate` git/fs spawns they may run
-// first — execute at once, so no fan-out (boot, a post-restart resubscribe herd,
-// or the genuinely-dirty residual after conditional revalidation) can ever
-// stampede more than N cold read-loads simultaneously. Orthogonal to the DB
-// loader gate (that bounds DB connections; this bounds the whole read-path unit,
-// including git/fs-only loaders that issue no query). The push/flush cascade is
-// deliberately NOT gated here — it stays level-parallel, bounded by the DB gate.
-// Tunable; surfaced via `get_runtime_profile`'s read-admit wait spans.
+// Read-admission concurrency cap. A COLD read-path load (WS sub-ack + HTTP GET
+// fallback, a `revalidate` probe) takes a slot to START, and from then on holds
+// it only while it runs a DB statement or a file call — a USE-SCOPED slot
+// (`packages/semaphore`'s `heldFor: ["db", "fs"]`; the DB driver and timed-fs
+// call `usingSlot`). So at most N reads run DB / file work at once (one slot
+// per read, however many statements it runs together), whatever
+// the fan-out (boot, a post-restart resubscribe herd), and a read waiting on
+// anything else — another read's flight, a mutex, a worker thread, a child
+// process, a timer — holds nothing: there is no call site to remember. Before,
+// a slot was held for the whole loader and each kind of wait had to opt out
+// (`whileWaiting`); each restart found the next one (main, 2026-11-18: about
+// half of the holder time was a worker reply, a CLI probe or git).
+// research/2026-11-18-network-read-admit-use-scoped-slots.md
 //
-// The slot counts reads that RUN, not reads that wait: it is `yieldable`, so a
-// read that only waits on work another caller is doing (an `inflight` join —
-// a shared memo's compute, another resource's flight) gives it back for the
-// wait and takes it back ahead of every newcomer. Otherwise six reads waiting
-// on one slow read hold all six slots, and every unrelated read queues behind
-// that one read (main, 2026-11-03: 131 reads waited ~12 s on one transcript).
-// research/2026-11-03-framework-read-admission-waiters-yield.md
+// It IS the bound on interactive DB statements (the DB driver gates only the
+// background lane). The push/flush cascade is deliberately NOT gated here — it
+// stays level-parallel, bounded by the DB gate. Tunable; surfaced via
+// `get_runtime_profile`'s read-admit wait spans.
 const READ_LOAD_CONCURRENCY = 6;
+
+// How many live reads run child processes at once (the `read-spawn` gate): a
+// read's `spawnCaptured` child holds a slot from its temp dir to its reap —
+// one slot per read, however many children that read runs together.
+// Lazy (`admit: false`): a read that spawns nothing never waits on it. It keeps
+// the bound the read gate used to give a reconnect herd's git / CLI spawns by
+// accident of holding its slot throughout — without a 3.7 s CLI probe holding a
+// read-admit slot that DB reads queue behind. Same key share as the read gate.
+const READ_SPAWN_CONCURRENCY = 6;
 
 // The most read-admission slots ONE resource key may hold at once (the gate's
 // `perClass`, each read's class its key): a key at its share has its next read
@@ -3129,11 +3159,9 @@ const READ_LOAD_CONCURRENCY = 6;
 // in readdir and held all 6 slots — 73 reads queued, 121 `reports.list` subs
 // waited 93 s, and the app loaded without data. With a share of half, a hung
 // key leaves the other half to every other key. A hard cap, not a fair-share
-// scheduler: a slot is held for the whole load, so a key that took every free
-// slot while the gate was idle would still starve whoever came next. One gate,
-// so a read waiting on another's work (`whileWaiting`) gives back its key's
-// share with its slot — a second, non-yieldable per-key gate around it could
-// deadlock two keys' reads waiting on each other's queued flights.
+// scheduler. One gate, so a read between uses gives back its key's share with
+// its slot — a second per-key gate held around it could deadlock two keys'
+// reads waiting on each other's queued flights.
 const READ_KEY_SHARE = 3;
 
 // The longest a `readCost: "memory"` read may take before its declaration is
@@ -3294,6 +3322,10 @@ export function createResourceRuntime(
   // `readGateWait` (server: `gateWaitHooks("read-admit")`), so a saturated gate
   // is observable rather than hidden.
   const readLoadGate = createSemaphore(READ_LOAD_CONCURRENCY, {
+    perClass: READ_KEY_SHARE,
+  });
+  // The child processes of live reads (see READ_SPAWN_CONCURRENCY).
+  const readSpawnGate = createSemaphore(READ_SPAWN_CONCURRENCY, {
     perClass: READ_KEY_SHARE,
   });
   // Identity of THIS server boot, stamped on every sub-ack / up-to-date frame.
@@ -4653,8 +4685,10 @@ export function createResourceRuntime(
   }
 
   // Admit one read-path body: a slot of the read-admission gate, within its
-  // key's share (`READ_KEY_SHARE`), yieldable, labelled for `holders` and
-  // charged as `read-admit`. `wanted` is asked when the slot comes; a read
+  // key's share (`READ_KEY_SHARE`), use-scoped (held to start the body, then
+  // only around its DB statements and file calls; its child processes take
+  // `read-spawn` slots instead), labelled for `holders` and charged as
+  // `read-admit`. `wanted` is asked when the slot comes; a read
   // nobody is owed any more rejects with `ReadAbandoned` instead of running
   // (see `readWanted`). A `readCost: "memory"` entry's read runs at once, with
   // no slot: it has no I/O for the gate to bound, and queueing it FIFO behind
@@ -4686,16 +4720,27 @@ export function createResourceRuntime(
       since: Date.now(),
       probe: read.probe,
     });
-    const run = readLoadGate.run(
-      () => {
-        leaveQueue();
-        if (!wanted()) throw new ReadAbandoned(key);
-        return body();
-      },
+    const run = readSpawnGate.run(
+      () =>
+        readLoadGate.run(
+          () => {
+            leaveQueue();
+            if (!wanted()) throw new ReadAbandoned(key);
+            return body();
+          },
+          {
+            onWait: opts.readGateWait?.onWait,
+            onQueued: opts.readGateWait?.onQueued,
+            heldFor: ["db", "fs"],
+            label,
+            class: key,
+          },
+        ),
       {
-        onWait: opts.readGateWait?.onWait,
-        onQueued: opts.readGateWait?.onQueued,
-        yieldable: true,
+        onWait: opts.readSpawnGateWait?.onWait,
+        onQueued: opts.readSpawnGateWait?.onQueued,
+        heldFor: ["spawn"],
+        admit: false,
         label,
         class: key,
       },
@@ -12217,5 +12262,6 @@ export function createResourceRuntime(
     dropPendingPersists,
     handoffState,
     readGateStats: () => readLoadGate.stats(),
+    readSpawnGateStats: () => readSpawnGate.stats(),
   };
 }

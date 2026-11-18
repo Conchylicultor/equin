@@ -1,9 +1,9 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import { test, expect, describe, beforeAll } from "bun:test";
+import { test, expect, describe, afterAll, beforeAll } from "bun:test";
 import { createSemaphore } from "./semaphore";
 import {
   installLeaseContextRuntime,
-  whileWaiting,
+  usingSlot,
   type LeaseScope,
 } from "./lease-scope";
 
@@ -14,6 +14,7 @@ beforeAll(() => {
     current: () => als.getStore(),
   });
 });
+afterAll(() => installLeaseContextRuntime(null));
 
 function deferred<T = void>() {
   let resolve!: (v: T) => void;
@@ -25,295 +26,293 @@ function deferred<T = void>() {
   return { promise, resolve, reject };
 }
 const flush = () => new Promise<void>((r) => setImmediate(r));
+const USES = { heldFor: ["db", "fs"] } as const;
 
-describe("yieldable slots", () => {
-  test("a waiting holder frees its slot; the next caller runs; the holder resumes ahead of newcomers", async () => {
+describe("use-scoped slots", () => {
+  // The class of bug this replaces: a body holding its slot while it waits on
+  // something that is not a resource use (a worker reply, a child process,
+  // another caller's flight, a mutex) — under the old held-by-default slot this
+  // test hangs: the second run never gets the only slot.
+  test("a body awaiting anything but a use holds no slot", async () => {
     const gate = createSemaphore(1);
-    const other = deferred<string>();
-    const order: string[] = [];
-    const a = gate.run(
-      async () => {
-        order.push("a:start");
-        const v = await whileWaiting(other.promise);
-        order.push(`a:resumed:${v}`);
-      },
-      { yieldable: true },
+    const worker = deferred<string>();
+    const waiter = gate.run(() => worker.promise, USES);
+    await flush();
+    expect(gate.stats()).toMatchObject({ active: 0, queued: 0 });
+    expect(await gate.run(() => Promise.resolve("unrelated"))).toBe(
+      "unrelated",
     );
-    await flush();
-    expect(gate.stats().active).toBe(0); // given back while waiting
-    const block = deferred();
-    const b = gate.run(async () => {
-      order.push("b:run");
-      await block.promise;
-    });
-    const c = gate.run(async () => {
-      order.push("c:run");
-    });
-    await flush();
-    expect(order).toEqual(["a:start", "b:run"]);
-    other.resolve("x");
-    await flush();
-    expect(gate.stats().queued).toBe(2); // a (at the head) and c
-    block.resolve();
-    await Promise.all([a, b, c]);
-    expect(order).toEqual(["a:start", "b:run", "a:resumed:x", "c:run"]);
-    expect(gate.stats()).toEqual({ active: 0, queued: 0, max: 1, holders: [] });
+    worker.resolve("reply");
+    expect(await waiter).toBe("reply");
   });
 
-  test("a rejected wait still takes the slot back before rethrowing", async () => {
+  test("a use holds the slot for exactly its length", async () => {
     const gate = createSemaphore(1);
-    const other = deferred();
-    let activeAfter = -1;
-    const a = gate.run(
-      async () => {
-        try {
-          await whileWaiting(other.promise);
-        } finally {
-          activeAfter = gate.stats().active;
-        }
-      },
-      { yieldable: true },
-    );
+    const query = deferred<number>();
+    const after = deferred();
+    const body = gate.run(async () => {
+      const rows = await usingSlot("db", () => query.promise);
+      await after.promise; // not a use: holds nothing
+      return rows;
+    }, USES);
     await flush();
-    other.reject(new Error("boom"));
-    expect(a).rejects.toThrow("boom");
+    expect(gate.stats()).toMatchObject({ active: 1 });
+    let other = false;
+    const next = gate.run(async () => {
+      other = true;
+    });
     await flush();
-    expect(activeAfter).toBe(1);
+    expect(other).toBe(false); // queued behind the running query
+    query.resolve(3);
+    await next;
+    expect(other).toBe(true);
+    expect(gate.stats().active).toBe(0);
+    after.resolve();
+    expect(await body).toBe(3);
+  });
+
+  test("a use started in the body's synchronous start keeps the admitted slot", async () => {
+    const gate = createSemaphore(1);
+    const query = deferred();
+    const body = gate.run(() => usingSlot("fs", () => query.promise), USES);
+    await flush();
+    expect(gate.stats()).toMatchObject({ active: 1, queued: 0 });
+    query.resolve();
+    await body;
     expect(gate.stats().active).toBe(0);
   });
 
-  test("overlapping waits give back once and take back once", async () => {
+  test("a use takes its slot back ahead of newcomers, FIFO among take-backs", async () => {
+    const gate = createSemaphore(1);
+    const order: string[] = [];
+    const blocker = deferred();
+    const waits = [deferred(), deferred()];
+    // Two admitted bodies, each waiting (holding nothing), then making a use.
+    const bodies = ["a", "b"].map((name, i) =>
+      gate.run(async () => {
+        await waits[i]!.promise;
+        await usingSlot("db", async () => {
+          order.push(name);
+        });
+      }, USES),
+    );
+    await flush();
+    // The gate is now taken by an unrelated holder; a newcomer queues.
+    const holder = gate.run(() => blocker.promise);
+    await flush();
+    const newcomer = gate.run(async () => {
+      order.push("newcomer");
+    });
+    waits[0]!.resolve(); // a's take-back queues first...
+    await flush();
+    waits[1]!.resolve(); // ...then b's, both ahead of the newcomer
+    await flush();
+    blocker.resolve();
+    await Promise.all([...bodies, holder, newcomer]);
+    expect(order).toEqual(["a", "b", "newcomer"]);
+  });
+
+  test("concurrent uses of one body share one slot", async () => {
     const gate = createSemaphore(2);
     const x = deferred();
     const y = deferred();
-    const a = gate.run(
-      async () => {
-        await Promise.all([whileWaiting(x.promise), whileWaiting(y.promise)]);
-      },
-      { yieldable: true },
+    const body = gate.run(
+      () =>
+        Promise.all([
+          usingSlot("db", () => x.promise),
+          usingSlot("fs", () => y.promise),
+        ]),
+      USES,
     );
-    await flush();
-    expect(gate.stats().active).toBe(0);
-    x.resolve();
-    await flush();
-    expect(gate.stats().active).toBe(0); // y still pending
-    y.resolve();
-    await a;
-    expect(gate.stats()).toEqual({ active: 0, queued: 0, max: 2, holders: [] });
-  });
-
-  test("a non-yieldable slot is held while its body waits", async () => {
-    const gate = createSemaphore(1);
-    const other = deferred();
-    const a = gate.run(async () => {
-      await whileWaiting(other.promise);
-    });
     await flush();
     expect(gate.stats().active).toBe(1);
-    other.resolve();
-    await a;
-  });
-
-  test("a wait outside any slot is the very promise", () => {
-    const p = Promise.resolve(1);
-    expect(whileWaiting(p)).toBe(p);
-  });
-
-  test("a wait started after the body settled takes nothing", async () => {
-    const gate = createSemaphore(1);
-    const late = deferred();
-    let stray: Promise<unknown> | undefined;
-    await gate.run(
-      async () => {
-        // Detached work the body does not await.
-        setTimeout(() => {
-          stray = whileWaiting(late.promise);
-        }, 0);
-      },
-      { yieldable: true },
-    );
-    await new Promise((r) => setTimeout(r, 5));
+    x.resolve();
+    await flush();
+    expect(gate.stats().active).toBe(1); // y still running
+    y.resolve();
+    await body;
     expect(gate.stats().active).toBe(0);
+  });
+
+  test("a use of a kind the slot is not held for takes nothing from it", async () => {
+    const gate = createSemaphore(1);
+    const child = deferred();
+    const body = gate.run(() => usingSlot("spawn", () => child.promise), USES);
+    await flush();
+    expect(gate.stats().active).toBe(0);
+    child.resolve();
+    await body;
+  });
+
+  test("a lazy gate (admit: false) is taken only by a use", async () => {
+    const spawns = createSemaphore(1);
+    const children = [deferred(), deferred()];
+    const started: number[] = [];
+    const lazy = { heldFor: ["spawn"], admit: false } as const;
+    const bodies = [0, 1].map((i) =>
+      spawns.run(
+        () =>
+          usingSlot("spawn", () => {
+            started.push(i);
+            return children[i]!.promise;
+          }),
+        lazy,
+      ),
+    );
+    // A lazy body that never spawns never waits.
+    expect(await spawns.run(() => Promise.resolve("no child"), lazy)).toBe(
+      "no child",
+    );
+    await flush();
+    expect(started).toEqual([0]); // the second child waits for the slot
+    children[0]!.resolve();
+    await flush();
+    expect(started).toEqual([0, 1]);
+    children[1]!.resolve();
+    await Promise.all(bodies);
+    expect(spawns.stats()).toMatchObject({ active: 0, queued: 0 });
+  });
+
+  test("a use finds the innermost slot held for its kind across nested gates", async () => {
+    const reads = createSemaphore(1);
+    const spawns = createSemaphore(1);
+    const child = deferred();
+    const query = deferred();
+    const body = spawns.run(
+      () =>
+        reads.run(
+          () =>
+            Promise.all([
+              usingSlot("spawn", () => child.promise),
+              usingSlot("db", () => query.promise),
+            ]),
+          USES,
+        ),
+      { heldFor: ["spawn"], admit: false },
+    );
+    await flush();
+    expect(spawns.stats().active).toBe(1);
+    expect(reads.stats().active).toBe(1);
+    query.resolve();
+    await flush();
+    expect(reads.stats().active).toBe(0); // the child holds no read slot
+    expect(spawns.stats().active).toBe(1);
+    child.resolve();
+    await body;
+    expect(spawns.stats().active).toBe(0);
+  });
+
+  test("a nested gated body: the outer holds nothing while it awaits the inner", async () => {
+    const gate = createSemaphore(1);
+    const query = deferred();
+    const outer = gate.run(
+      () => gate.run(() => usingSlot("db", () => query.promise), USES),
+      USES,
+    );
+    await flush();
+    // Only the inner body's use holds the one slot: no self-deadlock.
+    expect(gate.stats()).toMatchObject({ active: 1, queued: 0 });
+    query.resolve();
+    await outer;
+    expect(gate.stats().active).toBe(0);
+  });
+
+  test("a use after the body settled holds nothing", async () => {
+    const gate = createSemaphore(1);
+    let stray: Promise<void> | undefined;
+    const late = deferred();
+    await gate.run(async () => {
+      stray = (async () => {
+        await late.promise;
+        await usingSlot("db", () => Promise.resolve());
+      })();
+    }, USES);
     late.resolve();
     await stray;
-    expect(gate.stats()).toEqual({ active: 0, queued: 0, max: 1, holders: [] });
-  });
-});
-
-describe("nested yieldable slots", () => {
-  test("only the innermost slot is given back; the outer stays held", async () => {
-    const gate = createSemaphore(2);
-    const other = deferred();
-    let activeDuringWait = -1;
-    const outer = gate.run(
-      () =>
-        gate.run(
-          async () => {
-            const wait = whileWaiting(other.promise);
-            activeDuringWait = gate.stats().active;
-            other.resolve();
-            await wait;
-          },
-          { yieldable: true },
-        ),
-      { yieldable: true },
-    );
-    await outer;
-    expect(activeDuringWait).toBe(1); // the outer slot, never both released
-    expect(gate.stats()).toEqual({ active: 0, queued: 0, max: 2, holders: [] });
+    expect(gate.stats()).toMatchObject({ active: 0, queued: 0 });
   });
 
-  test("a yielded slot is not held: its holder leaves `holders` for the wait and returns with the slot", async () => {
+  test("a use the body left open keeps the slot until it ends", async () => {
     const gate = createSemaphore(1);
-    const other = deferred<void>();
-    const resumed = deferred<void>();
-    const finish = deferred<void>();
-    const a = gate.run(
-      async () => {
-        await whileWaiting(other.promise);
-        resumed.resolve();
-        await finish.promise;
-      },
-      { yieldable: true, label: "a" },
-    );
-    await flush();
-    expect(gate.stats().holders).toEqual([]);
-    other.resolve();
-    await resumed.promise;
-    expect(gate.stats().holders.map((h) => h.label)).toEqual(["a"]);
-    finish.resolve();
-    await a;
-    expect(gate.stats().holders).toEqual([]);
+    const checkout = deferred();
+    let open: Promise<void> | undefined;
+    await gate.run(async () => {
+      open = usingSlot("db", () => checkout.promise); // released later
+    }, USES);
+    expect(gate.stats().active).toBe(1);
+    checkout.resolve();
+    await open;
+    expect(gate.stats()).toMatchObject({ active: 0, queued: 0 });
   });
 
-  test("a yielded slot frees its class's share too", async () => {
+  test("a plain slot held around a use cannot deadlock the use-scoped gate", async () => {
+    // The 2026-11-05 shape: a read takes a plain peek gate around a readdir.
+    // The readdir's take-back waits only for a read slot, whose holders are
+    // themselves uses — so it always comes.
+    const reads = createSemaphore(1);
+    const peeks = createSemaphore(1);
+    const disk = [deferred(), deferred()];
+    const done = [0, 1].map((i) =>
+      reads.run(
+        () => peeks.run(() => usingSlot("fs", () => disk[i]!.promise)),
+        USES,
+      ),
+    );
+    await flush();
+    disk[0]!.resolve();
+    disk[1]!.resolve();
+    await Promise.all(done);
+    expect(reads.stats()).toMatchObject({ active: 0, queued: 0 });
+    expect(peeks.stats()).toMatchObject({ active: 0, queued: 0 });
+  });
+
+  test("a use's take-back keeps its class's share", async () => {
     const gate = createSemaphore(2, { perClass: 1 });
-    const other = deferred<void>();
-    const order: string[] = [];
-    const a1 = gate.run(
-      async () => {
-        order.push("a1");
-        await whileWaiting(other.promise);
-        order.push("a1:resumed");
-      },
-      { yieldable: true, class: "a" },
+    const q = [deferred(), deferred()];
+    const waits = [deferred(), deferred()];
+    const ran: number[] = [];
+    const bodies = [0, 1].map((i) =>
+      gate.run(
+        async () => {
+          await waits[i]!.promise;
+          await usingSlot("db", () => {
+            ran.push(i);
+            return q[i]!.promise;
+          });
+        },
+        { ...USES, class: "a" },
+      ),
     );
     await flush();
-    // a1 waits on other work: its class's share is free for a2.
-    const a2 = gate.run(
-      async () => {
-        order.push("a2");
-        other.resolve();
-      },
-      { yieldable: true, class: "a" },
-    );
-    await Promise.all([a1, a2]);
-    expect(order).toEqual(["a1", "a2", "a1:resumed"]);
-  });
-});
-
-describe("a held slot nested in a yieldable one", () => {
-  // The 2026-11-05 file-explorer wedge: each folder-peek read ran inside the
-  // live read gate (yieldable) and took host-fs's peek gate (plain) around a
-  // readdir awaited through whileWaiting. Yielding the read slot while holding
-  // the peek slot let other reads take every read slot and queue for the peek
-  // slot; the readdir's return then waited for a read slot none would free.
-  test("a body holding a plain slot does not give its yieldable slot back", async () => {
-    const reads = createSemaphore(1);
-    const peeks = createSemaphore(1);
-    const io = deferred();
-    let activeDuringWait = -1;
-    const peek = (wait: () => Promise<void>) =>
-      reads.run(() => peeks.run(wait), { yieldable: true });
-    const first = peek(async () => {
-      const pending = whileWaiting(io.promise);
-      activeDuringWait = reads.stats().active;
-      await pending;
-    });
+    waits[0]!.resolve();
+    waits[1]!.resolve();
     await flush();
-    const second = peek(async () => {});
+    expect(ran).toEqual([0]); // class "a" holds its one-slot share
+    q[0]!.resolve();
     await flush();
-    expect(activeDuringWait).toBe(1); // the read slot stayed held
-    io.resolve();
-    await Promise.all([first, second]); // no deadlock: both settle
-    expect(reads.stats()).toEqual({
-      active: 0,
-      queued: 0,
-      max: 1,
-      holders: [],
-    });
-    expect(peeks.stats()).toEqual({
-      active: 0,
-      queued: 0,
-      max: 1,
-      holders: [],
-    });
+    expect(ran).toEqual([0, 1]);
+    q[1]!.resolve();
+    await Promise.all(bodies);
   });
 
-  test("a plain slot pins yieldable slots inside it and around it", async () => {
-    const outer = createSemaphore(2);
-    const plain = createSemaphore(1);
-    const inner = createSemaphore(2);
-    const other = deferred();
-    let during = { outer: -1, inner: -1 };
-    await outer.run(
-      () =>
-        plain.run(() =>
-          inner.run(
-            async () => {
-              const pending = whileWaiting(other.promise);
-              during = {
-                outer: outer.stats().active,
-                inner: inner.stats().active,
-              };
-              other.resolve();
-              await pending;
-            },
-            { yieldable: true },
-          ),
-        ),
-      { yieldable: true },
-    );
-    expect(during).toEqual({ outer: 1, inner: 1 });
-  });
-
-  test("a plain body that rejects stops pinning", async () => {
-    const reads = createSemaphore(1);
-    const peeks = createSemaphore(1);
-    const other = deferred();
-    let activeDuringWait = -1;
-    await reads.run(
+  test("labelled holders are listed only while a use holds the slot", async () => {
+    const gate = createSemaphore(1);
+    const query = deferred();
+    const wait = deferred();
+    const body = gate.run(
       async () => {
-        const failed = peeks.run(() => Promise.reject(new Error("boom")));
-        expect(failed).rejects.toThrow("boom");
-        await failed.catch((err: unknown) => {
-          if (!(err instanceof Error && err.message === "boom")) throw err;
-        });
-        const pending = whileWaiting(other.promise);
-        activeDuringWait = reads.stats().active;
-        other.resolve();
-        await pending;
+        await wait.promise;
+        await usingSlot("db", () => query.promise);
       },
-      { yieldable: true },
+      { ...USES, label: "read x" },
     );
-    expect(activeDuringWait).toBe(0);
-  });
-
-  test("once the plain slot is released, a wait gives the yieldable slot back again", async () => {
-    const reads = createSemaphore(1);
-    const peeks = createSemaphore(1);
-    const other = deferred();
-    let activeDuringWait = -1;
-    await reads.run(
-      async () => {
-        await peeks.run(async () => {});
-        const pending = whileWaiting(other.promise);
-        activeDuringWait = reads.stats().active;
-        other.resolve();
-        await pending;
-      },
-      { yieldable: true },
-    );
-    expect(activeDuringWait).toBe(0);
+    await flush();
+    expect(gate.stats().holders).toEqual([]);
+    wait.resolve();
+    await flush();
+    expect(gate.stats().holders.map((h) => h.label)).toEqual(["read x"]);
+    query.resolve();
+    await body;
+    expect(gate.stats().holders).toEqual([]);
   });
 });

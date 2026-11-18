@@ -1,40 +1,50 @@
 /**
- * The ambient half of a yieldable gate slot: which leases the running code
- * holds, so that code which is about to WAIT on something another caller is
- * doing (`whileWaiting`) can hand them back for the length of the wait.
+ * The ambient half of a use-scoped gate slot (`SlotOptions.heldFor`): which
+ * slots the running code may hold, so that a leaf use of a resource — a DB
+ * statement, a file call, a child process (`usingSlot`) — can hold its slot for
+ * exactly the length of that use, and nothing else can.
  *
- * Why it exists: a gate bounds how much work RUNS at once. A body that holds a
- * slot while it only waits — for an in-flight run another caller started (an
- * `inflight` join), say — is not running, yet it keeps the slot. Enough such
- * waiters fill the gate, and every unrelated caller queues behind work none of
- * them depends on: the latency of one slow run becomes the latency of all. A
- * yieldable slot (`SlotOptions.yieldable`) is released while its holder waits
- * and taken back, ahead of every newcomer, when the wait ends — so the gate
- * counts the bodies that run, not the ones that wait.
+ * Why: a gate bounds how much work RUNS at once. A body that held its slot for
+ * its whole run held it too while it only waited — on another caller's flight,
+ * a mutex, a worker thread's answer, a child process — and enough such waiters
+ * filled the gate in front of unrelated callers (the live read gate, main,
+ * 2026-11-03 → 2026-11-18). The fix used to be one opt-out per kind of wait
+ * (`whileWaiting`), and each restart found the next kind. Now a use-scoped slot
+ * is RELEASED by default and held only inside a declared use: waiting on
+ * anything else holds nothing, with no call site to remember.
  *
  * The scope is carried by an injected context runtime (mirroring the profiler's
  * span context): core stays host-neutral, and every Bun host installs an
  * AsyncLocalStorage-backed one at boot — a worktree server in
  * `runtime-profiler/server`'s install, central in `central-core/bin`. Without
- * it every `whileWaiting` is a passthrough — the slot is simply held. That is
- * a browser host (no async context in a browser yet), so it must not wait on
- * another party inside a gated read at all: its page inputs are read as a
- * state, never awaited (`framework/browser-server`).
+ * one no use could find its slot, so a use-scoped gate falls back to holding
+ * the slot for the whole body (`leaseContextInstalled`) — a browser host.
+ *
+ * research/2026-11-18-network-read-admit-use-scoped-slots.md
  */
 
-/** One held yieldable slot, as `whileWaiting` sees it. */
-export interface YieldableLease {
-  /** The body that took it has settled: nothing to give back or take back. */
+/**
+ * What a use-scoped slot is held for: a LEAF use of a scarce resource — one
+ * whose completion waits on no in-process gate (a DB statement and the pool
+ * connection it runs on, one file call, one child process). Closed, so a new
+ * kind of held work is a reviewed change here; every holder finishing on its
+ * own is what keeps use-scoped gates free of wait-for cycles.
+ */
+export type SlotUse = "db" | "fs" | "spawn";
+
+/** One use-scoped slot in scope, as `usingSlot` sees it. */
+export interface UseLease {
+  /** The body that took it has settled: it holds nothing any more. */
   readonly ended: boolean;
-  /** A wait starts: give the slot back (the first of overlapping waits does). */
-  beginWait(): void;
-  /** A wait ends: take the slot back (the last of overlapping waits does). */
-  endWait(): Promise<void>;
+  /** Whether this slot is held for `use`. */
+  handles(use: SlotUse): boolean;
+  /** Run `start` holding the slot (taken back first when not held). */
+  use<T>(start: () => Promise<T>): Promise<T>;
 }
 
-/** The yieldable leases the current async context holds, outermost first. */
+/** The use-scoped leases the current async context runs under, outermost first. */
 export interface LeaseScope {
-  readonly leases: readonly YieldableLease[];
+  readonly leases: readonly UseLease[];
 }
 
 export interface LeaseContextRuntime {
@@ -42,38 +52,27 @@ export interface LeaseContextRuntime {
   current(): LeaseScope | undefined;
 }
 
-// Default: no ambient context (a browser host, a test that installs none) —
-// `whileWaiting` is a passthrough and a yieldable slot is held throughout.
-let contextRuntime: LeaseContextRuntime = {
-  run: (_scope, fn) => fn(),
-  current: () => undefined,
-};
+let contextRuntime: LeaseContextRuntime | null = null;
 
-export function installLeaseContextRuntime(runtime: LeaseContextRuntime): void {
+/**
+ * Install the async context runtime (a host does it once, at boot), or remove
+ * it with `null` — a test suite installs one for its own tests and removes it
+ * after, so another suite sharing the process sees the host it asked for.
+ */
+export function installLeaseContextRuntime(
+  runtime: LeaseContextRuntime | null,
+): void {
   contextRuntime = runtime;
 }
 
-/**
- * A plain (non-yieldable) slot in the scope: while its body runs, a wait
- * anywhere inside it gives nothing back — whichever yieldable slots sit
- * around or inside it. Giving one back while holding a plain slot is a
- * lock-order inversion: the body keeps the plain slot, others take the
- * yielded one and queue for the plain one (holding theirs), and the take-back
- * waits for a slot none of them will free — the 2026-11-05 file-explorer
- * wedge (a folder peek's plain gate around a readdir, inside the live read
- * gate).
- */
-interface HeldSlot extends YieldableLease {
-  readonly held: true;
-  ended: boolean;
-}
-
-function isHeldSlot(lease: YieldableLease): lease is HeldSlot {
-  return (lease as Partial<HeldSlot>).held === true;
+/** Whether a use can find its slot (an async context runtime is installed). */
+export function leaseContextInstalled(): boolean {
+  return contextRuntime !== null;
 }
 
 /** Run `fn` with `lease` added to the ambient scope (nested gates stack). */
-export function runInLeaseScope<T>(lease: YieldableLease, fn: () => T): T {
+export function runInLeaseScope<T>(lease: UseLease, fn: () => T): T {
+  if (!contextRuntime) return fn();
   const parent = contextRuntime.current();
   return contextRuntime.run(
     { leases: parent ? [...parent.leases, lease] : [lease] },
@@ -82,53 +81,27 @@ export function runInLeaseScope<T>(lease: YieldableLease, fn: () => T): T {
 }
 
 /**
- * Run `fn`, the body of a plain slot, with that slot in the ambient scope
- * (see `HeldSlot`) until it settles. Outside any yieldable scope there
- * is nothing to pin.
+ * Run `start` — ONE leaf use of a resource of kind `use` — holding, for its
+ * length, the innermost live slot in scope held for that kind. A slot given
+ * back is taken back at the head of its gate's queue first (the body was
+ * admitted before every caller queued now). Outside any such scope it simply
+ * runs `start`.
+ *
+ * Only the resource primitives call it (the `semaphore/slot-use-site` lint;
+ * each call site is a sanctioned exemption): `start` must wait on nothing but
+ * the resource itself, or a holder could wait on a gate whose holders wait on
+ * it.
  */
-export async function runHoldingSlot<T>(fn: () => Promise<T>): Promise<T> {
-  const parent = contextRuntime.current();
-  if (!parent) return fn();
-  const slot: HeldSlot = {
-    held: true,
-    ended: false,
-    beginWait() {},
-    endWait: () => Promise.resolve(),
-  };
-  try {
-    return await contextRuntime.run({ leases: [...parent.leases, slot] }, fn);
-  } finally {
-    slot.ended = true;
-  }
-}
-
-/**
- * Await `promise` — work some OTHER caller is doing — without holding a gate
- * slot while it is pending: the innermost yieldable slot the current context
- * holds is released for the wait and taken back (at the head of its gate's
- * queue) before this resolves or rejects. Call it only where the caller merely
- * waits; a caller doing the work itself keeps its slot, which is what the gate
- * bounds. Approximate by design: of overlapping waits in one body the last to
- * end takes the slot back (a branch whose wait ended first runs slotless until
- * then), and detached work that inherited the scope yields its body's slot.
- */
-export function whileWaiting<T>(promise: Promise<T>): Promise<T> {
-  // Only the INNERMOST live lease yields. A body nested in another yieldable
-  // body (a gated read inside a gated read) taking several back at once could
-  // split the free slots one per body — each holding one, waiting for another,
-  // none releasing. Outer leases stay held, as they always were.
-  const leases = contextRuntime.current()?.leases ?? [];
-  // A plain slot held anywhere in the scope pins every yieldable one (`HeldSlot`).
-  if (leases.some((held) => isHeldSlot(held) && !held.ended)) return promise;
-  const lease = leases.findLast((held) => !held.ended);
-  // Nothing held: the very promise, so a caller sharing it keeps its identity.
-  if (!lease) return promise;
-  lease.beginWait();
-  return (async () => {
-    try {
-      return await promise;
-    } finally {
-      await lease.endWait();
+export function usingSlot<T>(
+  use: SlotUse,
+  start: () => Promise<T>,
+): Promise<T> {
+  const leases = contextRuntime?.current()?.leases;
+  if (leases) {
+    for (let i = leases.length - 1; i >= 0; i--) {
+      const lease = leases[i]!;
+      if (!lease.ended && lease.handles(use)) return lease.use(start);
     }
-  })();
+  }
+  return start();
 }

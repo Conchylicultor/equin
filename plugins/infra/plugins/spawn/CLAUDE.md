@@ -320,15 +320,16 @@ presence only — **no re-exports**; import from `core/`.
   - Exports (values):
     - `getMainRepoRoot`
     - `getWorktreeRoot`
+    - `installSpawnUse`
     - `spawnCaptured`
     - `spawnExpectOk`
     - `SpawnFailedError`
     - `spawnPassthrough`
     - `spawnToFile`
 - Cross-plugin:
-  - Imported by: 106 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 107 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework` ×32
-    - `infra` ×31
+    - `infra` ×32
     - `apps` ×9
     - `database` ×5
     - `debug` ×5

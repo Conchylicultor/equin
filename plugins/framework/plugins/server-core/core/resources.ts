@@ -635,6 +635,9 @@ const runtime = createResourceRuntime({
   // Shown while it is still in progress, too, so an open `sub` queued on the
   // gate reads as queued, not as busy with its own work (debug/stuck-spans).
   readGateWait: gateWaitHooks("read-admit"),
+  // A live read's child process queued for a `read-spawn` slot, charged the
+  // same way under its own layer.
+  readSpawnGateWait: gateWaitHooks("read-spawn"),
   // Read-path single-flight coalescing wait (mirrors read-admit): the time a
   // JOINING caller spent awaiting another caller's in-flight loader for the
   // same (key, params), shown while it lasts and charged to the joiner's own
@@ -748,6 +751,7 @@ const runtime = createResourceRuntime({
 // occupancy to `read-admit` span waits. Registered here (not in the runtime)
 // because resource-runtime stays profiler-free; central never registers.
 registerGateGauge("read-admit", () => runtime.readGateStats());
+registerGateGauge("read-spawn", () => runtime.readSpawnGateStats());
 
 export const {
   defineResource,

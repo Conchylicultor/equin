@@ -115,7 +115,7 @@ export function createSignedMemo<T, I = void>(opts: {
    * same `(key, input)` — `inputKey` spells the input — instead of each
    * running its own. For a probe that touches the filesystem and is asked N
    * times at once (every value derived from one source, resubscribing
-   * together): the N become joiners of one probe, holding no yieldable gate
+   * together): the N become joiners of one probe, holding no use-scoped gate
    * slot while they wait and charging the time as a `signature-join:<name>`
    * wait.
    *

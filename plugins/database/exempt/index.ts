@@ -24,4 +24,11 @@ export default [
     reason:
       "PGlite's clock shift rewrites every timestamp column the catalog lists, by name: a generator over the catalog, not a write to a declared table.",
   },
+  {
+    rule: "semaphore/slot-use-site",
+    paths: ["machine/internal/pg-driver.ts"],
+    kind: "sanctioned",
+    reason:
+      "The DB driver is the resource primitive: each statement attempt (connect + query) and each interactive checkout until its release is one `db` use, holding a live read's use-scoped read-admit slot for exactly that long — taken before the connection, so the order is always read-admit → connection.",
+  },
 ] satisfies Exemptions;

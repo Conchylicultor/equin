@@ -20,7 +20,7 @@ export {
   scanGlob,
   scanGlobSync,
   onSlowFsCall,
-  installFsAwait,
+  installFsUse,
   installFsWaitMeter,
   installFsCallGuard,
   FS_WAIT_FLOOR_MS,
