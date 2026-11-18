@@ -7,6 +7,7 @@ export {
   clearUnservedAt,
   currentLinkFor,
   currentLinksDir,
+  durableCheckoutRoot,
   isInSlotPool,
   listSlots,
   mainSlotsDir,

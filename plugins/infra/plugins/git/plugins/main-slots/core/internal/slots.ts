@@ -578,3 +578,17 @@ export async function isInSlotPool(path: string): Promise<boolean> {
   ]);
   return pool !== null && resolved !== null && resolved.startsWith(`${pool}/`);
 }
+
+/**
+ * The spelling of checkout `root` that stays valid for as long as something
+ * launched from it runs. A main SLOT is checked out again (or reclaimed) once
+ * no build or backend holds it, so a path into it, handed to a process that
+ * outlives the backend (an agent's hook commands, its guards root), names a
+ * directory that disappears: it becomes main's `current` link instead
+ * (`current/<main namespace>` — a composition's too: the code is main's), which
+ * always resolves to the slot main serves at that moment. Any other checkout
+ * (a worktree) lives as long as its agents and is returned as is.
+ */
+export async function durableCheckoutRoot(root: string): Promise<string> {
+  return (await isInSlotPool(root)) ? currentLinkFor(MAIN_WORKTREE_NAME) : root;
+}

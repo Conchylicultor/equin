@@ -40,11 +40,7 @@ import { readClaudeUsage } from "./claude-usage";
 import { resolveDisclaimExec } from "./disclaim";
 import { namedClaudeBin } from "./named-claude";
 import { agentBackgroundShell } from "./background-shell";
-import {
-  currentLinkFor,
-  isInSlotPool,
-} from "@plugins/infra/plugins/git/plugins/main-slots/core";
-import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
+import { durableCheckoutRoot } from "@plugins/infra/plugins/git/plugins/main-slots/core";
 import {
   cloneSharedBun,
   sharedBunDir,
@@ -232,7 +228,10 @@ export async function startAgentProcess(
   const namedBun = bun.kind === "cloned" ? bun.path : null;
   const options: AgentLaunchOptions = {
     ...intent,
-    guardsRoot: await launchGuardsRoot(intent.guardsRoot),
+    // A main slot becomes main's `current` link (main-slots
+    // `durableCheckoutRoot`): the agent may outlive the slot. Resolved at
+    // every start, so a relaunch of an older options file gets it too.
+    guardsRoot: await durableCheckoutRoot(intent.guardsRoot),
     claudeBin,
     disclaimExec,
     namedClaudeBin: namedClaude,
@@ -431,19 +430,4 @@ export async function attachRunningAgents(): Promise<void> {
       sdkAgentDaemon.attach({ instance: id, pidFile: agentPidPath(id) }),
     );
   }
-}
-
-/**
- * The checkout the agent's policy hooks run their guards from, as handed to
- * its environment (`EQUIN_GUARDS_ROOT`). A main SLOT (infra/git/main-slots) —
- * what a scratch workspace names when the launching backend runs from one —
- * becomes main's `current` link instead (`current/<main namespace>`; a
- * composition's agent too — the guards are main's code): every hook call then resolves the slot
- * main serves at that moment (and its bootstrap holds it while loading,
- * `guards/bin/bootstrap.ts`), never a slot a later build may have checked out
- * again under an agent that outlives its backend. Resolved at every start,
- * so a relaunch of an older options file gets it too.
- */
-async function launchGuardsRoot(root: string): Promise<string> {
-  return (await isInSlotPool(root)) ? currentLinkFor(MAIN_WORKTREE_NAME) : root;
 }

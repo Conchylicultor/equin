@@ -145,8 +145,10 @@ Who holds a slot:
 - **The agent host** — `agent-boot`, only while it loads. Its CLI's later
   needs live in the agent's own dir (the claude clone, a copy of
   `bin/background-shell`).
-- **Guard hooks** — an agent whose `GUARDS_ROOT` would be a slot gets main's
-  `current` link instead (`runtime-sdk`'s `launchGuardsRoot`); the guard
+- **Agent hooks** — an agent outlives the slot its backend ran from, so every
+  path an agent launch bakes in (its `GUARDS_ROOT`, the stop-gate and
+  compaction hook commands) names main's `current` link instead of a slot
+  (`durableCheckoutRoot`); the guard
   bootstrap holds it (`O_SHLOCK`, kind `guard`) while the hook runs, and its
   main fallback runs main's served slot (the most recent `main-slot-served`
   marker, written for main's own app only).
@@ -347,6 +349,7 @@ a normal wait:
     - `drainSlowFingerprint`
     - `drainSlowMessage`
     - `DrainSlowPayloadSchema`
+    - `durableCheckoutRoot`
     - `holdSlotForLife`
     - `isInSlotPool`
     - `listSlots`
@@ -385,7 +388,9 @@ a normal wait:
     - `runInBuildSlot`
 - Cross-plugin:
   - Imported by:
+    - `conversations/compaction-context`
     - `conversations/runtime-sdk`
+    - `conversations/stop-gate`
     - `framework/cli/build`
     - `infra/git/main-slots/reclaim`
     - `infra/launcher`

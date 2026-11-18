@@ -36,7 +36,10 @@ exits 1 (the PreToolUse command turns any failure into a block, exit 2). A bare
 `bun` used to exit 127 silently on every call in a Claude Code started from a
 shell without mise. `guards:hook-commands-via-launcher` holds
 `.claude/settings.json` to the same spelling. Other plugins' hooks (stop-gate,
-compaction-context) pass `REPO_ROOT` and a repo-relative script.
+compaction-context) pass their backend's checkout — `REPO_ROOT`, or main's
+`current` link when that is a main slot (main-slots `durableCheckoutRoot`: the
+agent outlives the slot, and a reclaimed slot's path made every Stop hook exit
+127) — and a repo-relative script.
 
 Imports only `infra/launcher/env-names` (a portable leaf: the env-name registry): the
 portable `agent-launch` server barrel imports it.

@@ -37632,6 +37632,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `drainSlowFingerprint`
               - `drainSlowMessage`
               - `DrainSlowPayloadSchema`
+              - `durableCheckoutRoot`
               - `holdSlotForLife`
               - `isInSlotPool`
               - `listSlots`
@@ -37670,7 +37671,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `runInBuildSlot`
           - Cross-plugin:
             - Imported by:
+              - `conversations/compaction-context`
               - `conversations/runtime-sdk`
+              - `conversations/stop-gate`
               - `framework/cli/build`
               - `infra/git/main-slots/reclaim`
               - `infra/launcher`
