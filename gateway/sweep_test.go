@@ -70,3 +70,30 @@ func TestPublicHostsNeedADefaultNamespace(t *testing.T) {
 		}
 	}
 }
+
+// Main's backend hosts the main-only jobs, automations and samplers, which run
+// with no browser open: the sweeper never stops it, whatever the public hosts —
+// yet it is not pinned, so a stop on request (the cold-start benchmark, a data
+// reset's hold) still reaches it.
+func TestSweepSparesMain(t *testing.T) {
+	for _, publicHosts := range []string{"", "equin.ai"} {
+		cfg := &Config{
+			SocketsDir:       shortTempDir(t),
+			IdleTimeout:      10 * time.Minute,
+			DefaultNamespace: "website",
+			PublicHosts:      publicHosts,
+			ChildEnv:         testChildEnv(t),
+		}
+		reg := NewRegistry(cfg)
+		mainWt := idleRunningWorktree(t, reg, mainNamespace)
+		if reg.sweepable(mainWt) {
+			t.Fatalf("public hosts %q: main was sweepable after an hour idle", publicHosts)
+		}
+		if mainWt.Pinned() {
+			t.Fatal("main must stay stoppable on request (not Pinned)")
+		}
+		if !reg.sweepable(idleRunningWorktree(t, reg, "att-x")) {
+			t.Fatalf("public hosts %q: an idle agent worktree must still be swept", publicHosts)
+		}
+	}
+}

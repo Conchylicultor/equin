@@ -347,7 +347,8 @@ func serverPathMissing(server string) bool {
 }
 
 // Sweep blocks until ctx is done, periodically tearing down idle backends —
-// except the namespace this gateway serves to the public (Config.publicNamespace).
+// except the always-on ones (Worktree.AlwaysOn: central and main) and the
+// namespace this gateway serves to the public (Config.publicNamespace).
 func (r *Registry) Sweep(ctx context.Context) {
 	t := time.NewTicker(r.cfg.SweepInterval)
 	defer t.Stop()
@@ -569,7 +570,7 @@ func socketStem(name string) string {
 // crucially, it does NOT skip registered worktrees (a registered worktree with
 // a live orphan socket is exactly the leak this fixes).
 //
-// MUST run synchronously before the watcher/sweep/eager-central goroutines
+// MUST run synchronously before the watcher/sweep/eager always-on goroutines
 // start (see main.go) — the "zero backends yet" invariant evaporates the instant
 // the gateway begins spawning, so this is safe only at boot and is never run
 // periodically.

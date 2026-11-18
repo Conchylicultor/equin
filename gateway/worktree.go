@@ -187,7 +187,7 @@ const (
 	// default priority; joining an in-flight background spawn promotes it.
 	StartBrowser
 	// StartDeploy: a deploy asked for this backend (the restart route a build
-	// POSTs, the eager central start) — new code or a new spec, so the one
+	// POSTs, the eager always-on start) — new code or a new spec, so the one
 	// background-priority start that may retry a failed boot (see Ensure).
 	StartDeploy
 )
@@ -1043,10 +1043,28 @@ func (w *Worktree) Pinned() bool {
 	return w.Name == centralNamespace
 }
 
+// AlwaysOn reports whether this worktree's backend is never swept for
+// idleness: the pinned central, and main (mainNamespace), by identity.
+//
+// Main's backend is where the main-only work lives — jobs and their schedules,
+// automations, and the samplers (host admission's owner sampler writes the
+// fleet memory reading every host CPU grant is sized from, leased for 120 s).
+// That work must run with no browser open, exactly like central's. Swept, main
+// stayed down until a request woke it: every `./equin build/check/test` run
+// from a terminal or an agent meanwhile saw admission "unmeasured" and sat on
+// its floor (77 sweeps of main on one Mac between 2026-06-05 and 2026-11-12,
+// ~348 h down in all, median 28 min, longest 66 h; a fresh Ubuntu install had
+// it swept ten minutes after install). Unlike central, main is not Pinned: the
+// cold-start benchmark and a data reset still stop it on request (`/stop`,
+// `?hold=1`).
+func (w *Worktree) AlwaysOn() bool {
+	return w.Pinned() || w.Name == mainNamespace
+}
+
 // ShouldSweep reports whether the sweeper should tear this worktree down now.
 // The decision lives on Worktree because it touches private state.
 func (w *Worktree) ShouldSweep(idleTimeout time.Duration) bool {
-	if w.Pinned() {
+	if w.AlwaysOn() {
 		return false
 	}
 	w.mu.Lock()

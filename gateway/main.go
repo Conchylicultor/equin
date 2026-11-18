@@ -448,7 +448,7 @@ func main() {
 		}
 		// Reap orphan backends left by a prior gateway generation. MUST run here —
 		// after the registry is loaded but BEFORE the watcher/sweep goroutines and
-		// the eager-central spawn below — because it relies on the gateway having
+		// the eager always-on spawn below — because it relies on the gateway having
 		// spawned zero backends yet (so any live socket is a prior-generation
 		// orphan). Do not move it after anything that can start a backend.
 		reconcileOrphanBackends(cfg.SocketsDir, reg)
@@ -508,14 +508,19 @@ func main() {
 		}
 	}
 
-	// Eagerly spawn `central` so plugins that load on boot (auth, secrets) are
-	// ready before the first request lands. PG is up by this point, so
-	// central's plugins can connect immediately. (Adopted: already running —
-	// Ensure returns it.)
-	if wt := reg.Get(centralNamespace); wt != nil {
+	// Eagerly spawn the always-on backends (Worktree.AlwaysOn): `central`, so
+	// plugins that load on boot (auth, secrets) are ready before the first
+	// request lands, and main, whose main-only jobs, automations and samplers
+	// must run with no browser open — the main deployer's boot edge restarts it
+	// only when a build is due. PG is up by this point, so their plugins can
+	// connect immediately. (Adopted: already running — Ensure returns it.)
+	for _, wt := range reg.List() {
+		if !wt.AlwaysOn() {
+			continue
+		}
 		go func() {
-			if _, err := wt.Ensure(ctx, StartDeploy, "eager central start"); err != nil {
-				slog.Warn("eager central spawn failed", "err", err)
+			if _, err := wt.Ensure(ctx, StartDeploy, "eager always-on start"); err != nil {
+				slog.Warn("eager always-on spawn failed", "worktree", wt.Name, "err", err)
 			}
 		}()
 	}
