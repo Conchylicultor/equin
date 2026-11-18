@@ -35,8 +35,6 @@ import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { AmbientField } from "@plugins/ui/plugins/ambient-field/web";
-import { useRef } from "react";
 
 const sendIcon = symbol("arrow-upward");
 
@@ -45,13 +43,11 @@ const RUNNING_DOT = "bg-success";
 
 /**
  * The agent manager's home: the date and a greeting, ONE prompt that starts an
- * agent, and one line of counts under it — nothing else, over a barely-there
- * ambient field that recedes behind the column.
+ * agent, and one line of counts under it — nothing else.
  */
 export function WelcomeView() {
   const conv = useConversations();
   const now = new Date();
-  const column = useRef<HTMLElement>(null);
 
   // The counts describe the user's conversations, so they render only once those
   // are known — a loading read shows nothing, never a zero it would then take
@@ -60,49 +56,46 @@ export function WelcomeView() {
     // A size container, so the column's offset is a share of the PANE's height
     // (`cqh`), not the browser viewport's — in a small window (a desktop
     // window, a split) a `vh` offset would push the prompt to the pane's foot.
-    <AmbientField recedeBehind={column}>
-      <Scroll className="h-full [container-type:size]">
-        <Stack
-          ref={column}
-          gap="xl"
-          // eslint-disable-next-line spacing/no-adhoc-spacing -- the column sits a little above the middle of the pane, where the eye lands, and stays put while the prompt grows
-          className="mx-auto w-full max-w-2xl px-xl pt-[28cqh] pb-2xl"
-        >
-          <Stack gap="xs">
-            <Text as="div" variant="caption" tone="faint">
-              {now.toLocaleDateString(undefined, {
-                weekday: "long",
-                month: "long",
-                day: "numeric",
-              })}
-            </Text>
-            <Text as="h1" variant="display" className="tracking-tight">
-              {greeting(now)}
-            </Text>
-          </Stack>
-          <Stack gap="lg">
-            <HomePrompt />
-            {matchResource(conv, {
-              loading: () => null,
-              error: (error) => (
-                <ResourceErrorInline
-                  variant="inline"
-                  subject="your conversations"
-                  error={error}
-                  refetch={conv.refetch}
-                />
-              ),
-              ready: (data) => (
-                <Counts
-                  {...partition(data.active)}
-                  total={data.active.length + data.totalGoneCount}
-                />
-              ),
+    <Scroll className="h-full [container-type:size]">
+      <Stack
+        gap="xl"
+        // eslint-disable-next-line spacing/no-adhoc-spacing -- the column sits a little above the middle of the pane, where the eye lands, and stays put while the prompt grows
+        className="mx-auto w-full max-w-2xl px-xl pt-[28cqh] pb-2xl"
+      >
+        <Stack gap="xs">
+          <Text as="div" variant="caption" tone="faint">
+            {now.toLocaleDateString(undefined, {
+              weekday: "long",
+              month: "long",
+              day: "numeric",
             })}
-          </Stack>
+          </Text>
+          <Text as="h1" variant="display" className="tracking-tight">
+            {greeting(now)}
+          </Text>
         </Stack>
-      </Scroll>
-    </AmbientField>
+        <Stack gap="lg">
+          <HomePrompt />
+          {matchResource(conv, {
+            loading: () => null,
+            error: (error) => (
+              <ResourceErrorInline
+                variant="inline"
+                subject="your conversations"
+                error={error}
+                refetch={conv.refetch}
+              />
+            ),
+            ready: (data) => (
+              <Counts
+                {...partition(data.active)}
+                total={data.active.length + data.totalGoneCount}
+              />
+            ),
+          })}
+        </Stack>
+      </Stack>
+    </Scroll>
   );
 }
 

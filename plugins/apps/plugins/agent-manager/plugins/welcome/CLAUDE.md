@@ -11,7 +11,7 @@
   - Contributes:
     - `Pane.Register` "welcome"
     - `Shell.Sidebar` "New conversation"
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/kept-state` ×4
     - `primitives/pane` ×3
     - `network/live/live-state` ×2
@@ -32,7 +32,6 @@
     - `primitives/launch.useTaskLaunch`
     - `primitives/text-editor/composer.ComposerField`
     - `shell.Shell`
-    - `ui/ambient-field.AmbientField`
   - Exports (values): `welcomePane`
 - Cross-plugin:
   - Uses tokens:

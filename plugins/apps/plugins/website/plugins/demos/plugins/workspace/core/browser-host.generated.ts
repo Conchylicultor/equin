@@ -865,7 +865,6 @@ export const browserHost = {
     "tasks.task-track",
     "tasks.tasks-core",
     "tasks.worktree-identity",
-    "ui.ambient-field",
     "ui.breadcrumb-separator",
     "ui.breadcrumb-separator.chevron",
     "ui.breadcrumb-separator.slash",

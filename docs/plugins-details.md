@@ -740,7 +740,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `Pane.Register` "welcome"
               - `Shell.Sidebar` "New conversation"
-            - Uses: 28 symbols — full list in [`plugins/apps/plugins/agent-manager/plugins/welcome/REFERENCE.md`](../plugins/apps/plugins/agent-manager/plugins/welcome/REFERENCE.md)
+            - Uses: 27 symbols — full list in [`plugins/apps/plugins/agent-manager/plugins/welcome/REFERENCE.md`](../plugins/apps/plugins/agent-manager/plugins/welcome/REFERENCE.md)
               - `primitives/kept-state` ×4
               - `primitives/pane` ×3
               - `network/live/live-state` ×2
@@ -761,7 +761,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/launch.useTaskLaunch`
               - `primitives/text-editor/composer.ComposerField`
               - `shell.Shell`
-              - `ui/ambient-field.AmbientField`
             - Exports (values): `welcomePane`
           - Cross-plugin:
             - Uses tokens:
@@ -65215,7 +65214,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `AmbientField`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/color-palette --primary-text`
-        - Imported by: `apps/agent-manager/welcome`
     - **`breadcrumb-separator`** — Breadcrumb-separator region (chevron / slash). Contributes its variant-region host into BreadcrumbSlots.Separator.
       - Web:
         - Slots: `BreadcrumbSeparator.Variant`
