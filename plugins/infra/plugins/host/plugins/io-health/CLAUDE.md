@@ -26,7 +26,9 @@ in a file nobody read.
     while it holds. Every threshold and the data it was chosen from is on
     `IO_HEALTH_THRESHOLDS` (`core/internal/detect.ts`).
   - `hostIoHealth` — the `host.io-health` live value (`needsMachine`): the
-    monitor missing, or its newest tick + root flag + active findings.
+    monitor unsupported on this OS (the monitor's `platforms`, with why —
+    the row is `not-applicable`), missing, or its newest tick + root flag +
+    active findings.
   - `HOST_IO_DEGRADED_KIND` — the report kind; its payload is the finding.
 - `machine/` — follows the log: a `writesWhileOpen` file watcher on the log
   file itself (kqueue: every append heard in milliseconds; no timer — the

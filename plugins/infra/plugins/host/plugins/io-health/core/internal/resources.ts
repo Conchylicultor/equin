@@ -19,6 +19,17 @@ export type LatestTick = z.infer<typeof LatestTickSchema>;
 export const IoHealthSchema = z.discriminatedUnion("monitor", [
   /** The monitor's log does not exist: it was never installed on this machine. */
   z.object({ monitor: z.literal("missing") }),
+  /**
+   * The monitor does not exist on this OS (its login service's `platforms`):
+   * the disk is not measured here, and nothing can be installed to change that.
+   */
+  z.object({
+    monitor: z.literal("unsupported"),
+    /** `process.platform` of the computer. */
+    platform: z.string(),
+    /** Why, in a user's words. */
+    reason: z.string(),
+  }),
   z.object({
     monitor: z.literal("present"),
     /** The newest tick in the log. Its age says whether the monitor still runs. */

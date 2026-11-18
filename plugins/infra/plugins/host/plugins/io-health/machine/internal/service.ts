@@ -7,7 +7,15 @@ import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { createCoalescer } from "@plugins/packages/plugins/coalesce/core";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { monitorLogsDir } from "@plugins/debug/data-dirs";
-import { FS_LATENCY_LOG_NAME, HOST_IO_DEGRADED_KIND } from "../../core";
+import {
+  FS_LATENCY_LOG_NAME,
+  HOST_IO_DEGRADED_KIND,
+  type IoHealth,
+} from "../../core";
+import {
+  FS_LATENCY_MONITOR_PLATFORMS,
+  FS_LATENCY_MONITOR_PLATFORM_REASON,
+} from "@plugins/infra/plugins/host/plugins/io-health/plugins/monitor/core";
 import { readLogTail } from "./log-tail";
 import { createIoHealthState } from "./io-health-state";
 
@@ -20,6 +28,21 @@ export const fsLatencyLogWatcher = defineFileWatcher({
   // watch of its folder was 3–14 s late while fseventsd was loaded.
   writesWhileOpen: true,
 });
+
+/**
+ * The value on a computer whose OS the monitor does not exist on (its login
+ * service's `platforms`), or null where it does: there is no log to follow,
+ * and no `./equin start` will ever write one, so the row says the disk is not
+ * measured here rather than that its monitor is missing.
+ */
+export const unsupportedHere: IoHealth | null =
+  FS_LATENCY_MONITOR_PLATFORMS.includes(process.platform)
+    ? null
+    : {
+        monitor: "unsupported",
+        platform: process.platform,
+        reason: FS_LATENCY_MONITOR_PLATFORM_REASON,
+      };
 
 const logPath = (): string => monitorLogsDir.file(FS_LATENCY_LOG_NAME);
 
@@ -59,7 +82,7 @@ let watcher: FileWatcher | null = null;
  * health row reads as "stopped".
  */
 export async function startIoHealth(): Promise<void> {
-  if (watcher) return;
+  if (watcher || unsupportedHere !== null) return;
   // Following a file in a missing directory fails.
   await monitorLogsDir.ensure();
   watcher = await fsLatencyLogWatcher.start({

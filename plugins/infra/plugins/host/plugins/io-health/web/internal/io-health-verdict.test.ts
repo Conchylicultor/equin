@@ -37,6 +37,26 @@ describe("Disk I/O row verdict", () => {
     expect(v.status.state).toBe("attention");
   });
 
+  test("an OS without the monitor is not applicable, says why, and never asks to install it", () => {
+    const v = ioHealthVerdict(
+      {
+        status: "ready",
+        refetch,
+        data: {
+          monitor: "unsupported",
+          platform: "linux",
+          reason: "the disk-speed check reads macOS's own disk statistics",
+        },
+      },
+      AT,
+    );
+    expect(v.status.state).toBe("not-applicable");
+    const summary = "summary" in v.status ? v.status.summary : "";
+    expect(summary).toStartWith("Not measured on Linux: ");
+    expect(summary).not.toContain("./equin start");
+    expect(v.nextChangeAt).toBeNull();
+  });
+
   test("healthy until the newest tick goes stale, then attention", () => {
     const fresh = ioHealthVerdict(
       { status: "ready", refetch, data: present([]) },

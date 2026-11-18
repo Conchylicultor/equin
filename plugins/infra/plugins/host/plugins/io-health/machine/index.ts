@@ -9,7 +9,7 @@ import {
 
 export default {
   description:
-    "Host file-I/O health, desktop-only: follows the fs-latency monitor's log (fs-latency.jsonl in the monitors' log dir, a file watcher — no timer) through the io-health detector, serves the result as the host.io-health live value (the monitor missing, or its newest tick and every finding holding over the trailing hour), and on main files each finding as a host-io-degraded report when raised and every hour it holds.",
+    "Host file-I/O health, desktop-only: follows the fs-latency monitor's log (fs-latency.jsonl in the monitors' log dir, a file watcher — no timer) through the io-health detector, serves the result as the host.io-health live value (the monitor unsupported on this OS — its login service's platforms, so no log is followed —, missing, or its newest tick and every finding holding over the trailing hour), and on main files each finding as a host-io-degraded report when raised and every hour it holds.",
   register: [fsLatencyLogWatcher],
   contributions: [hostIoDegradedKind, ...hostIoHealthServed.declare],
   onReady: async () => {

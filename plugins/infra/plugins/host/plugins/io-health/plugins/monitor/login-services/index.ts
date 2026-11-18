@@ -9,7 +9,10 @@ import { builtFile } from "@plugins/infra/plugins/deps/plugins/build/deps";
 import { monitorLogsDir } from "@plugins/debug/data-dirs";
 import { MONITOR_INTERVAL_MS } from "@plugins/infra/plugins/host/plugins/io-health/core";
 import { fsLatencyMonitorBinary } from "../deps";
-import { FS_LATENCY_MONITOR_LABEL } from "../core";
+import {
+  FS_LATENCY_MONITOR_LABEL,
+  FS_LATENCY_MONITOR_PLATFORMS,
+} from "../core";
 
 export const fsLatencyMonitorService = defineLoginService({
   id: FS_LATENCY_MONITOR_LABEL,
@@ -24,7 +27,8 @@ export const fsLatencyMonitorService = defineLoginService({
   session: "background",
   schedule: { everySeconds: MONITOR_INTERVAL_MS / 1000 },
   // IOKit statistics, vfs.vnstats, darwinbg: there is nothing to read elsewhere.
-  platforms: ["darwin"],
+  // The same list tells the Disk I/O row where to expect the monitor's log.
+  platforms: FS_LATENCY_MONITOR_PLATFORMS,
   dep: fsLatencyMonitorBinary,
   executable: {
     name: "fs-latency-monitor",

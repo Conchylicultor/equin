@@ -1,6 +1,6 @@
 import { serveValue } from "@plugins/network/plugins/live/machine";
 import { hostIoHealth } from "../../core";
-import { ioHealthState, refreshIoHealth } from "./service";
+import { ioHealthState, refreshIoHealth, unsupportedHere } from "./service";
 
 // External: the truth is the monitor's log, which no change feed observes.
 // The state notifies after each refresh that changed the value (one per tick
@@ -10,6 +10,8 @@ export const hostIoHealthServed = serveValue(hostIoHealth, {
   source: "external",
   changes: "notified",
   loader: async () => {
+    // No monitor on this OS: a constant, never refreshed.
+    if (unsupportedHere !== null) return unsupportedHere;
     const v = ioHealthState.current();
     if (v !== null) return v;
     // Subscribed before onReady's first read finished: read now.

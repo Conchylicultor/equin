@@ -38339,6 +38339,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Core:
                 - Exports (values):
                   - `FS_LATENCY_MONITOR_LABEL`
+                  - `FS_LATENCY_MONITOR_PLATFORM_REASON`
+                  - `FS_LATENCY_MONITOR_PLATFORMS`
                   - `START_MONITOR_COMMAND`
         - **`machine-sleep`** — useSleepNow(): the machine.sleep live value (and useSleepNowForFold: the reading as op-log's `sleepNow` fold parameter, unknown while loading or where the computer cannot be read) — the box's sleep clock, so a live surface can count a nap as asleep rather than as work. The machine's sleep clock, read and published: publishSleepReading() re-reads it and tells its listeners only when it changed — called by an existing periodic observer, so a wake reaches the browser without a poller of its own — with currentSleepReading() and onSleepReadingChanged() for the machine half that serves it as the machine.sleep live value, sleptDuring(start, end) — the sleep this process saw inside a wall-clock span — awakeSpanStart(end, awakeMs) — the wall-clock instant that much awake time before end, stepping over those sleeps — setAwakeTimeout(fn, awakeMs), a timer that a sleep does not spend, and wakeBefore(at, within) — the sleep whose wake came just before an instant, so what a wake explains can say the machine had just woken.
           - Server:

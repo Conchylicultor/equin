@@ -23,6 +23,20 @@ export interface IoHealthVerdict {
 /** The read the row folds: `useLive(hostIoHealth)`'s result. */
 export type IoHealthRead = ResourceResult<IoHealth> | ResourceUnavailable;
 
+/** `process.platform` as a person names the OS. */
+function osName(platform: string): string {
+  switch (platform) {
+    case "linux":
+      return "Linux";
+    case "darwin":
+      return "macOS";
+    case "win32":
+      return "Windows";
+    default:
+      return platform;
+  }
+}
+
 function clock(at: number): string {
   return new Date(at).toLocaleTimeString([], {
     hour: "2-digit",
@@ -35,6 +49,9 @@ function clock(at: number): string {
  *
  * - loading → `unknown` ("Checking…"), never green before the read lands;
  * - unavailable (no computer behind this host) → `not-applicable`;
+ * - the monitor not existing on this OS (its login service's `platforms`) →
+ *   `not-applicable`, saying why: nothing is wrong and nothing can be
+ *   installed, so it is not counted;
  * - the monitor's log missing → `attention`: disk health is not watched at
  *   all, which must not read as "all good";
  * - its newest tick older than {@link MONITOR_STALE_MS} → `attention`: the
@@ -67,6 +84,15 @@ export function ioHealthVerdict(
       break;
   }
   const v = read.data;
+  if (v.monitor === "unsupported") {
+    return {
+      status: {
+        state: "not-applicable",
+        summary: `Not measured on ${osName(v.platform)}: ${v.reason}`,
+      },
+      nextChangeAt: null,
+    };
+  }
   if (v.monitor === "missing") {
     return {
       status: {
