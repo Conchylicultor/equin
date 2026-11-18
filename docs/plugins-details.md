@@ -40529,6 +40529,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `Aggregate`
           - `BootHookScope`
+          - `ContextRunner`
           - `EntryContext`
           - `EntryCost`
           - `FlightSpan`
@@ -40562,6 +40563,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `__pushBand`
           - `beginDeferredWait`
           - `beginWait`
+          - `captureContext`
           - `captureFlightWindow`
           - `currentCallerKind`
           - `currentEntryLabel`
@@ -40569,11 +40571,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `gateWaitHooks`
           - `getRuntimeProfile`
           - `getSelfMeter`
+          - `installAsyncContextRuntime`
           - `installBackgroundLaneRuntime`
           - `installBootHookScopeRuntime`
           - `installLoaderReadSetSink`
           - `installProfilingSuppressionRuntime`
-          - `installRootContextRuntime`
           - `installSpanContextRuntime`
           - `loopStallsSince`
           - `markWait`
@@ -44042,7 +44044,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `writeAllSync`
     - **`coalesce`** — Trigger coalescer: createCoalescer / createKeyedCoalescer run a reaction at most once at a time per key and fold every trigger that lands mid-run into ONE trailing run (its items merged), so however many triggers arrive the work is bounded to one running plus one pending per key — and a trigger never joins a run that started before it.
       - Core:
-        - Uses: `infra/runtime-profiler.beginWait`
+        - Uses:
+          - `infra/runtime-profiler.beginWait`
+          - `infra/runtime-profiler.captureContext`
+          - `infra/runtime-profiler.ContextRunner`
         - Exports (types):
           - `Coalescer`
           - `CoalescerStats`

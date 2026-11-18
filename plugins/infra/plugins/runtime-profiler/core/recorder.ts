@@ -1000,19 +1000,40 @@ export function runInBackgroundLane<T>(fn: () => T): T {
   return backgroundLaneRuntime.run(fn);
 }
 
-// --- Root-context runtime ---
+// --- Async-context runtime (root, capture) ---
 // Same injection shape as the runtimes above, so core stays Node-free; the
-// server installs one that runs `fn` in an AsyncLocalStorage snapshot taken at
-// boot, outside every request, loader, lane and suppression scope.
+// server installs one over AsyncLocalStorage: `root` runs `fn` in a snapshot
+// taken at boot, outside every request, loader, lane and suppression scope;
+// `capture` snapshots the caller's context now, to run work in it later.
 
-interface RootContextRuntime {
-  run<T>(fn: () => T): T;
+/** Runs a function in the async context it was captured in. */
+export type ContextRunner = <T>(fn: () => T) => T;
+
+interface AsyncContextRuntime {
+  root: ContextRunner;
+  capture(): ContextRunner;
 }
 
-let rootContextRuntime: RootContextRuntime = { run: (fn) => fn() };
+const runAsIs: ContextRunner = (fn) => fn();
 
-export function installRootContextRuntime(rt: RootContextRuntime): void {
-  rootContextRuntime = rt;
+let asyncContextRuntime: AsyncContextRuntime = {
+  root: runAsIs,
+  capture: () => runAsIs,
+};
+
+export function installAsyncContextRuntime(rt: AsyncContextRuntime): void {
+  asyncContextRuntime = rt;
+}
+
+/**
+ * The caller's async context, captured now: the returned runner runs a
+ * function in it later, from wherever it is called — so work deferred on
+ * someone's behalf (a coalescer's trailing run, started by the settle of the
+ * run before it) is attributed to whoever asked for it, never to the context
+ * that happened to start it. A host with no ambient context runs `fn` as is.
+ */
+export function captureContext(): ContextRunner {
+  return asyncContextRuntime.capture();
 }
 
 /**
@@ -1023,7 +1044,7 @@ export function installRootContextRuntime(rt: RootContextRuntime): void {
  * context (no runtime installed) runs `fn` as is.
  */
 export function runInRootContext<T>(fn: () => T): T {
-  return rootContextRuntime.run(fn);
+  return asyncContextRuntime.root(fn);
 }
 
 /**

@@ -24,7 +24,7 @@ import {
   installSpanContextRuntime,
   installProfilingSuppressionRuntime,
   installBackgroundLaneRuntime,
-  installRootContextRuntime,
+  installAsyncContextRuntime,
   installBootHookScopeRuntime,
   installLoaderReadSetSink,
   recordEntrySpan,
@@ -142,10 +142,14 @@ installBootHookScopeRuntime({
 
 // The root context, captured here — at module eval, outside every scope above —
 // so `runInRootContext` (a change producer's coalescing timer and flush) runs
-// there whoever triggered it.
+// there whoever triggered it. `captureContext` snapshots the caller's own, for
+// work run later on its behalf (a coalescer's trailing run).
 const inRoot = AsyncLocalStorage.snapshot();
 
-installRootContextRuntime({ run: (fn) => inRoot(fn) });
+installAsyncContextRuntime({
+  root: (fn) => inRoot(fn),
+  capture: () => AsyncLocalStorage.snapshot(),
+});
 
 // Each finished loader entry hands its captured tables to server-core's
 // runtime-owned read-set — what the route drift guard (A8 / D5) and the persisted

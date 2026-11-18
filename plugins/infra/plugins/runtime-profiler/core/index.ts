@@ -16,7 +16,8 @@ export {
   installSpanContextRuntime,
   installProfilingSuppressionRuntime,
   installBackgroundLaneRuntime,
-  installRootContextRuntime,
+  installAsyncContextRuntime,
+  captureContext,
   runWithoutProfiling,
   runInBackgroundLane,
   runInRootContext,
@@ -41,6 +42,7 @@ export {
   __pushBand,
 } from "./recorder";
 export type {
+  ContextRunner,
   BootHookScope,
   RunTrackedOptions,
   OriginClass,

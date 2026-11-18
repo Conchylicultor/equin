@@ -1,4 +1,8 @@
-import { beginWait } from "@plugins/infra/plugins/runtime-profiler/core";
+import {
+  beginWait,
+  captureContext,
+  type ContextRunner,
+} from "@plugins/infra/plugins/runtime-profiler/core";
 
 /** Totals since the coalescer was created, across every key. */
 export interface CoalescerStats {
@@ -58,6 +62,16 @@ interface Generation<E> {
   waiters: Waiter[];
   /** `settled()` callers: resolved when this run settles, whatever its outcome. */
   settledWaiters: (() => void)[];
+  /**
+   * The context the run starts in: that of the trigger that asked for it
+   * first. A run asked for while the key is idle starts inline, in its
+   * caller's context already; one folded behind a run in flight is started by
+   * that run's settle, whose context belongs to whoever started THAT run — a
+   * boot hook's first pass would own the trailing pass a file change asked
+   * for (git-watcher, 2026-11-18: `git-watcher:recompute` reported as work
+   * its onReady left running).
+   */
+  inContext: ContextRunner;
 }
 
 interface Slot<E> {
@@ -116,7 +130,12 @@ export function createKeyedCoalescer<K, E = never>(opts: {
     }
     let gen = slot.pending;
     if (gen === null) {
-      gen = { items: [], waiters: [], settledWaiters: [] };
+      gen = {
+        items: [],
+        waiters: [],
+        settledWaiters: [],
+        inContext: slot.running ? captureContext() : runInline,
+      };
       slot.pending = gen;
     } else {
       stats.folded += 1;
@@ -142,7 +161,8 @@ export function createKeyedCoalescer<K, E = never>(opts: {
     // count), so only a thenable is async work.
     let result: unknown;
     try {
-      result = opts.run(key, gen.items);
+      const items = gen.items;
+      result = gen.inContext(() => opts.run(key, items));
     } catch (err) {
       settle(key, slot, gen, { failed: true, error: err });
       return;
@@ -192,7 +212,8 @@ export function createKeyedCoalescer<K, E = never>(opts: {
       // Idle, this very call starts the run: it is this caller's work (it
       // runs in this context, its spans nest here) — a starter waits for
       // nothing, as `inflight`'s. Otherwise it is folded behind a run already
-      // in flight, and runs when THAT settles, in its context: a join.
+      // in flight, and runs when THAT settles (in the context of the trigger
+      // that asked for it first): a join.
       const startsHere = slots.get(key)?.running === false;
       start(key);
       return startsHere ? done : joined(done);
@@ -217,6 +238,8 @@ export function createKeyedCoalescer<K, E = never>(opts: {
     stats: () => ({ ...stats }),
   };
 }
+
+const runInline: ContextRunner = (fn) => fn();
 
 function isThenable(v: unknown): v is PromiseLike<unknown> {
   return (

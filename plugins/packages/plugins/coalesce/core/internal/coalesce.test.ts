@@ -1,6 +1,7 @@
-import { describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, test } from "bun:test";
 import { AsyncLocalStorage } from "node:async_hooks";
 import {
+  installAsyncContextRuntime,
   installSpanContextRuntime,
   onSlowSpan,
   recordEntrySpan,
@@ -262,5 +263,40 @@ describe("waits on another caller's run", () => {
     });
     const waits = await waitsOfCaller(c, "starting-reader");
     expect(waits["coalesce:probe-own"]).toBeUndefined();
+  });
+});
+
+describe("the context a run starts in", () => {
+  const who = new AsyncLocalStorage<string>();
+  installAsyncContextRuntime({
+    root: (fn) => fn(),
+    capture: () => AsyncLocalStorage.snapshot(),
+  });
+  afterAll(() => {
+    installAsyncContextRuntime({
+      root: (fn) => fn(),
+      capture: () => (fn) => fn(),
+    });
+  });
+
+  test("a trailing run starts in the context of the trigger that asked for it first, never the previous run's", async () => {
+    const gate = deferred();
+    const startedIn: (string | undefined)[] = [];
+    const c = createCoalescer<number>({
+      name: "probe-context",
+      run: async (items) => {
+        startedIn.push(who.getStore());
+        if (items[0] === 0) await gate.promise;
+      },
+    });
+    // The first run is the boot hook's; the triggers landing mid-run are a
+    // file change's, then a later caller's (folded into the same run).
+    const first = who.run("boot-hook", () => c.run([0]));
+    who.run("file-change", () => c.trigger([1]));
+    who.run("later", () => c.trigger([2]));
+    gate.resolve();
+    await first;
+    await c.idle();
+    expect(startedIn).toEqual(["boot-hook", "file-change"]);
   });
 });

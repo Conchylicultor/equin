@@ -453,6 +453,12 @@ What a flagged site becomes:
   run, and everything it starts, runs outside the hook's scope. The reason is the
   justification a reviewer reads.
 
+Work deferred on someone's behalf runs in the asker's context, not whichever one
+starts it: `captureContext()` snapshots it, and `packages/coalesce` starts a
+trailing run in the context of the trigger that asked for it first — otherwise a
+file change folded behind a boot hook's awaited first pass would run as the
+hook's leftover work.
+
 Why runtime and not a lint rule: the launch is usually in a helper in another file
 (`startXWatcher` → `void runTracked(…)`), and the type-check lint sees other files as
 `.d.ts`, so no rule can follow a hook into its callees. Work started after the hook
@@ -611,6 +617,7 @@ remaining allocations are one flat band array per completed entry span, and what
   - Exports (types):
     - `Aggregate`
     - `BootHookScope`
+    - `ContextRunner`
     - `EntryContext`
     - `EntryCost`
     - `FlightSpan`
@@ -644,6 +651,7 @@ remaining allocations are one flat band array per completed entry span, and what
     - `__pushBand`
     - `beginDeferredWait`
     - `beginWait`
+    - `captureContext`
     - `captureFlightWindow`
     - `currentCallerKind`
     - `currentEntryLabel`
@@ -651,11 +659,11 @@ remaining allocations are one flat band array per completed entry span, and what
     - `gateWaitHooks`
     - `getRuntimeProfile`
     - `getSelfMeter`
+    - `installAsyncContextRuntime`
     - `installBackgroundLaneRuntime`
     - `installBootHookScopeRuntime`
     - `installLoaderReadSetSink`
     - `installProfilingSuppressionRuntime`
-    - `installRootContextRuntime`
     - `installSpanContextRuntime`
     - `loopStallsSince`
     - `markWait`
