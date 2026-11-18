@@ -135,8 +135,8 @@ export interface RunChecksOptions {
   /**
    * The working tree's content hash, already computed by the caller
    * (`computeTreeHash`, whose `null` is its fail-open "no hash": run uncached).
-   * Omitted, the runner computes it itself. Ignored under `noCache`, which
-   * never hashes.
+   * Omitted, the runner computes it itself — under `noCache` too: the hash
+   * names the tree the run scans, whether or not its verdicts are cached.
    */
   treeHash?: { value: string | null };
   /**
@@ -408,27 +408,30 @@ export async function runChecks(
   }
 
   const noCache = options?.noCache || readEnv("CHECK_NO_CACHE") === "1";
-  // Root is only needed when caching (tree hash + snapshot); skipping it in
-  // no-cache mode preserves today's behaviour of not touching git at all.
+  // The root and the tree hash are facts about the checkout, not caches, so
+  // they are learned under `--no-cache` too: `--no-cache` bypasses the RESULT
+  // cache (and the grep index, below) and still scans the run's tree. Without
+  // a tree every grep pre-filter fell back to a whole-working-tree `git grep
+  // --untracked` — ~100 of them per pass, each re-walking every directory and
+  // opening every file: ~1,100 s of kernel CPU in an 80 s uncached pass on an
+  // 18-core Mac (2026-11-18), against ~0.4 s each over the tree object.
   // Each of the four is wrapped in its own progress phase. They all spawn git
   // or walk the cache dir, so any one of them can be where a run wedges — and
   // the diagnostic has to name WHICH, exactly as it names a hung check. Wrapping
   // costs one appended line per phase.
-  const root = noCache
-    ? null
-    : await progress.bootstrap("root", () => getWorktreeRoot());
+  const root = await progress.bootstrap("root", () => getWorktreeRoot());
   // A caller that already hashed the tree (the `check` command, which keys its
   // run-level single-flight on it before the grant) hands the hash in, so the
   // tree the flight is keyed on IS the tree the cache is keyed on — one
   // computation, not two that could straddle an edit.
-  const treeHash = root
-    ? options.treeHash !== undefined
+  const treeHash =
+    options.treeHash !== undefined
       ? options.treeHash.value
-      : await progress.bootstrap("tree-hash", () => computeTreeHash(root))
-    : null;
-  const cache = treeHash
-    ? await progress.bootstrap("open-cache", () => openCheckCache())
-    : null;
+      : await progress.bootstrap("tree-hash", () => computeTreeHash(root));
+  const cache =
+    treeHash !== null && !noCache
+      ? await progress.bootstrap("open-cache", () => openCheckCache())
+      : null;
   // The shared, content-addressed tree snapshot — loaded at most ONCE per run
   // (one `git ls-tree -r`) and reused by every input-keyed check's
   // validate/record AND by `ctx.repo()`, whose file set is this tree whenever
@@ -444,18 +447,21 @@ export async function runChecks(
   // is a hot path, not a dormant one.
   let snapshotLoad: Promise<TreeSnapshot | null> | null = null;
   const loadSnapshot = (): Promise<TreeSnapshot | null> =>
-    root !== null && treeHash !== null
+    treeHash !== null
       ? (snapshotLoad ??= loadTreeSnapshot(root, treeHash))
       : Promise.resolve(null);
+  // Eager only for the input-keyed cache, which `--no-cache` turns off.
   const anyInputKeyed = selected.some((c) => c.inputKeyed === true);
   const snapshot: TreeSnapshot | null =
-    anyInputKeyed && root && treeHash
+    anyInputKeyed && cache !== null && treeHash !== null
       ? await progress.bootstrap("tree-snapshot", loadSnapshot)
       : null;
   // The run's grep selections, answered per blob from the host-wide index:
-  // only blobs no run has grepped for a pattern cost a `git grep`.
+  // only blobs no run has grepped for a pattern cost a `git grep`. Not under
+  // `--no-cache`, which means "really run": every grep runs whole — over the
+  // run's tree.
   const grep =
-    options.grepIndex !== undefined && root !== null && treeHash !== null
+    options.grepIndex !== undefined && !noCache && treeHash !== null
       ? createGrepIndex({
           root,
           tree: treeHash,
@@ -470,7 +476,7 @@ export async function runChecks(
   // its own slot only — see `readSetFile` in `cache.ts` for why one shared
   // slot missed nearly every time.
   const readSetCheckouts: readonly AppPath[] =
-    snapshot !== null && root !== null
+    snapshot !== null
       ? await progress.bootstrap("read-set-checkouts", async () => {
           const main = await mainCheckoutRoot(root);
           return main === null || main === root ? [root] : [root, main];
@@ -479,8 +485,9 @@ export async function runChecks(
 
   // `ctx.snapshot()`: the run's tree, strictly. With caching on it is the very
   // snapshot loaded above (one memoized load, so the cache key, the replay and
-  // the check read one tree); under `--no-cache`, or when that fail-open load
-  // came back null, it is hashed and listed here on first ask — and a git
+  // the check read one tree), loaded on first ask under `--no-cache`; when the
+  // tree could not be hashed or listed (fail-open null), it is hashed and
+  // listed again here — and a git
   // failure rejects, failing the check that asked rather than handing it
   // nothing to key on.
   let strictSnapshotLoad: Promise<TreeSnapshot> | null = null;
@@ -488,15 +495,14 @@ export async function runChecks(
     (strictSnapshotLoad ??= (async () => {
       const loaded = await loadSnapshot();
       if (loaded !== null) return loaded;
-      return readTreeSnapshot(root ?? (await getWorktreeRoot()));
+      return readTreeSnapshot(root);
     })());
 
   // `ctx.repo()`: the run's file set, loaded by the first check that asks and
   // shared by every check after it (`repo-set.ts` says where it comes from).
-  // `--no-cache` resolved no root above; the set resolves its own then.
   const repo = runRepoFiles({
     loadSnapshot,
-    root: () => (root !== null ? Promise.resolve(root) : getWorktreeRoot()),
+    root: () => Promise.resolve(root),
   });
 
   // Bootstrap is over: the facts that cost work to learn are now known, so they

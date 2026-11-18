@@ -410,8 +410,8 @@ const run: CliAction<
   // CPU work, and the run-level single-flight below is keyed on it — a
   // duplicate must find the in-flight run without first queueing for a host
   // slot. Handed to `runChecks` so the cache is keyed on the same reading.
-  // `--no-cache` / EQUIN_CHECK_NO_CACHE mean "really run": no hash, no
-  // flight — exactly what the runner does with them.
+  // `--no-cache` / EQUIN_CHECK_NO_CACHE mean "really run": no flight, so no
+  // hash here — the runner hashes the tree itself, to scan it.
   // `--verify-records` recomputes every record, so its checks must really run.
   const verifyRecords = opts.verifyRecords === true;
   const noCache =

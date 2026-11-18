@@ -198,6 +198,14 @@ git stays the authority on both halves, so a selection equals what `git grep -l
   `:(literal)` path, or the whole query when there are many — whose output must
   then lie inside the domain `listTreePathspec` lists, or the run throws).
 
+**`--no-cache` still scans the run's tree.** It turns off the result cache and
+the grep index (every selection is a whole `git grep` again), never the tree
+hash: the hash is a fact about the checkout. Without a tree, each of the ~100
+selections of a pass fell back to a working-tree `git grep --untracked`, which
+re-walks every directory and opens every file — ~1,100 s of kernel CPU in an
+80 s uncached pass on an 18-core Mac (2026-11-18), against ~0.4 s each over the
+tree object.
+
 `gitGrepList` reads `-z` output: a quoted path (non-ASCII, `"`, `\`) would
 otherwise name no file and be recorded as not matching, host-wide.
 

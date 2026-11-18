@@ -49,7 +49,7 @@ export default [
     paths: ["core/repo-set.ts"],
     kind: "sanctioned",
     reason:
-      "The check runner's own `ctx.repo()`: read off the run's tree snapshot, and listed only when there is none (`--no-cache`, or a snapshot that failed to load) \u2014 once per run, shared by every check.",
+      "The check runner's own `ctx.repo()`: read off the run's tree snapshot, and listed only when there is none (a tree that failed to hash or load) \u2014 once per run, shared by every check.",
   },
   {
     rule: "repo-walk-safety/no-adhoc-repo-listing",

@@ -119,7 +119,7 @@ describe("runRepoFiles (the run's ctx.repo)", () => {
     expect([...a.all()]).toEqual(EXPECTED);
   });
 
-  test("no snapshot (--no-cache, or a failed load) falls back to loadRepoFiles", async () => {
+  test("no snapshot (a failed hash or load) falls back to loadRepoFiles", async () => {
     const repo = runRepoFiles({
       loadSnapshot: () => Promise.resolve(null),
       root: () => Promise.resolve(root),

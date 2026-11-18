@@ -108,9 +108,8 @@ export function recordingRepo(
  *      load: already done when an input-keyed check is selected, done here
  *      otherwise. The set is then the tree the cache key hashed, each blob id
  *      the one it hashed.
- *   2. `loadRepoSnapshot(root)` when there is no snapshot: `--no-cache`
- *      computes no tree hash, and the snapshot load is fail-open (null on any
- *      git failure). The same universe, asked of git directly — and the same
+ *   2. `loadRepoSnapshot(root)` when there is no snapshot: the tree hash
+ *      and the snapshot load are fail-open (null on any git failure). The same universe, asked of git directly — and the same
  *      implementation build-time codegen uses.
  * A failure of (2) rejects, and every check that asked fails itself, naming
  * it. Never an empty set: that would pass every rule that iterates it.

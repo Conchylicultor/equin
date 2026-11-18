@@ -250,7 +250,8 @@ export async function listCandidateSources(
  * The cache key is computed from this tree-ish; scanning it (rather than the
  * working tree) guarantees a recorded PASS reflects the exact bytes hashed —
  * including files that were untracked when the cache entry was written. Null
- * (uncached / non-git run) falls back to the working tree.
+ * (no tree hash: git could not hash it, or a scan outside the runner) falls
+ * back to the working tree.
  */
 async function readCandidates(
   root: string,
@@ -319,7 +320,7 @@ export async function gitGrepList(
   pathspecs: string[],
   tree: string | null,
 ): Promise<string[]> {
-  // Against a tree: scan exactly its blobs. Without one (uncached fallback):
+  // Against a tree: scan exactly its blobs. Without one (no tree hash):
   // scan the working tree, adding `--untracked` so even an ad-hoc run still
   // sees not-yet-committed files. Paths from a tree-grep are prefixed with
   // `<tree>:`; strip it so callers always get repo-relative paths.
