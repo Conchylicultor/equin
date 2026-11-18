@@ -19,13 +19,22 @@ export function ownTargetFirst<T extends { isMainComposition: boolean }>(
 
 /** One target's deploy, as the fan-out sees it. */
 export type TargetDeploy =
-  { ok: true } | { ok: false; reason: string[]; failedLabels: string[] };
+  | { ok: true }
+  | {
+      ok: false;
+      reason: string[];
+      failedLabels: string[];
+      /** No verdict: the failure is only processes killed by this signal. */
+      killedBy: string | null;
+    };
 
 /** A target that did not deploy, and why. */
 export interface TargetFailure<T> {
   target: T;
   reason: string[];
   failedLabels: string[];
+  /** No verdict: the failure is only processes killed by this signal. */
+  killedBy: string | null;
 }
 
 /** How the fan-out went. */
@@ -85,6 +94,7 @@ export async function deployEachTarget<T>(
       target,
       reason: result.reason,
       failedLabels: result.failedLabels,
+      killedBy: result.killedBy,
     });
     if (first) {
       const rest = targets.slice(i + 1);

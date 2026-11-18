@@ -25,8 +25,11 @@ import {
   webDistPath,
   type ArtifactHooks,
   type HeavyJob,
+  stepLog,
   type StepResult,
 } from "./internal/app-artifacts";
+import { checkStepOutcome } from "./internal/step-outcome";
+import { buildFailureEnd } from "./internal/failure-end";
 import { resolveBuildTargets } from "./internal/build-targets";
 import { checkPassUnits } from "./internal/grant-split";
 import { deployNamespace } from "./internal/deploy-namespace";
@@ -158,7 +161,6 @@ import {
 } from "@plugins/build/plugins/run-ledger/core";
 import { runAttached } from "@plugins/infra/plugins/jobs/plugins/supervised-job/cli";
 import { runBuildSteps } from "@plugins/framework/plugins/cli/plugins/build/plugins/build-steps/cli";
-import { BUILD_EXIT_SUPERSEDED } from "@plugins/build/plugins/build-status/core";
 
 // Wedge-breaker for the local `git` metadata reads in this file — orders of
 // magnitude above what any of them take. A CLI command owns no deadline of its
@@ -1724,7 +1726,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
           label: "checks",
           lines: result.lines,
           durationMs: Math.round(performance.now() - start),
-          success: result.ok,
+          outcome: checkStepOutcome(result.ended),
         };
       };
 
@@ -1759,11 +1761,14 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
       let stepResults: StepResult[] = [];
       const onSteps = (steps: StepResult[]): void => {
         stepResults = steps;
-        printStepBlocks(steps);
+        printStepBlocks(steps.map(stepLog));
       };
 
       const stepRoster = (): Verdict["steps"] =>
-        stepResults.map((r) => ({ label: r.label, success: r.success }));
+        stepResults.map((r) => ({
+          label: r.label,
+          success: r.outcome.kind === "ok",
+        }));
 
       /**
        * The commit this checkout moved to during the build, or `null` if it did
@@ -1790,6 +1795,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
       const failBuild = async (
         reason: string[],
         failedLabels: string[],
+        failures: readonly { killedBy: string | null }[],
       ): Promise<never> => {
         flushFootprint();
         const pointers = [`Full output: ${transcriptPath}`];
@@ -1798,7 +1804,9 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
         for (const ns of receipts.keys()) {
           pointers.push(`Deploy receipt: ${worktreeArtifacts.buildStatus(ns)}`);
         }
-        if (stepResults.some((r) => r.id === "checks" && !r.success)) {
+        if (
+          stepResults.some((r) => r.id === "checks" && r.outcome.kind !== "ok")
+        ) {
           pointers.push(
             `Check logs:  ${worktreeArtifacts.checkLog(name, buildId)}`,
           );
@@ -1823,6 +1831,10 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
         // has no subject: reporting it as a failure blames whichever check
         // happened to straddle the swap for drift that does not exist.
         const newHead = await supersededBy();
+        // The one code this failure ends on — resolved before the verdict,
+        // so the ledger row, the receipts, the process's own status (the
+        // run's exit marker) and the headline all say the same thing.
+        const end = buildFailureEnd({ supersededBy: newHead, failures });
         const v: Verdict =
           newHead !== null
             ? {
@@ -1839,6 +1851,19 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
                 pointers,
                 steps: stepRoster(),
               }
+            : end.kind === "killed"
+              ? {
+                  ok: false,
+                  headline: `BUILD KILLED — ${failedLabels.length > 0 ? failedLabels.join(", ") : "deploy"} (${end.signal})`,
+                  reason: [
+                    `NOT DEPLOYED. A process ${failedLabels.length === 1 ? "this step" : "these steps"} ran was killed by ${end.signal}`,
+                    `(the OOM killer, a crash, an operator) before it answered: no verdict on the code.`,
+                    ...reason,
+                    ...fanOut,
+                  ],
+                  pointers,
+                  steps: stepRoster(),
+                }
             : {
                 ok: false,
                 headline: `BUILD FAILED — ${failedLabels.length > 0 ? failedLabels.join(", ") : "deploy"}`,
@@ -1846,11 +1871,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
                 pointers,
                 steps: stepRoster(),
               };
-        // The one code this failure ends on. Resolved here rather than beside
-        // closeRun below so the ledger row, the receipts and the process's own
-        // status (the run's exit marker) are all stamped from the same value
-        // and cannot disagree.
-        const exitCode = newHead !== null ? BUILD_EXIT_SUPERSEDED : 1;
+        const { exitCode } = end;
         // Close this invocation's build_runs row, BEFORE finalizeBuild releases
         // the recorder pool. One row, one exit code — honest, because the
         // invocation is the unit of work even when several namespaces published.
@@ -1859,7 +1880,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
         // the tree moved mid-build, so this build answers for no coherent tree —
         // reporting it as a failure would blame the check that straddled the swap.
         await finalizeBuild(false, {
-          status: newHead !== null ? "superseded" : "failed",
+          status: end.kind === "superseded" ? "superseded" : "failed",
           exitCode,
         });
         emitVerdict(v);
@@ -1916,6 +1937,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
         preparedFailures.set(target, {
           target,
           failedLabels: [`${target.namespace} registry`],
+          killedBy: null,
           reason: [
             `NOT DEPLOYED: ${namespaceUrl(target.namespace, "", gatewayPortSync())} — its composition registry failed: ${message}`,
           ],
@@ -2189,6 +2211,10 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
           [
             ...fanned.failed.flatMap((f) => f.failedLabels),
             ...(unpreparedResidents.length > 0 ? ["composition registry"] : []),
+          ],
+          [
+            ...fanned.failed,
+            ...unpreparedResidents.map(() => ({ killedBy: null })),
           ],
         );
       }

@@ -48,7 +48,10 @@ export const BUILD_EXIT_HARD_KILLED = -1;
  * are FIRST-PARTY: `./equin build` installs `installFatalSignalExit` and
  * *chooses* `128 + signo` for itself, from `FATAL_SIGNAL_EXITS`, having caught
  * the signal. So the number here is a record the build wrote about a signal it
- * saw, not a wait status somebody decoded afterwards.
+ * saw, not a wait status somebody decoded afterwards. The build also
+ * authors it for a failure made only of steps whose CHILD died of a signal
+ * (an OOM-killed type-check worker), from the steps' typed outcome
+ * (`framework/cli/build`'s `failure-end.ts`): still a signal it saw.
  *
  * That precondition is the whole licence, so it is written down rather than
  * assumed: **the moment `build_runs.exit_code` can carry a status this repo did

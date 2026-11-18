@@ -26,7 +26,11 @@ import {
   type TypeCheckWorkerResult,
 } from "../../core";
 import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/plugins/file/core";
-import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import {
+  ChildKilledError,
+  childSignalOf,
+  spawnCaptured,
+} from "@plugins/infra/plugins/spawn/core";
 import { pacedHeapEnv } from "@plugins/packages/plugins/heap-pacing/core";
 import type { PeakFootprint } from "@plugins/packages/plugins/proc-rusage/core";
 import {
@@ -314,6 +318,17 @@ async function spawnWorker(opts: {
     }),
   );
   const wallMs = performance.now() - startedAt;
+  // Killed — itself, or a batch process it ran (it then exits `128 + signo`,
+  // `shared/worker.ts`): typed, so a check or a build reads "no verdict", not
+  // a failed type check. The worker is ours, so its code is first-party.
+  const killedBy = childSignalOf(spawned);
+  if (killedBy !== null) {
+    throw new ChildKilledError(
+      `type-check worker for "${name}"`,
+      killedBy,
+      spawned.stderr.trim() || spawned.stdout.trim(),
+    );
+  }
   if (spawned.exitCode !== 0) {
     throw new Error(
       `type-check worker for "${name}" exited ${spawned.exitCode}:\n${spawned.stderr.trim() || spawned.stdout.trim()}`,

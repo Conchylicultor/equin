@@ -30,9 +30,16 @@ import {
   PROGRESS_FILE,
   readBuildProgress,
   runCheckSubprocess,
+  type BuildStepLog,
   type SpanOptions,
   type ValveDeps,
 } from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
+import {
+  checkStepOutcome,
+  stepOutcomeOfError,
+  stepsKilledBy,
+  type StepOutcome,
+} from "./step-outcome";
 import {
   compositionFleetSource,
   runWebArtifactsPipeline,
@@ -277,7 +284,18 @@ export interface StepResult {
   label: string;
   lines: Array<{ text: string; stream: "stdout" | "stderr" }>;
   durationMs: number;
-  success: boolean;
+  outcome: StepOutcome;
+}
+
+/** A step as its transcript block draws it (passed or not). */
+export function stepLog(step: StepResult): BuildStepLog {
+  return {
+    id: step.id,
+    label: step.label,
+    lines: step.lines,
+    durationMs: step.durationMs,
+    success: step.outcome.kind === "ok",
+  };
 }
 
 // One greppable line per measured build phase, e.g. "checks: peak footprint
@@ -847,7 +865,7 @@ export async function fastValidationJobs(opts: {
       label: "checks (always-run)",
       lines: result.lines,
       durationMs: Math.round(performance.now() - start),
-      success: result.ok,
+      outcome: checkStepOutcome(result.ended),
     };
   });
 
@@ -875,11 +893,12 @@ export async function fastValidationJobs(opts: {
     // weight, the worker in the foreground as the slot's holder — because
     // `spawnTypeCheckWorker` is the one place a worker is admitted and takes
     // the grant itself.
+    const tree = await readTypeCheckTree(root, program.tsconfigPath);
     const run = await spawnTypeCheckWorker({
       root,
       name: program.name,
       tsconfigPath: program.tsconfigPath,
-      tree: await readTypeCheckTree(root, program.tsconfigPath),
+      tree,
       tscMode: "keyed",
       // A missed prediction answers from one whole program and is reported,
       // never a failed build (`type-check`'s `shared/name-run.ts`).
@@ -888,13 +907,28 @@ export async function fastValidationJobs(opts: {
       // skipping, and an empty list is what the worker reads as "none".
       lintFiles: [],
       grant,
+    }).catch((err: unknown) => {
+      // A worker the kernel killed (or whose batch it killed) judged
+      // nothing: the step ends `killed`, not failed. Any other crash still
+      // takes the step down with it.
+      const outcome = stepOutcomeOfError(err);
+      if (outcome.kind !== "killed") throw err;
+      return { killed: outcome, message: (err as Error).message };
     });
+    if ("killed" in run) {
+      end();
+      return {
+        id: `tsc:${program.name}`,
+        label: `tsc ${program.name}`,
+        lines: [{ text: run.message, stream: "stderr" }],
+        durationMs: Math.round(performance.now() - start),
+        outcome: run.killed,
+      };
+    }
     end({ peak: run.peakFootprint });
     for (const line of run.result.tscErrors.split("\n")) {
       if (line) lines.push({ text: line, stream: "stdout" });
     }
-    // A worker that CRASHED threw out of `spawnTypeCheckWorker` above and
-    // takes this step down with it.
     const success = run.result.tscErrors === "";
     for (const text of run.result.tscLines)
       lines.push({ text, stream: "stdout" });
@@ -920,7 +954,7 @@ export async function fastValidationJobs(opts: {
       label: `tsc ${program.name}`,
       lines,
       durationMs: Math.round(performance.now() - start),
-      success,
+      outcome: success ? { kind: "ok" } : { kind: "failed" },
     };
   });
 
@@ -956,7 +990,13 @@ export type ArtifactBuildResult =
        */
       graphHash: string;
     }
-  | { ok: false; steps: StepResult[]; failedLabels: string[] };
+  | {
+      ok: false;
+      steps: StepResult[];
+      failedLabels: string[];
+      /** `stepsKilledBy(steps)`: the failure is only killed processes. */
+      killedBy: string | null;
+    };
 
 /**
  * WHICH dist this build produces — an IDENTITY, never a path. The path module
@@ -1279,7 +1319,7 @@ export async function buildAndPublishWebDist(
     // when every one of them did (`BuildSpan.reused`).
     let stagesReused: boolean | undefined;
     const lines: StepResult["lines"] = [];
-    let success = true;
+    let outcome: StepOutcome = { kind: "ok" };
     try {
       // WHAT the fleet is planned from. Without a composition the pipeline
       // defaults to the committed FULL registry; with one it MUST be told, or
@@ -1374,7 +1414,7 @@ export async function buildAndPublishWebDist(
         stream: "stdout",
       });
     } catch (err) {
-      success = false;
+      outcome = stepOutcomeOfError(err);
       const message =
         err instanceof Error ? (err.stack ?? err.message) : String(err);
       for (const line of message.split("\n")) {
@@ -1387,7 +1427,7 @@ export async function buildAndPublishWebDist(
       label: "web artifacts",
       lines,
       durationMs: Math.round(performance.now() - start),
-      success,
+      outcome,
     };
   };
 
@@ -1409,10 +1449,12 @@ export async function buildAndPublishWebDist(
   const steps = await runHeavySection(opts.grant);
   opts.onSteps?.(steps);
 
-  const failedLabels = steps.filter((r) => !r.success).map((r) => r.label);
+  const failedLabels = steps
+    .filter((r) => r.outcome.kind !== "ok")
+    .map((r) => r.label);
   if (failedLabels.length > 0) {
     await rm(stagingPath, { recursive: true, force: true });
-    return { ok: false, steps, failedLabels };
+    return { ok: false, steps, failedLabels, killedBy: stepsKilledBy(steps) };
   }
 
   // The two pins that describe what was just built, so a server can say what it

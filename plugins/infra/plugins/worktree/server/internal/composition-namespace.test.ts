@@ -12,7 +12,10 @@
 import { describe, expect, test } from "bun:test";
 import { asNamespace } from "@plugins/infra/plugins/namespace/core";
 import {
+  claimingMarker,
+  markerServes,
   namespaceCollision,
+  type CompositionMarker,
   type NamespaceProbe,
 } from "./composition-namespace";
 
@@ -125,5 +128,52 @@ describe("namespaceCollision — a host alias", () => {
         "host alias",
       );
     }
+  });
+});
+
+describe("the two-phase marker — claimed `publishing`, `served` once the deploy came up", () => {
+  const served: CompositionMarker = {
+    composition: "sonata",
+    checkout: null,
+    builtAt: "2026-11-17T10:00:00.000Z",
+    buildId: "build-old",
+    commit: "aaaa",
+    state: "served",
+  };
+  const fresh: CompositionMarker = {
+    composition: "sonata",
+    checkout: null,
+    builtAt: "2026-11-18T10:00:00.000Z",
+    buildId: "build-new",
+    commit: "bbbb",
+    state: "served",
+  };
+
+  test("a claim over a served marker keeps the served commit, and is publishing", () => {
+    const claim = claimingMarker(served, fresh);
+    // `builtAt` moves: the rate limit measures from the last attempt, so a
+    // failed build of a `daily` composition still waits its day.
+    expect(claim).toEqual({ ...fresh, commit: "aaaa", state: "publishing" });
+    // A build killed after the claim: the marker cannot say it serves HEAD.
+    expect(markerServes(claim).ok).toBe(false);
+  });
+
+  test("a first claim carries the build in flight, still publishing", () => {
+    const claim = claimingMarker(null, fresh);
+    expect(claim).toEqual({ ...fresh, state: "publishing" });
+    expect(markerServes(claim).ok).toBe(false);
+  });
+
+  test("a served marker names its commit; an old one without `state` reads as served", () => {
+    expect(markerServes(fresh)).toEqual({ ok: true, commit: "bbbb" });
+    expect(markerServes({ commit: "cccc" })).toEqual({
+      ok: true,
+      commit: "cccc",
+    });
+  });
+
+  test("a marker with no commit cannot say what it serves", () => {
+    expect(markerServes({ commit: null }).ok).toBe(false);
+    expect(markerServes({}).ok).toBe(false);
   });
 });

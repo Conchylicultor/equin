@@ -4,6 +4,7 @@ import {
   type Check,
   type CheckResult,
 } from "@plugins/framework/plugins/tooling/core";
+import { killedByOf } from "@plugins/infra/plugins/spawn/core";
 
 /** One `ctx.log` line a check emitted, buffered until the check settles. */
 export interface CheckObservation {
@@ -51,7 +52,10 @@ function describeThrown(err: unknown): string {
  * Fatal: an uncaught throw is a bug in the check, and softening it would let a
  * broken check pass a build. The one exception is an `InconclusiveCheckError`
  * — shared plumbing saying, by type, that the environment (not the check)
- * could not answer — which settles as `inconclusive`. Never cached: the
+ * could not answer — which settles as `inconclusive`; and a
+ * `ChildKilledError` (`infra/spawn`) — a process the check ran died of a
+ * signal — which stays fatal but carries `killedBy`, no verdict on the code.
+ * Never cached: the
  * runner records passes only, and `cached: false` says this outcome came from
  * running the body. The observations are the ones the check logged before it
  * threw, kept because they are often the only clue to how far it got.
@@ -68,10 +72,20 @@ export function thrownOutcome(
     observations: CheckObservation[];
   },
 ): CheckOutcome {
+  const killed = killedByOf(err);
   const result: CheckResult =
-    err instanceof InconclusiveCheckError
+    killed !== null
       ? {
           ok: false,
+          message: killed.message,
+          hint:
+            "A process this check ran was killed by a signal (the OOM killer, a crash) before it answered: " +
+            "no verdict on the code. Re-run it.",
+          killedBy: killed.signal,
+        }
+      : err instanceof InconclusiveCheckError
+        ? {
+            ok: false,
           inconclusive: true,
           message: err.message,
           hint:

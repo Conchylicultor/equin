@@ -147,6 +147,47 @@ describe("convergence — the same policy main's own auto-build runs", () => {
     ).toBe(true);
   });
 
+  test("a marker still `publishing` at HEAD is not converged — a killed build is retried", () => {
+    // The claim a build stamps before publishing. Killed before its deploy
+    // came up, it used to name HEAD and read as converged for ever.
+    const claimed = {
+      commit: B,
+      builtAt: agoIso(30 * 24 * HOUR),
+      state: "publishing" as const,
+    };
+    expect(
+      compositionWantsRebuild(
+        inputs({
+          marker: claimed,
+          attempts: [{ id: "build-b", commit: B, outcome: "no-verdict" }],
+        }),
+      ),
+    ).toEqual({ kind: "build", retry: 1 });
+    // A failed build leaves the claim too; its verdict stands.
+    expect(
+      wants(
+        inputs({
+          marker: claimed,
+          attempts: [{ id: "build-b", commit: B, outcome: "failed" }],
+        }),
+      ),
+    ).toBe(false);
+  });
+
+  test("a marker `served` at HEAD is converged", () => {
+    expect(
+      wants(
+        inputs({
+          marker: {
+            commit: B,
+            builtAt: agoIso(30 * 24 * HOUR),
+            state: "served",
+          },
+        }),
+      ),
+    ).toBe(false);
+  });
+
   test("no HEAD ⇒ no build — nothing to converge toward", () => {
     expect(wants(inputs({ head: null }))).toBe(false);
   });

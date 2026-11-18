@@ -231,7 +231,9 @@ in a checkout, so exactly one build owns the receipt at a time and a build that
 dies while still queuing cannot overwrite its predecessor's.
 
 **A killed build and a build that failed its checks both write
-`status: "failed"`** — what separates them is `exitCode` (`128+signo` vs `1`)
+`status: "failed"`** — what separates them is `exitCode` (`128+signo` vs `1`;
+a build whose only failures are steps whose CHILD died of a signal — an
+OOM-killed type-check worker — ends `128+signo` too, `cli/internal/failure-end.ts`)
 plus `signal`, stamped the moment a catchable signal arrives rather than only at
 the terminal rewrite, so an *escalating* kill (SIGTERM then SIGKILL: `timeout -k`,
 most supervisors) still records the SIGTERM on the `running` receipt the SIGKILL
@@ -305,8 +307,11 @@ Three orderings that look incidental and are not:
 - **Every target's `sweepDistLeftovers` runs up front**, before any staging dir
   exists. Sweeping inside the loop deletes target 2's staging dir while target
   1's is live.
-- **The `composition.json` marker is written TWICE** for a composition target,
-  and both are load-bearing. FIRST, before anything else touches the namespace
+- **The `composition.json` marker is claimed TWICE, then stamped served** for
+  a composition target, and all three are load-bearing. The two claims are
+  `publishing` and keep the last completed deploy's commit; only the deploy
+  that came up healthy stamps `served` with its own, so a build killed in
+  between never reads as converged (`claimingMarker`, `infra/worktree`). FIRST, before anything else touches the namespace
   dir — a crash mid-build otherwise leaves a marker-less dir the collision guard
   refuses forever. AGAIN in the same breath as `spec.json`, because the claim
   alone does not survive: a build spends minutes between the two (it used to

@@ -159,6 +159,16 @@ spawns that are meant to outlive a call, each sanctioned by an exemption.
   stdout AND stderr appended to one file (`>> path 2>&1`, a raw fd) instead of
   inherited: for a child whose output is a record a reader follows while it
   grows (supervised-job's attached runs, `runAttached`).
+- **`ChildKilledError` / `killedByOf` / `signalExitCode` / `childSignalOf`** —
+  a child that died of a signal judged nothing, so a layer reporting a verdict
+  must not read it as one. A spawn site that sees `signalCode` throws
+  `ChildKilledError(what, signal)`; `killedByOf(err)` finds it through `cause`
+  chains; a first-party child that caught one exits `signalExitCode(signal)`
+  (`128 + signo`, from a portable table — an unknown signal throws), and its
+  spawner reads it back with `childSignalOf` (its `signalCode`, else that
+  authored code — only for a child whose codes this repo writes). The chain
+  type-check batch → worker → check → build uses it so an OOM kill reaches the
+  build ledger as `killed`, not `failed` (`build/converge` § Termination).
 - **`getWorktreeRoot(cwd?)` / `getMainRepoRoot(cwd?)`** — THE canonical git
   root helpers (`git rev-parse --show-toplevel` /
   `dirname(resolve(git rev-parse --git-common-dir))`), collapsing the ~51-file
@@ -318,9 +328,14 @@ presence only — **no re-exports**; import from `core/`.
     - `SpawnResult`
     - `SpawnToFileOptions`
   - Exports (values):
+    - `authoredSignalOf`
+    - `ChildKilledError`
+    - `childSignalOf`
     - `getMainRepoRoot`
     - `getWorktreeRoot`
     - `installSpawnUse`
+    - `killedByOf`
+    - `signalExitCode`
     - `spawnCaptured`
     - `spawnExpectOk`
     - `SpawnFailedError`

@@ -31933,8 +31933,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `INSTALL_VERB`
         - **`build`** — `./equin build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
           - Cli:
-            - Uses: 75 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
-              - `framework/cli/op-runtime` ×33
+            - Uses: 76 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
+              - `framework/cli/op-runtime` ×34
               - `installer` ×5
               - `framework/cli/bootstrap` ×4
               - `framework/tooling/web-artifacts` ×4
@@ -32155,6 +32155,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `BuildReceiptStatus`
               - `BuildRunProgress`
               - `BuildSpan`
+              - `BuildStepLog`
               - `CheckSubprocessOptions`
               - `CheckSubprocessResult`
               - `DirectOpContext`
@@ -33156,7 +33157,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values): `parseRuntimeException`
         - **`checks`** — Check runner and built-in checks for ./equin check
           - Core:
-            - Uses: 92 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
+            - Uses: 93 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
               - `framework/tooling` ×12
               - `packages/timed-fs` ×11
               - `plugin-meta/plugin-records` ×9
@@ -33164,10 +33165,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/exempt` ×7
               - `infra/stack-sampler` ×5
               - `infra/host-fs/user-path` ×4
+              - `infra/spawn` ×4
               - `packages/shared-work` ×4
               - `framework/tooling/checks/source-analysis` ×3
               - `infra/launcher/env-names` ×3
-              - `infra/spawn` ×3
               - `packages/thread-cpu-clock` ×3
               - `plugin-meta/parse-utils` ×3
               - `infra/git/private-index` ×2
@@ -33230,6 +33231,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `maskedSource`
               - `openCheckCache`
               - `parsedTsSource`
+              - `passKilledBy`
               - `pruneCheckCache`
               - `readCheckProgress`
               - `readTranscriptVerdict`
@@ -40841,9 +40843,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SpawnResult`
           - `SpawnToFileOptions`
         - Exports (values):
+          - `authoredSignalOf`
+          - `ChildKilledError`
+          - `childSignalOf`
           - `getMainRepoRoot`
           - `getWorktreeRoot`
           - `installSpawnUse`
+          - `killedByOf`
+          - `signalExitCode`
           - `spawnCaptured`
           - `spawnExpectOk`
           - `SpawnFailedError`
@@ -41179,6 +41186,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `addCheckout`
           - `appCheckoutOf`
           - `checkoutState`
+          - `claimingMarker`
           - `classifyNamespace`
           - `countReadySpares`
           - `createSpareWorktree`
@@ -41204,6 +41212,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `listWorktreeOps`
           - `listWorktreePaths`
           - `loadCompositionMarker`
+          - `markerServes`
           - `markWorktreeOpStart`
           - `namespaceCollision`
           - `probeNamespace`

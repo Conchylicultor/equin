@@ -31,6 +31,8 @@ import {
   type WorktreeSpec,
   readWorktreeSpec,
   stampCompositionMarker,
+  claimingMarker,
+  loadCompositionMarker,
   writeWorktreeSpec,
   type CompositionMarker,
 } from "@plugins/infra/plugins/worktree/server";
@@ -69,9 +71,10 @@ import { namedBackendCommand } from "./named-backend";
  * `./equin build`, run once per `--composition` (and once, unnamed, for a
  * plain build).
  *
- *   marker → dist → database → config → (marker again) + spec → adopt, or
- *   restart → health probe (took over, then settled) → keep the dist, or put
- *   the previous one back
+ *   marker (claim: `publishing`) → dist → database → config → (claim again)
+ *   + spec → adopt, or
+ *   restart → health probe (took over, then settled) → keep the dist and
+ *   stamp the marker `served`, or put the previous one back
  *
  * The dist is published before the restart (the new backend reads its graph at
  * boot), so a deploy that fails after it rolls the frontend back: a namespace
@@ -119,6 +122,12 @@ export type DeployNamespaceResult =
       failedLabels: string[];
       /** The failure's own sentences, rendered by `run.ts`'s funnel. */
       reason: string[];
+      /**
+       * The signal the failure is made of when it is only killed processes
+       * (a step's child the OOM killer took): no verdict on the code. `null`
+       * for every failure that judged something.
+       */
+      killedBy: string | null;
     };
 
 export interface DeployNamespaceOptions {
@@ -576,9 +585,14 @@ export async function deployNamespace(
     }
   };
 
-  // The provenance this namespace carries, built ONCE so the claim below and the
-  // re-stamp at the commit point write identical bytes — which is what makes the
-  // second write invisible in the normal case.
+  // The provenance this namespace carries once THIS deploy has come up
+  // (`served`), built once. Until then the namespace carries the CLAIM made
+  // from it (`claimingMarker`: `publishing`, the last completed deploy's
+  // commit kept), stamped below at the claim and again at the spec write —
+  // identical bytes, so the second write is invisible in the normal case. A
+  // build killed anywhere between the claim and its health probe so leaves a
+  // marker that reads as not converged (`markerServes`), and main's
+  // convergence retries it; before, the claim already named this HEAD.
   //
   // The checkout's own app has no marker, deliberately: that namespace belongs
   // to the checkout, and `namespaceCollision`'s checkout arm refuses to create a
@@ -597,9 +611,14 @@ export async function deployNamespace(
         builtAt: new Date().toISOString(),
         buildId: opts.buildId,
         commit: opts.commit,
+        state: "served",
       };
+  const claim: CompositionMarker | null =
+    marker === null
+      ? null
+      : claimingMarker(await loadCompositionMarker(ns), marker);
   const stampMarker = async (): Promise<void> => {
-    if (marker !== null) await stampCompositionMarker(ns, marker);
+    if (claim !== null) await stampCompositionMarker(ns, claim);
   };
 
   // MARKER FIRST — before anything else writes into the namespace dir, and only
@@ -646,6 +665,7 @@ export async function deployNamespace(
     return {
       ok: false,
       failedLabels: artifact.failedLabels,
+      killedBy: artifact.killedBy,
       reason: [
         `NOT DEPLOYED. Nothing was published; ${site} still serves the previous build.`,
         `The frontend compiled, but the artifact was discarded.`,
@@ -937,11 +957,15 @@ export async function deployNamespace(
   }
   if (result.ok) {
     await publication.keep();
+    // The second phase: this deploy came up, so the marker names it.
+    if (marker !== null) await stampCompositionMarker(ns, marker);
     return result;
   }
   const { backend, ...failure } = result;
   return {
     ...failure,
+    // A backend that did not come up judged the code.
+    killedBy: null,
     reason: [
       ...failure.reason,
       ...(await settleFailedServe({

@@ -433,6 +433,7 @@ pid liveness.
     - `addCheckout`
     - `appCheckoutOf`
     - `checkoutState`
+    - `claimingMarker`
     - `classifyNamespace`
     - `countReadySpares`
     - `createSpareWorktree`
@@ -458,6 +459,7 @@ pid liveness.
     - `listWorktreeOps`
     - `listWorktreePaths`
     - `loadCompositionMarker`
+    - `markerServes`
     - `markWorktreeOpStart`
     - `namespaceCollision`
     - `probeNamespace`

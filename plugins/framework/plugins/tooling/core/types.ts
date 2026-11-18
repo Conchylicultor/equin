@@ -460,5 +460,19 @@ export type CheckResult =
    * stays `ok: false`, and the runner records only `ok === true`), so the check
    * re-runs next time and re-verifies the real invariant. Omit the flag for an
    * ordinary hard failure, which stays fatal exactly as before.
+   *
+   * `killedBy` (a signal's name) means a process the check ran died of that
+   * signal — the OOM killer's SIGKILL, a crash — before it answered, and that
+   * is the whole failure. Still fatal: no verdict is not a pass, so the pass
+   * fails and nothing is cached. But it is no verdict on the code either, so
+   * a pass whose every non-passing check says so ends as killed, not failed
+   * (`./equin check` exits `128 + signo`), and a build reading it records
+   * no verdict. Set it only when nothing else failed.
    */
-  | { ok: false; message: string; hint?: string; inconclusive?: true };
+  | {
+      ok: false;
+      message: string;
+      hint?: string;
+      inconclusive?: true;
+      killedBy?: string;
+    };

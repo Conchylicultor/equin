@@ -13,7 +13,10 @@
 import { cpSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { basename, join } from "path";
 import { fileURLToPath } from "url";
-import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import {
+  ChildKilledError,
+  spawnCaptured,
+} from "@plugins/infra/plugins/spawn/core";
 import { pacedHeapEnv } from "@plugins/packages/plugins/heap-pacing/core";
 import { readEnvPath } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import type { TypeCheckTree } from "../core";
@@ -102,6 +105,16 @@ export function processBatches(opts: {
               peakFootprint.bytes,
             );
           } else opts.spend.unmeasured++;
+          // A batch the kernel ended (the OOM killer takes the biggest
+          // process, and a batch is it) judged nothing: typed, so the worker
+          // exits as killed and no layer above reads it as a type error.
+          if (spawned.signalCode !== null) {
+            throw new ChildKilledError(
+              `type-check batch ${job.index} (${job.sources.length} files)`,
+              spawned.signalCode,
+              spawned.stderr.trim() || spawned.stdout.trim(),
+            );
+          }
           if (spawned.exitCode !== 0) {
             throw new Error(
               `type-check batch ${job.index} (${job.sources.length} files) exited ${spawned.exitCode}:\n${spawned.stderr.trim() || spawned.stdout.trim()}`,

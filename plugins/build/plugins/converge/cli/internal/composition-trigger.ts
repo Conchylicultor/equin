@@ -4,6 +4,7 @@ import {
 } from "@plugins/network/plugins/live/plugins/live-state/core";
 import { autoRebuildIntervalMs } from "@plugins/plugin-meta/plugins/composition/core";
 import { wantsBuild } from "@plugins/build/plugins/deployment/core";
+import { markerServes } from "@plugins/infra/plugins/worktree/server";
 import type {
   AutoBuildDecision,
   BuildAttempt,
@@ -23,7 +24,11 @@ import type {
  */
 export interface CompositionRebuildInputs {
   mode: string;
-  marker: { commit?: string | null; builtAt: string } | null;
+  marker: {
+    commit?: string | null;
+    builtAt: string;
+    state?: "publishing" | "served";
+  } | null;
   /** This checkout's HEAD — the target the composition converges toward. */
   head: string | null;
   /** This composition's newest closed build attempts, newest first (`wantsBuild`). */
@@ -112,14 +117,16 @@ export function compositionWantsRebuild(
       deployable: [
         {
           id: "web",
-          // A marker written before the `commit` field genuinely cannot name
-          // one. `convergenceOf` reads an unresolved pin as `behind`, never as
-          // converged, so such a namespace builds exactly once and then
-          // self-heals — the marker the build stamps carries a commit.
-          commit:
-            i.marker.commit == null
-              ? unresolved("this composition.json predates the commit field")
-              : resolved(i.marker.commit),
+          // A marker that cannot name what is served — still `publishing` (a
+          // build claimed the namespace and was killed, or failed, before its
+          // deploy came up), or written before the `commit` field — is an
+          // unresolved pin. `convergenceOf` reads it as `behind`, never as
+          // converged, so a killed build is retried within `wantsBuild`'s
+          // bound and a failed one is not (its verdict stands).
+          commit: ((served) =>
+            served.ok ? resolved(served.commit) : unresolved(served.reason))(
+            markerServes(i.marker),
+          ),
           // Determinate absences, NOT read failures. We do not read another
           // namespace's dist graph, and we do not pay a `merge-base
           // --is-ancestor` git spawn per served composition on every edge —

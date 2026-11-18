@@ -87,6 +87,8 @@ export {
   probeNamespace,
   namespaceCollision,
   stampCompositionMarker,
+  claimingMarker,
+  markerServes,
   loadCompositionMarker,
   isCompositionMarkerPath,
   hasCompositionMarker,

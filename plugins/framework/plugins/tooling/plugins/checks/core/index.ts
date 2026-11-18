@@ -1,4 +1,5 @@
 export { runChecks, requestedJobs } from "./runner";
+export { passKilledBy } from "./killed-pass";
 export type { LoadedCheck, RunChecksOptions } from "./runner";
 export { scopeOf } from "./scope";
 export { assertExemptableInvariant } from "./check-exemptions";

@@ -58,6 +58,60 @@ export interface CompositionMarker {
    * none — a reader reports that as unknown rather than guessing.
    */
   commit?: string | null;
+  /**
+   * Where the build that wrote this marker is. `publishing`: a build claimed
+   * the namespace and has not seen its deploy come up — it may have been
+   * killed mid-publish, so the namespace may serve the old dist, a half
+   * published one, or a backend that never restarted; `commit` still names
+   * the last deploy that completed (or, on a first claim, the build in
+   * flight), while `builtAt` / `buildId` are the claiming build's. `served`: the deploy those fields name came up
+   * healthy. Absent: a marker written before the field — read as `served`.
+   *
+   * Two-phase so a reader can tell "serves this commit" from "a build of it
+   * started": a composition build killed between its claim and its health
+   * probe used to leave a marker naming HEAD, which main's convergence read as
+   * converged and never retried (`claimingMarker`, `markerServes`).
+   */
+  state?: "publishing" | "served";
+}
+
+/**
+ * The marker a build writes when it CLAIMS the namespace (and again at its
+ * spec write): `publishing`, keeping the commit the last completed deploy
+ * served, so the commit does not move until this build's deploy has come up.
+ * `builtAt` / `buildId` are this build's: `builtAt` is when the namespace was
+ * last ATTEMPTED, which is what a serve mode's rate limit measures from — so a
+ * failed or killed build of a `daily` composition still waits its day. On a
+ * first claim (nothing here yet) the fresh values stand, still `publishing`.
+ */
+export function claimingMarker(
+  previous: CompositionMarker | null,
+  fresh: CompositionMarker,
+): CompositionMarker {
+  if (previous === null) return { ...fresh, state: "publishing" };
+  return { ...fresh, commit: previous.commit ?? null, state: "publishing" };
+}
+
+/**
+ * The commit a marker says its namespace serves, or why it cannot say: a
+ * marker still `publishing` (a build claimed it and never saw its deploy come
+ * up), or one written before the `commit` field.
+ */
+export function markerServes(
+  marker: Pick<CompositionMarker, "commit" | "state">,
+): { ok: true; commit: string } | { ok: false; reason: string } {
+  if (marker.state === "publishing")
+    return {
+      ok: false,
+      reason:
+        "a build claimed this composition and never saw its deploy come up (killed or failed mid-publish)",
+    };
+  if (marker.commit == null)
+    return {
+      ok: false,
+      reason: "this composition.json predates the commit field",
+    };
+  return { ok: true, commit: marker.commit };
 }
 
 /** Who is asking for the namespace. The refusal rules differ by side. */

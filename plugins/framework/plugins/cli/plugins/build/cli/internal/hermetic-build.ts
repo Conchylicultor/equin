@@ -19,6 +19,7 @@ import {
   generateAppSources,
   footprintLine,
   prepareCompositionSources,
+  stepLog,
   webDistPath,
   withBuildAdmission,
   type ArtifactHooks,
@@ -367,7 +368,7 @@ export async function runHermeticBuild(opts: {
           // bug at a glance; it is the opposite.
           companions: i === 0 ? companions : [],
           grant,
-          onSteps: (steps) => printStepBlocks(steps),
+          onSteps: (steps) => printStepBlocks(steps.map(stepLog)),
           hooks,
         });
 
@@ -386,7 +387,7 @@ export async function runHermeticBuild(opts: {
             [
               "",
               `ARTIFACT BUILD FAILED — ${target.composition}: ${artifact.failedLabels.join(", ")}`,
-              `  ${artifact.steps.map((s) => `${s.label} ${s.success ? "✓" : "✗"}`).join("   ")}`,
+              `  ${artifact.steps.map((s) => `${s.label} ${s.outcome.kind === "ok" ? "✓" : "✗"}`).join("   ")}`,
               `Nothing was published for "${target.composition}"; its release dist ` +
                 `(${webDistPath(target)}) still resolves to the previous build of it. ` +
                 `No served app was touched.`,

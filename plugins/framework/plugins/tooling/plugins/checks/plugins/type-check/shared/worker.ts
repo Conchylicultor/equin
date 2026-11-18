@@ -25,6 +25,7 @@ import { realpathSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join, relative } from "path";
 import ts from "typescript";
 import { exitWithParent } from "@plugins/packages/plugins/flock/core";
+import { killedByOf, signalExitCode } from "@plugins/infra/plugins/spawn/core";
 // The job/result shapes live in this plugin's `core/` barrel: two spawners (the
 // check's fan-out and the build's fast path) name them, and only one worker
 // implements them. Through the barrel, not the file: a deep import into the
@@ -736,6 +737,14 @@ let output: Output;
 try {
   output = { kind: "done", result: await run(job) };
 } catch (err) {
+  // A batch process the kernel killed: this worker judged nothing either, and
+  // says so the way its spawner reads it — `128 + signo`, authored here after
+  // seeing the batch's signal (`spawnTypeCheckWorker` reads it back typed).
+  const killed = killedByOf(err);
+  if (killed !== null) {
+    console.error(killed.message);
+    process.exit(signalExitCode(killed.signal));
+  }
   // Refused before anything this run records: the name store is written
   // after both programs, the walk base after that, and the lint state by the
   // spawner from a result only. The heavy run starts from the same state.

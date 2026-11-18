@@ -103,14 +103,31 @@ gateway files `main-deploy-failed` once; until a push or a manual Build, each
 later trigger says so in its log only (the quarter-hourly composition tick
 would otherwise file it ~96 times a day).
 
-Two limits of the retry: a killed composition build that got as far as
-stamping its `composition.json` marker reads as converged (the marker is its
-carrier), so it is not retried; and a host OOM kill usually takes a build's
-child (vite, tsc), not the build itself — the build then reports a failed step
-and exits 1, a `failed` verdict that is not retried. On 2026-11-18 the build
-itself took the signal (exit 143). Before 2026-11-18 such a build consumed the target, and
-on a fresh Linux VM an OOM-killed build left main on its previous deploy while
-the log said "converged".
+Two cases the retry covers by construction, both closed on 2026-11-18:
+
+- **A killed CHILD.** A host OOM kill usually takes a build's child, not the
+  build: the biggest process is a type-check worker (or a batch it runs) or a
+  check pass. Each layer carries the fact up typed, never as a bare exit code:
+  the spawn site throws `ChildKilledError` (`infra/spawn`), a first-party child
+  that saw one exits `128 + signo`, a check that failed only that way carries
+  `killedBy`, `./equin check` exits `128 + signo` when every failure is one,
+  the build step's outcome is `killed`, and a build whose failure is made only
+  of killed steps exits `128 + signo` (`buildFailureEnd`,
+  `framework/cli/build`'s `cli/internal/failure-end.ts`) — a `killed` row in
+  the ledger, retried like a build that took the signal itself. One real
+  failure beside it (a type error, a failing check) keeps the build `failed`.
+- **A composition killed mid-publish.** The `composition.json` marker is
+  two-phase (`infra/worktree`'s `claimingMarker` / `markerServes`): the claim
+  a build stamps before it publishes is `publishing` and keeps the last
+  completed deploy's commit (its `builtAt` is the attempt's, so the rate
+  limit still runs from it), and only a deploy that came up stamps it
+  `served` with its own. A `publishing` marker is an unresolved carrier, so
+  `compositionWantsRebuild` reads it as behind, and a killed build is retried
+  (a failed one is not: its verdict stands).
+
+Before 2026-11-18 a killed build consumed the target, and on a fresh Linux VM
+an OOM-killed build left main on its previous deploy while the log said
+"converged".
 
 A pass that builds nothing says why (`describeNothingToBuild`): "converged"
 only when the served dist names HEAD. A pass that would repeat the build it

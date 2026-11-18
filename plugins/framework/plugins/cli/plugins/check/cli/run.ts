@@ -7,7 +7,10 @@ import {
   withDirectOp,
   type DirectOpFlight,
 } from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
+import {
+  getWorktreeRoot,
+  signalExitCode,
+} from "@plugins/infra/plugins/spawn/core";
 import { openGrepIndexStore } from "@plugins/framework/plugins/tooling/plugins/checks/cli";
 import { installRecordStore } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import {
@@ -24,6 +27,7 @@ import {
   readCheckProgress,
   readTranscriptVerdict,
   runChecks,
+  passKilledBy,
   requestedJobs,
   scopeOf,
   type CheckRunProgress,
@@ -421,6 +425,8 @@ const run: CliAction<
   // A nested check adopts its parent's id (`--run-id`, validated above), so
   // the child's transcript and progress records name the op a human is
   // actually looking at; a top-level check mints its own inside the primitive.
+  // Set by the run below when its failure is only killed processes.
+  let killedBy: string | null = null;
   const outcome = await withDirectOp(
     "check",
     {
@@ -537,10 +543,16 @@ const run: CliAction<
         const filed = await fileHostCheckReports(failures);
         return filed && inconclusive.length === 0 ? "success" : "failed";
       }
+      // A pass whose every failure is a process killed by a signal (the OOM
+      // killer took a type-check worker) judged nothing: it exits the way a
+      // killed process does, `128 + signo`, so a build reading it records no
+      // verdict rather than a failed one (op-runtime's check-subprocess).
+      if (!ok) killedBy = passKilledBy(failures.map((f) => f.result));
       return ok ? "success" : "failed";
     },
   );
-  if (outcome !== "success") process.exit(1);
+  if (outcome !== "success")
+    process.exit(killedBy !== null ? signalExitCode(killedBy) : 1);
 };
 
 export default run;

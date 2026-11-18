@@ -17,6 +17,7 @@ const fail = (why: string) => ({
   ok: false as const,
   reason: [why],
   failedLabels: [why],
+  killedBy: null,
 });
 
 describe("ownTargetFirst", () => {
@@ -58,7 +59,15 @@ describe("deployEachTarget", () => {
   test("a target whose preparation failed is recorded failed and never deployed", async () => {
     const seen: string[] = [];
     const prepared = new Map<T, TargetFailure<T>>([
-      [sonata, { target: sonata, reason: ["registry"], failedLabels: ["r"] }],
+      [
+        sonata,
+        {
+          target: sonata,
+          reason: ["registry"],
+          failedLabels: ["r"],
+          killedBy: null,
+        },
+      ],
     ]);
     const out = await deployEachTarget(
       [main, sonata, website],
@@ -75,7 +84,15 @@ describe("deployEachTarget", () => {
 
   test("a prepared failure after a stopping one is still reported failed, not unattempted", async () => {
     const prepared = new Map<T, TargetFailure<T>>([
-      [website, { target: website, reason: ["registry"], failedLabels: ["r"] }],
+      [
+        website,
+        {
+          target: website,
+          reason: ["registry"],
+          failedLabels: ["r"],
+          killedBy: null,
+        },
+      ],
     ]);
     const out = await deployEachTarget(
       [main, sonata, website],
@@ -89,7 +106,15 @@ describe("deployEachTarget", () => {
   test("a prepared failure of targets[0] moves the validation and the stop rule to the next target attempted", async () => {
     const seen: { namespace: string; first: boolean }[] = [];
     const prepared = new Map<T, TargetFailure<T>>([
-      [sonata, { target: sonata, reason: ["registry"], failedLabels: ["r"] }],
+      [
+        sonata,
+        {
+          target: sonata,
+          reason: ["registry"],
+          failedLabels: ["r"],
+          killedBy: null,
+        },
+      ],
     ]);
     const out = await deployEachTarget(
       [sonata, website, main],

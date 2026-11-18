@@ -3,6 +3,7 @@ import {
   InconclusiveCheckError,
   type Check,
 } from "@plugins/framework/plugins/tooling/core";
+import { ChildKilledError } from "@plugins/infra/plugins/spawn/core";
 import { thrownOutcome, type CheckObservation } from "./thrown-outcome";
 
 // Pure: no check registry, no runner. A check that throws must fail ITSELF —
@@ -28,6 +29,21 @@ function failed(outcome: ReturnType<typeof settle>) {
 }
 
 describe("thrownOutcome", () => {
+  test("a child killed by a signal stays fatal but says killedBy — no verdict on the code", () => {
+    const killed = new ChildKilledError(
+      'type-check worker for "repo"',
+      "SIGKILL",
+    );
+    const result = failed(settle(new Error("wrapped", { cause: killed })));
+    expect(result.killedBy).toBe("SIGKILL");
+    expect(result.inconclusive).toBeUndefined();
+    expect(result.message).toContain("killed by SIGKILL");
+  });
+
+  test("an ordinary throw carries no killedBy", () => {
+    expect(failed(settle(new Error("boom"))).killedBy).toBeUndefined();
+  });
+
   test("a thrown Error is a fatal, uncached FAIL carrying its stack", () => {
     const err = new Error("Connection terminated due to connection timeout");
     const observations: CheckObservation[] = [

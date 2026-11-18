@@ -36,6 +36,7 @@ import type {
   TypeCheckWorkerResult,
 } from "../core";
 import { spawnTypeCheckWorker, type WorkerAdmission } from "../server";
+import { killedByOf } from "@plugins/infra/plugins/spawn/core";
 import type {
   Check,
   CheckContext,
@@ -272,6 +273,9 @@ const check: Check = {
 
     let result: WorkerResult | undefined;
     let crash: string | undefined;
+    // The signal that ended the worker (or a batch it ran), when that is how
+    // it crashed: no verdict on the code, carried as `killedBy`.
+    let killedBy: string | undefined;
     let lintLines = "";
 
     // Everything that reads file bytes or the tree — the tsconfig
@@ -327,6 +331,7 @@ const check: Check = {
           result = await runWorker(root, program, plan, ctx.grant);
         } catch (err) {
           crash = (err as Error).message;
+          killedBy = killedByOf(err)?.signal;
         }
       }
 
@@ -471,6 +476,11 @@ const check: Check = {
       ok: false,
       message: parts.join("\n\n"),
       hint: hints.join(" ") || undefined,
+      // Only when the kill is the whole failure: a type error found before it
+      // is a verdict.
+      ...(killedBy !== undefined && !tscErrors && !lintLines
+        ? { killedBy }
+        : {}),
     };
   },
 };

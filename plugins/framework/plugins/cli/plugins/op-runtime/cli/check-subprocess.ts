@@ -63,6 +63,7 @@ import type { PeakFootprint } from "@plugins/packages/plugins/proc-rusage/core";
 import type { CheckScope } from "@plugins/framework/plugins/tooling/core";
 import { readCheckProgress } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import {
+  childSignalOf,
   spawnCaptured,
   spawnPassthrough,
 } from "@plugins/infra/plugins/spawn/core";
@@ -104,6 +105,17 @@ export interface CheckSubprocessOptions {
 
 export interface CheckSubprocessResult {
   ok: boolean;
+  /**
+   * How the pass ended, typed: `killed` when a signal ended it — the child's
+   * own (its `signalCode`, or the `128 + signo` its fatal-signal exit
+   * authors) or, as the child reports it the same way, a process every one of
+   * its failing checks ran (`passKilledBy`): no verdict on the code. `failed`
+   * only for a pass that judged the code and found something.
+   */
+  ended:
+    | { kind: "passed" }
+    | { kind: "failed" }
+    | { kind: "killed"; signal: string };
   exitCode: number;
   /**
    * The child's output, one entry per line. Always empty for `"inherit"` — the
@@ -177,6 +189,7 @@ export async function runCheckSubprocess(
   // build's `Promise.all` exactly as a throwing `runChecks` did, and build's
   // exit backstop renders it as "aborted before completing".
   let exitCode: number;
+  let signalCode: string | null;
   let peakFootprint: PeakFootprint;
   const lines: CheckSubprocessResult["lines"] = [];
   if (output === "inherit") {
@@ -187,6 +200,7 @@ export async function runCheckSubprocess(
       peakFootprint: "report",
     });
     exitCode = result.exitCode;
+    signalCode = result.signalCode;
     peakFootprint = result.resourceUsage.peakFootprint;
   } else {
     // `mergeStderr: true`, not two buffers. Two separate captures would split
@@ -211,14 +225,31 @@ export async function runCheckSubprocess(
         "this child is the whole `./equin check` run; its duration is the work's, and the CLI invocation above it owns no shorter deadline",
     });
     exitCode = result.exitCode;
+    signalCode = result.signalCode;
     peakFootprint = result.resourceUsage.peakFootprint;
     for (const line of result.stdout.split("\n")) {
       if (line) lines.push({ text: line, stream: "stdout" });
     }
   }
 
+  // The child is `./equin check`, whose codes are first-party: `128 + signo`
+  // is a signal it saw (its own, or its checks' processes'), never a choice.
+  // One exception: a pass its own hang watch killed (checks' `hang-watch.ts`
+  // SIGKILLs a thread that held its core for minutes) is a verdict — a
+  // check that hangs on this tree hangs again, so retrying it would spend
+  // minutes of CPU per attempt to file the same `check-pass-hung` report.
+  const hung =
+    runId !== undefined &&
+    readCheckProgress().some((r) => r.runId === runId && r.hung !== null);
+  const killedBy = hung ? null : childSignalOf({ exitCode, signalCode });
   return {
     ok: exitCode === 0,
+    ended:
+      exitCode === 0
+        ? { kind: "passed" }
+        : killedBy !== null
+          ? { kind: "killed", signal: killedBy }
+          : { kind: "failed" },
     exitCode,
     lines,
     spans:

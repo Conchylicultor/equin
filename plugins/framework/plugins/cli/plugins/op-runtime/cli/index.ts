@@ -115,5 +115,6 @@ export {
   renderVerdict,
 } from "./build-output";
 export type { Verdict } from "./build-output";
+export type { BuildStepLog } from "../core/internal/step-blocks";
 
 export { claimRunErrorFile, readCliCrash, recordCliCrash } from "./cli-crash";

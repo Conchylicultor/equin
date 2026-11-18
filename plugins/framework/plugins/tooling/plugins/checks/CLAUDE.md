@@ -683,7 +683,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
 
 - Description: Check runner and built-in checks for ./equin check
 - Core:
-  - Uses: 92 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 93 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework/tooling` ×12
     - `packages/timed-fs` ×11
     - `plugin-meta/plugin-records` ×9
@@ -691,10 +691,10 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `framework/tooling/exempt` ×7
     - `infra/stack-sampler` ×5
     - `infra/host-fs/user-path` ×4
+    - `infra/spawn` ×4
     - `packages/shared-work` ×4
     - `framework/tooling/checks/source-analysis` ×3
     - `infra/launcher/env-names` ×3
-    - `infra/spawn` ×3
     - `packages/thread-cpu-clock` ×3
     - `plugin-meta/parse-utils` ×3
     - `infra/git/private-index` ×2
@@ -757,6 +757,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `maskedSource`
     - `openCheckCache`
     - `parsedTsSource`
+    - `passKilledBy`
     - `pruneCheckCache`
     - `readCheckProgress`
     - `readTranscriptVerdict`

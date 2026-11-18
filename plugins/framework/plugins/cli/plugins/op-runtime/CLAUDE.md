@@ -206,6 +206,7 @@ the shared Playwright harness.
     - `BuildReceiptStatus`
     - `BuildRunProgress`
     - `BuildSpan`
+    - `BuildStepLog`
     - `CheckSubprocessOptions`
     - `CheckSubprocessResult`
     - `DirectOpContext`
