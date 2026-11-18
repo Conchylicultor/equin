@@ -5,6 +5,14 @@ import {
   type SiteReportsResponse,
 } from "@plugins/apps/plugins/deploy/plugins/site-reports/plugins/intake/core";
 
+const encoder = new TextEncoder();
+/** One entry's serialized size, its count at the widest it can be. */
+function entryBytes(report: BatchedReport): number {
+  return encoder.encode(
+    JSON.stringify({ ...report, count: SITE_REPORT_LIMITS.maxCount }),
+  ).length;
+}
+
 /** One report as the page hands it to the batcher, before its count is folded in. */
 export type BatchedReport = Omit<SiteReportEntry, "count">;
 
@@ -16,6 +24,12 @@ export interface BatcherLimits {
   maxPosts: number;
   /** Reports in one POST (the intake's `maxBatch`). */
   maxBatch: number;
+  /**
+   * One POST's serialized body, in UTF-8 bytes (the intake's `maxBodyBytes` —
+   * also a browser's keepalive bound, the pagehide flush's): a batch stops
+   * short of it, the rest go next.
+   */
+  maxBodyBytes: number;
   /** How long the first queued report waits for others to join its batch. */
   batchDelayMs: number;
   /** The longest back-off between two failed sends. */
@@ -28,6 +42,7 @@ export const BATCHER_LIMITS: BatcherLimits = {
   maxDistinct: 20,
   maxPosts: 10,
   maxBatch: SITE_REPORT_LIMITS.maxBatch,
+  maxBodyBytes: SITE_REPORT_LIMITS.maxBodyBytes,
   batchDelayMs: 5_000,
   maxBackoffMs: 5 * 60_000,
   maxFailures: 5,
@@ -150,8 +165,13 @@ export function createReportBatcher(deps: BatcherDeps): ReportBatcher {
       return;
     }
     const batch: { held: Held; count: number }[] = [];
+    // `{"reports":[` + `]}`, then each entry and its comma.
+    let bodyBytes = 14;
     for (const h of held.values()) {
       if (h.unsent === 0) continue;
+      const size = entryBytes(h.report) + 1;
+      if (batch.length > 0 && bodyBytes + size > limits.maxBodyBytes) break;
+      bodyBytes += size;
       batch.push({ held: h, count: h.unsent });
       if (batch.length >= limits.maxBatch) break;
     }

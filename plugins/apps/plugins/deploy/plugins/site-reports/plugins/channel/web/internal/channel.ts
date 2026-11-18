@@ -28,6 +28,5 @@ export const siteReportBatcher = createReportBatcher({
 /** report() on a site page: into the batcher, never one request per report. */
 export const siteReportChannel: ReportChannel = (body) => {
   const entry = toSiteReport(body, window.location.href);
-  if (entry === null) return Promise.resolve({ outcome: "dropped" });
   return Promise.resolve({ outcome: siteReportBatcher.add(entry) });
 };

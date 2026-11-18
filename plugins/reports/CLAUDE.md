@@ -27,6 +27,18 @@ The report contract every runtime shares — the HTTP body (`ReportBody`, and
 — is `core/`, because the engine that serves the routes is a child plugin and
 cannot reach a plugin-private `shared/`.
 
+## An oversized report arrives trimmed, never not at all
+
+A failure that lists everything it touched (a host boot naming every plugin
+it lost) makes the largest report, and a browser refuses a keepalive fetch
+over 64 KB outright — so such a report used to vanish. Every report channel
+fits each report to its own bounds with `core/fit.ts`'s `fitReportBody` — the
+engine's (`web/report.ts`) to `REPORT_SIZE_LIMITS`, the site's to its intake's: a long string is cut in its middle, the cut
+saying so in place (`… [N chars trimmed] …`) — a stack keeps its frames, top
+first (a crash's fingerprint), and loses the message it opens with; a long array keeps its first items; a payload still
+too large drops its largest fields; each structural cut is named in the
+message. A channel with tighter bounds (the site's) fits it again to its own.
+
 ## Readers are live
 
 Every reader reads `reports.list` (`core/resources.ts`), a
@@ -175,11 +187,13 @@ before it) beside the total, worded by `formatReportActivity`
     - `ReportInput`
     - `ReportOccurrence`
     - `ReportResult`
+    - `ReportSizeLimits`
     - `ReportSource`
   - Exports (values):
     - `afterWakeSummary`
     - `CLIENT_REPORT_SOURCES`
     - `fenceUntrustedReport`
+    - `fitReportBody`
     - `fixedByClaim`
     - `FIXES_REPORT_TRAILER`
     - `fixStandingOf`
@@ -198,6 +212,7 @@ before it) beside the total, worded by `formatReportActivity`
     - `REPORT_FIXED_BY_TRAILER`
     - `REPORT_HOURLY_MAX`
     - `REPORT_RECENT_MAX`
+    - `REPORT_SIZE_LIMITS`
     - `reportActivity`
     - `ReportBodySchema`
     - `reportDetailRoute`
@@ -213,6 +228,7 @@ before it) beside the total, worded by `formatReportActivity`
     - `SERVER_REPORT_SOURCES`
     - `skewProofOf`
     - `submitReport`
+    - `trimText`
     - `UNTRUSTED_REPORT_SOURCES`
     - `versionSkewCode`
     - `versionSkewExplains`

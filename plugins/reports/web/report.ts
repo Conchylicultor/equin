@@ -3,6 +3,9 @@ import { pageTransport } from "@plugins/primitives/plugins/networking/plugins/pa
 import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
 import { defineRequestSink } from "@plugins/primitives/plugins/report-sink/core";
 import {
+  fitReportBody,
+  REPORT_SIZE_LIMITS,
+  trimText,
   ReportBodySchema,
   reportMessageOrDerived,
   submitReport,
@@ -29,6 +32,9 @@ export type ClientReportOutcome =
  * anonymous — installs its own channel at register time
  * (`apps/deploy/site-reports/channel`): bounded, batched, deduped, to its own
  * public intake. A channel that throws is caught by report(), which warns.
+ * A channel fits each report to its own bounds (reports/core's
+ * `fitReportBody`, as the engine's does): a report too large is sent trimmed,
+ * saying so — never refused or dropped for its size.
  */
 export type ReportChannel = (body: ReportBody) => Promise<ClientReportOutcome>;
 
@@ -45,10 +51,18 @@ async function sendToEngine(body: ReportBody): Promise<ClientReportOutcome> {
   // they belong to the page and always reach the page's own server, whatever
   // subtree raised them.
   const fetchEndpoint = fetchEndpointOver(pageTransport);
+  // Fitted to the engine's bounds: a keepalive fetch over 64 KB fails
+  // outright, so a report too large arrives trimmed and saying so, never not
+  // at all (core/fit.ts).
   return await fetchEndpoint(
     submitReport,
     {},
-    { body, keepalive: true, report: false, retry: REPORT_RETRY },
+    {
+      body: fitReportBody(body, REPORT_SIZE_LIMITS),
+      keepalive: true,
+      report: false,
+      retry: REPORT_RETRY,
+    },
   );
 }
 
@@ -125,7 +139,7 @@ export async function report(
   } catch (err) {
     const cause = err instanceof Error ? err.message : String(err);
     console.warn(
-      `[reports] report not delivered (${body.kind}/${body.source}): ${body.message} — ${cause}`,
+      `[reports] report not delivered (${body.kind}/${body.source}): ${trimText(body.message, 1_000)} — ${cause}`,
     );
     return null;
   }

@@ -48,7 +48,9 @@ route that lists the reports: the mirror's change stream is the only way they
 leave the box.
 
 Only anonymous data is stored: no IP, client id or user agent. The page sends
-its pathname and clamps every string (`channel`'s `toSiteReport`).
+its pathname and fits every report to these bounds (`channel`'s `toSiteReport`,
+over reports/core's `fitReportBody`): an oversized report arrives trimmed,
+saying so, never dropped.
 
 ## Tests
 

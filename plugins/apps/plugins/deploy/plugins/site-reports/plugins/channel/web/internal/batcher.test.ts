@@ -13,6 +13,7 @@ const limits: BatcherLimits = {
   maxDistinct: 3,
   maxPosts: 4,
   maxBatch: 2,
+  maxBodyBytes: 64 * 1024,
   batchDelayMs: 5_000,
   maxBackoffMs: 60_000,
   maxFailures: 2,
@@ -30,12 +31,15 @@ function report(message: string): BatchedReport {
   };
 }
 
-function harness(answer: () => SiteReportsResponse | Error) {
+function harness(
+  answer: () => SiteReportsResponse | Error,
+  overrides: Partial<BatcherLimits> = {},
+) {
   const sent: SiteReportEntry[][] = [];
   const timers: { fn: () => void; delayMs: number }[] = [];
   const warnings: string[] = [];
   const batcher = createReportBatcher({
-    limits,
+    limits: { ...limits, ...overrides },
     send: (entries) => {
       sent.push(entries);
       const a = answer();
@@ -85,6 +89,17 @@ describe("report batcher", () => {
     expect(h.timers.at(-1)?.delayMs).toBe(limits.batchDelayMs);
     await h.batcher.flush();
     expect(h.sent[1]).toHaveLength(1);
+  });
+
+  test("a batch stops short of maxBodyBytes; the rest go next", async () => {
+    const h = harness(ok, { maxBodyBytes: 1_000 });
+    h.batcher.add(report("a".repeat(300)));
+    h.batcher.add(report("b".repeat(300)));
+    await h.batcher.flush();
+    expect(h.sent[0]).toHaveLength(1);
+    await h.batcher.flush();
+    expect(h.sent[1]).toHaveLength(1);
+    expect(h.sent[1]![0]!.message).toBe("b".repeat(300));
   });
 
   test("failures back off, keep their counts, and stop the visit", async () => {

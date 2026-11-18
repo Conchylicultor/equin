@@ -3762,7 +3762,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/deploy/site-reports/import`
         - **`site-reports`** — Umbrella for the error reports a deployed site's visitors' browsers send: the intake that ships inside the site (public bounded endpoint, aggregated table, mirror set) and the page channel that sends them (deduped, capped, batched).
           - Plugins:
-            - **`channel`** (excluded) — The website's report channel: registers itself as reports' reportChannel at register time, so report() on a site page — the page's collectors, which also catch what the live demo raises — sends to the site's own public intake (POST /api/site-reports) instead of a reports engine the site does not have: deduped by fingerprint (a repeat only counted), at most 20 fingerprints and 10 POSTs per visit, batched 5 s, backed off on failure (stopping after 5), anonymous (no client id or user agent, the pathname only, strings clamped). Excluded from every composition by default (base-exclusions); the website names it.
+            - **`channel`** (excluded) — The website's report channel: registers itself as reports' reportChannel at register time, so report() on a site page — the page's collectors, which also catch what the live demo raises — sends to the site's own public intake (POST /api/site-reports) instead of a reports engine the site does not have: deduped by fingerprint (a repeat only counted), at most 20 fingerprints and 10 POSTs per visit, batched 5 s, backed off on failure (stopping after 5), anonymous (no client id or user agent, the pathname only, fitted to the intake's bounds — an oversized report trimmed and saying so, never dropped — and a batch kept under its body bound). Excluded from every composition by default (base-exclusions); the website names it.
               - Web:
                 - Contributes: `Core.Root` → `FlushReportsOnPagehide`
                 - Uses:
@@ -59550,11 +59550,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReportInput`
       - `ReportOccurrence`
       - `ReportResult`
+      - `ReportSizeLimits`
       - `ReportSource`
     - Exports (values):
       - `afterWakeSummary`
       - `CLIENT_REPORT_SOURCES`
       - `fenceUntrustedReport`
+      - `fitReportBody`
       - `fixedByClaim`
       - `FIXES_REPORT_TRAILER`
       - `fixStandingOf`
@@ -59573,6 +59575,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `REPORT_FIXED_BY_TRAILER`
       - `REPORT_HOURLY_MAX`
       - `REPORT_RECENT_MAX`
+      - `REPORT_SIZE_LIMITS`
       - `reportActivity`
       - `ReportBodySchema`
       - `reportDetailRoute`
@@ -59588,6 +59591,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SERVER_REPORT_SOURCES`
       - `skewProofOf`
       - `submitReport`
+      - `trimText`
       - `UNTRUSTED_REPORT_SOURCES`
       - `versionSkewCode`
       - `versionSkewExplains`

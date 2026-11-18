@@ -28,7 +28,7 @@ describe("toSiteReport", () => {
     });
   });
 
-  test("clamps the message and every payload string", () => {
+  test("fits the message and the payload to the intake's bounds, saying so", () => {
     const entry = toSiteReport(
       {
         kind: "crash",
@@ -37,20 +37,25 @@ describe("toSiteReport", () => {
         data: { stack: "s".repeat(5_000), nested: { v: "n".repeat(5_000) } },
       },
       "https://equin.ai/",
-    )!;
-    expect(entry.message.length).toBe(1_000);
+    );
+    expect(entry.message.length).toBeLessThanOrEqual(1_000);
+    expect(entry.message).toContain("chars trimmed");
     expect(JSON.stringify(entry.data).length).toBeLessThanOrEqual(4_096);
+    expect(JSON.stringify(entry.data)).toContain("chars trimmed");
   });
 
-  test("a payload too large even clamped is not sent", () => {
+  test("a payload too large even clamped is still sent, its largest fields dropped and named", () => {
     const data = Object.fromEntries(
       Array.from({ length: 200 }, (_, i) => [`k${i}`, "v".repeat(100)]),
     );
-    expect(
-      toSiteReport(
-        { kind: "crash", source: "browser-error", message: "m", data },
-        "https://equin.ai/",
-      ),
-    ).toBeNull();
+    const entry = toSiteReport(
+      { kind: "crash", source: "browser-error", message: "m", data },
+      "https://equin.ai/",
+    );
+    expect(JSON.stringify(entry.data).length).toBeLessThanOrEqual(4_096);
+    expect(entry.message).toStartWith(
+      "m [report trimmed to fit its size limit:",
+    );
+    expect(entry.message.length).toBeLessThanOrEqual(1_000);
   });
 });

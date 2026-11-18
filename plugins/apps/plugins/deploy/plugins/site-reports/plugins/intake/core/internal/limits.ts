@@ -12,7 +12,7 @@ export const SITE_REPORT_LIMITS = {
   maxMessage: 1_000,
   /** One report's kind payload, serialized. */
   maxDataBytes: 4_096,
-  /** One string inside a report's kind payload, in characters (the page clamps). */
+  /** One string inside a report's kind payload, in characters (the page trims, saying so). */
   maxDataString: 1_500,
   /** Occurrences the browser folded into one entry. */
   maxCount: 1_000,

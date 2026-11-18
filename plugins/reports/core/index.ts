@@ -43,6 +43,8 @@ export {
 export type { ReportBody, ReportInput } from "./report-body";
 export { ReportBodySchema } from "./report-body";
 export { reportMessageOrDerived } from "./blank-message";
+export { fitReportBody, trimText, REPORT_SIZE_LIMITS } from "./fit";
+export type { ReportSizeLimits } from "./fit";
 export {
   FIXES_REPORT_TRAILER,
   REPORT_FIXED_BY_TRAILER,
