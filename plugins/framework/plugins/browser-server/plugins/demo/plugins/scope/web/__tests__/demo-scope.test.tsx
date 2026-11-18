@@ -655,6 +655,60 @@ describe("<DemoScope>", () => {
     expect(view.queryByText("never")).toBeNull();
   });
 
+  it("a page drawing the boot draws a failed host in its own box — reported, never thrown — and Try again boots a fresh one", async () => {
+    console.error = () => {};
+    const reported: unknown[] = [];
+    const onError = (e: ErrorEvent) => {
+      reported.push(e.error);
+      e.preventDefault();
+    };
+    window.addEventListener("error", onError);
+    try {
+      let boots = 0;
+      const seen: { boots: string[] } = { boots: [] };
+      let retry: (() => void) | null = null;
+      const view = await renderAsync(
+        <PluginProvider plugins={PLUGINS}>
+          <Boundary>
+            <DemoScope
+              scenario={scenarioOf(() => {
+                boots += 1;
+                if (boots === 1) {
+                  throw new TypeError(
+                    "Failed to fetch dynamically imported module",
+                  );
+                }
+                return storyServer();
+              }, "lost-module")}
+              resume
+              boot={(state) => {
+                seen.boots.push(state.kind);
+                if (state.kind === "failed") retry = state.retry;
+                return state.kind === "failed" ? <p>could not start</p> : null;
+              }}
+            >
+              <p>in the demo</p>
+            </DemoScope>
+          </Boundary>
+        </PluginProvider>,
+      );
+      await waitFor(() =>
+        expect(view.getByText("could not start")).toBeTruthy(),
+      );
+      // Drawn, not thrown: the page around it stands.
+      expect(view.queryByTestId("boundary")).toBeNull();
+      expect(reported).toHaveLength(1);
+      expect(String(reported[0])).toContain("Failed to fetch");
+      act(() => retry!());
+      await waitFor(() => expect(view.getByText("in the demo")).toBeTruthy());
+      expect(boots).toBe(2);
+      expect(reported).toHaveLength(1);
+    } finally {
+      window.removeEventListener("error", onError);
+      localStorage.clear();
+    }
+  });
+
   it("a host declining because the same host serves elsewhere sends the tab there: it joins, no screen", async () => {
     let boots = 0;
     const view = await renderAsync(

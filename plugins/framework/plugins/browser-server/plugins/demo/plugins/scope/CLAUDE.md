@@ -23,7 +23,17 @@ seed — so the unchanged app reads demo data through `useLive` /
   retiring (its last tab went: it flushes and closes; the tab moves to the
   next host generation) — or a dedicated worker where the browser has no
   SharedWorker.
-  Unmount disposes the server and leaves the connection. A host that fails to boot throws to the error boundary.
+  Unmount disposes the server and leaves the connection.
+- **A host that fails to boot stays in the demo's box.** With `boot`, the
+  page draws it (`DemoBoot` `failed`: the error and `retry`), the failure
+  reported once through `reportError` (the crash collector files it as any
+  uncaught error) — never thrown, since the scope's error boundary is the
+  page's: on the website it is the whole site's, so one module the visitor's
+  network lost (a dropped connection, a content blocker) blanked every page
+  (report-1795030621-pibl6l). `retry` connects again: the failed worker
+  retired itself, so the next one boots fresh and fetches its modules again
+  (Chrome does not keep a failed module fetch). Without `boot`, it throws to
+  the error boundary.
 - **A gate, where the page draws the boot** (`boot={(state) => …}`,
   `DemoBoot`: `gate` → `starting` with the worker's `HostProgress`). The
   visitor enters through the gate on every visit. Behind it, the scope asks
@@ -123,7 +133,7 @@ in-realm `MessageChannel` standing in for the worker).
 
 ## Plugin reference
 
-- Description: <DemoScope scenario>: renders its subtree against the scenario's browser host — real server code in a worker, on the scenario's seed — and scoped to the host's composition (<PluginScope>), so the page shows exactly the plugins the worker serves. Everything inside reaches the host only (the scope's transport): the build's coverage guard holds the host to serving every read, endpoint and config the scope uses, or declaring it needsMachine (answered unavailable); a key or endpoint it still does not serve fails loudly. A host that fails to boot throws to the error boundary. An optional boot render gates the demo on every visit (DemoBoot: checking, the gate, then starting with the worker's progress): the visitor enters it (enter), or — while they are in the demo in another tab of this browser (a shared Web Lock each such tab holds) — the tab joins it with no gate (onEnter hears both, and which: the gate's click, or a join no one acted on); a page whose own URL says whether the visitor is in decides alone (resume: true — no gate, only the loading; false — the gate, no join); behind the gate, a browser already holding the demo's data starts the host at once, a first visit only on enter, since it downloads the whole server and its data. Connects to one SharedWorker per build (every tab of the demo shares its server and data: a worker that finds the same host serving under another name sends the tab there — it joins, never takes it), shows the true cause when the host will not serve the page (equin updated in another tab; a browser without SharedWorker that opened it in another tab), and exposes Reset (useDemoHostControl) — the host wipes its data and every tab reconnects to a fresh one.
+- Description: <DemoScope scenario>: renders its subtree against the scenario's browser host — real server code in a worker, on the scenario's seed — and scoped to the host's composition (<PluginScope>), so the page shows exactly the plugins the worker serves. Everything inside reaches the host only (the scope's transport): the build's coverage guard holds the host to serving every read, endpoint and config the scope uses, or declaring it needsMachine (answered unavailable); a key or endpoint it still does not serve fails loudly. A host that fails to boot is drawn by the boot render (failed: reported through reportError, with a retry that boots a fresh host), and throws to the error boundary where there is none. An optional boot render gates the demo on every visit (DemoBoot: checking, the gate, then starting with the worker's progress, or failed): the visitor enters it (enter), or — while they are in the demo in another tab of this browser (a shared Web Lock each such tab holds) — the tab joins it with no gate (onEnter hears both, and which: the gate's click, or a join no one acted on); a page whose own URL says whether the visitor is in decides alone (resume: true — no gate, only the loading; false — the gate, no join); behind the gate, a browser already holding the demo's data starts the host at once, a first visit only on enter, since it downloads the whole server and its data. Connects to one SharedWorker per build (every tab of the demo shares its server and data: a worker that finds the same host serving under another name sends the tab there — it joins, never takes it), shows the true cause when the host will not serve the page (equin updated in another tab; a browser without SharedWorker that opened it in another tab), and exposes Reset (useDemoHostControl) — the host wipes its data and every tab reconnects to a fresh one.
 - Web:
   - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework/browser-server` ×7

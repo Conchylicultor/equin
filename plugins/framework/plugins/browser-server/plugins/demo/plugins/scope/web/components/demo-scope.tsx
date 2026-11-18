@@ -377,12 +377,19 @@ type ScopeState =
  *   the demo's data, so starting downloads nothing large) or not (a first
  *   visit: entering downloads the server and its data);
  * - `starting` — the visitor entered and the host is still booting,
- *   `progress` its worker's report so far (`null` until the first arrives).
+ *   `progress` its worker's report so far (`null` until the first arrives);
+ * - `failed` — the host could not boot (most often a module of its server
+ *   that the visitor's network lost on the way: a dropped connection, a
+ *   content blocker). The failure is already reported (`reportError`, as an
+ *   uncaught error is); `retry` boots a fresh host, which fetches what was
+ *   lost again. The page draws it in the demo's own box, so a demo that
+ *   failed never takes the page around it down.
  */
 export type DemoBoot =
   | { kind: "checking" }
   | { kind: "gate"; enter(): void }
-  | { kind: "starting"; progress: HostProgress | null };
+  | { kind: "starting"; progress: HostProgress | null }
+  | { kind: "failed"; error: unknown; retry(): void };
 
 /**
  * How the visitor came into a gated demo: `"gate"` — they clicked Enter in
@@ -417,8 +424,9 @@ export type DemoEntry = "gate" | "joined";
  * Every tab shares the running host: a worker that finds the same host
  * already serving the data (another tab's, under another generation's name)
  * sends this tab to it (`join`), and a Reset or a retirement is followed to
- * the next host — never a screen. A host that fails to boot throws to the
- * error boundary. Only a cause the tab cannot follow stops it, each with its
+ * the next host — never a screen. A host that fails to boot is drawn by
+ * `boot` (`failed`: reported, with a retry) — without `boot`, it throws to
+ * the error boundary. Only a cause the tab cannot follow stops it, each with its
  * own message and a Reload (`StopReason`): equin was updated in another tab,
  * or a browser without SharedWorker opened the demo in another tab.
  */
@@ -549,6 +557,13 @@ export function DemoScope({
     () => trackHostGenerations(scenario.id),
     [scenario.id],
   );
+  // After a failed boot: a fresh host. The failed one retired itself (it
+  // would replay its failure), so connecting again reaches the next one, which
+  // fetches its modules again — what a lost module needs.
+  const retry = useEventCallback(() => {
+    setState({ kind: "booting", progress: null });
+    setReconnects((r) => r + 1);
+  });
   useEffect(() => {
     if (!started) return;
     // A reset throws away the scope's browser-side state with its data (the
@@ -616,6 +631,14 @@ export function DemoScope({
     () => (host === null ? null : { reset: host.reset }),
     [host],
   );
+  // A boot failure the page draws (`boot`) is reported here, once: drawn, it
+  // reaches no error boundary, and a failure nobody hears of is a hidden one.
+  // `reportError` files it as an uncaught error is (the crash collector).
+  const failure = state.kind === "failed" ? state.error : null;
+  const drawsFailure = boot !== undefined;
+  useEffect(() => {
+    if (failure !== null && drawsFailure) reportError(failure);
+  }, [failure, drawsFailure]);
   // Only a gated scope (`boot` set) is ever outside. The gate comes first: a
   // host started behind it (stored data) that failed or was declined says so
   // once the visitor enters, never in place of the gate.
@@ -634,8 +657,12 @@ export function DemoScope({
       },
     });
   }
-  // A host that could not boot reaches the error boundary, never an empty app.
-  if (state.kind === "failed") throw state.error;
+  // A host that could not boot is never an empty app: the page draws it with
+  // a retry (reported by the effect above), else it reaches the error boundary.
+  if (state.kind === "failed") {
+    if (boot === undefined) throw state.error;
+    return boot({ kind: "failed", error: state.error, retry });
+  }
   if (scopePlugins.kind === "failed") throw scopePlugins.error;
   if (state.kind === "stopped") return <HostStopped why={state.why} />;
   if (

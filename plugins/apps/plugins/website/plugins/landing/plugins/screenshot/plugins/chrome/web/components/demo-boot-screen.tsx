@@ -45,7 +45,10 @@ const isStarting = (progress: HostProgress | null): boolean =>
  * - while it is not known yet whether the visitor is already in the demo in
  *   another tab (`checking`, a few ms), the logo alone;
  * - while it starts, one bar in the logo's gradient, what it is doing and
- *   how much it downloaded so far, in place of the button.
+ *   how much it downloaded so far, in place of the button;
+ * - when it could not start (a module lost on the visitor's network), what
+ *   happened and Try again, in the button's place — the page around it is
+ *   untouched.
  *
  * It fills its box: the website's demo band — or the whole
  * page, where the URL it opens is maximized.
@@ -79,6 +82,25 @@ export function DemoBootScreen({ state }: { state: DemoBoot }): ReactNode {
             </>
           )}
           {state.kind === "starting" && <BootBar progress={state.progress} />}
+          {state.kind === "failed" && (
+            <>
+              {/* Same slot, same weight as Enter: the way back in. */}
+              <ControlSizeProvider size="lg">
+                <Button className="demo-boot-enter" onClick={state.retry}>
+                  Try again
+                </Button>
+              </ControlSizeProvider>
+              <Text
+                as="p"
+                variant="body"
+                tone="muted"
+                className="demo-boot-sub"
+                role="alert"
+              >
+                equin could not start: part of it did not download.
+              </Text>
+            </>
+          )}
         </div>
       </div>
     </div>
