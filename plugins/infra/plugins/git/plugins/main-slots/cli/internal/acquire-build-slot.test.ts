@@ -1413,7 +1413,10 @@ describe("central pins its slot", () => {
   // it to the repo root): its slot serves while it holds it, never drains.
 
   /** A slot central runs from, its spec naming another tree (no link, no spec names it). */
-  async function centralSlot(root: AppPath, sha: string): Promise<{
+  async function centralSlot(
+    root: AppPath,
+    sha: string,
+  ): Promise<{
     slot: AppPath;
     central: Awaited<ReturnType<typeof acquireSharedLease>>;
   }> {
@@ -1446,7 +1449,11 @@ describe("central pins its slot", () => {
     const { slot: c, central } = await centralSlot(root, first);
     const [a, b] = (await freshSlots(root, first, 2)) as [AppPath, AppPath];
     const jobA = await acquireSharedLease(a, "exec-child", "run");
-    const jobB = await acquireSharedLease(b, "exec-child", "worktree.spare-refill");
+    const jobB = await acquireSharedLease(
+      b,
+      "exec-child",
+      "worktree.spare-refill",
+    );
     for (const s of [a, b])
       await stampUnserved(s, { at: new Date(), reportAfterMs: THRESHOLD_MS });
     expect(await stateOf(c)).toBe("serving");

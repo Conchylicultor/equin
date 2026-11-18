@@ -37438,8 +37438,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reports.ReportRow`
             - Register: `defineSupervisedJob('main-slots.reclaim')`
           - Core:
-            - Uses: 46 symbols — full list in [`plugins/infra/plugins/git/plugins/main-slots/REFERENCE.md`](../plugins/infra/plugins/git/plugins/main-slots/REFERENCE.md)
-              - `infra/git/main-slots/boot-lease` ×19
+            - Uses: 47 symbols — full list in [`plugins/infra/plugins/git/plugins/main-slots/REFERENCE.md`](../plugins/infra/plugins/git/plugins/main-slots/REFERENCE.md)
+              - `infra/git/main-slots/boot-lease` ×20
               - `packages/timed-fs` ×6
               - `infra/paths` ×5
               - `infra/namespace` ×4
@@ -37542,7 +37542,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `checkoutRootOfSync`
                   - `detachedHeadOf`
                   - `drainRecordFor`
-                  - `drainsByDesign`
                   - `holdSlotLeaseSync`
                   - `MAIN_SLOT_SERVED_FILE`
                   - `MAIN_SLOT_STAMP`
@@ -37561,6 +37560,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `SLOT_LOCK_FILE`
                   - `SLOT_UNSERVED_FILE`
                   - `slotHandedLockFile`
+                  - `slotHolderRole`
               - Cross-plugin:
                 - Imported by:
                   - `infra/git/main-slots`

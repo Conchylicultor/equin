@@ -307,8 +307,8 @@ a normal wait:
     - `reports.ReportRow`
   - Register: `defineSupervisedJob('main-slots.reclaim')`
 - Core:
-  - Uses: 46 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra/git/main-slots/boot-lease` ×19
+  - Uses: 47 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/git/main-slots/boot-lease` ×20
     - `packages/timed-fs` ×6
     - `infra/paths` ×5
     - `infra/namespace` ×4
