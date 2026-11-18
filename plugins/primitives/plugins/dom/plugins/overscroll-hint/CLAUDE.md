@@ -112,6 +112,13 @@ shrinking deltas; the relax wins as they shrink, so the band recedes while
 momentum is still arriving. While a finger is down (touch) the pull holds, then
 springs back on release.
 
+**The frame loop runs only while the band moves.** Once the offset catches a
+resting finger's pull the band is `still` and the loop stops until the next
+`touchmove` or the release — otherwise it rewrites the same inline styles 60×/s
+(a render-loop report). A touch's end is also watched on the element it began
+on: once that element leaves the document, the end never reaches the window
+and the band would stay held out.
+
 Smoothness is checked deterministically by `rubber-band.test.ts` (60 / 120 /
 144 Hz and an irregular 17–83 ms cadence), not by the e2e: a headless browser on
 a loaded machine delivers input and frames up to hundreds of ms apart, so a

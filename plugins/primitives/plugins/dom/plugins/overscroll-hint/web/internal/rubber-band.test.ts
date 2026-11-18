@@ -118,4 +118,30 @@ describe("rubber band", () => {
     for (let i = 0; i < 120; i += 1) band.frame(16, 0, false);
     expect(band.atRest).toBe(true);
   });
+
+  test("a held finger that stops moving stops the band: still, until input or release", () => {
+    const band = createRubberBand();
+    band.frame(16, 100, true);
+    expect(band.still).toBe(false); // still catching up with the pull
+    let frames = 0;
+    while (!band.still && frames < 120) {
+      band.frame(16, 0, true);
+      frames += 1;
+    }
+    // The spring reaches the held pull within a fraction of a second, and
+    // then nothing moves: a frame loop has nothing left to draw.
+    expect(frames).toBeLessThan(30);
+    const held = band.offset;
+    band.frame(16, 0, true);
+    expect(band.offset).toBe(held);
+    expect(band.still).toBe(true);
+    expect(band.atRest).toBe(false);
+    // The finger moves again: the band moves.
+    band.frame(16, 20, true);
+    expect(band.still).toBe(false);
+  });
+
+  test("at rest the band is still", () => {
+    expect(createRubberBand().still).toBe(true);
+  });
 });

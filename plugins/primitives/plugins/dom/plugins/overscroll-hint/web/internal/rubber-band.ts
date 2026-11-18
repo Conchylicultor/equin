@@ -76,6 +76,13 @@ export interface RubberBand {
   readonly offset: number;
   /** Whether the band is back at rest (nothing left to draw or animate). */
   readonly atRest: boolean;
+  /**
+   * Whether the band has stopped moving: the drawn offset sits exactly on the
+   * pull, with no velocity. At rest, or held still by a finger — the band
+   * then stays where it is until the next `frame` brings input or a release,
+   * so a frame loop has nothing to draw until then.
+   */
+  readonly still: boolean;
 }
 
 export function createRubberBand(): RubberBand {
@@ -108,6 +115,15 @@ export function createRubberBand(): RubberBand {
         pull = 0;
         offset = 0;
         velocity = 0;
+      } else if (
+        holding &&
+        Math.abs(offset - target) < REST_EPS &&
+        Math.abs(velocity) < REST_SPEED
+      ) {
+        // A finger holds the pull and the offset has reached it: the band
+        // stops here, exactly, until the finger moves or lifts.
+        offset = target;
+        velocity = 0;
       }
     },
     get offset() {
@@ -115,6 +131,9 @@ export function createRubberBand(): RubberBand {
     },
     get atRest() {
       return pull === 0 && offset === 0 && velocity === 0;
+    },
+    get still() {
+      return offset === -pull && velocity === 0;
     },
   };
 }

@@ -92,6 +92,15 @@ export function installOverscrollHint(
       endBounce();
       return;
     }
+    // Held still under a finger: nothing moves until the finger does (a
+    // touchmove) or lifts (a touchend), and each of those schedules a frame.
+    // Looping on would redraw the same offset every frame for as long as the
+    // finger rests — a 60/s write of unchanged styles, and a page that never
+    // idles. The next frame measures its dt from scratch, not across the wait.
+    if (bounce.band.still) {
+      lastTs = null;
+      return;
+    }
     schedule();
   }
 
@@ -180,9 +189,39 @@ export function installOverscrollHint(
     }
   }
 
+  // A touch's end is dispatched to the element the touch began on, even once
+  // that element has left the document — and then it never bubbles to the
+  // window (a tap that closes the sheet it landed in). Missing it would hold
+  // the band out, and `touching` true, until some later touch. So every
+  // touch's target is watched for an end the window cannot see.
+  const touchTargets = new Set<EventTarget>();
+
+  function onDetachedTouchEnd(event: Event): void {
+    if (event.target instanceof Node && event.target.isConnected) return; // the window sees it
+    onTouchEnd(event as TouchEvent);
+  }
+
+  function unwatchTouchTargets(): void {
+    for (const target of touchTargets) {
+      target.removeEventListener("touchend", onDetachedTouchEnd);
+      target.removeEventListener("touchcancel", onDetachedTouchEnd);
+    }
+    touchTargets.clear();
+  }
+
   function onTouchStart(event: TouchEvent): void {
     const t = event.touches[0];
     if (!t) return;
+    const target = event.target;
+    if (target !== null && !touchTargets.has(target)) {
+      touchTargets.add(target);
+      target.addEventListener("touchend", onDetachedTouchEnd, {
+        passive: true,
+      });
+      target.addEventListener("touchcancel", onDetachedTouchEnd, {
+        passive: true,
+      });
+    }
     touching = true;
     touchX = t.clientX;
     touchY = t.clientY;
@@ -201,6 +240,7 @@ export function installOverscrollHint(
 
   function onTouchEnd(event: TouchEvent): void {
     if (event.touches.length > 0) return;
+    unwatchTouchTargets();
     // A cancelled touch (the browser took it) never refreshes.
     refresh.release(event.type === "touchend");
     touching = false; // released → the band springs back from where it was held
@@ -221,6 +261,7 @@ export function installOverscrollHint(
     window.removeEventListener("touchmove", onTouchMove);
     window.removeEventListener("touchend", onTouchEnd);
     window.removeEventListener("touchcancel", onTouchEnd);
+    unwatchTouchTargets();
     if (frameId !== null) cancelAnimationFrame(frameId);
     frameId = null;
     batch = null;
