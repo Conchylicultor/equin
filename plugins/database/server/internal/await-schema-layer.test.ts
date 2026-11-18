@@ -16,6 +16,8 @@ const NOT_READY = {
  */
 function fakeHost(opts: {
   inFlight: boolean;
+  /** The watch answers that no deploy will ever set up this code (an old main slot). */
+  superseded?: string;
   lastOwnerBoot?: OwnerBootRecord | null;
 }) {
   let ready = false;
@@ -44,14 +46,16 @@ function fakeHost(opts: {
         });
       },
       awaitDeploysSettled: async (signal) => {
-        if (!opts.inFlight) return [];
+        if (opts.superseded !== undefined)
+          return { kind: "superseded", detail: opts.superseded };
+        if (!opts.inFlight) return { kind: "settled", waitedOn: [] };
         await new Promise<void>((resolve, reject) => {
           void settled.then(resolve);
           signal.addEventListener("abort", () => reject(signal.reason), {
             once: true,
           });
         });
-        return ["a deploy of this namespace"];
+        return { kind: "settled", waitedOn: ["a deploy of this namespace"] };
       },
       lastOwnerBoot: () => Promise.resolve(opts.lastOwnerBoot ?? null),
     },
@@ -87,6 +91,27 @@ describe("waitForOwner", () => {
       "no build, deploy or backend boot of this checkout is in flight",
     );
     expect(String(caught)).toContain("./equin build");
+    expect(Date.now() - started).toBeLessThan(1000);
+    expect(host.closed()).toBe(true);
+  });
+
+  test("a main slot main moved past: refused at once, naming why — never waits on main's next deploys", async () => {
+    // report-1794960565-yv4ch2: a child the draining backend spawned from
+    // its old slot waited the whole bound while newer deploys ran.
+    const host = fakeHost({
+      inFlight: true,
+      superseded: "main has moved past this slot",
+    });
+    const started = Date.now();
+    let caught: unknown;
+    try {
+      await waitForOwner(NOT_READY, host.deps);
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBeInstanceOf(SchemaNotReadyError);
+    expect(String(caught)).toContain("main has moved past this slot");
+    expect(String(caught)).not.toContain("./equin build");
     expect(Date.now() - started).toBeLessThan(1000);
     expect(host.closed()).toBe(true);
   });

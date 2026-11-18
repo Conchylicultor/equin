@@ -15,6 +15,7 @@ import {
   db,
   DatabaseDriver,
   type DatabaseDriverImpl,
+  type DeploysSettled,
   type OwnerBootRecord,
 } from "./driver";
 
@@ -119,15 +120,15 @@ export async function waitForOwner(
   // its build lock go after this point is heard as a NOTIFY, and one that did
   // before it is seen by the read that follows the settle.
   const stopWatching = new AbortController();
-  let settled = false;
-  let waitedOn: readonly string[] = [];
+  // What the builds and deploys watch found, once it did. Cast, not
+  // annotated: set from a callback (as `watchFailed` below).
+  let settled = null as DeploysSettled | null;
   // Cast, not annotated: set from a callback, which tsc's narrowing of the
   // initializer does not see.
   let watchFailed = null as { err: unknown } | null;
   const deploys = driver.awaitDeploysSettled(stopWatching.signal).then(
-    (what) => {
-      waitedOn = what;
-      settled = true;
+    (outcome) => {
+      settled = outcome;
       wake?.();
     },
     (err: unknown) => {
@@ -165,14 +166,22 @@ export async function waitForOwner(
       }
       // Read after every build, deploy and serving backend's boot in flight
       // ended (a booting backend lets go only once its `onReady` settled the
-      // stamp): no owner is on its way. Why, from what the last one said.
-      if (wasSettled)
+      // stamp), or after learning none ever will boot an owner of this code
+      // (a main slot main moved past): no owner is on its way. Why, from what
+      // the last one said.
+      if (wasSettled !== null)
         throw new SchemaNotReadyError(
-          nothingComing(check, waitedOn, await driver.lastOwnerBoot()),
+          wasSettled.kind === "superseded"
+            ? `${check.detail}; ${wasSettled.detail}`
+            : nothingComing(
+                check,
+                wasSettled.waitedOn,
+                await driver.lastOwnerBoot(),
+              ),
         );
       const remaining = waitMs - (Date.now() - started);
       if (remaining <= 0) throw new SchemaNotReadyError(check.detail);
-      if (notified || settled || watchFailed !== null) continue;
+      if (notified || settled !== null || watchFailed !== null) continue;
       await withDeadline(
         new Promise<void>((resolve) => {
           wake = resolve;

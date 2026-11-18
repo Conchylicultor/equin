@@ -141,9 +141,15 @@ export interface DatabaseDriverImpl {
    * until its `onReady` recorded the stamp, however the build that restarted
    * it exited. On main's checkout it also does not settle while its HEAD is
    * one main's build has not attempted yet (a push landed, its deploy not
-   * started). PGlite's process is its own owner: nothing to wait for.
+   * started). A main SLOT is the opposite case: its HEAD never moves, so a
+   * slot whose commit is not the one main's last build was for is a slot main
+   * moved past — no deploy will ever boot an owner of its code, and it answers
+   * `superseded` at once instead of waiting on main's next deploys
+   * (report-1794960565-yv4ch2: a spare refill spawned by the draining backend
+   * held its old slot the whole 10 min bound). PGlite's process is its own
+   * owner: nothing to wait for.
    */
-  awaitDeploysSettled(signal: AbortSignal): Promise<readonly string[]>;
+  awaitDeploysSettled(signal: AbortSignal): Promise<DeploysSettled>;
   /**
    * This serving process's boot toward its schema stamp is over — `onReady`
    * recorded it, or the write failed: says so where a refused `exec` child
@@ -162,6 +168,16 @@ export interface DatabaseDriverImpl {
    */
   lastOwnerBoot(): Promise<OwnerBootRecord | null>;
 }
+
+/**
+ * What `awaitDeploysSettled` found: every build, deploy and owner boot in
+ * flight ended (`waitedOn`: what it waited for, in words — empty when it did
+ * not wait), or none ever will set up this process's code, because main has
+ * moved past the slot it runs from (`detail`, in words).
+ */
+export type DeploysSettled =
+  | { kind: "settled"; waitedOn: readonly string[] }
+  | { kind: "superseded"; detail: string };
 
 /** How a serving backend's boot toward its schema stamp ended (`settleOwnerBoot`). */
 export type OwnerBootOutcome =
