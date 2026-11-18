@@ -20,6 +20,7 @@ import {
 // loads zod.
 import type {
   BuildSubStepId,
+  INSTALL_PROTOCOL_VERSION,
   InstallEventBody,
   InstallStepId,
   InstallTopStepId,
@@ -103,9 +104,12 @@ export function emitInstallEvent(event: InstallEventBody): void {
   writeAllSync(out.fd, eventLine(event));
 }
 
+/** The version every event is written with: the core's, held equal by tsc (the value can't be imported here). */
+const PROTOCOL_VERSION: typeof INSTALL_PROTOCOL_VERSION = 2;
+
 /** One event as its line: stamped with `v` and `t`, and whole under PIPE_BUF. */
 function eventLine(event: InstallEventBody): string {
-  const line = `${JSON.stringify({ v: 1, t: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"), ...event })}\n`;
+  const line = `${JSON.stringify({ v: PROTOCOL_VERSION, t: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"), ...event })}\n`;
   if (Buffer.byteLength(line) > PIPE_BUF)
     throw new Error(
       `install event over ${PIPE_BUF} bytes (it could interleave with another writer's): ${line.slice(0, 200)}`,

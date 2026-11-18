@@ -513,6 +513,15 @@ describe.each(BASHES)("install.sh under %s", (_label, BASH) => {
         ["build.interface", "end", "host-grant"],
       ]);
       expect(waits[0]?.holder?.kind).toBe("check");
+      // A phase the step names itself, through the FIFO by path.
+      expect(
+        events.flatMap((e) => (e.type === "doing" ? [[e.step, e.text]] : [])),
+      ).toEqual([
+        [
+          "start",
+          "Installing the system libraries the Chromium browser runs on (dry run: nothing is installed)",
+        ],
+      ]);
       // Only the last frame of each phase is kept as a log line.
       const cloneLog = events.flatMap((e) =>
         e.type === "log" && e.step === "clone" ? [e.line] : [],
@@ -668,6 +677,12 @@ describe.each(BASHES)("install.sh under %s", (_label, BASH) => {
       expect(stamped).toContainEqual(
         expect.stringMatching(
           /\[5\/5\] build › build the interface: Waiting for another task to finish · a check started \d+ min ago$/,
+        ),
+      );
+      // A phase the step names itself (`say` inside it) gets its own line.
+      expect(stamped).toContainEqual(
+        expect.stringMatching(
+          /\] start equin's services: Installing the system libraries the Chromium browser runs on \(dry run: nothing is installed\)$/,
         ),
       );
       // A step says how long it usually takes only when it has a measured

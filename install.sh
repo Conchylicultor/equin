@@ -40,7 +40,7 @@
 #                    run only the steps after the clone, into that running
 #                    install's event stream (below), <s> seconds after it began
 #   --events-fd <n>  write the install's events (plugins/installer/core,
-#                    protocol v1: one JSON object per line) to fd <n>
+#                    protocol v2: one JSON object per line) to fd <n>
 #   --control-fd <n> read decisions (retry / quit) from fd <n> when a step fails
 #
 # The line below says this script accepts --release / --checkout; a Release's
@@ -55,9 +55,9 @@
 # the steps and the code they install always come from the same commit, even
 # when an older release's script installs main (`--ref main`, a fork). The
 # line below says this script accepts --attach and speaks the install event
-# protocol v1 on it; the version moves with the protocol. Keep it a line of
+# protocol v2 on it; the version moves with the protocol. Keep it a line of
 # its own.
-# installer-attach: 1
+# installer-attach: 2
 #
 # The install's internal arguments (--release, --checkout, --attach, --mode,
 # --since) are read from EQUIN_INSTALL_INTERNAL_ARGS (one per line) too, so
@@ -187,7 +187,7 @@ stage0() {
   # Installing main (or a fork's): the release's script runs only the steps
   # before the clone, then hands the rest to main's own (see the header). A
   # release from before that would install main with its own, older steps.
-  if [ "$want" = main ] && ! grep -qx '# installer-attach: 1' "$dir/install.sh"; then
+  if [ "$want" = main ] && ! grep -qx '# installer-attach: 2' "$dir/install.sh"; then
     stage0_fallback main "$tag" "its installer would install main with its own older steps"
     return 0
   fi
@@ -1120,7 +1120,7 @@ on_exit() {
     # The hub gone (SIGPIPE): the exit event straight into the record.
     if ! ev exit "\"code\":$rc$cause" 2>/dev/null; then
       ev_now
-      printf '{"v":1,"t":"%s","type":"exit","code":%s%s}\n' "$EV_T" "$rc" "$cause" >>"$RUN_DIR/events.jsonl"
+      printf '{"v":2,"t":"%s","type":"exit","code":%s%s}\n' "$EV_T" "$rc" "$cause" >>"$RUN_DIR/events.jsonl"
     fi
     eval "exec $HUB_FD>&-"
     EV_OUT=""
@@ -1273,8 +1273,8 @@ hand_to_checkout() {
     say "This version of equin is older than this installer, so the installer's own steps install it."
     return 0
   fi
-  [ "$marker" = "# installer-attach: 1" ] || fail "This version of equin installs itself with newer steps than this installer can show, so the installer stopped. What it did so far is kept: finish the install from equin's folder with: cd $INSTALL_DIR && ./install.sh" \
-    "$script says '$marker'; this installer speaks '# installer-attach: 1'"
+  [ "$marker" = "# installer-attach: 2" ] || fail "This version of equin installs itself with newer steps than this installer can show, so the installer stopped. What it did so far is kept: finish the install from equin's folder with: cd $INSTALL_DIR && ./install.sh" \
+    "$script says '$marker'; this installer speaks '# installer-attach: 2'"
   internal_args "$script" --attach "$RUN_DIR" --mode "$MODE" --since "$SECONDS" \
     --checkout "$CHECKOUT" ${RELEASE:+--release "$RELEASE"}
   set +e
@@ -1334,12 +1334,12 @@ byte_len() {
 ev() {
   if [ -n "${EV_BY_PATH:-}" ]; then # a helper process: the FIFO by path, one write
     ev_now
-    printf '{"v":1,"t":"%s","type":"%s"%s}\n' "$EV_T" "$1" "${2:+,$2}" >"$FIFO"
+    printf '{"v":2,"t":"%s","type":"%s"%s}\n' "$EV_T" "$1" "${2:+,$2}" >"$FIFO"
     return 0
   fi
   [ -n "$EV_OUT" ] || return 0
   ev_now
-  printf '{"v":1,"t":"%s","type":"%s"%s}\n' "$EV_T" "$1" "${2:+,$2}" >&"$EV_OUT"
+  printf '{"v":2,"t":"%s","type":"%s"%s}\n' "$EV_T" "$1" "${2:+,$2}" >&"$EV_OUT"
 }
 
 # ev_step <id> <start|done|skipped|failed> [ms]
@@ -1359,7 +1359,7 @@ ev_done() {
 # the FIFO opened by path, one write. A no-op outside an install's step.
 step_ev() {
   [ -n "${EQUIN_INSTALL_EVENTS:-}" ] || return 0
-  printf '{"v":1,"t":"%s",%s}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$1" > "$EQUIN_INSTALL_EVENTS"
+  printf '{"v":2,"t":"%s",%s}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$1" > "$EQUIN_INSTALL_EVENTS"
 }
 
 # log_line <step id> <text>: one log event. The line is cut so the whole event
@@ -1620,7 +1620,7 @@ plan_json() {
 # write_timing: <run dir>/timing.json (installer/core InstallTiming) — how long
 # every step that ran to done took, read back from events.jsonl (this
 # script's step events and the `./equin` commands' share one shape:
-# {"v":1,"t":…,"type":"step","id":…,"state":"done","ms":…}). A step done twice
+# {"v":2,"t":…,"type":"step","id":…,"state":"done","ms":…}). A step done twice
 # (a retry) keeps its last time. A build sub-step (`build.*`) whose last word
 # is skipped took 0 when the build ran to done — a fresh install's build finds
 # main already built, and those zeros are what lets the window show a time
@@ -1629,8 +1629,8 @@ plan_json() {
 write_timing() {
   local steps dry=false
   [ "$DRY_RUN" != "1" ] || dry=true
-  steps="$(sed -n -e 's/^{"v":1,"t":"[^"]*","type":"step","id":"\([^"]*\)","state":"done","ms":\([0-9]*\)}$/\1 \2/p' \
-    -e 's/^{"v":1,"t":"[^"]*","type":"step","id":"\(build\.[^"]*\)","state":"skipped"}$/\1 skipped/p' "$RUN_DIR/events.jsonl" |
+  steps="$(sed -n -e 's/^{"v":2,"t":"[^"]*","type":"step","id":"\([^"]*\)","state":"done","ms":\([0-9]*\)}$/\1 \2/p' \
+    -e 's/^{"v":2,"t":"[^"]*","type":"step","id":"\(build\.[^"]*\)","state":"skipped"}$/\1 skipped/p' "$RUN_DIR/events.jsonl" |
     awk '{ if (!($1 in ms)) order[n++] = $1; ms[$1] = $2 }
       END {
         for (i = 0; i < n; i++) {
@@ -2444,7 +2444,7 @@ r_init() {
   fi
   for ((i = 0; i < P_N; i++)); do
     S_ST[i]=pending; S_T0[i]=0; S_MS[i]=0; S_PD[i]=""; S_PT[i]=""; S_PU[i]=""
-    S_Q[i]=0; S_WON[i]=""; S_WKIND[i]=""; S_WAT[i]=""; S_WT0[i]=0; S_WSUM[i]=0
+    S_Q[i]=0; S_WON[i]=""; S_WKIND[i]=""; S_WAT[i]=""; S_WT0[i]=0; S_WSUM[i]=0; S_NOW[i]=""
   done
   G_N=${#G_ID[@]}
   R_LOGS=(); R_LOGN=0; R_STEP_LOG0=0
@@ -2500,6 +2500,7 @@ r_event() {
       r_str kind "$l"; kind=$F; r_str startedAt "$l"; at=$F; r_str t "$l"; t=$F
       r_on_wait "$id" "$state" "$on" "$kind" "$at" "$t" ;;
     log) r_on_log "$l" ;;
+    doing) r_on_doing "$l" ;;
     done)
       r_num ms "$l"; R_DONE_MS=$F; r_str url "$l"; R_DONE_URL=$F; R_FORCE=1
       if [ "$MODE" = "plain" ]; then
@@ -2725,7 +2726,7 @@ r_on_step() {
   R_FORCE=1
   case "$2" in
     start)
-      S_ST[i]=active; S_T0[i]=$SECONDS; S_WSUM[i]=0; S_WON[i]=""; S_PD[i]=""; S_PT[i]=""; S_Q[i]=0
+      S_ST[i]=active; S_T0[i]=$SECONDS; S_WSUM[i]=0; S_WON[i]=""; S_PD[i]=""; S_PT[i]=""; S_Q[i]=0; S_NOW[i]=""
       [ -n "${P_PARENT[i]}" ] || R_STEP_LOG0=$R_LOGN # a failure shows its own step's lines
       if [ "$1" = "build" ]; then # a retry starts the sub-steps over
         for ((j = 0; j < P_N; j++)); do [ "${P_PARENT[j]}" != "build" ] || S_ST[j]=pending; done
@@ -2795,6 +2796,19 @@ r_on_progress() {
   r_remaining
   if [ -n "$REM" ]; then r_left "$REM"; text="$text · $LF"; fi
   r_plain "$text"
+}
+
+# r_on_doing <event>: the step names what it is doing now. Its count so far
+# described what came before (the window's rule too): dropped. Plain: a line
+# of its own; interactive: a line under the step's row (r_draw).
+r_on_doing() {
+  local i
+  r_str step "$1"; r_idx "$F"; i=$RI
+  [ "$i" -ge 0 ] || return 0
+  r_jstr text "$1"
+  S_NOW[i]=$JS; S_PD[i]=""; S_PT[i]=""; S_PU[i]=""
+  R_FORCE=1
+  if [ "$MODE" = "plain" ]; then r_name "$i"; r_plain "$NM: $JS"; fi
 }
 
 r_on_wait() {
@@ -3122,6 +3136,10 @@ r_draw() {
         detail="${C_D}${P_DOING[GA]}…${C_0}"
       fi
       r_ln "  $MK $name $detail"
+      # What the running step said it is doing now, under its row.
+      if [ "$GA" -ge 0 ] && [ -n "${S_NOW[GA]}" ] && [ -z "$wait" ]; then
+        r_ln "      ${C_D}› $(r_cut "${S_NOW[GA]}" $((R_COLS - 9)))${C_0}"
+      fi
     else
       r_pad "$detail" 36; detail=$PD; r_padl "$right" 8
       r_ln "  $MK $name ${C_D}$detail  $PD${C_0}"
@@ -3300,7 +3318,9 @@ dry_step() {
   done
   case "$1" in
     clone) dry_clone ;;
-    start) dry_count 312 crates ;;
+    start) dry_count 312 crates
+      # A phase of the step's own, as start_services names its system installs.
+      say "Installing the system libraries the Chromium browser runs on (dry run: nothing is installed)" ;;
     build) dry_build ;;
   esac
   if [ "$1" = "toolchain" ]; then
@@ -3448,14 +3468,22 @@ dry_notice() {
     settings-opened) text="Turn on Terminal in Privacy & Security, App Management, then click Add them." ;;
     *) text="With them, equin's apps open in their own windows and get a menu-bar icon. To allow it, turn on Terminal in Privacy & Security, App Management. It's optional: skip it and use equin in your browser." ;;
   esac
-  printf '{"v":1,"t":"%s","type":"notice","id":"dev.equin.menu-bar","state":"%s","title":"macOS blocked equin from adding its apps","text":"%s","without":"the menu-bar icon and app shortcuts"}\n' \
+  printf '{"v":2,"t":"%s","type":"notice","id":"dev.equin.menu-bar","state":"%s","title":"macOS blocked equin from adding its apps","text":"%s","without":"the menu-bar icon and app shortcuts"}\n' \
     "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$1" "$text" >"$FIFO"
 }
 
 # say <message>: one of the script's own progress lines. On the terminal
 # view's watch it is a log line of the view (step null): printed straight to
-# the terminal it would be drawn over.
+# the terminal it would be drawn over. Inside a step it names what the step is
+# doing now (a `doing` event: every view shows it — the plain one as its own
+# line, the others in place of the plan's words — rather than one log line
+# among the tool output that follows it), and is printed into the step's
+# output too, so the log and a failure's last lines keep it.
 say() {
+  if [ -n "${EQUIN_INSTALL_STEP:-}" ]; then
+    json_str "$*"
+    step_ev "\"type\":\"doing\",\"step\":\"$EQUIN_INSTALL_STEP\",\"text\":$JSON_STR"
+  fi
   if [ -n "$RUN_DIR" ] && [ "$MODE" != "window" ] && [ -z "${EQUIN_INSTALL_STEP:-}" ]; then
     log_line "" "$*"
   else

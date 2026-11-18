@@ -15,8 +15,19 @@ import { z } from "zod";
  * Design: research/2026-11-17-global-installer-window.md §1.
  */
 
-/** The protocol's major version; a renderer refuses any other. */
-export const INSTALL_PROTOCOL_VERSION = 1;
+/**
+ * The protocol's major version: what every emitter writes. A renderer reads
+ * this version and the older ones it is a superset of
+ * ({@link READABLE_PROTOCOL_VERSIONS}), and refuses any other.
+ *
+ * - 1: the first stream.
+ * - 2: adds `doing` (what a step is doing now, when it names a phase of its
+ *   own). A v1 stream is a valid v2 stream, so recorded v1 runs still read.
+ */
+export const INSTALL_PROTOCOL_VERSION = 2;
+
+/** Every version a v{@link INSTALL_PROTOCOL_VERSION} reader reads: each a subset of this one. */
+const READABLE_PROTOCOL_VERSIONS = [1, INSTALL_PROTOCOL_VERSION] as const;
 
 /** install.sh's top-level steps, in run order. */
 const TOP_STEP_IDS = [
@@ -162,7 +173,7 @@ export const NoticeState = z.enum([
 export type NoticeState = z.infer<typeof NoticeState>;
 
 const base = {
-  v: z.literal(INSTALL_PROTOCOL_VERSION),
+  v: z.literal(READABLE_PROTOCOL_VERSIONS),
   /** When the event was written: an ISO-8601 UTC instant. */
   t: z.iso.datetime(),
 };
@@ -267,6 +278,20 @@ export const InstallEvent = z.discriminatedUnion("type", [
     state: z.enum(["start", "end"]),
     on: WaitOn,
     holder: WaitHolder.optional(),
+  }),
+  /**
+   * What the running step is doing now, when the step names a phase of its
+   * own beyond the plan's `doing` — install.sh's `say` inside a step
+   * ("Installing the system libraries the Chromium browser runs on (asks for
+   * your password)"). In the user's words (the installer message rules). It
+   * holds until the step's next `doing` or its end; a count reported before
+   * it no longer describes the step.
+   */
+  z.strictObject({
+    ...base,
+    type: z.literal("doing"),
+    step: InstallStepId,
+    text: z.string().min(1),
   }),
   /** One line of output: a step's child output, or the script's own (step null). */
   z.strictObject({

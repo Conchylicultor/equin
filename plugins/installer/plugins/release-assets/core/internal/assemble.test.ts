@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { INSTALL_PROTOCOL_VERSION } from "@plugins/installer/core";
 import { releaseManifest, sha256Sums } from "./assemble";
 import { HANDOFF_MARKER, INSTALLER_BINARIES, ReleaseManifest } from "./assets";
 
@@ -17,7 +18,7 @@ describe("releaseManifest", () => {
       tag: "v2026.12.01",
       commit: COMMIT,
       handoff: 1,
-      eventsProtocol: 1,
+      eventsProtocol: INSTALL_PROTOCOL_VERSION,
       installers: 1,
     });
     // install.sh reads it one key per line, and finds no platform key in it:

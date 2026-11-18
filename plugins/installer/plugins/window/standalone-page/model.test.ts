@@ -197,6 +197,28 @@ describe("installer page model", () => {
     expect(statusText(stale, now(3))).toBe("Building the interface…");
   });
 
+  test("what the step says it is doing now replaces the plan's words and the count before it, until it runs again", () => {
+    const doing = (s: number, text: string): string =>
+      JSON.stringify({ v: 2, t: at(s), type: "doing", step: "clone", text });
+    const view = fold([
+      plan(),
+      step(0, "clone", "start"),
+      count(1, "clone", 954, 1385, "packages"),
+      doing(2, "Installing the system libraries the Chromium browser runs on"),
+    ]);
+    expect(statusText(view, now(3))).toBe(
+      "Installing the system libraries the Chromium browser runs on…",
+    );
+    applyLine(view, count(4, "clone", 10, 100, "%"));
+    expect(statusText(view, now(5))).toBe(
+      "Installing the system libraries the Chromium browser runs on · 10%",
+    );
+    applyLine(view, step(6, "clone", "start"));
+    expect(statusText(view, now(7))).toBe("Downloading equin…");
+    // A v1 stream (recorded before `doing` existed) still reads.
+    expect(fold([plan(), step(0, "clone", "start")]).phase).toBe("running");
+  });
+
   test("a count that reached its total is not shown: the step runs on past it", () => {
     const view = fold([
       plan(),

@@ -22,7 +22,11 @@ import {
   namespaceUrl,
 } from "@plugins/infra/plugins/namespace/core";
 import { writeFileSync } from "node:fs";
-import { InstallEvent, type InstallEventBody } from "@plugins/installer/core";
+import {
+  INSTALL_PROTOCOL_VERSION,
+  InstallEvent,
+  type InstallEventBody,
+} from "@plugins/installer/core";
 import {
   arg,
   requireArg,
@@ -139,7 +143,11 @@ const dur = (est: number): number => Math.round(est * PACE);
 const stamped: string[] = [];
 let clock = 0;
 const emit = (e: InstallEventBody): void => {
-  const line = JSON.stringify({ v: 1, t: iso(clock), ...e });
+  const line = JSON.stringify({
+    v: INSTALL_PROTOCOL_VERSION,
+    t: iso(clock),
+    ...e,
+  });
   InstallEvent.parse(JSON.parse(line));
   stamped.push(line);
 };

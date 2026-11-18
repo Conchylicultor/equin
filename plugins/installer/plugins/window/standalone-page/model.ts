@@ -27,6 +27,11 @@ export interface ViewLeaf {
   readonly label: string;
   /** What it does, as it happens ("Downloading equin"). */
   readonly doing: string;
+  /**
+   * What its current attempt said it is doing now (the `doing` event), and
+   * when — in place of `doing` from then on; null until it says.
+   */
+  now: { readonly text: string; readonly at: number } | null;
   /** Its median on a clean install, seconds; null when none is measured. */
   readonly est: number | null;
   state: StepState;
@@ -188,6 +193,7 @@ function newLeaf(s: {
     label: s.label,
     doing: s.doing,
     est: s.est_s,
+    now: null,
     state: "pending",
     startedAt: null,
     tookMs: null,
@@ -244,6 +250,7 @@ export function applyEvent(view: InstallView, event: InstallEvent): void {
       const { leaf, parent } = found;
       if (event.state === "start") {
         leaf.state = "active";
+        leaf.now = null;
         leaf.startedAt = at;
         leaf.endedAt = null;
         leaf.tookMs = null;
@@ -255,6 +262,7 @@ export function applyEvent(view: InstallView, event: InstallEvent): void {
         if (parent === null)
           for (const sub of (leaf as ViewStep).substeps) {
             Object.assign(sub, {
+              now: null,
               state: "pending",
               startedAt: null,
               tookMs: null,
@@ -340,6 +348,15 @@ export function applyEvent(view: InstallView, event: InstallEvent): void {
         view.wait = null;
       }
       return;
+    case "doing": {
+      const found = findLeaf(view, event.step);
+      if (found === null) {
+        protocolError(view, `step "${event.step}" is not in the plan`);
+        return;
+      }
+      found.leaf.now = { text: event.text, at };
+      return;
+    }
     case "log":
       view.log.push({
         kind: event.stream === "err" ? "err" : "line",
@@ -553,7 +570,9 @@ function waitText(wait: Wait, now: number): string {
  * The running state's status line: what is happening now, with its count
  * when the tool doing it gave one and it is still counting
  * (`Compiling native modules · 137 of 312`), else `<doing>…`; an open wait
- * says what it waits for instead.
+ * says what it waits for instead. What the step last said it is doing now
+ * (`now`) replaces the plan's words, and a count reported before it no
+ * longer describes the step.
  */
 export function statusText(view: InstallView, now: number): string {
   if (view.wait !== null) return waitText(view.wait, now);
@@ -564,18 +583,18 @@ export function statusText(view: InstallView, now: number): string {
   const counts = [view.progress.get(leaf.id)];
   if (parent !== undefined && parent !== leaf)
     counts.push(view.progress.get(parent.id));
+  const since = Math.max(leaf.startedAt ?? 0, leaf.now?.at ?? 0);
   const count = counts
-    .filter(
-      (c): c is Progress => c !== undefined && c.at >= (leaf.startedAt ?? 0),
-    )
+    .filter((c): c is Progress => c !== undefined && c.at >= since)
     .sort((a, b) => b.at - a.at)[0];
+  const doing = leaf.now?.text ?? leaf.doing;
   // A count that reached its total no longer says what the step is doing: the
   // step runs on (other work beside what was counted), and "2,294 of 2,294"
   // held for minutes reads as stuck (2026-11-18 fresh installs: 8 min).
   if (count === undefined || count.total === null || count.done >= count.total)
-    return `${leaf.doing}…`;
-  if (count.unit === "%") return `${leaf.doing} · ${count.done}%`;
-  return `${leaf.doing} · ${countText(count.done, count.total, count.unit)}`;
+    return `${doing}…`;
+  if (count.unit === "%") return `${doing} · ${count.done}%`;
+  return `${doing} · ${countText(count.done, count.total, count.unit)}`;
 }
 
 /**

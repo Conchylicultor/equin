@@ -41,6 +41,10 @@ pub(crate) const PAGE: &str = include_str!(concat!(env!("OUT_DIR"), "/page.html"
 pub(crate) const WIDTH: f64 = 760.0;
 pub(crate) const HEIGHT: f64 = 640.0;
 /// The page's background (`--bg`), painted before the page's first frame.
+/// The install event protocol version the window's own events are written in
+/// (installer/core `INSTALL_PROTOCOL_VERSION`).
+const PROTOCOL_VERSION: u32 = 2;
+
 const BACKGROUND: (u8, u8, u8, u8) = (7, 9, 14, 255);
 
 enum UserEvent {
@@ -332,7 +336,7 @@ fn main() {
             }
             Event::UserEvent(UserEvent::Output { stream, line }) => {
                 let event = json!({
-                    "v": 1, "t": clock::now_iso(), "type": "log",
+                    "v": PROTOCOL_VERSION, "t": clock::now_iso(), "type": "log",
                     "step": null, "stream": stream, "line": line,
                 });
                 state.backlog.push(event.to_string());
@@ -341,7 +345,7 @@ fn main() {
                 state.exit_code = Some(code);
                 if !state.saw_exit {
                     // Killed before its EXIT trap could say so.
-                    let event = json!({ "v": 1, "t": clock::now_iso(), "type": "exit", "code": code });
+                    let event = json!({ "v": PROTOCOL_VERSION, "t": clock::now_iso(), "type": "exit", "code": code });
                     state.backlog.push(event.to_string());
                 }
                 // Stopped (the window's Stop, Ctrl-C in the terminal): done here too.

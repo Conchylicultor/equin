@@ -82,14 +82,18 @@ label; in `install.sh`, the split is the signature — `fail <message>
 plan's `label` / `doing` per step. A renderer never writes a message of its
 own (next section): fix wording in the step engine, and every view changes.
 
-## The event stream (protocol v1)
+## The event stream (protocol v2)
 
 - **One schema**, `core/` (`InstallEvent`, a zod discriminated union): NDJSON,
-  one event per line, each with `v: 1`, `t` (ISO-8601 UTC) and `type`:
+  one event per line, each with `v: 2`, `t` (ISO-8601 UTC) and `type`:
   `plan` (groups, then every step with `label`, `doing`, `group`, `est_s` —
   the build with its `substeps`), `step` (`start | done | skipped | failed`,
   `ms`), `progress` (`done` / `total` in `crates | plugins | packages | %`),
-  `wait` (`start | end`, what on, who holds it), `log` (a step's output, or
+  `wait` (`start | end`, what on, who holds it), `doing` (what a step is
+  doing now, when it names a phase of its own — install.sh's `say` inside a
+  step: the plain view prints it as a line, the interactive view under the
+  step's row, the window in its status line, each in place of the plan's
+  `doing` and of a count reported before it), `log` (a step's output, or
   the script's own with `step: null`), `pause` (a diagnosis: kind, title,
   text, evidence, blocking, optional, manual), `resolved` (how a pause
   ended), `fixing` (Fix with Claude opened: where), `notice` (a part left
@@ -119,7 +123,9 @@ own (next section): fix wording in the step engine, and every view changes.
   are carried out by the forwarder itself. The window's full command set is
   in [`window`](plugins/window/CLAUDE.md) § the page.
 - **Versioning**: `v` is the protocol's major version
-  (`INSTALL_PROTOCOL_VERSION`); a renderer refuses any other. Every event is
+  (`INSTALL_PROTOCOL_VERSION`); a renderer reads it and the older versions
+  it is a superset of (v1: v2 only added `doing`, so recorded v1 runs still
+  replay and still give estimates), and refuses any other. Every event is
   a `strictObject`, so even a new field breaks an older reader — which is
   safe only because a window reads only streams of its own protocol: a
   release's window runs that release's `install.sh`, which hands the steps
@@ -246,7 +252,8 @@ and the plan's arrays (`plan_data`):
 
 - **interactive** (stdout a terminal, `TERM` not dumb, no `CI`): a status
   block redrawn in place (on every step change, else once a second) — one row
-  per group, the build's sub-steps with their counts while it runs, the
+  per group (the running step's `doing`, when it named one, on a line under
+  its row), the build's sub-steps with their counts while it runs, the
   overall bar, elapsed, time left, the last two log lines and the log path;
   the done screen after. A password prompt (`wait … password`) stops the
   redraws until it is answered. A pause draws the block's last frame, its box
@@ -256,7 +263,8 @@ and the plan's arrays (`plan_data`):
   (`pause-printed` in the run dir) the box and what was printed stay above
   the new block.
 - **plain** (CI, a pipe): append-only `HH:MM:SS [n/N] <step>: …` lines —
-  started (usually …), every 25 %, waits, done in …, `equin is ready · …`.
+  started (usually …), every 25 %, waits, each `doing` the step names,
+  done in …, `equin is ready · …`.
   A failed step prints its last lines (`  > `).
 - **Time left** = Σ pending `est × pace` + the running one's `max(0, est ×
   pace − worked)`, waits not counted; pace = worked / estimated over the
