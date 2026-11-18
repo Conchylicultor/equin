@@ -200,3 +200,29 @@ follow-up listed above.
 no move on wake, a remote edit on a dormant line and eviction. A pixel diff of
 static vs. live rendering (marks, link, chip, soft break, heading, lists, to-do,
 wrapping) showed 0 differing pixels.
+
+## Follow-up: the two full style recalcs (2026-11-18)
+
+Profiled again with `open-in-conversation-profile.ts`, which now folds forced
+(begin/end) recalcs into its listing and can record what dirtied the tree
+(`--invalidations 1`). Of the two ~50k-element recalcs, only the first is real
+work:
+
+- **First** (~230 ms headless; first reader the outline's `findScrollParent`):
+  the first styling of the ~23k elements the open inserts. Any frame pays it;
+  moving the reader would only move the cost. Its lever is the per-row element
+  count, not the read.
+- **Second** (~250 ms): the editor surface published its width as an inherited
+  CSS variable (`--block-surface-width`, inline on the surface, read only by
+  `WideBlock`). Changing an inherited custom property restyles every element
+  under it, i.e. the whole page. The first write (null → 568px) came from the
+  surface's ResizeObserver; when it landed after the frame had styled the rows,
+  the whole page was restyled again. Every pane-width change paid the same.
+  Measured on main: one write = 700–1,270 ms of forced style on the 604-block
+  page (loaded machine); a pane-width change = 870–960 ms frames vs 70–110 ms
+  with the fix.
+
+Fix: the width is a subscribable value (`internal/surface-width.ts`,
+`SurfaceWidthContext`), read by `WideBlock` alone (`wideBlockMax(width)`), so
+a write re-renders only the wide blocks. Tables render at the same widths.
+

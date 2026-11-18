@@ -1,7 +1,8 @@
 import { useRef, type ReactNode } from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
-import { WIDE_BLOCK_MAX } from "../internal/page-column";
+import { wideBlockMax } from "../internal/page-column";
+import { useSurfaceWidth } from "../internal/surface-width";
 import { useReportRowOverhang } from "./row-overhang";
 import { useCaretCueTarget } from "./void-caret";
 
@@ -11,9 +12,9 @@ import { useCaretCueTarget } from "./void-caret";
  * staying CENTERED on the column, while every other block keeps the measure.
  *
  * Its width is its content's own (`max-content`), never less than the column
- * and never more than the surface allows (`WIDE_BLOCK_MAX`, from the width the
- * editor publishes). Past that the content wraps or scrolls inside — what is
- * inside decides which.
+ * and never more than the surface allows (`wideBlockMax`, from the width the
+ * editor publishes to the wide blocks alone). Past that the content wraps or
+ * scrolls inside — what is inside decides which.
  *
  * Centered by a grid's `justify-items: center`: a grid item wider than its
  * track overflows BOTH sides equally, so no transform (which would make this a
@@ -35,6 +36,7 @@ export function WideBlock({
   className?: string;
 }) {
   const cue = useCaretCueTarget();
+  const surfaceWidth = useSurfaceWidth();
   const column = useRef<HTMLDivElement>(null);
   const box = useRef<HTMLDivElement>(null);
   useReportRowOverhang(column, box);
@@ -44,7 +46,7 @@ export function WideBlock({
       <div
         ref={box}
         className={cn("relative w-max min-w-full", cue, className)}
-        style={{ maxWidth: WIDE_BLOCK_MAX }}
+        style={{ maxWidth: wideBlockMax(surfaceWidth) }}
       >
         {children}
       </div>

@@ -181,6 +181,10 @@ horizontal geometry.
   `<PageContentColumn>`; read-only → `<Inset x={BLOCK_INSET}>` with `<ReadOnlyBlocks>`
   at `C`; a new block type → `<Inset x={BLOCK_INSET} y="…">` (vertical padding is
   per block).
+- **The surface's width reaches a `WideBlock` as a value, never as an inherited
+  CSS variable on the surface** (`internal/surface-width.ts`): writing a custom
+  property on an ancestor restyles every element under it — the whole page, on
+  the first measure and on every pane resize.
 - Never splice a ramp step into a class name (`` `pl-${BLOCK_INSET}` ``) — Tailwind
   only emits literal tokens. Use `<Inset>` or `insetClass()`.
 - A container frame is handed `C` as `inset` and adds `BLOCK_INSET` once (in

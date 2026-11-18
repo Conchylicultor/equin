@@ -100,7 +100,21 @@ await withBrowser(async (h) => {
     cdp.once("Tracing.tracingComplete", () => r()),
   );
   await cdp.send("Tracing.start", {
-    categories: "devtools.timeline,disabled-by-default-devtools.timeline",
+    // Invalidation tracking floods the trace (one event per node laid out
+    // again); the default buffer drops everything past the first ~0.5 s.
+    traceConfig: {
+      recordMode: "recordAsMuchAsPossible",
+      traceBufferSizeInKb: 2_000_000,
+      includedCategories: [
+        "devtools.timeline",
+        "disabled-by-default-devtools.timeline",
+        // Opt-in: one event per node restyled or laid out, with its stack —
+        // enough bytes to cut the trace off within the first second.
+        ...(arg("invalidations", "") === "1"
+          ? ["disabled-by-default-devtools.timeline.invalidationTracking"]
+          : []),
+      ],
+    },
     transferMode: "ReportEvents",
   });
   const t0 = Date.now();
@@ -112,24 +126,35 @@ await withBrowser(async (h) => {
   await page.waitForTimeout(secs * 1000);
   await cdp.send("Tracing.end");
   await traceDone;
+  writeFileSync(`${out}.trace.json`, JSON.stringify({ traceEvents }));
   {
-    const main = traceEvents
-      .filter(
-        (e) =>
-          e.name === "thread_name" &&
-          (e as unknown as { args?: { name?: string } }).args?.name ===
-            "CrRendererMainThread",
-      )
-      .map((m) => ({
-        m,
-        n: traceEvents.filter((e) => e.tid === m.tid && e.ph === "X").length,
-      }))
-      .sort((a, b) => b.n - a.n)[0]?.m;
+    // The page's main thread is the one that spent the most time in style
+    // recalcs — counting events instead picks a renderer main thread of
+    // another frame once invalidation tracking floods the trace.
     const byTid = new Map<number, number>();
     for (const e of traceEvents)
-      if (e.name === "UpdateLayoutTree")
-        byTid.set(e.tid, (byTid.get(e.tid) ?? 0) + 1);
-    const tid = main?.tid ?? [...byTid].sort((a, b) => b[1] - a[1])[0]?.[0];
+      if (e.name === "UpdateLayoutTree" && e.ph === "X")
+        byTid.set(e.tid, (byTid.get(e.tid) ?? 0) + (e.dur ?? 0));
+    const tid = [...byTid].sort((a, b) => b[1] - a[1])[0]?.[0];
+    // A recalc or layout FORCED by script is recorded as a begin/end pair, not
+    // one complete event: fold each pair into one so the sums and the big
+    // recalcs below count the forced ones too (they are the ones to find).
+    const open: (typeof traceEvents)[number][] = [];
+    for (const e of traceEvents
+      .filter((x) => x.tid === tid && (x.ph === "B" || x.ph === "E"))
+      .sort((a, b) => a.ts - b.ts)) {
+      if (e.ph === "B") open.push(e);
+      else {
+        const b = open.pop();
+        if (b)
+          traceEvents.push({
+            ...b,
+            ph: "X",
+            dur: e.ts - b.ts,
+            args: { ...b.args, ...e.args },
+          });
+      }
+    }
     const sums = new Map<string, { n: number; ms: number }>();
     for (const e of traceEvents) {
       if (e.ph !== "X" || e.tid !== tid || e.dur === undefined) continue;
@@ -166,6 +191,57 @@ await withBrowser(async (h) => {
         (e.name === "Layout" || e.name === "UpdateLayoutTree") &&
         (e.dur ?? 0) > 10000,
     );
+    // What dirtied the tree before each big recalc: the invalidation-tracking
+    // events between the previous UpdateLayoutTree and this one, grouped by
+    // reason, node and the top frames of the stack that caused them.
+    const recalcs = traceEvents
+      .filter(
+        (e) => e.tid === tid && e.ph === "X" && e.name === "UpdateLayoutTree",
+      )
+      .sort((a, b) => a.ts - b.ts);
+    const invalidations = traceEvents.filter(
+      (e) => e.tid === tid && /InvalidationTracking$/.test(e.name),
+    );
+    for (const e of big) {
+      if (e.name !== "UpdateLayoutTree") continue;
+      const i = recalcs.indexOf(e);
+      const from = i > 0 ? recalcs[i - 1]!.ts + (recalcs[i - 1]!.dur ?? 0) : 0;
+      const groups = new Map<string, number>();
+      for (const v of invalidations) {
+        if (v.ts < from || v.ts > e.ts) continue;
+        const d = (v.args?.data ?? {}) as {
+          reason?: string;
+          nodeName?: string;
+          invalidationList?: {
+            classes?: string[];
+            id?: string;
+            attribute?: string;
+          }[];
+          stackTrace?: {
+            functionName: string;
+            url: string;
+            lineNumber: number;
+          }[];
+        };
+        const list = (d.invalidationList ?? [])
+          .map((x) => x.classes?.join(".") ?? x.attribute ?? x.id ?? "")
+          .join(",");
+        const stack = (d.stackTrace ?? [])
+          .slice(0, 4)
+          .map(
+            (f) =>
+              `${f.functionName || "(anon)"}@${f.url.split("/").slice(-1)[0]}:${f.lineNumber}`,
+          )
+          .join(" < ");
+        const k = `${v.name.replace("InvalidationTracking", "")} ${d.reason ?? ""} ${(d.nodeName ?? "").slice(0, 60)} ${list.slice(0, 80)} | ${stack}`;
+        groups.set(k, (groups.get(k) ?? 0) + 1);
+      }
+      console.log(
+        `  invalidations before the ${((e.dur ?? 0) / 1000).toFixed(0)} ms recalc @${((e.ts - recalcs[0]!.ts) / 1000).toFixed(0)} ms:`,
+      );
+      for (const [k, n] of [...groups].sort((a, b) => b[1] - a[1]).slice(0, 15))
+        console.log(`    ${String(n).padStart(6)}× ${k}`);
+    }
     for (const e of big)
       console.log(
         `  big ${e.name} ${((e.dur ?? 0) / 1000).toFixed(0)} ms args=${JSON.stringify((e as unknown as { args: unknown }).args).slice(0, 300)} forced=${Boolean(e.args?.data?.stackTrace ?? (e as unknown as { args?: { beginData?: { stackTrace?: unknown } } }).args?.beginData?.stackTrace)}  ${JSON.stringify((e as unknown as { args?: { beginData?: { stackTrace?: { functionName: string }[] } } }).args?.beginData?.stackTrace?.slice(0, 3).map((f) => f.functionName) ?? e.args?.data?.stackTrace?.slice(0, 3) ?? "")}`,

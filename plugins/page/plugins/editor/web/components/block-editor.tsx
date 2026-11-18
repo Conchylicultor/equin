@@ -125,12 +125,15 @@ import { TextSpanHighlight, type SpanLinePaint } from "./text-span-highlight";
 import {
   BLOCK_GUTTER,
   BLOCK_INSET,
-  SURFACE_WIDTH_VAR,
   blockContentLeft,
   framePadX,
   framePadY,
 } from "../internal/page-column";
 import { FrameHoverProvider, useSetFrameHover } from "../internal/frame-hover";
+import {
+  createSurfaceWidth,
+  SurfaceWidthContext,
+} from "../internal/surface-width";
 import { ExternalDropOverlay } from "./external-drop-overlay";
 import {
   resolveBlockPasteHandler,
@@ -1061,15 +1064,17 @@ function SelectionLayer({
     return () => attachContainer(null);
   }, [attachContainer, containerRef]);
 
-  // The surface's width, published as a CSS variable for a `WideBlock` to grow
-  // into (see `SURFACE_WIDTH_VAR`). Written on the element, not through React
-  // state: no row re-renders for a pane resize. The observer is RAF-debounced,
-  // so a wide block reflowing the surface's HEIGHT in response is not a
-  // ResizeObserver loop.
+  // The surface's width, handed to the `WideBlock`s that grow into it and to
+  // nothing else (`internal/surface-width.ts` — never an inherited CSS
+  // variable on the surface: writing one restyles the whole page). No row
+  // re-renders for a pane resize, only the wide blocks. The observer is
+  // RAF-debounced, so a wide block reflowing the surface's HEIGHT in response
+  // is not a ResizeObserver loop.
+  const [surfaceWidth] = useState(createSurfaceWidth);
   useResizeObserver(containerRef, () => {
     const surface = containerRef.current;
     if (!surface) return;
-    surface.style.setProperty(SURFACE_WIDTH_VAR, `${surface.clientWidth}px`);
+    surfaceWidth.set(surface.clientWidth);
   });
 
   // ---- Clipboard (DOM copy/cut/paste on the focused container) -------------
@@ -2578,49 +2583,52 @@ function SelectionLayer({
             {/* The pointer-inside-this-card signal, scoped to this block list.
                 It wraps the grid rather than the whole surface so the store dies
                 with the list it describes, and it adds no DOM. */}
-            <FrameHoverProvider>
-              <div
-                ref={publishContentRef}
-                // eslint-disable-next-line layout/no-adhoc-layout -- the block list is a single-column grid so container frames can span row lines; the ramp has no primitive for line-spanning overlays
-                className={cn("relative grid grid-cols-1", contentClassName)}
-                style={{ paddingLeft: 0, paddingRight: BLOCK_GUTTER }}
-              >
-                {/* Frames first in DOM order so they paint BEHIND the rows they
+            <SurfaceWidthContext value={surfaceWidth}>
+              <FrameHoverProvider>
+                <div
+                  ref={publishContentRef}
+                  // eslint-disable-next-line layout/no-adhoc-layout -- the block list is a single-column grid so container frames can span row lines; the ramp has no primitive for line-spanning overlays
+                  className={cn("relative grid grid-cols-1", contentClassName)}
+                  style={{ paddingLeft: 0, paddingRight: BLOCK_GUTTER }}
+                >
+                  {/* Frames first in DOM order so they paint BEHIND the rows they
                   span (equal stacking level → document order decides). */}
-                {frameSpans.map((span) => {
-                  const seat = railSeats[span.start];
-                  const insets = frameInsets.get(span.block.id);
-                  return (
-                    <div
-                      key={`frame:${span.block.id}`}
-                      // eslint-disable-next-line layout/no-adhoc-layout -- grid-row span placement is the point of this element; `relative` gives the frame a positioned box to paint into
-                      className="pointer-events-none relative col-start-1"
-                      style={{ gridRow: `${span.start + 1} / ${span.end + 2}` }}
-                    >
-                      <Editor.BlockFrame.Dispatch
-                        type={span.block.type}
-                        data={span.block.data}
-                        blockId={span.block.id}
-                        // The container's OWN content edge — so the box lands on
-                        // the prose x however deeply the cards nest.
-                        inset={blockContentLeft(
-                          span.depth,
-                          seat?.absorbedIndent ?? 0,
-                        )}
-                        // Three DIFFERENT counts, resolved together above: the
-                        // right edge clears every enclosing frame, while a
-                        // vertical edge clears only the ones whose pad is
-                        // reserved on this frame's own opening / closing row. A
-                        // `"rule"` container is in none of them, so its bar spans
-                        // its rows exactly.
-                        rightInset={framePadX(insets?.right ?? 0)}
-                        topInset={framePadY(insets?.top ?? 0)}
-                        bottomInset={framePadY(insets?.bottom ?? 0)}
-                      />
-                    </div>
-                  );
-                })}
-                {/* The block-selection highlight, over the frames and under the
+                  {frameSpans.map((span) => {
+                    const seat = railSeats[span.start];
+                    const insets = frameInsets.get(span.block.id);
+                    return (
+                      <div
+                        key={`frame:${span.block.id}`}
+                        // eslint-disable-next-line layout/no-adhoc-layout -- grid-row span placement is the point of this element; `relative` gives the frame a positioned box to paint into
+                        className="pointer-events-none relative col-start-1"
+                        style={{
+                          gridRow: `${span.start + 1} / ${span.end + 2}`,
+                        }}
+                      >
+                        <Editor.BlockFrame.Dispatch
+                          type={span.block.type}
+                          data={span.block.data}
+                          blockId={span.block.id}
+                          // The container's OWN content edge — so the box lands on
+                          // the prose x however deeply the cards nest.
+                          inset={blockContentLeft(
+                            span.depth,
+                            seat?.absorbedIndent ?? 0,
+                          )}
+                          // Three DIFFERENT counts, resolved together above: the
+                          // right edge clears every enclosing frame, while a
+                          // vertical edge clears only the ones whose pad is
+                          // reserved on this frame's own opening / closing row. A
+                          // `"rule"` container is in none of them, so its bar spans
+                          // its rows exactly.
+                          rightInset={framePadX(insets?.right ?? 0)}
+                          topInset={framePadY(insets?.top ?? 0)}
+                          bottomInset={framePadY(insets?.bottom ?? 0)}
+                        />
+                      </div>
+                    );
+                  })}
+                  {/* The block-selection highlight, over the frames and under the
                   rows. It is resolved here — with the whole flatten in view —
                   rather than per row, because "is the line above me selected
                   too" is not knowable from a row alone, and it is the answer to
@@ -2628,61 +2636,62 @@ function SelectionLayer({
                   passage. A selected CONTAINER needs no special case either: it
                   paints over its frame span, which is what covers a zero-height
                   anchor row's box. */}
-                {serverSync
-                  ? textPageIds.map((id) => (
-                      <PageBlockDocsHold key={id} pageId={id} />
-                    ))
-                  : null}
-                <SelectionBands bands={selectionBands} />
-                {spanPaint && (
-                  <TextSpanHighlight
-                    lines={spanPaint.lines}
-                    readsOf={textReadsOf}
-                    subscribeReads={subscribeTextReads}
-                    readsVersion={textReadsVersion}
-                  />
-                )}
-                {flat.map((f, i) => (
-                  <RowCell
-                    key={f.block.id}
-                    blockId={f.block.id}
-                    row={i}
-                    arrived={arrivals.get(f.block.id) ?? false}
-                    frames={frameIdsByRow[i]!}
-                    feet={feetByRow[i]!}
-                    onOverhang={reportRowOverhang}
-                  >
-                    <BlockRow
-                      block={f.block}
-                      depth={f.depth}
-                      hasVisibleChildren={f.firstVisibleChildType !== null}
-                      ordinal={f.ordinal}
-                      seat={railSeats[i]!}
-                      isSelected={painted.has(f.block.id)}
-                      isDragging={
-                        activeId === f.block.id ||
-                        (bulkDrag?.subtree.has(f.block.id) ?? false)
-                      }
-                      dropZone={
-                        activeDropTarget?.id === f.block.id
-                          ? activeDropTarget.zone
-                          : null
-                      }
+                  {serverSync
+                    ? textPageIds.map((id) => (
+                        <PageBlockDocsHold key={id} pageId={id} />
+                      ))
+                    : null}
+                  <SelectionBands bands={selectionBands} />
+                  {spanPaint && (
+                    <TextSpanHighlight
+                      lines={spanPaint.lines}
+                      readsOf={textReadsOf}
+                      subscribeReads={subscribeTextReads}
+                      readsVersion={textReadsVersion}
                     />
-                  </RowCell>
-                ))}
-                {marquee && (
-                  <div
-                    // The lasso is drawn OVER the blocks it is sweeping, so its
-                    // fill stays fainter than the selection band underneath it —
-                    // it reads as the gesture, not as a second highlight.
-                    // eslint-disable-next-line layout/no-adhoc-layout -- marquee rectangle positioned via JS-computed top/height coords (inset-x-2 insets its sides within the content box); not a ramp-expressible anchor
-                    className="bg-primary/5 border-primary/25 pointer-events-none absolute inset-x-2 z-base rounded-sm border"
-                    style={{ top: marquee.top, height: marquee.height }}
-                  />
-                )}
-              </div>
-            </FrameHoverProvider>
+                  )}
+                  {flat.map((f, i) => (
+                    <RowCell
+                      key={f.block.id}
+                      blockId={f.block.id}
+                      row={i}
+                      arrived={arrivals.get(f.block.id) ?? false}
+                      frames={frameIdsByRow[i]!}
+                      feet={feetByRow[i]!}
+                      onOverhang={reportRowOverhang}
+                    >
+                      <BlockRow
+                        block={f.block}
+                        depth={f.depth}
+                        hasVisibleChildren={f.firstVisibleChildType !== null}
+                        ordinal={f.ordinal}
+                        seat={railSeats[i]!}
+                        isSelected={painted.has(f.block.id)}
+                        isDragging={
+                          activeId === f.block.id ||
+                          (bulkDrag?.subtree.has(f.block.id) ?? false)
+                        }
+                        dropZone={
+                          activeDropTarget?.id === f.block.id
+                            ? activeDropTarget.zone
+                            : null
+                        }
+                      />
+                    </RowCell>
+                  ))}
+                  {marquee && (
+                    <div
+                      // The lasso is drawn OVER the blocks it is sweeping, so its
+                      // fill stays fainter than the selection band underneath it —
+                      // it reads as the gesture, not as a second highlight.
+                      // eslint-disable-next-line layout/no-adhoc-layout -- marquee rectangle positioned via JS-computed top/height coords (inset-x-2 insets its sides within the content box); not a ramp-expressible anchor
+                      className="bg-primary/5 border-primary/25 pointer-events-none absolute inset-x-2 z-base rounded-sm border"
+                      style={{ top: marquee.top, height: marquee.height }}
+                    />
+                  )}
+                </div>
+              </FrameHoverProvider>
+            </SurfaceWidthContext>
           </Overlay>
         </ContentScope>
         <DragOverlay dropAnimation={null}>

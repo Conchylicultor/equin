@@ -206,22 +206,18 @@ export function framePadY(frames: number): string {
 }
 
 /**
- * The CSS variable the editor's full-width interaction surface publishes on
- * itself: its own width, in px. Inherited by every block, it is the one length
- * a block cannot otherwise know — how much room the pane has BEYOND the reading
- * column — and what lets a {@link WideBlock} grow past the column into it.
+ * The widest a wide block may grow: the editor surface (`surfaceWidth`, from
+ * `internal/surface-width.ts`), less one `BLOCK_GUTTER` on each side — the same
+ * margin the rail keeps on the left, mirrored, so a wide table stands off the
+ * pane's edges as far as the column's own rows do. On a surface that does not
+ * publish its width (`null`: the read-only renderer, or not measured yet), the
+ * block's own column stands in, so it stays in its column.
  *
  * Measured rather than read from a container query: `container-type` on the
  * surface would make it a fixed-position containing block for the overlays the
  * editor hosts (the format toolbar, the caret chip), which the viewport-escape
- * auditor reports. Unset on a surface that does not publish it (the read-only
- * renderer), where a wide block simply stays in its column.
+ * auditor reports.
  */
-export const SURFACE_WIDTH_VAR = "--block-surface-width";
-
-/**
- * The widest a wide block may grow: the surface, less one `BLOCK_GUTTER` on
- * each side — the same margin the rail keeps on the left, mirrored, so a wide
- * table stands off the pane's edges as far as the column's own rows do.
- */
-export const WIDE_BLOCK_MAX = `calc(var(${SURFACE_WIDTH_VAR}, 100%) - ${2 * BLOCK_GUTTER}px)`;
+export function wideBlockMax(surfaceWidth: number | null): string {
+  return `calc(${surfaceWidth === null ? "100%" : `${surfaceWidth}px`} - ${2 * BLOCK_GUTTER}px)`;
+}
