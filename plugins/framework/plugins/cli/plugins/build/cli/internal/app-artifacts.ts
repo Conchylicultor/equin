@@ -109,6 +109,7 @@ import {
   type DistPublication,
 } from "./dist-publish";
 import { stampExperimentalMarker } from "./experimental-marker";
+import { frontendUnits } from "./grant-split";
 import {
   peakFootprintText,
   type PeakFootprint,
@@ -814,13 +815,22 @@ export async function fastValidationJobs(opts: {
   // claims, that states that the contradiction cannot be written.
   jobs.push(async (grant) => {
     const start = performance.now();
-    const result = await runCheckSubprocess({
-      root,
-      grant,
-      select: { scope: ["tree", "deploy"], alwaysRun: true },
-      runId: checkRunId,
-      output: "capture",
-    });
+    // The child spends ITS share of the grant, reserved here for its whole
+    // run. One unit, not `checkPassUnits`: the always-run checks are light
+    // (config and schema reads, no type-check worker), and the tsc job beside
+    // them takes its host type-check slot BEFORE its grant units — every unit
+    // reserved here is time that slot sits held and idle.
+    const result = await grant.run(
+      (share) =>
+        runCheckSubprocess({
+          root,
+          grant: share,
+          select: { scope: ["tree", "deploy"], alwaysRun: true },
+          runId: checkRunId,
+          output: "capture",
+        }),
+      { units: 1 },
+    );
     for (const span of result.spans) {
       hooks.pushSpan(
         `check:${span.checkId}`,
@@ -1303,7 +1313,10 @@ export async function buildAndPublishWebDist(
       // three cores, measured — see web-artifacts' pooled-builder.ts), clamped
       // to the grant; the pipeline is admitted for that many units, so the
       // grant bounds the threads.
-      const threads = Math.min(idealArtifactBuildThreads(), grant.units);
+      const threads = Math.min(
+        idealArtifactBuildThreads(),
+        frontendUnits(grant.units, companions.length > 0),
+      );
       const builder = createPooledArtifactBuilder({
         repoRoot: root,
         minify: opts.minify,

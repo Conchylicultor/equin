@@ -12,6 +12,7 @@ import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/
 import { retryUntil, exponential } from "@plugins/packages/plugins/retry/core";
 import type { LoginServiceId } from "../../core";
 import {
+  blankValues,
   isDefinitionCurrent,
   readDefinition,
   removeDefinition,
@@ -143,6 +144,8 @@ function launchdService(id: LoginServiceId): LoginService {
         plistPath(),
         renderLaunchAgentPlist({ ...id, ...job }),
       ),
+    definitionShape: (job) =>
+      renderLaunchAgentPlist({ ...id, ...job, env: blankValues(job.env) }),
     installedJob: async () => {
       const content = await readDefinition(plistPath());
       return content === null ? null : parseLaunchAgentPlist(content);

@@ -28,9 +28,12 @@ export interface LoginService {
   /** What the manager currently holds for the service. */
   state(): Promise<LoginServiceState>;
   /**
-   * Write the job definition. Returns whether the file changed — neither
-   * manager re-reads a definition while the job is loaded, so a change takes
-   * effect on the next `unload` + `load`.
+   * Write the job definition. Returns whether the file changed. The launch it
+   * names (program, arguments, environment) takes effect on the next
+   * `unload` + `load` — neither manager restarts a loaded job for it. systemd's
+   * policy keys (`OOMPolicy`, `Restart`) apply to the running unit at once:
+   * a changed unit file is followed by `daemon-reload`, so systemd never holds
+   * a stale copy of a file on disk.
    *
    * 0600: a declared environment may carry credentials (the gateway's carries
    * OAuth client secrets).
@@ -43,6 +46,14 @@ export interface LoginService {
    * no definition.
    */
   isCurrent(job: LoginServiceJob): Promise<boolean>;
+  /**
+   * The definition `write(job)` would write with every environment VALUE
+   * blanked (the names kept): what identifies a launch and the manager's
+   * policy for it, minus what the starter's shell happens to carry. For a key
+   * that must move when the definition's own policy does (the gateway's
+   * follow-main attempt key) yet not on every run's inherited values.
+   */
+  definitionShape(job: LoginServiceJob): string;
   /**
    * The launch the written definition holds (argv and cwd), read back — null
    * when there is no definition or it is not one this service wrote. For a

@@ -218,6 +218,7 @@ the shared Playwright harness.
     - `GateMode`
     - `HoldResult`
     - `JoinedRun`
+    - `OomPreference`
     - `ResolvedReceipt`
     - `SignalOriginTapOptions`
     - `SignalTermination`
@@ -238,8 +239,10 @@ the shared Playwright harness.
     - `installVerdictGuard`
     - `laneFor`
     - `mustRequeue`
+    - `OP_OOM_SCORE_ADJ`
     - `openBuildProgress`
     - `opPriority`
+    - `preferOomKill`
     - `printStepBlocks`
     - `PROGRESS_FILE`
     - `publishLane`

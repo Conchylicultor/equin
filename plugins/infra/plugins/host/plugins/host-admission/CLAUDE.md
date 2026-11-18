@@ -385,11 +385,19 @@ the returned `slots` in an in-process `createSemaphore(slots)`
 - `grant.lane` — the lane it was admitted in. Children read lane-shaped
   decisions off it (the type-check worker's slot window), never off the
   branch.
-- `grant.env()` — `{ EQUIN_HOST_GRANT, EQUIN_LANE }`, inherited by a
-  subprocess child so its `inheritedGrant()` rebuilds the SAME budget and spends
-  those units — acquiring NOTHING host-wide, because the parent holds the slots
-  and the child is their only spender. This is what deletes the old
-  the host-slot-held marker / `kind: "exempt"` double-acquire dodge.
+- `share.env()` — the `GrantShare` a `run` hands its body: `{ EQUIN_HOST_GRANT,
+  EQUIN_LANE }` naming exactly the units that `run` holds, inherited by a
+  subprocess child so its `inheritedGrant()` rebuilds a budget of those units
+  and spends them — acquiring NOTHING host-wide, because the parent holds the
+  slots, and the parent's own `run`s wait for them until the child exits. This
+  is what deletes the old host-slot-held marker / `kind: "exempt"`
+  double-acquire dodge. **There is no `grant.env()`**: it handed a child the
+  whole grant while the holder kept spending the same units — a build's check
+  child got every unit while the build's web pipeline ran on them too, so on
+  an 8 GB host (`B = 1`) a cold type-check fleet and the rolldown link ran
+  side by side on a budget sized for one, and the kernel killed the check pass
+  (2026-11-18). A child that is the holder's whole remaining work (push's land
+  phase, a test run's runners) takes `grant.run(fn, { units: grant.units })`.
 
 ### A grant runs its holder in the foreground
 
@@ -527,6 +535,7 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
     - `FleetWindow`
     - `Grant`
     - `GrantHooks`
+    - `GrantShare`
     - `HolderPeakRecord`
     - `HolderReading`
     - `HolderWork`

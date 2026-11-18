@@ -58,7 +58,7 @@ import type { FsCallSummary } from "@plugins/packages/plugins/timed-fs/core";
 // every path; demoting the whole check subtree from here would be a behaviour
 // change smuggled into a refactor.
 
-import type { Grant } from "@plugins/infra/plugins/host/plugins/host-admission/core";
+import type { GrantShare } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import type { PeakFootprint } from "@plugins/packages/plugins/proc-rusage/core";
 import type { CheckScope } from "@plugins/framework/plugins/tooling/core";
 import { readCheckProgress } from "@plugins/framework/plugins/tooling/plugins/checks/core";
@@ -71,12 +71,15 @@ export interface CheckSubprocessOptions {
   /** The checkout to check. Becomes the child's `cwd`. */
   root: string;
   /**
-   * The host CPU grant this op already holds. Handed to the child via
-   * `grant.env()`, whose `inheritedGrant()` rebuilds it and SPENDS those units
-   * for its type-check fleet without re-acquiring host-wide — no double-acquire,
-   * no deadlock, since the parent already holds the slots.
+   * The units of the op's host CPU grant this check pass may spend: the share
+   * a `grant.run` holds while the child runs. Handed to the child via
+   * `share.env()`, whose `inheritedGrant()` rebuilds a budget of exactly those
+   * units and SPENDS them for its type-check fleet without re-acquiring
+   * host-wide — no double-acquire, no deadlock, since the parent already holds
+   * the slots, and no double spend, since the parent's own `run`s wait for
+   * them meanwhile.
    */
-  grant: Grant;
+  grant: GrantShare;
   /**
    * Selection BY PROPERTY ONLY, expressed here as flags and RESOLVED in the
    * child. Deliberately no `ids` field: a list computed in this process would be

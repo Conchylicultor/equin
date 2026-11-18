@@ -9,6 +9,7 @@ import {
 import { realpathSync } from "@plugins/packages/plugins/timed-fs/core";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import {
+  preferOomKill,
   checkBroadcasts,
   installFatalSignalExit,
   opPriority,
@@ -533,6 +534,9 @@ const pushAction: CliAction<
   installFatalSignalExit(
     await signalOriginTap({ opId: pushId, worktree: opSlug }),
   );
+  // Out of memory, the kernel kills this push and what it spawns (its land
+  // phase, its check pass) before anything serving the app.
+  await preferOomKill();
   // Fires immediately BEFORE `pushPool.run` (see withPushLock), so a push
   // blocked on the mutex lands on disk as a live "waiting" row before it
   // ever holds the lock. A failure BEFORE this point writes no record at

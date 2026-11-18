@@ -33,7 +33,7 @@ closes the channel for the next impure one.
 
 The remedy the message names: spawn the check pass through the shared helper at
 [`cli/plugins/op-runtime/cli/check-subprocess.ts`](../../../../../cli/plugins/op-runtime/cli/check-subprocess.ts),
-threading the host grant through `grant.env()` so the child does not re-acquire
+threading a share of the host grant through `share.env()` so the child does not re-acquire
 host capacity.
 
 ## What is and is not banned

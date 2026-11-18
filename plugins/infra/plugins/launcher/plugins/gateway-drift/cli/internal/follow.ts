@@ -264,7 +264,7 @@ async function followLocked(
   if (differences.length === 0) return { kind: "current" };
 
   const to = prepared.launch.executable.identity;
-  const key = launchKey(job, to);
+  const key = launchKey(service.definitionShape(job), to);
   const last = await readLastAttempt();
   if (last !== null && last.key === key) {
     log(
@@ -704,25 +704,20 @@ function flagOf(argv: readonly string[], flag: string): string | undefined {
 }
 
 /**
- * One launch's key: the build, argv (binary path and every flag), cwd and the
- * environment's NAMES — never its values. A value this run inherits that
- * differed from run to run would otherwise mint a new key on every gateway
- * boot, and each boot's run would restart the gateway again: the loop the key
- * exists to end. So an environment-value change is tried once per launch.
+ * One launch's key: the build and the job's definition with its environment
+ * VALUES blanked (`LoginService.definitionShape`: binary path, every flag,
+ * cwd, the environment's names, and the manager's own policy keys). Never the
+ * values: a value this run inherits that differed from run to run would
+ * otherwise mint a new key on every gateway boot, and each boot's run would
+ * restart the gateway again: the loop the key exists to end. So an
+ * environment-value change is tried once per launch. The policy keys are in
+ * it: a definition whose only change was one (`OOMPolicy=continue`,
+ * 2026-11-18) keyed the same as the launch already attempted, and was never
+ * written to a machine whose gateway was otherwise current.
  */
-function launchKey(
-  job: ReturnType<typeof gatewayServiceJob>,
-  identity: string,
-): string {
+function launchKey(definitionShape: string, identity: string): string {
   return createHash("sha256")
-    .update(
-      JSON.stringify({
-        identity,
-        argv: job.argv,
-        cwd: job.cwd,
-        env: Object.keys(job.env).sort(),
-      }),
-    )
+    .update(JSON.stringify({ identity, definitionShape }))
     .digest("hex");
 }
 

@@ -53,6 +53,8 @@ describe("renderSystemdUserUnit", () => {
     // A stop signals the gateway alone: every running agent process shares
     // its cgroup.
     expect(unit).toContain("KillMode=process");
+    // One process of the unit OOM-killed never stops the whole unit.
+    expect(unit).toContain("OOMPolicy=continue");
     expect(unit).toContain(`StandardOutput=append:${job.stdioLog}`);
     expect(unit).toContain("WantedBy=default.target");
   });
@@ -96,6 +98,7 @@ Restart=on-failure
 RestartSec=10
 TimeoutStopSec=20
 KillMode=process
+OOMPolicy=continue
 StandardOutput=append:/h/me/logs/gateway-stdio.log
 StandardError=append:/h/me/logs/gateway-stdio.log
 

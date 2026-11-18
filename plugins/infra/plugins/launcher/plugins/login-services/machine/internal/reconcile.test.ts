@@ -143,6 +143,9 @@ function fakeService(
       return Promise.resolve({ path: definitionPath, changed });
     },
     isCurrent: (job) => Promise.resolve(render(job) === definition),
+    definitionShape: () => {
+      throw new Error("not under test");
+    },
     installedJob: async () => {
       throw new Error("not under test");
     },

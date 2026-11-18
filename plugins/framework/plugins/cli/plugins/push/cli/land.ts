@@ -104,12 +104,18 @@ async function runRebasedChecks(
 ): Promise<boolean> {
   report.stepStart("checks");
   console.log("Running checks...");
-  const result = await runCheckSubprocess({
-    root,
-    grant,
-    select: { scope: "tree" },
-    output: "inherit",
-  });
+  // The check pass is the only heavy work left: it gets every unit, held for
+  // it until it exits.
+  const result = await grant.run(
+    (share) =>
+      runCheckSubprocess({
+        root,
+        grant: share,
+        select: { scope: "tree" },
+        output: "inherit",
+      }),
+    { units: grant.units },
+  );
   report.stepEnd("checks");
   return result.ok;
 }

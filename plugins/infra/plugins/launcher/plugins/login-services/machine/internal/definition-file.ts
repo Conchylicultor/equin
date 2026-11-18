@@ -44,3 +44,14 @@ export async function removeDefinition(path: AppPath): Promise<boolean> {
   await rm(path);
   return true;
 }
+
+/**
+ * The environment's names, every value blanked — what a definition says about
+ * its environment once the starter's own values are taken out
+ * (`LoginService.definitionShape`).
+ */
+export function blankValues(
+  env: Readonly<Record<string, string>>,
+): Record<string, string> {
+  return Object.fromEntries(Object.keys(env).map((k) => [k, ""]));
+}

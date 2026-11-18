@@ -49,10 +49,14 @@ test("withPoolGrant grants the share's units, runs fn and releases the share", a
     async (g) => {
       expect(g.units).toBe(2);
       expect(g.lane).toBe("background");
-      expect(g.env()).toEqual(
-        envEntries({ HOST_GRANT: "2", LANE: "background" }),
-      );
-      return g.run(async () => 42);
+      return g.run(async (share) => {
+        // A run hands its body the units it holds — one, by default — never
+        // the whole grant.
+        expect(share.env()).toEqual(
+          envEntries({ HOST_GRANT: "1", LANE: "background" }),
+        );
+        return 42;
+      });
     },
   );
   expect(result).toBe(42);
@@ -116,9 +120,15 @@ test("inheritedGrant reads the HOST_GRANT key and bounds grant.run to units", as
     // The lane is a field, not only an env string: a child reads lane-shaped
     // decisions (its type-check worker's slot and priority) off the grant.
     expect(g!.lane).toBe("interactive");
-    // The env it hands a child round-trips the very values it was built from.
-    expect(g!.env()).toEqual(
-      envEntries({ HOST_GRANT: "3", LANE: "interactive" }),
+    // A share of the whole grant hands a child the very values it was built
+    // from.
+    await g!.run(
+      async (share) => {
+        expect(share.env()).toEqual(
+          envEntries({ HOST_GRANT: "3", LANE: "interactive" }),
+        );
+      },
+      { units: 3 },
     );
 
     // 9 tasks through a 3-unit grant: concurrency must never exceed 3.
@@ -217,9 +227,45 @@ test("inheritedGrant defaults the lane to background when the LANE key is unset"
   await withEnv({ HOST_GRANT: "2", LANE: undefined }, () => {
     const g = inheritedGrant();
     expect(g?.lane).toBe("background");
-    expect(g?.env()).toEqual(
-      envEntries({ HOST_GRANT: "2", LANE: "background" }),
+    return g!.run(
+      async (share) => {
+        expect(share.env()).toEqual(
+          envEntries({ HOST_GRANT: "2", LANE: "background" }),
+        );
+      },
+      { units: 2 },
     );
+  });
+});
+
+// The 2026-11-18 OOM: a build handed its check child the whole grant and spent
+// the same unit on its web pipeline meanwhile. A share's units are the parent's
+// no longer until the child is done.
+test("a share handed to a child is not spent by the holder meanwhile", async () => {
+  await withInheritedUnits(1, async (grant) => {
+    const order: string[] = [];
+    let releaseChild!: () => void;
+    const childDone = new Promise<void>((r) => (releaseChild = r));
+    let childStarted!: () => void;
+    const started = new Promise<void>((r) => (childStarted = r));
+    const child = grant.run(async (share) => {
+      expect(share.units).toBe(1);
+      order.push("child:start");
+      childStarted();
+      await childDone;
+      order.push("child:end");
+    });
+    const own = grant.run(async () => {
+      order.push("own");
+    });
+    await started;
+    // Several macrotask turns: the holder's own run still waits for the unit
+    // the child holds.
+    for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0));
+    expect(order).toEqual(["child:start"]);
+    releaseChild();
+    await Promise.all([child, own]);
+    expect(order).toEqual(["child:start", "child:end", "own"]);
   });
 });
 

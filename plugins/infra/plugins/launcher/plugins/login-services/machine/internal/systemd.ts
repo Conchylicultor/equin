@@ -10,6 +10,7 @@ import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/
 import { retryUntil, exponential } from "@plugins/packages/plugins/retry/core";
 import { SERVICE_STOP_WAIT_MS, type LoginServiceId } from "../../core";
 import {
+  blankValues,
   isDefinitionCurrent,
   readDefinition,
   removeDefinition,
@@ -175,17 +176,26 @@ function systemdService(id: LoginServiceId): LoginService {
     startsAt: id.session === "background" ? "boot" : "login",
     definitionPath: unitPath,
     state,
-    write: (job) =>
-      writeDefinition(unitPath(), renderSystemdUserUnit({ ...id, ...job })),
+    write: async (job) => {
+      const written = await writeDefinition(
+        unitPath(),
+        renderSystemdUserUnit({ ...id, ...job }),
+      );
+      if (written.changed) await daemonReload();
+      return written;
+    },
     isCurrent: (job) =>
       isDefinitionCurrent(unitPath(), renderSystemdUserUnit({ ...id, ...job })),
+    definitionShape: (job) =>
+      renderSystemdUserUnit({ ...id, ...job, env: blankValues(job.env) }),
     installedJob: async () => {
       const content = await readDefinition(unitPath());
       return content === null ? null : parseSystemdUserUnit(content);
     },
     readDefinition: () => readDefinition(unitPath()),
     restoreDefinition: async (content) => {
-      await writeDefinition(unitPath(), content);
+      if ((await writeDefinition(unitPath(), content)).changed)
+        await daemonReload();
     },
     remove,
     load,
@@ -199,6 +209,17 @@ function systemdService(id: LoginServiceId): LoginService {
       });
     },
   };
+}
+
+// systemd keeps its own parsed copy of every unit file; after a write it holds
+// the old one (and warns "changed on disk") until told to re-read. The policy
+// keys apply to the running unit from the reload on — the 2026-11-18 incident's
+// `OOMPolicy=continue` reached an installed gateway only this way, since the
+// follow-main step hands the gateway over without reloading its unit.
+async function daemonReload(): Promise<void> {
+  await spawnExpectOk(systemctl("daemon-reload"), {
+    timeoutMs: SYSTEMCTL_TIMEOUT_MS,
+  });
 }
 
 export const systemdManager: LoginServiceManager = {

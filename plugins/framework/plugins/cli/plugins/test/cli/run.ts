@@ -445,29 +445,41 @@ const run: CliAction<[string[]], object> = async (paths) => {
     },
     // Every dir a test makes through `os.tmpdir()` lands in this run's own
     // scratch root, removed when the run ends — see run-tmpdir.ts.
+    // The runners are the run's whole work, one after the other: each is
+    // handed every unit of the grant, held for them until they are done.
     (grant, ctx) =>
-      withRunTmpdir(async (scratch) => {
-        const env = { ...process.env, ...grant.env(), ...tmpdirEnv(scratch) };
-        // The run's machine-readable record, written before either runner starts
-        // so a killed run reads `running` rather than a previous run's verdict.
-        // `toolchain upgrade` compares two of these, before and after.
-        const { slug } = ctx;
-        const status: TestStatus = {
-          opId: ctx.opId,
-          pid: process.pid,
-          startedAt: new Date().toISOString(),
-          targets: runnerArgs,
-          status: "running",
-          finishedAt: null,
-          runners: [],
-        };
-        writeTestStatus(slug, status);
-        const bunReport = worktreeArtifacts.testReport(slug, ctx.opId, "bun");
-        const domReport = worktreeArtifacts.testReport(
-          slug,
-          ctx.opId,
-          "vitest",
-        );
+      grant.run(
+        (share) =>
+          withRunTmpdir(async (scratch) => {
+            const env = {
+              ...process.env,
+              ...share.env(),
+              ...tmpdirEnv(scratch),
+            };
+            // The run's machine-readable record, written before either runner starts
+            // so a killed run reads `running` rather than a previous run's verdict.
+            // `toolchain upgrade` compares two of these, before and after.
+            const { slug } = ctx;
+            const status: TestStatus = {
+              opId: ctx.opId,
+              pid: process.pid,
+              startedAt: new Date().toISOString(),
+              targets: runnerArgs,
+              status: "running",
+              finishedAt: null,
+              runners: [],
+            };
+            writeTestStatus(slug, status);
+            const bunReport = worktreeArtifacts.testReport(
+              slug,
+              ctx.opId,
+              "bun",
+            );
+            const domReport = worktreeArtifacts.testReport(
+              slug,
+              ctx.opId,
+              "vitest",
+            );
 
         const bunRun =
           bun.length > 0
@@ -600,6 +612,8 @@ const run: CliAction<[string[]], object> = async (paths) => {
         console.error(`\nFAILED: ${failed.join(", ")}`);
         return "failed";
       }),
+        { units: grant.units },
+      ),
   );
   // The tests ran and some failed — a verdict, told apart from a run that
   // could not be done (exit 1) for whoever supervises runs.

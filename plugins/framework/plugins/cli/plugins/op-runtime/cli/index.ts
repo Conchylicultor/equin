@@ -50,6 +50,8 @@ export type {
 } from "./build-receipt";
 
 export { FATAL_SIGNAL_EXITS, installFatalSignalExit } from "./fatal-signals";
+export { OP_OOM_SCORE_ADJ, preferOomKill } from "./oom-preference";
+export type { OomPreference } from "./oom-preference";
 export type {
   FatalSignal,
   FatalSignalExitOptions,

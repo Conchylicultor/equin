@@ -15,6 +15,7 @@ import {
   type FleetMemoryUnmeasuredPayload,
   type Grant,
   type GrantHooks,
+  type GrantShare,
   type HolderWork,
   type Lane,
   type Priority,
@@ -53,12 +54,27 @@ export const cpuPool = defineHostPool({
 // both by `withHostGrant` (after a host acquire) and `inheritedGrant` (the
 // units already held by the parent). The semaphore is what bounds a holder's
 // fan-out to `units`; nothing here touches flock.
+//
+// Each `run` hands its body the share it holds: a subprocess child is given
+// exactly those units (`share.env()`), which this semaphore keeps from every
+// other spender until the body settles — so a child and its parent never spend
+// the same unit twice.
 function grantOfUnits(units: number, lane: Lane): Grant {
   const sem = createSemaphore(units);
   return {
     units,
     lane,
-    run: (fn, opts) => sem.run(fn, { weight: spendOf(opts?.units, units) }),
+    run: (fn, opts) => {
+      const weight = spendOf(opts?.units, units);
+      return sem.run(() => fn(shareOf(weight, lane)), { weight });
+    },
+  };
+}
+
+function shareOf(units: number, lane: Lane): GrantShare {
+  return {
+    units,
+    lane,
     env: () => envEntries({ HOST_GRANT: String(units), LANE: lane }),
   };
 }
@@ -297,7 +313,7 @@ export const e2ePool = defineHostPool({
  * `withHostGrant`'s twin for an e2e script run: acquire ONE `e2e` slot, run
  * `fn`, release. Same signature, so a direct op picks the pool without
  * changing shape. The grant it hands `fn` carries one unit for the holder's own
- * fan-out but **no env**: it holds no `cpu` units, so a child must not inherit
+ * fan-out but its shares carry **no env**: it holds no `cpu` units, so a child must not inherit
  * a `EQUIN_HOST_GRANT` claiming some — a `./equin check` an e2e
  * script spawns acquires its own `cpu` grant like any top-level op.
  */
@@ -310,12 +326,13 @@ export async function withE2eGrant<T>(
     priority: opts.priority,
   });
   const sem = createSemaphore(1);
+  // Its shares carry no env: they hold no `cpu` units to hand down.
+  const unit: GrantShare = { units: 1, lane: opts.lane, env: () => ({}) };
   const grant: Grant = {
     units: 1,
     lane: opts.lane,
     run: (body, runOpts) =>
-      sem.run(body, { weight: spendOf(runOpts?.units, 1) }),
-    env: () => ({}),
+      sem.run(() => body(unit), { weight: spendOf(runOpts?.units, 1) }),
   };
   try {
     return await fn(grant);

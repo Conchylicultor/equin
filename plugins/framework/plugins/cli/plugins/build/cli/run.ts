@@ -28,6 +28,7 @@ import {
   type StepResult,
 } from "./internal/app-artifacts";
 import { resolveBuildTargets } from "./internal/build-targets";
+import { checkPassUnits } from "./internal/grant-split";
 import { deployNamespace } from "./internal/deploy-namespace";
 import { askAdoption } from "./internal/adopt";
 import { runConvergence } from "./internal/converge";
@@ -72,6 +73,7 @@ import { join, relative, resolve } from "path";
 import { parseMigrationAnswers } from "@plugins/framework/plugins/cli/plugins/migrations/cli";
 import { formatChangedSources } from "@plugins/framework/plugins/tooling/plugins/format/core";
 import {
+  preferOomKill,
   buildProfilerStart,
   checkBroadcasts,
   checkValveGuard,
@@ -1113,6 +1115,10 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
       onSignal: recordSignal,
     }),
   );
+  // Out of memory, the kernel kills this build (or a child it spawns from
+  // here on) before the gateway, Postgres or a backend it serves beside —
+  // see op-runtime's oom-preference.ts.
+  await preferOomKill();
 
   endSpan = buildProfilerStart(
     "nameValidation",
@@ -1668,20 +1674,26 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
         // This used to be spelled as NO filter at all, which is a different claim
         // ("every scope, including any added later") and is how a build came to fail
         // on a data dir a concurrently-running agent's unmerged branch had declared.
-        const result = await runCheckSubprocess({
-          root,
-          select: { scope: ["tree", "deploy"] },
-          // The build's host CPU grant — the child's type-check spends it per
-          // worker, without re-acquiring host-wide.
-          grant,
+        const result = await grant.run(
+          (share) =>
+            runCheckSubprocess({
+              root,
+              select: { scope: ["tree", "deploy"] },
+              // The check pass's share of the build's host CPU grant, held
+              // until it exits — the child's type-check spends it per worker,
+              // without re-acquiring host-wide, and the frontend beside it
+              // spends only the rest (`checkPassUnits`).
+              grant: share,
           // The child derives `check-<buildId>.log` from this — the identical
           // path this build's failure funnel points at, because both sides
           // compute it from `basename(root)`. Full, untruncated check output
           // lands there beside the build's other per-run artifacts; the
           // captured `lines` (console + transcript) stay summarized.
-          runId: buildId,
-          output: "capture",
-        });
+              runId: buildId,
+              output: "capture",
+            }),
+          { units: checkPassUnits(grant.units) },
+        );
         // Replayed from the child's own settle records, reconciled onto this
         // process's clock — so `build:checks` still draws one bar per check at
         // its true offset. A killed child draws a partial lane, which is honest

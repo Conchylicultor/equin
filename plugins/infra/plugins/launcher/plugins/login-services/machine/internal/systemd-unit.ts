@@ -18,6 +18,18 @@ import type { InstalledJob } from "./login-service";
  *   too — every running agent process among them, started detached to outlive
  *   its backend — so systemd's default (SIGTERM the whole cgroup, SIGKILL what
  *   is left) would kill every agent on each `start --force`.
+ * - `OOMPolicy=continue` — when the kernel OOM-kills ONE process of the unit,
+ *   that process alone dies. systemd's default (`stop`) answers any OOM kill
+ *   in the unit's cgroup by stopping the whole unit: on an 8 GB Linux host
+ *   (2026-11-18) one 2.8 GB check process of main's deploy was killed, and
+ *   systemd took the gateway down with it — every backend, Postgres and every
+ *   tab — then relaunched it 10 s later (`Result=oom-kill`, measured on
+ *   Ubuntu 24.04, systemd 255). Every agent, build and check a backend
+ *   spawned lives in this cgroup too, so the default turned any one of them
+ *   running out of memory into an outage of the app. A killed process's own
+ *   parent reports it (a build's check child dying fails the build, loudly);
+ *   the gateway relaunches a backend that died. launchd has no such
+ *   whole-job policy: a memory kill there takes one process already.
  *
  * The session decides when it runs:
  * - `background` — `WantedBy=default.target`: started with the user's service
@@ -55,6 +67,7 @@ Restart=on-failure
 RestartSec=10
 TimeoutStopSec=${SERVICE_STOP_TIMEOUT_S}
 KillMode=process
+OOMPolicy=continue
 StandardOutput=append:${path(spec.stdioLog)}
 StandardError=append:${path(spec.stdioLog)}
 

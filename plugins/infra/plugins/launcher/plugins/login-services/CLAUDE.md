@@ -219,9 +219,13 @@ responsible process); agents disclaim (`packages/spawn-disclaim`).
 
 The rest of the policy is shared and fixed in the pure renderers
 (`machine/internal/launchd-plist.ts`, `systemd-unit.ts`): relaunch on a
-non-zero exit only, 10 s throttle, a `SERVICE_STOP_TIMEOUT_S` (20 s) stop timeout, `KillMode=process`. A
-`background` spec renders byte-identical to the gateway's plist / unit from
-before this was generic — the renderer tests pin it.
+non-zero exit only, 10 s throttle, a `SERVICE_STOP_TIMEOUT_S` (20 s) stop timeout, `KillMode=process`,
+and on systemd `OOMPolicy=continue`: the unit's cgroup holds every backend,
+agent, build and check, and systemd's default (`stop`) answered one of them
+being OOM-killed by stopping the whole gateway (8 GB Ubuntu, 2026-11-18) —
+now that process dies alone and its parent reports it. A
+`background` spec renders the gateway's plist / unit — the renderer tests pin
+it byte for byte.
 
 ## Periodic services and platforms
 

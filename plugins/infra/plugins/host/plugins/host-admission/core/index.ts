@@ -16,7 +16,7 @@ export {
   cpuBudget,
   grantPriority,
 } from "./internal/budget";
-export type { Grant, GrantHooks } from "./internal/grant";
+export type { Grant, GrantHooks, GrantShare } from "./internal/grant";
 export {
   CpuHolderMarkerSchema,
   HOLDER_PEAK_WINDOW_MS,

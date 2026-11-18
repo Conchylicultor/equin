@@ -28,8 +28,10 @@ main — and when it is not, make it so. Two halves over one comparison
    repo root a push may be rewriting; compared again, plus the whole rendered job
    (`isCurrent` — the environment, which this run inherits from the gateway's
    declared one) — current is a no-op.
-4. The launch key (a hash of the build, argv, cwd and the environment's
-   names — not its values, so an inherited value that differs run to run
+4. The launch key (a hash of the build and the rendered definition with its
+   environment values blanked — `LoginService.definitionShape`: argv, cwd,
+   the environment's names and the manager's policy keys such as systemd's
+   `OOMPolicy`; not the values, so an inherited value that differs run to run
    cannot mint a key per boot) against
    `last-attempt.json`: a key already attempted is not retried, whatever its
    outcome — a gateway that cannot come up would otherwise be retried by the
@@ -38,7 +40,8 @@ main — and when it is not, make it so. Two halves over one comparison
    (`LoginService.readDefinition`) and the build held as `machine-gateway`
    (`heldDep`, `infra/deps`). No held build → refuse (report).
 6. `adoptGatewayLaunch` (install into the equin app, `database.json`), write
-   the job, then **hand over** (`handOverGateway`, `launcher/server`): the
+   the job (on systemd a changed unit is `daemon-reload`ed by the write, so a
+   policy key reaches the running unit with no restart), then **hand over** (`handOverGateway`, `launcher/server`): the
    gateway's keeper replaces the gateway process with the job's binary, argv,
    environment and cwd over the same sockets and backends — no backend stops
    (`gateway/CLAUDE.md` § The keeper). The running gateway is dialled at the

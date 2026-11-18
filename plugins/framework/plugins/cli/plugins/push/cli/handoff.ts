@@ -28,7 +28,7 @@ import { spawnPassthrough } from "@plugins/infra/plugins/spawn/core";
 // So the push driver, after the rebase, does only this: spawn the land phase,
 // wait, record what it reports. The driver keeps holding the push mutex and the
 // host grant — the land phase runs INSIDE that hold (the grant handed down by
-// env like the checks' — `grant.env()` → `inheritedGrant()`), so nothing is
+// env like the checks' — a share of the whole grant, `share.env()` → `inheritedGrant()`), so nothing is
 // re-queued and the lock never crosses a process.
 //
 // This file is the WHOLE contract between two versions of the code: the driver
@@ -176,18 +176,24 @@ export async function runLandPhase(opts: {
     report: reportPath,
   };
   const spawnedAtMs = Date.now();
-  const { exitCode } = await spawnPassthrough([join(root, CLI_NAME), "push"], {
-    cwd: root,
-    env: {
-      ...process.env,
-      ...opts.grant.env(),
-      ...envEntries({
-        FROZEN_LOCKFILE: "1",
-        PUSH_LAND: JSON.stringify(payload),
+  // The land phase is the driver's whole remaining work: it is handed every
+  // unit of the grant, reserved for it until it exits.
+  const { exitCode } = await opts.grant.run(
+    (share) =>
+      spawnPassthrough([join(root, CLI_NAME), "push"], {
+        cwd: root,
+        env: {
+          ...process.env,
+          ...share.env(),
+          ...envEntries({
+            FROZEN_LOCKFILE: "1",
+            PUSH_LAND: JSON.stringify(payload),
+          }),
+        },
+        stdin: "inherit",
       }),
-    },
-    stdin: "inherit",
-  });
+    { units: opts.grant.units },
+  );
   const report = readLandReport(reportPath);
   rmSync(reportPath, { force: true });
 

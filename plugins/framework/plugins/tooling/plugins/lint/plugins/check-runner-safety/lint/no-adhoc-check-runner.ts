@@ -37,7 +37,7 @@ export default createRule({
         "channel stays open for the next impure check). Spawn the check pass " +
         "instead, through the shared helper in " +
         "plugins/framework/plugins/cli/plugins/op-runtime/cli/check-subprocess.ts, " +
-        "threading the host grant through grant.env(). Type-only imports are " +
+        "threading a share of the host grant through share.env(). Type-only imports are " +
         "allowed, and " +
         "RunChecksOptions / listAllChecks / scopeOf on the same barrel are not " +
         "banned — only invoking the runner is.",

@@ -4,21 +4,42 @@
 //
 // A grant is admission returned as *tokens*, not permission. A holder does not
 // declare what it fans out into; it SUBDIVIDES the units it was given. Every
-// heavy child spends one via `run`; a subprocess child inherits the *number*
-// via `env()` and rebuilds its own in-process semaphore, so nothing a holder
-// spawns re-acquires host-wide.
+// heavy child spends some via `run`; a subprocess child is handed the units its
+// `run` holds (`share.env()`) and rebuilds its own in-process semaphore over
+// exactly those, so nothing a holder spawns re-acquires host-wide.
 
 import type { Lane } from "./budget";
 
-// A grant reaches a subprocess child as two variables: HOST_GRANT (the
-// inherited unit count, a positive int) and LANE (the inherited lane).
+// A share reaches a subprocess child as two variables: HOST_GRANT (the unit
+// count it holds, a positive int) and LANE (the inherited lane).
+
+/**
+ * The units ONE `grant.run` holds while its body runs — what a subprocess
+ * child may be handed. `env()` names exactly `units`, so the child's
+ * `inheritedGrant()` rebuilds a budget of those units and no more, and the
+ * holder cannot spend them meanwhile: they are taken from its own semaphore
+ * until the body settles.
+ */
+export interface GrantShare {
+  readonly units: number;
+  readonly lane: Lane;
+  env(): Record<string, string>;
+}
 
 /**
  * A subdivisible admission grant. `units` is how many host CPU slots the holder
- * actually acquired (always `>= 1`). `run` spends one unit through an in-process
- * semaphore (so a holder's own fan-out is bounded to `units`). `env()` is what a
- * subprocess child inherits so its `inheritedGrant()` reconstructs the same
- * budget without acquiring anything host-wide.
+ * actually acquired (always `>= 1`). `run` spends units through an in-process
+ * semaphore (so a holder's own fan-out is bounded to `units`), and hands its
+ * body the {@link GrantShare} it holds — the only way to give a subprocess
+ * child units to spend.
+ *
+ * There is deliberately no `grant.env()`. It handed a child the WHOLE grant
+ * while the holder kept spending the same units itself: a build passed all of
+ * its units to its check pass and ran the web-artifacts pipeline on them at
+ * the same time, so on an 8 GB host (one unit) the type-check fleet and the
+ * rolldown link ran side by side on a budget sized for one of them, and the
+ * host ran out of memory (2026-11-18). A child's units are now reserved by the
+ * `run` that spawns it.
  */
 export interface Grant {
   readonly units: number;
@@ -36,7 +57,8 @@ export interface Grant {
    * child is worth (default 1, a positive integer) — a child whose MEASURED peak
    * is a multiple of the `PER_UNIT_BYTES` quantum declares that multiple, so the
    * quantum can stay the fleet's mean while a heavy consumer pays its own tail
-   * where it is measured.
+   * where it is measured. A subprocess child is handed the share `fn`
+   * receives (`share.env()`), never more.
    *
    * The request is CLAMPED to `min(units, grant.units)`, and the clamp lives here
    * because the grant is the ceiling: a 1-unit grant (an inherited
@@ -46,9 +68,14 @@ export interface Grant {
    * fan-out narrows, nothing deadlocks, and a weight can never exceed the
    * semaphore's `max`. Declaring more units than the grant holds is therefore
    * legal and means "as heavy as this grant can express".
+   *
+   * Never nest a `run` inside another `run` of the same grant: at one unit the
+   * inner one waits for the unit the outer one holds, for ever.
    */
-  run<T>(fn: () => Promise<T>, opts?: { units?: number }): Promise<T>;
-  env(): Record<string, string>;
+  run<T>(
+    fn: (share: GrantShare) => Promise<T>,
+    opts?: { units?: number },
+  ): Promise<T>;
 }
 
 /**

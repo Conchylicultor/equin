@@ -31933,8 +31933,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `INSTALL_VERB`
         - **`build`** — `./equin build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
           - Cli:
-            - Uses: 74 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
-              - `framework/cli/op-runtime` ×32
+            - Uses: 75 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
+              - `framework/cli/op-runtime` ×33
               - `installer` ×5
               - `framework/cli/bootstrap` ×4
               - `framework/tooling/web-artifacts` ×4
@@ -32167,6 +32167,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `GateMode`
               - `HoldResult`
               - `JoinedRun`
+              - `OomPreference`
               - `ResolvedReceipt`
               - `SignalOriginTapOptions`
               - `SignalTermination`
@@ -32187,8 +32188,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `installVerdictGuard`
               - `laneFor`
               - `mustRequeue`
+              - `OP_OOM_SCORE_ADJ`
               - `openBuildProgress`
               - `opPriority`
+              - `preferOomKill`
               - `printStepBlocks`
               - `PROGRESS_FILE`
               - `publishLane`
@@ -32233,6 +32236,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/op-runtime.checkBroadcasts`
               - `framework/cli/op-runtime.installFatalSignalExit`
               - `framework/cli/op-runtime.opPriority`
+              - `framework/cli/op-runtime.preferOomKill`
               - `framework/cli/op-runtime.reportInterruptedPredecessorSync`
               - `framework/cli/op-runtime.runCheckSubprocess`
               - `framework/cli/op-runtime.signalOriginTap`
@@ -38146,6 +38150,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FleetWindow`
               - `Grant`
               - `GrantHooks`
+              - `GrantShare`
               - `HolderPeakRecord`
               - `HolderReading`
               - `HolderWork`

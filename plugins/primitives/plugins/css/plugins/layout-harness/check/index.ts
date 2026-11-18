@@ -103,13 +103,13 @@ const check: Check = {
 
     // Chromium is an on-demand dependency. Install it (a no-op once it is)
     // BEFORE taking the pool: in a `./equin deps install` child, which
-    // spends a unit of THIS op's grant (passed down) rather than queueing
+    // spends the unit of THIS op's grant reserved for it here rather than queueing
     // host-wide behind it — on a one-unit host that queue waited on its own
     // parent until the install timed out. The suite's measurer then finds it
     // installed (see `web/internal/measure-page.ts`).
     try {
-      await ctx.grant.run(() =>
-        ensureDepViaCli(chromium, { stdio: "capture", grant: ctx.grant }),
+      await ctx.grant.run((share) =>
+        ensureDepViaCli(chromium, { stdio: "capture", grant: share }),
       );
     } catch (err) {
       return {

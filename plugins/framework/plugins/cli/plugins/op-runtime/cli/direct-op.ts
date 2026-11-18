@@ -1,3 +1,4 @@
+import { preferOomKill } from "./oom-preference";
 import {
   withHostGrant,
   withE2eGrant,
@@ -299,6 +300,12 @@ export interface DirectOpDeps {
   /** Register an exit-time cleanup (`process.on("exit", …)`). */
   onExit: (fn: () => void) => void;
   installFatalSignalExit: (opId: string, slug: Namespace) => Promise<void>;
+  /**
+   * Make this op process the kernel's first OOM victim (spawn-priority's
+   * `preferOomKill`). Only a top-level op calls it; a nested one inherited the
+   * value from its parent at fork.
+   */
+  preferOomKill: () => Promise<void>;
   singleFlight: typeof singleFlight;
   tryLead: typeof tryLead;
   /** The progress line a joiner prints. */
@@ -356,6 +363,9 @@ const realDeps: DirectOpDeps = {
   // map is shared with `build` and `push`; see ./fatal-signals.ts.
   installFatalSignalExit: async (opId, slug) =>
     installFatalSignalExit(await signalOriginTap({ opId, worktree: slug })),
+  preferOomKill: async () => {
+    await preferOomKill();
+  },
   singleFlight,
   tryLead,
   log: (line) => console.log(line),
@@ -419,7 +429,7 @@ export async function withDirectOp<K extends OpKind>(
   if (!nested) deps.reportInterruptedPredecessor(slug);
 
   // A direct op on the main worktree is human-blocking (interactive), any other
-  // is background. `publishLane` not-clobbers: a parent op's `grant.env()`
+  // is background. `publishLane` not-clobbers: a parent op's grant share (`share.env()`)
   // always sets EQUIN_LANE, so a nested op reads the parent's
   // classification here rather than reclassifying off its own branch — that
   // is how a push-nested check keeps `interactive` even on an agent branch.
@@ -468,6 +478,9 @@ export async function withDirectOp<K extends OpKind>(
     // (the wrapper's orphan SIGTERM tears this worker down cleanly). SIGKILL is
     // uncatchable; the kernel drops the marker's flock with the process.
     await deps.installFatalSignalExit(opId, slug);
+    // A check, test or script run is tooling: out of memory, the kernel kills
+    // it before the gateway, Postgres or a backend.
+    await deps.preferOomKill();
   }
 
   const ctx: DirectOpContext<K> = {

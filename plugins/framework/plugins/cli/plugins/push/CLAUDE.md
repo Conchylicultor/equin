@@ -129,7 +129,7 @@ would fire on nearly every push and buy nothing.
 
 - **The lock never moves.** The driver keeps holding the mutex and the grant and
   the land phase runs inside that hold, the grant handed down by env like the
-  checks' (`grant.env()` → `inheritedGrant()`). Releasing the mutex to re-run the
+  checks' (a share of every unit: `share.env()` → `inheritedGrant()`). Releasing the mutex to re-run the
   push was measured out: 31 % of pushes have another land while they queue, so a
   restart would rebase again. The child dies with the driver (orphan guard).
 - **It is nested.** No op record, no worktree-op marker, no mutex request: the
@@ -196,6 +196,7 @@ queues behind the mutex it was holding.
     - `framework/cli/op-runtime.checkBroadcasts`
     - `framework/cli/op-runtime.installFatalSignalExit`
     - `framework/cli/op-runtime.opPriority`
+    - `framework/cli/op-runtime.preferOomKill`
     - `framework/cli/op-runtime.reportInterruptedPredecessorSync`
     - `framework/cli/op-runtime.runCheckSubprocess`
     - `framework/cli/op-runtime.signalOriginTap`

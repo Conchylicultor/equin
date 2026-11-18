@@ -6,7 +6,7 @@ import {
   spawnPassthrough,
 } from "@plugins/infra/plugins/spawn/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
-import type { Grant } from "@plugins/infra/plugins/host/plugins/host-admission/core";
+import type { GrantShare } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import type { Dep, DepSource, Ready } from "./dep";
 import { readyNow } from "./ensure";
 
@@ -22,11 +22,14 @@ const INSTALL_TIMEOUT_MS = 30 * 60_000;
  * like any other install, under the same host flock — and the proof is then
  * read back with `readyNow`.
  *
- * - `grant` is the host grant this process holds, or `null` when it holds none
- *   (a script): the child inherits it (`grant.env()`) and spends one of its
- *   units rather than queueing host-wide behind its own parent — which, on a
- *   host whose fleet is a single unit, never ends. Required, so a caller
- *   inside an op cannot forget to pass the grant it already holds.
+ * - `grant` is the share of the host grant this process reserved for the
+ *   install (`grant.run((share) => ensureDepViaCli(dep, { grant: share }))`),
+ *   or `null` when it holds none (a script): the child inherits it
+ *   (`share.env()`) and spends its units rather than queueing host-wide behind
+ *   its own parent — which, on a host whose fleet is a single unit, never
+ *   ends. Required, so a caller inside an op cannot forget to pass the share
+ *   it holds; a share, so the child never spends units the caller is
+ *   spending too.
  * - Already installed: one `readyNow`, no child.
  * - `stdio: "inherit"` streams the child's progress to this process's
  *   terminal (an e2e run someone is watching); `"capture"` keeps it, and puts
@@ -37,7 +40,11 @@ const INSTALL_TIMEOUT_MS = 30 * 60_000;
  */
 export async function ensureDepViaCli<S extends DepSource>(
   dep: Dep<S>,
-  opts: { stdio: "inherit" | "capture"; grant: Grant | null; root?: AppPath },
+  opts: {
+    stdio: "inherit" | "capture";
+    grant: GrantShare | null;
+    root?: AppPath;
+  },
 ): Promise<Ready<S>> {
   const root = opts.root ?? REPO_ROOT;
   const before = await readyNow(dep, { root });

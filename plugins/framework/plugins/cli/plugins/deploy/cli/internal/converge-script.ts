@@ -326,6 +326,13 @@ export const RELEASE_STOP_TIMEOUT_S = 45;
  * website box, 2026-11-13). Whatever is left when the main process exits is
  * SIGKILLed, which is why the launcher waits Postgres out.
  *
+ * `OOMPolicy=continue`: one process of the unit OOM-killed dies alone.
+ * systemd's default (`stop`) stops the whole unit on any OOM kill in its
+ * cgroup — the site down until `Restart=always` brings every part back, for
+ * one backend worker that ran out of memory (the gateway relaunches a backend
+ * that died; the dev host's login-service unit carries the same line, for the
+ * same reason — `systemd-unit.ts`).
+ *
  * `TimeoutStopSec` covers that ordered stop: the launcher's gateway wait (10 s,
  * inside which the gateway's own budget runs) plus Postgres's fast shutdown
  * (15 s, then immediate) — {@link RELEASE_STOP_TIMEOUT_S}.
@@ -347,6 +354,7 @@ Environment=${envName("RELEASE_DIR")}=${t.runtimeDir}
 Restart=always
 RestartSec=2
 KillMode=mixed
+OOMPolicy=continue
 TimeoutStopSec=${RELEASE_STOP_TIMEOUT_S}
 PrivateTmp=yes
 

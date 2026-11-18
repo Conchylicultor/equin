@@ -25,10 +25,12 @@ function fakeGrant(units: number, lane: Lane): Grant {
   return {
     units,
     lane,
-    run: (fn) => fn(),
-    env: () => ({
-      ...envEntries({ HOST_GRANT: String(units) }),
-    }),
+    run: (fn) =>
+      fn({
+        units,
+        lane,
+        env: () => envEntries({ HOST_GRANT: String(units) }),
+      }),
   };
 }
 
@@ -133,6 +135,7 @@ function makeHarness(
     installFatalSignalExit: async (opId) => {
       events.push(`signals:${opId.length > 0 ? "armed" : "?"}`);
     },
+    preferOomKill: async () => {},
     // `_slug` above: the stubs record the op, not the slug — every call in a
     // run carries the same one, asserted once through `predecessor:<slug>`.
     singleFlight: (async (o, lead) => {

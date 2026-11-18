@@ -1,3 +1,4 @@
+import type { GrantShare } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import {
   existsSync,
   realpathSync,
@@ -157,7 +158,7 @@ const run: CliAction<[string, string[]], object> = async (script, args) => {
   const tierNote = kind === "script" ? darwinbgNote() : null;
   if (tierNote !== null) console.error(tierNote);
   const outcome = await withDirectOp(kind, { max: 1 }, async (grant) => {
-    const spawnScript = () =>
+    const spawnScript = (share: GrantShare | null) =>
       spawnPassthrough(
         scratch
           ? [
@@ -178,14 +179,18 @@ const run: CliAction<[string, string[]], object> = async (script, args) => {
         env: pacedHeapEnv({
           ...process.env,
             ...(scratch ? { NODE_PATH: join(root, "node_modules") } : {}),
-          ...(grant === null ? {} : grant.env()),
+            ...(share === null ? {} : share.env()),
         }),
         },
       );
     const { exitCode, signalCode } =
       grant === null
-        ? await spawnScript()
-        : await withForegroundPriority(spawnScript);
+        ? await spawnScript(null)
+        : // The script is the op's whole work: it is handed the grant's share
+          // (an e2e run's carries no cpu units, so its env is empty).
+          await grant.run((share) =>
+            withForegroundPriority(() => spawnScript(share)),
+          );
     if (tierNote !== null) console.error(`\n${tierNote}`);
     // A signalled child can still report exit 0. Reporting that as success is
     // the absorbed failure this repo bans — the script did not finish, it was
