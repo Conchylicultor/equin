@@ -345,6 +345,11 @@ export const InstallEvent = z.discriminatedUnion("type", [
     ...base,
     type: z.literal("exit"),
     code: z.number().int(),
+    /**
+     * Why the install stopped, when it was not the install's own doing: the
+     * terminal view ended under it, or the stream lost its reader (SIGPIPE).
+     */
+    cause: z.string().optional(),
   }),
 ]);
 export type InstallEvent = z.infer<typeof InstallEvent>;

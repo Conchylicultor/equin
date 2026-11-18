@@ -74,7 +74,8 @@ own (next section): fix wording in the step engine, and every view changes.
   text, evidence, blocking, optional, manual), `resolved` (how a pause
   ended), `fixing` (Fix with Claude opened: where), `notice` (a part left
   out, and where it stands), `done` (`url`) and `exit` (`code`, always the
-  last line).
+  last line; `cause` when the install did not end itself — its terminal view
+  ended under it, or the stream lost its reader).
 - **Step ids are a closed set** (`InstallStepId`: tools, mise, clone,
   toolchain, start, build, and the build's sub-steps `build.database`,
   `build.deps`, `build.codegen`, `build.interface`, `build.deploy`).
@@ -134,7 +135,23 @@ own (next section): fix wording in the step engine, and every view changes.
 - **Exit drains**: the EXIT trap writes `exit`, closes the write end and waits
   for the hub, then writes `timing.json`, and only then prints a failure's
   message (below the terminal view's last frame). The hub ignores INT / TERM /
-  HUP; the script traps them (`exit 130 / 143 / 129`) so `exit` says so.
+  HUP; the script traps them (`exit 130 / 143 / 129`) so `exit` says so, and
+  PIPE (`exit 141`): a stream that lost its reader ends the install with a
+  message and an `exit` event (written by path when the hub is gone), never
+  silently.
+- **A view that dies stops the install loudly.** The hub runs `render` in a
+  subshell of its own; when it ends before drawing `exit`, `view_ended`
+  prints the cause on stderr, leaves it in `view-ended` (the exit event's
+  `cause`, the failure message), sends TERM to the install and to the attached
+  one (`attached-pid`) — taken between commands, so a step command already
+  running finishes first — and keeps draining the stream, so no writer dies
+  of SIGPIPE.
+- **`read -t` loops go through `read_tick`.** bash 3.2 answers a timeout with
+  status 1 and the variable untouched; bash ≥ 4 (Linux, Homebrew's bash) with
+  a status above 128 and the variable set to what came so far — often empty,
+  which a loop trusting the variable read as EOF (the terminal view quit on
+  the first quiet second). `read_tick` tells line / EOF / timeout apart under
+  both; `render` and `ev_lines` use it.
 - **Progress from tools that redraw with CR** (`git clone --progress`,
   `softwareupdate --verbose`): `ev_frames` reads a character at a time, turns
   the percentage into `progress` when it changes, and keeps only each phase's
@@ -210,9 +227,12 @@ for one event), git's CR progress, counted progress (`start`, the build's
 sub-steps), a wait with its holder, and the build's sub-steps written through
 the FIFO by path, as `./equin build` does. `EQUIN_INSTALL_DRY_RUN_FAIL=<step>`
 fails that step's first attempt; `EQUIN_INSTALL_DRY_RUN_PACE=<s>` slows it down
-for watching a renderer. Held to the schema by
+for watching a renderer; `EQUIN_INSTALL_DRY_RUN_VIEW_EXIT=<step>` makes the
+terminal view exit at that step's start. Held to the schema by
 `window/cli/internal/dry-run-stream.test.ts` (window mode, events.jsonl,
-timing.json, the plain view), run under `/bin/bash` with `HOME` a temp dir.
+timing.json, the plain view), run under `/bin/bash` with `HOME` a temp dir;
+the plain view's quiet-stretch and dying-view cases run under every bash the
+machine has (`/bin/bash`, the one on PATH, Homebrew's).
 
 ## Stage 0: which equin, and which view (`install.sh`, top)
 

@@ -1,7 +1,9 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawn, type ChildProcess } from "node:child_process";
 import {
+  existsSync,
   mkdtempSync,
+  realpathSync,
   readFileSync,
   readlinkSync,
   readdirSync,
@@ -549,9 +551,10 @@ describe("install.sh --dry-run event stream", () => {
 /** The dry run with no window: stdout a pipe, so the terminal view is plain. */
 async function plainDryRun(
   env: Partial<Record<EnvKey, string>> = {},
+  bash: string = BASH,
 ): Promise<{ out: string; err: string; code: number | null; home: string }> {
   const home = tempHome();
-  const child = spawn(BASH, [SCRIPT, "--dry-run"], {
+  const child = spawn(bash, [SCRIPT, "--dry-run"], {
     stdio: ["ignore", "pipe", "pipe"],
     env: {
       ...process.env,
@@ -638,4 +641,58 @@ describe("install.sh --dry-run, plain terminal view", () => {
     // The pause said it all: no second message after it.
     expect(err).not.toContain("dry run failed");
   });
+});
+
+/**
+ * Every bash a `curl … | bash` could run here: the one every Mac ships (3.2)
+ * and each one on PATH (Homebrew's 5.x when installed) — one per binary.
+ * `read -t` tells a timeout from EOF differently in 3.2 and in 4+, which once
+ * made the terminal view quit on the first quiet second under bash 5 (Linux).
+ */
+const BASHES = [
+  ...new Map(
+    [BASH, ...(process.env.PATH ?? "").split(":").map((d) => join(d, "bash"))]
+      .filter((b) => b !== "bash" && existsSync(b))
+      .map((b) => [realpathSync(b), b] as const),
+  ).values(),
+];
+
+describe.each(BASHES)("install.sh --dry-run, plain view, under %s", (bash) => {
+  test("a quiet stretch past the view's tick and the watchdog: the view keeps going, the install finishes", async () => {
+    const { out, code, home } = await plainDryRun(
+      { INSTALL_DRY_RUN_FAIL: "toolchain:quiet", INSTALL_STALL_S: "1" },
+      bash,
+    );
+    expect(code).toBe(0);
+    expect(out).toMatch(/equin is ready · installed in \d+s/);
+    const recorded = parseAll(
+      readFileSync(join(runDir(home), "events.jsonl"), "utf8"),
+    );
+    expect(pauses(recorded)[0]).toMatchObject({ kind: "stall" });
+    expect(stepStates(recorded, "toolchain")).toEqual(["start", "done"]);
+    expect(recorded.at(-1)).toMatchObject({ type: "exit", code: 0 });
+  }, 30_000);
+
+  test("a view that dies stops the install loudly: stderr, the exit event's cause, the failure message", async () => {
+    const { out, err, code, home } = await plainDryRun(
+      // toolchain: after the hand-off, so the attached install is stopped too.
+      { INSTALL_DRY_RUN_VIEW_EXIT: "toolchain" },
+      bash,
+    );
+    expect(code).toBe(143);
+    expect(out).not.toContain("equin is ready");
+    expect(err).toContain(
+      "install.sh: the terminal view stopped (status 7) while the install was running",
+    );
+    expect(err).toContain("The installer stopped: the terminal view stopped");
+    const recorded = parseAll(
+      readFileSync(join(runDir(home), "events.jsonl"), "utf8"),
+    );
+    expect(recorded.at(-1)).toMatchObject({
+      type: "exit",
+      code: 143,
+      cause:
+        "the terminal view stopped (status 7) while the install was running",
+    });
+  }, 30_000);
 });

@@ -912,6 +912,10 @@ open_streams() {
   trap 'exit 130' INT
   trap 'exit 143' TERM
   trap 'exit 129' HUP
+  # The event stream's reader gone (the hub, the window): a write to it kills
+  # this script with SIGPIPE, which no EXIT trap sees — exit through on_exit
+  # instead, which says so.
+  trap 'exit 141' PIPE
   return 0
 }
 
@@ -919,15 +923,35 @@ open_streams() {
 # its last frame), timing.json after a success, and only then a failure's
 # message — below the terminal view's last frame, never under its redraws.
 on_exit() {
-  local rc=$?
+  local rc=$? cause=""
   set +e
+  # Its own writes to a reader that is gone fail (EPIPE) rather than kill it,
+  # and a stop arriving now (view_ended's TERM) cannot cut this trap short.
+  trap '' PIPE TERM INT HUP
+  if [ -n "$RUN_DIR" ] && [ -f "$RUN_DIR/view-ended" ]; then
+    cause=$(cat "$RUN_DIR/view-ended")
+    [ -n "$FAIL_MSG" ] || FAIL_MSG="The installer stopped: $cause. Run the installer again: it picks up where it stopped."
+    [ -n "$FAIL_DETAILS" ] || FAIL_DETAILS="log: $RUN_DIR/install.log"
+  elif [ "$rc" = 141 ]; then
+    cause="the install's event stream lost its reader (SIGPIPE)"
+    [ -n "$FAIL_MSG" ] || FAIL_MSG="The installer stopped: $cause. Run the installer again: it picks up where it stopped."
+    [ -z "$RUN_DIR" ] || FAIL_DETAILS="log: $RUN_DIR/install.log"
+  fi
+  if [ -n "$cause" ]; then
+    json_str "$cause"
+    cause=",\"cause\":$JSON_STR"
+  fi
   if [ -n "$HUB_PID" ]; then
     # Attached steps that sent done, even if a signal cut the wait after it.
     if [ -n "$RUN_DIR" ] && [ -f "$RUN_DIR/attached-done" ]; then
       rm -f "$RUN_DIR/attached-done"
       DONE_SENT=1
     fi
-    ev exit "\"code\":$rc"
+    # The hub gone (SIGPIPE): the exit event straight into the record.
+    if ! ev exit "\"code\":$rc$cause" 2>/dev/null; then
+      ev_now
+      printf '{"v":1,"t":"%s","type":"exit","code":%s%s}\n' "$EV_T" "$rc" "$cause" >>"$RUN_DIR/events.jsonl"
+    fi
     eval "exec $HUB_FD>&-"
     EV_OUT=""
     wait "$HUB_PID"
@@ -943,8 +967,9 @@ on_exit() {
     # below its terminal view's last frame.
     [ -z "$FAIL_MSG" ] || printf '%s\n%s\n' "$FAIL_MSG" "$FAIL_DETAILS" >"$RUN_DIR/attached-fail"
     FAIL_MSG=""
+    rm -f "$RUN_DIR/attached-pid"
   else
-    ev exit "\"code\":$rc"
+    ev exit "\"code\":$rc$cause"
   fi
   if [ -n "$FAIL_MSG" ]; then
     print_fail "$FAIL_MSG" "$FAIL_DETAILS"
@@ -997,7 +1022,10 @@ start_hub() {
       exec tee -a "$RUN_DIR/events.jsonl" <"$FIFO" >&"$EV_FD"
     ) &
   else
-    ( trap '' INT TERM HUP; tee -a "$RUN_DIR/events.jsonl" <"$FIFO" | render ) &
+    # The view in a subshell of its own, so whatever ends it (even a bash
+    # error) leaves view_ended to see its status and keep tee's reader alive
+    # (and no `set -e` there: a failing view must not end the group first).
+    ( trap '' INT TERM HUP; tee -a "$RUN_DIR/events.jsonl" <"$FIFO" | { set +e; (render); view_ended $?; } ) &
   fi
   HUB_PID=$!
   eval "exec $CF_FD<>\"\$CFIFO\""
@@ -1055,6 +1083,8 @@ attach_streams() {
   eval "exec $HUB_FD>\"\$FIFO\""
   EV_OUT=$HUB_FD
   CLOSE_FDS="$HUB_FD>&- $CF_FD<&- $LOG_FD>&-"
+  # So the hub can stop this script too when the terminal view ends early.
+  printf '%s\n' "$$" >"$RUN_DIR/attached-pid"
   # Run again from now on, the install resumes from this checkout.
   write_resume
 }
@@ -1067,7 +1097,7 @@ attach_streams() {
 hand_to_checkout() {
   local script=$1 marker rc
   shift
-  rm -f "$RUN_DIR/attached-done" "$RUN_DIR/attached-fail"
+  rm -f "$RUN_DIR/attached-done" "$RUN_DIR/attached-fail" "$RUN_DIR/attached-pid"
   marker="$(grep -m 1 '^# installer-attach: ' "$script" 2>/dev/null || true)"
   if [ -z "$marker" ]; then
     say "This version of equin is older than this installer, so the installer's own steps install it."
@@ -1182,6 +1212,26 @@ log_line() {
   ev log "\"step\":$step,\"stream\":\"out\",\"line\":$JSON_STR"
 }
 
+# read_tick <seconds>: one line of stdin, or <seconds> without one — told
+# apart the same way under every bash, as `read -t` itself does not: bash 3.2
+# answers a timeout with status 1 and the variable left as it was, bash >= 4
+# with a status above 128 and the variable set to what came so far (often
+# empty, which reads as EOF to a loop that trusts the variable). Returns 0 (a
+# line, in RL_LINE), 1 (EOF; RL_LINE holds an unterminated last line, maybe
+# empty) or 2 (the timeout). A line cut by a timeout is carried in RL_PART
+# (bash >= 4 hands it over; 3.2 drops it): a loop clears RL_PART before it
+# starts.
+read_tick() {
+  local line=$'\001' rc=0
+  IFS= read -r -t "$1" line || rc=$?
+  if [ "$rc" = 0 ]; then
+    RL_LINE=$RL_PART$line; RL_PART=""; return 0
+  fi
+  if [ "$rc" -gt 128 ]; then RL_PART=$RL_PART$line; return 2; fi
+  [ "$line" != $'\001' ] || return 2
+  RL_LINE=$RL_PART$line; RL_PART=""; return 1
+}
+
 # ev_lines <step id>: each line of stdin, as a log event of that step — with
 # the no-progress watchdog. A step that prints nothing and reports nothing
 # (no event reached events.jsonl) for STALL_S seconds (10 min, or 3 × its
@@ -1192,23 +1242,24 @@ log_line() {
 # on every line — not polling. An open wait (a password, Apple's installer,
 # the machine's build slot, which has its own rule) is not a stall.
 ev_lines() {
-  local line tick=$'\001' quiet stalled=0 age est
+  local quiet stalled=0 age est
   est="$(est_s "$1")"
   quiet=600
   [ "$est" = "null" ] || [ $((est * 3)) -le "$quiet" ] || quiet=$((est * 3))
   quiet=${EQUIN_INSTALL_STALL_S:-$quiet}
+  RL_PART=""
   while :; do
-    line=$tick
-    if IFS= read -r -t "$quiet" line; then
+    if read_tick "$quiet"; then
       [ "$stalled" = 0 ] || { ev resolved '"how":"progress"'; stalled=0; }
-      log_line "$1" "$line"
-    elif [ "$line" != "$tick" ]; then
-      [ -z "$line" ] || log_line "$1" "$line"
+      log_line "$1" "$RL_LINE"
+    elif [ $? = 1 ]; then
+      [ -z "$RL_LINE" ] || log_line "$1" "$RL_LINE"
       break
     else
       # Quiet here, but the step's own `./equin` may have reported (its
       # events skip this reader): stalled only when events.jsonl is as old.
-      age=$(($(date +%s) - $(stat -f %m "$RUN_DIR/events.jsonl" 2>/dev/null || stat -c %Y "$RUN_DIR/events.jsonl")))
+      # GNU stat first: its `-f` is the file system's status, not BSD's format.
+      age=$(($(date +%s) - $(stat -c %Y "$RUN_DIR/events.jsonl" 2>/dev/null || stat -f %m "$RUN_DIR/events.jsonl")))
       if [ "$stalled" = 0 ] && [ "$age" -ge "$quiet" ] && ! tail -n 1 "$RUN_DIR/events.jsonl" | grep -q '"type":"wait","step":"[^"]*","state":"start"'; then
         stall_pause "$1" "$quiet"
         stalled=1
@@ -2064,21 +2115,53 @@ R_SPIN=(⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏)
 render() {
   set +eu
   shopt -s extglob
-  local line tick=$'\001'
+  # The dry run's view exits (status 7) at that step's start, to prove a
+  # view that dies stops the install loudly (view_ended).
+  local dry_exit=""
+  [ "$DRY_RUN" != "1" ] || dry_exit=${EQUIN_INSTALL_DRY_RUN_VIEW_EXIT:-}
   r_init
+  RL_PART=""
   while :; do
-    line=$tick
     # A 1 s timeout (bash 3.2 takes whole seconds) ticks the spinner and the
-    # clocks; a timeout leaves the variable as it was, EOF empties it.
-    if IFS= read -r -t 1 line; then
-      r_event "$line"
-    elif [ "$line" != "$tick" ]; then
-      [ -z "$line" ] || r_event "$line"
+    # clocks; read_tick tells it from EOF under every bash.
+    if read_tick 1; then
+      case "$RL_LINE" in *"\"id\":\"$dry_exit\",\"state\":\"start\""*) [ -z "$dry_exit" ] || exit 7 ;; esac
+      r_event "$RL_LINE"
+    elif [ $? = 1 ]; then
+      [ -z "$RL_LINE" ] || r_event "$RL_LINE"
       break
     fi
     [ "$MODE" != "interactive" ] || r_maybe_draw
   done
   r_finish
+  # The stream ended before the install said it ended: view_ended says so.
+  [ -n "$R_EXIT" ] || return 3
+}
+
+# view_ended <the terminal view's status>: in the hub, once the view ended.
+# 0: it drew the exit event, the install is over. Anything else, the view ended
+# while the install runs — which used to kill the install without a word (tee,
+# then install.sh, died of SIGPIPE on their next write). Now it is loud: the
+# cause on stderr at once, and in view-ended for on_exit (the exit event's
+# `cause`, the failure message); the install is stopped as Ctrl-C would (TERM,
+# taken by bash between commands: a step command already running finishes
+# first), since its pauses cannot be answered without the view; and the
+# stream is drained into events.jsonl until it ends, so no writer dies of
+# SIGPIPE on the way.
+view_ended() {
+  [ "$1" != 0 ] || return 0
+  local cause
+  if [ "$1" = 3 ]; then
+    cause="the terminal view's event stream ended before the install's exit event"
+  else
+    cause="the terminal view stopped (status $1) while the install was running"
+  fi
+  printf '%s\n' "$cause" >"$RUN_DIR/view-ended"
+  printf '\ninstall.sh: %s, so the install stops. Its log: %s\n' \
+    "$cause" "$RUN_DIR/install.log" >&2
+  kill -TERM "$$" 2>/dev/null
+  [ ! -f "$RUN_DIR/attached-pid" ] || kill -TERM "$(cat "$RUN_DIR/attached-pid")" 2>/dev/null
+  cat >/dev/null
 }
 
 r_init() {

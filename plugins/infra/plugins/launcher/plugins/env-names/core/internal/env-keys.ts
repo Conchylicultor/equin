@@ -69,6 +69,8 @@ export const RUNTIME_WITHHELD_ENV = {
     "the step `install.sh --dry-run` fails once (installer), set by `./equin installer window --fail` and the stream test for that one run",
   INSTALL_DRY_RUN_OPTIONAL:
     "the step `install.sh --dry-run` treats as optional, so a pause on it offers Skip (installer), set by the stream test for that one run",
+  INSTALL_DRY_RUN_VIEW_EXIT:
+    "the step at whose start `install.sh --dry-run`'s terminal view exits (installer), set by the stream test to prove a view that dies stops the install loudly",
   INSTALL_DRY_RUN_NOTICE:
     "makes `install.sh --dry-run`'s start step report a part left out (the login services macOS refused), as `./equin start` does (installer), set by the stream test and `./equin installer window` for that one run",
   INSTALL_STALL_S:
