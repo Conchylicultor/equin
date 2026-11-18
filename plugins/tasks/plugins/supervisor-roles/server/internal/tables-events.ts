@@ -40,3 +40,23 @@ export const {
   name: "supervisorRoles.backlogArrived",
   filters: {},
 });
+
+export interface SupervisorRolesListingChangedPayload {
+  roleId: string;
+  [key: string]: unknown;
+}
+
+/**
+ * What the Supervisor roles system-prompt section lists changed: a listed
+ * role was created, deleted, renamed or re-described, or a role was listed or
+ * unlisted (`listingChanged`). The section is rendered at each spawn of an
+ * agent's process, so the running ones are sent it again
+ * (`listing-notice.ts`).
+ */
+export const {
+  event: supervisorRolesListingChanged,
+  table: _supervisorRolesListingChangedTriggers,
+} = defineTriggerEvent<SupervisorRolesListingChangedPayload>({
+  name: "supervisorRoles.listingChanged",
+  filters: {},
+});

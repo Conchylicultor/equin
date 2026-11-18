@@ -35,6 +35,7 @@ import { tasksSupervisor } from "./internal/tables";
 import {
   supervisorRoleBacklogArrived,
   supervisorRoleIconStale,
+  supervisorRolesListingChanged,
 } from "./internal/tables-events";
 
 export {
@@ -52,6 +53,7 @@ export {
   routeRefusal,
   setTaskSupervisorRole,
   supervisorOfTask,
+  unknownRoleMessage,
 } from "./internal/roles";
 export type {
   BacklogFiling,
@@ -63,7 +65,9 @@ export { _supervisorRoles, tasksSupervisor } from "./internal/tables";
 export {
   supervisorRoleBacklogArrived,
   supervisorRoleIconStale,
+  supervisorRolesListingChanged,
 } from "./internal/tables-events";
+export { SUPERVISOR_ROLES_SECTION_ID } from "./internal/sections";
 export type {
   SupervisorRoleBacklogArrivedPayload,
   SupervisorRoleIconStalePayload,
@@ -71,7 +75,7 @@ export type {
 
 export default {
   description:
-    "Supervisor roles, data half: the supervisor_roles table (name, Haiku-picked icon with a person's override, listed, description, prompt, the queue section its sessions land in — contributed as Queue.LaunchSection) served whole as supervisor-roles.all with its create / edit / delete endpoints; the per-task owner (tasks_ext_supervisor, a role id, exposed as the `supervisor` field of every task list, routed by PUT /api/tasks/:taskId/supervisor); filing into a role's backlog (fileToBacklog — a root task owned by the role, never armed) and handing an existing task to one (handOffToBacklog — the same end state); the supervisor-role mandate (the supervisor preset plus the role powers on the root) and its ownership claim (a role owns its backlog and session trees, so its session manages them); the system-prompt sections listing the listed roles to agents that may file into a backlog, and the shared supervisor prompt (a config) for every supervisor root.",
+    "Supervisor roles, data half: the supervisor_roles table (name, Haiku-picked icon with a person's override, listed, description, prompt, the queue section its sessions land in — contributed as Queue.LaunchSection) served whole as supervisor-roles.all with its create / edit / delete endpoints; the per-task owner (tasks_ext_supervisor, a role id, exposed as the `supervisor` field of every task list, routed by PUT /api/tasks/:taskId/supervisor); filing into a role's backlog (fileToBacklog — a root task owned by the role, never armed) and handing an existing task to one (handOffToBacklog — the same end state); the supervisor-role mandate (the supervisor preset plus the role powers on the root) and its ownership claim (a role owns its backlog and session trees, so its session manages them); the system-prompt sections listing the listed roles to agents that may file into a backlog (a write that changes the listing emits supervisorRoles.listingChanged; the desktop half re-sends the section to running agents), and the shared supervisor prompt (a config) for every supervisor root.",
   httpRoutes: {
     [createSupervisorRole.route]: handleCreateSupervisorRole,
     [updateSupervisorRole.route]: handleUpdateSupervisorRole,
@@ -91,5 +95,9 @@ export default {
     supervisorRolesSection,
     supervisorPromptSection,
   ],
-  register: [supervisorRoleIconStale, supervisorRoleBacklogArrived],
+  register: [
+    supervisorRoleIconStale,
+    supervisorRoleBacklogArrived,
+    supervisorRolesListingChanged,
+  ],
 } satisfies ServerPluginDefinition;

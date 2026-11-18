@@ -1,20 +1,21 @@
-import type { MandateSectionRefresh } from "@plugins/conversations/plugins/system-prompt/plugins/composer/server";
+import type { SectionRefresh } from "@plugins/conversations/plugins/system-prompt/plugins/composer/server";
 
 /**
- * The notice: the agent's MCP tools were already refreshed (reconnected), but
- * its system prompt is fixed for the life of its process, so this turn carries
- * every section of it that follows the mandate, rendered again (`## Mandate`,
- * the supervisor prompt, the task tree…) — and names the ones that no longer
- * apply. Its next spawn renders them anyway. Information only: a mandate
- * change says what the agent may do, never that it should do anything now.
+ * A change notice: `lead` says what changed (and that it is information
+ * only), then — since the agent's system prompt is fixed for the life of its
+ * process — every section the change touches, rendered again, and the ones
+ * that no longer apply named. Its next spawn renders them anyway.
  */
-export function noticeText(sections: readonly MandateSectionRefresh[]): string {
+export function noticeText(
+  lead: string,
+  sections: readonly SectionRefresh[],
+): string {
   const current = sections.filter((s) => s.kind === "current");
   const withdrawn = sections.filter((s) => s.kind === "withdrawn");
   const lines = [
-    "Your task's mandate was just changed by the user. This is for your information only — it is NOT a request to act: do not start, change or stop any work because of it, and do not use any newly granted capability unless the user explicitly asks you to.",
+    lead,
     "",
-    "Your equin MCP tools were refreshed to match. The parts of your system prompt that depend on the mandate are now out of date — each `<equin-context>` below replaces the one of the same id:",
+    "The parts of your system prompt this changes are now out of date — each `<equin-context>` below replaces the one of the same id:",
     "",
   ];
   if (current.length === 0)
@@ -34,3 +35,8 @@ export function noticeText(sections: readonly MandateSectionRefresh[]): string {
   );
   return lines.join("\n");
 }
+
+/** The mandate change notice's lead: a mandate says what the agent may do,
+ * never that it should do anything now. */
+export const MANDATE_CHANGE_LEAD =
+  "Your task's mandate was just changed by the user. This is for your information only — it is NOT a request to act: do not start, change or stop any work because of it, and do not use any newly granted capability unless the user explicitly asks you to. Your equin MCP tools were refreshed to match.";

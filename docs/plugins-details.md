@@ -23647,7 +23647,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types): `SystemPromptSection`
         - Exports (values): `SystemPrompt`
       - Plugins:
-        - **`composer`** — Composes what equin appends to an agent's system prompt at a spawn: composeSystemPromptAppend (the preprompt, then every SystemPrompt.Section in id order inside <equin-context id>, a throwing section reported and replaced by a notice), which the launch and resume paths call right before the agent process starts; refreshMandateSections (every section that follows the mandate, rendered again — what it says now, or that one the process carried no longer applies), which the mandate change notice sends a running agent. Records each part's size per conversation (conversations_ext_system_prompt), read by the context card through the lookup-only conversations.system-prompt collection. Apart from the section contribution so a contributor's closure does not carry the conversations table.
+        - **`composer`** — Composes what equin appends to an agent's system prompt at a spawn: composeSystemPromptAppend (the preprompt, then every SystemPrompt.Section in id order inside <equin-context id>, a throwing section reported and replaced by a notice), which the launch and resume paths call right before the agent process starts; refreshSections (the sections a change picks — every one that follows the mandate, or one owner's own — rendered again: what each says now, or that one the process carried no longer applies), which a change notice sends a running agent. Records each part's size per conversation (conversations_ext_system_prompt), read by the context card through the lookup-only conversations.system-prompt collection. Apart from the section contribution so a contributor's closure does not carry the conversations table.
           - Server:
             - Contributes: `resource.declare` "conversations.system-prompt:rows"
             - Uses:
@@ -23658,11 +23658,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/tasks-core._conversations`
             - DB schema: `plugins/conversations/plugins/system-prompt/plugins/composer/server/internal/tables.ts`
             - Entity extension of: `tasks/tasks-core` (table `conversations_ext_system_prompt`)
-            - Exports (types): `MandateSectionRefresh`
+            - Exports (types): `SectionRefresh`
             - Exports (values):
               - `_conversationSystemPromptTable`
               - `composeSystemPromptAppend`
-              - `refreshMandateSections`
+              - `refreshSections`
             - Resources: `conversations.system-prompt:rows` (keyed, point)
           - Cross-plugin:
             - Imported by:
@@ -62702,18 +62702,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/supervisor-roles/events`
               - `tasks/supervisor-roles/sessions`
           - Plugins:
-            - **`change-notice`** — A running agent follows a change of its task's mandate without a restart: on tasks.mandateChanged each live agent on those tasks reconnects the equin MCP server (its tools are the new mandate's at once), then is sent every system-prompt section that follows the mandate (Mandate, Supervisor prompt, Task tree…), rendered again — and those that no longer apply named — as an event turn — its system prompt is fixed for the life of its process. The notice is typed now, the way a user message is (a working agent reads it at its next step), and says it is information only, not a request to act; an agent this backend does not run gets none.
+            - **`change-notice`** — A running agent follows a change of its task's mandate without a restart: on tasks.mandateChanged each live agent on those tasks reconnects the equin MCP server (its tools are the new mandate's at once), then is sent every system-prompt section that follows the mandate (Mandate, Supervisor prompt, Task tree…), rendered again — and those that no longer apply named — as an event turn — its system prompt is fixed for the life of its process. The notice is typed now, the way a user message is (a working agent reads it at its next step), and says it is information only, not a request to act; an agent this backend does not run gets none. The delivery is sendSectionNotice, which the owner of any other state a section renders (e.g. the supervisor roles list) calls with its own lead and its own section.
               - Server:
                 - Contributes: `trigger` "mandate-change-notice.on-change"
                 - Uses:
                   - `conversations.Runtime`
                   - `conversations.submitTurn`
-                  - `conversations/system-prompt/composer.refreshMandateSections`
+                  - `conversations/system-prompt/composer.refreshSections`
                   - `infra/events.Trigger`
                   - `infra/jobs.defineJob`
                   - `tasks/tasks-core.listActiveConversations`
                   - `tasks/tasks-core.taskMandateChanged`
+                - Exports (types): `SectionNotice`
+                - Exports (values): `sendSectionNotice`
                 - Register: `defineJob('mandate-change-notice.on-change')`
+              - Cross-plugin:
+                - Imported by: `tasks/supervisor-roles`
             - **`definitions`** — The named-mandate registry's web presence: eagerly registers the boot-preloaded mandate.definitions live value (every named mandate's id, label and the mandates it is a kind of) so boot-snapshot hydrates it before first paint. The named-mandate registry: MandateDefinitions.Definition (what one named mandate grants) and MandateDefinitions.Source (a runtime family of them — one per automation), read at every resolution through mandateDefinitionEntries, mandateIsKindOf (is a stored mandate id a kind of a base mandate — its lineage, declared by defineMandate extends), and the mandate.definitions value (every named mandate's id, label, the mandates it is a kind of and whether a person may state it — an owned mandate is stated only by its owner's writes, and a re-file to the root states its `refiledAs` instead).
               - Server:
                 - Contributes: `resource.declare` "mandate.definitions"
@@ -63156,7 +63160,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineJob('sidequest-autopilot.triage-on-task')`
           - `defineJob('sidequest-autopilot.triage-backfill')`
           - `defineWarmup('sidequest-autopilot.triage-backfill')`
-    - **`supervisor-roles`** — Supervisor roles, web half: registers the srole id kind, the shared supervisor prompt config (Settings → Config) and the exposed `supervisor` field of every task list, its options the live roles by name. Supervisor roles, data half: the supervisor_roles table (name, Haiku-picked icon with a person's override, listed, description, prompt, the queue section its sessions land in — contributed as Queue.LaunchSection) served whole as supervisor-roles.all with its create / edit / delete endpoints; the per-task owner (tasks_ext_supervisor, a role id, exposed as the `supervisor` field of every task list, routed by PUT /api/tasks/:taskId/supervisor); filing into a role's backlog (fileToBacklog — a root task owned by the role, never armed) and handing an existing task to one (handOffToBacklog — the same end state); the supervisor-role mandate (the supervisor preset plus the role powers on the root) and its ownership claim (a role owns its backlog and session trees, so its session manages them); the system-prompt sections listing the listed roles to agents that may file into a backlog, and the shared supervisor prompt (a config) for every supervisor root.
+    - **`supervisor-roles`** — Supervisor roles, web half: registers the srole id kind, the shared supervisor prompt config (Settings → Config) and the exposed `supervisor` field of every task list, its options the live roles by name. Supervisor roles, data half: the supervisor_roles table (name, Haiku-picked icon with a person's override, listed, description, prompt, the queue section its sessions land in — contributed as Queue.LaunchSection) served whole as supervisor-roles.all with its create / edit / delete endpoints; the per-task owner (tasks_ext_supervisor, a role id, exposed as the `supervisor` field of every task list, routed by PUT /api/tasks/:taskId/supervisor); filing into a role's backlog (fileToBacklog — a root task owned by the role, never armed) and handing an existing task to one (handOffToBacklog — the same end state); the supervisor-role mandate (the supervisor preset plus the role powers on the root) and its ownership claim (a role owns its backlog and session trees, so its session manages them); the system-prompt sections listing the listed roles to agents that may file into a backlog (a write that changes the listing emits supervisorRoles.listingChanged; the desktop half re-sends the section to running agents), and the shared supervisor prompt (a config) for every supervisor root.
       - Web:
         - Contributes:
           - `IdKinds.Kind` "srole"
@@ -63186,6 +63190,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations.system-prompt.section` "supervisor-roles"
           - `watchSource` "supervisor-roles.backlog"
           - `trigger` "supervisor-roles.icon"
+          - `trigger` "supervisor-roles.listing-notice"
           - `trigger` "watch.ingest"
         - Uses: 35 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/REFERENCE.md)
           - `tasks/tasks-core` ×9
@@ -63231,13 +63236,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `roleOfConversation`
           - `routeRefusal`
           - `setTaskSupervisorRole`
+          - `SUPERVISOR_ROLES_SECTION_ID`
           - `supervisorOfTask`
           - `supervisorRoleBacklogArrived`
           - `supervisorRoleIconStale`
+          - `supervisorRolesListingChanged`
           - `tasksSupervisor`
+          - `unknownRoleMessage`
         - Register:
           - `defineTriggerEvent('supervisorRoles.iconStale')`
           - `defineTriggerEvent('supervisorRoles.backlogArrived')`
+          - `defineTriggerEvent('supervisorRoles.listingChanged')`
         - Resources:
           - `supervisor-roles.all` (keyed)
           - `supervisor-roles.all:rows` (keyed, point)
@@ -63251,7 +63260,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `conversations/runtime-sdk.heldAtClaudeLimit`
           - `tasks/orchestration/watch.watchSource`
-        - Register: `defineJob('supervisor-roles.icon')`
+        - Register:
+          - `defineJob('supervisor-roles.icon')`
+          - `defineJob('supervisor-roles.listing-notice')`
       - Core:
         - Uses: 28 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/REFERENCE.md)
           - `tasks/tasks-core` ×4
@@ -63549,8 +63560,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/task-header`
         - **`sessions`** — Supervisor role sessions: POST /api/supervisor-roles/:id/sessions opens the role's live session or launches one (one live session per role — a root task stating the supervisor-role mandate, owned by the role, its brief the role's prompt, armed at once), POST …/:id/backlog/:taskId/adopt (the Supervisors pane's Adopt: into the live session, launching one when none is live), and the role powers' MCP tools, gated on the role capability: backlog (list the role's backlog), adopt_task (move a backlog task under the live session's root and arm it) and route_task (hand a task the role owns to another role).
           - Server:
-            - Uses: 27 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/plugins/sessions/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/plugins/sessions/REFERENCE.md)
-              - `tasks/supervisor-roles` ×11
+            - Uses: 28 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/plugins/sessions/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/plugins/sessions/REFERENCE.md)
+              - `tasks/supervisor-roles` ×12
               - `tasks/tasks-core` ×6
               - `infra/endpoints` ×2
               - `tasks/orchestration/mandate` ×2

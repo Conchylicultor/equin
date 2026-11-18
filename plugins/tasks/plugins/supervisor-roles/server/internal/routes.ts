@@ -12,7 +12,11 @@ import {
   updateSupervisorRole,
 } from "../../core";
 import { _supervisorRoles } from "./tables";
-import { supervisorRoleIconStale } from "./tables-events";
+import {
+  supervisorRoleIconStale,
+  supervisorRolesListingChanged,
+} from "./tables-events";
+import { listingChanged } from "./listing-changed";
 import {
   deleteRoleReleasing,
   getSupervisorRole,
@@ -68,6 +72,8 @@ export const handleCreateSupervisorRole = implement(
       });
       if (body.icon === undefined)
         await supervisorRoleIconStale.emit({ roleId: id }, { tx });
+      if (body.listed ?? true)
+        await supervisorRolesListingChanged.emit({ roleId: id }, { tx });
     });
     return { id };
   },
@@ -104,6 +110,13 @@ export const handleUpdateSupervisorRole = implement(
         .where(eq(_supervisorRoles.id, role.id));
       if (repick)
         await supervisorRoleIconStale.emit({ roleId: role.id }, { tx });
+      const after = {
+        listed: body.listed ?? role.listed,
+        name: body.name ?? role.name,
+        description: body.description ?? role.description,
+      };
+      if (listingChanged(role, after))
+        await supervisorRolesListingChanged.emit({ roleId: role.id }, { tx });
     });
   },
 );
@@ -113,9 +126,12 @@ export const handleDeleteSupervisorRole = implement(
   async ({ params }) => {
     const role = await getSupervisorRole(params.id);
     if (!role) throw new HttpError(404, `No supervisor role "${params.id}".`);
-    const refusal = await db.transaction((tx) =>
-      deleteRoleReleasing(role.id, tx),
-    );
+    const refusal = await db.transaction(async (tx) => {
+      const refused = await deleteRoleReleasing(role.id, tx);
+      if (refused === null && listingChanged(role, null))
+        await supervisorRolesListingChanged.emit({ roleId: role.id }, { tx });
+      return refused;
+    });
     if (refusal?.kind === "live-session")
       throw new HttpError(
         409,

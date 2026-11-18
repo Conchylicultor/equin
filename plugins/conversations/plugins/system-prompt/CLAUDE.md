@@ -48,10 +48,13 @@ right place for instructions to the agent rather than about a server's tools.
   as an event turn from the plugin that owns it; the next spawn renders the new
   state anyway. Every section declares `followsMandate` (required): the mandate
   change notice (`tasks/orchestration/mandate/change-notice`) re-renders each
-  one that does through the composer's `refreshMandateSections` and sends them
+  one that does through the composer's `refreshSections` and sends them
   all — so a task switched to Supervisor gets the Supervisor prompt, not just
   the `## Mandate` lines — naming those its process carried that no longer
-  apply.
+  apply. A section that depends on other state sends its own notice through
+  the same path (change-notice's `sendSectionNotice`, picking its own id):
+  e.g. `tasks/supervisor-roles` re-sends the Supervisor roles list when a
+  listed role is created, edited or deleted.
 - **runtime-sdk's own relaunches** (moving to another launch account, a rewind
   through `stop`) replay the options file of their spawn, append included.
 - **Every character is paid on every turn.** Write a section only for what no

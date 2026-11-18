@@ -99,7 +99,17 @@ tools — are `plugins/sessions`.
   session reads its backlog). The filing agent never hears its own filing.
 - **System prompt** — `supervisor-roles` section: the listed roles (name, id,
   description) and how to file, for a conversation whose grant has
-  `backlog`. `supervisor-prompt` section: for the conversation at the ROOT of
+  `backlog`. Rendered at each spawn, so a running agent would keep the list
+  it started with (2026-11: long-lived supervisor sessions never saw roles
+  listed after they started and ran that work themselves): a write that
+  changes what it lists (`listingChanged`: a listed role created, deleted,
+  renamed or re-described; a role listed or unlisted) emits
+  `supervisorRoles.listingChanged` on its transaction, and the
+  desktop's `supervisor-roles.listing-notice` job (`machine/`) re-sends the section to every live
+  agent it speaks to, through the mandate change notice's path
+  (change-notice's `sendSectionNotice`). An unknown role id is answered with
+  the listed roles as they are now (`add_task`, `edit_task`'s hand-off,
+  `route_task` — `unknownRoleMessage`). `supervisor-prompt` section: for the conversation at the ROOT of
   a mandate that is a kind of `supervisor` (`mandateIsKindOf` over the
   definitions' lineage — `supervisor-role` among them; never a worker), a role
   session's role line plus the shared supervisor prompt
@@ -118,7 +128,7 @@ tools — are `plugins/sessions`.
 
 ## Plugin reference
 
-- Description: Supervisor roles, web half: registers the srole id kind, the shared supervisor prompt config (Settings → Config) and the exposed `supervisor` field of every task list, its options the live roles by name. Supervisor roles, data half: the supervisor_roles table (name, Haiku-picked icon with a person's override, listed, description, prompt, the queue section its sessions land in — contributed as Queue.LaunchSection) served whole as supervisor-roles.all with its create / edit / delete endpoints; the per-task owner (tasks_ext_supervisor, a role id, exposed as the `supervisor` field of every task list, routed by PUT /api/tasks/:taskId/supervisor); filing into a role's backlog (fileToBacklog — a root task owned by the role, never armed) and handing an existing task to one (handOffToBacklog — the same end state); the supervisor-role mandate (the supervisor preset plus the role powers on the root) and its ownership claim (a role owns its backlog and session trees, so its session manages them); the system-prompt sections listing the listed roles to agents that may file into a backlog, and the shared supervisor prompt (a config) for every supervisor root.
+- Description: Supervisor roles, web half: registers the srole id kind, the shared supervisor prompt config (Settings → Config) and the exposed `supervisor` field of every task list, its options the live roles by name. Supervisor roles, data half: the supervisor_roles table (name, Haiku-picked icon with a person's override, listed, description, prompt, the queue section its sessions land in — contributed as Queue.LaunchSection) served whole as supervisor-roles.all with its create / edit / delete endpoints; the per-task owner (tasks_ext_supervisor, a role id, exposed as the `supervisor` field of every task list, routed by PUT /api/tasks/:taskId/supervisor); filing into a role's backlog (fileToBacklog — a root task owned by the role, never armed) and handing an existing task to one (handOffToBacklog — the same end state); the supervisor-role mandate (the supervisor preset plus the role powers on the root) and its ownership claim (a role owns its backlog and session trees, so its session manages them); the system-prompt sections listing the listed roles to agents that may file into a backlog (a write that changes the listing emits supervisorRoles.listingChanged; the desktop half re-sends the section to running agents), and the shared supervisor prompt (a config) for every supervisor root.
 - Web:
   - Contributes:
     - `IdKinds.Kind` "srole"
@@ -148,6 +158,7 @@ tools — are `plugins/sessions`.
     - `conversations.system-prompt.section` "supervisor-roles"
     - `watchSource` "supervisor-roles.backlog"
     - `trigger` "supervisor-roles.icon"
+    - `trigger` "supervisor-roles.listing-notice"
     - `trigger` "watch.ingest"
   - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×9
@@ -193,13 +204,17 @@ tools — are `plugins/sessions`.
     - `roleOfConversation`
     - `routeRefusal`
     - `setTaskSupervisorRole`
+    - `SUPERVISOR_ROLES_SECTION_ID`
     - `supervisorOfTask`
     - `supervisorRoleBacklogArrived`
     - `supervisorRoleIconStale`
+    - `supervisorRolesListingChanged`
     - `tasksSupervisor`
+    - `unknownRoleMessage`
   - Register:
     - `defineTriggerEvent('supervisorRoles.iconStale')`
     - `defineTriggerEvent('supervisorRoles.backlogArrived')`
+    - `defineTriggerEvent('supervisorRoles.listingChanged')`
   - Resources:
     - `supervisor-roles.all` (keyed)
     - `supervisor-roles.all:rows` (keyed, point)
@@ -213,7 +228,9 @@ tools — are `plugins/sessions`.
   - Uses:
     - `conversations/runtime-sdk.heldAtClaudeLimit`
     - `tasks/orchestration/watch.watchSource`
-  - Register: `defineJob('supervisor-roles.icon')`
+  - Register:
+    - `defineJob('supervisor-roles.icon')`
+    - `defineJob('supervisor-roles.listing-notice')`
 - Core:
   - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×4

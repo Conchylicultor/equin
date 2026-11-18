@@ -21,6 +21,7 @@ import {
   routeRefusal,
   setTaskSupervisorRole,
   supervisorOfTask,
+  unknownRoleMessage,
 } from "@plugins/tasks/plugins/supervisor-roles/server";
 import { formatBacklog, type BacklogLine } from "../../core";
 import { adoptIntoSession } from "./adopt";
@@ -117,7 +118,7 @@ export const routeTaskTool = Mcp.tool({
     if (refusal !== null || (await supervisorOfTask(taskId)) !== roleId)
       return text(`${taskId} is not in your role's backlog.`);
     const role = await getSupervisorRole(input.supervisor);
-    if (!role) return text(`No supervisor role "${input.supervisor}".`);
+    if (!role) return text(await unknownRoleMessage(input.supervisor));
     await setTaskSupervisorRole(taskId, role.id);
     return text(`Routed ${taskId} to ${role.id}.`);
   },

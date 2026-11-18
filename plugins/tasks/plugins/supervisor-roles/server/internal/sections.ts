@@ -75,8 +75,11 @@ export async function renderSupervisorPrompt(
   return ["## Supervisor", "", parts.join("\n\n")].join("\n");
 }
 
+/** The Supervisor roles section's id — what the listing notice re-sends. */
+export const SUPERVISOR_ROLES_SECTION_ID = "supervisor-roles";
+
 export const supervisorRolesSection = SystemPrompt.Section({
-  id: "supervisor-roles",
+  id: SUPERVISOR_ROLES_SECTION_ID,
   label: "Supervisor roles",
   followsMandate: true,
   render: renderSupervisorRoles,

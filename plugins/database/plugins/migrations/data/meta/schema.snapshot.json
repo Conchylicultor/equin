@@ -1,6 +1,6 @@
 {
-  "id": "2cefce02-bbc5-4da0-b3a6-2070c7122962",
-  "prevId": "7191e1bd-f84b-4772-82db-c4873ab29e2c",
+  "id": "611e13e0-08ff-4851-8432-6ea3d403187f",
+  "prevId": "2cefce02-bbc5-4da0-b3a6-2070c7122962",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -19156,6 +19156,66 @@
     },
     "public.supervisorRoles_iconStale_triggers": {
       "name": "supervisorRoles_iconStale_triggers",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "job_name": {
+          "name": "job_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "job_with": {
+          "name": "job_with",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "enabled": {
+          "name": "enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "one_shot": {
+          "name": "one_shot",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "declared": {
+          "name": "declared",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.supervisorRoles_listingChanged_triggers": {
+      "name": "supervisorRoles_listingChanged_triggers",
       "schema": "",
       "columns": {
         "id": {

@@ -118,34 +118,33 @@ export async function composeSystemPromptAppend(
   return parts.length === 0 ? undefined : parts.map((p) => p.text).join("\n\n");
 }
 
-/** One mandate-following section, as the mandate change notice re-sends it. */
-export type MandateSectionRefresh =
+/** One section, as a change notice re-sends it to a running agent. */
+export type SectionRefresh =
   /** What it says now, wrapped as in the system prompt (`<equin-context>`). */
   | { kind: "current"; id: string; label: string; text: string }
   /** It was in the agent's system prompt and now renders nothing: drop it. */
   | { kind: "withdrawn"; id: string; label: string };
 
 /**
- * The conversation's mandate changed under its running agent: every section
- * that follows the mandate (`followsMandate`), rendered again now, in id
- * order — what each says now, or that one the agent's system prompt carried
- * (its last spawn's record) no longer applies. A section empty both then and
- * now is left out. Renders exactly as a spawn would (a throwing section is
- * reported and replaced by its notice); the record is left alone — it says
- * what the process was started with.
+ * What the sections `pick` selects say now, for a running agent whose system
+ * prompt was fixed at its spawn — rendered again in id order: what each says
+ * now, or that one the agent's system prompt carried (its last spawn's
+ * record) no longer applies. A section empty both then and now is left out.
+ * The mandate change notice picks every section that `followsMandate`; the
+ * owner of another change picks its own section. Renders exactly as a spawn
+ * would (a throwing section is reported and replaced by its notice); the
+ * record is left alone — it says what the process was started with.
  */
-export async function refreshMandateSections(
+export async function refreshSections(
   conversationId: string,
-): Promise<MandateSectionRefresh[]> {
+  pick: (section: SystemPromptSection) => boolean,
+): Promise<SectionRefresh[]> {
   const [rendered, record] = await Promise.all([
-    renderSections(
-      sectionsInOrder().filter((s) => s.followsMandate),
-      conversationId,
-    ),
+    renderSections(sectionsInOrder().filter(pick), conversationId),
     conversationSystemPromptExt.get(conversationId),
   ]);
   const carried = new Set(record?.sections.map((s) => s.id) ?? []);
-  const out: MandateSectionRefresh[] = [];
+  const out: SectionRefresh[] = [];
   for (const { section, text } of rendered) {
     const { id, label } = section;
     if (text !== null && text.trim() !== "")

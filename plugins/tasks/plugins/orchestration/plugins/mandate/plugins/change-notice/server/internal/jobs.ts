@@ -1,21 +1,15 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
-import { MCP_SERVER_NAME } from "@plugins/infra/plugins/mcp/core";
-import { Runtime, submitTurn } from "@plugins/conversations/server";
-import { refreshMandateSections } from "@plugins/conversations/plugins/system-prompt/plugins/composer/server";
 import { listActiveConversations } from "@plugins/tasks/plugins/tasks-core/server";
-import { noticeText } from "./notice";
+import { MANDATE_CHANGE_LEAD } from "./notice";
+import { sendSectionNotice } from "./send";
 
 /**
  * On a mandate change: each live agent on the moved tasks reconnects the
  * equin MCP server (its tools follow at once), then is sent a notice carrying
  * every system-prompt section that follows the mandate (`## Mandate`, the
- * supervisor prompt, …), rendered again — its system prompt is fixed for the life of
- * its process. The notice is typed now, as a person's message would be
- * (`submitTurn`): a working agent reads it at its next step, an idle one
- * answers it. An agent this backend does not run (`not-running`: another
- * namespace's, hibernated, or none) is skipped: its next start reads the new
- * mandate.
+ * supervisor prompt, …), rendered again — its system prompt is fixed for the
+ * life of its process (`sendSectionNotice`).
  */
 export const onMandateChangedJob = defineJob({
   name: "mandate-change-notice.on-change",
@@ -32,25 +26,13 @@ export const onMandateChangedJob = defineJob({
       tasks.has(c.taskId),
     );
     await Promise.all(
-      live.map(async (c) => {
-        const outcome = await Runtime.get(c.runtime).reconnectMcp(
-          c.id,
-          MCP_SERVER_NAME,
-        );
-        if (outcome === "not-running") return;
-        const text = noticeText(await refreshMandateSections(c.id));
-        const out = await submitTurn(c.id, {
-          kind: "event",
-          text,
-          typedText: text,
-        });
-        if (out.kind === "not-found")
-          throw new Error(`mandate notice: conversation ${c.id} not found`);
-        if (out.kind === "stopped")
-          throw new Error(
-            `mandate notice: conversation ${c.id} stopped (${out.status}) after its MCP reconnect`,
-          );
-      }),
+      live.map((c) =>
+        sendSectionNotice(c, {
+          lead: MANDATE_CHANGE_LEAD,
+          pick: (s) => s.followsMandate,
+          reconnectMcp: true,
+        }),
+      ),
     );
   },
 });

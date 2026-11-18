@@ -97,6 +97,16 @@ function describeRoles(roles: readonly SupervisorRole[]): string {
 }
 
 /**
+ * The refusal for a role id that names no role, naming the listed roles as
+ * they are NOW — an agent's system prompt lists them as they were at its
+ * spawn, so a stale id is answered with the live list rather than misrouted.
+ */
+export async function unknownRoleMessage(ref: string): Promise<string> {
+  const listed = (await listSupervisorRoles()).filter((r) => r.listed);
+  return `No supervisor role "${ref}". The listed roles now: ${describeRoles(listed)}.`;
+}
+
+/**
  * The role a filing names: a LISTED role's id. Anything else throws, naming
  * what may be named.
  */
