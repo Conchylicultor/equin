@@ -195,3 +195,37 @@ describe("parseLaunchAgentPlist", () => {
     expect(parseLaunchAgentPlist("<plist><dict></dict></plist>")).toBeNull();
   });
 });
+
+describe("renderLaunchAgentPlist — a program inside equin.app", () => {
+  const bundled = (program: string) =>
+    renderLaunchAgentPlist({ ...job, argv: [program, "-x"] });
+
+  test("associates the job with the bundle, so macOS names it equin", () => {
+    for (const name of ["gateway", "equin-desktop"]) {
+      expect(
+        bundled(`/h/me/.equin/state/app/equin.app/Contents/MacOS/${name}`),
+      ).toContain(
+        `<key>Label</key>\n\t<string>dev.example.service</string>\n\t<key>AssociatedBundleIdentifiers</key>\n\t<array>\n\t\t<string>dev.equin</string>\n\t</array>\n\t<key>ProgramArguments</key>`,
+      );
+    }
+  });
+
+  test("a program outside the bundle carries no association", () => {
+    for (const program of [
+      "/h/me/.equin/cache/deps/gateway-binary/abc/env/gateway",
+      "/Applications/Other.app/Contents/MacOS/gateway",
+      "/h/me/equin.app/Contents/Resources/gateway",
+    ]) {
+      expect(bundled(program)).not.toContain("AssociatedBundleIdentifiers");
+    }
+  });
+
+  test.skipIf(process.platform !== "darwin")("plutil accepts it", async () => {
+    const path = join(mkdtempSync(join(tmpdir(), "plist-")), "job.plist");
+    writeFileSync(path, bundled("/h/me/equin.app/Contents/MacOS/gateway"));
+    const res = await spawnCaptured(["plutil", "-lint", path], {
+      timeoutMs: 10_000,
+    });
+    expect(res.exitCode).toBe(0);
+  });
+});

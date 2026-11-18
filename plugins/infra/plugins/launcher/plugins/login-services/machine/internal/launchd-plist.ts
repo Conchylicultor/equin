@@ -1,5 +1,6 @@
 import { SERVICE_STOP_TIMEOUT_S, type LoginServiceSpec } from "../../core";
 import type { InstalledJob } from "./login-service";
+import { appBundleIdOfProgram } from "./macos-app-plist";
 
 /**
  * Render a launchd property list for a per-user LaunchAgent — pure, so the exact
@@ -27,6 +28,14 @@ import type { InstalledJob } from "./login-service";
  * still going. `interactive` adds `ProcessType Interactive`: launchd's
  * default type carries resource limits a measurement must not read as the
  * machine's.
+ *
+ * A job whose program is an executable of `equin.app` carries
+ * `AssociatedBundleIdentifiers` naming the bundle — derived from the program,
+ * so no caller can forget it. It is how a legacy plist names its app to
+ * macOS's Background Task Management (`man launchd.plist`: System Settings →
+ * Login Items). Without it a fresh install's "… can run in the background"
+ * notifications named the bare executables (`gateway`, `equin-desktop`) — an
+ * internal name, the first thing a new user sees of equin's background part.
  */
 export function renderLaunchAgentPlist(spec: LoginServiceSpec): string {
   const str = (v: string) => `<string>${escapeXml(v)}</string>`;
@@ -42,6 +51,11 @@ export function renderLaunchAgentPlist(spec: LoginServiceSpec): string {
     spec.schedule === undefined
       ? `\t<key>KeepAlive</key>\n\t<dict>\n\t\t<key>SuccessfulExit</key>\n\t\t<false/>\n\t</dict>\n\t<key>ThrottleInterval</key>\n\t<integer>10</integer>\n`
       : `\t<key>StartInterval</key>\n\t<integer>${interval(spec.schedule.everySeconds)}</integer>\n`;
+  const bundleId = appBundleIdOfProgram(spec.argv[0] ?? "");
+  const associated =
+    bundleId === null
+      ? ""
+      : `\t<key>AssociatedBundleIdentifiers</key>\n\t<array>\n\t\t${str(bundleId)}\n\t</array>\n`;
   const processType = spec.interactive
     ? `\t<key>ProcessType</key>\n\t${str("Interactive")}\n`
     : "";
@@ -51,7 +65,7 @@ export function renderLaunchAgentPlist(spec: LoginServiceSpec): string {
 <dict>
 \t<key>Label</key>
 \t${str(spec.label)}
-${session}\t<key>ProgramArguments</key>
+${associated}${session}\t<key>ProgramArguments</key>
 \t<array>
 ${spec.argv.map((a) => `\t\t${str(a)}`).join("\n")}
 \t</array>

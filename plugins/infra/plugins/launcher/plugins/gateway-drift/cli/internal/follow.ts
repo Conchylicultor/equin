@@ -251,12 +251,15 @@ async function followLocked(
   }
   // The whole job too: the drift row cannot rebuild the environment (it is
   // the starter's), but this run starts from the gateway's own declared
-  // environment, so a job that differs only there (the PATH rule) is a launch
-  // main changed.
+  // environment, so a job that differs only there (the PATH rule) — or in a
+  // key the renderer derives (the bundle association) — is a launch main
+  // changed.
   const job = gatewayServiceJob(gatewayLaunchSpec(prepared.launch));
   const differences = [...drift.differences];
   if (differences.length === 0 && !(await service.isCurrent(job))) {
-    differences.push("the job's declared environment changed");
+    differences.push(
+      "the job's definition changed (its declared environment or launchd keys)",
+    );
   }
   if (differences.length === 0) return { kind: "current" };
 

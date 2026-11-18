@@ -11,6 +11,24 @@ import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
  */
 export const APP_BUNDLE_ID = "dev.equin";
 
+/** The bundle's file name, in the login services' app dir (`macosAppDir`). */
+export const APP_BUNDLE_NAME = "equin.app";
+
+/**
+ * The bundle id of the app `program` runs from — {@link APP_BUNDLE_ID} when it
+ * is an executable in an equin bundle's `Contents/MacOS` (the installed one, or
+ * any copy of it: the id is the bundle's, not its path's), else null.
+ */
+export function appBundleIdOfProgram(program: string): string | null {
+  const parts = program.split("/");
+  return parts.length >= 4 &&
+    parts.at(-2) === "MacOS" &&
+    parts.at(-3) === "Contents" &&
+    parts.at(-4) === APP_BUNDLE_NAME
+    ? APP_BUNDLE_ID
+    : null;
+}
+
 /** The bundle's icon, `Contents/Resources/<ICON_NAME>.icns`. */
 export const ICON_NAME = "equin";
 

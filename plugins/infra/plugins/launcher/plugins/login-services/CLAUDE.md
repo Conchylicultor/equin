@@ -186,6 +186,13 @@ responsible process); agents disclaim (`packages/spawn-disclaim`).
   file gone it logs `proc_pidpath_audittoken() failed from PID[…]: No such
   file or directory` and refuses the grant — minutes later, once its cache
   expires (2026-10-31).
+- **Every job running from the bundle names it** — `AssociatedBundleIdentifiers
+  [dev.equin]`, derived by the launchd renderer from argv[0]
+  (`appBundleIdOfProgram`), so no caller can forget it. It is how a legacy
+  plist names its app to macOS's Background Task Management (`man
+  launchd.plist`; Login Items, the "… can run in the background"
+  notification). Without it a fresh install's notifications named the bare
+  executables, `gateway` and `equin-desktop`.
 - **A stable path**, not the per-build deps cache: components rebuild on their
   own, and a menu-bar rebuild must not restart the gateway. Never under `/tmp`:
   LaunchServices disables a bundle there (no Settings row, `tccutil` fails).

@@ -49,6 +49,7 @@ import { macosAppDir } from "../../data-dirs";
 import type { ServiceForUser } from "./define";
 import {
   APP_BUNDLE_ID,
+  APP_BUNDLE_NAME,
   ICON_NAME,
   readAppComponents,
   renderAppInfoPlist,
@@ -119,13 +120,15 @@ export function machineMacosAppHost(
   tool: RcodesignTool | null,
   log: (line: string) => void,
 ): MacosAppHost {
-  const bundle = macosAppDir.file("equin.app");
+  const bundle = macosAppDir.file(APP_BUNDLE_NAME);
   return {
     platform: process.platform,
     bundle,
     async withLock(fn) {
       await macosAppDir.ensure();
-      const held = await waitForFlock(macosAppDir.file("equin.app.lock"));
+      const held = await waitForFlock(
+        macosAppDir.file(`${APP_BUNDLE_NAME}.lock`),
+      );
       try {
         return await fn();
       } finally {
