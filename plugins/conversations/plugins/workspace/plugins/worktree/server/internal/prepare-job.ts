@@ -83,14 +83,15 @@ export const worktreePrepareJob = defineSupervisedJob({
       ended.push({ ...s, endAt: Date.now() });
       log(`checkout ${attemptId} step: ${describeSetupStep(s)}`);
     });
-    const { source, tree, depStore, fsmonitor, untrackedCache } = await setupWorktree(
-      attemptId,
-      path,
-      new Set(getConfig(compositionsConfig).manifests.map((m) => m.id)),
-      // This backend: its database is where the attempt row lives.
-      runtimeNamespace(),
-      steps.onStep,
-    );
+    const { source, tree, depStore, fsmonitor, untrackedCache } =
+      await setupWorktree(
+        attemptId,
+        path,
+        new Set(getConfig(compositionsConfig).manifests.map((m) => m.id)),
+        // This backend: its database is where the attempt row lives.
+        runtimeNamespace(),
+        steps.onStep,
+      );
     if (conversationId !== undefined)
       await markCheckoutEnded(conversationId, {
         endedAt: Date.now(),

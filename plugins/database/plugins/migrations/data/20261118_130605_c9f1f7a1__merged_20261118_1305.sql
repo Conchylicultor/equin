@@ -1,5 +1,6 @@
--- singularity:snapshot id=efd44da8-075d-4d7c-9598-83c148ffbc1d parents=611e13e0-08ff-4851-8432-6ea3d403187f
--- singularity:supersedes e2a709c3 a10d11ec
+-- singularity:snapshot id=e33ba18d-3f06-40c9-9c95-45c224b6d2a8 parents=611e13e0-08ff-4851-8432-6ea3d403187f
+-- singularity:supersedes f11153b2
+-- singularity:supersedes f11153b2 <- e2a709c3 a10d11ec
 -- singularity:phase expand
 CREATE TABLE "conversations_ext_launch" (
 	"parent_id" text PRIMARY KEY NOT NULL,
