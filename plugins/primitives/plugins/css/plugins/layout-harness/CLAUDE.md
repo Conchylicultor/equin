@@ -307,8 +307,16 @@ NOT `file://`: Vite emits an ES-module `<script type="module">` + a stylesheet
 asset one real origin. Token VALUES (`--space-*`, pads, control heights) are
 emitted at RUNTIME by ThemeInjector (never static CSS), so `entry.html` seeds the
 DEFAULT density ramp on the measured `[data-geo-root]` — the same default the
-bespoke tests hardcoded — for faithful gap/pad geometry; a monospace 14px font is
-forced for cross-machine width determinism.
+bespoke tests hardcoded — for faithful gap/pad geometry. Every measured node is
+drawn in ONE bundled webfont at 14px — the app's text face, `var(--font-sans)`
+(Inter, which app.css imports) — never a system family: `monospace` is Menlo on
+macOS and DejaVu Sans Mono on Linux, so the geometry differed per OS. The entry
+loads that face before any fixture renders and fails the page when the family
+in `entry.html` matches no bundled face. Even one bundled face renders slightly
+differently per OS (Linux drew Cascadia 0.29px higher than macOS), so the face
+is the one whose correct rows sit well inside `opticalCenter`'s ε: the
+glyph-and-words row reads 0.24px off in Inter, 0.71px in Cascadia (1.00px on
+Linux, failing main's deploy there).
 
 ## The `data-geo` contract
 

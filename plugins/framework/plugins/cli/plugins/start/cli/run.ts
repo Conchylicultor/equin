@@ -17,9 +17,10 @@ import {
   getWorktreeRoot,
 } from "@plugins/infra/plugins/spawn/core";
 import {
-  checkSystemPackages,
+  declaredDeps,
   ensureDep,
   MissingSystemPackagesError,
+  systemPackagesToPrepare,
   type DepProgress,
 } from "@plugins/infra/plugins/deps/deps";
 import { cliExecContext } from "@plugins/infra/plugins/jobs/plugins/supervised-job/cli";
@@ -185,6 +186,12 @@ type Steps = {
 
 /** The line `--system-packages` answers on (install.sh's `start_services` reads it). */
 const SYSTEM_PACKAGES_MARK = "system-packages:";
+/**
+ * The lines `--system-packages` names a dependency's own install command on,
+ * one per command: `system-setup:<what, in words>` then the argv, every field
+ * tab-separated (install.sh runs it as root).
+ */
+const SYSTEM_SETUP_MARK = "system-setup:";
 
 const run: CliAction<[], Opts> = async (opts) => {
   // `--only` is resolved first: a typo fails before anything is installed,
@@ -203,14 +210,26 @@ const run: CliAction<[], Opts> = async (opts) => {
     leaveOutIds(opts.leaveOut, declared),
   );
   // install.sh asks this before the start step runs: what the OS must
-  // provide for the parts this start would add here, so it installs them
-  // (one sudo) from the declarations, never from a list of its own.
+  // provide for the parts this start would add here, and for the dependencies
+  // every install prepares (`SystemPackages.everyInstall`), so it installs
+  // them (one sudo) from the declarations, never from a list of its own.
   if (opts.systemPackages) {
-    // One marked line: anything else on stdout (a dependency install's
-    // output) never reaches apt.
-    const missing =
-      manager === null ? [] : await missingSystemPackages(parts.add);
-    console.log(`${SYSTEM_PACKAGES_MARK}${missing.join(" ")}`);
+    const prepare = await systemPackagesToPrepare(
+      manager === null ? [] : parts.add.map((d) => d.dep),
+      await declaredDeps(),
+      await getWorktreeRoot(),
+    );
+    // Marked lines only: anything else on stdout (a dependency install's
+    // output) never reaches apt or sudo.
+    console.log(`${SYSTEM_PACKAGES_MARK}${prepare.apt.join(" ")}`);
+    for (const c of prepare.commands) {
+      for (const field of [c.forUser, ...c.argv])
+        if (field.includes("\t") || field.includes("\n"))
+          throw new Error(
+            `--system-packages: ${JSON.stringify(field)} holds a tab or a newline, which the system-setup line cannot carry`,
+          );
+      console.log(`${SYSTEM_SETUP_MARK}${[c.forUser, ...c.argv].join("\t")}`);
+    }
     return;
   }
   // One equin per account: a second checkout of the repo would share this
@@ -439,18 +458,6 @@ function sayLeftOut(parts: PartsHere): void {
   }
 }
 
-/** The OS packages the parts' programs need and this machine lacks (apt names). */
-async function missingSystemPackages(
-  decls: readonly LoginServiceDeclaration[],
-): Promise<string[]> {
-  const missing = new Set<string>();
-  for (const decl of decls) {
-    const check = await checkSystemPackages(decl.dep);
-    if (check.kind === "missing") for (const p of check.apt) missing.add(p);
-  }
-  return [...missing];
-}
-
 type FailedPart = { decl: LoginServiceDeclaration; error: unknown };
 
 /**
@@ -465,7 +472,7 @@ function partsFailedNotice(failed: readonly FailedPart[]): InstallerNotice {
   const missing = failed.flatMap((f) =>
     f.error instanceof MissingSystemPackagesError ? [f.error] : [],
   );
-  const apt = [...new Set(missing.flatMap((m) => m.apt))];
+  const commands = installCommands(missing);
   const them = failed.length > 1 ? "them" : "it";
   return defineNotice({
     title: `equin couldn't add ${names}`,
@@ -475,8 +482,8 @@ function partsFailedNotice(failed: readonly FailedPart[]): InstallerNotice {
         ? `${failed.length > 1 ? "They need" : "It needs"} ${joinNames([...new Set(missing.map((m) => m.forUser))])}, which aren't installed on this computer.`
         : `${failed.length > 1 ? "They are" : "It is"} built on this computer, and that build failed.`,
     now: [
-      apt.length > 0
-        ? `Install what ${failed.length > 1 ? "they need" : "it needs"} with \`sudo apt-get install ${apt.join(" ")}\`, then run \`./equin start\` again.`
+      commands.length > 0
+        ? `Install what ${failed.length > 1 ? "they need" : "it needs"} with ${commands.map((c) => `\`sudo ${c}\``).join(" and ")}, then run \`./equin start\` again.`
         : "Fix what stopped the build (its last lines are in the details), then run `./equin start` again.",
       `Or start equin without ${them}: \`./equin start --leave-out ${decls.map((d) => d.id).join(",")}\`.`,
     ],
@@ -503,13 +510,29 @@ function pauseText(
   const missing = failed.flatMap((f) =>
     f.error instanceof MissingSystemPackagesError ? [f.error] : [],
   );
-  const apt = [...new Set(missing.flatMap((m) => m.apt))];
+  const commands = installCommands(missing);
   const them = failed.length > 1 ? "them" : "it";
   const act =
-    apt.length > 0
-      ? `Install ${them === "it" ? "what it needs" : "what they need"} with \`sudo apt-get install ${apt.join(" ")}\`, then Try again.`
+    commands.length > 0
+      ? `Install ${them === "it" ? "what it needs" : "what they need"} with ${commands.map((c) => `\`sudo ${c}\``).join(" and ")}, then Try again.`
       : "Fix with Claude reads what went wrong first; Try again builds it again.";
   return `${notice.doing} ${notice.blocked} ${act} It's optional: Skip starts equin without ${them}, and equin works in your browser. ${notice.ifSkipped.optional ? notice.ifSkipped.addLater : ""}`.trim();
+}
+
+/**
+ * The commands (run as root) that install what the failed parts lack: one apt
+ * line for every listed package, then each dependency tool's own command.
+ */
+function installCommands(
+  missing: readonly MissingSystemPackagesError[],
+): string[] {
+  const apt = [...new Set(missing.flatMap((m) => m.apt))];
+  return [
+    ...(apt.length > 0 ? [`apt-get install ${apt.join(" ")}`] : []),
+    ...new Set(
+      missing.filter((m) => m.apt.length === 0).map((m) => m.command.join(" ")),
+    ),
+  ];
 }
 
 /** An error's last lines, the home folder as `~` (evidence a person may share). */

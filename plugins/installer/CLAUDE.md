@@ -482,12 +482,20 @@ behind it: 32 s to 5 min on the 2026-11-18 Linux VMs); Skip runs `start`
 again with the part left out (`--leave-out`, here `EQUIN_INSTALL_LEFT_OUT`).
 
 **What the parts need from the OS** is declared by each part's dependency
-(`Dep.systemPackages`, apt names — the menu-bar icon's GTK / WebKitGTK); the
-start step's body (`start_services`) asks `./equin start --system-packages`
-and apt-installs what is missing (one sudo) before `./equin start`. A failed
-apt install does not stop the step: `start` then fails on the part, with the
-packages named. `--system-packages` answers on one marked line, each name checked before
-it reaches apt; apt waits out a dpkg lock (a fresh machine's own updates). A
+(`Dep.systemPackages`, apt names — the menu-bar icon's GTK / WebKitGTK), and
+by every dependency whose libraries each install prepares
+(`systemPackages.everyInstall` — Chromium's, which main's unattended deploy
+checks the layout in and cannot ask a password for); the start step's body
+(`start_services`) asks `./equin start --system-packages` and installs what is
+missing (one sudo) before `./equin start`. A failed install does not stop the
+step: `start` then fails on the part, with the packages named, and a
+dependency used later says what it lacks when it is installed.
+`--system-packages` answers on one `system-packages:` line (apt names, each
+checked before it reaches apt; apt waits out a dpkg lock — a fresh machine's
+own updates) and one `system-setup:` line per command a dependency's own tool
+installs its libraries with (Playwright's `install-deps`, whose package list
+depends on the distribution release): what it is, then the argv,
+tab-separated, run as root. A
 machine with no desktop (`hostDesktop`: no display outside SSH, no display
 manager, no desktop session installed) never builds or registers a
 `graphical` service — `start` says it left it out.

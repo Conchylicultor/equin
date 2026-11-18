@@ -8,11 +8,16 @@ import type {
   BrowserType,
   LaunchOptions,
 } from "playwright";
-import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
+import {
+  spawnCaptured,
+  spawnExpectOk,
+} from "@plugins/infra/plugins/spawn/core";
 import type {
   DepSource,
   InstallContext,
   Ready,
+  ToolInstalledPackages,
+  ToolPackagesCheck,
 } from "@plugins/infra/plugins/deps/deps";
 import { BROWSER_EXECUTABLES_FILE, readBrowserExecutables } from "../../core";
 
@@ -248,6 +253,69 @@ async function assertSystemLibraries(
       `the browser cannot start on this host: system libraries missing (${missing.join(", ")}). Install them once, as root: sudo ${process.execPath} ${cli} install-deps chromium`,
     );
   }
+}
+
+/**
+ * The OS packages a browser runs against on Linux, as Playwright itself knows
+ * them: its `install-deps` carries the package list per distribution release
+ * (Ubuntu 22.04 and 24.04 name half of them differently), so the declaration
+ * hands the check and the install to it rather than listing names. Checked
+ * with `install-deps --dry-run` (an apt simulation, as the user); installed
+ * with `install-deps` as root, by install.sh. Both run the Playwright this
+ * plugin resolves in the checkout asked, the same one `launchChromium`
+ * launches through.
+ */
+export function playwrightSystemPackages(opts: {
+  browser: PlaywrightBrowserName;
+  forUser: string;
+}): ToolInstalledPackages {
+  const { browser, forUser } = opts;
+  return {
+    forUser,
+    async check(root) {
+      const pw = await resolvePlaywright(root);
+      const result = await spawnCaptured(
+        [process.execPath, pw.cli, "install-deps", "--dry-run", browser],
+        { cwd: root, timeoutMs: 2 * MINUTE },
+      );
+      return readDryRun(result.exitCode, `${result.stdout}\n${result.stderr}`);
+    },
+    async installCommand(root) {
+      const pw = await resolvePlaywright(root);
+      return [process.execPath, pw.cli, "install-deps", browser];
+    },
+  };
+}
+
+const ALL_INSTALLED = "All system dependencies are installed.";
+const MISSING_HEADER = /^Missing system dependencies \(\d+\):$/m;
+
+/**
+ * What `playwright install-deps --dry-run` answered: exit 0 with "All system
+ * dependencies are installed." is present; exit 1 with its "Missing system
+ * dependencies (N):" list is missing; anything else — apt could not simulate
+ * (package lists never fetched), or a wording this does not know — is
+ * unknown, with the output as the reason, never read as present.
+ */
+export function readDryRun(
+  exitCode: number,
+  output: string,
+): ToolPackagesCheck {
+  if (exitCode === 0 && output.includes(ALL_INSTALLED))
+    return { kind: "present" };
+  const header = MISSING_HEADER.exec(output);
+  if (exitCode !== 0 && header !== null) {
+    const packages = output
+      .slice(header.index + header[0].length)
+      .split("\n")
+      .map((line) => /^ {2}(\S+)$/.exec(line)?.[1])
+      .filter((p): p is string => p !== undefined);
+    if (packages.length > 0) return { kind: "missing", packages };
+  }
+  return {
+    kind: "unknown",
+    reason: `playwright install-deps --dry-run exited ${exitCode}: ${output.trim().split("\n").slice(-5).join(" / ")}`,
+  };
 }
 
 /**

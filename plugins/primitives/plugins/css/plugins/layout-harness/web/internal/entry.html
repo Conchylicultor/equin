@@ -5,16 +5,26 @@
     <title>Layout harness measurer</title>
     <style>
       /*
-       * Font determinism: sub-pixel text width drifts across OS font stacks, so
-       * truncation onset can shift a few px. The bespoke geometry tests force a
-       * fixed monospace 14px on the measured root; we do the same on every node
-       * under `[data-geo-root]` so the measured layout is reproducible across
-       * machines. The live gallery uses real fonts; only the measured suite
-       * forces monospace.
+       * Font determinism: text width and ink metrics differ from one face to
+       * the next, so truncation onset and the optical centre move with the
+       * font. Every node under `[data-geo-root]` is therefore drawn in ONE
+       * face at 14px: the app's own text face (`--font-sans`, Inter, which
+       * app.css bundles from fontsource) — the same bytes on every machine,
+       * and the face the rows the suite gates are actually read in. Never a
+       * generic family: `monospace` was Menlo on macOS and DejaVu Sans Mono
+       * on Linux. entry.tsx loads this face before any fixture renders and
+       * fails the page when it is not a bundled one.
+       *
+       * Why not Cascadia (the bundled monospace): a correctly built
+       * glyph-and-words row reads 0.71px off-centre in it on macOS and 1.00px
+       * on Linux (2026-11-18 — Linux draws it 0.29px higher), against
+       * opticalCenter's 0.75px. In Inter the same row reads 0.24px, which
+       * leaves the per-OS rendering difference inside the budget while the
+       * real fault (~3px) stays far outside it.
        */
       [data-geo-root],
       [data-geo-root] * {
-        font-family: monospace;
+        font-family: var(--font-sans);
         font-size: 14px;
       }
       /*

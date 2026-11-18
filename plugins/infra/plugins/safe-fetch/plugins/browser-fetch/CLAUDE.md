@@ -213,6 +213,7 @@ proven by hand:
   - Uses:
     - `infra/deps.defineDep`
     - `infra/deps/playwright-browser.playwrightBrowser`
+    - `infra/deps/playwright-browser.playwrightSystemPackages`
   - Exports (values): `chromium`
 - Cross-plugin:
   - Imported by:

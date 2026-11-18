@@ -109,11 +109,20 @@ held), `failed.json`, `last-used`, `holds/`. The lock is `locks/deps/<id>-<ident
   under `exec.admit` (one background unit of `withHostGrant`).
 - **`systemPackages: { linux: { apt, forUser } }`** on a declaration: what
   the OS must provide (a native build's libraries — the menu-bar helper's GTK
-  and WebKitGTK). `checkSystemPackages(dep)` answers present / missing (apt
-  names) / unchecked (no dpkg); the engine checks it before an install and
-  throws `MissingSystemPackagesError` naming them, never the build tool's
-  error halfway in. `./equin start --system-packages` lists them for
-  install.sh, which installs them — no list of its own.
+  and WebKitGTK). `checkSystemPackages(dep, root)` answers present / missing
+  (the apt names and the root command that installs them) / unchecked (no
+  dpkg); the engine checks it before an install and throws
+  `MissingSystemPackagesError` naming them, never the build tool's error
+  halfway in. **`linux: <ToolInstalledPackages>`** instead hands the check and
+  the install to a tool of the dependency's own, for a list that depends on
+  the distribution release (`playwrightSystemPackages`: Playwright's
+  `install-deps`, per Ubuntu / Debian release); a check the tool could not
+  make (`unknown`) never refuses an install. **`everyInstall: "<why>"`** makes
+  every Linux install prepare them, not only one whose start adds a part using
+  the dependency — for one installed on demand later by a process that cannot
+  ask for a password (Chromium, first needed by main's unattended deploy).
+  `./equin start --system-packages` lists them for install.sh
+  (`systemPackagesToPrepare`), which installs them — no list of its own.
 - **`admission: { none: "<why>" }`** on a source skips `exec.admit`: for an
   install too small to be worth a grant that a caller awaits on the way INTO
   an op of its own (the signal-origin shim, before `build` / `check` / `push`
@@ -503,11 +512,14 @@ torch.
     - `ReadyNow`
     - `RemoveOutcome`
     - `SealOutcome`
+    - `SetupCommand`
     - `SourceVersion`
     - `SweepReport`
     - `SystemPackages`
     - `SystemPackagesCheck`
     - `TargetedSource`
+    - `ToolInstalledPackages`
+    - `ToolPackagesCheck`
   - Exports (values):
     - `checkSystemPackages`
     - `declaredDep`
@@ -535,6 +547,7 @@ torch.
     - `SEALED_MANIFEST`
     - `stayPin`
     - `sweepUnusedDeps`
+    - `systemPackagesToPrepare`
     - `UnknownDepError`
 - Test helpers:
   - Deps: `@plugins/infra/plugins/deps/deps/testing`

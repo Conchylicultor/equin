@@ -9,6 +9,7 @@ export {
   launchPersistentChromium,
   PLAYWRIGHT_BUNDLE_EXTERNAL,
   playwrightBrowser,
+  playwrightSystemPackages,
 } from "./internal/playwright-browser";
 export type {
   ChromiumLaunchOptions,

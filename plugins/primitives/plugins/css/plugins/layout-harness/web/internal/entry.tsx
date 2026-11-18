@@ -576,12 +576,47 @@ function applyMutation(scope: HTMLElement, mutate: FixtureMutation): void {
   }
 }
 
-void loadExhibits().then((loaded) => {
-  // The geometry-gated exhibits (and regions, filled with the kit) become one
-  // measurable shape here, so everything below — render, measure, mutate —
-  // deals in one shape. App exhibits are dropped without being loaded.
-  const exhibits = measurableExhibits(loaded);
-  byId = new Map(exhibits.map((f) => [f.id, f]));
+// ── The measured face, loaded before anything is measured ──────────
+//
+// entry.html draws every measured node in one face, and that face must be the
+// same bytes on every machine: a system family (`monospace`) is a different
+// font per OS, and the suite then measures different geometry on Linux than on
+// macOS. A webfont is fetched lazily, on first use, and the text is drawn in a
+// fallback until it arrives (`font-display: swap`) — so a fixture measured
+// before then measures the fallback. Hence: the family is read from the
+// stylesheet (its one spelling, in entry.html), loaded for the characters the
+// fixtures use, and a family that resolves to no font face — a generic or
+// system family — fails the page instead of being measured.
+const FACE_SAMPLE =
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,:;/-_…⋯";
+
+async function loadMeasuredFace(): Promise<void> {
+  const probe = document.createElement("div");
+  probe.setAttribute("data-geo-root", "");
+  container.appendChild(probe);
+  // Read before the probe goes: a removed element's computed style is empty.
+  const cs = getComputedStyle(probe);
+  const family = cs.fontFamily;
+  const font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${family}`;
+  probe.remove();
+  const faces = await document.fonts.load(font, FACE_SAMPLE);
+  if (faces.length === 0) {
+    throw new Error(
+      `layout harness: the measured font "${family}" (entry.html, [data-geo-root]) matches no font face the page bundles. It must be a webfont the page loads — a system or generic family is a different font on each OS, so the geometry would differ between macOS and Linux.`,
+    );
+  }
+}
+
+// A load that fails is handed to the driver by name (`__fixturesFailed`), which
+// stops waiting at once and throws it — rather than timing out on a page that
+// will never be ready.
+Promise.all([loadExhibits(), loadMeasuredFace()]).then(
+  ([loaded]) => {
+    // The geometry-gated exhibits (and regions, filled with the kit) become one
+    // measurable shape here, so everything below — render, measure, mutate —
+    // deals in one shape. App exhibits are dropped without being loaded.
+    const exhibits = measurableExhibits(loaded);
+    byId = new Map(exhibits.map((f) => [f.id, f]));
 
   (window as HarnessWindow).__renderFixture = (id, width, falsify) => {
     const fixture = byId.get(id);
@@ -712,5 +747,10 @@ void loadExhibits().then((loaded) => {
     };
   };
 
-  (window as HarnessWindow).__fixturesReady = true;
-});
+    (window as HarnessWindow).__fixturesReady = true;
+  },
+  (err: unknown) => {
+    (window as HarnessWindow).__fixturesFailed =
+      err instanceof Error ? (err.stack ?? err.message) : String(err);
+  },
+);

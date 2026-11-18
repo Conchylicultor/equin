@@ -863,19 +863,27 @@ prepare_linux() {
 }
 
 # start_services: the start step's body. First what the OS must provide for
-# the parts `./equin start` adds here — declared by those parts themselves
-# (Dep.systemPackages; the menu-bar icon's GTK and WebKitGTK on a desktop),
-# asked of `./equin start --system-packages`, never listed here — then start.
-# A failed package install does not stop the step: start then fails on that
-# optional part with its own diagnosis (what it gives, the packages it lacks,
-# Skip).
+# the parts `./equin start` adds here, and for the dependencies every install
+# prepares — declared by those parts and dependencies themselves
+# (Dep.systemPackages: the menu-bar icon's GTK and WebKitGTK on a desktop,
+# the libraries Chromium runs on), asked of `./equin start --system-packages`,
+# never listed here — then start. It answers one `system-packages:` line (apt
+# names, installed in one apt call) and a `system-setup:` line per command a
+# dependency's own tool installs its libraries with (what it is, then the
+# argv, tab-separated; run as root). A failed install does not stop the step:
+# start then fails on that optional part with its own diagnosis (what it
+# gives, the packages it lacks, Skip), and a dependency used later says what
+# is missing when it is installed.
 start_services() {
-  local out pkgs="" p
+  local out pkgs="" p setups="" line for_user tab
+  local -a fields
+  tab="$(printf '\t')"
   if [ "$OS" != "Darwin" ] && command -v apt-get >/dev/null 2>&1; then
     out="$(./equin start --system-packages)"
-    # Its one marked line; any other output (a dependency install's) is not
-    # a package name.
+    # Its marked lines; any other output (a dependency install's) is not a
+    # package name or a command.
     pkgs="$(printf '%s\n' "$out" | sed -n 's/^system-packages://p' | tail -n 1)"
+    setups="$(printf '%s\n' "$out" | sed -n 's/^system-setup://p')"
     printf '%s\n' "$out" | grep -q '^system-packages:' || {
       echo "./equin start --system-packages answered no system-packages: line:"; printf '%s\n' "$out"; return 1; }
     for p in $pkgs; do
@@ -897,6 +905,21 @@ start_services() {
       echo "Those packages did not install; equin starts anyway and says what is missing."
     fi
   fi
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    IFS="$tab" read -r -a fields <<<"$line"
+    if [ "${#fields[@]}" -lt 2 ]; then
+      echo "./equin start --system-packages answered a system-setup line with no command: $line"; return 1
+    fi
+    for_user="${fields[0]}"
+    say "Installing $for_user (asks for your password)"
+    echo "command: ${fields[*]:1}"
+    if sudo_once "equin needs your password to install $for_user." &&
+      sudo -- env DEBIAN_FRONTEND=noninteractive "${fields[@]:1}"; then :
+    else
+      echo "That did not install; equin starts anyway, and what needs $for_user says what is missing."
+    fi
+  done <<<"$setups"
   ./equin start
 }
 

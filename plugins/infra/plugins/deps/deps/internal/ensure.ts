@@ -116,7 +116,7 @@ export async function installInCache(
   // What the OS must provide (a native build's libraries), checked before
   // anything is built: a missing one fails here naming it, never as the build
   // tool's own error halfway in.
-  await assertSystemPackages(dep);
+  await assertSystemPackages(dep, root);
 
   const fd = await waitLock(paths.lock, () =>
     say(

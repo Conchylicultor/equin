@@ -113,10 +113,12 @@ manager and no desktop session installed — a headless server; not
 left out: nothing built,
 registered or asked of the OS, one line saying so. `--leave-out <ids>` (and an
 install's Skip, `EQUIN_INSTALL_LEFT_OUT`) leaves out the named ones; a later
-plain `start` adds them. `--system-packages` prints, and exits, the apt
-packages the services this start would add still need (`Dep.systemPackages`)
-on one `system-packages:` line — install.sh installs them before the start
-step, reading only that line.
+plain `start` adds them. `--system-packages` prints, and exits, what the OS
+still lacks for the services this start would add and for the dependencies
+every install prepares (`Dep.systemPackages`, `everyInstall`): the apt
+packages on one `system-packages:` line, and each command a dependency's own
+tool installs its libraries with on a `system-setup:` line — install.sh
+installs them before the start step, reading only those lines.
 
 **A part that cannot be prepared** (every dependency is ensured before the
 gateway) ends `start` with exit 1 and an installer notice naming it

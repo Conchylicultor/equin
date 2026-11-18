@@ -151,9 +151,9 @@ export async function openMeasurer(outDir: string): Promise<Measurer> {
   // for reasons that have nothing to do with geometry. Nothing in the class we
   // DO care about is console-only: the measurer page mounts no error boundary,
   // so React funnels every uncaught render/commit error through `reportError`,
-  // which surfaces here. (An unhandled promise rejection during the async
-  // fixture load is caught earlier and differently — `__fixturesReady` never
-  // flips, so `waitForFunction` below times out.)
+  // which surfaces here. (A failure of the async load itself — the exhibits,
+  // or the measured face — is caught earlier and differently: the page hands
+  // it over as `__fixturesFailed`, and the wait below throws it by name.)
   const pageErrors: string[] = [];
   page.on("pageerror", (err: Error) => {
     pageErrors.push(err.stack ?? `${err.name}: ${err.message}`);
@@ -164,12 +164,20 @@ export async function openMeasurer(outDir: string): Promise<Measurer> {
   // globals are installed; wait for it rather than the bare function existence so
   // we never race the async fixture load.
   await page.waitForFunction(
-    () => (window as HarnessWindow).__fixturesReady === true,
+    () =>
+      (window as HarnessWindow).__fixturesReady === true ||
+      (window as HarnessWindow).__fixturesFailed !== undefined,
     undefined,
     {
       timeout: 30_000,
     },
   );
+  const loadFailure = await page.evaluate(
+    () => (window as HarnessWindow).__fixturesFailed,
+  );
+  if (loadFailure !== undefined) {
+    throw new Error(`the measurer page failed to load: ${loadFailure}`);
+  }
 
   return {
     async measure(id, width, falsify) {

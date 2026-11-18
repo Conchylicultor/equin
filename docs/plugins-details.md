@@ -36375,11 +36375,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ReadyNow`
           - `RemoveOutcome`
           - `SealOutcome`
+          - `SetupCommand`
           - `SourceVersion`
           - `SweepReport`
           - `SystemPackages`
           - `SystemPackagesCheck`
           - `TargetedSource`
+          - `ToolInstalledPackages`
+          - `ToolPackagesCheck`
         - Exports (values):
           - `checkSystemPackages`
           - `declaredDep`
@@ -36407,6 +36410,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SEALED_MANIFEST`
           - `stayPin`
           - `sweepUnusedDeps`
+          - `systemPackagesToPrepare`
           - `UnknownDepError`
       - Test helpers:
         - Deps: `@plugins/infra/plugins/deps/deps/testing`
@@ -36684,6 +36688,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `launchPersistentChromium`
               - `PLAYWRIGHT_BUNDLE_EXTERNAL`
               - `playwrightBrowser`
+              - `playwrightSystemPackages`
         - **`python`** — The python installer kind of infra/deps (pythonEnv, runPython, PythonEntryError) over uv, with its caches as declared data dirs Its uv-updater sub-plugin keeps every python/ project's uv.lock and .python-version current.
           - Cross-plugin:
             - Imported by:
@@ -40694,6 +40699,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `infra/deps.defineDep`
               - `infra/deps/playwright-browser.playwrightBrowser`
+              - `infra/deps/playwright-browser.playwrightSystemPackages`
             - Exports (values): `chromium`
           - Cross-plugin:
             - Imported by:

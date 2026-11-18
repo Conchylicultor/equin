@@ -11,6 +11,8 @@ import type { MeasuredFixture } from "@plugins/primitives/plugins/css/plugins/la
 export type HarnessWindow = typeof window & {
   /** True once `loadExhibits()` resolved and the globals below are installed. */
   __fixturesReady: boolean;
+  /** Why the page could not get ready (the exhibits or the measured face failed to load), once it knows. */
+  __fixturesFailed?: string;
   /** Mount a fixture at `width`, optionally applying a falsification mutation. */
   __renderFixture: (
     id: string,

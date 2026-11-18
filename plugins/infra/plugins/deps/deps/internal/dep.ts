@@ -217,22 +217,58 @@ export interface DepPin {
 /**
  * What an install needs from the operating system that no installer kind
  * provides: the libraries a native build links against (the menu-bar icon's
- * GTK and WebKitGTK on Linux). Declared beside the dependency so whoever
- * prepares a machine (install.sh, through `./equin start --system-packages`)
- * installs them from the declaration, never from a list of its own. Linux
- * only, by Debian / Ubuntu package name: apt is the one package manager the
- * installer drives. Checked before an install (`checkSystemPackages`): a
- * missing one fails it as a `MissingSystemPackagesError`, naming them, rather
- * than as the build tool's own error halfway in.
+ * GTK and WebKitGTK on Linux), or a downloaded browser runs against
+ * (Chromium's NSS, ATK, libgbm, ALSA, …). Declared beside the dependency so
+ * whoever prepares a machine (install.sh, through `./equin start
+ * --system-packages`) installs them from the declaration, never from a list
+ * of its own. Linux only: apt is the one package manager the installer
+ * drives. Checked before an install (`checkSystemPackages`): a missing one
+ * fails it as a `MissingSystemPackagesError`, naming them, rather than as the
+ * build tool's own error halfway in.
  */
 export interface SystemPackages {
-  readonly linux: {
-    /** Debian / Ubuntu package names. */
-    readonly apt: readonly string[];
-    /** What they are, in a person's words: "the GTK and WebKitGTK libraries". */
-    readonly forUser: string;
-  };
+  readonly linux: AptPackages | ToolInstalledPackages;
+  /**
+   * Set when EVERY Linux install prepares these, not only one whose `./equin
+   * start` adds a part that runs this dependency — the reason, for people
+   * ("main's deploy checks run in it"). Without it a dependency installed on
+   * demand later, by a process that cannot ask for a password (main's
+   * unattended deploy), finds its libraries missing and fails there.
+   */
+  readonly everyInstall?: string;
 }
+
+/** OS packages named here, by Debian / Ubuntu package name. */
+export interface AptPackages {
+  /** Debian / Ubuntu package names. */
+  readonly apt: readonly string[];
+  /** What they are, in a person's words: "the GTK and WebKitGTK libraries". */
+  readonly forUser: string;
+}
+
+/**
+ * OS packages a tool of the dependency's own knows and installs — for a list
+ * that depends on the distribution release, which no fixed apt list can be
+ * (Playwright's `install-deps` carries one per Ubuntu / Debian release: 24.04
+ * renamed half of them with a `t64` suffix).
+ */
+export interface ToolInstalledPackages {
+  /** What they are, in a person's words. */
+  readonly forUser: string;
+  /**
+   * Whether this host has them, asked of the tool from checkout `root`:
+   * `unknown` when the tool could not tell (it simulates with apt, which a
+   * machine whose package lists were never fetched cannot answer).
+   */
+  check(root: string): Promise<ToolPackagesCheck>;
+  /** The command that installs them, run as root (install.sh, under its one sudo). */
+  installCommand(root: string): Promise<readonly string[]>;
+}
+
+export type ToolPackagesCheck =
+  | { readonly kind: "present" }
+  | { readonly kind: "missing"; readonly packages: readonly string[] }
+  | { readonly kind: "unknown"; readonly reason: string };
 
 export type DefineDepSpec<S extends DepSource> = {
   /** Stable id: the cache dir name and the CLI argument. `^[a-z][a-z0-9-]*$`. */

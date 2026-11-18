@@ -31,12 +31,18 @@ export type {
   SourceVersion,
   SystemPackages,
   TargetedSource,
+  ToolInstalledPackages,
+  ToolPackagesCheck,
 } from "./internal/dep";
 export {
   checkSystemPackages,
   MissingSystemPackagesError,
+  systemPackagesToPrepare,
 } from "./internal/system-packages";
-export type { SystemPackagesCheck } from "./internal/system-packages";
+export type {
+  SetupCommand,
+  SystemPackagesCheck,
+} from "./internal/system-packages";
 export { depState, ensureDep, readyNow, removeDep } from "./internal/ensure";
 export type { EnsureOptions, ReadyNow, RemoveOutcome } from "./internal/ensure";
 export { ensureDepViaCli } from "./internal/via-cli";
