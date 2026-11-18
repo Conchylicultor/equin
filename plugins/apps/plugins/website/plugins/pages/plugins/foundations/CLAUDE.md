@@ -16,6 +16,12 @@ Re-check the picks (the prototype's options pill) before porting a change.
   `.iceberg-dive`): a click descends to the first layer under the surface.
 - A depth gauge (lines of code passed below the surface), a Components /
   Harness filter under the title, and Expand all (the pill, or `E`).
+- Each layer's line count (`core/layer-loc.ts`) is code only — tests, test
+  support, e2e scripts and generated files left out — and is written by
+  `scripts/count-loc.ts`, which assigns every source file to a layer by path
+  (longest prefix in its `LAYER_OF` table) and fails on a file no layer
+  claims. Refresh it with
+  `./equin run plugins/apps/plugins/website/plugins/pages/plugins/foundations/scripts/count-loc.ts`.
 - Harness pieces are plain chips like the rest, told apart by the wrench in
   front of their name (teal on the ice, cyan in the deep); the Harness key
   carries the same wrench.
@@ -117,7 +123,9 @@ variables.
   - Uses: `apps/website/crawlable.WebsitePages`
 - Core:
   - Uses: `apps/website/crawlable.defineWebsitePage`
-  - Exports (values): `foundationsPage`
+  - Exports (values):
+    - `foundationsPage`
+    - `LAYER_LOC`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/density --chrome-pane-h`

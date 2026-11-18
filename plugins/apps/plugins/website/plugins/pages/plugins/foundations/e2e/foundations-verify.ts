@@ -35,11 +35,18 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
+import { LAYER_LOC } from "../core";
 
 const out = arg("out", "/tmp/foundations");
 const width = numArg("width", 1280);
 const height = numArg("height", 900);
 const colorScheme = arg("color-scheme", "dark") === "light" ? "light" : "dark";
+
+/** Every line below the surface, as the gauge prints it at the bottom. */
+const BELOW = Object.entries(LAYER_LOC)
+  .filter(([key]) => key !== "apps")
+  .reduce((sum, [, n]) => sum + n, 0)
+  .toLocaleString("en-US");
 
 /** Pieces and drawings on the page (data.ts / cards/index.ts); the apps (no drawing) start closed. */
 const PIECES = 63;
@@ -315,7 +322,7 @@ await withBrowser(async (h) => {
   await scrollPane(page, "bottom");
   const bottom = await waitFor(
     () => sceneState(page),
-    (s) => s.readout.startsWith("733,354"),
+    (s) => s.readout.startsWith(BELOW),
     { timeoutMs: 3000, intervalMs: 100 },
   );
   r.ok(

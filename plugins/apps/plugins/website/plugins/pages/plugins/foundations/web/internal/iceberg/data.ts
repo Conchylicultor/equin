@@ -1,3 +1,4 @@
+import { LAYER_LOC } from "../../../core";
 import type { CardKey } from "../cards";
 
 /**
@@ -8,7 +9,8 @@ import type { CardKey } from "../cards";
  * A piece's name says what the thing IS; its sentence says what it brings.
  * `harness` pieces shorten the loop from "you have an idea" to "it runs in
  * production"; every other piece is a component: what every app built on equin
- * gets for free. `loc` is the lines of code in the layer, which the depth gauge
+ * gets for free. `loc` is the lines of code in the layer (tests and generated
+ * files excluded, recounted by `scripts/count-loc.ts`), which the depth gauge
  * counts down through.
  */
 export interface IcebergPiece {
@@ -34,7 +36,7 @@ export const LAYERS: readonly IcebergLayer[] = [
   {
     key: "apps",
     name: "The apps",
-    loc: 140365,
+    loc: LAYER_LOC.apps,
     tag: "What you see. Every one is just plugins put together.",
     pieces: [
       {
@@ -84,7 +86,7 @@ export const LAYERS: readonly IcebergLayer[] = [
   {
     key: "shell",
     name: "Shell & chrome",
-    loc: 34571,
+    loc: LAYER_LOC.shell,
     tag: "The frame around every app.",
     pieces: [
       {
@@ -140,7 +142,7 @@ export const LAYERS: readonly IcebergLayer[] = [
   {
     key: "primitives",
     name: "UI primitives",
-    loc: 286996,
+    loc: LAYER_LOC.primitives,
     tag: "Building blocks every app reuses.",
     pieces: [
       {
@@ -181,7 +183,7 @@ export const LAYERS: readonly IcebergLayer[] = [
   {
     key: "plugins",
     name: "The plugin system",
-    loc: 88701,
+    loc: LAYER_LOC.plugins,
     tag: "An abstraction above the code: a thousand small, self-contained pieces that combine together into one app.",
     pieces: [
       {
@@ -235,7 +237,7 @@ export const LAYERS: readonly IcebergLayer[] = [
   {
     key: "data",
     name: "Data in motion",
-    loc: 24067,
+    loc: LAYER_LOC.data,
     tag: "How data on screen stays in sync with the server.",
     pieces: [
       {
@@ -283,7 +285,7 @@ export const LAYERS: readonly IcebergLayer[] = [
   {
     key: "state",
     name: "Where state lives",
-    loc: 49175,
+    loc: LAYER_LOC.state,
     tag: "Your data, kept safe and current while agents change the app around it.",
     pieces: [
       {
@@ -337,7 +339,7 @@ export const LAYERS: readonly IcebergLayer[] = [
   {
     key: "background",
     name: "Background & reactions",
-    loc: 20962,
+    loc: LAYER_LOC.background,
     tag: "Work the app does on its own, without a user action.",
     pieces: [
       {
@@ -365,7 +367,7 @@ export const LAYERS: readonly IcebergLayer[] = [
   {
     key: "watching",
     name: "Watching itself",
-    loc: 77444,
+    loc: LAYER_LOC.watching,
     tag: "Each part of the app reports what it does, so you can see what is happening without reading the code.",
     pieces: [
       {
@@ -413,7 +415,7 @@ export const LAYERS: readonly IcebergLayer[] = [
   {
     key: "machine",
     name: "The machine",
-    loc: 31788,
+    loc: LAYER_LOC.machine,
     tag: "Processes, addresses and the operating system.",
     pieces: [
       {
@@ -460,7 +462,7 @@ export const LAYERS: readonly IcebergLayer[] = [
   {
     key: "loop",
     name: "The loop",
-    loc: 119650,
+    loc: LAYER_LOC.loop,
     tag: "Agents use the app to change and deploy the app itself.",
     pieces: [
       {

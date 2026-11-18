@@ -13264,7 +13264,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses: `apps/website/crawlable.WebsitePages`
               - Core:
                 - Uses: `apps/website/crawlable.defineWebsitePage`
-                - Exports (values): `foundationsPage`
+                - Exports (values):
+                  - `foundationsPage`
+                  - `LAYER_LOC`
               - Cross-plugin:
                 - Uses tokens:
                   - `ui/tokens/density --chrome-pane-h`
