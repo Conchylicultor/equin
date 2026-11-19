@@ -73,8 +73,7 @@ interface ChildReport {
 async function child(nodes: string[] | "all"): Promise<void> {
   // Modules resolve namespace-scoped paths at module eval; nothing here writes.
   declareRuntimeNamespace(asNamespace(argValues("--namespace")[0] ?? "equin"));
-  const picked =
-    nodes === "all" ? entries : nodes.map((n) => byNode.get(n)!);
+  const picked = nodes === "all" ? entries : nodes.map((n) => byNode.get(n)!);
   const cpu0 = process.cpuUsage();
   const t0 = performance.now();
   const loaded = await loadServerPlugins(picked);
