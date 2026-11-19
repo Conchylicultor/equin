@@ -99,6 +99,7 @@ Design: `research/2026-08-18-global-namespace-identity.md`.
   - Uses:
     - `framework/product-name.LEGACY_IDS`
     - `framework/product-name.PRODUCT_NAME`
+    - `packages/floor-compat.canParseUrl`
   - Exports (types):
     - `CheckoutRef`
     - `Namespace`

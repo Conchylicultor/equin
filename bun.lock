@@ -4329,6 +4329,13 @@
       "name": "@equin/plugin-framework-tooling-lint-aria-safety",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/lint/plugins/browser-floor": {
+      "name": "@equin/plugin-framework-tooling-lint-browser-floor",
+      "version": "0.0.1",
+      "devDependencies": {
+        "@mdn/browser-compat-data": "^8.1.9",
+      },
+    },
     "plugins/framework/plugins/tooling/plugins/lint/plugins/bun-safety": {
       "name": "@equin/plugin-framework-tooling-lint-bun-safety",
       "version": "0.0.1",
@@ -5372,6 +5379,10 @@
     },
     "plugins/packages/plugins/flock": {
       "name": "@equin/plugin-packages-flock",
+      "version": "0.0.1",
+    },
+    "plugins/packages/plugins/floor-compat": {
+      "name": "@equin/plugin-packages-floor-compat",
       "version": "0.0.1",
     },
     "plugins/packages/plugins/heap-pacing": {
@@ -10421,6 +10432,8 @@
 
     "@equin/plugin-framework-tooling-lint-aria-safety": ["@equin/plugin-framework-tooling-lint-aria-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/aria-safety"],
 
+    "@equin/plugin-framework-tooling-lint-browser-floor": ["@equin/plugin-framework-tooling-lint-browser-floor@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/browser-floor"],
+
     "@equin/plugin-framework-tooling-lint-bun-safety": ["@equin/plugin-framework-tooling-lint-bun-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/bun-safety"],
 
     "@equin/plugin-framework-tooling-lint-button-safety": ["@equin/plugin-framework-tooling-lint-button-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/button-safety"],
@@ -10902,6 +10915,8 @@
     "@equin/plugin-packages-error-subject": ["@equin/plugin-packages-error-subject@workspace:plugins/packages/plugins/error-subject"],
 
     "@equin/plugin-packages-flock": ["@equin/plugin-packages-flock@workspace:plugins/packages/plugins/flock"],
+
+    "@equin/plugin-packages-floor-compat": ["@equin/plugin-packages-floor-compat@workspace:plugins/packages/plugins/floor-compat"],
 
     "@equin/plugin-packages-heap-pacing": ["@equin/plugin-packages-heap-pacing@workspace:plugins/packages/plugins/heap-pacing"],
 
@@ -12450,6 +12465,8 @@
     "@lexical/utils": ["@lexical/utils@0.53.0", "", { "dependencies": { "@lexical/internal": "0.53.0", "@lexical/selection": "0.53.0", "lexical": "0.53.0" }, "peerDependencies": { "typescript": ">=5.2" }, "optionalPeers": ["typescript"] }, "sha512-Uq+zEWPnX0eZqRw0gTe3NuPOduePHVmP0dQ3jyoi8JIN3HIQOIn5yTFGejX8j4M3RcYXwgsm89pNWflNWV/8tw=="],
 
     "@lexical/yjs": ["@lexical/yjs@0.53.0", "", { "dependencies": { "@lexical/internal": "0.53.0", "@lexical/selection": "0.53.0", "lexical": "0.53.0" }, "peerDependencies": { "typescript": ">=5.2", "yjs": ">=13.5.37" }, "optionalPeers": ["typescript"] }, "sha512-5q5vwK3YRv6cBEhF54ATC09RsfVDW8uhRjgD7jcOcbiPvy5oZCsUI04PJs/V7+Nozr3ivmmtfqgBn/orHfbQeQ=="],
+
+    "@mdn/browser-compat-data": ["@mdn/browser-compat-data@8.1.9", "", {}, "sha512-7d8D9yzVS4ugLbt4clzc5DKU8dq85K0lRebjzpP43GxSr7vYKmczgfuEU+0beimjl5YmnHkcErtolg5t5ttb0A=="],
 
     "@mermaid-js/parser": ["@mermaid-js/parser@2.0.1", "", { "dependencies": { "@chevrotain/types": "~13.2.0" } }, "sha512-j37dj/h6p6pots1L7pLPPNuABEEu9WP4OYg9pW1g+nYG331j0+3canE9OagtYdytYvdSAMG+2fKU5cxep6LgjA=="],
 

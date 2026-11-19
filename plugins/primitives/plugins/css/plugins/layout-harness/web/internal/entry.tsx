@@ -145,6 +145,9 @@ function textInkCenter(el: Element): number | null {
   const line = range.getClientRects()[0];
   if (!line || line.height === 0) return null;
   const m = metricsFor(parent, textNode.data);
+  // Firefox 116+; the harness's Chromium has them.
+  if (!("fontBoundingBoxAscent" in m) || !("fontBoundingBoxDescent" in m))
+    return null;
   const fontBox = m.fontBoundingBoxAscent + m.fontBoundingBoxDescent;
   const baseline =
     line.top + (line.height - fontBox) / 2 + m.fontBoundingBoxAscent;

@@ -197,7 +197,11 @@ function LiveMediaPlayer({
     const media = mediaRef.current;
     // Only THIS player's video leaves the browser's picture in picture: the
     // page has one, and another player's may be in it.
-    if (media !== null && document.pictureInPictureElement === media) {
+    if (
+      media !== null &&
+      "exitPictureInPicture" in document &&
+      document.pictureInPictureElement === media
+    ) {
       await document.exitPictureInPicture();
       return;
     }
@@ -223,7 +227,7 @@ function LiveMediaPlayer({
         return;
       }
     }
-    if (media instanceof HTMLVideoElement)
+    if (media instanceof HTMLVideoElement && "requestPictureInPicture" in media)
       await media.requestPictureInPicture();
   };
 

@@ -1,3 +1,4 @@
+import { canParseUrl } from "@plugins/packages/plugins/floor-compat/core";
 /**
  * `raw` if it is an absolute `http(s)` URL, else `null`.
  *
@@ -20,7 +21,7 @@
  * offer nothing.
  */
 export function externalUrl(raw: string | null): string | null {
-  if (raw === null || !URL.canParse(raw)) return null;
+  if (raw === null || !canParseUrl(raw)) return null;
   const { protocol } = new URL(raw);
   return protocol === "http:" || protocol === "https:" ? raw : null;
 }

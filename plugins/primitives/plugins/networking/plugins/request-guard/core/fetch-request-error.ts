@@ -1,3 +1,4 @@
+import { canParseUrl } from "@plugins/packages/plugins/floor-compat/core";
 /**
  * A page `fetch` that rejected — no HTTP answer came back (the network dropped,
  * the request was blocked by an extension or CORS) or the browser refused to
@@ -41,7 +42,7 @@ const MAX_NAMED_URL = 300;
  */
 export function nameRequestUrl(raw: string, base: string | undefined): string {
   let named = raw;
-  if (base !== undefined && URL.canParse(raw, base)) {
+  if (base !== undefined && canParseUrl(raw, base)) {
     const url = new URL(raw, base);
     named =
       url.origin === new URL(base).origin

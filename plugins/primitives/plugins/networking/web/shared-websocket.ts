@@ -169,6 +169,7 @@ interface WorkerSeams {
 }
 
 function realSharedWorker(name: string): SharedWorkerLike {
+  // eslint-disable-next-line browser-floor/no-api-above-floor -- handed out only where `typeof SharedWorker` passed (below; Chrome Android has it from 148)
   return new SharedWorker(new URL("./shared-ws.worker.ts", import.meta.url), {
     type: "module",
     name,

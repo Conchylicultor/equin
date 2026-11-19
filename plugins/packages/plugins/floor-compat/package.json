@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-packages-floor-compat",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Floor-safe spellings of built-ins newer than the browser floor (framework/tooling/lint/browser-floor), each answering as the built-in does: canParseUrl (URL.canParse), parseUrl (URL.parse), jsonResponse (Response.json), promiseWithResolvers (Promise.withResolvers). Plain JS on every host."
+}

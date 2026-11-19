@@ -4,6 +4,7 @@ import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { compactUrl, type PartialWebFetchInput } from "../internal/web-fetch";
+import { canParseUrl } from "@plugins/packages/plugins/floor-compat/core";
 
 /**
  * WebFetch fetches a page and answers a prompt against it. The row names the
@@ -23,7 +24,7 @@ export function WebFetchToolView({
       summary={url ? compactUrl(url) : undefined}
       note={offset ? `· from char ${offset}` : undefined}
       aside={
-        url && URL.canParse(url) ? (
+        url && canParseUrl(url) ? (
           <a
             href={url}
             target="_blank"

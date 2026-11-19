@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { canParseUrl } from "@plugins/packages/plugins/floor-compat/core";
 
 /** A YouTube video id: 11 characters of URL-safe base64. */
 const VIDEO_ID = /^[A-Za-z0-9_-]{11}$/;
@@ -31,7 +32,7 @@ const YOUTUBE_HOSTS = new Set([
 export function youtubeVideoId(raw: string): string | null {
   const value = raw.trim();
   if (VIDEO_ID.test(value)) return value;
-  if (!URL.canParse(value)) return null;
+  if (!canParseUrl(value)) return null;
 
   const url = new URL(value);
   let candidate: string | null = null;

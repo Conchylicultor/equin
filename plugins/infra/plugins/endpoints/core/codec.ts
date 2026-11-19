@@ -1,5 +1,6 @@
 import type { z } from "zod";
 import { HttpError } from "./http-error";
+import { jsonResponse } from "@plugins/packages/plugins/floor-compat/core";
 
 /**
  * A transport codec for an endpoint body/response payload.
@@ -59,7 +60,7 @@ export function json<T>(schema?: z.ZodType<T>): Codec<T> {
       return result.data;
     },
     encodeResponse(value) {
-      return Response.json(value);
+      return jsonResponse(value);
     },
     async decodeResponse(res) {
       const raw: unknown = await res.json();

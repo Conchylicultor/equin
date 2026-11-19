@@ -473,9 +473,17 @@ async function openPersistent(
  * included — the stores (`last`, which holds the lifecycle record) last.
  */
 async function deleteAll(prefix: string, last: string): Promise<void> {
-  const names = (await indexedDB.databases())
-    .map((d) => d.name)
-    .filter((n): n is string => n !== undefined && n.includes(prefix));
+  const names =
+    typeof indexedDB.databases === "function"
+      ? (await indexedDB.databases())
+          .map((d) => d.name)
+          .filter((n): n is string => n !== undefined && n.includes(prefix))
+      : // No listing below Firefox 126 (the browser floor is 115): delete the
+        // names the storage can have — PGlite's IDBFS database for its
+        // `idb://${prefix}db` data dir, named by its mount point or by its
+        // data dir (both tried: deleting an absent database succeeds), and
+        // the stores.
+        [`/pglite/${prefix}db`, `${prefix}db`, last];
   for (const n of names.filter((n) => n !== last)) await idbDelete(n);
   await idbDelete(last);
 }

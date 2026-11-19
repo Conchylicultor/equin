@@ -593,6 +593,10 @@ function ViewerFrame({
         feedback("The browser didn't allow copying the image");
         return;
       }
+      if (err instanceof DOMException && err.name === "NotSupportedError") {
+        feedback("This browser can't copy images");
+        return;
+      }
       throw err;
     }
     feedback("Image copied");

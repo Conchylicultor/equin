@@ -121,6 +121,7 @@ export function installStallWatch(readTab: () => StallTab): StallWatch {
   };
 
   function attach(): void {
+    // eslint-disable-next-line browser-floor/no-api-above-floor -- reached only when `useWorker` found SharedWorker (absent on Chrome Android before 148)
     const worker = new SharedWorker(
       new URL("../stall-watchdog.worker.ts", import.meta.url),
       { type: "module", name: watchdogWorkerName(PREFIX) },

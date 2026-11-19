@@ -1,3 +1,4 @@
+import { canParseUrl } from "@plugins/packages/plugins/floor-compat/core";
 // Pure display formatters for an event row. Local-calendar (never UTC) and
 // locale-pinned to fixed English abbreviations so the output is deterministic
 // and unit-testable — the app is English-only today, and `toLocaleString` would
@@ -60,6 +61,6 @@ export function formatPlace(
  * broken link.
  */
 export function urlHost(raw: string): string | null {
-  if (!URL.canParse(raw)) return null;
+  if (!canParseUrl(raw)) return null;
   return new URL(raw).host.replace(/^www\./, "");
 }

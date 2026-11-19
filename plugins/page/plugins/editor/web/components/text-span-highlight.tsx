@@ -22,21 +22,21 @@ export interface SpanLinePaint {
  */
 const painters = new Map<symbol, Range[]>();
 
-function highlightRegistry(): HighlightRegistry {
-  // Supported by every target (Chromium 105, Safari 17.2, Firefox 140). A
-  // browser without it cannot show the span at all, so say so loudly rather
-  // than leave a selection the user can act on but not see.
-  if (typeof CSS === "undefined" || !("highlights" in CSS)) {
+function syncRegistry(): void {
+  // Newer than the browser floor (Safari 17.2, Firefox 140). A browser
+  // without it cannot show the span at all, so say so loudly rather than
+  // leave a selection the user can act on but not see.
+  if (
+    typeof CSS === "undefined" ||
+    !("highlights" in CSS) ||
+    typeof Highlight === "undefined"
+  ) {
     throw new Error(
       "page editor: the CSS Custom Highlight API is unavailable, so a text " +
         "span cannot be painted",
     );
   }
-  return CSS.highlights;
-}
-
-function syncRegistry(): void {
-  const registry = highlightRegistry();
+  const registry = CSS.highlights;
   const ranges = [...painters.values()].flat();
   if (ranges.length === 0) registry.delete(HIGHLIGHT_NAME);
   else registry.set(HIGHLIGHT_NAME, new Highlight(...ranges));

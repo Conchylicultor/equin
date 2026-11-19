@@ -1,0 +1,9 @@
+{
+  "name": "@equin/plugin-framework-tooling-lint-browser-floor",
+  "version": "0.0.1",
+  "private": true,
+  "description": "The browser floor equin's browser code supports (Chrome/Edge 111, Firefox 115, Safari and iOS Safari 16.4 — every browser from March 2023 on), and browser-floor/no-api-above-floor: a type-aware rule that refuses, in browser-built code, a built-in the TypeScript lib declares but MDN's browser-compat-data says a floor browser lacks (URL.canParse, Set.prototype.union, Promise.withResolvers, …).",
+  "devDependencies": {
+    "@mdn/browser-compat-data": "^8.1.9"
+  }
+}

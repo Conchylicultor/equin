@@ -20,8 +20,9 @@ export function createOutputLatency(ctx: AudioContext): { read(): number } {
   let held: number | null = null;
   return {
     read() {
-      // Typed as always present, but Safari leaves it undefined.
-      const output: number | undefined = ctx.outputLatency;
+      // Typed as always present, but Safari has it from 18.4 only.
+      const output: number | undefined =
+        "outputLatency" in ctx ? ctx.outputLatency : undefined;
       const reported = ctx.baseLatency + (output ?? 0);
       if (held === null || Math.abs(reported - held) > JITTER_SEC) {
         held = reported;

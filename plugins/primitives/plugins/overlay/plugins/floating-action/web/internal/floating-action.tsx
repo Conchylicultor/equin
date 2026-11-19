@@ -268,8 +268,10 @@ function FloatingActionPanel({
       // CSS `zoom` on the wrapper or its ancestors; a length written into the
       // wrapper's style is scaled by that zoom again. Divide it back out, or a
       // zoomed control's hitbox comes out zoom² the size of its panel (and a
-      // `my-auto`-centred one drags the panel off-centre).
-      const zoom = wrapper.currentCSSZoom;
+      // `my-auto`-centred one drags the panel off-centre). A browser without
+      // `currentCSSZoom` (Chrome 128, Firefox 126, Safari 18.4) leaves zoom out
+      // of the boxes too, so there is nothing to divide out.
+      const zoom = "currentCSSZoom" in wrapper ? wrapper.currentCSSZoom : 1;
       wrapper.style.width = `${(trig.width + chrome.width) / zoom}px`;
       wrapper.style.height = `${(trig.height + chrome.height) / zoom}px`;
     },

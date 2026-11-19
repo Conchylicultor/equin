@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { normalizeHost } from "../../core";
+import { canParseUrl } from "@plugins/packages/plugins/floor-compat/core";
 
 /**
  * The primary language subtag of an `Accept-Language` header (`fr-CH, fr;q=0.9`
@@ -100,7 +101,7 @@ export function parseReferrer(
   siteHost: string,
 ): ParsedReferrer | null {
   if (!referrer) return null;
-  if (!URL.canParse(referrer)) return null;
+  if (!canParseUrl(referrer)) return null;
   const url = new URL(referrer);
   if (!url.hostname) return null;
   const host = normalizeHost(url.hostname);

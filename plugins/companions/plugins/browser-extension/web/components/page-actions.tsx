@@ -26,6 +26,7 @@ import {
 } from "../../core";
 import { BrowserExtension } from "../slots";
 import { useExtensionHost } from "../host";
+import { canParseUrl } from "@plugins/packages/plugins/floor-compat/core";
 
 const doneIcon = symbol("check");
 const failedIcon = symbol("error");
@@ -60,7 +61,7 @@ export function PageActionsSection() {
   const href =
     present?.tab !== null &&
     present?.tab !== undefined &&
-    URL.canParse(present.tab.url)
+    canParseUrl(present.tab.url)
       ? present.tab.url
       : null;
   const url = useMemo(() => (href === null ? null : new URL(href)), [href]);

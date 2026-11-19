@@ -13,6 +13,7 @@ import {
   type VisitorAccess,
 } from "./principal";
 import { readPrincipalStamp, UNSTAMPED_GATEWAY_WARNING } from "./stamp";
+import { jsonResponse } from "@plugins/packages/plugins/floor-compat/core";
 
 /**
  * A socket host's route handler, as the gate reads it: the endpoints primitive
@@ -216,7 +217,7 @@ export function hostGate(stamped: boolean): HostGate {
       let table: HostRouteTable | null = null;
       const tableHandler: GatedRouteHandler = () => {
         table ??= { stamped, routes: hostRouteTable(all, ws) };
-        return Response.json(table);
+        return jsonResponse(table);
       };
       const all = [...http, [opts.tableRoute, tableHandler] as const];
       return stamped

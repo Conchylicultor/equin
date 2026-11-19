@@ -20,7 +20,12 @@ export function documentPipOf(win: Window): DocumentPictureInPicture | null {
 
 /** Whether any picture in picture is offered here: our own window, or the browser's video one. */
 export function pipOffered(win: Window): boolean {
-  return documentPipOf(win) !== null || win.document.pictureInPictureEnabled;
+  return (
+    documentPipOf(win) !== null ||
+    // Firefox has no video picture in picture API (153 brings it).
+    ("pictureInPictureEnabled" in win.document &&
+      win.document.pictureInPictureEnabled)
+  );
 }
 
 /**

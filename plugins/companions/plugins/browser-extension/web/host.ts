@@ -119,6 +119,8 @@ function failed(err: unknown): ProbeState {
 /** Whether the extension's popup is this page's parent. */
 function framedByExtension(): boolean {
   if (window.parent === window) return false;
+  // Chrome's (the extension's browser); Firefox has it from 148 only.
+  if (!("ancestorOrigins" in window.location)) return false;
   return window.location.ancestorOrigins.item(0) === EXTENSION_ORIGIN;
 }
 

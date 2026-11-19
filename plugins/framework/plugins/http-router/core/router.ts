@@ -1,5 +1,6 @@
 import { serverTimingValue } from "./server-timing";
 import { thrownResponse } from "./thrown-response";
+import { jsonResponse } from "@plugins/packages/plugins/floor-compat/core";
 
 /** A route's handler: the request and the values of its `:param` segments. */
 export type RouteHandler = (
@@ -148,7 +149,7 @@ export function createRequestHandler(
       return withServerTiming(
         withDefaultCacheControl(
           thrownResponse(errObj) ??
-            Response.json({ error: "Internal server error" }, { status: 500 }),
+            jsonResponse({ error: "Internal server error" }, { status: 500 }),
         ),
         performance.now() - startedAt,
       );

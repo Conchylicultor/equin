@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { canParseUrl } from "@plugins/packages/plugins/floor-compat/core";
 
 /** WebFetch's input, as its card draws it. */
 export const WebFetchInputSchema = z.looseObject({
@@ -14,7 +15,7 @@ export type PartialWebFetchInput = z.infer<typeof PartialWebFetchInputSchema>;
 /** `host/path`, scheme, `www.` and a bare trailing slash dropped. A cut URL
  *  that does not parse yet is shown as written. */
 export function compactUrl(url: string): string {
-  if (!URL.canParse(url)) return url;
+  if (!canParseUrl(url)) return url;
   const u = new URL(url);
   const path = u.pathname === "/" ? "" : u.pathname;
   return `${u.hostname.replace(/^www\./, "")}${path}${u.search}`;

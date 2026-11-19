@@ -543,6 +543,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `infra/runtime-profiler.gateWaitHooks`
     - `infra/runtime-profiler.recordEntrySpan`
     - `packages/error-subject.SubjectError`
+    - `packages/floor-compat.jsonResponse`
     - `packages/inflight.createInflight`
     - `packages/semaphore.createSemaphore`
     - `primitives/embed/frame/agent.injectFrameAgent`

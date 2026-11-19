@@ -16,12 +16,20 @@ import { dataUriToBlob, dataUriType, type OpenVia } from "../../core";
  * an `await` before `write()` would spend.
  *
  * Throws what the browser throws. The caller decides which of those is an
- * expected refusal (`NotAllowedError`) and lets the rest surface.
+ * expected refusal (`NotAllowedError`, or `NotSupportedError` where the
+ * browser cannot write an image) and lets the rest surface.
  */
 export async function copyImage(
   img: HTMLImageElement,
   src: string,
 ): Promise<void> {
+  // Writing an image is Firefox 127+ (newer than the browser floor): refused
+  // as the browser refuses what it does not support.
+  if (!("write" in navigator.clipboard) || typeof ClipboardItem !== "function")
+    throw new DOMException(
+      "Copying an image is not supported",
+      "NotSupportedError",
+    );
   const png =
     src.startsWith("data:") && dataUriType(src) === "image/png"
       ? Promise.resolve(dataUriToBlob(src))

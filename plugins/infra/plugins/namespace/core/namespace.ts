@@ -17,6 +17,7 @@ import {
   LEGACY_IDS,
   PRODUCT_NAME,
 } from "@plugins/framework/plugins/product-name/core";
+import { canParseUrl } from "@plugins/packages/plugins/floor-compat/core";
 //
 // The gateway (Go) deliberately does NOT implement the rule below. It treats a
 // namespace as an opaque directory key — it maps a Host header to a spec dir and
@@ -468,7 +469,7 @@ export function contentUrl(
 export function contentUrlParts(
   raw: string,
 ): { item: string; namespace: Namespace; path: string; port: number } | null {
-  if (!URL.canParse(raw)) return null;
+  if (!canParseUrl(raw)) return null;
   const url = new URL(raw);
   if (!isContentHost(url.host)) return null;
   const item = url.hostname.split(".")[0]!;
@@ -534,7 +535,7 @@ export function namespaceFromHost(host: string): Namespace | null {
  * Throws on anything else — a hook must not dial an address it cannot vouch for.
  */
 export function asNamespaceOrigin(raw: string): string {
-  if (!URL.canParse(raw)) {
+  if (!canParseUrl(raw)) {
     throw new Error(`Not a namespace URL: "${raw}" does not parse as a URL.`);
   }
   const url = new URL(raw);

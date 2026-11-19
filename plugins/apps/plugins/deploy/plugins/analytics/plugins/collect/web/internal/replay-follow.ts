@@ -7,6 +7,7 @@ import {
   type ReplayCommand,
   type ReplayFrameMessage,
 } from "../../core";
+import { canParseUrl } from "@plugins/packages/plugins/floor-compat/core";
 
 /**
  * The framed site's half of the session replay (`core/internal/replay.ts`):
@@ -40,7 +41,7 @@ export interface ReplayFollowDeps {
 const isNamespaceHost = (host: string) => namespaceFromHost(host) !== null;
 
 function originIsLocal(origin: string): boolean {
-  if (!URL.canParse(origin)) return false;
+  if (!canParseUrl(origin)) return false;
   return isNamespaceHost(new URL(origin).host);
 }
 

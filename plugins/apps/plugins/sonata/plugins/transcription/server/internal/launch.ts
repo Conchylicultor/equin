@@ -14,6 +14,7 @@ import type { WorkspaceSpec } from "@plugins/conversations/plugins/workspace/cor
 import type { TranscriptionInput } from "../../shared/input";
 import { markFailed, markTranscribing } from "./state";
 import { TRANSCRIPTION_PROFILE_ID, type ProfileInput } from "./profile-input";
+import { canParseUrl } from "@plugins/packages/plugins/floor-compat/core";
 
 /** The task category transcription tasks are filed under. */
 export const SONATA_CATEGORY_ID = "sonata";
@@ -83,7 +84,7 @@ function linkTitle(url: string): string {
 /** The first absolute http(s) link in free text, if any. */
 function firstLink(text: string): string | null {
   for (const match of text.matchAll(/https?:\/\/[^\s<>()[\]"']+/g)) {
-    if (URL.canParse(match[0])) return match[0];
+    if (canParseUrl(match[0])) return match[0];
   }
   return null;
 }

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { originOf } from "@plugins/infra/plugins/request-origin/core";
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
+import { jsonResponse } from "@plugins/packages/plugins/floor-compat/core";
 
 /**
  * Main is read-only for agent sessions: on main's backend, a write carrying the
@@ -51,7 +52,7 @@ export function agentWriteRefusedMessage(route: string): string {
  * (`isAgentWriteRefusal`) so no other collector files it either.
  */
 export function agentWriteRefusedResponse(route: string): Response {
-  return Response.json(
+  return jsonResponse(
     {
       reason: "agent-write-refused",
       route,

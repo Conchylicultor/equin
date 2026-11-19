@@ -19,6 +19,7 @@ import { agentWriteGate, type AgentWrite } from "./agent-write";
 import { registerRouteSlowThreshold } from "./slow-threshold";
 import { HttpError } from "./http-error";
 import { injectFrameAgent } from "@plugins/primitives/plugins/embed/plugins/frame/plugins/agent/core";
+import { jsonResponse } from "@plugins/packages/plugins/floor-compat/core";
 
 export { HttpError };
 
@@ -26,7 +27,7 @@ export { HttpError };
 // - Drizzle `timestamp` columns (Date) where the Zod schema says string
 // - Rank class objects where the schema says string (toJSON serialises them)
 // - Plain strings where the schema infers a branded string
-// Response.json() serialises all of these correctly on the wire.
+// jsonResponse() serialises all of these correctly on the wire.
 type JsonSerializable = { toJSON(): string; toString(): string };
 type JsonCompat<T> = T extends string
   ? string | Date | JsonSerializable
@@ -131,7 +132,7 @@ export function endpointHandler<
           }
           const result = _endpoint.querySchema.safeParse(raw);
           if (!result.success) {
-            return Response.json(
+            return jsonResponse(
               { error: "Query validation failed", issues: result.error.issues },
               { status: 400 },
             );
@@ -178,7 +179,7 @@ export function endpointHandler<
             ? new Response(null, { status: 204 })
             : _endpoint.responseCodec
               ? _endpoint.responseCodec.encodeResponse(result as TResponse)
-            : Response.json(result);
+            : jsonResponse(result);
       } catch (err) {
         if (err instanceof HttpError) {
           return new Response(err.message, { status: err.status });

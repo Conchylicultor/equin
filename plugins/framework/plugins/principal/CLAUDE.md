@@ -168,6 +168,7 @@ deploy does that by itself after the push that changes it
     - `infra/namespace.CONTENT_ITEM_RE`
     - `infra/namespace.contentUrl`
     - `infra/namespace.namespaceFromHost`
+    - `packages/floor-compat.jsonResponse`
   - Exports (types):
     - `EndpointAccess`
     - `GatedRouteHandler`

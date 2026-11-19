@@ -264,10 +264,7 @@ export function moduleEvaluation(path: string): ModuleEvaluation {
  * calls, and after a top-level `await`.
  */
 function evaluatingModule(): string {
-  const prev = Error.stackTraceLimit;
-  Error.stackTraceLimit = Infinity;
-  const stack = new Error().stack ?? "";
-  Error.stackTraceLimit = prev;
+  const stack = fullStack();
   const lines = stack.trim().split("\n");
   const last = lines[lines.length - 1]!.trim();
   const m = /^at (?:.*\()?(\/.*?):\d+:\d+\)?$/.exec(last);
@@ -276,6 +273,20 @@ function evaluatingModule(): string {
       `[slots] cannot tell which module is evaluating from the stack frame ${JSON.stringify(last)}`,
     );
   return m[1]!;
+}
+
+/**
+ * The current stack, every frame of it. `Error.stackTraceLimit` is V8's and
+ * JavaScriptCore's knob (Firefox has it from 153 only, and keeps its whole
+ * stack without it).
+ */
+function fullStack(): string {
+  if (typeof Error.stackTraceLimit !== "number") return new Error().stack ?? "";
+  const prev = Error.stackTraceLimit;
+  Error.stackTraceLimit = Infinity;
+  const stack = new Error().stack ?? "";
+  Error.stackTraceLimit = prev;
+  return stack;
 }
 
 /**

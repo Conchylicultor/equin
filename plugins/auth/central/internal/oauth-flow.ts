@@ -9,6 +9,7 @@ import type {
   OAuth2Config,
   ParsedTokenResponse,
 } from "@plugins/auth/core";
+import { canParseUrl } from "@plugins/packages/plugins/floor-compat/core";
 
 export function generateNonce(bytes = 32): string {
   return randomBytes(bytes).toString("hex");
@@ -227,7 +228,7 @@ export function resolveOpenerOrigin(
   if (raw === null) {
     return { kind: "ok", origin: namespaceUrl(worktree, "", port) };
   }
-  if (!URL.canParse(raw)) {
+  if (!canParseUrl(raw)) {
     return { kind: "invalid", message: `invalid origin query param: ${raw}` };
   }
   const parsed = new URL(raw);

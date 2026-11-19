@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { ToolCall } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import { canParseUrl } from "@plugins/packages/plugins/floor-compat/core";
 
 /** WebSearch's input, as its card draws it. */
 export const WebSearchInputSchema = z.looseObject({
@@ -44,7 +45,7 @@ const LINKS_LINE = /^Links: (\[.*\])$/gm;
 const REMINDER = /\n*REMINDER: You MUST include the sources[\s\S]*$/;
 
 export function hostOf(url: string): string {
-  return URL.canParse(url) ? new URL(url).hostname.replace(/^www\./, "") : url;
+  return canParseUrl(url) ? new URL(url).hostname.replace(/^www\./, "") : url;
 }
 
 /** Group links by site, busiest site first (ties keep first-seen order). */

@@ -33,19 +33,17 @@ const TIER_NAMES: Record<RevealTone, readonly string[]> = {
  */
 const painters = new Map<symbol, { tone: RevealTone; tiers: Range[][] }>();
 
-function highlightRegistry(): HighlightRegistry {
-  // Supported by every target (Chromium 105, Safari 17.2, Firefox 140).
-  if (typeof CSS === "undefined" || !("highlights" in CSS)) {
-    throw new Error(
-      "streaming text: the CSS Custom Highlight API is unavailable, so the " +
-        "message being written cannot be painted",
-    );
-  }
-  return CSS.highlights;
-}
-
 function sync(): void {
-  const registry = highlightRegistry();
+  // The CSS Custom Highlight API is Safari 17.2 / Firefox 140 — newer than
+  // the browser floor. The fade is decoration: without the API the text
+  // simply appears, unpainted.
+  if (
+    typeof CSS === "undefined" ||
+    !("highlights" in CSS) ||
+    typeof Highlight === "undefined"
+  )
+    return;
+  const registry = CSS.highlights;
   for (const [tone, names] of Object.entries(TIER_NAMES)) {
     names.forEach((name, tier) => {
       const ranges = [...painters.values()].flatMap((p) =>

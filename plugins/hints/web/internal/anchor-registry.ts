@@ -105,7 +105,13 @@ function registerAnchor(key: string, el: HTMLElement): () => void {
 
 function isRendered(el: HTMLElement): boolean {
   if (!el.isConnected) return false;
-  return el.checkVisibility({ visibilityProperty: true });
+  // checkVisibility is Safari 17.4+ (newer than the browser floor).
+  if (typeof el.checkVisibility === "function")
+    return el.checkVisibility({ visibilityProperty: true });
+  return (
+    el.getClientRects().length > 0 &&
+    getComputedStyle(el).visibility !== "hidden"
+  );
 }
 
 /**

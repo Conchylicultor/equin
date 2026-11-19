@@ -258,7 +258,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `POST /api/events/sources/:id/refresh`
     - `POST /api/events/sources/refresh-all`
 - Core:
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×3
     - `ids` ×3
     - `network/live` ×3
@@ -274,6 +274,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `infra/endpoints.defineEndpoint`
     - `infra/entities.entityRef`
     - `network/live/query-resource.compositeKey`
+    - `packages/floor-compat.canParseUrl`
   - Exports (types):
     - `CreateEventSourceBody`
     - `EventCategory`

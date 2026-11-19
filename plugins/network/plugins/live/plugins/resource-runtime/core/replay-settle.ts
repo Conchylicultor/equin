@@ -1,3 +1,4 @@
+import { promiseWithResolvers } from "@plugins/packages/plugins/floor-compat/core";
 // When the restart replay has been answered: the signal a serving host waits
 // on before it starts its post-serving background work (server-core's settled
 // phase — every warm-up drains there).
@@ -120,7 +121,7 @@ export function createReplaySettle<S extends object>(deps: {
   let lastActivity = 0;
   let armedAt: number | null = null;
   let outcome: ReplaySettled | null = null;
-  const done = Promise.withResolvers<ReplaySettled>();
+  const done = promiseWithResolvers<ReplaySettled>();
   let judgeTimer: ReturnType<typeof setTimeout> | null = null;
   let herdTimer: ReturnType<typeof setTimeout> | null = null;
   let ceilingTimer: ReturnType<typeof setTimeout> | null = null;

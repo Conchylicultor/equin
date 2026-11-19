@@ -262,6 +262,7 @@ its disable does not cover. Parameters and imports have no in-file value.
 - Sub-plugins:
   - **`agent-origin-safety`** — Lint rule keeping an e2e script's own Node-side calls to the app under test marked with the agent-origin headers, so the writes they cause stay attributable and revertible.
   - **`aria-safety`** — aria-safety lint rule: no-orphan-composite-role
+  - **`browser-floor`** — The browser floor equin's browser code supports (Chrome/Edge 111, Firefox 115, Safari and iOS Safari 16.4 — every browser from March 2023 on), and browser-floor/no-api-above-floor: a type-aware rule…
   - **`bun-safety`** — bun-safety lint rule: no-declare-identifier
   - **`button-safety`** — button-safety lint rules: no-async-raw-button, no-redundant-cursor-pointer
   - **`caret-trigger-safety`** — caret-trigger-safety lint rule: no-adhoc-caret-trigger

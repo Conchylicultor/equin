@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { jsonResponse } from "@plugins/packages/plugins/floor-compat/core";
 
 /**
  * The status a host answers an endpoint it does not serve with: `409` — the
@@ -25,7 +26,7 @@ export function unsupportedEndpointResponse(
   method: string,
   path: string,
 ): Response {
-  return Response.json(
+  return jsonResponse(
     { reason: "unsupported", method, path } satisfies z.infer<
       typeof unsupportedBody
     >,

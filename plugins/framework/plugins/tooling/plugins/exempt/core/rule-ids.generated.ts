@@ -20,6 +20,7 @@ export type ExemptableRuleId =
   | "boundaries/no-platform-api"
   | "boundaries:machine-portable-declaration"
   | "boundaries:web-loads-portable"
+  | "browser-floor/no-api-above-floor"
   | "bun-safety/no-declare-identifier"
   | "button-safety/no-async-raw-button"
   | "button-safety/no-redundant-cursor-pointer"

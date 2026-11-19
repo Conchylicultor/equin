@@ -115,18 +115,20 @@ async function upload(
 ): Promise<void> {
   // Fire clipboard copy and server upload in parallel. A clipboard permission
   // prompt must not block the upload — otherwise the just-opened tab sits on
-  // "Loading…" until the user dismisses it.
-  void navigator.clipboard
-    .write([new ClipboardItem({ "image/png": blob })])
-    .catch((err) => {
-      // Clipboard permission denied or not supported — non-fatal; upload proceeds regardless.
-      if (
-        err instanceof DOMException &&
-        (err.name === "NotAllowedError" || err.name === "SecurityError")
-      )
-        return;
-      throw err;
-    });
+  // "Loading…" until the user dismisses it. A browser that cannot write an
+  // image (Firefox before 127) skips the copy; the upload is what matters.
+  if ("write" in navigator.clipboard && typeof ClipboardItem === "function")
+    void navigator.clipboard
+      .write([new ClipboardItem({ "image/png": blob })])
+      .catch((err) => {
+        // Clipboard permission denied or not supported — non-fatal; upload proceeds regardless.
+        if (
+          err instanceof DOMException &&
+          (err.name === "NotAllowedError" || err.name === "SecurityError")
+        )
+          return;
+        throw err;
+      });
 
   try {
     const uploaded = await uploadAttachment(

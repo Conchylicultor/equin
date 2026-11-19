@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { jsonResponse } from "@plugins/packages/plugins/floor-compat/core";
 
 /**
  * The header the gateway stamps on every request it proxies to a socket host
@@ -114,7 +115,7 @@ export const CROSS_SITE_REFUSED_MESSAGE =
  * gateway answers its own refusals with (`writeCrossSiteRefusal`).
  */
 export function crossSiteRefusedResponse(route: string): Response {
-  return Response.json(
+  return jsonResponse(
     {
       reason: "cross-site-refused",
       route,
@@ -147,7 +148,7 @@ export function contentOnlyResponse(
   route: string,
   contentUrl: string | null,
 ): Response {
-  return Response.json(
+  return jsonResponse(
     {
       reason: "content-only",
       route,

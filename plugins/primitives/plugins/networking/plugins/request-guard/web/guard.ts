@@ -7,6 +7,7 @@ import {
   nameRequestUrl,
   REQUEST_GUARD_INSTALLED_GLOBAL,
 } from "../core";
+import { canParseUrl } from "@plugins/packages/plugins/floor-compat/core";
 
 /**
  * The page request guard: the runtime half (rung 4) of "the browser reads the
@@ -117,7 +118,7 @@ function refusal(
 ): RawApiRequestError | null {
   // An unparseable URL is not a request to anyone: the native rejects it with
   // its own error.
-  if (!URL.canParse(raw, document.baseURI)) return null;
+  if (!canParseUrl(raw, document.baseURI)) return null;
   const url = new URL(raw, document.baseURI);
   const sameOrigin =
     channel === "WebSocket"

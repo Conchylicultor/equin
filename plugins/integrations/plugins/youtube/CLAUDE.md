@@ -197,6 +197,20 @@ calls the controller makes; `@types/youtube` is not a dependency.
     - `YouTubeIframeApiLoadError`
     - `YouTubePlayer`
     - `YouTubePlayerNotReadyError`
+- Core:
+  - Uses: `packages/floor-compat.canParseUrl`
+  - Exports (types):
+    - `CodeVerdict`
+    - `EmbedStatus`
+  - Exports (values):
+    - `EmbedStatusSchema`
+    - `snapPlaybackRate`
+    - `statusFromOembedCode`
+    - `statusFromPlayerCode`
+    - `VideoIdSchema`
+    - `youtubeThumbnailUrl`
+    - `youtubeVideoId`
+    - `youtubeWatchUrl`
 - Deps:
   - Uses:
     - `infra/deps.defineDep`
@@ -229,19 +243,6 @@ calls the controller makes; `@types/youtube` is not a dependency.
     - `checkOembed`
     - `searchYouTube`
     - `searchYouTubeWith`
-- Core:
-  - Exports (types):
-    - `CodeVerdict`
-    - `EmbedStatus`
-  - Exports (values):
-    - `EmbedStatusSchema`
-    - `snapPlaybackRate`
-    - `statusFromOembedCode`
-    - `statusFromPlayerCode`
-    - `VideoIdSchema`
-    - `youtubeThumbnailUrl`
-    - `youtubeVideoId`
-    - `youtubeWatchUrl`
 - Sub-plugins:
   - **`audio-fetch`** — YouTube audio download: fetchYouTubeAudio(videoId, exec) returns one video's best audio stream as served (webm/opus or m4a, no ffmpeg), downloaded by yt-dlp — JavaScript challenges solved on bun…
   - **`song-videos`** — Which YouTube videos are this song? The SongVideos.Source contribution (a source's find(query, exec) → answered videos | unavailable) and findSongVideos(query, exec): every source asked at once…

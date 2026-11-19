@@ -1,4 +1,5 @@
 import { MAX_REFERRER_LENGTH, MAX_UTM_LENGTH, type UtmTags } from "../../core";
+import { canParseUrl } from "@plugins/packages/plugins/floor-compat/core";
 
 /**
  * Where the visitor came from, read once from the page load's landing URL and
@@ -23,7 +24,7 @@ export function externalReferrer(
 ): string | undefined {
   if (referrer === "" || referrer.length > MAX_REFERRER_LENGTH)
     return undefined;
-  if (!URL.canParse(referrer)) return undefined;
+  if (!canParseUrl(referrer)) return undefined;
   const url = new URL(referrer);
   if (url.protocol !== "http:" && url.protocol !== "https:") return undefined;
   return url.host.toLowerCase() === siteHost.toLowerCase()

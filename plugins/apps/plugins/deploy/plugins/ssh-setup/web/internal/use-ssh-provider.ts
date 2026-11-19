@@ -1,5 +1,6 @@
 import type { Server } from "@plugins/apps/plugins/deploy/plugins/servers/web";
 import { SshProvider, type SshProviderDescriptor } from "../slots";
+import { canParseUrl } from "@plugins/packages/plugins/floor-compat/core";
 
 export interface ResolvedSshProvider {
   /** The server's console URL, parsed — `null` when absent or unparsable. */
@@ -23,7 +24,7 @@ export interface ResolvedSshProvider {
 export function useSshProvider(server: Server): ResolvedSshProvider {
   const providers = SshProvider.useContributions();
   const raw = server.consoleUrl;
-  const url = raw && URL.canParse(raw) ? new URL(raw) : null;
+  const url = raw && canParseUrl(raw) ? new URL(raw) : null;
   return {
     url,
     provider: url ? providers.find((p) => p.match(url)) : undefined,

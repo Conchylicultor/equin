@@ -21,7 +21,13 @@ import { waitFor, type Settled } from "./wait";
 export async function busyRegions(scope: Page | Locator): Promise<string[]> {
   return scope.locator('[aria-busy="true"]').evaluateAll((els) =>
     els
-      .filter((el) => el.checkVisibility())
+      // checkVisibility is Safari 17.4+; a browser without it shows any
+      // element that has a box.
+      .filter((el) =>
+        typeof el.checkVisibility === "function"
+          ? el.checkVisibility()
+          : el.getClientRects().length > 0,
+      )
       .map((el) => {
         const label =
           el.getAttribute("aria-label") ?? (el.textContent || el.tagName);

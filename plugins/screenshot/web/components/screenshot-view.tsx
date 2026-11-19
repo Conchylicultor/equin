@@ -226,6 +226,13 @@ export function ScreenshotView({ id }: { id: string }) {
           onCopy={async () => {
             const blob = await finalBlob();
             if (!blob) return;
+            if (
+              !("write" in navigator.clipboard) ||
+              typeof ClipboardItem !== "function"
+            )
+              throw new Error(
+                "screenshot: this browser cannot copy an image (Firefox 127+)",
+              );
             await navigator.clipboard.write([
               new ClipboardItem({ "image/png": blob }),
             ]);

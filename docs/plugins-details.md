@@ -4555,7 +4555,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `POST /api/events/sources/:id/refresh`
               - `POST /api/events/sources/refresh-all`
           - Core:
-            - Uses: 25 symbols — full list in [`plugins/apps/plugins/events/plugins/events-core/REFERENCE.md`](../plugins/apps/plugins/events/plugins/events-core/REFERENCE.md)
+            - Uses: 26 symbols — full list in [`plugins/apps/plugins/events/plugins/events-core/REFERENCE.md`](../plugins/apps/plugins/events/plugins/events-core/REFERENCE.md)
               - `fields` ×3
               - `ids` ×3
               - `network/live` ×3
@@ -4571,6 +4571,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/endpoints.defineEndpoint`
               - `infra/entities.entityRef`
               - `network/live/query-resource.compositeKey`
+              - `packages/floor-compat.canParseUrl`
             - Exports (types):
               - `CreateEventSourceBody`
               - `EventCategory`
@@ -32413,12 +32414,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Exports (types): `Hook`
     - **`http-router`** — The one HTTP request router every host mounts: createRequestHandler turns "METHOD /path/:param" route pairs into a (req) => Promise<Response> — literal fast path, then :param matching in registration order, a default cache-control: no-store, a Server-Timing stamp of the handler's own time with a per-response id on every response (readServerTiming parses it back), and a logged, reported 500 on a throw — generic, or the response the error carries (answerThrowWith, for a protocol with its own error shape such as MCP's JSON-RPC). A duplicate route key throws at construction.
-      - Cross-plugin:
-        - Imported by:
-          - `framework/server-core`
-          - `infra/mcp`
-          - `primitives/networking`
       - Core:
+        - Uses: `packages/floor-compat.jsonResponse`
         - Exports (types):
           - `RequestHandlerOptions`
           - `RouteHandler`
@@ -32429,6 +32426,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readServerTiming`
           - `SERVER_TIMING_METRIC`
           - `serverTimingValue`
+      - Cross-plugin:
+        - Imported by:
+          - `framework/server-core`
+          - `infra/mcp`
+          - `primitives/networking`
     - **`image-import`** — What `import shot from "./x.png"` evaluates to on every host: an ImportedImage — its URL and its pixel size, read from the file at build time so a page reserves the image's box before it loads. The web build emits the file beside the artifact (content-hashed, fetched like any image: cached, decoded off-thread, lazy-loadable), never base64 in the JS; a Bun render and a jsdom test get a data: URL. A leaf over packages/image-size, so web code can name the type without reaching the build.
       - Core:
         - Uses:
@@ -32536,6 +32538,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/namespace.CONTENT_ITEM_RE`
           - `infra/namespace.contentUrl`
           - `infra/namespace.namespaceFromHost`
+          - `packages/floor-compat.jsonResponse`
         - Exports (types):
           - `EndpointAccess`
           - `GatedRouteHandler`
@@ -34262,6 +34265,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Exemptions:
                 - Exempted by: `framework/tooling/e2e-harness` (0 debt)
             - **`aria-safety`** — aria-safety lint rule: no-orphan-composite-role
+            - **`browser-floor`** — The browser floor equin's browser code supports (Chrome/Edge 111, Firefox 115, Safari and iOS Safari 16.4 — every browser from March 2023 on), and browser-floor/no-api-above-floor: a type-aware rule that refuses, in browser-built code, a built-in the TypeScript lib declares but MDN's browser-compat-data says a floor browser lacks (URL.canParse, Set.prototype.union, Promise.withResolvers, …).
             - **`bun-safety`** — bun-safety lint rule: no-declare-identifier
             - **`button-safety`** — button-safety lint rules: no-async-raw-button, no-redundant-cursor-pointer
             - **`caret-trigger-safety`** — caret-trigger-safety lint rule: no-adhoc-caret-trigger
@@ -36934,6 +36938,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/runtime-profiler.gateWaitHooks`
           - `infra/runtime-profiler.recordEntrySpan`
           - `packages/error-subject.SubjectError`
+          - `packages/floor-compat.jsonResponse`
           - `packages/inflight.createInflight`
           - `packages/semaphore.createSemaphore`
           - `primitives/embed/frame/agent.injectFrameAgent`
@@ -39820,6 +39825,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `framework/product-name.LEGACY_IDS`
           - `framework/product-name.PRODUCT_NAME`
+          - `packages/floor-compat.canParseUrl`
         - Exports (types):
           - `CheckoutRef`
           - `Namespace`
@@ -42114,6 +42120,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `YouTubeIframeApiLoadError`
           - `YouTubePlayer`
           - `YouTubePlayerNotReadyError`
+      - Core:
+        - Uses: `packages/floor-compat.canParseUrl`
+        - Exports (types):
+          - `CodeVerdict`
+          - `EmbedStatus`
+        - Exports (values):
+          - `EmbedStatusSchema`
+          - `snapPlaybackRate`
+          - `statusFromOembedCode`
+          - `statusFromPlayerCode`
+          - `VideoIdSchema`
+          - `youtubeThumbnailUrl`
+          - `youtubeVideoId`
+          - `youtubeWatchUrl`
       - Deps:
         - Uses:
           - `infra/deps.defineDep`
@@ -42146,19 +42166,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `checkOembed`
           - `searchYouTube`
           - `searchYouTubeWith`
-      - Core:
-        - Exports (types):
-          - `CodeVerdict`
-          - `EmbedStatus`
-        - Exports (values):
-          - `EmbedStatusSchema`
-          - `snapPlaybackRate`
-          - `statusFromOembedCode`
-          - `statusFromPlayerCode`
-          - `VideoIdSchema`
-          - `youtubeThumbnailUrl`
-          - `youtubeVideoId`
-          - `youtubeWatchUrl`
       - Plugins:
         - **`audio-fetch`** — YouTube audio download: fetchYouTubeAudio(videoId, exec) returns one video's best audio stream as served (webm/opus or m4a, no ffmpeg), downloaded by yt-dlp — JavaScript challenges solved on bun — from the on-demand `youtube-audio` Python dependency into a host-wide cache under a per-video host flock; a hit is a file read. A video YouTube will not serve throws YouTubeAudioUnavailableError (non-retryable); a stream YouTube refuses (HTTP 403, intermittent) is re-extracted with a freshly signed URL and retried up to 3 times; still refused, or another download error of the video, throws YouTubeAudioDownloadError — isYouTubeAudioError answers 'the video's failure, not the machine's' for both. A bot check, rate limit or unreachable YouTube throws YouTubeAccessError (retryable, the machine's failure). Failures come back from the Python module as a classified document, never a traceback. The daily youtube-audio.sweep keeps the cache within 30 days unused and 2 GB.
           - Server:
@@ -43948,7 +43955,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/metrics`
         - **`resource-runtime`**
           - Core:
-            - Uses: 50 symbols — full list in [`plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md`](../plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md)
+            - Uses: 51 symbols — full list in [`plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md`](../plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md)
               - `network/live/resource-protocol` ×20
               - `network/live/resource-runtime/routing` ×19
               - `packages/semaphore` ×3
@@ -43956,6 +43963,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/value-patch` ×2
               - `primitives/networking` ×2
               - `network/live/canonical-params.canonicalParams`
+              - `packages/floor-compat.promiseWithResolvers`
               - `packages/inflight.createInflight`
             - Exports (types):
               - `AliasMembership`
@@ -44249,6 +44257,33 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `flockTry`
           - `flockTryShared`
           - `waitForFlock`
+    - **`floor-compat`** — Floor-safe spellings of built-ins newer than the browser floor (framework/tooling/lint/browser-floor), each answering as the built-in does: canParseUrl (URL.canParse), parseUrl (URL.parse), jsonResponse (Response.json), promiseWithResolvers (Promise.withResolvers). Plain JS on every host.
+      - Cross-plugin:
+        - Imported by:
+          - `apps/browser/history`
+          - `apps/deploy/analytics/collect`
+          - `apps/deploy/ssh-setup`
+          - `apps/events/event-list`
+          - `apps/events/events-core`
+          - `apps/sonata/transcription`
+          - `auth`
+          - `companions/browser-extension`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/web-fetch`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/web-search`
+          - `framework/http-router`
+          - `framework/principal`
+          - `infra/endpoints`
+          - `infra/namespace`
+          - `integrations/youtube`
+          - `network/live/resource-runtime`
+          - `primitives/networking/request-guard`
+      - Core:
+        - Exports (types): `Resolvers`
+        - Exports (values):
+          - `canParseUrl`
+          - `jsonResponse`
+          - `parseUrl`
+          - `promiseWithResolvers`
     - **`heap-pacing`** — Heap pacing for heavy bun processes: pacedHeapEnv(env, ramBytes?) sets BUN_JSC_forceRAMSize (default HEAVY_PROCESS_RAM_BYTES, 4 GB), so JavaScriptCore collects a large heap near its live size instead of letting it grow ~2.4–2.9x against the machine's whole RAM. A pace is the child's own: one this repo set (marked) is replaced by a child's, one a person set wins everywhere; parentPacedHeapEnv keeps the parent's pace for a child doing its parent's work. Applied to the type-check worker (its profile) and batches (the worker's pace), every check pass (CHECK_PROCESS_RAM_BYTES, 2 GB: the build/push check child and, via the ./equin shim, a direct ./equin check) and ./equin run scripts.
       - Core:
         - Uses: `infra/launcher/env-names.envName`
@@ -56134,6 +56169,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Exemptions:
             - Exempts itself from: `networking/no-request-guard-capability` — `web/page-transport.ts` (sanctioned)
         - **`request-guard`** — The page request guard: installRequestGuard (once, first thing in the app entry) refuses every same-origin /api, /ws and /gateway request page code issues by a raw channel — fetch, XMLHttpRequest, sendBeacon, EventSource, WebSocket — with a RawApiRequestError (fetch rejects, the rest throw), each also logged and filed through requestGuardReportSink (held until the crash collector registers). The app's own channels hold a capability instead: nativeFetch (the page transport) and nativeWebSocket (the per-tab socket), falling back to the globals at call time when no guard is installed; GET / HEAD of the asset routes allowAssetRoute registers pass. Importing the capability is bounded by networking/no-request-guard-capability.
+          - Core:
+            - Uses: `packages/floor-compat.canParseUrl`
+            - Exports (values):
+              - `FetchRequestError`
+              - `headRequestScript`
+              - `nameRequestUrl`
+              - `REQUEST_GUARD_INSTALLED_GLOBAL`
           - Cross-plugin:
             - Imported by:
               - `framework/web-core`
@@ -56156,12 +56198,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `nativeWebSocket`
               - `RawApiRequestError`
               - `requestGuardReportSink`
-          - Core:
-            - Exports (values):
-              - `FetchRequestError`
-              - `headRequestScript`
-              - `nameRequestUrl`
-              - `REQUEST_GUARD_INSTALLED_GLOBAL`
     - **`outline`** — Umbrella for the outline primitive: the scroll-spy position half and the rail chrome half.
       - Plugins:
         - **`rail`** — Notion-style outline rail: a dash per section pinned to the surface's right edge, the current one bright and wide (position from outline/scroll-spy), expanding on hover / focus / tap into the depth-indented outline with click-to-jump. Windows its dashes to the height it has while the panel always lists every entry, so a long document's indicator can never lie.
