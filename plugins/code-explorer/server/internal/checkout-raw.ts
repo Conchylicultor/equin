@@ -59,7 +59,7 @@ async function serveCheckoutFile(req: Request): Promise<Response> {
     const absTarget = resolveInsideRoot(root, path);
     if (absTarget === null)
       return new Response("Invalid path", { status: 400 });
-    return await serveHostPath(asUserPath(absTarget), req.headers.get("range"));
+    return await serveHostPath(asUserPath(absTarget), req.headers);
   }
 
   // As of a revision: a git read, so the workspace must be a checkout.

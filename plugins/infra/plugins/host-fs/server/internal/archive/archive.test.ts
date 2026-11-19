@@ -274,7 +274,7 @@ describe("raw", () => {
     const res = await serveArchiveMember(
       asUserPath(join(archive, "readme.txt")),
       at("readme.txt"),
-      "bytes=0-4",
+      new Headers({ range: "bytes=0-4" }),
     );
     expect(res.status).toBe(206);
     expect(res.headers.get("content-range")).toBe("bytes 0-4/13");
@@ -285,7 +285,7 @@ describe("raw", () => {
     const res = await serveArchiveMember(
       asUserPath(join(archive, "2022", "b.stream")),
       at("2022/b.stream"),
-      "bytes=0-1",
+      new Headers({ range: "bytes=0-1" }),
     );
     expect(res.status).toBe(200);
     expect(res.headers.get("accept-ranges")).toBe("none");
@@ -293,15 +293,20 @@ describe("raw", () => {
   });
   test("failures map to statuses", async () => {
     expect(
-      (await serveArchiveMember(asUserPath(join(archive, "x")), at("x"), null))
-        .status,
+      (
+        await serveArchiveMember(
+          asUserPath(join(archive, "x")),
+          at("x"),
+          new Headers(),
+        )
+      ).status,
     ).toBe(404);
     expect(
       (
         await serveArchiveMember(
           asUserPath(join(archive, "2022")),
           at("2022"),
-          null,
+          new Headers(),
         )
       ).status,
     ).toBe(400);
@@ -310,7 +315,7 @@ describe("raw", () => {
         await serveArchiveMember(
           asUserPath(join(archive, "secret.txt")),
           at("secret.txt"),
-          null,
+          new Headers(),
         )
       ).status,
     ).toBe(422);

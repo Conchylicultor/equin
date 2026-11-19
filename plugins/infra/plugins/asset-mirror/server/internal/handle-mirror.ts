@@ -113,7 +113,7 @@ export async function handleMirror(
     }
   }
   // Honours `Range`, so a mirrored video seeks (and plays at all in Safari).
-  return rangedBlobResponse(cached.blob, req.headers.get("range"), {
+  return rangedBlobResponse(cached.blob, req.headers, {
     "content-type": contentType(name),
     // Pinned bytes are immutable; let the browser cache them indefinitely.
     "cache-control": "public, max-age=31536000, immutable",

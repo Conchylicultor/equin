@@ -2,6 +2,27 @@
 export type ByteRange = { start: number; end: number };
 
 /**
+ * The most an open-ended range (`bytes=N-`) a media element asks for is
+ * answered with: 1 MiB.
+ *
+ * A media element asks `bytes=N-` — everything from N on — whether it wants
+ * the whole file or only its metadata (`preload="metadata"`, a seek): it
+ * stops reading once it has enough, but over HTTP/2 the transport has
+ * already let the rest in — Chrome's stream window admits ~6 MB before its
+ * media stack's back-pressure applies. Unbounded, a 16 MB film that nobody
+ * plays cost every phone visit to equin.ai ~6 MB. Answering the open end
+ * with at most a chunk (RFC 9110 lets a 206 carry less than asked: the
+ * `Content-Range` says which bytes and the total) puts the reader in charge
+ * of the bytes on the wire: a player that wants more asks for the next
+ * range, as it does after a seek (Chrome's and Firefox's media stacks reopen
+ * at the offset a short response ended at). An explicit end (`bytes=N-M`) is
+ * the reader's own bound and is served as asked. Only a media element's ask
+ * is bounded (`Sec-Fetch-Dest: video | audio`): a resumed download or
+ * `curl -C -` asks `bytes=N-` and means it, and would stop at 1 MiB.
+ */
+export const OPEN_RANGE_CHUNK_BYTES = 1024 * 1024;
+
+/**
  * Read a `Range` header against a body of `size` bytes.
  *
  * - `none`: no header, or one this server serves whole (several ranges, a unit
@@ -13,7 +34,12 @@ export type RangeRequest =
   | { kind: "range"; range: ByteRange }
   | { kind: "unsatisfiable" };
 
-export function parseRange(header: string | null, size: number): RangeRequest {
+export function parseRange(
+  header: string | null,
+  size: number,
+  /** The most an open-ended range is answered with (unbounded: `Infinity`). */
+  openEndBytes: number = Infinity,
+): RangeRequest {
   if (!header) return { kind: "none" };
   const m = /^bytes=(\d*)-(\d*)$/.exec(header.trim());
   if (!m) return { kind: "none" };
@@ -30,15 +56,22 @@ export function parseRange(header: string | null, size: number): RangeRequest {
   }
   const start = Number(from);
   if (start >= size) return { kind: "unsatisfiable" };
-  const end = to === "" ? size - 1 : Math.min(Number(to), size - 1);
+  const end = Math.min(
+    to === "" ? start + openEndBytes - 1 : Number(to),
+    size - 1,
+  );
   if (end < start) return { kind: "none" };
   return { kind: "range", range: { start, end } };
 }
 
+/** Media elements: the readers whose open-ended ranges are bounded (`Sec-Fetch-Dest`). */
+const MEDIA_DESTINATIONS = new Set(["video", "audio", "track"]);
+
 /**
  * Answer a GET for `body` honouring its `Range` header: the whole body (200),
- * the one requested window (206, `Content-Range`), or 416 for a range past the
- * end. Every answer says `Accept-Ranges: bytes`, so a `<video>` / `<audio>`
+ * the one requested window (206, `Content-Range`; a media element's
+ * open-ended one at most `OPEN_RANGE_CHUNK_BYTES`), or 416 for a range past
+ * the end. Takes the request's headers: the range and who reads it. Every answer says `Accept-Ranges: bytes`, so a `<video>` / `<audio>`
  * seeks by asking for the bytes it needs (Safari will not play a video served
  * without ranges). `headers` are the route's own (content type, caching, …).
  *
@@ -47,12 +80,18 @@ export function parseRange(header: string | null, size: number): RangeRequest {
  */
 export function rangedBlobResponse(
   body: Blob,
-  rangeHeader: string | null,
+  requestHeaders: Headers,
   headers: Record<string, string>,
 ): Response {
   const size = body.size;
   const base = { ...headers, "Accept-Ranges": "bytes" };
-  const range = parseRange(rangeHeader, size);
+  const range = parseRange(
+    requestHeaders.get("range"),
+    size,
+    MEDIA_DESTINATIONS.has(requestHeaders.get("sec-fetch-dest") ?? "")
+      ? OPEN_RANGE_CHUNK_BYTES
+      : Infinity,
+  );
   if (range.kind === "unsatisfiable") {
     return new Response(null, {
       status: 416,

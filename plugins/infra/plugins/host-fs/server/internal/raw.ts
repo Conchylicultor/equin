@@ -46,7 +46,7 @@ export async function handleRaw(req: Request): Promise<Response> {
   try {
     const raw = new URL(req.url, "http://localhost").searchParams.get("path");
     if (raw === null) return new Response("Missing path", { status: 400 });
-    return await serveHostPath(resolveHostPath(raw), req.headers.get("range"));
+    return await serveHostPath(resolveHostPath(raw), req.headers);
   } catch (err) {
     if (err instanceof HttpError)
       return new Response(err.message, { status: err.status });
@@ -62,17 +62,19 @@ export async function handleRaw(req: Request): Promise<Response> {
  */
 export async function serveHostPath(
   path: UserPath,
-  rangeHeader: string | null,
+  /** The request's headers: its `Range`, and who reads it (`Sec-Fetch-Dest`). */
+  requestHeaders: Headers,
 ): Promise<Response> {
   const located = await locateHostPath(path);
   return located.kind === "archive"
-    ? await serveArchiveMember(path, located, rangeHeader)
-    : await serveHostFile(path, rangeHeader);
+    ? await serveArchiveMember(path, located, requestHeaders)
+    : await serveHostFile(path, requestHeaders);
 }
 
 export async function serveHostFile(
   path: UserPath,
-  rangeHeader: string | null,
+  /** The request's headers: its `Range`, and who reads it (`Sec-Fetch-Dest`). */
+  requestHeaders: Headers,
 ): Promise<Response> {
   let size: number;
   try {
@@ -95,7 +97,7 @@ export async function serveHostFile(
   // the file blob stat'ing again (a file growing meanwhile serves what was stat'd).
   const type = Bun.file(path).type;
   const file = Bun.file(path).slice(0, size, type);
-  return rangedBlobResponse(file, rangeHeader, inertHeaders(path, type));
+  return rangedBlobResponse(file, requestHeaders, inertHeaders(path, type));
 }
 
 /**
@@ -107,7 +109,8 @@ export async function serveHostFile(
 export async function serveArchiveMember(
   path: UserPath,
   at: Extract<HostLocation, { kind: "archive" }>,
-  rangeHeader: string | null,
+  /** The request's headers: its `Range`, and who reads it (`Sec-Fetch-Dest`). */
+  requestHeaders: Headers,
 ): Promise<Response> {
   const opened = await openArchiveMember(path, at);
   switch (opened.kind) {
@@ -138,5 +141,5 @@ export async function serveArchiveMember(
       },
     });
   }
-  return rangedBlobResponse(body, rangeHeader, headers);
+  return rangedBlobResponse(body, requestHeaders, headers);
 }

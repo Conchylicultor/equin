@@ -35,6 +35,11 @@ Back to equin / the browser's Back, a reload (the gate
 again), the demo page loaded fresh (no gate, no hero film) and a second tab
 joining it, with screenshots.
 
+`e2e/home-load.ts` measures what a phone pays for the homepage before any
+click (FCP, LCP, TBT, TTI, bytes, what finished before the first paint),
+cold and on a repeat visit, over the same shaped link as `e2e/enter-cost.ts`
+(`e2e/internal/shaper.ts`) with Chrome's CPU throttled 4×.
+
 ## Did the demo leak? — one rule, every script
 
 The demo runs in the page's own document, so a page-origin `/api` request's

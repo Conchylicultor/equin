@@ -328,9 +328,15 @@ describe("raw", () => {
   test("sandboxes every file but a PDF", async () => {
     writeFileSync(join(root, "page.html"), "<script></script>");
     writeFileSync(join(root, "doc.pdf"), "%PDF-1.4");
-    const html = await serveHostFile(asUserPath(join(root, "page.html")), null);
+    const html = await serveHostFile(
+      asUserPath(join(root, "page.html")),
+      new Headers(),
+    );
     expect(html.headers.get("content-security-policy")).toBe("sandbox");
-    const pdf = await serveHostFile(asUserPath(join(root, "doc.pdf")), null);
+    const pdf = await serveHostFile(
+      asUserPath(join(root, "doc.pdf")),
+      new Headers(),
+    );
     expect(pdf.headers.get("content-type")).toBe("application/pdf");
     expect(pdf.headers.get("content-security-policy")).toBeNull();
     expect(pdf.headers.get("x-content-type-options")).toBe("nosniff");
