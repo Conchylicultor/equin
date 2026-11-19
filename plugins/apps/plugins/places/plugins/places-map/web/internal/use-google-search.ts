@@ -109,7 +109,13 @@ export function useGoogleSearch({
   session: string;
   tags: readonly PlaceTag[];
 }): GoogleSearchState {
-  const q = useDebouncedValue(text.trim(), SEARCH_DEBOUNCE_MS);
+  // Only a question Google is asked is debounced: text too short to ask is
+  // "" at once, so typing the first letter (or clearing the box) never
+  // re-renders the screen a second time 300 ms later for nothing.
+  const trimmed = text.trim();
+  const askable = trimmed.length >= GOOGLE_MIN_CHARS ? trimmed : "";
+  const debounced = useDebouncedValue(askable, SEARCH_DEBOUNCE_MS);
+  const q = askable === "" ? "" : debounced;
   const asking = q.length >= GOOGLE_MIN_CHARS;
   const bounds = useCameraRest(
     camera,

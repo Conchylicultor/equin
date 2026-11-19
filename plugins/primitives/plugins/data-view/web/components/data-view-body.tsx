@@ -11,6 +11,7 @@ import {
   type Contribution,
 } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
+import { useAppliedQuery } from "../internal/use-applied-query";
 import {
   isHostedToolbar,
   isSectionsToolbar,
@@ -634,16 +635,15 @@ function DataViewBodyInner<TRow>(
   // `stateFor` is a ViewGetter: the same object until this view's state
   // changes, so everything memoised on `activeState` downstream holds. A
   // controlled `search` replaces this tab's stored query: the surface's own
-  // field owns it, and every part that shows or applies a query reads this one
-  // — derived in a memo, so the override keeps that identity guarantee.
+  // field owns it. The search field shows the query as typed (`typedQuery`);
+  // every part that APPLIES it reads `activeState`, whose query trails by a
+  // deferred render — so a keystroke paints the field, and the rows, the
+  // views and the panels beside them follow as interruptible background work
+  // (`useAppliedQuery`), keeping that identity guarantee.
   const storedState = viewModel.stateFor(activeViewId);
-  const searchQuery = search?.query;
-  const activeState = useMemo(
-    () =>
-      searchQuery === undefined
-        ? storedState
-        : { ...storedState, query: searchQuery },
-    [storedState, searchQuery],
+  const { typed: typedQuery, state: activeState } = useAppliedQuery(
+    storedState,
+    search?.query,
   );
 
   // The active view nests THIS source's rows: a view type that can nest (the
@@ -963,13 +963,16 @@ function DataViewBodyInner<TRow>(
         count: loadedRows.length,
       };
     }
+    // A plain loop, never a counter bumped inside a lambda: the React
+    // Compiler cannot lower that, and skips the whole component over it.
     let tail: { row: TRow; key: string } | null = null;
     let count = 0;
-    loadedRows.forEach((row, i) => {
-      if (!isPaged(row)) return;
-      count++;
+    for (let i = 0; i < loadedRows.length; i++) {
+      const row = loadedRows[i]!;
+      if (!isPaged(row)) continue;
+      count += 1;
       tail = { row, key: rowKey(row, i) };
-    });
+    }
     return { tail, count };
   }, [paging, loadedRows, rowKey]);
   const tail = pagedTail?.tail ?? null;
@@ -1899,7 +1902,7 @@ function DataViewBodyInner<TRow>(
                 (c) => c.views === undefined || c.views.includes(activeViewId),
               )}
               controls={controlsContext}
-              query={activeState.query}
+              query={typedQuery}
               onQueryChange={onQueryChange}
               searchPlaceholder={chrome.searchPlaceholder}
               quickFilters={props.quickFilters}
@@ -1927,7 +1930,7 @@ function DataViewBodyInner<TRow>(
               options={
                 <DataViewControlsProvider {...controlsContext}>
                   <HostedOptions
-                    query={activeState.query}
+                    query={typedQuery}
                     onQueryChange={onQueryChange}
                     searchPlaceholder={chrome.searchPlaceholder}
                     quickFilters={props.quickFilters}
@@ -2002,7 +2005,7 @@ function DataViewBodyInner<TRow>(
               <DataViewToolbar
                 stickyRef={chrome.stickyRef}
                 title={chrome.title}
-                query={activeState.query}
+                query={typedQuery}
                 onQueryChange={onQueryChange}
                 switcher={chrome.switcher}
                 quickFilters={props.quickFilters}

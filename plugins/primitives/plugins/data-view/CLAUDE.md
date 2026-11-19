@@ -151,6 +151,14 @@ ignored by the read path until forked, silently dropping edits.
   query surviving a restart leaves a filtered subset that reads as the view's whole
   contents. Durable narrowings are the config row's. If a query should persist,
   put it in the URL.
+- **The query is typed now and applied a render later**
+  (`web/internal/use-applied-query.ts`): the search field reads the query as
+  typed, every part that applies it (`activeState`, the controls context, the
+  views, the aside) reads it through `useDeferredValue`. A keystroke paints
+  the field alone; filtering and re-rendering the rows is background work React
+  drops when the next key lands. Only the query is deferred — a filter / sort
+  edit is applied at once, since a handler builds the next filter from the one
+  in effect. Measure with `places-map/e2e/search-perf.ts`.
 - **The expand map is the only home for tree collapse state — never a domain
   entity column.** Collapse is per-`(surface, view-instance, row)`; an entity flag
   makes two views fight over one value, turns a UI gesture into a DB write + live

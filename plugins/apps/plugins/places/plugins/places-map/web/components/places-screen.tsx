@@ -668,6 +668,44 @@ function PlacesSurface({
     ),
   );
 
+  function openPlace(place: Place) {
+    claim();
+    setSearchOpen(false);
+    setDetail(null);
+    setSelectedId(place.id);
+  }
+
+  /** A Google place's card: the place card once it is saved, else the detail card. */
+  function openHit(hit: GoogleHit, note: AskPickNote | null) {
+    const saved = savedByGoogleId.get(hit.placeId);
+    if (saved !== undefined) {
+      openPlace(saved);
+      return;
+    }
+    const detailed = detailedHit(hit);
+    if (detailed === null) return;
+    claim();
+    setSearchOpen(false);
+    setSelectedId(null);
+    setDetail({ hit: detailed, pick: note, pageItem: null });
+  }
+
+  /** A page's place: its place card once it is yours, else its Google card with the page's note. */
+  function openPageItem(item: PageOverlayItem) {
+    if (item.saved !== null) {
+      openPlace(item.saved);
+      return;
+    }
+    claim();
+    setSearchOpen(false);
+    setSelectedId(null);
+    setDetail({ hit: pageItemHit(item), pick: null, pageItem: item });
+  }
+
+  function openPick(p: AskPick) {
+    openHit(p.hit, { n: p.n, why: p.why, about: p.about, sources: p.sources });
+  }
+
   // A pick's or a ghost's click opens its detail card.
   const activateGhost = useEventCallback((id: string) => {
     const blockId = blockIdOfPin(id);
@@ -752,44 +790,6 @@ function PlacesSurface({
       camera,
     ],
   );
-
-  function openPlace(place: Place) {
-    claim();
-    setSearchOpen(false);
-    setDetail(null);
-    setSelectedId(place.id);
-  }
-
-  /** A Google place's card: the place card once it is saved, else the detail card. */
-  function openHit(hit: GoogleHit, note: AskPickNote | null) {
-    const saved = savedByGoogleId.get(hit.placeId);
-    if (saved !== undefined) {
-      openPlace(saved);
-      return;
-    }
-    const detailed = detailedHit(hit);
-    if (detailed === null) return;
-    claim();
-    setSearchOpen(false);
-    setSelectedId(null);
-    setDetail({ hit: detailed, pick: note, pageItem: null });
-  }
-
-  /** A page's place: its place card once it is yours, else its Google card with the page's note. */
-  function openPageItem(item: PageOverlayItem) {
-    if (item.saved !== null) {
-      openPlace(item.saved);
-      return;
-    }
-    claim();
-    setSearchOpen(false);
-    setSelectedId(null);
-    setDetail({ hit: pageItemHit(item), pick: null, pageItem: item });
-  }
-
-  function openPick(p: AskPick) {
-    openHit(p.hit, { n: p.n, why: p.why, about: p.about, sources: p.sources });
-  }
 
   /**
    * Save a Google hit, without a word: resolves the saved place — `fresh`
