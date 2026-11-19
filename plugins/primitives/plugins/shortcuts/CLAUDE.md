@@ -31,6 +31,16 @@ typings say otherwise). The listener takes an `Event` and narrows with
 A raw key listener that bypasses the registry (allowed only with a lint
 exemption, e.g. Sonata's hold-to-scrub seek) must apply the same three rules.
 
+## Registering from a component
+
+`useSurfaceShortcuts` / `usePageShortcuts` register by what the shortcuts ARE
+(id, keys, label, group, precedence, `enableInInputs`, whether a `when` is
+given) — never by the array's identity — and call `handler` / `when` from the
+latest render (`internal/use-registered-shortcuts.ts`). So an array rebuilt
+on every render needs no memo: a surface re-rendering per frame used to
+re-register per frame, each one a `ShortcutManager` commit (the demo's Places
+during a window resize, 41/s).
+
 ## Space = play / pause
 
 Every player binds Space through `usePlayPauseShortcut(toggle)` — never its own

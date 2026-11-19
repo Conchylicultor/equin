@@ -765,6 +765,14 @@ export function installRenderLoopDetector(): () => void {
     "wheel",
     "scroll",
     "input",
+    // The user resizing the window (dragging its edge, a split view) sends no
+    // input to the page, yet everything laid out by its size re-lays out on
+    // every frame — a map redrawing its tiles is that work, not a loop (the
+    // demo's Places filed a 455/s "cascade" for it). A loop driven by layout
+    // (a ResizeObserver oscillating) fires no window resize, so it still counts.
+    "resize",
+    // Safari's trackpad pinch: a gesture, not a wheel, and no pointer move.
+    "gesturechange",
   ] as const;
   for (const ev of INTERACTION_EVENTS) {
     window.addEventListener(ev, markInteraction, { capture: true, passive: true });

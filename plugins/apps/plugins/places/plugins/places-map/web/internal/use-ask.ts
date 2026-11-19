@@ -1,6 +1,5 @@
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { useState } from "react";
-import type { MapBounds } from "@plugins/map/core";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
 import {
   useStartThread,
@@ -14,6 +13,7 @@ import {
   type PlacesAskInput,
 } from "@plugins/apps/plugins/places/plugins/ask/core";
 import { biasOf } from "./use-google-search";
+import { useCameraRest, type CameraRestStore } from "./camera-rest-store";
 
 const RESULTS = [placesPicks];
 
@@ -49,7 +49,7 @@ export interface AskState {
  * (with its dot) without covering the map. A run you have read is left in the
  * history.
  */
-export function useAsk(bounds: MapBounds | null): AskState {
+export function useAsk(camera: CameraRestStore): AskState {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [shown, setShown] = useState(false);
   const [restored, setRestored] = useState(false);
@@ -84,9 +84,12 @@ export function useAsk(bounds: MapBounds | null): AskState {
     }
   }
 
+  // Whether the map has rested at all — not where: a rest re-renders nothing
+  // here; the question reads the box when it is asked.
+  const rested = useCameraRest(camera, (state) => state.bounds !== null);
   const blocked = !availability.available
     ? availability.message
-    : bounds === null
+    : !rested
       ? "Waiting for the map"
       : null;
 
@@ -98,6 +101,7 @@ export function useAsk(bounds: MapBounds | null): AskState {
   };
 
   const start = async (question: string): Promise<boolean> => {
+    const { bounds } = camera.get();
     if (bounds === null) return false;
     const input: PlacesAskInput = {
       bounds: biasOf(bounds),

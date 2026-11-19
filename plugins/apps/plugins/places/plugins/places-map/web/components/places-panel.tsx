@@ -29,7 +29,6 @@ import { useConfigResult } from "@plugins/config_v2/web";
 import { placeCardsConfig } from "../../core";
 import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
-import type { MapBounds } from "@plugins/map/core";
 import {
   places as placesCollection,
   type Place,
@@ -42,6 +41,11 @@ import {
 } from "../internal/fields";
 import type { PanelLayout, PanelScope } from "../internal/layout-stores";
 import { scopePlaces } from "../internal/panel-scope";
+import { useSameRows } from "../internal/same-rows";
+import {
+  useCameraRest,
+  type CameraRestStore,
+} from "../internal/camera-rest-store";
 import { placeVisual } from "../internal/place-visual";
 import { PANEL_WIDTH } from "./card-frame";
 import { PlaceCover, PlaceGlyph, PlaceTile } from "./place-glyph";
@@ -104,23 +108,15 @@ const LAYOUT_OPTIONS = [
   },
 ] as const;
 
-/**
- * What the map beside the panel shows, as far as "In view" goes: not known
- * yet (the camera has not rested), no map at all (no renderer, or it is
- * blocked — so nothing is in view and the panel lists every place), or the
- * part of the map the chrome leaves uncovered.
- */
-export type PanelMapView =
-  | { kind: "pending" }
-  | { kind: "no-map" }
-  | { kind: "visible"; bounds: MapBounds };
-
 export interface PlacesPanelProps {
   /** Every saved place: the active preset's rows are read over them. */
   places: readonly Place[];
   tags: readonly PlaceTag[];
-  /** What the map shows: the part the chrome leaves uncovered, not yet known, or no map. */
-  view: PanelMapView;
+  /**
+   * Where the map rests — what "In view" reads (the part the chrome leaves
+   * uncovered, not yet known, or no map), read by the list itself.
+   */
+  camera: CameraRestStore;
   layout: PanelLayout;
   onLayoutChange: (layout: PanelLayout) => void;
   scope: PanelScope;
@@ -205,7 +201,7 @@ function PanelList(
   },
 ): ReactNode {
   const {
-    view,
+    camera,
     layout,
     onLayoutChange,
     scope,
@@ -214,6 +210,7 @@ function PanelList(
     preset,
     onFit,
   } = props;
+  const view = useCameraRest(camera, (state) => state.view);
   // Without a map nothing is in view: every place is listed.
   const noMap = view.kind === "no-map";
   const scoped = useMemo(() => {
@@ -226,6 +223,10 @@ function PanelList(
         return scopePlaces(rows, view.bounds, scope, (p) => p.location);
     }
   }, [rows, view, scope]);
+  // A rest that brings no place in or out (a pan of a few pixels, each frame
+  // of a window resize) hands the list the rows it already has: the DataView
+  // under it re-derives nothing.
+  const shown = useSameRows(scoped?.shown ?? null);
 
   const showAll = (
     <Button variant="link" onClick={() => onScopeChange("all")}>
@@ -266,7 +267,7 @@ function PanelList(
       </Stack>
     );
   } else {
-    body = <PanelRows {...props} shown={scoped.shown} />;
+    body = <PanelRows {...props} shown={shown ?? scoped.shown} />;
     if (!noMap && scope === "in-view" && scoped.outside > 0) {
       footer = (
         // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band

@@ -14,6 +14,12 @@ import { usePlaceSearch } from "@plugins/apps/plugins/places/plugins/places-core
 import type { GoogleHit } from "../components/google-result-card";
 import { candidateHit, googleResultVisual } from "./google-result";
 import { useDebouncedValue } from "./use-debounced-value";
+import {
+  boundsEqual,
+  roundedBounds,
+  useCameraRest,
+  type CameraRestStore,
+} from "./camera-rest-store";
 
 /** How long typing must pause before Google is asked. */
 const SEARCH_DEBOUNCE_MS = 300;
@@ -84,8 +90,9 @@ function hitsOf(
 
 /**
  * The Google half of the Places search: `text` debounced, asked once it is
- * {@link GOOGLE_MIN_CHARS} long, biased to the map's view (`bounds`, asked
- * again when the camera rests elsewhere), at the downgrade ladder's rung this
+ * {@link GOOGLE_MIN_CHARS} long, biased to the map's view (the camera's rest,
+ * rounded — asked again when the camera rests elsewhere; read only while
+ * asking, so a rest re-renders nothing while the search is idle), at the downgrade ladder's rung this
  * month's budget allows (`useMapsBudget`), in one session per `session`. While
  * a newer question is out, the previous answer stays (`refreshing`), so the
  * cards do not blink on every keystroke or pan; a question too short to ask
@@ -93,17 +100,22 @@ function hitsOf(
  */
 export function useGoogleSearch({
   text,
-  bounds,
+  camera,
   session,
   tags,
 }: {
   text: string;
-  bounds: MapBounds | null;
+  camera: CameraRestStore;
   session: string;
   tags: readonly PlaceTag[];
 }): GoogleSearchState {
   const q = useDebouncedValue(text.trim(), SEARCH_DEBOUNCE_MS);
   const asking = q.length >= GOOGLE_MIN_CHARS;
+  const bounds = useCameraRest(
+    camera,
+    (state) => (asking ? roundedBounds(state, BIAS_DECIMALS) : null),
+    boundsEqual,
+  );
   const bias = bounds === null ? null : biasOf(bounds);
   // The ladder's rung, from this month's live counts: the search is asked at
   // the richest detail the free allowance still covers.

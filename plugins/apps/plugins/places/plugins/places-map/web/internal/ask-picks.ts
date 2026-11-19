@@ -16,6 +16,12 @@ import {
 } from "@plugins/apps/plugins/places/plugins/ask/core";
 import type { GoogleHit } from "../components/google-result-card";
 import { candidateHit } from "./google-result";
+import {
+  boundsEqual,
+  roundedBounds,
+  useCameraRest,
+  type CameraRestStore,
+} from "./camera-rest-store";
 
 /** What Sonnet said about one pick — its card's and its detail card's words. */
 export interface AskPickNote {
@@ -141,9 +147,16 @@ export function mapPicksOf(
 export function useAskMapPicks(
   conversationId: string | null,
   expanded: ReadonlySet<string>,
-  bounds: MapBounds | null,
+  camera: CameraRestStore,
   tags: readonly PlaceTag[],
 ): readonly AskPick[] {
+  // Which picks are off the map, by the rounded box — read only while a run
+  // is in hand, so a rest re-renders nothing without one.
+  const bounds = useCameraRest(
+    camera,
+    (state) => (conversationId === null ? null : roundedBounds(state)),
+    boundsEqual,
+  );
   const results = useAskResults(conversationId);
   const candidates = useAskCandidates(conversationId);
   return useMemo(

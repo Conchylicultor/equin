@@ -17,6 +17,15 @@ Only components re-rendering at `ATTRIBUTE_MIN_COMMITS_PER_SEC` or more are
 named (the app's background commits are not a loop's cause); an empty
 `initiators` means no React re-render drives the writes — an imperative loop. Compositions without the profiler file without attribution.
 
+## What counts as the user acting
+
+Idle means no `pointerdown` / `pointermove` / `keydown` / `wheel` / `scroll`
+/ `input`, and no window `resize` or Safari `gesturechange`, for `IDLE_MS`.
+A window being resized sends the page no input, yet everything sized by it
+re-lays out each frame (a map redraws its tiles): counting it keeps that out
+of the reports, while a layout-driven loop (a ResizeObserver oscillating)
+fires no window resize and is still caught.
+
 ## Animation hosts
 
 An intended imperative animation (a rAF loop drawing an SVG scene) writes

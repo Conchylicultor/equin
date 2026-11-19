@@ -31,7 +31,14 @@ Then `PlacesSurface` renders, inside a `relative h-full` box:
   `crowd: { kind: "spots" }` (every place always drawn — no clusters), ranks a
   Want to go place above the rest (`rank`), reports each camera rest
   (`bounds` for the Google search, `visible` for the panel's In view) and
-  carries the panel's `fitRequest`. One place hover (`useLinkedHover`,
+  carries the panel's `fitRequest`. Each rest goes to the screen's camera
+  store (`web/internal/camera-rest-store.ts`), never to screen state: Google
+  reports a rest on every frame of a window resize, and as state each one
+  re-rendered the whole screen. Readers select their part with
+  `useCameraRest` — the Google search and Ask the box rounded to ~100 m,
+  and only while a query or a run is in hand; the panel its view, its rows
+  keeping their identity while the same places are in view (`useSameRows`).
+  One place hover (`useLinkedHover`,
   `primitives/data-view` — a store, never screen state: a pin, row or card reads its own part,
   so gliding over the pins re-renders what they light, never the screen) is
   shared by the map (the presets DataView's `rowHover`) and the

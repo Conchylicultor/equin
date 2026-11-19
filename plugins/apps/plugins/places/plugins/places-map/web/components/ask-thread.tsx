@@ -13,7 +13,6 @@ import { FoldMotion } from "@plugins/primitives/plugins/collapsible/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
-import type { MapBounds } from "@plugins/map/core";
 import {
   AgentThread,
   EndThreadButton,
@@ -33,6 +32,12 @@ import {
   type AskPick,
 } from "../internal/ask-picks";
 import { GoogleResultCard, type GoogleHit } from "./google-result-card";
+import {
+  boundsEqual,
+  roundedBounds,
+  useCameraRest,
+  type CameraRestStore,
+} from "../internal/camera-rest-store";
 
 const sonnetIcon = symbol("auto-awesome");
 const hideIcon = symbol("right-panel-close");
@@ -50,7 +55,8 @@ const SUMMARY_NAMES = 3;
 export interface AskThreadCardProps {
   conversationId: string;
   tags: readonly PlaceTag[];
-  bounds: MapBounds | null;
+  /** Where the map rests: which picks are off the map. */
+  camera: CameraRestStore;
   savedByGoogleId: ReadonlyMap<string, Place>;
   /** The linked Google-result hover, by place id (cards and ghost pins). */
   googleHover: LinkedHover;
@@ -138,13 +144,18 @@ function Picks(
   const {
     conversationId,
     tags,
-    bounds,
+    camera,
     toolUseId,
     payload,
     current,
     expanded,
     onToggleExpanded,
   } = props;
+  const bounds = useCameraRest(
+    camera,
+    (state) => roundedBounds(state),
+    boundsEqual,
+  );
   const candidates = useAskCandidates(conversationId);
   if (candidates.status === "loading")
     return <Loading variant="rows" count={2} />;

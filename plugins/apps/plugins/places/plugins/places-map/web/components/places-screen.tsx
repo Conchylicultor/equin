@@ -26,7 +26,7 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import { useDraft } from "@plugins/primitives/plugins/kept-state/web";
-import { type LatLng, type MapBounds, type MapPin } from "@plugins/map/core";
+import { type LatLng, type MapPin } from "@plugins/map/core";
 import { deriveLinkedHover } from "@plugins/primitives/plugins/data-view/core";
 import { useLinkedHover } from "@plugins/primitives/plugins/data-view/web";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
@@ -97,7 +97,8 @@ import { GooglePlaceCard, type DetailedHit } from "./google-place-card";
 import { UniversalSearchPanel } from "./universal-search";
 import { PlaceCard } from "./place-card";
 import { PANEL_WIDTH, PLACE_CARD_WIDTH, type CardFrame } from "./card-frame";
-import { PlacesPanel, type PanelMapView } from "./places-panel";
+import { PlacesPanel } from "./places-panel";
+import { useCameraRestStore } from "../internal/camera-rest-store";
 import {
   PAGE_OVERLAY_UNREPORTED,
   PageOverlayPanel,
@@ -309,10 +310,13 @@ function PlacesSurface({
   // places, and their pins) and Google's hits around the map's view.
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
-  const [bounds, setBounds] = useState<MapBounds | null>(null);
-  // The part of the map the chrome leaves uncovered: what the side panel's
-  // "In view" lists — or no map at all, when none can be drawn.
-  const [mapView, setMapView] = useState<PanelMapView>({ kind: "pending" });
+  // Where the map rests: its whole area (what Google and Sonnet are biased
+  // to) and the part the chrome leaves uncovered (what the side panel's "In
+  // view" lists — or no map at all, when none can be drawn). A store, never
+  // this screen's state: Google reports a rest on every frame of a window
+  // resize, and each one re-rendered the whole screen. Readers select the
+  // part they use (`useCameraRest`).
+  const camera = useCameraRestStore();
   // The panel's Fit map: each bump frames the preset's places.
   const [fitRequest, setFitRequest] = useState(0);
   // The page the camera last framed: once per page laid over the map, as
@@ -428,8 +432,8 @@ function PlacesSurface({
   // thread card the bar's pill shows and hides; its picks are on the map while
   // it is in hand — the current result's, plus every earlier one unfolded in
   // the thread (unfolded per run, so another run starts folded).
-  const ask = useAsk(bounds);
-  const google = useGoogleSearch({ text: query, bounds, session, tags });
+  const ask = useAsk(camera);
+  const google = useGoogleSearch({ text: query, camera, session, tags });
   const [expanded, setExpanded] = useState<{
     conversationId: string | null;
     ids: ReadonlySet<string>;
@@ -445,7 +449,7 @@ function PlacesSurface({
   const askPicks = useAskMapPicks(
     ask.conversationId,
     expandedIds,
-    bounds,
+    camera,
     tags,
   );
   const savedByGoogleId = useMemo(() => placesByGoogleId(places), [places]);
@@ -646,7 +650,7 @@ function PlacesSurface({
           label: "Close the place card",
           // Above other app-wide Esc shortcuts: the card is the nearer thing
           // to close. A popover open in the card owns its Esc.
-          priority: 1,
+          precedence: 1,
           // The open search panel owns its own Esc.
           when: () => cardOpen && !searchOpen,
           handler: closeCards,
@@ -655,7 +659,7 @@ function PlacesSurface({
           id: "places.cancel-pin-pick",
           keys: "Escape",
           label: "Cancel dropping or moving the pin",
-          priority: 2,
+          precedence: 2,
           when: () => pinPick !== null,
           handler: () => setPinPick(null),
         },
@@ -726,10 +730,9 @@ function PlacesSurface({
         },
         hover: ghostHover,
         onCameraRest: (rest) => {
-          setBounds(rest.bounds);
-          setMapView({ kind: "visible", bounds: rest.visible });
+          camera.rest(rest.bounds, rest.visible);
         },
-        onNoMap: () => setMapView({ kind: "no-map" }),
+        onNoMap: () => camera.noMap(),
         fitRequest,
       } satisfies MapViewOptions<Place>,
     }),
@@ -746,6 +749,7 @@ function PlacesSurface({
       ghostHover,
       activateGhost,
       fitRequest,
+      camera,
     ],
   );
 
@@ -1091,7 +1095,7 @@ function PlacesSurface({
                 <PlacesPanel
                   places={places}
                   tags={tags}
-                    view={mapView}
+                    camera={camera}
                   layout={panelLayout}
                   onLayoutChange={setPanelLayout}
                   scope={panelScope}
@@ -1160,7 +1164,7 @@ function PlacesSurface({
             <AskThreadCard
               conversationId={ask.conversationId}
               tags={tags}
-              bounds={bounds}
+              camera={camera}
               savedByGoogleId={savedByGoogleId}
               googleHover={googleHover}
               onSave={saveCard}
