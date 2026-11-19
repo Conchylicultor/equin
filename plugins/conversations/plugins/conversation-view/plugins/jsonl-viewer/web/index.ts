@@ -48,8 +48,14 @@ export { useJsonlConversationId } from "./components/conversation-id-context";
 export { paneScrollScope } from "./components/pane-scroll-scope";
 export { formatTime, formatTokenCount } from "./utils";
 export { Timestamp } from "./components/timestamp";
-export { useSectionExpand } from "./components/section-sticky-context";
-export type { SectionExpand } from "./components/section-sticky-context";
+export {
+  useSectionExpand,
+  useSectionStart,
+} from "./components/section-sticky-context";
+export type {
+  SectionExpand,
+  SectionStart,
+} from "./components/section-sticky-context";
 
 export default {
   description:

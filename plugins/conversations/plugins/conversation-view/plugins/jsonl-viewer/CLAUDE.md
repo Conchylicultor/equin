@@ -180,7 +180,7 @@ back.
   - Contributes:
     - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
     - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
-  - Uses: 53 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 55 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/live-state` ×9
     - `primitives/dom/auto-scroll` ×7
     - `conversations/conversation-view/pending-turn` ×6
@@ -194,12 +194,14 @@ back.
     - `primitives/css/grow.growClass`
     - `primitives/css/line.Line`
     - `primitives/css/motion.Arrival`
+    - `primitives/css/pin.Pin`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/sticky.Sticky`
     - `primitives/css/text.Text`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/dom/in-view.useInView`
+    - `primitives/dom/scroll-reveal.revealElement`
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
     - `primitives/markdown.useMarkdownLoaded`
@@ -218,6 +220,7 @@ back.
     - `EventRendererMeta`
     - `OverlayContribution`
     - `SectionExpand`
+    - `SectionStart`
     - `StandIn`
     - `StreamingStandIns`
     - `TranscriptEvents`
@@ -241,6 +244,7 @@ back.
     - `useJsonlConversationId`
     - `useRowMarkdown`
     - `useSectionExpand`
+    - `useSectionStart`
     - `useStreamingRow`
     - `useStreamingStandIns`
     - `useTranscriptDrawn`

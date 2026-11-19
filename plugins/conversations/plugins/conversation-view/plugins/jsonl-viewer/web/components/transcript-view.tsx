@@ -23,7 +23,7 @@ import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { useSurfaceTabId } from "@plugins/primitives/plugins/scope/plugins/surface-id/web";
 import { ImageGallery } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 import { EventRow } from "./event-row";
-import { StickyUserHeader } from "./sticky-user-header";
+import { TurnSection } from "./turn-section";
 import { ConversationIdProvider } from "./conversation-id-context";
 import {
   TranscriptSubjectProvider,
@@ -157,14 +157,16 @@ function EventSections({
           first.kind === "event" && events[first.index]?.kind === "user-text";
         if (!opensWithPrompt && section.start === 0 && opening) {
           return (
-            <Stack key={opening.id} gap="sm">
-              <StickyUserHeader>
+            <TurnSection
+              key={opening.id}
+              header={
                 <Arrival key={opening.id} arrived={false}>
                   <EventRow event={opening.event} beforeWindow />
                 </Arrival>
-              </StickyUserHeader>
+              }
+            >
               {Array.from({ length: section.end }, (_, j) => renderItem(j))}
-            </Stack>
+            </TurnSection>
           );
         }
         if (!opensWithPrompt) {
@@ -177,12 +179,11 @@ function EventSections({
           );
         }
         return (
-          <Stack key={key} gap="sm">
-            <StickyUserHeader>{renderItem(section.start)}</StickyUserHeader>
+          <TurnSection key={key} header={renderItem(section.start)}>
             {Array.from({ length: section.end - section.start - 1 }, (_, j) =>
               renderItem(section.start + 1 + j),
             )}
-          </Stack>
+          </TurnSection>
         );
       })}
     </ImageGallery>

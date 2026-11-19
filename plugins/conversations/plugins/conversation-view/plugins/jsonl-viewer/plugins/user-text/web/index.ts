@@ -4,6 +4,7 @@ import { JsonlRowActions } from "@plugins/conversations/plugins/conversation-vie
 import { UserTextRow } from "./components/user-text-row";
 import { RawTextToggleAction } from "./components/raw-toggle-action";
 import { CopyUserTextAction } from "./components/copy-text-action";
+import { ScrollToMessageAction } from "./components/scroll-to-message-action";
 
 export default {
   description: "Renders user text events in the JSONL viewer.",
@@ -17,6 +18,10 @@ export default {
     JsonlRowActions.Item({
       id: "copy-user-text",
       component: CopyUserTextAction,
+    }),
+    JsonlRowActions.Item({
+      id: "scroll-to-message",
+      component: ScrollToMessageAction,
     }),
     JsonlRowActions.Item({
       id: "raw-text-toggle",

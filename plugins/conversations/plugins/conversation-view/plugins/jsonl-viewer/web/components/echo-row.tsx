@@ -3,7 +3,7 @@ import type { PendingTurn } from "@plugins/conversations/plugins/conversation-vi
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { echoEventOf } from "../echo-event";
 import { EventRow } from "./event-row";
-import { StickyUserHeader } from "./sticky-user-header";
+import { TurnSection } from "./turn-section";
 
 /**
  * A sent turn the transcript does not hold yet, drawn as the transcript WILL
@@ -31,14 +31,13 @@ export function EchoRow({
     [id, kind, text, sentAt],
   );
   const row = <EventRow event={event} standIn />;
-  return (
+  const statusLine = <div className="px-md">{status}</div>;
+  return event.kind === "user-text" ? (
+    <TurnSection header={row}>{statusLine}</TurnSection>
+  ) : (
     <Stack gap="sm">
-      {event.kind === "user-text" ? (
-        <StickyUserHeader>{row}</StickyUserHeader>
-      ) : (
-        row
-      )}
-      <div className="px-md">{status}</div>
+      {row}
+      {statusLine}
     </Stack>
   );
 }

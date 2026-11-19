@@ -9,11 +9,13 @@
   - Contributes:
     - `JsonlViewer.EventRenderer` "user-text" → `UserTextRow`
     - `JsonlRowActions.Item` "copy-user-text" → `CopyUserTextAction`
+    - `JsonlRowActions.Item` "scroll-to-message" → `ScrollToMessageAction`
     - `JsonlRowActions.Item` "raw-text-toggle" → `RawTextToggleAction`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
     - `conversations/conversation-view/jsonl-viewer.useRowMarkdown`
     - `conversations/conversation-view/jsonl-viewer.useSectionExpand`
+    - `conversations/conversation-view/jsonl-viewer.useSectionStart`
     - `conversations/conversation-view/jsonl-viewer/row-actions.CopyTextAction`
     - `conversations/conversation-view/jsonl-viewer/row-actions.EventRowActions`
     - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`

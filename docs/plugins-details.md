@@ -19239,7 +19239,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
               - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
-            - Uses: 53 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Uses: 55 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `network/live/live-state` ×9
               - `primitives/dom/auto-scroll` ×7
               - `conversations/conversation-view/pending-turn` ×6
@@ -19253,12 +19253,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/grow.growClass`
               - `primitives/css/line.Line`
               - `primitives/css/motion.Arrival`
+              - `primitives/css/pin.Pin`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
               - `primitives/css/sticky.Sticky`
               - `primitives/css/text.Text`
               - `primitives/dom/element-size.useResizeObserver`
               - `primitives/dom/in-view.useInView`
+              - `primitives/dom/scroll-reveal.revealElement`
               - `primitives/icon-button.IconButton`
               - `primitives/loading.Loading`
               - `primitives/markdown.useMarkdownLoaded`
@@ -19277,6 +19279,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `EventRendererMeta`
               - `OverlayContribution`
               - `SectionExpand`
+              - `SectionStart`
               - `StandIn`
               - `StreamingStandIns`
               - `TranscriptEvents`
@@ -19300,6 +19303,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useJsonlConversationId`
               - `useRowMarkdown`
               - `useSectionExpand`
+              - `useSectionStart`
               - `useStreamingRow`
               - `useStreamingStandIns`
               - `useTranscriptDrawn`
@@ -21639,11 +21643,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes:
                   - `JsonlViewer.EventRenderer` "user-text" → `UserTextRow`
                   - `JsonlRowActions.Item` "copy-user-text" → `CopyUserTextAction`
+                  - `JsonlRowActions.Item` "scroll-to-message" → `ScrollToMessageAction`
                   - `JsonlRowActions.Item` "raw-text-toggle" → `RawTextToggleAction`
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
                   - `conversations/conversation-view/jsonl-viewer.useRowMarkdown`
                   - `conversations/conversation-view/jsonl-viewer.useSectionExpand`
+                  - `conversations/conversation-view/jsonl-viewer.useSectionStart`
                   - `conversations/conversation-view/jsonl-viewer/row-actions.CopyTextAction`
                   - `conversations/conversation-view/jsonl-viewer/row-actions.EventRowActions`
                   - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
@@ -51559,11 +51565,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pin`
               - `pinClasses`
           - Cross-plugin:
-            - Imported by: 64 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
+            - Imported by: 65 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
               - `primitives` ×21
               - `apps` ×17
               - `page` ×9
-              - `conversations` ×5
+              - `conversations` ×6
               - `tasks` ×3
               - `apps-core/app-rail`
               - `audience/developer-mark`
@@ -54392,11 +54398,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `revealElement`
               - `useRevealOnActive`
           - Cross-plugin:
-            - Imported by: 53 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
+            - Imported by: 54 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
               - `apps` ×21
               - `primitives` ×16
               - `page` ×6
-              - `conversations` ×3
+              - `conversations` ×4
               - `apps-core` ×2
               - `hints`
               - `layouts/miller`
