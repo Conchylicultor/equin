@@ -241,6 +241,34 @@ describe("site-reports intake under load", () => {
     expect(row!.count).toBe(8);
   });
 
+  test("a repeat replaces the sample: the row tells the latest cause, not the first", async () => {
+    const { intake, advance } = setup();
+    // One wrapper error thrown from one place for every cause: a crash keys
+    // on its type and stack, so both causes share one fingerprint.
+    const boot = (cause: string, commit: string): SiteReportEntry => ({
+      ...crash("boot"),
+      message: `PortHostBootError: the worker failed to boot: ${cause}`,
+      data: { ...crash("boot").data, errorType: "PortHostBootError" },
+      commit,
+    });
+    await submit(intake, [boot("first cause", "aaa")], "192.0.2.20");
+    await submit(intake, [boot("second cause", "bbb")], "192.0.2.21");
+    await intake.flush();
+    let rows = await t.db.select().from(siteReports);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.message).toEndWith("second cause");
+    expect(rows[0]!.commit).toBe("bbb");
+
+    // Across flushes too (the row already written).
+    advance(WINDOW_MS + 1_000);
+    await submit(intake, [boot("third cause", "ccc")], "192.0.2.22");
+    await intake.flush();
+    rows = await t.db.select().from(siteReports);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.message).toEndWith("third cause");
+    expect(rows[0]!.count).toBe(3);
+  });
+
   test("an unknown kind or a payload its schema refuses is dropped and counted", async () => {
     const { intake } = setup();
     const r = await submit(

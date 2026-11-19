@@ -153,8 +153,17 @@ export function createSiteReportsIntake(deps: IntakeDeps): SiteReportsIntake {
     })}`;
     const held = pending.get(key);
     if (held) {
+      // The latest occurrence is the sample: a fingerprint need not key on
+      // the message (a crash keys on its type and stack, so every cause a
+      // wrapper error carries shares one row), and what fired LAST is what
+      // tells whether a fix held.
       held.count += entry.count;
       held.lastSeenAt = now;
+      held.message = entry.message;
+      held.data = entry.data;
+      held.path = entry.path;
+      held.buildId = entry.buildId;
+      held.commit = entry.commit;
       return "accepted";
     }
     if (!spec.fanOutExempt) {
@@ -265,7 +274,15 @@ export function createSiteReportsIntake(deps: IntakeDeps): SiteReportsIntake {
           })
           .onConflictDoUpdate({
             target: siteReports.fingerprint,
-            set: { count, lastSeenAt, buildId: r.buildId, commit: r.commit },
+            set: {
+              count,
+              lastSeenAt,
+              message: r.message,
+              data: r.data,
+              path: r.path,
+              buildId: r.buildId,
+              commit: r.commit,
+            },
           })
           .returning({ inserted: sql`(xmax = 0)`.mapWith(Boolean) });
         rows.delete(fingerprint);
@@ -277,7 +294,15 @@ export function createSiteReportsIntake(deps: IntakeDeps): SiteReportsIntake {
         // At the cap a known fingerprint still counts up; a new one is dropped.
         const updated = await deps.db
           .update(siteReports)
-          .set({ count, lastSeenAt })
+          .set({
+            count,
+            lastSeenAt,
+            message: r.message,
+            data: r.data,
+            path: r.path,
+            buildId: r.buildId,
+            commit: r.commit,
+          })
           .where(eq(siteReports.fingerprint, fingerprint))
           .returning({ fingerprint: siteReports.fingerprint });
         rows.delete(fingerprint);

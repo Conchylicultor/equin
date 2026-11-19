@@ -15,8 +15,10 @@ import { SITE_REPORT_DROP_REASONS } from "../../core";
 
 /**
  * One row per error fingerprint a site's visitors hit — never one per
- * occurrence: a repeat only adds to `count` and moves `last_seen_at`. The
- * first occurrence's kind payload is kept as the sample. Nothing here names a
+ * occurrence: a repeat adds to `count`, moves `last_seen_at` and replaces
+ * the sample (message, payload, path, build) with its own — a fingerprint
+ * need not key on the message, and the latest cause is what tells whether a
+ * fix held. Nothing here names a
  * visitor: no IP, no client id, no user agent, the page's pathname only.
  *
  * Bounded by construction: at most `SITE_REPORT_LIMITS.maxRows` rows (a new

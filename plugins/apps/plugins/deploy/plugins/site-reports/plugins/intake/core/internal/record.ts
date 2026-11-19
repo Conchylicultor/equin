@@ -7,7 +7,7 @@ export const SiteReportRecordSchema = z
     kind: z.string(),
     source: z.string(),
     message: z.string(),
-    /** The kind payload of the first occurrence. */
+    /** The kind payload of the latest occurrence. */
     data: z.record(z.string(), z.unknown()),
     path: z.string(),
     buildId: z.string().nullable(),
