@@ -1,7 +1,6 @@
 import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
-import { beginDescribedWait } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
   gitWaitDetail,
   indexTraceEnv,
@@ -140,37 +139,37 @@ export async function tryRunGit(
   opts: GitRunOptions = {},
 ): Promise<GitResult> {
   // The child's time is git's, not the caller's: an `io` wait on
-  // `git:<subcommand>`, shown while it runs and charged as it ends — so a
-  // span awaiting a slow `git status` names it (and slow-ops files a slow one
-  // as `wait git:status`) instead of booking it as its own work. The wait
-  // says what it read (`git-read-facts`): the kind of checkout, and for an
-  // index read whether git's fsmonitor spared it the scan and how many files
-  // it stat'ed — so a slow read names where it happened and why.
+  // `git:<subcommand>` (the spawn's wait — infra/spawn's meter), shown while
+  // it runs and charged as it exits — so a span awaiting a slow `git status`
+  // names it (and slow-ops files a slow one as `wait git:status`) instead of
+  // booking it as its own work. The wait says what it read
+  // (`git-read-facts`): the kind of checkout, and for an index read whether
+  // git's fsmonitor spared it the scan and how many files it stat'ed — so a
+  // slow read names where it happened and why.
   const subcommand = gitSubcommand(args);
-  const end = beginDescribedWait(`git:${subcommand}`, "io");
   const traceEnv = indexTraceEnv(subcommand);
-  let result: Awaited<ReturnType<typeof spawnCaptured>>;
-  try {
-    result = await spawnCaptured(
-      [GIT, "--no-optional-locks", "-C", cwd, ...args],
-      {
-        timeoutMs: GIT_TIMEOUT_MS,
-        stdin: opts.stdin,
-        ...(traceEnv && { env: { ...process.env, ...traceEnv } }),
+  // The trace lines split off stderr once, whether the wait's detail or the
+  // caller's answer asks first.
+  let split: ReturnType<typeof splitIndexTrace> | null | undefined;
+  const splitOf = (stderr: string) =>
+    split !== undefined
+      ? split
+      : (split = traceEnv ? splitIndexTrace(stderr) : null);
+  const result = await spawnCaptured(
+    [GIT, "--no-optional-locks", "-C", cwd, ...args],
+    {
+      timeoutMs: GIT_TIMEOUT_MS,
+      stdin: opts.stdin,
+      ...(traceEnv && { env: { ...process.env, ...traceEnv } }),
+      wait: {
+        layer: `git:${subcommand}`,
+        describe: (r) => gitWaitDetail(cwd, splitOf(r.stderr)?.facts ?? null),
       },
-    );
-  } catch (err) {
-    end(undefined);
-    throw err;
-  }
-  let split: ReturnType<typeof splitIndexTrace> | null = null;
-  try {
-    split = traceEnv ? splitIndexTrace(result.stderr) : null;
-  } finally {
-    end(gitWaitDetail(cwd, split?.facts ?? null));
-  }
+    },
+  );
+  const traced = splitOf(result.stderr);
   const { exitCode, stdout } = result;
-  const stderr = split?.stderr ?? result.stderr;
+  const stderr = traced?.stderr ?? result.stderr;
   if (exitCode === 0) return { ok: true, stdout };
   // A KILLED child is not an answer, so it must not become one. Every caller of
   // the probe variant reads `ok: false` as git's verdict — "no such ref", "no

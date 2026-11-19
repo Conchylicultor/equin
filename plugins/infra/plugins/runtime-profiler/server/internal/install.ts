@@ -33,6 +33,7 @@ import {
   recordSpan,
   beginWait,
   beginDeferredWait,
+  beginDescribedWait,
   gateWaitHooks,
   runInRootContext,
   getRuntimeProfile,
@@ -42,8 +43,11 @@ import {
   type EntryCost,
   type SpanKind,
   type SpanMeasure,
+  type SpanMeasures,
   type GateReading,
   type LeafSpanOptions,
+  type WaitDetail,
+  SPAN_MEASURES,
 } from "../../core";
 import { installInflightJoinMeter } from "@plugins/packages/plugins/inflight/core";
 import {
@@ -51,7 +55,11 @@ import {
   usingSlot,
   type LeaseScope,
 } from "@plugins/packages/plugins/semaphore/core";
-import { installSpawnUse } from "@plugins/infra/plugins/spawn/core";
+import {
+  installSpawnUse,
+  installSpawnWaitMeter,
+  type SpawnWaitDetail,
+} from "@plugins/infra/plugins/spawn/core";
 
 // Stores the EntryContext by identity: AsyncLocalStorage preserves the same
 // object reference across the entry's async continuation, so a gate awaited deep
@@ -75,6 +83,42 @@ installFsWaitMeter((layer) => beginDeferredWait(layer, "io", FS_WAIT_FLOOR_MS));
 // time as its own. Installed, not imported: the resource runtime builds on
 // inflight, and this plugin's server half on the runtime.
 installInflightJoinMeter((layer) => beginWait(layer, "join"));
+
+// A child process is another process's work: every `spawnCaptured` child is
+// an `io` wait on its layer (`spawn:<program>`, or the caller's name —
+// `git:status`), shown while it runs and charged as it is reaped. So a slow
+// child is filed as `wait <layer>` whoever awaited it, and one under the bar
+// stays its waiter's work, named by its layer, instead of unnamed own time.
+installSpawnWaitMeter((layer) => {
+  const end = beginDescribedWait(layer, "io");
+  return (detail) => end(detail && waitDetailOf(detail));
+});
+
+/**
+ * A spawn's wait detail as the profiler's. Its measures are named by the
+ * caller in a plugin that cannot see `SpanMeasure`, so an unknown name is a
+ * loud error here, never a silently dropped number.
+ */
+function waitDetailOf(d: SpawnWaitDetail): WaitDetail {
+  let measures: SpanMeasures | undefined;
+  for (const [name, v] of Object.entries(d.measures ?? {})) {
+    if (v === undefined) continue;
+    if (!isSpanMeasure(name))
+      throw new Error(
+        `spawn wait measure "${name}" is not a span measure (SPAN_MEASURES: ${SPAN_MEASURES.join(", ")})`,
+      );
+    (measures ??= {})[name] = v;
+  }
+  return {
+    ...(d.variant !== undefined && { variant: d.variant }),
+    ...(measures && { measures }),
+    ...(d.subject !== undefined && { subject: d.subject }),
+  };
+}
+
+function isSpanMeasure(name: string): name is SpanMeasure {
+  return (SPAN_MEASURES as readonly string[]).includes(name);
+}
 
 installSpanContextRuntime({
   run: (ctx, fn) => als.run(ctx, fn),

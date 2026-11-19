@@ -89,7 +89,8 @@ all or it is charged to the op that owns it:
 
 | Excluded | Where it is measured | Who owns it |
 |---|---|---|
-| A server span's gate waits (`waitMs`) | `slowSpanMs` (resolve-threshold.ts), every kind | The gate. A `queue` wait at or past `loaderMs` files `wait <layer>` (`onSlowWait`): one row per gate, its waiters as callers. Waits each under the bar are summed: a wait not filed is residue, kept on the innermost open entry and offered as one wait (their sum capped at the entry's union on the gate — overlapping waiters cost it their union; the `waitCount` measure says how many) when it closes, the entry its caller, then handed unfiled to the nearest open ancestor — never back to any op as its own time, filed or not (until 2026-11-19 an unfiled residue was added back to the entry's own: during main's restarts a `loader prototypes.list` was filed at 2.78 s "own" of which 1.62 s was `read-admit` queue) — so 40 queries × 150 ms on `db-acquire` is one 6 s `wait db-acquire`, filed once. Residue leaving the top of its chain unfiled is laid on the gate's timeline (runtime-profiler `addGateBusy`): the waits of independent ops join into busy stretches — time the gate's queue held without a break — and a stretch is judged on its length, the time a burst took to drain, against the same `loaderMs` bar as one op's wait; filed at most once per stretch (variant `queue held across ops`, the longest waiter its caller, `longestWaitMs` the longest any one op queued in it). Never a sum across waiters: the 60 s window it replaced (summed wait ÷ 60 s, mean depth ≥ 0.25) fired on nearly every restart of main — one ~0.5 s replay burst of ~250 reads sums to 15–20 s while no reader waited 1 s (replay of main, 2026-11-12 13:00 → 11-14: 108 of 108 window firings were one restart's burst, longest single wait 0.18–1.8 s, none a 2 s stretch; the 11-08 restart loop still files — 13 of its 45 trips show a ≥ 2 s stretch or wait). Before that (2026-11-12) the window was judged on the per-op bar and a boot storm re-filed every 2 s of it, 20–360 times per boot. A `join` wait (an identical run in flight) is that run's, which reports itself. |
+| A server span's gate waits (`waitMs`: `queue` and `join`) | `slowSpanMs` (resolve-threshold.ts), every kind | The gate. A `queue` wait at or past `loaderMs` files `wait <layer>` (`onSlowWait`) when a reader waited (`isReaderWait`: a `bg` op's queue is no one's latency): one row per gate, its waiters as callers. Waits each under the bar are summed: a wait not filed is residue, kept on the innermost open entry and offered as one wait (their sum capped at the entry's union on the gate — overlapping waiters cost it their union; the `waitCount` measure says how many) when it closes, the entry its caller, then handed unfiled to the nearest open ancestor — never back to any op as its own time, filed or not (until 2026-11-19 an unfiled residue was added back to the entry's own: during main's restarts a `loader prototypes.list` was filed at 2.78 s "own" of which 1.62 s was `read-admit` queue) — so 40 queries × 150 ms on `db-acquire` is one 6 s `wait db-acquire`, filed once. Residue leaving the top of its chain unfiled is laid on the gate's timeline (runtime-profiler `addGateBusy`): the waits of independent ops join into busy stretches — time the gate's queue held without a break — and a stretch is judged on its length, the time a burst took to drain, against the same `loaderMs` bar as one op's wait; filed at most once per stretch (variant `queue held across ops`, the longest waiter its caller, `longestWaitMs` the longest any one op queued in it). Never a sum across waiters: the 60 s window it replaced (summed wait ÷ 60 s, mean depth ≥ 0.25) fired on nearly every restart of main — one ~0.5 s replay burst of ~250 reads sums to 15–20 s while no reader waited 1 s (replay of main, 2026-11-12 13:00 → 11-14: 108 of 108 window firings were one restart's burst, longest single wait 0.18–1.8 s, none a 2 s stretch; the 11-08 restart loop still files — 13 of its 45 trips show a ≥ 2 s stretch or wait). Before that (2026-11-12) the window was judged on the per-op bar and a boot storm re-filed every 2 s of it, 20–360 times per boot. A `join` wait (an identical run in flight) is that run's, which reports itself. |
+| A server span's `io` wait FILED on its own: a git child (`git:<subcommand>`), any other child process (`spawn:<program>`), a worker's answer (`worker:<daemon>`), a file call (`fs-<op>`) | `onSlowWait` with `kind: "io"`, at its charge; then off the waiter's `excludedMs` | That process's (the disk's) work, judged on its own duration whoever waited — a background op's slow worker too — against the bar of the op that awaited it, never below `loaderMs` (`resolveWaitThreshold`: a job's hold class, a warm-up's declared budget — the awaited work is part of the work that op expects to do, so a backup job's minute-long archive child is not filed at 2 s). An `io` wait UNDER the bar is not excluded: it is work the span awaited, judged as part of it, its layer naming it on the row, and never residue or a busy stretch (concurrent children are not a queue). So a pass of three git children each under the bar files once, as the pass. Between 2026-11-19 (fcd918d4f8) and this rule an unfiled `io` wait was nobody's: replayed over main's 7 days, 123 `bg watch-edited-files:pass` (2.4–3 s of git) and 72 `plugin-tree:first-build` (a 2–3 s worker build) traces were reported nowhere; before that (2026-11-15 → 11-19) a `bg` op's worker wait was declined and handed back as the op's own. |
 | A span's time inside an enclosed op already filed (`claims`) | `slowSpanMs` over the profiler's `excludedMs` | That op, filed once (see "One cause, one report"). |
 | A server span's child ops (`child ops`: a `sub`'s loader, a `flush`'s pushes, a job's tracked work), filed or not | `slowSpanMs` over the profiler's `excludedMs` (each entry's executions, unioned into its nearest open parent — runtime-profiler, "Own time") | Each child, judged on its own span. Before (2026-11-19), a child under its bar was its parent's own time: 694 `sub` traces in main's restart windows over 7 days were their loader's time (27 remain own-slow); every `flush` trace (29) was its pushes'. |
 | A server leaf's time on a blocked event loop (`event-loop`) | runtime-profiler's `noteLoopTurn` (health-monitor's 100 ms probe) or `noteLoopObserved` (a database reply read while the probe is overdue), charged by `recordSpan` to a plain leaf (a query) | The stall: its answer sat unread. A stall ≥ 3 s is filed with its stacks (`event-loop-stall`); shorter ones are on Debug → Health. Entries are not charged. |
@@ -174,9 +175,15 @@ only waited in the same cycle) and four client `update`s. Now:
   was taken off. Layers overlap (a claimed loader is also a child op), so the
   list's Wait column, their sum, can read past the duration.
 - **A child op is its own op, filed or not.** Its time is never its parent's
-  own, so a parent made of many children each under the bar files nothing:
+  own (unlike an unfiled `io` wait, which is: a child op is judged on its own
+  span; an `io` wait under the bar has no span of its own to be judged on), so
+  a parent made of many children each under the bar files nothing:
   a `flush` of thirty 150 ms pushes, a job running a hundred tracked steps.
   That is the cost of one cause, one report — the parent did no slow work.
+  Rolling unfiled child work into the parent was replayed (main, 7 days):
+  restart `sub`s judged slow went 50 → 73–109 — the restart-contention false
+  positives 2026-11-19 removed — while outside restarts it caught only
+  `git-watcher:recompute` (13, its ref reactions each under the bar).
   The latency it adds is judged where someone waited on it: a delivery's
   `deliver:<key>` and its `flush-queue`, a tab's `element` / `update`, a job's
   wall-clock `job-deadline-exceeded` (deadline-audit).
@@ -216,15 +223,16 @@ only waited in the same cycle) and four client `update`s. Now:
   or message; a newer trip's payload replaces it. A batch body over 24 KB (one carrying
   evidence can) goes without `keepalive`: Chrome refuses keepalive bodies
   past 64 KB in flight.
-- **Only a reader's wait is the gate's** (`isReaderWait`,
-  resolve-threshold.ts). A wait whose one waiter is a `bg` span (a warm-up, a
-  watcher pass, a build's slot holder) is declined: no reader waited on it.
-  It climbs on as residue like any unfiled wait, and is never that op's own
-  time either, so a warm-up slow only because the worker or git child it
-  awaited was slow files nothing (`reader-wait.test.ts`) — until a reader
-  waits on the same gate, which files `wait <layer>`. A busy stretch is filed only when some non-`bg` op
-  queued in it (`GateBusyWait.waiterKinds`). A loader, `sub`, `http`, flush or
-  job waiting is still `wait <layer>` (`reader-wait.test.ts`).
+- **Only a reader's queue is the gate's** (`isReaderWait`,
+  resolve-threshold.ts). A `queue` wait whose one waiter is a `bg` span (a
+  warm-up, a watcher pass, a build's slot holder) is declined: no reader
+  waited on it. It climbs on as residue like any unfiled queue wait, and is
+  never that op's own time either — until a reader waits on the same gate,
+  which files `wait <layer>`. A busy stretch is filed only when some non-`bg`
+  op queued in it (`GateBusyWait.waiterKinds`). An `io` wait is not a queue:
+  a slow worker or git child is filed as `wait <layer>` whoever awaited it,
+  a background op included, and one under the bar is its waiter's own time
+  (`reader-wait.test.ts`).
 - **A warm-up is judged once**, here, on its `bg` span (against its declared
   `budgetMs` or `DEFAULT_WARMUP_BUDGET_MS`); boot-budget no longer judges its
   boot span.

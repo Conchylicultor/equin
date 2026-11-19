@@ -59,9 +59,15 @@ import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core"
 // A monitor judges a span on `durationMs − excludedMs`, its OWN time. An
 // entry's `excludedUnion` holds the time that is not its own:
 //
-// - every wait it made itself (it was the innermost open entry), filed or not:
-//   a queue's time is the gate's, an `io` wait the disk's / child process's, a
-//   join the joined run's;
+// - every `queue` / `join` wait it made itself (it was the innermost open
+//   entry), filed or not: a queue's time is the gate's, a join the joined
+//   run's;
+// - every `io` wait it made itself that was FILED as its own op (`wait
+//   git:status`): that work was judged where it happened. An `io` wait under
+//   every bar is work the op awaited — a child process, a worker, the disk —
+//   and stays in its own time, its layer naming it, so a pass made of three
+//   git children each under the bar is judged on their sum, once, as the op
+//   that awaited them;
 // - its direct child ops' executions, filed or not: each child is judged on
 //   its own span, so its time is never its parent's too;
 // - the enclosed spans filed as slow ops of their own (claims — a leaf, here).
@@ -764,6 +770,11 @@ export interface EntryContext {
   /** Entry start on the profiler clock; the clip floor for all its tracks. */
   startMs: number;
   /**
+   * The bar the entry declared (`EntrySpanOptions.budgetMs`), handed with its
+   * `io` waits (`OpWait.callerBudgetMs`): the work it awaited is held to it.
+   */
+  budgetMs?: number;
+  /**
    * Set in `recordEntrySpan`'s finally, after the entry recorded itself. A
    * closed context must never be mutated again: a detached child (or a late
    * gate callback) finishing after its parent closed would otherwise write
@@ -1243,12 +1254,17 @@ export function onSlowSpan(
  * - `join`: for an identical run already in flight (`read-coalesce`,
  *   `*-coalesce`, `endpoint-dedupe`), or a 0 ms hit/miss marker: the time is
  *   that run's own work, which its own span already reports.
- * - `io`: for the filesystem to answer a read, listing, stat or glob scan
- *   (`fs-read`, `fs-readdir`, `fs-stat`, `fs-glob` — `packages/timed-fs`):
- *   the time is the disk's. Filed like a `queue` wait — handed to
- *   `onSlowWait` against its layer, its residue summed — so a stalled disk is
- *   reported as `wait fs-<op>` wherever it lands, never as the caller's work.
- * Either way it is not the WAITER's time (see `slow-ops`' own-time rule).
+ * - `io`: for WORK another party does on the waiter's behalf — the disk
+ *   answering a file call (`fs-read`, `fs-readdir`, `fs-stat`, `fs-glob` —
+ *   `packages/timed-fs`), a child process (`git:<subcommand>`,
+ *   `spawn:<program>` — `infra/spawn`), a worker thread's answer
+ *   (`worker:<daemon>`). The work is judged where it happens: one `io` wait
+ *   is handed to `onSlowWait` as its own op (`wait <layer>`), whoever
+ *   waited. One no subscriber filed is NOT residue and not a gate's: it stays
+ *   the waiter's — work the op awaited, judged as part of it, its layer
+ *   naming what made the time (see "Own time").
+ * A `queue` or `join` wait is never the WAITER's time (see `slow-ops`'
+ * own-time rule); an `io` wait is, unless it was filed on its own.
  */
 export type WaitKind = "queue" | "join" | "io";
 
@@ -1299,6 +1315,14 @@ interface SlowWaitBase {
 /** What one op waited on a gate: a single wait, or its residue summed. */
 export interface OpWait extends SlowWaitBase {
   /**
+   * What it waited for (`WaitKind`): `queue` — capacity on a gate, the
+   * holders' doing, so only a reader's wait is anyone's latency; `io` — one
+   * piece of work another party did (a child process, a worker, the disk),
+   * slow or not on its own whoever waited. A residue is always `queue`: an
+   * unfiled `io` wait stays its waiter's work.
+   */
+  kind: "queue" | "io";
+  /**
    * The innermost open entry that waited (a latency leaf: the leaf itself); for
    * a residue, the entry whose own time it was excluded from.
    */
@@ -1312,6 +1336,14 @@ export interface OpWait extends SlowWaitBase {
   latency?: true;
   /** A single wait only: what it was for, as its waiter told (`WaitDetail`). */
   detail?: WaitDetail;
+  /**
+   * An `io` wait: the bar its waiter DECLARED (`EntrySpanOptions.budgetMs` —
+   * a warm-up's budget, `runTracked(…, { budgetMs })`), if any. The work it
+   * awaited is part of the work that op expects to do, so a monitor holds the
+   * wait to the waiter's bar, never below it: a backup's 60 s archive child is
+   * not slow against a 2 s default.
+   */
+  callerBudgetMs?: number;
   busy?: never;
 }
 
@@ -1320,6 +1352,8 @@ export interface OpWait extends SlowWaitBase {
  * from the first leftover waiter queuing to the last one admitted.
  */
 export interface GateBusyWait extends SlowWaitBase {
+  /** Only queues hold: concurrent `io` work is not a queue (see `OpWait.kind`). */
+  kind: "queue";
   /** The op that queued longest in the stretch. */
   caller: SpanRef;
   /** How many queue waits the stretch holds. */
@@ -1370,9 +1404,10 @@ function withHolders(wait: SlowWait): SlowWait {
 }
 
 /**
- * Subscribe to `queue` waits of at least `thresholdMs` — the gate as the slow
- * op: a span is judged on its own time (its waits excluded), so the time it
- * queued is reported here, against the gate, instead. Called synchronously from
+ * Subscribe to `queue` and `io` waits of at least `thresholdMs` (`kind` says
+ * which) — the gate, or the other party's work, as the slow op: a span is
+ * judged on its own time, so the time it queued is reported here, against the
+ * gate, and a piece of work it awaited is judged here on its own. Called synchronously from
  * `chargeWait` (one wait), as an entry closes (its residue — see
  * `offerQueueResidue`) and from the gate's busy stretch (`addGateBusy`); the
  * handler must only schedule. Returns a disposer.
@@ -1414,7 +1449,8 @@ export interface GateMeter {
    * The longest the gate's queue held without a break (every wait, filed or
    * not; waits arrive as they end, so a wait reaching back past a stretch
    * that already closed starts a new one — a slight under-count): the time
-   * the worst burst took to drain.
+   * the worst burst took to drain. 0 for an `io` layer: concurrent work is
+   * not a queue.
    */
   longestBusyMs: number;
   /**
@@ -1454,7 +1490,9 @@ function meterGateWait(
     };
     gateMeters.set(layer, m);
   }
-  if (ms <= 0) return; // admitted with room: the queue did not hold
+  // Admitted with room: the queue did not hold. And `io` work is no queue:
+  // concurrent children or file calls overlapping are not a stretch it held.
+  if (ms <= 0 || kind === "io") return;
   const cur = gateMeterStretches.get(layer);
   if (cur && wait.t0 <= cur.t1) {
     cur.t0 = Math.min(cur.t0, wait.t0);
@@ -2590,6 +2628,7 @@ export function recordSpan(
         ).unionMs
       : 0;
     notifySlowWait({
+      kind: "queue",
       layer: queue.layer,
       ms: queueMs - laneClaimed,
       caller: {
@@ -2627,7 +2666,7 @@ function offerQueueResidue(ctx: EntryContext): Map<string, QueueTally> {
     // 100 ms are 100 ms of the flush, not 10 s.
     const ms = Math.min(tally.ms, ctx.layerUnions.get(layer)?.unionMs ?? 0);
     if (ms <= 0) continue;
-    if (notifySlowWait({ layer, ms, caller, waits })) continue;
+    if (notifySlowWait({ kind: "queue", layer, ms, caller, waits })) continue;
     unfiled.set(layer, { ms, waits, spans: tally.spans });
   }
   return unfiled;
@@ -2752,6 +2791,7 @@ function addGateBusy(
   for (const st of grown) {
     if (st.filed || !list.includes(st)) continue;
     st.filed = notifySlowWait({
+      kind: "queue",
       layer,
       ms: st.t1 - st.t0,
       caller: st.top?.ref ?? caller,
@@ -2822,7 +2862,8 @@ function capDetail(detail: SpanDetail | undefined): SpanDetail | undefined {
  * GATE's slowness, charged where it happens (once per wait — the per-ancestor
  * unions above would count it once per level). A queue wait no subscriber
  * filed is residue, kept on the innermost open entry and offered again, summed,
- * as it closes (`offerQueueResidue`).
+ * as it closes (`offerQueueResidue`). An `io` wait no subscriber filed is the
+ * waiter's work: it stays in the waiter's own time (see "Own time").
  *
  * If no entry is active (context-less: jobs, pollers, migrations), fall back
  * to a standalone `db [layer]` span so the wait is never silently lost.
@@ -2852,14 +2893,21 @@ function chargeWaitIn(
   // A context-less join is nobody's wait: the time is the joined run's, which
   // its own span counts, and there is no waiter to take it off — a fallback
   // span would only inflate `db` call counts.
-  if (!cur && kind === "join") return;
   if (!cur) {
+    if (kind === "join") return;
+    const caller: SpanRef = { kind: "db", label: `[${layer}]` };
+    // A context-less `io` wait is one piece of another party's work with no
+    // op awaiting it (a sampler's `ps`): offered as its own op and done —
+    // it is no `db` op, so no fallback span inflates the `db` aggregates.
+    if (kind === "io") {
+      notifySlowWait({ kind, layer, ms, caller, ...(detail && { detail }) });
+      return;
+    }
     // Context-less by definition, so the fallback span is a root leaf: mint an
     // id, no parent. It IS a wait, not work: recorded as all wait (own time
     // 0), so no monitor judging own time charges the gate's queue to a `db`
     // op, and — like any wait — handed to `onSlowWait` against its gate, the
     // fallback span its caller.
-    const caller: SpanRef = { kind: "db", label: `[${layer}]` };
     record(
       caller.kind,
       caller.label,
@@ -2872,23 +2920,40 @@ function chargeWaitIn(
       0,
       0,
     );
-    if (!notifySlowWait({ layer, ms, caller, ...(detail && { detail }) }))
+    if (!notifySlowWait({ kind, layer, ms, caller, ...(detail && { detail }) }))
       addGateBusy(layer, queued, 1, caller);
     return;
   }
-  if (
+  // A `queue` / `io` wait is offered as its own op where it happens. Unfiled,
+  // a queue wait is residue (the gate's, summed on); an `io` wait is work the
+  // waiter awaited, so it stays in the waiter's own time below — never
+  // residue, never a gate's busy stretch (concurrent git children or file
+  // calls are not a queue).
+  const filed =
     kind !== "join" &&
-    !notifySlowWait({
+    notifySlowWait({
+      kind,
       layer,
       ms,
       caller: { kind: cur.kind, label: cur.label },
       ...(detail && { detail }),
-    })
-  ) {
+      ...(kind === "io" &&
+        cur.budgetMs !== undefined && { callerBudgetMs: cur.budgetMs }),
+    });
+  if (kind === "queue" && !filed) {
     const holder = nearestOpen(cur);
     if (holder) addResidue(holder, layer, ms, 1, queued);
     else addGateBusy(layer, queued, 1, { kind: cur.kind, label: cur.label });
   }
+  // Whether the wait comes off the waiter's own time: a queue's time is the
+  // gate's and a join's the joined run's, always; an `io` wait's only once it
+  // was filed as its own op. Unfiled, the work it stands for — a 1.5 s
+  // `git status` under the bar — is the op that awaited it: before
+  // (2026-11-19, fcd918d4f8 → this change), it was excluded and filed by no
+  // one, and `bg watch-edited-files:pass` (2.4–3 s of git children) went
+  // unreported 123 times in 7 days of main's traces, 67 of them with every
+  // child under the bar.
+  const offOwn = kind !== "io" || filed;
   const end = waitEnd;
   const start = end - ms;
   // The wait comes off the own time of the entry that waited (the innermost
@@ -2909,7 +2974,7 @@ function chargeWaitIn(
     const covered = contribute(track, start, end);
     contribute(a.waitUnion, start, end);
     contribute(a.busyUnion, start, end);
-    if (a === waiter) contribute(a.excludedUnion, start, end);
+    if (a === waiter && offOwn) contribute(a.excludedUnion, start, end);
     if (kind === "io")
       contribute((a.ioUnion ??= newTrack(a.startMs)), start, end);
     // Record a band merging the interval the layer track just counted into the
@@ -3340,6 +3405,7 @@ export async function recordEntrySpan<T>(
     label,
     parent: cur,
     startMs: t0,
+    ...(opts?.budgetMs !== undefined && { budgetMs: opts.budgetMs }),
     closed: false,
     layerUnions: new Map(),
     layerBands: new Map(),

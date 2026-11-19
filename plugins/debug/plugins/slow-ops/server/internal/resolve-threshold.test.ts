@@ -63,13 +63,16 @@ describe("resolveWaitThreshold", () => {
   const caller = { kind: "push" as const, label: "deliver:x" };
   test("a gate's queue holds work back: the loader bar", () => {
     expect(
-      resolveWaitThreshold({ layer: "read-admit", ms: 0, caller }, thresholds),
+      resolveWaitThreshold(
+        { kind: "queue", layer: "read-admit", ms: 0, caller },
+        thresholds,
+      ),
     ).toBe(2000);
   });
   test("a latency leaf's queue is staleness a tab shows: the update bar", () => {
     expect(
       resolveWaitThreshold(
-        { layer: "flush-queue", ms: 0, caller, latency: true },
+        { kind: "queue", layer: "flush-queue", ms: 0, caller, latency: true },
         { ...thresholds, updateMs: 800 },
       ),
     ).toBe(800);
@@ -77,7 +80,7 @@ describe("resolveWaitThreshold", () => {
   test("one request's waits summed are still judged per request: the loader bar", () => {
     expect(
       resolveWaitThreshold(
-        { layer: "read-admit", ms: 0, caller, waits: 300 },
+        { kind: "queue", layer: "read-admit", ms: 0, caller, waits: 300 },
         thresholds,
       ),
     ).toBe(2000);
@@ -85,6 +88,7 @@ describe("resolveWaitThreshold", () => {
   test("a gate's busy stretch is a latency: the loader bar, whatever the waits", () => {
     // 250 reads that queued together for 0.5 s are judged on the 0.5 s.
     const stretch = {
+      kind: "queue" as const,
       layer: "read-admit",
       caller,
       busy: true as const,

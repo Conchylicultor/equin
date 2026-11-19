@@ -17,6 +17,7 @@ export type {
   SpawnPassthroughOptions,
   SpawnPassthroughResult,
   SpawnToFileOptions,
+  SpawnWaitDetail,
 } from "./internal/types";
 export {
   spawnCaptured,
@@ -25,6 +26,7 @@ export {
 } from "./internal/spawn-captured";
 export { spawnPassthrough, spawnToFile } from "./internal/spawn-passthrough";
 export { installSpawnUse } from "./internal/spawn-use";
+export { installSpawnWaitMeter } from "./internal/spawn-wait";
 export { getWorktreeRoot, getMainRepoRoot } from "./internal/git-roots";
 export {
   ChildKilledError,

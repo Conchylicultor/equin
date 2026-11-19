@@ -38,6 +38,25 @@ on top of whatever `env` it gets. Don't remove it: otherwise a `git status` in
 main's checkout (main's auto-build) takes `.git/index.lock` and a concurrent
 push's merge into main fails. Real writes still lock.
 
+## Every child is a wait (`installSpawnWaitMeter`)
+
+A captured child is another process's work, so a backend's profiler meters
+each `spawnCaptured` run as one `io` wait: `spawn:<program>` by default, or
+the caller's own name and detail (`opts.wait: { layer, describe }` —
+`primitives/commit-list`'s git runner names `git:<subcommand>` and the
+checkout it read). It is shown on the caller's span while it runs and charged
+as the child is reaped, from inside the child's spawn use (`installSpawnUse`),
+so the `read-spawn` slot it queued for is the gate's wait, not the child's.
+The runtime profiler installs the meter (`server/internal/install.ts`); with
+none installed (a CLI) nothing is metered. A slow child is then filed as
+`wait <layer>` whoever awaited it, and one under the bar is its waiter's work,
+named by its layer (runtime-profiler, "Awaited work"). A child is held to
+the bar of the op that awaited it (a job's hold class, a warm-up's budget),
+so a long-by-design child (a backup archive) is not a slow one. The default
+layer is the program's basename up to its first space, so a binary named per
+process (`equin · <kind> · <id>`) is one layer. Installed, not
+imported: the profiler's server half imports this plugin.
+
 ## Children die with their parent
 
 A child started here cannot outlive the process that started it. Before
@@ -339,6 +358,7 @@ presence only — **no re-exports**; import from `core/`.
     - `SpawnPassthroughResult`
     - `SpawnResult`
     - `SpawnToFileOptions`
+    - `SpawnWaitDetail`
   - Exports (values):
     - `authoredSignalOf`
     - `ChildKilledError`
@@ -346,6 +366,7 @@ presence only — **no re-exports**; import from `core/`.
     - `getMainRepoRoot`
     - `getWorktreeRoot`
     - `installSpawnUse`
+    - `installSpawnWaitMeter`
     - `killedByOf`
     - `signalExitCode`
     - `spawnCaptured`

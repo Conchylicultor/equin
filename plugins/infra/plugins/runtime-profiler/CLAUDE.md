@@ -218,15 +218,18 @@ a worker thread's answer through `WorkerDaemonInstance.awaitReply`,
 `infra/spawn/daemon` — the worker's time, filed as `wait worker:<daemon>`); `fs-stat` / `fs-readdir` / `fs-read` / `fs-glob`
 (kind `io`: a file call past `packages/timed-fs`'s floor, a `beginDeferredWait`
 from `server/internal/install.ts`'s fs wait meter — a disk stall is the
-disk's time, filed like a `queue` wait as `wait fs-<op>`); `git:<subcommand>`
+disk's time, filed as `wait fs-<op>` when slow on its own); `git:<subcommand>`
 (kind `io`: a git child of `primitives/commit-list`'s `runGit` / `tryRunGit`,
-announced as it spawns and charged as it exits — the child's time, so a span
-awaiting `git status` is not booked as its own work; slow-ops files a slow one
-as `wait git:status`); `event-loop` (below). A wait with no active entry (context-less jobs/pollers)
+named through the spawn's wait — slow-ops files a slow one as `wait
+git:status`); `spawn:<program>` (kind `io`: any other `spawnCaptured` child,
+metered by `infra/spawn`'s `installSpawnWaitMeter`, which
+`server/internal/install.ts` installs — from inside its `read-spawn` slot, so
+the slot's queue is not the child's time); `event-loop` (below). A wait with no active entry (context-less jobs/pollers)
 falls back to a standalone `db [layer]` span so the wait is never lost — recorded
-as ALL wait (`waits: { [layer]: ms }`, own time 0) and, for a `queue`/`io` wait,
+as ALL wait (`waits: { [layer]: ms }`, own time 0) and, for a `queue` wait,
 handed to `onSlowWait` with that span as its caller: a wait is never booked as a
-`db` op's work.
+`db` op's work. A context-less `io` wait is handed to `onSlowWait` (that same
+caller) and records no span: it is no `db` op.
 
 ### Gate meters (`getRuntimeProfile().gates`) — where the waits are judged
 
@@ -249,9 +252,13 @@ stays the WALL sum: a view, never a cost to judge. See
 A monitor judges a span on `durationMs − excludedMs`. An entry's
 `excludedUnion` holds, as an interval union over its own timeline:
 
-- **every wait it made itself, filed or not** (it was the innermost open
-  entry): a queue is the gate's, an `io` wait the disk's or child's, a join
-  the joined run's;
+- **every `queue` / `join` wait it made itself, filed or not** (it was the
+  innermost open entry): a queue is the gate's, a join the joined run's;
+- **every `io` wait it made itself that was filed as its own op** (`wait
+  git:status`, `wait worker:<daemon>`): that work was judged where it
+  happened. An `io` wait no subscriber filed is work the op awaited — a child
+  process, a worker, the disk — and stays in its own time (see *Awaited
+  work* below);
 - **its direct child ops' executions, filed or not** — each child is judged on
   its own span (slow-ops shows them as the `child ops` layer);
 - **claims on it** (an enclosed leaf filed as its own slow op).
@@ -275,8 +282,42 @@ intervals of the same entry closed. That happens with concurrency only: a handle
 running a long child beside a loop of its own short waits. Clipped, the long
 child reads as the parent's own time: an over-report, never a hidden one.
 
-**Unfiled waits are never own time.** A closing entry offers each gate's
-residue (its unfiled queue/io waits, summed) to `onSlowWait`. What no
+**Awaited work — an unfiled `io` wait is its waiter's.** An `io` wait is
+one piece of work another party did on the op's behalf. It is offered to
+`onSlowWait` once, where it happens (`OpWait.kind: "io"`), and slow-ops files
+it whoever waited — a background op's slow worker included. Under every bar,
+it is neither residue nor a gate's busy stretch (concurrent git children are
+not a queue): it stays in the waiter's own time, its layer naming it on the
+row. So every second of it is judged exactly once — on its own when it was
+slow on its own, else as part of the op that awaited it. The wait carries the
+bar its waiter declared (`OpWait.callerBudgetMs`, from `EntrySpanOptions.budgetMs`):
+slow-ops holds an `io` wait to the waiter's own bar (a job's hold class, a
+warm-up's budget), never below `loaderMs`, so a backup job's minute-long
+archive child is part of the job's expected work, not a 2 s slow child. A
+context-less `io` wait (no op awaiting it: a sampler's `ps`) is offered as its
+own op and records no fallback `db [layer]` span; the meter keeps no busy
+stretch for an `io` layer (`longestBusyMs` 0). Between fcd918d4f8
+(2026-11-19) and this rule an unfiled `io` wait was excluded from its waiter
+and filed by no one: replayed over main's 7 days of traces (2026-11-12 → 11-19), `bg
+watch-edited-files:pass` (2.4–3.0 s of git children: 123 traces, now 56 as
+the slow child, 67 as the pass whose children were each under the bar),
+`plugin-tree:first-build` (its worker's 2–3 s build, declined as a `bg`
+waiter's: 72, now 68 as `wait worker:plugin-tree.faceted-index`) and
+git-bound loaders (`build.deployment`: 27) were reported nowhere. The tradeoff: an `io` wait is timed to the callback
+that reads its answer, so during a busy restart replay its event-loop delay
+lands in the waiter's own time too — restart `loader` traces judged slow 272
+→ ~328 in the replay; restart `sub` 50 → 52 and `flush` 0 → 0 (their own
+time takes no child's).
+
+**A child op stays its own.** Its unfiled time is not rolled into its parent:
+a parent of many small children (a `flush` of pushes, a `sub` around its
+loader) is judged on its own time, and the latency the children add where
+someone waits on it — `deliver:<key>`, an `element`, a job's deadline.
+Rolling child work up was replayed too: restart `sub`s judged slow went 50 →
+73–109, the restart-contention false positives fcd918d4f8 removed.
+
+**Unfiled queue waits are never own time.** A closing entry offers each gate's
+residue (its unfiled queue waits, summed) to `onSlowWait`. What no
 subscriber filed climbs to the nearest open ancestor, then the gate's busy
 timeline. It is never added back to an op's own time. It used to be
 (`residueMs`, 2026-11-14 → 11-19): during main's restart replay every read
@@ -399,10 +440,11 @@ imports `server/`, so on the client every entry point is a transparent passthrou
   identical run already in flight (a coalesce or dedupe), or a 0 ms hit/miss
   marker, so the time is that run's. A slow-op consumer judges a span on its
   own time (its waits excluded), so this is what decides who the waited time
-  is charged to. `io` means the filesystem (`packages/timed-fs`): the time
-  is the disk's, and it is filed like `queue`.
+  is charged to. `io` means work another party does — the disk
+  (`packages/timed-fs`), a child process, a worker thread: offered
+  to `onSlowWait` whoever waited, and, unfiled, its waiter's own time.
 - `onSlowWait(handler, { thresholdMs })` — the push seam for a slow `queue`
-  wait: called once per wait, from its charge (an ancestor's union would
+  or `io` wait (`kind` says which): called once per wait, from its charge (an ancestor's union would
   count it once per level), with the layer, the ms and the innermost open
   entry that waited — and from a latency leaf's `queue` (see Lanes), flagged
   `latency: true`. Context-less waits already become a `db [layer]` span and
@@ -741,7 +783,7 @@ remaining allocations are one flat band array per completed entry span, and what
     - `SPAN_MEASURES`
     - `waitSplit`
 - Cross-plugin:
-  - Imported by: 79 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 78 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×24
     - `debug` ×21
     - `apps` ×7
@@ -749,7 +791,6 @@ remaining allocations are one flat band array per completed entry span, and what
     - `database` ×3
     - `packages` ×3
     - `build` ×2
-    - `primitives` ×2
     - `reports` ×2
     - `tasks` ×2
     - `auth`
@@ -759,6 +800,7 @@ remaining allocations are one flat band array per completed entry span, and what
     - `integrations/google-maps/browser-config`
     - `network/live/change-feed`
     - `plugin-meta/plugin-tree`
+    - `primitives/log-channels`
 - Exemptions:
   - Exempts itself from:
     - `boundaries/no-platform-api` — `server/internal/install.ts` (debt)

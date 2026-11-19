@@ -457,7 +457,7 @@ describe("gate meters — every queue wait metered once, against its gate", () =
         count: 1,
         totalMs: 5,
         maxWaitMs: 5,
-        longestBusyMs: 5,
+        longestBusyMs: 0,
       },
     ]);
   });
@@ -907,6 +907,113 @@ describe("queue residue — many small waits are reported against the gate", () 
   });
 });
 
+describe("io waits — another party's work, judged where it happens", () => {
+  test("an unfiled io wait stays the waiter's own time; a filed one does not; neither is residue", async () => {
+    const offered: string[] = [];
+    const sub = onSlowWait(
+      (w) => {
+        offered.push(`${w.kind} ${w.layer} ${w.ms}${w.busy ? " busy" : ""}`);
+        return w.ms >= 1000;
+      },
+      { thresholdMs: 0 },
+    );
+    try {
+      await recordEntrySpan("bg", "pass", async () => {
+        fakeNow += 100; // own code
+        fakeNow += 400;
+        chargeWait("git:status", 400, "io"); // under the bar: its work
+        fakeNow += 1500;
+        chargeWait("git:diff", 1500, "io"); // filed on its own
+        fakeNow += 300;
+        chargeWait("read-admit", 300, "queue"); // the gate's, always
+      });
+    } finally {
+      sub.dispose();
+    }
+    // Each io wait offered once, where it happened; the unfiled one is not
+    // offered again as residue or a busy stretch. The queue wait is.
+    expect(offered).toEqual([
+      "io git:status 400",
+      "io git:diff 1500",
+      "queue read-admit 300",
+      "queue read-admit 300",
+      "queue read-admit 300 busy",
+    ]);
+    const span = getRuntimeProfile().slowest.bg[0]!;
+    expect(span.durationMs).toBe(2300);
+    // Own: its 100 ms + the 400 ms git child nobody filed.
+    expect(span.durationMs - span.excludedMs).toBe(500);
+    expect(span.waits).toEqual({
+      "git:status": 400,
+      "git:diff": 1500,
+      "read-admit": 300,
+    });
+  });
+});
+
+describe("io waits — no op awaiting, or a declared waiter", () => {
+  test("a context-less io wait is offered as its own op, with no fallback db span", () => {
+    const offered: SlowWait[] = [];
+    const sub = onSlowWait(
+      (w) => {
+        offered.push(w);
+        return false;
+      },
+      { thresholdMs: 0 },
+    );
+    try {
+      fakeNow = 700;
+      chargeWait("spawn:ps", 700, "io");
+    } finally {
+      sub.dispose();
+    }
+    expect(offered).toEqual([
+      {
+        kind: "io",
+        layer: "spawn:ps",
+        ms: 700,
+        caller: { kind: "db", label: "[spawn:ps]" },
+      },
+    ]);
+    expect(getRuntimeProfile().aggregates.db).toEqual([]);
+  });
+
+  test("an io wait carries the bar its waiter declared", async () => {
+    const offered: SlowWait[] = [];
+    const sub = onSlowWait(
+      (w) => {
+        offered.push(w);
+        return false;
+      },
+      { thresholdMs: 0 },
+    );
+    try {
+      await recordEntrySpan(
+        "bg",
+        "warmup:x",
+        () => {
+          fakeNow += 300;
+          chargeWait("worker:x", 300, "io");
+        },
+        undefined,
+        undefined,
+        { budgetMs: 4000 },
+      );
+    } finally {
+      sub.dispose();
+    }
+    expect(offered).toEqual([
+      {
+        kind: "io",
+        layer: "worker:x",
+        ms: 300,
+        caller: { kind: "bg", label: "warmup:x" },
+        callerBudgetMs: 4000,
+      },
+    ]);
+  });
+});
+
 describe("claims — a slow op filed once, by the innermost op that was slow", () => {
   // A subscriber that files (claims) every span past `bar` on its own time,
   // the way slow-ops' install hook does.
@@ -1310,6 +1417,7 @@ describe("lanes — a delivery queued behind an earlier flush pass", () => {
     expect(deliver.waits).toEqual({ "flush-queue": 1800 });
     expect(seen).toEqual([
       {
+        kind: "queue",
         layer: "flush-queue",
         ms: 1800,
         caller: { kind: "push", label: "deliver:x" },

@@ -21,7 +21,13 @@ import { trackLiveChild } from "./live-children";
 import { peakFootprintRequest, readResourceUsage } from "./resource-usage";
 import { signalName } from "./signal-code";
 import { runSpawnUse } from "./spawn-use";
-import type { ChildResourceUsage, SpawnOptions, SpawnResult } from "./types";
+import { beginSpawnWait } from "./spawn-wait";
+import type {
+  ChildResourceUsage,
+  SpawnOptions,
+  SpawnResult,
+  SpawnWaitDetail,
+} from "./types";
 
 /**
  * A `spawnExpectOk` child that exited non-zero (or on a signal). Carries the
@@ -150,7 +156,44 @@ export function spawnCaptured(
 ): Promise<SpawnResult> {
   // One child, from its temp dir to its reap, is one spawn use: inside a live
   // read it holds a `read-spawn` slot for exactly that long (`installSpawnUse`).
-  return runSpawnUse(() => spawnCapturedNow(argv, opts));
+  return runSpawnUse(() => meteredSpawn(argv, opts));
+}
+
+// The child's run as a wait (`installSpawnWaitMeter`), from inside its spawn
+// use: the slot it may have queued for is the gate's wait, not the child's.
+async function meteredSpawn(
+  argv: string[],
+  opts: SpawnOptions,
+): Promise<SpawnResult> {
+  const end = beginSpawnWait(opts.wait?.layer ?? defaultWaitLayer(argv));
+  let result: SpawnResult;
+  try {
+    result = await spawnCapturedNow(argv, opts);
+  } catch (err) {
+    end(undefined);
+    throw err;
+  }
+  // The wait ends whatever `describe` does: a throw there must not leave it
+  // announced on the caller's spans for good.
+  let detail: SpawnWaitDetail | undefined;
+  try {
+    detail = opts.wait?.describe?.(result);
+  } finally {
+    end(detail);
+  }
+  return result;
+}
+
+/**
+ * `spawn:<program>` — the basename of the program the caller ran, up to its
+ * first space: a binary named per process (`equin · <kind> · <id>`,
+ * packages/process-name) is one layer, not one per id.
+ */
+function defaultWaitLayer(argv: readonly string[]): string {
+  const program = argv[0] ?? "";
+  const base = program.slice(program.lastIndexOf("/") + 1);
+  const space = base.indexOf(" ");
+  return `spawn:${space < 0 ? base : base.slice(0, space)}`;
 }
 
 async function spawnCapturedNow(

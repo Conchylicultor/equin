@@ -117,10 +117,11 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
   // `wait <layer>` — once per wait, where it happened, its waiter the caller —
   // so a congested gate is ONE row and one report naming it, with every op
   // that queued on it among its callers, instead of a report against each of
-  // them. The profiler hands only `queue` waits here (a `join` is the run it
-  // joined, which reports itself). A latency leaf's queue (a delivery waiting
-  // for the flush lane) arrives already net of what the lane filed inside it.
-  // Waits each under the bar arrive summed: as an entry's residue (`waits`
+  // them. The profiler hands `queue` waits here, and `io` waits — one piece
+  // of work another party did, judged on its own duration (a `join` is the
+  // run it joined, which reports itself). A latency leaf's queue (a delivery
+  // waiting for the flush lane) arrives already net of what the lane filed
+  // inside it. Queue waits each under the bar arrive summed: as an entry's residue (`waits`
   // set, the entry its caller — 40 queries × 150 ms on `db-acquire` is one 6 s
   // wait), or, when every op waited a little, as the gate's busy stretch
   // across independent ops (`busy` set: how long its queue held without a
@@ -131,9 +132,10 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
   // feel, held to the loader bar — never a sum across waiters.
   waitDisposer = onSlowWait(
     (wait: SlowWait) => {
-      // A background op's own wait: no reader waited on it, so it is not
-      // filed here (`isReaderWait`); it climbs on as residue, never that op's
-      // own time.
+      // A background op's queue: no reader waited on it, so it is not filed
+      // here (`isReaderWait`); it climbs on as residue, never that op's own
+      // time. An `io` wait (a git child, a worker, the disk) is judged on
+      // its own whoever waited; unfiled, it is its waiter's own time.
       if (!isReaderWait(wait)) return false;
       const threshold = resolveWaitThreshold(wait, thresholds);
       if (wait.ms < threshold) return false;

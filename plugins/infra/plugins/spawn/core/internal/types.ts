@@ -106,6 +106,34 @@ export interface SpawnBaseOptions {
    * the peak is `unmeasured: not-requested`.
    */
   peakFootprint?: "report";
+  /**
+   * What this child's run is called as a wait, for a caller that knows it
+   * better than its program name (`git:status`, not `spawn:git`), and what it
+   * was for once it is over. Omitted, it is `spawn:<program>` with no detail.
+   * See `installSpawnWaitMeter`: the child is another process's work, so the
+   * caller's span never books it as its own code, and a slow one is filed as
+   * `wait <layer>`.
+   */
+  wait?: SpawnWait;
+}
+
+/** How a child's run is named as a wait (`SpawnBaseOptions.wait`). */
+export interface SpawnWait {
+  layer: string;
+  /** Told once the child is reaped, from its result; not called on a throw. */
+  describe?: (result: SpawnResult) => SpawnWaitDetail | undefined;
+}
+
+/**
+ * What a child's run was for: the profiler's `WaitDetail`, restated here so
+ * this leaf-ish core imports no profiler (the profiler's server half imports
+ * this plugin). `variant` — which instance of the layer, a closed set;
+ * `measures` — numbers measured on it; `subject` — the exact thing (a path).
+ */
+export interface SpawnWaitDetail {
+  variant?: string;
+  measures?: Readonly<Partial<Record<string, number>>>;
+  subject?: string;
 }
 
 /**

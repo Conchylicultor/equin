@@ -40880,7 +40880,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SPAN_MEASURES`
           - `waitSplit`
       - Cross-plugin:
-        - Imported by: 79 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
+        - Imported by: 78 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
           - `infra` ×24
           - `debug` ×21
           - `apps` ×7
@@ -40888,7 +40888,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database` ×3
           - `packages` ×3
           - `build` ×2
-          - `primitives` ×2
           - `reports` ×2
           - `tasks` ×2
           - `auth`
@@ -40898,6 +40897,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `integrations/google-maps/browser-config`
           - `network/live/change-feed`
           - `plugin-meta/plugin-tree`
+          - `primitives/log-channels`
       - Exemptions:
         - Exempts itself from:
           - `boundaries/no-platform-api` — `server/internal/install.ts` (debt)
@@ -41095,6 +41095,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SpawnPassthroughResult`
           - `SpawnResult`
           - `SpawnToFileOptions`
+          - `SpawnWaitDetail`
         - Exports (values):
           - `authoredSignalOf`
           - `ChildKilledError`
@@ -41102,6 +41103,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `getMainRepoRoot`
           - `getWorktreeRoot`
           - `installSpawnUse`
+          - `installSpawnWaitMeter`
           - `killedByOf`
           - `signalExitCode`
           - `spawnCaptured`
