@@ -203,7 +203,6 @@ before it) beside the total, worded by `formatReportActivity`
     - `fromOutdatedBundle`
     - `investigateReport`
     - `isUntrustedReportSource`
-    - `normalizeMessage`
     - `regresses`
     - `REPORT_AFTER_WAKE_WINDOW_MS`
     - `REPORT_CATEGORIES`

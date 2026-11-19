@@ -21,6 +21,11 @@
 // is closing.
 
 import {
+  crashFieldsOf,
+  normalizeMessage,
+  SubjectError,
+} from "@plugins/packages/plugins/error-subject/core";
+import {
   runMarked,
   type TaskMarkText,
 } from "@plugins/primitives/plugins/perfs/plugins/task-marks/core";
@@ -137,7 +142,7 @@ export type FromHost =
       boot: HostBoot;
       readyAtMs: number;
     }
-  | { t: "failed"; error: string }
+  | { t: "failed"; error: HostServerError }
   /** How far the boot has come (`HostProgress`), posted to every page waiting for it until it settles. */
   | { t: "progress"; progress: HostProgress }
   /** The host declined to boot (`HostRefusedError`), for `refusal`. */
@@ -354,9 +359,7 @@ export function serveHost(opts: ServeHostOptions): ServedHost {
       if (err instanceof HostRefusedError) {
         post({ t: "refused", refusal: err.refusal });
       } else {
-        const error =
-          err instanceof Error ? (err.stack ?? err.message) : String(err);
-        post({ t: "failed", error });
+        post({ t: "failed", error: hostFailure(err) });
       }
       return;
     }
@@ -584,12 +587,46 @@ export async function serveOverPort(
   await booted;
 }
 
-/** A server across a port that never booted: `boot` threw in the worker. */
-export class PortHostBootError extends Error {
-  constructor(readonly hostError: string) {
-    super(`the browser server's worker failed to boot:\n${hostError}`);
+/** What the worker tells a page of an error it threw: plain data, across the port. */
+function hostFailure(err: unknown): HostServerError {
+  const fields = crashFieldsOf(err);
+  return {
+    message: err instanceof Error ? err.message : String(err),
+    stack: fields.stack,
+    errorType: fields.errorType,
+    scope: fields.scope,
+  };
+}
+
+/**
+ * A server across a port that never booted: `boot` threw in the worker.
+ *
+ * Thrown from ONE place in the page whatever failed in the worker, so its own
+ * stack says nothing of the cause: it names the cause as its subject (the
+ * worker error's type, its own subject, and its message as a class — ids,
+ * numbers and hashes stripped), which every crash report filed from it keys
+ * on. Two causes are two reports, and a fixed cause is not marked regressed
+ * when another one fires.
+ */
+export class PortHostBootError extends SubjectError {
+  constructor(readonly hostError: HostServerError) {
+    super(
+      `the browser server's worker failed to boot:\n${hostError.stack ?? hostError.message}`,
+      { subject: bootFailureSubject(hostError) },
+    );
     this.name = "PortHostBootError";
   }
+}
+
+/** The cause of a failed boot, as stable words (`PortHostBootError`'s subject). */
+function bootFailureSubject(error: HostServerError): string {
+  return [
+    error.errorType ?? "Error",
+    error.scope,
+    normalizeMessage(error.message, 120),
+  ]
+    .filter((p): p is string => p !== null && p !== "")
+    .join(" › ");
 }
 
 /** The host declined to boot (`HostRefusedError` in the worker), for `refusal`. */

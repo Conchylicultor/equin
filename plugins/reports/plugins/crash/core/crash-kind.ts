@@ -1,8 +1,6 @@
 import { z } from "zod";
-import {
-  normalizeMessage,
-  type ReportFingerprintContext,
-} from "@plugins/reports/core";
+import { normalizeMessage } from "@plugins/packages/plugins/error-subject/core";
+import type { ReportFingerprintContext } from "@plugins/reports/core";
 import { UiContextMetaSchema } from "@plugins/primitives/plugins/ui-context/core";
 import { ResizeLoopTraceSchema } from "./resize-loop";
 

@@ -82,10 +82,9 @@ channel.
   - Uses: `reports.ReportKind`
 - Core:
   - Uses:
+    - `packages/error-subject.normalizeMessage`
     - `packages/list-bound.cappedList`
     - `primitives/ui-context.UiContextMetaSchema`
-    - `reports.normalizeMessage`
-    - `reports.ReportFingerprintContext`
   - Exports (types):
     - `CrashPayload`
     - `ResizeLoopTrace`

@@ -31644,6 +31644,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hostServerErrorSink`
       - Core:
         - Uses:
+          - `packages/error-subject.crashFieldsOf`
+          - `packages/error-subject.normalizeMessage`
+          - `packages/error-subject.SubjectError`
           - `primitives/perfs/task-marks.runMarked`
           - `primitives/perfs/task-marks.TaskMarkText`
         - Exports (types):
@@ -44165,16 +44168,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/live-state-snapshot`
       - Core:
         - Exports (values): `withDeadline`
-    - **`error-subject`** — What an error is about, carried by the error: SubjectError (a shared throw site — the migration runner, the trigger installer — names the one subject it failed for), errorSubject(err) (the subjects along the cause chain plus the innermost class code, ENOENT / SQLSTATE) and crashFieldsOf(err, scope?) — the errorType / stack / scope every crash filer derives from an error, so a shared throw site's failures land on one report row per cause instead of one for all. Enforced by error-subject/crash-fields-of.
+    - **`error-subject`** — What an error is about, carried by the error: SubjectError (a shared throw site — the migration runner, the trigger installer — names the one subject it failed for), errorSubject(err) (the subjects along the cause chain plus the innermost class code, ENOENT / SQLSTATE) and crashFieldsOf(err, scope?) — the errorType / stack / scope every crash filer derives from an error, and normalizeMessage(message) — a message as an identity (ids, hashes and numbers stripped), shared by every kind and subject keyed on a failure's text, so a shared throw site's failures land on one report row per cause instead of one for all. Enforced by error-subject/crash-fields-of.
       - Cross-plugin:
-        - Imported by: 32 plugins — full list in [`plugins/packages/plugins/error-subject/REFERENCE.md`](../plugins/packages/plugins/error-subject/REFERENCE.md)
+        - Imported by: 34 plugins — full list in [`plugins/packages/plugins/error-subject/REFERENCE.md`](../plugins/packages/plugins/error-subject/REFERENCE.md)
           - `infra` ×8
           - `database` ×6
           - `conversations` ×5
+          - `debug` ×3
+          - `framework` ×3
           - `reports` ×3
           - `apps` ×2
-          - `debug` ×2
-          - `framework` ×2
           - `network` ×2
           - `integrations/github-events`
           - `tasks/tasks-core`
@@ -44186,6 +44189,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `crashFieldsOf`
           - `errorSubject`
+          - `normalizeMessage`
           - `SubjectError`
     - **`flock`** — Kernel advisory file locking: flockTry/flockRelease over libc flock(2), and waitForFlock — a push-based blocking acquire run in a child so the event loop never freezes. The one lock ownership the kernel releases on process death (SIGKILL included) and that consults no pid.
       - Core:
@@ -59592,7 +59596,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `fromOutdatedBundle`
       - `investigateReport`
       - `isUntrustedReportSource`
-      - `normalizeMessage`
       - `regresses`
       - `REPORT_AFTER_WAKE_WINDOW_MS`
       - `REPORT_CATEGORIES`
@@ -59827,10 +59830,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses: `reports.ReportKind`
       - Core:
         - Uses:
+          - `packages/error-subject.normalizeMessage`
           - `packages/list-bound.cappedList`
           - `primitives/ui-context.UiContextMetaSchema`
-          - `reports.normalizeMessage`
-          - `reports.ReportFingerprintContext`
         - Exports (types):
           - `CrashPayload`
           - `ResizeLoopTrace`

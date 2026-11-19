@@ -16,7 +16,6 @@ export {
   fenceUntrustedReport,
 } from "./untrusted";
 export type { ReportFingerprintContext } from "./fingerprint";
-export { normalizeMessage } from "./message-identity";
 export { reportIdKind } from "./id-kind";
 export type { ReportId } from "./id-kind";
 export {

@@ -15,6 +15,7 @@ import {
   type ServerFrame,
 } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
 import { onTaskMark } from "@plugins/primitives/plugins/perfs/plugins/task-marks/core";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { inRealmServer } from "../testing";
 import type { BrowserServer } from "./browser-server";
 import {
@@ -160,6 +161,57 @@ describe("a browser server over a port", () => {
     expect((pageErr as PortHostBootError).message).toContain(
       "migration 42 failed",
     );
+  });
+
+  test("a failed boot names its cause: one report per cause, not one for every boot failure", async () => {
+    const pageError = async (fail: () => never): Promise<PortHostBootError> => {
+      const channel = new MessageChannel();
+      channel.port1.start();
+      channel.port2.start();
+      // The worker's own rejection is the cause the page receives: awaited
+      // beside it, as the boot test above does.
+      const [, page] = await Promise.all([
+        serveOverPort(channel.port2, async () => fail()).then(
+          () => {
+            throw new Error("booted");
+          },
+          (e: unknown) => e,
+        ),
+        portBrowserServer(channel.port1).then(
+          () => {
+            throw new Error("booted");
+          },
+          (e: unknown) => e as PortHostBootError,
+        ),
+      ]);
+      return page;
+    };
+    class UnknownError extends Error {
+      override name = "UnknownError";
+    }
+    const blob = await pageError(() => {
+      throw new UnknownError(
+        "Error preparing Blob/File data to be stored in object store",
+      );
+    });
+    const fetch1 = await pageError(() => {
+      throw new TypeError(
+        "Failed to fetch dynamically imported module: /artifacts/a.0123456789abcdef/index.js",
+      );
+    });
+    const fetch2 = await pageError(() => {
+      throw new TypeError(
+        "Failed to fetch dynamically imported module: /artifacts/a.fedcba9876543210/index.js",
+      );
+    });
+    const blobScope = crashFieldsOf(blob).scope;
+    expect(blobScope).toBe(
+      "UnknownError › Error preparing Blob/File data to be stored in object store",
+    );
+    // Another cause, another report.
+    expect(crashFieldsOf(fetch1).scope).not.toBe(blobScope);
+    // The same cause, whatever ids its message carries, one report.
+    expect(crashFieldsOf(fetch1).scope).toBe(crashFieldsOf(fetch2).scope);
   });
 
   test("an attached port answers requests beside the page's own port", async () => {

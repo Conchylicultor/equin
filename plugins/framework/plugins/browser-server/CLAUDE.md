@@ -329,6 +329,9 @@ reaching the server, detach on unmount).
     - `hostServerErrorSink`
 - Core:
   - Uses:
+    - `packages/error-subject.crashFieldsOf`
+    - `packages/error-subject.normalizeMessage`
+    - `packages/error-subject.SubjectError`
     - `primitives/perfs/task-marks.runMarked`
     - `primitives/perfs/task-marks.TaskMarkText`
   - Exports (types):

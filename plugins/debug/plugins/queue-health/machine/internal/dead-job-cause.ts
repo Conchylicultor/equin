@@ -1,4 +1,4 @@
-import { normalizeMessage } from "@plugins/reports/core";
+import { normalizeMessage } from "@plugins/packages/plugins/error-subject/core";
 import type { DeadJobErrorStat } from "@plugins/infra/plugins/jobs/machine";
 import { hash53 } from "@plugins/packages/plugins/string-hash/core";
 import type { QueueDeadJobPayload } from "../../core";
