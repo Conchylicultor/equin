@@ -21,7 +21,7 @@ import { claudeUsagePath } from "./paths";
 // SDK session that sends no prompt, asks Claude Code its `get_usage` control
 // request (what `/usage` shows — no model call, nothing billed) and closes.
 // ~1 s of CLI start-up. Recorded in the same per-account file the agents
-// overwrite, so the meters, the account picker and auto-switch read it alike.
+// overwrite, so the meters, the account picker and the limit banner read it alike.
 
 /** CLI start-up plus one HTTP read; a ceiling, not an estimate. */
 const USAGE_READ_TIMEOUT_MS = 60_000;

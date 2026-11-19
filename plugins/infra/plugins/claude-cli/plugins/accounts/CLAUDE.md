@@ -5,11 +5,12 @@ The Claude accounts agents can run on, and which one new agents launch on.
 - **The system account** (`SYSTEM_ACCOUNT_ID`) is always there: whatever the computer's Claude Code is signed into (signed in from the app: `claude-cli/sign-in`). It has no token here.
 - **Added accounts** hold a credential, one of two kinds (`CLAUDE_CREDENTIALS`, derived from the pasted string's prefix — never chosen separately):
   - a **token** (`sk-ant-oat…`): a plan sign-in, drawing on that plan's limits. The user signs in to the account in the app (`claude-cli/sign-in` runs Claude Code's `setup-token` and saves the token through `addClaudeAccountWithCredential`, the machine half's export) — it is never pasted or shown;
-  - an **API key** (`sk-ant-api…` or, for keys the Console creates since ~2026-10, `sk-ant-usr…`; pasted — the accounts' "Use an API key"): billed per use to its Console organization — e.g. the monthly API credit a Max / Team plan includes once a Console org is linked (claude.ai → Settings → Billing → API credits). It has no plan limits, so it is **metered**: with auto-switch on it is the overflow, used only while every plan account is at its limit and left as soon as one has room (`runtime-sdk`'s `launchAccount`).
+  - an **API key** (`sk-ant-api…` or, for keys the Console creates since ~2026-10, `sk-ant-usr…`; pasted — the accounts' "Use an API key"): billed per use to its Console organization — e.g. the monthly API credit a Max / Team plan includes once a Console org is linked (claude.ai → Settings → Billing → API credits). It has no plan limits, so it is **metered**.
 
-  The credential goes to the secrets store (namespace `claude-accounts`, key = account id); `accounts.json` (data-dir `state/claude-accounts`) holds only names, each account's `kind`, the active id and `autoSwitch`.
+  The credential goes to the secrets store (namespace `claude-accounts`, key = account id); `accounts.json` (data-dir `state/claude-accounts`) holds only names, each account's `kind` and the active id.
 - **Machine-wide.** Every worktree's agents launch on the active account. The choice is read at agent-process start (`runtime-sdk`), which passes the account id to the agent; the agent fetches the credential itself (`claudeAccountCredential`) and hands it to Claude Code through `claudeCredentialEnv` — `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY` by its kind, every other credential variable removed. The credential never sits in argv, the options file or the login shell's environment.
 - A running agent keeps the account it started on until its process restarts.
+- **Never switched automatically.** New agents launch on the account the user made active, and nothing moves them to another account because a limit was reached — a limit is waited out (`runtime-sdk`'s auto-resume, `heldAtClaudeLimit`). Running several plan accounts to get around their usage limits is against Anthropic's terms (the Claude Code legal page: plan limits "assume ordinary, individual usage"), so the auto-switch that once did (`autoSwitch`, removed 2026-11) must not come back; the limit banner's "Continue on …" is a developer-only manual switch.
 - **An added account has no Claude-in-Chrome** (nor claude.ai connectors): its credential carries no claude.ai sign-in, and Claude Code drops them silently, `--chrome` or not. The `chrome-needs-system-account` guard (`guard/`) tells an agent so the first time it ToolSearches for Chrome — only then, to keep it out of every other session's context.
 - **One-shot generations follow it too.** Titles, summaries, triage — every `runClaudePrint` / `runClaudeReadOnly` — run on `activeClaudeAccountId()` (the `ActiveClaudeAccount` host service, which the machine half provides from the accounts file), through `claudeSessionEnv` (`claude-cli/sdk`), the same environment builder agents use.
 - Usage limits are per account and recorded by `conversations/runtime-sdk` (it owns the rate-limit events); the health row's account picker lives there too.
@@ -50,7 +51,6 @@ The Claude accounts agents can run on, and which one new agents launch on.
     - `POST /api/claude-accounts/add`
     - `POST /api/claude-accounts/remove`
     - `POST /api/claude-accounts/select`
-    - `POST /api/claude-accounts/auto-switch`
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
@@ -76,7 +76,6 @@ The Claude accounts agents can run on, and which one new agents launch on.
     - `NO_CLAUDE_ACCOUNTS`
     - `removeClaudeAccount`
     - `selectClaudeAccount`
-    - `setClaudeAccountAutoSwitch`
     - `SYSTEM_ACCOUNT_ID`
     - `withStandInNames`
 - Cross-plugin:

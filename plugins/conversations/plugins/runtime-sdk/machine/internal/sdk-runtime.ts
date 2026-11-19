@@ -497,8 +497,7 @@ async function waitForCliInitialize(
  * A running agent keeps the account it started on until its process restarts
  * (the launch picks the account). So before a turn reaches an idle agent,
  * restart it on its session's end when a launch now would pick another
- * account — the user switched account, or auto-switch left a spent one —
- * so every turn (typed, Resume, Resume all) runs where a launch runs now.
+ * account — the user switched account — so every turn (typed, Resume, Resume all) runs where a launch runs now.
  * When no account has room, the launch account is the agent's own: the turn
  * goes to it as is and the CLI answers with its limit notice.
  *

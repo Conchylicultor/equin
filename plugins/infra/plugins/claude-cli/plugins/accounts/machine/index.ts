@@ -3,14 +3,8 @@ import {
   addClaudeAccount,
   removeClaudeAccount,
   selectClaudeAccount,
-  setClaudeAccountAutoSwitch,
 } from "../core";
-import {
-  handleAdd,
-  handleAutoSwitch,
-  handleRemove,
-  handleSelect,
-} from "./internal/routes";
+import { handleAdd, handleRemove, handleSelect } from "./internal/routes";
 import { claudeAccountsServed } from "./internal/served";
 import { activeAccountFromFile } from "./internal/store";
 import { ActiveClaudeAccount } from "../server";
@@ -26,12 +20,11 @@ export type { SystemLogin } from "./internal/system-login";
 
 export default {
   description:
-    "The Claude accounts, desktop-only half: the machine-wide accounts file (each added account's name, the active one, auto-switch — readClaudeAccounts, selectClaudeAccountById), served as the claude-accounts push value off a watch of it, the active one provided as the ActiveClaudeAccount host service, and the add / remove / select / auto-switch endpoints that rewrite it (a token goes to the secrets store), watchClaudeAccounts — a callback on every rewrite of the file, from any backend — and readSystemLogin: the claude.ai account the computer's Claude Code is signed into (its user config's oauthAccount.accountUuid), the uuid a transcript's session-owner record names.",
+    "The Claude accounts, desktop-only half: the machine-wide accounts file (each added account's name, the active one — readClaudeAccounts, selectClaudeAccountById), served as the claude-accounts push value off a watch of it, the active one provided as the ActiveClaudeAccount host service, and the add / remove / select endpoints that rewrite it (a token goes to the secrets store), watchClaudeAccounts — a callback on every rewrite of the file, from any backend — and readSystemLogin: the claude.ai account the computer's Claude Code is signed into (its user config's oauthAccount.accountUuid), the uuid a transcript's session-owner record names.",
   httpRoutes: {
     [addClaudeAccount.route]: handleAdd,
     [removeClaudeAccount.route]: handleRemove,
     [selectClaudeAccount.route]: handleSelect,
-    [setClaudeAccountAutoSwitch.route]: handleAutoSwitch,
   },
   contributions: [
     ...claudeAccountsServed.declare,

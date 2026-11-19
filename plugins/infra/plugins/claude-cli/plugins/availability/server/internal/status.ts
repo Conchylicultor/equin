@@ -118,9 +118,6 @@ export type LaunchReadiness =
  *   `initialize` only says a credential is present, never whether it works.
  *   The agent's own start is the check — a credential Claude Code refuses
  *   ends the agent before `ready`, failing the launch loudly with the reason.
- *
- * With auto-switch on, the runtime may start the agent on another account
- * than the active one; that account's own start checks it the same way.
  */
 export async function checkLaunchReadiness(): Promise<LaunchReadiness> {
   if ((await activeClaudeAccountId()) !== SYSTEM_ACCOUNT_ID)

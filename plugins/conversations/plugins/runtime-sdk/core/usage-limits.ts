@@ -1,7 +1,8 @@
 import type { ClaudeUsage, ClaudeUsageWindow } from "./claude-usage";
 
 // How full an account's limits are now, from its last report — shared by the
-// health row (meters, the account picker) and the launch (auto-switch).
+// health row (meters, the account picker, the limit banner's developer-only
+// "Continue on …").
 
 export type UsageWindowId = "session" | "week";
 
@@ -84,8 +85,8 @@ export function weekRoom(
 }
 
 /**
- * An account as a launch weighs it. `metered`: billed per use (an API key) —
- * it has no plan limits, so nothing ever says it is full; it is the overflow.
+ * An account as the limit banner weighs it. `metered`: billed per use (an API
+ * key) — it has no plan limits, so nothing ever says it is full.
  */
 export interface LaunchCandidate {
   id: string;
@@ -113,39 +114,4 @@ export function roomiestAccount(
     if (!best || left > best.left) best = { id, left };
   }
   return best?.id ?? candidates.find((c) => c.metered)?.id ?? null;
-}
-
-/**
- * The account an agent launches on: the active one — unless auto-switch is
- * on and either its limit is reached (then the roomiest other one that can
- * run, or the active one still, when none can) or it is metered (then back to
- * the roomiest plan account that can run: the overflow is left as soon as a
- * plan has room, or it would become the active one and drain).
- */
-export function launchAccount(opts: {
-  accounts: readonly LaunchCandidate[];
-  active: string;
-  autoSwitch: boolean;
-  byAccount: Readonly<Record<string, ClaudeUsage>>;
-  now: number;
-}): string {
-  const { accounts, active, autoSwitch, byAccount, now } = opts;
-  if (!autoSwitch) return active;
-  if (accounts.find((a) => a.id === active)?.metered) {
-    return (
-      roomiestAccount(
-        accounts.filter((a) => !a.metered),
-        byAccount,
-        now,
-      ) ?? active
-    );
-  }
-  if (!limitReached(byAccount[active], now)) return active;
-  return (
-    roomiestAccount(
-      accounts.filter((a) => a.id !== active),
-      byAccount,
-      now,
-    ) ?? active
-  );
 }

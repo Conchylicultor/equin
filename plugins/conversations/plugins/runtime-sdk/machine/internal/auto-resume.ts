@@ -20,7 +20,7 @@ import { resumeStopped } from "./resume-stopped";
 export const autoResumeJob = defineJob({
   name: "runtime-sdk.auto-resume",
   description:
-    "Resumes agents a Claude usage limit stopped once the limit resets (or another account has room), when Resume agents when their usage limit resets is on.",
+    "Resumes agents a Claude usage limit stopped once the limit resets, when Resume agents when their usage limit resets is on.",
   hold: "minutes",
   inProcess:
     "Each resume restarts an agent process (seconds); a restart mid-run re-runs it from the DB, where a resumed agent is no longer stopped, so nothing is resumed twice.",

@@ -120,11 +120,6 @@ export const ClaudeAccountsSchema = z.object({
   }),
   /** The account new agents launch on: {@link SYSTEM_ACCOUNT_ID} or an added account's id. */
   active: z.string().min(1),
-  /**
-   * Launch on the account with the most weekly room left when the active one
-   * has hit a limit — an API key only while every plan account has.
-   */
-  autoSwitch: z.boolean(),
 });
 export type ClaudeAccounts = z.infer<typeof ClaudeAccountsSchema>;
 
@@ -132,7 +127,6 @@ export type ClaudeAccounts = z.infer<typeof ClaudeAccountsSchema>;
 export const NO_CLAUDE_ACCOUNTS: ClaudeAccounts = {
   accounts: [],
   active: SYSTEM_ACCOUNT_ID,
-  autoSwitch: false,
 };
 
 /** Every account id: the system one first, then the added accounts. */
@@ -178,11 +172,5 @@ export const removeClaudeAccount = defineEndpoint({
 export const selectClaudeAccount = defineEndpoint({
   route: "POST /api/claude-accounts/select",
   body: z.object({ id: z.string().min(1) }),
-  needsMachine: { feature: "Switching Claude accounts" },
-});
-
-export const setClaudeAccountAutoSwitch = defineEndpoint({
-  route: "POST /api/claude-accounts/auto-switch",
-  body: z.object({ enabled: z.boolean() }),
   needsMachine: { feature: "Switching Claude accounts" },
 });

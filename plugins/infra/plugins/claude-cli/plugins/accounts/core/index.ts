@@ -13,7 +13,6 @@ export {
   NO_CLAUDE_ACCOUNTS,
   removeClaudeAccount,
   selectClaudeAccount,
-  setClaudeAccountAutoSwitch,
   SYSTEM_ACCOUNT_ID,
 } from "./internal/accounts";
 export type {

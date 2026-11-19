@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import type { ClaudeUsage } from "./claude-usage";
 import {
   type LaunchCandidate,
-  launchAccount,
   limitReached,
   roomiestAccount,
   viewUsageWindow,
@@ -93,93 +92,5 @@ describe("roomiestAccount", () => {
     // A plan account never reported on still comes before the key.
     expect(roomiestAccount([KEY, ...plan("c", "d")], byAccount, NOW)).toBe("d");
     expect(roomiestAccount([...plan("c"), KEY], byAccount, NOW)).toBe("key");
-  });
-});
-
-describe("launchAccount", () => {
-  const byAccount = { system: usage(1, 0.5), work: usage(0.1, 0.3) };
-  const accounts = plan("system", "work");
-  test("the active account, unless auto-switch moves off a reached limit", () => {
-    expect(
-      launchAccount({
-        accounts,
-        active: "system",
-        autoSwitch: false,
-        byAccount,
-        now: NOW,
-      }),
-    ).toBe("system");
-    expect(
-      launchAccount({
-        accounts,
-        active: "system",
-        autoSwitch: true,
-        byAccount,
-        now: NOW,
-      }),
-    ).toBe("work");
-    expect(
-      launchAccount({
-        accounts,
-        active: "work",
-        autoSwitch: true,
-        byAccount,
-        now: NOW,
-      }),
-    ).toBe("work");
-  });
-  test("nowhere to go: stays", () => {
-    expect(
-      launchAccount({
-        accounts,
-        active: "system",
-        autoSwitch: true,
-        byAccount: { ...byAccount, work: usage(0.2, 1) },
-        now: NOW,
-      }),
-    ).toBe("system");
-  });
-  test("an API key is the overflow: used while every plan is full, left once one has room", () => {
-    const withKey = [...accounts, KEY];
-    const full = { system: usage(1, 0.5), work: usage(0.2, 1) };
-    expect(
-      launchAccount({
-        accounts: withKey,
-        active: "system",
-        autoSwitch: true,
-        byAccount: full,
-        now: NOW,
-      }),
-    ).toBe("key");
-    // Still full: stays on the key.
-    expect(
-      launchAccount({
-        accounts: withKey,
-        active: "key",
-        autoSwitch: true,
-        byAccount: full,
-        now: NOW,
-      }),
-    ).toBe("key");
-    // A plan has room again: back to it.
-    expect(
-      launchAccount({
-        accounts: withKey,
-        active: "key",
-        autoSwitch: true,
-        byAccount,
-        now: NOW,
-      }),
-    ).toBe("work");
-    // Auto-switch off: the user's pick, whatever it is.
-    expect(
-      launchAccount({
-        accounts: withKey,
-        active: "key",
-        autoSwitch: false,
-        byAccount,
-        now: NOW,
-      }),
-    ).toBe("key");
   });
 });

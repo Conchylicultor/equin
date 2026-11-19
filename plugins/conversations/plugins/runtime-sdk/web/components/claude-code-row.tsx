@@ -20,11 +20,7 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useNavigate } from "@plugins/apps-core/plugins/tabs/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { requestAccountMenu } from "../internal/account-menu";
-import {
-  accountViews,
-  activeAccountView,
-  launchAccountView,
-} from "../internal/account-views";
+import { accountViews, activeAccountView } from "../internal/account-views";
 import { ErrorStoppedBanner } from "./error-stopped";
 
 // The Claude Code row's expanded detail: the versions and the agents, one line
@@ -172,17 +168,12 @@ function StoppedBanner({
   now: number;
 }) {
   const { accounts, usage, claude, stopped } = inputs;
-  const launch = launchAccountView(
-    accounts,
-    accountViews(accounts, claude),
-    usage,
-    now,
-  );
+  const active = activeAccountView(accounts, accountViews(accounts, claude));
   return (
     <ErrorStoppedBanner
       stopped={stopped}
-      launchAccountId={launch.id}
-      launchAccountName={launch.name}
+      accountId={active.id}
+      accountName={active.name}
       usage={usage}
       now={now}
     />

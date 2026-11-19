@@ -3,13 +3,11 @@ import {
   addClaudeAccount,
   removeClaudeAccount,
   selectClaudeAccount,
-  setClaudeAccountAutoSwitch,
 } from "../../core";
 import {
   addClaudeAccountWithCredential,
   removeClaudeAccountById,
   selectClaudeAccountById,
-  setClaudeAccountsAutoSwitch,
 } from "./store";
 
 export const handleAdd = implementMachine(addClaudeAccount, ({ body }) =>
@@ -22,9 +20,4 @@ export const handleRemove = implementMachine(removeClaudeAccount, ({ body }) =>
 
 export const handleSelect = implementMachine(selectClaudeAccount, ({ body }) =>
   selectClaudeAccountById(body.id),
-);
-
-export const handleAutoSwitch = implementMachine(
-  setClaudeAccountAutoSwitch,
-  ({ body }) => setClaudeAccountsAutoSwitch(body.enabled),
 );

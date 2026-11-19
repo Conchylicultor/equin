@@ -10,7 +10,6 @@ import {
   addClaudeAccount,
   removeClaudeAccount,
   selectClaudeAccount,
-  setClaudeAccountAutoSwitch,
   SYSTEM_ACCOUNT_ID,
   CLAUDE_CREDENTIALS,
   type ClaudeAccounts,
@@ -41,6 +40,7 @@ import {
 } from "@plugins/primitives/plugins/setup-steps/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { ForAudience } from "@plugins/audience/plugins/developer-mark/web";
 import {
   autoResumeConfig,
   limitReached,
@@ -55,7 +55,6 @@ import { formatResets, USAGE_WINDOWS } from "../internal/claude-usage";
 import {
   accountViews,
   activeAccountView,
-  launchAccountView,
   type AccountView,
 } from "../internal/account-views";
 import { AccountHead, LEVEL_CLASS } from "./account-head";
@@ -69,7 +68,7 @@ import { ErrorStoppedBanner } from "./error-stopped";
 // keep theirs until their process restarts. Adding or picking one reads its
 // limits at once (no agent turn needed), so its room shows straight away. An
 // API-key account has no plan limits: it is billed to its Console org (e.g.
-// the plan's monthly API credit), and auto-switch uses it only as overflow.
+// the plan's monthly API credit). Nothing switches accounts on its own.
 
 const addIcon = symbol("add");
 const personIcon = symbol("person");
@@ -157,7 +156,12 @@ function WeekRoomGlance({
   );
 }
 
-/** The active account hit a limit: say until when, and offer the roomiest other. */
+/**
+ * The active account hit a limit: say until when. A developer is also offered
+ * the roomiest other account — a manual switch, never made for anyone else:
+ * moving between plan accounts to get around their limits is against
+ * Anthropic's terms (`infra/claude-cli/accounts`).
+ */
 function LimitBanner({
   views,
   active,
@@ -191,17 +195,19 @@ function LimitBanner({
         limit · {formatResets(reached.id, reached.resetsAt, now)}
       </Text>
       {next ? (
-        <Line>
-          <Fill />
-          <Button onClick={() => onSwitch(next.id)}>
-            Continue on {next.name}
-            {next.metered
-              ? " · API credit"
-              : room?.kind === "known"
-                ? ` · ${percent(room.left)} left`
-                : ""}
-          </Button>
-        </Line>
+        <ForAudience audience="developer" mark="badge">
+          <Line>
+            <Fill />
+            <Button onClick={() => onSwitch(next.id)}>
+              Continue on {next.name}
+              {next.metered
+                ? " · API credit"
+                : room?.kind === "known"
+                  ? ` · ${percent(room.left)} left`
+                  : ""}
+            </Button>
+          </Line>
+        </ForAudience>
       ) : null}
     </Stack>
   );
@@ -353,7 +359,7 @@ function AddAccountChoices({
  * account with its session and week meters (and the limit banner, the
  * conversations an API error stopped, with Resume all); then every account
  * with its weekly room, the active one filled — a click switches — and Add
- * account last; then the auto-switch and auto-resume switches. Its sections
+ * account last; then the auto-resume switch. Its sections
  * are bands of the panel the foot opens (`ControlPanelPopover`), which draws
  * the rules between them.
  */
@@ -377,7 +383,6 @@ export function ClaudeAccountMenu({
   // the account switched to) runs on the server's answer (`switchTo`).
   const selectAccount = useEndpointMutation(selectClaudeAccount);
   const removeAccount = useEndpointMutation(removeClaudeAccount);
-  const autoSwitch = useEndpointMutation(setClaudeAccountAutoSwitch);
   const refreshUsage = useEndpointMutation(refreshClaudeUsage);
   // Accounts Claude Code reported no plan limits for, with why.
   const [unreadable, setUnreadable] = useState<Record<string, string>>({});
@@ -395,7 +400,6 @@ export function ClaudeAccountMenu({
   }
   if (
     removeAccount.kind === "unavailable" ||
-    autoSwitch.kind === "unavailable" ||
     refreshUsage.kind === "unavailable"
   )
     throw new Error("Claude accounts: endpoints disagree on the computer");
@@ -423,8 +427,6 @@ export function ClaudeAccountMenu({
       ? { kind: "idle" }
       : { kind: "unreadable", reason };
   };
-  // Where a resumed agent restarts: the launch's own choice.
-  const launchView = launchAccountView(accounts, views, usage, now);
   const closeAdding = () => setAdding(null);
   // A plan account signed in: read its limits at once.
   const onSignedIn = (id: string) => {
@@ -459,8 +461,8 @@ export function ClaudeAccountMenu({
           />
           <ErrorStoppedBanner
             stopped={stopped}
-            launchAccountId={launchView.id}
-            launchAccountName={launchView.name}
+            accountId={active.id}
+            accountName={active.name}
             usage={usage}
             now={now}
           />
@@ -525,32 +527,14 @@ export function ClaudeAccountMenu({
         ) : null}
         {switchedTo === active.id ? (
           <StepNote>
-            {active.metered && accounts.autoSwitch
-              ? `With auto-switch on, new agents launch on ${active.name} only while every plan account is at its limit.`
-              : `New agents launch on ${active.name}.`}{" "}
-            Agents already running keep their account until they restart.
+            New agents launch on {active.name}. Agents already running keep
+            their account until they restart.
           </StepNote>
         ) : null}
       </ControlPanel.Section>
       {/* Flush: the settings start on the panel's edge with the section
           text, not past the account rows' avatar column. */}
       <ControlPanel.Section flush>
-        <ControlPanel.Row
-          select="switch"
-          checked={accounts.autoSwitch}
-          muted
-          wrap
-          onSelect={() =>
-            autoSwitch.mutate({ body: { enabled: !accounts.autoSwitch } })
-          }
-          {...(views.some((v) => v.metered)
-            ? {
-                hint: "An API key is switched to only while every plan account is at its limit",
-              }
-            : {})}
-        >
-          Switch on hitting the weekly limit
-        </ControlPanel.Row>
         <AutoResumeSwitch />
       </ControlPanel.Section>
     </ControlSizeProvider>

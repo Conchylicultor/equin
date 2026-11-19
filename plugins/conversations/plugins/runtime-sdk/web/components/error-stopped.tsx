@@ -28,8 +28,8 @@ import { formatResets } from "../internal/claude-usage";
 // The conversations an API error stopped (a usage limit, a server error, a
 // lost connection), in the Claude Code row: how many and of which kind, the
 // list (each opens its conversation), and Resume all — one resume turn each,
-// whose send restarts an agent a usage limit stopped on the account a launch
-// picks now (`launchAccountId`).
+// whose send restarts an agent a usage limit stopped on the active account
+// (`accountId`) when it runs on another.
 
 const ERROR_STOPPED_VIEW = defineDataView("runtime-sdk.error-stopped");
 
@@ -66,15 +66,15 @@ function failureOf(r: ResumeStoppedResult): { id: string; message: string }[] {
 
 export function ErrorStoppedBanner({
   stopped,
-  launchAccountId,
-  launchAccountName,
+  accountId,
+  accountName,
   usage,
   now,
 }: {
   stopped: readonly ErrorStoppedConversation[];
-  /** The account an agent restarted now runs on. */
-  launchAccountId: string;
-  launchAccountName: string;
+  /** The active account: the one an agent restarted now runs on. */
+  accountId: string;
+  accountName: string;
   usage: ClaudeUsageRead;
   now: number;
 }): ReactElement | null {
@@ -82,11 +82,11 @@ export function ErrorStoppedBanner({
   const fetchEndpoint = useFetchEndpoint();
   const [failed, setFailed] = useState<{ id: string; message: string }[]>([]);
   if (stopped.length === 0) return null;
-  const reading = usage.byAccount[launchAccountId];
+  const reading = usage.byAccount[accountId];
   const reached = limitReached(reading, now);
   const room = weekRoom(reading, now);
-  // Only a usage limit's resume depends on an account with room; any other
-  // stop resumes on the agent's own.
+  // Only a usage limit's resume depends on the active account having room;
+  // any other stop resumes on the agent's own.
   const limited = stopped.some((c) => c.stopError === USAGE_LIMIT_ERROR);
   const onlyLimited = stopped.every((c) => c.stopError === USAGE_LIMIT_ERROR);
   const resumeAll = async () => {
@@ -125,7 +125,7 @@ export function ErrorStoppedBanner({
         <Line>
           {limited && reached ? (
             <Text variant="caption" tone="muted">
-              No account has room · {launchAccountName}{" "}
+              {accountName} is at its limit ·{" "}
               {formatResets(reached.id, reached.resetsAt, now)}
             </Text>
           ) : null}
@@ -135,7 +135,7 @@ export function ErrorStoppedBanner({
             onClick={resumeAll}
           >
             Resume all
-            {limited ? ` on ${launchAccountName}` : ""}
+            {limited ? ` on ${accountName}` : ""}
             {limited && room.kind === "known"
               ? ` · ${percent(room.left)} left`
               : ""}

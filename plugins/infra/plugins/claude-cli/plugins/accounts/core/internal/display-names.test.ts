@@ -8,7 +8,6 @@ const two: ClaudeAccounts = {
     { id: "acct-2", name: "real-b", addedAt: 2, kind: "token" },
   ],
   active: "acct-2",
-  autoSwitch: false,
 };
 
 describe("withStandInNames", () => {

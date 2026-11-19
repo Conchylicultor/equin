@@ -3,7 +3,7 @@ import { claudeAccountsDir } from "../../data-dirs";
 
 /**
  * Run `onChange` whenever any backend rewrites the accounts file — an account
- * added or removed, another one made active, auto-switch toggled. Its
+ * added or removed, or another one made active. Its
  * directory holds nothing else but the rename's temp file. Resolves to the
  * release once the watch is open.
  */

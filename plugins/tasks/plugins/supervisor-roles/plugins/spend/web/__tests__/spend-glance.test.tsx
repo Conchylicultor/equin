@@ -33,7 +33,6 @@ vi.mock("@plugins/network/plugins/live/web", async (importOriginal) => {
         data: {
           accounts: [],
           active: "system",
-          autoSwitch: false,
           byAccount: {},
         },
         refetch,

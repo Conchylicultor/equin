@@ -109,14 +109,6 @@ export function selectClaudeAccountById(id: string): Promise<void> {
   });
 }
 
-export function setClaudeAccountsAutoSwitch(enabled: boolean): Promise<void> {
-  return changeAccounts(async () => {
-    const state = await readClaudeAccounts();
-    if (state.autoSwitch !== enabled)
-      await writeClaudeAccounts({ ...state, autoSwitch: enabled });
-  });
-}
-
 /** The ActiveClaudeAccount host service on the desktop: the file's choice, read now. */
 export const activeAccountFromFile: ActiveClaudeAccountImpl = {
   id: async () => (await readClaudeAccounts()).active,

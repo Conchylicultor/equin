@@ -19,24 +19,18 @@ import {
   type DaemonInstance,
 } from "@plugins/infra/plugins/spawn/plugins/daemon/server";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
-import { claudeAccountRefs } from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
-import {
-  readClaudeAccounts,
-  selectClaudeAccountById,
-} from "@plugins/infra/plugins/claude-cli/plugins/accounts/machine";
+import { readClaudeAccounts } from "@plugins/infra/plugins/claude-cli/plugins/accounts/machine";
 import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
 import { PGREP, PS } from "@plugins/infra/plugins/paths/server";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { bundledClaudeBin } from "@plugins/infra/plugins/claude-cli/plugins/sdk/machine";
 import {
   AgentLaunchOptionsSchema,
-  launchAccount,
   type AgentLaunchIntent,
   type AgentLaunchOptions,
 } from "../../core";
 import { currentAgentRow } from "./agent-row-lease";
 import { liveAgentIds } from "./agent-processes";
-import { readClaudeUsage } from "./claude-usage";
 import { resolveDisclaimExec } from "./disclaim";
 import { namedClaudeBin } from "./named-claude";
 import { agentBackgroundShell } from "./background-shell";
@@ -108,28 +102,14 @@ export interface StartedAgent {
 const MAX_OUTPUT_CHARS = 4_000;
 
 /**
- * The Claude account this launch runs on: the active one — or, when
- * auto-switch is on and the active one's limit is reached, the roomiest other
- * account, which then becomes the active one (the next launches follow it).
- * Read at every process start, so a switch reaches an agent at its next start.
+ * The Claude account an agent process started now runs on: the active one, the
+ * user's own pick — never another one because a limit was reached (running
+ * plan accounts around their limits is against Anthropic's terms;
+ * `infra/claude-cli/accounts`). Read at every process start, so a switch
+ * reaches an agent at its next start.
  */
-async function chooseLaunchAccount(): Promise<string> {
-  const chosen = await nextLaunchAccount();
-  if (chosen !== (await readClaudeAccounts()).active)
-    await selectClaudeAccountById(chosen);
-  return chosen;
-}
-
-/** The account an agent process started now would run on — a read, selecting nothing. */
 export async function nextLaunchAccount(): Promise<string> {
-  const state = await readClaudeAccounts();
-  return launchAccount({
-    accounts: claudeAccountRefs(state),
-    active: state.active,
-    autoSwitch: state.autoSwitch,
-    byAccount: (await readClaudeUsage()).byAccount,
-    now: Date.now(),
-  });
+  return (await readClaudeAccounts()).active;
 }
 
 /**
@@ -245,7 +225,7 @@ export async function startAgentProcess(
   const staging = `${optionsPath}.${String(process.pid)}.tmp`;
   await writeFile(staging, JSON.stringify(options, null, 2));
   await rename(staging, optionsPath);
-  const account = await chooseLaunchAccount();
+  const account = await nextLaunchAccount();
   // Not demoted: the agent leaves darwinbg itself and demotes only what its
   // CLI launches (bin/agent.ts, scheduling tier).
   const command = [

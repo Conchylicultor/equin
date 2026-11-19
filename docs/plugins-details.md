@@ -14647,6 +14647,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/app-launcher`
           - `build`
           - `config_v2/git-defaults-preview`
+          - `conversations/runtime-sdk`
           - `hints/ask`
           - `primitives/ui-context/element-picker`
           - `shell/global-action-bar`
@@ -23418,13 +23419,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CONVERSATION_RUNTIMES`
           - `ConversationRuntimeIdSchema`
           - `DEFAULT_CONVERSATION_RUNTIME`
-    - **`runtime-sdk`** — The health report's Claude Code row: Claude Code itself (critical while the computer is signed out, with the in-app Sign in — claude-cli/sign-in, 'Signing in…' while it runs — and Check again), the agent processes running — here, and in every other worktree (each as its task's chip) — the active Claude account's usage limits as meters (named by the account; the week collapsed, the session too expanded; attention while its limit is reached), the conversations an API error stopped (Resume all), and Manage accounts. The agent manager's sidebar foot: the Claude account new agents launch on with its weekly quota, opening the account menu (its session and week meters; each account's weekly room, add — signing in to another account in the app, or an API key — / remove / switch, auto-switch, auto-resume when a limit resets, Continue on another account when the active one is limited). The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and its rewind anchor — out of the change feed, being the consumer's per-batch checkpoint) and the conversations_ext_sdk_agent_stop side table (the part a live surface reads: the API-error stop and the account, written only when it changes), the pure event reducer, and the mapping of a launch onto the agent's options file; the runtime-sdk.error-stopped collection (active conversations whose agent's turn an API error stopped — a usage limit, a server error, a lost connection — with the CLI's kind of failure); the auto-resume setting (Resume agents when their usage limit resets).
+    - **`runtime-sdk`** — The health report's Claude Code row: Claude Code itself (critical while the computer is signed out, with the in-app Sign in — claude-cli/sign-in, 'Signing in…' while it runs — and Check again), the agent processes running — here, and in every other worktree (each as its task's chip) — the active Claude account's usage limits as meters (named by the account; the week collapsed, the session too expanded; attention while its limit is reached), the conversations an API error stopped (Resume all), and Manage accounts. The agent manager's sidebar foot: the Claude account new agents launch on with its weekly quota, opening the account menu (its session and week meters; each account's weekly room, add — signing in to another account in the app, or an API key — / remove / switch, auto-resume when a limit resets, and — for a developer only — Continue on another account when the active one is limited). The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and its rewind anchor — out of the change feed, being the consumer's per-batch checkpoint) and the conversations_ext_sdk_agent_stop side table (the part a live surface reads: the API-error stop and the account, written only when it changes), the pure event reducer, and the mapping of a launch onto the agent's options file; the runtime-sdk.error-stopped collection (active conversations whose agent's turn an API error stopped — a usage limit, a server error, a lost connection — with the CLI's kind of failure); the auto-resume setting (Resume agents when their usage limit resets).
       - Web:
         - Contributes:
           - `HealthReport.Row` "Claude Code" → `ClaudeCodeRowDetail`
           - `Shell.Sidebar` "Claude account" → `ClaudeAccountFoot`
           - `ConfigV2.WebRegister` "runtime-sdk-auto-resume"
-        - Uses: 57 symbols — full list in [`plugins/conversations/plugins/runtime-sdk/REFERENCE.md`](../plugins/conversations/plugins/runtime-sdk/REFERENCE.md)
+        - Uses: 58 symbols — full list in [`plugins/conversations/plugins/runtime-sdk/REFERENCE.md`](../plugins/conversations/plugins/runtime-sdk/REFERENCE.md)
           - `primitives/css/ui-kit` ×7
           - `infra/claude-cli/availability` ×4
           - `infra/claude-cli/sign-in` ×4
@@ -23438,6 +23439,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live` ×2
           - `primitives/avatar` ×2
           - `primitives/css/control-panel` ×2
+          - `audience/developer-mark.ForAudience`
           - `conversations/conversation-view.conversationPane`
           - `primitives/css/clip.Clip`
           - `primitives/css/fill.Fill`
@@ -23501,7 +23503,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/question-relay.retireQuestion`
           - `conversations/stop-gate.stopGateHookEntry`
           - `infra/claude-cli/accounts.readClaudeAccounts`
-          - `infra/claude-cli/accounts.selectClaudeAccountById`
           - `infra/claude-cli/sdk.bundledClaudeBin`
           - `infra/endpoints.implementMachine`
           - `network/live.serveValue`
@@ -23590,7 +23591,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DismissReplySchema`
           - `errorStoppedConversations`
           - `HelloReplySchema`
-          - `launchAccount`
           - `limitReached`
           - `OpenRequestSchema`
           - `partialFrameOf`
@@ -36064,7 +36064,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `POST /api/claude-accounts/add`
               - `POST /api/claude-accounts/remove`
               - `POST /api/claude-accounts/select`
-              - `POST /api/claude-accounts/auto-switch`
           - Core:
             - Uses:
               - `infra/endpoints.defineEndpoint`
@@ -36090,7 +36089,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `NO_CLAUDE_ACCOUNTS`
               - `removeClaudeAccount`
               - `selectClaudeAccount`
-              - `setClaudeAccountAutoSwitch`
               - `SYSTEM_ACCOUNT_ID`
               - `withStandInNames`
           - Cross-plugin:
