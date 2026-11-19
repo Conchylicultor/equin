@@ -84,10 +84,11 @@ order. Rows per day do not grow with traffic; retention is 35 days.
 its tab's kind — `real` (a person's tab) or `automated` (the agent browser, an e2e
 run: `navigator.webdriver`) — in a table of its own, written in the same statement
 as the combined row (`mergeClientMinute`), so what the user feels can be read apart
-from an agent's reload loop. The combined table is untouched: it stays every tab's
-(the summary card and every other reader unchanged), and "every tab" reads
-continuously across the split (2026-11-19). A batch from a bundle that sends no
-client lands in the combined row only — never guessed. (Not a `client_kind` column
+from an agent's reload loop. The combined table is untouched: it stays every tab's,
+and "every tab" reads continuously across the split (2026-11-19). A tab that
+cannot hold a tab id (`NO_TAB_ID`) still sends its kind (with a null `tabId`), so
+its minutes are split too; only a batch from a bundle that sends no client at all
+lands in the combined row only — never guessed. (Not a `client_kind` column
 on the combined table: changing a hot table's primary key leaves it with no unique
 constraint between the expand and the deferred contract, and every upsert of the
 old and the new code fails in that window.) The day rollup reads the combined rows
@@ -148,12 +149,18 @@ main's numbers as its own would be wrong) and from backups.
 ## The read path
 
 The Stats card reads `latency-ledger.summary`, a live value with a typed `window`
-param (`1h` / `24h` / `7d`). Its tables are feed-blind by declaration, so it is
+param (`1h` / `24h` / `7d`) and a `tabs` param (`LATENCY_SUMMARY_TABS`): `real`
+(the card's default — what the user feels), `automated`, or `all`. For one kind
+of tab the browser metrics — and the exit criteria over them — read
+`latency_ledger_client_minute`, while the server's own metrics (delivery, thread
+lag) still read the combined table; the slowest list keeps the rows of that kind
+(a row with no client only under `all`). `all` reads the combined table alone,
+as before the split. Its tables are feed-blind by declaration, so it is
 served external (`server/internal/summary-resource.ts`) and the minute flush is
 its change source: `noteFlushedMinute` keeps a monotonic guard and notifies only
 the windows a tab is subscribed to (tracked with `whileSubscribed`; the rules
 live in the pure `server/internal/flush-notifier.ts`, unit-tested). The value
-declares the four tables it reads as `reads.outsideFeed` (accepted by the
+declares the five tables it reads as `reads.outsideFeed` (accepted by the
 read-set drift guard, never routed; change-feed refuses one it does cover).
 
 It is `load: "on-demand"`: the 7-day histogram sum alone (one of the loader's
@@ -242,6 +249,7 @@ state rather than the previous window's numbers.
     - `LatencyMetric`
     - `LatencyStat`
     - `LatencySummary`
+    - `LatencySummaryTabs`
     - `LatencyWindow`
     - `LedgerClient`
   - Exports (values):
@@ -260,6 +268,8 @@ state rather than the previous window's numbers.
     - `isEmptyAcc`
     - `LATENCY_CLIENT_KINDS`
     - `LATENCY_METRICS`
+    - `LATENCY_SUMMARY_TABS`
+    - `LATENCY_TABS_SPLIT_SINCE`
     - `LATENCY_WINDOWS`
     - `latencySummary`
     - `LedgerClientSchema`

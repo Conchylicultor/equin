@@ -1,8 +1,13 @@
 import { serveValue } from "@plugins/network/plugins/live/server";
-import { latencySummary, type LatencyWindow } from "../../core";
+import {
+  latencySummary,
+  type LatencySummaryTabs,
+  type LatencyWindow,
+} from "../../core";
 import { createFlushNotifier } from "./flush-notifier";
 import { loadLatencySummary } from "./query";
 import {
+  _latencyLedgerClientMinute,
   _latencyLedgerHostMinute,
   _latencyLedgerInteraction,
   _latencyLedgerMinute,
@@ -17,7 +22,9 @@ import {
 // time; the next flush carries them.) It declares those reads as `outsideFeed`:
 // accepted by the read-set drift guard, never routed.
 
-const flushNotifier = createFlushNotifier<LatencyWindow>();
+// One subscription per (window, tabs) tuple: each has its own notify.
+const flushNotifier =
+  createFlushNotifier<`${LatencyWindow}:${LatencySummaryTabs}`>();
 
 export const latencySummaryServed = serveValue(latencySummary, {
   source: "external",
@@ -29,17 +36,18 @@ export const latencySummaryServed = serveValue(latencySummary, {
     outsideFeed: {
       tables: [
         _latencyLedgerMinute,
+        _latencyLedgerClientMinute,
         _latencyLedgerHostMinute,
         _latencyLedgerThreadMinute,
         _latencyLedgerInteraction,
       ],
       reason:
-        "written by the ledger's minute flush and the browser's batches, and excluded from the change feed so a write does not recompute per row; the minute flush notifies every subscribed window instead, since a landed minute may change any window's percentiles",
+        "written by the ledger's minute flush and the browser's batches, and excluded from the change feed so a write does not recompute per row; the minute flush notifies every subscribed (window, tabs) tuple instead, since a landed minute may change any of their percentiles",
     },
   },
-  loader: ({ window }) => loadLatencySummary(window),
-  whileSubscribed: ({ window }, notify) =>
-    flushNotifier.subscribe(window, notify),
+  loader: ({ window, tabs }) => loadLatencySummary(window, tabs),
+  whileSubscribed: ({ window, tabs }, notify) =>
+    flushNotifier.subscribe(`${window}:${tabs}`, notify),
 });
 
 /** A minute was written: refresh every subscribed window, once per minute. */

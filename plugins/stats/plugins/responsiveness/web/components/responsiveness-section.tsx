@@ -8,12 +8,14 @@ import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { LiveChart } from "@plugins/stats/plugins/commits/web";
 import {
+  LATENCY_TABS_SPLIT_SINCE,
   METRIC_LABELS,
   PRESSURE_DECOMPRESSIONS_PER_SEC,
   PRESSURE_FREE_MEM_MB,
   latencySummary,
   type LatencyStat,
   type LatencySummary,
+  type LatencySummaryTabs,
   type LatencyWindow,
 } from "@plugins/debug/plugins/latency-ledger/core";
 import { formatCount, formatMs, formatShare } from "./format";
@@ -24,14 +26,23 @@ const WINDOWS: { id: LatencyWindow; label: string }[] = [
   { id: "7d", label: "7 days" },
 ];
 
+// Whose tabs the browser measures and the criteria over them are judged on.
+// Yours by default: the agent browser's reload loops are not what you feel.
+const TABS: { id: LatencySummaryTabs; label: string }[] = [
+  { id: "real", label: "Your tabs" },
+  { id: "automated", label: "Automated" },
+  { id: "all", label: "Every tab" },
+];
+
 type Summary = LatencySummary;
 
 export function ResponsivenessSection() {
   const [window, setWindow] = useState<LatencyWindow>("24h");
+  const [tabs, setTabs] = useState<LatencySummaryTabs>("real");
   // Live: the server's minute flush refreshes the subscribed window. A switch
   // of window is a new tuple, so it shows its loading state rather than the
   // previous window's numbers.
-  const summary = useLive(latencySummary, { window });
+  const summary = useLive(latencySummary, { window, tabs });
 
   return (
     <Stack gap="lg">
@@ -41,13 +52,19 @@ export function ResponsivenessSection() {
           ones. A minute is under pressure when memory decompressions pass{" "}
           {formatCount(PRESSURE_DECOMPRESSIONS_PER_SEC)} a second, free memory
           falls under {PRESSURE_FREE_MEM_MB} MB, or the machine watcher raised
-          its alarm.
+          its alarm.{" "}
+          {tabs === "all"
+            ? "Every tab: your own and those automation drives (the agent browser, end-to-end runs) together."
+            : `Page loads, navigations, updates and clicks are ${tabs === "real" ? "your own tabs'" : "automated tabs' (the agent browser, end-to-end runs)"} only, recorded apart since ${LATENCY_TABS_SPLIT_SINCE}; server measures are every tab's.`}
         </Text>
-        <SegmentedControl
-          options={WINDOWS}
-          value={window}
-          onChange={setWindow}
-        />
+        <Stack direction="row" align="center" gap="sm">
+          <SegmentedControl options={TABS} value={tabs} onChange={setTabs} />
+          <SegmentedControl
+            options={WINDOWS}
+            value={window}
+            onChange={setWindow}
+          />
+        </Stack>
       </Stack>
       <LiveChart
         read={summary}

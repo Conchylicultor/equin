@@ -1,10 +1,12 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import { LATENCY_WINDOWS, LatencySummarySchema } from "./endpoints";
+import { LATENCY_SUMMARY_TABS } from "./metrics";
 
 /**
- * The responsiveness summary for one window: p50 / p95 by minute class, the
- * exit criteria, thread owners and the slowest interactions.
+ * The responsiveness summary for one window and one set of tabs (`tabs`: a
+ * person's, automation's, or every tab — `LATENCY_SUMMARY_TABS`): p50 / p95 by
+ * minute class, the exit criteria, thread owners and the slowest interactions.
  *
  * Served external (`server/internal/summary-resource.ts`): its tables are
  * excluded from the change feed by declaration, so the ledger's own minute
@@ -19,6 +21,9 @@ import { LATENCY_WINDOWS, LatencySummarySchema } from "./endpoints";
  */
 export const latencySummary = liveValue("latency-ledger.summary", {
   schema: LatencySummarySchema,
-  params: { window: z.enum(LATENCY_WINDOWS) },
+  params: {
+    window: z.enum(LATENCY_WINDOWS),
+    tabs: z.enum(LATENCY_SUMMARY_TABS),
+  },
   load: "on-demand",
 });

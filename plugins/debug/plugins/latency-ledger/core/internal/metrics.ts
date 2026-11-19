@@ -78,6 +78,24 @@ export const LATENCY_CLIENT_KINDS = [
 ] as const;
 export type LatencyClientKind = (typeof LATENCY_CLIENT_KINDS)[number];
 
+/**
+ * Whose tabs the responsiveness summary judges a browser metric over: a
+ * person's (`real`, the default — what the user feels), automation's, or every
+ * tab (`all`, the combined table — the only record before the split). The
+ * server's own metrics (delivery, thread lag) are every tab's in each view.
+ * Split rows exist from 2026-11-19 (`LATENCY_TABS_SPLIT_SINCE`), so a window
+ * reaching before it holds only every-tab samples there.
+ */
+export const LATENCY_SUMMARY_TABS = [
+  "real",
+  "automated",
+  "all",
+] as const satisfies readonly LatencyClientKind[];
+export type LatencySummaryTabs = (typeof LATENCY_SUMMARY_TABS)[number];
+
+/** The first UTC day browser minutes were also filed by tab kind. */
+export const LATENCY_TABS_SPLIT_SINCE = "2026-11-19";
+
 // A minute is "under pressure" when the machine was short of memory in it, or the
 // cluster sentinel had its duress latch set. The two memory bars are the ones the
 // track's evidence was cut with (2026-09-18); the latch trips later and on more

@@ -17,6 +17,8 @@ export {
   LATENCY_METRICS,
   CLIENT_METRICS,
   LATENCY_CLIENT_KINDS,
+  LATENCY_SUMMARY_TABS,
+  LATENCY_TABS_SPLIT_SINCE,
   METRIC_LABELS,
   EXIT_CRITERIA,
   THREAD_STALL_MS,
@@ -29,6 +31,7 @@ export type {
   ClientLatencyMetric,
   ExitCriterion,
   LatencyClientKind,
+  LatencySummaryTabs,
 } from "./internal/metrics";
 export {
   submitClientLatency,

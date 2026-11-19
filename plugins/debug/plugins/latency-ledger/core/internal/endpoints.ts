@@ -1,7 +1,12 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { BUCKET_COUNT, HISTOGRAM_SCHEME } from "./histogram";
-import { CLIENT_METRICS, EXIT_CRITERIA, LATENCY_METRICS } from "./metrics";
+import {
+  CLIENT_METRICS,
+  EXIT_CRITERIA,
+  LATENCY_METRICS,
+  LATENCY_SUMMARY_TABS,
+} from "./metrics";
 import {
   cappedList,
   wholeList,
@@ -59,9 +64,14 @@ export type Interaction = z.infer<typeof InteractionSchema>;
  * drives it (the agent browser, an e2e run). The per-client page-load judge
  * (`latency-ledger/client-rate`) counts a tab's loads by it. An automated
  * client is marked, never left out.
+ *
+ * `tabId` is null for a tab whose storage cannot hold an id (`NO_TAB_ID`, a
+ * sentinel shared by every such tab, so it names no one tab): its interactions
+ * are counted toward no client, but its kind is still known and sent, so its
+ * minutes are split like any other tab's.
  */
 export const LedgerClientSchema = z.object({
-  tabId: z.string().min(1).max(100),
+  tabId: z.string().min(1).max(100).nullable(),
   automated: z.boolean(),
 });
 export type LedgerClient = z.infer<typeof LedgerClientSchema>;
@@ -105,6 +115,8 @@ export type LatencyWindow = (typeof LATENCY_WINDOWS)[number];
 
 export const LatencySummarySchema = z.object({
   window: z.enum(LATENCY_WINDOWS),
+  /** Whose tabs the browser metrics, the criteria over them and the slowest list are. */
+  tabs: z.enum(LATENCY_SUMMARY_TABS),
   /**
    * Minutes of the window the server recorded, by class. `slept`: the machine
    * slept in it, so its samples are left out. A minute the server did not record

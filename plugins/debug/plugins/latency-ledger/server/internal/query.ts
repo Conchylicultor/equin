@@ -4,6 +4,7 @@ import { db } from "@plugins/database/server";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import {
   BUCKET_COUNT,
+  CLIENT_METRICS,
   EXIT_CRITERIA,
   HISTOGRAM_SCHEME,
   LATENCY_METRICS,
@@ -17,6 +18,7 @@ import {
   type LatencyMetric,
   type LatencyStat,
   type LatencySummary,
+  type LatencySummaryTabs,
   type LatencyWindow,
 } from "../../core";
 
@@ -76,12 +78,50 @@ function statOf(row: MetricRow | undefined): LatencyStat {
   };
 }
 
+const MINUTE_COLUMNS = sql`metric, minute_start, scheme, counts, count, max_ms, censored, excluded`;
+
 /**
- * The summary for one window — the `latency-ledger.summary` loader
- * (./summary-resource). Four aggregate reads over the window's rows.
+ * The minute rows a summary over `tabs` reads. Every tab: the combined table.
+ * One kind of tab: its browser minutes from the split table, and the server's
+ * own metrics (measured once for every tab) from the combined one — so the
+ * agent browser's reload loops never weigh in what a person's tabs are judged by.
+ */
+function minuteSource(tabs: LatencySummaryTabs) {
+  if (tabs === "all")
+    return sql`SELECT ${MINUTE_COLUMNS} FROM latency_ledger_minute`;
+  const clientMetrics = sql.join(
+    CLIENT_METRICS.map((m) => sql`${m}`),
+    sql`, `,
+  );
+  return sql`
+    SELECT ${MINUTE_COLUMNS} FROM latency_ledger_client_minute
+    WHERE client_kind = ${tabs}
+    UNION ALL
+    SELECT ${MINUTE_COLUMNS} FROM latency_ledger_minute
+    WHERE metric NOT IN (${clientMetrics})`;
+}
+
+/**
+ * The page loads and navigations a summary over `tabs` lists. `automated` is
+ * set only from a client the browser sent, so an automated row is known as
+ * such even without a tab id; a person's tab is known by its id. A row with
+ * neither (a bundle that predates the client, or a person's tab that cannot
+ * hold an id) is in every tab's list only — never guessed.
+ */
+function interactionFilter(tabs: LatencySummaryTabs) {
+  if (tabs === "all") return sql`TRUE`;
+  if (tabs === "automated") return sql`automated`;
+  return sql`NOT automated AND client_id IS NOT NULL`;
+}
+
+/**
+ * The summary for one window over one set of tabs — the
+ * `latency-ledger.summary` loader (./summary-resource). Four aggregate reads
+ * over the window's rows.
  */
 export async function loadLatencySummary(
   window: LatencyWindow,
+  tabs: LatencySummaryTabs,
 ): Promise<LatencySummary> {
   const since = new Date(Date.now() - WINDOW_MS[window]);
 
@@ -93,7 +133,7 @@ export async function loadLatencySummary(
         WITH classed AS (
           SELECT m.metric, m.counts, m.count, m.max_ms, m.censored, m.excluded,
                  ${minuteClass} AS class
-          FROM latency_ledger_minute m
+          FROM (${minuteSource(tabs)}) m
           LEFT JOIN latency_ledger_host_minute h USING (minute_start)
           WHERE m.minute_start >= ${since} AND m.scheme = ${HISTOGRAM_SCHEME}
         ),
@@ -219,11 +259,13 @@ export async function loadLatencySummary(
                resource_count, last_resource_key
         FROM latency_ledger_interaction
         WHERE occurred_at >= ${since} AND NOT hidden
+          AND ${interactionFilter(tabs)}
         ORDER BY duration_ms DESC LIMIT ${SLOWEST_INTERACTIONS}`,
   });
 
   return {
     window,
+    tabs,
     minutes: {
       calm: minutesOf("calm"),
       pressure: minutesOf("pressure"),

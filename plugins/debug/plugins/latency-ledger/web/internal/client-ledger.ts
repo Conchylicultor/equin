@@ -120,14 +120,16 @@ function restore(
 
 // Who loaded these pages: the tab (kept across its reloads), and whether
 // automation drives it — a mark, so an agent browser's reload loop is judged
-// and reported like a person's. A tab whose storage cannot hold an id shares
-// the sentinel with every other such tab: it is sent as no client (unknown),
-// never pooled into one made-up client.
-function clientField(): { client?: LedgerClient } {
+// and reported like a person's, and its minutes are filed apart from a
+// person's. A tab whose storage cannot hold an id shares the sentinel with
+// every other such tab: it is sent with no tab id (counted toward no client,
+// never pooled into one made-up client), but still with its kind.
+function ledgerClient(): LedgerClient {
   const tabId = getTabId();
-  return tabId === NO_TAB_ID
-    ? {}
-    : { client: { tabId, automated: AUTOMATED_BROWSER } };
+  return {
+    tabId: tabId === NO_TAB_ID ? null : tabId,
+    automated: AUTOMATED_BROWSER,
+  };
 }
 
 export async function flush(): Promise<void> {
@@ -149,7 +151,7 @@ export async function flush(): Promise<void> {
           scheme: HISTOGRAM_SCHEME,
           minutes: batchMinutes,
           interactions: batchInteractions,
-          ...clientField(),
+          client: ledgerClient(),
         },
         keepalive: true,
         // A failed observability post is not a user-facing error.

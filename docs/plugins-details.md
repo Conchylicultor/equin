@@ -26682,6 +26682,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LatencyMetric`
           - `LatencyStat`
           - `LatencySummary`
+          - `LatencySummaryTabs`
           - `LatencyWindow`
           - `LedgerClient`
         - Exports (values):
@@ -26700,6 +26701,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isEmptyAcc`
           - `LATENCY_CLIENT_KINDS`
           - `LATENCY_METRICS`
+          - `LATENCY_SUMMARY_TABS`
+          - `LATENCY_TABS_SPLIT_SINCE`
           - `LATENCY_WINDOWS`
           - `latencySummary`
           - `LedgerClientSchema`
