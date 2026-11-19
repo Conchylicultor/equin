@@ -18,7 +18,10 @@ import {
   RowActions,
   rowActionsAnchor,
 } from "@plugins/primitives/plugins/row-actions/web";
-import { useVirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
+import {
+  useVirtualRows,
+  virtualKeyProps,
+} from "@plugins/primitives/plugins/virtual-rows/web";
 import {
   useRowFold,
   type RowFoldProps,
@@ -606,8 +609,8 @@ export function DataTable<TRow>({
   ].join(" ");
 
   // Shared row renderer so the plain branch and the windowed branch render
-  // identical rows. The optional `measure` handle is supplied only by the
-  // virtualized branch (tanstack's measureElement reads the data-index). Routed
+  // identical rows. The optional `measure` ref is supplied only by the
+  // virtualized branch (the window finds a row by its key). Routed
   // through `DataTableRow` (a component) so per-row decoration may call hooks.
   const useDecorate = useRowDecoration ?? useNoRowDecoration;
   const renderRow = (
@@ -623,9 +626,9 @@ export function DataTable<TRow>({
       return (
         <div
           key={rowKey(row, i)}
-          ref={measure?.ref}
+          ref={measure}
           {...foldProps}
-          data-index={measure?.index}
+          {...(measure ? virtualKeyProps(rowKey(row, i)) : null)}
           // eslint-disable-next-line layout/no-adhoc-layout -- full-span line spanning the subgrid table's column tracks (a tree's placeholder child)
           className="col-span-full rail-follow"
         >
@@ -646,8 +649,7 @@ export function DataTable<TRow>({
         rowActions={rowActions}
         rowPersistentActions={rowPersistentActions}
         useRowDecoration={useDecorate}
-        measureRef={measure?.ref}
-        measureIndex={measure?.index}
+        measureRef={measure}
         foldInert={foldProps.inert}
         rowPad={rowPad}
         presentation={presentation}
@@ -895,9 +897,11 @@ function WithSelection({
  * scrolling a row in, a search narrowing the rows, the next page landing —
  * re-rendered every drawn row and all its cells (~100 components a row: a
  * Tasks search keystroke rendered ~30,000). Every prop is therefore a value or
- * a stable identity: the measure handle travels as its two parts (the
- * virtualizer's `measureElement` is one function per virtualizer), and the
- * fold's row props as their one varying value (`foldInert`).
+ * a stable identity: the measure ref is the virtualizer's one
+ * `measureElement`, a windowed row is found by its key (never handed its
+ * position, which every row below a row that comes or goes would re-render
+ * for), and the fold's row props travel as their one varying value
+ * (`foldInert`).
  */
 const DataTableRow = memo(DataTableRowImpl) as typeof DataTableRowImpl;
 
@@ -912,7 +916,6 @@ function DataTableRowImpl<TRow>({
   rowPersistentActions,
   useRowDecoration,
   measureRef,
-  measureIndex,
   foldInert,
   rowPad,
   presentation,
@@ -937,10 +940,9 @@ function DataTableRowImpl<TRow>({
   useRowDecoration: Hook<
     (row: TRow, key: string) => DataTableRowDecoration | undefined
   >;
-  /** A windowed row's measurement ref (the virtualizer's `measureElement`). */
-  measureRef?: RowMeasure["ref"];
-  /** A windowed row's index, which `measureElement` reads off `data-index`. */
-  measureIndex?: number;
+  /** A windowed row's measurement ref (the virtualizer's `measureElement`),
+   *  which finds the row by its key (`virtualKeyProps`). */
+  measureRef?: RowMeasure;
   /** Whether the row is folding away (`useRowFold`'s `inert`): a value, so
    *  the memoized row is not handed a fresh props object per render. */
   foldInert: boolean;
@@ -992,7 +994,7 @@ function DataTableRowImpl<TRow>({
     <div
       ref={rowRef}
       {...foldProps}
-      data-index={measureIndex}
+      {...(measureRef ? virtualKeyProps(key) : null)}
       // The row's identity on the DOM — the same marker the list and icons
       // views carry — so a test can address one row instead of walking text.
       data-row-key={key}
@@ -1291,7 +1293,7 @@ function VirtualTableBody<TRow>({
             paint to become the window's estimate (never painted — the
             window replaces it in the same frame). */}
         {probe !== null && lines.length > 0
-          ? renderLine(lines[0]!, { ref: probe, index: 0 })
+          ? renderLine(lines[0]!, probe)
           : null}
         <div
           aria-hidden
@@ -1337,10 +1339,7 @@ function VirtualTableBody<TRow>({
                 style={{ height: gap }}
               />
             )}
-            {renderLine(lines[vi.index]!, {
-              ref: virtualizer.measureElement,
-              index: vi.index,
-            })}
+            {renderLine(lines[vi.index]!, virtualizer.measureElement)}
           </Fragment>
         );
       })}
@@ -1422,12 +1421,10 @@ function renderGroupHeader<TRow>(
   );
 }
 
-/** A windowed row's measurement handle (tanstack's `measureElement` reads the
- *  `data-index`). */
-interface RowMeasure {
-  ref: (el: Element | null) => void;
-  index: number;
-}
+/** A windowed row's measurement ref (the virtualizer's `measureElement`, or
+ *  the first commit's probe); the row carries its key for it
+ *  (`virtualKeyProps`). */
+type RowMeasure = (el: Element | null) => void;
 
 /**
  * One line of the table body, in paint order: a data row, or — grouped — a

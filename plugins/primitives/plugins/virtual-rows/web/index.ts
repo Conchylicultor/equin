@@ -1,6 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export { VirtualRows, useVirtualRows } from "./internal/virtual-rows";
+export {
+  VirtualRows,
+  useVirtualRows,
+  virtualKeyProps,
+} from "./internal/virtual-rows";
 export { offscreenSkipClass } from "./internal/offscreen-skip";
 export type {
   VirtualRowsProps,

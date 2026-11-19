@@ -52677,7 +52677,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell/notifications`
     - **`data-table`** — Sortable/filterable flex-layout data table primitive.
       - Web:
-        - Uses: 28 symbols — full list in [`plugins/primitives/plugins/data-table/REFERENCE.md`](../plugins/primitives/plugins/data-table/REFERENCE.md)
+        - Uses: 29 symbols — full list in [`plugins/primitives/plugins/data-table/REFERENCE.md`](../plugins/primitives/plugins/data-table/REFERENCE.md)
           - `primitives/css/ui-kit` ×4
           - `primitives/css/sticky/stack` ×3
           - `primitives/css/text` ×3
@@ -52687,10 +52687,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/link-gesture` ×2
           - `primitives/row-actions` ×2
           - `primitives/virtual-rows/row-fold` ×2
+          - `primitives/virtual-rows` ×2
           - `primitives/css/center.Center`
           - `primitives/css/scroll.useScrollsSideways`
           - `primitives/css/spacing.Stack`
-          - `primitives/virtual-rows.useVirtualRows`
           - `ui/icons.Icon`
         - Exports (types):
           - `ColumnDef`
@@ -59264,6 +59264,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `offscreenSkipClass`
           - `useVirtualRows`
+          - `virtualKeyProps`
           - `VirtualRows`
       - Cross-plugin:
         - Imported by:

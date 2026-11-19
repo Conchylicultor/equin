@@ -292,16 +292,17 @@ re-rendered every drawn row and its cells — ~100 components a row; a Tasks
 search keystroke rendered ~30,000. A row bails out only while each of its props
 keeps its identity, so:
 
-- the windowed measure handle travels as two props (`measureRef`, the
-  virtualizer's one `measureElement`, and `measureIndex`), and the fold's row
-  props as `foldInert` (the row rebuilds `rowProps` from its own key);
+- a windowed row's measure ref (`measureRef`) is the virtualizer's one
+  `measureElement`, and the fold's row props travel as `foldInert` (the row
+  rebuilds `rowProps` from its own key);
 - a row is handed its key (`rowId`), never its position: `useRowDecoration`,
   `rowActions` and `rowPersistentActions` are called with `(row, key)`, so a
   row whose neighbours came or went keeps its props. The selection arrives as
-  a boolean (`selected`), so a new `selectedRowId` re-renders two rows. One
-  exception left: a WINDOWED row still takes its window position
-  (`measureIndex`, the `data-index` the virtualizer measures by), so there a
-  row above that comes or goes re-renders the rows below it;
+  a boolean (`selected`), so a new `selectedRowId` re-renders two rows. A
+  WINDOWED row too: it carries its key (`virtualKeyProps`), which the window
+  looks its index up by (`virtual-rows`), never a `data-index` — a row above
+  that comes or goes re-renders none of the rows below it (pinned by
+  `web/__tests__/windowed-row-memo.test.tsx`);
 - the `row` objects themselves keep their identity while unchanged — a
   nesting caller hands the tree model's shared lines (tree CLAUDE.md, "A row
   re-renders only when something about IT changes");
@@ -339,7 +340,7 @@ step renders, to check a caller.
 
 - Description: Sortable/filterable flex-layout data table primitive.
 - Web:
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×4
     - `primitives/css/sticky/stack` ×3
     - `primitives/css/text` ×3
@@ -349,10 +350,10 @@ step renders, to check a caller.
     - `primitives/link-gesture` ×2
     - `primitives/row-actions` ×2
     - `primitives/virtual-rows/row-fold` ×2
+    - `primitives/virtual-rows` ×2
     - `primitives/css/center.Center`
     - `primitives/css/scroll.useScrollsSideways`
     - `primitives/css/spacing.Stack`
-    - `primitives/virtual-rows.useVirtualRows`
     - `ui/icons.Icon`
   - Exports (types):
     - `ColumnDef`

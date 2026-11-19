@@ -56,11 +56,8 @@ async function localKeys(page: Page): Promise<string[]> {
  */
 async function firstNonMatchingTitle(page: Page): Promise<string | null> {
   return page.evaluate((query) => {
-    const rows = [...document.querySelectorAll("[data-index]")].sort(
-      (a, b) =>
-        Number(a.getAttribute("data-index")) -
-        Number(b.getAttribute("data-index")),
-    );
+    // Windowed rows are drawn in item order, each marked by its item key.
+    const rows = [...document.querySelectorAll("[data-virtual-key]")];
     for (const row of rows) {
       const title = row.querySelector("span, div")?.textContent?.trim();
       if (title && !title.toLowerCase().includes(query)) return title;

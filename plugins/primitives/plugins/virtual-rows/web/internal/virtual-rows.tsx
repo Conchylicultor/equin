@@ -27,6 +27,22 @@ import { useRowFold } from "@plugins/primitives/plugins/virtual-rows/plugins/row
  *  viewport's worth of rows sliding through, without drawing a whole subtree. */
 const MAX_DRAW_PAST_END = 60;
 
+/**
+ * The attribute a measured row carries: its item KEY (`getKey`), which the
+ * window looks its index up by. Never its index: a row stamped with its
+ * position re-renders whenever a row above it comes or goes, which a memoized
+ * row (data-table's) must not. A measured element without it throws.
+ */
+const VIRTUAL_KEY_ATTR = "data-virtual-key";
+
+/** The props that mark a windowed row with its item key (`VIRTUAL_KEY_ATTR`),
+ *  spread on the element given the window's measure ref. */
+export function virtualKeyProps(key: string): {
+  [VIRTUAL_KEY_ATTR]: string;
+} {
+  return { [VIRTUAL_KEY_ATTR]: key };
+}
+
 export interface VirtualRowsProps<T> {
   items: readonly T[];
   /** Estimated px per row; dynamic measurement refines it after mount. */
@@ -278,6 +294,20 @@ export function useVirtualRows<T>({
     { deps: [items, scrollEl] },
   );
 
+  // Where each item key sits in `items`: a row is found by the key it
+  // carries (`VIRTUAL_KEY_ATTR`), so it never has to carry its position.
+  const indexByKey = useMemo(() => {
+    const out = new Map<string, number>();
+    items.forEach((item, i) => {
+      const key = getKey(item, i);
+      // Two rows under one key would measure as one (and share a React key).
+      if (out.has(key))
+        throw new Error(`Two windowed rows share the key ${key}`);
+      out.set(key, i);
+    });
+    return out;
+  }, [items, getKey]);
+
   // eslint-disable-next-line react-hooks/incompatible-library -- @tanstack/react-virtual is genuinely compiler-incompatible (returns a mutable Virtualizer mutated outside render); this hook is the sanctioned exempt, opted out of compilation via the "use no memo" directive above.
   const virtualizer = useVirtualizer({
     count: items.length,
@@ -327,6 +357,19 @@ export function useVirtualRows<T>({
   // nothing; the window is redrawn at the true margin before paint.
   virtualizer.shouldAdjustScrollPositionOnItemSizeChange =
     marginItems === items ? undefined : () => false;
+  // Every index virtual-core reads off a row element (its ref callback, its
+  // ResizeObserver entries) comes from the row's key, looked up in the items
+  // of the latest render — set here, like the options `useVirtualizer` sets
+  // in render. A row whose key left the items is out of range (-1), as a
+  // stale `data-index` was.
+  virtualizer.indexFromElement = (node) => {
+    const key = node.getAttribute(VIRTUAL_KEY_ATTR);
+    if (key === null)
+      throw new Error(
+        `A windowed row was measured without its ${VIRTUAL_KEY_ATTR} (its item key)`,
+      );
+    return indexByKey.get(key) ?? -1;
+  };
 
   // The reveal is keyed on the item, not its index: an index shift (rows
   // inserted above it — a folder expanded while the selected row is scrolled
@@ -451,7 +494,7 @@ export function VirtualRows<T>({
         <Placed
           key={vi.key}
           {...fold.rowProps(String(vi.key))}
-          data-index={vi.index}
+          {...virtualKeyProps(String(vi.key))}
           ref={virtualizer.measureElement}
           x={{ start: 0, end: 0 }}
           y={{ start: 0, shift: vi.start - scrollMargin }}

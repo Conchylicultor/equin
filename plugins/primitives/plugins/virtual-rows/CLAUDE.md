@@ -29,6 +29,13 @@
   first measured row's size. A wrong estimate jolts the list by the error
   for every row first drawn above the reader. `VirtualRows` and
   `data-table`'s windowed body both render the probe.
+- **A row is found by its key, never its position.** A measured row carries
+  its item key (`virtualKeyProps(key)`, the `data-virtual-key` attribute),
+  and `useVirtualRows` replaces virtual-core's `indexFromElement` (which
+  parses a `data-index`) with a lookup of that key in the latest items. A
+  row element is therefore the same element with the same props wherever
+  the row sits — a memoized row (data-table's) is not re-rendered when rows
+  above it come or go. A measured element without the attribute throws.
 - **Disclosures fold (`openKeys`).** `VirtualRows` runs `row-fold`'s
   `useRowFold` over its items: given the open keys the items were flattened
   under, a toggle's revealed rows grow in, hidden ones stay drawn (folding out)
@@ -66,6 +73,7 @@
   - Exports (values):
     - `offscreenSkipClass`
     - `useVirtualRows`
+    - `virtualKeyProps`
     - `VirtualRows`
 - Cross-plugin:
   - Imported by:

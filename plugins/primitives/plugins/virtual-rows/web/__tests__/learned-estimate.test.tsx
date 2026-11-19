@@ -9,7 +9,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 import type { ReactElement } from "react";
-import { useVirtualRows } from "../internal/virtual-rows";
+import { useVirtualRows, virtualKeyProps } from "../internal/virtual-rows";
 
 /** The window's total size, per render. */
 const totals: number[] = [];
@@ -27,7 +27,7 @@ function List(props: { items: string[] }): ReactElement {
         {virtualItems.map((vi) => (
           <div
             key={vi.key}
-            data-index={vi.index}
+            {...virtualKeyProps(String(vi.key))}
             data-row
             ref={virtualizer.measureElement}
           >
