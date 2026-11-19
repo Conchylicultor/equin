@@ -150,9 +150,23 @@ export interface LinkInputs {
   vendorSetHash: string;
   /** Web plugins loaded at boot (not deferred). */
   eager: ReadonlySet<string>;
-  /** Deferred web plugins under an app root, by root (`appRootOf`). */
+  /**
+   * Deferred web plugins by the group they load with: an app root
+   * (`appRootOf`), or {@link ON_DEMAND_GROUP} for one under no app.
+   */
   appPlugins: Readonly<Record<string, readonly string[]>>;
 }
+
+/**
+ * The group of the deferred web plugins under no app root: the page's
+ * on-demand plugins (a bundled browser host's page scope, the registry's
+ * `webScopedEntries` — every other plugin outside an app is eager). The scope
+ * loads them together when the visitor asks, so they are cut into route
+ * chunks like an app's set — left to rolldown's lazy chunking, the website's
+ * demo scope was ~870 chunks, fetched import by import (2.2 MB in 755
+ * requests on Enter). Not an app root, so it has no app preload seeds.
+ */
+export const ON_DEMAND_GROUP = "on-demand";
 
 /** What a link produced — published as the `link.<key>` record's meta. */
 export interface LinkRecord {
@@ -254,8 +268,8 @@ export function linkInputsOf(opts: {
       eager.add(t.pluginPath);
       continue;
     }
-    const root = appRootOf(t.pluginPath);
-    if (root !== null) (appPlugins[root] ??= []).push(t.pluginPath);
+    const root = appRootOf(t.pluginPath) ?? ON_DEMAND_GROUP;
+    (appPlugins[root] ??= []).push(t.pluginPath);
   }
   for (const paths of Object.values(appPlugins)) paths.sort();
   return {
@@ -1182,7 +1196,8 @@ async function runLink(
     ...seedsOf(bootRoots).filter((u) => u !== entryUrl),
   ];
   const appSeeds: Record<string, string[]> = {};
-  for (const [root, roots] of appRoots) appSeeds[root] = seedsOf(roots);
+  for (const [root, roots] of appRoots)
+    if (root !== ON_DEMAND_GROUP) appSeeds[root] = seedsOf(roots);
   const bootChunks = new Set(
     [...boot].map((m) => chunkOfModule.get(m)).filter((u) => u !== undefined),
   ).size;

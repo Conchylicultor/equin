@@ -316,7 +316,7 @@ takes a `debt` exemption on the check's id.
     - `framework/tooling/guards` (11 debt)
     - `framework/tooling/import-closure` (1 debt)
     - `framework/tooling/lint` (2 debt)
-    - `framework/tooling/web-artifacts` (22 debt)
+    - `framework/tooling/web-artifacts` (23 debt)
     - `framework/web-core` (1 debt)
     - `infra/asset-mirror/bundle` (1 debt)
     - `infra/claude-cli/usage-ledger/pricing/price-table` (1 debt)

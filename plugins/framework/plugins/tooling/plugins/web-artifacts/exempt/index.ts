@@ -26,6 +26,7 @@ export default [
       "core/internal/vendors.ts",
       "core/internal/vite-builder.ts",
       "core/internal/worker-link.ts",
+      "core/internal/worker-bundle.ts",
     ],
     kind: "debt",
     task: "task-1792338443-riwqev",
@@ -96,6 +97,7 @@ export default [
       "core/internal/vendors.ts",
       "core/internal/vite-builder.ts",
       "core/internal/worker-link.ts",
+      "core/internal/worker-bundle.ts",
     ],
     kind: "sanctioned",
     reason:

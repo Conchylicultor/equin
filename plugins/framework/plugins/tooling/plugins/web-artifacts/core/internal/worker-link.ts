@@ -52,6 +52,7 @@ import {
 import { WORKER_TREE_PREFIX } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/plugins/served-paths/core";
 import { cobuildHostOf } from "../own-roots";
 import { HOST_SNAPSHOT_LINK_KIND } from "./host-snapshots";
+import { bundleWorkerTree, WORKER_BUNDLE_VERSION } from "./worker-bundle";
 import {
   artifactStorePath,
   artifactTmpDir,
@@ -248,6 +249,8 @@ export interface WorkerTree {
   dirName: string;
   /** link name → absolute store path */
   links: Record<string, AppPath>;
+  /** The link names of the hosts' entries: what the bundle starts from. */
+  entries: string[];
 }
 
 /**
@@ -257,6 +260,8 @@ export interface WorkerTree {
 export function workerTreeOf(opts: {
   linked: ReadonlyArray<{ linkName: string; linkedDirName: string }>;
   vendorSetDir: AppPath;
+  /** The hosts' entry link names (`workerLinkName` of each `bin`). */
+  entries: readonly string[];
 }): WorkerTree {
   // `linkedDirName` is any store entry the link names: a linked artifact copy,
   // or a host's snapshot dir (`host-snapshots.ts`), which has nothing to link.
@@ -272,17 +277,37 @@ export function workerTreeOf(opts: {
   }
   links[VENDOR_LINK] = opts.vendorSetDir;
   const sorted = Object.keys(links).sort();
+  const entries = [...new Set(opts.entries)].sort();
+  for (const e of entries) {
+    if (links[e] === undefined)
+      throw new Error(`worker tree: entry ${e} is not one of its links`);
+  }
+  // The bundle inside the tree (`worker-bundle.ts`) is a function of the
+  // links, the entries and the bundler's version: all three name the tree.
   const hash = createHash("sha256")
-    .update(sorted.map((k) => `${k}\t${basename(links[k]!)}`).join("\n"))
+    .update(
+      [
+        ...sorted.map((k) => `${k}\t${basename(links[k]!)}`),
+        ...entries.map((e) => `entry\t${e}`),
+        `bundle\t${WORKER_BUNDLE_VERSION}`,
+      ].join("\n"),
+    )
     .digest("hex");
   return {
     dirName: `${WORKER_TREE_PREFIX}${hash.slice(0, 16)}`,
     links: Object.fromEntries(sorted.map((k) => [k, links[k]!])),
+    entries,
   };
 }
 
-/** Ensure the tree's store entry exists (a dir of symlinks); return its path. */
-export async function ensureWorkerTree(tree: WorkerTree): Promise<AppPath> {
+/**
+ * Ensure the tree's store entry exists (a dir of symlinks, and the bundle the
+ * worker loads, `_bundle/` — `worker-bundle.ts`); return its path.
+ */
+export async function ensureWorkerTree(
+  tree: WorkerTree,
+  log: (line: string) => void,
+): Promise<AppPath> {
   if (hasArtifact(tree.dirName)) {
     touchArtifact(tree.dirName);
     return artifactStorePath(tree.dirName);
@@ -291,10 +316,16 @@ export async function ensureWorkerTree(tree: WorkerTree): Promise<AppPath> {
   for (const [name, target] of Object.entries(tree.links)) {
     symlinkSync(target, joinAppPath(tmp, name));
   }
+  await bundleWorkerTree({
+    treeDir: tmp,
+    entries: tree.entries,
+    vendorLink: VENDOR_LINK,
+    log,
+  });
   await publishDir({
     tmpDir: tmp,
     dest: artifactStorePath(tree.dirName),
-    meta: { workerTree: Object.keys(tree.links) },
+    meta: { workerTree: Object.keys(tree.links), entries: tree.entries },
     isComplete: () => hasArtifact(tree.dirName),
   });
   return artifactStorePath(tree.dirName);

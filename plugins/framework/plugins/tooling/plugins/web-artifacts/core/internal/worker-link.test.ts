@@ -104,11 +104,16 @@ describe("workerTreeOf", () => {
   ];
 
   test("is named by its links: same links, same tree; one artifact changed, a new tree", () => {
-    const one = workerTreeOf({ linked, vendorSetDir: asAppPath("/v/set.aa") });
+    const one = workerTreeOf({
+      linked,
+      vendorSetDir: asAppPath("/v/set.aa"),
+      entries: ["a.server"],
+    });
     expect(
       workerTreeOf({
         linked: [...linked].reverse(),
         vendorSetDir: asAppPath("/v/set.aa"),
+        entries: ["a.server"],
       }).dirName,
     ).toBe(one.dirName);
     const changed = workerTreeOf({
@@ -117,9 +122,28 @@ describe("workerTreeOf", () => {
         { linkName: "b.core", linkedDirName: "b.core.3333.worker" },
       ],
       vendorSetDir: asAppPath("/v/set.aa"),
+      entries: ["a.server"],
     });
     expect(changed.dirName).not.toBe(one.dirName);
     expect(Object.keys(one.links)).toEqual(["_vendor", "a.server", "b.core"]);
+    // The entries name the tree too: its bundle starts from them.
+    expect(
+      workerTreeOf({
+        linked,
+        vendorSetDir: asAppPath("/v/set.aa"),
+        entries: ["a.server", "b.core"],
+      }).dirName,
+    ).not.toBe(one.dirName);
+  });
+
+  test("an entry that is not one of its links throws", () => {
+    expect(() =>
+      workerTreeOf({
+        linked,
+        vendorSetDir: asAppPath("/v/set.aa"),
+        entries: ["c.bin"],
+      }),
+    ).toThrow(/not one of its links/);
   });
 
   test("one link name for two artifacts throws", () => {
@@ -130,6 +154,7 @@ describe("workerTreeOf", () => {
           { linkName: "a.server", linkedDirName: "a.server.9999.worker" },
         ],
         vendorSetDir: asAppPath("/v/set.aa"),
+        entries: ["a.server"],
       }),
     ).toThrow(/names two artifacts/);
   });

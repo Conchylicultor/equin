@@ -36,6 +36,7 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { waitForNotBusy } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
+import { namespaceFromHost } from "@plugins/infra/plugins/namespace/core";
 import { ENTER_DEMO } from "./internal/demo-pages";
 
 interface Shape {
@@ -132,7 +133,31 @@ async function startShaper(shape: Shape): Promise<Shaper> {
       const line = head.toString("latin1").split("\r\n")[0] ?? "";
       const m = /^CONNECT ([^:\s]+):(\d+) /.exec(line);
       if (m === null) {
-        client.end("HTTP/1.1 405 Method Not Allowed\r\n\r\n");
+        // A plain-http target (a local build at `http://<ns>.localhost`):
+        // the request, in absolute form, goes to its origin as is (the
+        // gateway reads the Host header), and the connection stays piped to
+        // that origin — a local build's page and worker fetch from one host.
+        const h = /^[A-Z]+ http:\/\/([^/:\s]+)(?::(\d+))?\//.exec(line);
+        if (h === null) {
+          client.end("HTTP/1.1 405 Method Not Allowed\r\n\r\n");
+          return;
+        }
+        // A namespace's host names the local gateway.
+        const host = namespaceFromHost(h[1]!) === null ? h[1]! : "127.0.0.1";
+        // Hold what else the client sends until the pipe listens.
+        client.pause();
+        const upstream = connect(Number(h[2] ?? 80), host, () => {
+          setTimeout(() => {
+            pipe(upstream, client, down);
+            pipe(client, upstream, up);
+            client.emit("data", head);
+            client.resume();
+          }, shape.rttMs);
+        });
+        sockets.add(upstream);
+        upstream.on("close", () => sockets.delete(upstream));
+        upstream.on("error", () => client.destroy());
+        client.on("close", () => upstream.destroy());
         return;
       }
       const upstream = connect(Number(m[2]), m[1]!, () => {
@@ -288,6 +313,11 @@ await withBrowser(async (h) => {
       (f) => f.sentAt >= clickAt - 50 && f.finishedAt <= usableAt + 50,
     );
     const total = afterClick.reduce((s, f) => s + f.encodedBytes, 0);
+    // What the demo still fetched in the 3 s after usable: code moved past
+    // the mark is not code saved.
+    const late = [...pageFetched, ...workerFetched].filter(
+      (f) => f.sentAt >= clickAt - 50 && f.finishedAt > usableAt + 50,
+    );
     console.log(
       `\n── run ${run}/${RUNS} · ${PROFILE}${shape === null ? "" : ` (${shape.downKbps / 1000} Mbps down, ${shape.rttMs} ms RTT)`} · ${url}`,
     );
@@ -298,7 +328,10 @@ await withBrowser(async (h) => {
       `bytes click → usable: ${mb(total)} in ${afterClick.length} requests (CDP)` +
         (shaper === null
           ? ""
-          : `; proxy delivered ${mb(downAtUsable - downAtClick)} (TLS)`),
+          : `; proxy delivered ${mb(downAtUsable - downAtClick)}`),
+    );
+    console.log(
+      `then, within 3 s of usable: ${mb(late.reduce((s, f) => s + f.encodedBytes, 0))} in ${late.length} requests`,
     );
     console.log(
       bootLine === null

@@ -34,7 +34,10 @@ Key invariants:
   host's page scope beyond its own plugins, codegen's `scopedOnlyWebPlugins`):
   the fleet plans and maps them like `webEntries`, and the plan's
   `deferredPaths` holds them, so they never join the boot's modulepreload
-  closure — the scope loads them when the visitor asks.
+  closure — the scope loads them when the visitor asks. In the link they are
+  one more group (`ON_DEMAND_GROUP`, the deferred plugins under no app root),
+  cut into route chunks like an app's set: left to lazy chunking, the
+  website's demo scope was ~870 chunks fetched import by import.
 - **A page artifact keeps its module boundaries; the page loads route chunks.**
   Every page-loaded kind (all but `WORKER_ONLY_KINDS`) builds with
   `preserveModules` (one emitted file per source module, at its
@@ -273,7 +276,20 @@ Key invariants:
   its hash combines its links, so a running worker never sees its tree change,
   and the page reaches the entry through the import map
   (`@browser-host-worker/<pluginPath>` — `host.js` calls `import.meta.resolve`
-  on it). What a worker never loads (`@browser-host/*`, a browser-unreachable
+  on it). The worker does not load those copies one by one: the tree also
+  holds their **bundle** (`internal/worker-bundle.ts`, `_bundle/`, built when
+  the tree is published), and the import map's worker entry is
+  `_bundle/<entry link>.js`. Its boot set — the static closure of each host
+  entry and of the entry's own `import()`s (the plugin graph's loaders) — is
+  cut into ~300 KB chunks by `cutByKeys`, and the entry imports every boot
+  chunk statically, so the browser requests them all at once
+  (`strictExecutionOrder` keeps each module body behind its init call, so
+  nothing runs early). Code reached only by another dynamic import keeps
+  rolldown's chunking; `_vendor/` and the snapshot stay external. The tree's
+  name hashes its links, its entries and `WORKER_BUNDLE_VERSION`, so the
+  entry URL is still known without bundling (map-in-sync). Before: the
+  website demo's worker made ~1,800 requests discovered level by level.
+  What a worker never loads (`@browser-host/*`, a browser-unreachable
   leaf's dynamic import) links to a module that throws when loaded. The "no
   Node builtins" gate is per artifact (`assertPortableArtifacts`, boundaries'
   `isPlatformApi`), before the vendor set is built. `scanStagedModules` scans
@@ -714,13 +730,13 @@ Key invariants:
     - `framework/tooling/web-artifacts/prune`
 - Exemptions:
   - Exempts itself from:
-    - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/global-css.ts`, `core/internal/host-snapshots.ts`, `core/internal/crawl-snapshot.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/link.ts`, `core/internal/own-files.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/tailwind-candidates.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts` (debt)
+    - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/global-css.ts`, `core/internal/host-snapshots.ts`, `core/internal/crawl-snapshot.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/link.ts`, `core/internal/own-files.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/tailwind-candidates.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts`, `core/internal/worker-bundle.ts` (debt)
     - `user-path/no-unproven-claim` — `core/internal/identity.ts`, `core/internal/plan.ts`, `core/internal/vendors.ts` (sanctioned)
     - `user-path/no-unproven-claim` — `core/internal/vendor-cache.ts` (sanctioned)
     - `user-path/no-unproven-claim` — `core/internal/global-css.ts`, `core/internal/package-assets.ts`, `core/internal/staged-verify.ts` (sanctioned)
     - `user-path/no-unproven-claim` — `core/internal/link.ts` (sanctioned)
     - `repo-walk-safety/no-adhoc-repo-listing` — `core/internal/pipeline.ts` (sanctioned)
-    - `blocking-fs/sync-named` — `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/global-css.ts`, `core/internal/host-snapshots.ts`, `core/internal/crawl-snapshot.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/link.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts` (sanctioned)
+    - `blocking-fs/sync-named` — `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/global-css.ts`, `core/internal/host-snapshots.ts`, `core/internal/crawl-snapshot.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/link.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts`, `core/internal/worker-bundle.ts` (sanctioned)
 - Sub-plugins:
   - **`blocker-scan`** — The daily web-artifacts.blocker-scan job (main only, in a supervised child running `./equin web-artifacts-blocker-scan`) and the blocked-artifact-url report kind it files through the outbox: one row…
   - **`prune`** — The hourly web-artifacts.prune job: prunes the shared write-once web caches (artifact store, vendor sets, CSS cache, package assets) off every build's path — dist links read unlocked, only changed…

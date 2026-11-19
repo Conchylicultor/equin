@@ -55,6 +55,7 @@ import {
   workerLinkName,
   workerTreeOf,
 } from "./worker-link";
+import { workerBundleEntry } from "./worker-bundle";
 
 /** A host as planned: its module's store dir and its worker closure. */
 export interface ExpectedHost {
@@ -91,15 +92,20 @@ export function composedHostsOf(opts: {
       });
     }
   }
+  const entryOf = (h: ExpectedHost) =>
+    workerLinkName(h.entry.pluginPath!, h.entry.kind);
   const tree = workerTreeOf({
     linked: [...linked.values(), ...opts.snapshotLinks],
     vendorSetDir: vendorSetPath(opts.vendorSetHash),
+    entries: opts.hosts.map(entryOf),
   });
+  // The worker loads the tree's bundle (`worker-bundle.ts`), never the
+  // linked copies one by one.
   return opts.hosts.map((h) => ({
     specifier: h.plan.specifier,
     dirName: h.dirName,
     workerSpecifier: hostWorkerSpecifier(h.plan.pluginPath),
-    workerUrl: `/artifacts/${tree.dirName}/${workerLinkName(h.entry.pluginPath!, h.entry.kind)}/index.js`,
+    workerUrl: `/artifacts/${tree.dirName}/${workerBundleEntry(entryOf(h))}`,
   }));
 }
 

@@ -703,9 +703,12 @@ async function runPipeline(
       const tree = workerTreeOf({
         linked: [...linked.values(), ...snapshotLinks],
         vendorSetDir: vendorSetPath(vendors.setHash),
+        entries: hosts.map((h) =>
+          workerLinkName(h.entry.pluginPath!, h.entry.kind),
+        ),
       });
       await lease.pin([artifactStorePath(tree.dirName)]);
-      await ensureWorkerTree(tree);
+      await ensureWorkerTree(tree, log);
       log(`worker tree: ${linked.size} artifacts linked (${tree.dirName})`);
       return {
         tree,

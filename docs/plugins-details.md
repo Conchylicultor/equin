@@ -33091,7 +33091,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/guards` (11 debt)
               - `framework/tooling/import-closure` (1 debt)
               - `framework/tooling/lint` (2 debt)
-              - `framework/tooling/web-artifacts` (22 debt)
+              - `framework/tooling/web-artifacts` (23 debt)
               - `framework/web-core` (1 debt)
               - `infra/asset-mirror/bundle` (1 debt)
               - `infra/claude-cli/usage-ledger/pricing/price-table` (1 debt)
@@ -34543,13 +34543,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/web-artifacts/prune`
           - Exemptions:
             - Exempts itself from:
-              - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/global-css.ts`, `core/internal/host-snapshots.ts`, `core/internal/crawl-snapshot.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/link.ts`, `core/internal/own-files.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/tailwind-candidates.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts` (debt)
+              - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/global-css.ts`, `core/internal/host-snapshots.ts`, `core/internal/crawl-snapshot.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/link.ts`, `core/internal/own-files.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/tailwind-candidates.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts`, `core/internal/worker-bundle.ts` (debt)
               - `user-path/no-unproven-claim` — `core/internal/identity.ts`, `core/internal/plan.ts`, `core/internal/vendors.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/internal/vendor-cache.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/internal/global-css.ts`, `core/internal/package-assets.ts`, `core/internal/staged-verify.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/internal/link.ts` (sanctioned)
               - `repo-walk-safety/no-adhoc-repo-listing` — `core/internal/pipeline.ts` (sanctioned)
-              - `blocking-fs/sync-named` — `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/global-css.ts`, `core/internal/host-snapshots.ts`, `core/internal/crawl-snapshot.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/link.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts` (sanctioned)
+              - `blocking-fs/sync-named` — `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/global-css.ts`, `core/internal/host-snapshots.ts`, `core/internal/crawl-snapshot.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/link.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts`, `core/internal/worker-bundle.ts` (sanctioned)
           - Plugins:
             - **`blocker-scan`** — The daily web-artifacts.blocker-scan job (main only, in a supervised child running `./equin web-artifacts-blocker-scan`) and the blocked-artifact-url report kind it files through the outbox: one row per (source file, rule) whose served URL a default content-blocker rule cancels.
               - Server:
@@ -39850,9 +39850,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `namespaceUrl`
           - `resolveNamespaceAlias`
       - Cross-plugin:
-        - Imported by: 86 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
+        - Imported by: 87 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
           - `framework` ×15
-          - `apps` ×13
+          - `apps` ×14
           - `infra` ×12
           - `debug` ×11
           - `conversations` ×7
