@@ -35,7 +35,18 @@ export interface TrackerDeps {
   consentKey: () => string | undefined;
   /** Posts one body. A rejection is left to surface; see `send` in instance.ts. */
   send: (body: CollectBody) => Promise<CollectResponse>;
+  /**
+   * The performance timeline (`performance.now()`): pauses while the device
+   * sleeps. Times the visible stretches, so engaged time never includes sleep,
+   * and orders the load milestones.
+   */
   now: () => number;
+  /**
+   * The wall clock (`Date.now()`): keeps running through sleep. Times the away
+   * stretches (gaps) and the idle window, so a tab hidden or left through a
+   * device sleep reports the real time away.
+   */
+  wallNow: () => number;
   /** Whether the page is visible right now (`document.visibilityState`). */
   isVisible: () => boolean;
   /**
@@ -81,11 +92,11 @@ interface CurrentPage {
   sentMs: number;
   /** An engagement is owed but the pageview id has not arrived yet. */
   owed: boolean;
-  /** `deps.now()` when the pageview was recorded: what gap offsets count from. */
+  /** `deps.wallNow()` when the pageview was recorded: what gap offsets count from. */
   startedAt: number;
   /** Closed away stretches, offsets from `startedAt`. */
   gaps: Gap[];
-  /** The running away stretch (`at` is a `deps.now()` instant), or null while present. */
+  /** The running away stretch (`at` is a `deps.wallNow()` instant), or null while present. */
   away: { kind: GapKind; at: number } | null;
   /** The gaps last sent (as JSON), so an unchanged list is not re-sent. */
   sentGaps: string;
@@ -143,7 +154,7 @@ export function createTracker(deps: TrackerDeps): Tracker {
    */
   let firstHiddenAt = deps.isVisible() ? Infinity : 0;
   /** The last input (or show, or path change): when an idle stretch would start. */
-  let lastActivity = deps.now();
+  let lastActivity = deps.wallNow();
   let cancelDeadline: (() => void) | null = null;
 
   const offset = (page: CurrentPage, at: number) => at - page.startedAt;
@@ -177,7 +188,7 @@ export function createTracker(deps: TrackerDeps): Tracker {
       ? appendGap(page.gaps, {
           kind: page.away.kind,
           startMs: offset(page, page.away.at),
-          endMs: offset(page, deps.now()),
+          endMs: offset(page, deps.wallNow()),
         })
       : page.gaps;
 
@@ -190,7 +201,7 @@ export function createTracker(deps: TrackerDeps): Tracker {
   const armDeadline = () => {
     if (cancelDeadline) return;
     cancelDeadline = deps.setDeadline(
-      Math.max(0, lastActivity + IDLE_AFTER_MS - deps.now()),
+      Math.max(0, lastActivity + IDLE_AFTER_MS - deps.wallNow()),
       onDeadline,
     );
   };
@@ -201,7 +212,7 @@ export function createTracker(deps: TrackerDeps): Tracker {
     if (!page || page.away || page.visibleSince === null) return;
     // Input since arming moved `lastActivity` without touching the timer (one
     // timer per idle window, not one per mousemove): wait out the rest.
-    if (deps.now() - lastActivity < IDLE_AFTER_MS) return armDeadline();
+    if (deps.wallNow() - lastActivity < IDLE_AFTER_MS) return armDeadline();
     // Playing media is watching, not idle. Its pause / end is an `activity()`,
     // which re-arms, so nothing has to look again until then.
     if (deps.isMediaPlaying()) return;
@@ -276,8 +287,9 @@ export function createTracker(deps: TrackerDeps): Tracker {
       const path = pagePathOf(rawPath);
       if (current?.path === path) return;
       const now = deps.now();
+      const wall = deps.wallNow();
       if (current) {
-        endAway(current, now);
+        endAway(current, wall);
         pause(current);
         sendEngagement(current);
       }
@@ -291,9 +303,9 @@ export function createTracker(deps: TrackerDeps): Tracker {
         visibleSince: visible ? now : null,
         sentMs: 0,
         owed: false,
-        startedAt: now,
+        startedAt: wall,
         gaps: [],
-        away: visible ? null : { kind: "hidden", at: now },
+        away: visible ? null : { kind: "hidden", at: wall },
         sentGaps: "[]",
         // The first pageview is the hard load; later ones are in-app navigations.
         loadOwed: !landingSent,
@@ -301,7 +313,7 @@ export function createTracker(deps: TrackerDeps): Tracker {
       };
       current = page;
       // A new page is a fresh start for the idle clock.
-      lastActivity = now;
+      lastActivity = wall;
       if (visible) armDeadline();
       const source = landingSent ? {} : deps.landing;
       landingSent = true;
@@ -327,23 +339,23 @@ export function createTracker(deps: TrackerDeps): Tracker {
       stopDeadline();
       // Repeated (visibilitychange, then pagehide): the hidden stretch runs on.
       if (current.away?.kind !== "hidden") {
-        const now = deps.now();
-        endAway(current, now);
-        current.away = { kind: "hidden", at: now };
+        const wall = deps.wallNow();
+        endAway(current, wall);
+        current.away = { kind: "hidden", at: wall };
       }
       pause(current);
       sendEngagement(current);
     },
     visible() {
       if (!current || current.visibleSince !== null) return;
-      const now = deps.now();
-      endAway(current, now);
-      current.visibleSince = now;
-      lastActivity = now;
+      const wall = deps.wallNow();
+      endAway(current, wall);
+      current.visibleSince = deps.now();
+      lastActivity = wall;
       armDeadline();
     },
     activity() {
-      lastActivity = deps.now();
+      lastActivity = deps.wallNow();
       if (!current || current.visibleSince === null) return;
       if (current.away?.kind === "idle") endAway(current, lastActivity);
       armDeadline();

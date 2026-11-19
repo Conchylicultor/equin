@@ -137,6 +137,7 @@ export function getTracker(): Tracker {
     consentKey: () => consentKeyOf(consentStore),
     send,
     now: () => performance.now(),
+    wallNow: () => Date.now(),
     isVisible: () => document.visibilityState === "visible",
     setDeadline: (delayMs, fire) => {
       const timer = setTimeout(fire, delayMs);

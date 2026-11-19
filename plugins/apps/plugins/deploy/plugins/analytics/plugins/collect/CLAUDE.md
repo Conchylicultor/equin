@@ -21,6 +21,12 @@ deploy UI, or any particular site.
   today's link. So a visitor keeps one id while they return within 30 days, and
   is forgotten after 30 days away. Design:
   `research/2026-09-29-apps-analytics-sliding-visitor-identity.md`.
+- **Which clock the tracker reads** (`web/internal/tracker.ts`): `gaps` (hidden /
+  idle offsets) and the idle window run on the **wall clock** (`Date.now()`),
+  which keeps going while the device sleeps — sleep counts as away. `engagedMs`
+  (visible stretches) and the load timings run on the **performance timeline**
+  (`performance.now()`), which pauses in sleep, so engaged time never includes
+  it. Visits already stored are not corrected.
 - `analytics_visits` / `analytics_hits` — raw rows, kept `RAW_RETENTION_DAYS`
   (90). A visit is a run of activity from one visitor with no gap of 30
   minutes (it may cross midnight). It is attributed to the UTC day it

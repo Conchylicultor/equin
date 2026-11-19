@@ -28,6 +28,8 @@ function harness(
   } = {},
 ) {
   let clock = 0;
+  /** Wall time slept through: the performance clock pauses, the wall clock does not. */
+  let slept = 0;
   let visible = true;
   let mediaPlaying = false;
   /** The armed deadline: when it fires, and what it runs. One at a time. */
@@ -61,6 +63,7 @@ function harness(
       return new Promise((resolve) => pending.push(resolve));
     },
     now: () => clock,
+    wallNow: () => clock + slept,
     isVisible: () => visible,
     setDeadline: (delayMs, fire) => {
       if (deadline) throw new Error("a second deadline was armed");
@@ -93,6 +96,10 @@ function harness(
         due.fire();
       }
       clock = end;
+    },
+    /** The device sleeps for `ms`: only the wall clock moves. */
+    sleep: (ms: number) => {
+      slept += ms;
     },
     setMediaPlaying: (v: boolean) => {
       mediaPlaying = v;
@@ -751,5 +758,44 @@ describe("page sections", () => {
     h.advance(1000);
     h.tracker.hidden();
     expect(engagements(h.sent)[0]).not.toHaveProperty("sections");
+  });
+});
+
+describe("device sleep", () => {
+  it("a tab hidden through a sleep reports the real time away; engaged excludes it", async () => {
+    const h = harness();
+    h.tracker.pathChanged("/website");
+    await h.respond(0, { outcome: "pageview", pageviewId: PV_A });
+    h.advance(10_000);
+    h.setVisible(false);
+    h.tracker.hidden();
+    h.advance(1_000);
+    h.sleep(2 * 60 * 60 * 1000);
+    h.advance(1_000);
+    h.setVisible(true);
+    h.tracker.visible();
+    h.advance(1_000);
+    h.tracker.hidden();
+    const beacons = h.sent.filter((b) => b.kind === "engagement");
+    const last = beacons[beacons.length - 1];
+    expect(last).toMatchObject({
+      engagedMs: 11_000,
+      gaps: [{ kind: "hidden", startMs: 10_000, endMs: 10_000 + 2_000 + 2 * 60 * 60 * 1000 }],
+    });
+  });
+
+  it("a visible tab the device slept under is idle for the sleep, not engaged", async () => {
+    const h = harness();
+    h.tracker.pathChanged("/website");
+    await h.respond(0, { outcome: "pageview", pageviewId: PV_A });
+    h.sleep(60 * 60 * 1000);
+    h.advance(IDLE_AFTER_MS);
+    h.tracker.hidden();
+    const beacons = h.sent.filter((b) => b.kind === "engagement");
+    const last = beacons[beacons.length - 1];
+    expect(last).toMatchObject({
+      engagedMs: IDLE_AFTER_MS,
+      gaps: [{ kind: "idle", startMs: 0 }],
+    });
   });
 });
