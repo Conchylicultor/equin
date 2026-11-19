@@ -14,8 +14,12 @@ imports the parent.
   `backlog` (the role's backlog, oldest first), `adopt_task` (a backlog task
   moves under the session root, its own interactive mandate cleared so it
   inherits the session's, its owner row dropped — the root carries the role
-  — all under the task's row lock; then watched like a filed task and
-  armed), `route_task` (hand a backlog task to another role; never a
+  — and, with `after`, wired to wait on those tasks (plain edges, no
+  splice), all in one transaction under the task's row lock; then watched
+  like a filed task and armed, unless `start: "manual"`. The edges land
+  before the arm, so a task adopted behind running work never launches early
+  — `edit_task add_after` cannot do this afterwards: it is refused once the
+  agent launched), `route_task` (hand a backlog task to another role; never a
   session root).
   Editing and dropping use `edit_task` / `drop_task`, scoped to what the
   caller owns: the parent's `TaskOwnerClaim` makes the role's tasks the
@@ -25,11 +29,11 @@ imports the parent.
 
 ## Plugin reference
 
-- Description: Supervisor role sessions: POST /api/supervisor-roles/:id/sessions opens the role's live session or launches one (one live session per role — a root task stating the supervisor-role mandate, owned by the role, its brief the role's prompt, armed at once), POST …/:id/backlog/:taskId/adopt (the Supervisors pane's Adopt: into the live session, launching one when none is live), and the role powers' MCP tools, gated on the role capability: backlog (list the role's backlog), adopt_task (move a backlog task under the live session's root and arm it) and route_task (hand a task the role owns to another role).
+- Description: Supervisor role sessions: POST /api/supervisor-roles/:id/sessions opens the role's live session or launches one (one live session per role — a root task stating the supervisor-role mandate, owned by the role, its brief the role's prompt, armed at once), POST …/:id/backlog/:taskId/adopt (the Supervisors pane's Adopt: into the live session, launching one when none is live), and the role powers' MCP tools, gated on the role capability: backlog (list the role's backlog), adopt_task (move a backlog task under the live session's root, wired after any `after` tasks in the same transaction, then armed unless start is manual) and route_task (hand a task the role owns to another role).
 - Server:
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/supervisor-roles` ×12
-    - `tasks/tasks-core` ×6
+    - `tasks/tasks-core` ×10
     - `infra/endpoints` ×2
     - `tasks/orchestration/mandate` ×2
     - `conversations/model-provider/catalog.getModelCatalog`

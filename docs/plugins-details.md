@@ -62879,6 +62879,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Exports (values):
       - `AddDependencyBodySchema`
       - `addTaskDependency`
+      - `checkAfterIds`
       - `createTask`
       - `CreateTaskBodySchema`
       - `createTaskChain`
@@ -64396,11 +64397,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
               - `tasks/supervisor-roles/spend`
               - `tasks/task-header`
-        - **`sessions`** — Supervisor role sessions: POST /api/supervisor-roles/:id/sessions opens the role's live session or launches one (one live session per role — a root task stating the supervisor-role mandate, owned by the role, its brief the role's prompt, armed at once), POST …/:id/backlog/:taskId/adopt (the Supervisors pane's Adopt: into the live session, launching one when none is live), and the role powers' MCP tools, gated on the role capability: backlog (list the role's backlog), adopt_task (move a backlog task under the live session's root and arm it) and route_task (hand a task the role owns to another role).
+        - **`sessions`** — Supervisor role sessions: POST /api/supervisor-roles/:id/sessions opens the role's live session or launches one (one live session per role — a root task stating the supervisor-role mandate, owned by the role, its brief the role's prompt, armed at once), POST …/:id/backlog/:taskId/adopt (the Supervisors pane's Adopt: into the live session, launching one when none is live), and the role powers' MCP tools, gated on the role capability: backlog (list the role's backlog), adopt_task (move a backlog task under the live session's root, wired after any `after` tasks in the same transaction, then armed unless start is manual) and route_task (hand a task the role owns to another role).
           - Server:
-            - Uses: 28 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/plugins/sessions/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/plugins/sessions/REFERENCE.md)
+            - Uses: 32 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/plugins/sessions/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/plugins/sessions/REFERENCE.md)
               - `tasks/supervisor-roles` ×12
-              - `tasks/tasks-core` ×6
+              - `tasks/tasks-core` ×10
               - `infra/endpoints` ×2
               - `tasks/orchestration/mandate` ×2
               - `conversations/model-provider/catalog.getModelCatalog`

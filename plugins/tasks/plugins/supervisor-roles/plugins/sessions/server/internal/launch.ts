@@ -20,7 +20,7 @@ import {
   setTaskSupervisorRole,
 } from "@plugins/tasks/plugins/supervisor-roles/server";
 import { adoptBacklogTask, launchRoleSession } from "../../core";
-import { adoptIntoSession } from "./adopt";
+import { adoptIntoSession, adoptRefusalMessage } from "./adopt";
 
 async function roleOr404(id: string): Promise<SupervisorRole> {
   const role = await getSupervisorRole(id);
@@ -99,14 +99,16 @@ export const handleAdoptBacklogTask = implement(
       taskId: params.taskId,
       roleId: role.id,
       rootTaskId: session.taskId,
-      model,
+      start: { kind: "armed", model },
     });
     if (!adopted.ok)
       throw new HttpError(
         409,
-        adopted.refusal === "held"
-          ? `${params.taskId} is held: it stays in the backlog.`
-          : `${params.taskId} is not in ${role.name}'s backlog any more.`,
+        adoptRefusalMessage(
+          params.taskId,
+          adopted.refusal,
+          `${role.name}'s backlog any more`,
+        ),
       );
     return { sessionTaskId: session.taskId, sessionStarted: session.started };
   },

@@ -108,6 +108,7 @@
   - Exports (values):
     - `AddDependencyBodySchema`
     - `addTaskDependency`
+    - `checkAfterIds`
     - `createTask`
     - `CreateTaskBodySchema`
     - `createTaskChain`

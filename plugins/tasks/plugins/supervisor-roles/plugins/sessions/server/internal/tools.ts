@@ -24,7 +24,11 @@ import {
   unknownRoleMessage,
 } from "@plugins/tasks/plugins/supervisor-roles/server";
 import { formatBacklog, type BacklogLine } from "../../core";
-import { adoptIntoSession } from "./adopt";
+import {
+  adoptIntoSession,
+  adoptRefusalMessage,
+  type AdoptStart,
+} from "./adopt";
 
 function text(t: string) {
   return { content: [{ type: "text" as const, text: t }] };
@@ -63,37 +67,71 @@ export const backlogTool = Mcp.tool({
 export const adoptTaskTool = Mcp.tool({
   name: "adopt_task",
   when: granted(supervisorRole),
-  description: `Adopt a task from your role's backlog into this session: it moves under your session's root task (your tree — you watch it, as a task you filed) and is armed, so an agent launches on it once nothing it runs after is pending. Only a task of your own role's backlog (\`backlog\` lists them) that is not held.`,
+  description: `Adopt a task from your role's backlog into this session: it moves under your session's root task (your tree — you watch it, as a task you filed) and, by default, is armed, so an agent launches on it once nothing it runs after is pending. Only a task of your own role's backlog (\`backlog\` lists them) that is not held.
+
+To queue it behind running work, pass \`after\` (the task ids it waits on — plain edges, spliced into no chain): the edges are written in the same transaction as the adoption, before it is armed, so it never launches early. \`start: "manual"\` adopts it without arming it (arm it later with \`edit_task start: "armed"\`).`,
   inputSchema: {
     task_id: z.string().min(1).describe("The backlog task to adopt."),
+    after: z
+      .array(z.string().min(1))
+      .min(1)
+      .optional()
+      .describe(
+        "Task ids it runs after (it launches once they are done); absent = none.",
+      ),
+    start: z
+      .enum(["armed", "manual"])
+      .optional()
+      .describe(
+        '"armed" (default): launch on its own once nothing it runs after is pending. "manual": adopted, not armed.',
+      ),
     model: ModelChoiceSchema.optional().describe(
-      "The model its agent launches with; absent = your filing default for its track.",
+      'The model its agent launches with (not with start "manual"); absent = your filing default for its track.',
     ),
   },
   async handler(input, { conversationId }) {
     const { roleId, rootTaskId } = await callerRole(conversationId);
     const taskId = input.task_id.trim();
-    const track = await getTaskTrack(taskId);
-    const grant = await grantOf(tasksFile, conversationId);
-    const model = input.model ?? grant?.[track]?.model ?? DEFAULT_MODEL_CHOICE;
+    if (input.start === "manual" && input.model !== undefined)
+      return text(
+        '`model` is the model an armed task launches with: drop it, or adopt with start "armed".',
+      );
+    let start: AdoptStart = { kind: "manual" };
+    if (input.start !== "manual") {
+      const track = await getTaskTrack(taskId);
+      const grant = await grantOf(tasksFile, conversationId);
+      start = {
+        kind: "armed",
+        model: input.model ?? grant?.[track]?.model ?? DEFAULT_MODEL_CHOICE,
+      };
+    }
     const adopted = await adoptIntoSession({
       taskId,
       roleId,
       rootTaskId,
-      model,
-      beforeArm: async () => {
+      start,
+      ...(input.after !== undefined ? { after: input.after } : {}),
+      afterAdopt: async () => {
         if ((await grantOf(watchChildren, conversationId)) !== null)
           await watchTask(taskId, { kind: "conversation", conversationId });
       },
     });
     if (!adopted.ok)
       return text(
-        adopted.refusal === "held"
-          ? `${taskId} is held by a person: it stays in the backlog.`
-          : `${taskId} is not in your role's backlog (\`backlog\` lists what is).`,
+        adoptRefusalMessage(
+          taskId,
+          adopted.refusal,
+          "your role's backlog (`backlog` lists what is)",
+        ),
       );
+    const waits =
+      adopted.after.length > 0
+        ? `, running after ${adopted.after.join(", ")}`
+        : "";
     return text(
-      `Adopted ${taskId} into your session (under ${rootTaskId}), armed with ${model}.`,
+      start.kind === "armed"
+        ? `Adopted ${taskId} into your session (under ${rootTaskId})${waits}, armed with ${start.model}.`
+        : `Adopted ${taskId} into your session (under ${rootTaskId})${waits}, not armed: arm it with \`edit_task start: "armed"\`.`,
     );
   },
 });

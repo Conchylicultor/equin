@@ -91,7 +91,8 @@ export type ManageRefusal =
   | "root"
   | "empty"
   | "conflict"
-  | "not-armable";
+  | "not-armable"
+  | "launched";
 
 /** Whether the caller owns a task (`task-ownership.ts`), read through a port:
  * `owner` is its owner in words ("filed by a person"). */
@@ -127,9 +128,12 @@ export interface ManageTasksPorts {
     | { kind: "none" }
     | { kind: "not-found" }
   >;
-  /** Why `taskId` cannot be armed (dropped, or an open attempt already IS
-   * its launch), or `null` when it can. */
+  /** Why `taskId` cannot be armed (dropped), or `null` when it can. */
   unarmable: (taskId: string) => Promise<string | null>;
+  /** Whether an agent already launched on `taskId` and its attempt is still
+   * open: that attempt IS its launch, so arming it or queueing it behind
+   * another task can no longer reach it. */
+  launched: (taskId: string) => Promise<boolean>;
   /** The task's current track. */
   trackOf: (taskId: string) => Promise<TaskTrack>;
   /** The model an armed task on `track` launches with when the caller names
@@ -260,6 +264,15 @@ export async function editTask(
       "`start` and `track` are a supervisor's to change: a sidequest you filed waits for a person (or a supervisor, once handed off) to start it.",
     );
 
+  // A dependency only holds back a launch that has not happened: added to a
+  // task whose agent is already running, it would stop nothing and leave the
+  // task shown as blocked while it runs.
+  if (addAfter.length > 0 && (await ports.launched(taskId)))
+    return refused(
+      "launched",
+      `${taskId}'s agent already launched — a task it runs after would not stop it. Message the agent with \`message_agent\` instead (e.g. to wait for ${addAfter.join(", ")}).`,
+    );
+
   let start: TaskEdit["start"];
   // Arming launches an agent, so it stays a power over the caller's OWN tree:
   // a task owned beyond it (a role's backlog task, an earlier session's tree)
@@ -276,6 +289,11 @@ export async function editTask(
       );
     const why = await ports.unarmable(taskId);
     if (why !== null) return refused("not-armable", why);
+    if (await ports.launched(taskId))
+      return refused(
+        "not-armable",
+        `${taskId} already has an open attempt — message its agent with \`message_agent\` instead.`,
+      );
     const model =
       input.model ??
       (await ports.defaultModel(

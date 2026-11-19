@@ -19,6 +19,7 @@ import {
   TASK_TRACKS,
   type TaskTrack,
 } from "@plugins/tasks/plugins/task-track/core";
+import { checkAfterIds } from "../../core";
 import type { RewireOptions } from "../../server/internal/rewire-dependencies";
 
 export type AddTaskRelation = "followup" | "prerequisite";
@@ -261,17 +262,17 @@ export async function fileAddTask(
   // task stays in progress while what it files runs, a supervisor's root).
   const defaultAfter = grant?.defaultAfter ?? "caller";
   const afterOmitted = input.start !== "now" && input.after === undefined;
-  const after =
+  const named =
     input.start === "now"
       ? []
-      : [
-          ...new Set(
-            input.after ?? (defaultAfter === "caller" ? [currentTaskId] : []),
-          ),
-        ];
-  for (const id of after) {
-    if (!(await ports.getTask(id)))
-      throw new Error(`\`after\` task "${id}" not found`);
+      : (input.after ?? (defaultAfter === "caller" ? [currentTaskId] : []));
+  let after: string[] = [];
+  if (named.length > 0) {
+    const checked = await checkAfterIds(named, {
+      exists: async (id) => (await ports.getTask(id)) !== null,
+    });
+    if (!checked.ok) throw new Error(checked.message);
+    after = checked.after;
   }
 
   const task = await ports.createTask({

@@ -84,12 +84,13 @@ const ports: ManageTasksPorts = {
   async unarmable(taskId) {
     const task = await getTask(taskId);
     if (task?.droppedAt) return `${taskId} is dropped — it will not run.`;
-    // As the Launch button's arm: an attempt not yet finished with already IS
-    // the task's launch, so the queue would claim the marker and skip it.
-    const attempts = await listAttemptsForTask(taskId);
-    if (attempts.some((a) => a.retained))
-      return `${taskId} already has an open attempt — message its agent with \`message_agent\` instead.`;
     return null;
+  },
+  async launched(taskId) {
+    // As the Launch button's arm: an attempt not yet finished with already IS
+    // the task's launch.
+    const attempts = await listAttemptsForTask(taskId);
+    return attempts.some((a) => a.retained);
   },
   trackOf: getTaskTrack,
   async defaultModel(conversationId, track) {
@@ -183,7 +184,7 @@ ${SCOPE} Every id named (the task and each \`add_after\` / \`remove_after\` id) 
 
 ${EXIT}
 
-Editing a task whose agent already launched does not reach that agent — message it with \`message_agent\`.`,
+Editing a task whose agent already launched does not reach that agent — message it with \`message_agent\`. \`add_after\` on such a task is refused: a dependency cannot hold back a launch that already happened.`,
   inputSchema: {
     task_id: z.string().min(1).describe("The task to edit."),
     title: z.string().min(1).optional().describe("The new title."),

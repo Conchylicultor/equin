@@ -69,10 +69,9 @@ function store(
   opts: { callerTask?: string | null; handOffRefused?: string } = {},
 ) {
   const applied: TaskEdit[] = [];
-  // B cannot be armed (an open attempt).
-  const unarmable: Record<string, string> = {
-    B: "B already has an open attempt",
-  };
+  // B's agent already launched (an open attempt).
+  const launched = new Set(["B"]);
+  const unarmable: Record<string, string> = {};
   const dropped: string[] = [];
   let cycle = false;
   const ports: ManageTasksPorts = {
@@ -98,6 +97,7 @@ function store(
         ? { kind: "found", rootTaskId: roots[id]! }
         : { kind: "not-found" },
     unarmable: async (id) => unarmable[id] ?? null,
+    launched: async (id) => launched.has(id),
     trackOf: async (id) => tracks[id] ?? "main",
     defaultModel: async (_conv, track) =>
       track === "sidequest" ? SIDEQUEST_DEFAULT : DEFAULT,
@@ -182,11 +182,11 @@ describe("edit_task", () => {
       await editTask({ task_id: "A", remove_after: ["R"] }, SUP, s.ports),
     ).toEqual({ kind: "edited", taskId: "A", changed: ["remove_after"] });
     expect(
-      await editTask({ task_id: "B", add_after: ["R"] }, SUP, s.ports),
-    ).toEqual({ kind: "edited", taskId: "B", changed: ["add_after"] });
+      await editTask({ task_id: "A", add_after: ["R"] }, SUP, s.ports),
+    ).toEqual({ kind: "edited", taskId: "A", changed: ["add_after"] });
     expect(s.applied).toEqual([
       { taskId: "A", addAfter: [], removeAfter: ["R"] },
-      { taskId: "B", addAfter: ["R"], removeAfter: [] },
+      { taskId: "A", addAfter: ["R"], removeAfter: [] },
     ]);
   });
 
@@ -218,6 +218,27 @@ describe("edit_task", () => {
       reason: "conflict",
       message: expect.stringContaining("Cycle"),
     });
+  });
+});
+
+describe("edit_task on a task whose agent already launched", () => {
+  test("add_after is refused (it would hold back nothing), naming message_agent; the rest still edits", async () => {
+    const s = store();
+    const out = await editTask(
+      { task_id: "B", add_after: ["A"], title: "x" },
+      SUP,
+      s.ports,
+    );
+    expect(out).toMatchObject({ kind: "refused", reason: "launched" });
+    expect(out.kind === "refused" && out.message).toContain("message_agent");
+    expect(s.applied).toEqual([]);
+    expect(
+      await editTask(
+        { task_id: "B", title: "x", remove_after: ["A"] },
+        SUP,
+        s.ports,
+      ),
+    ).toMatchObject({ kind: "edited" });
   });
 });
 
