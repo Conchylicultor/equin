@@ -17,6 +17,14 @@ the two-phase publish:
   a draft, left by a publish that stopped midway); `publish` off builds any ref
   and keeps the binaries as run artifacts only (how to try a build without
   releasing).
+- **The window is off for now** (`WINDOW_ON_TAGS: "false"` in the workflow):
+  the install is terminal-only (install.sh `DEFAULT_VIEW=terminal`), so a
+  pushed release tag runs validate + publish only (~1 min) — no page, macOS,
+  Linux, attach or release-status. validate reports `window=false`, so
+  `release.json` says `installers: null` and stage 0 never looks for a
+  binary (`--window` says there is none). A manual run with `-f window=true`
+  builds it (with `publish` off: any ref, binaries kept as run artifacts).
+  Turn `WINDOW_ON_TAGS` on together with a windowed `DEFAULT_VIEW`.
 - **Jobs**: validate (which ref, is it a release, does it have the window's
   crate, is it the newest release) → publish (below; needs only validate) and,
   in parallel, page (the installer page bundled once,

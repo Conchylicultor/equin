@@ -23,6 +23,11 @@
 #   installer to an existing Release (its core files are left alone), with
 #   `replace` to republish the Release from scratch, or with `publish` off to
 #   only build any ref and keep the binaries as run artifacts.
+# - The window is OFF for now (WINDOW_ON_TAGS below): the install is
+#   terminal-only (install.sh's DEFAULT_VIEW=terminal), so a release tag only
+#   runs validate + publish (~1 min) — no macOS/Linux builds. Its release.json
+#   says `installers: null`, so stage 0 never looks for a window. A manual run
+#   with `window` on still builds (and, with publish on, attaches) it.
 # - A tag cut before the installer window existed has no crate to build: its
 #   Release carries install.sh, release.json and SHA256SUMS only, and the curl
 #   install's stage 0 installs it in the terminal view.
@@ -55,6 +60,10 @@ on:
         description: "Replace the tag's existing GitHub Release (off: an existing Release keeps its files, and only gets the installer attached)"
         type: boolean
         default: false
+      window:
+        description: "Build the installer window (off: the Release carries install.sh, release.json and SHA256SUMS only — the install is terminal-only for now)"
+        type: boolean
+        default: false
       retried:
         description: "Set by the workflow itself when it re-runs a build that never got a runner (at most once): this run does not re-run again"
         type: boolean
@@ -68,6 +77,11 @@ concurrency:
   cancel-in-progress: false
 
 env:
+  # Whether a pushed release tag builds the installer window. Off while the
+  # install is terminal-only (install.sh DEFAULT_VIEW=terminal): the window's
+  # builds (a macOS runner, two Linux ones) were the slow part of a release.
+  # Turn on with DEFAULT_VIEW. A manual run decides with its `window` input.
+  WINDOW_ON_TAGS: "false"
   # The release tag grammar as a POSIX ERE. Must equal RELEASE_TAG_ERE in
   # plugins/upstream/plugins/release/core — the release-assets:tag-grammar
   # check holds the two equal.
@@ -103,6 +117,7 @@ jobs:
           REF: ${{ inputs.ref || github.ref_name }}
           EVENT: ${{ github.event_name }}
           PUBLISH: ${{ github.event_name == 'push' || inputs.publish }}
+          WANT_WINDOW: ${{ github.event_name == 'push' && env.WINDOW_ON_TAGS || inputs.window || false }}
         run: |
           set -euo pipefail
           release=false
@@ -126,6 +141,9 @@ jobs:
           if [ -f "$CRATE/Cargo.toml" ]; then window=true; fi
           if [ "$window" = false ]; then
             echo "::notice::$REF predates the installer window: its Release carries install.sh, release.json and SHA256SUMS only."
+          elif [ "$WANT_WINDOW" != true ]; then
+            echo "::notice::The installer window is off (terminal-only install): $REF's Release carries install.sh, release.json and SHA256SUMS only."
+            window=false
           fi
           newest="$(git tag -l 'v*' | grep -E "$RELEASE_TAG_ERE" | sort -V | tail -n 1)"
           latest=false
@@ -508,7 +526,7 @@ jobs:
           done <<< "$jobs"
           retry=false
           if [ "$RETRIED" != true ] && [ "$unacquired" -gt 0 ] && [ "$other" -eq 0 ]; then retry=true; fi
-          next="Re-attach it: \`gh workflow run installer-release.yml -R $GH_REPO -f ref=$TAG\`."
+          next="Re-attach it: \`gh workflow run installer-release.yml -R $GH_REPO -f ref=$TAG -f window=true\`."
           if [ "$retry" = true ]; then next="A build never got a GitHub runner, so the attach is re-run once automatically."; fi
           {
             printf '%s\n\n' "$base"
@@ -525,4 +543,4 @@ jobs:
       # the Release and only attaches.
       - name: Re-run the attach once
         if: ${{ failure() && steps.mark.outputs.retry == 'true' }}
-        run: gh workflow run installer-release.yml --ref "$DEFAULT_BRANCH" -f ref="$TAG" -f retried=true
+        run: gh workflow run installer-release.yml --ref "$DEFAULT_BRANCH" -f ref="$TAG" -f window=true -f retried=true
