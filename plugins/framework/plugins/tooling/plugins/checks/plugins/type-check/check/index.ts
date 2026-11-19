@@ -31,6 +31,7 @@ import {
   type TscProgram,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import type {
+  TypeCheckMemoryProfile,
   TypeCheckStats,
   TypeCheckWorkerJob,
   TypeCheckWorkerResult,
@@ -69,6 +70,7 @@ interface WorkerResult extends TypeCheckWorkerResult {
   wallMs: number;
   slotWaitMs: number;
   admission: WorkerAdmission;
+  profile: TypeCheckMemoryProfile;
 }
 
 async function runWorker(
@@ -111,6 +113,7 @@ async function runWorker(
     wallMs: run.wallMs,
     slotWaitMs: run.slotWaitMs,
     admission: run.admission,
+    profile: run.profile,
   };
 }
 
@@ -248,6 +251,9 @@ const check: Check = {
   // `*.composition.*.generated.ts` registry — does not exist for the check
   // (`../shared/repo-view.ts`), so the read-set replay sees all it reads.
   inputKeyed: true,
+  heavyChildren: {
+    what: "the type-check worker and its batch processes (up to ~7 GB, or one unit's ~3.9 GB under the one-unit profile)",
+  },
   async run(ctx: CheckContext) {
     // The run's tree: its hash and every blob's sha, as git hashed the working
     // tree — the same snapshot the cache key and the replay read, and taken
@@ -354,7 +360,7 @@ const check: Check = {
       if (costLine !== null) ctx.log?.(costLine, "stderr");
       if (result) {
         ctx.log?.(
-          admissionLine(`type-check worker ${program.name}`, result.admission),
+          `${admissionLine(`type-check worker ${program.name}`, result.admission)}; memory profile ${result.profile.kind} (K ${result.profile.batchFiles} unless the run chose its own batching, heap paced at ${formatBytes(result.profile.heapRamBytes)} unless the environment set a pace)`,
           "stderr",
         );
       }
@@ -425,6 +431,7 @@ const check: Check = {
         t: new Date().toISOString(),
         worktree: checkoutWorktreeName(root),
         admission: result.admission.kind,
+        profile: result.profile.kind,
         workerBytes: result.peakFootprint.bytes,
         batches:
           batches === null

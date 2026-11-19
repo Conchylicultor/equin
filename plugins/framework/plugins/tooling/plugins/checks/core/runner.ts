@@ -48,6 +48,7 @@ import {
   type ResolvedExemption,
 } from "@plugins/framework/plugins/tooling/plugins/exempt/core";
 import { withKillsSeen } from "./killed-pass";
+import { grantFor, passPhases } from "./heavy-first";
 import { openPassHolds } from "./memo-lifetime";
 import type { MemoHolds } from "@plugins/packages/plugins/shared-work/core";
 import {
@@ -611,7 +612,8 @@ export async function runChecks(
     // recorded PASS always reflects content the check actually inspected. The
     // grant is the caller's held host CPU admission; heavy checks spend it.
     const ctx: Omit<CheckContext, "exempt" | "inScope"> = {
-      grant: options.grant,
+      // A check spends the grant only when it declares `heavyChildren`.
+      grant: grantFor(check, options.grant),
       log: (line, stream) => observations.push({ line, stream }),
       cacheEnabled: !noCache,
       repo,
@@ -837,10 +839,15 @@ export async function runChecks(
   const holds = openPassHolds(options.memoContext);
   let notStarted = selected.length;
 
+  // On a one-unit grant, the checks that run heavy children go first, one at
+  // a time, and the rest wait for them (`heavy-first.ts`). Each check still
+  // takes its gate slot below, inside its phase.
+  const phases = passPhases(selected, options.grant.units);
+  const exclusive = createSemaphore(1);
+
   let results: CheckOutcome[];
   try {
-    results = await Promise.all(
-      selected.map(async (check) => {
+    const runSelected = async (check: Check): Promise<CheckOutcome> => {
         // The check's slot in the gate, held as a lease rather than through a
         // `gate.run` wrap: a check that joins another run's in-flight check
         // gives it back for the wait and re-takes it before doing work
@@ -957,6 +964,25 @@ export async function runChecks(
         } finally {
           slot.release();
         }
+    };
+    const firstRuns = phases.first.map((check) =>
+      exclusive.run(() => runSelected(check)),
+    );
+    const firstDone = Promise.allSettled(firstRuns);
+    const restRuns = phases.rest.map(async (check) => {
+      await firstDone;
+      return runSelected(check);
+    });
+    const byCheck = new Map<Check, Promise<CheckOutcome>>();
+    phases.first.forEach((check, i) => byCheck.set(check, firstRuns[i]!));
+    phases.rest.forEach((check, i) => byCheck.set(check, restRuns[i]!));
+    // Selection order, whatever order they ran in.
+    results = await Promise.all(
+      selected.map((check) => {
+        const run = byCheck.get(check);
+        if (run === undefined)
+          throw new Error(`check "${check.id}" is in no phase of the pass`);
+        return run;
       }),
     );
   } catch (err) {

@@ -15298,7 +15298,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/run-local-target.ts` (debt)
 
-- **`build`** — Trigger `./equin build` from the toolbar. Tabs on an older build update themselves: useTabUpdate() is the one verdict (current / available / required / fault) of the build this tab runs against the build served, and the page's UpdatePolicyRoot (Core.Root) reloads into the served build at a safe moment through reload-readiness's quietReload — hidden, or visible and idle, or at once when the old build already fails here — with a neutral Update pill the whole time an update is pending (naming what holds it, if anything) and a red fault, for developers only, when plugins fail on the served build itself. Build, portable half: the build-run id kind, the build config, the Build task category and the build.history collection over build_runs — what a host without the computer serves too. Running builds (the jobs, the routes, the auto-build reconcile) is build/machine.
+- **`build`** — Trigger `./equin build` from the toolbar. Tabs on an older build update themselves: useTabUpdate() is the one verdict (current / available / required / fault) of the build this tab runs against the build served, and the page's UpdatePolicyRoot (Core.Root) reloads into the served build at a safe moment through reload-readiness's quietReload — hidden, or visible and idle, or at once when the old build already fails here — with a neutral Update pill the whole time an update is pending (naming what holds it, if anything) and a red fault, for developers only, when plugins fail on the served build itself. The health report's Update not deployed row: attention while this namespace's newest closed build ended out of memory (the computer ran out of memory checking the update — the commit still running, and that closing other apps frees memory), pulsing while the retry runs; absent otherwise. Build, portable half: the build-run id kind, the build config, the Build task category and the build.history collection over build_runs — what a host without the computer serves too. Running builds (the jobs, the routes, the auto-build reconcile) is build/machine.
   - Web:
     - Slots:
       - `BuildDetailSlots.Section`
@@ -15317,12 +15317,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ActionBar.Item` → `BuildButton`
       - `ActionBar.Activity` "build"
       - `ActionBar.Glance` → `UpdateGlance`
+      - `HealthReport.Row` "Update not deployed"
       - `Core.Root` → `UpdatePolicyRoot`
       - `Pane.Register` "build"
       - `Pane.Register` "build-detail"
       - `DebugApp.Sidebar` "Builds"
       - `ConfigV2.WebRegister` "config"
-    - Uses: 43 symbols — full list in [`plugins/build/REFERENCE.md`](../plugins/build/REFERENCE.md)
+    - Uses: 44 symbols — full list in [`plugins/build/REFERENCE.md`](../plugins/build/REFERENCE.md)
       - `network/live/live-state` ×4
       - `primitives/css/ui-kit` ×4
       - `infra/endpoints` ×3
@@ -15353,6 +15354,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/relative-time.ElapsedTime`
       - `runs.RunsDataView`
       - `shell/action-bar.ActionBar`
+      - `shell/health-report.HealthReport`
       - `shell/notifications.useToast`
       - `ui/icons.Icon`
     - Exports (values):
@@ -15631,6 +15633,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BuildStatus`
         - Exports (values):
           - `BUILD_EXIT_HARD_KILLED`
+          - `BUILD_EXIT_OUT_OF_MEMORY`
           - `BUILD_EXIT_SIGNAL_BASE`
           - `BUILD_EXIT_SUPERSEDED`
           - `BUILD_STATUS_OPTIONS_META`
@@ -15921,7 +15924,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BuildRunRecorder`
           - `LastClosedRun`
         - Exports (values): `createBuildRunRecorder`
-    - **`runs-arm`** — The build arm's presence on the merged run surface: its rows' link into the existing build run-detail pane, and the status / targets / commit / exit-code columns only a build row has. The build arm of the merged run space: binds `build_runs` into the runs union, mapping the six-way BuildStatus taxonomy onto the shared outcome axis while keeping it whole as the `build.status` arm field, plus the targets, commit and exit code only a build row has.
+    - **`runs-arm`** — The build arm's presence on the merged run surface: its rows' link into the existing build run-detail pane, and the status / targets / commit / exit-code columns only a build row has. The build arm of the merged run space: binds `build_runs` into the runs union, mapping the seven-way BuildStatus taxonomy onto the shared outcome axis while keeping it whole as the `build.status` arm field, plus the targets, commit and exit code only a build row has.
       - Web:
         - Contributes:
           - `DataViewSlots.CollectionRowActivation` "runs:open"
@@ -33479,7 +33482,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `WorkerAdmission`
                 - Exports (values): `spawnTypeCheckWorker`
               - Core:
-                - Uses: `infra/host/host-admission.PER_UNIT_BYTES`
+                - Uses:
+                  - `infra/host/host-admission.PER_UNIT_BYTES`
+                  - `packages/heap-pacing.HEAVY_PROCESS_RAM_BYTES`
                 - Exports (types):
                   - `LintBaseRef`
                   - `LintFileJob`
@@ -33493,6 +33498,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `TscPredictionMiss`
                   - `TypeCheckBatching`
                   - `TypeCheckDivergencePayload`
+                  - `TypeCheckMemoryProfile`
                   - `TypeCheckStats`
                   - `TypeCheckTree`
                   - `TypeCheckWorkerJob`
@@ -33508,10 +33514,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `NO_TYPED_PARTS`
                   - `TYPE_CHECK_BATCH_FILES`
                   - `TYPE_CHECK_DIVERGENCE_KIND`
+                  - `TYPE_CHECK_FULL_PROFILE`
                   - `TYPE_CHECK_LIGHT_SOURCES`
+                  - `TYPE_CHECK_ONE_UNIT_PROFILE`
                   - `TYPE_CHECK_WORKER_PEAK_BYTES`
                   - `TYPE_CHECK_WORKER_UNITS`
                   - `TypeCheckDivergencePayloadSchema`
+                  - `typeCheckProfileFor`
               - Cross-plugin:
                 - Imported by:
                   - `framework/cli/build`
@@ -44234,11 +44243,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HEAVY_PROCESS_RAM_BYTES`
           - `JSC_RAM_SIZE_ENV`
           - `pacedHeapEnv`
-    - **`host-memory`** — The host's memory, one shape on macOS and Linux: readHostMemory() reads vm_stat on macOS, /proc/meminfo and /proc/vmstat on Linux, into what the system can hand out (available), kernel memory no process carries (macOS wired; Linux what is neither free, on a page LRU nor reclaimable slab), the RAM processes hold (macOS anonymous + compressor; Linux AnonPages + Shmem), the compressor's size and the swap / compression counters — or unsupported on another OS.
+    - **`host-memory`** — The host's memory, one shape on macOS and Linux: readHostMemory() reads vm_stat on macOS, /proc/meminfo and /proc/vmstat on Linux, into what the system can hand out (available), kernel memory no process carries (macOS wired; Linux what is neither free, on a page LRU nor reclaimable slab), the RAM processes hold (macOS anonymous + compressor; Linux AnonPages + Shmem), the compressor's size and the swap / compression counters — or unsupported on another OS. readOomKillCount() reads the kernel's OOM-kill count since boot (Linux /proc/vmstat oom_kill), as a typed result: unsupported on macOS, unstated on a kernel without the line, unreadable when the read fails — never a 0 that could read as no kills.
       - Cross-plugin:
         - Imported by:
           - `debug/health-monitor`
           - `debug/sentinel/machine-usage`
+          - `framework/cli/build`
       - Core:
         - Exports (types):
           - `HostMemory`
@@ -44246,7 +44256,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HostMemoryIo`
           - `HostMemoryPlatform`
           - `HostMemoryRead`
-        - Exports (values): `readHostMemory`
+          - `OomKillCount`
+        - Exports (values):
+          - `readHostMemory`
+          - `readOomKillCount`
     - **`host-semaphore`** — Cross-process concurrency primitive: createHostSemaphore bounds work across processes via flock slot files (the host-wide twin of packages/semaphore).
       - Server:
         - Uses:
@@ -61314,6 +61327,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Slots: `HealthReport.Row`
         - Slot contributors:
+          - `HealthReport.Row` ← `build`
           - `HealthReport.Row` ← `conversations.runtime-sdk`
           - `HealthReport.Row` ← `database.query-deadline`
           - `HealthReport.Row` ← `debug.queue-health`
@@ -61374,6 +61388,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --font-weight-semibold`
         - Imported by:
+          - `build`
           - `conversations/runtime-sdk`
           - `database/query-deadline`
           - `debug/queue-health`

@@ -22,6 +22,18 @@ describe("pacedHeapEnv", () => {
     });
   });
 
+  test("paces against the share a caller names", () => {
+    expect(pacedHeapEnv({ PATH: "/bin" }, 1.5e9)).toEqual({
+      PATH: "/bin",
+      [JSC_RAM_SIZE_ENV]: "1500000000",
+    });
+  });
+
+  test("a non-positive share is refused, never paced to nothing", () => {
+    expect(() => pacedHeapEnv({}, 0)).toThrow(/must be positive/);
+    expect(() => pacedHeapEnv({}, Number.NaN)).toThrow(/must be positive/);
+  });
+
   test("never mutates its input", () => {
     const env: Record<string, string> = { PATH: "/bin" };
     pacedHeapEnv(env);

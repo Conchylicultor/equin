@@ -66,6 +66,10 @@ const SAMPLES: BuildRunOutcome[] = [
   { finishedAt: FINISHED, exitCode: 74 },
   { finishedAt: FINISHED, exitCode: 75 },
   { finishedAt: FINISHED, exitCode: 76 },
+  // BUILD_EXIT_OUT_OF_MEMORY, and its neighbours on both sides.
+  { finishedAt: FINISHED, exitCode: 70 },
+  { finishedAt: FINISHED, exitCode: 71 },
+  { finishedAt: FINISHED, exitCode: 72 },
   // Hard-killed owner, and the numbers either side of it.
   { finishedAt: FINISHED, exitCode: -2 },
   { finishedAt: FINISHED, exitCode: -1 },
@@ -110,6 +114,7 @@ const EXPECTED_OUTCOME: Record<BuildStatus, RunOutcome> = {
   superseded: "canceled",
   interrupted: "canceled",
   killed: "canceled",
+  "out-of-memory": "canceled",
 };
 
 describe("buildStatusExpr agrees with buildStatusOf", () => {
@@ -130,7 +135,7 @@ describe("buildOutcomeExpr collapses onto the shared axis", () => {
   }
 
   test("every build status the taxonomy has is covered", () => {
-    // If a seventh BuildStatus appears, this suite's own map fails to compile —
+    // If an eighth BuildStatus appears, this suite's own map fails to compile —
     // and so does the one the expression is generated from. Both have to be
     // extended, which is the point of writing them twice.
     const statuses = new Set(SAMPLES.map(buildStatusOf));

@@ -3,7 +3,11 @@ export {
   TYPE_CHECK_LIGHT_SOURCES,
   TYPE_CHECK_WORKER_PEAK_BYTES,
   TYPE_CHECK_WORKER_UNITS,
+  TYPE_CHECK_FULL_PROFILE,
+  TYPE_CHECK_ONE_UNIT_PROFILE,
+  typeCheckProfileFor,
 } from "./worker-weight";
+export type { TypeCheckMemoryProfile } from "./worker-weight";
 export {
   LINT_GROUP_ALL,
   LINT_GROUP_BASE,

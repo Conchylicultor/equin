@@ -116,7 +116,12 @@ Two cases the retry covers by construction, both closed on 2026-11-18:
   the build step's outcome is `killed`, and a build whose failure is made only
   of killed steps exits `128 + signo` (`buildFailureEnd`,
   `framework/cli/build`'s `cli/internal/failure-end.ts`) — a `killed` row in
-  the ledger, retried like a build that took the signal itself. One real
+  the ledger, retried like a build that took the signal itself. When one of
+  those kills is a SIGKILL and the host's OOM-kill counter moved during the
+  build (Linux `/proc/vmstat` `oom_kill`), it exits `BUILD_EXIT_OUT_OF_MEMORY`
+  (71) instead — an `out-of-memory` row, retried the same way, and the one
+  no-verdict end the user is told of (a bell and a health-report row, since
+  only free memory changes the next attempt). One real
   failure beside it (a type error, a failing check) keeps the build `failed`.
   A top-level `./equin check` that joined an in-flight run adopts the
   leader's kill too (`DirectOpContext.markKilled` → `JoinedRun.killedBy`)

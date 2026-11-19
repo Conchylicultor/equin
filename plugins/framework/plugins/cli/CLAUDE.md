@@ -233,7 +233,9 @@ dies while still queuing cannot overwrite its predecessor's.
 **A killed build and a build that failed its checks both write
 `status: "failed"`** — what separates them is `exitCode` (`128+signo` vs `1`;
 a build whose only failures are steps whose CHILD died of a signal — an
-OOM-killed type-check worker — ends `128+signo` too, `cli/internal/failure-end.ts`)
+OOM-killed type-check worker — ends `128+signo` too, `cli/internal/failure-end.ts`,
+or `71` when one of those kills is a SIGKILL and the host's OOM-kill counter rose
+during the build: `out-of-memory`)
 plus `signal`, stamped the moment a catchable signal arrives rather than only at
 the terminal rewrite, so an *escalating* kill (SIGTERM then SIGKILL: `timeout -k`,
 most supervisors) still records the SIGTERM on the `running` receipt the SIGKILL

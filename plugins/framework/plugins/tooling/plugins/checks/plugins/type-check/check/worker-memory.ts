@@ -46,6 +46,11 @@ export const WorkerMemoryRecordSchema = z.object({
   worktree: z.string(),
   /** Which pool admitted it: `type-check-light`, or `type-check-worker` (heavy / escalated). */
   admission: z.enum(["light", "heavy", "escalated"]),
+  /**
+   * The memory profile the worker ran (`typeCheckProfileFor`). Absent on a
+   * record written before profiles existed: every such run was `full`.
+   */
+  profile: z.enum(["full", "one-unit"]).optional(),
   /** The worker process's own peak physical footprint. */
   workerBytes: z.number().nonnegative(),
   /** Its batch processes, when it ran any: how many, and the upper bound on their peaks alive at once. */
@@ -71,11 +76,15 @@ export async function recordWorkerMemory(
  * A run's tree peak, as the weight is defined: the worker's own peak plus its
  * batches' peak at once — an UPPER bound, since the two need not coincide (a
  * worker sampled during its batches sat at 0.5–1.0 GB, below its own 1.5–2.9 GB
- * peak). Only a run that took the heavy pool and batched counts: that is the
- * run the two units are reserved for. A light run (≤ 0.5–3.4 GB) is not.
+ * peak). Only a run that took the heavy pool, batched and ran the full memory
+ * profile counts: that is the run the two units are reserved for. A light run (≤ 0.5–3.4 GB) is not.
  */
 export function heavyTreePeak(r: WorkerMemoryRecord): number | null {
   if (r.admission === "light" || r.batches === null) return null;
+  // A one-unit run is sized to fit ONE unit, not the full weight: judging the
+  // full weight on it would pull the declared peak down toward a profile a
+  // roomy host never runs.
+  if ((r.profile ?? "full") !== "full") return null;
   return r.workerBytes + r.batches.concurrentBytes;
 }
 

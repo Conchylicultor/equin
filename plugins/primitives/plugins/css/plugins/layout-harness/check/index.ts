@@ -91,6 +91,9 @@ const check: Check = {
   // included (`page-inputs.ts` seeds the whole harness plugin), so the
   // recorded read-set is the whole of what the verdict depends on.
   inputKeyed: true,
+  heavyChildren: {
+    what: "the measurer page's Vite build and a headless Chromium (and Chromium's install on first use)",
+  },
   async run(ctx: CheckContext): Promise<CheckResult> {
     const root = await getWorktreeRoot();
     const sig = await computeSig(ctx);

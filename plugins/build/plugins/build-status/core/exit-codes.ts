@@ -20,6 +20,28 @@
 export const BUILD_EXIT_SUPERSEDED = 75;
 
 /**
+ * A build that ended because the computer ran out of memory: every failure is
+ * a process killed by SIGKILL, and the host's OOM-kill counter moved while the
+ * build ran (`framework/cli/build`'s `failure-end.ts`). On an 8 GB Linux host
+ * the kernel's OOM killer takes main's check pass, so the automatic deploy
+ * ends this way with no defect in the code — and the user, not a developer,
+ * is who must hear it: nothing deployed, and the fix is free memory, not a
+ * commit.
+ *
+ * Its own code rather than `128 + 9`, because a SIGKILL alone does not say
+ * who sent it: the counter is the evidence, and it is read by the build that
+ * saw the kill, so it is recorded with the outcome instead of re-guessed by a
+ * reader. A host that cannot count OOM kills (macOS, an unreadable
+ * `/proc/vmstat`) never ends with it — such a build stays `killed`.
+ *
+ * 71 is EX_OSERR from sysexits.h: "an operating system error has been
+ * detected" — a resource the OS could not provide. Below 128, so the
+ * `BUILD_EXIT_SIGNAL_BASE` reading never sees it, and unused by every other
+ * build exit path.
+ */
+export const BUILD_EXIT_OUT_OF_MEMORY = 71;
+
+/**
  * The exit code the ledger writes for a run whose owning process was hard-killed
  * by a newer build's restart. Deliberately outside the 0-255 wait status range,
  * so it can never collide with a code the build itself chose.

@@ -42,12 +42,20 @@ export const HEAVY_PROCESS_RAM_BYTES = 4e9;
 
 /**
  * `env` (a child's FULL environment, as spawn takes it) with the heap paced
- * for a heavy process. A value already set wins: a measurement can pick its
- * own, and a paced process's children inherit the same one. Returns a copy.
+ * for a heavy process, against `ramBytes` (default `HEAVY_PROCESS_RAM_BYTES`).
+ * A caller whose process must stay inside a smaller memory share passes that
+ * share's pace (a type-check worker admitted on one host unit: 1.5 GB, see the
+ * type-check's memory profiles). A value already set wins: a measurement can
+ * pick its own, and a paced process's children inherit the same one. Returns
+ * a copy.
  */
 export function pacedHeapEnv(
   env: Readonly<Record<string, string | undefined>>,
+  ramBytes: number = HEAVY_PROCESS_RAM_BYTES,
 ): Record<string, string | undefined> {
+  if (!(ramBytes > 0)) {
+    throw new Error(`pacedHeapEnv: ramBytes must be positive, got ${ramBytes}`);
+  }
   if (env[JSC_RAM_SIZE_ENV] !== undefined) return { ...env };
-  return { ...env, [JSC_RAM_SIZE_ENV]: String(HEAVY_PROCESS_RAM_BYTES) };
+  return { ...env, [JSC_RAM_SIZE_ENV]: String(ramBytes) };
 }

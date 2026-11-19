@@ -9,7 +9,9 @@ import type { BuildStatus } from "./build-status";
  * Colour carries the one distinction that matters: `failed` is destructive
  * because it is the only status a human must act on. `superseded`,
  * `interrupted` and `killed` are muted — none of them is a code defect, so none
- * of them should draw the eye the way a real failure must.
+ * of them should draw the eye the way a real failure must. `out-of-memory` is
+ * neither: not a code defect, so not destructive, but the user must see that
+ * nothing deployed and why, so a warning rather than muted.
  *
  * Declaration order is the order a filter dropdown offers.
  */
@@ -20,4 +22,5 @@ export const BUILD_STATUS_OPTIONS_META = {
   superseded: { label: "Superseded", variant: "muted" },
   interrupted: { label: "Interrupted", variant: "muted" },
   killed: { label: "Killed externally", variant: "muted" },
+  "out-of-memory": { label: "Out of memory", variant: "warning" },
 } as const satisfies Record<BuildStatus, FieldOptionMeta>;

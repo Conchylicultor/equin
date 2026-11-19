@@ -388,11 +388,13 @@ function finishDedupeKey(buildId: string): string {
  * uses.
  *
  * Every arm reads `buildStatusOf`, never a raw exit code, so the notification can
- * never disagree with the badge on the run's page. Four of the six statuses are
- * not defects and must not read as alarms — `superseded` (the tree moved under
- * it), `killed` (a signal from outside says nothing about the code) and
+ * never disagree with the badge on the run's page. Five of the seven statuses
+ * are not defects and must not read as alarms — `superseded` (the tree moved
+ * under it), `killed` (a signal from outside says nothing about the code) and
  * `interrupted` (its process vanished without recording anything) each get their
- * own sentence.
+ * own sentence for a developer. `out-of-memory` is not a defect either, but it
+ * is the user's news: nothing updated, and only they can free the memory the
+ * next attempt needs — so it is the one no-verdict end told to everyone.
  *
  * `RunTerminal.signalCode` is deliberately NOT consulted here, and reading the
  * status instead is not the banned `exitCode > 128` inference — but only
@@ -456,6 +458,28 @@ async function notifyBuildFinished(
         description: `${row.commitHash?.slice(0, 9) ?? "the built commit"} was replaced mid-build — rebuilding`,
         detail: buildId,
         variant: "info",
+        linkTo,
+        dedupeKey,
+      },
+      conn,
+    );
+    return;
+  }
+  // The computer ran out of memory while checking the update (an 8 GB Linux
+  // host OOM-kills main's check pass): the user's news, in their words — the
+  // app keeps the version it had, closing other apps is the one thing that
+  // helps, and main's convergence retries on its own (up to its no-verdict
+  // budget), so there is nothing to press.
+  if (status === "out-of-memory") {
+    await recordNotification(
+      {
+        type: "build",
+        category: "updates",
+        title: "equin couldn't update",
+        description:
+          "Your computer ran out of memory while checking the update. equin keeps running the version you have; closing other apps frees memory for the next attempt.",
+        detail: `${buildId} · ${row.commitHash?.slice(0, 9) ?? "no commit"} · out of memory after ${seconds}s`,
+        variant: "warning",
         linkTo,
         dedupeKey,
       },

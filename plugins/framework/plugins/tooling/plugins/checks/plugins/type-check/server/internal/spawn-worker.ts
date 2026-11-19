@@ -16,10 +16,12 @@ import { type AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/c
 import type { Grant } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import type { ForegroundSlot } from "@plugins/infra/plugins/host/plugins/host-admission/server";
 import {
-  TYPE_CHECK_BATCH_FILES,
   TYPE_CHECK_LIGHT_SOURCES,
   NO_TYPED_PARTS,
   TYPE_CHECK_WORKER_UNITS,
+  TYPE_CHECK_FULL_PROFILE,
+  typeCheckProfileFor,
+  type TypeCheckMemoryProfile,
   type TypeCheckTree,
   type TypeCheckWorkerJob,
   type TypeCheckWorkerOutput,
@@ -98,6 +100,11 @@ export interface TypeCheckWorkerRun {
   slotWaitMs: number;
   /** Which pool the worker that answered was admitted through, and why. */
   admission: WorkerAdmission;
+  /**
+   * The memory profile it ran (`typeCheckProfileFor` of the units its share
+   * held): what its footprints are measured against.
+   */
+  profile: TypeCheckMemoryProfile;
 }
 
 /**
@@ -217,34 +224,60 @@ export async function spawnTypeCheckWorker(opts: {
     tree,
     batch,
   });
+  // The batching is decided INSIDE the grant's run, from the units the share
+  // actually holds: `Grant.run` clamps the worker's weight to the grant, and a
+  // worker admitted on less than it weighs runs the profile that fits the
+  // share (`typeCheckProfileFor`) — never the full one on a one-unit host.
+  // A small run keeps the full profile's pacing whatever its share: it
+  // builds no program over `TYPE_CHECK_LIGHT_SOURCES` (≤ 3.4 GB measured), so
+  // it already fits one unit, and pacing it tighter would only cost CPU.
   const admitted = (
     pool: typeof typeCheckWorkerPool,
-    batch: TypeCheckWorkerJob["batch"],
+    plan: (units: number) => {
+      profile: TypeCheckMemoryProfile;
+      batch: TypeCheckWorkerJob["batch"];
+    },
   ) => {
     const queuedAt = performance.now();
     return pool.run(
       (slot) => {
         const slotWaitMs = performance.now() - queuedAt;
         return grant.run(
-          async () => ({
-            ...(await spawnWorker({ root, name, job: job(batch), slot })),
-            slotWaitMs,
-          }),
+          async (share) => {
+            const { profile, batch } = plan(share.units);
+            return {
+              ...(await spawnWorker({
+                root,
+                name,
+                job: job(batch),
+                slot,
+                profile,
+              })),
+              slotWaitMs,
+              profile,
+            };
+          },
           { units: TYPE_CHECK_WORKER_UNITS },
         );
       },
       { lane: grant.lane },
     );
   };
-  const heavyBatch = opts.batch ?? {
-    kind: "batches",
-    k: TYPE_CHECK_BATCH_FILES,
+  // A caller's own batching is kept as given; otherwise batches of the
+  // profile's K.
+  const heavyPlan = (units: number) => {
+    const profile = typeCheckProfileFor(units);
+    const batch: TypeCheckWorkerJob["batch"] = opts.batch ?? {
+      kind: "batches",
+      k: profile.batchFiles,
+    };
+    return { profile, batch };
   };
   const heavy = async (admission: WorkerAdmission, waitedMs: number) => {
-    const { output, ...ran } = await admitted(typeCheckWorkerPool, heavyBatch);
+    const { output, ...ran } = await admitted(typeCheckWorkerPool, heavyPlan);
     if (output.kind !== "done") {
       throw new Error(
-        `type-check worker for "${name}" answered over-budget under batching ${heavyBatch.kind}, which never refuses`,
+        `type-check worker for "${name}" answered over-budget under batching ${opts.batch?.kind ?? "batches"}, which never refuses`,
       );
     }
     return {
@@ -260,10 +293,10 @@ export async function spawnTypeCheckWorker(opts: {
   if (why !== null) {
     run = await heavy({ kind: "heavy", why }, 0);
   } else {
-    const { output, ...small } = await admitted(typeCheckLightPool, {
-      kind: "refuse",
-      sources: TYPE_CHECK_LIGHT_SOURCES,
-    });
+    const { output, ...small } = await admitted(typeCheckLightPool, () => ({
+      profile: TYPE_CHECK_FULL_PROFILE,
+      batch: { kind: "refuse", sources: TYPE_CHECK_LIGHT_SOURCES },
+    }));
     run =
       output.kind === "done"
         ? { ...small, result: output.result, admission: { kind: "light" } }
@@ -291,20 +324,25 @@ async function spawnWorker(opts: {
   name: string;
   job: TypeCheckWorkerRequest;
   slot: ForegroundSlot;
+  profile: TypeCheckMemoryProfile;
 }): Promise<
-  Omit<TypeCheckWorkerRun, "slotWaitMs" | "admission" | "result"> & {
+  Omit<
+    TypeCheckWorkerRun,
+    "slotWaitMs" | "admission" | "result" | "profile"
+  > & {
     output: TypeCheckWorkerOutput;
   }
 > {
-  const { root, name, job, slot } = opts;
+  const { root, name, job, slot, profile } = opts;
   const startedAt = performance.now();
   const spawned = await launchTypeCheckWorker(job, (argv, io) =>
     slot.spawn(argv, {
       ...io,
     cwd: root,
-    // A multi-GB heap, paced against what one process may hold rather than
-    // the machine's whole RAM; its batch processes inherit the same pacing.
-    env: pacedHeapEnv(process.env),
+      // A multi-GB heap, paced against what one process may hold under its
+      // profile rather than the machine's whole RAM; its batch processes
+      // inherit the same pacing.
+      env: pacedHeapEnv(process.env, profile.heapRamBytes),
       // A bun script: it reports its own peak footprint at exit.
       peakFootprint: "report",
     // A type-check worker builds a whole TypeScript program; cold, that is

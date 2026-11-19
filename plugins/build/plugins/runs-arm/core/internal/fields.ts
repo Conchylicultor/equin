@@ -12,8 +12,8 @@ import {
 import { runs } from "@plugins/runs/core";
 
 /**
- * The six build statuses, as a schema. A `Record`-checked list rather than a
- * free `z.enum`: a seventh `BuildStatus` fails to compile here.
+ * The seven build statuses, as a schema. A `Record`-checked list rather than a
+ * free `z.enum`: an eighth `BuildStatus` fails to compile here.
  */
 const BUILD_STATUS_VALUES = {
   running: true,
@@ -21,6 +21,7 @@ const BUILD_STATUS_VALUES = {
   superseded: true,
   interrupted: true,
   killed: true,
+  "out-of-memory": true,
   failed: true,
 } satisfies Record<BuildStatus, true>;
 
@@ -45,7 +46,7 @@ export const BuildStatusSchema: z.ZodType<BuildStatus> = z.enum(BUILD_STATUSES);
  * deliberately collapses `superseded` / `interrupted` / `killed` into one
  * `canceled`, because those three distinctions are not true of every kind of
  * run — but they are exactly the distinctions a person reading a build list
- * needs. Keeping the six-way taxonomy as an arm field is how precision
+ * needs. Keeping the seven-way taxonomy as an arm field is how precision
  * survives the collapse: filter `outcome is canceled` across every ledger, then
  * `build.status is superseded` when the question is about builds.
  *

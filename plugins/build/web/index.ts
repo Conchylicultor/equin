@@ -11,6 +11,8 @@ import { BuildButton } from "./components/build-button";
 import { UpdateGlance } from "./components/update-button";
 import { UpdatePolicyRoot } from "./components/update-policy-root";
 import { useBuildActivity } from "./hooks/use-build-activity";
+import { useOutOfMemoryHealth } from "./hooks/use-out-of-memory-health";
+import { HealthReport } from "@plugins/shell/plugins/health-report/web";
 import { buildPane, buildDetailPane } from "./panes";
 import { BuildDetail } from "./slots";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -24,7 +26,7 @@ export { useStaleFrontend } from "./hooks/use-stale-frontend";
 export default {
   collapsed: true,
   description:
-    "Trigger `./equin build` from the toolbar. Tabs on an older build update themselves: useTabUpdate() is the one verdict (current / available / required / fault) of the build this tab runs against the build served, and the page's UpdatePolicyRoot (Core.Root) reloads into the served build at a safe moment through reload-readiness's quietReload — hidden, or visible and idle, or at once when the old build already fails here — with a neutral Update pill the whole time an update is pending (naming what holds it, if anything) and a red fault, for developers only, when plugins fail on the served build itself.",
+    "Trigger `./equin build` from the toolbar. Tabs on an older build update themselves: useTabUpdate() is the one verdict (current / available / required / fault) of the build this tab runs against the build served, and the page's UpdatePolicyRoot (Core.Root) reloads into the served build at a safe moment through reload-readiness's quietReload — hidden, or visible and idle, or at once when the old build already fails here — with a neutral Update pill the whole time an update is pending (naming what holds it, if anything) and a red fault, for developers only, when plugins fail on the served build itself. The health report's Update not deployed row: attention while this namespace's newest closed build ended out of memory (the computer ran out of memory checking the update — the commit still running, and that closing other apps frees memory), pulsing while the retry runs; absent otherwise.",
   contributions: [
     IdKinds.Kind({ kind: buildRunIdKind }),
     ActionBar.Item({
@@ -37,6 +39,15 @@ export default {
     // anyway.
     ActionBar.Activity({ id: "build", useActivity: useBuildActivity }),
     ActionBar.Glance({ id: "reload", component: UpdateGlance }),
+    // A deploy the computer ran out of memory for, told to the user where
+    // they look: nothing deployed, and only free memory helps. Absent
+    // otherwise.
+    HealthReport.Row({
+      kind: "status",
+      id: "build-out-of-memory",
+      title: "Update not deployed",
+      useStatus: useOutOfMemoryHealth,
+    }),
     // The reload policy: a tab on an older build updates itself at a safe
     // moment, once per page.
     Core.Root({ component: UpdatePolicyRoot, scope: "page" }),

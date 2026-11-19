@@ -12,7 +12,12 @@ import {
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { currentRecordStore } from "@plugins/plugin-meta/plugins/plugin-records/core";
-import { existsSync, realpath } from "@plugins/packages/plugins/timed-fs/core";
+import {
+  existsSync,
+  readFile,
+  realpath,
+} from "@plugins/packages/plugins/timed-fs/core";
+import { readOomKillCount } from "@plugins/packages/plugins/host-memory/core";
 import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { sweepDistLeftovers } from "./internal/dist-publish";
 import {
@@ -1289,6 +1294,13 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
       // and the build's verdict is about no coherent tree at all. See
       // `supersededBy` at the verdict funnels below.
       const headAtStart = await readHead(root);
+      // The host's OOM-kill count as the build starts, against which the
+      // failure funnel reads it again: a step SIGKILLed while the count rose
+      // ran out of memory (`buildFailureEnd`'s `out-of-memory`), which on an
+      // 8 GB Linux host is how main's check pass ends.
+      const oomKillsAtStart = await readOomKillCount(process.platform, (path) =>
+        readFile(path, "utf8"),
+      );
 
       /**
        * Open one target's deploy receipt. AFTER the lock, not before: the lock
@@ -1834,7 +1846,16 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
         // The one code this failure ends on — resolved before the verdict,
         // so the ledger row, the receipts, the process's own status (the
         // run's exit marker) and the headline all say the same thing.
-        const end = buildFailureEnd({ supersededBy: newHead, failures });
+        const end = buildFailureEnd({
+          supersededBy: newHead,
+          failures,
+          oomKills: {
+            atStart: oomKillsAtStart,
+            atEnd: await readOomKillCount(process.platform, (path) =>
+              readFile(path, "utf8"),
+            ),
+          },
+        });
         const v: Verdict =
           newHead !== null
             ? {
@@ -1851,6 +1872,22 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
                 pointers,
                 steps: stepRoster(),
               }
+            : end.kind === "out-of-memory"
+              ? {
+                  ok: false,
+                  headline: `BUILD OUT OF MEMORY — ${failedLabels.length > 0 ? failedLabels.join(", ") : "deploy"}`,
+                  reason: [
+                    `NOT DEPLOYED. The computer ran out of memory during ${failedLabels.length > 0 ? failedLabels.join(", ") : "the build"}:`,
+                    `the system killed ${failedLabels.length === 1 ? "this step's" : "these steps'"} process to free memory (${end.oomKills} out-of-memory`,
+                    `kill${end.oomKills === 1 ? "" : "s"} on this host while the build ran). No verdict on the code.`,
+                    `${targetUrls.join(", ")} ${targetUrls.length === 1 ? "keeps serving its" : "keep serving their"} previous build. Closing other apps frees memory`,
+                    `for the next attempt (main's automatic deploy retries a few times, then waits for the next update).`,
+                    ...reason,
+                    ...fanOut,
+                  ],
+                  pointers,
+                  steps: stepRoster(),
+                }
             : end.kind === "killed"
               ? {
                   ok: false,

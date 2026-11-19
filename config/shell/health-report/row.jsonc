@@ -1,4 +1,4 @@
-// @hash c3d15d46bf83
+// @hash e6860999fb54
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -16,7 +16,9 @@
     "tasks.worktree-identity:worktree",
     // Is this clone on the newest release: what the user acts on, right under where they are.
     "upstream:updates",
-    // The checkout that publishes releases (where the row above is absent): what is unreleased.
+    // An update this machine ran out of memory checking, and so did not deploy: right under "is there an update".
+    "build:build-out-of-memory",
+    // The checkout that publishes releases (where the updates row is absent): what is unreleased.
     "upstream:releases",
     // Whether GitHub's news reaches the publisher at all: the releases row above reads it.
     "integrations.github-events:github-events",

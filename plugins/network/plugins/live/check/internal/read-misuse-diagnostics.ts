@@ -222,6 +222,9 @@ export const readMisuseDiagnostics: Check = {
   // reports and `recordCompileInputs` puts in the read-set: an edit outside
   // the fixture's type closure replays the PASS and compiles nothing.
   inputKeyed: true,
+  heavyChildren: {
+    what: "a TypeScript compile of the fixture's whole type closure (~1.4 GB)",
+  },
   description:
     "Every misuse in network/live's `use-live-query-types.test.ts` is reported on the line its `@ts-expect-error` marks with exactly the TS code(s) the marker names (`// @ts-expect-error TS2322 — <label>`) — so never as TS2769 (\"No overload matches this call\", which `@ts-expect-error` cannot tell apart) unless the marker lists it — with no unmarked diagnostic. Compiles the file, markers blanked in memory, under the repo's compiler options.",
   async run(ctx) {

@@ -63,13 +63,13 @@ list.
 
 ## Why `build.status` exists at all
 
-`outcome` collapses `superseded` / `interrupted` / `killed` into one `canceled`,
-because those three are not distinctions every kind of run can draw. They are
-exactly the distinctions a person reading a *build* list needs, and none of the
-three is a defect. Keeping the six-way taxonomy as an arm field is how the
-precision survives the collapse — and it is why the list row contributes the
-build dot rather than the shared outcome dot, which would paint all three the
-same grey.
+`outcome` collapses `superseded` / `interrupted` / `killed` / `out-of-memory`
+into one `canceled`, because those four are not distinctions every kind of run
+can draw. They are exactly the distinctions a person reading a *build* list
+needs, and none of the four is a defect. Keeping the seven-way taxonomy as an
+arm field is how the precision survives the collapse — and it is why the list
+row contributes the build dot rather than the shared outcome dot, which would
+paint all four the same grey (an out-of-memory run's own dot is a warning).
 
 ## `message` is null, deliberately
 
@@ -102,7 +102,7 @@ quiet absence of a predicate.
 
 ## Plugin reference
 
-- Description: The build arm's presence on the merged run surface: its rows' link into the existing build run-detail pane, and the status / targets / commit / exit-code columns only a build row has. The build arm of the merged run space: binds `build_runs` into the runs union, mapping the six-way BuildStatus taxonomy onto the shared outcome axis while keeping it whole as the `build.status` arm field, plus the targets, commit and exit code only a build row has.
+- Description: The build arm's presence on the merged run surface: its rows' link into the existing build run-detail pane, and the status / targets / commit / exit-code columns only a build row has. The build arm of the merged run space: binds `build_runs` into the runs union, mapping the seven-way BuildStatus taxonomy onto the shared outcome axis while keeping it whole as the `build.status` arm field, plus the targets, commit and exit code only a build row has.
 - Web:
   - Contributes:
     - `DataViewSlots.CollectionRowActivation` "runs:open"

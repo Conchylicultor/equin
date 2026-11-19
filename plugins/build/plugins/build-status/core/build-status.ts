@@ -1,11 +1,12 @@
 import {
   BUILD_EXIT_HARD_KILLED,
+  BUILD_EXIT_OUT_OF_MEMORY,
   BUILD_EXIT_SIGNAL_BASE,
   BUILD_EXIT_SUPERSEDED,
 } from "./exit-codes";
 
 /**
- * How a build run ended, as one closed set. Four of the six arms are *not*
+ * How a build run ended, as one closed set. Five of the seven arms are *not*
  * defects — only `failed` is a build that ran to a verdict and gave a bad one:
  *
  * - `superseded` — its tree was replaced mid-run, so it never had a subject
@@ -14,12 +15,22 @@ import {
  *   there is no artifact and no verdict.
  * - `killed` — a signal arrived from outside the build (SIGTERM/SIGINT/…): a
  *   human, a supervisor, another agent. Says nothing about the code.
+ * - `out-of-memory` — the computer ran out of memory and the kernel killed a
+ *   step (see `BUILD_EXIT_OUT_OF_MEMORY`). Says nothing about the code either,
+ *   but unlike `killed` it is the user's to hear: nothing deployed, and only
+ *   free memory changes the next attempt.
  *
  * Everything that renders or reasons about a run's outcome goes through
  * `buildStatusOf`, so no call site branches on exit codes again.
  */
 export type BuildStatus =
-  "running" | "success" | "superseded" | "interrupted" | "killed" | "failed";
+  | "running"
+  | "success"
+  | "superseded"
+  | "interrupted"
+  | "killed"
+  | "out-of-memory"
+  | "failed";
 
 /** The two fields that decide a status — any `BuildRun` satisfies it. */
 export interface BuildRunOutcome {
@@ -52,6 +63,7 @@ export function buildStatusOf(run: BuildRunOutcome): BuildStatus {
   if (exitCode === 0) return "success";
   if (exitCode === BUILD_EXIT_SUPERSEDED) return "superseded";
   if (exitCode === BUILD_EXIT_HARD_KILLED) return "interrupted";
+  if (exitCode === BUILD_EXIT_OUT_OF_MEMORY) return "out-of-memory";
   if (exitCode !== null && exitCode > BUILD_EXIT_SIGNAL_BASE) return "killed";
   return "failed";
 }

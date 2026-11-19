@@ -1,4 +1,7 @@
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { resolve } from "node:path";
+import { readOomKillCount } from "@plugins/packages/plugins/host-memory/core";
+import { deadBuildExitCode } from "./failure-end";
 import {
   joinAppPath,
   type AppPath,
@@ -392,6 +395,11 @@ async function convergeBuilds(
             : { BUILD_ID: buildId, BUILD_RELAYED: "1" },
         ),
       };
+      // Read around the child: a build the kernel OOM-killed whole records
+      // nothing itself, and this run's close is its row's first write.
+      const readOomKills = () =>
+        readOomKillCount(process.platform, (path) => readFile(path, "utf8"));
+      const oomKillsAtStart = await readOomKills();
       let exitCode: number;
       if (checkout.kind === "main") {
         // Main builds in a SLOT (`infra/git/main-slots`): a linked worktree
@@ -429,6 +437,10 @@ async function convergeBuilds(
           env,
         });
       }
+      exitCode = deadBuildExitCode(exitCode, {
+        atStart: oomKillsAtStart,
+        atEnd: await readOomKills(),
+      });
       // The build closes its own row on every verdict; this is the backstop for
       // the ways it can end without one (a throw, an early exit, a signal), so
       // the next decision sees this attempt. First writer wins.
@@ -458,6 +470,8 @@ function describeExit(exitCode: number): string {
       return " (failed)";
     case "killed":
       return ` (killed: ${killedSignalName(exitCode)} — not a verdict on the code)`;
+    case "out-of-memory":
+      return " (out of memory: the host's OOM killer took the build or a step — not a verdict on the code)";
     case "interrupted":
     case "superseded":
       return ` (${status} — not a verdict on the code)`;

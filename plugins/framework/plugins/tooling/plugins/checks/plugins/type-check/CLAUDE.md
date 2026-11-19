@@ -293,7 +293,7 @@ It takes the caller's `Grant`, so admission and priority cannot be skipped:
    - The transcript's `type-check worker repo: admitted …` line says which pool, and for an escalation what the refused attempt cost.
 2. **`TYPE_CHECK_WORKER_UNITS` of the grant** (`core/worker-weight.ts`: `ceil(7.0 GB mean heavy-run footprint / PER_UNIT_BYTES)` = 2) — CPU accounting.
    - Every run appends its measured footprints (admission, worker, batches at once) to the host log `~/.equin/logs/type-check-worker-memory/worker-memory.jsonl` (`check/worker-memory.ts`). The host check `type-check:worker-weight-measured` (main's hourly host audit) fails when `TYPE_CHECK_WORKER_PEAK_BYTES` sits more than 20 % from the last 14 days' mean heavy-run footprint, or `PER_UNIT_BYTES` more than 20 % from that mean per unit spent; re-derive from the log, never by a guessed offset.
-   - The grant clamps it to its own size.
+   - The grant clamps it to its own size — and **the worker then fits the share it got** (`typeCheckProfileFor(share.units)`, decided inside `grant.run`): a share of `TYPE_CHECK_WORKER_UNITS` runs the full profile (K 2000, heap paced at 4 GB); a share the clamp cut to ONE unit (an 8 GB host's whole budget, or any host whose measured window shrank) runs the one-unit profile (K 500, paced at 1.5 GB). Measured cold on an 8 GB Ubuntu VM: the full profile alone was OOM-killed (a batch at 5.2 GB), the one-unit profile peaked at ~3.9 GB for +41 % CPU (`research/2026-11-19-global-8gb-deploy-check-pass-memory.md`). A small run keeps the full pace (it fits a unit already). The admission line prints the profile; the memory log records it, and `worker-weight-measured` judges the full weight on full-profile runs only.
    - Batch processes run serially inside this share.
 3. **Foreground, as the slot's holder, in either lane**: the pool is `holder: "foreground"` and the worker spawns via `slot.spawn` (out of darwinbg even from a darwinbg session; no spelling for demoting it).
    - The lane picks only the slot window, never the tier — background-tier workers stretched every slot wait fleet-wide.
@@ -338,7 +338,9 @@ Sizes: `research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md`.
     - `WorkerAdmission`
   - Exports (values): `spawnTypeCheckWorker`
 - Core:
-  - Uses: `infra/host/host-admission.PER_UNIT_BYTES`
+  - Uses:
+    - `infra/host/host-admission.PER_UNIT_BYTES`
+    - `packages/heap-pacing.HEAVY_PROCESS_RAM_BYTES`
   - Exports (types):
     - `LintBaseRef`
     - `LintFileJob`
@@ -352,6 +354,7 @@ Sizes: `research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md`.
     - `TscPredictionMiss`
     - `TypeCheckBatching`
     - `TypeCheckDivergencePayload`
+    - `TypeCheckMemoryProfile`
     - `TypeCheckStats`
     - `TypeCheckTree`
     - `TypeCheckWorkerJob`
@@ -367,10 +370,13 @@ Sizes: `research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md`.
     - `NO_TYPED_PARTS`
     - `TYPE_CHECK_BATCH_FILES`
     - `TYPE_CHECK_DIVERGENCE_KIND`
+    - `TYPE_CHECK_FULL_PROFILE`
     - `TYPE_CHECK_LIGHT_SOURCES`
+    - `TYPE_CHECK_ONE_UNIT_PROFILE`
     - `TYPE_CHECK_WORKER_PEAK_BYTES`
     - `TYPE_CHECK_WORKER_UNITS`
     - `TypeCheckDivergencePayloadSchema`
+    - `typeCheckProfileFor`
 - Cross-plugin:
   - Imported by:
     - `framework/cli/build`

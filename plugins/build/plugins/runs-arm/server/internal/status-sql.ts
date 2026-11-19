@@ -6,6 +6,7 @@ import type { ColumnExpr } from "@plugins/primitives/plugins/keyset/server";
 type Operand = ColumnExpr | ColumnRef;
 import {
   BUILD_EXIT_HARD_KILLED,
+  BUILD_EXIT_OUT_OF_MEMORY,
   BUILD_EXIT_SIGNAL_BASE,
   BUILD_EXIT_SUPERSEDED,
   type BuildStatus,
@@ -42,18 +43,20 @@ export function buildStatusExpr(finishedAt: Operand, exitCode: Operand): SQL {
     when ${exitCode} = 0 then 'success'
     when ${exitCode} = ${BUILD_EXIT_SUPERSEDED} then 'superseded'
     when ${exitCode} = ${BUILD_EXIT_HARD_KILLED} then 'interrupted'
+    when ${exitCode} = ${BUILD_EXIT_OUT_OF_MEMORY} then 'out-of-memory'
     when ${exitCode} > ${BUILD_EXIT_SIGNAL_BASE} then 'killed'
     else 'failed'
   end)::text`;
 }
 
 /**
- * How each of the six build statuses reads on the shared outcome axis.
+ * How each of the seven build statuses reads on the shared outcome axis.
  *
  * A `Record<BuildStatus, RunOutcome>` rather than a hand-written `CASE`: adding
- * a seventh build status is then a `tsc` error here rather than a run that
- * silently loses its outcome. The three cancellations collapse because none of
- * them is a verdict on the code — see `BuildStatus`'s own docblock.
+ * an eighth build status is then a `tsc` error here rather than a run that
+ * silently loses its outcome. The four cancellations collapse because none of
+ * them is a verdict on the code — see `BuildStatus`'s own docblock. (An
+ * out-of-memory run keeps its warning on the arm's own `build.status`.)
  */
 const OUTCOME_OF_STATUS: Record<BuildStatus, RunOutcome> = {
   running: "running",
@@ -62,6 +65,7 @@ const OUTCOME_OF_STATUS: Record<BuildStatus, RunOutcome> = {
   superseded: "canceled",
   interrupted: "canceled",
   killed: "canceled",
+  "out-of-memory": "canceled",
 };
 
 /**

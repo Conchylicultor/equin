@@ -289,6 +289,27 @@ the status as a ghost text button — a ring spinner (`Spinner shape="ring"`) an
 **Update pill** nested at its end. A failed build rings the tray in
 `destructive-solid` at 45%.
 
+## A deploy the computer ran out of memory for is never silent
+
+On an 8 GB Linux host the kernel's OOM killer takes main's check pass. A
+SIGKILL alone does not say who sent it, so the build reads the host's OOM-kill
+counter (`packages/host-memory`'s `readOomKillCount`, Linux `/proc/vmstat`
+`oom_kill`) at its start and at its failure, and a failure made only of killed
+steps — one a SIGKILL — while the counter rose ends `out-of-memory`
+(`BUILD_EXIT_OUT_OF_MEMORY`, `build-status`). Still no verdict: convergence
+retries it like `killed`. Unlike `killed` it is the user's news, told twice:
+
+- **the bell** — "equin couldn't update" (warning, every audience;
+  `notifyBuildFinished`): out of memory while checking the update, the app
+  keeps its version, closing other apps frees memory for the next attempt (convergence retries up to three times, then waits for a push or Build);
+- **the health report** — the "Update not deployed" row (`web/internal/
+  out-of-memory-health.ts`): attention while the newest CLOSED run of this
+  namespace's history ended out of memory, naming the commit still running,
+  pulsing while a build runs; absent otherwise, unknown while the history loads.
+
+A host that cannot count OOM kills (macOS) never upgrades a kill: its build
+stays `killed`, rather than guess.
+
 ## Tabs on an older build update themselves
 
 A newer build served is an **update, not a fault**: no red state, no click.
@@ -349,7 +370,7 @@ the common case.
 
 ## Plugin reference
 
-- Description: Trigger `./equin build` from the toolbar. Tabs on an older build update themselves: useTabUpdate() is the one verdict (current / available / required / fault) of the build this tab runs against the build served, and the page's UpdatePolicyRoot (Core.Root) reloads into the served build at a safe moment through reload-readiness's quietReload — hidden, or visible and idle, or at once when the old build already fails here — with a neutral Update pill the whole time an update is pending (naming what holds it, if anything) and a red fault, for developers only, when plugins fail on the served build itself. Build, portable half: the build-run id kind, the build config, the Build task category and the build.history collection over build_runs — what a host without the computer serves too. Running builds (the jobs, the routes, the auto-build reconcile) is build/machine.
+- Description: Trigger `./equin build` from the toolbar. Tabs on an older build update themselves: useTabUpdate() is the one verdict (current / available / required / fault) of the build this tab runs against the build served, and the page's UpdatePolicyRoot (Core.Root) reloads into the served build at a safe moment through reload-readiness's quietReload — hidden, or visible and idle, or at once when the old build already fails here — with a neutral Update pill the whole time an update is pending (naming what holds it, if anything) and a red fault, for developers only, when plugins fail on the served build itself. The health report's Update not deployed row: attention while this namespace's newest closed build ended out of memory (the computer ran out of memory checking the update — the commit still running, and that closing other apps frees memory), pulsing while the retry runs; absent otherwise. Build, portable half: the build-run id kind, the build config, the Build task category and the build.history collection over build_runs — what a host without the computer serves too. Running builds (the jobs, the routes, the auto-build reconcile) is build/machine.
 - Web:
   - Slots:
     - `BuildDetailSlots.Section`
@@ -368,12 +389,13 @@ the common case.
     - `ActionBar.Item` → `BuildButton`
     - `ActionBar.Activity` "build"
     - `ActionBar.Glance` → `UpdateGlance`
+    - `HealthReport.Row` "Update not deployed"
     - `Core.Root` → `UpdatePolicyRoot`
     - `Pane.Register` "build"
     - `Pane.Register` "build-detail"
     - `DebugApp.Sidebar` "Builds"
     - `ConfigV2.WebRegister` "config"
-  - Uses: 43 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/live-state` ×4
     - `primitives/css/ui-kit` ×4
     - `infra/endpoints` ×3
@@ -404,6 +426,7 @@ the common case.
     - `primitives/relative-time.ElapsedTime`
     - `runs.RunsDataView`
     - `shell/action-bar.ActionBar`
+    - `shell/health-report.HealthReport`
     - `shell/notifications.useToast`
     - `ui/icons.Icon`
   - Exports (values):

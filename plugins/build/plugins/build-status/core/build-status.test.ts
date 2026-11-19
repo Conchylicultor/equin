@@ -37,6 +37,24 @@ describe("buildStatusOf", () => {
     expect(buildStatusOf({ finishedAt: FINISHED, exitCode: 143 })).toBe("killed"); // SIGTERM
   });
 
+  test("BUILD_EXIT_OUT_OF_MEMORY (71) is out-of-memory, not a failure", () => {
+    expect(buildStatusOf({ finishedAt: FINISHED, exitCode: 71 })).toBe(
+      "out-of-memory",
+    );
+    expect(buildStatusOf({ finishedAt: FINISHED, exitCode: 70 })).toBe(
+      "failed",
+    );
+    expect(buildStatusOf({ finishedAt: FINISHED, exitCode: 72 })).toBe(
+      "failed",
+    );
+  });
+
+  test("a SIGKILL without the out-of-memory code stays killed", () => {
+    expect(buildStatusOf({ finishedAt: FINISHED, exitCode: 137 })).toBe(
+      "killed",
+    );
+  });
+
   test("128 itself is not a signal death", () => {
     expect(buildStatusOf({ finishedAt: FINISHED, exitCode: 128 })).toBe("failed");
   });

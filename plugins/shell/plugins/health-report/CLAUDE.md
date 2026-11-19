@@ -156,6 +156,7 @@ probes, is mounted per page.
 - Web:
   - Slots: `HealthReport.Row`
   - Slot contributors:
+    - `HealthReport.Row` ← `build`
     - `HealthReport.Row` ← `conversations.runtime-sdk`
     - `HealthReport.Row` ← `database.query-deadline`
     - `HealthReport.Row` ← `debug.queue-health`
@@ -216,6 +217,7 @@ probes, is mounted per page.
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by:
+    - `build`
     - `conversations/runtime-sdk`
     - `database/query-deadline`
     - `debug/queue-health`

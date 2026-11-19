@@ -9,6 +9,7 @@
 // host-admission has to know that this consumer exists.
 
 import { PER_UNIT_BYTES } from "@plugins/infra/plugins/host/plugins/host-admission/core";
+import { HEAVY_PROCESS_RAM_BYTES } from "@plugins/packages/plugins/heap-pacing/core";
 
 /**
  * One heavy worker's peak PHYSICAL FOOTPRINT: the worker process's own peak
@@ -82,6 +83,76 @@ export const TYPE_CHECK_WORKER_UNITS = Math.ceil(
  * not re-benchmarked at other sizes in footprint.
  */
 export const TYPE_CHECK_BATCH_FILES = 2000;
+
+/**
+ * How a heavy worker spends memory: the most sources one program holds (K)
+ * and the RAM its heap (and its batches', which inherit it) is paced against
+ * (`packages/heap-pacing`). One of two, picked from the units the worker was
+ * actually granted (`typeCheckProfileFor`), never from a flag.
+ */
+export interface TypeCheckMemoryProfile {
+  readonly kind: "full" | "one-unit";
+  readonly batchFiles: number;
+  readonly heapRamBytes: number;
+}
+
+/**
+ * The worker as weighed above: K `TYPE_CHECK_BATCH_FILES`, paced at
+ * `HEAVY_PROCESS_RAM_BYTES`. Its tree peaks at ~7 GB — what
+ * `TYPE_CHECK_WORKER_UNITS` reserves.
+ */
+export const TYPE_CHECK_FULL_PROFILE: TypeCheckMemoryProfile = {
+  kind: "full",
+  batchFiles: TYPE_CHECK_BATCH_FILES,
+  heapRamBytes: HEAVY_PROCESS_RAM_BYTES,
+};
+
+/**
+ * The worker on ONE unit of `PER_UNIT_BYTES`: what an 8 GB host has (its
+ * fleet budget B is 1), and what any host's grant shrinks to when its measured
+ * window does. Running the full profile there is the overrun admission exists
+ * to prevent: the clamp in `Grant.run` admitted the 7 GB worker on a 3.6 GB
+ * share, and on an 8 GB Ubuntu host (app running, ~5.6 GB available) the cold
+ * type-check alone was OOM-killed with a batch at 5.2 GB (2026-11-18).
+ *
+ * MEASURED on that host, the same cold whole-tree check alone (17,999
+ * sources), against the full profile on a 16 GB clone:
+ *
+ *   profile            batches  batch peak  worker peak  tree peak  CPU
+ *   full (K 2000, 4 GB)      9      5.7 GB       4.7 GB     ~6.6 GB   971 s
+ *   one-unit (K 500, 1.5 GB) 36     3.3 GB       3.8 GB     ~3.9 GB  1373 s
+ *
+ * (peaks are the physical footprints the worker prints; the tree peak is the
+ * sampled PSS of worker + batch at once — the two peaks never coincide: the
+ * worker's own is its end phase, after the batches). So +41 % CPU, paid only
+ * where the memory is not there. K alone is a poor lever (K 1000 kept 90 % of
+ * the peak, research/2026-11-18-global-cold-check-pass-memory.md) and so is
+ * pacing alone; together they bring a batch inside one unit
+ * (research/2026-11-19-global-8gb-deploy-check-pass-memory.md).
+ */
+export const TYPE_CHECK_ONE_UNIT_PROFILE: TypeCheckMemoryProfile = {
+  kind: "one-unit",
+  batchFiles: 500,
+  heapRamBytes: 1.5e9,
+};
+
+/**
+ * The profile a worker granted `units` runs: the full one only when its grant
+ * holds the units the full profile weighs. `Grant.run` clamps a request to
+ * the grant, so a worker admitted on fewer units than `TYPE_CHECK_WORKER_UNITS`
+ * has a share smaller than its weight — it then shrinks to fit the share,
+ * rather than spending memory nobody admitted.
+ */
+export function typeCheckProfileFor(units: number): TypeCheckMemoryProfile {
+  if (!Number.isInteger(units) || units < 1) {
+    throw new Error(
+      `typeCheckProfileFor: units must be a positive integer, got ${units}`,
+    );
+  }
+  return units >= TYPE_CHECK_WORKER_UNITS
+    ? TYPE_CHECK_FULL_PROFILE
+    : TYPE_CHECK_ONE_UNIT_PROFILE;
+}
 
 /**
  * L: the most source files (checked, or held to be linted) one program of a

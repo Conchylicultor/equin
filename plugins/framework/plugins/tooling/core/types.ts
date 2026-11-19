@@ -11,8 +11,8 @@ import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/c
  * invoking build/check/push already holds — a check that fans out heavy children
  * (type-check's tsc worker, layout-geometry's Chromium suite) spends
  * `grant.run(...)` per child instead of acquiring host-wide again, so the whole
- * check pass is accountable to the one grant. Checks that spawn nothing heavy
- * ignore the argument.
+ * check pass is accountable to the one grant. Only a check that declares
+ * `heavyChildren` may spend it; any other check's `grant.run` throws.
  */
 export interface CheckContext {
   grant: Grant;
@@ -373,6 +373,19 @@ export interface Check {
    * the check only runs in the full check pass.
    */
   alwaysRun?: boolean;
+  /**
+   * DECLARES that this check spends `ctx.grant` on heavy child processes (a
+   * type-check worker, a Vite build and Chromium, a fixture compile), and says
+   * what they are. Only a declaring check's `ctx.grant.run` works; any other
+   * check's throws, naming it.
+   *
+   * Why the declaration: on a grant of ONE unit (an 8 GB host, or any host
+   * whose measured window shrank to one quantum) the runner runs the
+   * declaring checks first, one at a time, before every other check — so the
+   * heavy children never run beside what the in-process checks hold
+   * (`checks/core/heavy-first.ts`).
+   */
+  heavyChildren?: { what: string };
   /**
    * Cache-signature contribution. Combined with the working-tree content hash
    * to key a recorded PASS, so an unchanged tree can reuse a prior green run

@@ -443,6 +443,21 @@ sizes CPU-bound workers (~6 background), but most checks are spawn/IO-bound and
 can correctly run wider. The grant bounds a check's heavy *children*; the gate
 bounds how many *checks* run.
 
+### On a one-unit grant, heavy checks run first, alone (`core/heavy-first.ts`)
+
+A check that spends `ctx.grant` on heavy child processes DECLARES it:
+`heavyChildren: { what }` (today type-check, layout-geometry,
+`live:read-misuse-diagnostics`). Any other check's `ctx.grant.run` throws,
+naming it. When the run's grant holds ONE unit (an 8 GB host; any host whose
+measured window shrank to one quantum), the declaring checks run first, one at
+a time, and every other check waits for them (`passPhases`). Why: the grant
+admits the children, but nothing admits the pass's own process, which keeps
+what the in-process checks built (3.2 GB on a cold pass even at `--jobs 1`, on
+an 8 GB Ubuntu VM); a type-check batch beside it was ~8 GB on one unit, and
+the kernel killed every deploy of main. Heavy FIRST, because what the
+in-process checks build stays resident after they finish. A wider grant keeps
+one phase. Measurements: `research/2026-11-19-global-8gb-deploy-check-pass-memory.md`.
+
 `checkStarted` is inside the gate too, so "started" keeps meaning "running" and a
 hang is still `started − ended`. Queued checks are derived
 (`selected − ever-started`), never recorded — a second source for that fact could

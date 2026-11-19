@@ -43,8 +43,8 @@ export interface ConvergenceDecision {
   compositions: string[];
   /**
    * The wanted targets (main's own app, compositions) whose build retries an
-   * attempt at the same commit that ended with no verdict (killed,
-   * interrupted, superseded), each with the id of that newest attempt — what
+   * attempt at the same commit that ended with no verdict (killed, out of
+   * memory, interrupted, superseded), each with the id of that newest attempt — what
    * lets the run tell a retry of a build it just made from a ledger that
    * lost that build's attempt.
    */
@@ -188,6 +188,7 @@ function outcomeOf(status: BuildStatus): BuildAttempt["outcome"] {
     case "failed":
       return "failed";
     case "killed":
+    case "out-of-memory":
     case "interrupted":
     case "superseded":
       return "no-verdict";

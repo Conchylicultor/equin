@@ -20,6 +20,7 @@ const DOT_COLOR_CLASS: Record<BuildStatus, string> = {
   superseded: "bg-muted-foreground/60",
   interrupted: "bg-muted-foreground/60",
   killed: "bg-muted-foreground/60",
+  "out-of-memory": "bg-warning",
 };
 
 /**

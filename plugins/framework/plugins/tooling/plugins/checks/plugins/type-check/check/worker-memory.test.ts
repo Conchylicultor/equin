@@ -26,6 +26,10 @@ describe("heavyTreePeak", () => {
     expect(heavyTreePeak({ ...base, admission: "light" })).toBeNull();
     expect(heavyTreePeak({ ...base, batches: null })).toBeNull();
   });
+  test("only a full-profile run judges the full weight; a record from before profiles was full", () => {
+    expect(heavyTreePeak({ ...base, profile: "full" })).toBe(7e9);
+    expect(heavyTreePeak({ ...base, profile: "one-unit" })).toBeNull();
+  });
 });
 
 describe("judgeWorkerWeight", () => {
