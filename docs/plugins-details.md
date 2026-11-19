@@ -34460,7 +34460,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Exemptions:
                 - Exempted by: `framework/tooling/e2e-harness` (0 debt)
             - **`aria-safety`** — aria-safety lint rule: no-orphan-composite-role
-            - **`browser-floor`** — The browser floor equin's browser code supports (Chrome/Edge 111, Firefox 115, Safari and iOS Safari 16.4 — every browser from March 2023 on), and browser-floor/no-api-above-floor: a type-aware rule that refuses, in browser-built code, a built-in the TypeScript lib declares but MDN's browser-compat-data says a floor browser lacks (URL.canParse, Set.prototype.union, Promise.withResolvers, …); and the browser-floor:worker-closure check, which runs that rule on the server/ and bin/ modules a browser host's worker loads (the closure of each bin/browser-host.ts — the website demo's in-browser server), so server code a visitor's browser runs is held to the floor too.
+            - **`browser-floor`** — The browser floor equin's browser code supports (Chrome/Edge 111, Firefox 115, Safari and iOS Safari 16.4 — every browser from March 2023 on), and browser-floor/no-api-above-floor: a type-aware rule that refuses, in browser-built code, a built-in the TypeScript lib declares but MDN's browser-compat-data says a floor browser lacks (URL.canParse, Set.prototype.union, Promise.withResolvers, …); and the browser-floor:worker-closure check, which runs that rule on the server/ and bin/ modules a browser host's worker loads (the closure of each bin/browser-host.ts — the website demo's in-browser server), so server code a visitor's browser runs is held to the floor too; and the browser-floor:vendor-sets host check, which holds the npm code the vendor sets bundle (every set in the web-artifact store, memoized per set) to the floor's regular expressions — no v flag, (?i:…) modifiers or duplicate named groups outside a feature test.
             - **`bun-safety`** — bun-safety lint rule: no-declare-identifier
             - **`button-safety`** — button-safety lint rules: no-async-raw-button, no-redundant-cursor-pointer
             - **`caret-trigger-safety`** — caret-trigger-safety lint rule: no-adhoc-caret-trigger
@@ -40194,9 +40194,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 147 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 148 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `infra` ×38
-          - `framework` ×24
+          - `framework` ×25
           - `apps` ×18
           - `debug` ×15
           - `build` ×8

@@ -4,7 +4,7 @@ import ts from "typescript";
 import { aboveFloorTable, type AboveFloor } from "./above-floor";
 import { isBrowserBuilt } from "./browser-built";
 import { floorInWords } from "./browser-floor";
-import { regexpFeatures } from "./regexp-features";
+import { regexpAboveFloor } from "./regexp-above-floor";
 
 const createRule = lintRuleCreator(import.meta.url);
 
@@ -334,34 +334,23 @@ export default createRule({
       pattern: string | undefined,
       flags: string,
     ) => {
-      const features = regexpFeatures(pattern ?? "", flags);
-      if (!features.ok) {
+      const verdict = regexpAboveFloor(pattern ?? "", flags, table);
+      if (!verdict.ok) {
         context.report({
           node,
           messageId: "regexpInvalid",
-          data: { error: features.error, floor: floorInWords() },
+          data: { error: verdict.error, floor: floorInWords() },
         });
         return;
       }
-      const regexpReport = (what: string, hit: AboveFloor) =>
+      for (const { what, hit, member } of verdict.hits) {
+        if (member !== undefined && isFeatureTested(node, text, member))
+          continue;
         context.report({
           node,
           messageId: "regexpAboveFloor",
           data: { what, needs: hit.needs, key: hit.key, floor: floorInWords() },
         });
-      for (const f of features.unknownFlags)
-        regexpReport(`the flag \`${f}\``, {
-          key: "no such flag",
-          needs: "every browser",
-        });
-      for (const member of features.flagMembers) {
-        const hit = table.members.get("RegExp")?.get(member);
-        if (hit === undefined || isFeatureTested(node, text, member)) continue;
-        regexpReport(`the \`${member}\` flag`, hit);
-      }
-      for (const feature of features.syntax) {
-        const hit = table.regexpSyntax.get(feature);
-        if (hit !== undefined) regexpReport(`\`${feature}\` syntax`, hit);
       }
     };
 

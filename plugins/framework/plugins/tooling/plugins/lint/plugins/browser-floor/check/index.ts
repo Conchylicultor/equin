@@ -8,6 +8,7 @@ import { isBrowserUnreachableDynamic } from "@plugins/framework/plugins/tooling/
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { pacedHeapEnv } from "@plugins/packages/plugins/heap-pacing/core";
 import { fileSetClosure } from "@plugins/plugin-meta/plugins/plugin-records/core";
+import { vendorSetsCheck } from "./vendor-sets";
 
 // ── browser-floor:worker-closure ───────────────────────────────────────────
 // `browser-floor/no-api-above-floor` holds the browser-built folders (`web/`,
@@ -159,4 +160,4 @@ export const workerClosureCheck: Check = {
   },
 };
 
-export default workerClosureCheck;
+export default [workerClosureCheck, vendorSetsCheck];

@@ -45,6 +45,7 @@ export const dataDirsEntries: CollectedEntry[] = [
   { pluginPath: "framework/plugins/cli/plugins/test", id: "framework.cli.test", loader: () => import("@plugins/framework/plugins/cli/plugins/test/data-dirs"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/checks", id: "framework.tooling.checks", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/data-dirs"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/type-check", id: "framework.tooling.checks.type-check", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/data-dirs"), dependsOn: [] },
+  { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/browser-floor", id: "framework.tooling.lint.browser-floor", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/browser-floor/data-dirs"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/web-artifacts", id: "framework.tooling.web-artifacts", loader: () => import("@plugins/framework/plugins/tooling/plugins/web-artifacts/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/asset-mirror", id: "infra.asset-mirror", loader: () => import("@plugins/infra/plugins/asset-mirror/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/attachments", id: "infra.attachments", loader: () => import("@plugins/infra/plugins/attachments/data-dirs"), dependsOn: [] },

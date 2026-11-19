@@ -51,8 +51,8 @@ to RegExp constructor" at module evaluation — and every importer fails to load
 (equin.ai's page editor did on emoji's `v` regex, 2026-11-19). A flag behind a
 test of its member (`"unicodeSets" in RegExp.prototype ? … : fallback`)
 passes. Not covered: the syntax of a computed source, and computed flags. npm
-code is not linted: on 2026-11-19 a scan of every built chunk (app, vendor
-set, worker tree — ~5.3k regexes) found no above-floor regex outside emoji.
+code is not linted — `browser-floor:vendor-sets` (below) holds it as built.
+`regexp-above-floor.ts` is the one verdict both read.
 
 The syntax note above ("lowered by vite") holds for syntax esbuild can lower;
 regex flags and syntax it cannot, so they are held here.
@@ -83,6 +83,43 @@ An inline `eslint-disable` for this rule in a `server/` file would be an
 unused directive to the type-check lint (which skips server files): fix a hit
 with `floor-compat` or a feature test.
 
+## `browser-floor:vendor-sets` — the npm code a browser runs
+
+npm packages reach the page through the vendor set (`set.<hash>` in
+web-artifacts' store, named by the import map) and a browser host's worker
+through its tree's `_vendor/` — a link to the same set. No lint sees them, and
+no build can fix a regex: esbuild's `target` lowers syntax, but a regex flag or
+pattern syntax the target lacks only turns a literal into `new RegExp(…)`,
+which throws the same on a floor browser. So a dependency upgrade bringing a
+`v` flag, `(?i:…)` modifiers or duplicate named groups would break every page
+importing that package there. (APIs newer than the floor in npm code are not
+covered: libraries feature-test them, and untyped minified code cannot tell a
+guarded use from a bare one.)
+
+The check (`check/vendor-sets.ts`) parses every set of the host's store —
+its entry files and `chunks/` — in a subprocess
+(`lint/vendor-scan-probe.ts`, the pure half `lint/vendor-scan.ts`): each regex
+literal and `new RegExp(…)` with literal flags gets `regexpAboveFloor`'s
+verdict; one created inside a `try` (a feature test) or behind a test naming
+its flag's member passes. A hit names the npm file it came from (the chunk's
+sourcemap) and every set holding it; fix it by pinning the package, patching
+it (`bun patch`), or keeping it behind a feature test in our own code.
+
+- **Host-scoped**: the store is the machine's. Main's hourly host audit runs
+  it and files a report; `./equin check --scope host` runs it on demand. Not
+  deploy-scoped: a build's check pass sees the dist that build replaces, so a
+  failure there would block the build fixing it.
+- **Memoized per set** (`data-dirs`: `browser-floor-vendor-scans/<set>.json`,
+  under the scanner's digest — this folder's verdict code and the compat data,
+  regexpp and TypeScript versions). A set is write-once, so it is parsed once;
+  a new set's files are first matched by content hash against every kept memo
+  (about half of a new set's files: its chunks' bytes name each other's
+  hashed names). A memo whose set was pruned is deleted. Measured 2026-11-19
+  (68 sets, ~31 MB / 668 files / ~3.7k regexes each): every set cold, 26 s;
+  one new set, under a second to ~2 s; nothing new, ~0.2 s.
+- It does not touch web-artifacts' `core/`: that source is the builder's
+  identity, so any edit there rebuilds the whole fleet cold.
+
 Raising the floor is a one-line edit of `BROWSER_FLOOR`; the rule then stops
 reporting what the new floor has.
 
@@ -90,6 +127,6 @@ reporting what the new floor has.
 
 ## Plugin reference
 
-- Description: The browser floor equin's browser code supports (Chrome/Edge 111, Firefox 115, Safari and iOS Safari 16.4 — every browser from March 2023 on), and browser-floor/no-api-above-floor: a type-aware rule that refuses, in browser-built code, a built-in the TypeScript lib declares but MDN's browser-compat-data says a floor browser lacks (URL.canParse, Set.prototype.union, Promise.withResolvers, …); and the browser-floor:worker-closure check, which runs that rule on the server/ and bin/ modules a browser host's worker loads (the closure of each bin/browser-host.ts — the website demo's in-browser server), so server code a visitor's browser runs is held to the floor too.
+- Description: The browser floor equin's browser code supports (Chrome/Edge 111, Firefox 115, Safari and iOS Safari 16.4 — every browser from March 2023 on), and browser-floor/no-api-above-floor: a type-aware rule that refuses, in browser-built code, a built-in the TypeScript lib declares but MDN's browser-compat-data says a floor browser lacks (URL.canParse, Set.prototype.union, Promise.withResolvers, …); and the browser-floor:worker-closure check, which runs that rule on the server/ and bin/ modules a browser host's worker loads (the closure of each bin/browser-host.ts — the website demo's in-browser server), so server code a visitor's browser runs is held to the floor too; and the browser-floor:vendor-sets host check, which holds the npm code the vendor sets bundle (every set in the web-artifact store, memoized per set) to the floor's regular expressions — no v flag, (?i:…) modifiers or duplicate named groups outside a feature test.
 
 <!-- AUTOGENERATED:END -->
