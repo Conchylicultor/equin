@@ -780,7 +780,13 @@ describe("device sleep", () => {
     const last = beacons[beacons.length - 1];
     expect(last).toMatchObject({
       engagedMs: 11_000,
-      gaps: [{ kind: "hidden", startMs: 10_000, endMs: 10_000 + 2_000 + 2 * 60 * 60 * 1000 }],
+      gaps: [
+        {
+          kind: "hidden",
+          startMs: 10_000,
+          endMs: 10_000 + 2_000 + 2 * 60 * 60 * 1000,
+        },
+      ],
     });
   });
 
