@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { CLIENT_REPORT_SOURCES } from "@plugins/reports/core";
-import { cappedList } from "@plugins/packages/plugins/list-bound/core";
+import {
+  cappedList,
+  cappedRecord,
+} from "@plugins/packages/plugins/list-bound/core";
 import {
   CLIENT_FAMILIES,
   CLIENT_OSES,
@@ -33,13 +36,25 @@ export const VISITOR_ERROR_LIMITS = {
   maxStallSelf: 5,
   /** Why a stall's stacks are unavailable, one plain line. */
   maxStallReason: 200,
+  /** The payload's nesting kept: the payload's own fields are depth 1. */
+  maxPayloadDepth: 6,
+  /** An object's fields kept, in the site's order. */
+  maxPayloadKeys: 30,
+  /** An array's items (or a multi-line string's lines) kept. */
+  maxPayloadItems: 20,
+  /** One string value, one plain line. */
+  maxPayloadString: 300,
+  /** Values kept over the whole payload (strings, numbers, booleans, nulls). */
+  maxPayloadLeaves: 300,
+  /** Characters over every string of the payload (the box holds a 4 KB payload). */
+  maxPayloadChars: 8_000,
 } as const;
 
 /**
  * A pathname of a safe alphabet: no scheme, no host (never `//`, which a
  * browser would read as one), no query, no markup.
  */
-export const SAFE_PATHNAME = /^\/(?!.*\/\/)[A-Za-z0-9/._~@-]{0,200}$/;
+export const SAFE_PATHNAME = /^(?!.*\/\/)\/[A-Za-z0-9/._~@-]{0,200}$/;
 /** An identifier-shaped value (a kind name). */
 export const SAFE_IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$.-]{0,63}$/;
 /** A build id. */
@@ -225,6 +240,108 @@ export const VisitorStallSchema = z.discriminatedUnion("kind", [
 export type VisitorStall = z.infer<typeof VisitorStallSchema>;
 
 /**
+ * A key of the reduced payload: identifier-shaped, and never one a plain
+ * object assignment would read as its prototype.
+ */
+export const SAFE_PAYLOAD_KEY =
+  /^(?!(?:__proto__|constructor|prototype)$)[A-Za-z_$][A-Za-z0-9_$-]{0,63}$/;
+
+/** One value of the reduced payload (see VisitorPayloadSchema). */
+export type VisitorPayloadValue =
+  | null
+  | boolean
+  | number
+  | string
+  | VisitorPayloadValue[]
+  | { [key: string]: VisitorPayloadValue };
+
+const PayloadValueSchema: z.ZodType<VisitorPayloadValue> = z.lazy(() =>
+  z.union([
+    z.null(),
+    z.boolean(),
+    z.number().finite(),
+    plainLine("payload string", VISITOR_ERROR_LIMITS.maxPayloadString),
+    cappedList(PayloadValueSchema, {
+      max: VISITOR_ERROR_LIMITS.maxPayloadItems,
+    }),
+    PayloadFieldsSchema,
+  ]),
+);
+
+const PayloadFieldsSchema: z.ZodType<{ [key: string]: VisitorPayloadValue }> =
+  z.lazy(() =>
+    cappedRecord(PayloadValueSchema, {
+      max: VISITOR_ERROR_LIMITS.maxPayloadKeys,
+    }).refine(
+      (r) => Object.keys(r).every((k) => SAFE_PAYLOAD_KEY.test(k)),
+      "payload key is not identifier-shaped",
+    ),
+  );
+
+/** Depth (the fields of an object are one deeper than it) and leaf count. */
+function payloadShape(
+  v: VisitorPayloadValue,
+  depth: number,
+): { depth: number; leaves: number; chars: number } {
+  if (v === null || typeof v !== "object")
+    return {
+      depth,
+      leaves: 1,
+      chars: typeof v === "string" ? Array.from(v).length : 0,
+    };
+  const children = Array.isArray(v) ? v : Object.values(v);
+  let deepest = depth;
+  let leaves = 0;
+  let chars = 0;
+  for (const c of children) {
+    const s = payloadShape(c, depth + 1);
+    deepest = Math.max(deepest, s.depth);
+    leaves += s.leaves;
+    chars += s.chars;
+  }
+  return { depth: deepest, leaves, chars };
+}
+
+/**
+ * The site's kind payload (`data`) of ANY report kind, reduced structurally
+ * — never copied: identifier-shaped keys only; numbers, booleans and nulls as
+ * they are; every string one sanitised plain line (as the message: no
+ * control, bidi or markup character, URLs on the site's own origin cut to
+ * their path and every other URL removed, clamped), a multi-line one (a stack)
+ * a list of such lines; nesting, fields, items and values all capped, and what
+ * was dropped counted in `omitted`. One generic reduction, so every kind's
+ * diagnostic data (a crash's stack and cause, a resize-loop trace, an
+ * adaptive-bar's or a render loop's evidence) reaches the local report,
+ * including kinds added later, with no per-kind code here.
+ */
+export const VisitorPayloadSchema = z
+  .object({
+    fields: PayloadFieldsSchema,
+    /** Values dropped: an unsafe key, past a cap or the depth, or not JSON. */
+    omitted: z.number().int().min(0).max(1_000_000),
+  })
+  .strict()
+  .superRefine((p, ctx) => {
+    const s = payloadShape(p.fields, 0);
+    if (s.depth > VISITOR_ERROR_LIMITS.maxPayloadDepth)
+      ctx.addIssue({
+        code: "custom",
+        message: `payload nests ${s.depth} deep`,
+      });
+    if (s.leaves > VISITOR_ERROR_LIMITS.maxPayloadLeaves)
+      ctx.addIssue({
+        code: "custom",
+        message: `payload holds ${s.leaves} values`,
+      });
+    if (s.chars > VISITOR_ERROR_LIMITS.maxPayloadChars)
+      ctx.addIssue({
+        code: "custom",
+        message: `payload holds ${s.chars} characters`,
+      });
+  });
+export type VisitorPayload = z.infer<typeof VisitorPayloadSchema>;
+
+/**
  * One website visitor's error as stored on the computer — typed, clamped
  * fields only. Nothing the site sent is copied as-is: the site's kind payload
  * is never stored, the message is one sanitised plain line, the stack is
@@ -262,6 +379,11 @@ export const WebsiteVisitorErrorSchema = z
      * for every other kind, and on rows imported before it was kept.
      */
     stall: VisitorStallSchema.nullable().default(null),
+    /**
+     * The site's kind payload, reduced structurally (VisitorPayloadSchema) —
+     * every kind's diagnostic data; null on rows imported before it was kept.
+     */
+    payload: VisitorPayloadSchema.nullable().default(null),
   })
   .strict();
 export type WebsiteVisitorError = z.infer<typeof WebsiteVisitorErrorSchema>;

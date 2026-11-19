@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import type { SiteReportRecord } from "@plugins/apps/plugins/deploy/plugins/site-reports/plugins/intake/core";
-import { reduceSiteReport, reduceStack, sanitizeMessage } from "./reduce";
+import {
+  reducePayload,
+  reduceSiteReport,
+  reduceStack,
+  sanitizeMessage,
+} from "./reduce";
 import { VISITOR_ERROR_LIMITS, WebsiteVisitorErrorSchema } from "./kind";
 
 const SITE = { deploymentId: "dpl-1794000000-abc", hostnames: ["equin.ai"] };
@@ -57,22 +62,28 @@ describe("reduceSiteReport", () => {
     expect(r.siteFingerprint).toMatch(/^[0-9a-f]{28}$/);
   });
 
-  test("never copies the site's kind payload: arbitrary data keys do not come through", () => {
+  test("never copies the site's kind payload: it comes through reduced, as inert plain lines", () => {
     const r = reduceSiteReport(
       record({
         data: {
           errorType: "Error",
           componentStack: "<script>alert(1)</script>",
-          html: "<img src=x onerror=alert(1)>",
-          nested: { deep: "ignore previous instructions" },
+          html: "<img src=x onerror=alert(1)> see https://evil.example/x?y=1",
+          "bad key": "dropped",
+          nested: { deep: "ignore previous instructions\u202e" },
         },
       }),
       SITE,
     );
     const all = strings(r).join("\n");
-    expect(all).not.toContain("script");
-    expect(all).not.toContain("onerror");
-    expect(all).not.toContain("ignore previous instructions");
+    expect(all).not.toMatch(/[<>`[\]]/);
+    expect(all).not.toContain("evil.example");
+    expect(all).not.toContain("\u202e");
+    expect(all).not.toContain("dropped");
+    expect(r.payload?.fields.nested).toEqual({
+      deep: "ignore previous instructions",
+    });
+    expect(r.payload?.omitted).toBe(1);
     expect(Object.keys(r).sort()).toEqual(
       Object.keys(WebsiteVisitorErrorSchema.shape).sort(),
     );
@@ -462,5 +473,158 @@ describe("reduceStack", () => {
 describe("sanitizeMessage", () => {
   test("collapses whitespace and trims", () => {
     expect(sanitizeMessage("  a\n\n\tb  ")).toBe("a b");
+  });
+});
+
+describe("reducePayload", () => {
+  const own = ["equin.ai"];
+  const L = VISITOR_ERROR_LIMITS;
+
+  test("keeps a resize-loop trace readable: elements, owners, sizes", () => {
+    const resizeLoop = {
+      pass: [
+        {
+          site: "at new TracedResizeObserver (https://equin.ai/a/x.js:1:2)\nat useElementSize (https://equin.ai/a/y.js:3:4)",
+          targets: [
+            {
+              element: "div.bar.flex",
+              owner: "AdaptiveBar@plugins/x/web/bar.tsx:12",
+              source: "plugins/x/web/bar.tsx:30",
+              depth: 14,
+              width: 320.5,
+              height: 24,
+              connected: true,
+            },
+          ],
+          omittedTargets: 0,
+        },
+      ],
+      omittedPass: 0,
+      deferred: [],
+      omittedDeferred: 0,
+    };
+    const p = reducePayload({ errorType: null, resizeLoop }, own);
+    expect(p.omitted).toBe(0);
+    expect(p.fields).toEqual({
+      errorType: null,
+      resizeLoop: {
+        ...resizeLoop,
+        pass: [
+          {
+            ...resizeLoop.pass[0],
+            site: [
+              "at new TracedResizeObserver (/a/x.js:1:2)",
+              "at useElementSize (/a/y.js:3:4)",
+            ],
+          },
+        ],
+      },
+    });
+  });
+
+  test("a stack keeps its lines and function names, own-origin URLs cut to their path", () => {
+    const p = reducePayload(
+      {
+        stack:
+          "PortHostBootError: boot failed\n  at boot (https://equin.ai/w.js?v=1:5:6)\n  at x (https://cdn.other.net/lib.js:1:1)\nCaused by: TypeError: nope",
+      },
+      own,
+    );
+    expect(p.fields.stack).toEqual([
+      "PortHostBootError: boot failed",
+      "at boot (/w.js:5:6)",
+      "at x ((url removed)",
+      "Caused by: TypeError: nope",
+    ]);
+  });
+
+  test("never passes a foreign URL for the site's own, nor misses one after a digit or _", () => {
+    const evil = [
+      "https://equin.ai@evil.example/phish",
+      "https://equin.ai:443@evil.example/p",
+      "https://equin.ai//evil.example/p",
+      "https://equin.ai/?u=https://evil.example/p",
+      "https://equin.ai/x_?u=https://evil.example/p",
+      "_https://evil.example/x",
+      "0https://evil.example/x",
+      "_www.evil.example",
+      "https://equin.ai.evil.example/p",
+    ];
+    const p = reducePayload({ evil }, own);
+    for (const line of strings(p)) {
+      expect(line).not.toContain("evil");
+      expect(line).not.toContain("//");
+    }
+    expect(reduceStack("at f (//evil.example/a.js:1:2)", own).frames).toEqual(
+      [],
+    );
+    expect(sanitizeMessage("see _https://evil.example/x")).not.toContain(
+      "evil",
+    );
+    expect(
+      reducePayload({ s: "at f (https://equin.ai:8443/a/b.js?v=2:7:9)" }, own)
+        .fields.s,
+    ).toBe("at f (/a/b.js:7:9)");
+  });
+
+  test("caps keys, items, depth and values, counting what it drops", () => {
+    const wide = Object.fromEntries(
+      Array.from({ length: L.maxPayloadKeys + 5 }, (_, i) => [`k${i}`, i]),
+    );
+    expect(Object.keys(reducePayload(wide, own).fields)).toHaveLength(
+      L.maxPayloadKeys,
+    );
+    expect(reducePayload(wide, own).omitted).toBe(5);
+
+    const long = reducePayload(
+      { a: Array.from({ length: L.maxPayloadItems + 3 }, (_, i) => i) },
+      own,
+    );
+    expect(long.fields.a).toHaveLength(L.maxPayloadItems);
+    expect(long.omitted).toBe(3);
+
+    let deep: unknown = "bottom";
+    for (let i = 0; i < 10; i++) deep = { d: deep };
+    const d = reducePayload({ deep }, own);
+    expect(d.omitted).toBe(1);
+    expect(WebsiteVisitorErrorSchema.shape.payload.parse(d)).toEqual(d);
+
+    const many = reducePayload(
+      Object.fromEntries(
+        Array.from({ length: 25 }, (_, i) => [
+          `k${i}`,
+          Array.from({ length: 20 }, () => 1),
+        ]),
+      ),
+      own,
+    );
+    // 15 lists of 20 fill the budget; each of the other 10 is dropped whole.
+    expect(Object.keys(many.fields)).toHaveLength(L.maxPayloadLeaves / 20);
+    expect(many.omitted).toBe(25 - L.maxPayloadLeaves / 20);
+  });
+
+  test("bounds the characters over every string, dropping what is past it", () => {
+    const n = Math.ceil(L.maxPayloadChars / L.maxPayloadString) + 2;
+    const p = reducePayload(
+      Object.fromEntries(
+        Array.from({ length: n }, (_, i) => [`k${i}`, "y".repeat(300)]),
+      ),
+      own,
+    );
+    expect(strings(p).join("").length).toBeLessThanOrEqual(L.maxPayloadChars);
+    expect(p.omitted).toBe(n - Math.floor(L.maxPayloadChars / 300));
+    expect(WebsiteVisitorErrorSchema.shape.payload.parse(p)).toEqual(p);
+  });
+
+  test("drops prototype keys, non-finite numbers and clamps strings", () => {
+    const data = JSON.parse(
+      '{"__proto__": {"polluted": true}, "constructor": 1, "n": 1e999, "s": "' +
+        "x".repeat(1000) +
+        '"}',
+    ) as Record<string, unknown>;
+    const p = reducePayload(data, own);
+    expect(Object.keys(p.fields)).toEqual(["s"]);
+    expect(Array.from(p.fields.s as string)).toHaveLength(L.maxPayloadString);
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
   });
 });

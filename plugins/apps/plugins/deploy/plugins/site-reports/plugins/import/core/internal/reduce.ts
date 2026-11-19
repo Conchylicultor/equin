@@ -12,9 +12,12 @@ import {
   SAFE_IDENTIFIER,
   SAFE_INVOKER_TYPE,
   SAFE_PATHNAME,
+  SAFE_PAYLOAD_KEY,
   VISITOR_ERROR_LIMITS as L,
   VISITOR_SOURCES,
   WebsiteVisitorErrorSchema,
+  type VisitorPayload,
+  type VisitorPayloadValue,
   type VisitorStackFrame,
   type VisitorStall,
   type WebsiteVisitorError,
@@ -50,7 +53,8 @@ export function reducePagePath(raw: unknown): string | null {
 // and the line / paragraph separators: none survives into a stored line.
 const INVISIBLE = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/gu;
 // A URL of any scheme, or a www. host: a link nobody should be one click from.
-const URL_LIKE = /\b[a-z][a-z0-9+.-]*:\/\/\S*|\bwww\.\S+/giu;
+// No leading word boundary: `_https://…` or `0www.…` must not slip past it.
+const URL_LIKE = /[a-z][a-z0-9+.-]*:\/\/\S*|www\.\S+/giu;
 // Markup characters: never rendered as markup anywhere, and stripped anyway so
 // a briefing pasted elsewhere cannot become a link, an image or HTML.
 const MARKUP = /[`<>[\]]/g;
@@ -264,10 +268,146 @@ export function reduceStall(data: unknown): VisitorStall {
   };
 }
 
+// An http(s) URL up to its end, a trailing stack position (`:12:3`) apart.
+// No leading word boundary: `_https://…` or `0https://…` is a URL too.
+const HTTP_URL = /https?:\/\/[^\s()]*?(?=(?::\d+){0,2}(?:[\s()]|$))/giu;
+
+/**
+ * A URL on the site's own origin as its path — parsed as a browser would (so
+ * userinfo, `//` or a URL in its query never passes for the site's own), its
+ * query and fragment dropped — or null to leave it for removal.
+ */
+function ownPath(url: string, own: ReadonlySet<string>): string | null {
+  let u: URL;
+  try {
+    u = new URL(url);
+  } catch (err) {
+    if (err instanceof TypeError) return null;
+    throw err;
+  }
+  if (u.username || u.password || !own.has(u.hostname.toLowerCase()))
+    return null;
+  return SAFE_PATHNAME.test(u.pathname) && u.pathname.length <= L.maxPath
+    ? u.pathname
+    : null;
+}
+
+/**
+ * One string of the payload as one plain line: a URL on the site's own origin
+ * cut to its path (`at f (https://equin.ai/a.js:1:2)` → `at f (/a.js:1:2)`),
+ * then sanitised like the message — every other URL removed.
+ */
+function payloadLine(raw: string, own: ReadonlySet<string>): string {
+  return sanitizeLine(
+    raw.replace(HTTP_URL, (url: string) => ownPath(url, own) ?? url),
+    L.maxPayloadString,
+  );
+}
+
+/**
+ * The site's kind payload reduced structurally (VisitorPayloadSchema): keys
+ * matched, scalars typed, strings sanitised one line each (a multi-line one,
+ * a stack, as a list of lines), every cap applied in the site's order and
+ * every value dropped counted. Generic over every report kind: what a kind
+ * carries for its diagnosis reaches the local report without code here naming
+ * the kind.
+ */
+export function reducePayload(
+  data: Record<string, unknown>,
+  hostnames: readonly string[],
+): VisitorPayload {
+  const own = new Set(hostnames.map((h) => h.toLowerCase()));
+  let leaves = 0;
+  let chars = 0;
+  let omitted = 0;
+
+  function leafString(line: string): string | undefined {
+    const n = Array.from(line).length;
+    if (chars + n > L.maxPayloadChars) {
+      omitted++;
+      return undefined;
+    }
+    chars += n;
+    leaves++;
+    return line;
+  }
+
+  // `depth` is the depth of the value being reduced (the payload's own fields
+  // are 1). Undefined: the value is dropped (and counted).
+  function value(v: unknown, depth: number): VisitorPayloadValue | undefined {
+    if (depth > L.maxPayloadDepth || leaves >= L.maxPayloadLeaves) {
+      omitted++;
+      return undefined;
+    }
+    if (v === null || typeof v === "boolean") {
+      leaves++;
+      return v;
+    }
+    if (typeof v === "number") {
+      if (!Number.isFinite(v)) {
+        omitted++;
+        return undefined;
+      }
+      leaves++;
+      return v;
+    }
+    if (typeof v === "string") {
+      const lines = v
+        .slice(0, 20_000)
+        .split(/\r?\n/)
+        .map((l) => payloadLine(l, own))
+        .filter((l) => l !== "");
+      if (lines.length <= 1) return leafString(lines[0] ?? "");
+      return list(lines, depth);
+    }
+    if (Array.isArray(v)) return list(v, depth);
+    if (typeof v === "object")
+      return fields(v as Record<string, unknown>, depth);
+    // undefined, a function, a bigint: not JSON.
+    omitted++;
+    return undefined;
+  }
+
+  function list(
+    items: readonly unknown[],
+    depth: number,
+  ): VisitorPayloadValue[] {
+    const out: VisitorPayloadValue[] = [];
+    for (const item of items) {
+      if (out.length >= L.maxPayloadItems) {
+        omitted++;
+        continue;
+      }
+      const r = value(item, depth + 1);
+      if (r !== undefined) out.push(r);
+    }
+    return out;
+  }
+
+  function fields(
+    obj: Record<string, unknown>,
+    depth: number,
+  ): { [key: string]: VisitorPayloadValue } {
+    const out: [string, VisitorPayloadValue][] = [];
+    for (const [k, v] of Object.entries(obj)) {
+      if (out.length >= L.maxPayloadKeys || !SAFE_PAYLOAD_KEY.test(k)) {
+        omitted++;
+        continue;
+      }
+      const r = value(v, depth + 1);
+      if (r !== undefined) out.push([k, r]);
+    }
+    return Object.fromEntries(out);
+  }
+
+  return { fields: fields(data, 0), omitted: Math.min(omitted, 1_000_000) };
+}
+
 /**
  * The structured-data gate between a site's stored report and this
  * computer: everything kept is typed and clamped, and the site's kind payload
- * (`data`) is never copied — only an error type and a stack read out of it.
+ * (`data`) is never copied — it is reduced structurally (reducePayload), and
+ * an error type, a stack's frames and a stall's evidence are read out of it.
  * The result is parsed with the kind's strict schema before it is returned,
  * so a value this function let through by mistake fails here, loudly, rather
  * than being stored.
@@ -312,5 +452,6 @@ export function reduceSiteReport(
     firstSeenAt: new Date(record.firstSeenAt).toISOString(),
     lastSeenAt: new Date(record.lastSeenAt).toISOString(),
     stall: record.kind === STALL_KIND ? reduceStall(record.data) : null,
+    payload: reducePayload(record.data, hostnames),
   });
 }

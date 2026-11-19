@@ -46,7 +46,7 @@ why, and the next hour retries it.
 ## Structured data only
 
 `reduceSiteReport` (`core/internal/reduce.ts`, pure) is the gate. The site's
-kind payload is never copied. What is kept:
+kind payload is never copied — it is reduced. What is kept:
 
 - the message as one plain line: control and bidi characters gone, URLs
   removed, `` ` < > [ ] `` replaced, at most 300 characters;
@@ -69,6 +69,22 @@ kind payload is never copied. What is kept:
   payload that no longer parses is `unreadable`, never guessed at. Without it
   a visitor's stall could not be investigated: the message alone does not say
   whether the page was busy or its process suspended.
+- for every kind, the payload itself reduced structurally (`payload`,
+  `VisitorPayloadSchema`; `reducePayload`) — so a report is diagnosable from
+  the local row alone (a crash's stack with its function names and its
+  cause, a resize-loop trace's elements and owners, an adaptive bar's or a
+  render loop's evidence), and a kind added later needs no code here. Keys
+  must be identifier-shaped (never `__proto__` / `constructor` /
+  `prototype`); numbers, booleans and nulls are kept as they are; every
+  string is one plain line sanitised like the message, with a URL on the
+  site's own origin cut to its path (query dropped) and every other URL
+  removed; a multi-line string (a stack) becomes a list of such lines. At
+  most 6 deep, 30 fields per object, 20 items per list, 300 characters per
+  string, 300 values and 8,000 characters in all, in the site's order; every
+  value dropped is counted in `omitted`. Before it, the evidence named only
+  by a kind's payload (the resize-loop trace — the only thing naming the
+  looping observer, since the browser gives that error no stack) survived
+  only in the box's raw row, which nothing here may read.
 
 The result is parsed with the kind's strict schema (`WebsiteVisitorErrorSchema`)
 here and again in `recordReport`.
@@ -113,7 +129,7 @@ reconcile mechanics are `table-mirror/replica`'s suite.
 
 ## Plugin reference
 
-- Description: Errors a deployed site's visitors hit, read hourly from the site's box over SSH (its mirror change stream, reduced as it arrives) into this computer's Reports as untrusted website-visitor reports (never auto-investigated, fenced as data when investigated by hand). Web half: the kind's Debug → Reports summary view — a Website visitors badge, then the site, the page and the visitor's error as plain text (never markup or a link) with the site's own occurrence count. Reads the errors a deployed site's visitors hit into this computer's Reports: the box's site_reports change stream (site-mirror, outbound SSH only) goes through the reduce step as the replica's sink — every row strictly parsed and reduced to typed, clamped fields, the site's payload never copied, no raw row stored here (only the mirror's content-free key index) — at most 50 rows per deployment per hourly run, each page ONE incident of the website-visitor-error kind (a reconciliation's catch-up rings no bell), source website-visitor — untrusted: never on the worklist automations read, fenced as data when investigated by hand.
+- Description: Errors a deployed site's visitors hit, read hourly from the site's box over SSH (its mirror change stream, reduced as it arrives) into this computer's Reports as untrusted website-visitor reports (never auto-investigated, fenced as data when investigated by hand). Web half: the kind's Debug → Reports summary view — a Website visitors badge, then the site, the page and the visitor's error as plain text (never markup or a link) with the site's own occurrence count. Reads the errors a deployed site's visitors hit into this computer's Reports: the box's site_reports change stream (site-mirror, outbound SSH only) goes through the reduce step as the replica's sink — every row strictly parsed and reduced to typed, clamped fields, the site's payload never copied but reduced structurally (identifier keys, typed scalars, every string a sanitised plain line, capped and counted — so every kind's diagnostic data reaches the local report), no raw row stored here (only the mirror's content-free key index) — at most 50 rows per deployment per hourly run, each page ONE incident of the website-visitor-error kind (a reconciliation's catch-up rings no bell), source website-visitor — untrusted: never on the worklist automations read, fenced as data when investigated by hand.
 - Web:
   - Contributes: `Reports.KindView` → `WebsiteVisitorSummary`
   - Uses:
@@ -133,6 +149,7 @@ reconcile mechanics are `table-mirror/replica`'s suite.
 - Core:
   - Uses:
     - `packages/list-bound.cappedList`
+    - `packages/list-bound.cappedRecord`
     - `packages/string-hash.hashHex`
     - `primitives/pane.pathWithoutSurfaceViews`
     - `reports.CLIENT_REPORT_SOURCES`
@@ -141,6 +158,7 @@ reconcile mechanics are `table-mirror/replica`'s suite.
     - `reports/main-thread-stall.MainThreadStallPayloadSchema`
   - Exports (types):
     - `SiteContext`
+    - `VisitorPayload`
     - `VisitorStackFrame`
     - `VisitorStall`
     - `WebsiteVisitorError`

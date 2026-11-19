@@ -3774,7 +3774,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exempts itself from:
                   - `networking/no-page-transport` — `web/internal/channel.ts` (sanctioned)
                   - `report-sink/collect-through-companion` — `web/index.ts` (sanctioned)
-            - **`import`** — Errors a deployed site's visitors hit, read hourly from the site's box over SSH (its mirror change stream, reduced as it arrives) into this computer's Reports as untrusted website-visitor reports (never auto-investigated, fenced as data when investigated by hand). Web half: the kind's Debug → Reports summary view — a Website visitors badge, then the site, the page and the visitor's error as plain text (never markup or a link) with the site's own occurrence count. Reads the errors a deployed site's visitors hit into this computer's Reports: the box's site_reports change stream (site-mirror, outbound SSH only) goes through the reduce step as the replica's sink — every row strictly parsed and reduced to typed, clamped fields, the site's payload never copied, no raw row stored here (only the mirror's content-free key index) — at most 50 rows per deployment per hourly run, each page ONE incident of the website-visitor-error kind (a reconciliation's catch-up rings no bell), source website-visitor — untrusted: never on the worklist automations read, fenced as data when investigated by hand.
+            - **`import`** — Errors a deployed site's visitors hit, read hourly from the site's box over SSH (its mirror change stream, reduced as it arrives) into this computer's Reports as untrusted website-visitor reports (never auto-investigated, fenced as data when investigated by hand). Web half: the kind's Debug → Reports summary view — a Website visitors badge, then the site, the page and the visitor's error as plain text (never markup or a link) with the site's own occurrence count. Reads the errors a deployed site's visitors hit into this computer's Reports: the box's site_reports change stream (site-mirror, outbound SSH only) goes through the reduce step as the replica's sink — every row strictly parsed and reduced to typed, clamped fields, the site's payload never copied but reduced structurally (identifier keys, typed scalars, every string a sanitised plain line, capped and counted — so every kind's diagnostic data reaches the local report), no raw row stored here (only the mirror's content-free key index) — at most 50 rows per deployment per hourly run, each page ONE incident of the website-visitor-error kind (a reconciliation's catch-up rings no bell), source website-visitor — untrusted: never on the worklist automations read, fenced as data when investigated by hand.
               - Web:
                 - Contributes: `Reports.KindView` → `WebsiteVisitorSummary`
                 - Uses:
@@ -3794,6 +3794,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Core:
                 - Uses:
                   - `packages/list-bound.cappedList`
+                  - `packages/list-bound.cappedRecord`
                   - `packages/string-hash.hashHex`
                   - `primitives/pane.pathWithoutSurfaceViews`
                   - `reports.CLIENT_REPORT_SOURCES`
@@ -3802,6 +3803,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `reports/main-thread-stall.MainThreadStallPayloadSchema`
                 - Exports (types):
                   - `SiteContext`
+                  - `VisitorPayload`
                   - `VisitorStackFrame`
                   - `VisitorStall`
                   - `WebsiteVisitorError`

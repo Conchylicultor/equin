@@ -2,6 +2,7 @@ import { ReportKind, type ReportRow } from "@plugins/reports/server";
 import {
   WEBSITE_VISITOR_ERROR_KIND,
   WebsiteVisitorErrorSchema,
+  type VisitorPayload,
   type VisitorStall,
   type WebsiteVisitorError,
 } from "../../core";
@@ -62,6 +63,21 @@ function stallLines(s: VisitorStall | null): string[] {
 }
 
 /**
+ * The site's reduced kind payload as task lines: its JSON, indented — every
+ * string in it already one sanitised plain line (no backtick, no markup, no
+ * foreign URL), and the engine fences the whole body as untrusted data.
+ */
+function payloadLines(p: VisitorPayload | null): string[] {
+  if (p === null) return [];
+  const empty = Object.keys(p.fields).length === 0;
+  return [
+    "",
+    `**Report payload (the site's \`data\`, reduced: strings sanitised, own-origin URLs cut to their path${p.omitted > 0 ? `, ${p.omitted} value(s) dropped past a cap` : ""}):**`,
+    ...(empty ? ["(empty)"] : JSON.stringify(p.fields, null, 2).split("\n")),
+  ];
+}
+
+/**
  * The task an Investigate files — built from typed fields only. The engine
  * fences the whole body as untrusted data (the row's source is
  * `website-visitor`); the message, already one sanitised line with no
@@ -96,6 +112,7 @@ export function renderWebsiteVisitorTask(
       `**Stack (the site's own bundle, ${e.framesOmitted} other frame(s) omitted):**`,
       frames,
       ...stallLines(e.stall),
+      ...payloadLines(e.payload),
     ].join("\n"),
   };
 }

@@ -5,6 +5,7 @@ export {
   websiteVisitorErrorSummary,
 } from "./internal/kind";
 export type {
+  VisitorPayload,
   VisitorStackFrame,
   VisitorStall,
   WebsiteVisitorError,
