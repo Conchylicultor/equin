@@ -9,6 +9,7 @@ export const LATENCY_METRICS = [
   "deliver-server",
   "watch-delivery",
   "turn-echo",
+  "input",
   "thread-lag",
 ] as const;
 export type LatencyMetric = (typeof LATENCY_METRICS)[number];
@@ -41,6 +42,10 @@ export const METRIC_LABELS: Record<
     label: "Message shown",
     what: "The agent taking a sent message, until the transcript line it wrote is on screen in an open tab.",
   },
+  input: {
+    label: "Click or keypress",
+    what: "A click, tap or keypress, until the next frame is painted (Event Timing: input delay, handlers and rendering). One under 16 ms is counted at 16 ms — the browser does not time it more finely.",
+  },
   "thread-lag": {
     label: "Server thread lag",
     what: "The worst delay of the serving thread in each 10-second window.",
@@ -53,8 +58,25 @@ export const CLIENT_METRICS = [
   "navigate",
   "update-e2e",
   "turn-echo",
+  "input",
 ] as const;
 export type ClientLatencyMetric = (typeof CLIENT_METRICS)[number];
+
+/**
+ * Whose samples a day row holds. `all`: a browser metric over every tab — the
+ * combined minute table, the only record before the split (2026-11-19) and
+ * still kept; `real` / `automated`: the same samples split by tab — a person's,
+ * or one driven by automation (the agent browser, an e2e run), so what the user
+ * feels is never averaged with an agent's reload loop; `server`: a metric the
+ * backend measures itself (delivery, thread lag), for every tab at once.
+ */
+export const LATENCY_CLIENT_KINDS = [
+  "all",
+  "real",
+  "automated",
+  "server",
+] as const;
+export type LatencyClientKind = (typeof LATENCY_CLIENT_KINDS)[number];
 
 // A minute is "under pressure" when the machine was short of memory in it, or the
 // cluster sentinel had its duress latch set. The two memory bars are the ones the

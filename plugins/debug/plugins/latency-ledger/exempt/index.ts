@@ -16,4 +16,11 @@ export default [
     reason:
       "Page-wide telemetry: the latency ledger's samples always reach the page's own server (D3).",
   },
+  {
+    rule: "sql-writes:fit:hand-written",
+    paths: ["server/internal/daily.ts"],
+    kind: "sanctioned",
+    reason:
+      "The day rollup is INSERT … SELECT over the minute table (each day's histograms summed element-wise with unnest / array_agg, minutes counted by class): drizzle's insert builder takes values, not a select of this shape. Its columns are the declared ones in tables.ts.",
+  },
 ] satisfies Exemptions;

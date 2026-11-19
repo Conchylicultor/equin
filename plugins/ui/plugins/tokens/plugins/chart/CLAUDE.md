@@ -18,6 +18,7 @@
     - `apps/website/pages/vision`
     - `apps/website/shell`
     - `primitives/css/ui-kit`
+    - `stats/scoreboard`
   - Imported by:
     - `apps/deploy/shell`
     - `apps/website/shell`

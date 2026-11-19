@@ -1,5 +1,6 @@
 import {
   boolean,
+  date,
   doublePrecision,
   index,
   integer,
@@ -15,7 +16,11 @@ import {
   parsedJson,
   parsedText,
 } from "@plugins/database/plugins/sql-column/server";
-import { LATENCY_METRICS } from "../../core";
+import {
+  CLIENT_METRICS,
+  LATENCY_CLIENT_KINDS,
+  LATENCY_METRICS,
+} from "../../core";
 
 // Plain `pgTable`s, not `defineEntity`: nothing here is a domain record with a
 // field schema or a wire shape — they are counters.
@@ -43,6 +48,38 @@ export const _latencyLedgerMinute = pgTable(
   (t) => [
     primaryKey({ columns: [t.metric, t.minuteStart] }),
     index("latency_ledger_minute_start_idx").on(t.minuteStart),
+  ],
+);
+
+/**
+ * The browser's minutes again, split by whose tab they came from: a person's
+ * (`real`) or one driven by automation (`automated`: the agent browser, an e2e
+ * run). Written in the same statement as the combined row above (./store.ts),
+ * which stays every tab's — so the summary and every reader of the combined
+ * table are unchanged, and "every tab" reads continuously across the split
+ * (2026-11-19). A batch from a bundle that sends no client lands in the
+ * combined row only. Browser metrics only (`CLIENT_METRICS`).
+ */
+export const _latencyLedgerClientMinute = pgTable(
+  "latency_ledger_client_minute",
+  {
+    metric: parsedText("metric", z.enum(CLIENT_METRICS)).notNull(),
+    minuteStart: timestamp("minute_start", { withTimezone: true }).notNull(),
+    clientKind: parsedText(
+      "client_kind",
+      z.enum(["real", "automated"]),
+    ).notNull(),
+    scheme: smallint("scheme").notNull(),
+    counts: integer("counts").array().notNull(),
+    count: integer("count").notNull().default(0),
+    sumMs: doublePrecision("sum_ms").notNull().default(0),
+    maxMs: doublePrecision("max_ms").notNull().default(0),
+    censored: integer("censored").notNull().default(0),
+    excluded: integer("excluded").notNull().default(0),
+  },
+  (t) => [
+    primaryKey({ columns: [t.metric, t.minuteStart, t.clientKind] }),
+    index("latency_ledger_client_minute_start_idx").on(t.minuteStart),
   ],
 );
 
@@ -110,3 +147,54 @@ export const _latencyLedgerInteraction = pgTable(
     index("latency_ledger_interaction_client_idx").on(t.clientId, t.occurredAt),
   ],
 );
+
+const MinuteClassSchema = z.enum(["calm", "pressure", "unknown", "slept"]);
+
+/**
+ * One closed UTC day of one metric, client kind and minute class: the minute
+ * rows added together, written ONCE by the hourly `latency-ledger.roll-days`
+ * job when the day can no longer change (./daily.ts) — so a 30-day trend reads
+ * a few hundred rows instead of summing ~150k minute histograms (3.5 s on main,
+ * 2026-11-19), and outlives the minute table's 35-day TTL. The class is the
+ * minute's (`minuteClass` in query.ts), decided when the day is rolled.
+ */
+export const _latencyLedgerDay = pgTable(
+  "latency_ledger_day",
+  {
+    day: date("day", { mode: "string" }).notNull(),
+    metric: parsedText("metric", z.enum(LATENCY_METRICS)).notNull(),
+    clientKind: parsedText(
+      "client_kind",
+      z.enum(LATENCY_CLIENT_KINDS),
+    ).notNull(),
+    minuteClass: parsedText("minute_class", MinuteClassSchema).notNull(),
+    scheme: smallint("scheme").notNull(),
+    counts: integer("counts").array().notNull(),
+    count: integer("count").notNull(),
+    maxMs: doublePrecision("max_ms").notNull(),
+    censored: integer("censored").notNull(),
+    excluded: integer("excluded").notNull(),
+  },
+  (t) => [
+    primaryKey({
+      columns: [t.day, t.metric, t.clientKind, t.minuteClass],
+    }),
+  ],
+);
+
+/**
+ * One closed UTC day of the machine: its minutes by class. Written in the same
+ * transaction as the day's `latency_ledger_day` rows, so its presence is the
+ * mark that the day is rolled (a day with no samples still gets this row).
+ */
+export const _latencyLedgerHostDay = pgTable("latency_ledger_host_day", {
+  day: date("day", { mode: "string" }).primaryKey(),
+  calmMinutes: integer("calm_minutes").notNull(),
+  pressureMinutes: integer("pressure_minutes").notNull(),
+  sleptMinutes: integer("slept_minutes").notNull(),
+  /** Minutes with no host record: the server was down or not writing yet. */
+  unknownMinutes: integer("unknown_minutes").notNull(),
+  rolledAt: timestamp("rolled_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});

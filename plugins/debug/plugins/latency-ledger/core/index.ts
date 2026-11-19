@@ -16,6 +16,7 @@ export type { HistogramAcc } from "./internal/histogram";
 export {
   LATENCY_METRICS,
   CLIENT_METRICS,
+  LATENCY_CLIENT_KINDS,
   METRIC_LABELS,
   EXIT_CRITERIA,
   THREAD_STALL_MS,
@@ -27,6 +28,7 @@ export type {
   LatencyMetric,
   ClientLatencyMetric,
   ExitCriterion,
+  LatencyClientKind,
 } from "./internal/metrics";
 export {
   submitClientLatency,
@@ -45,3 +47,4 @@ export type {
   LatencyWindow,
 } from "./internal/endpoints";
 export { latencySummary } from "./internal/resources";
+export type { DailyLatency } from "./internal/daily";

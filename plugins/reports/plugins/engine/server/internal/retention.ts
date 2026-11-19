@@ -1,6 +1,11 @@
 import { isNull } from "drizzle-orm";
 import { defineRetention } from "@plugins/infra/plugins/retention/server";
 import { _reports } from "@plugins/reports/server";
+import {
+  _reportFingerprintsSeen,
+  _reportFixDays,
+  _reportTrendDays,
+} from "./tables";
 
 // `_reports` is an unbounded-growth firehose: automatic crash / slow-op /
 // render-loop / endpoint-error telemetry is deduped per (fingerprint, worktree)
@@ -38,3 +43,27 @@ export const reportsRetention = defineRetention({
   perWorktree: true,
   where: isNull(_reports.taskId),
 });
+
+// The report history (./tables.ts) outlives the reports by design: a year and
+// more, so a trend can be read long after the rows it counted were swept. The
+// seen set's bound is the same: a cause unseen for 400 days counts as new again.
+export const trendRetentions = [
+  defineRetention({
+    table: _reportTrendDays,
+    column: "day",
+    ttlDays: 400,
+    perWorktree: true,
+  }),
+  defineRetention({
+    table: _reportFixDays,
+    column: "day",
+    ttlDays: 400,
+    perWorktree: true,
+  }),
+  defineRetention({
+    table: _reportFingerprintsSeen,
+    column: "firstSeenAt",
+    ttlDays: 400,
+    perWorktree: true,
+  }),
+];

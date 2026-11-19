@@ -49,7 +49,7 @@
   - Exports (values): `densityGroup`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --radius`
-  - Tokens used by: 361 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Tokens used by: 362 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×73
     - `apps` ×72
     - `conversations` ×51
@@ -64,8 +64,8 @@
     - `shell` ×5
     - `apps-core` ×4
     - `infra` ×4
+    - `stats` ×4
     - `build` ×3
-    - `stats` ×3
     - `active-data` ×2
     - `backup` ×2
     - `code-explorer` ×2

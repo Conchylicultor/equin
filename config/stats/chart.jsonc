@@ -1,4 +1,4 @@
-// @hash 35229783720e
+// @hash 63bb7444fdff
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -8,6 +8,7 @@
 //   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
 {
   "items": [
+    "stats.scoreboard:scoreboard",
     "stats.responsiveness:responsiveness",
     "stats.commits:commits",
     "stats.commits:lines",

@@ -10,6 +10,7 @@ import {
   recordInteraction,
   recordSample,
 } from "../internal/client-ledger";
+import { startInputTracking } from "../internal/input-tracker";
 import {
   cutActiveInteraction,
   startInteractionTracking,
@@ -28,6 +29,9 @@ const METRIC_OF: Partial<Record<ClientLatencySignal, ClientLatencyMetric>> = {
 // pushes into this tab, and of every sent message reaching it.
 export function LatencyCollector() {
   useEffect(() => startInteractionTracking(recordInteraction), []);
+  // Every click and keypress, input → next paint. Interactions happen only in a
+  // visible tab, so none is excluded as hidden.
+  useEffect(() => startInputTracking((ms) => recordSample("input", ms)), []);
 
   // Leaving the page: first the load still in flight is cut short and
   // recorded, then everything is sent — in that order, so a page that never

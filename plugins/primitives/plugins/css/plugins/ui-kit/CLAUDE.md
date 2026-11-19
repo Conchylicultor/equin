@@ -631,7 +631,7 @@ yes/no guard: `useConfirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `ui/tokens/chart` ×5
     - `ui/tokens/font-family` ×4
     - `ui/tokens/scrollbar --scrollbar-color`
-  - Imported by: 479 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 480 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×114
     - `apps` ×110
     - `conversations` ×55
@@ -658,6 +658,7 @@ yes/no guard: `useConfirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `layouts` ×2
     - `music` ×2
     - `screenshot` ×2
+    - `stats` ×2
     - `wish` ×2
     - `audience/developer-mark`
     - `code-explorer/commit-detail`
@@ -667,7 +668,6 @@ yes/no guard: `useConfirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `network/live/live-state`
     - `reports/popover-anchor-lost`
     - `search/quick-find`
-    - `stats/commits`
     - `tag-tree/picker`
     - `upstream`
 - Exemptions:

@@ -355,7 +355,7 @@ presence only — **no re-exports**; import from `core/`.
     - `spawnToFile`
     - `watchChildKills`
 - Cross-plugin:
-  - Imported by: 110 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 111 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×33
     - `framework` ×32
     - `apps` ×9
@@ -369,12 +369,12 @@ presence only — **no re-exports**; import from `core/`.
     - `primitives` ×2
     - `release` ×2
     - `reports` ×2
+    - `stats` ×2
     - `auth/apple-signing`
     - `backup`
     - `hints/ask`
     - `integrations/github-events`
     - `review/plugin-changes`
-    - `stats/commits`
     - `tasks`
     - `upstream`
     - `wish/github-issue`

@@ -1,7 +1,10 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { writeBootReadyEvent } from "./internal/write-boot-event";
 
-export { readBootEvents } from "./internal/read-boot-events";
+export {
+  readBootEvents,
+  readBootStartsSince,
+} from "./internal/read-boot-events";
 export { readBootJournals } from "./internal/boot-journal";
 export {
   writeBootDeadEvent,

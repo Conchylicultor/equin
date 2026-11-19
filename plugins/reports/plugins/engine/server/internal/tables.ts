@@ -1,5 +1,7 @@
 import {
+  date,
   index,
+  integer,
   pgTable,
   primaryKey,
   text,
@@ -50,4 +52,53 @@ export const _reportFixes = pgTable(
     primaryKey({ columns: [t.reportId, t.commit] }),
     index("report_fixes_landed_idx").on(t.landedAt),
   ],
+);
+
+// The report history that outlives the reports themselves. `reports` rows are
+// swept after 7 days (./retention.ts) and a report's fixes go with it (the
+// cascade above), and `hourly` keeps 24 hours — so "is the app converging?"
+// (report volume per day, new causes per week, fixes that came back) had no
+// answer past a week. These three tables are filled by triggers on `reports`
+// and `report_fixes` (./trend-triggers.ts), so every writer is counted, and
+// read by `loadReportTrend` (./trend.ts). Kept 400 days.
+
+/** Occurrences per UTC day and report kind (the day a write recorded them). */
+export const _reportTrendDays = pgTable(
+  "report_trend_days",
+  {
+    day: date("day", { mode: "string" }).notNull(),
+    kind: text("kind").notNull(),
+    occurrences: integer("occurrences").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.day, t.kind] })],
+);
+
+/**
+ * Every report cause ever seen: one row per fingerprint, with the first
+ * occurrence it had. A fingerprint swept with its report and seen again keeps
+ * its first row — it is a recurrence, not a new cause.
+ */
+export const _reportFingerprintsSeen = pgTable(
+  "report_fingerprints_seen",
+  {
+    fingerprint: text("fingerprint").primaryKey(),
+    kind: text("kind").notNull(),
+    firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).notNull(),
+  },
+  (t) => [index("report_fingerprints_seen_first_idx").on(t.firstSeenAt)],
+);
+
+/**
+ * The fix ledger per UTC day and report kind: fixes that landed, and fixed
+ * reports that came back — so "do fixes hold?" reads per kind.
+ */
+export const _reportFixDays = pgTable(
+  "report_fix_days",
+  {
+    day: date("day", { mode: "string" }).notNull(),
+    kind: text("kind").notNull(),
+    landed: integer("landed").notNull().default(0),
+    regressed: integer("regressed").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.day, t.kind] })],
 );

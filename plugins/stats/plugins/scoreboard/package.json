@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-stats-scoreboard",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Is the app getting faster or slower, and is it converging? Weekly trend lines over 35 days of what the user feels (p50 / p95 of updates, navigations, clicks and keypresses, page loads, server thread lag — real tabs apart from automated ones), the pressure the machine was under (memory-pressure minutes, main restarts), report volume per restart, and whether problems are being removed as a class (new causes, fixes that came back, fixes that landed a guard)."
+}

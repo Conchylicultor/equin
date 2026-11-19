@@ -739,6 +739,12 @@
       "parent": null
     },
     {
+      "paneId": "stats-scoreboard",
+      "segment": "responsiveness-trend",
+      "appIndex": false,
+      "parent": null
+    },
+    {
       "paneId": "supervisor-role",
       "segment": "role/:roleId",
       "appIndex": false,

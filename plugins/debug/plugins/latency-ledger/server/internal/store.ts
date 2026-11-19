@@ -1,13 +1,15 @@
 import { sql } from "drizzle-orm";
-import { db } from "@plugins/database/server";
+import { db, writeAtomically } from "@plugins/database/server";
 import {
   HISTOGRAM_SCHEME,
+  type ClientLatencyMetric,
   type HistogramAcc,
   type Interaction,
   type LatencyMetric,
   type LedgerClient,
 } from "../../core";
 import {
+  _latencyLedgerClientMinute,
   _latencyLedgerHostMinute,
   _latencyLedgerInteraction,
   _latencyLedgerMinute,
@@ -42,8 +44,55 @@ export interface ThreadMinute {
 
 /** Add one minute's histogram into its row (creating it). */
 export async function mergeMetricMinute(m: MetricMinute): Promise<void> {
+  await metricMinuteUpsert(m);
+}
+
+/**
+ * Add a browser batch's minute into the combined row AND its tab kind's row,
+ * in one statement — so the split never disagrees with the combined row it
+ * splits (./tables.ts, `latency_ledger_client_minute`).
+ */
+export async function mergeClientMinute(
+  m: MetricMinute & {
+    metric: ClientLatencyMetric;
+    clientKind: "real" | "automated";
+  },
+): Promise<void> {
+  const t = _latencyLedgerClientMinute;
+  await writeAtomically(db, [
+    metricMinuteUpsert(m),
+    db
+      .insert(t)
+      .values({
+        metric: m.metric,
+        minuteStart: new Date(m.minuteStart),
+        clientKind: m.clientKind,
+        scheme: HISTOGRAM_SCHEME,
+        counts: m.acc.counts,
+        count: m.acc.count,
+        sumMs: m.acc.sumMs,
+        maxMs: m.acc.maxMs,
+        censored: m.acc.censored,
+        excluded: m.acc.excluded,
+      })
+      .onConflictDoUpdate({
+        target: [t.metric, t.minuteStart, t.clientKind],
+        set: {
+          counts: sql`(SELECT array_agg(a + b ORDER BY i) FROM unnest(${t.counts}, EXCLUDED.counts) WITH ORDINALITY AS u(a, b, i))`,
+          count: sql`${t.count} + EXCLUDED.count`,
+          sumMs: sql`${t.sumMs} + EXCLUDED.sum_ms`,
+          maxMs: sql`greatest(${t.maxMs}, EXCLUDED.max_ms)`,
+          censored: sql`${t.censored} + EXCLUDED.censored`,
+          excluded: sql`${t.excluded} + EXCLUDED.excluded`,
+        },
+        setWhere: sql`${t.scheme} = EXCLUDED.scheme`,
+      }),
+  ]);
+}
+
+function metricMinuteUpsert(m: MetricMinute) {
   const t = _latencyLedgerMinute;
-  await db
+  return db
     .insert(t)
     .values({
       metric: m.metric,

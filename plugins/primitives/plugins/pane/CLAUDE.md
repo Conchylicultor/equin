@@ -792,9 +792,9 @@ out of the way: **what it opens takes its column**.
 - Load-bearing: yes
 - Web:
   - Slots: `Pane.Register`
-  - Slot contributors: 102 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Pane.Register` ×102
-  - Contributes: 135 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 103 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Pane.Register` ×103
+  - Contributes: 136 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `FileBrowserHeader` "title" → `PaneTitleItem`
     - `FilePreviewHeader` "title" → `PaneTitleItem`
     - `SlotRender.ListMiddleware`
@@ -900,6 +900,7 @@ out of the way: **what it opens takes its column**.
     - `renderProfilerPane.Actions` "title" → `PaneTitleItem`
     - `reportDetailPane.Actions` "title" → `PaneTitleItem`
     - `reportsPane.Actions` "title" → `PaneTitleItem`
+    - `scoreboardPane.Actions` "title" → `PaneTitleItem`
     - `screenshotPane.Actions` "title" → `PaneTitleItem`
     - `serverDetailPane.Actions` "title" → `PaneTitleItem`
     - `serversRootPane.Actions` "title" → `PaneTitleItem`
@@ -1090,7 +1091,7 @@ out of the way: **what it opens takes its column**.
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --spacing`
-  - Imported by: 219 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 220 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×79
     - `conversations` ×33
     - `debug` ×29
@@ -1101,11 +1102,11 @@ out of the way: **what it opens takes its column**.
     - `plugin-meta` ×6
     - `layouts` ×4
     - `infra` ×3
+    - `stats` ×3
     - `companions` ×2
     - `page` ×2
     - `reports` ×2
     - `shell` ×2
-    - `stats` ×2
     - `ui` ×2
     - `auth`
     - `backup`

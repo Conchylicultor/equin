@@ -17,7 +17,16 @@ import {
 } from "./internal/process-hooks";
 import { fatalReportHandler, serverReportHandler } from "./internal/fatal";
 import { RestartSkip } from "@plugins/build/plugins/restart-skip/plugins/hooks/server";
-import { _reportFixes } from "./internal/tables";
+import {
+  _reportFingerprintsSeen,
+  _reportFixDays,
+  _reportFixes,
+  _reportTrendDays,
+} from "./internal/tables";
+import { reportTrendTriggers } from "./internal/trend-triggers";
+import { trendRetentions } from "./internal/retention";
+import { DbTrigger } from "@plugins/database/plugins/db-triggers/server";
+import { ExcludeFromChangeFeed } from "@plugins/network/plugins/live/plugins/change-feed/server";
 import {
   fixClaimsReaction,
   ingestFixClaims,
@@ -47,6 +56,8 @@ export {
   reportOutboxSink,
 } from "./internal/outbox-sink";
 export { investigateReport } from "./internal/investigate";
+export { loadReportTrend } from "./internal/trend";
+export type { ReportTrend } from "./internal/trend";
 export type { RecordReportResult } from "./internal/record-report";
 export { recordReportDebounced } from "./internal/record-report-debounced";
 export { DEFAULT_REPORT_DEBOUNCE_MS } from "./internal/debounce";
@@ -86,6 +97,34 @@ export default {
       reason:
         "Fixes of main's reports, recorded from main's history and main's deploys; a fork holds none of those reports.",
     }),
+    // The report history (./internal/trend-triggers.ts): kept by triggers on
+    // every write of `reports` and `report_fixes`; read on demand by the
+    // responsiveness scoreboard, so no live reader needs the feed.
+    DbTrigger(reportTrendTriggers),
+    ...[_reportTrendDays, _reportFingerprintsSeen, _reportFixDays].flatMap(
+      (table) => [
+        ExcludeFromFork({
+          table,
+          reason:
+            "History of this host's own reports; a fork's reports are its own.",
+        }),
+      ],
+    ),
+    ExcludeFromChangeFeed({
+      table: _reportTrendDays,
+      reason:
+        "Bumped by a trigger on every report occurrence; read on demand by the responsiveness scoreboard.",
+    }),
+    ExcludeFromChangeFeed({
+      table: _reportFingerprintsSeen,
+      reason:
+        "Filled by a trigger on every new report cause; read on demand by the responsiveness scoreboard.",
+    }),
+    ExcludeFromChangeFeed({
+      table: _reportFixDays,
+      reason:
+        "Bumped by a trigger on the fix ledger; read on demand by the responsiveness scoreboard.",
+    }),
     // A deploy adopted without a restart runs the new commit too: the fixes
     // it contains are live (`stampDeployedFixes`).
     RestartSkip.Adopted({
@@ -93,7 +132,12 @@ export default {
       adopt: stampDeployedFixes,
     }),
   ],
-  register: [backfillNoiseWarmup, reportsRetention, fixClaimsReaction],
+  register: [
+    backfillNoiseWarmup,
+    reportsRetention,
+    ...trendRetentions,
+    fixClaimsReaction,
+  ],
   // Every caught server error becomes a crash report. A `sinkHandlers` entry,
   // so it is attached in every boot mode (an exec child's errors are filed
   // too), and what was reported before it attached is replayed.

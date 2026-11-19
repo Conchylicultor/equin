@@ -2,7 +2,11 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { submitClientLatency } from "../core";
 import { handleClientLatency } from "./internal/ingest";
 import { startLatencyRecorder, stopLatencyRecorder } from "./internal/recorder";
+import { rollDaysJob } from "./internal/daily";
 import {
+  clientMinuteRetention,
+  dayRetention,
+  hostDayRetention,
   hostMinuteRetention,
   interactionRetention,
   minuteRetention,
@@ -10,6 +14,7 @@ import {
 } from "./internal/retention";
 import { ledgerContributions } from "./internal/contributions";
 
+export { loadDailyLatency } from "./internal/daily";
 export {
   readClientHours,
   readClientRoutes,
@@ -25,9 +30,13 @@ export default {
   },
   register: [
     minuteRetention,
+    clientMinuteRetention,
     hostMinuteRetention,
     threadMinuteRetention,
     interactionRetention,
+    dayRetention,
+    hostDayRetention,
+    rollDaysJob,
   ],
   onReady: startLatencyRecorder,
   onShutdown: stopLatencyRecorder,

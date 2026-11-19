@@ -19,7 +19,16 @@ ledger keeps **all** of them, as per-minute histograms.
 | `deliver-server` | the server notices the change | it sends the frame | server |
 | `watch-delivery` | a write to a watched file (its ctime), or the watch's arming when the write predates it | the watch hears it (before any debounce); ≤ 1 sample / watcher instance / 5 s | server (`infra/file-watcher`'s `onWatchDelivery`) |
 | `turn-echo` | the agent took a sent message (`submittedAt`) | its transcript line is on screen in the tab | browser (`turn-echo` signal) |
+| `input` | a person's click, tap or keypress (`pointerdown` / `keydown`, trusted) | the next painted frame — Event Timing's `duration` (input delay + handlers + rendering, what INP is made of) | browser (`web/internal/input-tracker.ts`) |
 | `thread-lag` | — | worst event-loop lag of each 10 s health sample | server |
+
+`input` counts EVERY interaction, not only the slow ones `reports/main-thread-stall`
+files. Event Timing reports an interaction only from 16 ms up, so each trusted
+`pointerdown` / `keydown` is counted at dispatch and one no entry claims within a
+second is recorded at 16 ms — "16 ms or less", an upper bound, so the fast majority
+is never missing from the percentiles. A pointer that became a scroll or a drag
+(entries with `interactionId` 0) is not an interaction and is not recorded; one
+under 16 ms leaves no entry and is counted as fast — a small bias toward fast.
 
 `update-e2e` exists because `deliver-server` is blind to the thing this track is
 about: its clock starts when the serving thread finally reads the NOTIFY, so a
@@ -71,6 +80,20 @@ browser's minutes and the server's merge into the same row by adding the arrays
 element-wise in one upsert — no read-modify-write, any number of tabs, either
 order. Rows per day do not grow with traffic; retention is 35 days.
 
+**Whose tab: `latency_ledger_client_minute`.** A browser batch is ALSO filed under
+its tab's kind — `real` (a person's tab) or `automated` (the agent browser, an e2e
+run: `navigator.webdriver`) — in a table of its own, written in the same statement
+as the combined row (`mergeClientMinute`), so what the user feels can be read apart
+from an agent's reload loop. The combined table is untouched: it stays every tab's
+(the summary card and every other reader unchanged), and "every tab" reads
+continuously across the split (2026-11-19). A batch from a bundle that sends no
+client lands in the combined row only — never guessed. (Not a `client_kind` column
+on the combined table: changing a hot table's primary key leaves it with no unique
+constraint between the expand and the deferred contract, and every upsert of the
+old and the new code fails in that window.) The day rollup reads the combined rows
+as `all` (browser metrics) or `server`, and the split as `real` / `automated`
+(`LATENCY_CLIENT_KINDS`).
+
 **Never change the bucket scheme in place.** Every stored array is aligned to it.
 A new scheme gets a new `HISTOGRAM_SCHEME`; the upsert refuses to add across
 schemes and the query ignores the old rows.
@@ -103,7 +126,23 @@ The browser posts at most once a minute per tab and on `pagehide`. A batch is
 cleared when handed to the network and put back if the request fails, because the
 server adds what it receives.
 
-All four tables are excluded from the change feed, from forks (a worktree showing
+**Days are added up once.** `latency_ledger_day` holds each closed UTC day (every
+boundary a UTC instant passed as a parameter — the session runs in the machine's
+zone, Europe/Paris on main) per
+(metric, client kind, minute class), and `latency_ledger_host_day` the day's
+minutes by class — written together in one statement by the hourly
+`latency-ledger.roll-days` job (`server/internal/daily.ts`) once no browser batch
+can still reach the day (ingest accepts minutes up to 6 h old; a day is rolled 7 h
+after it ends). The host-day row is the "rolled" mark; a missed hour is caught up
+by the next, and the first run after a deploy backfills the 34 days the minute
+table still holds. `loadDailyLatency(sinceDay)` (server barrel) reads the rolled
+days and sums the rest (today, and yesterday until it is rolled) live: summing
+35 days of minutes took 3.5 s on main (2026-11-19, ~116k rows × 67 buckets); the
+rollups are kept 400 days. Each day row carries its histogram, so a reader merges
+days into any period (a week's p95 is the merged histogram's, never an average of
+daily p95s).
+
+All the tables are excluded from the change feed, from forks (a worktree showing
 main's numbers as its own would be wrong) and from backups.
 
 ## The read path
@@ -146,22 +185,14 @@ state rather than the previous window's numbers.
     - `primitives/scope/tab-id.getTabId`
     - `primitives/scope/tab-id.NO_TAB_ID`
 - Server:
-  - Contributes:
+  - Contributes: 22 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `backup-data-exclusion` ×7
+    - `change-feed-exclusion` ×7
+    - `fork-data-exclusion` ×7
     - `resource.declare` "latency-ledger.summary"
-    - `change-feed-exclusion` "latency_ledger_host_minute"
-    - `change-feed-exclusion` "latency_ledger_interaction"
-    - `change-feed-exclusion` "latency_ledger_minute"
-    - `change-feed-exclusion` "latency_ledger_thread_minute"
-    - `fork-data-exclusion` "latency_ledger_host_minute"
-    - `fork-data-exclusion` "latency_ledger_interaction"
-    - `fork-data-exclusion` "latency_ledger_minute"
-    - `fork-data-exclusion` "latency_ledger_thread_minute"
-    - `backup-data-exclusion` "latency_ledger_host_minute"
-    - `backup-data-exclusion` "latency_ledger_interaction"
-    - `backup-data-exclusion` "latency_ledger_minute"
-    - `backup-data-exclusion` "latency_ledger_thread_minute"
   - Uses:
     - `database.db`
+    - `database.writeAtomically`
     - `database/admin.ExcludeFromBackup`
     - `database/admin.ExcludeFromFork`
     - `database/sql-column.parsedJson`
@@ -173,19 +204,25 @@ state rather than the previous window's numbers.
     - `infra/file-watcher.onWatchDelivery`
     - `infra/host/duress/latch.isUnderDuress`
     - `infra/host/duress/shed.createShedBuffer`
+    - `infra/jobs.defineJob`
     - `infra/retention.defineRetention`
     - `network/live.serveValue`
     - `network/live/change-feed.ExcludeFromChangeFeed`
   - DB schema: `plugins/debug/plugins/latency-ledger/server/internal/tables.ts`
   - Exports (types): `ClientHour`
   - Exports (values):
+    - `loadDailyLatency`
     - `readClientHours`
     - `readClientRoutes`
   - Register:
     - `defineJob('retention.latency_ledger_minute')`
+    - `defineJob('retention.latency_ledger_client_minute')`
     - `defineJob('retention.latency_ledger_host_minute')`
     - `defineJob('retention.latency_ledger_thread_minute')`
     - `defineJob('retention.latency_ledger_interaction')`
+    - `defineJob('retention.latency_ledger_day')`
+    - `defineJob('retention.latency_ledger_host_day')`
+    - `defineJob('latency-ledger.roll-days')`
   - Resources: `latency-ledger.summary` (invalidate, notified, whole: the plugins whose code ran on the serving thread — each minute keeps only its top owners (the rest as `other`), so a window holds a few dozen, capped: LATENCY_METRICS.length, capped: EXIT_CRITERIA.length, capped: SLOWEST_INTERACTIONS)
   - Routes: `POST /api/latency-ledger/client`
 - Core:
@@ -197,9 +234,11 @@ state rather than the previous window's numbers.
   - Exports (types):
     - `ClientLatencyMetric`
     - `ClientMinute`
+    - `DailyLatency`
     - `ExitCriterion`
     - `HistogramAcc`
     - `Interaction`
+    - `LatencyClientKind`
     - `LatencyMetric`
     - `LatencyStat`
     - `LatencySummary`
@@ -219,6 +258,7 @@ state rather than the previous window's numbers.
     - `HISTOGRAM_SCHEME`
     - `InteractionSchema`
     - `isEmptyAcc`
+    - `LATENCY_CLIENT_KINDS`
     - `LATENCY_METRICS`
     - `LATENCY_WINDOWS`
     - `latencySummary`
@@ -237,10 +277,12 @@ state rather than the previous window's numbers.
   - Imported by:
     - `debug/latency-ledger/client-rate`
     - `stats/responsiveness`
+    - `stats/scoreboard`
 - Exemptions:
   - Exempts itself from:
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)
     - `networking/no-page-transport` — `web/internal/client-ledger.ts` (sanctioned)
+    - `sql-writes:fit:hand-written` — `server/internal/daily.ts` (sanctioned)
 - Sub-plugins:
   - **`client-rate`** — Client-rate report renderer: a one-line Debug → Reports summary (how many page loads one tab made this hour, against the usual client-hour, marked when automated), plus the config registration.…
 

@@ -36,3 +36,39 @@ export async function readBootEvents(
         Number.POSITIVE_INFINITY) >= cutoff,
   );
 }
+
+// A restart-heavy month: main booted ~1,900 times in 35 days (2026-11-19,
+// ~3,900 lines) — far past MAX_LINES. Starts are counted from enough lines
+// for a quarter of that pace, and the answer says when it ran out of lines
+// before reaching `sinceMs`.
+const COUNT_MAX_LINES = 40_000;
+
+/**
+ * Every boot of `worktree` whose process started at or after `sinceMs`, as its
+ * start instant (epoch ms), oldest first — a boot is counted whether it became
+ * ready or not. `complete: false` when the file's kept lines start after
+ * `sinceMs` (rotated away, or more boots than the read covers): the earliest
+ * counted boot then marks where knowledge begins (`knownFrom`; its own day is
+ * partial). `knownFrom: null` — the read covers the whole window.
+ */
+export async function readBootStartsSince(
+  worktree: string,
+  sinceMs: number,
+): Promise<{ starts: number[]; knownFrom: number | null }> {
+  const lines = await readChannelJson(
+    worktree,
+    "boot",
+    COUNT_MAX_LINES,
+    BootLineSchema,
+  );
+  const starts = pairBootLines(lines)
+    .map((e) => e.processStartedAt)
+    .sort((a, b) => a - b);
+  const oldest = starts[0];
+  return {
+    starts: starts.filter((s) => s >= sinceMs),
+    // The read reached back past `sinceMs` only if it kept a boot before it.
+    knownFrom:
+      oldest !== undefined && oldest < sinceMs ? null : (oldest ?? null),
+  };
+}

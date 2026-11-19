@@ -133,12 +133,14 @@ boots from before the marks.
     - `BootLineSchema`
     - `readBootEvents`
     - `readBootJournals`
+    - `readBootStartsSince`
     - `writeBootDeadEvent`
     - `writeBootStartEvent`
 - Cross-plugin:
   - Imported by:
     - `debug/boot-watchdog`
     - `debug/timeline`
+    - `stats/scoreboard`
 - Exemptions:
   - Exempts itself from:
     - `server-core/no-process-crash-listener` — `machine/internal/boot-crash.ts` (sanctioned)

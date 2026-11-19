@@ -1,7 +1,11 @@
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { runInBackgroundLane } from "@plugins/infra/plugins/runtime-profiler/core";
 import { minuteStartOf, submitClientLatency } from "../../core";
-import { insertInteractions, mergeMetricMinute } from "./store";
+import {
+  insertInteractions,
+  mergeClientMinute,
+  mergeMetricMinute,
+} from "./store";
 
 // A browser's clock can be wrong; a minute from the future or the distant past is
 // dropped rather than written where no host record will ever classify it.
@@ -22,10 +26,18 @@ export const handleClientLatency = implement(
       ms >= now - MAX_AGE_MS && ms <= now + MAX_AHEAD_MS;
     // Observability, not something the user is waiting on: run it in the
     // background connection lane even though an HTTP request carries it.
+    // Whose tab: a batch with a client is also filed under its kind (a
+    // person's tab or an automated one); one from a bundle that sends none
+    // reaches the combined row only — never guessed.
+    const clientKind = body.client
+      ? body.client.automated
+        ? ("automated" as const)
+        : ("real" as const)
+      : null;
     await runInBackgroundLane(async () => {
       for (const m of body.minutes) {
         if (!inRange(m.minuteStart)) continue;
-        await mergeMetricMinute({
+        const minute = {
           metric: m.metric,
           minuteStart: minuteStartOf(m.minuteStart),
           acc: {
@@ -36,7 +48,9 @@ export const handleClientLatency = implement(
             censored: m.censored,
             excluded: m.excluded,
           },
-        });
+        };
+        if (clientKind === null) await mergeMetricMinute(minute);
+        else await mergeClientMinute({ ...minute, clientKind });
       }
       await insertInteractions(
         body.interactions.filter((i) => inRange(i.occurredAt)),

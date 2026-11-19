@@ -255,6 +255,29 @@ its `recurred` state, not an error variant, keeps its toast up — and unlinks t
 old investigation task so the report is back on the worklist
 (`reportWorklist`: no task, not noise, open or regressed).
 
+## The report history outlives the reports
+
+`reports` rows are swept after 7 days, a report's fixes cascade away with it and
+`hourly` keeps 24 hours — so "is the app converging?" had no answer past a week.
+Three tables keep that history (`server/internal/tables.ts`), filled by triggers
+(`server/internal/trend-triggers.ts`, the `reports.trend` trigger set) so every
+writer is counted with no writer code:
+
+- `report_trend_days` — occurrences per UTC day and kind (the day a write
+  recorded them), from `reports` inserts and every raise of `count`;
+- `report_fingerprints_seen` — every cause ever seen, with its first occurrence;
+  a fingerprint swept with its report and seen again keeps its first row (a
+  recurrence, not a new cause);
+- `report_fix_days` — per landing day and the fixed report's kind, fixes landed
+  and how many of THOSE came back since (a cohort: a regression is counted on the
+  day its fix landed), from `report_fixes` inserts and the stamping of
+  `regressed_at`.
+
+`loadReportTrend(sinceDay)` (server barrel) reads them — the seen set joined with
+the live `reports` rows, and the fix counters with the ledger rows still alive
+(the larger per day), so the days before the triggers existed are counted as far
+as the surviving rows go. Kept 400 days. Read by `stats/scoreboard`.
+
 ## Filing from a process with no server
 
 `recordReport` runs inside a backend. A process with no server — a
@@ -273,14 +296,23 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
 - Server:
   - Contributes:
     - `change-producer` "reports"
+    - `fork-data-exclusion` "report_fingerprints_seen"
+    - `fork-data-exclusion` "report_fix_days"
     - `fork-data-exclusion` "report_fixes"
+    - `fork-data-exclusion` "report_trend_days"
     - `fork-data-exclusion` "reports"
+    - `db-trigger` "reports.trend"
+    - `change-feed-exclusion` "report_fingerprints_seen"
+    - `change-feed-exclusion` "report_fix_days"
+    - `change-feed-exclusion` "report_trend_days"
     - `restart-skip.adopted` "the report fixes the adopted commit contains (deployed)"
-  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `reports` ×10
     - `build/server-build-id` ×4
     - `shell/notifications` ×4
+    - `database/db-triggers` ×2
     - `infra/host/duress/shed` ×2
+    - `network/live/change-feed` ×2
     - `primitives/commit-list` ×2
     - `build/restart-skip/hooks.RestartSkip`
     - `database/admin.ExcludeFromFork`
@@ -291,18 +323,19 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `infra/host/machine-sleep.wakeBefore`
     - `infra/retention.defineRetention`
     - `infra/warmup.defineWarmup`
-    - `network/live/change-feed.defineChangeProducer`
     - `packages/source-digest.sourceDigest`
   - DB schema: `plugins/reports/plugins/engine/server/internal/tables.ts`
   - Exports (types):
     - `IncidentOptions`
     - `RecordReportResult`
+    - `ReportTrend`
     - `RestateOccurrence`
     - `RestateResult`
   - Exports (values):
     - `DEFAULT_REPORT_DEBOUNCE_MS`
     - `investigateReport`
     - `linkReportsToTask`
+    - `loadReportTrend`
     - `recordReport`
     - `recordReportDebounced`
     - `recordReportIncident`
@@ -316,11 +349,14 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
   - Register:
     - `defineWarmup('reports.backfill-noise')`
     - `defineJob('retention.reports')`
+    - `defineJob('retention.report_trend_days')`
+    - `defineJob('retention.report_fix_days')`
+    - `defineJob('retention.report_fingerprints_seen')`
     - `defineRefReaction('reports.fix-claims (refs/heads/main)')`
 - Machine:
   - Uses: `infra/endpoints.implementMachine`
 - Cross-plugin:
-  - Imported by: 36 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 37 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×14
     - `conversations` ×5
     - `infra` ×4
@@ -332,6 +368,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `framework/cli/push`
     - `integrations/github-events`
     - `page/place/google`
+    - `stats/scoreboard`
     - `tasks/reports-investigation`
 - Exemptions:
   - Exempts itself from:

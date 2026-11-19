@@ -70,6 +70,7 @@
     - `stats/cost`
     - `stats/pushes`
     - `stats/responsiveness`
+    - `stats/scoreboard`
     - `stats/tasks`
 - Shared:
   - Exports (types):

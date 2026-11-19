@@ -35,7 +35,7 @@ const WINDOW_MS: Record<LatencyWindow, number> = {
 //   calm     everything else
 // It runs in SQL so the histograms are summed in Postgres, off the serving thread:
 // a 7-day window is tens of thousands of 67-number rows.
-const minuteClass = sql`CASE
+export const minuteClass = sql`CASE
   WHEN h.minute_start IS NULL THEN 'unknown'
   WHEN h.slept_ms > 0 THEN 'slept'
   WHEN h.duress

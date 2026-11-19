@@ -7589,6 +7589,10 @@
       "name": "@equin/plugin-stats-responsiveness",
       "version": "0.0.1",
     },
+    "plugins/stats/plugins/scoreboard": {
+      "name": "@equin/plugin-stats-scoreboard",
+      "version": "0.0.1",
+    },
     "plugins/stats/plugins/tasks": {
       "name": "@equin/plugin-stats-tasks",
       "version": "0.0.1",
@@ -11954,6 +11958,8 @@
     "@equin/plugin-stats-pushes": ["@equin/plugin-stats-pushes@workspace:plugins/stats/plugins/pushes"],
 
     "@equin/plugin-stats-responsiveness": ["@equin/plugin-stats-responsiveness@workspace:plugins/stats/plugins/responsiveness"],
+
+    "@equin/plugin-stats-scoreboard": ["@equin/plugin-stats-scoreboard@workspace:plugins/stats/plugins/scoreboard"],
 
     "@equin/plugin-stats-tasks": ["@equin/plugin-stats-tasks@workspace:plugins/stats/plugins/tasks"],
 

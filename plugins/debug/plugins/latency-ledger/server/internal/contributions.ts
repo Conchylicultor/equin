@@ -4,6 +4,9 @@ import {
   ExcludeFromFork,
 } from "@plugins/database/plugins/admin/server";
 import {
+  _latencyLedgerClientMinute,
+  _latencyLedgerDay,
+  _latencyLedgerHostDay,
   _latencyLedgerHostMinute,
   _latencyLedgerInteraction,
   _latencyLedgerMinute,
@@ -20,9 +23,12 @@ import { latencySummaryServed } from "./summary-resource";
 //  - no backup: 35-day observability, not user data.
 const ledgerTables = [
   _latencyLedgerMinute,
+  _latencyLedgerClientMinute,
   _latencyLedgerHostMinute,
   _latencyLedgerThreadMinute,
   _latencyLedgerInteraction,
+  _latencyLedgerDay,
+  _latencyLedgerHostDay,
 ];
 
 // Each feed exclusion names its table literally: the no-db-backed-notify check
@@ -32,6 +38,10 @@ const feedReason =
   "Written every minute by the ledger itself; the latency-ledger.summary value is notified by the ledger's minute flush instead.";
 const feedExclusions = [
   ExcludeFromChangeFeed({ table: _latencyLedgerMinute, reason: feedReason }),
+  ExcludeFromChangeFeed({
+    table: _latencyLedgerClientMinute,
+    reason: feedReason,
+  }),
   ExcludeFromChangeFeed({
     table: _latencyLedgerHostMinute,
     reason: feedReason,
@@ -43,6 +53,16 @@ const feedExclusions = [
   ExcludeFromChangeFeed({
     table: _latencyLedgerInteraction,
     reason: feedReason,
+  }),
+  ExcludeFromChangeFeed({
+    table: _latencyLedgerDay,
+    reason:
+      "Written once per closed day by the latency-ledger.roll-days job; read on demand by the responsiveness scoreboard.",
+  }),
+  ExcludeFromChangeFeed({
+    table: _latencyLedgerHostDay,
+    reason:
+      "Written once per closed day by the latency-ledger.roll-days job; read on demand by the responsiveness scoreboard.",
   }),
 ];
 
