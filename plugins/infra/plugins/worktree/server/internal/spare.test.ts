@@ -20,6 +20,7 @@ import {
   convergeExistingCheckout,
   gitWorktreesDir,
   isUnfinishedCheckout,
+  isUnfinishedEntry,
   listReadySpares,
   listWorktreeEntries,
   lockWorktree,
@@ -44,6 +45,13 @@ async function git(cwd: string, ...args: string[]): Promise<string> {
     throw new Error(`git ${args.join(" ")} failed: ${r.stderr}`);
   }
   return r.stdout.trim();
+}
+
+// The pass-over-every-checkout form of the rule must agree with the per-path one.
+async function entryUnfinished(wt: string): Promise<boolean> {
+  const entry = (await listWorktreeEntries(repo)).find((e) => e.path === wt);
+  if (entry === undefined) throw new Error(`${wt} is not registered`);
+  return isUnfinishedEntry(entry);
 }
 
 async function commit(file: string, content: string): Promise<string> {
@@ -341,6 +349,7 @@ describe("spare claim", () => {
     ]);
     expect(await listReadySpares(repo)).toEqual([spare]);
     expect(await isUnfinishedCheckout(repo, spare)).toBe(false);
+    expect(await entryUnfinished(spare)).toBe(false);
     expect(await checkoutState(repo, spare)).toBe("complete");
     const noRemove = async (path: string): Promise<void> => {
       throw new Error(`removed ${path}`);
@@ -555,6 +564,7 @@ describe("crash convergence", () => {
     await git(repo, "worktree", "unlock", spare);
     await git(repo, "worktree", "move", spare, wt);
     expect(await isUnfinishedCheckout(repo, wt)).toBe(true);
+    expect(await entryUnfinished(wt)).toBe(true);
 
     expect(
       await convergeExistingCheckout(repo, "att-8", wt, noGate, noSteps),
@@ -568,6 +578,7 @@ describe("crash convergence", () => {
     expect(await git(wt, "status", "--porcelain")).toBe("");
     expect(await lockOf(wt)).toBe(LEGACY_IDS.worktreeLockReason);
     expect(await isUnfinishedCheckout(repo, wt)).toBe(false);
+    expect(await entryUnfinished(wt)).toBe(false);
   });
 
   test("a switch killed after writing an added file converges to a clean checkout", async () => {
@@ -600,6 +611,7 @@ describe("crash convergence", () => {
     expect(plainSwitch.exitCode).not.toBe(0);
     expect(plainSwitch.stderr).toContain("Untracked working tree file");
     expect(await isUnfinishedCheckout(repo, wt)).toBe(true);
+    expect(await entryUnfinished(wt)).toBe(true);
 
     expect(
       (await convergeExistingCheckout(repo, "att-10", wt, noGate, noSteps))
@@ -635,6 +647,7 @@ describe("crash convergence", () => {
     writeFileSync(join(admin, "locked"), ADD_IN_PROGRESS_LOCK);
     expect(existsSync(join(wt, "a.txt"))).toBe(false);
     expect(await isUnfinishedCheckout(repo, wt)).toBe(true);
+    expect(await entryUnfinished(wt)).toBe(true);
 
     expect(
       (await convergeExistingCheckout(repo, "att-12", wt, noGate, noSteps))
@@ -647,6 +660,7 @@ describe("crash convergence", () => {
     expect(await git(wt, "status", "--porcelain")).toBe("");
     expect(await lockOf(wt)).toBe(LEGACY_IDS.worktreeLockReason);
     expect(await isUnfinishedCheckout(repo, wt)).toBe(false);
+    expect(await entryUnfinished(wt)).toBe(false);
   });
 
   test("a finished checkout is left in place and only re-locked", async () => {
@@ -672,6 +686,7 @@ describe("crash convergence", () => {
     await checkoutAttempt(repo, "att-9", wt, noSteps);
     await git(wt, "switch", "--detach", "HEAD");
     expect(await isUnfinishedCheckout(repo, wt)).toBe(false);
+    expect(await entryUnfinished(wt)).toBe(false);
   });
 });
 

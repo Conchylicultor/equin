@@ -452,6 +452,7 @@ pid liveness.
     - `isCanonicalWorktreePath`
     - `isCompositionMarkerPath`
     - `isPersistentNamespace`
+    - `isUnfinishedEntry`
     - `isWorktreeOpActive`
     - `isWorktreeSpecPath`
     - `listActiveWorktreeOps`

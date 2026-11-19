@@ -372,6 +372,13 @@ a built-in-ledger job that declares `lock`, anything else throws. The row says
 whether a run is still going and why one failed; the work's own result (the
 checkout on disk) stays the authority, observed before every wait.
 
+`openSupervisedRuns(job, inputs)` is the same question for many keys at once:
+the inputs whose run is open, from ONE read of the job's open rows. A pass that
+must not touch work a run is still making uses it as the in-flight lock —
+`worktree.fsmonitor-reconcile` skips every checkout whose `worktree.prepare`
+run is open. Read it after the caller's own listing of the work, so a run that
+closed in between has ended (finished or failed) before the read.
+
 ## Residuals
 
 - **A dead workflow costs its run the side effects, not the ledger.** If the
@@ -789,6 +796,7 @@ construction, and the job and the body it spawns cannot drift apart.
     - `defineSupervisedJob`
     - `latestSupervisedRun`
     - `onSupervisedRunChange`
+    - `openSupervisedRuns`
     - `runEnded`
   - Register:
     - `defineTriggerEvent('supervisedRun.ended')`

@@ -37,3 +37,31 @@ export async function latestSupervisedRun<
   }
   return builtinLedgerFor(locked.jobName, conn).latest(locked.lock(input));
 }
+
+/**
+ * The inputs among `inputs` whose run of `job` is open — claimed and not
+ * closed: its child runs, or is being spawned. One read for the whole list
+ * (every open run of the job), so a pass over many keys costs one query.
+ *
+ * The open row is the job's in-flight lock: a caller that must not touch what
+ * a run is still making (a checkout mid-setup) skips these. Read it AFTER the
+ * caller's own view of the work (a listing): work found then whose run is
+ * closed by now has finished, or failed, before this read.
+ *
+ * Only for a single-child built-in-ledger job, as `latestSupervisedRun`.
+ */
+export async function openSupervisedRuns<N extends string, S extends z.ZodType>(
+  job: SupervisedJob<N, S>,
+  inputs: readonly z.infer<S>[],
+  conn: NodePgDatabase = db,
+): Promise<z.infer<S>[]> {
+  const locked = builtinLockedJobOf(job);
+  if (locked === null) {
+    throw new Error(
+      `[supervised-job] ${job.name}: openSupervisedRuns needs a single-child built-in-ledger job — an own ledger reads its runs from its own table.`,
+    );
+  }
+  if (inputs.length === 0) return [];
+  const open = await builtinLedgerFor(locked.jobName, conn).openLockKeys();
+  return inputs.filter((input) => open.has(locked.lock(input)));
+}

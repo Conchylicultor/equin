@@ -1416,18 +1416,30 @@ export async function isUnfinishedCheckout(
   );
   if (entry === undefined) return false;
   if (entry.locked === ADD_IN_PROGRESS_LOCK) return true;
-  let gitFile: string;
   try {
-    gitFile = await readFile(join(wtPath, ".git"), "utf8");
+    await readFile(join(wtPath, ".git"), "utf8");
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
     // No `.git` file (a leftover) or a `.git` dir (not a linked worktree).
     if (code === "ENOENT" || code === "EISDIR") return false;
     throw err;
   }
-  const gitdir = /^gitdir: (.+)$/m.exec(gitFile)?.[1]?.trim();
-  if (!gitdir || !isSpareName(basename(gitdir))) return false;
-  return entry.head?.kind === "detached" && entry.locked === null;
+  return isUnfinishedEntry(entry);
+}
+
+/**
+ * The rule of {@link isUnfinishedCheckout}, on an entry already listed
+ * (`listWorktreeEntries`) — for a pass over every checkout, which must not
+ * list them all again per checkout. A linked checkout's `.git` file names its
+ * admin dir, which is the entry's `gitDir`: `spare-*` for a claimed spare.
+ */
+export function isUnfinishedEntry(entry: WorktreeEntry): boolean {
+  if (entry.locked === ADD_IN_PROGRESS_LOCK) return true;
+  return (
+    isSpareName(basename(entry.gitDir)) &&
+    entry.head?.kind === "detached" &&
+    entry.locked === null
+  );
 }
 
 /** Where the checkout at a path stands — see {@link checkoutState}. */

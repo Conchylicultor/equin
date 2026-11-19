@@ -75,6 +75,7 @@ export function builtinLedgerFor(
   closeRow(runId: string, terminal: RunTerminal): Promise<void>;
   markCancelled(lockKey: string): Promise<string | null>;
   latest(lockKey: string): Promise<SupervisedRunRow | null>;
+  openLockKeys(): Promise<ReadonlySet<string>>;
 } {
   return {
     /**
@@ -192,6 +193,20 @@ export function builtinLedgerFor(
         )
         .returning({ id: _supervisedJobRuns.id });
       return row?.id ?? null;
+    },
+
+    /** The lock key of every open run of this job (at most one per key). */
+    async openLockKeys() {
+      const rows = await conn
+        .select({ lockKey: _supervisedJobRuns.lockKey })
+        .from(_supervisedJobRuns)
+        .where(
+          and(
+            eq(_supervisedJobRuns.jobName, jobName),
+            isNull(_supervisedJobRuns.finishedAt),
+          ),
+        );
+      return new Set(rows.map((r) => r.lockKey));
     },
 
     /** The newest run of this job under `lockKey`, open or closed. */

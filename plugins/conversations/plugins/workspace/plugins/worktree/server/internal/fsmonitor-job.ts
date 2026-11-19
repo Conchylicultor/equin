@@ -3,6 +3,7 @@ import {
   defineJob,
   NonRetryableError,
 } from "@plugins/infra/plugins/jobs/server";
+import { openSupervisedRuns } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
@@ -13,6 +14,7 @@ import {
   ensureMainWorktreeRoot,
   gitWorktreesDir,
   isCanonicalWorktreeName,
+  isUnfinishedEntry,
   listWorktreeEntries,
 } from "@plugins/infra/plugins/worktree/server";
 import {
@@ -20,6 +22,7 @@ import {
   reconcileCheckoutFsmonitors,
   type FsmonitorCheckout,
 } from "@plugins/infra/plugins/git/plugins/fsmonitor/server";
+import { worktreePrepareJob } from "./prepare-job";
 
 const fsmonitorLog = defineLogSink({
   id: "worktree-fsmonitor",
@@ -54,6 +57,22 @@ const fsmonitorLog = defineLogSink({
  * Only checkouts whose attempt row main holds are decided: one another
  * backend minted (a worktree build's agents) is left as it is, and its daemon
  * ends with its checkout.
+ *
+ * Only FINISHED checkouts are touched. While an attempt's `worktree.prepare`
+ * run is open, its child owns the checkout — it writes the tree, installs it,
+ * then starts the fsmonitor and records its token itself (`setupWorktree`).
+ * Touching it then races that child: a `config.worktree.lock` taken twice, an
+ * index read before the tree write made one, and — the one that could fail a
+ * launch — this pass's index publish holding `index.lock` while the child's
+ * `git reset --hard` or `git switch` needs it. So a checkout whose prepare run
+ * is open, or which a cut-off run left unfinished (`isUnfinishedEntry`: the
+ * next run discards it), is left alone this pass. The open runs are read AFTER
+ * the listing: a checkout listed whose run has closed since has ended — its
+ * files final, whole or (a write cut off) unfinished. A run that failed after
+ * the files (its install) leaves them whole: decided like any other, its
+ * retry's setup may overlap a pass, where every fsmonitor write of the setup
+ * is non-fatal. A run that never closes, or a checkout abandoned unfinished,
+ * is never decided — at most one idle daemon left as it was.
  */
 export const fsmonitorReconcileJob = defineJob({
   name: "worktree.fsmonitor-reconcile",
@@ -89,14 +108,32 @@ export const fsmonitorReconcileJob = defineJob({
         e.path === `${worktreesDir}/${nameOf(e.path)}` &&
         isCanonicalWorktreeName(nameOf(e.path)),
     );
+    // After the listing — see the job's doc.
+    const settingUp = new Set(
+      (
+        await openSupervisedRuns(
+          worktreePrepareJob,
+          attempts.map((e) => ({ attemptId: nameOf(e.path), path: e.path })),
+        )
+      ).map((i) => i.attemptId),
+    );
+    const notReady = new Set(
+      attempts.filter(
+        (e) => settingUp.has(nameOf(e.path)) || isUnfinishedEntry(e),
+      ),
+    );
     const retention = await attemptRetention(
       attempts.map((e) => nameOf(e.path)),
     );
     const checkouts: FsmonitorCheckout[] = attempts.map((e) => {
-      const retained = retention.get(nameOf(e.path));
+      const retained = notReady.has(e)
+        ? undefined
+        : retention.get(nameOf(e.path));
       return {
         path: e.path,
         gitDir: e.gitDir,
+        // A checkout not set up yet is still passed, as left alone (`unknown`),
+        // so its daemon is never taken for an orphan's.
         want: retained === undefined ? "unknown" : retained ? "on" : "off",
       };
     });
@@ -109,7 +146,9 @@ export const fsmonitorReconcileJob = defineJob({
         false,
       signal,
     });
-    fsmonitorLog.publish(describeFsmonitorReconcile(result));
+    fsmonitorLog.publish(
+      `${describeFsmonitorReconcile(result)}; not set up yet ${notReady.size}${notReady.size ? ` (${[...notReady].map((e) => nameOf(e.path)).join(", ")})` : ""}`,
+    );
     if (result.failures.length > 0) {
       throw new Error(
         `[worktree.fsmonitor-reconcile] ${result.failures.length} checkout(s) failed:\n` +

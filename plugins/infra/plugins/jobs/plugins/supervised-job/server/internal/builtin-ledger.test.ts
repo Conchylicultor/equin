@@ -45,7 +45,7 @@ import {
   recordRunError,
 } from "./builtin-ledger";
 import { cancelSupervisedJobByLock } from "./cancel";
-import { latestSupervisedRun } from "./latest-run";
+import { latestSupervisedRun, openSupervisedRuns } from "./latest-run";
 import {
   defineSupervisedJob,
   endAttempt,
@@ -623,5 +623,38 @@ describe("the built-in ledger (real DB)", () => {
     expect(latest?.id).toBe(second);
     expect(latest?.open).toBe(true);
     await t.db.execute(sql`DELETE FROM supervised_job_runs`);
+  });
+
+  test("openSupervisedRuns answers the inputs whose run is open", async () => {
+    const job = defineSupervisedJob({
+      name: "supervised-job.test.open",
+      description: "Test job.",
+      input: z.object({ target: z.string(), note: z.string() }),
+      channel: { publishAll: () => {} } as unknown as LogChannel,
+      lock: (input) => input.target,
+      argv: () => ({ argv: ["true"] }),
+    });
+    const ledger = builtinLedgerFor("supervised-job.test.open", t.db);
+    const meta = { attempt: 1, workflowRunId: "wf" };
+    const [inA, inB, inC] = ["a", "b", "c"].map((target) => ({
+      target,
+      note: "x",
+    }));
+    if (!inA || !inB || !inC) throw new Error("three inputs");
+    const inputs = [inA, inB, inC];
+    expect(await openSupervisedRuns(job, inputs, t.db)).toEqual([]);
+
+    const a = await ledger.claim({ ...meta, lockKey: "a" });
+    const b = await ledger.claim({ ...meta, lockKey: "b" });
+    if (a === null || b === null) throw new Error("the claims must win");
+    // Another job's open run under the same key is not this job's.
+    await builtinLedgerFor("supervised-job.test.other", t.db).claim({
+      ...meta,
+      lockKey: "c",
+    });
+    expect(await openSupervisedRuns(job, inputs, t.db)).toEqual([inA, inB]);
+    // Closed, the run no longer holds its key.
+    await ledger.closeRow(b, ended(0));
+    expect(await openSupervisedRuns(job, inputs, t.db)).toEqual([inA]);
   });
 });

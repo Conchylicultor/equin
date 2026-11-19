@@ -24328,9 +24328,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`worktree`** — The worktree workspace: a conversation runs in its attempt's git checkout of this repo (`.claude/worktrees/<id>`), with a forked DB and config dir — checked out by the supervised worktree.prepare job (a detached child a restart does not kill) that the spawn job requests and waits on, resumable while the checkout exists. Keeps git's fsmonitor daemon running for exactly the checkouts whose attempt is still retained (worktree.fsmonitor-reconcile, main only: on a conversation closing, at start and every 10 minutes).
           - Server:
             - Contributes: `trigger` "worktree.fsmonitor-on-conversation-ended"
-            - Uses: 34 symbols — full list in [`plugins/conversations/plugins/workspace/plugins/worktree/REFERENCE.md`](../plugins/conversations/plugins/workspace/plugins/worktree/REFERENCE.md)
-              - `infra/worktree` ×10
-              - `infra/jobs/supervised-job` ×5
+            - Uses: 36 symbols — full list in [`plugins/conversations/plugins/workspace/plugins/worktree/REFERENCE.md`](../plugins/conversations/plugins/workspace/plugins/worktree/REFERENCE.md)
+              - `infra/worktree` ×11
+              - `infra/jobs/supervised-job` ×6
               - `infra/git/fsmonitor` ×3
               - `infra/jobs` ×3
               - `conversations/launch-timeline` ×2
@@ -39127,6 +39127,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `defineSupervisedJob`
               - `latestSupervisedRun`
               - `onSupervisedRunChange`
+              - `openSupervisedRuns`
               - `runEnded`
             - Register:
               - `defineTriggerEvent('supervisedRun.ended')`
@@ -41252,6 +41253,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isCanonicalWorktreePath`
           - `isCompositionMarkerPath`
           - `isPersistentNamespace`
+          - `isUnfinishedEntry`
           - `isWorktreeOpActive`
           - `isWorktreeSpecPath`
           - `listActiveWorktreeOps`

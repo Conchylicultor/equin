@@ -40,7 +40,16 @@ ensures it for an existing one (a resume) — a failure there is a result
 (`fsmonitor: { kind: "failed" }`), never a failed launch.
 `conversations/workspace/worktree`'s `worktree.fsmonitor-reconcile` (main
 only) does the rest: on while the attempt is retained, off once not — when a
-conversation closes, at main's start, and every 10 minutes.
+conversation closes, at main's start, and every 10 minutes. It decides
+FINISHED checkouts only: one whose `worktree.prepare` run is open belongs to
+that run's `setupWorktree` (which starts the fsmonitor itself, after the install), and one a
+cut-off run left unfinished is discarded by the next — both are passed as
+`unknown`. Racing the setup took `config.worktree.lock` twice, read an index
+the tree write had not made yet, and (the one that could fail a launch) held
+`index.lock` for a token publish while the setup's `git reset --hard` /
+`git switch` needed it. A resume's prepare that starts just after the pass read
+the open runs can still overlap it on a finished checkout; there every write
+the setup makes to the fsmonitor is inside its non-fatal `fsmonitor` step.
 
 ## The token is the whole trick — and our reads never write it
 

@@ -13,6 +13,7 @@ export {
   setupWorktree,
   type WorktreeSetup,
   checkoutState,
+  isUnfinishedEntry,
   type CheckoutState,
   type CheckoutSource,
   addCheckout,
