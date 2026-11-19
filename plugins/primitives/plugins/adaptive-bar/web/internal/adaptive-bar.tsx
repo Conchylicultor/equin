@@ -1588,8 +1588,31 @@ function AdaptiveBarShell({
       // there, so the occupants' rects shift with `scrollLeft`, and flooring a
       // bar that was asked to scroll would shrink every one of them.
       if (layoutMeasured && overflow !== "scroll" && result.fits) {
-        const overflowingBy = measureRowOverflow(root, order, trigger);
-        if (overflowingBy > 0) {
+        const seen = measureRowOverflow(root, order, trigger);
+        if (seen.by > 0) {
+          // The widths the fit priced, read back from what it was handed, so
+          // the fault names which number disagreed with the row.
+          const widths = new Map<string, number | undefined>();
+          let evicted = false;
+          for (const item of items) {
+            const rung = result.placement.get(item.id);
+            if (rung === null) evicted = true;
+            else if (rung !== undefined)
+              widths.set(item.id, item.inlineWidths[rung]);
+          }
+          const evidence = rowOverflowEvidence(
+            {
+              rowPx,
+              insetPx: metrics.insetPx,
+              yieldFloorPx: yieldFloor,
+              foreignGapsPx,
+              gapPx,
+              budget,
+              triggerPx: evicted ? triggerPx : null,
+              widths,
+            },
+            seen,
+          );
           // The floor, unconditionally: the fit's own numbers have just been
           // contradicted by the engine, so "the widest placement the fit blessed
           // as fitting" is exactly the claim under suspicion.
@@ -1599,7 +1622,7 @@ function AdaptiveBarShell({
             label,
             overflow,
             ...originOf(root),
-            message: `the fit says everything fits and the rendered row still overflows the box the bar was given, by ${String(Math.round(overflowingBy))}px — so the widths the fit decided from are not the widths the row actually has.`,
+            message: `overflows by ${String(Math.round(seen.by * 10) / 10)}px though the fit said it fits — ${evidence}. The widths the fit decided from are not the widths the row actually has.`,
           });
           // Not a settled answer: it floored and surrendered. Falling through
           // to the clear below would refund a zero-width recovery on the way
@@ -2199,9 +2222,9 @@ function px(value: string): number {
  */
 function measureRowOverflow(
   root: HTMLElement,
-  order: readonly { anchor: HTMLElement; entry: BarItemEntry }[],
+  order: readonly { id: string; anchor: HTMLElement; entry: BarItemEntry }[],
   trigger: HTMLElement | null,
-): number {
+): RowOverflow {
   // Judged in the row's own LAYOUT pixels, the currency the fit decided in
   // (`layoutWidthPx`): the rects are visual, so under an ancestor transform (a
   // window opening from `scale(0.96)`) they are mapped back by the row's own
@@ -2218,8 +2241,8 @@ function measureRowOverflow(
     right: layoutWidth - px(style.paddingRight) - px(style.borderRightWidth),
   };
 
-  const spans: Span[] = [];
-  const addIfLaidOut = (el: HTMLElement): void => {
+  const spans: (Span & { id: string })[] = [];
+  const addIfLaidOut = (el: HTMLElement, id: string): void => {
     // Load-bearing: an element generating NO boxes (`hidden`, which is how
     // absence and the un-needed `⋯` are both spelled) reports a rect of all
     // zeros — at the viewport origin, which would fabricate a full-width LEFT
@@ -2227,7 +2250,7 @@ function measureRowOverflow(
     // `display: none` slots.
     if (el.getClientRects().length === 0) return;
     const r = el.getBoundingClientRect();
-    spans.push({ left: toLayout(r.left), right: toLayout(r.right) });
+    spans.push({ id, left: toLayout(r.left), right: toLayout(r.right) });
   };
   // The other filter, and it is per-KIND because "still in the row" is asked
   // differently of the two. An occupant is in the row when it is docked at its
@@ -2235,11 +2258,70 @@ function measureRowOverflow(
   // relocated into the body-portaled panel, so its rect describes the panel's
   // layout and says nothing about this row. The `⋯` trigger is the bar's own
   // element and IS a direct child, so for it the parent check is exact.
-  for (const { anchor, entry } of order) {
+  for (const { id, anchor, entry } of order) {
     if (!isDockedInline(entry.container, anchor)) continue;
-    addIfLaidOut(entry.container);
+    addIfLaidOut(entry.container, id);
   }
-  if (trigger !== null && trigger.parentNode === root) addIfLaidOut(trigger);
+  if (trigger !== null && trigger.parentNode === root)
+    addIfLaidOut(trigger, "⋯");
 
-  return overflowPx(box, spans);
+  return {
+    by: overflowPx(box, spans),
+    box,
+    spans,
+    scale,
+    scrollLeft: root.scrollLeft,
+  };
+}
+
+/** What `measureRowOverflow` saw: the verdict, and the layout it read it from. */
+export interface RowOverflow {
+  /** How far the occupants stick out of the content box, past the tolerance; 0 when they fit. */
+  by: number;
+  /** The row's content box, in its own layout pixels. */
+  box: Span;
+  /** Every laid-out occupant (and the `⋯`, as `"⋯"`), in the same pixels. */
+  spans: readonly (Span & { id: string })[];
+  /** The row's visual / layout width: 1 unless an ancestor transform scales it. */
+  scale: number;
+  /** The row's own scroll offset (a clipping row can still be scrolled by script or focus). */
+  scrollLeft: number;
+}
+
+/**
+ * The `row-overflow` fault's evidence, FIRST in its message so a report cut to
+ * a few hundred characters (a visitor's, imported from the site) still carries
+ * it: what the fit decided from (row, inset, yield floor, foreign gaps, gap,
+ * budget, its total and the `⋯` it priced), then what the row rendered (its
+ * box, each occupant's fit width → rendered width and extent, scale, scroll).
+ * Without it the fault could say only that the two disagree, never where — and
+ * a transient on a visitor's phone cannot be reproduced to find out.
+ */
+export function rowOverflowEvidence(
+  fit: {
+    rowPx: number;
+    insetPx: number;
+    yieldFloorPx: number;
+    foreignGapsPx: number;
+    gapPx: number;
+    budget: number;
+    triggerPx: number | null;
+    widths: ReadonlyMap<string, number | undefined>;
+  },
+  seen: RowOverflow,
+): string {
+  const n = (v: number): string => String(Math.round(v * 10) / 10);
+  const inline = [...fit.widths.values()];
+  const priced =
+    inline.reduce<number>((sum, w) => sum + (w ?? 0), 0) +
+    (fit.triggerPx ?? 0) +
+    fit.gapPx *
+      Math.max(0, inline.length + (fit.triggerPx === null ? 0 : 1) - 1);
+  const occupants = seen.spans
+    .map((s) => {
+      const fitPx = s.id === "⋯" ? fit.triggerPx : fit.widths.get(s.id);
+      return `${s.id} ${fitPx === undefined || fitPx === null ? "?" : n(fitPx)}→${n(s.right - s.left)}@${n(s.left)}-${n(s.right)}`;
+    })
+    .join(", ");
+  return `fit: row ${n(fit.rowPx)} −inset ${n(fit.insetPx)} −floor ${n(fit.yieldFloorPx)} −foreign ${n(fit.foreignGapsPx)} = budget ${n(fit.budget)} ≥ total ${n(priced)} (gap ${n(fit.gapPx)}); rendered: box ${n(seen.box.left)}-${n(seen.box.right)}, ${occupants}; scale ${String(Math.round(seen.scale * 1000) / 1000)}, scroll ${n(seen.scrollLeft)}`;
 }
