@@ -139,7 +139,14 @@ export type StallEvent =
   /** The tab's port is gone: its liveness lock was granted to us, or it detached. */
   | { type: "gone"; portId: string; now: number }
   | { type: "tick"; now: number }
-  /** The clock stopped (no visible tab, nothing in flight): the next tick is not "late". */
+  /**
+   * The clock (re)started at `now`: the reference its first tick is judged
+   * late against. Without it a first tick that came late — the worker itself
+   * suspended right after a tab came back into view — had nothing to be late
+   * against, and the tab's whole silence was filed as a freeze.
+   */
+  | { type: "clock-started"; now: number }
+  /** The clock stopped (no visible tab, nothing in flight): no tick until it starts again. */
   | { type: "clock-stopped" }
   | { type: "filed"; id: string; ok: boolean }
   | { type: "adopt"; record: StallRecord };
@@ -153,6 +160,10 @@ export interface StallMachine {
     string,
     { payload: MainThreadStallDraft; deliveredTo: string | null }
   >;
+  /**
+   * Worker clock of the clock's last beat — a tick, or its start. Null while
+   * the clock is stopped: a tick then is a wiring bug, not a beat.
+   */
   lastTick: number | null;
   readonly newId: () => string;
 }
@@ -243,6 +254,9 @@ export function step(m: StallMachine, ev: StallEvent): StallEffect[] {
       break;
     case "tick":
       onTick(m, ev.now, out);
+      break;
+    case "clock-started":
+      m.lastTick = ev.now;
       break;
     case "clock-stopped":
       m.lastTick = null;
@@ -380,10 +394,16 @@ function onGone(
 
 function onTick(m: StallMachine, now: number, out: StallEffect[]): void {
   const last = m.lastTick;
+  if (last === null)
+    throw new Error(
+      "main-thread-stall watchdog: a tick with the clock stopped — clock-started must precede the first tick",
+    );
   m.lastTick = now;
-  if (last !== null && now - last > STALL.PING_MS + STALL.SLEEP_LATE_MS) {
-    // The worker's own clock stalled: the machine slept or the host froze.
-    // Every tab looks stale for that reason alone — reset, file nothing.
+  if (now - last > STALL.PING_MS + STALL.SLEEP_LATE_MS) {
+    // The worker's own clock stalled: the machine slept, the host froze, or
+    // the browser suspended the worker (a phone resuming a tab — the first
+    // tick after the clock started counts too). Every tab looks stale for
+    // that reason alone — reset, file nothing.
     out.push({
       type: "log",
       line: { kind: "sleep", lateMs: now - last - STALL.PING_MS },

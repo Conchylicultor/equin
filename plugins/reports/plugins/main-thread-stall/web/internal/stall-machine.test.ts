@@ -71,6 +71,9 @@ function run(
   alive: string[],
 ): StallEffect[] {
   const out: StallEffect[] = [];
+  // The worker starts its clock before the first tick (a beat before it).
+  if (m.lastTick === null)
+    out.push(...step(m, { type: "clock-started", now: from - STALL.PING_MS }));
   for (let t = from; t <= to; t += STALL.PING_MS) {
     out.push(...step(m, { type: "tick", now: t }));
     for (const p of alive)
@@ -581,10 +584,65 @@ describe("noise", () => {
       portId: "a",
       tab: tab("A"),
       frozen: false,
-      now: T0 + 60_000,
+      now: T0 + 59_000,
     });
+    step(m, { type: "clock-started", now: T0 + 59_000 });
     const fx = step(m, { type: "tick", now: T0 + 60_000 });
     expect(of(fx, "log").some((l) => l.line.kind === "sleep")).toBe(false);
+  });
+
+  test("a tick with the clock stopped is a wiring bug", () => {
+    const m = machine();
+    attach(m, "a", tab("A"));
+    expect(() => step(m, { type: "tick", now: T0 + 1000 })).toThrow(
+      /clock-started/,
+    );
+  });
+
+  // report-1795091821-xwqzky: a phone tab back in view after 7.3 h hidden
+  // posts `visible` (the clock starts), then the worker is suspended again;
+  // its FIRST tick lands 16 s late. The tab's silence was the worker's.
+  test("a first tick late after the clock starts is a sleep, not a freeze", () => {
+    const m = machine();
+    attach(m, "a", tab("A", { visible: false }));
+    step(m, {
+      type: "state",
+      portId: "a",
+      tab: tab("A"),
+      frozen: false,
+      now: T0,
+    });
+    expect(needsClock(m)).toBe(true);
+    step(m, { type: "clock-started", now: T0 });
+    // The tab, thawed, runs its socket's close handlers meanwhile.
+    mark(m, "a", T0 + 12_700, "ws-reconnect-scheduled");
+    const fx = step(m, { type: "tick", now: T0 + 16_263 });
+    expect(of(fx, "log").some((l) => l.line.kind === "sleep")).toBe(true);
+    expect(m.incidents.size).toBe(0);
+    run(m, T0 + 16_265, T0 + 30_000, ["a"]);
+    expect(m.incidents.size).toBe(0);
+    expect(m.outbox.size).toBe(0);
+  });
+
+  test("a tab that freezes right after the clock starts is still reported", () => {
+    const m = machine();
+    attach(m, "a", tab("A", { visible: false }));
+    step(m, {
+      type: "state",
+      portId: "a",
+      tab: tab("A"),
+      frozen: false,
+      now: T0,
+    });
+    step(m, { type: "clock-started", now: T0 });
+    // The worker ticks on time; the tab never answers for 16 s.
+    run(m, T0 + 1000, T0 + 16_000, []);
+    expect(m.incidents.size).toBe(1);
+    run(m, T0 + 17_000, T0 + 20_000, ["a"]);
+    expect(m.incidents.size).toBe(0);
+    const [filed] = [...m.outbox.values()];
+    expect(filed?.payload.ended).toBe("recovered");
+    expect(filed?.payload.durationMs).toBe(17_000);
   });
 
   test("a hidden tab that goes quiet is logged once, never reported", () => {

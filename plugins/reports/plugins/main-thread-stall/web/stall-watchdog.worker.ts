@@ -106,6 +106,9 @@ function boot(): void {
   function syncClock(): void {
     const want = needsClock(machine);
     if (want && timer === null) {
+      // The start is the first tick's reference: a first tick that comes late
+      // (this worker suspended meanwhile) is a sleep, not a frozen tab.
+      apply(step(machine, { type: "clock-started", now: Date.now() }));
       timer = setInterval(
         () => feed({ type: "tick", now: Date.now() }),
         STALL.PING_MS,

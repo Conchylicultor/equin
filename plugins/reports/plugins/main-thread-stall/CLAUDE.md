@@ -24,7 +24,7 @@ in flight.
 
 `web/internal/stall-machine.ts` is a reducer over `attach / state / pong /
 frame / mark / mark-end / interaction / interaction-end / gone / tick /
-clock-stopped / filed / adopt` returning effects
+clock-started / clock-stopped / filed / adopt` returning effects
 (`ping / persist / forget / deliver / log`); the worker only carries them out.
 All rules live (and are tested) there:
 
@@ -42,7 +42,15 @@ All rules live (and are tested) there:
   Chromium never announces) does (`infra/mcp/browser` core `freezeTab`), so
   its idle tabs are not filed (the 35.8 s and 254.9 s "stalls" of 2026-11-15;
   `e2e/freeze.ts` case 1c).
-- **Sleep**: a worker tick > 3 s late resets every tab and drops open stalls.
+- **Sleep**: a worker tick > 3 s late resets every tab and drops open stalls
+  — the first tick after the clock starts included: the start is its
+  reference (`clock-started`). A phone resuming a tab after hours hidden
+  thaws the tab, which posts `visible` (starting the clock), and the worker
+  is suspended again before its first tick; that tick came 16 s late with no
+  reference, and the tab's silence was filed as a 16.3 s freeze
+  (report-1795091821-xwqzky: `frozenIn` begun 12.7 s after the last sign of
+  life, so no tick ran in between; its last heap reading was 7.3 h old — the
+  moment the analytics saw it hidden).
 - **Cohort**: tabs silent within 1.5 s of each other froze together (one
   renderer): one incident, the focused visible tab primary, the others
   `cohort[]`; they stay `covered` (no second incident) until they answer.
