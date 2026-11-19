@@ -16,25 +16,25 @@ import { TaskHistoryDaySchema, tasksHistory } from "../../shared/values";
 async function loadHistory() {
   return executeRows(db, {
     label: "stats.tasks.history",
+    // ONE pass over tasks_v: each task row fans out into its (up to three)
+    // events through a VALUES list. The view derives every task's status
+    // from its attempts, pushes and conversations (~100 ms for ~9k tasks); a
+    // UNION of four selects over it evaluated it four times (0.5–0.7 s,
+    // report-1795095247-rouu7t) on every task, attempt or push write.
     query: sql`
       SELECT date, SUM(added)::int AS added, SUM(completed)::int AS completed,
              SUM(dropped)::int AS dropped
-        FROM (
-          SELECT created_at AS at, 1 AS added, 0 AS completed, 0 AS dropped
-            FROM ${tasksView}
-          UNION ALL
-          SELECT finished_at, 0, 1, 0
-            FROM ${tasksView} WHERE status = 'done' AND finished_at IS NOT NULL
-          UNION ALL
-          SELECT dropped_at, 0, 0, 1
-            FROM ${tasksView} WHERE status = 'dropped' AND dropped_at IS NOT NULL
-          UNION ALL
-          SELECT held_at, 0, 0, 1
-            FROM ${tasksView} WHERE status = 'held' AND held_at IS NOT NULL
-        ) events
+        FROM ${tasksView} t
+        CROSS JOIN LATERAL (VALUES
+          (t.created_at, 1, 0, 0),
+          (CASE WHEN t.status = 'done' THEN t.finished_at END, 0, 1, 0),
+          (CASE WHEN t.status = 'dropped' THEN t.dropped_at
+                WHEN t.status = 'held' THEN t.held_at END, 0, 0, 1)
+        ) AS e(at, added, completed, dropped)
         CROSS JOIN LATERAL (
-          SELECT to_char(events.at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS date
+          SELECT to_char(e.at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS date
         ) d
+       WHERE e.at IS NOT NULL
        GROUP BY date
        ORDER BY date`,
     row: TaskHistoryDaySchema,

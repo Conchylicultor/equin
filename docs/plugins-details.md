@@ -54157,13 +54157,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-xs`
               - `ui/tokens/shape --spacing`
-            - Imported by: 22 plugins — full list in [`plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md)
+            - Imported by: 23 plugins — full list in [`plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md)
               - `apps` ×8
               - `primitives` ×7
               - `conversations` ×4
               - `apps-core/tab-surface`
               - `layouts/miller`
               - `page/editor`
+              - `stats`
           - Exemptions:
             - Exempts itself from:
               - `scroll-safety/no-adhoc-scroll-write` — `web` (sanctioned)
@@ -54298,7 +54299,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/sortable-list`
           - Web:
             - Exports (values): `isChromeGesture`
-        - **`in-view`** — The one sanctioned home for new IntersectionObserver: createInViewWatcher(onChange, options) is the DOM layer, owning the WeakSet enrollment rule so a re-enrollment pass costs nothing, and useInView(target, onChange, {deps}) is the React layer — observes one element, hands the most recent entry of each batch to a stabilised callback, and rebuilds the observer only when deps change (the rebuild is what re-delivers against a still-intersecting element).
+        - **`in-view`** — The one sanctioned home for new IntersectionObserver: createInViewWatcher(onChange, options) is the DOM layer, owning the WeakSet enrollment rule so a re-enrollment pass costs nothing, and useInView(target, onChange, {deps}) is the React layer — observes one element, hands the most recent entry of each batch to a stabilised callback, and rebuilds the observer only when deps change (the rebuild is what re-delivers against a still-intersecting element). <MountWhenNear fallback scrollRoot?> mounts a heavy section only once its box nears the visible part of its scroller, then keeps it (a dashboard pays for what is on screen, not for every section below the fold).
           - Web:
             - Uses: `primitives/latest-ref.useEventCallback`
             - Exports (types):
@@ -54306,8 +54307,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `InViewRoot`
               - `InViewTarget`
               - `InViewWatcher`
+              - `MountWhenNearProps`
             - Exports (values):
               - `createInViewWatcher`
+              - `MountWhenNear`
               - `useInView`
           - Cross-plugin:
             - Imported by:
@@ -54327,6 +54330,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/dom/auto-scroll`
               - `primitives/outline/scroll-spy`
               - `primitives/pane`
+              - `stats`
           - Exemptions:
             - Exempts itself from:
               - `intersection-observer-safety/no-raw-intersection-observer` — `web/internal/in-view.ts` (sanctioned)
@@ -55718,7 +55722,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 241 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 242 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×72
           - `conversations` ×26
           - `ui` ×24
@@ -55749,6 +55753,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `music/background`
           - `screenshot`
           - `search/quick-find`
+          - `stats`
           - `tag-tree/picker`
     - **`log-channels`** — Persistent log-channel substrate: clientLog browser emitter that buffers and flushes log lines over plain HTTP to the per-worktree JSONL files. Server barrel owns Log/persist/registry and the /api/logs/emit + /ws/logs routes; debug/logs is the viewer.
       - Server:
@@ -62202,6 +62207,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/css/surface.Surface`
       - `primitives/css/text.Text`
       - `primitives/css/toggle-chip.ToggleChip`
+      - `primitives/dom/auto-scroll.findScrollParent`
+      - `primitives/dom/in-view.MountWhenNear`
+      - `primitives/loading.Loading`
       - `primitives/pane.defineRoute`
       - `primitives/pane.Pane`
       - `primitives/pane.PaneChrome`
@@ -62215,6 +62223,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Uses tokens:
       - `ui/tokens/color-palette --muted-foreground`
       - `ui/tokens/density --space-lg`
+      - `ui/tokens/shape --spacing`
     - Imported by:
       - `stats/commits`
       - `stats/cost`
@@ -68229,7 +68238,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 417 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 418 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×97
               - `apps` ×80
               - `primitives` ×62
@@ -68243,9 +68252,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reorder` ×6
               - `apps-core` ×5
               - `companions` ×5
+              - `stats` ×5
               - `review` ×4
               - `shell` ×4
-              - `stats` ×4
               - `build` ×3
               - `active-data` ×2
               - `backup` ×2

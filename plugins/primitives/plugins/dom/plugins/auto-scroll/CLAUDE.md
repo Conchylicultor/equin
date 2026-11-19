@@ -291,13 +291,14 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
   - Uses tokens:
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --spacing`
-  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 23 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×8
     - `primitives` ×7
     - `conversations` ×4
     - `apps-core/tab-surface`
     - `layouts/miller`
     - `page/editor`
+    - `stats`
 - Exemptions:
   - Exempts itself from:
     - `scroll-safety/no-adhoc-scroll-write` — `web` (sanctioned)

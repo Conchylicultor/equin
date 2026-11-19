@@ -27,6 +27,9 @@
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
+    - `primitives/dom/auto-scroll.findScrollParent`
+    - `primitives/dom/in-view.MountWhenNear`
+    - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
@@ -40,6 +43,7 @@
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/density --space-lg`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `stats/commits`
     - `stats/cost`

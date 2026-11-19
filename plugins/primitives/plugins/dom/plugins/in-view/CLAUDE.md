@@ -22,6 +22,18 @@ primitive.
   time; nothing resolved means nothing is built. `onChange` is stabilised
   internally, so the observer never re-subscribes on closure churn.
 
+- `<MountWhenNear fallback rootMargin? scrollRoot?>` → mounts `children` once
+  its box first comes near the visible part of its scroller, then keeps them
+  (a one-way latch — the content's state survives scrolling away). For a long
+  surface stacking heavy independent sections (Stats' charts): opening it costs
+  what is on screen, not every section below the fold, and an unmounted
+  section's reads never start. `scrollRoot` resolves the scroller from the box
+  (pass auto-scroll's `findScrollParent`): a `rootMargin` only widens the
+  ROOT's box, so with the viewport as root an inner scroller's clip would cancel
+  it. Give `fallback` about the content's height — a short one brings every
+  later box near at once. A section not mounted yet is missed by find-in-page
+  and print. Not a virtualizer (see `primitives/virtual-rows`).
+
 There is deliberately **no** `useIsInView(): boolean`. Both single-element
 consumers write to a ref rather than to state precisely so a scroll costs no
 render; a boolean form would have no caller and would invite one.
@@ -55,7 +67,7 @@ allowlisting a copy.
 
 ## Plugin reference
 
-- Description: The one sanctioned home for new IntersectionObserver: createInViewWatcher(onChange, options) is the DOM layer, owning the WeakSet enrollment rule so a re-enrollment pass costs nothing, and useInView(target, onChange, {deps}) is the React layer — observes one element, hands the most recent entry of each batch to a stabilised callback, and rebuilds the observer only when deps change (the rebuild is what re-delivers against a still-intersecting element).
+- Description: The one sanctioned home for new IntersectionObserver: createInViewWatcher(onChange, options) is the DOM layer, owning the WeakSet enrollment rule so a re-enrollment pass costs nothing, and useInView(target, onChange, {deps}) is the React layer — observes one element, hands the most recent entry of each batch to a stabilised callback, and rebuilds the observer only when deps change (the rebuild is what re-delivers against a still-intersecting element). <MountWhenNear fallback scrollRoot?> mounts a heavy section only once its box nears the visible part of its scroller, then keeps it (a dashboard pays for what is on screen, not for every section below the fold).
 - Web:
   - Uses: `primitives/latest-ref.useEventCallback`
   - Exports (types):
@@ -63,8 +75,10 @@ allowlisting a copy.
     - `InViewRoot`
     - `InViewTarget`
     - `InViewWatcher`
+    - `MountWhenNearProps`
   - Exports (values):
     - `createInViewWatcher`
+    - `MountWhenNear`
     - `useInView`
 - Cross-plugin:
   - Imported by:
@@ -84,6 +98,7 @@ allowlisting a copy.
     - `primitives/dom/auto-scroll`
     - `primitives/outline/scroll-spy`
     - `primitives/pane`
+    - `stats`
 - Exemptions:
   - Exempts itself from:
     - `intersection-observer-safety/no-raw-intersection-observer` — `web/internal/in-view.ts` (sanctioned)

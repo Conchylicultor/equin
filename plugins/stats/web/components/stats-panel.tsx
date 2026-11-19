@@ -2,6 +2,9 @@ import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
+import { MountWhenNear } from "@plugins/primitives/plugins/dom/plugins/in-view/web";
+import { findScrollParent } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Stats } from "../slots";
 import { StatsProvider, useShowEmptyDays } from "./stats-context";
 
@@ -44,7 +47,17 @@ function StatsContent() {
               <Surface level="raised" as="section" className="p-lg">
                 <Stack gap="lg">
                   <Text as="h2" variant="label">{item.title}</Text>
-                  <item.component />
+                  {/* A card's charts mount only once it nears the screen: drawn
+                      all at once, the ~20 charts below the fold made opening
+                      Stats a 0.5–2.5 s frame, and started every card's reads. */}
+                  <MountWhenNear
+                    scrollRoot={findScrollParent}
+                    fallback={
+                      <Loading variant="block" className="h-72 w-full" />
+                    }
+                  >
+                    <item.component />
+                  </MountWhenNear>
                 </Stack>
               </Surface>
             )}
