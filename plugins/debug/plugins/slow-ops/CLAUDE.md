@@ -89,8 +89,9 @@ all or it is charged to the op that owns it:
 
 | Excluded | Where it is measured | Who owns it |
 |---|---|---|
-| A server span's gate waits (`waitMs`) | `slowSpanMs` (resolve-threshold.ts), every kind | The gate. A `queue` wait at or past `loaderMs` files `wait <layer>` (`onSlowWait`): one row per gate, its waiters as callers. Waits each under the bar are summed: a wait not filed is residue, kept on the innermost open entry and offered as one wait (their sum capped at the entry's union on the gate — overlapping waiters cost it their union; the `waitCount` measure says how many) when it closes, the entry its caller, then handed unfiled to the nearest open ancestor — so 40 queries × 150 ms on `db-acquire` is one 6 s `wait db-acquire`, filed once. Residue leaving the top of its chain unfiled is laid on the gate's timeline (runtime-profiler `addGateBusy`): the waits of independent ops join into busy stretches — time the gate's queue held without a break — and a stretch is judged on its length, the time a burst took to drain, against the same `loaderMs` bar as one op's wait; filed at most once per stretch (variant `queue held across ops`, the longest waiter its caller, `longestWaitMs` the longest any one op queued in it). Never a sum across waiters: the 60 s window it replaced (summed wait ÷ 60 s, mean depth ≥ 0.25) fired on nearly every restart of main — one ~0.5 s replay burst of ~250 reads sums to 15–20 s while no reader waited 1 s (replay of main, 2026-11-12 13:00 → 11-14: 108 of 108 window firings were one restart's burst, longest single wait 0.18–1.8 s, none a 2 s stretch; the 11-08 restart loop still files — 13 of its 45 trips show a ≥ 2 s stretch or wait). Before that (2026-11-12) the window was judged on the per-op bar and a boot storm re-filed every 2 s of it, 20–360 times per boot. A `join` wait (an identical run in flight) is that run's, which reports itself. |
+| A server span's gate waits (`waitMs`) | `slowSpanMs` (resolve-threshold.ts), every kind | The gate. A `queue` wait at or past `loaderMs` files `wait <layer>` (`onSlowWait`): one row per gate, its waiters as callers. Waits each under the bar are summed: a wait not filed is residue, kept on the innermost open entry and offered as one wait (their sum capped at the entry's union on the gate — overlapping waiters cost it their union; the `waitCount` measure says how many) when it closes, the entry its caller, then handed unfiled to the nearest open ancestor — never back to any op as its own time, filed or not (until 2026-11-19 an unfiled residue was added back to the entry's own: during main's restarts a `loader prototypes.list` was filed at 2.78 s "own" of which 1.62 s was `read-admit` queue) — so 40 queries × 150 ms on `db-acquire` is one 6 s `wait db-acquire`, filed once. Residue leaving the top of its chain unfiled is laid on the gate's timeline (runtime-profiler `addGateBusy`): the waits of independent ops join into busy stretches — time the gate's queue held without a break — and a stretch is judged on its length, the time a burst took to drain, against the same `loaderMs` bar as one op's wait; filed at most once per stretch (variant `queue held across ops`, the longest waiter its caller, `longestWaitMs` the longest any one op queued in it). Never a sum across waiters: the 60 s window it replaced (summed wait ÷ 60 s, mean depth ≥ 0.25) fired on nearly every restart of main — one ~0.5 s replay burst of ~250 reads sums to 15–20 s while no reader waited 1 s (replay of main, 2026-11-12 13:00 → 11-14: 108 of 108 window firings were one restart's burst, longest single wait 0.18–1.8 s, none a 2 s stretch; the 11-08 restart loop still files — 13 of its 45 trips show a ≥ 2 s stretch or wait). Before that (2026-11-12) the window was judged on the per-op bar and a boot storm re-filed every 2 s of it, 20–360 times per boot. A `join` wait (an identical run in flight) is that run's, which reports itself. |
 | A span's time inside an enclosed op already filed (`claims`) | `slowSpanMs` over the profiler's `excludedMs` | That op, filed once (see "One cause, one report"). |
+| A server span's child ops (`child ops`: a `sub`'s loader, a `flush`'s pushes, a job's tracked work), filed or not | `slowSpanMs` over the profiler's `excludedMs` (each entry's executions, unioned into its nearest open parent — runtime-profiler, "Own time") | Each child, judged on its own span. Before (2026-11-19), a child under its bar was its parent's own time: 694 `sub` traces in main's restart windows over 7 days were their loader's time (27 remain own-slow); every `flush` trace (29) was its pushes'. |
 | A server leaf's time on a blocked event loop (`event-loop`) | runtime-profiler's `noteLoopTurn` (health-monitor's 100 ms probe) or `noteLoopObserved` (a database reply read while the probe is overdue), charged by `recordSpan` to a plain leaf (a query) | The stall: its answer sat unread. A stall ≥ 3 s is filed with its stacks (`event-loop-stall`); shorter ones are on Debug → Health. Entries are not charged. |
 | A delivery's wait on its flush's filed ops, and its `throttle-hold` | `deliver:<key>` is a latency leaf (`recordSpan(…, { latency: true })`) | The filed op; the hold is declared. |
 | A delivery's own load's `join` waits (a watched memo's pass, a flight it coalesced onto) | the leaf's `joinsOf: push <key>` (runtime-profiler, "Joins") | The joined run, judged on its own span (a `bg` watcher pass). |
@@ -165,10 +166,20 @@ only waited in the same cycle) and four client `update`s. Now:
 
 - **The innermost slow op is filed; what encloses it is judged without it.**
   The install hook calls the profiler's `claim()` on every span it files, and
-  the profiler takes that span's interval off every open enclosing entry
-  (`excludedMs`, `claims` — runtime-profiler, "Claims"). The row's `waits` name
-  the claimed op as a layer (`loader edited-files 2600`), so an enclosing span
-  still filed shows what was taken off.
+  the profiler takes that span's interval off the nearest open enclosing entry
+  (`excludedMs`; every entry above excludes that one whole as a child op) and
+  names it on each (`claims` — runtime-profiler, "Claims", "Own time"). The
+  row's `waits` name the claimed op as a layer (`loader edited-files 2600`)
+  and the child ops (`child ops`), so an enclosing span still filed shows what
+  was taken off. Layers overlap (a claimed loader is also a child op), so the
+  list's Wait column, their sum, can read past the duration.
+- **A child op is its own op, filed or not.** Its time is never its parent's
+  own, so a parent made of many children each under the bar files nothing:
+  a `flush` of thirty 150 ms pushes, a job running a hundred tracked steps.
+  That is the cost of one cause, one report — the parent did no slow work.
+  The latency it adds is judged where someone waited on it: a delivery's
+  `deliver:<key>` and its `flush-queue`, a tab's `element` / `update`, a job's
+  wall-clock `job-deadline-exceeded` (deadline-audit).
 - **A delivery is a latency, not work.** `deliver:<key>` subtracts its declared
   `throttle-hold` and the claims its flush collected inside its window; it is
   filed only when slow for a reason nothing else reported, so it stays the
@@ -207,9 +218,11 @@ only waited in the same cycle) and four client `update`s. Now:
   past 64 KB in flight.
 - **Only a reader's wait is the gate's** (`isReaderWait`,
   resolve-threshold.ts). A wait whose one waiter is a `bg` span (a warm-up, a
-  watcher pass, a build's slot holder) is declined, so the recorder hands it
-  back as that op's residue: judged with its own time on its own bar, filed as
-  `bg <label>` if slow. A busy stretch is filed only when some non-`bg` op
+  watcher pass, a build's slot holder) is declined: no reader waited on it.
+  It climbs on as residue like any unfiled wait, and is never that op's own
+  time either, so a warm-up slow only because the worker or git child it
+  awaited was slow files nothing (`reader-wait.test.ts`) — until a reader
+  waits on the same gate, which files `wait <layer>`. A busy stretch is filed only when some non-`bg` op
   queued in it (`GateBusyWait.waiterKinds`). A loader, `sub`, `http`, flush or
   job waiting is still `wait <layer>` (`reader-wait.test.ts`).
 - **A warm-up is judged once**, here, on its `bg` span (against its declared

@@ -35,6 +35,8 @@ A wait is charged as it ends (a `beginWait` handle's end, a gate's `onWait` —
 see *Waits in progress* below); the interval `[now − ms, now]` propagates to **every open ancestor entry** (innermost included) up the
 live `EntryContext.parent` chain, so a composite span like a `flush` draining many loaders
 names the gates its subtree waited on rather than showing huge wall-clock with empty `waits`.
+(These are the *display* unions. What an op is judged on, `excludedMs`, takes direct items
+only — see *Own time* below.)
 
 The load-bearing math is the **interval-union** (`Track`, per ancestor): a flush
 drains loaders concurrently, so *summing* child waits into an ancestor could exceed its
@@ -242,16 +244,53 @@ one report about the gate, not one per waiting resource. `Aggregate.totalMs`
 stays the WALL sum: a view, never a cost to judge. See
 `research/2026-07-02-global-profiler-wait-propagation.md`.
 
-### Unfiled residue is the entry's own (`residueMs`)
+### Own time — what a span is judged on (`excludedMs`)
 
-A closing entry offers each gate's residue (its unfiled queue/io waits,
-summed) to `onSlowWait` FIRST; what no subscriber filed comes off
-`excludedMs` (`SlowSpan.residueMs`), so the entry is judged on own +
-unreported waits against its own bar. Filed, it takes the residue (not handed
-on); unfiled, the residue climbs to the nearest open ancestor, then the
-gate's busy timeline. Without it, 0.6 s own + a 1.5 s wait at a 2 s bar filed
-nothing: each part was judged alone. Invariant: a wait taken off one op's
-report is reported for that op (or an enclosing one) at the same bar.
+A monitor judges a span on `durationMs − excludedMs`. An entry's
+`excludedUnion` holds, as an interval union over its own timeline:
+
+- **every wait it made itself, filed or not** (it was the innermost open
+  entry): a queue is the gate's, an `io` wait the disk's or child's, a join
+  the joined run's;
+- **its direct child ops' executions, filed or not** — each child is judged on
+  its own span (slow-ops shows them as the `child ops` layer);
+- **claims on it** (an enclosed leaf filed as its own slow op).
+
+Direct items only: a deeper wait lies inside a child's execution, which the
+child hands its parent whole as it closes. So the track holds a few long
+intervals, never a subtree's thousands of short ones. When every ancestor
+unioned every wait, a loader's file calls filled its `sub`'s track past
+`TRACK_SPAN_CAP`. The frozen floor then clipped the loader's interval charged
+at its end, and `sub prototypes.list` filed 3.2 s "of its own" around its
+3.5 s loader (main, 2026-11-19).
+
+A child that is still running when its parent closes (a race, a deadline, a
+detached child) is excluded from the parent up to the parent's close
+(`openChildren`): its interval only arrives as it closes, after the parent
+recorded.
+
+The direct-only rule does not remove the `TRACK_SPAN_CAP` floor clip in every
+case. Clipping needs a long interval that started before 64 later, disjoint
+intervals of the same entry closed. That happens with concurrency only: a handler
+running a long child beside a loop of its own short waits. Clipped, the long
+child reads as the parent's own time: an over-report, never a hidden one.
+
+**Unfiled waits are never own time.** A closing entry offers each gate's
+residue (its unfiled queue/io waits, summed) to `onSlowWait`. What no
+subscriber filed climbs to the nearest open ancestor, then the gate's busy
+timeline. It is never added back to an op's own time. It used to be
+(`residueMs`, 2026-11-14 → 11-19): during main's restart replay every read
+queued on `read-admit`, and a `loader prototypes.list` filed at 2.78 s "own"
+was 1.62 s queue + 0.13 s file stats + ~1 s of gaps. The waits a report took
+off stay on its row as layers.
+
+**What remains is not all CPU.** Own time is the span's code, its leaves
+(queries: its work) and awaits nothing meters. It also includes the time its
+continuations sat behind other ops' turns on a busy event loop: no
+per-context turn signal exists to tell those apart (see *Event-loop stalls*).
+During a restart replay that part dominates: on main (2026-11-19 16:01),
+`prototypes.list`'s ~1 s of gaps against ~0.1–0.2 s of its own code (thread
+ledger), on a thread busy ~9 s of that minute.
 
 The gate's busy stretch is a different measurement (`GateBusyWait`, `busy`
 set): the positions of independent ops' leftover waits (`QueueTally.spans`,
@@ -269,10 +308,10 @@ gate's meter (`GateMeter`, below) either way.
 ### Claims — one slow op, filed once (`excludedMs` / `claims`)
 
 An `onSlowSpan` handler gets `(span, claim)`. Calling `claim()` says "I filed
-this span as its own slow op": the recorder then unions the span's wall interval
-into every still-open enclosing entry — the same all-ancestor walk as a gate
-wait — on a per-claimant track (`<kind> <label>`), and into `excludedUnion`
-(waits ∪ claims). Each record carries `excludedMs` (that union, `≤ durationMs`)
+this span as its own slow op": the recorder then names it on every still-open
+enclosing entry, on a per-claimant track (`<kind> <label>`, the row's layer), and
+takes it off the own time (`excludedUnion`) of the nearest open one only — the
+entries above already exclude that one whole as a child op (see *Own time*). Each record carries `excludedMs` (`≤ durationMs`)
 and `claims` (per claimant); a monitor judges `durationMs − excludedMs`. So a
 slow loader is filed once, not again as its `push`, its `flush`, the watcher
 `bg` pass or the `http`/`sub` around it — an enclosing span is filed only when it

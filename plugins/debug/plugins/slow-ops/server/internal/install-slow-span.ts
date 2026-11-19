@@ -5,7 +5,7 @@ import {
   type SlowWait,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import { captureTrace } from "@plugins/debug/plugins/trace/plugins/engine/server";
-import { WAIT_KIND } from "../../shared/endpoints";
+import { CHILD_OPS_LAYER, WAIT_KIND } from "../../shared/endpoints";
 import { recordSlowOp } from "./record-slow-op";
 import {
   perfFloorMs,
@@ -50,19 +50,22 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
       // Every kind is judged on its OWN time (`durationMs − excludedMs`) — see
       // `slowSpanMs`. Time queued on a gate is the gate's, filed against it by
       // the `onSlowWait` subscription below; a `sub` that spent 7.7 s of 9 s
-      // queued on `read-admit` is not itself slow. Time inside an enclosed op
-      // already filed is that op's.
+      // queued on `read-admit` is not itself slow. Time inside a child op is
+      // that op's, judged on its own span.
       const ownMs = slowSpanMs(span);
       if (ownMs < threshold) return;
       // This span is the slow op: every span enclosing it (and a delivery that
       // waited on it) is judged without it, so it is filed once — here.
       claim();
-      // The row's layers: the gate waits, plus each filed op this span
-      // contained, named by the op — the time it was judged without.
-      const waits =
-        span.claims === undefined
-          ? span.waits
-          : { ...span.waits, ...span.claims };
+      // The row's layers — the time it was judged without, never hidden: the
+      // gate waits, its child ops' executions, and each filed op this span
+      // contained, named by the op.
+      const layers = {
+        ...span.waits,
+        ...(span.childMs > 0 && { [CHILD_OPS_LAYER]: span.childMs }),
+        ...span.claims,
+      };
+      const waits = Object.keys(layers).length > 0 ? layers : undefined;
       // 1. Evidence FIRST, synchronously: captureTrace's admission + the sync
       // coherent-instant capture must run before any await so the flight window
       // (open spans, gate occupancy) describes THIS trip's instant. Admission is
@@ -128,8 +131,9 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
   // feel, held to the loader bar — never a sum across waiters.
   waitDisposer = onSlowWait(
     (wait: SlowWait) => {
-      // A background op's own wait: not filed here, so it comes back to that
-      // op as residue and is judged with its own time (`isReaderWait`).
+      // A background op's own wait: no reader waited on it, so it is not
+      // filed here (`isReaderWait`); it climbs on as residue, never that op's
+      // own time.
       if (!isReaderWait(wait)) return false;
       const threshold = resolveWaitThreshold(wait, thresholds);
       if (wait.ms < threshold) return false;

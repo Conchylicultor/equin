@@ -1,7 +1,8 @@
 // Who a wait is filed for, through the real recorder: the handlers below are
 // install-slow-span's decisions (which waits are a reader's, which bar), so a
 // page's wait on a slow worker is still `wait <layer>`, while the same wait
-// under background work comes back to that op as its own time.
+// under background work is no one's latency: not filed against the gate, and
+// never that op's own time either (a wait is no op's work).
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { AsyncLocalStorage } from "node:async_hooks";
 import {
@@ -107,9 +108,9 @@ describe("a wait is filed as the gate's only for a reader", () => {
     ]);
   });
 
-  test("background work's wait is its own time, judged on its own bar", async () => {
+  test("background work's wait is neither the gate's report nor its own time", async () => {
     await waitOnWorker("bg", "first-build", 2500);
-    expect(filed).toEqual(["bg first-build own 2500"]);
+    expect(filed).toEqual([]);
   });
 
   test("a warm-up within its budget files nothing", async () => {
@@ -129,8 +130,8 @@ describe("a wait is filed as the gate's only for a reader", () => {
     expect(filed).toEqual(["wait worker:test-index 3000 by bg warmup:trees"]);
   });
 
-  test("a warm-up past its budget files itself, not the wait", async () => {
+  test("a warm-up past its budget only by waiting files nothing", async () => {
     await waitOnWorker("bg", "warmup:trees", 2500, 2000);
-    expect(filed).toEqual(["bg warmup:trees own 2500"]);
+    expect(filed).toEqual([]);
   });
 });

@@ -801,10 +801,11 @@ describe("queue residue — many small waits are reported against the gate", () 
     );
   });
 
-  // The own-time hole: a 0.6 s op that queued 1.5 s at a 2 s bar was judged
-  // in two halves — its own time (0.6 s) and its residue (1.5 s) — neither
-  // reaching the bar, so the 2.1 s op filed nothing anywhere.
-  describe("residue no gate report took is the entry's own", () => {
+  // A wait under every bar is a short wait, never work: no op takes it back
+  // as its own time. Until 2026-11-19 an unfiled residue was added back to the
+  // entry's own (`residueMs`); on main's restarts a `loader prototypes.list`
+  // was filed at 2.78 s "own" of which 1.62 s was `read-admit` queue.
+  describe("an unfiled wait is never an op's own time", () => {
     // Files every span whose own time (`durationMs − excludedMs`) reaches
     // `bar`, the way slow-ops' install hook does.
     function fileSpansOver(bar: number, filed: string[]) {
@@ -813,15 +814,39 @@ describe("queue residue — many small waits are reported against the gate", () 
           const own = span.durationMs - span.excludedMs;
           if (own < bar) return;
           claim();
-          filed.push(
-            `${span.kind}:${span.label} own ${own} residue ${span.residueMs ?? 0}`,
-          );
+          filed.push(`${span.kind}:${span.label} own ${own}`);
         },
         { thresholdMs: 0 },
       );
     }
 
-    test("0.6 s own + a 1.5 s wait at a 2 s bar files the op once", async () => {
+    test("a restart-replay load — 1.6 s queued, 1 s of its own — files nothing as the op", async () => {
+      const spans: string[] = [];
+      const waits: string[] = [];
+      const s = fileSpansOver(2000, spans);
+      const w = fileWaitsOver(2000, waits);
+      try {
+        await recordEntrySpan("sub", "prototypes.list", async () => {
+          await recordEntrySpan("loader", "prototypes.list", () => {
+            // Queued in many short turns, each under the bar.
+            for (let i = 0; i < 8; i++) {
+              waitsInARow("read-admit", 1, 200);
+              fakeNow += 125; // its own work between them
+            }
+          });
+        });
+      } finally {
+        s.dispose();
+        w.dispose();
+      }
+      expect(spans).toEqual([]);
+      const loader = getRuntimeProfile().slowest.loader[0]!;
+      expect(loader.durationMs).toBe(2600);
+      expect(loader.durationMs - loader.excludedMs).toBe(1000);
+      expect(loader.waits).toEqual({ "read-admit": 1600 });
+    });
+
+    test("an op slow on its own is filed on its own time, its waits beside it", async () => {
       const spans: string[] = [];
       const waits: string[] = [];
       const s = fileSpansOver(2000, spans);
@@ -830,42 +855,18 @@ describe("queue residue — many small waits are reported against the gate", () 
         await recordEntrySpan("sub", "s", async () => {
           await recordEntrySpan("loader", "l", () => {
             waitsInARow("read-admit", 1, 1500);
-            fakeNow += 600; // own work
+            fakeNow += 2100; // own work
           });
-        });
-        // The residue the loader's report took is not offered again: not by
-        // `s`, and not by the gate's busy timeline, however much more queues.
-        await recordEntrySpan("sub", "t", () => {
-          waitsInARow("read-admit", 1, 1900);
         });
       } finally {
         s.dispose();
         w.dispose();
       }
-      expect(spans).toEqual(["loader:l own 2100 residue 1500"]);
-      // `t`'s 1.9 s alone is under the bar, in the window alone.
+      expect(spans).toEqual(["loader:l own 2100"]);
       expect(waits).toEqual([]);
     });
 
-    test("a residue filed by its gate is not counted as the op's too", async () => {
-      const spans: string[] = [];
-      const waits: string[] = [];
-      const s = fileSpansOver(2000, spans);
-      const w = fileWaitsOver(2000, waits);
-      try {
-        await recordEntrySpan("loader", "l", () => {
-          waitsInARow("db-acquire", 25, 100); // 2.5 s, filed against the gate
-          fakeNow += 600;
-        });
-      } finally {
-        s.dispose();
-        w.dispose();
-      }
-      expect(waits).toEqual(["db-acquire 2500 loader:l ×25"]);
-      expect(spans).toEqual([]);
-    });
-
-    test("unfiled, the residue still climbs to the ancestor", async () => {
+    test("unfiled, the residue climbs to the ancestor and is filed as the gate's", async () => {
       const spans: string[] = [];
       const waits: string[] = [];
       const s = fileSpansOver(2000, spans);
@@ -874,7 +875,7 @@ describe("queue residue — many small waits are reported against the gate", () 
         await recordEntrySpan("flush", "f", async () => {
           for (const key of ["a", "b"])
             await recordEntrySpan("loader", key, () => {
-              waitsInARow("read-admit", 1, 900);
+              waitsInARow("read-admit", 1, 1100);
               fakeNow += 100;
             });
         });
@@ -882,10 +883,10 @@ describe("queue residue — many small waits are reported against the gate", () 
         s.dispose();
         w.dispose();
       }
-      // Each loader: 1 s unreported. The flush: 1.8 s residue + 0.2 s own
-      // = 2 s, at the bar — filed by the flush, the gate's sum inside it.
-      expect(spans).toEqual(["flush:f own 2000 residue 1800"]);
-      expect(waits).toEqual([]);
+      // Each loader: 1.1 s queued, under the bar. Summed on the flush, 2.2 s
+      // — the gate's, never the flush's own (its loaders are child ops).
+      expect(spans).toEqual([]);
+      expect(waits).toEqual(["read-admit 2200 flush:f ×2"]);
     });
   });
 
@@ -945,7 +946,8 @@ describe("claims — a slow op filed once, by the innermost op that was slow", (
     const all = getRuntimeProfile().slowest;
     const flush = all.flush.find((s) => s.label === "flushNotifies")!;
     expect(flush.durationMs).toBe(2700);
-    expect(flush.excludedMs).toBe(2600);
+    // Its child op, the push (which holds the loader), is not its own time.
+    expect(flush.excludedMs).toBe(2650);
     expect(flush.claims).toEqual({ "loader edited-files": 2600 });
   });
 
@@ -969,7 +971,7 @@ describe("claims — a slow op filed once, by the innermost op that was slow", (
     expect(filed[1]!.excludedMs).toBe(500);
   });
 
-  test("an unfiled child claims nothing", async () => {
+  test("an unfiled child claims nothing, and is still not its parent's own time", async () => {
     const filed: SlowSpan[] = [];
     const sub = fileOver(1000, filed);
     try {
@@ -982,9 +984,69 @@ describe("claims — a slow op filed once, by the innermost op that was slow", (
     } finally {
       sub.dispose();
     }
-    expect(filed.map((s) => `${s.kind} ${s.label}`)).toEqual(["push p"]);
-    expect(filed[0]!.excludedMs).toBe(0);
-    expect(filed[0]!.claims).toBeUndefined();
+    // Before 2026-11-19 the push was filed at 1.2 s, its loader's 0.6 s
+    // included: 694 `sub` traces in main's restart windows over 7 days.
+    expect(filed).toEqual([]);
+    const push = getRuntimeProfile().slowest.push[0]!;
+    expect(push.excludedMs).toBe(600);
+    expect(push.claims).toBeUndefined();
+  });
+
+  test("a child still running as its parent closes is not the parent's own time", async () => {
+    const filed: SlowSpan[] = [];
+    const sub = fileOver(1000, filed);
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    let child!: Promise<void>;
+    try {
+      await recordEntrySpan("http", "GET /x", () => {
+        fakeNow += 100;
+        // A race / deadline: the handler answers while its loader still runs.
+        child = recordEntrySpan("loader", "l", async () => {
+          fakeNow += 1500;
+          chargeWait("read-admit", 1500, "queue"); // the loader's queue
+          await gate;
+        });
+      });
+      fakeNow += 200;
+      release();
+      await child;
+    } finally {
+      sub.dispose();
+    }
+    expect(filed).toEqual([]);
+    const http = getRuntimeProfile().slowest.http[0]!;
+    expect(http.durationMs).toBe(1600);
+    expect(http.durationMs - http.excludedMs).toBe(100);
+  });
+
+  test("a subtree's many waits never clip a child out of its parent's exclusion", async () => {
+    // main, 2026-11-19: a loader's file calls (more than TRACK_SPAN_CAP
+    // disjoint waits) were unioned into its `sub` too; the frozen floor then
+    // clipped the loader's interval, charged at its end, and the sub filed
+    // 3.2 s "of its own" around its 3.5 s loader.
+    const filed: SlowSpan[] = [];
+    const sub = fileOver(2000, filed);
+    try {
+      await recordEntrySpan("sub", "s", async () => {
+        fakeNow += 100; // the sub's own admission work
+        await recordEntrySpan("loader", "l", () => {
+          for (let i = 0; i < TRACK_SPAN_CAP * 2; i++) {
+            fakeNow += 10;
+            chargeWait("fs-stat", 2, "io");
+            fakeNow += 10; // own work between file calls
+          }
+          fakeNow += 900;
+        });
+      });
+    } finally {
+      sub.dispose();
+    }
+    // The loader: 128 × 18 ms + 900 ms of its own = 3.2 s, filed; the sub
+    // around it is its own 100 ms only.
+    expect(filed.map((s) => `${s.kind} ${s.label}`)).toEqual(["loader l"]);
+    const s = getRuntimeProfile().slowest.sub[0]!;
+    expect(s.durationMs - s.excludedMs).toBe(100);
   });
 
   test("a latency leaf is judged net of the claims inside its window", async () => {

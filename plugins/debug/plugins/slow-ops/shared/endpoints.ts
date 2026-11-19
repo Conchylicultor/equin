@@ -30,6 +30,10 @@ export const SLEEP_LAYER = "sleep";
 // main-thread-stall files as its own `main-thread` slow-op.
 export const STALL_LAYER = "main-thread-stall";
 
+// The layer a server span's direct child ops are shown under: their executions
+// (each judged on its own span, filed or not) are not the span's own time.
+export const CHILD_OPS_LAYER = "child ops";
+
 // The layer a client span's hidden time is charged to: the tab was in the
 // background (or frozen), where its timers, frames and callbacks are
 // throttled, so that part measures the browser, not the system.

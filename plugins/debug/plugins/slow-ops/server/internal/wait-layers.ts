@@ -1,5 +1,6 @@
 import type { SlowOpReportPayload } from "../../core";
 import {
+  CHILD_OPS_LAYER,
   HIDDEN_LAYER,
   SERVER_JOIN_LAYER,
   SLEEP_LAYER,
@@ -23,6 +24,8 @@ const WAIT_LAYER_HINTS: Readonly<Record<string, string>> = {
     "The server's answer waited on another run already in flight (a push it joined, a shared memo's pass) — not counted against this op; that run is judged on its own server span (a `bg` watcher pass, a `deliver:<key>`, a loader).",
   [HIDDEN_LAYER]:
     "The tab was hidden or frozen, where the browser throttles it — not counted against this op.",
+  [CHILD_OPS_LAYER]:
+    "Time inside the ops this one ran (a sub's loader, a flush's pushes, a job's tracked work) — not counted against this op: each is judged on its own span, and filed there when it was slow.",
   "event-loop":
     "This backend's event loop was blocked while the call was in flight, so its answer sat unread — not counted against this op (runtime-profiler's event-loop probe); a stall of 3 s or more is filed on its own (event-loop-stall).",
   "throttle-hold":

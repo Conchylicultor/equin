@@ -28,7 +28,8 @@ import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core"
 // orchestration/CPU). Gate waits propagate to EVERY open ancestor — not just
 // the innermost entry — so a composite span (e.g. a `flush` draining many
 // loaders) names the gates its subtree waited on instead of showing a huge
-// wall-clock with empty `waits`.
+// wall-clock with empty `waits`. (Those are display unions: what a span is
+// JUDGED on takes direct items only — see "Own time" below.)
 //
 // The load-bearing constraint is concurrency: a flush drains many loaders in
 // parallel, so SUMMING child waits into an ancestor can exceed the ancestor's
@@ -53,15 +54,41 @@ import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core"
 // under re-covering the same time range, so the same wait interval landing in
 // every level is exactly what makes each level's `waits` self-contained.
 //
+// ## Own time: what a span is judged on
+//
+// A monitor judges a span on `durationMs − excludedMs`, its OWN time. An
+// entry's `excludedUnion` holds the time that is not its own:
+//
+// - every wait it made itself (it was the innermost open entry), filed or not:
+//   a queue's time is the gate's, an `io` wait the disk's / child process's, a
+//   join the joined run's;
+// - its direct child ops' executions, filed or not: each child is judged on
+//   its own span, so its time is never its parent's too;
+// - the enclosed spans filed as slow ops of their own (claims — a leaf, here).
+//
+// Direct items only. A deeper wait is inside a child's execution, which the
+// child hands its parent whole as it closes — so each track holds a few long
+// intervals, never a subtree's thousands of short ones. (Unioned into every
+// ancestor, a loader's file calls filled its `sub`'s track past
+// `TRACK_SPAN_CAP`; the frozen floor then clipped the loader's interval
+// charged at its end, and `sub prototypes.list` filed 3.2 s "of its own"
+// around its 3.5 s loader — main, 2026-11-19.)
+//
+// What is left is the span's own code, its leaves (queries — its work), and
+// awaits nothing meters. Time its continuations sat behind OTHER ops' turns
+// on a busy event loop lands there too: the runtime gives no per-context turn
+// signal (Bun 1.4.4: `async_hooks` `init` / `before` never fire), so no part
+// of it can be told from the op's own synchronous work — see the CLAUDE.md
+// § Event-loop stalls.
+//
 // ## Claims: one slow op, filed once
 //
 // A span a slow-span subscriber FILES as its own slow op (`claim()`, see
-// `SlowSpanHandler`) is taken off the own time of every enclosing entry still
-// open — the same all-ancestor union walk as a gate wait, on a per-claimant
-// track, into `excludedUnion` (waits ∪ claims → `excludedMs`). So a slow loader
-// is reported once, not again as its `push`, its `flush` and the watcher pass
-// around them; an enclosing span is reported only when it was slow ON TOP of
-// what it contained. A latency leaf (`recordSpan(…, { latency: true })`, a
+// `SlowSpanHandler`) is taken off the own time of the nearest open entry
+// enclosing it (its ancestors exclude that entry whole), and kept on every
+// enclosing entry's per-claimant track (`claims`, naming it on their rows). So
+// a slow loader is reported once, not again as its `push`, its `flush` and the
+// watcher pass around them. A latency leaf (`recordSpan(…, { latency: true })`, a
 // delivery's first-notify → send) subtracts the claims its enclosing entry
 // collected inside its window: it waited on them, it did not do them.
 //
@@ -83,12 +110,12 @@ import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core"
 // upward like a child's execution interval: kept on the innermost open entry,
 // offered as one wait (its sum, the entry its caller) when that entry closes
 // (`offerQueueResidue`). So 40 queries × 150 ms is one 6 s wait, filed once,
-// by the innermost entry it is slow for. Still unfiled, it is the ENTRY's
-// again: judged with its own time against its bar (`SlowSpan.residueMs`), so
-// a 0.6 s op that queued 1.5 s at a 2 s bar is filed as the 2.1 s op it was —
-// a wait taken off one report is always reported somewhere at the same bar.
-// Only when that files nothing too is it handed to the nearest open ancestor
-// (`handResidueOn`), which judges it the same way. Residue that leaves the top of its
+// by the innermost entry it is slow for. Still unfiled, it is handed to the
+// nearest open ancestor (`handResidueOn`), which offers it again, summed with
+// its own — never added back to any op's own time: a wait under every bar is
+// a short wait, not work (main, 2026-11-19: a `loader prototypes.list` filed
+// at 2.78 s held 1.62 s of `read-admit` queue handed back as its own, during a
+// restart's replay). Residue that leaves the top of its
 // chain unfiled (each request waited a little) is laid on the gate's timeline
 // (`addGateBusy`), where the leftover waits of independent ops join into busy
 // stretches — time the gate's queue held without a break — each offered as the
@@ -287,22 +314,14 @@ export interface SlowSpan {
   /** durationMs − union(waits ∪ child executions): own orchestration/CPU. Leaves: durationMs. */
   selfMs: number;
   /**
-   * Union of the time that is not this span's own: its gate waits ∪ the
-   * intervals of enclosed spans already filed as slow ops of their own
-   * (`claims`). `≤ durationMs`. What a monitor judges is `durationMs −
-   * excludedMs` (see `onSlowSpan`'s `claim`) — less any {@link residueMs}.
+   * Union of the time that is not this span's own (`≤ durationMs`): every
+   * wait it made itself — filed or not — ∪ its direct child ops' executions
+   * (each judged on its own span, filed or not) ∪ the intervals of enclosed
+   * spans filed as slow ops of their own (`claims`). What a monitor judges is
+   * `durationMs − excludedMs` (see `onSlowSpan`'s `claim`): the span's own
+   * time. See "Own time" in the module header.
    */
   excludedMs: number;
-  /**
-   * Gate waits inside this span that no gate report covered: its queue
-   * residue left unfiled once offered to `onSlowWait` (`offerQueueResidue`).
-   * Already taken OFF `excludedMs` — a wait no report holds stays this span's
-   * to report, so time subtracted from it is always reported somewhere at the
-   * same bar. Filed, the span takes it (the residue goes no further); unfiled,
-   * it moves on to the nearest open ancestor, then the gate's busy timeline. Absent
-   * when none.
-   */
-  residueMs?: number;
   /**
    * Time this span spent inside enclosed ops that were filed as their own slow
    * op, by claimant (`<kind> <label>` → ms, a union per claimant). For a
@@ -367,8 +386,9 @@ export interface EntryCost {
 
 /**
  * A slow-span subscriber. `claim()` says "I filed this span as its own slow
- * op": its wall interval is then taken off the own time of every enclosing
- * entry still open (and of a latency leaf recorded under one), so one slow
+ * op": its wall interval is then taken off the own time of the nearest
+ * enclosing entry still open (whose ancestors exclude that entry whole), and
+ * of a latency leaf recorded under one, so one slow
  * operation is filed once — by the innermost op that was slow — not again by
  * every span that merely contained it. Call it synchronously.
  */
@@ -767,8 +787,20 @@ export interface EntryContext {
   busyUnion: Track;
   /** Union of direct-child entry execution intervals → `childMs`. */
   childUnion: Track;
-  /** Union of gate waits ∪ claims → `excludedMs`. */
+  /**
+   * What is not this entry's own time → `excludedMs` (see "Own time"): the
+   * waits it made itself, its direct child ops' executions, and the claims on
+   * it — direct items only, unlike `waitUnion` / `layerUnions`, which union
+   * every wait of the subtree.
+   */
   excludedUnion: Track;
+  /**
+   * Direct child entries still running, so an entry closing before one of
+   * them (a race, a deadline, a detached child) excludes the part of the
+   * child it overlapped — the child hands its interval over only as it
+   * closes. Lazily created.
+   */
+  openChildren?: Set<EntryContext>;
   /**
    * Waits still IN PROGRESS in this entry's subtree (`beginWait`): registered
    * on the waiting entry and every open ancestor, removed when the wait ends.
@@ -2111,8 +2143,6 @@ function record(
   /** The innermost open entry a filed claim starts at (see `claimEnclosing`). */
   claimFrom?: EntryContext,
   latency?: boolean,
-  /** Unfiled queue residue, already off `excludedMs` (see `SlowSpan.residueMs`). */
-  residueMs?: number,
 ): boolean {
   if (profilingDisabled()) return false;
   // Drop spans produced inside a runWithoutProfiling scope before any aggregate,
@@ -2275,7 +2305,6 @@ function record(
       selfMs,
       excludedMs,
       ...(claims && { claims }),
-      ...(residueMs !== undefined && residueMs > 0 && { residueMs }),
       ...(latency && { latency: true as const }),
       detail,
       ...(budgetMs !== undefined && { budgetMs }),
@@ -2371,8 +2400,9 @@ function handJoinsUp(ctx: EntryContext, bands: readonly WaitBand[]): void {
 
 /**
  * Take `[start, end]` — a span just filed as its own slow op — off the own time
- * of every open entry from `from` up: each unions it into its per-claimant
- * track and its `excludedUnion`, and keeps the interval as a positioned band
+ * of the nearest open entry from `from` up (its `excludedUnion`), and name it
+ * on every open entry above: each unions it into its per-claimant track and
+ * keeps the interval as a positioned band
  * for latency leaves. Arrives end-ordered (the span just ended), like
  * `chargeWait`. Closed entries are skipped: their records are final.
  */
@@ -2382,6 +2412,11 @@ function claimEnclosing(
   start: number,
   end: number,
 ): void {
+  // Only the nearest open entry takes the claim off its own time: every entry
+  // above it already excludes that entry's whole execution as a child op (see
+  // "Own time"). Charging each ancestor too would only add a long reach-back
+  // interval to tracks that may have frozen their floor past its start.
+  const holder = nearestOpen(from);
   for (let a: EntryContext | undefined = from; a; a = a.parent) {
     if (a.closed) continue;
     const unions = (a.claimUnions ??= new Map());
@@ -2391,7 +2426,7 @@ function claimEnclosing(
       unions.set(name, track);
     }
     contribute(track, start, end);
-    contribute(a.excludedUnion, start, end);
+    if (a === holder) contribute(a.excludedUnion, start, end);
     const lo = start < a.startMs ? a.startMs : start;
     if (end > lo) {
       pushBand((a.claimBands ??= []), name, lo, end, CLAIM_BAND_CAP);
@@ -2570,9 +2605,7 @@ export function recordSpan(
 /**
  * Offer a closing entry's queue residue on each gate — the unfiled waits it
  * holds, summed — to `onSlowWait`, the entry its caller, and return what no
- * subscriber filed: the entry is then judged on it with its own time
- * (`SlowSpan.residueMs`), and only when that files nothing is it handed on
- * (`handResidueOn`). The entry was judged
+ * subscriber filed, to be handed on (`handResidueOn`). The entry was judged
  * without that time, so it must be reported against the gate even when it is
  * made of many waits each under every bar: 40 queries waiting 150 ms each on
  * `db-acquire` are one 6 s `wait db-acquire`. Unfiled, the residue moves to
@@ -2600,17 +2633,10 @@ function offerQueueResidue(ctx: EntryContext): Map<string, QueueTally> {
   return unfiled;
 }
 
-/** What a residue left unfiled after its offer adds up to, across layers. */
-function sumResidue(residue: Map<string, QueueTally>): number {
-  let ms = 0;
-  for (const tally of residue.values()) ms += tally.ms;
-  return ms;
-}
-
 /**
  * Hand an entry's unfiled residue to the nearest open ancestor — or, from the
- * top of the chain, to each gate's busy timeline. Only when the entry did not file:
- * a filed entry's report already holds it.
+ * top of the chain, to each gate's busy timeline. Whether the entry filed or
+ * not: no op's report holds a wait as its own time.
  */
 function handResidueOn(
   ctx: EntryContext,
@@ -2865,6 +2891,14 @@ function chargeWaitIn(
   }
   const end = waitEnd;
   const start = end - ms;
+  // The wait comes off the own time of the entry that waited (the innermost
+  // open one) only: every entry above it excludes that entry's execution as a
+  // child op. Unioned into each ancestor too, a deep subtree's many short
+  // waits filled their tracks past `TRACK_SPAN_CAP`, the frozen floor clipped
+  // the child's interval charged at its end, and the child's time read as the
+  // ancestor's own (main, 2026-11-19: `sub prototypes.list` filed 3.2 s "of
+  // its own" around its 3.5 s loader).
+  const waiter = nearestOpen(cur);
   for (let a: EntryContext | undefined = cur; a; a = a.parent) {
     if (a.closed) continue;
     let track = a.layerUnions.get(layer);
@@ -2875,7 +2909,7 @@ function chargeWaitIn(
     const covered = contribute(track, start, end);
     contribute(a.waitUnion, start, end);
     contribute(a.busyUnion, start, end);
-    contribute(a.excludedUnion, start, end);
+    if (a === waiter) contribute(a.excludedUnion, start, end);
     if (kind === "io")
       contribute((a.ioUnion ??= newTrack(a.startMs)), start, end);
     // Record a band merging the interval the layer track just counted into the
@@ -3315,10 +3349,19 @@ export async function recordEntrySpan<T>(
     excludedUnion: newTrack(t0),
   };
   openEntries.add(ctx);
+  const holder = nearestOpen(cur);
+  if (holder) (holder.openChildren ??= new Set()).add(ctx);
   try {
     return await contextRuntime.run(ctx, fn);
   } finally {
     const t1 = now();
+    holder?.openChildren?.delete(ctx);
+    // A child still running is a child op too: the part of it this entry
+    // overlapped is not its own time (its interval reaches us only as it
+    // closes, after this entry recorded).
+    if (ctx.openChildren)
+      for (const child of ctx.openChildren)
+        contribute(ctx.excludedUnion, child.startMs, t1);
     // (1) Propagate this entry's execution interval to the nearest OPEN
     // ancestor only (see doc comment). Skipping closed ancestors keeps a
     // detached child (finishing after its parent already recorded) from
@@ -3328,6 +3371,9 @@ export async function recordEntrySpan<T>(
       if (a.closed) continue;
       contribute(a.childUnion, t0, t1);
       contribute(a.busyUnion, t0, t1);
+      // A child op is judged on its own span, filed or not: its time is never
+      // the enclosing op's own (see "Own time").
+      contribute(a.excludedUnion, t0, t1);
       break;
     }
     // (2) Close before recording so nothing can race a mutation in between.
@@ -3362,17 +3408,12 @@ export async function recordEntrySpan<T>(
       for (const [name, track] of ctx.claimUnions) claims[name] = track.unionMs;
     }
     const parentId = ctx.parent ? ctx.parent.id : null;
-    // The gates first: each layer's residue is offered to `onSlowWait` on its
-    // own, and what no subscriber filed stays this entry's — judged with its
-    // own time, against its bar (see `SlowSpan.residueMs`). Judging the two
-    // apart let a 0.6 s op that queued 1.5 s on a gate file nothing at a 2 s
-    // bar: neither part reached it, and the residue only met the gate's
-    // per-window sum.
+    // The gates first: each layer's residue (the waits no subscriber filed
+    // one by one) is offered to `onSlowWait` summed, this entry its caller.
+    // What is still unfiled is never this entry's own time: it moves on —
+    // to the nearest open ancestor, then the gate's busy timeline — where it
+    // is judged as the gate's queue (see "Own time").
     const residue = ctx.queueTallies ? offerQueueResidue(ctx) : undefined;
-    const residueMs = Math.min(
-      ctx.excludedUnion.unionMs,
-      residue === undefined ? 0 : sumResidue(residue),
-    );
     const filed = record(
       kind,
       label,
@@ -3387,11 +3428,9 @@ export async function recordEntrySpan<T>(
       waitBands,
       detail,
       opts?.budgetMs,
-      ctx.excludedUnion.unionMs - residueMs,
+      ctx.excludedUnion.unionMs,
       claims,
       ctx.parent,
-      undefined,
-      residueMs,
     );
     // A root entry filed as its own slow op is a claim on its lane: a later
     // run of the lane queued behind it waited on an op already filed.
@@ -3408,8 +3447,8 @@ export async function recordEntrySpan<T>(
       onReads?.(ctx.tables ?? NO_TABLES, ctx.tags);
     }
     if (ctx.joinBands) handJoinsUp(ctx, ctx.joinBands);
-    // Filed, the entry's report holds its residue; unfiled, it moves on.
-    if (residue !== undefined && !filed) handResidueOn(ctx, residue);
+    // Filed or not, the entry's report never holds its residue: it moves on.
+    if (residue !== undefined) handResidueOn(ctx, residue);
     // After everything the recorder owes: the caller's callback cannot cost it.
     opts?.onJoined?.(
       ctx.joinBands ? bandsWithin(ctx.joinBands, t0, t1).unionMs : 0,

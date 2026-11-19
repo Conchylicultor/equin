@@ -23,29 +23,36 @@ export type Thresholds = ConfigValues<(typeof slowOpConfig)["fields"]>;
 /**
  * The quantity a span is judged on: its **own time** (`durationMs −
  * excludedMs`), for every kind — the part of the run that is a property of the
- * span itself. `excludedMs` is the union of its gate waits (below) and its
- * claims: time inside an enclosed span already filed as its own slow op (the
- * install hook calls `claim()` on every span it files), so one slow loader is
- * filed once, not again by the `push`, `flush`, `sub` or `http` around it.
+ * span itself. `excludedMs` (runtime-profiler, "Own time") is the union of:
  *
- * Time spent queued on a named gate is not. A `sub` span waits on the 6-slot
- * `read-admit` gate for ~85% of its wall time on average (2026-10-29 audit:
- * `config-v2.values` 7.7e9 of 9e9 ms was `read-admit`), so judging wall time
- * filed a report against every innocent resource that queued behind a busy
- * gate. The queue is the GATE's slowness and is reported against it, once per
- * wait, as a `wait <layer>` op (`onSlowWait`, install-slow-span.ts); a `join`
- * wait (an identical run in flight) is that run's, which reports itself. The
- * same held for jobs first: `jobs.dead-gc` held a worker slot 77 s to do 254 ms
- * of work, the rest blocked on `background-tx-acquire`.
+ * - every wait the span made itself, filed or not. Time queued on a named gate
+ *   is the gate's: a `sub` waits on the 6-slot `read-admit` gate for ~85% of
+ *   its wall time on average (2026-10-29 audit: `config-v2.values` 7.7e9 of
+ *   9e9 ms was `read-admit`). The queue is reported against the gate — once
+ *   per wait past the bar, as a `wait <layer>` op (`onSlowWait`,
+ *   install-slow-span.ts), else summed as residue up the chain and onto the
+ *   gate's busy stretches — and never comes back as the span's own: on main
+ *   (2026-11-19) a `loader prototypes.list` filed at 2.78 s "own" held 1.62 s
+ *   of unfiled `read-admit` queue handed back to it, during a restart's
+ *   replay. A `join` wait is the joined run's, an `io` wait the disk's or the
+ *   child process's.
+ * - its child ops' executions, filed or not: each is judged on its own span,
+ *   so a `sub` is never filed for the loader it ran (main, 2026-11-19: `sub
+ *   prototypes.list` 3.2 s "of its own" was its 3.5 s loader).
+ * - enclosed spans already filed as their own slow op (`claims` — the install
+ *   hook calls `claim()` on every span it files), so a slow query is filed
+ *   once, not again by the loader around it.
  *
- * `excludedMs` is a wall-clock-overlapping OVERLAY, not an additive component: the
- * recorder accumulates it as an interval union over the span's own timeline, so
- * `excludedMs ≤ durationMs` holds at every level and this subtraction can never go
- * negative (`runtime-profiler/core/recorder.ts`, "Wall-clock decomposition").
- * Only *named gate* waits count as wait — a model call's latency is work.
+ * What is left is the span's own code, its leaves (queries — its work) and
+ * awaits nothing meters, plus the time its continuations sat behind other ops
+ * on a busy event loop: the runtime gives no per-context turn signal, so that
+ * last part cannot be told from the span's own synchronous work and stays in
+ * (runtime-profiler CLAUDE.md, "Event-loop stalls").
  *
- * Deliberately NOT `selfMs`, which also subtracts child-span execution and
- * would credit a span for the work its own DB queries did.
+ * `excludedMs` is a wall-clock-overlapping OVERLAY, not an additive component:
+ * the recorder accumulates it as an interval union over the span's own
+ * timeline, so `excludedMs ≤ durationMs` holds at every level and this
+ * subtraction can never go negative.
  *
  * Machine sleep needs no subtraction here: the profiler's clock
  * (`performance.now()` in Bun on macOS) stops while the machine sleeps —
@@ -53,7 +60,8 @@ export type Thresholds = ConfigValues<(typeof slowOpConfig)["fields"]>;
  * 22:12, the 18:02 sleep never reaching it.
  *
  * The recorded row still carries wall-clock `durationMs` plus its per-layer
- * `waits`, so the wait-vs-work split stays readable off the row.
+ * `waits` (the child ops and the claims among them), so the wait-vs-work
+ * split stays readable off the row.
  */
 export function slowSpanMs(span: SlowSpan): number {
   return Math.max(0, span.durationMs - span.excludedMs);
@@ -127,16 +135,14 @@ export function resolveSlowThreshold(span: SlowSpan, t: Thresholds): number {
 /**
  * Whether a wait is filed as the gate's (`wait <layer>`) at all: not when the
  * one op that waited is a `bg` span — detached background work (a warm-up, a
- * watcher pass, a build's slot holder) that no reader is behind. Declined, the
- * recorder hands the wait back to that op as residue: its own time again,
- * judged against its own bar (a warm-up's budget, else `loaderMs`), so it is
- * filed as the slow background op it is (`bg <label>`), never as a reader's
- * wait. Every other waiter — a loader, a `sub`, an `http` request, a flush or
- * job — is a reader of the gate, and its wait is judged by
- * `resolveWaitThreshold`. A gate's busy stretch (`busy`) is the gate's queue
- * across independent ops: a reader's when any op of another kind queued in
- * it (`waiterKinds`) — else it is only that background work's waits, handed
- * back (each op already judged them as its own time).
+ * watcher pass, a build's slot holder) that no reader is behind, so its wait
+ * is no one's latency. Declined, it climbs on as residue like any unfiled
+ * wait, and is never the `bg` op's own time either. Every other waiter — a
+ * loader, a `sub`, an `http` request, a flush or job — is a reader of the
+ * gate, and its wait is judged by `resolveWaitThreshold`. A gate's busy
+ * stretch (`busy`) is the gate's queue across independent ops: a reader's
+ * when any op of another kind queued in it (`waiterKinds`) — else it is only
+ * that background work's waits.
  *
  * Before (main, 2026-11-15): a restart's 2.3 s faceted-index build, awaited by
  * the boot warm-up and the session's `plugin-tree:first-build` slot holder,
