@@ -215,11 +215,11 @@ the scroll plugin's CLAUDE.md and the `css:no-unanchored-has` check).
     - `ui/tokens/type-scale --font-size-caption`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-caption`
-  - Imported by: 61 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 62 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×15
     - `apps` ×12
     - `ui` ×12
-    - `primitives` ×8
+    - `primitives` ×9
     - `plugin-meta` ×4
     - `review` ×3
     - `auth`

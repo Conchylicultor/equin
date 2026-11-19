@@ -101,10 +101,14 @@ click on a card) changes nothing.
 **Every sanctioned scroll funnel announces a navigation.**
 `announceNavigation(target)` arms the owner of `target` and of every ancestor
 scroller. It is called by `scrollChildIntoView`, `glideScroll`, `scrollToBottom`/`scrollToTop`,
-`useEdgeAutoScroll` and scroll-reveal's `revealElement`, so an outline jump or a
-`StickyUserHeader` expand moves the reader and is never undone. A new
-*navigating* scroll writer must call it. A *compensation* that keeps the reader
-in place (`KeepAnchorAcross`, `KeepScrollAcross`, `keepInPlace`) must not.
+`useEdgeAutoScroll` and scroll-reveal's `revealElement`, so an outline jump moves
+the reader and is never undone. An announcement makes a follower `driving` **at
+once** (`navigate`), not at the first scroll event — the size observer runs
+before it, and its bottom write would cancel the navigation. One that moves
+nothing settles at the bottom and follows again. A new *navigating* scroll
+writer must call it. A *compensation* that keeps the reader in place
+(`KeepAnchorAcross`, `KeepScrollAcross`, `keepInPlace`) must not — unless it
+carries out the reader's own action (`StickyUserHeader` expanding in place).
 Lint already forces every programmatic scroll through these two plugins, so
 the set is complete. The remaining unannounced moves are browser-native:
 find-in-page has no page-visible input, so ⌘F / Ctrl+F parks explicitly.

@@ -25,6 +25,12 @@ on its *parent* (`max-height` + `overflow:hidden` + a fade mask), so the child's
 and expanded states. The overflow check (`offsetHeight > collapsedHeight + 1`)
 therefore never depends on the current expand state — no flapping at the boundary.
 
+## Motion
+
+A toggle folds the clip between the clamp and the content's height on the
+app's fold clock (`collapsible/core`'s `foldTiming`; instant under reduced
+motion). A controlled `expanded` changed by its owner alone lands at once.
+
 ## API
 
 - `children` — the content to clamp.
@@ -47,6 +53,7 @@ therefore never depends on the current expand state — no flapping at the bound
 - Description: Clamps tall content to a max height and reveals a Show more/less toggle only when the rendered content actually overflows (measured via ResizeObserver, not char/line heuristics).
 - Web:
   - Uses:
+    - `primitives/css/motion.prefersReducedMotion`
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/dom/element-size.useResizeObserver`

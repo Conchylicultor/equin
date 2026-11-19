@@ -231,8 +231,8 @@ Design: [`research/2026-10-25-global-surface-motion.md`](../../../../../../resea
     - `useTransitionHold`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/color-palette --primary`
-  - Imported by: 24 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives` ×9
+  - Imported by: 25 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives` ×10
     - `apps` ×6
     - `map` ×2
     - `page` ×2

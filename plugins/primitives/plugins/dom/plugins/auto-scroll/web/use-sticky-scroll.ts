@@ -525,7 +525,18 @@ export function useStickyScroll(
         arm();
     };
 
-    const unlisten = listenForNavigation(el, arm);
+    // An announced navigation hands the offset to the reader at once, not at
+    // its first scroll event: the size observer runs before that event, and
+    // a write of the bottom from it would cancel or undo the navigation. One
+    // that moves nothing settles where it is — at the bottom, following again.
+    const onNavigate = () => {
+      readerDistance = distanceToBottom(el);
+      readerMovedDown = false;
+      dispatch({ t: "navigate" });
+      arm();
+    };
+
+    const unlisten = listenForNavigation(el, onNavigate);
     el.addEventListener("scroll", onScroll, { passive: true });
     el.addEventListener("wheel", arm, { passive: true });
     el.addEventListener("touchstart", arm, { passive: true });

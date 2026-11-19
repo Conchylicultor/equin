@@ -68,6 +68,15 @@ export type StickySignal =
   | { t: "settle"; distance: number; movedDown: boolean }
   /** The bottom sentinel entered or left the pin margin. */
   | { t: "sentinel"; visible: boolean }
+  /**
+   * A navigation the reader asked for was announced (`announceNavigation`):
+   * a scroll moving them is about to land, or their own action is about to
+   * re-lay-out what they look at (a pinned prompt expanding in place). A
+   * follower stops writing the bottom until it settles — a write from its
+   * size observer, before the navigation's first scroll event, would cancel
+   * a smooth scroll and undo an instant one.
+   */
+  | { t: "navigate" }
   /** The user pressed the jump-to-bottom affordance. */
   | { t: "jump" }
   /** The consumer's `followKey` changed — an explicit "the user just acted". */
@@ -120,6 +129,12 @@ export function step(
       return { mode: FOLLOWING, action: "scroll-to-bottom" };
     case "find":
       return { mode: ANCHORED, action: "none" };
+    case "navigate":
+      // The reader drives until it settles, which decides between following
+      // (it ended at the bottom — or never moved) and parking.
+      return mode.kind === "following"
+        ? { mode: DRIVING, action: "none" }
+        : { mode, action: "none" };
     case "sentinel":
       return { mode, action: followAction(mode, signal.visible) };
     case "settle":

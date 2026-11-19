@@ -1,4 +1,12 @@
-import { useRef, useState, type CSSProperties, type ReactNode } from "react";
+import {
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
+import { foldTiming } from "@plugins/primitives/plugins/collapsible/core";
+import { prefersReducedMotion } from "@plugins/primitives/plugins/css/plugins/motion/web";
 import {
   Inset,
   Stack,
@@ -63,6 +71,10 @@ export function Expandable({
   className,
 }: ExpandableProps) {
   const contentRef = useRef<HTMLDivElement>(null);
+  const clipRef = useRef<HTMLDivElement>(null);
+  /** The clip's height when the reader toggled — where the fold starts. */
+  const foldFrom = useRef<number | null>(null);
+  const fold = useRef<Animation | null>(null);
   const [overflowing, setOverflowing] = useState(false);
   const [uncontrolledExpanded, setUncontrolledExpanded] = useState(false);
   const isControlled = expandedProp !== undefined;
@@ -91,15 +103,53 @@ export function Expandable({
       }
     : {};
 
+  // The toggle unfolds the clip to the content's height (or folds it back to
+  // the clamp) on the app's one fold clock, instead of jumping. Only a toggle
+  // moves it: an owner changing a controlled `expanded` on its own lands at
+  // once. A toggle mid-fold starts from where the clip is.
+  useLayoutEffect(() => {
+    const from = foldFrom.current;
+    const clip = clipRef.current;
+    const content = contentRef.current;
+    foldFrom.current = null;
+    fold.current?.cancel();
+    fold.current = null;
+    if (from === null || !clip || !content) return;
+    const to = expanded ? content.offsetHeight : collapsedHeight;
+    if (Math.abs(to - from) < 1) return;
+    const timing = foldTiming({ opening: expanded, distance: to - from });
+    clip.style.overflow = "hidden";
+    const anim = clip.animate(
+      [{ maxHeight: `${from}px` }, { maxHeight: `${to}px` }],
+      {
+        duration: prefersReducedMotion() ? 0 : timing.duration,
+        easing: timing.easing,
+      },
+    );
+    // Expanded, the clip clips nothing once the fold is done; clamped, its
+    // own style keeps `overflow: hidden`. Only the current fold settles: a
+    // cancelled one's event lands after the next fold set its overflow.
+    const settle = () => {
+      if (fold.current !== anim) return;
+      fold.current = null;
+      if (expanded) clip.style.overflow = "";
+    };
+    anim.onfinish = settle;
+    anim.oncancel = settle;
+    fold.current = anim;
+  }, [expanded, collapsedHeight]);
+
   const toggle = () => {
     const next = !expanded;
+    if (clipRef.current)
+      foldFrom.current = clipRef.current.getBoundingClientRect().height;
     if (!isControlled) setUncontrolledExpanded(next);
     onToggle?.(next);
   };
 
   return (
     <div className={className}>
-      <div style={clipStyle}>
+      <div ref={clipRef} style={clipStyle}>
         <div ref={contentRef}>{children}</div>
       </div>
       {overflowing ? (

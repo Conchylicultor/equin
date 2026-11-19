@@ -19147,10 +19147,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
               - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
-            - Uses: 51 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Uses: 53 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `network/live/live-state` ×9
+              - `primitives/dom/auto-scroll` ×7
               - `conversations/conversation-view/pending-turn` ×6
-              - `primitives/dom/auto-scroll` ×4
               - `conversations/conversation-view/jsonl-viewer/collapsible-card` ×2
               - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
               - `primitives/css/working-dots` ×2
@@ -19167,7 +19167,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/text.Text`
               - `primitives/dom/element-size.useResizeObserver`
               - `primitives/dom/in-view.useInView`
-              - `primitives/dom/scroll-reveal.revealElement`
               - `primitives/icon-button.IconButton`
               - `primitives/loading.Loading`
               - `primitives/markdown.useMarkdownLoaded`
@@ -50402,11 +50401,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-caption`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-caption`
-        - Imported by: 61 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
+        - Imported by: 62 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
           - `conversations` ×15
           - `apps` ×12
           - `ui` ×12
-          - `primitives` ×8
+          - `primitives` ×9
           - `plugin-meta` ×4
           - `review` ×3
           - `auth`
@@ -51301,8 +51300,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useTransitionHold`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --primary`
-            - Imported by: 24 plugins — full list in [`plugins/primitives/plugins/css/plugins/motion/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/motion/REFERENCE.md)
-              - `primitives` ×9
+            - Imported by: 25 plugins — full list in [`plugins/primitives/plugins/css/plugins/motion/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/motion/REFERENCE.md)
+              - `primitives` ×10
               - `apps` ×6
               - `map` ×2
               - `page` ×2
@@ -54161,11 +54160,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `revealElement`
               - `useRevealOnActive`
           - Cross-plugin:
-            - Imported by: 54 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
+            - Imported by: 53 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
               - `apps` ×21
               - `primitives` ×16
               - `page` ×6
-              - `conversations` ×4
+              - `conversations` ×3
               - `apps-core` ×2
               - `hints`
               - `layouts/miller`
@@ -54499,6 +54498,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`expandable`** — Clamps tall content to a max height and reveals a Show more/less toggle only when the rendered content actually overflows (measured via ResizeObserver, not char/line heuristics).
       - Web:
         - Uses:
+          - `primitives/css/motion.prefersReducedMotion`
           - `primitives/css/spacing.Inset`
           - `primitives/css/spacing.Stack`
           - `primitives/dom/element-size.useResizeObserver`

@@ -97,6 +97,26 @@ describe("step — reader scrolls", () => {
     expect(step(driving, scroll({ distance: 500 }), T).mode).toEqual(driving);
   });
 
+  test("an announced navigation hands a follower to the reader at once", () => {
+    // Before its first scroll event: the size observer runs in between, and
+    // a bottom write from it would cancel or undo the navigation (a pinned
+    // prompt expanding in place, 2026-11-19).
+    expect(step(following, { t: "navigate" }, T)).toEqual({
+      mode: driving,
+      action: "none",
+    });
+    // A navigation that moved nothing settles at the bottom: following again.
+    expect(
+      step(driving, { t: "settle", distance: 0, movedDown: false }, T).mode,
+    ).toEqual(following);
+    // A parked or driving reader is already the reader's.
+    for (const mode of [driving, anchored])
+      expect(step(mode, { t: "navigate" }, T)).toEqual({
+        mode,
+        action: "none",
+      });
+  });
+
   test("find parks", () => {
     expect(step(following, { t: "find" }, T).mode).toEqual(anchored);
   });
