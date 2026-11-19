@@ -254,8 +254,10 @@ export function useVirtualRows<T>({
   // observer's synchronous measure on re-subscribe) and whenever a box that
   // decides it resizes (see
   // `boxesAbove`), and the window keeps tracking the rows it draws rather
-  // than where they started. The boxes are re-collected with the items: what
-  // sits above the region changes with what is drawn.
+  // than where they started. The boxes are re-collected with the items (what
+  // sits above the region changes with what is drawn) and by the observer
+  // itself whenever one is replaced, inserted or removed without the items
+  // changing (a toolbar band remounting as the pane narrows).
   useResizeObserver(
     () => {
       const sizer = measureRef.current;

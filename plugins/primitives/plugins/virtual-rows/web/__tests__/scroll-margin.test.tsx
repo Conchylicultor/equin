@@ -6,7 +6,8 @@
  * longer are — so it is re-measured in the very commit that changes the
  * items, before paint (no observer callback awaited). Content above can also
  * resize with the rows unchanged (another section's placeholders above this
- * one): a resize of a box above the region re-measures it too.
+ * one): a resize of a box above the region re-measures it too — the box there
+ * now, not one it replaced.
  */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -18,7 +19,12 @@ let margins: number[] = [];
 /** Per render: may a size the window learns scroll the reader (`adjusts`) or not (`holds`)? */
 let gates: ("adjusts" | "holds")[] = [];
 
-function Probe(props: { items: string[]; above: number }): ReactElement {
+function Probe(props: {
+  items: string[];
+  above: number;
+  /** The above box's key: a new one remounts it (a toolbar band redrawn). */
+  band?: string;
+}): ReactElement {
   const { measureRef, scrollMargin, virtualizer } = useVirtualRows({
     items: props.items,
     estimateSize: 20,
@@ -32,7 +38,11 @@ function Probe(props: { items: string[]; above: number }): ReactElement {
   );
   return (
     <div data-testid="scroller" style={{ overflowY: "auto" }}>
-      <div data-testid="above" style={{ height: props.above }} />
+      <div
+        key={props.band}
+        data-testid="above"
+        style={{ height: props.above }}
+      />
       <div data-testid="sizer" ref={measureRef} />
     </div>
   );
@@ -131,6 +141,34 @@ describe("useVirtualRows — scrollMargin", () => {
         document.querySelector('[data-testid="above"]')!,
       ),
     );
+    expect(margins.at(-1)).toBe(160);
+  });
+
+  it("follows a box above the region that is replaced with the items unchanged", async () => {
+    vi.stubGlobal("ResizeObserver", DrivenResizeObserver);
+    vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
+      cb(0);
+      return 0;
+    });
+    layOutBelowAbove();
+    const items = ["a", "b", "c", "d"];
+    const { rerender } = render(
+      <Probe items={items} above={100} band="wide" />,
+    );
+    const old = document.querySelector('[data-testid="above"]')!;
+    // The band remounts (the pane narrowed): same items, same height.
+    rerender(<Probe items={items} above={100} band="narrow" />);
+    await act(async () => {});
+    const band = document.querySelector('[data-testid="above"]')!;
+    expect(band).not.toBe(old);
+    const watched = [...DrivenResizeObserver.all].flatMap((ro) => [
+      ...ro.watched,
+    ]);
+    expect(watched).toContain(band);
+    expect(watched).not.toContain(old);
+    // The new band grows on its own (no render): the margin follows it.
+    (band as HTMLElement).style.height = "160px";
+    act(() => DrivenResizeObserver.resize(band));
     expect(margins.at(-1)).toBe(160);
   });
 });

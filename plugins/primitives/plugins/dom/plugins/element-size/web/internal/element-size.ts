@@ -12,7 +12,10 @@ import {
   runAsAfterLayout,
   type AfterLayoutRead,
 } from "@plugins/primitives/plugins/dom/plugins/after-layout/web";
-import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
+import {
+  useEventCallback,
+  useLatestRef,
+} from "@plugins/primitives/plugins/latest-ref/web";
 
 export type ElementSize = { width: number; height: number };
 
@@ -24,6 +27,12 @@ type RefLike = { readonly current: Element | null };
  * effect time and may return a lazily-resolved node (e.g. an `offsetParent` or
  * `parentElement`) or several nodes. Re-subscription is driven by `deps`, not by
  * the target's identity, so an inline getter never re-subscribes every render.
+ *
+ * The target is re-resolved (the latest one passed) whenever the DOM around
+ * what it resolved to changes — a target detached, or the child list of an
+ * observed target's parent changed (a box replaced, one inserted beside it) —
+ * so a getter naming DOM the caller does not own keeps observing what it names
+ * now, not the elements it named when `deps` last changed.
  */
 export type ResizeTarget =
   | RefLike
@@ -55,7 +64,12 @@ function resolveTargets(target: ResizeTarget): Element[] {
  *   there too, so it may read layout (`offsetParent`). Under jsdom the phase
  *   runs at once: the synchronous measure a test asserts after render,
  * - then on every observed resize, **RAF-debounced** by default (coalesces
- *   bursts and sidesteps the "ResizeObserver loop completed" warning).
+ *   bursts and sidesteps the "ResizeObserver loop completed" warning),
+ * - and when the observed set itself changes: an element detached, inserted
+ *   or removed at an observed target's level is re-resolved through `target`
+ *   in the after-layout phase, and `onResize` runs if the set moved (a box
+ *   removed from a fixed-height level resizes nothing observed, yet moves what
+ *   sits after it).
  *
  * `onResize` may return a write (a DOM mutation built from what it read): in
  * the after-layout phase it runs after every read of the batch, so it never
@@ -85,10 +99,12 @@ export function useResizeObserver(
   const debounce = !beforePaint && (options?.debounce ?? true);
   const deps = options?.deps ?? [];
   const handler = useEventCallback(onResize);
+  // The latest `target`: a re-resolution between two `deps` changes reads
+  // what the caller names now.
+  const latestTarget = useLatestRef(target);
 
   useLayoutEffect(() => {
     let rafId: number | null = null;
-    let observer: ResizeObserver | null = null;
     const runNow = () => handler()?.();
     const schedule = beforePaint
       ? () => commitInPhase(runNow)
@@ -99,36 +115,94 @@ export function useResizeObserver(
           }
         : runNow;
 
+    // The observed set, kept equal to what `target` resolves to as the DOM
+    // around it changes (`retarget`).
+    const observed = new Map<Element, () => void>();
+    const observer = new ResizeObserver((entries) =>
+      runAsAfterLayout(
+        () => {
+          // A target detached (its subtree replaced above its own parent —
+          // what `structure` cannot see) is delivered as a resize to 0: its
+          // replacement, if the target resolves to one, is observed instead.
+          if (entries.some((e) => !e.target.isConnected)) retarget();
+          schedule();
+        },
+        entries.map((e) => e.target),
+      ),
+    );
+    // The target may name DOM the caller does not own (an ancestor, the boxes
+    // before a region, a scroller's children), which changes without `deps`
+    // changing: a box replaced, one inserted beside an observed one. Every
+    // child-list change at an observed target's level re-resolves the set —
+    // in the after-layout phase, never on the commit path that mutated it.
+    let retargetPending = false;
+    let cancelRetarget = (): void => {};
+    const structure = new MutationObserver(() => {
+      if (retargetPending) return;
+      retargetPending = true;
+      cancelRetarget = afterLayout(() => {
+        retargetPending = false;
+        return retarget() ? handler() : undefined;
+      });
+    });
+    const watchedParents = new Set<Node>();
+    /** Re-resolve the target set; true when it changed. */
+    const retarget = (): boolean => {
+      // Every element the target names stays observed, attached or not (a
+      // portal's container docked by a later layout effect): only one it no
+      // longer names is released.
+      const next = new Set(resolveTargets(latestTarget.current));
+      let changed = false;
+      for (const [el, release] of observed) {
+        if (next.has(el)) continue;
+        release();
+        observed.delete(el);
+        changed = true;
+      }
+      for (const el of next) {
+        if (observed.has(el)) continue;
+        // Held back (resized above a delivery by a commit inside it): the same
+        // response as a delivery, in the phase that resized it.
+        observed.set(el, observeInPhase(observer, el, schedule));
+        changed = true;
+      }
+      const parents = new Set<Node>();
+      for (const el of observed.keys())
+        if (el.parentNode !== null) parents.add(el.parentNode);
+      if (
+        parents.size !== watchedParents.size ||
+        [...parents].some((p) => !watchedParents.has(p))
+      ) {
+        structure.disconnect();
+        watchedParents.clear();
+        for (const parent of parents) {
+          watchedParents.add(parent);
+          structure.observe(parent, { childList: true });
+        }
+      }
+      return changed;
+    };
+
     // Resolve, subscribe and take the initial measure after layout — never on
     // the commit path, where each read forces a full style recalc.
-    const releases: (() => void)[] = [];
     const cancelInitial = afterLayout(() => {
-      const elements = resolveTargets(target);
-      if (elements.length === 0) return;
-      const created = new ResizeObserver((entries) =>
-        runAsAfterLayout(
-          schedule,
-          entries.map((e) => e.target),
-        ),
-      );
-      observer = created;
-      // Held back (resized above a delivery by a commit inside it): the same
-      // response as a delivery, in the phase that resized it.
-      for (const el of elements)
-        releases.push(observeInPhase(created, el, schedule));
-      return handler();
+      retarget();
+      return observed.size === 0 ? undefined : handler();
     });
 
     return () => {
       cancelInitial();
-      for (const release of releases) release();
-      observer?.disconnect();
+      cancelRetarget();
+      structure.disconnect();
+      for (const release of observed.values()) release();
+      observer.disconnect();
       if (rafId !== null) cancelAnimationFrame(rafId);
     };
-    // `handler` is stable; `target` is read at effect time (stable refs, or a
-    // getter re-evaluated each run). Re-subscribe only on `debounce`/`deps`.
+    // `handler` and `latestTarget` are stable; `target` is resolved at effect
+    // time and again whenever the DOM around its elements changes.
+    // Re-subscribe only on `debounce`/`deps`.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [handler, debounce, beforePaint, ...deps]);
+  }, [handler, latestTarget, debounce, beforePaint, ...deps]);
 }
 
 /**
