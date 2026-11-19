@@ -4,6 +4,7 @@ export type {
   Rollup,
   RollupClosure,
   RollupColumn,
+  RollupIndex,
   RollupOp,
   RollupReconcile,
   RollupSourceSpec,

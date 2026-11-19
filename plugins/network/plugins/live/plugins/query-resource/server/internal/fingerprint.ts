@@ -156,6 +156,10 @@ export function rollupDdlHash(rollup: Rollup): string {
     JSON.stringify([
       rollup.table,
       rollup.createTableDdl,
+      // Only when it has any: a rollup without one hashes as it always did.
+      ...(rollup.indexes.length === 0
+        ? []
+        : [rollup.indexes.map((ix) => ix.ddl)]),
       rollup.selectCheckSql,
       rollup.sources.map((s) => [
         s.table,

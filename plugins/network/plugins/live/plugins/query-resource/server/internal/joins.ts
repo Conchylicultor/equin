@@ -619,14 +619,18 @@ export function assertHopsCovered(
         `${head}, which is not a source of the rollup — a write that moves or deletes a "${via.table}" row would re-key rollup rows no route reaches. ${add}`,
       );
     }
-    if (hop.carry !== via.key || hop.via !== undefined) {
+    if (
+      hop.carry.length !== 1 ||
+      hop.carry[0] !== via.key ||
+      hop.via !== undefined
+    ) {
       refuse(
         `${head}, whose source does not carry the hop key "${via.key}" directly — a write that moves a "${via.table}" row would re-aggregate neither its old nor its new key. Set its \`carry: ${via.table}.${via.key}\` with no \`via\``,
       );
     }
     if (
       !hop.pk.includes(via.match) &&
-      hop.carry !== via.match &&
+      !hop.carry.includes(via.match) &&
       !hop.reads.includes(via.match)
     ) {
       refuse(
@@ -1766,6 +1770,22 @@ function joinRoute(
  * A rollup's route on one of its sources: `<alias>[<source table>]` — the
  * rollup table itself is never routed (A1: it has no change-feed trigger).
  */
+/**
+ * The one carry column of a rollup source a route keys on. A source whose rows
+ * carry several columns (derived-tables' multi-column carry) names several
+ * rollup keys per row, which one route column cannot follow: refused, so such
+ * a rollup is read on the change feed (`fed: true`), never joined by its
+ * sources.
+ */
+export function soleCarry(src: CompiledRollupSource): string {
+  if (src.carry.length !== 1) {
+    throw new Error(
+      `rollup source "${src.table}" (${src.functionName}) carries ${src.carry.length} columns (${src.carry.join(", ")}): a route keys on one carry column — read the rollup on the change feed (\`fed: true\`) instead of joining it by its sources`,
+    );
+  }
+  return src.carry[0];
+}
+
 export function rollupRouteId(alias: string, sourceTable: string): string {
   return `${alias}[${sourceTable}]`;
 }
@@ -1804,9 +1824,10 @@ function rollupSourceRoute(
 ): RawRoute {
   const { plan } = host;
   const id = rollupRouteId(join.alias, src.table);
-  const columns = [...new Set([...src.pk, src.carry, ...src.reads])].sort();
+  const carry = soleCarry(src);
+  const columns = [...new Set([...src.pk, carry, ...src.reads])].sort();
   const keyed =
-    src.pk.length === 1 && src.pk[0] === src.carry ? {} : { column: src.carry };
+    src.pk.length === 1 && src.pk[0] === carry ? {} : { column: carry };
   const route = { id, table: src.table, columns };
   if (
     src.via === undefined &&

@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
+import { sql } from "drizzle-orm";
 import {
   boolean,
+  date,
+  index,
   integer,
   pgTable,
   text,
@@ -8,6 +11,8 @@ import {
 } from "drizzle-orm/pg-core";
 import {
   ATTEMPT_CONV_AGG_TABLE,
+  TASK_HISTORY_DAYS_TABLE,
+  TASK_HISTORY_FACTS_TABLE,
   TASK_LATEST_CONVERSATION_TABLE,
 } from "@plugins/database/plugins/derived-views/core";
 import { defineRollup } from "./define-rollup";
@@ -217,5 +222,192 @@ describe("defineRollup — eval-time refusals", () => {
     expect(() => convAgg({ select: () => `SELECT 1 AS attempt_id` })).toThrow(
       /select must call scope/,
     );
+  });
+});
+
+// A source row naming two rollup rows: an item counted on the day it opened
+// and the day it closed.
+const items = pgTable("items", {
+  id: text("id").primaryKey(),
+  openedDay: date("opened_day").notNull(),
+  closedDay: date("closed_day"),
+  kind: text("kind"),
+  stamp: timestamp("stamp", { withTimezone: true }),
+});
+const days = pgTable(TASK_HISTORY_DAYS_TABLE, {
+  day: date("day").primaryKey(),
+  n: integer("n").notNull(),
+});
+const daysSelect = (scope: (k: string) => string) =>
+  `SELECT e.day, count(*)::int AS n FROM (
+     SELECT i.opened_day AS day FROM items i WHERE ${scope("i.opened_day")}
+     UNION ALL
+     SELECT i.closed_day FROM items i WHERE i.closed_day IS NOT NULL AND ${scope("i.closed_day")}
+   ) e GROUP BY e.day`;
+
+describe("defineRollup — a multi-column carry", () => {
+  const multi = defineRollup({
+    table: days,
+    key: days.day,
+    select: daysSelect,
+    sources: [
+      {
+        table: items,
+        carry: [items.openedDay, items.closedDay],
+        reads: [items.kind],
+      },
+    ],
+  });
+  const [src] = multi.sources;
+
+  test("compiles every carry, and collects each statement's values of all of them", () => {
+    expect(src!.carry).toEqual(["opened_day", "closed_day"]);
+    expect(src!.carryType).toBe("date");
+    const fn = src!.functionDdl;
+    expect(fn).toContain(
+      `FROM new_rows AS n, unnest(ARRAY[n."opened_day", n."closed_day"]) AS x(v)`,
+    );
+    expect(fn).toContain(
+      `FROM old_rows AS o, unnest(ARRAY[o."opened_day", o."closed_day"]) AS x(v)`,
+    );
+    // An UPDATE collects both sides of every moved row, and diffs every carry.
+    expect(fn).toContain(
+      `ARRAY[o."opened_day", o."closed_day"] || ARRAY[n."opened_day", n."closed_day"]`,
+    );
+    expect(fn).toContain(
+      `ROW(o."opened_day", o."closed_day", o."kind") IS DISTINCT FROM ROW(n."opened_day", n."closed_day", n."kind")`,
+    );
+  });
+
+  test("a single carry still compiles to the one-column collect (existing rollups unchanged)", () => {
+    const fn = convAgg().sources[0]!.functionDdl;
+    expect(fn).toContain(
+      `SELECT array_agg(DISTINCT n."attempt_id") INTO _rollup_carried FROM new_rows AS n WHERE n."attempt_id" IS NOT NULL;`,
+    );
+  });
+
+  test("carries of different types are refused", () => {
+    expect(() =>
+      defineRollup({
+        table: days,
+        key: days.day,
+        select: daysSelect,
+        sources: [
+          { table: items, carry: [items.openedDay, items.kind], reads: [] },
+        ],
+      }),
+    ).toThrow(/carry "kind" is text, carry "opened_day" is date/);
+  });
+
+  test("a carry listed twice is refused", () => {
+    expect(() =>
+      defineRollup({
+        table: days,
+        key: days.day,
+        select: daysSelect,
+        sources: [
+          {
+            table: items,
+            carry: [items.openedDay, items.openedDay],
+            reads: [],
+          },
+        ],
+      }),
+    ).toThrow(/lists a carry column twice/);
+  });
+
+  test("a multi-column carry through a via hop is refused", () => {
+    const hop = pgTable("hop", {
+      d: date("d").primaryKey(),
+      day: date("day").notNull(),
+    });
+    expect(() =>
+      defineRollup({
+        table: days,
+        key: days.day,
+        select: daysSelect,
+        sources: [
+          {
+            table: items,
+            carry: [items.openedDay, items.closedDay],
+            via: { table: hop, match: hop.d, key: hop.day },
+            reads: [],
+          },
+        ],
+      }),
+    ).toThrow(/carries 2 columns through a via hop/);
+  });
+});
+
+describe("defineRollup — secondary indexes", () => {
+  test("a plain index on the handle is compiled with its columns and DDL", () => {
+    const handle = pgTable(
+      TASK_HISTORY_FACTS_TABLE,
+      {
+        taskId: text("task_id").primaryKey(),
+        openedDay: date("opened_day").notNull(),
+      },
+      (t) => [index("thf_opened_idx").on(t.openedDay)],
+    );
+    const r = defineRollup({
+      table: handle,
+      key: handle.taskId,
+      select: (scope) =>
+        `SELECT i.id AS task_id, i.opened_day FROM items i WHERE ${scope("i.id")}`,
+      sources: [{ table: items, carry: items.id, reads: [items.openedDay] }],
+    });
+    expect(r.indexes).toEqual([
+      {
+        name: "thf_opened_idx",
+        columns: ["opened_day"],
+        unique: false,
+        ddl: `CREATE INDEX "thf_opened_idx" ON "public"."task_history_facts" ("opened_day")`,
+      },
+    ]);
+    expect(convAgg().indexes).toEqual([]);
+  });
+
+  test("a descending index is refused", () => {
+    const handle = pgTable(
+      TASK_HISTORY_FACTS_TABLE,
+      {
+        taskId: text("task_id").primaryKey(),
+        openedDay: date("opened_day").notNull(),
+      },
+      (t) => [index("thf_desc_idx").on(t.openedDay.desc())],
+    );
+    expect(() =>
+      defineRollup({
+        table: handle,
+        key: handle.taskId,
+        select: (scope) =>
+          `SELECT i.id AS task_id, i.opened_day FROM items i WHERE ${scope("i.id")}`,
+        sources: [{ table: items, carry: items.id, reads: [items.openedDay] }],
+      }),
+    ).toThrow(/index "thf_desc_idx" must index plain columns/);
+  });
+
+  test("a partial index is refused", () => {
+    const handle = pgTable(
+      TASK_HISTORY_FACTS_TABLE,
+      {
+        taskId: text("task_id").primaryKey(),
+        openedDay: date("opened_day").notNull(),
+      },
+      (t) => [
+        index("thf_partial_idx")
+          .on(t.openedDay)
+          .where(sql`${t.openedDay} IS NOT NULL`),
+      ],
+    );
+    expect(() =>
+      defineRollup({
+        table: handle,
+        key: handle.taskId,
+        select: (scope) =>
+          `SELECT i.id AS task_id, i.opened_day FROM items i WHERE ${scope("i.id")}`,
+        sources: [{ table: items, carry: items.id, reads: [items.openedDay] }],
+      }),
+    ).toThrow(/index "thf_partial_idx" must be a plain btree index/);
   });
 });

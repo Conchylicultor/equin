@@ -263,6 +263,7 @@ is recomputed in `onReady`.
     - `Rollup`
     - `RollupClosure`
     - `RollupColumn`
+    - `RollupIndex`
     - `RollupOp`
     - `RollupReconcile`
     - `RollupSourceSpec`
@@ -280,6 +281,7 @@ is recomputed in `onReady`.
     - `network/live/query-resource`
     - `page/editor`
     - `page/links`
+    - `stats/tasks`
     - `tasks/tasks-core`
 - Exemptions:
   - Exempts itself from:

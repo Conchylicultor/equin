@@ -40,8 +40,14 @@ export interface RollupSourceSpec {
   /**
    * The source column that names the rollup row a source row contributes to —
    * the rollup key itself, or (with `via`) a value the hop maps to it.
+   *
+   * Several columns (no `via`) when one source row contributes to several
+   * rollup rows — a task counted on the day it was created AND the day it
+   * resolved: a write re-aggregates every key any of them names, before and
+   * after. Such a source cannot back a rollup a collection joins (its routes
+   * key on one carry column; `soleCarry` refuses it).
    */
-  carry: PgColumn;
+  carry: PgColumn | readonly [PgColumn, ...PgColumn[]];
   via?: RollupVia;
   /**
    * Every other source column the aggregate reads. An UPDATE re-aggregates only
@@ -128,6 +134,16 @@ export interface RollupSpec<T extends PgTable = PgTable> {
   fed?: true;
 }
 
+/** One secondary index of a rollup table. */
+export interface RollupIndex {
+  name: string;
+  /** Its columns, in order (plain btree, ascending). */
+  columns: readonly string[];
+  unique: boolean;
+  /** `CREATE [UNIQUE] INDEX …` */
+  ddl: string;
+}
+
 /** One rollup column, as the generated DDL declares it. */
 export interface RollupColumn {
   name: string;
@@ -149,9 +165,10 @@ export interface CompiledRollupSource {
   table: string;
   /** The source table's primary-key columns. */
   pk: readonly string[];
-  carry: string;
+  /** The carry columns (`RollupSourceSpec.carry`): one, or several with no `via`. */
+  carry: readonly [string, ...string[]];
   /**
-   * The carry column's SQL type — `via.match`'s too (asserted), else the
+   * The carry columns' SQL type (one for all, asserted) — `via.match`'s too (asserted), else the
    * rollup key's. What a reader routing this source's changed carry values
    * (a reverse probe over them) casts them to.
    */
@@ -197,6 +214,15 @@ export interface Rollup<T extends PgTable = PgTable> {
   readonly closure?: { table: string; child: string; parent: string };
   /** `CREATE TABLE IF NOT EXISTS …` */
   readonly createTableDdl: string;
+  /**
+   * The secondary indexes the handle declares (drizzle's `index()` in the
+   * table's extra config): what a rollup ON this rollup scopes its select by
+   * when it does not carry this table's key (a day rollup reading per-task
+   * rows by day). The boot layer creates one only when the catalog lacks it
+   * or holds it with other columns — never a no-op `CREATE INDEX`, which
+   * would still lock the table against its maintain functions' writes.
+   */
+  readonly indexes: readonly RollupIndex[];
   /**
    * The `select` with its scope rendered as a no-op that still names the key
    * expression — what the boot layer compiles as a temp view to check its

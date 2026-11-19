@@ -20,7 +20,7 @@ import { minuteClass } from "./query";
 // 3.5 s on main (2026-11-19, ~116k rows × 67 buckets) and grows with the window.
 // The days not rolled yet — today, and yesterday until the browser's late
 // batches can no longer reach it — are summed live from the minute table: a day
-// and a half at most.
+// and a half at most (the reader rolls a closed day the job has not reached).
 
 const DAY_MS = 24 * 60 * 60_000;
 // A browser batch may carry a minute up to 6 h old (ingest's MAX_AGE_MS): a day
@@ -253,6 +253,14 @@ export async function loadDailyLatency(
   now = Date.now(),
 ): Promise<DailyLatency> {
   const tomorrow = dayOf(now + DAY_MS);
+  // Roll any closed day the hourly job has not reached yet (a fresh install
+  // before its first run, a machine asleep through the hour) before reading,
+  // so the live sum below only ever covers the days still open — today, and
+  // yesterday until ROLL_AFTER_CLOSE_MS — whatever the job's timing. Normally
+  // a 34-row read that rolls nothing. Main's first trend reads after this
+  // table shipped summed 35 days of minutes live (3–4 s, report-1795096034-mr4sfb)
+  // because the job's first run was still up to an hour away.
+  await rollClosedDays(now);
   const rolledHosts = await executeRows(db, {
     label: "latency-ledger:daily-host-rolled",
     row: z.object({

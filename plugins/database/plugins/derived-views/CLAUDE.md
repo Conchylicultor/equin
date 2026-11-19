@@ -189,6 +189,8 @@ and re-export it from `core/index.ts`. See
     - `TASK_BLOCKING_TABLE`
     - `TASK_CHILD_COUNT_TABLE`
     - `TASK_DEPENDENCY_LIST_TABLE`
+    - `TASK_HISTORY_DAYS_TABLE`
+    - `TASK_HISTORY_FACTS_TABLE`
     - `TASK_LATEST_CONVERSATION_TABLE`
     - `topoSortViews`
 - Cross-plugin:
@@ -205,6 +207,7 @@ and re-export it from `core/index.ts`. See
     - `network/live/live-state-snapshot`
     - `page/editor`
     - `page/links`
+    - `stats/tasks`
     - `tasks/tasks-core`
 - Exemptions:
   - Exempts itself from: `sql-writes:fit:hand-written` — `server/internal/rebuild.ts` (debt)

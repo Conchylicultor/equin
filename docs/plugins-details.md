@@ -24886,6 +24886,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Rollup`
           - `RollupClosure`
           - `RollupColumn`
+          - `RollupIndex`
           - `RollupOp`
           - `RollupReconcile`
           - `RollupSourceSpec`
@@ -24903,6 +24904,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/query-resource`
           - `page/editor`
           - `page/links`
+          - `stats/tasks`
           - `tasks/tasks-core`
       - Exemptions:
         - Exempts itself from:
@@ -24981,6 +24983,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TASK_BLOCKING_TABLE`
           - `TASK_CHILD_COUNT_TABLE`
           - `TASK_DEPENDENCY_LIST_TABLE`
+          - `TASK_HISTORY_DAYS_TABLE`
+          - `TASK_HISTORY_FACTS_TABLE`
           - `TASK_LATEST_CONVERSATION_TABLE`
           - `topoSortViews`
       - Cross-plugin:
@@ -24997,6 +25001,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/live-state-snapshot`
           - `page/editor`
           - `page/links`
+          - `stats/tasks`
           - `tasks/tasks-core`
       - Exemptions:
         - Exempts itself from: `sql-writes:fit:hand-written` — `server/internal/rebuild.ts` (debt)
@@ -62585,11 +62590,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `stats/commits.tooltipNumberFormatter`
           - `stats/commits.yAxisFormatter`
       - Server:
-        - Contributes: `resource.declare` "stats.tasks.history"
+        - Contributes:
+          - `resource.declare` "stats.tasks.history"
+          - `derived-table` "task_history_days"
+          - `derived-table` "task_history_facts"
         - Uses:
           - `database.db`
+          - `database/derived-tables.DerivedTable`
           - `network/live.serveValue`
-          - `tasks/tasks-core.tasksView`
+          - `tasks/tasks-core._taskAttemptFacts`
+          - `tasks/tasks-core._tasks`
+          - `tasks/tasks-core.taskDerived`
+        - DB schema: `plugins/stats/plugins/tasks/server/internal/rollup-table.ts`
         - Resources: `stats.tasks.history` (push, whole: one row per UTC day since the first task (a few hundred for a year of use), aggregated in SQL — never one row per task)
       - Cross-plugin:
         - Uses tokens:
@@ -65745,6 +65757,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `_conversations`
           - `_conversationStatusChangedTriggers`
           - `_pushLandedTriggers`
+          - `_taskAttemptFacts`
           - `_taskCreatedTriggers`
           - `_taskDescriptionChangedTriggers`
           - `_taskMandateChangedTriggers`
@@ -65830,6 +65843,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskAttachments`
           - `taskCreated`
           - `taskDependsOn`
+          - `taskDerived`
           - `taskDescriptionChanged`
           - `taskDescriptionsServed`
           - `taskDroppedStatesServed`

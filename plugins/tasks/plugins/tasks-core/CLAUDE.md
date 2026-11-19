@@ -498,6 +498,7 @@ serves them.
     - `_conversations`
     - `_conversationStatusChangedTriggers`
     - `_pushLandedTriggers`
+    - `_taskAttemptFacts`
     - `_taskCreatedTriggers`
     - `_taskDescriptionChangedTriggers`
     - `_taskMandateChangedTriggers`
@@ -583,6 +584,7 @@ serves them.
     - `taskAttachments`
     - `taskCreated`
     - `taskDependsOn`
+    - `taskDerived`
     - `taskDescriptionChanged`
     - `taskDescriptionsServed`
     - `taskDroppedStatesServed`

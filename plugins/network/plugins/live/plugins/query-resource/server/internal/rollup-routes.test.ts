@@ -17,6 +17,7 @@ import { describe, expect, test } from "bun:test";
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  date,
   integer,
   pgTable,
   text,
@@ -26,6 +27,7 @@ import { defineRollup } from "@plugins/database/plugins/derived-tables/core";
 import {
   ATTEMPT_CONV_AGG_TABLE,
   ATTEMPT_PUSH_AGG_TABLE,
+  TASK_HISTORY_DAYS_TABLE,
   TASK_LATEST_CONVERSATION_TABLE,
 } from "@plugins/database/plugins/derived-views/core";
 import type { ResourceParams } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
@@ -41,7 +43,12 @@ import {
 import { recordingQueryDb } from "../testing/recording-db";
 import { routedReads } from "./arm-plan";
 import { compileGroupsQuery } from "./compile-groups";
-import { compileAllJoins, compileJoins, type PlannedJoin } from "./joins";
+import {
+  compileAllJoins,
+  compileJoins,
+  soleCarry,
+  type PlannedJoin,
+} from "./joins";
 import { compiledRoutePlan } from "./routes";
 import type { WindowOrderKey } from "./spec";
 
@@ -807,5 +814,40 @@ describe("C9 / D24 — an `all`-only join outside the `all` compiler is refused 
         db: recordingQueryDb().db,
       }),
     ).toThrow(/only a collection declared `all` reads/);
+  });
+});
+
+describe("soleCarry", () => {
+  test("a single carry is the route column; a multi-column carry is refused", () => {
+    const items = pgTable("items", {
+      id: text("id").primaryKey(),
+      openedDay: date("opened_day").notNull(),
+      closedDay: date("closed_day"),
+    });
+    const days = pgTable(TASK_HISTORY_DAYS_TABLE, {
+      day: date("day").primaryKey(),
+      n: integer("n").notNull(),
+    });
+    const multi = defineRollup({
+      table: days,
+      key: days.day,
+      select: (scope) =>
+        `SELECT i.opened_day AS day, count(*)::int AS n FROM items i WHERE ${scope("i.opened_day")} GROUP BY 1`,
+      sources: [
+        { table: items, carry: [items.openedDay, items.closedDay], reads: [] },
+      ],
+      fed: true,
+    });
+    expect(() => soleCarry(multi.sources[0]!)).toThrow(
+      /rollup source "items" .* carries 2 columns \(opened_day, closed_day\)/,
+    );
+    const single = defineRollup({
+      table: days,
+      key: days.day,
+      select: (scope) =>
+        `SELECT i.opened_day AS day, count(*)::int AS n FROM items i WHERE ${scope("i.opened_day")} GROUP BY 1`,
+      sources: [{ table: items, carry: items.openedDay, reads: [] }],
+    });
+    expect(soleCarry(single.sources[0]!)).toBe("opened_day");
   });
 });

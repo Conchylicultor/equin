@@ -36,6 +36,7 @@ import {
   assertHopsCovered,
   primaryColumns,
   rollupRouteId,
+  soleCarry,
   type JoinPlan,
 } from "./joins";
 import { allOf, anyOf, anyOfExpr, canonicalSqlType } from "./raw-sql";
@@ -845,7 +846,7 @@ export function compileGrouped(
   const keyedBy = (table: PgTable, col: PgColumn): { column?: string } =>
     tablePrimary(table) === col ? {} : { column: col.name };
   const srcGate = (src: CompiledRollupSource): string[] =>
-    [...new Set([...src.pk, src.carry, ...src.reads])].sort();
+    [...new Set([...src.pk, ...src.carry, ...src.reads])].sort();
   /** `<on> = ANY(<keys>)` — the carried values as rollup keys, through `via`. */
   const inKeys = (
     on: PgColumn,
@@ -898,9 +899,9 @@ export function compileGrouped(
       ...route,
       map: {
         kind: "reverse",
-        ...(src.pk.length === 1 && src.pk[0] === src.carry
+        ...(src.pk.length === 1 && src.pk[0] === soleCarry(src)
           ? {}
-          : { column: src.carry }),
+          : { column: soleCarry(src) }),
         resolve: guarded(resolve),
       },
     };

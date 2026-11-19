@@ -25,11 +25,18 @@
     - `stats/commits.tooltipNumberFormatter`
     - `stats/commits.yAxisFormatter`
 - Server:
-  - Contributes: `resource.declare` "stats.tasks.history"
+  - Contributes:
+    - `resource.declare` "stats.tasks.history"
+    - `derived-table` "task_history_days"
+    - `derived-table` "task_history_facts"
   - Uses:
     - `database.db`
+    - `database/derived-tables.DerivedTable`
     - `network/live.serveValue`
-    - `tasks/tasks-core.tasksView`
+    - `tasks/tasks-core._taskAttemptFacts`
+    - `tasks/tasks-core._tasks`
+    - `tasks/tasks-core.taskDerived`
+  - DB schema: `plugins/stats/plugins/tasks/server/internal/rollup-table.ts`
   - Resources: `stats.tasks.history` (push, whole: one row per UTC day since the first task (a few hundred for a year of use), aggregated in SQL — never one row per task)
 - Cross-plugin:
   - Uses tokens:

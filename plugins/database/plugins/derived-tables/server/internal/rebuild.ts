@@ -108,6 +108,7 @@ export async function prepareRollupTables(
     const recreated = new Set<string>();
     for (const r of ordered) {
       if (await ensureRollupTable(tx, r)) recreated.add(r.table);
+      await ensureRollupIndexes(tx, r);
     }
     const adoptable = adoptableSourceTables(ordered, older);
     return {
@@ -398,6 +399,54 @@ async function ensureRollupTable(tx: Tx, r: Rollup): Promise<boolean> {
   return true;
 }
 
+// Each declared secondary index, read off the catalog first: created when
+// missing, dropped and recreated when its columns or uniqueness differ, and
+// left alone otherwise. Never a no-op `CREATE INDEX IF NOT EXISTS`: Postgres
+// takes the table's ShareLock before it checks existence, held until the
+// schema layer commits — blocking the maintain functions' writes (every task
+// write, for a rollup on tasks) through each boot, where a steady-state boot
+// takes no source lock. An index the handle no longer declares is left in
+// place (harmless; the table is rebuilt on its next shape change).
+async function ensureRollupIndexes(tx: Tx, r: Rollup): Promise<void> {
+  if (r.indexes.length === 0) return;
+  const live = await executeRows(tx, {
+    query: drizzleSql`
+      SELECT c.relname::text AS name, i.indisunique AS unique,
+             ARRAY(SELECT a.attname::text
+                     FROM unnest(i.indkey::int2[]) WITH ORDINALITY AS k(attnum, n)
+                     JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = k.attnum
+                    ORDER BY k.n) AS columns
+        FROM pg_index i
+        JOIN pg_class c ON c.oid = i.indexrelid
+       WHERE i.indrelid = to_regclass(${`public."${r.table}"`})`,
+    row: z.object({
+      name: z.string(),
+      unique: z.boolean(),
+      columns: z.array(z.string()),
+    }),
+    label: `derived-tables: ${r.table} indexes`,
+  });
+  const byName = new Map(live.map((ix) => [ix.name, ix]));
+  for (const ix of r.indexes) {
+    const have = byName.get(ix.name);
+    if (
+      have !== undefined &&
+      have.unique === ix.unique &&
+      have.columns.join(",") === ix.columns.join(",")
+    ) {
+      continue;
+    }
+    if (have !== undefined) {
+      log.publish(
+        `[derived-tables] ${r.table}: index ${ix.name} is on (${have.columns.join(", ")}), declared on (${ix.columns.join(", ")}) — recreating it`,
+        "stderr",
+      );
+      await tx.execute(drizzleSql.raw(`DROP INDEX "public".${q(ix.name)}`));
+    }
+    await tx.execute(drizzleSql.raw(ix.ddl));
+  }
+}
+
 // The rollup's `select`, compiled as a temp view and checked against its
 // declaration before its maintain functions are (re)installed:
 //
@@ -497,7 +546,7 @@ function selectProblems(
     declared.set(table, set);
   };
   for (const s of r.sources) {
-    allow(s.table, [...s.pk, s.carry, ...s.reads]);
+    allow(s.table, [...s.pk, ...s.carry, ...s.reads]);
     if (s.via !== undefined) allow(s.via.table, [s.via.match, s.via.key]);
   }
   for (const d of reads) {

@@ -116,6 +116,12 @@ export { runtimeOfConversationLookup } from "./internal/runtime-lookups";
 // writes that move them (change-feed's `relationBases`) — at one FULL reload
 // per such write.
 export { tasks as tasksView } from "./internal/views";
+// A task's status / finished-at rule (`taskDerived`) and the stored per-task
+// attempt facts it reads (`task_attempt_facts`, a rollup on the change feed):
+// what a rollup over tasks derives a task's outcome from without reading
+// `tasks_v` (Stats → Tasks' history, `stats/tasks`).
+export { taskDerived } from "./internal/derived";
+export { _taskAttemptFacts } from "./internal/rollup-table";
 
 // Zod schemas and TS types
 export {

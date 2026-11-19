@@ -215,6 +215,16 @@ export const TASK_BLOCKING_TABLE = "task_prerequisite_blocking";
 export const TASK_CHILD_COUNT_TABLE = "task_child_count";
 
 /**
+ * Stats → Tasks' history (`plugins/stats/plugins/tasks/server/internal/rollups.ts`):
+ * per task, the UTC day it was created and the day and way it resolved
+ * (`task_history_facts`), and per UTC day how many tasks were created,
+ * completed and dropped (`task_history_days`, a rollup on the first, on the
+ * change feed). Created and reconciled by `prepareRollupTables`.
+ */
+export const TASK_HISTORY_FACTS_TABLE = "task_history_facts";
+export const TASK_HISTORY_DAYS_TABLE = "task_history_days";
+
+/**
  * Per task, how many ACTIVE tasks transitively depend on it (query-resource's
  * `materializeJoin` of a closure over `task_dependencies` walked dependent-ward,
  * in `plugins/tasks/plugins/tasks-core/server/internal/task-rows.ts`): the
@@ -309,6 +319,8 @@ export const IMPERATIVE_PUBLIC_TABLES = {
   TASK_BLOCKING_TABLE,
   TASK_CHILD_COUNT_TABLE,
   TASK_ACTIVE_DEPENDENTS_TABLE,
+  TASK_HISTORY_FACTS_TABLE,
+  TASK_HISTORY_DAYS_TABLE,
   PAGE_TREE_CHILDREN_TABLE,
   PAGE_LINK_TARGETS_TABLE,
   PAGE_LIVE_TABLE,
