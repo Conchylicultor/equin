@@ -6,9 +6,9 @@ const WEBKIT_WORDS =
 
 describe("isContextTeardown", () => {
   test("WebKit's teardown rejection of a lock or permission promise", () => {
-    expect(isContextTeardown(new DOMException(WEBKIT_WORDS, "AbortError"))).toBe(
-      true,
-    );
+    expect(
+      isContextTeardown(new DOMException(WEBKIT_WORDS, "AbortError")),
+    ).toBe(true);
   });
 
   test("any other AbortError is still a crash", () => {
