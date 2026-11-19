@@ -235,10 +235,23 @@ export const filterOps = {
 type FilterOps = typeof filterOps;
 export type FilterOpId = keyof FilterOps;
 
-/** The ops a domain takes — derived from the table's `domains`, so it cannot drift. */
-export type OpsFor<D extends FilterDomainId> = {
-  [K in FilterOpId]: D extends FilterOps[K]["domains"][number] ? K : never;
-}[FilterOpId];
+/** Each domain's ops, computed once over the concrete domains. */
+type OpsByDomain = {
+  [D in FilterDomainId]: {
+    [K in FilterOpId]: D extends FilterOps[K]["domains"][number] ? K : never;
+  }[FilterOpId];
+};
+
+/**
+ * The ops a domain takes — derived from the table's `domains`, so it cannot
+ * drift. A lookup in {@link OpsByDomain}, not the conditional per op written
+ * inline: over a generic domain (a column type a call's contextual type
+ * reaches before its type arguments are fixed) that conditional is a union of
+ * one deferred conditional per op, which every mapped type over the ops
+ * (`ExactlyOne`'s `Exclude` per op) squares; the lookup stays one deferred
+ * indexed access (research/2026-11-19-global-use-live-checker-types.md).
+ */
+export type OpsFor<D extends FilterDomainId> = OpsByDomain[D];
 
 /** An op's operand kind. */
 export type OperandKindOf<K extends FilterOpId> = FilterOps[K]["operand"];

@@ -26,7 +26,6 @@ import type {
   LiveQueryGroupable,
   LiveQueryWhere,
   LiveRowQuery,
-  LiveWhere,
   LiveScopedAllQuery,
   LivePagedPages,
   LivePagedValue,
@@ -37,7 +36,6 @@ import type {
   LiveTreeCollection,
   LiveValue,
   LiveValueOrigin,
-  LiveWhereOf,
 } from "@plugins/network/plugins/live/core";
 import {
   COLLECTION_KIND_KEYS,
@@ -325,20 +323,34 @@ type NotScopeFields<Row, B extends string> = {
   readonly [K in Exclude<keyof Row & string, B>]?: never;
 };
 
-/**
- * A scoped set's skip (`{ where: null }`): its scope is not known yet (another
- * read is still loading it) — `pending`, nothing read. `never` elsewhere.
- */
-type ScopeSkip<D> = D extends { window: object }
-  ? never
-  : [LiveWhereOf<D>] extends [never]
-    ? never
-    : null;
-
 /** A scoped set's scope record. */
 type ScopeWhere<Row, B extends string> = {
   readonly [K in B]: string;
 } & NotScopeFields<Row, B>;
+
+/**
+ * The `where` a query on a collection declared `D` takes: a window's
+ * {@link LiveQueryWhere} (its own columns plus those its `columns` bring), a
+ * scoped `all` set's scope record or `null` (its skip — the scope is not
+ * known yet: `pending`, nothing read), and `never` on an unscoped `all` set.
+ *
+ * ONE alias, passed both to the forms' `where` and to
+ * {@link KnownKeysOnly}'s slot, so the two are the same type and their
+ * intersection is that type. Two spellings of the same `where` (the
+ * collection's `LiveWhereOf` beside the forms' own) intersect as a cross
+ * product of their clause unions — every op of every column against every
+ * other, ~7k types on a 40-column collection, built for each call's
+ * contextual type (measured, research/2026-11-19-global-use-live-checker-types.md).
+ */
+type QueryWhere<D, Row, F, B extends string, Cols> = D extends {
+  window: object;
+}
+  ? LiveQueryWhere<F, Cols>
+  : D extends { all: object }
+    ? [B] extends [never]
+      ? never
+      : ScopeWhere<Row, B> | null
+    : never;
 
 /** Every kind key but `K`, refused (`?: never`): a form names one read. */
 type OnlyKind<K extends CollectionKindKey | "none"> = {
@@ -465,13 +477,13 @@ type FormKeys<Forms> = Forms extends unknown ? keyof Forms : never;
 type QueryKeyName = FormKeys<
   | CollectionForms<
       { window: object; count: object; tree: LiveTree },
-      object,
+      never,
       never,
       never,
       never,
       never
     >
-  | CollectionForms<{ all: object }, object, never, never, "scope", never>
+  | CollectionForms<{ all: object }, never, never, "scope", never, never>
 >;
 
 /**
@@ -501,12 +513,11 @@ type KnownKeysOnly<K extends PropertyKey, Known, W> = {
  */
 type CollectionForms<
   D,
-  Row,
   F,
   S extends string,
   B extends string,
   G,
-  W = LiveWhere<F>,
+  W,
   GC extends string = LiveGroupableColumn<F>,
 > =
   | (LiveRowQuery & OnlyKind<"id"> & IncludeFor<D>)
@@ -523,7 +534,7 @@ type CollectionForms<
           [B] extends [never]
           ? OnlyKind<"select"> & { select: unknown }
           : OnlyKind<"select"> & {
-              where: ScopeWhere<Row, B> | null;
+              where: W;
               select?: unknown;
             }
         : never);
@@ -702,19 +713,18 @@ export function useLive<
   query:
     | (CollectionForms<
         D,
-        Row,
         LiveQueryFilterable<F, Cols>,
         LiveQuerySortable<S, Cols>,
         B,
         G,
-        LiveQueryWhere<F, Cols>,
+        QueryWhere<D, Row, F, B, Cols>,
         LiveQueryGroupable<F, Cols>
       > &
         KindKeyValues<Row, I, Ids, C, G, R, In> &
         BroughtColumns<Cols> &
         KindGuard<QueryKindValues<D, I, Ids, C, G, R, N>> &
         SkipGuard<N> &
-        KnownKeysOnly<K, QueryKeyName, LiveWhereOf<D, Cols> | ScopeSkip<D>>)
+        KnownKeysOnly<K, QueryKeyName, QueryWhere<D, Row, F, B, Cols>>)
     | QueryHoles<D, N>,
 ): WithMachine<
   NM,

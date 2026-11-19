@@ -599,6 +599,10 @@ export interface LiveAllCollection<
  * `[typeof trackColumns]`) — extends a window's vocabulary by theirs (see
  * {@link LiveQueryFilterable}): `LiveWhereOf<typeof tasks, [typeof track]>`
  * takes `{ "tasks_ext_track.track": "sidequest" }`.
+ *
+ * `useLive`'s own query typing spells the same `where` once more
+ * (`QueryWhere`, web/internal/use-live.ts — plus a scope's `null` skip and
+ * its refusal of non-scope fields): keep the two in agreement.
  */
 export type LiveWhereOf<C, Cols = never> = C extends {
   window: object;
