@@ -53,6 +53,11 @@ import {
   type StackedTitle,
 } from "../internal/title-cell";
 import { NestedTableView } from "./nested-table-view";
+import {
+  useLatestSelector,
+  useLatestStore,
+  type LatestStore,
+} from "@plugins/primitives/plugins/latest-ref/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
@@ -173,21 +178,45 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
   );
 
   // What a manual-order row's decoration reads (`useManualOrderDecoration`).
-  // DataTable's per-row decoration hook only receives `(row, index)`, but the
+  // DataTable's per-row decoration hook only receives `(row, key)`, but the
   // primitive needs the row's group to scope a drag to its own section — so
-  // it is resolved by row key here, once per set of sections.
+  // it is resolved by row key here, once per set of sections, and read per
+  // row (a store, not a context value: a search re-partitions the sections,
+  // and only the rows whose section changed may re-render).
   const rowKey = props.rowKey;
   const getRank = manualOrder?.getRank;
-  const manualRowContext = useMemo((): ManualRowContextValue | null => {
-    if (getRank === undefined) return null;
-    const sectionKeyByRowKey = new Map<string, string | null>();
+  const sectionKeyByRowKey = useMemo(() => {
+    const map = new Map<string, string | null>();
+    for (const section of sections) {
+      for (const entry of section.entries) map.set(entry.key, section.key);
+    }
+    return map;
+  }, [sections]);
+  const sectionOf =
+    useLatestStore<ReadonlyMap<string, string | null>>(sectionKeyByRowKey);
+  const manualRowContext = useMemo(
+    (): ManualRowContextValue | null =>
+      getRank === undefined ? null : { getRank, sectionOf },
+    [getRank, sectionOf],
+  );
+  // Aggregate representatives carry a `×N` badge in the primary cell, keyed
+  // by row OBJECT identity (the cell renderer gets the row, not its index) —
+  // stable, since the representative row object flows through unchanged.
+  // Read per row through a store, so the columns (and every row they reach)
+  // do not change when the counts do.
+  const aggregateCountByRow = useMemo(() => {
+    const map = new Map<unknown, number>();
     for (const section of sections) {
       for (const entry of section.entries) {
-        sectionKeyByRowKey.set(entry.key, section.key);
+        if (entry.aggregateCount && entry.aggregateCount > 1) {
+          map.set(entry.row, entry.aggregateCount);
+        }
       }
     }
-    return { rowKey, getRank, sectionKeyByRowKey };
-  }, [sections, rowKey, getRank]);
+    return map;
+  }, [sections]);
+  const aggregateCounts =
+    useLatestStore<ReadonlyMap<unknown, number>>(aggregateCountByRow);
 
   // The host owns loading→empty precedence (it skips this view while loading),
   // so an empty section set always means confirmed-empty.
@@ -233,17 +262,6 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
       columnFields.push(f);
     }
   }
-  // Aggregate representatives carry a `×N` badge in the primary cell. Key the
-  // count by row OBJECT identity (the cell renderer gets the row, not its index),
-  // which is stable since the representative row object flows through unchanged.
-  const aggregateCountByRow = new Map<unknown, number>();
-  for (const section of sections) {
-    for (const entry of section.entries) {
-      if (entry.aggregateCount && entry.aggregateCount > 1) {
-        aggregateCountByRow.set(entry.row, entry.aggregateCount);
-      }
-    }
-  }
   // The badge lands on the title column (else the first one drawn).
   const primaryFieldId = titleField?.id ?? columnFields[0]?.id;
 
@@ -283,14 +301,11 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
       ) {
         return <span className="text-list-time-ink">{cell}</span>;
       }
-      const count =
-        f.id === primaryFieldId ? aggregateCountByRow.get(row) : undefined;
-      if (!count) return cell;
+      if (f.id !== primaryFieldId || aggregate === undefined) return cell;
       return (
-        <Inline gap="xs">
+        <AggregateCount counts={aggregateCounts} row={row}>
           {cell}
-          <Badge variant="muted">{`×${count}`}</Badge>
-        </Inline>
+        </AggregateCount>
       );
     },
     // The title takes the slack unless its field sets a width.
@@ -323,15 +338,15 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
       ]
     : fieldColumns;
 
-  const actionProps = (row: unknown, i: number) => ({
+  const actionProps = (row: unknown, key: string) => ({
     row,
-    hasChildren: hasChildren?.(rowKey(row, i)) ?? false,
+    hasChildren: hasChildren?.(key) ?? false,
   });
   const rowActions = revealed
-    ? (row: unknown, i: number) => revealed(actionProps(row, i))
+    ? (row: unknown, key: string) => revealed(actionProps(row, key))
     : undefined;
   const rowPersistentActions = persistent
-    ? (row: unknown, i: number) => persistent(actionProps(row, i))
+    ? (row: unknown, key: string) => persistent(actionProps(row, key))
     : undefined;
 
   const shared = {
@@ -496,10 +511,9 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
  *  the view was a new `useRowDecoration` on every render (re-rendering every
  *  row) and kept the React Compiler off the whole view. */
 interface ManualRowContextValue {
-  rowKey: (row: unknown, index: number) => string;
   getRank: ManualOrderConfig<unknown>["getRank"];
-  /** Which section each row sits in, by row key. */
-  sectionKeyByRowKey: ReadonlyMap<string, string | null>;
+  /** Which section each row sits in, by row key — read per row. */
+  sectionOf: LatestStore<ReadonlyMap<string, string | null>>;
 }
 
 const ManualRowContext = createContext<ManualRowContextValue | null>(null);
@@ -512,20 +526,16 @@ const ManualRowContext = createContext<ManualRowContextValue | null>(null);
  */
 function useManualOrderDecoration(
   row: unknown,
-  i: number,
+  id: string,
 ): DataTableRowDecoration | undefined {
   const ctx = use(ManualRowContext);
   if (ctx === null)
     throw new Error("A manual-order table row rendered outside its table view");
-  const id = ctx.rowKey(row, i);
   const rank = ctx.getRank(row);
+  const section = useLatestSelector(ctx.sectionOf, (m) => m.get(id) ?? null);
   // Destructured so render never reads a member off the hook output
   // (react-hooks/refs flags member access on it, not destructuring).
-  const { ref, listeners, style } = useRankSortableItem(
-    id,
-    rank,
-    ctx.sectionKeyByRowKey.get(id) ?? null,
-  );
+  const { ref, listeners, style } = useRankSortableItem(id, rank, section);
   // A null rank marks the row non-orderable: the hook still runs (hooks rule),
   // but we return no decoration so its ref attaches to nothing — the row is
   // neither a drag source nor a drop target.
@@ -536,6 +546,28 @@ function useManualOrderDecoration(
 /** The manual-order decoration, bound once so the view hands `DataTable` a
  *  constant (and never names a hook as a value, which the compiler refuses). */
 const MANUAL_ORDER_DECORATION = { useRowDecoration: useManualOrderDecoration };
+
+/** A primary cell with its aggregate's `×N` badge, when the row represents
+ *  several — read per row, so a change of the counts redraws only the rows
+ *  whose count changed. */
+function AggregateCount({
+  counts,
+  row,
+  children,
+}: {
+  counts: LatestStore<ReadonlyMap<unknown, number>>;
+  row: unknown;
+  children: ReactNode;
+}): ReactNode {
+  const count = useLatestSelector(counts, (m) => m.get(row));
+  if (!count) return children;
+  return (
+    <Inline gap="xs">
+      {children}
+      <Badge variant="muted">{`×${count}`}</Badge>
+    </Inline>
+  );
+}
 
 /** Flatten the sections into the rank-reorder item list (id + rank + group).
  *  Null-rank entries are non-orderable, so they are neither reorder-scope

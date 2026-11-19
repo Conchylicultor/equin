@@ -295,12 +295,25 @@ keeps its identity, so:
 - the windowed measure handle travels as two props (`measureRef`, the
   virtualizer's one `measureElement`, and `measureIndex`), and the fold's row
   props as `foldInert` (the row rebuilds `rowProps` from its own key);
+- a row is handed its key (`rowId`), never its position: `useRowDecoration`,
+  `rowActions` and `rowPersistentActions` are called with `(row, key)`, so a
+  row whose neighbours came or went keeps its props. The selection arrives as
+  a boolean (`selected`), so a new `selectedRowId` re-renders two rows. One
+  exception left: a WINDOWED row still takes its window position
+  (`measureIndex`, the `data-index` the virtualizer measures by), so there a
+  row above that comes or goes re-renders the rows below it;
+- the `row` objects themselves keep their identity while unchanged — a
+  nesting caller hands the tree model's shared lines (tree CLAUDE.md, "A row
+  re-renders only when something about IT changes");
 - a caller's `columns`, `tree`, `rowActions`, `rowPersistentActions`,
   `rowActivation` and `useRowDecoration` must be stable while what they draw is
   — never rebuilt per render. A decoration hook is a module constant reading
   its inputs from a context (data-view's nested table: `NestedRowContext`),
   never a function declared inside the caller's component (that is a new hook
   per render, and it keeps the React Compiler off the whole component).
+  What changes per render (a section map, aggregate counts, which line is
+  first) goes in that context as a `LatestStore` read per row
+  (`primitives/latest-ref`), never as a value.
 
 `render-cost.ts` (`framework/tooling/react-compiler/skips/e2e`) counts what a
 step renders, to check a caller.

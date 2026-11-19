@@ -633,14 +633,14 @@ export function DataTable<TRow>({
         </div>
       );
     }
+    const key = rowKey(row, i);
     return (
       <DataTableRow
-        key={rowKey(row, i)}
+        key={key}
         row={row}
-        index={i}
+        rowId={key}
         columns={shownColumns}
-        rowKey={rowKey}
-        selectedRowId={selectedRowId}
+        selected={key === selectedRowId}
         rowActivation={rowActivation}
         onRowOpen={onRowOpen}
         rowActions={rowActions}
@@ -903,10 +903,9 @@ const DataTableRow = memo(DataTableRowImpl) as typeof DataTableRowImpl;
 
 function DataTableRowImpl<TRow>({
   row,
-  index,
+  rowId: key,
   columns,
-  rowKey,
-  selectedRowId,
+  selected: selectedByKey,
   rowActivation,
   onRowOpen,
   rowActions,
@@ -924,16 +923,19 @@ function DataTableRowImpl<TRow>({
   parts,
 }: {
   row: TRow;
-  index: number;
+  /** The row's key (`rowKey`) — never its index: a row keeps its props, and
+   *  so skips its render, when rows above it come or go. */
+  rowId: string;
   columns: ColumnDef<TRow>[];
-  rowKey: (row: TRow, index: number) => string;
-  selectedRowId: string | undefined;
+  /** Whether this row is the table's selected row (`selectedRowId`): a
+   *  boolean, so a selection change re-renders the two rows it moves between. */
+  selected: boolean;
   rowActivation: ((row: TRow) => Activation | undefined) | undefined;
   onRowOpen: ((row: TRow) => void) | undefined;
-  rowActions: ((row: TRow, index: number) => ReactNode) | undefined;
-  rowPersistentActions: ((row: TRow, index: number) => ReactNode) | undefined;
+  rowActions: ((row: TRow, key: string) => ReactNode) | undefined;
+  rowPersistentActions: ((row: TRow, key: string) => ReactNode) | undefined;
   useRowDecoration: Hook<
-    (row: TRow, index: number) => DataTableRowDecoration | undefined
+    (row: TRow, key: string) => DataTableRowDecoration | undefined
   >;
   /** A windowed row's measurement ref (the virtualizer's `measureElement`). */
   measureRef?: RowMeasure["ref"];
@@ -954,12 +956,11 @@ function DataTableRowImpl<TRow>({
   metaColumns: boolean;
   parts: DataTableParts | undefined;
 }): ReactNode {
-  const decoration = useRowDecoration(row, index);
+  const decoration = useRowDecoration(row, key);
   // A row whose activation is a link reads the link gestures: ⌘/middle-click
   // open its href in a browser tab instead of opening it here.
   const activation = rowActivation?.(row);
   const gestures = activationProps(activation);
-  const key = rowKey(row, index);
   // Destructure-and-rename so render never does inline `decoration.ref` member
   // access on the hook output (react-hooks/refs flags member access on a ref
   // value in render; destructuring is fine).
@@ -975,7 +976,7 @@ function DataTableRowImpl<TRow>({
   const revealedActions =
     decoration && "actions" in decoration
       ? decoration.actions
-      : rowActions?.(row, index);
+      : rowActions?.(row, key);
   const outline = presentation === "outline";
   const soft = presentation === "soft";
   // A decorated row in a windowed body is BOTH a drag source and a measurement
@@ -983,7 +984,7 @@ function DataTableRowImpl<TRow>({
   // decoration disabled virtualization).
   const rowRef = useComposedRef<HTMLElement>(decorationRef, measureRef);
   const look = ROW_LOOK[presentation];
-  const selected = decorationSelected ?? key === selectedRowId;
+  const selected = decorationSelected ?? selectedByKey;
   // The row's fold props (`useRowFold().rowProps`), keyed by its body line —
   // a data row's line key is its row key.
   const foldProps: RowFoldProps = { "data-row-fold": key, inert: foldInert };
@@ -1169,7 +1170,7 @@ function DataTableRowImpl<TRow>({
             {rowPersistentActions ? (
               <Stack direction="row" gap="none" align="center" justify="end">
                 <RowActions pin={null} alwaysVisible>
-                  {rowPersistentActions(row, index)}
+                  {rowPersistentActions(row, key)}
                 </RowActions>
                 {rowActions && !outline ? (
                   <RowActions pin={null}>{revealedActions}</RowActions>

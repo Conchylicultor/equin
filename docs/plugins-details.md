@@ -52773,7 +52773,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×4
           - `DataViewSlots.Setting` ×4
           - `IdKinds.Kind` ×2
-        - Uses: 149 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 147 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `network/live` ×24
           - `primitives/css/ui-kit` ×17
           - `primitives/data-view/view-core` ×11
@@ -52785,7 +52785,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/text` ×3
           - `primitives/css/toggle-chip` ×3
           - `primitives/kept-state` ×3
-          - `primitives/tree` ×3
           - `config_v2` ×2
           - `primitives/collapsible` ×2
           - `primitives/css/fill` ×2
@@ -52827,6 +52826,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/overlay/tooltip.Kbd`
           - `primitives/pane.usePaneViewParam`
           - `primitives/relative-time.useNow`
+          - `primitives/tree.useRowControls`
           - `primitives/virtual-rows.offscreenSkipClass`
           - `shell/notifications.useToast`
           - `shell/toast.isInToast`
@@ -53599,10 +53599,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort, and nests its rows (a tree is a table with no columns) when the source has a hierarchy.
           - Web:
             - Contributes: `DataViewSlots.View` "Table" → `TableView`
-            - Uses: 91 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md)
+            - Uses: 95 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md)
               - `primitives/data-view` ×48
-              - `primitives/tree` ×19
+              - `primitives/tree` ×20
               - `primitives/data-table` ×7
+              - `primitives/latest-ref` ×4
               - `primitives/css/text` ×3
               - `primitives/rank-reorder` ×3
               - `primitives/css/badge.Badge`
@@ -53614,7 +53615,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/spacing.Stack`
               - `primitives/css/ui-kit.cn`
-              - `primitives/latest-ref.useEventCallback`
               - `ui/icons.Icon`
             - Exports (types): `TableViewOptions`
           - Cross-plugin:
@@ -55383,7 +55383,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `atOrBeforePredicate`
           - `orderByClauses`
           - `seekPredicate`
-    - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
+    - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), useEventCallback(fn) is the stable-identity callback built on it, and useLatestStore(value) / useLatestSelector(store, select) hand a per-render value down to many memoized readers, each re-rendering only when its own selected answer changes. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
         - Imported by: 91 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
           - `primitives` ×35
@@ -55411,9 +55411,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/latest-ref.ts` (debt)
       - Web:
+        - Exports (types): `LatestStore`
         - Exports (values):
           - `useEventCallback`
           - `useLatestRef`
+          - `useLatestSelector`
+          - `useLatestStore`
     - **`launch`** — The standard launch-an-agent popover, and the split [model | launch] control under it.
       - Web:
         - Uses: 40 symbols — full list in [`plugins/primitives/plugins/launch/REFERENCE.md`](../plugins/primitives/plugins/launch/REFERENCE.md)
@@ -58857,11 +58860,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Slots: `Tree.Disclosure`
         - Slot contributors: `Tree.Disclosure` ← `ui.tree-disclosure`
-        - Uses: 29 symbols — full list in [`plugins/primitives/plugins/tree/REFERENCE.md`](../plugins/primitives/plugins/tree/REFERENCE.md)
+        - Uses: 32 symbols — full list in [`plugins/primitives/plugins/tree/REFERENCE.md`](../plugins/primitives/plugins/tree/REFERENCE.md)
           - `primitives/css/ui-kit` ×6
+          - `primitives/latest-ref` ×5
           - `primitives/css/spacing` ×2
           - `primitives/dom/scroll-reveal` ×2
-          - `primitives/latest-ref` ×2
           - `primitives/link-gesture` ×2
           - `primitives/row-actions` ×2
           - `primitives/collapsible.CollapsibleChevron`
@@ -58941,10 +58944,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TreeDisclosureProps`
           - `TreeKeyMove`
           - `TreeNode`
+          - `TreeSharing`
         - Exports (values):
           - `buildTree`
           - `childPlaceholder`
           - `computeDrop`
+          - `createTreeSharing`
           - `extendTarget`
           - `flatNodeIds`
           - `flattenVisible`

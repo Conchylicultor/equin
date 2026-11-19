@@ -237,8 +237,11 @@ export interface DataTableProps<TRow> {
    * `bg-accent` highlight. Compared against `rowKey(row, index)`.
    */
   selectedRowId?: string;
-  /** Trailing per-row actions, hover-revealed in their own column. */
-  rowActions?: (row: TRow, index: number) => ReactNode;
+  /** Trailing per-row actions, hover-revealed in their own column. Called
+   *  with the row's key (`rowKey`), never its index: a row's render must not
+   *  depend on where it sits, or every row below a row that came or went would
+   *  redraw (rows are memoized — see the plugin's CLAUDE.md). */
+  rowActions?: (row: TRow, key: string) => ReactNode;
   /**
    * Trailing per-row actions that stay painted **at rest** (never revealed),
    * sharing the same reserved trailing track as {@link rowActions} and sitting
@@ -246,7 +249,7 @@ export interface DataTableProps<TRow> {
    * without hovering (a Play button). The track is reserved whenever either is
    * present.
    */
-  rowPersistentActions?: (row: TRow, index: number) => ReactNode;
+  rowPersistentActions?: (row: TRow, key: string) => ReactNode;
   /**
    * CSS length the table's own sticky rows pin at, measured from the top of the
    * scroll viewport. Defaults to `"0px"` (flush to the top). Set this when a
@@ -263,10 +266,11 @@ export interface DataTableProps<TRow> {
    * drag reorder). Returns a ref + props spread + classes + style + in-row
    * overlay for the row element. Composes with windowing: a decorated row is still measured
    * and windowed. Inert when absent. The name must start with `use` (it is
-   * invoked as a hook). Stable per mount.
+   * invoked as a hook). Stable per mount. Called with the row's key, never
+   * its index (see {@link rowActions}).
    */
   useRowDecoration?: Hook<
-    (row: TRow, index: number) => DataTableRowDecoration | undefined
+    (row: TRow, key: string) => DataTableRowDecoration | undefined
   >;
   /**
    * Row keys that must stay mounted when scrolled out of the window — an

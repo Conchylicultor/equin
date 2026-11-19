@@ -9,6 +9,7 @@ import { filterTree } from "@plugins/primitives/plugins/search/web";
 import {
   buildTree,
   childPlaceholder,
+  createTreeSharing,
   flatNodeIds,
   flattenVisible,
   isDescendant,
@@ -21,7 +22,8 @@ import {
 } from "../../core";
 import { useSubtreeExpandIndex } from "./use-subtree-expand-index";
 import { useLazyLoadRequests } from "./use-lazy-load-requests";
-import type { TreeContextValue } from "./use-tree-row";
+import { useLatestStore } from "@plugins/primitives/plugins/latest-ref/web";
+import type { TreeContextValue, TreeState } from "./use-tree-row";
 import type { TreeItem } from "./types";
 
 /**
@@ -260,9 +262,16 @@ export function useTreeModel<T extends TreeItem>(
 
   // The painted lines: what a windowed renderer paints, what the keyboard walks
   // and — via orderedIds — the multi-select shift-range order, so none diverge.
+  //
+  // Shared across renders (`createTreeSharing`): a line whose node and depth
+  // are unchanged is the very object it was last render, so a renderer's
+  // memoized rows redraw only the lines that changed — a search keystroke or a
+  // live update rebuilds the whole forest as new objects otherwise.
+  const [sharing] = useState(createTreeSharing<T>);
   const flat = useMemo(
-    () => flattenVisible(visibleTree, placeholderOf),
-    [visibleTree, placeholderOf],
+    () =>
+      sharing.lines(flattenVisible(sharing.forest(visibleTree), placeholderOf)),
+    [sharing, visibleTree, placeholderOf],
   );
   const orderedIds = useMemo(() => flatNodeIds(flat), [flat]);
   // From `rows`, not the searched or scoped forest: a search force-opens what
@@ -373,51 +382,65 @@ export function useTreeModel<T extends TreeItem>(
     void setExpanded(changes);
   }, [selectedId, revealSelected, rows, setExpanded]);
 
-  const context = useMemo<TreeModelContext<T>>(
+  // What changes as the tree is used goes to the rows through a store, each
+  // row selecting its own answers (`useTreeRow`): a new selection, a new fold
+  // index or a host callback rebuilt per render re-renders only the rows whose
+  // answer changed, never every row through the context.
+  const treeState = useMemo<TreeState<T>>(
     () => ({
-      rows,
       selectedId,
       pendingFocusId,
-      setPendingFocus: setPendingFocusId,
-      clearPendingFocus,
       onSelect,
       selectHref,
       setExpanded,
       subtreeAllExpanded: subtreeIndex.getAllExpanded,
       toggleSubtreeExpanded,
       onCreate,
-      takeInitialReveal,
-      revealSelected,
       expandOnActivate,
       openOnActivate,
       lazyChildren,
-      childPlaceholder: placeholderOf,
       onOpen,
-      multiSelect,
-      canCreate: canCreate && !!onCreate,
-      canReorder: !!onMove,
-      guides,
     }),
     [
-      rows,
       selectedId,
       pendingFocusId,
-      clearPendingFocus,
       onSelect,
       selectHref,
       setExpanded,
       subtreeIndex,
       toggleSubtreeExpanded,
       onCreate,
-      takeInitialReveal,
-      revealSelected,
       expandOnActivate,
       openOnActivate,
       lazyChildren,
-      placeholderOf,
       onOpen,
+    ],
+  );
+  const state = useLatestStore(treeState);
+
+  const canOpen = onOpen !== undefined;
+  const context = useMemo<TreeModelContext<T>>(
+    () => ({
+      state,
+      setPendingFocus: setPendingFocusId,
+      clearPendingFocus,
+      takeInitialReveal,
+      revealSelected,
+      canOpen,
+      multiSelect,
+      canCreate: canCreate && !!onCreate,
+      canReorder: !!onMove,
+      guides,
+    }),
+    [
+      state,
+      clearPendingFocus,
+      takeInitialReveal,
+      revealSelected,
+      canOpen,
       multiSelect,
       canCreate,
+      onCreate,
       onMove,
       guides,
     ],

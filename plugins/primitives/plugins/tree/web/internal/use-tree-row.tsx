@@ -16,26 +16,27 @@ import {
 } from "@dnd-kit/core";
 import { useRankReorderItem } from "@plugins/primitives/plugins/rank-reorder/web";
 import { useRevealOnActive } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
-import type {
-  ChildPlaceholder,
-  ExpandChange,
-  LazyChildren,
-  TreeNode,
-} from "../../core";
+import {
+  useLatestSelector,
+  type LatestStore,
+} from "@plugins/primitives/plugins/latest-ref/web";
+import type { ExpandChange, LazyChildren, TreeNode } from "../../core";
 import type { TreeItem } from "./types";
 
-export type TreeContextValue<T extends TreeItem> = {
-  rows: readonly T[];
+/**
+ * What changes as a tree is used — the selection, the pending focus, the
+ * subtree fold index, and the host's callbacks (often new every render). Never
+ * read whole while rendering: a row selects its own answers from it
+ * (`useTreeRow`), so a change re-renders only the rows whose answer changed;
+ * an event handler reads it at the event (`state.get()`).
+ */
+export type TreeState<T extends TreeItem> = {
   selectedId: string | undefined;
   pendingFocusId: string | null;
-  /** Focus this row's name input once it appears (e.g. right after a create). */
-  setPendingFocus: (id: string) => void;
-  clearPendingFocus: () => void;
   onSelect: (id: string, gesture: Gesture) => void;
   /** See `TreeModelArgs.selectHref`. */
   selectHref?: (id: string) => (() => string) | undefined;
-  /** Batched expand write (see `TreeModelArgs.setExpanded`) — a single-row
-   *  toggle wraps itself in a 1-element array. */
+  /** Batched expand write (see `TreeModelArgs.setExpanded`). */
   setExpanded: (changes: readonly ExpandChange[]) => void | Promise<void>;
   /**
    * Is every expandable node in this row's subtree (the row itself included)
@@ -45,11 +46,31 @@ export type TreeContextValue<T extends TreeItem> = {
   subtreeAllExpanded: (id: string) => boolean;
   /** Fold or unfold this row's whole subtree in ONE batched `setExpanded`. */
   toggleSubtreeExpanded: (id: string) => void;
-  /** Omitted for a read-only tree — `canCreate` is then false and Add disappears. */
   onCreate?: (args: {
     parentId: string | null;
     afterId?: string;
   }) => Promise<string | null | undefined>;
+  /** See `TreeModelArgs.expandOnActivate`. */
+  expandOnActivate?: (row: T) => boolean;
+  /** See `TreeModelArgs.openOnActivate`. */
+  openOnActivate?: (row: T) => boolean;
+  /** Lazily-listed children (see `TreeModelArgs.lazyChildren`). */
+  lazyChildren?: LazyChildren<T>;
+  /** The open gesture (double-click / Enter); see `TreeModelArgs.onOpen`. */
+  onOpen?: (id: string) => void;
+};
+
+/**
+ * The tree context a model publishes to its rows (`TreeProvider`). Every
+ * member keeps its identity while the tree is used — what changes lives in
+ * `state`, read per row — so a search, a selection or a host re-render never
+ * re-renders a row through this context.
+ */
+export type TreeContextValue<T extends TreeItem> = {
+  state: LatestStore<TreeState<T>>;
+  /** Focus this row's name input once it appears (e.g. right after a create). */
+  setPendingFocus: (id: string) => void;
+  clearPendingFocus: () => void;
   /**
    * One-shot per tree (model) instance: returns `true` the first time it is called
    * (the tree's initial mount) and `false` forever after. Drives the row's
@@ -59,21 +80,8 @@ export type TreeContextValue<T extends TreeItem> = {
   takeInitialReveal: () => boolean;
   /** Whether the selected row scrolls itself into view (`TreeModelArgs.revealSelected`). */
   revealSelected: boolean;
-  /** Activating (body-clicking) a matching row toggles its expansion instead of
-   *  selecting it (see `TreeModelArgs.expandOnActivate`). Absent → every row
-   *  selects, today's behavior. */
-  expandOnActivate?: (row: T) => boolean;
-  /** A single click on a matching row OPENS it (`onOpen`) instead of selecting
-   *  it (see `TreeModelArgs.openOnActivate`). */
-  openOnActivate?: (row: T) => boolean;
-  /** Lazily-listed children (see `TreeModelArgs.lazyChildren`). */
-  lazyChildren?: LazyChildren<T>;
-  /** The placeholder child row an open node shows in place of children it does
-   *  not have yet, or `null` (see `childPlaceholder`). Bound by the tree model to its
-   *  lazy source and search state, so every row asks the same question. */
-  childPlaceholder: (node: TreeNode<T>) => ChildPlaceholder | null;
-  /** The open gesture (double-click / Enter); see `TreeModelArgs.onOpen`. */
-  onOpen?: (id: string) => void;
+  /** True when the tree has an open gesture (`TreeModelArgs.onOpen`). */
+  canOpen: boolean;
   /** True when the tree is in multi-select mode → each row draws a checkbox. */
   multiSelect: boolean;
   /** True when `onCreate` is wired → the root Add and each row's add-child show. */
@@ -205,13 +213,25 @@ export function useRowControls(): RowControls {
   return controls;
 }
 
+/**
+ * One tree row's controls. Re-renders the row only when an answer about THIS
+ * row changes: every per-row read is a selector over the tree's state
+ * (`TreeContextValue.state`), and every handler reads the state when it runs.
+ */
 export function useTreeRow<T extends TreeItem>(node: TreeNode<T>): RowControls {
   const ctx = useTreeContext<T>();
+  const { state } = ctx;
   const isOpen = node.expanded;
-  const hasChildren =
-    node.children.length > 0 || (ctx.lazyChildren?.hasChildren(node) ?? false);
-  const isSelected = ctx.selectedId === node.id;
-  const shouldAutoFocus = ctx.pendingFocusId === node.id;
+  const hasChildren = useLatestSelector(
+    state,
+    (s) =>
+      node.children.length > 0 || (s.lazyChildren?.hasChildren(node) ?? false),
+  );
+  const isSelected = useLatestSelector(state, (s) => s.selectedId === node.id);
+  const shouldAutoFocus = useLatestSelector(
+    state,
+    (s) => s.pendingFocusId === node.id,
+  );
 
   // The drag source + before/after sibling zones come from the shared
   // rank-reorder primitive (same `{ id, rank }` / `{ zone, targetId }` data
@@ -246,64 +266,72 @@ export function useTreeRow<T extends TreeItem>(node: TreeNode<T>): RowControls {
   );
 
   const toggleExpanded = useCallback(
-    () => void ctx.setExpanded([{ id: node.id, expanded: !isOpen }]),
-    [ctx, node.id, isOpen],
+    () => void state.get().setExpanded([{ id: node.id, expanded: !isOpen }]),
+    [state, node.id, isOpen],
   );
   // The `expandOnActivate` branch lives HERE, not at the `onSelect` seam, and
-  // that placement is load-bearing: `ctx.onSelect` is also called
+  // that placement is load-bearing: `onSelect` is also called
   // PROGRAMMATICALLY — by `createAtRoot` (tree-list.tsx), by `addChild` /
   // `addBelow` below, and by the reveal path — and every one of those must keep
   // navigating to the row it just created or revealed. Only a real body click
   // routes through `select`, so only `select` may divert the gesture to a toggle.
   const select = useCallback(
     (gesture: Gesture) => {
-      if (ctx.expandOnActivate?.(node)) {
+      const s = state.get();
+      if (s.expandOnActivate?.(node)) {
         toggleExpanded();
         return;
       }
-      ctx.onSelect(node.id, gesture);
+      s.onSelect(node.id, gesture);
     },
-    [ctx, node, toggleExpanded],
+    [state, node, toggleExpanded],
   );
   // A row whose click toggles expansion is not navigating, so it is no link.
   // Presence is read now; the URL is resolved again at click time, so the thunk
   // keeps one identity across renders (this object is a context value).
-  const isLink =
-    !ctx.expandOnActivate?.(node) && ctx.selectHref?.(node.id) !== undefined;
-  const resolveHref = ctx.selectHref;
+  const isLink = useLatestSelector(
+    state,
+    (s) => !s.expandOnActivate?.(node) && s.selectHref?.(node.id) !== undefined,
+  );
   const selectHref = useMemo(
     () =>
-      isLink && resolveHref
+      isLink
         ? () => {
-            const href = resolveHref(node.id);
+            const href = state.get().selectHref?.(node.id);
             if (!href)
               throw new Error(`tree row ${node.id} is no longer a link`);
             return href();
           }
         : undefined,
-    [isLink, resolveHref, node.id],
+    [isLink, state, node.id],
   );
-  const consumeAutoFocus = useCallback(() => ctx.clearPendingFocus(), [ctx]);
+  const consumeAutoFocus = ctx.clearPendingFocus;
   // Distinct from `select`: no `expandOnActivate` diversion. Opening a folder IS
   // what a double-click on it asks for, whatever a single click does there.
-  const onOpen = ctx.onOpen;
+  const canOpen = ctx.canOpen;
   const open = useMemo(
-    () => (onOpen ? () => onOpen(node.id) : undefined),
-    [onOpen, node.id],
+    () => (canOpen ? () => state.get().onOpen?.(node.id) : undefined),
+    [canOpen, state, node.id],
   );
-  const clickOpens = !!onOpen && !!ctx.openOnActivate?.(node);
+  const clickOpens = useLatestSelector(
+    state,
+    (s) => !!s.onOpen && !!s.openOnActivate?.(node),
+  );
 
   // Resolved for THIS node, so a row's fold affordance needs nothing but its own
   // controls. The read is a map lookup into the index the tree model built for the
-  // whole forest this render; the walk that produces the write happens on click.
-  const subtreeAllExpanded = ctx.subtreeAllExpanded(node.id);
+  // whole forest; the walk that produces the write happens on click.
+  const subtreeAllExpanded = useLatestSelector(state, (s) =>
+    s.subtreeAllExpanded(node.id),
+  );
   const toggleSubtreeExpanded = useCallback(
-    () => ctx.toggleSubtreeExpanded(node.id),
-    [ctx, node.id],
+    () => state.get().toggleSubtreeExpanded(node.id),
+    [state, node.id],
   );
 
+  const setPendingFocus = ctx.setPendingFocus;
   const addChild = useCallback(async () => {
-    const create = ctx.onCreate;
+    const create = state.get().onCreate;
     if (!create) return;
     const id = await create({ parentId: node.id });
     if (!id) return;
@@ -311,24 +339,24 @@ export function useTreeRow<T extends TreeItem>(node: TreeNode<T>): RowControls {
     // the reveal-on-select effect: `onSelect` is a no-op until the created row
     // lands in `rows` (a live-state round-trip), so on a collapsed folder the
     // child would be created invisibly. Expanding the parent needs no round-trip.
-    await ctx.setExpanded([{ id: node.id, expanded: true }]);
-    ctx.setPendingFocus(id);
-    ctx.onSelect(id, PLAIN_GESTURE);
-  }, [ctx, node.id]);
+    await state.get().setExpanded([{ id: node.id, expanded: true }]);
+    setPendingFocus(id);
+    state.get().onSelect(id, PLAIN_GESTURE);
+  }, [state, setPendingFocus, node.id]);
 
-  // Positional intent only. `ctx.rows` may be a *filtered projection* of a
+  // Positional intent only. The tree's rows may be a *filtered projection* of a
   // shared ordering space (the pages sidebar sees only `type='page'` rows of the
   // `page_blocks` forest), so a rank minted here over the visible siblings can
   // collide with an invisible one. The consumer's endpoint resolves `afterId`
   // against the complete sibling set.
   const addBelow = useCallback(async () => {
-    const create = ctx.onCreate;
+    const create = state.get().onCreate;
     if (!create) return;
     const id = await create({ parentId: node.parentId, afterId: node.id });
     if (!id) return;
-    ctx.setPendingFocus(id);
-    ctx.onSelect(id, PLAIN_GESTURE);
-  }, [ctx, node.id, node.parentId]);
+    setPendingFocus(id);
+    state.get().onSelect(id, PLAIN_GESTURE);
+  }, [state, setPendingFocus, node.id, node.parentId]);
 
   // Memoized, not a fresh literal per render: the row publishes this object
   // as the `RowControlsContext` value, and a context value that churns every

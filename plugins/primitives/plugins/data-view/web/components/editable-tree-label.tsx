@@ -1,11 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import type { TreeNode } from "@plugins/primitives/plugins/tree/core";
-import {
-  useRowControls,
-  useTreeContext,
-  type TreeItem,
-} from "@plugins/primitives/plugins/tree/web";
+import { useRowControls } from "@plugins/primitives/plugins/tree/web";
 import type { FieldDef } from "../../core";
 import { useResolveCellEditor } from "../cell-editor-slot";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -21,8 +16,7 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
  * click on the already-selected row enters edit mode). New rows created via `onCreate` auto-open into edit via
  * the tree primitive's pending-focus → `shouldAutoFocus` signal.
  */
-export function EditableTreeLabel<TNode extends TreeItem>(props: {
-  node: TreeNode<TNode>;
+export function EditableTreeLabel(props: {
   row: unknown;
   /** The primary field — guaranteed to have `onEdit`/`onEditValues` by the caller. */
   field: FieldDef<unknown>;
@@ -30,10 +24,9 @@ export function EditableTreeLabel<TNode extends TreeItem>(props: {
   read: ReactNode;
   className?: string;
 }): ReactNode {
-  const { node, row, field, read, className } = props;
+  const { row, field, read, className } = props;
   const resolveEditor = useResolveCellEditor();
-  const { shouldAutoFocus, consumeAutoFocus } = useRowControls();
-  const ctx = useTreeContext();
+  const { shouldAutoFocus, consumeAutoFocus, isSelected } = useRowControls();
   const [editing, setEditing] = useState(false);
   const editingRef = useLatestRef(editing);
 
@@ -92,7 +85,7 @@ export function EditableTreeLabel<TNode extends TreeItem>(props: {
       // `onSelect`; dnd-kit swallows the click that ends a real drag.
       onClick={(e) => {
         // Clicking the label of an already-selected row enters edit mode.
-        if (ctx.selectedId === node.id) {
+        if (isSelected) {
           e.stopPropagation();
           setEditing(true);
         }

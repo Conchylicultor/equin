@@ -240,6 +240,29 @@ a second menu (the table's `rowMenu` option) beside the action cluster.
 The renderer provides it around each row only (`RowControlsProvider`). `useTreeRow`'s
 return is `useMemo`'d because it is now a context value.
 
+## A row re-renders only when something about IT changes
+
+Renderers memoize their rows (data-table's `DataTableRow`), so the tree hands
+them inputs that keep their identity while the row is unchanged:
+
+- **The context is stable.** `TreeContextValue` holds flags and stable
+  functions only; everything that changes as the tree is used — the
+  selection, the pending focus, the subtree fold index, the host's callbacks
+  (often new every render) — is `state`, a `LatestStore<TreeState>`
+  (`primitives/latest-ref`). `useTreeRow` reads each per-row answer through a
+  selector (`isSelected`, `subtreeAllExpanded`, `hasChildren`, `isLink`,
+  `clickOpens`) and every handler reads `state.get()` when it runs. A
+  selection change re-renders the two rows it moves between; a search, the
+  rows whose answers moved. Never put a per-render value on the context.
+- **Lines keep their identity.** Every forest the model builds is new objects
+  (`buildTree` spreads each row; a search clones what it keeps, forced open),
+  so the model passes it through a `createTreeSharing` (core): a node whose own
+  fields are unchanged and whose children are the very nodes kept for them is
+  the previous object (bottom-up, so a kept node never carries a stale
+  subtree), and a line whose node and depth are unchanged is the previous
+  line. `flat` therefore hands a renderer new objects only for the lines that
+  changed.
+
 ## The model and its renderer
 
 The plugin owns the model, not the drawing. data-view's nested table
@@ -286,11 +309,11 @@ that layout — while row-fold moves rows with transform / clip / opacity.
 - Web:
   - Slots: `Tree.Disclosure`
   - Slot contributors: `Tree.Disclosure` ← `ui.tree-disclosure`
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×6
+    - `primitives/latest-ref` ×5
     - `primitives/css/spacing` ×2
     - `primitives/dom/scroll-reveal` ×2
-    - `primitives/latest-ref` ×2
     - `primitives/link-gesture` ×2
     - `primitives/row-actions` ×2
     - `primitives/collapsible.CollapsibleChevron`
@@ -370,10 +393,12 @@ that layout — while row-fold moves rows with transform / clip / opacity.
     - `TreeDisclosureProps`
     - `TreeKeyMove`
     - `TreeNode`
+    - `TreeSharing`
   - Exports (values):
     - `buildTree`
     - `childPlaceholder`
     - `computeDrop`
+    - `createTreeSharing`
     - `extendTarget`
     - `flatNodeIds`
     - `flattenVisible`

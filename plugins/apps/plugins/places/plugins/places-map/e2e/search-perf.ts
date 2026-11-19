@@ -12,7 +12,11 @@
 // Usage:
 //   ./equin run plugins/apps/plugins/places/plugins/places-map/e2e/search-perf.ts \
 //     [--path /about/demo/at/places] [--query paris] [--cpu 4] [--rounds 1] [--top 25] [--fiber-top 0]
+//     [--field "Search or add places"]
 //     [--no-profile] [--trace] [--out "$EQUIN_SCRATCH/search"]
+//
+// `--field` is the search field's placeholder, so the same run measures any
+// DataView's search (`--path /agents/tasks --field "Search…"`: the Tasks list).
 //
 // `--rounds N` repeats the run and prints each step's median keystroke latency.
 // With one round it also prints, per step, the React commits it caused and the
@@ -32,6 +36,7 @@ import { writeFileSync } from "node:fs";
 
 const url = pageUrl(arg("path", "/about/demo/at/places"));
 const query = arg("query", "paris");
+const field = arg("field", "Search or add places");
 const cpu = numArg("cpu", 4);
 const top = numArg("top", 25);
 const fiberTop = numArg("fiber-top", 0);
@@ -225,6 +230,7 @@ await withBrowser(async (h) => {
         names: Record<string, number>;
         roots: Record<string, number>;
         total: number;
+        mounted: number;
         outline: string[];
       }[];
       __REACT_DEVTOOLS_GLOBAL_HOOK__?: unknown;
@@ -236,6 +242,7 @@ await withBrowser(async (h) => {
       type: unknown;
       child: Fiber | null;
       sibling: Fiber | null;
+      alternate: Fiber | null;
     }
     const nameOf = (t: unknown): string => {
       if (typeof t === "function")
@@ -268,6 +275,9 @@ await withBrowser(async (h) => {
         const names: Record<string, number> = {};
         const roots: Record<string, number> = {};
         let total = 0;
+        // Rendered for the first time (no previous fiber to update): a row
+        // a new result mounted, as opposed to one that re-rendered.
+        let mounted = 0;
         // Each fiber with whether a component above it rendered: the top-most
         // rendered components are the commit's roots — what set it off.
         const outline: string[] = [];
@@ -287,6 +297,7 @@ await withBrowser(async (h) => {
             if (outline.length < 1500)
               outline.push(`${" ".repeat(Math.min(depth, 60))}${n}`);
             total++;
+            if (f.alternate === null) mounted++;
             rendered = true;
           }
           if (f.sibling) stack.push([f.sibling, under, depth]);
@@ -297,12 +308,12 @@ await withBrowser(async (h) => {
               depth + (rendered ? 1 : 0),
             ]);
         }
-        w.__spCommits.push({ names, roots, total, outline });
+        w.__spCommits.push({ names, roots, total, mounted, outline });
       },
     };
   });
   await page.goto(url, { waitUntil: "commit" });
-  const input = page.getByPlaceholder("Search or add places");
+  const input = page.getByPlaceholder(field);
   await input.waitFor({ timeout: 180_000 });
   await page.waitForTimeout(6000);
   console.log(`page: ${url}  cpu x${cpu}  query "${query}"`);
@@ -370,6 +381,7 @@ await withBrowser(async (h) => {
             names: Record<string, number>;
             roots: Record<string, number>;
             total: number;
+            mounted: number;
             outline: string[];
           }[];
         }
@@ -381,7 +393,7 @@ await withBrowser(async (h) => {
       for (const [n, k] of Object.entries(c.names))
         names[n] = (names[n] ?? 0) + k;
     console.log(
-      `[fibers] ${step}: ${all.length} commits, ${all.map((c) => c.total).join(" + ")} components rendered`,
+      `[fibers] ${step}: ${all.length} commits, ${all.map((c) => c.total).join(" + ")} components rendered (${all.reduce((n, c) => n + c.mounted, 0)} of them mounted)`,
     );
     if (out !== "/dev/null")
       all.forEach((c, i) => {
@@ -394,7 +406,9 @@ await withBrowser(async (h) => {
     for (const c of all)
       if (c.total >= 50)
         console.log(
-          `    commit of ${c.total} from ${Object.entries(c.roots)
+          `    commit of ${c.total} (${c.mounted} mounted) from ${Object.entries(
+            c.roots,
+          )
             .map(([n, k]) => (k > 1 ? `${n}×${k}` : n))
             .join(", ")}`,
         );

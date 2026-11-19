@@ -46,7 +46,12 @@ import {
   type RowSelectionConfig,
   type ViewRowDropConfig,
 } from "@plugins/primitives/plugins/data-view/web";
-import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
+import {
+  useEventCallback,
+  useLatestSelector,
+  useLatestStore,
+  type LatestStore,
+} from "@plugins/primitives/plugins/latest-ref/web";
 import {
   nextRowSelection,
   type FlatTreeLine,
@@ -63,6 +68,7 @@ import {
   TreeProvider,
   TreeRootAdd,
   TreeRowActions,
+  useRowControls,
   type RowSelectionClick,
   flatExpandAll,
   useSpringOpen,
@@ -149,10 +155,11 @@ function TreeHead({
   pillInRow: boolean;
   children: ReactNode;
 }): ReactNode {
-  const ctx = useTreeContext<Row>();
+  // The row's own controls (the decoration publishes them around the row),
+  // so the head re-renders with its row, never with the tree.
+  const { hasChildren, isOpen, toggleExpanded } = useRowControls();
+  const { guides } = useTreeContext<Row>();
   const { node, depth } = line;
-  const hasChildren =
-    node.children.length > 0 || (ctx.lazyChildren?.hasChildren(node) ?? false);
   return (
     <Stack
       direction="row"
@@ -173,12 +180,10 @@ function TreeHead({
       <TreeLeading
         depth={depth}
         hasChildren={hasChildren}
-        isOpen={node.expanded}
-        onToggle={() =>
-          void ctx.setExpanded([{ id: node.id, expanded: !node.expanded }])
-        }
+        isOpen={isOpen}
+        onToggle={toggleExpanded}
         icon={icon}
-        guides={ctx.guides}
+        guides={guides}
       />
       {children}
       {node.alias && (
@@ -207,6 +212,9 @@ interface NestedRowContextValue {
   rowMenu: TableViewOptions<unknown>["rowMenu"];
   /** An outline's top-level rows stand apart (see the view). */
   rootGap: boolean;
+  /** The first painted line's key — the one root that takes no gap — read
+   *  per row, so a new first line re-renders the two rows it concerns. */
+  firstLineKey: LatestStore<string | null>;
 }
 
 const NestedRowContext = createContext<NestedRowContextValue | null>(null);
@@ -246,7 +254,7 @@ function selectionGesture(
  */
 function useNestedRowDecoration(
   line: Line,
-  index: number,
+  key: string,
 ): DataTableRowDecoration | undefined {
   const {
     rowAccent,
@@ -258,7 +266,9 @@ function useNestedRowDecoration(
     revealed,
     rowMenu,
     rootGap,
+    firstLineKey,
   } = useNestedRowContext();
+  const isFirstLine = useLatestSelector(firstLineKey, (k) => k === key);
   const node = (line as NodeLine).node;
   const controls = useTreeRow(node);
   const accent = rowAccent?.(node.__row);
@@ -344,7 +354,7 @@ function useNestedRowDecoration(
     ),
     // A nested row sits flush on its parent; a root stands apart.
     style:
-      rootGap && (line as NodeLine).depth === 0 && index > 0
+      rootGap && (line as NodeLine).depth === 0 && !isFirstLine
         ? { marginTop: "var(--tree-root-gap)" }
         : undefined,
     // A drop onto the row nests under it: the row reads highlighted.
@@ -622,6 +632,30 @@ export function NestedTableView(
   // rendering again. The painted order is read when a row is clicked, not
   // while rendering: a search reorders it on every keystroke.
   const orderedIds = useEventCallback(() => model.orderedIds);
+  // Grouped, each section's slice of the one flattened tree (the roots
+  // partition, every descendant follows its root).
+  const { collapsedSections } = props;
+  const groupSlices = grouped
+    ? grouped.sections.map((section) => {
+        const key = section.key!;
+        return {
+          section,
+          key,
+          collapsed: collapsedSections?.has(key) ?? false,
+          rows: model.flat.filter(
+            (line) => sectionOf!.get(lineOwner(line).id) === key,
+          ),
+        };
+      })
+    : null;
+  // The first line the table draws: the first row of the first open
+  // section, else the first line.
+  const firstLine = groupSlices
+    ? groupSlices.find((g) => !g.collapsed && g.rows.length > 0)?.rows[0]
+    : model.flat[0];
+  const firstLineKey = useLatestStore(
+    firstLine === undefined ? null : lineKey(firstLine),
+  );
   const rowAccent = options.rowAccent;
   const rowContext = useMemo(
     (): NestedRowContextValue => ({
@@ -634,6 +668,7 @@ export function NestedTableView(
       revealed,
       rowMenu,
       rootGap,
+      firstLineKey,
     }),
     [
       rowAccent,
@@ -645,6 +680,7 @@ export function NestedTableView(
       revealed,
       rowMenu,
       rootGap,
+      firstLineKey,
     ],
   );
 
@@ -667,7 +703,7 @@ export function NestedTableView(
   // method call on `props`, which the compiler can only key on the whole props
   // object — new on every render of the host — so the columns (and every row
   // they reach) would be rebuilt each time.
-  const { rowTone, setSort, collapsedSections, setSectionCollapsed } = props;
+  const { rowTone, setSort, setSectionCollapsed } = props;
   const sectionSummary = props.sectionSummary;
   const labelClassName = options.labelClassName;
   const labelClass = (row: unknown) =>
@@ -727,7 +763,6 @@ export function NestedTableView(
           : (resolveCell(f, value ?? null, row) ?? readFallback(f, value));
         return (
           <EditableTreeLabel
-            node={node}
             row={row}
             field={f}
             read={read}
@@ -888,15 +923,11 @@ export function NestedTableView(
     grouped ? (
       <DataTable
         data={[]}
-        groups={grouped.sections.map((section): DataTableGroup<Line> => {
-          const key = section.key!;
-          const collapsed = collapsedSections?.has(key) ?? false;
-          return {
+        groups={groupSlices!.map(
+          ({ section, key, collapsed, rows }): DataTableGroup<Line> => ({
             key,
             collapsed,
-            rows: model.flat.filter(
-              (line) => sectionOf!.get(lineOwner(line).id) === key,
-            ),
+            rows,
             header: (
               <DataViewGroupHeader
                 section={section}
@@ -911,8 +942,8 @@ export function NestedTableView(
                 )}
               />
             ),
-          };
-        })}
+          }),
+        )}
         {...shared}
       />
     ) : (

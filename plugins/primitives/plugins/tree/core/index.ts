@@ -23,6 +23,8 @@ export type {
   TreeKeyMove,
 } from "./internal/flatten";
 export type { ExpandChange } from "./internal/expand";
+export { createTreeSharing } from "./internal/share";
+export type { TreeSharing } from "./internal/share";
 export { extendTarget, nextRowSelection } from "./internal/row-selection";
 export type {
   RowSelectionGesture,
