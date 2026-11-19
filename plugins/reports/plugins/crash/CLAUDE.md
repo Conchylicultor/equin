@@ -37,6 +37,17 @@ it): filed — a page fetch's rejection names its URL and caller
 phone's backgrounded tab), or the whole host: a console warning, no report.
 `web/internal/fetch-no-answer.ts`.
 
+## A page leaving is not a crash
+
+When a document goes away (navigation, reload, closed tab, removed frame),
+WebKit rejects every pending or held Web Lock promise (`navigator.locks.request`
+/ `.query`) and pending `permissions.query` with `AbortError: Promise was
+rejected because the browsing context is going away`. A lock held for the page's
+lifetime is released that way, so every Safari page leaving produced one
+unhandled, stackless rejection. The collector recognises that exact,
+browser-owned DOMException and warns instead of filing; any other AbortError is
+filed. `web/internal/context-teardown.ts`.
+
 ## The page shell's own report arrives through the collector
 
 The shell's inline boot-failure script (`framework/web-core`'s `index.html`)

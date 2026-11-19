@@ -9,6 +9,7 @@ import {
   describeErrorEvent,
   describeRejection,
 } from "../internal/describe-caught";
+import { isContextTeardown } from "../internal/context-teardown";
 import { fileUnlessOffline } from "../internal/fetch-no-answer";
 import { takeShellReports } from "../internal/shell-reports";
 
@@ -53,6 +54,14 @@ export function CrashCollector() {
       if (e.reason instanceof EndpointAgentWriteRefusedError) return;
       // Filed through the request guard's sink already (see onError).
       if (e.reason instanceof RawApiRequestError) return;
+      // WebKit rejecting a lock / permission promise because this document is
+      // going away: the page leaving, not a bug (`internal/context-teardown.ts`).
+      if (isContextTeardown(e.reason)) {
+        console.warn(
+          `[reports] not filed — the browser rejected a promise because this page is going away: ${String(e.reason)}`,
+        );
+        return;
+      }
       const err = e.reason instanceof Error ? e.reason : null;
       // Read now: the page may have moved on by the time the host answers.
       const message = describeRejection(e);
