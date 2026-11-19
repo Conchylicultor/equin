@@ -25,6 +25,19 @@ export type NetDiagEvent =
       elapsedMs: number;
       attempt: number;
     }
+  /**
+   * A page resumed (`SocketOwner.checkLink`) onto an open connection that had
+   * delivered nothing for `silentMs`, though its server promises a frame every
+   * `heartbeatMs`, and that delivered nothing in the settle window either: the
+   * link did not survive the pause (a sleep). The owner closes it and
+   * reconnects — the visitor's network, recorded, never a server fault.
+   */
+  | {
+      type: "ws-silent";
+      url: string;
+      silentMs: number;
+      heartbeatMs: number;
+    }
   // --- tab ports joining / leaving the SharedWorker (shared-ws-host.ts) ---
   | { type: "port-attached"; url: string; ports: number }
   | {

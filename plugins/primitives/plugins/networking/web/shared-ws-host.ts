@@ -48,6 +48,8 @@ interface PortEntry {
  */
 export function createSharedWsHost(deps: SharedWsHostDeps): SharedWsHost {
   let url: string | null = null;
+  /** The server's heartbeat, as the attach that opened the socket named it. */
+  let heartbeatMs: number | null = null;
   let owner: SocketOwner | null = null;
   const ports = new Map<string, PortEntry>();
 
@@ -134,6 +136,13 @@ export function createSharedWsHost(deps: SharedWsHostDeps): SharedWsHost {
       );
       return null;
     }
+    if (owner !== null && msg.heartbeatMs !== heartbeatMs) {
+      fatal(
+        port,
+        `shared-ws worker's socket judges a ${heartbeatMs ?? "no"} ms heartbeat, tab attached for ${msg.heartbeatMs ?? "none"}`,
+      );
+      return null;
+    }
     url = msg.url;
     ports.set(msg.portId, {
       port,
@@ -153,14 +162,20 @@ export function createSharedWsHost(deps: SharedWsHostDeps): SharedWsHost {
       broadcastStatus();
     } else {
       const socketUrl = url;
-      owner = new SocketOwner(socketUrl, deps.makeWebSocket, {
-        onStatus: () => broadcastStatus(),
-        // Stamped here, in the worker: a busy tab delays only its own
-        // handler, never this.
-        onMessage: deliverRx,
-        onError: () => broadcast({ kind: "ws-error" }),
-        onDiag: diag,
-      });
+      heartbeatMs = msg.heartbeatMs;
+      owner = new SocketOwner(
+        socketUrl,
+        deps.makeWebSocket,
+        {
+          onStatus: () => broadcastStatus(),
+          // Stamped here, in the worker: a busy tab delays only its own
+          // handler, never this.
+          onMessage: deliverRx,
+          onError: () => broadcast({ kind: "ws-error" }),
+          onDiag: diag,
+        },
+        heartbeatMs,
+      );
       if (msg.holdConnects) owner.fault("hold");
       owner.start();
     }
@@ -204,6 +219,9 @@ export function createSharedWsHost(deps: SharedWsHostDeps): SharedWsHost {
             return;
           case "detach":
             release(portId, "detach");
+            return;
+          case "check-link":
+            owner?.checkLink();
             return;
           case "test-fault":
             owner?.fault(msg.fault);

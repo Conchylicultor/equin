@@ -140,6 +140,17 @@ export const DERIVE_MAX_SOURCES = 2;
 export const DERIVE_MAX_ID = 128;
 
 /**
+ * How often the runtime sends every open socket a `ping`, at the least. A
+ * promise to the client, not just a server setting: a socket that has
+ * delivered nothing for two beats is no longer carrying frames (a link left
+ * dead or stalled by a sleep, a NAT rebinding, a half-open connection), and
+ * the client replaces it instead of sending into it (`heartbeatMs` on the
+ * socket, `primitives/networking`). In the hashed data: a change is a wire
+ * change.
+ */
+export const HEARTBEAT_MS = 20_000;
+
+/**
  * One source of a seeded derivation (a `sub` frame's `derive.from` entry): a
  * tuple of the same resource the tab holds at `version`, and the slice of its
  * rows the new tuple is — those after the row `after` (exclusive; `null` =
@@ -464,6 +475,7 @@ export const VOCABULARY = {
   limits: {
     deriveMaxSources: DERIVE_MAX_SOURCES,
     deriveMaxId: DERIVE_MAX_ID,
+    heartbeatMs: HEARTBEAT_MS,
   },
 } as const;
 

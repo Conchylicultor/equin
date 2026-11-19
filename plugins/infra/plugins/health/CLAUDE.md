@@ -51,6 +51,9 @@ Watches this page's connection to its backends and says so.
   records the answer, and the socket opening settles it as the visitor's
   link. The cost: a server-side handshake hang that heals on the very next
   attempt is no longer filed from the page.
+  A `ws-silent` (the shared socket replaced, on a page's resume, a link a
+  sleep left carrying nothing) is never a wedge: it is the visitor's network,
+  and the replacement is the fix — the socket's own diag, in the tab's log.
 - **`getHealth` / `waitForRestart`** — the `/api/health` client helpers.
   `/api/health` admits a deployed site's **visitor** (`access: { visitor }`):
   every page probes its own host through it, and owner-only it answered a

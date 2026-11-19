@@ -43922,6 +43922,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DERIVE_MAX_ID`
               - `DERIVE_MAX_SOURCES`
               - `DEV_BUILD`
+              - `HEARTBEAT_MS`
               - `parseAnswerTrail`
               - `parseResourceBytesHeaders`
               - `parseResourceHttpErrorBody`
@@ -43947,8 +43948,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/metrics`
         - **`resource-runtime`**
           - Core:
-            - Uses: 49 symbols — full list in [`plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md`](../plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md)
-              - `network/live/resource-protocol` ×19
+            - Uses: 50 symbols — full list in [`plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md`](../plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md)
+              - `network/live/resource-protocol` ×20
               - `network/live/resource-runtime/routing` ×19
               - `packages/semaphore` ×3
               - `packages/string-hash` ×2

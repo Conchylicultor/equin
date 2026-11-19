@@ -34,7 +34,12 @@ export type {
   AnswerTrailQuery,
   AnswerTrailRequest,
 } from "./internal/answer-trail";
-export { DERIVE_MAX_ID, DERIVE_MAX_SOURCES, PROTOCOL } from "./internal/frames";
+export {
+  DERIVE_MAX_ID,
+  DERIVE_MAX_SOURCES,
+  HEARTBEAT_MS,
+  PROTOCOL,
+} from "./internal/frames";
 export type {
   ClientFrame,
   Derivation,

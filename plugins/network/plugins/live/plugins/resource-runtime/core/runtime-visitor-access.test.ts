@@ -6,7 +6,8 @@
  */
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
-import { createHarness, tick } from "./test-support";
+import { parseAnswerTrail } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
+import { controllable, createHarness, tick } from "./test-support";
 
 const VISITOR = { visitor: "the test page reads it" } as const;
 
@@ -380,5 +381,96 @@ describe("visitor access per tuple", () => {
         { mode: "push", loader: async () => 1, visitorTuple: () => true },
       ),
     ).toThrow(/grants no visitor access/);
+  });
+});
+
+// The answer trail a visitor's tab asks when its sub went unanswered
+// (report-1794962221-4ztwpq: equin.ai's visitors could only report "HTTP 403").
+const trail = (key: string, params: Record<string, string> = {}) =>
+  new Request(
+    `http://backend/api/resources/_answer?${new URLSearchParams({
+      tabId: "t",
+      id: "7",
+      key,
+      params: JSON.stringify(params),
+    })}`,
+  );
+
+/** A read of `slow` parked on its loader, holding a read-admission slot. */
+async function holdSlot(h: ReturnType<typeof createHarness>) {
+  const ctl = controllable(3);
+  h.runtime.defineExternalResource(
+    {
+      key: "slow",
+      schema: z.number(),
+      validateParams: () => {},
+      access: VISITOR,
+    },
+    { mode: "push", loader: () => ctl.loader() },
+  );
+  ctl.block();
+  await h.subscribe("slow", {}, { id: 1, tabId: "other" });
+  return ctl;
+}
+
+describe("visitor access — the answer trail", () => {
+  test("a visitor is answered about a key it may read, every gate holder's label withheld", async () => {
+    const h = createHarness({
+      principals: ["visitor"],
+      callerOf: () => "visitor",
+    });
+    define(h);
+    const ctl = await holdSlot(h);
+    await h.subscribe("open", {}, { id: 7, tabId: "t" });
+    const r = await h.runtime.handleResourceHttp(trail("open"), {
+      key: "_answer",
+    });
+    expect(r.status).toBe(200);
+    const t = parseAnswerTrail(await r.json());
+    expect(t.request.kind).toBe("answered");
+    expect(t.gate.holders.map((x) => x.label)).toEqual(["(withheld)"]);
+    ctl.release();
+    await tick();
+  });
+
+  test("a visitor is refused the trail of a key it may not read, as its read would be", async () => {
+    const h = createHarness({ callerOf: () => "visitor" });
+    define(h);
+    for (const key of ["closed", "nope"]) {
+      const r = await h.runtime.handleResourceHttp(trail(key), {
+        key: "_answer",
+      });
+      expect(r.status).toBe(403);
+    }
+  });
+
+  test("a visitor is refused the trail of a tuple its per-tuple rule closes", async () => {
+    const h = createHarness({
+      callerOf: () => "visitor",
+      visitorWebPlugins: () => SITE,
+    });
+    definePerTuple(h);
+    const closed = await h.runtime.handleResourceHttp(
+      trail("docs", { path: "secret" }),
+      { key: "_answer" },
+    );
+    expect(closed.status).toBe(403);
+    const open = await h.runtime.handleResourceHttp(
+      trail("docs", { path: "public" }),
+      { key: "_answer" },
+    );
+    expect(open.status).toBe(200);
+  });
+
+  test("the owner's trail names the holders", async () => {
+    const h = createHarness({ callerOf: () => "owner" });
+    const ctl = await holdSlot(h);
+    const r = await h.runtime.handleResourceHttp(trail("slow"), {
+      key: "_answer",
+    });
+    const t = parseAnswerTrail(await r.json());
+    expect(t.gate.holders.map((x) => x.label)).toEqual(["slow"]);
+    ctl.release();
+    await tick();
   });
 });

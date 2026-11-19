@@ -48,6 +48,36 @@ export interface PageLifecycleLike {
 }
 
 /**
+ * When this tab's page runs again after a pause: `subscribe(fn)` calls `fn` on
+ * each resume and returns its unsubscribe.
+ */
+export interface PageResumeLike {
+  subscribe(fn: () => void): () => void;
+}
+
+/**
+ * The page's own resumes: back to visible (`visibilitychange`), or a frozen
+ * page resuming (`resume`, Chrome's Page Lifecycle) — the moments a woken
+ * device's tabs resync.
+ */
+function documentResume(): PageResumeLike | null {
+  if (typeof document === "undefined") return null;
+  return {
+    subscribe(fn) {
+      const onVisibility = () => {
+        if (document.visibilityState === "visible") fn();
+      };
+      document.addEventListener("visibilitychange", onVisibility);
+      document.addEventListener("resume", fn);
+      return () => {
+        document.removeEventListener("visibilitychange", onVisibility);
+        document.removeEventListener("resume", fn);
+      };
+    },
+  };
+}
+
+/**
  * Injection seam for the OS globals this stack touches. All optional —
  * production passes nothing and the globals are used; tests wire the fakes from
  * `./testing`. See
@@ -58,6 +88,8 @@ export interface SharedWebSocketHooks {
   locks?: LockManagerLike;
   /** `null` ⇒ no page lifecycle (never detaches on its own). Default: `window`. */
   pageLifecycle?: PageLifecycleLike | null;
+  /** `null` ⇒ no resume signal (a link is never doubted). Default: `document`'s. */
+  pageResume?: PageResumeLike | null;
 }
 
 /** What the tab asks of the socket it shares (as opposed to the OS seams in `SharedWebSocketHooks`). */
@@ -86,6 +118,20 @@ export interface SharedWebSocketOptions {
    * only unaddressed frames reach the tab.
    */
   address?: string;
+  /**
+   * The server's heartbeat: it sends every open socket a frame at least this
+   * often (live-state passes the resource runtime's `HEARTBEAT_MS`). When this
+   * tab's page resumes (visible again, unfrozen) onto a link that has carried
+   * nothing for longer, the socket doubts it, and replaces it (`ws-silent`)
+   * if it still delivers nothing — a link a sleep left dead or stalled —
+   * instead of letting the tab's resync wait on it until TCP gives up, a
+   * minute or more later (`SocketOwner.checkLink`). Absent: a server that
+   * promises nothing; a link is never doubted.
+   *
+   * A fact about the server's protocol, so tabs sharing a socket (one
+   * dialect) must agree on it: an attach naming another value is refused.
+   */
+  heartbeatMs?: number;
 }
 
 /**
@@ -215,9 +261,12 @@ export class SharedWebSocket {
   private readonly absUrl: string;
   private readonly dialect: string | undefined;
   private readonly address: string | null;
+  private readonly heartbeatMs: number | null;
   private readonly makeSharedWorker: MakeSharedWorker;
   private readonly locks: LockManagerLike;
   private readonly lifecycle: PageLifecycleLike | null;
+  /** Ends the resume subscription (`heartbeatMs`); null when none. */
+  private unsubscribeResume: (() => void) | null = null;
   private session: PortSession | null = null;
   private will: string | null = null;
   private closed = false;
@@ -243,6 +292,7 @@ export class SharedWebSocket {
     this.url = typeof url === "string" ? url : url.toString();
     this.dialect = options?.dialect;
     this.address = options?.address ?? null;
+    this.heartbeatMs = options?.heartbeatMs ?? null;
     this.makeSharedWorker =
       hooks?.makeSharedWorker ?? defaultSeams().makeSharedWorker;
     this.locks = hooks?.locks ?? defaultSeams().locks;
@@ -264,6 +314,20 @@ export class SharedWebSocket {
 
     this.lifecycle?.addEventListener("pagehide", this.onPageHide);
     this.lifecycle?.addEventListener("pageshow", this.onPageShow);
+    if (this.heartbeatMs !== null) {
+      const resume =
+        hooks?.pageResume !== undefined ? hooks.pageResume : documentResume();
+      this.unsubscribeResume =
+        resume?.subscribe(() => {
+          // Only to a worker that holds this tab's attach: a queued doubt
+          // would be about a socket the resume never saw.
+          if (this.session?.attached) {
+            this.session.port.postMessage({
+              kind: "check-link",
+            } satisfies TabToWorker);
+          }
+        }) ?? null;
+    }
     if (this.testHook) {
       const fault = (f: "drop" | "hold" | "release") => () =>
         this.postToWorker({ kind: "test-fault", fault: f });
@@ -304,6 +368,8 @@ export class SharedWebSocket {
     this.readyState = SharedWebSocket.CLOSED;
     this.lifecycle?.removeEventListener("pagehide", this.onPageHide);
     this.lifecycle?.removeEventListener("pageshow", this.onPageShow);
+    this.unsubscribeResume?.();
+    this.unsubscribeResume = null;
     this.detach();
     /* eslint-disable promise-safety/no-bare-catch -- a throwing onclose listener must not break close() */
     try {
@@ -376,6 +442,7 @@ export class SharedWebSocket {
             holdConnects:
               this.testHook?.holdFromStart.includes(this.url) ?? false,
             address: this.address,
+            heartbeatMs: this.heartbeatMs,
           });
           if (this.will !== null) post({ kind: "will", data: this.will });
           session.attached = true;

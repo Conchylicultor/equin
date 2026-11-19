@@ -14,6 +14,7 @@ import {
 import {
   ANSWER_TRAIL_HOLDERS_MAX,
   ANSWER_TRAIL_KEY,
+  HEARTBEAT_MS,
   BUILD_GRAPH_HEADER,
   DEV_BUILD,
   DERIVE_MAX_ID,
@@ -3110,11 +3111,13 @@ export type SeedOutcome =
 export type PersistedValueCheck =
   { kind: "valid" } | { kind: "skipped" } | { kind: "invalid"; error: string };
 
-const HEARTBEAT_MS = 20_000;
-
 // How many stalled resources one ping names (the oldest first): a hung
 // filesystem can hold several leaves at once, and the row names a few at most.
 const STALLED_RESOURCES_MAX = 5;
+
+// What a visitor's answer trail names each read-gate holder: the label is
+// `<key> <params>` of a read that may be the owner's, never a visitor's to know.
+const WITHHELD_HOLDER_LABEL = "(withheld)";
 
 // How long a closed socket's subs stay held for its tabs to replay them on a
 // new socket (the runtime's `detached` linger). The client reconnects after
@@ -10974,15 +10977,14 @@ export function createResourceRuntime(
     noteClientBuild(build);
     if (!key) return httpError(404, { reason: "unknown-key" });
     const caller = opts.callerOf?.(req) ?? "owner";
-    // The runtime's own diagnostics are the owner's.
-    if (
-      caller === "visitor" &&
-      (key === "_debug" || key === ANSWER_TRAIL_KEY)
-    ) {
+    // The runtime's own diagnostics are the owner's — but for the answer
+    // trail, which a visitor asks about its own sub of a key it may read
+    // (`handleAnswerTrail` answers it the visitor's part).
+    if (caller === "visitor" && key === "_debug") {
       return httpError(403, { reason: "unauthorized" });
     }
     if (key === "_debug") return handleResourcesDebug();
-    if (key === ANSWER_TRAIL_KEY) return handleAnswerTrail(req);
+    if (key === ANSWER_TRAIL_KEY) return handleAnswerTrail(req, caller);
     const entry = registry.get(key);
     if (!entry) return httpError(404, refuseUnknownKey(key, build));
     if (refuseForCaller(caller, entry)) {
@@ -11041,6 +11043,28 @@ export function createResourceRuntime(
       reportLoaderError(`access.tuple failed for ${entry.key}`, err);
       return true;
     }
+  }
+
+  /**
+   * Whether a visitor may ask the answer trail about this tuple: one it may
+   * read — the key open to visitors and, for a key with a per-tuple rule, the
+   * params passing the gate and the rule. A tuple failing the gate is refused
+   * quietly: the trail is no read, and a visitor's junk files no report.
+   */
+  async function visitorAsksOwnTuple(
+    entry: RegistryEntry,
+    params: ResourceParams,
+  ): Promise<boolean> {
+    if (refuseForCaller("visitor", entry)) return false;
+    if (!needsTupleCheck("visitor", entry)) return true;
+    const tuple = canonicalTuple(entry, params);
+    try {
+      entry.validateParams(tuple);
+    } catch (err) {
+      if (err instanceof ResourceContractError) return false;
+      throw err;
+    }
+    return !(await refuseTupleForCaller("visitor", entry, tuple));
   }
 
   // A failed read's JSON body (see `ResourceHttpErrorBody`): the client reads
@@ -11237,7 +11261,19 @@ export function createResourceRuntime(
   // HTTP read route — so the question queues where the sub did (this
   // server's thread), and how late `at` is says how busy that thread is.
   // `?tabId=&id=&key=&params=<json>`; a malformed question is a 400.
-  function handleAnswerTrail(req: Request): Response {
+  /**
+   * The answer trail (resource-protocol's `AnswerTrail`). A visitor — a
+   * deployed site's tab whose sub went unanswered — is answered too, for a
+   * tuple it may read (the key's `access`, its per-tuple rule), and only its
+   * part: the request, the tuple's own queued / loading reads and the read
+   * gate's occupancy, every holder's label withheld (`<key> <params>` of the
+   * owner's reads is the owner's to know; how long each has held stays).
+   * Anything else is 403 `unauthorized`, as an HTTP read of the key would be.
+   */
+  async function handleAnswerTrail(
+    req: Request,
+    caller: LiveCaller,
+  ): Promise<Response> {
     const q = new URL(req.url).searchParams;
     const tabId = q.get("tabId");
     const id = Number(q.get("id"));
@@ -11266,6 +11302,12 @@ export function createResourceRuntime(
     // flight key is spelled from the canonical tuple).
     const entry = registry.get(key);
     const tupleParams = params as ResourceParams;
+    if (
+      caller === "visitor" &&
+      (entry === undefined || !(await visitorAsksOwnTuple(entry, tupleParams)))
+    ) {
+      return httpError(403, { reason: "unauthorized" });
+    }
     const tuple = flightKeyOf(
       key,
       paramsKey(
@@ -11285,9 +11327,10 @@ export function createResourceRuntime(
         active: gate.active,
         queued: gate.queued,
         max: gate.max,
-        holders: gate.holders
-          .slice(0, ANSWER_TRAIL_HOLDERS_MAX)
-          .map((h) => ({ label: h.label, heldMs: Math.round(h.heldMs) })),
+        holders: gate.holders.slice(0, ANSWER_TRAIL_HOLDERS_MAX).map((h) => ({
+          label: caller === "visitor" ? WITHHELD_HOLDER_LABEL : h.label,
+          heldMs: Math.round(h.heldMs),
+        })),
       },
     };
     return new Response(JSON.stringify(trail), {

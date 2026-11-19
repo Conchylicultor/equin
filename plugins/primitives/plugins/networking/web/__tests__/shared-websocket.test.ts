@@ -31,7 +31,11 @@ import {
 } from "../../core";
 import { SharedWebSocket } from "../shared-websocket";
 import { readFrameAddress } from "../addressed-frame-reader";
-import { CONNECT_DEADLINE_MS } from "../socket-owner";
+import {
+  CONNECT_DEADLINE_MS,
+  SILENCE_SLACK_MS,
+  WAKE_SETTLE_MS,
+} from "../socket-owner";
 import { subscribeNetDiag, type NetDiagEvent } from "../net-diag-bus";
 import { createSharedWsHost } from "../shared-ws-host";
 import { SHARED_WS_PROTO, type WorkerToTab } from "../shared-ws-protocol";
@@ -603,6 +607,85 @@ describe("SharedWebSocket — reported recoveries", () => {
     hub.server.all()[0]!.open();
     await vi.advanceTimersByTimeAsync(CONNECT_DEADLINE_MS * 3);
     expect(diag.some((e) => e.type === "ws-connect-stalled")).toBe(false);
+    expect(hub.server.openSockets()).toHaveLength(1);
+  });
+
+  // The server's heartbeat (`heartbeatMs`): a page's resume doubts an open
+  // link that has carried nothing for over a beat. report-1794962221-4ztwpq: a
+  // visitor's tab woke onto a socket a sleep had left stalled, sent its resync
+  // into it, and waited 42–64 s for answers the server gave at once on a
+  // fresh connection.
+  const HEARTBEAT = 20_000;
+  const QUIET = HEARTBEAT + SILENCE_SLACK_MS + 1;
+  async function openWithHeartbeat(hub: ReturnType<typeof createTransportHub>) {
+    const resumes = new Set<() => void>();
+    const sws = new SharedWebSocket(
+      URL_PATH,
+      {
+        ...hub.tab().hooks,
+        pageResume: {
+          subscribe(fn) {
+            resumes.add(fn);
+            return () => resumes.delete(fn);
+          },
+        },
+      },
+      { heartbeatMs: HEARTBEAT },
+    );
+    built.push(sws);
+    await flush();
+    hub.server.all()[0]!.open();
+    await flush();
+    const resume = async () => {
+      for (const fn of resumes) fn();
+      await flush();
+    };
+    return { sws, resume };
+  }
+
+  test("a resume onto a link that carried nothing since, and delivers nothing in the settle window, replaces it", async () => {
+    const hub = createTransportHub();
+    const { sws, resume } = await openWithHeartbeat(hub);
+    vi.setSystemTime(Date.now() + 10 * 60_000); // asleep: wall time moves, no timer runs
+    await resume();
+    await vi.advanceTimersByTimeAsync(WAKE_SETTLE_MS - 1);
+    expect(diag.some((e) => e.type === "ws-silent")).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(diag.find((e) => e.type === "ws-silent")).toMatchObject({
+      heartbeatMs: HEARTBEAT,
+    });
+    expect(hub.server.all()[0]!.readyState).toBe(CLOSED);
+    await vi.advanceTimersByTimeAsync(500); // first backoff step
+    hub.server.all()[1]!.open();
+    await flush();
+    expect(sws.status).toBe("open");
+  });
+
+  test("a resume onto a link that hands over what it carried meanwhile keeps it", async () => {
+    const hub = createTransportHub();
+    const { resume } = await openWithHeartbeat(hub);
+    vi.setSystemTime(Date.now() + 10 * 60_000);
+    await resume();
+    hub.server.all()[0]!.serverSend({ kind: "ping" });
+    await vi.advanceTimersByTimeAsync(WAKE_SETTLE_MS * 2);
+    expect(diag.some((e) => e.type === "ws-silent")).toBe(false);
+    expect(hub.server.openSockets()).toHaveLength(1);
+  });
+
+  test("a resume onto a link that delivered within a beat doubts nothing", async () => {
+    const hub = createTransportHub();
+    const { resume } = await openWithHeartbeat(hub);
+    await vi.advanceTimersByTimeAsync(QUIET - 2_000);
+    await resume();
+    await vi.advanceTimersByTimeAsync(WAKE_SETTLE_MS * 2);
+    expect(diag.some((e) => e.type === "ws-silent")).toBe(false);
+  });
+
+  test("a link that merely runs quiet is never judged — only a resume doubts it", async () => {
+    const hub = createTransportHub();
+    await openWithHeartbeat(hub);
+    await vi.advanceTimersByTimeAsync(QUIET * 10);
+    expect(diag.some((e) => e.type === "ws-silent")).toBe(false);
     expect(hub.server.openSockets()).toHaveLength(1);
   });
 

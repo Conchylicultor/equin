@@ -40,6 +40,7 @@ import {
   ANSWER_TRAIL_KEY,
   DERIVE_MAX_SOURCES,
   DEV_BUILD,
+  HEARTBEAT_MS,
   parseAnswerTrail,
   parseResourceBytesHeaders,
   PROTOCOL,
@@ -232,8 +233,16 @@ const REALM_HOLDER_ID = crypto.randomUUID();
  * that read frames alike — an older bundle left open across a deploy that
  * changed the vocabulary keeps a socket of its own and never sees a frame it
  * cannot read, while a deploy that did not change it keeps every tab on one.
+ *
+ * Its heartbeat is the runtime's (`HEARTBEAT_MS`, in the same vocabulary): a
+ * link that delivers no ping for two beats — typically one a sleep left dead
+ * or stalled — is replaced by the socket, so the resync a wake sends goes out
+ * on a connection that answers instead of waiting out TCP on the old one.
  */
-const SOCKET_OPTIONS: SharedWebSocketOptions = { dialect: PROTOCOL };
+const SOCKET_OPTIONS: SharedWebSocketOptions = {
+  dialect: PROTOCOL,
+  heartbeatMs: HEARTBEAT_MS,
+};
 
 /**
  * A frame this client sends — the protocol's, and only the protocol's: a field

@@ -20,7 +20,10 @@ vi.mock(
 
 import { QueryClient } from "@tanstack/react-query";
 import { z } from "zod";
-import { PROTOCOL } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
+import {
+  HEARTBEAT_MS,
+  PROTOCOL,
+} from "@plugins/network/plugins/live/plugins/resource-protocol/core";
 import type { SharedWebSocketOptions } from "@plugins/primitives/plugins/networking/web";
 import { createTransportHub } from "@plugins/primitives/plugins/networking/web/testing";
 import { NotificationsClient } from "../notifications-client";
@@ -62,8 +65,16 @@ describe("NotificationsClient — the frame protocol", () => {
     // Its address is the client's holder id: the runtime addresses each
     // tuple's frames to the holders, the worker hands a tab only its own.
     expect(asked).toEqual([
-      { dialect: PROTOCOL, address: expect.any(String) },
-      { dialect: PROTOCOL, address: expect.any(String) },
+      {
+        dialect: PROTOCOL,
+        heartbeatMs: HEARTBEAT_MS,
+        address: expect.any(String),
+      },
+      {
+        dialect: PROTOCOL,
+        heartbeatMs: HEARTBEAT_MS,
+        address: expect.any(String),
+      },
     ]);
     expect(hub.workers.count()).toBe(1);
     expect(hub.server.all()).toHaveLength(1);

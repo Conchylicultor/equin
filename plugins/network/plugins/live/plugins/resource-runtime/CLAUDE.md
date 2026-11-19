@@ -792,7 +792,13 @@ All but the version are co-produced by the starter. A push drain mints
   request's state, the tuple's oldest queued / loading read and the gate's
   occupancy and holders — on every host, profiler or not: a browser host has
   no runtime profile, so this is the only split of a wait it can give.
-  live-state asks it for the oldest sub of every unanswered-sub report. Wall
+  live-state asks it for the oldest sub of every unanswered-sub report. A
+  visitor (a deployed site's tab) is answered too, for a tuple it may read
+  (the key's `access`, its per-tuple rule — else 403 like the read), with
+  every gate holder's label withheld (`(withheld)`: `<key> <params>` of an
+  owner read is the owner's to know; the held times stay) — so a visitor's
+  report says whether the server read the frame (report-1794962221-4ztwpq
+  could only say "HTTP 403"). Wall
   clock (the tab sets it against its own). Bounded: owed records 10 min,
   answered ones 2 min after the answer, at most 20 000 of each.
   `runtime-answer-trail.test.ts`.
@@ -873,8 +879,8 @@ only) opens it to a deployed site's visitor; absent is the owner only. The
 caller is the host's: `callerOf(req)` for an HTTP read (server-core passes
 principal's `admittedAs`), `RuntimeSocket.data.principal` for a socket (read
 once at `open`; absent ⇒ owner — a browser host, central). A visitor is
-refused an undeclared key on the HTTP read (403 `unauthorized`, `_debug` and
-the answer trail too) and in `handleSub` / each `sub-batch` entry
+refused an undeclared key on the HTTP read (403 `unauthorized`, `_debug`
+too) and in `handleSub` / each `sub-batch` entry
 (`sub-error unauthorized`, BEFORE the params gate — a visitor learns nothing
 of an owner-only key's contract and files no report — and before any
 registration or load); `visitorReadable(key)` is the same rule for the boot
@@ -1025,8 +1031,8 @@ Out of reach at this seam (DB-backed harness instead):
 ## Plugin reference
 
 - Core:
-  - Uses: 49 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `network/live/resource-protocol` ×19
+  - Uses: 50 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `network/live/resource-protocol` ×20
     - `network/live/resource-runtime/routing` ×19
     - `packages/semaphore` ×3
     - `packages/string-hash` ×2

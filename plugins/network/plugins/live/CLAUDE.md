@@ -1396,7 +1396,8 @@ export const savedThemesList = liveValue("saved-themes.list", {
   runtime decides per registered key (resource-runtime's
   `ResourceDefinition.access`).
 - Enforced on every read path a visitor reaches: the HTTP read (403
-  `unauthorized`, `_debug` and the answer trail too), each socket `sub` /
+  `unauthorized`, `_debug` too; the answer trail only for a tuple the visitor
+  may read, its gate holders' labels withheld), each socket `sub` /
   `sub-batch` entry (`sub-error unauthorized`, before any side effect) and the
   boot snapshot (only visitor-readable keys; the crawlable take assembles a
   visitor's). The owner, a browser host and central read everything.

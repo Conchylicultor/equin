@@ -15,6 +15,22 @@ others — there is no leader to lose. Design:
   worker's logic, free of worker globals), `shared-ws.worker.ts` (the thin entry
   wiring the real `WebSocket` / `navigator.locks`), `shared-websocket.ts` (the
   tab client).
+- **A resume doubts a quiet link (`heartbeatMs`).** A consumer whose server
+  promises a frame at least every `heartbeatMs`
+  (`SharedWebSocketOptions.heartbeatMs`; live-state passes the resource
+  runtime's `HEARTBEAT_MS`, 20 s) gets its open connection checked whenever
+  one of its tabs' pages runs again after a pause (visible again, `resume` —
+  `PageResumeLike`, a `check-link` to the worker): a link that delivered
+  nothing for over a beat (+ `SILENCE_SLACK_MS`) gets `WAKE_SETTLE_MS` to
+  deliver anything, else it is replaced (`ws-silent`, `SocketOwner.checkLink`).
+  A sleep can leave the old connection dead (a new network path) or stalled
+  in a TCP retransmission backoff that grew through the sleep while it still
+  reads "open": a woken tab's resync waited 42–64 s on it for answers the
+  server gave at once on a fresh connection (equin.ai,
+  report-1794962221-4ztwpq). Never judged while a socket merely runs — a link
+  going quiet then (a network change, one large frame on a slow link) is TCP's
+  to judge. Tabs on one socket must name the same heartbeat (one dialect
+  does): another value is a `fatal` attach.
 - **The worker bundles only this plugin's own files.** Import maps do not reach
   workers, and an artifact's address hashes only its own plugin, so
   web-artifacts' inline audit fails the build on any other first-party import

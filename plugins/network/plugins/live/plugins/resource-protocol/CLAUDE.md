@@ -54,6 +54,11 @@ field / an optional flip / a new kind / a limit, and is snapshot-pinned — a
 change of the pin IS a wire change, updated only beside the frame edit that
 moved it.
 
+`HEARTBEAT_MS` (20 s) lives here too, in the hashed data: how often the
+runtime pings every open socket, at the least — a promise the client's
+socket judges silence by (`heartbeatMs`, `primitives/networking`), so a
+change to it is a wire change.
+
 `DERIVE_MAX_SOURCES` (2) and `DERIVE_MAX_ID` (128) live here too, in the hashed
 data: the client refuses to send more, the runtime refuses to read more.
 
@@ -172,6 +177,7 @@ live-state asks it when a sub goes unanswered. An HTTP body, not a frame:
     - `DERIVE_MAX_ID`
     - `DERIVE_MAX_SOURCES`
     - `DEV_BUILD`
+    - `HEARTBEAT_MS`
     - `parseAnswerTrail`
     - `parseResourceBytesHeaders`
     - `parseResourceHttpErrorBody`

@@ -7,7 +7,7 @@
 import type { NetDiagEvent } from "./net-diag-bus";
 import type { WsStatus } from "./ws-status-bus";
 
-export const SHARED_WS_PROTO = 4;
+export const SHARED_WS_PROTO = 5;
 
 /** Tab → worker. */
 export type TabToWorker =
@@ -18,6 +18,8 @@ export type TabToWorker =
    * `address`: the port's address (`SharedWebSocketOptions.address`) — an
    * addressed server frame (`core/addressed-frame.ts`) reaches the port only
    * when it names it; `null` — the port receives unaddressed frames only.
+   * `heartbeatMs`: the server's heartbeat (`SharedWebSocketOptions.heartbeatMs`),
+   * `null` when it promises none — the socket judges silence by it.
    */
   | {
       kind: "attach";
@@ -26,11 +28,17 @@ export type TabToWorker =
       proto: number;
       holdConnects: boolean;
       address: string | null;
+      heartbeatMs: number | null;
     }
   /** A frame for the server. */
   | { kind: "tx"; data: string }
   /** The frame the worker sends the server when this port leaves; `null` clears it. */
   | { kind: "will"; data: string | null }
+  /**
+   * The tab's page ran again after a pause (visible again, resumed): the
+   * worker doubts a socket that has carried nothing since (`SocketOwner.checkLink`).
+   */
+  | { kind: "check-link" }
   /** The tab is leaving (pagehide / close): release the port now. */
   | { kind: "detach" }
   /** A fault injected by an e2e test hook (`core/ws-test-hook.ts`); never sent otherwise. */
