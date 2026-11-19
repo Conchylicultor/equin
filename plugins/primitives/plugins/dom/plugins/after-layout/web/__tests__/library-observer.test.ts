@@ -24,21 +24,25 @@ function nativeObserverClass(calls: NativeCall[]) {
   };
 }
 
-/** body > shallow ; body > a > b > deep — each with a settable layout width
- * (jsdom has no layout). */
+/** body > shallow ; body > a > b > deep — each with a settable layout width,
+ * as its inline style: jsdom has no layout, and its computed style resolves
+ * the inline one — what after-layout reads. */
 function tree(): {
   shallow: Element;
   deep: Element;
-  widths: Map<Element, number>;
+  widths: { set(el: Element, px: number): void };
 } {
   document.body.innerHTML =
     '<div id="shallow"></div><div><div><div id="deep"></div></div></div>';
-  const get = (id: string) => document.getElementById(id) as Element;
-  const widths = new Map<Element, number>();
+  const get = (id: string) => document.getElementById(id) as HTMLElement;
+  const widths = {
+    set: (el: Element, px: number) => {
+      (el as HTMLElement).style.width = `${px}px`;
+    },
+  };
   for (const el of [get("shallow"), get("deep")]) {
     widths.set(el, 100);
-    el.getBoundingClientRect = () =>
-      ({ width: widths.get(el) ?? 0, height: 10 }) as DOMRect;
+    el.style.height = "10px";
   }
   return { shallow: get("shallow"), deep: get("deep"), widths };
 }

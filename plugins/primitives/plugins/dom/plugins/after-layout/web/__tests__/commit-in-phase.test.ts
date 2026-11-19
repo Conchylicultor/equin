@@ -16,22 +16,34 @@ function fakeObserver(): { observer: ResizeObserver; observed: Set<Element> } {
   return { observer, observed };
 }
 
+/** An element's layout width, as its inline style: jsdom has no layout, and
+ * its computed style resolves the inline one — what after-layout reads. */
+interface Widths {
+  set(el: Element, px: number): void;
+  get(el: Element): number;
+}
+
+const widths: Widths = {
+  set: (el, px) => {
+    (el as HTMLElement).style.width = `${px}px`;
+  },
+  get: (el) => parseFloat((el as HTMLElement).style.width),
+};
+
 /** body > shallow ; body > a > b > deep > deeper — each with a settable
- * layout width (jsdom has no layout). */
+ * layout width. */
 function tree(): {
   shallow: Element;
   deep: Element;
   deeper: Element;
-  widths: Map<Element, number>;
+  widths: Widths;
 } {
   document.body.innerHTML =
     '<div id="shallow"></div><div><div><div id="deep"><div id="deeper"></div></div></div></div>';
-  const get = (id: string) => document.getElementById(id) as Element;
-  const widths = new Map<Element, number>();
+  const get = (id: string) => document.getElementById(id) as HTMLElement;
   for (const el of [get("shallow"), get("deep"), get("deeper")]) {
     widths.set(el, 100);
-    el.getBoundingClientRect = () =>
-      ({ width: widths.get(el) ?? 0, height: 10 }) as DOMRect;
+    el.style.height = "10px";
   }
   return {
     shallow: get("shallow"),
@@ -131,6 +143,27 @@ describe("commitInPhase", () => {
     release();
   });
 
+  it("a box that only moved under a transform is not a resize", () => {
+    const { shallow, deep } = tree();
+    stubFrames();
+    const { observer } = fakeObserver();
+    const heldBack = vi.fn();
+    const release = observeInPhase(observer, shallow, heldBack);
+    // The rendered rect jitters with the box's position under a scale (float
+    // math); its layout size does not, and that is what a ResizeObserver sees.
+    let jitter = 30;
+    shallow.getBoundingClientRect = () =>
+      ({ width: 864, height: (jitter += 1e-5) }) as DOMRect;
+
+    runAsAfterLayout(
+      () => commitInPhase(() => shallow.setAttribute("data-moved", "")),
+      [deep],
+    );
+
+    expect(heldBack).not.toHaveBeenCalled();
+    release();
+  });
+
   it("an unchanged box, or a released observation, is not answered", () => {
     const { shallow, deep, widths } = tree();
     stubFrames();
@@ -187,7 +220,7 @@ describe("commitInPhase", () => {
         [deep],
       ),
     ).toThrow(
-      /after 10 passes in one frame: oscillator\.tsx:12 100×10\/0×0→85×10\/0×0→100×10\/0×0 — /,
+      /after 10 passes in one frame: oscillator\.tsx:12 100×10→85×10→100×10 — /,
     );
     expect(answers).toBe(10);
     release();

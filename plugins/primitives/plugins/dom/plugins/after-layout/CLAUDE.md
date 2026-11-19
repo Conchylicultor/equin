@@ -64,9 +64,13 @@ would hold those resizes back a frame (painting the old size meanwhile) and
 report "ResizeObserver loop completed with undelivered notifications".
 
 So the phase settles them itself. `commitInPhase` records, before the phase's
-first commit, the box of every observation at or above the delivery
-(`getBoundingClientRect` size and client size — the same read before and after,
-and no transform advances inside one task). When the phase ends, each one the
+first commit, the box of every observation at or above the delivery, read as
+the browser compares it: the element's used width and height (computed style:
+untransformed, wherever it sits) and its scrollbar gutters (offset − client
+size). Never the rendered rect: under a scaled ancestor (a desktop window
+opens from `scale(0.96)`) its size is float math on the box's position, so an
+element a commit only moved "resized" by 1e-5 px — answered, and when the
+answer moved something again, answered until the loop guard threw. When the phase ends, each one the
 commits resized is stopped (nothing left for the browser to hold back),
 restarted at the next frame, and answered now through its `onHeldBack` — which
 may commit and resize more, settled the same way (at most 10 passes, then it
@@ -83,9 +87,10 @@ it was observed at. The snapshot therefore notes every connected observation
 (a deeper one without reading its box), and one the commit detached is
 answered and restarted like a resize.
 
-Not covered: a change of the content box alone (padding, with the border box
-and client box unchanged) — the browser still reports that one, and the
-resize-loop tracer (`element-size/resize-loop-trace`) names it.
+Not covered: a change of the content box alone (padding, with the used size
+and gutters unchanged on a border-box element) — the browser still reports
+that one, and the resize-loop tracer (`element-size/resize-loop-trace`) names
+it.
 
 ## Caveats
 

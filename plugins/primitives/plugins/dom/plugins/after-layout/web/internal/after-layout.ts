@@ -356,24 +356,34 @@ function startNextFrame(obs: Observation): void {
   });
 }
 
-/** What the browser compares an observation by, read the same way before and
- * after a commit: the layout box (a transform cannot change between the two
- * reads — no animation advances inside one task) and the client box (a
- * scrollbar appearing narrows the content box without the border box). */
+/**
+ * What the browser compares an observation by, read the way it reads it: the
+ * element's own LAYOUT size — its used width and height (computed style:
+ * fractional, untransformed, wherever the box sits) — and its scrollbar
+ * gutters (offset minus client size on each axis: a scrollbar appearing
+ * narrows the content box without the used size). Never the rendered rect:
+ * under a scaled ancestor (a desktop window opens from scale(0.96)) its size
+ * comes out of float math on the box's position, so a commit that only MOVED
+ * an element "resized" it by 1e-5 px — a resize no ResizeObserver reports,
+ * answered here, and when the answer moved anything again, answered again
+ * until the loop guard threw (report-1795041429-7egg5c: a sticky header and
+ * every table row, identical to 0.1 px across ten passes).
+ */
 interface Box {
-  width: number;
-  height: number;
-  clientWidth: number;
-  clientHeight: number;
+  width: string;
+  height: string;
+  gutterX: number;
+  gutterY: number;
 }
 
 function boxOf(el: Element): Box {
-  const rect = el.getBoundingClientRect();
+  const style = getComputedStyle(el);
+  const sized = el as Partial<HTMLElement>;
   return {
-    width: rect.width,
-    height: rect.height,
-    clientWidth: el.clientWidth,
-    clientHeight: el.clientHeight,
+    width: style.width,
+    height: style.height,
+    gutterX: (sized.offsetWidth ?? 0) - el.clientWidth,
+    gutterY: (sized.offsetHeight ?? 0) - el.clientHeight,
   };
 }
 
@@ -381,16 +391,16 @@ function sameBox(a: Box, b: Box): boolean {
   return (
     a.width === b.width &&
     a.height === b.height &&
-    a.clientWidth === b.clientWidth &&
-    a.clientHeight === b.clientHeight
+    a.gutterX === b.gutterX &&
+    a.gutterY === b.gutterY
   );
 }
 
 /**
  * The observations a settle loop kept resizing, most-resized first: each named
  * by its element's source (`data-source`, the file:line that rendered it) or
- * tag and class, with its last boxes — `w×h` (layout box) and `/cw×ch` (client
- * box) when they differ, the client box being where a scrollbar shows. Short:
+ * tag and class, with its last boxes — `w×h` (layout size) and its scrollbar
+ * gutters when it has any. Short:
  * a visitor's report keeps one line of 300 characters.
  */
 function describeTrail(trail: ReadonlyMap<Observation, Box[]>): string {
@@ -411,13 +421,14 @@ function elementLabel(el: Element): string {
 }
 
 function formatBox(b: Box): string {
-  const px = (n: number) => String(Math.round(n * 10) / 10);
+  const px = (v: string) => {
+    const n = parseFloat(v);
+    return Number.isNaN(n) ? v : String(Math.round(n * 10) / 10);
+  };
   const layout = `${px(b.width)}×${px(b.height)}`;
-  const client = `${px(b.clientWidth)}×${px(b.clientHeight)}`;
-  return Math.round(b.width) === b.clientWidth &&
-    Math.round(b.height) === b.clientHeight
+  return b.gutterX === 0 && b.gutterY === 0
     ? layout
-    : `${layout}/${client}`;
+    : `${layout} gutter ${b.gutterX}×${b.gutterY}`;
 }
 
 /**
