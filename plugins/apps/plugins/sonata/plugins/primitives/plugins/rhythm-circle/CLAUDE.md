@@ -46,6 +46,8 @@ CSS-transitioned.
     - `ui/tokens/color-palette --muted`
     - `ui/tokens/color-palette --primary`
   - Imported by: `apps/sonata/rich/rhythm-controls`
+- Exemptions:
+  - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/rhythm-circle.tsx` (debt)
 - Web:
   - Exports (types):
     - `RhythmCircleHandle`

@@ -8,6 +8,8 @@
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
   - Imported by: `apps/isle/world-view`
+- Exemptions:
+  - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/shapes.ts` (debt)
 - Web:
   - Exports (types):
     - `ClickModifiers`

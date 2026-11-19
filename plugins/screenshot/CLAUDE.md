@@ -57,6 +57,8 @@
     - `ui/tokens/type-scale --font-size-3xs`
     - `ui/tokens/type-scale --line-height-3xs`
   - Imported by: `screenshot/draw-on-app`
+- Exemptions:
+  - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/prompt-form.tsx`, `web/components/screenshot-button.tsx` (debt)
 - Shared:
   - Exports (values): `saveScreenshotFile`
 - Sub-plugins:

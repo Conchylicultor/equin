@@ -30,4 +30,18 @@ export default [
     reason:
       "A standalone regenerator run by hand (`./equin run …/write-identity-snapshot.ts`), outside any check pass: it is its own pass root, lists the working tree once and hands that set to scanPaneIdentities.",
   },
+  {
+    rule: "react-compiler:no-silent-skips",
+    paths: [
+      "web/components/pane-chrome.tsx",
+      "web/components/pane-resolve-guard.tsx",
+      "web/components/promote-control.tsx",
+      "web/pane.ts",
+      "web/use-render-sync.ts",
+    ],
+    kind: "debt",
+    task: "task-1795087496-4w8ni5",
+    reason:
+      "Left uncompiled by the React Compiler — pane-chrome.tsx: PaneChrome (calls a hook carried as a value), PaneEndControls (calls a hook carried as a value); pane-resolve-guard.tsx: StickyResolveGuard (calls a hook carried as a value), FallbackChrome (calls a hook carried as a value); promote-control.tsx: ExpandElsewhere (calls a hook carried as a value), DefaultPromote (calls a hook carried as a value); pane.ts: useToggle (its hand-written memoization cannot be preserved), usePaneTitle (calls a hook carried as a value), useRoute and useIndexMatch (their memo lists the registry-version signal `contributions`, which they never read, under an exhaustive-deps disable — the compiler would drop it as a dep and a late-registered pane would never resolve); use-render-sync.ts: useRenderSync (reads a ref during render).",
+  },
 ] satisfies Exemptions;

@@ -146,6 +146,8 @@ registry readers are headless.
     - `screenshot`
     - `tasks/supervisor-roles/pane`
     - `tasks/task-description`
+- Exemptions:
+  - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/text-editor-impl.tsx` (debt)
 - Sub-plugins:
   - **`caret-motion`** — The caret-crossing channel for Lexical editors: a mover that relocates a caret ACROSS something announces it in the direction of travel, and every consumer of a synthesized caret position observes…
   - **`caret-trigger`** — Caret-anchored trigger primitive for Lexical editors: derives open-state from editor text and a single-owner arbiter.

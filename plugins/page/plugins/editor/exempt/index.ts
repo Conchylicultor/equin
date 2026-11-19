@@ -121,4 +121,18 @@ export default [
     reason:
       "Written before sourceAnalysis(ctx): reads code through parse-utils' text helpers (regexes over masked source), which skip what they cannot guess.",
   },
+  {
+    rule: "react-compiler:no-silent-skips",
+    paths: [
+      "web/block-editor-context.tsx",
+      "web/components/block-editor.tsx",
+      "web/components/block-menu-plugin.tsx",
+      "web/components/block-type-list.tsx",
+      "web/composite-block-store.tsx",
+    ],
+    kind: "debt",
+    task: "task-1795087496-4w8ni5",
+    reason:
+      "Left uncompiled by the React Compiler — block-editor-context.tsx: BlockEditorProviderInner (its hand-written memoization cannot be preserved); block-editor.tsx: SelectionLayer (unsupported syntax: Handle TryStatement without a catch clause); block-menu-plugin.tsx: InsertActionBinding (calls a hook carried as a value); block-type-list.tsx: BlockTypeList (unsupported syntax: Handle UpdateExpression to variables captured within lambdas); composite-block-store.tsx: CompositeServerProviderHost (its hand-written memoization cannot be preserved).",
+  },
 ] satisfies Exemptions;

@@ -340,16 +340,17 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `timer/no-unlisted-timer` — `central/internal/refresh-loop.ts` (sanctioned)
     - `namespace:legacy-host` — `central/internal/oauth-flow.test.ts` (sanctioned)
     - `product-name:legacy-id` — `central/internal/oauth-flow.test.ts` (sanctioned)
+    - `react-compiler:no-silent-skips` — `web/components/account-detail.tsx`, `web/components/accounts-pane.tsx`, `web/components/connect-button.tsx`, `web/components/grant-access-button.tsx`, `web/components/oauth-client-setup.tsx`, `web/components/scope-grant-notice.tsx` (debt)
 - Sub-plugins:
   - **`apple-signing`** [exempt] — Apple code-signing config registration (web). The Accounts provider row + setup wizard UI live in the setup-wizard sub-plugin. Apple code-signing credentials: config fields + certificate upload +…
     - Plugins:
-      - **`setup-wizard`** — Apple code-signing UI: the Accounts 'Apple Developer' integration row and its guided certificate + App Store Connect API key setup, rendered inline in the row's Accounts pane.
+      - **`setup-wizard`** [exempt] — Apple code-signing UI: the Accounts 'Apple Developer' integration row and its guided certificate + App Store Connect API key setup, rendered inline in the row's Accounts pane.
   - **`google`** — Google OAuth provider — adds the Google row to the Accounts pane and a credentials section to Settings. Google OAuth 2.0 provider. Use with Drive, Gmail, Calendar consumer plugins via incremental…
     - Plugins:
-      - **`setup-wizard`** — Guided setup steps for Google OAuth credentials (project → Drive API → consent screen → OAuth client → paste → connect), rendered inline in the Google Accounts pane.
+      - **`setup-wizard`** [exempt] — Guided setup steps for Google OAuth credentials (project → Drive API → consent screen → OAuth client → paste → connect), rendered inline in the Google Accounts pane.
   - **`google-maps`** — Google Maps Platform API-key provider. The key is stored in the central auth token store (encrypted, shared across worktrees) and verified against the Places API before it is accepted.
     - Plugins:
-      - **`setup-wizard`** — Guided setup steps for the Google Maps Platform API key (project → Places API → billing → key → paste), rendered inline in its Accounts pane; contributes the Accounts provider row.
+      - **`setup-wizard`** [exempt] — Guided setup steps for the Google Maps Platform API key (project → Places API → billing → key → paste), rendered inline in its Accounts pane; contributes the Accounts provider row.
   - **`hooktheory`** — Hooktheory Accounts row: signs in with a Hooktheory username and password through the shared sign-in form, inline in its Accounts pane. Hooktheory (TheoryTab) username/password provider. The…
   - **`notion`** — Notion OAuth provider (scaffold). Adds the Notion row to the Accounts pane, set up there with the generic OAuth client steps (console → redirect URI → client id + secret → connect), and registers…
 

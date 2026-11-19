@@ -15,4 +15,12 @@ export default [
     reason:
       "Page-wide telemetry: a page's reading of its own memory belongs to the page, posted to the page's own server whatever subtree is focused (D3).",
   },
+  {
+    rule: "react-compiler:no-silent-skips",
+    paths: ["web/components/tab-memory-recorder.tsx"],
+    kind: "debt",
+    task: "task-1795087496-4w8ni5",
+    reason:
+      "Left uncompiled by the React Compiler — TabMemoryRecorder (a compiler internal error).",
+  },
 ] satisfies Exemptions;

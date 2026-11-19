@@ -140,6 +140,8 @@ disagree.
     - `apps/places/places-map`
     - `page/place/google`
     - `page/place/map-layer`
+- Exemptions:
+  - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/place-block.tsx` (debt)
 - Sub-plugins:
   - **`google`** — Google Maps as a place-lookup source for the /place block: contributes the provider's name, icon, and the 'set up Google Maps' affordance the block renders while no API key is configured.
   - **`map-layer`** — Puts /place blocks on the /map block: a PageMap.Layer turning every located place on the page into a pin that points back at its block (picked places without coordinates are counted as unplaced, not…

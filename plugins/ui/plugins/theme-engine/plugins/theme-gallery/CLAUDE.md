@@ -90,6 +90,8 @@ its lines are the schema's: name, source, tags), `list` draws `ThemeSwatch`.
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
   - Imported by: `ui/theme-engine/theme-gallery/customizer`
+- Exemptions:
+  - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/use-theme-gallery.ts` (debt)
 - Sub-plugins:
   - **`customizer`** — The Theme customizer section: the theme gallery as cards, with rename and delete on saved themes.
 

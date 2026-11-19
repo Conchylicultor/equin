@@ -85,6 +85,8 @@
     - `screenshot/draw-on-app`
     - `wish/element-picker`
     - `wish/github-issue`
+- Exemptions:
+  - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/wish-field.tsx` (debt)
 - Sub-plugins:
   - **`element-picker`** — The element picker wired into equin's Improve flow: a 'Pick UI element' segment of the Improve pill that opens the Improve popover with the picked element as a <ui-context/> chip, and an 'Attach UI…
   - **`github-issue`** — File on GitHub: a button in the Wish popover's footer, beside Launch, that opens GitHub's new-issue form on the product's repository prefilled with the drafted wish and the page it is about, then…

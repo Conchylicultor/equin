@@ -1106,25 +1106,34 @@ export function useLive<Row, F, S extends string>(
       `useLive("${keyOf(source)}"): this call site read a ${READ_KIND[firstKind]}, and now asks a ${READ_KIND[kind]} — a call site reads one kind of thing on every render (a viewport, a count, an id set: always or never)`,
     );
   }
-  /* eslint-disable react-hooks/rules-of-hooks -- each branch is fixed per call site: asserted above */
+  // Each hook call below carries its own next-line disable, never one block
+  // disable around the switch: the React Compiler reads a block disable of a
+  // react-hooks rule as covering the whole file and skips every function in
+  // it (react-compiler/skips). Only this dispatcher stays uncompiled.
   switch (kind) {
     case "unavailable":
+      // eslint-disable-next-line react-hooks/rules-of-hooks -- the branch is fixed per call site: asserted above
       return useUnavailable(needsMachine!);
     case "viewport-pages":
       // Before `null → count`: a paged read passes a `null` collection to
       // read nothing (a detached or sectioned DataView), keeping its hooks.
+      // eslint-disable-next-line react-hooks/rules-of-hooks -- the branch is fixed per call site: asserted above
       return useViewportPages(
         source as LiveCollection<Row, F, S> | null,
+        // eslint-disable-next-line react-hooks/rules-of-hooks -- the branch is fixed per call site: asserted above
         usePinnedClock(source, query as LivePagesQuery<F, S> | null),
         options as LivePagesOptions,
       );
     case "count":
       // `null` source or query: only the count overload takes one.
+      // eslint-disable-next-line react-hooks/rules-of-hooks -- the branch is fixed per call site: asserted above
       return useCount(
         source as LiveCollection<Row, F, S> | null,
+        // eslint-disable-next-line react-hooks/rules-of-hooks -- the branch is fixed per call site: asserted above
         usePinnedClock(source, query as LiveCountQuery<F> | null),
       );
     case "value-pages":
+      // eslint-disable-next-line react-hooks/rules-of-hooks -- the branch is fixed per call site: asserted above
       return useValuePages(
         source as unknown as LivePagedValue<
           unknown,
@@ -1137,47 +1146,57 @@ export function useLive<Row, F, S extends string>(
         options as LiveValuePagesOptions | undefined,
       );
     case "query-value": {
+      // eslint-disable-next-line react-hooks/rules-of-hooks -- the branch is fixed per call site: asserted above
       const read = useQueryValue(
         source as LiveQueryValue<unknown, unknown, unknown, LiveValueOrigin>,
         query as unknown,
       );
       // A declaration is a snapshot or not for good: the branch is fixed too.
+      // eslint-disable-next-line react-hooks/rules-of-hooks -- the branch is fixed per call site: asserted above
       return isSnapshot(source!) ? useSnapshotRead(read) : read;
     }
     case "value": {
       // `null` is the substrate's skip; `useResource` canonicalizes the params
       // (an absent optional one is one tuple however it is spelled).
+      // eslint-disable-next-line react-hooks/rules-of-hooks -- the branch is fixed per call site: asserted above
       const read = useResource(
         source as LiveValue<unknown, Record<string, string>, LiveValueOrigin>,
         query as Record<string, string> | null | undefined,
       );
+      // eslint-disable-next-line react-hooks/rules-of-hooks -- the branch is fixed per call site: asserted above
       return isSnapshot(source!) ? useSnapshotRead(read) : read;
     }
     case "query-value-list":
+      // eslint-disable-next-line react-hooks/rules-of-hooks -- the branch is fixed per call site: asserted above
       return useQueryValueList(
         source as LiveQueryValue<unknown, unknown, unknown, LiveValueOrigin>,
         query as readonly unknown[],
         options as LiveValueListOptions | undefined,
       );
     case "value-list":
+      // eslint-disable-next-line react-hooks/rules-of-hooks -- the branch is fixed per call site: asserted above
       return useValueList(
         source as LiveValue<unknown, Record<string, string>, LiveValueOrigin>,
         query as readonly (Record<string, string> | null)[],
         options as LiveValueListOptions | undefined,
       );
     case "all":
+      // eslint-disable-next-line react-hooks/rules-of-hooks -- the branch is fixed per call site: asserted above
       return useAll(
         (source as LiveAllCollection<Row, string>).all,
         (query ?? undefined) as AllQuery<Row> | undefined,
       );
     case "all-pages":
+      // eslint-disable-next-line react-hooks/rules-of-hooks -- the branch is fixed per call site: asserted above
       return useAllPages(
         source as LiveCollection<Row, F, S>,
+        // eslint-disable-next-line react-hooks/rules-of-hooks -- the branch is fixed per call site: asserted above
         usePinnedClock(source, query as LiveQuery<F, S> | null | undefined) ??
           undefined,
         options as LiveListReadOptions | undefined,
       );
     case "row":
+      // eslint-disable-next-line react-hooks/rules-of-hooks -- the branch is fixed per call site: asserted above
       return useRow(
         source as LiveRowsCollection<Row>,
         (query as LiveRowQuery).id,
@@ -1185,8 +1204,10 @@ export function useLive<Row, F, S extends string>(
     case "viewport-pages-tree":
       // Ancestors or not, one read (`useTreeViewportPages`): a tree's call
       // site may ask for them on some renders only, or read nothing between.
+      // eslint-disable-next-line react-hooks/rules-of-hooks -- the branch is fixed per call site: asserted above
       return useTreeViewportPages(
         source as LiveTreeCollection<Row, F, S>,
+        // eslint-disable-next-line react-hooks/rules-of-hooks -- the branch is fixed per call site: asserted above
         usePinnedClock(
           source,
           withoutInclude(query as LivePagesQuery<F, S> | null),
@@ -1195,8 +1216,10 @@ export function useLive<Row, F, S extends string>(
         includesAncestors(query),
       );
     case "all-pages-ancestors":
+      // eslint-disable-next-line react-hooks/rules-of-hooks -- the branch is fixed per call site: asserted above
       return useTreeAllPages(
         source as LiveTreeCollection<Row, F, S>,
+        // eslint-disable-next-line react-hooks/rules-of-hooks -- the branch is fixed per call site: asserted above
         usePinnedClock(
           source,
           withoutInclude(query as LiveQuery<F, S> | null | undefined),
@@ -1204,17 +1227,19 @@ export function useLive<Row, F, S extends string>(
         options as LiveListReadOptions | undefined,
       );
     case "row-ancestors":
+      // eslint-disable-next-line react-hooks/rules-of-hooks -- the branch is fixed per call site: asserted above
       return useTreeRow(
         source as LiveTreeCollection<Row, unknown, string>,
         (query as LiveRowQuery).id,
       );
     case "collection":
+      // eslint-disable-next-line react-hooks/rules-of-hooks -- the branch is fixed per call site: asserted above
       return useCollection(
         source as LiveCollection<Row, F, S> | LiveRowsCollection<Row>,
+        // eslint-disable-next-line react-hooks/rules-of-hooks -- the branch is fixed per call site: asserted above
         usePinnedClock(source, query as LiveGroupQuery<F> | LiveIdsQuery),
       );
   }
-  /* eslint-enable react-hooks/rules-of-hooks */
 }
 
 /**

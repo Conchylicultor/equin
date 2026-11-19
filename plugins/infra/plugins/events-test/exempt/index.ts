@@ -52,4 +52,12 @@ export default [
     reason:
       "The harnesses stage a stuck or superseded graphile row by writing graphile-worker's own tables (graphile_worker._private_*), which graphile's migrations create and this repo declares no typed table for.",
   },
+  {
+    rule: "react-compiler:no-silent-skips",
+    paths: ["web/components/events-test-view.tsx"],
+    kind: "debt",
+    task: "task-1795087496-4w8ni5",
+    reason:
+      "Left uncompiled by the React Compiler — EventsTestView (unsupported syntax: Handle TryStatement with a finalizer ('finally') clause).",
+  },
 ] satisfies Exemptions;

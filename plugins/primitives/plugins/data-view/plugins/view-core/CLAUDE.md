@@ -324,6 +324,8 @@ contributions each surface passes in, and per-entry plugin id
   - Imported by:
     - `primitives/data-view`
     - `primitives/metrics`
+- Exemptions:
+  - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/use-view-model.ts`, `web/internal/use-views-config.ts` (debt)
 - Shared:
   - Exports (values): `viewsDescriptor`
 - Test helpers:

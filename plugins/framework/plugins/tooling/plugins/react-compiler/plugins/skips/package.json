@@ -1,0 +1,26 @@
+{
+  "name": "@equin/plugin-framework-tooling-react-compiler-skips",
+  "version": "0.0.1",
+  "private": true,
+  "description": "The React Compiler's skips made visible: the react-compiler:no-silent-skips check runs the compiler over every browser-built module with the build's own options and fails on each component or hook it leaves uncompiled, unless the owning plugin declares the file exempt; and render-cost.ts, an e2e that counts what a skip re-renders on a real interaction.",
+  "dependencies": {
+    "@babel/core": "^7.29.13",
+    "babel-plugin-react-compiler": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/babel__core": "^7.20.5"
+  },
+  "dependencyPolicy": {
+    "holds": [
+      {
+        "names": [
+          "@babel/core"
+        ],
+        "below": "8.0.0",
+        "reason": "The check runs the compiler through the same Babel the artifact builder does (web-artifacts holds @babel/core below 8 until the @vitejs/plugin-react 6 move, task-1793076072-gwttlf); the two lift together.",
+        "issue": "https://babeljs.io/docs/v8-migration",
+        "reviewBy": "2027-02-07"
+      }
+    ]
+  }
+}

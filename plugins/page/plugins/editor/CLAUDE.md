@@ -2857,6 +2857,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `check-thread-safety/no-blocking-check-work` — `check/index.ts`, `check/no-token-identity-outside-owner.ts` (debt)
     - `sql-writes:fit:hand-written` — `server/internal/page-id.ts` (sanctioned)
     - `source-read-safety/no-text-source-read` — `check/no-token-identity-outside-owner.ts` (debt)
+    - `react-compiler:no-silent-skips` — `web/block-editor-context.tsx`, `web/components/block-editor.tsx`, `web/components/block-menu-plugin.tsx`, `web/components/block-type-list.tsx`, `web/composite-block-store.tsx` (debt)
   - Exempted by: `page/editor` (0 debt)
 - Test helpers:
   - Web: `@plugins/page/plugins/editor/web/testing`

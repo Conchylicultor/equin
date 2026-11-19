@@ -102,7 +102,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `active-data/task`
       - `conversations/conversation-view/jsonl-viewer/assistant-text`
   - Exemptions:
-    - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
+    - Exempts itself from:
+      - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
+      - `react-compiler:no-silent-skips` — `web/internal/code-chain.tsx` (debt)
   - Test helpers:
     - Web: `@plugins/active-data/web/testing`
       - `activeDataPlugin`
@@ -598,6 +600,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/font-family --font-mono`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/task-card.tsx` (debt)
     - **`task-link`** — Renders raw `task-<id>` strings inline as clickable chips that open the task detail pane, and presents the task id kind (title + open) to the id registry. Models emit the bare id, no tag wrapping needed. The task id chip's server half (idChipServer): resolves a `task-<id>` to its task's title for the id registry and for model-read text, and registers the page-editor inline token so a page block holding the chip stays agent-readable.
       - Web:
         - Contributes:
@@ -920,6 +924,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `browserVisitIdKind`
           - Cross-plugin:
             - Imported by: `apps/browser/start-page`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/record-visits.tsx` (debt)
         - **`isle-building`** — The Browser's building on Isle: the observatory, its dome slot and telescope slowly turning.
           - Web:
             - Contributes: `Isle.Building` "browser"
@@ -1080,7 +1086,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/browser/webview`
               - `apps/website`
           - Exemptions:
-            - Exempts itself from: `spacer/no-split-slot-row` — `web/components/browser-layout.tsx` (sanctioned)
+            - Exempts itself from:
+              - `spacer/no-split-slot-row` — `web/components/browser-layout.tsx` (sanctioned)
+              - `react-compiler:no-silent-skips` — `web/components/persist-tabs.tsx` (debt)
         - **`start-page`** — Browser start page: the empty-state landing shown in the viewport when no URL is loaded — a centered hero (time-of-day greeting + pill search), a grid of pins (curated quick links, then the live bookmarks), and the recently visited pages.
           - Web:
             - Contributes: `Browser.StartPage` "Start page" → `StartPage`
@@ -1179,6 +1187,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-md`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/remote-tab.tsx` (debt)
     - **`chord`** — Chord — a chord ear trainer that plays loops of real songs whose chords you have turned on, asks you to name each chord, and keeps track of how well you know each one.
       - Cross-plugin:
         - Imported by: `apps/chord/song-index`
@@ -1425,6 +1435,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-bold`
               - `ui/tokens/type-scale --font-weight-semibold`
             - Imported by: `apps/chord/trainer`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/use-piano.ts` (debt)
           - Core:
             - Exports (types):
               - `ChannelLevel`
@@ -2980,6 +2992,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `paths:no-hardcoded-paths` — `core/derive.ts` (sanctioned)
               - `boundaries/no-platform-api` — `server/internal/transcript.ts` (debt)
+              - `react-compiler:no-silent-skips` — `web/components/site-banner.tsx`, `web/components/site-overview.tsx`, `web/components/site-settings.tsx` (debt)
           - Plugins:
             - **`runs-arm`** — The deploy arm's presence on the merged run surface: its rows' link into the site's Deployments tab, and the cells of its eight own fields (verb, failed phase, server / deployment / composition / release-run / commit ids, exit code) — real filterable and sortable SQL dimensions, declared by the arm. The deploy arm of the unified run space: binds deploy_runs into the runs union — status folded into the shared outcome vocabulary through a typed map, a label naming the composition and the server it went to, the verb as both the shared trigger and its own enum dimension, and the CLI's refusal text as the shared message. Reads null for namespace: a deploy targets a remote server, not a worktree.
               - Web:
@@ -3979,6 +3992,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-semibold`
               - `ui/tokens/type-scale --line-height-subheading`
             - Imported by: `apps/desktop/shelf`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/launcher-overlay.tsx` (debt)
         - **`shelf`** — The desktop's bottom shelf: a centred dock with the launcher button, the pinned apps and the running ones (grouped per app, with window pips, hover thumbnails and a right-click app menu), and the tray — the pager's mini-desktops with their desktop previews, the overview button and the clock. Reserves the desktop's bottom work area and is where windows minimise to.
           - Web:
             - Contributes: `Desktop.Overlay` "Desktop overlay" → `Shelf`
@@ -4200,6 +4215,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/desktop/wallpaper/openverse`
               - `apps/desktop/wallpaper/upload`
               - `apps/desktop/windows`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/wallpaper-picker.tsx` (debt)
           - Plugins:
             - **`builtin`** — Built-in wallpaper source: contributes the Built-in tab to the desktop wallpaper picker, a grid of the bundled wallpapers (and the theme-following gradient); picking one writes its id to the wallpaper config with no server upload.
               - Web:
@@ -4351,6 +4368,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/desktop/shelf`
               - `apps/desktop/switcher`
               - `apps/website/landing/screenshot`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/floating-foreground.tsx`, `web/components/floating-tabs-bridge.tsx`, `web/components/window-snapshot.tsx`, `web/floating-placement.tsx` (debt)
     - **`events`** — Events — track events from pluggable sources in one database.
       - Plugins:
         - **`event-date`** — The event date format: a schema that states a recurrence once, its pure expander, its human label, its anchor-independent identity key, and the prompt fragment that documents it to the model — one folder so spec, parser and expander cannot drift.
@@ -5330,6 +5349,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/code/file-pane`
               - `conversations/conversation-view/explorer`
               - `plugin-meta/plugin-view/file-tree`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/lenses.tsx`, `web/internal/move-into.ts` (debt)
         - **`folder-peek`** — A folder of any browsable file system browsed as a side pane through the Files browser (the browser's header — back / forward / up, the path bar as the title, the filter, the toggles — as the pane header; tree, the file opened from it previewed in a column of its own beside it): the folder/<dir>[;fs=<system>] pane (no ;fs: the computer's disk), homed in Files and opened beside any surface — useFolderPeekTarget()(fs, dir) is its link, folderLocationParams(fs, dir) its params — with Expand opening Files at the pane's location.
           - Web:
             - Contributes: `Pane.Register` "folder-peek"
@@ -5514,6 +5535,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/file-explorer/places`
               - `conversations/conversation-view/code/file-pane`
               - `conversations/conversation-view/explorer`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/resolve-places.tsx` (debt)
     - **`home`** — Home — app launcher and entry point. The Apps task category: the category tasks filed from the Home app's cards, such as building a new app, are grouped under.
       - Server:
         - Contributes: `taskCategory` "apps"
@@ -5843,6 +5866,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `WALK_FRAMES`
               - `walkCycle`
         - **`dev`** — Isle's dev tools, never part of the app: the growth exhibit (isle/growth) — the world drawn with N made-up apps (14…142; ±1, add to a category, remove one at random, another seed), placed in memory, never the real plots, with its stats (islands, districts, buildings, empty lots, rebuild time), a switch between baking in workers and on the page, and a fingerprint of what was baked to compare the two.
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `exhibits/internal/growth.tsx` (debt)
         - **`plots`** — Isle's plots table (isle_plots: one row per plot of a world, keyed (world, plotId), its occupant unique per world, the geometry as jsonb) served as the isle.plots live collection, and the claim / move / restore endpoints: one compare-and-set transaction per batch, answered stale when what the writer read no longer holds.
           - Server:
             - Contributes:
@@ -5908,6 +5933,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shadow --shadow`
             - Imported by: `apps/isle/world-view`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/shapes.ts` (debt)
           - Web:
             - Exports (types):
               - `ClickModifiers`
@@ -6143,6 +6170,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `pentatonicHz`
           - Cross-plugin:
             - Imported by: `apps/keyboard-party/shell`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/party-stage.tsx` (debt)
         - **`shell`** — App shell for Keyboard Party: registers the /keyboard-party app entry, whose one page is the party stage.
           - Web:
             - Contributes: `Apps.App` "Tap Tap Party" → `KeyboardPartyLayout`
@@ -6193,6 +6222,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Endpoint callers:
               - `remote-images`
               - `sync`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/attachment-chip.tsx` (debt)
         - **`gmail-api`** — Stateless typed Gmail REST API v1 client (profile, messages, history, labels) with concurrency-bounded batched gets and exponential backoff. Takes an access token per call; never touches auth or storage.
           - Cross-plugin:
             - Imported by:
@@ -7146,7 +7177,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
               - `page/inline-date`
           - Exemptions:
-            - Exempts itself from: `endpoints/no-void-fetch-endpoint` — `web/components/pages-sidebar.tsx` (sanctioned)
+            - Exempts itself from:
+              - `endpoints/no-void-fetch-endpoint` — `web/components/pages-sidebar.tsx` (sanctioned)
+              - `react-compiler:no-silent-skips` — `web/components/change-cover-popover.tsx`, `web/components/new-page-item.tsx`, `web/components/page-header.tsx` (debt)
         - **`prompt-origin`** — Origin backlink in the task detail: the page a `/prompt`-block-launched task came from, as a clickable chip opening pageDetailPane. Renders nothing when the task has no prompt-block link or the page is gone.
           - Web:
             - Contributes: `TaskDetailSlots.Section` "Origin" → `PromptOriginSection`
@@ -8920,6 +8953,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/sonata/piano-keyboard`
                   - `apps/sonata/rich/circle-of-fifths`
                   - `apps/sonata/rich/readout-keyboard`
+              - Exemptions:
+                - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/live-play-engine.tsx` (debt)
             - **`metronome`** — Sonata metronome: a synthesized click track (continuous + count-in lead-in) scheduled on the engine's audio clock, with a toolbar control and an on-screen countdown. Server registration of the Sonata metronome config.
               - Web:
                 - Contributes:
@@ -9054,6 +9089,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/shortcuts.targetClaimsKey`
               - `primitives/shortcuts.usePlayPauseShortcut`
               - `primitives/shortcuts.useSurfaceShortcuts`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/seek-hold-controller.tsx` (debt)
         - **`covers`** — Serves Sonata song covers: a content-addressed SVG cache (rendered on request, deduped while in flight) over the scoreCoverFiles data-files root, immutable while the URL's version is current.
           - Server:
             - Contributes: `data-files.root-location` "apps.sonata.covers"
@@ -9391,6 +9428,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/transpose` (table `sonata_songs_ext_transpose`)
               - `apps/sonata/sources/ultimate-guitar/alignment` (table `sonata_songs_ext_ug_alignment`)
               - `apps/sonata/sources/ultimate-guitar` (table `sonata_songs_ext_ultimate_guitar`)
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/onboarding.tsx`, `web/components/section-pane.tsx`, `web/song-hydrator.tsx`, `web/song-link.tsx` (debt)
         - **`look`** — Web registration of the Sonata look config (flat / realistic / sketch) plus its View-popover switch — the app's single appearance choice. The palette itself is plain data in core/. Server registration of the Sonata look config (flat / realistic / sketch).
           - Web:
             - Contributes:
@@ -9502,6 +9541,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chord-palette --chord-outside`
               - `ui/tokens/color-palette --primary`
               - `ui/tokens/color-palette --ring`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/lyrics-hud.tsx` (debt)
         - **`mini-player`** — Sonata's mini player: <SonataMiniPlayer> — one song (a library song or a file's bytes) in a player of its own, drawn as the immersive player scaled down and wearing Sonata's theme wherever it is hosted: the falling notes fill the box, an optional header band floats over their top, and the progression capsule (play, the timeline, loop) floats in glass. One loading state until the display has drawn, then everything at once and it plays. Shared by the file viewer's MIDI preview and the song peek pane.
           - Web:
             - Uses:
@@ -9568,6 +9609,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/color-palette --background`
               - `ui/tokens/shape --spacing`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/notation.tsx` (debt)
         - **`now-playing`** — A Sonata player's song in the browser's media session (media/media-session): Chrome's media controls and the OS's Now Playing / media keys show its name (a library song's live title, a file's name — from the song document) with the Sonata icon, a scrubber over the tempo-scaled song, and play / pause / seek driving the playback session. A SonataSession.Effect, so every player claims it — the Sonata app's (following its song when it plays on with no Sonata page shown; Sonata's background music source leaves the session to it), a file preview's and a mini player's — and the one that started playing last owns the session.
           - Web:
             - Contributes: `SonataSession.Effect` "now-playing" → `SonataNowPlaying`
@@ -9692,6 +9735,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/piano-roll/fx-core`
               - `apps/sonata/piano-roll/fx-ripples`
               - `apps/sonata/piano-roll/fx-shatter`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/piano-roll.tsx`, `web/internal/pixi/app.tsx` (debt)
           - Plugins:
             - **`fx-comets`** — Fancy piano-roll FX (opt-in): a comet arcs along the keyboard line between consecutive notes of the same track, with a fading particle trail. Server registration of the fx-comets enabled toggle.
               - Web:
@@ -9734,6 +9779,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Server:
                 - Contributes: `ConfigV2.Register` "config"
                 - Uses: `config_v2.ConfigV2`
+              - Exemptions:
+                - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/fx-ripples.tsx` (debt)
             - **`fx-shatter`** — Fancy piano-roll FX (opt-in): notes shatter into tinted debris that arcs up and falls under gravity at the strike line. Server registration of the fx-shatter enabled toggle.
               - Web:
                 - Contributes:
@@ -9891,6 +9938,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/songsheet`
               - `apps/sonata/transport-bar`
               - `apps/sonata/view-options`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/view.tsx` (debt)
         - **`primitives`** — Umbrella for Sonata-local client primitives.
           - Plugins:
             - **`glass`** — The player's one floating surface: <Glass> — a barely translucent, blurred panel with a top sheen and a hairline edge that the toolbar pill, the progression capsule and the section rail all float on over the notes (menus stay the theme's solid popover). A shape (pill / panel) and a tint (the bars' or the progression capsule's deeper glass).
@@ -9936,6 +9985,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by:
                   - `apps/sonata/piano-roll`
                   - `apps/sonata/transport-bar`
+              - Exemptions:
+                - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/use-inertial-drag.ts` (debt)
               - Core:
                 - Exports (types): `VelocityTracker`
                 - Exports (values):
@@ -10002,6 +10053,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/chord/piano`
                   - `apps/sonata/piano-keyboard`
                   - `apps/sonata/rich/readout-keyboard`
+              - Exemptions:
+                - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/keyboard.tsx` (debt)
             - **`rhythm-circle`** — Generic rotating rhythm-necklace SVG: one concentric ring per track, a bead per pulse (index 0 at 12 o'clock, clockwise), filled beads for onsets, and a playhead needle. Imports nothing from Sonata — speaks only plain numbers. The spin is driven imperatively via setPhase(phase) and costs zero React renders; beads are optionally click-to-toggle.
               - Cross-plugin:
                 - Uses tokens:
@@ -10009,6 +10062,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --muted`
                   - `ui/tokens/color-palette --primary`
                 - Imported by: `apps/sonata/rich/rhythm-controls`
+              - Exemptions:
+                - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/rhythm-circle.tsx` (debt)
               - Web:
                 - Exports (types):
                   - `RhythmCircleHandle`
@@ -10408,6 +10463,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Routes: `POST /api/sonata/songs/:id/chord-mode`
               - Cross-plugin:
                 - Imported by: `apps/sonata/rich/accompaniment`
+              - Exemptions:
+                - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/chord-mode-switch.tsx` (debt)
             - **`chord-overlay`** — Sonata Overlay: labels chord annotations along the timeline. Requires the time-axis capability, so it renders on the piano roll and any future time-based display.
               - Web:
                 - Contributes: `Sonata.Overlay` "chord-overlay" → `ChordOverlay`
@@ -10887,6 +10944,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by: 35 plugins — full list in [`plugins/apps/plugins/sonata/plugins/session/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/session/REFERENCE.md)
               - `apps` ×35
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/session.tsx` (debt)
         - **`shell`** — App shell for Sonata. Registers the /sonata app entry (SonataLayout: one SonataPlayerScope around the pane router), derives the app's song — the one loaded in the player (useSonataApp) — and defines the app-level Sonata.{Overlay,TransportOverlay,TransportEdge,PitchAxis,Home,Provider,Effect,PlaybackEffect,Hud,ViewOption,Section} slots, and the app's own dark-only theme (the immersive player's blue-black night, sky accent, the chord colours, Manrope), which the sonata app selects.
           - Web:
             - Slots:
@@ -11079,6 +11138,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/type-scale --font-weight-normal`
                   - `ui/tokens/type-scale --line-height-caption`
                 - Imported by: `apps/sonata/fixtures`
+              - Exemptions:
+                - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/chord-grid-editor-section.tsx`, `web/loader.tsx` (debt)
             - **`midi`** — MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi. Persists per-song MIDI (attachment + track count) and contributes the library Import affordance, hydration, the song's falling-notes cover, and the cell of the Tracks field its extension exposes on every list of songs. Owns the sonata_songs_ext_midi side-table: per-song MIDI attachment + track count. Creates MIDI-backed songs, serves each song's MIDI row as the lookup-only live collection sonata.midi (what the player hydrates the song from), exposes its track count and file-missing flag to every list of songs (LiveColumns.Expose), serves each song's falling-notes cover (GET …/midi/cover/<version>.svg, drawn by covers), and seeds the bundled public-domain MIDI starters at boot (Bach's C-major prelude written from notes; Mendelssohn, Scriabin and Grieg as Mutopia Project files).
               - Web:
                 - Contributes:
@@ -11416,7 +11477,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/type-scale --font-weight-semibold`
                 - Imported by: `apps/sonata/sources/ultimate-guitar/alignment`
               - Exemptions:
-                - Exempts itself from: `ids:pk-declared` — `server/internal/tables-tab-saved.ts` (debt)
+                - Exempts itself from:
+                  - `ids:pk-declared` — `server/internal/tables-tab-saved.ts` (debt)
+                  - `react-compiler:no-silent-skips` — `web/components/ug-import-dialog.tsx`, `web/loader.tsx` (debt)
               - Plugins:
                 - **`alignment`** — UG sheet alignment in the player: a 'Recording' editor section showing the song's YouTube video (the recording plugin's RecordingVideo viewport with its volume, and its on/off RecordingSwitch in the header; the video itself is declared by a headless effect to the session's recording player, so it keeps playing — synced to the transport when the song plays on its alignment, a weak match included, else on its own — while the section is collapsed), an alignment status box (icon, status line, one control — Cancel, Re-align, Retry, Try another or Find a video — and while working a three-stage bar: find a video, analyse the audio, align the sheet), the video's line (title, match chip, channel, Replace) and an inline picker (a YouTube link, the candidate videos with thumbnail and outcome — click one to switch — and Search again); a headless report of a video the player refuses (SonataRecording.Refused → video-refused), and a headless effect writing the applied alignment record into the Ultimate Guitar raw so the Score plays on the recording's beats. In the library: the Video field's presentation (hidden by default). UG sheet alignment, every host's half: owns the sonata_songs_ext_ug_alignment side-table (video, who picked it, the resolver's candidates, status, record), served as a lookup-only live collection, its video id exposed to every list of songs (LiveColumns.Expose). Choosing a video and aligning to it is the machine/ half's.
                   - Web:
@@ -13976,6 +14039,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/home/usage-fields`
           - `apps/website/landing/screenshot`
           - `companions/menu-bar/app-grid`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/floating-app-launcher.tsx` (debt)
     - **`app-manifest`** — Makes every listed app installable as its own OS app: serves GET /api/apps/:appId/manifest.webmanifest (id / start_url / scope = the app's base path, its tile colour, its icon PNGs) from the generated app declarations, and links it from each app's pages through a DocumentHead.Fragment (manifest, theme-color, apple-touch-icon). A surface-mode app (the desktop) installs at its base path, the route prefix of every page it shows.
       - Server:
         - Contributes: `DocumentHead.Fragment` "app-manifest"
@@ -14290,6 +14355,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/surface/solo`
           - `apps/desktop/windows`
           - `apps/website/landing/screenshot`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/use-tab-presence.ts` (debt)
       - Plugins:
         - **`docked`** — Docked surface placement — the full-area tab that fills the surface below the tab strip.
           - Web:
@@ -14448,6 +14515,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `music/background`
           - `ui/theme-engine/quick-theme`
           - `upstream`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/use-surface-shown.ts`, `web/internal/use-tabs.tsx` (debt)
     - **`theme-scope`** — Theme-scope helpers: the single definition of the focused full-surface app's theme scope, which decides the document's light/dark and canvas (never the :root tokens, always the desktop's) (useRootThemeScopeState: a state that keeps the not-registered-yet window apart from 'no app owns the surface'), and useAppSettingsScope — the app:<id> config scope per-app theme settings (variants) are read in: the nearest app theme boundary's (a pane's home app), else the focused app's.
       - Web:
         - Uses:
@@ -14771,6 +14840,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `timer/no-unlisted-timer` — `central/internal/refresh-loop.ts` (sanctioned)
       - `namespace:legacy-host` — `central/internal/oauth-flow.test.ts` (sanctioned)
       - `product-name:legacy-id` — `central/internal/oauth-flow.test.ts` (sanctioned)
+      - `react-compiler:no-silent-skips` — `web/components/account-detail.tsx`, `web/components/accounts-pane.tsx`, `web/components/connect-button.tsx`, `web/components/grant-access-button.tsx`, `web/components/oauth-client-setup.tsx`, `web/components/scope-grant-notice.tsx` (debt)
   - Plugins:
     - **`apple-signing`** — Apple code-signing config registration (web). The Accounts provider row + setup wizard UI live in the setup-wizard sub-plugin. Apple code-signing credentials: config fields + certificate upload + Tauri release env provider.
       - Web:
@@ -14833,6 +14903,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-size-caption`
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-caption`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/apple-setup.tsx` (debt)
     - **`google`** — Google OAuth provider — adds the Google row to the Accounts pane and a credentials section to Settings. Google OAuth 2.0 provider. Use with Drive, Gmail, Calendar consumer plugins via incremental scopes.
       - Web:
         - Contributes:
@@ -14878,6 +14950,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/type-scale --font-weight-medium`
             - Imported by: `auth/google`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/google-setup.tsx` (debt)
     - **`google-maps`** — Google Maps Platform API-key provider. The key is stored in the central auth token store (encrypted, shared across worktrees) and verified against the Places API before it is accepted.
       - Central:
         - Uses: `auth.registerAuthProvider`
@@ -14913,6 +14987,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/color-palette --destructive`
               - `ui/tokens/color-palette --muted-foreground`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/google-maps-setup.tsx` (debt)
     - **`hooktheory`** — Hooktheory Accounts row: signs in with a Hooktheory username and password through the shared sign-in form, inline in its Accounts pane. Hooktheory (TheoryTab) username/password provider. The password is traded once for Hooktheory's long-lived API token; only the token is stored, in the central auth token store (encrypted, shared across worktrees).
       - Web:
         - Contributes: `Auth.Provider` "Hooktheory"
@@ -16233,6 +16309,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `active-data/commit-link`
           - `conversations/conversation-view/commits-graph`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/commit-message.tsx` (debt)
     - **`file-kind`** — What a changed file is, from its repo path alone: fileKindOf(path) → code | test | doc | generated (tests by the test layout's isTestFilePath plus Go's _test.go, generated by codegen's GENERATED_ARTIFACTS, docs as *.md), and FILE_KINDS — the closed list with each kind's label and icon. Pure core, so a commit's file list classifies client-side with no wire change.
       - Core:
         - Uses:
@@ -16636,6 +16714,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `companions/menu-bar/wish`
           - `conversations/companion-status`
           - `shell/notifications/native`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/status-line.tsx` (debt)
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins: the registry over the user-layer store (the ConfigStore host service) and the committed layer (ConfigGitLayer), its live values and the scope routes.
   - Web:
@@ -17581,6 +17661,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/places/places-map`
           - `apps/sonata/transcription`
           - `hints/ask`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/agent-thread.tsx`, `web/internal/use-thread.ts` (debt)
     - **`agents`** — Named agent definitions that launch conversations. Named agent definitions that launch conversations: the agents roster and launches (tables, live collections, CRUD and move routes), portable; the launch route itself is the desktop-only machine half.
       - Web:
         - Slots:
@@ -17796,6 +17878,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --line-height-body`
           - `ui/tokens/type-scale --line-height-title`
         - Imported by: `apps/website/demos/workspace/story`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/agent-detail.tsx` (debt)
     - **`all-conversations`** — All-conversations app pane: a live DataView over the `conversations.all.v2` collection (filter/sort/search over every conversation, kept fresh by the routed change feed) reachable from the agent-manager sidebar; and how the conversations entity's fields present in every conversation list (the optimistic status cell, the model filter's live catalog options). Serves the two conversation-list collections — `conversations.all.v2` (system conversations hidden by a default scope) and `conversations.history.v2` — over `_conversations` with the owner joins (attempt → task), routed: a conversation, attempt or task write refills only the rows it changes.
       - Web:
         - Slots: `allConversationsPane.Actions`
@@ -18968,6 +19052,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/density --space-sm`
               - `ui/tokens/shape --spacing`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/dependencies-button.tsx` (debt)
         - **`dependent-count`** — Per-row "N blocked" chip on a conversation item: how many tasks are transitively blocked by that conversation's task. The conversation toolbar shows the same count inside its Tasks button instead of as a chip of its own.
           - Web:
             - Contributes: `Item.Chips` → `DependentCountItemChip`
@@ -19297,7 +19383,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live`
               - `tasks/outcome-report`
           - Exemptions:
-            - Exempts itself from: `no-raw-websocket` — `e2e/no-op-frames.ts` (sanctioned)
+            - Exempts itself from:
+              - `no-raw-websocket` — `e2e/no-op-frames.ts` (sanctioned)
+              - `react-compiler:no-silent-skips` — `web/use-whole-transcript.ts` (debt)
           - Plugins:
             - **`api-error`** — Renders the CLI's own notice of a failed model request in the JSONL viewer — a usage limit with its reset time, a server error, an expired login — as a warning line, not as the agent's words. A refused sign-in (authentication_failed) is said in the app's words — never the CLI's 'run /login' — with the sign-in fix inline while the computer's sign-in is still blocked.
               - Web:
@@ -19423,6 +19511,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/color-palette --muted-foreground`
                       - `ui/tokens/shape --spacing`
                       - `ui/tokens/type-scale --font-weight-semibold`
+                  - Exemptions:
+                    - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/agent-listing-delta-view.tsx` (debt)
                 - **`attached-file`** — Renders a file the user attached to their message: a pasted image shown inline at its own aspect with a small/large toggle, a text file as a syntax-highlighted listing behind its path, or a PDF / notebook as one line naming it — over every content kind of the SDK's Read-tool output, switched exhaustively so a new kind is a type error. A file the prompt already draws (an equin attachment) folds into the context after the prompt instead of repeating it.
                   - Web:
                     - Contributes:
@@ -20498,6 +20588,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by:
                   - `conversations/conversation-view/jsonl-viewer/background-shells`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
+              - Exemptions:
+                - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/task-notification-row.tsx` (debt)
             - **`teammate-message`** — Renders messages from other Claude sessions (<teammate-message> blocks, and cross-session messages: the sender's task as a chip opening its conversation, the message open) distinctly from human user messages.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "teammate-message" → `TeammateMessageRow`
@@ -21591,6 +21683,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-xl`
               - `ui/tokens/shape --spacing`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/launch-prompts-button.tsx` (debt)
           - Shared:
             - Exports (values): `launchPromptsConfig`
         - **`markdown-extensions`** — Conversation-scoped markdown enhancers: file-links, inline code enhancements, and image proxying.
@@ -21923,6 +22017,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `useSetConversationPromptDraft`
           - Cross-plugin:
             - Imported by: `conversations/conversation-view/rewind`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/prompt-input.tsx` (debt)
         - **`prompt-templates`** — Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates. Exports the chip bar itself (TemplateChipBar: usage-ranked pinned split chips plus the hover panel of every template and the config gear, always drawn — even with no templates; the panel lists every template (click inserts, ➤ sends) and, where the host lets it, manages them in place: + New template (prefilled from the draft) and ✎ on each row to rename, rewrite or delete it, sized to its content as it changes) and its one split chip (TemplateChip: ✎ name inserts, ➤ sends) for other template-like surfaces. Named template chips that prepend text to the conversation prompt editor for editing before sending.
           - Web:
             - Contributes:
@@ -22065,6 +22161,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `turn-send-safety/no-adhoc-turn-send` — `web/internal/delivery.ts` (sanctioned)
               - `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
+              - `react-compiler:no-silent-skips` — `web/components/push-and-exit-button.tsx` (debt)
           - Shared:
             - Exports (values):
               - `pushAndExitConfig`
@@ -22173,6 +22270,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/agent-thread`
               - `conversations/conversation-view/push-and-exit`
               - `conversations/conversation-view/status`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/resume-button.tsx` (debt)
         - **`rewind`** — Row actions on each of the user's own messages: go back to just before it, in this conversation (Rewind to here) or in a new one (Fork from here). Warns first about what cannot be brought back. useGoBackToMessage is the same flow for a surface that stands for a hidden message (e.g. a question's answer), with the caller deciding where the removed text goes.
           - Web:
             - Contributes:
@@ -22227,7 +22326,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --line-height-body`
             - Imported by: `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
           - Exemptions:
-            - Exempts itself from: `no-db-backed-notify` — `machine/internal/rewind-preview-served.ts` (sanctioned)
+            - Exempts itself from:
+              - `no-db-backed-notify` — `machine/internal/rewind-preview-served.ts` (sanctioned)
+              - `react-compiler:no-silent-skips` — `web/hooks/use-go-back.tsx` (debt)
         - **`running-agents`** — The sub-agents working for this conversation, in a card above the prompt box: a summary line (how many are working, how long the longest has been going) that folds the list, and one row per agent — what it was asked to do, what it is, what it last did and how many tokens it has produced. A finished agent lingers a few seconds showing 'done m:ss'; the card is not there at all when nothing is running. The transcript's stats strip carries an agents reading (how many agents, and the output tokens the conversation and they produced in all) that toggles the card to list every agent, finished or not
           - Web:
             - Contributes:
@@ -23238,6 +23339,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-medium`
           - `ui/tokens/type-scale --font-weight-semibold`
           - `ui/tokens/type-scale --line-height-3xs`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/recovery-view.tsx` (debt)
       - Shared:
         - Exports (types): `RestoreBatchBody`
         - Exports (values):
@@ -23470,6 +23573,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/supervisor-roles`
           - `tasks/supervisor-roles/spend`
           - `tasks/task-title`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/claude-accounts.tsx` (debt)
     - **`self-compact`** — An agent compacting its own context: the compact_context MCP tool (granted by context.compact) records the request in conversation_compactions; when the agent can take an automatic turn, self-compact.send types `/compact <keep>` then the continuation as an event turn. A pending request is a PendingTurn (every other automatic sender holds until it went out) and waives the stop gate; the capability's describe joins the Mandate section.
       - Server:
         - Contributes:
@@ -26054,7 +26159,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --line-height-3xs`
           - `ui/tokens/type-scale --line-height-caption`
       - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/broadcasts-file.ts`, `server/internal/entries-served.ts`, `server/internal/handle-write.ts` (debt)
+        - Exempts itself from:
+          - `boundaries/no-platform-api` — `server/internal/broadcasts-file.ts`, `server/internal/entries-served.ts`, `server/internal/handle-write.ts` (debt)
+          - `react-compiler:no-silent-skips` — `web/components/broadcasts-panel.tsx` (debt)
       - Shared:
         - Exports (types): `WriteBroadcastsBody`
         - Exports (values):
@@ -27574,6 +27681,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `no-raw-websocket` — `e2e/clean-soak.ts` (sanctioned)
               - `networking/no-page-transport` — `web/components/tab-memory-recorder.tsx` (sanctioned)
+              - `react-compiler:no-silent-skips` — `web/components/tab-memory-recorder.tsx` (debt)
     - **`queue`** — Debug → Queue: the jobs queue as live DataViews with side detail panes — Queue (the host's live job queue, a windowed external collection: status, hold class, attempts, run-at, error, per-state counts; Retry / Cancel), History (the recorded runs, a windowed collection: outcome, duration against the class ceiling, slot wait, error; Run now) — a job leaves Queue for History when its run finishes, and an open detail follows it — Dead (the dead-letter archive), Events (the emit() log, matched or not) and Triggers (every event→job subscription, enable / disable / delete).
       - Web:
         - Slots:
@@ -29378,6 +29486,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `no-db-backed-notify` — `server/internal/scan-served.ts` (sanctioned)
           - `endpoints:no-raw-json-handlers` — `server/internal/handle-delete.ts` (sanctioned)
           - `boundaries/no-platform-api` — `server/internal/dirs.ts`, `server/internal/hygiene-witness.ts`, `server/internal/reap-policy.ts`, `server/internal/reap.ts` (debt)
+          - `react-compiler:no-silent-skips` — `web/components/worktree-cleanup-panel.tsx` (debt)
       - Shared:
         - Exports (types): `BulkDeleteWorktreesBody`
         - Exports (values):
@@ -30122,6 +30231,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tab-bar`
               - `ui/theme-engine`
               - `ui/variant-region`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/dynamic-enum-control.tsx` (debt)
     - **`dynamic-flags`** — Dynamic flags (toggles) field type: identity only. Options and their defaults are resolved at config-render time via the plugins/config sub-plugin's slot.
       - Web:
         - Contributes: `Fields.Identity` "dynamic-flags"
@@ -30171,6 +30282,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useDynamicFlagsSampleOptions`
           - Cross-plugin:
             - Imported by: `conversations/model-provider`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/dynamic-flags-control.tsx` (debt)
     - **`enum`** — Enum (select) field type: identity only. The config-render, table (chip cell), and filter (multi-select) capabilities live in the plugins/{config,table,filter} sub-plugins.
       - Web:
         - Contributes: `Fields.Identity` "enum"
@@ -33866,7 +33979,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards/module-extension.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 203 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 204 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×62
               - `primitives` ×29
               - `conversations` ×26
@@ -33874,9 +33987,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug` ×10
               - `apps-core` ×6
               - `tasks` ×5
+              - `framework` ×4
               - `active-data` ×3
               - `config_v2` ×3
-              - `framework` ×3
               - `reports` ×3
               - `shell` ×3
               - `ui` ×3
@@ -34438,6 +34551,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `provisionCollectedDir`
               - `provisionEntries`
         - **`react-compiler`** — Enables the React Compiler (Babel) across the frontend via a vite/ build contribution; presence of this folder is the on/off switch.
+          - Plugins:
+            - **`skips`** — The React Compiler's skips made visible: the react-compiler:no-silent-skips check runs the compiler over every browser-built module with the build's own options and fails on each component or hook it leaves uncompiled, unless the owning plugin declares the file exempt; and render-cost.ts, an e2e that counts what a skip re-renders on a real interaction.
         - **`test-layout`** — The canonical bun:test ⇄ vitest split as data (core), enforced as the test-layout:runner-split check.
           - Core:
             - Uses: `plugin-meta/parse-utils.maskSource`
@@ -35100,6 +35215,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/ask-card.tsx` (debt)
     - **`help-menu`** — The ? "Getting started" menu on the global action bar — the hints engine's help anchor, ringed while a tour end pulses it — rendering the open HelpMenu.Entry slot: Replay the tour (the primary tour), Show tips again (resets every declared tip), and Read the guide (equin.ai, new tab); other plugins add their own entries (Ask equin how to…, from hints/ask). The Help task category: the category questions asked from the ? menu ("Ask equin how to…") are grouped under.
       - Web:
         - Slots: `HelpMenu.Entry`
@@ -37413,6 +37530,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `boundaries/no-platform-api` — `server/internal/serial-queue.ts` (debt)
           - `sql-writes:fit:schema` — `machine/internal/crash-recovery.ts`, `machine/internal/queue-lock-no-steal.ts`, `machine/internal/superseded.ts` (sanctioned)
           - `sql-writes:fit:hand-written` — `machine/internal/crash-recovery.ts`, `machine/internal/queue-lock-no-steal.ts`, `machine/internal/superseded.ts` (sanctioned)
+          - `react-compiler:no-silent-skips` — `web/components/events-test-view.tsx` (debt)
       - Shared:
         - Exports (types):
           - `DeleteTargetingBody`
@@ -41790,6 +41908,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/website/promo-film/seed`
           - `map/google`
           - `page/place/google`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/slots.tsx` (debt)
       - Machine:
         - Exports (types): `PlacesClientResult`
         - Exports (values): `getPlacesClient`
@@ -42467,6 +42587,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `page/map`
       - `page/place/map-layer`
       - `primitives/data-view/map`
+  - Exemptions:
+    - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/map-view.tsx` (debt)
   - Plugins:
     - **`google`** — Google Maps JavaScript API as the map renderer: draws GeoMap overlays (pins as overlays holding each pin's contributed content, Google's own places hidden, paths as polylines, areas as polygons, strokes in resolved theme tones), frames them once and then only from its Fit control, zooms the vector map on the wheel at the user's Scroll zoom speed setting, shows the live-map set-up action until a browser key is set, and replaces Google's silent grey map with an error card when the key is refused. Draws the Live map setup's Map ID preview map. Lazily loaded off the boot wave. Stores the Google map's settings (Scroll zoom speed) so Settings can edit them.
       - Web:
@@ -42644,6 +42766,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/audio`
           - `page/video`
           - `primitives/file-viewer/media`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/media-player.tsx` (debt)
 
 - **`music`** — Umbrella for music shared across apps: the chord box (a chord's degree colour, numeral and tile), the ambient engine (generative WebAudio music and sound effects), and the background music service (the music apps offer, played from the page root so it outlives the app, one at a time across the browser's tabs, with the action bar's music button).
   - Plugins:
@@ -42731,6 +42855,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/isle/world-view`
           - `apps/sonata/background-music`
           - `apps/sonata/player`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/background-music-root.tsx`, `web/components/music-panel.tsx` (debt)
     - **`chord-box`** — The chord box: <ChordBox> (a frame painted in the colour of its numeral's number — filled tile, given or empty — holding its numeral and name, with a full-bleed hit button behind the content and now / selected states), <ChordNumeral> (the Roman numeral in the display serif, its mark raised in the sans), chordToneStyle / chordColour (the degree's --chord-N colour and tile depth as the --fn custom properties the .chord-tone paint reads), and chordPaint — the four named paints (tile, tint, tint-quiet, ghost) every chord surface applies by name instead of re-stating a chord colour, with .chord-caption for a reading under a numeral (V/V, I/3) in the paint's own ink. Knows degrees and strings only, so any app can draw a chord the same way.
       - Web:
         - Uses:
@@ -43217,6 +43343,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `no-db-backed-notify` — `server/internal/serve-off-feed.ts` (sanctioned)
           - `no-db-backed-notify` — `central/internal/serve-value.ts`, `server/internal/serve-collection.ts`, `server/internal/serve-value.ts` (sanctioned)
           - `no-raw-websocket` — `e2e/narrowing.ts` (sanctioned)
+          - `react-compiler:no-silent-skips` — `web/internal/use-live.ts`, `web/internal/use-pages.ts` (debt)
         - Exempted by:
           - `framework/central-core` (0 debt)
           - `framework/server-core` (0 debt)
@@ -43721,7 +43848,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/editor`
               - `ui/theme-engine/saved-themes`
           - Exemptions:
-            - Exempts itself from: `live/no-legacy-resource-spelling` — `.` (sanctioned)
+            - Exempts itself from:
+              - `live/no-legacy-resource-spelling` — `.` (sanctioned)
+              - `react-compiler:no-silent-skips` — `web/internal/use-optimistic-resource.ts` (debt)
         - **`query-resource`** — Declarative SQL query→resource compiler: one drizzle-based declaration derives the loader, scoped loader, scope policy (the routes the change router serves it by, for a bounded window / point set, a whole ordered set declared `all` — compileAllCollection, grouped CTEs over rollup / children / closure joins — and a grouping), and client keyOf for live-state resources.
           - Server:
             - Uses:
@@ -45648,6 +45777,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/file`
           - `page/image`
           - `page/video`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/attachment-upload.tsx` (debt)
     - **`audio`** — Audio block type: upload an audio file and play it inline. Audio block type: registers its `data` schema (attachment) at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "audio" → `AudioBlock`
@@ -46567,6 +46698,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `check-thread-safety/no-blocking-check-work` — `check/index.ts`, `check/no-token-identity-outside-owner.ts` (debt)
           - `sql-writes:fit:hand-written` — `server/internal/page-id.ts` (sanctioned)
           - `source-read-safety/no-text-source-read` — `check/no-token-identity-outside-owner.ts` (debt)
+          - `react-compiler:no-silent-skips` — `web/block-editor-context.tsx`, `web/components/block-editor.tsx`, `web/components/block-menu-plugin.tsx`, `web/components/block-type-list.tsx`, `web/composite-block-store.tsx` (debt)
         - Exempted by: `page/editor` (0 debt)
       - Test helpers:
         - Web: `@plugins/page/plugins/editor/web/testing`
@@ -47551,6 +47683,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/places/places-map`
           - `page/place/google`
           - `page/place/map-layer`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/place-block.tsx` (debt)
       - Plugins:
         - **`google`** — Google Maps as a place-lookup source for the /place block: contributes the provider's name, icon, and the 'set up Google Maps' affordance the block renders while no API key is configured.
           - Web:
@@ -47880,6 +48014,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --font-weight-medium`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/table-block.tsx`, `web/components/table-chrome.tsx` (debt)
     - **`tags`** — Page tags, web half: the vocabulary and per-page reads (usePageTags, useListedPageTags off a listed row's exposed `tags`, the editable usePageTagsEditor), the soft TagChip / TagDot, the read-only PageTagChips, and the TagPicker popover (search or create, toggle, and per-tag rename / recolor / delete). Shows a page's tags after its title on every page reference (sub-page rows, link blocks, backlinks), and presents the exposed `tags` field (options read live from the vocabulary) in every list whose rows are blocks. Page tags, server half: the page_tags vocabulary and the page_blocks_ext_tags assignments (one ordered tag-id list per tagged page), both served live; the vocabulary CRUD and per-page PUT endpoints; and the reads/writes other plugins use — loadPageTags (the <page-meta> header), resolveTagNames (name → tag, refusing unknown names unless created explicitly) and writeResolvedPageTags / setPageTags. A page's tags are exposed as the `tags` field of every list whose rows are blocks (LiveColumns.Expose).
       - Web:
         - Contributes:
@@ -50531,6 +50667,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --font-weight-semibold`
           - `ui/tokens/type-scale --line-height-body`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/command-palette-dialog.tsx` (debt)
     - **`commit-list`** — Reusable commit row rendering and git log types. Git log parser, `git diff -z` name-status / numstat / raw+numstat parsers, the runGit invocation and commit row types for reuse across plugins.
       - Web:
         - Uses:
@@ -50907,6 +51045,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields/color/config`
               - `ui/theme-engine/theme-customizer`
               - `ui/tokens/shadow/customizer`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/use-color-drag.ts` (debt)
           - Core:
             - Exports (values):
               - `Color`
@@ -52588,6 +52728,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/data-view/list`
           - `primitives/data-view/table`
           - `primitives/metrics/chart-kit`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/data-table.tsx` (debt)
       - Core:
         - Exports (types):
           - `FitColumn`
@@ -53142,6 +53284,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `data-view/no-adhoc-row-list` — `.` (sanctioned)
           - `live/visible-range-minter` — `web/internal/pages-viewport.ts` (sanctioned)
+          - `react-compiler:no-silent-skips` — `web/components/creators-control.tsx`, `web/internal/collection-item-actions.tsx`, `web/internal/collection-row-activation.tsx`, `web/internal/define-item-actions.tsx`, `web/internal/derived-fields.tsx`, `web/internal/field-extensions.tsx`, `web/internal/live-source.tsx`, `web/internal/live-tree/use-live-tree.tsx`, `web/internal/row-reads.tsx`, `web/internal/use-filter-presets.ts`, `web/internal/use-item-action-zones.tsx`, `web/internal/use-sort-presets.ts`, `web/internal/use-visible-row-keys.ts` (debt)
         - Exempted by:
           - `primitives/data-view` (0 debt)
           - `primitives/tree` (0 debt)
@@ -53245,6 +53388,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/events/sources/source-detail/runs`
               - `apps/studio/compositions/release`
               - `runs`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/use-custom-column-defs.ts` (debt)
           - Plugins:
             - **`values`** — Per-row custom-column VALUES keyed by (dataViewId, rowKey, columnId): the generic data_view_custom_values table, the data-view-custom-values live value over it, and the upsert/delete-on-empty and delete-column endpoints. Pure DB, so portable; the config-bound column definitions are the parent custom-columns plugin's.
               - Server:
@@ -53371,6 +53516,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-xs`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/icons-view.tsx` (debt)
           - Core:
             - Exports (types): `IconsViewOptions`
         - **`list`** — List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
@@ -53422,6 +53569,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shadow --shadow-md`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/use-slot-widths.ts` (debt)
           - Core:
             - Exports (types): `ListViewOptions`
         - **`map`** — Map view child for the data-view primitive: every row with a location as a pin on a full-bleed map, clustered, with clicking a pin activating its row.
@@ -53485,6 +53634,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --tree-root-gap`
               - `ui/tokens/density --tree-row-gap`
               - `ui/tokens/shape --spacing`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/nested-table-view.tsx`, `web/components/table-view.tsx` (debt)
           - Core:
             - Exports (types): `TableViewOptions`
         - **`view-core`** — Type-agnostic named-view-instance engine: instance model + resolver, config-descriptor machinery, debounced write-back, and the editable view-switcher chrome. Type-agnostic named-view-instance engine (server): the per-id `views` config descriptor + a generic registration helper. Consumers register their own ids under their own plugin.
@@ -53568,6 +53719,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `primitives/data-view`
               - `primitives/metrics`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/use-view-model.ts`, `web/internal/use-views-config.ts` (debt)
           - Shared:
             - Exports (values): `viewsDescriptor`
           - Test helpers:
@@ -53750,6 +53903,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `review`
           - `tasks/task-detail`
           - `ui/theme-engine/theme-customizer`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/define-detail-sections.tsx` (debt)
     - **`diff-view`** — Generic side-by-side / text diff renderer primitive. Exposes TextDiff (two in-memory strings), DiffView/DiffOrImageView (worktree file vs a git ref), DiffRenderer, and the shiki token helpers.
       - Web:
         - Uses: 24 symbols — full list in [`plugins/primitives/plugins/diff-view/REFERENCE.md`](../plugins/primitives/plugins/diff-view/REFERENCE.md)
@@ -53936,7 +54091,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `layouts/miller`
               - `page/editor`
           - Exemptions:
-            - Exempts itself from: `scroll-safety/no-adhoc-scroll-write` — `web` (sanctioned)
+            - Exempts itself from:
+              - `scroll-safety/no-adhoc-scroll-write` — `web` (sanctioned)
+              - `react-compiler:no-silent-skips` — `web/use-edge-auto-scroll.ts`, `web/use-sticky-scroll.ts` (debt)
           - Plugins:
             - **`follow-motion`** — FOLLOW_MOTION_ATTR: the attribute an element whose animation grows a stick-to-bottom surface's content carries, so the surface follows it frame by frame. A leaf with no imports, so an animator (css/motion, which ui-kit's OverlayPanel imports) stamps it without reaching auto-scroll, which imports ui-kit.
               - Cross-plugin:
@@ -54043,7 +54200,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/editor`
               - `screenshot`
           - Exemptions:
-            - Exempts itself from: `resize-observer-safety/no-raw-resize-observer` — `web/internal/element-size.ts` (sanctioned)
+            - Exempts itself from:
+              - `resize-observer-safety/no-raw-resize-observer` — `web/internal/element-size.ts` (sanctioned)
+              - `react-compiler:no-silent-skips` — `web/internal/element-size.ts` (debt)
           - Plugins:
             - **`resize-loop-trace`** — Names the observers behind a 'ResizeObserver loop completed with undelivered notifications' error, which the browser raises with no stack: installResizeLoopTrace() (imported first by main.tsx) wraps the page's ResizeObserver to remember the callbacks of the current pass and where each observer was created; when the loop error fires it emits, on resizeLoopReportSink, that pass and the notifications held back to the next frame (the elements whose resize could not be delivered). claimsResizeLoopError(e) tells the window-error reporter the tracer reports this one.
               - Cross-plugin:
@@ -54095,7 +54254,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/outline/scroll-spy`
               - `primitives/pane`
           - Exemptions:
-            - Exempts itself from: `intersection-observer-safety/no-raw-intersection-observer` — `web/internal/in-view.ts` (sanctioned)
+            - Exempts itself from:
+              - `intersection-observer-safety/no-raw-intersection-observer` — `web/internal/in-view.ts` (sanctioned)
+              - `react-compiler:no-silent-skips` — `web/internal/in-view.ts` (debt)
         - **`layout-host`** — Which way the box laying a node out flows its children: useHostFlowAxis(sentinelRef, { followResize? }) reads it in the frame's after-layout phase (no forced style recalc on the commit path) — the host being the nearest ancestor that draws a box (skipping display: contents wrappers, whose width is 0 and which never resize), and row only for a row flex container (computed flex-direction alone says row for every element). Shared by the slot renderer and the reorder middleware so neither misreads a wrapped host.
           - Web:
             - Uses:
@@ -54190,6 +54351,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `screenshot/draw-on-app`
               - `tasks/worktree-identity`
               - `ui/theme-engine`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/browser-value.ts` (debt)
           - Web:
             - Exports (types):
               - `BrowserValueOptions`
@@ -54413,6 +54576,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-description`
           - `tasks/task-header`
           - `tasks/task-triage`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/use-editable-field.ts` (debt)
     - **`embed`** — The declared embedded-document signal: embedMode() reads the `?embed=` flag once at boot (the pane router drops every query on its first write, so it cannot be re-read) — `?embed=1` opens one route with no app chrome, `?embed=chrome` opens the whole app, chrome included — and embedUrl(path, mode) builds an in-app URL that opens that way. isChromelessDocument() is read by the apps layout (no tab bar, no rail) and the floating action bar (hidden); isEmbeddedDocument() by the two sessionStorage writers (app-instance registry, persisted tabs) so a same-origin frame in either mode never evicts the host tab's own state. A framed embed never pulls focus out of its host: its focus() is a no-op until this document has focus (an autofocusing embedded app would otherwise close the host's open popover as its frame loads).
       - Cross-plugin:
         - Imported by:
@@ -55244,6 +55409,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `screenshot`
           - `tasks/supervisor-roles/spend`
           - `ui/icons/sprites`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/latest-ref.ts` (debt)
       - Web:
         - Exports (values):
           - `useEventCallback`
@@ -55306,6 +55473,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports/launch-fix`
           - `screenshot`
           - `upstream`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/launch-agent-popover.tsx`, `web/components/launch-control.tsx` (debt)
       - Plugins:
         - **`investigate`** — The one 'launch an agent to investigate this failure' affordance: <InvestigateAction> — a fixed icon, label and popover, briefed by the caller, filed about the failed record (tasks/task-subject) so a second launch reuses its task and the action turns into View task.
           - Web:
@@ -55686,6 +55855,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug` ×2
           - `code-explorer/commit-detail`
           - `primitives/file-viewer/markdown`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/markdown-renderer.tsx` (debt)
     - **`metrics`** — Metrics surfaces: useMetricCatalog / useMetric / useMetricDetails / useMetricDetailsTotal (live reads of the served metrics values — the details one key-range pages, every loaded one live, and its total the per-question meta sibling — so a change the metric's source announces refetches what is on screen, without polling), MetricTile (KPI toggle with value, polarity-coloured delta and sparkline), MetricCard (controls derived from the catalog entry: split, daily | cumulative for flows, table twin, previous-period line on the unsplit total), BreakdownCard, RangeBar, the DrillDrawer listing the records behind a bucket, BoardView (sections of focus tiles, a lead card and a card grid, every ref checked against the catalog) and Board (a view-core tabbed board whose specs live in a config declared with defineBoardConfig). Metrics engine: the MetricsServer.Source contribution (a source's metrics and breakdowns bound to their evaluators), the served metrics.catalog / metrics.query / metrics.details live values evaluating any of them through the one tz-aware bucketing engine — each query and drill-down (its key-range pages and its total) watching its source's `changes` through one refcounted subscription per source — and the sqlFlow / sqlLevel helpers joining a table against the engine's intervals.
       - Server:
         - Contributes:
@@ -57046,6 +57217,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `pane/no-pane-header-bar` — `.` (sanctioned)
           - `check-thread-safety/no-blocking-check-work` — `check/identity-manifest.ts`, `check/index.ts` (debt)
           - `repo-walk-safety/no-adhoc-repo-listing` — `check/write-identity-snapshot.ts` (sanctioned)
+          - `react-compiler:no-silent-skips` — `web/components/pane-chrome.tsx`, `web/components/pane-resolve-guard.tsx`, `web/components/promote-control.tsx`, `web/pane.ts`, `web/use-render-sync.ts` (debt)
         - Exempted by:
           - `apps/browser/bookmarks` (0 debt)
           - `primitives/bar` (0 debt)
@@ -57188,6 +57360,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/file-explorer/browser`
           - `conversations/conversation-view/code/file-pane`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/path-bar.tsx` (debt)
       - Plugins:
         - **`folder-places`** — A file system's folders as a path crumb's menu: folderPlaces(fs) is the PathPlaces a path bar source or a FilepathBreadcrumb hands its crumbs — each level the folders inside one folder (hidden ones only when on the trail), read with useFolderListing when its menu opens, sorted as people sort, the one on the trail first and marked, each folder's own folders a submenu read when it opens; the loading and failure states drawn in the menu, and a bounded window with More for a very large folder.
           - Web:
@@ -57350,6 +57524,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/color-palette --destructive`
               - `ui/tokens/color-palette --toolbar-foreground`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/use-speech-recognition.ts` (debt)
     - **`rank`** — Fractional-indexing rank primitive. THE authoritative source for sortable rank strings — use nextRankIn()/nextRankUnder() from the server barrel for new insertions; use rankAdjacentTo() from the server barrel to resolve a DnD move's anchor. Never use floats or integers. THE authoritative source for sortable rank strings. Use nextRankIn() for flat tables, nextRankUnder() for parent-scoped lists. Re-exports rankText column type. Never use floats or integers for ordering.
       - Server:
         - Uses: `database.db`
@@ -57656,6 +57832,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/sync-status`
               - `primitives/undo-redo`
               - `shell/health-report`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/scoped-store.tsx` (debt)
         - **`surface-id`** — Stable per-surface-instance id context (the tab's tabId): SurfaceIdContext + useSurfaceTabId. A leaf so low-level primitives (shortcuts, scoped-store) can read which surface they're rendered in without importing pane.
           - Cross-plugin:
             - Imported by:
@@ -57883,7 +58061,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `layouts/miller`
           - `media/player`
       - Exemptions:
-        - Exempts itself from: `shortcuts/no-window-key-listener` — `web/internal/shortcut-manager.tsx` (sanctioned)
+        - Exempts itself from:
+          - `shortcuts/no-window-key-listener` — `web/internal/shortcut-manager.tsx` (sanctioned)
+          - `react-compiler:no-silent-skips` — `web/internal/use-registered-shortcuts.ts` (debt)
         - Exempted by: `primitives/shortcuts` (0 debt)
       - Test helpers:
         - Web: `@plugins/primitives/plugins/shortcuts/web/testing`
@@ -57973,6 +58153,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `review/plugin-changes`
           - `stats`
           - `wish`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/slot-order.ts` (debt)
     - **`sortable-list`** — Generic sortable list primitive with smooth displacement animations. Wraps @dnd-kit/sortable into SortableList + SortableItem components, its pointer sensor useChromePointerSensor (activates only on a press that is the handle's own — not one bubbled from a portaled popover, not one in text entry — and is the one every drag primitive mounts), plus DeferredSortableList / DeferredSortableHost for a list draggable only in a mode (no drag machinery mounted while disabled, items never remounted by the toggle; its items are deferred-item's DeferredSortableItem, which imports no dnd-kit).
       - Web:
         - Uses:
@@ -58245,6 +58427,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/deploy/deployments`
           - `debug/trace/pane`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/define-tabbed-view.tsx` (debt)
     - **`text-editor`** — Generic Lexical-based rich text editor primitive. Plugins inject behaviors via the Plugin slot and registerNodeExtension.
       - Web:
         - Slots: `TextEditorSlots.Plugin`
@@ -58304,6 +58488,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `screenshot`
           - `tasks/supervisor-roles/pane`
           - `tasks/task-description`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/text-editor-impl.tsx` (debt)
       - Plugins:
         - **`caret-motion`** — The caret-crossing channel for Lexical editors: a mover that relocates a caret ACROSS something announces it in the direction of travel, and every consumer of a synthesized caret position observes that one command.
           - Cross-plugin:
@@ -58588,6 +58774,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×3
               - `primitives` ×2
               - `screenshot` ×2
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/attachment-file-chip.tsx` (debt)
         - **`token-extension`** — The inline-token primitive's synchronously-loadable half: the declaration TYPES of a token family, the tokenExtension pairing of pattern and node, THE line scan, and the lazy-source host registry. Imports lexical for types only — the class factory lives in the `node` sub-plugin.
           - Cross-plugin:
             - Imported by:
@@ -58919,6 +59107,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/improve`
               - `hints/ask`
               - `wish/element-picker`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/picker-button.tsx` (debt)
     - **`undo-redo`** — Surface-scoped client-side undo/redo command-history stack: a UndoRedoProvider per surface tab holding past/future stacks of {undo,redo} thunks, with time-windowed coalescing, a max-depth cap, a re-entrancy guard so replayed patches aren't re-recorded, mount-scoped entries (useScopedUndoRedo drops its entries when its mount unmounts), a pending-flush seam (usePendingFlush / registerPendingFlush: a producer holding a not-yet-recorded entry seals it at the start of every undo/redo turn, outside the replay guard, so it is the entry popped), serialized turns (an undo/redo during an in-flight thunk queues FIFO behind it instead of running under the guard), and an optional useUndoRedoShortcuts (mod+z / mod+shift+z / mod+y) convenience binding.
       - Web:
         - Uses:
@@ -58960,6 +59150,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/prototype`
           - `page/tags`
           - `primitives/text-editor`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/use-undo-redo-shortcuts.ts` (debt)
     - **`usage-rank`** — Frecency usage ranking for any (namespace, key) set: useRecordUsage() returns the recorder that fires one atomic decay-and-increment, useUsageOrder() returns the most-used-first order — one coalesced id-set subscription, frozen per context so chips never move under the cursor, seeded from a local cache so the first paint does not re-sort — and useRecentUsage() lists a namespace's most recently used keys (a bounded window), for a Recent row with no candidate set to rank. Owns the usage_stats table: one frecency rollup per (namespace, key), updated by a single atomic decay-and-increment upsert, served as a lookup-only live collection read by id set, and the nightly sweep of keys unused for a year.
       - Server:
         - Contributes:
@@ -59028,6 +59220,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/pages/page-tree`
           - `conversations/conversation-view/prompt-templates`
           - `primitives/css/color-picker`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/use-usage-order.ts` (debt)
     - **`view-switcher`** — Presentational view-switcher chrome: borderless ghost-pill SegmentedControl mapping {id,title,icon} options to a single-select switcher (pure chrome — selection state stays with the caller), plus the opt-in device-local active-id helper useActiveViewId.
       - Web:
         - Uses:
@@ -59076,6 +59270,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/data-view/icons`
           - `primitives/data-view/list`
           - `primitives/icon-picker`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/virtual-rows.tsx` (sanctioned)
       - Plugins:
         - **`row-fold`** — Disclosure motion for flat lists: useRowFold — given the rows and the open keys they were flattened under, rows a disclosure reveals grow in, rows it hides fold out (kept drawn until gone) and the rows below slide; any other change (scroll, search, live data, paging) lands as is. Owned by the flat renderers (VirtualRows, DataTable). Core: the pure disclosure diff; the fold timing is collapsible's (foldTiming), one clock for every fold.
           - Web:
@@ -59378,6 +59574,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `conversations/conversation-view/artifacts`
       - `page/editor`
       - `reorder/slot-middleware`
+  - Exemptions:
+    - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/area-writes.ts` (debt)
   - Shared:
     - Exports (types): `ReorderableSlot`
     - Exports (values):
@@ -61140,6 +61338,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ui/tokens/type-scale --font-size-3xs`
       - `ui/tokens/type-scale --line-height-3xs`
     - Imported by: `screenshot/draw-on-app`
+  - Exemptions:
+    - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/prompt-form.tsx`, `web/components/screenshot-button.tsx` (debt)
   - Shared:
     - Exports (values): `saveScreenshotFile`
   - Plugins:
@@ -61192,6 +61392,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shadow --shadow-lg`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/draw-on-app-button.tsx` (debt)
 
 - **`search`** — Umbrella for the reusable full-text search primitive: the indexed search engine substrate and the reusable quick-find UI.
   - Plugins:
@@ -61431,7 +61633,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hints/ask`
           - `shell/notifications`
       - Exemptions:
-        - Exempts itself from: `page-hosts-on-demand` — `web/index.ts` (sanctioned)
+        - Exempts itself from:
+          - `page-hosts-on-demand` — `web/index.ts` (sanctioned)
+          - `react-compiler:no-silent-skips` — `web/internal/use-bar-activities.tsx` (debt)
     - **`health-report`** — Unified health report: one dot merging every HealthReport.Row contribution (critical > attention > unknown > ok, with a count of rows needing a look), opening a popover that lists info rows first, then status rows in the slot's reorder layout order. Owns the slot, and contributes its button as the action bar's leading mark (ActionBar.Lead); knows no contributor.
       - Web:
         - Slots: `HealthReport.Row`
@@ -61513,6 +61717,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports/resource-errors`
           - `tasks/worktree-identity`
           - `upstream`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/health-row.tsx`, `web/components/status-probes.tsx` (debt)
       - Core:
         - Exports (types):
           - `DotMerge`
@@ -61721,6 +61927,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `endpoints/no-void-fetch-endpoint` — `web/internal/toast.ts` (sanctioned)
           - `shell-toast/no-direct-custom-toast` — `web/components/notification-view.tsx` (sanctioned)
+          - `react-compiler:no-silent-skips` — `web/components/notification-view.tsx` (debt)
       - Shared:
         - Exports (values):
           - `createNotification`
@@ -64117,6 +64324,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --line-height-caption`
               - `ui/tokens/type-scale --line-height-label`
               - `ui/tokens/type-scale --line-height-title`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/spend-detail.tsx` (debt)
     - **`supervisor-run`** — The Supervisor launch option on every new-task composer (Home prompt, Make a wish, menu bar): Interactive (unset — the pill rests as its icon) or Supervisor. Draft-only — it decides how a task's tree runs when it is filed. The Supervisor launch option's server half: a task filed with it states the supervisor mandate (supervisorMandate) as its own — its conversation an ordinary one with more powers, the tasks it files workers that report. Not inherited: the tasks its agents file are covered by the mandate already (nearest wins).
       - Web:
         - Contributes: `TaskLaunch.Option` "Supervisor" → `SupervisorLaunchControl`
@@ -64295,6 +64504,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-md`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/launch-options.tsx` (debt)
     - **`task-detail`** — Owns the /tasks pane host and the right-pane detail view for a selected task. Defines the TaskDetail.Section slot and the flush-registry context that section sub-plugins share.
       - Web:
         - Slots:
@@ -64444,6 +64655,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-dependencies`
           - `wish`
           - `wish/element-picker`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/task-draft-popover.tsx` (debt)
       - Core:
         - Exports (values): `TASK_DRAFT_FORM_WIDTH`
     - **`task-effort`** — Per-task thinking-mode (effort) picker, contributed as a launch option of both the task detail's Prompt card and the task-draft popover; the selection is applied to Claude Code on launch. Owns the tasks_ext_effort side-table: the per-task thinking mode (effort level), applied to Claude Code at launch via --effort / --settings ultracode.
@@ -64572,7 +64785,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-caption`
       - Exemptions:
-        - Exempts itself from: `endpoints/no-void-fetch-endpoint` — `web/components/task-graph.tsx` (sanctioned)
+        - Exempts itself from:
+          - `endpoints/no-void-fetch-endpoint` — `web/components/task-graph.tsx` (sanctioned)
+          - `react-compiler:no-silent-skips` — `web/components/edge-actions.tsx` (debt)
     - **`task-header`** — Top section of the task detail pane: editable title, status chip, hold/drop buttons, track (main | sidequest, click to switch), author, the page it was filed from, and timestamps. Launch configuration (auto-start, preprompt, thinking mode) lives in the Prompt card, not here.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "Task" → `TaskHeader`
@@ -66906,7 +67121,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tweakcn/community-browser`
               - `ui/tweakcn/community-browser/customizer`
           - Exemptions:
-            - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
+            - Exempts itself from:
+              - `ids:pk-declared` — `server/internal/tables.ts` (debt)
+              - `react-compiler:no-silent-skips` — `web/remove-saved-theme.ts` (debt)
         - **`theme-customizer`** — Extensible theme customization pane: per-app theme toggle, component variant pickers, search, and contributed sections, plus the token-group editor kit (useTokenGroupEditor, TokenRows, FillFromMenu) every section edits the scope's theme through.
           - Web:
             - Slots:
@@ -67003,6 +67220,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
             - Imported by: `ui/theme-engine/theme-gallery/customizer`
+          - Exemptions:
+            - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/use-theme-gallery.ts` (debt)
           - Plugins:
             - **`customizer`** — The Theme customizer section: the theme gallery as cards, with rename and delete on saved themes.
               - Web:
@@ -68479,6 +68698,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `screenshot/draw-on-app`
       - `wish/element-picker`
       - `wish/github-issue`
+  - Exemptions:
+    - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/wish-field.tsx` (debt)
   - Plugins:
     - **`element-picker`** — The element picker wired into equin's Improve flow: a 'Pick UI element' segment of the Improve pill that opens the Improve popover with the picked element as a <ui-context/> chip, and an 'Attach UI element' button in the task-draft form. The picker, its overlay and the chip are primitives/ui-context/element-picker.
       - Web:

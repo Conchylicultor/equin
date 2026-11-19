@@ -228,6 +228,8 @@ it is handed and knows no tour.
     - `tasks/task-dependencies`
     - `wish`
     - `wish/element-picker`
+- Exemptions:
+  - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/task-draft-popover.tsx` (debt)
 - Core:
   - Exports (values): `TASK_DRAFT_FORM_WIDTH`
 

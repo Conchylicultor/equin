@@ -1124,6 +1124,7 @@ out of the way: **what it opens takes its column**.
     - `pane/no-pane-header-bar` — `.` (sanctioned)
     - `check-thread-safety/no-blocking-check-work` — `check/identity-manifest.ts`, `check/index.ts` (debt)
     - `repo-walk-safety/no-adhoc-repo-listing` — `check/write-identity-snapshot.ts` (sanctioned)
+    - `react-compiler:no-silent-skips` — `web/components/pane-chrome.tsx`, `web/components/pane-resolve-guard.tsx`, `web/components/promote-control.tsx`, `web/pane.ts`, `web/use-render-sync.ts` (debt)
   - Exempted by:
     - `apps/browser/bookmarks` (0 debt)
     - `primitives/bar` (0 debt)

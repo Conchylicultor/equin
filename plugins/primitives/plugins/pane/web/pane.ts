@@ -4035,12 +4035,16 @@ export function useRoute(): PaneMatch | null {
   // identity (which tracks the registry, same as `useIndexMatch`) re-resolves the
   // instant the target pane's plugin loads — e.g. an instant-restored deep link.
   const contributions = PaneSlots.Register.useContributions();
-  /* eslint-disable react-hooks/exhaustive-deps -- `contributions` identity tracks the module-level registry Map read inside resolveRoute; it is the registry-version signal, not an unused dep. Block form, not next-line: this call is long enough for the formatter to reflow, which would carry a positional directive off it. */
+  // `contributions` is the registry's version signal, not a value the memo
+  // reads, so the compiler cannot see it as a dep (a `void contributions`
+  // statement is dead code it deletes): this hook stays uncompiled, its memo
+  // hand-written. A NEXT-LINE disable, never a block one — the React Compiler
+  // reads a block disable as covering the whole file (react-compiler/skips).
   return useMemo(
     () => store.resolveRoute(route),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `contributions` identity tracks the module-level registry Map read inside resolveRoute; it is the registry-version signal, not an unused dep.
     [store, route, contributions],
   );
-  /* eslint-enable react-hooks/exhaustive-deps */
 }
 
 /**

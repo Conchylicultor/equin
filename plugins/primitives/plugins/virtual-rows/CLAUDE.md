@@ -76,6 +76,8 @@
     - `primitives/data-view/icons`
     - `primitives/data-view/list`
     - `primitives/icon-picker`
+- Exemptions:
+  - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/virtual-rows.tsx` (sanctioned)
 - Sub-plugins:
   - **`row-fold`** — Disclosure motion for flat lists: useRowFold — given the rows and the open keys they were flattened under, rows a disclosure reveals grow in, rows it hides fold out (kept drawn until gone) and the…
 

@@ -168,6 +168,7 @@ export type ExemptableRuleId =
   | "rail/no-pad-under-owner"
   | "rail/no-panel-bleed"
   | "rail/no-unowned-overlay"
+  | "react-compiler:no-silent-skips"
   | "reactive-server-io/no-reactive-server-io"
   | "relocate:moved-plugins-unnamed"
   | "repo-root/no-depth-counted-path"

@@ -101,6 +101,7 @@
   - Exempts itself from:
     - `turn-send-safety/no-adhoc-turn-send` — `web/internal/delivery.ts` (sanctioned)
     - `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
+    - `react-compiler:no-silent-skips` — `web/components/push-and-exit-button.tsx` (debt)
 - Shared:
   - Exports (values):
     - `pushAndExitConfig`

@@ -139,6 +139,8 @@ its own, so it declares no data dir; see `apps-core/CLAUDE.md`.
     - `apps/desktop/wallpaper/openverse`
     - `apps/desktop/wallpaper/upload`
     - `apps/desktop/windows`
+- Exemptions:
+  - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/wallpaper-picker.tsx` (debt)
 - Sub-plugins:
   - **`builtin`** — Built-in wallpaper source: contributes the Built-in tab to the desktop wallpaper picker, a grid of the bundled wallpapers (and the theme-following gradient); picking one writes its id to the…
   - **`from-url`** — From-URL wallpaper source: contributes the From URL tab to the desktop wallpaper picker, emitting a pasted image URL the picker imports (and the server validates) via the import-url endpoint.

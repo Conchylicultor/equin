@@ -435,6 +435,7 @@ notification, unbounded, as a DataView (`web/components/notifications-view.tsx`)
   - Exempts itself from:
     - `endpoints/no-void-fetch-endpoint` — `web/internal/toast.ts` (sanctioned)
     - `shell-toast/no-direct-custom-toast` — `web/components/notification-view.tsx` (sanctioned)
+    - `react-compiler:no-silent-skips` — `web/components/notification-view.tsx` (debt)
 - Shared:
   - Exports (values):
     - `createNotification`

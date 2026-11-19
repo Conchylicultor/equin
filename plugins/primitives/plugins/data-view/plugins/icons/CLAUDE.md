@@ -140,6 +140,8 @@ through the real body, `web/__tests__/paged-conformance.test.tsx` (data-view's
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
+- Exemptions:
+  - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/icons-view.tsx` (debt)
 - Core:
   - Exports (types): `IconsViewOptions`
 

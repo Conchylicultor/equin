@@ -45,6 +45,8 @@ stability-independent and is suppressed at the site with an inline disable.)
     - `screenshot`
     - `tasks/supervisor-roles/spend`
     - `ui/icons/sprites`
+- Exemptions:
+  - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/latest-ref.ts` (debt)
 - Web:
   - Exports (values):
     - `useEventCallback`

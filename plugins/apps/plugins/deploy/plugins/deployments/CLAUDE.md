@@ -681,6 +681,7 @@ default, a left rail revealing each (`useRevealSection`).
   - Exempts itself from:
     - `paths:no-hardcoded-paths` — `core/derive.ts` (sanctioned)
     - `boundaries/no-platform-api` — `server/internal/transcript.ts` (debt)
+    - `react-compiler:no-silent-skips` — `web/components/site-banner.tsx`, `web/components/site-overview.tsx`, `web/components/site-settings.tsx` (debt)
 - Sub-plugins:
   - **`runs-arm`** — The deploy arm's presence on the merged run surface: its rows' link into the site's Deployments tab, and the cells of its eight own fields (verb, failed phase, server / deployment / composition /…
 

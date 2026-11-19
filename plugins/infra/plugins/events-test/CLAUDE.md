@@ -133,6 +133,7 @@ curl -sX POST http://<ns>.localhost:<port>/api/events-test/queue-saturate \
     - `boundaries/no-platform-api` — `server/internal/serial-queue.ts` (debt)
     - `sql-writes:fit:schema` — `machine/internal/crash-recovery.ts`, `machine/internal/queue-lock-no-steal.ts`, `machine/internal/superseded.ts` (sanctioned)
     - `sql-writes:fit:hand-written` — `machine/internal/crash-recovery.ts`, `machine/internal/queue-lock-no-steal.ts`, `machine/internal/superseded.ts` (sanctioned)
+    - `react-compiler:no-silent-skips` — `web/components/events-test-view.tsx` (debt)
 - Shared:
   - Exports (types):
     - `DeleteTargetingBody`

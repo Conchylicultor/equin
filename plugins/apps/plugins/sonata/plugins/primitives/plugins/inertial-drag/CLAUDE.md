@@ -32,6 +32,8 @@ it does not fling). Both are `bun test`-covered.
   - Imported by:
     - `apps/sonata/piano-roll`
     - `apps/sonata/transport-bar`
+- Exemptions:
+  - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/use-inertial-drag.ts` (debt)
 - Core:
   - Exports (types): `VelocityTracker`
   - Exports (values):

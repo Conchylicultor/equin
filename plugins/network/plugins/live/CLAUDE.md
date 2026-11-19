@@ -1977,6 +1977,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `no-db-backed-notify` — `server/internal/serve-off-feed.ts` (sanctioned)
     - `no-db-backed-notify` — `central/internal/serve-value.ts`, `server/internal/serve-collection.ts`, `server/internal/serve-value.ts` (sanctioned)
     - `no-raw-websocket` — `e2e/narrowing.ts` (sanctioned)
+    - `react-compiler:no-silent-skips` — `web/internal/use-live.ts`, `web/internal/use-pages.ts` (debt)
   - Exempted by:
     - `framework/central-core` (0 debt)
     - `framework/server-core` (0 debt)

@@ -233,6 +233,8 @@ probes, is mounted per page.
     - `reports/resource-errors`
     - `tasks/worktree-identity`
     - `upstream`
+- Exemptions:
+  - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/health-row.tsx`, `web/components/status-probes.tsx` (debt)
 - Core:
   - Exports (types):
     - `DotMerge`

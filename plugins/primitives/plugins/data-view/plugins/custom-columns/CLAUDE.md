@@ -159,6 +159,8 @@ how the caller obtained it.
     - `apps/events/sources/source-detail/runs`
     - `apps/studio/compositions/release`
     - `runs`
+- Exemptions:
+  - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/use-custom-column-defs.ts` (debt)
 - Sub-plugins:
   - **`values`** — Per-row custom-column VALUES keyed by (dataViewId, rowKey, columnId): the generic data_view_custom_values table, the data-view-custom-values live value over it, and the upsert/delete-on-empty and…
 

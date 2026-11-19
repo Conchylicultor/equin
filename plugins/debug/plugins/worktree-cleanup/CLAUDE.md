@@ -260,6 +260,7 @@ the panel until it is given something to say.
     - `no-db-backed-notify` — `server/internal/scan-served.ts` (sanctioned)
     - `endpoints:no-raw-json-handlers` — `server/internal/handle-delete.ts` (sanctioned)
     - `boundaries/no-platform-api` — `server/internal/dirs.ts`, `server/internal/hygiene-witness.ts`, `server/internal/reap-policy.ts`, `server/internal/reap.ts` (debt)
+    - `react-compiler:no-silent-skips` — `web/components/worktree-cleanup-panel.tsx` (debt)
 - Shared:
   - Exports (types): `BulkDeleteWorktreesBody`
   - Exports (values):

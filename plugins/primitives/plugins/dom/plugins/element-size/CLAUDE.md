@@ -153,7 +153,9 @@ different need, extend the primitive rather than allowlisting a copy.
     - `page/editor`
     - `screenshot`
 - Exemptions:
-  - Exempts itself from: `resize-observer-safety/no-raw-resize-observer` — `web/internal/element-size.ts` (sanctioned)
+  - Exempts itself from:
+    - `resize-observer-safety/no-raw-resize-observer` — `web/internal/element-size.ts` (sanctioned)
+    - `react-compiler:no-silent-skips` — `web/internal/element-size.ts` (debt)
 - Sub-plugins:
   - **`resize-loop-trace`** — Names the observers behind a 'ResizeObserver loop completed with undelivered notifications' error, which the browser raises with no stack: installResizeLoopTrace() (imported first by main.tsx) wraps…
 

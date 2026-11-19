@@ -346,6 +346,8 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `page/map`
     - `page/place/map-layer`
     - `primitives/data-view/map`
+- Exemptions:
+  - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/map-view.tsx` (debt)
 - Sub-plugins:
   - **`google`** — Google Maps JavaScript API as the map renderer: draws GeoMap overlays (pins as overlays holding each pin's contributed content, Google's own places hidden, paths as polylines, areas as polygons…
   - **`pin-layer`** — The map's pin layer, vendor-neutral: PinLayer holds every pin at rest as a scene of marks and draws a frame from a projection — one sprite per pin on one surface (marks rasterized once per look, a…

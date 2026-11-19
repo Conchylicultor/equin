@@ -26,4 +26,12 @@ export default [
     task: "task-1792338443-riwqev",
     reason: "not yet split into server/ + machine/",
   },
+  {
+    rule: "react-compiler:no-silent-skips",
+    paths: ["web/components/worktree-cleanup-panel.tsx"],
+    kind: "debt",
+    task: "task-1795087496-4w8ni5",
+    reason:
+      "Left uncompiled by the React Compiler — WorktreeCleanupPanel (unsupported syntax: Support value blocks (conditional, logical, optional chaining, etc) within a try/catch statement), DeleteAction (unsupported syntax: Handle TryStatement with a finalizer ('finally') clause).",
+  },
 ] satisfies Exemptions;

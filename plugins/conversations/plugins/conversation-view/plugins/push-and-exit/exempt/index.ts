@@ -16,4 +16,12 @@ export default [
     reason:
       "A trigger table built by infra/events' defineTriggerEvent, whose shared column set (events/server/internal/base-columns.ts) keys every *_triggers table by a bare uuid. Phase 6 of the unified prefixed ids keys them all at once (uuid -> text + a declared kind) in that one file; delete this entry then.",
   },
+  {
+    rule: "react-compiler:no-silent-skips",
+    paths: ["web/components/push-and-exit-button.tsx"],
+    kind: "debt",
+    task: "task-1795087496-4w8ni5",
+    reason:
+      "Left uncompiled by the React Compiler — PushAndExitButton (unsupported syntax: Handle TryStatement with a finalizer ('finally') clause).",
+  },
 ] satisfies Exemptions;

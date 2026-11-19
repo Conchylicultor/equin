@@ -115,6 +115,8 @@ started" notification confirms it), so its props are the form's minus
     - `reports/launch-fix`
     - `screenshot`
     - `upstream`
+- Exemptions:
+  - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/launch-agent-popover.tsx`, `web/components/launch-control.tsx` (debt)
 - Sub-plugins:
   - **`investigate`** — The one 'launch an agent to investigate this failure' affordance: <InvestigateAction> — a fixed icon, label and popover, briefed by the caller, filed about the failed record (tasks/task-subject) so…
 

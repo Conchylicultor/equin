@@ -237,6 +237,8 @@ see `data-view/CLAUDE.md` ("The rail") and `data-table/CLAUDE.md`.
     - `ui/tokens/density --tree-root-gap`
     - `ui/tokens/density --tree-row-gap`
     - `ui/tokens/shape --spacing`
+- Exemptions:
+  - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/nested-table-view.tsx`, `web/components/table-view.tsx` (debt)
 - Core:
   - Exports (types): `TableViewOptions`
 

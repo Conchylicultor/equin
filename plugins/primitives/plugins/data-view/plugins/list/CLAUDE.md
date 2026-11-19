@@ -330,6 +330,8 @@ conditional hook.
     - `ui/tokens/shadow --shadow-md`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
+- Exemptions:
+  - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/use-slot-widths.ts` (debt)
 - Core:
   - Exports (types): `ListViewOptions`
 

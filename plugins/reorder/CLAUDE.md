@@ -172,6 +172,8 @@ Because the origin default is the materialized catalog, adding/removing a contri
     - `conversations/conversation-view/artifacts`
     - `page/editor`
     - `reorder/slot-middleware`
+- Exemptions:
+  - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/area-writes.ts` (debt)
 - Shared:
   - Exports (types): `ReorderableSlot`
   - Exports (values):

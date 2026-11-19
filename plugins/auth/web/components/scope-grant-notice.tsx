@@ -20,12 +20,13 @@ export function ScopeGrantNotice({
   providerId: string;
   status: AuthAccountState;
 }) {
+  // Read before any early return: a hook called only on some renders breaks
+  // React's hook order the render the account's kind changes.
+  const contributions = Auth.ScopeRequirement.useContributions();
   // Only OAuth accounts have grantable scopes.
   if (status.kind !== "oauth2") return null;
 
-  const reqs = Auth.ScopeRequirement.useContributions().filter(
-    (r) => r.providerId === providerId,
-  );
+  const reqs = contributions.filter((r) => r.providerId === providerId);
   if (reqs.length === 0) return null;
 
   return (

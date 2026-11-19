@@ -355,6 +355,8 @@ Verified in Chromium only (the e2e harness drives Chromium).
     - `primitives/data-view/list`
     - `primitives/data-view/table`
     - `primitives/metrics/chart-kit`
+- Exemptions:
+  - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/data-table.tsx` (debt)
 - Core:
   - Exports (types):
     - `FitColumn`

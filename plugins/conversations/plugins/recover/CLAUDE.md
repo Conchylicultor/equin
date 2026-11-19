@@ -48,6 +48,8 @@
     - `ui/tokens/type-scale --font-weight-medium`
     - `ui/tokens/type-scale --font-weight-semibold`
     - `ui/tokens/type-scale --line-height-3xs`
+- Exemptions:
+  - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/recovery-view.tsx` (debt)
 - Shared:
   - Exports (types): `RestoreBatchBody`
   - Exports (values):

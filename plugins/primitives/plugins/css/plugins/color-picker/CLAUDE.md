@@ -62,6 +62,8 @@
     - `fields/color/config`
     - `ui/theme-engine/theme-customizer`
     - `ui/tokens/shadow/customizer`
+- Exemptions:
+  - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/use-color-drag.ts` (debt)
 - Core:
   - Exports (values):
     - `Color`

@@ -326,7 +326,9 @@ back.
     - `network/live`
     - `tasks/outcome-report`
 - Exemptions:
-  - Exempts itself from: `no-raw-websocket` — `e2e/no-op-frames.ts` (sanctioned)
+  - Exempts itself from:
+    - `no-raw-websocket` — `e2e/no-op-frames.ts` (sanctioned)
+    - `react-compiler:no-silent-skips` — `web/use-whole-transcript.ts` (debt)
 - Sub-plugins:
   - **`api-error`** — Renders the CLI's own notice of a failed model request in the JSONL viewer — a usage limit with its reset time, a server error, an expired login — as a warning line, not as the agent's words. A…
   - **`api-request`** — Renders the model API call settings Claude Code logs (model, effort, thinking, max tokens, permission mode, betas, tool set) as a change log: the first call's settings, then one row per call that…

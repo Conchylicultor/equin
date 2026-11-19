@@ -116,7 +116,9 @@ has no other reactive read. Design: `research/2026-11-05-global-ambient-signals-
     - `layouts/miller`
     - `media/player`
 - Exemptions:
-  - Exempts itself from: `shortcuts/no-window-key-listener` — `web/internal/shortcut-manager.tsx` (sanctioned)
+  - Exempts itself from:
+    - `shortcuts/no-window-key-listener` — `web/internal/shortcut-manager.tsx` (sanctioned)
+    - `react-compiler:no-silent-skips` — `web/internal/use-registered-shortcuts.ts` (debt)
   - Exempted by: `primitives/shortcuts` (0 debt)
 - Test helpers:
   - Web: `@plugins/primitives/plugins/shortcuts/web/testing`

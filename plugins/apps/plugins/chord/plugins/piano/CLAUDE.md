@@ -211,6 +211,8 @@ one held down — the one thing a value check cannot tell you.
     - `ui/tokens/type-scale --font-weight-bold`
     - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by: `apps/chord/trainer`
+- Exemptions:
+  - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/use-piano.ts` (debt)
 - Core:
   - Exports (types):
     - `ChannelLevel`

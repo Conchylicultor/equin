@@ -2934,6 +2934,7 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
   - Exempts itself from:
     - `data-view/no-adhoc-row-list` — `.` (sanctioned)
     - `live/visible-range-minter` — `web/internal/pages-viewport.ts` (sanctioned)
+    - `react-compiler:no-silent-skips` — `web/components/creators-control.tsx`, `web/internal/collection-item-actions.tsx`, `web/internal/collection-row-activation.tsx`, `web/internal/define-item-actions.tsx`, `web/internal/derived-fields.tsx`, `web/internal/field-extensions.tsx`, `web/internal/live-source.tsx`, `web/internal/live-tree/use-live-tree.tsx`, `web/internal/row-reads.tsx`, `web/internal/use-filter-presets.ts`, `web/internal/use-item-action-zones.tsx`, `web/internal/use-sort-presets.ts`, `web/internal/use-visible-row-keys.ts` (debt)
   - Exempted by:
     - `primitives/data-view` (0 debt)
     - `primitives/tree` (0 debt)

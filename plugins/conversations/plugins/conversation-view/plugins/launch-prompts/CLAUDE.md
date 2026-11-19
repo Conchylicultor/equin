@@ -36,6 +36,8 @@
   - Uses tokens:
     - `ui/tokens/density --space-xl`
     - `ui/tokens/shape --spacing`
+- Exemptions:
+  - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/launch-prompts-button.tsx` (debt)
 - Shared:
   - Exports (values): `launchPromptsConfig`
 

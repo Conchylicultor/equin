@@ -344,7 +344,9 @@ reported) — the kind worth surfacing as crash tasks, not just toasts.
     - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by: `apps/sonata/sources/ultimate-guitar/alignment`
 - Exemptions:
-  - Exempts itself from: `ids:pk-declared` — `server/internal/tables-tab-saved.ts` (debt)
+  - Exempts itself from:
+    - `ids:pk-declared` — `server/internal/tables-tab-saved.ts` (debt)
+    - `react-compiler:no-silent-skips` — `web/components/ug-import-dialog.tsx`, `web/loader.tsx` (debt)
 - Sub-plugins:
   - **`alignment`** — UG sheet alignment in the player: a 'Recording' editor section showing the song's YouTube video (the recording plugin's RecordingVideo viewport with its volume, and its on/off RecordingSwitch in the…
   - **`tab`** — The Ultimate Guitar tab model: the normalized raw tab schema and the chord/lyric markup parser.

@@ -188,6 +188,8 @@ over:
     - `apps/website/promo-film/seed`
     - `map/google`
     - `page/place/google`
+- Exemptions:
+  - Exempts itself from: `react-compiler:no-silent-skips` — `web/slots.tsx` (debt)
 - Machine:
   - Exports (types): `PlacesClientResult`
   - Exports (values): `getPlacesClient`

@@ -66,7 +66,9 @@
     - `ui/tokens/type-scale --line-height-3xs`
     - `ui/tokens/type-scale --line-height-caption`
 - Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/broadcasts-file.ts`, `server/internal/entries-served.ts`, `server/internal/handle-write.ts` (debt)
+  - Exempts itself from:
+    - `boundaries/no-platform-api` — `server/internal/broadcasts-file.ts`, `server/internal/entries-served.ts`, `server/internal/handle-write.ts` (debt)
+    - `react-compiler:no-silent-skips` — `web/components/broadcasts-panel.tsx` (debt)
 - Shared:
   - Exports (types): `WriteBroadcastsBody`
   - Exports (values):

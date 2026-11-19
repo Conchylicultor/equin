@@ -112,6 +112,8 @@ frames at all. The contract lives in `web/internal/pixi/render-scheduler.ts`:
     - `apps/sonata/piano-roll/fx-core`
     - `apps/sonata/piano-roll/fx-ripples`
     - `apps/sonata/piano-roll/fx-shatter`
+- Exemptions:
+  - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/piano-roll.tsx`, `web/internal/pixi/app.tsx` (debt)
 - Sub-plugins:
   - **`fx-comets`** — Fancy piano-roll FX (opt-in): a comet arcs along the keyboard line between consecutive notes of the same track, with a fading particle trail. Server registration of the fx-comets enabled toggle.
   - **`fx-core`** — Ambient piano-roll FX (on by default): key-strike glow, rising sparks, and an active-note brighten over the sounding bar. Server registration of the fx-core enabled toggle.

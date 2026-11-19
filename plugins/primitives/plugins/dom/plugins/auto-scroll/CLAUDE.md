@@ -299,7 +299,9 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `layouts/miller`
     - `page/editor`
 - Exemptions:
-  - Exempts itself from: `scroll-safety/no-adhoc-scroll-write` — `web` (sanctioned)
+  - Exempts itself from:
+    - `scroll-safety/no-adhoc-scroll-write` — `web` (sanctioned)
+    - `react-compiler:no-silent-skips` — `web/use-edge-auto-scroll.ts`, `web/use-sticky-scroll.ts` (debt)
 - Sub-plugins:
   - **`follow-motion`** — FOLLOW_MOTION_ATTR: the attribute an element whose animation grows a stick-to-bottom surface's content carries, so the surface follows it frame by frame. A leaf with no imports, so an animator…
 

@@ -141,6 +141,8 @@ primitive when a second consumer appears.
   - Imported by:
     - `apps/file-explorer/browser`
     - `conversations/conversation-view/code/file-pane`
+- Exemptions:
+  - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/path-bar.tsx` (debt)
 - Sub-plugins:
   - **`folder-places`** — A file system's folders as a path crumb's menu: folderPlaces(fs) is the PathPlaces a path bar source or a FilepathBreadcrumb hands its crumbs — each level the folders inside one folder (hidden ones…
 

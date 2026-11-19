@@ -15,4 +15,16 @@ export default [
     task: "task-1792338443-riwqev",
     reason: "not yet split into server/ + machine/",
   },
+  {
+    rule: "react-compiler:no-silent-skips",
+    paths: [
+      "web/components/site-banner.tsx",
+      "web/components/site-overview.tsx",
+      "web/components/site-settings.tsx",
+    ],
+    kind: "debt",
+    task: "task-1795087496-4w8ni5",
+    reason:
+      "Left uncompiled by the React Compiler — site-banner.tsx: BannerProbe (calls a hook carried as a value); site-overview.tsx: CheckRow (calls a hook carried as a value); site-settings.tsx: GatedNavEntry (calls a hook carried as a value).",
+  },
 ] satisfies Exemptions;

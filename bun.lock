@@ -4487,6 +4487,17 @@
         "babel-plugin-react-compiler": "^1.0.0",
       },
     },
+    "plugins/framework/plugins/tooling/plugins/react-compiler/plugins/skips": {
+      "name": "@equin/plugin-framework-tooling-react-compiler-skips",
+      "version": "0.0.1",
+      "dependencies": {
+        "@babel/core": "^7.29.13",
+        "babel-plugin-react-compiler": "^1.0.0",
+      },
+      "devDependencies": {
+        "@types/babel__core": "^7.20.5",
+      },
+    },
     "plugins/framework/plugins/tooling/plugins/test-layout": {
       "name": "@equin/plugin-framework-tooling-test-layout",
       "version": "0.0.1",
@@ -10507,6 +10518,8 @@
     "@equin/plugin-framework-tooling-provision": ["@equin/plugin-framework-tooling-provision@workspace:plugins/framework/plugins/tooling/plugins/provision"],
 
     "@equin/plugin-framework-tooling-react-compiler": ["@equin/plugin-framework-tooling-react-compiler@workspace:plugins/framework/plugins/tooling/plugins/react-compiler"],
+
+    "@equin/plugin-framework-tooling-react-compiler-skips": ["@equin/plugin-framework-tooling-react-compiler-skips@workspace:plugins/framework/plugins/tooling/plugins/react-compiler/plugins/skips"],
 
     "@equin/plugin-framework-tooling-test-layout": ["@equin/plugin-framework-tooling-test-layout@workspace:plugins/framework/plugins/tooling/plugins/test-layout"],
 

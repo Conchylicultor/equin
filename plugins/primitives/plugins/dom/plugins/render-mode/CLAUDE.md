@@ -69,6 +69,8 @@ into the markup. `renderMode()` is how a building block knows to.
     - `screenshot/draw-on-app`
     - `tasks/worktree-identity`
     - `ui/theme-engine`
+- Exemptions:
+  - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/browser-value.ts` (debt)
 - Web:
   - Exports (types):
     - `BrowserValueOptions`
