@@ -61,9 +61,17 @@ export function useLatestSelector<T, R>(
   const answer = select(store.rendered());
   const [, rerender] = useReducer((n: number) => n + 1, 0);
   const rendered = useLatestRef({ select, answer });
-  // Subscribed in a LAYOUT effect, not `useSyncExternalStore`'s passive one:
-  // the publisher publishes in its own layout effect, which runs after its
-  // descendants', so a reader mounted in the same commit is already
+  // Hand-rolled, not `useSyncExternalStore` (tried, 2026-11 — the obvious
+  // rewrite that would drop "use no memo"): uSES records a reader's rendered
+  // answer in a PASSIVE effect, but the publisher publishes in its LAYOUT
+  // effect, which runs first. So a reader that rendered its new answer in the
+  // publishing pass (its own props changed too) still looks stale to uSES on
+  // the publish and is forced through one more render in an extra sync
+  // commit. latest-store.test.tsx's "renders once" test counts the row's
+  // function runs and fails on that rewrite.
+  //
+  // Subscribed in a LAYOUT effect: the publisher's layout effect runs after
+  // its descendants', so a reader mounted in the same commit is already
   // listening. The check on subscribe covers a value that moved between this
   // render and the subscription (staged by a later render of the publisher).
   useLayoutEffect(() => {

@@ -19,6 +19,9 @@ afterEach(cleanup);
 type State = { selected: string };
 
 const renders: Record<string, number> = {};
+// Every run of a row's function, bailed-out ones included (a render React
+// throws away commits no effect, so `renders` cannot see it).
+const calls: Record<string, number> = {};
 
 const Row = memo(function Row({
   id,
@@ -59,6 +62,8 @@ const LabelledRow = memo(function LabelledRow({
   useLayoutEffect(() => {
     renders[id] = (renders[id] ?? 0) + 1;
   });
+  // eslint-disable-next-line react-hooks/immutability -- counts every run of the function, bailed-out ones included, which no effect can see
+  calls[id] = (calls[id] ?? 0) + 1;
   const selected = useLatestSelector(state, (s) => s.selected === id);
   return <span data-testid={id}>{`${label} ${selected ? "on" : "off"}`}</span>;
 });
@@ -100,6 +105,7 @@ describe("useLatestStore / useLatestSelector", () => {
 
   it("a row re-rendered by the render that changed the value renders once, with the new answer", () => {
     for (const k of Object.keys(renders)) delete renders[k];
+    for (const k of Object.keys(calls)) delete calls[k];
     const { getByTestId, rerender } = render(
       <Labelled ids={["a", "b"]} label="x" selected="a" />,
     );
@@ -110,6 +116,10 @@ describe("useLatestStore / useLatestSelector", () => {
     expect(getByTestId("a").textContent).toBe("y off");
     expect(getByTestId("b").textContent).toBe("y on");
     expect(renders).toEqual({ a: 2, b: 2 });
+    // Not even a bailed-out run more: `useSyncExternalStore` would force one
+    // (it learns a reader's answer in a passive effect, after the layout
+    // effect that publishes), in an extra synchronous commit.
+    expect(calls).toEqual({ a: 2, b: 2 });
   });
 
   it("a row mounted by the render that changed the value reads the new value", () => {

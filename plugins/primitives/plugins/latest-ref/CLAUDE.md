@@ -32,8 +32,12 @@ badge.
   is mounting) selects the new answer the first time. It is published after
   the commit (a layout effect, before paint), which re-renders — in the same
   task — only the readers that did not render in that pass and whose answer
-  changed. Readers subscribe in a layout effect (not `useSyncExternalStore`,
-  which subscribes after paint), so none misses that publish. (Selecting from
+  changed. Readers subscribe in a layout effect, so none misses that publish.
+  It is not `useSyncExternalStore`: uSES learns a reader's answer in a
+  passive effect, after the layout effect that publishes, so a reader that
+  rendered its new answer in that pass would be forced through one more
+  (bailed-out) render in an extra sync commit — the "renders once" test
+  counts the row's function runs and fails on that rewrite. (Selecting from
   the published value instead rendered every reader of the changing commit
   twice: once stale, once corrected.)
 - `select` must answer a primitive or a reference stable while the answer is
