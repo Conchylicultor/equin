@@ -116,6 +116,8 @@ export type ExemptableRuleId =
   | "map-google/maps-js-libraries"
   | "marker-scan-safety/no-adhoc-binding-scan"
   | "marker-scan-safety/no-adhoc-marker-scan"
+  | "media-element/no-raw-media-play"
+  | "media-element/no-raw-request-picture-in-picture"
   | "model-provider:no-raw-model-flags"
   | "motion/no-dead-timing"
   | "motion/no-transition-all"

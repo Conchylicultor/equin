@@ -42793,6 +42793,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Uses:
           - `infra/endpoints.useAssetSrcs`
+          - `primitives/dom/media-element.playMedia`
           - `primitives/latest-ref.useLatestRef`
         - Exports (types):
           - `MediaArtwork`
@@ -42810,9 +42811,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ThemeEngine.FixedTheme` "Media player controls"
           - `ThemeEngine.SubTheme` "Media player settings panel"
           - `ThemeEngine.SubTheme` "Media player volume"
-        - Uses: 27 symbols — full list in [`plugins/media/plugins/player/REFERENCE.md`](../plugins/media/plugins/player/REFERENCE.md)
+        - Uses: 29 symbols — full list in [`plugins/media/plugins/player/REFERENCE.md`](../plugins/media/plugins/player/REFERENCE.md)
           - `primitives/css/ui-kit` ×7
           - `primitives/shortcuts` ×3
+          - `primitives/dom/media-element` ×2
           - `primitives/kept-state` ×2
           - `primitives/latest-ref` ×2
           - `primitives/css/slider.Slider`
@@ -54375,6 +54377,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `primitives/slot-render`
               - `reorder`
+        - **`media-element`** — A media element's requests the browser may refuse, with every refusal a value: playMedia(el) answers playing or refused (no-gesture / overtaken / source-failed with the element's MediaError, which its error event already reports) and throws only a MediaPlayError carrying the caller's stack and the element's state; videoPipSupport(doc?) answers unsupported or supported with request(video) → entered | refused. Its lint rules (no-raw-media-play, no-raw-request-picture-in-picture) send every other HTMLMediaElement .play() promise and .requestPictureInPicture() call here.
+          - Cross-plugin:
+            - Imported by:
+              - `media/media-session`
+              - `media/player`
+          - Exemptions:
+            - Exempts itself from:
+              - `media-element/no-raw-media-play` — `web/internal/media-play.ts` (sanctioned)
+              - `media-element/no-raw-request-picture-in-picture` — `web/internal/video-pip.ts` (sanctioned)
+            - Exempted by: `primitives/dom/media-element` (0 debt)
+          - Web:
+            - Exports (types):
+              - `PlayOutcome`
+              - `VideoPipOutcome`
+              - `VideoPipSupport`
+            - Exports (values):
+              - `MediaPlayError`
+              - `playMedia`
+              - `videoPipSupport`
         - **`movable`** — Drag-to-move floating chrome: <Movable at bounds> is a placed floating piece (a pill, a tag, a chip — `at` places it as a Pin step or Placed coordinates and it IS that positioned element, so nothing is left at home after a drag) the user can pull off whatever it covers — grabbed by its surface, or by one of its buttons once the pointer travels (a plain press stays a click, and the release after a drag never clicks). It stays inside `bounds`, is pulled back in when bounds shrink, and a double-click on its surface sends it home. The gesture itself is useDragGesture — the onPointerDown of a handle (threshold on buttons, capture at drag start, the post-drag click swallowed) — for a piece that places itself.
           - Web:
             - Uses:

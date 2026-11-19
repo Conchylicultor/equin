@@ -1,3 +1,4 @@
+import { playMedia } from "@plugins/primitives/plugins/dom/plugins/media-element/web";
 import { toggleMute, volumeTarget } from "./math";
 
 /**
@@ -6,20 +7,10 @@ import { toggleMute, volumeTarget } from "./math";
  * back on its own events), so the components only ever ask it to change.
  */
 
-/** Play, answering a refusal (no user gesture yet, or a pause cut it short) by staying paused. */
-export function playMedia(el: HTMLMediaElement): void {
-  el.play().catch((err: unknown) => {
-    if (
-      err instanceof DOMException &&
-      (err.name === "NotAllowedError" || err.name === "AbortError")
-    )
-      return;
-    throw err;
-  });
-}
-
 export function togglePlayback(el: HTMLMediaElement): void {
-  if (el.paused) playMedia(el);
+  // A refusal (no gesture yet, overtaken, a source that failed — which the
+  // element's error event reports) leaves it paused; only the unnamed throws.
+  if (el.paused) void playMedia(el);
   else el.pause();
 }
 

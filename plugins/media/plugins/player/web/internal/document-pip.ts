@@ -5,6 +5,8 @@
  * theme.
  */
 
+import { videoPipSupport } from "@plugins/primitives/plugins/dom/plugins/media-element/web";
+
 /** The `window.documentPictureInPicture` API (Chromium 116+), not in the DOM lib yet. */
 export interface DocumentPictureInPicture {
   requestWindow(options: { width: number; height: number }): Promise<Window>;
@@ -23,8 +25,7 @@ export function pipOffered(win: Window): boolean {
   return (
     documentPipOf(win) !== null ||
     // Firefox has no video picture in picture API (153 brings it).
-    ("pictureInPictureEnabled" in win.document &&
-      win.document.pictureInPictureEnabled)
+    videoPipSupport(win.document).kind === "supported"
   );
 }
 

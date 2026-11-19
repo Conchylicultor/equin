@@ -8,6 +8,7 @@
 - Web:
   - Uses:
     - `infra/endpoints.useAssetSrcs`
+    - `primitives/dom/media-element.playMedia`
     - `primitives/latest-ref.useLatestRef`
   - Exports (types):
     - `MediaArtwork`

@@ -1,3 +1,4 @@
+import { playMedia } from "@plugins/primitives/plugins/dom/plugins/media-element/web";
 import { silenceUrl } from "./silence";
 
 /**
@@ -205,12 +206,8 @@ function syncElement(claim: ResolvedClaim | null) {
 }
 
 function play(el: HTMLAudioElement) {
-  el.play().catch((err: unknown) => {
-    // The autoplay policy: no gesture on this page yet. The element stays
-    // paused; the next change of the claim (a press in the app) tries again.
-    if (err instanceof DOMException && err.name === "NotAllowedError") return;
-    // A pause() or a dropped src overtook the play: nothing to do.
-    if (err instanceof DOMException && err.name === "AbortError") return;
-    throw err;
-  });
+  // A refusal (the autoplay policy: no gesture on this page yet; a pause or a
+  // dropped src overtaking it) leaves it paused; the next change of the claim
+  // (a press in the app) tries again. Only an unnamed rejection throws.
+  void playMedia(el);
 }

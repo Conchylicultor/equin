@@ -672,6 +672,7 @@ export const browserHost = {
     "primitives.dom.gesture-origin",
     "primitives.dom.in-view",
     "primitives.dom.layout-host",
+    "primitives.dom.media-element",
     "primitives.dom.movable",
     "primitives.dom.overscroll-hint",
     "primitives.dom.reload-readiness",

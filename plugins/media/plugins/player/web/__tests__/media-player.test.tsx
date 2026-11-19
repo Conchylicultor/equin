@@ -378,6 +378,10 @@ describe("picture in picture", () => {
       configurable: true,
       value: { requestWindow },
     });
+    Object.defineProperty(document, "pictureInPictureEnabled", {
+      configurable: true,
+      value: true,
+    });
     const videoPip = vi.fn(() => Promise.resolve({}));
     Object.defineProperty(
       HTMLVideoElement.prototype,

@@ -61,7 +61,6 @@ import {
 import { mediaPlayerThemeScope } from "../internal/theme";
 import { useIdle } from "../internal/use-idle";
 import {
-  playMedia,
   seekMedia,
   setMediaLoop,
   setMediaRate,
@@ -79,6 +78,7 @@ import "../internal/media-player.css";
 import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { useMediaQuery } from "@plugins/primitives/plugins/dom/plugins/render-mode/web";
 import { fullscreenSupport } from "@plugins/primitives/plugins/dom/plugins/element-fullscreen/web";
+import { playMedia } from "@plugins/primitives/plugins/dom/plugins/media-element/web";
 import { TouchControls } from "./touch-controls";
 
 const playIcon = symbol("play-arrow");
@@ -528,7 +528,7 @@ export function Player({
     if (dragging) {
       resumeAfterSeek.current = !el.paused;
       el.pause();
-    } else if (resumeAfterSeek.current) playMedia(el);
+    } else if (resumeAfterSeek.current) void playMedia(el);
     setSeeking(dragging);
     wake();
   };

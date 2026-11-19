@@ -230,6 +230,7 @@ export const staticHosts: Record<string, StaticHost> = {
       "primitives/plugins/dom/plugins/gesture-origin",
       "primitives/plugins/dom/plugins/in-view",
       "primitives/plugins/dom/plugins/layout-host",
+      "primitives/plugins/dom/plugins/media-element",
       "primitives/plugins/dom/plugins/movable",
       "primitives/plugins/dom/plugins/overscroll-hint",
       "primitives/plugins/dom/plugins/reload-readiness",

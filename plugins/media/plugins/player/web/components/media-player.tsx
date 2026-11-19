@@ -28,6 +28,7 @@ import {
 import { Player } from "./player";
 import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { renderMode } from "@plugins/primitives/plugins/dom/plugins/render-mode/core";
+import { videoPipSupport } from "@plugins/primitives/plugins/dom/plugins/media-element/web";
 
 const pipIcon = symbol("picture-in-picture-alt");
 
@@ -227,8 +228,14 @@ function LiveMediaPlayer({
         return;
       }
     }
-    if (media instanceof HTMLVideoElement && "requestPictureInPicture" in media)
-      await media.requestPictureInPicture();
+    if (!(media instanceof HTMLVideoElement)) return;
+    const support = videoPipSupport(document);
+    if (support.kind !== "supported") return;
+    // The browser may still say no (iOS: a video it cannot float, or not
+    // ready yet): that is its answer, not a bug — the player stays on the page.
+    const answer = await support.request(media);
+    if (answer.kind === "refused")
+      console.warn("The browser refused picture in picture:", answer.error);
   };
 
   return (
