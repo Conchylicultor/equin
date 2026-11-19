@@ -9,7 +9,7 @@ header — carries `py-row rail-follow`: block padding from the row density toke
 (`--pad-row-y`), inline padding from the ambient rail
 (`var(--rail-start, var(--chrome-pad-x))`). There is no per-table opt-out, and
 column alignment holds for the same reason the old fixed padding worked: every
-row reads the *same* value.
+row reads the _same_ value.
 
 The default resolves to `--chrome-pad-x` (0.75rem), so a table
 in a plain pane looks unchanged. A table inside a host that opened a rail region
@@ -282,6 +282,28 @@ spill past its border), and because it crosses portals the right way.
 Pinned by `data-view/plugins/table/e2e/sticky-scroll.ts` (Studio explorer
 nested + Debug → Claude CLI Calls flat, 390 / 820 / 1440, light and dark).
 Verified in Chromium only (the e2e harness drives Chromium).
+
+## Rows are memoized: every row prop must keep its identity
+
+`DataTableRow` is `memo`: the body draws rows in a `.map`, where no compiler
+memoizes an element per item, so without it every commit of the table (a
+window scrolling a row in, a search narrowing the rows, a page landing)
+re-rendered every drawn row and its cells — ~100 components a row; a Tasks
+search keystroke rendered ~30,000. A row bails out only while each of its props
+keeps its identity, so:
+
+- the windowed measure handle travels as two props (`measureRef`, the
+  virtualizer's one `measureElement`, and `measureIndex`), and the fold's row
+  props as `foldInert` (the row rebuilds `rowProps` from its own key);
+- a caller's `columns`, `tree`, `rowActions`, `rowPersistentActions`,
+  `rowActivation` and `useRowDecoration` must be stable while what they draw is
+  — never rebuilt per render. A decoration hook is a module constant reading
+  its inputs from a context (data-view's nested table: `NestedRowContext`),
+  never a function declared inside the caller's component (that is a new hook
+  per render, and it keeps the React Compiler off the whole component).
+
+`render-cost.ts` (`framework/tooling/react-compiler/skips/e2e`) counts what a
+step renders, to check a caller.
 
 ## Windowing + drag reorder compose
 

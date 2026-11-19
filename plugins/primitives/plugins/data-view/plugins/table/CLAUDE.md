@@ -202,9 +202,9 @@ see `data-view/CLAUDE.md` ("The rail") and `data-table/CLAUDE.md`.
 - Description: Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort, and nests its rows (a tree is a table with no columns) when the source has a hierarchy.
 - Web:
   - Contributes: `DataViewSlots.View` "Table" → `TableView`
-  - Uses: 86 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×45
-    - `primitives/tree` ×18
+  - Uses: 91 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×48
+    - `primitives/tree` ×19
     - `primitives/data-table` ×7
     - `primitives/css/text` ×3
     - `primitives/rank-reorder` ×3
@@ -217,6 +217,7 @@ see `data-view/CLAUDE.md` ("The rail") and `data-table/CLAUDE.md`.
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.cn`
+    - `primitives/latest-ref.useEventCallback`
     - `ui/icons.Icon`
   - Exports (types): `TableViewOptions`
 - Cross-plugin:
@@ -237,8 +238,6 @@ see `data-view/CLAUDE.md` ("The rail") and `data-table/CLAUDE.md`.
     - `ui/tokens/density --tree-root-gap`
     - `ui/tokens/density --tree-row-gap`
     - `ui/tokens/shape --spacing`
-- Exemptions:
-  - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/nested-table-view.tsx`, `web/components/table-view.tsx` (debt)
 - Core:
   - Exports (types): `TableViewOptions`
 

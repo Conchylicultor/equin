@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, type ReactNode } from "react";
+import {
+  createContext,
+  use,
+  useCallback,
+  useEffect,
+  useMemo,
+  type ReactNode,
+} from "react";
 import {
   DataTable,
   DATA_TABLE_VIRTUALIZE_THRESHOLD,
@@ -32,10 +39,14 @@ import {
   type DataViewRenderProps,
   type FieldDef,
   type ItemActionsDescriptor,
+  type ItemActionZones,
   type ProjectedRow,
+  type RowDnd,
   type RowDragConfig,
+  type RowSelectionConfig,
   type ViewRowDropConfig,
 } from "@plugins/primitives/plugins/data-view/web";
+import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   nextRowSelection,
   type FlatTreeLine,
@@ -52,6 +63,7 @@ import {
   TreeProvider,
   TreeRootAdd,
   TreeRowActions,
+  type RowSelectionClick,
   flatExpandAll,
   useSpringOpen,
   treeRowGestures,
@@ -175,6 +187,201 @@ function TreeHead({
     </Stack>
   );
 }
+
+/**
+ * What a nested table's row decoration reads: the view's per-render inputs,
+ * handed down as one context value so the decoration hook is a module
+ * constant (a hook declared inside the view was a new `useRowDecoration` on
+ * every render — re-rendering every row — and kept the React Compiler off
+ * the whole view).
+ */
+interface NestedRowContextValue {
+  rowAccent: TableViewOptions<unknown>["rowAccent"];
+  canReorder: boolean;
+  canCreate: boolean;
+  dnd: RowDnd<unknown> | null;
+  rowSelection: RowSelectionConfig | undefined;
+  /** The painted order, read at a click (a range selection). */
+  orderedIds: () => readonly string[];
+  revealed: ItemActionZones<unknown>["cluster"]["revealed"];
+  rowMenu: TableViewOptions<unknown>["rowMenu"];
+  /** An outline's top-level rows stand apart (see the view). */
+  rootGap: boolean;
+}
+
+const NestedRowContext = createContext<NestedRowContextValue | null>(null);
+
+function useNestedRowContext(): NestedRowContextValue {
+  const ctx = use(NestedRowContext);
+  if (ctx === null)
+    throw new Error(
+      "A nested table row's decoration ran outside its NestedTableView",
+    );
+  return ctx;
+}
+
+/** A selectable row's gesture handler: the next selection over the painted
+ *  order, read at the gesture. */
+function selectionGesture(
+  rowSelection: RowSelectionConfig,
+  id: string,
+  orderedIds: () => readonly string[],
+): (gesture: RowSelectionClick) => void {
+  return (gesture) => {
+    const next = nextRowSelection(
+      rowSelection,
+      { kind: gesture, id },
+      orderedIds(),
+    );
+    if (next !== rowSelection) rowSelection.onChange(next);
+  };
+}
+
+/**
+ * Per-row decoration HOOK (called inside DataTable's row component): the
+ * row is a tree row — its controls (`useTreeRow`: drag source, the
+ * before / after / into droppables, the reveal), gestures (select, link,
+ * open), ARIA and `data-tree-*` attributes, and its drop zones. Only node
+ * lines reach it: a placeholder is a full-span line, never a decorated row.
+ */
+function useNestedRowDecoration(
+  line: Line,
+  index: number,
+): DataTableRowDecoration | undefined {
+  const {
+    rowAccent,
+    canReorder,
+    canCreate,
+    dnd,
+    rowSelection,
+    orderedIds,
+    revealed,
+    rowMenu,
+    rootGap,
+  } = useNestedRowContext();
+  const node = (line as NodeLine).node;
+  const controls = useTreeRow(node);
+  const accent = rowAccent?.(node.__row);
+  const { childRef, dragSource } = controls;
+  // A reference row has no position of its own: never a drag source.
+  const draggable = canReorder && !node.alias;
+  // A native drag / drop row (`rowDrag` / `rowDrop`); an alias is neither.
+  const native = dnd && !node.alias ? dnd.rowProps(node.id, node.__row) : null;
+  // `into`: the drop goes into this row; `inside`: into the folder holding it.
+  const dropState = useRowDropState(dnd, node.id);
+  const isDropTarget = dropState === "into";
+  // In a row selection, this row's own membership is its highlight.
+  const isSelected = rowSelection
+    ? rowSelection.selected.has(node.id)
+    : controls.isSelected;
+  const dragRef = dragSource.ref;
+  const ref = useCallback(
+    (el: HTMLElement | null) => {
+      childRef(el);
+      if (draggable) dragRef(el);
+    },
+    [childRef, dragRef, draggable],
+  );
+  const gestures = treeRowGestures({
+    onSelect: controls.select,
+    selectHref: controls.selectHref,
+    onOpen: controls.open,
+    clickOpens: controls.clickOpens,
+    selection:
+      rowSelection && !node.alias
+        ? selectionGesture(rowSelection, node.id, orderedIds)
+        : undefined,
+  });
+  // The row's revealed cluster, from its own controls (`treeRowTrailing`,
+  // the one `RowChrome` uses): `null` when it offers nothing, so no empty
+  // cluster mounts on it. An alias has none.
+  let actions: ReactNode = null;
+  if (!node.alias) {
+    const trailing = treeRowTrailing({
+      actions: revealed?.({
+        row: node.__row,
+        hasChildren: node.children.length > 0,
+      }),
+      menu: rowMenu
+        ? (helpers: RowMenuHelpers) => rowMenu(helpers, node.__row)
+        : undefined,
+      childCount: node.children.length,
+      controls,
+      canCreate,
+    });
+    actions = trailing ?? null;
+  }
+  return {
+    ref,
+    actions,
+    props: {
+      ...gestures,
+      ...(draggable ? dragSource.attributes : {}),
+      ...(draggable ? dragSource.listeners : {}),
+      ...native,
+      role: "row",
+      "aria-level": (line as NodeLine).depth + 1,
+      "aria-expanded": controls.hasChildren ? controls.isOpen : undefined,
+      "aria-selected": isSelected,
+      "data-tree-row": true,
+      "data-tree-id": node.id,
+      // An alias is a second drawing of a row the real node already marks.
+      "data-row-key": node.alias ? undefined : node.id,
+    },
+    className: cn(
+      // The named group the disclosure's hover reveal reads.
+      TREE_ROW_GROUP,
+      // A press-and-drag across rows is a row gesture (a selection, a
+      // drag), never a text selection. An inline editor in the row is a
+      // form control and keeps its own.
+      "select-none",
+      // A focusable row (one with an open gesture or a row selection) is
+      // walked with the arrow keys, so the row the keys are on must show it.
+      (controls.open || rowSelection) && "focus-ring",
+      controls.isDragging && "opacity-40",
+      (controls.isOverChild || isDropTarget) && DROP_TARGET_RING,
+      (isDropTarget || dropState === "inside") && DROP_TARGET_WASH,
+    ),
+    // A nested row sits flush on its parent; a root stands apart.
+    style:
+      rootGap && (line as NodeLine).depth === 0 && index > 0
+        ? { marginTop: "var(--tree-root-gap)" }
+        : undefined,
+    // A drop onto the row nests under it: the row reads highlighted.
+    highlighted: controls.isOverChild || isDropTarget,
+    selected: rowSelection ? isSelected : undefined,
+    // Everything in the row reads its controls, as inside a `RowChrome`:
+    // the trailing cluster, and any cell or item action asking
+    // `useOptionalRowControls`.
+    provide: (content) => (
+      <RowControlsProvider value={controls}>{content}</RowControlsProvider>
+    ),
+    overlay: (
+      <>
+        {accent != null && (
+          // eslint-disable-next-line layout/no-adhoc-layout -- full-bleed accent wash painted over the row (RowChrome's own accent layer)
+          <div aria-hidden className="pointer-events-none absolute inset-0">
+            {accent}
+          </div>
+        )}
+        <TreeDropZones
+          beforeRef={controls.beforeRef}
+          afterRef={controls.afterRef}
+          isOverBefore={controls.isOverBefore}
+          isOverAfter={controls.isOverAfter}
+        />
+      </>
+    ),
+  };
+}
+
+/**
+ * The decoration every nested table's rows wear, bound once: the view hands
+ * `DataTable` this constant, so the rows' hook never changes identity (and the
+ * view itself never names a hook as a value, which the React Compiler
+ * refuses to compile).
+ */
+const NESTED_ROW_DECORATION = { useRowDecoration: useNestedRowDecoration };
 
 /**
  * The table view over a hierarchical source: rows nest. The shared hierarchy
@@ -403,6 +610,44 @@ export function NestedTableView(
     [sectionOf, modelOnDragEnd],
   );
 
+  const windowed =
+    !grouped && model.flat.length > DATA_TABLE_VIRTUALIZE_THRESHOLD;
+  // An outline's top-level rows stand apart as a tree's roots do
+  // (`TreeList`'s `gap-tree-root`; a windowed tree's rows sit flush, as here).
+  const rootGap = options.presentation === "outline" && !windowed;
+  const rowMenu = options.rowMenu;
+  // What every row's decoration reads (`useNestedRowDecoration`), as one
+  // context value: the hook itself is a module constant, so the table's rows
+  // are re-rendered by a change of what they draw, never by this view
+  // rendering again. The painted order is read when a row is clicked, not
+  // while rendering: a search reorders it on every keystroke.
+  const orderedIds = useEventCallback(() => model.orderedIds);
+  const rowAccent = options.rowAccent;
+  const rowContext = useMemo(
+    (): NestedRowContextValue => ({
+      rowAccent,
+      canReorder,
+      canCreate,
+      dnd,
+      rowSelection,
+      orderedIds,
+      revealed,
+      rowMenu,
+      rootGap,
+    }),
+    [
+      rowAccent,
+      canReorder,
+      canCreate,
+      dnd,
+      rowSelection,
+      orderedIds,
+      revealed,
+      rowMenu,
+      rootGap,
+    ],
+  );
+
   if (hierarchy.rows.length === 0 && props.emptyState !== undefined) {
     return (
       <DropBackground dnd={dnd} group={null} firstKey={null} lastKey={null}>
@@ -418,8 +663,15 @@ export function NestedTableView(
 
   // The label's per-row emphasis: the host's `rowTone`, then the surface's
   // own class (which wins), on the first cell — as the tree's label.
+  // The props a render calls are read into locals first: `props.x?.(…)` is a
+  // method call on `props`, which the compiler can only key on the whole props
+  // object — new on every render of the host — so the columns (and every row
+  // they reach) would be rebuilt each time.
+  const { rowTone, setSort, collapsedSections, setSectionCollapsed } = props;
+  const sectionSummary = props.sectionSummary;
+  const labelClassName = options.labelClassName;
   const labelClass = (row: unknown) =>
-    cn(rowToneClass(props.rowTone?.(row)), options.labelClassName?.(row));
+    cn(rowToneClass(rowTone?.(row)), labelClassName?.(row));
   const columns: ColumnDef<Line>[] = columnFields.map((f, i) => ({
     id: f.id,
     header: f.header === false ? "" : (f.header ?? f.label),
@@ -546,147 +798,6 @@ export function NestedTableView(
     pillIndent: (line) => `calc(${line.depth} * var(--tree-pill-indent))`,
   };
 
-  // Per-row decoration HOOK (called inside DataTable's row component): the
-  // row is a tree row — its controls (`useTreeRow`: drag source, the
-  // before / after / into droppables, the reveal), gestures (select, link,
-  // open), ARIA and `data-tree-*` attributes, and its drop zones. Only node
-  // lines reach it: a placeholder is a full-span line, never a decorated row.
-  const windowed =
-    !grouped && model.flat.length > DATA_TABLE_VIRTUALIZE_THRESHOLD;
-  // An outline's top-level rows stand apart as a tree's roots do
-  // (`TreeList`'s `gap-tree-root`; a windowed tree's rows sit flush, as here).
-  const rootGap = options.presentation === "outline" && !windowed;
-  const rowMenu = options.rowMenu;
-  function useRowDecoration(
-    line: Line,
-    index: number,
-  ): DataTableRowDecoration | undefined {
-    const node = (line as NodeLine).node;
-    const controls = useTreeRow(node);
-    const accent = options.rowAccent?.(node.__row);
-    const { childRef, dragSource } = controls;
-    // A reference row has no position of its own: never a drag source.
-    const draggable = canReorder && !node.alias;
-    // A native drag / drop row (`rowDrag` / `rowDrop`); an alias is neither.
-    const native =
-      dnd && !node.alias ? dnd.rowProps(node.id, node.__row) : null;
-    // `into`: the drop goes into this row; `inside`: into the folder holding it.
-    const dropState = useRowDropState(dnd, node.id);
-    const isDropTarget = dropState === "into";
-    // In a row selection, this row's own membership is its highlight.
-    const isSelected = rowSelection
-      ? rowSelection.selected.has(node.id)
-      : controls.isSelected;
-    const dragRef = dragSource.ref;
-    const ref = useCallback(
-      (el: HTMLElement | null) => {
-        childRef(el);
-        if (draggable) dragRef(el);
-      },
-      [childRef, dragRef, draggable],
-    );
-    const gestures = treeRowGestures({
-      onSelect: controls.select,
-      selectHref: controls.selectHref,
-      onOpen: controls.open,
-      clickOpens: controls.clickOpens,
-      selection:
-        rowSelection && !node.alias
-          ? (gesture) => {
-              const next = nextRowSelection(
-                rowSelection,
-                gesture === "click"
-                  ? { kind: "click", id: node.id }
-                  : gesture === "toggle"
-                    ? { kind: "toggle", id: node.id }
-                    : { kind: "range", id: node.id },
-                model.orderedIds,
-              );
-              if (next !== rowSelection) rowSelection.onChange(next);
-            }
-          : undefined,
-    });
-    // The row's revealed cluster, from its own controls (`treeRowTrailing`,
-    // the one `RowChrome` uses): `null` when it offers nothing, so no empty
-    // cluster mounts on it. An alias has none.
-    const actions = node.alias
-      ? null
-      : (treeRowTrailing({
-          actions: revealed?.({
-            row: node.__row,
-            hasChildren: node.children.length > 0,
-          }),
-          menu: rowMenu
-            ? (helpers: RowMenuHelpers) => rowMenu(helpers, node.__row)
-            : undefined,
-          childCount: node.children.length,
-          controls,
-          canCreate,
-        }) ?? null);
-    return {
-      ref,
-      actions,
-      props: {
-        ...gestures,
-        ...(draggable ? dragSource.attributes : {}),
-        ...(draggable ? dragSource.listeners : {}),
-        ...native,
-        role: "row",
-        "aria-level": (line as NodeLine).depth + 1,
-        "aria-expanded": controls.hasChildren ? controls.isOpen : undefined,
-        "aria-selected": isSelected,
-        "data-tree-row": true,
-        "data-tree-id": node.id,
-        // An alias is a second drawing of a row the real node already marks.
-        "data-row-key": node.alias ? undefined : node.id,
-      },
-      className: cn(
-        // The named group the disclosure's hover reveal reads.
-        TREE_ROW_GROUP,
-        // A press-and-drag across rows is a row gesture (a selection, a
-        // drag), never a text selection. An inline editor in the row is a
-        // form control and keeps its own.
-        "select-none",
-        // A focusable row (one with an open gesture or a row selection) is
-        // walked with the arrow keys, so the row the keys are on must show it.
-        (controls.open || rowSelection) && "focus-ring",
-        controls.isDragging && "opacity-40",
-        (controls.isOverChild || isDropTarget) && DROP_TARGET_RING,
-        (isDropTarget || dropState === "inside") && DROP_TARGET_WASH,
-      ),
-      // A nested row sits flush on its parent; a root stands apart.
-      style:
-        rootGap && (line as NodeLine).depth === 0 && index > 0
-          ? { marginTop: "var(--tree-root-gap)" }
-          : undefined,
-      // A drop onto the row nests under it: the row reads highlighted.
-      highlighted: controls.isOverChild || isDropTarget,
-      selected: rowSelection ? isSelected : undefined,
-      // Everything in the row reads its controls, as inside a `RowChrome`:
-      // the trailing cluster, and any cell or item action asking
-      // `useOptionalRowControls`.
-      provide: (content) => (
-        <RowControlsProvider value={controls}>{content}</RowControlsProvider>
-      ),
-      overlay: (
-        <>
-          {accent != null && (
-            // eslint-disable-next-line layout/no-adhoc-layout -- full-bleed accent wash painted over the row (RowChrome's own accent layer)
-            <div aria-hidden className="pointer-events-none absolute inset-0">
-              {accent}
-            </div>
-          )}
-          <TreeDropZones
-            beforeRef={controls.beforeRef}
-            afterRef={controls.afterRef}
-            isOverBefore={controls.isOverBefore}
-            isOverAfter={controls.isOverAfter}
-          />
-        </>
-      ),
-    };
-  }
-
   // The trailing cluster: the consumer's item actions, then the tree's own
   // chrome — fold / unfold the subtree, the row menu, add a child — which is
   // the tree row's own cluster (`TreeRowActions`, reading the controls the
@@ -745,7 +856,7 @@ export function NestedTableView(
     columns,
     rowKey: lineKey,
     sortState: mapPrimary(props.sortHeader.active),
-    onToggleSort: (columnId: string) => props.setSort(columnId),
+    onToggleSort: (columnId: string) => setSort(columnId),
     selectedRowId: props.selectedRowId,
     emptyLabel: "No results found",
     rowActions,
@@ -753,7 +864,7 @@ export function NestedTableView(
     stickyHeaderOffset: `var(${DATA_VIEW_HEADER_OFFSET_VAR}, 0px)`,
     // A row's toggle folds the lines it reveals or hides.
     openKeys: model.openKeys,
-    useRowDecoration,
+    ...NESTED_ROW_DECORATION,
     columnHeader: options.columnHeader,
     density: props.density,
     presentation: options.presentation,
@@ -779,7 +890,7 @@ export function NestedTableView(
         data={[]}
         groups={grouped.sections.map((section): DataTableGroup<Line> => {
           const key = section.key!;
-          const collapsed = props.collapsedSections?.has(key) ?? false;
+          const collapsed = collapsedSections?.has(key) ?? false;
           return {
             key,
             collapsed,
@@ -790,8 +901,8 @@ export function NestedTableView(
               <DataViewGroupHeader
                 section={section}
                 open={!collapsed}
-                onClick={() => props.setSectionCollapsed?.(key, !collapsed)}
-                summary={props.sectionSummary?.(section)}
+                onClick={() => setSectionCollapsed?.(key, !collapsed)}
+                summary={sectionSummary?.(section)}
                 // Fold / unfold this group's subtrees (a group holds whole
                 // subtrees: every descendant follows its root).
                 action={groupFoldAction(
@@ -827,19 +938,26 @@ export function NestedTableView(
     >
       {(activeId) => (
         <TreeProvider value={model.context}>
-          <DropBackground dnd={dnd} group={null} firstKey={null} lastKey={null}>
-            {options.presentation === "outline" ? (
-              <FieldPresentationProvider
-                rows={props.rows}
-                fields={termFields}
-                rowsComplete={props.rowsComplete}
-              >
-                {renderTable(activeId)}
-              </FieldPresentationProvider>
-            ) : (
-              renderTable(activeId)
-            )}
-          </DropBackground>
+          <NestedRowContext value={rowContext}>
+            <DropBackground
+              dnd={dnd}
+              group={null}
+              firstKey={null}
+              lastKey={null}
+            >
+              {options.presentation === "outline" ? (
+                <FieldPresentationProvider
+                  rows={props.rows}
+                  fields={termFields}
+                  rowsComplete={props.rowsComplete}
+                >
+                  {renderTable(activeId)}
+                </FieldPresentationProvider>
+              ) : (
+                renderTable(activeId)
+              )}
+            </DropBackground>
+          </NestedRowContext>
           {addLabel != null && (
             <div className="rail-follow">
               <TreeRootAdd

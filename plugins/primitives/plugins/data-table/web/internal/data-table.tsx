@@ -2,6 +2,7 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 import "./data-table.css";
 import {
   Fragment,
+  memo,
   useCallback,
   useMemo,
   type CSSProperties,
@@ -645,8 +646,9 @@ export function DataTable<TRow>({
         rowActions={rowActions}
         rowPersistentActions={rowPersistentActions}
         useRowDecoration={useDecorate}
-        measure={measure}
-        foldProps={foldProps}
+        measureRef={measure?.ref}
+        measureIndex={measure?.index}
+        foldInert={foldProps.inert}
         rowPad={rowPad}
         presentation={presentation}
         tree={tree}
@@ -887,8 +889,19 @@ function WithSelection({
  * decoration adds a drag-source ref, spreads drag props, extra classes, inline
  * style (the sortable slide), and an in-row overlay. Markup is byte-for-byte the
  * legacy row when no decoration is returned.
+ *
+ * Memoized: the body draws its rows in a `.map`, where no compiler memoizes an
+ * element per item, so without `memo` every commit of the table — a window
+ * scrolling a row in, a search narrowing the rows, the next page landing —
+ * re-rendered every drawn row and all its cells (~100 components a row: a
+ * Tasks search keystroke rendered ~30,000). Every prop is therefore a value or
+ * a stable identity: the measure handle travels as its two parts (the
+ * virtualizer's `measureElement` is one function per virtualizer), and the
+ * fold's row props as their one varying value (`foldInert`).
  */
-function DataTableRow<TRow>({
+const DataTableRow = memo(DataTableRowImpl) as typeof DataTableRowImpl;
+
+function DataTableRowImpl<TRow>({
   row,
   index,
   columns,
@@ -899,8 +912,9 @@ function DataTableRow<TRow>({
   rowActions,
   rowPersistentActions,
   useRowDecoration,
-  measure,
-  foldProps,
+  measureRef,
+  measureIndex,
+  foldInert,
   rowPad,
   presentation,
   tree,
@@ -921,9 +935,13 @@ function DataTableRow<TRow>({
   useRowDecoration: Hook<
     (row: TRow, index: number) => DataTableRowDecoration | undefined
   >;
-  measure?: RowMeasure;
-  /** The row's place in a fold (`useRowFold`). */
-  foldProps: RowFoldProps;
+  /** A windowed row's measurement ref (the virtualizer's `measureElement`). */
+  measureRef?: RowMeasure["ref"];
+  /** A windowed row's index, which `measureElement` reads off `data-index`. */
+  measureIndex?: number;
+  /** Whether the row is folding away (`useRowFold`'s `inert`): a value, so
+   *  the memoized row is not handed a fresh props object per render. */
+  foldInert: boolean;
   /** The row block-padding class, from the table's density. */
   rowPad: "py-row" | "py-row-compact";
   presentation: DataTablePresentation;
@@ -963,14 +981,17 @@ function DataTableRow<TRow>({
   // A decorated row in a windowed body is BOTH a drag source and a measurement
   // target, so the two refs compose (they were mutually exclusive back when
   // decoration disabled virtualization).
-  const rowRef = useComposedRef<HTMLElement>(decorationRef, measure?.ref);
+  const rowRef = useComposedRef<HTMLElement>(decorationRef, measureRef);
   const look = ROW_LOOK[presentation];
   const selected = decorationSelected ?? key === selectedRowId;
+  // The row's fold props (`useRowFold().rowProps`), keyed by its body line —
+  // a data row's line key is its row key.
+  const foldProps: RowFoldProps = { "data-row-fold": key, inert: foldInert };
   return (
     <div
       ref={rowRef}
       {...foldProps}
-      data-index={measure?.index}
+      data-index={measureIndex}
       // The row's identity on the DOM — the same marker the list and icons
       // views carry — so a test can address one row instead of walking text.
       data-row-key={key}

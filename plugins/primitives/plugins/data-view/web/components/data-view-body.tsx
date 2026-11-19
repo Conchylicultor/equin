@@ -12,6 +12,7 @@ import {
 } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import { useAppliedQuery } from "../internal/use-applied-query";
+import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   isHostedToolbar,
   isSectionsToolbar,
@@ -870,6 +871,51 @@ function DataViewBodyInner<TRow>(
     () => new Set(sortController.sortableFields.map((f) => f.id)),
     [sortController.sortableFields],
   );
+  // What the view is handed about sorting and selection, one object each
+  // while they stand: the views memoize their columns and row chrome on them,
+  // and a fresh object per render of this body re-rendered every row the
+  // view draws (a search keystroke renders this body several times).
+  const activeSort = activeState.sort;
+  const sortHeader = useMemo(
+    () => ({ active: activeSort, sortable: sortableIds }),
+    [activeSort, sortableIds],
+  );
+  // The view's writers, one function each for the body's lifetime: they act
+  // on the view model as it is when called. Closures over `viewModel` were new
+  // on every render of this body — and the model is new on every keystroke of
+  // an uncontrolled search (it holds the query) — so every row a view draws
+  // re-rendered with them (the nested table's tree context carries
+  // `setExpanded` to each row).
+  const setViewSort = useEventCallback((fieldId: string) => {
+    if (!sortableIds.has(fieldId)) {
+      throw new Error(
+        `DataView "${storageKey}": setSort("${fieldId}") names a field this list cannot sort by`,
+      );
+    }
+    viewModel.setSort(activeViewId, fieldId);
+  });
+  const setViewFilter = useEventCallback(
+    (filter: Parameters<DataViewRenderProps<unknown>["setFilter"]>[0]) =>
+      viewModel.setFilter(activeViewId, filter),
+  );
+  const setViewExpanded = useEventCallback(
+    (changes: Parameters<DataViewRenderProps<unknown>["setExpanded"]>[0]) =>
+      viewModel.setExpanded(activeViewId, changes),
+  );
+  const setViewSectionCollapsed = useEventCallback(
+    (key: string, collapsed: boolean) =>
+      viewModel.setSectionCollapsed(activeViewId, key, collapsed),
+  );
+  const viewSelection = useMemo(
+    () =>
+      selection && {
+        ...selection,
+        // Kept per surface and view instance (multi-select keeps it as
+        // view state of the place this renders in).
+        keep: `${storageKey}/${activeViewId}`,
+      },
+    [selection, storageKey, activeViewId],
+  );
   // Saved sort/filter presets are NOT read here. They are config a user only
   // ever looks at with a panel open, and each panel is a mounted component that
   // can hook freely — so `useSortPresets` / `useFilterPresets` live in the sort
@@ -1591,16 +1637,9 @@ function DataViewBodyInner<TRow>(
           fields: fields as DataViewRenderProps<unknown>["fields"],
           rowKey: rowKey as DataViewRenderProps<unknown>["rowKey"],
           state: effectiveState,
-          setSort: (fieldId) => {
-            if (!sortableIds.has(fieldId)) {
-              throw new Error(
-                `DataView "${storageKey}": setSort("${fieldId}") names a field this list cannot sort by`,
-              );
-            }
-            viewModel.setSort(activeViewId, fieldId);
-          },
-          sortHeader: { active: activeState.sort, sortable: sortableIds },
-          setFilter: (filter) => viewModel.setFilter(activeViewId, filter),
+          setSort: setViewSort,
+          sortHeader,
+          setFilter: setViewFilter,
           rowActivation:
             resolveRowActivation as DataViewRenderProps<unknown>["rowActivation"],
           onRowOpen: onRowOpen as DataViewRenderProps<unknown>["onRowOpen"],
@@ -1629,19 +1668,13 @@ function DataViewBodyInner<TRow>(
           attach: (activeAttaches
             ? attach
             : undefined) as DataViewRenderProps<unknown>["attach"],
-          // Kept per surface and view instance (multi-select keeps it as
-          // view state of the place this renders in).
-          selection: selection && {
-            ...selection,
-            keep: `${storageKey}/${activeViewId}`,
-          },
+          selection: viewSelection,
           rowSelection,
           rowDrag: rowDrag as DataViewRenderProps<unknown>["rowDrag"],
           rowDrop: viewRowDrop as DataViewRenderProps<unknown>["rowDrop"],
           // A live tree's hits are drawn open (`useLiveTree`'s `expanded`).
           expanded: treeView?.expanded ?? activeState.expanded,
-          setExpanded: (changes) =>
-            viewModel.setExpanded(activeViewId, changes),
+          setExpanded: setViewExpanded,
           // Expand-all over a live tree in expand mode would open a window per
           // node — not offered; over its hits it opens the loaded nodes.
           reportExpandAll:
@@ -1657,8 +1690,7 @@ function DataViewBodyInner<TRow>(
             rowsComplete as DataViewRenderProps<unknown>["rowsComplete"],
           sectioning: sectioning as DataViewRenderProps<unknown>["sectioning"],
           collapsedSections: viewModel.collapsedSectionsFor(activeViewId),
-          setSectionCollapsed: (key, collapsed) =>
-            viewModel.setSectionCollapsed(activeViewId, key, collapsed),
+          setSectionCollapsed: setViewSectionCollapsed,
           foldLines,
           // The flat read's placeholders, drawn around the view below — a grid
           // view keeps its cards' columns across a release above them.

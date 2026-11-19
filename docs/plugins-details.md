@@ -53599,9 +53599,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort, and nests its rows (a tree is a table with no columns) when the source has a hierarchy.
           - Web:
             - Contributes: `DataViewSlots.View` "Table" → `TableView`
-            - Uses: 86 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md)
-              - `primitives/data-view` ×45
-              - `primitives/tree` ×18
+            - Uses: 91 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md)
+              - `primitives/data-view` ×48
+              - `primitives/tree` ×19
               - `primitives/data-table` ×7
               - `primitives/css/text` ×3
               - `primitives/rank-reorder` ×3
@@ -53614,6 +53614,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/spacing.Stack`
               - `primitives/css/ui-kit.cn`
+              - `primitives/latest-ref.useEventCallback`
               - `ui/icons.Icon`
             - Exports (types): `TableViewOptions`
           - Cross-plugin:
@@ -53634,8 +53635,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --tree-root-gap`
               - `ui/tokens/density --tree-row-gap`
               - `ui/tokens/shape --spacing`
-          - Exemptions:
-            - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/nested-table-view.tsx`, `web/components/table-view.tsx` (debt)
           - Core:
             - Exports (types): `TableViewOptions`
         - **`view-core`** — Type-agnostic named-view-instance engine: instance model + resolver, config-descriptor machinery, debounced write-back, and the editable view-switcher chrome. Type-agnostic named-view-instance engine (server): the per-id `views` config descriptor + a generic registration helper. Consumers register their own ids under their own plugin.
@@ -55386,8 +55385,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `seekPredicate`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 90 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
-          - `primitives` ×34
+        - Imported by: 91 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+          - `primitives` ×35
           - `apps` ×25
           - `page` ×5
           - `conversations` ×3
@@ -58858,10 +58857,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Slots: `Tree.Disclosure`
         - Slot contributors: `Tree.Disclosure` ← `ui.tree-disclosure`
-        - Uses: 28 symbols — full list in [`plugins/primitives/plugins/tree/REFERENCE.md`](../plugins/primitives/plugins/tree/REFERENCE.md)
+        - Uses: 29 symbols — full list in [`plugins/primitives/plugins/tree/REFERENCE.md`](../plugins/primitives/plugins/tree/REFERENCE.md)
           - `primitives/css/ui-kit` ×6
           - `primitives/css/spacing` ×2
           - `primitives/dom/scroll-reveal` ×2
+          - `primitives/latest-ref` ×2
           - `primitives/link-gesture` ×2
           - `primitives/row-actions` ×2
           - `primitives/collapsible.CollapsibleChevron`
@@ -58872,7 +58872,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/text.Text`
           - `primitives/icon-button.IconButton`
-          - `primitives/latest-ref.useLatestRef`
           - `primitives/loading.Loading`
           - `primitives/rank-reorder.useRankReorderItem`
           - `primitives/search.filterTree`

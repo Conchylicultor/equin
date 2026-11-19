@@ -286,10 +286,11 @@ that layout — while row-fold moves rows with transform / clip / opacity.
 - Web:
   - Slots: `Tree.Disclosure`
   - Slot contributors: `Tree.Disclosure` ← `ui.tree-disclosure`
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×6
     - `primitives/css/spacing` ×2
     - `primitives/dom/scroll-reveal` ×2
+    - `primitives/latest-ref` ×2
     - `primitives/link-gesture` ×2
     - `primitives/row-actions` ×2
     - `primitives/collapsible.CollapsibleChevron`
@@ -300,7 +301,6 @@ that layout — while row-fold moves rows with transform / clip / opacity.
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
-    - `primitives/latest-ref.useLatestRef`
     - `primitives/loading.Loading`
     - `primitives/rank-reorder.useRankReorderItem`
     - `primitives/search.filterTree`

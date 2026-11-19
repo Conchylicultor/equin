@@ -22,6 +22,7 @@ import {
 } from "../../core";
 import type { TreeItem } from "./types";
 import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
+import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 
 /**
  * Arrow-key navigation for a tree whose rows are focusable: a key on a
@@ -102,64 +103,56 @@ export function useTreeKeyboard<T extends TreeItem>(args: {
     [selectionState, onSelectionChange, orderedIds],
   );
 
-  const onKeyDown = useCallback(
-    (e: KeyboardEvent<HTMLElement>) => {
-      const row = e.target as HTMLElement;
-      const id = row.dataset.treeId;
-      if (id === undefined || !row.hasAttribute("data-tree-row")) return;
-      if (selectionState) {
-        if (e.key === "Escape") {
-          if (selectionState.selected.size > 0) reselect({ kind: "clear" });
-          return;
-        }
-        if (e.key === "a" && (e.metaKey || e.ctrlKey)) {
-          e.preventDefault();
-          reselect({ kind: "all" });
-          return;
-        }
-        if (e.shiftKey && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
-          e.preventDefault();
-          const delta = e.key === "ArrowDown" ? 1 : -1;
-          const target = extendTarget(orderedIds, id, delta);
-          if (target === null) return;
-          reselect({ kind: "extend", from: id, delta });
-          wanted.current = target;
-          focusWanted();
-          return;
-        }
-      }
-      const move = treeKeyMove(e.key, id, flatNodes, lazyChildren);
-      if (move.kind === "none") return;
-      e.preventDefault();
-      if (move.kind === "expand") {
-        void setExpanded([{ id: move.id, expanded: move.expanded }]);
+  // One handler for the grid's lifetime, reading the rows as they are when a
+  // key lands: a handler rebuilt with every change of the rows (a search
+  // keystroke, a live update) re-rendered every row the table draws, since
+  // the renderer hands it to each of them inside one `tree` object.
+  const onKeyDown = useEventCallback((e: KeyboardEvent<HTMLElement>) => {
+    const row = e.target as HTMLElement;
+    const id = row.dataset.treeId;
+    if (id === undefined || !row.hasAttribute("data-tree-row")) return;
+    if (selectionState) {
+      if (e.key === "Escape") {
+        if (selectionState.selected.size > 0) reselect({ kind: "clear" });
         return;
       }
-      if (move.kind === "load") {
-        move.loadMore();
+      if (e.key === "a" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        reselect({ kind: "all" });
         return;
       }
-      wanted.current = move.id;
-      // A "Load more" line takes focus, never the selection: it is no row.
-      if (move.line === "more") {
+      if (e.shiftKey && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+        e.preventDefault();
+        const delta = e.key === "ArrowDown" ? 1 : -1;
+        const target = extendTarget(orderedIds, id, delta);
+        if (target === null) return;
+        reselect({ kind: "extend", from: id, delta });
+        wanted.current = target;
         focusWanted();
         return;
       }
-      reselect({ kind: "click", id: move.id });
-      onSelect(move.id, PLAIN_GESTURE);
+    }
+    const move = treeKeyMove(e.key, id, flatNodes, lazyChildren);
+    if (move.kind === "none") return;
+    e.preventDefault();
+    if (move.kind === "expand") {
+      void setExpanded([{ id: move.id, expanded: move.expanded }]);
+      return;
+    }
+    if (move.kind === "load") {
+      move.loadMore();
+      return;
+    }
+    wanted.current = move.id;
+    // A "Load more" line takes focus, never the selection: it is no row.
+    if (move.line === "more") {
       focusWanted();
-    },
-    [
-      flatNodes,
-      lazyChildren,
-      setExpanded,
-      onSelect,
-      focusWanted,
-      selectionState,
-      reselect,
-      orderedIds,
-    ],
-  );
+      return;
+    }
+    reselect({ kind: "click", id: move.id });
+    onSelect(move.id, PLAIN_GESTURE);
+    focusWanted();
+  });
 
   return { containerRef, onKeyDown: enabled ? onKeyDown : undefined };
 }

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { createContext, use, useMemo, type ReactNode } from "react";
 import {
   DataTable,
   DATA_TABLE_VIRTUALIZE_THRESHOLD,
@@ -172,40 +172,22 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
     },
   );
 
-  // Which section each row sits in. DataTable's per-row decoration hook only
-  // receives `(row, index)`, but the primitive needs the row's group to scope a
-  // drag to its own section — so resolve it by row key here, once.
-  const sectionKeyByRowKey = new Map<string, string | null>();
-  for (const section of sections) {
-    for (const entry of section.entries) {
-      sectionKeyByRowKey.set(entry.key, section.key);
+  // What a manual-order row's decoration reads (`useManualOrderDecoration`).
+  // DataTable's per-row decoration hook only receives `(row, index)`, but the
+  // primitive needs the row's group to scope a drag to its own section — so
+  // it is resolved by row key here, once per set of sections.
+  const rowKey = props.rowKey;
+  const getRank = manualOrder?.getRank;
+  const manualRowContext = useMemo((): ManualRowContextValue | null => {
+    if (getRank === undefined) return null;
+    const sectionKeyByRowKey = new Map<string, string | null>();
+    for (const section of sections) {
+      for (const entry of section.entries) {
+        sectionKeyByRowKey.set(entry.key, section.key);
+      }
     }
-  }
-
-  // Per-row decoration hook (called once per row inside DataTable's row
-  // component, so it may call hooks): the whole row is the sortable drag source,
-  // following the pointer while dragged and sliding while another row of its
-  // section passes. Defined unconditionally (recognized as a hook by name);
-  // passed to DataTable only in manual mode.
-  function useRowDecoration(
-    row: unknown,
-    i: number,
-  ): DataTableRowDecoration | undefined {
-    const id = props.rowKey(row, i);
-    const rank = manualOrder!.getRank(row);
-    // Destructured so render never reads a member off the hook output
-    // (react-hooks/refs flags member access on it, not destructuring).
-    const { ref, listeners, style } = useRankSortableItem(
-      id,
-      rank,
-      sectionKeyByRowKey.get(id) ?? null,
-    );
-    // A null rank marks the row non-orderable: the hook still runs (hooks rule),
-    // but we return no decoration so its ref attaches to nothing — the row is
-    // neither a drag source nor a drop target.
-    if (rank == null) return undefined;
-    return { ref, props: { ...listeners }, style };
-  }
+    return { rowKey, getRank, sectionKeyByRowKey };
+  }, [sections, rowKey, getRank]);
 
   // The host owns loading→empty precedence (it skips this view while loading),
   // so an empty section set always means confirmed-empty.
@@ -314,8 +296,13 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
     // The title takes the slack unless its field sets a width.
     ...(f === titleField ? { width: f.width ?? "minmax(0,1fr)" } : undefined),
   }));
+  // The props a render calls are read into locals first: `props.x?.(…)` is a
+  // method call on `props`, which the compiler can only key on the whole props
+  // object — new on every render of the host — so the columns and row
+  // actions (and every row they reach) would be rebuilt each time.
+  const { hasChildren, setSort, setSectionCollapsed, sectionSummary } = props;
   const hasChildrenOf = (row: unknown): boolean =>
-    props.hasChildren?.(props.rowKey(row, 0)) ?? false;
+    hasChildren?.(rowKey(row, 0)) ?? false;
   const columns: ColumnDef<unknown>[] = thumb
     ? [
         {
@@ -338,7 +325,7 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
 
   const actionProps = (row: unknown, i: number) => ({
     row,
-    hasChildren: props.hasChildren?.(props.rowKey(row, i)) ?? false,
+    hasChildren: hasChildren?.(rowKey(row, i)) ?? false,
   });
   const rowActions = revealed
     ? (row: unknown, i: number) => revealed(actionProps(row, i))
@@ -353,7 +340,7 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
     // The ACTIVE sort, for the arrow — `state.sort` is empty under a
     // server-ordered source.
     sortState: mapPrimary(props.sortHeader.active),
-    onToggleSort: (columnId: string) => props.setSort(columnId),
+    onToggleSort: (columnId: string) => setSort(columnId),
     // The table speaks the same `Activation` the surface resolves: a link row's
     // middle- / ⌘-click opens its URL in a browser tab, Enter runs it.
     rowActivation: props.rowActivation,
@@ -372,7 +359,7 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
     openKeys: props.foldLines?.open,
     // Manual order: per-row drag affordances. Composes with DataTable's
     // windowing. Sort is already hidden by the host while manual order is on.
-    useRowDecoration: manualOrder ? useRowDecoration : undefined,
+    ...(manualOrder ? MANUAL_ORDER_DECORATION : undefined),
     columnHeader: options.columnHeader,
     // The view's Column captions switch, else the code's `header`.
     header: tableHeaderOption(options),
@@ -445,8 +432,8 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
                   <DataViewGroupHeader
                     section={section}
                     open={!collapsed}
-                    onClick={() => props.setSectionCollapsed?.(key, !collapsed)}
-                    summary={props.sectionSummary?.(section)}
+                    onClick={() => setSectionCollapsed?.(key, !collapsed)}
+                    summary={sectionSummary?.(section)}
                   />
                 </NestedSectionIndent>
               ),
@@ -493,12 +480,62 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
             : undefined
         }
       >
-        {(activeId) => renderTable(activeId)}
+        {(activeId) => (
+          <ManualRowContext value={manualRowContext}>
+            {renderTable(activeId)}
+          </ManualRowContext>
+        )}
       </RankReorderProvider>
     );
   }
   return renderTable(null);
 }
+
+/** What a manual-order row's decoration reads, handed down as one context
+ *  value so the decoration hook is a module constant: a hook declared inside
+ *  the view was a new `useRowDecoration` on every render (re-rendering every
+ *  row) and kept the React Compiler off the whole view. */
+interface ManualRowContextValue {
+  rowKey: (row: unknown, index: number) => string;
+  getRank: ManualOrderConfig<unknown>["getRank"];
+  /** Which section each row sits in, by row key. */
+  sectionKeyByRowKey: ReadonlyMap<string, string | null>;
+}
+
+const ManualRowContext = createContext<ManualRowContextValue | null>(null);
+
+/**
+ * Per-row decoration hook (called once per row inside DataTable's row
+ * component, so it may call hooks): the whole row is the sortable drag source,
+ * following the pointer while dragged and sliding while another row of its
+ * section passes. Passed to DataTable only in manual mode.
+ */
+function useManualOrderDecoration(
+  row: unknown,
+  i: number,
+): DataTableRowDecoration | undefined {
+  const ctx = use(ManualRowContext);
+  if (ctx === null)
+    throw new Error("A manual-order table row rendered outside its table view");
+  const id = ctx.rowKey(row, i);
+  const rank = ctx.getRank(row);
+  // Destructured so render never reads a member off the hook output
+  // (react-hooks/refs flags member access on it, not destructuring).
+  const { ref, listeners, style } = useRankSortableItem(
+    id,
+    rank,
+    ctx.sectionKeyByRowKey.get(id) ?? null,
+  );
+  // A null rank marks the row non-orderable: the hook still runs (hooks rule),
+  // but we return no decoration so its ref attaches to nothing — the row is
+  // neither a drag source nor a drop target.
+  if (rank == null) return undefined;
+  return { ref, props: { ...listeners }, style };
+}
+
+/** The manual-order decoration, bound once so the view hands `DataTable` a
+ *  constant (and never names a hook as a value, which the compiler refuses). */
+const MANUAL_ORDER_DECORATION = { useRowDecoration: useManualOrderDecoration };
 
 /** Flatten the sections into the rank-reorder item list (id + rank + group).
  *  Null-rank entries are non-orderable, so they are neither reorder-scope
