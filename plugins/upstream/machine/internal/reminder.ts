@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { parsed } from "@plugins/database/plugins/sql-projection/server";
@@ -22,17 +22,15 @@ import {
 import { upstreamReleaseSubject } from "../../shared/subject";
 import { OUT_OF_DATE_TITLE, outOfDateSummary } from "../../shared/update-words";
 
-/** When the newest reminder about `latest` was written, dismissed or not. */
-async function lastRemindedAt(latest: string): Promise<Date | null> {
+/**
+ * When the newest reminder was written — about any release, dismissed or not:
+ * the cadence is the user's, so a newer release does not restart it.
+ */
+async function lastRemindedAt(): Promise<Date | null> {
   const [row] = await db
     .select({ createdAt: _notifications.createdAt })
     .from(_notifications)
-    .where(
-      and(
-        eq(_notifications.type, REMINDER_NOTIFICATION_TYPE),
-        sql`${_notifications.metadata} ->> ${REMINDER_RELEASE_KEY} = ${latest}`,
-      ),
-    )
+    .where(eq(_notifications.type, REMINDER_NOTIFICATION_TYPE))
     .orderBy(desc(_notifications.createdAt))
     .limit(1);
   return row?.createdAt ?? null;
@@ -42,8 +40,8 @@ async function lastRemindedAt(latest: string): Promise<Date | null> {
  * The update reminder, after a check found `latest` missing from local `main`:
  * one user notification "equin is out of date" whose action (`equin-update`,
  * web) sends an agent or puts the reminder off — written only when
- * `reminderDecision` says it is due (once per release, then at most monthly or
- * when the user's snooze ends; never while reminders are off, the release is
+ * `reminderDecision` says it is due (at most every two weeks whichever release
+ * it is about, or when the user's snooze ends; never while reminders are off, the release is
  * skipped or an update task exists).
  *
  * Each reminder is its own row (the decision is the cadence, not a dedup
@@ -61,7 +59,7 @@ export async function remindOfRelease(
     settings: getConfig(upstreamReminderConfig),
     latest,
     taskLive: (await findSubjectTask(upstreamReleaseSubject(latest))) !== null,
-    lastRemindedAt: await lastRemindedAt(latest),
+    lastRemindedAt: await lastRemindedAt(),
     now,
   });
   if (decision.kind !== "remind") return decision;

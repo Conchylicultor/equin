@@ -1,9 +1,16 @@
 import { z } from "zod";
 
-/** How often an unanswered release is brought up again: at most monthly. */
-export const REMINDER_CADENCE_MS = 30 * 24 * 60 * 60 * 1000;
-
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * How often the user hears that equin is out of date: at most every two weeks,
+ * whichever release it is about. Counted across releases, not per release —
+ * upstream may cut one a day, and each new tag must not toast again.
+ */
+export const REMINDER_CADENCE_MS = 14 * DAY_MS;
+
+/** "Remind me later → In a month". */
+const MONTH_MS = 30 * DAY_MS;
 
 /** The reminder notification's own words, shared by the writer and its tests. */
 export const REMINDER_NOTIFICATION_TYPE = "upstream-release-reminder";
@@ -34,16 +41,20 @@ export interface ReminderInputs {
   latest: string;
   /** A task about that release exists (an update is under way). */
   taskLive: boolean;
-  /** When the newest reminder about `latest` was written (`null`: never). */
+  /**
+   * When the newest reminder was written — about ANY release (`null`: never).
+   * The cadence is the user's, not a release's: a newer release does not
+   * restart it.
+   */
   lastRemindedAt: Date | null;
   now: Date;
 }
 
 /**
- * Why a reminder is (not) written now. The user hears of a release once, then
- * at most every `REMINDER_CADENCE_MS` — unless they chose when ("Remind me
- * later"): a snooze set after the last reminder replaces the cadence, so
- * "Tomorrow" really is tomorrow.
+ * Why a reminder is (not) written now. The user hears that equin is out of
+ * date at most every `REMINDER_CADENCE_MS`, however many releases upstream cuts
+ * meanwhile — unless they chose when ("Remind me later"): a snooze set after
+ * the last reminder replaces the cadence, so "Tomorrow" really is tomorrow.
  */
 export type ReminderDecision =
   | { kind: "remind" }
@@ -110,7 +121,7 @@ export function laterWrite(
     case "week":
       return after(7 * DAY_MS);
     case "month":
-      return after(REMINDER_CADENCE_MS);
+      return after(MONTH_MS);
     case "skip":
       return { key: "skippedRelease", value: latest };
     case "never":

@@ -142,14 +142,15 @@ which writes ONE user notification "equin is out of date" (`2026.10.30 →
 - the release is not the `skippedRelease`;
 - no task about the release exists (an update is under way — the row shows it);
 - now is past `snoozedUntil`;
-- and the release was never brought up, or its last reminder is 30 days old,
-  or the user snoozed it after that reminder (the snooze replaces the cadence,
+- and no reminder was ever written, or the last one — about **any** release,
+  so a release cut every day still toasts at most every two weeks — is 14
+  days old, or the user snoozed it after that reminder (the snooze replaces the cadence,
   so "Tomorrow" is tomorrow's check, not a month away). A snooze ends at the
   start of the UTC day it lands on, so the daily 05:00 UTC check of that day
   picks it up whatever hour the user clicked.
 
-"Its last reminder" is read from the notifications table (the newest row of
-type `upstream-release-reminder` whose metadata names the release, dismissed or
+"The last reminder" is read from the notifications table (the newest row of
+type `upstream-release-reminder`, whichever release it names, dismissed or
 not). Each reminder is its own row; the day in its dedupe key only keeps two
 runs of one day's job from writing twice. On `current`, the job settles every
 reminder (that release's and every earlier one's) in place (state resolved,

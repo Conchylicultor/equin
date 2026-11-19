@@ -54,7 +54,7 @@ describe("reminderDecision", () => {
     ).toBe("remind");
   });
 
-  it("reminds again at most monthly", () => {
+  it("reminds again at most every two weeks", () => {
     expect(reminderDecision(inputs({ lastRemindedAt: ago(DAY) }))).toEqual({
       kind: "quiet",
       reason: "reminded",
@@ -62,6 +62,20 @@ describe("reminderDecision", () => {
     expect(
       reminderDecision(inputs({ lastRemindedAt: ago(REMINDER_CADENCE_MS) }))
         .kind,
+    ).toBe("remind");
+  });
+
+  it("a newer release does not restart the cadence", () => {
+    // The last reminder was about an older release, a day ago.
+    expect(
+      reminderDecision(
+        inputs({ latest: "v2026.11.20", lastRemindedAt: ago(DAY) }),
+      ),
+    ).toEqual({ kind: "quiet", reason: "reminded" });
+    expect(
+      reminderDecision(
+        inputs({ latest: "v2026.11.20", lastRemindedAt: ago(14 * DAY) }),
+      ).kind,
     ).toBe("remind");
   });
 
@@ -100,9 +114,7 @@ describe("laterWrite", () => {
     });
     expect(laterWrite("month", "v1", afternoon)).toEqual({
       key: "snoozedUntil",
-      value: new Date(
-        new Date("2026-11-17T00:00:00Z").getTime() + REMINDER_CADENCE_MS,
-      ),
+      value: new Date(new Date("2026-11-17T00:00:00Z").getTime() + 30 * DAY),
     });
     // Tomorrow's 05:00 UTC check is past the snooze.
     expect(
