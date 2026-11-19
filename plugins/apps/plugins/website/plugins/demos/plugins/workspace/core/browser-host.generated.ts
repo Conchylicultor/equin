@@ -747,6 +747,7 @@ export const browserHost = {
     "primitives.report-sink",
     "primitives.row-actions",
     "primitives.scope.app-instance",
+    "primitives.scope.automation",
     "primitives.scope.context-relay",
     "primitives.scope.dom-scope",
     "primitives.scope.host-election",

@@ -95,6 +95,7 @@ before it) beside the total, worded by `formatReportActivity`
     - `ids.IdKinds`
     - `infra/endpoints.fetchEndpointOver`
     - `primitives/networking/page-transport.pageTransport`
+    - `primitives/scope/automation.AUTOMATED_BROWSER`
     - `primitives/scope/tab-id.getTabId`
     - `primitives/slot-render.defineDispatchSlot`
   - Exports (types):

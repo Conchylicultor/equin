@@ -1,6 +1,7 @@
 import { fetchEndpointOver } from "@plugins/infra/plugins/endpoints/web";
 import { pageTransport } from "@plugins/primitives/plugins/networking/plugins/page-transport/web";
 import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
+import { AUTOMATED_BROWSER } from "@plugins/primitives/plugins/scope/plugins/automation/web";
 import { defineRequestSink } from "@plugins/primitives/plugins/report-sink/core";
 import {
   fitReportBody,
@@ -37,6 +38,9 @@ export type ClientReportOutcome =
  * saying so — never refused or dropped for its size.
  */
 export type ReportChannel = (body: ReportBody) => Promise<ClientReportOutcome>;
+
+/** What a report filed by an automated browser opens with. */
+const AUTOMATED_REPORT_PREFIX = "(automated browser) ";
 
 // Retry budget for one report: 6 retries sleeping 0.5, 1, 2, 4, 8, 16 s
 // (backoffMs * 2^attempt, ±15% jitter) — about 31.5 s across 7 attempts, enough
@@ -115,8 +119,16 @@ export async function report(
     const stamped = {
       ...body,
       // A blank message is a collector bug: filed anyway, saying so, so the bug
-      // reaches Reports instead of vanishing with the report.
-      message: reportMessageOrDerived(body),
+      // reaches Reports instead of vanishing with the report. A report an
+      // automated browser filed (an agent driving the page, an e2e run) says
+      // so first — marked, never muted (scope/automation): a script moving a
+      // map's camera sends no input, and a background-priority headless
+      // browser's frames are seconds long, so its render loops and slow
+      // interactions read as a visitor's unless named. In the message, in
+      // front: the one field every channel carries to every surface (the
+      // site's intake and its import included), and the end is what a trim
+      // cuts.
+      message: `${AUTOMATED_BROWSER ? AUTOMATED_REPORT_PREFIX : ""}${reportMessageOrDerived(body)}`,
       url: body.url ?? window.location.href,
       clientId: body.clientId ?? getTabId(),
       // The ARTIFACT this tab is running — the graph hash baked into the bundle,

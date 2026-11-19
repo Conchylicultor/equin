@@ -26,6 +26,17 @@ re-lays out each frame (a map redraws its tiles): counting it keeps that out
 of the reports, while a layout-driven loop (a ResizeObserver oscillating)
 fires no window resize and is still caught.
 
+The user must stay idle through the attribution window too: the window
+watches React's commits, and input there makes them the user's (panning the
+map again names the map's camera re-render as the "loop's" cause). A
+detection the user interrupts is dropped (logged as `interrupted`) and may
+fire again later.
+
+A script moving the page (an agent's headless browser calling the map's
+`moveCamera`, resizing a box) sends no input either, so what it drives reads
+as idle. Every report such a browser files says so up front — `report()`
+prefixes `(automated browser)` (`scope/automation`) — never muted.
+
 ## Animation hosts
 
 An intended imperative animation (a rAF loop drawing an SVG scene) writes

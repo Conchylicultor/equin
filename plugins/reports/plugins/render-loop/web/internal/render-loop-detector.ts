@@ -314,6 +314,27 @@ export function installRenderLoopDetector(): () => void {
     return attribution;
   }
 
+  /**
+   * Whether the user acted after `since` (input, a resize, a held playback).
+   * A loop is filed only when the user stayed idle through its attribution
+   * window too: the window watches React's commits, and input in it (the user
+   * panning the map again) makes those commits theirs — the demo's Places named
+   * Map's camera re-render as a 1181/s loop's cause that way.
+   */
+  function actedSince(since: number): boolean {
+    const now = performance.now();
+    return msIdle(now) < now - since;
+  }
+
+  /** A detection the user interrupted: logged, and free to fire again. */
+  function interrupted(guard: string, base: { signature: string }): void {
+    firedGuards.delete(guard);
+    clientLog(
+      CHANNEL,
+      JSON.stringify({ kind: "interrupted", signature: base.signature }),
+    );
+  }
+
   /** True for animation-driven style writes that are legitimately fast (4a excl). */
   function isAnimationAttr(attrName: string | null, target: Node): boolean {
     if (attrName !== "style") return false;
@@ -568,7 +589,15 @@ export function installRenderLoopDetector(): () => void {
     // navigation away from it.
     const url = window.location.href;
     const anchor = state.anchor;
+    const detectedAt = performance.now();
     const attributed = scopeAttribution(await attribute(), anchor);
+    if (actedSince(detectedAt)) {
+      interrupted(
+        `${base.signature}|${base.mutationClass}|${base.attrName ?? ""}`,
+        base,
+      );
+      return;
+    }
     const data: RenderLoopPayload = {
       signature: meta.signature,
       pluginId: meta.pluginId ?? null,
@@ -703,7 +732,12 @@ export function installRenderLoopDetector(): () => void {
     );
     const url = window.location.href;
     const anchor = agg.anchor;
+    const detectedAt = performance.now();
     const attributed = scopeAttribution(await attribute(), anchor);
+    if (actedSince(detectedAt)) {
+      interrupted(`${base.signature}|${base.mutationClass}|`, base);
+      return;
+    }
     // The aggregate root is a coarse container — all per-node marker fields are
     // null (pluginId/source/owner/etc. vary across the subtree by design).
     const data: RenderLoopPayload = {
