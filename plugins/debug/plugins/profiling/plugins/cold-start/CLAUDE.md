@@ -59,6 +59,28 @@ commit subscribers, installed before the app loads): commits before first
 data, commits between first data and route content, and the longest stretch
 with no commit in that window.
 
+## Warm loads: `e2e/warm-load.ts`
+
+The other end: the server up and every byte of code already cached, as a
+returning user of the local app loads it. One context whose HTTP and code
+caches a warm-up load fills, then per iteration first paint, route content,
+the `boot:*` spans and the renderer's main-thread time before route content
+and from there to `deferred-load-complete` (the "load and run everything else"
+tier). `--coverage` adds one load under V8 precise coverage: of the source
+modules the page's HTML preloads (counted from each chunk's source map), how
+many were initialised (their `__esmMin` init ran) and how many had a real
+function called by route content. Its isolated `import()` row is NOT the
+2026-11-13 eval number: route chunks run module bodies only when the app's
+boot calls their inits, so it measures linking alone (see the script header).
+
+```bash
+./equin run plugins/debug/plugins/profiling/plugins/cold-start/e2e/warm-load.ts \
+  [--path /agents] [--iterations 5] [--coverage] [--out "$EQUIN_SCRATCH/warm.json"]
+```
+
+A background job process's start-up cost (the server side's other short-lived
+boot) is measured by `framework/server-core/scripts/exec-boot-cost.ts`.
+
 ## Per iteration
 
 1. `POST /gateway/worktrees/<ns>/stop` (gateway API, reached through the target
