@@ -7,6 +7,7 @@ import {
   type SlowInteractionDraft,
 } from "../../core";
 import type { StallStacks } from "@plugins/reports/plugins/main-thread-stall/plugins/tab-evidence/core";
+import { coarseClient } from "./coarse-client";
 import { INTERACTION, type InteractionVerdict } from "./interaction-judge";
 
 // The slow-op every slow interaction lands as: one row per target (what was
@@ -56,7 +57,11 @@ export async function fileSlowInteraction(
   await report({
     kind: REPORT_KIND,
     source: "client-slow-interaction",
-    data: { ...d, stacks: await stacks() },
+    data: {
+      ...d,
+      client: coarseClient(navigator.userAgent),
+      stacks: await stacks(),
+    },
     message: slowInteractionSummary(d),
     url: d.url,
   });

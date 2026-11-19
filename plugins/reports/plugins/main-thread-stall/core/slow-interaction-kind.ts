@@ -7,7 +7,7 @@ import {
   InteractionTargetSchema,
 } from "./interaction-target";
 import { StallStacksSchema } from "@plugins/reports/plugins/main-thread-stall/plugins/tab-evidence/core";
-import { StallFrameSchema } from "./main-thread-stall-kind";
+import { StallClientSchema, StallFrameSchema } from "./main-thread-stall-kind";
 
 // The `slow-interaction` report payload: a click, tap or key press whose next
 // paint came late — the delay the user felt, measured by the browser's Event
@@ -62,6 +62,12 @@ export const SlowInteractionPayloadSchema = z.object({
     kind: "unavailable",
     reason: "filed before slow-interaction reports carried sampled stacks",
   }),
+  // The browser it happened in (family and OS only — see StallClientSchema),
+  // read by the tab when it reports one. Evidence only, like `stacks`: never
+  // part of the fingerprint or summary. A presentation delay is the browser's
+  // own rendering and media work, which differs by engine, so it is the first
+  // thing reproducing one needs.
+  client: StallClientSchema.default({ family: "unknown", os: "unknown" }),
 });
 export type SlowInteractionPayload = z.infer<
   typeof SlowInteractionPayloadSchema
@@ -69,10 +75,14 @@ export type SlowInteractionPayload = z.infer<
 
 /**
  * A slow interaction as the interaction watch measures it: everything but
- * `stacks`, which the tab adds from its profiler only when it reports one. It
- * is also all the fingerprint and summary may read.
+ * `stacks` and `client`, which the tab adds (from its profiler, from its user
+ * agent) only when it reports one. It is also all the fingerprint and summary
+ * may read.
  */
-export type SlowInteractionDraft = Omit<SlowInteractionPayload, "stacks">;
+export type SlowInteractionDraft = Omit<
+  SlowInteractionPayload,
+  "stacks" | "client"
+>;
 
 /**
  * What was interacted with — kind, key class, element, contribution, pane and
