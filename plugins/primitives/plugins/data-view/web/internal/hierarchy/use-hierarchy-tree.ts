@@ -392,6 +392,7 @@ export function useHierarchyTree(args: {
       onSelect,
       selectHref: props.rowActivation ? selectHref : undefined,
       setExpanded,
+      holdOpen: props.holdOpen,
       // A field sort overrides the manual (rank) order, so drag-to-reorder
       // would move a row with no visible effect — no DnD while sorted (drop
       // back to manual to reorder), mirroring Notion. `onCreate` stays.

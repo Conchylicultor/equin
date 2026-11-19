@@ -16,11 +16,27 @@ own key space (the tree model's expanded ids, a table's open folds; a
 `DataTable` adds its groups' open state itself). It is state the owner already
 has, so there is no "this change was a toggle" call to forget.
 
-`detectDisclosure` (core) decides: a change of `items` folds only when some
-open key flipped that is not itself a row appearing or vanishing (a row
-inserted already open is live data). Scrolling a window, a search, a scope,
-live inserts, a page arriving never flip the open set, so they land as they
-are. A list passing no `openKeys` never folds.
+`detectDisclosure` (core) decides: a change of `items` is a toggle only when
+some open key flipped that is not itself a row appearing or vanishing (a row
+inserted already open is live data) **and** the rows changed only as those
+flips would change them — the surviving rows keep their order, each gap
+between two of them only gains rows or only loses them, and, when every
+toggled key is a line both lists draw, no more gaps change than lines toggled
+(a toggled line's subtree is one run under it). A toggled key that is no line
+(a fold line's, a group's) bounds nothing: a fold line puts each folded row
+back in its sorted place.
+
+**`openKeys` is the user's disclosure state, not what is drawn open.** A
+search or filter that holds rows open draws them open without moving it —
+the tree model's search forces its keepers open in the painted forest, never
+in `openKeys`; the DataView live tree hands no expand map of its own under a
+search for the same reason. The shape is the guard behind that, for an owner
+whose open set still moves with a filter (a rows-scoped filter opening its
+hits by default): a filter drops and adds rows all over the list, between
+rows that stay, so it lands as it is and opens nothing to await. Scrolling a
+window, a scope, live inserts, a page arriving land as they are too — and so
+does a toggle landing in the same commit as such a change. A list passing no
+`openKeys` never folds.
 
 **A reveal may land after its toggle** — a lazy node opens onto a
 "Loading…" placeholder its children replace one listing later; a live
@@ -85,6 +101,7 @@ a 60 fps display paints). It passes on the tween clock.
 - Core:
   - Exports (types):
     - `AwaitedReveal`
+    - `DisclosureRead`
     - `FoldingRow`
     - `IsStandIn`
     - `RowDisclosure`

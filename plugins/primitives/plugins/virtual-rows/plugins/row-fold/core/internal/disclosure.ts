@@ -24,19 +24,43 @@ export interface RowDisclosure<T> {
 type GetKey<T> = (item: T, index: number) => string;
 
 /**
- * Whether `prev → next` is a disclosure, and what it revealed and hid.
+ * One change of a list, read: a TOGGLE (the open set flipped, and the rows
+ * changed only as those flips would change them) with what it drew — `null`
+ * when it drew nothing yet (a lazy node opening onto rows still on their way) —
+ * or any other CHANGE, which lands as it is and awaits nothing.
+ */
+export type DisclosureRead<T> =
+  { kind: "toggle"; disclosure: RowDisclosure<T> | null } | { kind: "change" };
+
+const CHANGE = { kind: "change" } as const;
+
+/**
+ * Whether `prev → next` is a toggle, and what it revealed and hid.
  *
- * A change of the list is a disclosure when a disclosure OPENED or CLOSED in
- * the same commit: a key whose membership in the open set flipped, and which
- * is not a row that itself appeared or vanished — a row inserted already
- * expanded, or deleted while expanded, is live data, not a toggle. Every other
- * change (scrolling a window, a search narrowing, live inserts, a page
- * arriving) leaves the open set alone and is no disclosure: `null`. So is a
- * disclosure that changed nothing drawn (a toggle under a search that holds
- * the subtree open).
+ * A change of the list is a toggle when a disclosure OPENED or CLOSED in
+ * the same commit — a key whose membership in the open set flipped, and which
+ * is not a row that itself appeared or vanished (a row inserted already
+ * expanded, or deleted while expanded, is live data, not a toggle) — AND the
+ * change has a disclosure's shape (`explainedByToggles`): the surviving rows
+ * keep their order, each gap between two of them only gains rows or only
+ * loses them, and — when every toggled key is a line both lists draw — no
+ * more gaps change than lines toggled (a toggled line's subtree is one run).
+ * A toggled key that is no line (a fold line's, a group's) may reveal rows in
+ * any number of gaps: a fold line puts each folded row back in its place.
+ *
+ * The shape is what tells a toggle from a filter whose owner's open set
+ * moves with it (a search holding every parent of a hit open, a filter
+ * opening the nodes it keeps): a filter drops and adds rows all over the
+ * list, between rows that stay. Every change that is not a toggle —
+ * scrolling a window, a search, live inserts, a page arriving, and a toggle
+ * that lands in the same commit as such a change — is a `change`, drawn as it
+ * lands. A toggle that changed nothing drawn (a lazy node opening onto rows
+ * still on their way, a toggle under a search holding the subtree open) is a
+ * toggle with a `null` disclosure.
  *
  * `openKeys` lives in the owner's own key space — a tree's expanded node ids,
- * a table's open group or fold keys; only its flips are read.
+ * a table's open group or fold keys; only its flips are read, so the shape is
+ * read from the rows alone, never from where a toggled key sits.
  */
 export function detectDisclosure<T>({
   prevItems,
@@ -50,17 +74,28 @@ export function detectDisclosure<T>({
   prevOpen: ReadonlySet<string>;
   nextOpen: ReadonlySet<string>;
   getKey: GetKey<T>;
-}): RowDisclosure<T> | null {
-  if (prevItems === nextItems) return null;
+}): DisclosureRead<T> {
   const flipped = symmetricDifference(prevOpen, nextOpen);
-  if (flipped.length === 0) return null;
-
+  if (flipped.length === 0) return CHANGE;
   const prevKeys = prevItems.map(getKey);
   const nextKeys = nextItems.map(getKey);
   const prevSet = new Set(prevKeys);
   const nextSet = new Set(nextKeys);
-  const toggled = flipped.some((key) => prevSet.has(key) === nextSet.has(key));
-  if (!toggled) return null;
+  // Toggled: a flipped key drawn in both lists (a tree line), or drawn in
+  // neither (a fold line's or a group's key, in the owner's own key space).
+  const onLines = flipped.filter(
+    (key) => prevSet.has(key) && nextSet.has(key),
+  ).length;
+  const offLines = flipped.some(
+    (key) => !prevSet.has(key) && !nextSet.has(key),
+  );
+  if (onLines === 0 && !offLines) return CHANGE;
+  // A toggled line reveals or hides one run, right under it; a key that is no
+  // line may reveal rows anywhere (a fold line puts each folded row back in
+  // its sorted place), so it bounds nothing.
+  const maxRuns = offLines ? Infinity : onLines;
+  if (!explainedByToggles(prevKeys, nextKeys, prevSet, nextSet, maxRuns))
+    return CHANGE;
 
   const revealed = new Set(nextKeys.filter((key) => !prevSet.has(key)));
   const hidden: FoldingRow<T>[] = [];
@@ -69,8 +104,11 @@ export function detectDisclosure<T>({
     if (nextSet.has(key)) after = key;
     else hidden.push({ key, item: prevItems[i]!, after });
   });
-  if (revealed.size === 0 && hidden.length === 0) return null;
-  return { revealed, hidden };
+  return {
+    kind: "toggle",
+    disclosure:
+      revealed.size === 0 && hidden.length === 0 ? null : { revealed, hidden },
+  };
 }
 
 /**
@@ -245,6 +283,41 @@ export function withFoldingRows<T>(
     if (following) out.push(...following);
   });
   return out;
+}
+
+/**
+ * Whether `prevKeys → nextKeys` is shaped like toggles and nothing else: the
+ * rows both lists draw in the same order, each changed gap between them all
+ * new rows (revealed) or all gone (hidden), and no more changed gaps than
+ * `maxRuns` — one per toggled line (nested toggles inside one revealed
+ * subtree share its run, so `<=`).
+ */
+function explainedByToggles(
+  prevKeys: readonly string[],
+  nextKeys: readonly string[],
+  prevSet: ReadonlySet<string>,
+  nextSet: ReadonlySet<string>,
+  maxRuns: number,
+): boolean {
+  // Per gap (0 = before the first surviving row, i = after the i-th): what
+  // the change did there — 1 removed rows, 2 inserted rows, 3 both.
+  const gaps = new Map<number, number>();
+  const survivors: string[] = [];
+  for (const key of prevKeys) {
+    if (nextSet.has(key)) survivors.push(key);
+    else gaps.set(survivors.length, 1);
+  }
+  let seen = 0;
+  for (const key of nextKeys) {
+    if (prevSet.has(key)) {
+      // A surviving row out of its old order: a sort, not a toggle.
+      if (survivors[seen] !== key) return false;
+      seen++;
+    } else gaps.set(seen, (gaps.get(seen) ?? 0) | 2);
+  }
+  if (gaps.size > maxRuns) return false;
+  for (const what of gaps.values()) if (what === 3) return false;
+  return true;
 }
 
 function symmetricDifference(

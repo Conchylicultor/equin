@@ -1559,6 +1559,13 @@ export interface DataViewRenderProps<TRow> {
   /** This view's expand map — the ONE home for tree collapse state. Persisted in
    * ViewState (localStorage), keyed per (surface, view-instance, row). */
   expanded?: Record<string, boolean>;
+  /**
+   * The rows are a search's hits, narrowed by their source (a live tree's
+   * server-side search): a hierarchical view draws every node open, without
+   * writing `expanded` — the user's open state, which a fold reads a toggle
+   * from (`useTreeModel`'s `holdOpen`). Absent = false.
+   */
+  holdOpen?: boolean;
   /** Write this view's expand map (writes THIS view's ViewState). Always supplied
    *  by the host, so a hierarchical view can rely on it. Batch-shaped: the whole
    *  gesture lands in ONE localStorage write, so expand-all over a large tree

@@ -98,12 +98,18 @@ export interface LiveTreeView<TRow> {
   /** The reads behind the rows — the body renders this node (it draws nothing). */
   readers: ReactNode;
   /**
-   * In hits mode, the expand map the rows are drawn under: every loaded node
-   * holding loaded rows open unless the user closed it (a search opens them
-   * all) — a hit is never hidden behind an ancestor nobody opened. `null` in
-   * expand mode (the view's own map).
+   * Under a filter's hits, the expand map the rows are drawn under: every
+   * loaded node holding loaded rows open unless the user closed it — a hit is
+   * never hidden behind an ancestor nobody opened. `null` in expand mode and
+   * under a search (the view's own map — `holdOpen` draws the hits open).
    */
   expanded: Record<string, boolean> | null;
+  /**
+   * The rows are a search's hits: drawn open by the tree model itself
+   * (`holdOpen`), never through the expand map — which stays the user's open
+   * set, so a keystroke changing the hits is never read as a toggle (row-fold).
+   */
+  holdOpen: boolean;
 }
 
 /**
@@ -824,15 +830,19 @@ export function useLiveTree<TRow>(args: {
     return { ...view, rows, paging };
   }, [view, access, rows, pagedIds, revealNotice, ancestorsPending]);
 
-  // Hits mode: every node holding loaded rows open unless the user closed it;
-  // a search opens them all.
+  // A filter's hits: every node holding loaded rows open unless the user
+  // closed it. A search's hits keep the view's own map and are drawn open by
+  // the tree model (`holdOpen`), which leaves the open set — what row-fold
+  // reads a toggle from — the user's. Opening them in the map would flip it on
+  // every keystroke (and on clearing the search), and each would fold.
+  const holdOpen = mode === "hits" && query !== "";
   const expanded = useMemo(() => {
-    if (mode !== "hits" || !synthetic) return null;
+    if (mode !== "hits" || !synthetic || query !== "") return null;
     const out: Record<string, boolean> = {};
     for (const row of rows) {
       const parent = synthetic.getParentId(row);
       if (parent === null) continue;
-      out[parent] = query !== "" ? true : (viewExpanded?.[parent] ?? true);
+      out[parent] = viewExpanded?.[parent] ?? true;
     }
     return { ...viewExpanded, ...out };
   }, [mode, synthetic, rows, query, viewExpanded]);
@@ -893,7 +903,7 @@ export function useLiveTree<TRow>(args: {
     ) : null;
 
   if (!source || !origin || !synthetic) return null;
-  return { mode, origin, hierarchy: synthetic, readers, expanded };
+  return { mode, origin, hierarchy: synthetic, readers, expanded, holdOpen };
 }
 
 /**

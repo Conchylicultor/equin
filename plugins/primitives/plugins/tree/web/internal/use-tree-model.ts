@@ -90,6 +90,15 @@ export type TreeModelArgs<T extends TreeItem> = {
    */
   search?: { accessor: (row: T) => string; query: string };
   /**
+   * Draw every node open — the rows ARE a search's hits, narrowed by their
+   * source (a live tree's server-side search), so each kept parent shows the
+   * hits under it, as `search` does for its own. Like `search`, it opens the
+   * painted forest only: `rows[].expanded` (the user's open set, `openKeys`)
+   * is left alone, so a keystroke that changes the hits is never read as a
+   * toggle. Default false.
+   */
+  holdOpen?: boolean;
+  /**
    * Whether the data source supports creation. Defaults to true (matching the
    * historical always-on add affordance). Drives the per-row hover "+" so a
    * read-only tree shows no non-functional add button.
@@ -185,6 +194,7 @@ export function useTreeModel<T extends TreeItem>(
     onCreate,
     dragOverlay,
     search,
+    holdOpen = false,
     canCreate = true,
     expandOnActivate,
     openOnActivate,
@@ -237,14 +247,23 @@ export function useTreeModel<T extends TreeItem>(
   const searchQuery = search?.query ?? "";
   const visibleTree = useMemo(() => {
     const needle = searchQuery.trim().toLowerCase();
-    if (!needle || !searchAccessor) return tree;
-    return filterTree<TreeNode<T>>(
-      tree,
-      (n) => searchAccessor(n).toLowerCase().includes(needle),
-      (n) => n.children,
-      (n, children) => ({ ...n, expanded: true, children }),
-    );
-  }, [tree, searchQuery, searchAccessor]);
+    if (needle && searchAccessor)
+      return filterTree<TreeNode<T>>(
+        tree,
+        (n) => searchAccessor(n).toLowerCase().includes(needle),
+        (n) => n.children,
+        (n, children) => ({ ...n, expanded: true, children }),
+      );
+    // The source's own search: every node kept, every node open.
+    if (holdOpen)
+      return filterTree<TreeNode<T>>(
+        tree,
+        () => true,
+        (n) => n.children,
+        (n, children) => ({ ...n, expanded: true, children }),
+      );
+    return tree;
+  }, [tree, searchQuery, searchAccessor, holdOpen]);
   const searching = visibleTree !== tree;
 
   // The placeholder rule, bound to this render's lazy source + search state and
@@ -274,8 +293,9 @@ export function useTreeModel<T extends TreeItem>(
     [sharing, visibleTree, placeholderOf],
   );
   const orderedIds = useMemo(() => flatNodeIds(flat), [flat]);
-  // From `rows`, not the searched or scoped forest: a search force-opens what
-  // it keeps and a scope drops rows, and neither is a toggle.
+  // From `rows`, not the searched or scoped forest: a search (`search`, or the
+  // source's own under `holdOpen`) force-opens what it keeps and a scope drops
+  // rows, and neither is a toggle.
   const openKeys = useMemo(
     () => new Set(rows.filter((r) => r.expanded).map((r) => r.id)),
     [rows],

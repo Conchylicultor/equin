@@ -7,6 +7,7 @@ export {
 } from "./internal/disclosure";
 export type {
   AwaitedReveal,
+  DisclosureRead,
   FoldingRow,
   IsStandIn,
   RowDisclosure,

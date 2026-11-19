@@ -570,8 +570,10 @@ export function NestedTableView(
   // view settings) and names no view type. Only when the surface asks for it
   // (`options.expandAll`) and some row in scope has children; `null` otherwise
   // and on unmount, so the control is present exactly while this view nests
-  // something to fold.
-  const wantsExpandAll = !!options.expandAll;
+  // something to fold. Not while the source holds every node open
+  // (`holdOpen`, a live search's hits): there is nothing to fold, and writing
+  // the user's map would only move the open set behind what is drawn.
+  const wantsExpandAll = !!options.expandAll && !props.holdOpen;
   const expandAllState = useMemo(() => {
     if (!wantsExpandAll) return null;
     const state = flatExpandAll(model.scoped);

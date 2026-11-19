@@ -222,24 +222,36 @@ function foldStep<T>({
       getKey,
       isStandIn,
     });
-  const toggled = detectDisclosure({
+  const read = detectDisclosure({
     prevItems,
     nextItems,
     prevOpen,
     nextOpen,
     getKey,
   });
+  // Not a toggle (a filter that moved the open set with it, live data in the
+  // same commit): it lands as it is, and opens nothing to await — a search
+  // holding a parent open is no reveal on its way. Toggles still awaited keep
+  // waiting, unless this change closed them.
+  if (read.kind === "change")
+    return {
+      disclosure: null,
+      awaited: {
+        after: new Set([...awaited.after].filter((key) => nextOpen.has(key))),
+        standIns: awaited.standIns,
+      },
+    };
   const fresh = awaitedReveal({
     nextItems,
     prevOpen,
     nextOpen,
-    revealed: toggled?.revealed ?? new Set(),
+    revealed: read.disclosure?.revealed ?? new Set(),
     getKey,
     isStandIn,
   });
   // Earlier toggles still waiting keep waiting, unless this one closed them.
   return {
-    disclosure: toggled,
+    disclosure: read.disclosure,
     awaited: {
       after: new Set([
         ...[...awaited.after].filter((key) => nextOpen.has(key)),

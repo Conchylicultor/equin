@@ -255,6 +255,27 @@ describe("useRowFold", () => {
     expect(animations).toHaveLength(0);
   });
 
+  // An owner that holds every parent of a hit open (a live tree's search):
+  // the open set flips on each keystroke, but no keystroke is a toggle — and
+  // a parent the search opened awaits nothing, so the next keystroke's rows
+  // landing after it do not fold in either.
+  it("folds nothing while a search moves the open set, typed or cleared", () => {
+    const { rerender } = render(
+      <List items={["p", "q", "r"]} openKeys={new Set()} />,
+    );
+    // Typed: the roots' hits, under their ancestors held open.
+    rerender(
+      <List items={["p", "p1", "r", "r1"]} openKeys={new Set(["p", "r"])} />,
+    );
+    // Narrowed: r keeps no hit under it, p gains one.
+    rerender(<List items={["p", "p1", "p2", "r"]} openKeys={new Set(["p"])} />);
+    // Cleared: the collapsed roots.
+    rerender(<List items={["p", "q", "r"]} openKeys={new Set()} />);
+    expect(drawn()).toEqual(["p", "q", "r"]);
+    expect(frames.size).toBe(0);
+    expect(animations).toHaveLength(0);
+  });
+
   it("does not fold a list that declares no disclosures", () => {
     const { rerender } = render(
       <List items={collapsed} openKeys={undefined} />,

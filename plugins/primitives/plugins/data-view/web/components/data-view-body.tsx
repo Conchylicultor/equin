@@ -1672,8 +1672,10 @@ function DataViewBodyInner<TRow>(
           rowSelection,
           rowDrag: rowDrag as DataViewRenderProps<unknown>["rowDrag"],
           rowDrop: viewRowDrop as DataViewRenderProps<unknown>["rowDrop"],
-          // A live tree's hits are drawn open (`useLiveTree`'s `expanded`).
+          // A live tree's hits are drawn open (`useLiveTree`'s `expanded`,
+          // and `holdOpen` under a search).
           expanded: treeView?.expanded ?? activeState.expanded,
+          holdOpen: treeView?.holdOpen,
           setExpanded: setViewExpanded,
           // Expand-all over a live tree in expand mode would open a window per
           // node — not offered; over its hits it opens the loaded nodes.
