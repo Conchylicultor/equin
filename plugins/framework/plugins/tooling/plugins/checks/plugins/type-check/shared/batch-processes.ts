@@ -17,7 +17,7 @@ import {
   ChildKilledError,
   spawnCaptured,
 } from "@plugins/infra/plugins/spawn/core";
-import { pacedHeapEnv } from "@plugins/packages/plugins/heap-pacing/core";
+import { parentPacedHeapEnv } from "@plugins/packages/plugins/heap-pacing/core";
 import { readEnvPath } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import type { TypeCheckTree } from "../core";
 import type { BatchJob, BatchOutcome, Batching } from "./batch-run";
@@ -87,8 +87,10 @@ export function processBatches(opts: {
             {
               cwd: opts.root,
               // The batch's heap — up to ~4.4 GB live — collected as it nears
-              // that, not at ~2.7× it (`packages/heap-pacing`).
-              env: pacedHeapEnv(process.env),
+              // that, not at ~2.7× it (`packages/heap-pacing`): at its worker's
+              // pace, the memory profile the worker was granted (1.5 GB on one
+              // unit, `worker-weight.ts`).
+              env: parentPacedHeapEnv(process.env),
               // A bun script: it reports its own peak footprint at exit.
               peakFootprint: "report",
               unbounded:

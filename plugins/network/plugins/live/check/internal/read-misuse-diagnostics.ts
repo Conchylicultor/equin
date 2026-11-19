@@ -4,6 +4,7 @@ import type {
   RepoSnapshot,
 } from "@plugins/framework/plugins/tooling/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import { pacedHeapEnv } from "@plugins/packages/plugins/heap-pacing/core";
 
 // ── live:read-misuse-diagnostics ───────────────────────────────────────────
 // `useLive`'s collection read is one signature, so a wrong query is reported
@@ -172,7 +173,9 @@ async function fixtureDiagnostics(
     ],
     {
       cwd: root,
-      env: { ...process.env, NO_COLOR: "1" },
+      // A whole-tsconfig compile: a heavy process of its own, paced as one
+      // rather than at the check pass's pace it would otherwise inherit.
+      env: pacedHeapEnv({ ...process.env, NO_COLOR: "1" }),
       stdin: stripped,
       // ~40 s of checker work on an idle host; ten minutes only bounds a
       // compile that never returns, under a loaded background check pass.

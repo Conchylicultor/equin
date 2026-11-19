@@ -39339,11 +39339,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `setEnvDefault`
               - `unsetEnv`
           - Cross-plugin:
-            - Imported by: 56 plugins — full list in [`plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md)
+            - Imported by: 57 plugins — full list in [`plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md)
               - `framework` ×18
               - `infra` ×16
+              - `packages` ×6
               - `debug` ×5
-              - `packages` ×5
               - `database` ×4
               - `installer` ×2
               - `auth`
@@ -44237,16 +44237,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `flockTry`
           - `flockTryShared`
           - `waitForFlock`
-    - **`heap-pacing`** — Heap pacing for heavy bun processes: pacedHeapEnv(env) sets BUN_JSC_forceRAMSize to HEAVY_PROCESS_RAM_BYTES (4 GB) unless the env already names one, so JavaScriptCore grows a multi-GB heap by ~1.3x before collecting instead of the ~2.7x it allows against the machine's whole RAM. Applied where TypeScript-program processes start (the type-check worker and its batches, ./equin run scripts) and inherited by their children.
-      - Cross-plugin:
-        - Imported by:
-          - `framework/cli/run`
-          - `framework/tooling/checks/type-check`
+    - **`heap-pacing`** — Heap pacing for heavy bun processes: pacedHeapEnv(env, ramBytes?) sets BUN_JSC_forceRAMSize (default HEAVY_PROCESS_RAM_BYTES, 4 GB), so JavaScriptCore collects a large heap near its live size instead of letting it grow ~2.4–2.9x against the machine's whole RAM. A pace is the child's own: one this repo set (marked) is replaced by a child's, one a person set wins everywhere; parentPacedHeapEnv keeps the parent's pace for a child doing its parent's work. Applied to the type-check worker (its profile) and batches (the worker's pace), every check pass (CHECK_PROCESS_RAM_BYTES, 2 GB: the build/push check child and, via the ./equin shim, a direct ./equin check) and ./equin run scripts.
       - Core:
+        - Uses: `infra/launcher/env-names.envName`
         - Exports (values):
+          - `CHECK_PROCESS_RAM_BYTES`
           - `HEAVY_PROCESS_RAM_BYTES`
           - `JSC_RAM_SIZE_ENV`
           - `pacedHeapEnv`
+          - `parentPacedHeapEnv`
+      - Cross-plugin:
+        - Imported by:
+          - `framework/cli/op-runtime`
+          - `framework/cli/run`
+          - `framework/tooling/checks/type-check`
     - **`host-memory`** — The host's memory, one shape on macOS and Linux: readHostMemory() reads vm_stat on macOS, /proc/meminfo and /proc/vmstat on Linux, into what the system can hand out (available), kernel memory no process carries (macOS wired; Linux what is neither free, on a page LRU nor reclaimable slab), the RAM processes hold (macOS anonymous + compressor; Linux AnonPages + Shmem), the compressor's size and the swap / compression counters — or unsupported on another OS. readOomKillCount() reads the kernel's OOM-kill count since boot (Linux /proc/vmstat oom_kill), as a typed result: unsupported on macOS, unstated on a kernel without the line, unreadable when the read fails — never a 0 that could read as no kills.
       - Cross-plugin:
         - Imported by:

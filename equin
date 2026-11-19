@@ -39,6 +39,15 @@ case "${1:-}" in
   *) verb=$1 ;;
 esac
 named="$names/verbs/equin · $verb"
+# A check pass's heap is paced (heap-pacing: CHECK_PROCESS_RAM_BYTES, marked as
+# this repo's by EQUIN_HEAP_PACED), as its build or push child is: JSC reads it
+# once, at VM start, so it is set before the exec. A pace a person set (no
+# mark) wins; one this repo set for a parent is replaced, as pacedHeapEnv does.
+# Conditionals only: it cannot abort.
+if [ "$verb" = check ] &&
+  { [ -z "${BUN_JSC_forceRAMSize:-}" ] || [ -n "${EQUIN_HEAP_PACED:-}" ]; }; then
+  export BUN_JSC_forceRAMSize=2000000000 EQUIN_HEAP_PACED=1
+fi
 if [ -f "$names/bun" ] && [ -d "$names/verbs" ] && [ "$names/stamp" -nt mise.lock ]; then
   if { [ -f "$named" ] && ! [ "$named" -ef "$names/bun" ] &&
     ! [ "$named" -nt "$names/bun" ] && ! [ "$names/bun" -nt "$named" ]; } ||

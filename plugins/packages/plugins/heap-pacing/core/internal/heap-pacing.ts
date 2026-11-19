@@ -1,3 +1,5 @@
+import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+
 // How far JavaScriptCore lets a heap grow before it collects, for the heavy
 // bun processes this repo starts (a TypeScript program + typed ESLint).
 //
@@ -41,13 +43,39 @@ export const JSC_RAM_SIZE_ENV = "BUN_JSC_forceRAMSize";
 export const HEAVY_PROCESS_RAM_BYTES = 4e9;
 
 /**
+ * The RAM a check pass's own process is paced against. Its live heap is
+ * ~1–1.5 GB (every plugin barrel loaded, a pass's memos), and a cold pass
+ * (a first update after an install: no plugin record made yet) allocates GBs
+ * of short-lived scan, fold and evaluation work on top of it. Against an 8 GB
+ * machine's RAM, JSC lets that heap reach ~2.4× its live size before a full
+ * collection (~2.9× on a 64 GB one), so the cold pass peaked at 3.1–3.4 GB of
+ * anonymous memory on an 8 GB Linux host — the process the kernel killed.
+ *
+ * Measured there (every tree and deploy check but type-check, cold records,
+ * peak anon RSS / wall): unpaced 3.09, 3.20, 3.43 GB / 66–78 s; 4 GB 3.49 GB /
+ * 84 s; 2 GB 2.26, 2.56 GB / 81–84 s; 1.5 GB 2.54 GB / 89 s. 2 GB is the knee
+ * (research/2026-11-19-global-cold-check-pass-gc-slack.md).
+ */
+export const CHECK_PROCESS_RAM_BYTES = 2e9;
+
+/**
+ * Marks a pace this repo set (`pacedHeapEnv`, the `./equin` shim), as against
+ * one a person set. A pace is a property of the process it was chosen for: a
+ * child spawned with a pace of its own replaces an inherited marked one, while
+ * an unmarked one — a measurement's — wins everywhere below it.
+ */
+export const HEAP_PACED_ENV = envName("HEAP_PACED");
+
+/**
  * `env` (a child's FULL environment, as spawn takes it) with the heap paced
  * for a heavy process, against `ramBytes` (default `HEAVY_PROCESS_RAM_BYTES`).
  * A caller whose process must stay inside a smaller memory share passes that
  * share's pace (a type-check worker admitted on one host unit: 1.5 GB, see the
- * type-check's memory profiles). A value already set wins: a measurement can
- * pick its own, and a paced process's children inherit the same one. Returns
- * a copy.
+ * type-check's memory profiles). The pace is the child's own: one its parent
+ * was paced at by this repo (marked {@link HEAP_PACED_ENV}) is replaced — a
+ * check pass paced at 2 GB still starts its type-check worker at the worker's
+ * profile. A value a person set (no mark) wins: a measurement can pick its own
+ * for a whole process tree. Returns a copy.
  */
 export function pacedHeapEnv(
   env: Readonly<Record<string, string | undefined>>,
@@ -56,6 +84,24 @@ export function pacedHeapEnv(
   if (!(ramBytes > 0)) {
     throw new Error(`pacedHeapEnv: ramBytes must be positive, got ${ramBytes}`);
   }
+  if (env[JSC_RAM_SIZE_ENV] !== undefined && env[HEAP_PACED_ENV] === undefined)
+    return { ...env };
+  return {
+    ...env,
+    [JSC_RAM_SIZE_ENV]: String(ramBytes),
+    [HEAP_PACED_ENV]: "1",
+  };
+}
+
+/**
+ * `env` for a child that is part of its parent's own work (a type-check
+ * worker's batch process): paced as the parent is, whatever paced it — the
+ * parent's environment as is when it carries a pace, `pacedHeapEnv` when it
+ * carries none. Returns a copy.
+ */
+export function parentPacedHeapEnv(
+  env: Readonly<Record<string, string | undefined>>,
+): Record<string, string | undefined> {
   if (env[JSC_RAM_SIZE_ENV] !== undefined) return { ...env };
-  return { ...env, [JSC_RAM_SIZE_ENV]: String(ramBytes) };
+  return pacedHeapEnv(env);
 }

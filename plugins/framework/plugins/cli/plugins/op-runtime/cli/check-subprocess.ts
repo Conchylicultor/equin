@@ -1,4 +1,8 @@
 import type { FsCallSummary } from "@plugins/packages/plugins/timed-fs/core";
+import {
+  CHECK_PROCESS_RAM_BYTES,
+  pacedHeapEnv,
+} from "@plugins/packages/plugins/heap-pacing/core";
 // The one way to run a check pass from another op.
 //
 // `runChecks()` has exactly ONE in-process caller — the `check` command's own
@@ -166,11 +170,14 @@ export async function runCheckSubprocess(
   if (runId !== undefined) argv.push("--run-id", runId);
 
   // `process.env` values are `string | undefined`; the inferred spread type is
-  // exactly what the spawn `env` contract accepts.
-  const env: Record<string, string | undefined> = {
-    ...process.env,
-    ...grant.env(),
-  };
+  // exactly what the spawn `env` contract accepts. The pass's process is a
+  // heavy one: its heap is paced (heap-pacing's CHECK_PROCESS_RAM_BYTES), or a
+  // cold pass lets ~2.4× its live heap pile up before a collection — the
+  // process an 8 GB host's kernel killed.
+  const env: Record<string, string | undefined> = pacedHeapEnv(
+    { ...process.env, ...grant.env() },
+    CHECK_PROCESS_RAM_BYTES,
+  );
   // CLOCKS. `wallStartMs` has to be in THIS process's `performance.now()`
   // domain (the span collector subtracts its own `t0`), and the child's
   // `performance.now()` has a different origin. So take one paired reading here,
