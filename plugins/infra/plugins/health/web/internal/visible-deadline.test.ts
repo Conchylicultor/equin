@@ -155,6 +155,17 @@ describe("createVisibleDeadlines", () => {
     expect(h.d.visibleMsSince(start + 6_000)).toBe(1_000);
   });
 
+  test("time before the page existed is not counted", () => {
+    // equin.ai 2026-11-19 03:56: a SharedWorker's handshake began 14.8 s
+    // before the page that received its stall was created.
+    const h = harness(); // created at t=1_000
+    h.advance(200);
+    expect(h.d.visibleMsSince(1_000 - 14_800)).toBe(200);
+    // A stall that keeps going once the page runs is seen in full.
+    h.advance(15_000);
+    expect(h.d.visibleMsSince(1_200)).toBe(15_000);
+  });
+
   test("a long suspension leaves a short wait under its limit", () => {
     const h = harness();
     const waitStart = 1_000;

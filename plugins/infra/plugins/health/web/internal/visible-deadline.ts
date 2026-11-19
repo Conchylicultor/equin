@@ -8,6 +8,13 @@
  * by a hide alone: only the hidden time itself is taken out of its window.
  *
  * - `visibleMsSince(start)`: how much of `[start, now]` the page was visible.
+ *   Time before this tracker was created is not counted: the page did not
+ *   exist (or was not watching), so it cannot vouch for it. A SharedWorker
+ *   outlives its pages — a phone's background tab left it mid-handshake, and
+ *   the page opened next inherited a 15 s window it had watched for 0.2 s
+ *   (equin.ai, 2026-11-19 03:56: that handshake was the phone's radio waking;
+ *   the next attempt opened in 1 s). A fault still there once the page runs
+ *   is seen by the page on its own clock (the next attempt's window).
  * - `arm(key, ms, onElapsed)`: call `onElapsed` once the page has been visible
  *   for `ms` in total since arming. A timer that fires while hidden parks until
  *   the page is visible again. Re-arming a key that is already armed (or
@@ -52,11 +59,13 @@ export function createVisibleDeadlines(
   // Closed hidden periods, oldest first, plus the open one (since the last
   // hide, until the visible event).
   const periods: Array<{ start: number; end: number }> = [];
-  let hiddenSince: number | null = env.isHidden() ? env.now() : null;
+  const observedSince = env.now();
+  let hiddenSince: number | null = env.isHidden() ? observedSince : null;
   const armed = new Map<string, Armed>();
 
-  const visibleMsSince = (start: number): number => {
+  const visibleMsSince = (since: number): number => {
     const now = env.now();
+    const start = Math.max(since, observedSince);
     let hidden = 0;
     const overlap = (a: number, b: number) => {
       hidden += Math.max(0, Math.min(b, now) - Math.max(a, start));
