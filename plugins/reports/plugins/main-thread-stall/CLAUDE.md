@@ -230,7 +230,24 @@ the tab was never frozen long enough to need one):
   clipped to the interaction → `script` / `forced-style-layout` (with
   `forcedBy`, the function that forced the most) / `style-layout` (the
   frame's own pass, less scripts run inside it — ResizeObserver callbacks) /
-  `other`; plus Event Timing's input delay / processing / presentation.
+  `withheld` / `other`; plus Event Timing's input delay / processing /
+  presentation.
+- **Judged on what the page spent** (`pageOwnMs`): its own time less the
+  rendering the browser **withheld** (`withheldOf`) — inside each long frame,
+  the wait for its render step that no script filled and no task blocked
+  (LoAF `blockingDuration`), less a vsync's 50 ms. A visible page with a free
+  thread renders within a vsync of asking, so a long free wait is the
+  browser's: a renderer throttled to ~1 frame/s (signature: ~1 s frames,
+  blocking 0, little script). Counted from the handlers' start, and only when
+  ≥ 2 long frames each waited ≥ 500 ms free (`throttled`): one suppressed
+  frame is the page's own (a view transition awaiting its update — pane-morph
+  waits up to 1.5 s). It stays on the slow-op and payload
+  (`breakdown.withheldMs`), never in the verdict; null on a stall (the
+  watchdog holds capped scripts, so free time cannot be told).
+- **Shown throughout or not judged**: a page hidden or Page-Lifecycle-frozen
+  anywhere from input to paint is skipped (it paints only once shown).
+- `focus` (at input, at paint) is evidence: a trusted input to an unfocused
+  window is driven from outside.
 - **File**: ≥ 200 ms → an `interaction` slow-op (operation = the target,
   variant = `forced by …` or the top function, waits = the split, caller = the
   route, `reportedBy: "slow-interaction"`); ≥ 800 ms own, or from the 3rd ≥ 300 ms

@@ -25,6 +25,7 @@ import {
   judgeInteraction,
   longestEntry,
   ownEnd,
+  pageOwnMs,
   type InteractionBegin,
   phasesOf,
   type EventTimingLike,
@@ -156,6 +157,19 @@ export function installInteractionWatch(
   // load (bounded by the distinct controls clicked).
   const recur = new Map<string, number>();
   const timers = new Set<ReturnType<typeof setTimeout>>();
+  // When the page stopped being shown (performance clock): hidden, or frozen
+  // by Page Lifecycle — pruned with the frames. An interaction one falls
+  // inside (input → paint) has no paint anyone waited for: the browser paints
+  // a hidden page only once it is shown again.
+  const hiddenAt: number[] = [];
+  const hid = (): void => {
+    const now = perfNow();
+    hiddenAt.push(now);
+    prune(now);
+  };
+  const onHidden = (): void => {
+    if (document.visibilityState === "hidden") hid();
+  };
 
   const after = (ms: number, fn: () => void): void => {
     const t = setTimeout(() => {
@@ -169,6 +183,7 @@ export function installInteractionWatch(
     const horizon = now - INTERACTION.FRAME_RING_MS;
     while (frames[0] && frames[0].end < horizon) frames.shift();
     while (slow[0] && slow[0].end < horizon) slow.shift();
+    while (hiddenAt[0] !== undefined && hiddenAt[0] < horizon) hiddenAt.shift();
   };
 
   // Capture phase on window: runs before any handler, while the target is in
@@ -231,14 +246,19 @@ export function installInteractionWatch(
       tab: readTab(),
     };
     const { target, tab } = origin;
-    if (!tab.visible) return;
+    const w = { start: e.startTime, end: e.startTime + e.duration };
+    // Shown from its input to its paint, or nobody waited on it.
+    if (!tab.visible || hiddenAt.some((t) => t >= w.start && t <= w.end))
+      return;
     const phases = phasesOf(e);
-    const ownMs = e.duration - phases.inputDelayMs;
+    const a = attribute(w, frames, e.processingStart);
+    // The page's own time: handlers → paint, less the rendering the browser
+    // withheld from it (a throttled renderer's ~1 s frames).
+    const ownMs = pageOwnMs(e.duration - phases.inputDelayMs, a.breakdown);
     const recurKey = JSON.stringify(target);
     const count =
       (recur.get(recurKey) ?? 0) + (ownMs >= INTERACTION.RECUR_MIN_MS ? 1 : 0);
     recur.set(recurKey, count);
-    const w = { start: e.startTime, end: e.startTime + e.duration };
     // A long frame at the stall bar inside its OWN time (handlers → paint):
     // the stall detector's report names this interaction — one cause, one
     // report. Not its input delay: a click that waited out an unrelated
@@ -250,7 +270,6 @@ export function installInteractionWatch(
         f.end - f.start >= STALL.REPORT_MIN_MS,
     );
     const verdict = judgeInteraction(ownMs, count, frozen);
-    const a = attribute(w, frames);
     // Judged after the interaction's paint: the route it opened, if it moved.
     const now = readTab();
     const landed =
@@ -273,6 +292,7 @@ export function installInteractionWatch(
       routePattern: tab.routePattern,
       url: tab.url,
       landed,
+      focus: { atInput: tab.focused, atPaint: now.focused },
     };
     clientLog(
       LOG_CHANNEL,
@@ -350,6 +370,8 @@ export function installInteractionWatch(
         capture: true,
         passive: true,
       });
+    document.addEventListener("visibilitychange", onHidden);
+    document.addEventListener("freeze", hid);
   } else {
     clientLog(
       LOG_CHANNEL,
@@ -367,6 +389,8 @@ export function installInteractionWatch(
         start: e.startTime,
         end,
         styleAndLayoutStart: e.styleAndLayoutStart,
+        renderStart: e.renderStart,
+        blocking: e.blockingDuration,
         scripts: e.scripts.map((s) => {
           const fn = s.sourceFunctionName || "(anonymous)";
           return {
@@ -401,9 +425,12 @@ export function installInteractionWatch(
       for (const t of timers) clearTimeout(t);
       timers.clear();
       eventObserver?.disconnect();
-      if (eventObserver)
+      if (eventObserver) {
         for (const type of Object.keys(DISPATCHED))
           window.removeEventListener(type, onDispatch, { capture: true });
+        document.removeEventListener("visibilitychange", onHidden);
+        document.removeEventListener("freeze", hid);
+      }
     },
   };
 }

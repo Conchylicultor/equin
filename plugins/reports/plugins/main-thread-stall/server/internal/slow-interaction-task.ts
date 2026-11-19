@@ -19,6 +19,8 @@ const LAYER_HINTS: Record<ReturnType<typeof dominantLayer>["layer"], string> = {
     "JavaScript ran for most of it: event handlers, React render and commit, effects. Profile the click (Debug → Render Profiler, or the Performance panel) starting from the top function, and look for work that does not need to happen before the next paint.",
   "style/layout":
     "The frame's own style and layout pass was the cost: the change touched a large subtree (a class or theme change high in the tree, a remount of a big pane). Reduce what the change restyles, or what mounts at once.",
+  "withheld rendering":
+    "The thread was free and the browser gave it no frame: inside the long frames, the wait for the render step was neither script nor a blocking task. A visible page renders within a vsync of asking, so this is the browser throttling the renderer (an occluded or off-screen window, an automated browser driving a background window, a starved compositor) — not the page. Check `focus` (a click in an unfocused window is driven from outside) and the frame cadence (~1 s frames with blocking 0 is a renderer throttled to 1 frame/s) before looking at the code; the page's own share is what is left.",
   other:
     "No long frame accounts for most of it: paint and compositing (large or many layers, filters, shadows), or the thread was busy with work under 50 ms per task. Record it in the Performance panel.",
 };
@@ -72,6 +74,9 @@ function renderDescription(row: ReportRow, d: SlowInteractionPayload): string {
   lines.push(
     `- **style/layout (the frame's own pass):** ${b.styleLayoutMs} ms`,
   );
+  lines.push(
+    `- **withheld rendering (thread free, no frame given):** ${b.withheldMs === null ? "not measured (filed before it was)" : `${b.withheldMs} ms`}`,
+  );
   lines.push(`- **other (paint, compositing, short tasks):** ${b.otherMs} ms`);
   lines.push("");
   lines.push(
@@ -112,6 +117,10 @@ function renderDescription(row: ReportRow, d: SlowInteractionPayload): string {
   );
   lines.push(`- **URL:** ${d.url}`);
   lines.push(`- **Browser:** ${d.client.family} on ${d.client.os}`);
+  if (d.focus)
+    lines.push(
+      `- **Window focus:** ${d.focus.atInput ? "focused" : "NOT focused"} at the input, ${d.focus.atPaint ? "focused" : "NOT focused"} at the paint${d.focus.atInput ? "" : " — a trusted input to an unfocused window is driven from outside (automation)"}`,
+    );
   if (d.landed)
     lines.push(
       `- **Opened:** route pattern \`${d.landed.routePattern}\` · ${d.landed.url} — the interaction navigated here, so measure the open of THIS route (with what it restored), not the pane it started on`,

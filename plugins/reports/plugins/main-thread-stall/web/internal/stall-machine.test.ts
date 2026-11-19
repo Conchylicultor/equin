@@ -807,6 +807,7 @@ describe("interactions", () => {
       scriptMs: 1000,
       forcedStyleLayoutMs: 6800,
       styleLayoutMs: 100,
+      withheldMs: null,
       otherMs: 100,
     });
     expect(mainThreadStallFingerprint(d!)).toBe(
@@ -848,6 +849,7 @@ describe("interactions", () => {
       scriptMs: 0,
       forcedStyleLayoutMs: 0,
       styleLayoutMs: 0,
+      withheldMs: null,
       otherMs: 7000,
     });
   });

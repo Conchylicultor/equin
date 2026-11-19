@@ -30,6 +30,17 @@ export const INTERACTION = {
   // An entry's startTime is its event's timeStamp; tolerance when matching.
   DISPATCH_MATCH_MS: 1,
   MAX_FRAMES: 5,
+  // The part of a long frame's free wait for its render step that is still a
+  // normal wait for the next vsync (LoAF's own long-frame bar): only the rest
+  // is rendering the browser withheld.
+  WITHHELD_SLACK_MS: 50,
+  // A throttled renderer withholds frame after frame: only when at least
+  // THROTTLED_FRAMES long frames inside the interaction each waited this long
+  // (free) for their render step is the wait the browser's. One suppressed
+  // frame is the page's own (a view transition awaiting its update, a
+  // compositor busy rastering what the page drew).
+  THROTTLED_WAIT_MS: 500,
+  THROTTLED_FRAMES: 2,
 } as const;
 
 /** One script of a long animation frame, on the page's performance clock. */
@@ -47,6 +58,10 @@ export interface RawFrame {
   end: number;
   /** 0 when the frame had no style/layout pass. */
   styleAndLayoutStart: number;
+  /** When its render step began; 0 when it had none. */
+  renderStart: number;
+  /** LoAF's blockingDuration: how long its long tasks (and render) held input. */
+  blocking: number;
   scripts: readonly RawScript[];
   /** The same frame on the wall clock, as the payload carries it. */
   frame: StallFrame;
@@ -76,11 +91,16 @@ const overlaps = (f: { start: number; end: number }, w: InteractionWindow) =>
  * Where an interaction's time went, from the long frames inside it: every
  * script clipped to the window (its forced style/layout pro rata), the frame's
  * own style/layout pass less the scripts that ran inside it (ResizeObserver
- * callbacks run there), and the rest as `other`. The four sum to the window.
+ * callbacks run there), the rendering the browser withheld (`withheldOf`,
+ * counted from `withheldFrom` — the handlers' start, never the input delay —
+ * and only from a throttled renderer: `throttled`), and the rest as `other`.
+ * The five sum to the window. `withheldFrom` null: not measured (the frames'
+ * scripts are capped, so their free time cannot be told) — `withheldMs` null.
  */
 export function attribute(
   w: InteractionWindow,
   frames: readonly RawFrame[],
+  withheldFrom: number | null,
 ): Attribution {
   const inside = frames
     .filter((f) => overlaps(f, w))
@@ -88,6 +108,7 @@ export function attribute(
   let scriptMs = 0;
   let forcedMs = 0;
   let styleLayoutMs = 0;
+  let withheldMs = 0;
   const byLabel = new Map<string, { ms: number; forced: number }>();
   for (const f of inside) {
     const slStart = f.styleAndLayoutStart > 0 ? f.styleAndLayoutStart : null;
@@ -116,9 +137,23 @@ export function attribute(
         0,
         overlap(slStart, f.end, w.start, w.end) - scriptsInStyleLayout,
       );
+    if (withheldFrom !== null)
+      withheldMs += withheldOf(f, {
+        start: Math.max(w.start, withheldFrom),
+        end: w.end,
+      });
   }
+  if (!throttled(inside)) withheldMs = 0;
   const total = w.end - w.start;
-  const otherMs = Math.max(0, total - scriptMs - forcedMs - styleLayoutMs);
+  // Never more than the window less what the page ran.
+  withheldMs = Math.min(
+    withheldMs,
+    Math.max(0, total - scriptMs - forcedMs - styleLayoutMs),
+  );
+  const otherMs = Math.max(
+    0,
+    total - scriptMs - forcedMs - styleLayoutMs - withheldMs,
+  );
   let topFunction: string | null = null;
   let forcedBy: string | null = null;
   let topMs = 0;
@@ -138,6 +173,7 @@ export function attribute(
       scriptMs: Math.round(scriptMs),
       forcedStyleLayoutMs: Math.round(forcedMs),
       styleLayoutMs: Math.round(styleLayoutMs),
+      withheldMs: withheldFrom === null ? null : Math.round(withheldMs),
       otherMs: Math.round(otherMs),
     },
     topFunction,
@@ -145,6 +181,52 @@ export function attribute(
     forcedBy: topForced >= 1 ? forcedBy : null,
     frames: inside.slice(0, INTERACTION.MAX_FRAMES).map((f) => f.frame),
   };
+}
+
+/**
+ * The rendering the browser withheld from one long frame, inside the window:
+ * the frame's wait for its render step (its start → render start, clipped to
+ * the window) that no script filled, less every ms its tasks blocked (LoAF's
+ * `blockingDuration` counts work no script attribution names) and less a
+ * vsync's slack. A frame waits for its render step only while the browser
+ * gives it no frame: with the thread free, a visible page renders within a
+ * vsync of asking, so a long free wait is the browser's (a renderer throttled
+ * to ~1 frame/s: an occluded or off-screen window, an automated browser), never
+ * the page's. A frame whose tasks blocked keeps that time as theirs.
+ */
+export function withheldOf(f: RawFrame, w: InteractionWindow): number {
+  return Math.max(0, freeWait(f, w) - INTERACTION.WITHHELD_SLACK_MS);
+}
+
+/** A frame's wait for its render step, inside `w`, that no script filled and no task blocked. */
+function freeWait(f: RawFrame, w: InteractionWindow): number {
+  const renderAt = f.renderStart > 0 ? f.renderStart : f.end;
+  const from = Math.max(f.start, w.start);
+  const to = Math.min(renderAt, w.end);
+  if (to <= from) return 0;
+  let scripts = 0;
+  for (const s of f.scripts)
+    scripts += overlap(s.start, s.start + s.duration, from, to);
+  return Math.max(0, to - from - scripts - f.blocking);
+}
+
+/**
+ * Whether the frames show a renderer the browser throttled: THROTTLED_FRAMES
+ * of them each waited THROTTLED_WAIT_MS or more, free, for their render step
+ * (over the whole frame — the cadence is the renderer's, not the click's).
+ */
+export function throttled(frames: readonly RawFrame[]): boolean {
+  const waited = frames.filter(
+    (f) =>
+      freeWait(f, { start: f.start, end: f.end }) >=
+      INTERACTION.THROTTLED_WAIT_MS,
+  );
+  return waited.length >= INTERACTION.THROTTLED_FRAMES;
+}
+
+/** What the page itself spent of an interaction: its own time less the rendering the browser withheld. */
+export function pageOwnMs(ownMs: number, b: InteractionBreakdown): number {
+  return Math.max(0, ownMs - (b.withheldMs ?? 0));
 }
 
 /**
@@ -160,6 +242,8 @@ export function rawFrameOf(f: StallFrame): RawFrame {
       f.styleAndLayoutStartMs === null
         ? 0
         : f.startedAt + f.styleAndLayoutStartMs,
+    renderStart: f.renderStartMs === null ? 0 : f.startedAt + f.renderStartMs,
+    blocking: f.blockingDurationMs,
     scripts: f.scripts.map((s) => {
       const fn = s.sourceFunctionName || "(anonymous)";
       return {
@@ -191,9 +275,11 @@ export function stallInteraction(
   frames: readonly StallFrame[],
   endedAt: number,
 ): StallInteraction {
+  // Not measured: the watchdog holds each frame's longest scripts only.
   const a = attribute(
     { start: begin.at, end: Math.max(begin.at, endedAt) },
     frames.map(rawFrameOf),
+    null,
   );
   return {
     target: begin.target,
@@ -207,8 +293,10 @@ export function stallInteraction(
 export type InteractionVerdict = "record" | "report";
 
 /**
- * What one slow interaction becomes, given how many interactions of at least
- * RECUR_MIN_MS its target has had in this page load (this one included):
+ * What one slow interaction becomes — judged on the time the PAGE spent
+ * (`pageOwnMs`: its own time less the rendering the browser withheld) — given
+ * how many interactions of at least RECUR_MIN_MS its target has had in this
+ * page load (this one included):
  * always a slow-op; a report when severe or recurring — except a freeze of the
  * stall detector's size (`frozen`: a long frame inside it reached the stall
  * bar, which is the bar the stall detector applies), whose own report names

@@ -40,6 +40,15 @@ export const InteractionBreakdownSchema = z.object({
   forcedStyleLayoutMs: z.number(),
   // The frame's own style and layout pass, before paint.
   styleLayoutMs: z.number(),
+  // Rendering the browser withheld: time inside long frames, before their
+  // render step, when the thread ran no script and no task of it blocked
+  // (LoAF blockingDuration) — it was free, and no frame was given to it. A
+  // page cannot cause that (no view transition or render-blocking resource
+  // was open); a throttled renderer does: an occluded or off-screen window,
+  // an automated browser, a starved compositor. Each frame keeps its first
+  // WITHHELD_SLACK_MS as a normal wait for vsync. Never part of what the
+  // page is judged on. Null: filed before it was measured (inside `otherMs`).
+  withheldMs: z.number().nullable().default(null),
   // The rest: paint, compositing, render steps outside scripts, or waiting —
   // time no long frame accounts for.
   otherMs: z.number(),
@@ -68,13 +77,19 @@ export function interactionTargetKey(t: InteractionTarget): string {
 
 /** The layer most of the interaction went to, for one-line summaries. */
 export function dominantLayer(b: InteractionBreakdown): {
-  layer: "script" | "forced style/layout" | "style/layout" | "other";
+  layer:
+    | "script"
+    | "forced style/layout"
+    | "style/layout"
+    | "withheld rendering"
+    | "other";
   ms: number;
 } {
   const layers = [
     { layer: "script", ms: b.scriptMs },
     { layer: "forced style/layout", ms: b.forcedStyleLayoutMs },
     { layer: "style/layout", ms: b.styleLayoutMs },
+    { layer: "withheld rendering", ms: b.withheldMs ?? 0 },
     { layer: "other", ms: b.otherMs },
   ] as const;
   return layers.reduce((a, c) => (c.ms > a.ms ? c : a));

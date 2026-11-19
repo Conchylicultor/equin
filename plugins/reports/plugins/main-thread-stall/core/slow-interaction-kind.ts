@@ -53,6 +53,16 @@ export const SlowInteractionPayloadSchema = z.object({
     .object({ routePattern: z.string(), url: z.string() })
     .nullable()
     .default(null),
+  // Whether the window had focus when the input was dispatched and when the
+  // paint was judged (document.hasFocus()). A person's click lands in a
+  // focused window; a trusted input to an unfocused one is driven from
+  // outside (an automation over CDP), whose window may be behind others and
+  // its rendering throttled. Context, never identity. Null: filed before it
+  // was recorded.
+  focus: z
+    .object({ atInput: z.boolean(), atPaint: z.boolean() })
+    .nullable()
+    .default(null),
   // The JS stacks the tab's sampling profiler caught inside the interaction's
   // own time (handlers → paint): what ran underneath the long frames' entry
   // points (a React root's `onclick` names nothing). Added by the tab when it
