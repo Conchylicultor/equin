@@ -232,17 +232,24 @@ function lengthPx(raw: string): number {
 }
 
 /**
- * How many of the row's laid-out flex items are NOT the bar's own — a host's
- * `Fill`, the growing `AdaptiveBar.Yield` cell, a reorder spacer.
+ * What the row's laid-out flex items that are NOT the bar's own cost it at
+ * their tightest — a host's `Fill`, the growing `AdaptiveBar.Yield` cell, a
+ * reorder spacer, a reorder divider.
  *
- * Each one costs the row a `gap` the fit never sees. Its WIDTH is slack (every
- * such cell is `min-w-0` and gives down to nothing, the yield cell's floor
- * reserved separately), but the gap beside it is not: flex lays out one gap
+ * Each one costs the row a `gap` the fit never sees: flex lays out one gap
  * between every pair of items, so a row holding a `Fill` between its title box
  * and its `⋯` is one gap wider at its tightest than the fit's sum. Uncounted,
  * the fit blesses a placement inside that gap, the row overflows it, and the
  * `row-overflow` guard floors the whole bar over a few pixels (a canvas frame
  * header lost its title box into the `⋯` that way).
+ *
+ * And each costs what it CANNOT give ({@link foreignFloorPx}): its margins and
+ * its minimum width. A `Fill`, a spacer or the yield cell gives its whole width
+ * (`min-w-0`, an empty box; the yield cell's legibility floor is reserved
+ * separately), but a divider is a 1px rule with a 6px margin either side that
+ * never gives — priced at its gap alone, two of them in Sonata's player header
+ * let the fit bless a row 2 × 13px wider than the room (a 7.7px `row-overflow`
+ * on equin.ai, 2026-11-19).
  *
  * `own` is what the fit already prices: the docked occupant containers and the
  * trigger. A flex item holding one of them (a host wrapper the anchor sits in)
@@ -253,11 +260,60 @@ function lengthPx(raw: string): number {
  * called where {@link useLayoutMeasured} holds — the same gate as the guard it
  * keeps honest.
  */
-export function foreignCellCount(
+export function foreignCellsPx(
   root: Element,
   own: readonly Element[],
+  gapPx: number,
 ): number {
-  let count = 0;
+  let total = 0;
+  for (const cell of foreignCells(root, own)) {
+    if (cell.getClientRects().length > 0) {
+      const floor = foreignFloorPx(cell, getComputedStyle(cell));
+      laidOutFloor.set(cell, floor);
+      total += gapPx + floor;
+      continue;
+    }
+    // Hidden now, laid out before: still priced, at what it cost then. A
+    // reorder divider hides itself when the group beside it is empty — so
+    // whether it shows depends on the very placement the fit is deciding.
+    // Priced only while shown, the fit decided each round against the other
+    // round's dividers: one rule hidden, `speed` fit and came back in; back in,
+    // the second rule showed and the row overflowed; out again, it hid — a
+    // cycle whose premise moved every round (so no promotion was ever barred),
+    // ending on a placement measured with a rule missing (Sonata's player
+    // header, 342.7px of row in 338). Reserved, its cost no longer depends on
+    // the placement, and the search converges. A cell never laid out (the
+    // bar's own hidden anchors) reserves nothing.
+    const reserved = laidOutFloor.get(cell);
+    if (reserved !== undefined) total += gapPx + reserved;
+  }
+  return total;
+}
+
+/**
+ * What each foreign cell cost the row the last time it was laid out — kept per
+ * element, so a cell that hides itself stays priced (see
+ * {@link foreignCellsPx}). Weak: a cell that leaves the DOM leaves the ledger.
+ */
+const laidOutFloor = new WeakMap<Element, number>();
+
+/**
+ * The row's flex items that are not the bar's own (see {@link foreignCellsPx}),
+ * those generating no box included: the bar observes all of them, because one
+ * can appear, vanish or change its floor with no observed box resizing — a
+ * reorder divider hides itself when the bar moves the items either side of it
+ * out of the row, and shows again when they come back, AFTER the fit that
+ * moved them. Watched, its 0 ↔ 13px is a resize like any other, and the fit is
+ * asked again with it priced.
+ *
+ * `display: contents` boxes are walked through (their children are the row's
+ * flex items); out-of-flow children are not flex items.
+ */
+export function foreignCells(
+  root: Element,
+  own: readonly Element[],
+): Element[] {
+  const cells: Element[] = [];
   const walk = (parent: Element): void => {
     for (const child of parent.children) {
       const style = getComputedStyle(child);
@@ -265,14 +321,40 @@ export function foreignCellCount(
         walk(child);
         continue;
       }
-      if (child.getClientRects().length === 0) continue;
       if (style.position === "absolute" || style.position === "fixed") {
         continue;
       }
       if (own.some((el) => child === el || child.contains(el))) continue;
-      count += 1;
+      cells.push(child);
     }
   };
   walk(root);
-  return count;
+  return cells;
+}
+
+/**
+ * The part of a foreign flex item that does not give when the row tightens, in
+ * layout pixels: its margins, plus its minimum width —
+ *
+ * - all of it for an item that does not shrink (`shrink-0`);
+ * - else a declared `min-width` (`min-w-0` is 0: a `Fill`, the yield cell);
+ * - else, for an item that does not grow, its width as laid out — it is sized
+ *   to its content, so this bounds its automatic minimum from above (a
+ *   divider's 1px rule);
+ * - else (a growing item with an automatic minimum, a reorder spacer) the
+ *   extent of its content, which its grown width says nothing about — 0 for an
+ *   empty spacer.
+ */
+function foreignFloorPx(cell: Element, style: CSSStyleDeclaration): number {
+  const margins = lengthPx(style.marginLeft) + lengthPx(style.marginRight);
+  if (lengthPx(style.flexShrink) === 0) return margins + layoutWidthPx(cell);
+  const declared = Number.parseFloat(style.minWidth);
+  if (Number.isFinite(declared)) return margins + declared;
+  if (lengthPx(style.flexGrow) === 0) return margins + layoutWidthPx(cell);
+  const layout = layoutWidthPx(cell);
+  const visual = cell.getBoundingClientRect().width;
+  const scale = layout > 0 && visual > 0 ? visual / layout : 1;
+  const range = document.createRange();
+  range.selectNodeContents(cell);
+  return margins + range.getBoundingClientRect().width / scale;
 }

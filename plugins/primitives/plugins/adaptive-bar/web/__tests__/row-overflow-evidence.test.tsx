@@ -12,7 +12,7 @@ describe("rowOverflowEvidence", () => {
     rowPx: 394,
     insetPx: 0,
     yieldFloorPx: 112,
-    foreignGapsPx: 8,
+    foreignPx: 8,
     gapPx: 4,
     budget: 274,
     triggerPx: null,

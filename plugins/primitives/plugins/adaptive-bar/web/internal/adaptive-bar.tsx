@@ -80,7 +80,8 @@ import {
 } from "./diagnostics";
 import { DEFAULT_LADDER, formFor, inlineRungsOf, yieldRankOf } from "./ladder";
 import {
-  foreignCellCount,
+  foreignCells,
+  foreignCellsPx,
   layoutWidthPx,
   readRowMetrics,
   useLayoutMeasured,
@@ -1213,20 +1214,25 @@ function AdaptiveBarShell({
      * there is nothing left to take it from. Stable, because the clamp holds
      * the budget at 0 however much narrower the row gets.
      */
-    // Plus one gap per laid-out cell that is not the bar's own (a host's
-    // `Fill`, the yield cell): its width gives, its gap does not, and the fit
-    // only prices the gaps between its own items. See `foreignCellCount`.
-    const foreignGapsPx = layoutMeasured
-      ? foreignCellCount(root, [
-          ...order
-            .filter(({ anchor, entry }) =>
-              isDockedInline(entry.container, anchor),
-            )
-            .map(({ entry }) => entry.container),
-          ...(trigger === null ? [] : [trigger]),
-        ]) * metrics.gapPx
+    // Plus, per laid-out cell that is not the bar's own (a host's `Fill`, the
+    // yield cell, a divider), its gap and what it cannot give — its margins
+    // and minimum width. The fit only prices its own items. See
+    // `foreignCellsPx`.
+    const foreignPx = layoutMeasured
+      ? foreignCellsPx(
+          root,
+          [
+            ...order
+              .filter(({ anchor, entry }) =>
+                isDockedInline(entry.container, anchor),
+              )
+              .map(({ entry }) => entry.container),
+            ...(trigger === null ? [] : [trigger]),
+          ],
+          metrics.gapPx,
+        )
       : 0;
-    const budget = Math.max(0, available - yieldFloor - foreignGapsPx);
+    const budget = Math.max(0, available - yieldFloor - foreignPx);
 
     // The bar's whole premise: `available` is handed to it and does not move
     // when it decides. Tested against the layout engine rather than inferred
@@ -1605,7 +1611,7 @@ function AdaptiveBarShell({
               rowPx,
               insetPx: metrics.insetPx,
               yieldFloorPx: yieldFloor,
-              foreignGapsPx,
+              foreignPx,
               gapPx,
               budget,
               triggerPx: evicted ? triggerPx : null,
@@ -1730,6 +1736,13 @@ function AdaptiveBarShell({
       if (trigger !== null) observed.push(trigger);
       for (const entry of entriesRef.current.values())
         observed.push(entry.container);
+      // And every cell of the row that is not the bar's own: the fit prices
+      // them (`foreignCellsPx`), and one can show, hide or resize with no own
+      // box moving — a divider re-judging itself after the bar moved the items
+      // beside it. Unwatched, the fit stayed blessed over a row it no longer
+      // fitted (`row-overflow` on Sonata's player header).
+      if (layoutMeasured)
+        observed.push(...foreignCells(root, observed.slice(1)));
       return observed;
     },
     reconcile,
@@ -2291,7 +2304,7 @@ export interface RowOverflow {
 /**
  * The `row-overflow` fault's evidence, FIRST in its message so a report cut to
  * a few hundred characters (a visitor's, imported from the site) still carries
- * it: what the fit decided from (row, inset, yield floor, foreign gaps, gap,
+ * it: what the fit decided from (row, inset, yield floor, foreign cells, gap,
  * budget, its total and the `⋯` it priced), then what the row rendered (its
  * box, each occupant's fit width → rendered width and extent, scale, scroll).
  * Without it the fault could say only that the two disagree, never where — and
@@ -2302,7 +2315,7 @@ export function rowOverflowEvidence(
     rowPx: number;
     insetPx: number;
     yieldFloorPx: number;
-    foreignGapsPx: number;
+    foreignPx: number;
     gapPx: number;
     budget: number;
     triggerPx: number | null;
@@ -2323,5 +2336,5 @@ export function rowOverflowEvidence(
       return `${s.id} ${fitPx === undefined || fitPx === null ? "?" : n(fitPx)}→${n(s.right - s.left)}@${n(s.left)}-${n(s.right)}`;
     })
     .join(", ");
-  return `fit: row ${n(fit.rowPx)} −inset ${n(fit.insetPx)} −floor ${n(fit.yieldFloorPx)} −foreign ${n(fit.foreignGapsPx)} = budget ${n(fit.budget)} ≥ total ${n(priced)} (gap ${n(fit.gapPx)}); rendered: box ${n(seen.box.left)}-${n(seen.box.right)}, ${occupants}; scale ${String(Math.round(seen.scale * 1000) / 1000)}, scroll ${n(seen.scrollLeft)}`;
+  return `fit: row ${n(fit.rowPx)} −inset ${n(fit.insetPx)} −floor ${n(fit.yieldFloorPx)} −foreign ${n(fit.foreignPx)} = budget ${n(fit.budget)} ≥ total ${n(priced)} (gap ${n(fit.gapPx)}); rendered: box ${n(seen.box.left)}-${n(seen.box.right)}, ${occupants}; scale ${String(Math.round(seen.scale * 1000) / 1000)}, scroll ${n(seen.scrollLeft)}`;
 }
