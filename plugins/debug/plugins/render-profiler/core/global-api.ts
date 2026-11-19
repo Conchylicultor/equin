@@ -16,6 +16,12 @@ export interface RenderProfilerGlobal {
   stop: () => void;
   getReport: () => ProfilerReport;
   isRunning: () => boolean;
+  /**
+   * The components a DOM node renders under, nearest first (portals followed
+   * through the component that opened them); `null` when React does not own
+   * the node. Answers whether a component that re-rendered can have rebuilt it.
+   */
+  componentsAbove: (node: Node) => string[] | null;
 }
 
 export type RenderProfilerWindow = Window & {

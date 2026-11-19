@@ -95,6 +95,9 @@ interface ShapeStamp {
 /** One sliding-window rate counter + wasted-work evidence, per signature. */
 interface SignatureState {
   meta: CulpritMeta;
+  // The node the latest mutation was about (see `anchorOf`): what the
+  // attribution is scoped to.
+  anchor: Element;
   mutationClass: MutationClass;
   attrName: string | undefined;
   // Mutation timestamps (performance.now) within the current WINDOW_MS window.
@@ -127,10 +130,27 @@ interface SignatureState {
 type NodeClass = { tracked: false } | { tracked: true; meta: CulpritMeta };
 const SKIPPED: NodeClass = { tracked: false };
 
-/** What the commit profiler saw while a loop ran, attached to its report. */
-interface Attribution {
+/** What the commit profiler saw while a loop ran, every loop firing in its window. */
+export interface Attribution {
+  reactCommitsPerSec: number;
+  /** Every initiator at a loop's rate, busiest first — not yet scoped to a loop. */
+  initiators: RenderLoopInitiator[];
+  /** The profiler's own question: which components a node renders under. */
+  componentsAbove: (node: Node) => string[] | null;
+}
+
+/**
+ * One loop's share of a profiling window: only the initiators that can have
+ * rebuilt its node — the components it renders under. The window is shared by
+ * every loop firing during it and runs AFTER detection, so whatever else
+ * re-rendered meanwhile (the next page, after the visitor left the looping
+ * one) is no cause of this loop and is never named for it.
+ */
+interface ScopedAttribution {
   reactCommitsPerSec: number;
   initiators: RenderLoopInitiator[];
+  /** The loop's node left the page before the window closed: nothing to name. */
+  gone: boolean;
 }
 
 /** Whether React rendered this element (it carries React's fiber key). */
@@ -156,7 +176,6 @@ async function attributeCommits(): Promise<Attribution | null> {
     reactCommitsPerSec: Math.round(report.commitsPerSec * 10) / 10,
     initiators: report.initiators
       .filter((i) => i.ratePerSec >= RENDER_LOOP.ATTRIBUTE_MIN_COMMITS_PER_SEC)
-      .slice(0, RENDER_LOOP.ATTRIBUTE_TOP)
       .map((i) => ({
         component: i.componentName,
         ancestors: i.ancestorPath.slice(-3),
@@ -165,14 +184,53 @@ async function attributeCommits(): Promise<Attribution | null> {
           .map((h) => `${h.kind}#${h.index}`),
         commitsPerSec: Math.round(i.ratePerSec * 10) / 10,
       })),
+    componentsAbove: (node) => api.componentsAbove(node),
   };
 }
 
+/** A loop's share of the window: the initiators its node renders under. */
+export function scopeAttribution(
+  a: Attribution | null,
+  anchor: Element,
+): ScopedAttribution | null {
+  if (a === null) return null;
+  if (!anchor.isConnected) {
+    return {
+      reactCommitsPerSec: a.reactCommitsPerSec,
+      initiators: [],
+      gone: true,
+    };
+  }
+  const above = new Set(a.componentsAbove(anchor) ?? []);
+  return {
+    reactCommitsPerSec: a.reactCommitsPerSec,
+    initiators: a.initiators
+      .filter((i) => above.has(i.component))
+      .slice(0, RENDER_LOOP.ATTRIBUTE_TOP),
+    gone: false,
+  };
+}
+
+/**
+ * The node a mutation is about, for attribution: its target — or, for a child
+ * list React does not own (body, a portal's container), the React-owned child
+ * the mutation added, whose components are the ones that put it there.
+ */
+function anchorOf(record: MutationRecord, target: Element): Element {
+  if (record.type !== "childList" || isReactOwned(target)) return target;
+  for (const node of Array.from(record.addedNodes)) {
+    if (node instanceof Element && isReactOwned(node)) return node;
+  }
+  return target;
+}
+
 /** The report message's tail naming what drives the loop, when attributed. */
-function attributionSuffix(a: Attribution | null): string {
+function attributionSuffix(a: ScopedAttribution | null): string {
   if (a === null) return "";
+  if (a.gone) return " — its node left the page before attribution";
   const top = a.initiators[0];
-  if (top === undefined) return " — no React re-render (imperative DOM writes)";
+  if (top === undefined)
+    return " — no React re-render above it (imperative DOM writes)";
   const hooks = top.hooks.length > 0 ? ` (${top.hooks.join(", ")})` : "";
   return ` — re-rendered by ${top.component}${hooks}`;
 }
@@ -180,6 +238,8 @@ function attributionSuffix(a: Attribution | null): string {
 /** Per-aggregate-root cascade window + gating streak state (aggregate tier). */
 interface AggregateState {
   root: string;
+  // The node the latest mutation in the subtree was about (see `anchorOf`).
+  anchor: Element;
   window: AggregateWindow;
   // performance.now of the first event in the current above-AGG_PER_SEC streak,
   // or null when the summed rate is currently below threshold.
@@ -366,12 +426,17 @@ export function installRenderLoopDetector(): () => void {
     return null;
   }
 
-  function stateFor(meta: CulpritMeta, attrName: string | undefined): SignatureState {
+  function stateFor(
+    meta: CulpritMeta,
+    attrName: string | undefined,
+    anchor: Element,
+  ): SignatureState {
     const key = `${meta.signature}|${attrName ?? ""}`;
     let state = states.get(key);
     if (!state) {
       state = {
         meta,
+        anchor,
         mutationClass: "childlist-rebuild",
         attrName,
         events: [],
@@ -390,11 +455,12 @@ export function installRenderLoopDetector(): () => void {
     return state;
   }
 
-  function aggStateFor(root: string): AggregateState {
+  function aggStateFor(root: string, anchor: Element): AggregateState {
     let agg = aggregates.get(root);
     if (!agg) {
       agg = {
         root,
+        anchor,
         window: new AggregateWindow(
           RENDER_LOOP.WINDOW_MS,
           RENDER_LOOP.AGG_MAX_TRACKED_LEAVES,
@@ -498,7 +564,11 @@ export function installRenderLoopDetector(): () => void {
       state.sampleValues.size > 0 ? Array.from(state.sampleValues) : undefined;
     const meta = state.meta;
     const tagMultiset = state.tagMultiset;
-    const attributed = await attribute();
+    // Where the loop ran, read at detection: the attribution window outlasts a
+    // navigation away from it.
+    const url = window.location.href;
+    const anchor = state.anchor;
+    const attributed = scopeAttribution(await attribute(), anchor);
     const data: RenderLoopPayload = {
       signature: meta.signature,
       pluginId: meta.pluginId ?? null,
@@ -533,7 +603,7 @@ export function installRenderLoopDetector(): () => void {
       kind: "render-loop",
       source: "client-render-loop",
       message,
-      url: window.location.href,
+      url,
       userAgent: navigator.userAgent,
       data: data as unknown as Record<string, unknown>,
     });
@@ -631,7 +701,9 @@ export function installRenderLoopDetector(): () => void {
       now,
       RENDER_LOOP.AGG_SAMPLE_LEAVES,
     );
-    const attributed = await attribute();
+    const url = window.location.href;
+    const anchor = agg.anchor;
+    const attributed = scopeAttribution(await attribute(), anchor);
     // The aggregate root is a coarse container — all per-node marker fields are
     // null (pluginId/source/owner/etc. vary across the subtree by design).
     const data: RenderLoopPayload = {
@@ -668,7 +740,7 @@ export function installRenderLoopDetector(): () => void {
       kind: "render-loop",
       source: "client-render-loop",
       message,
-      url: window.location.href,
+      url,
       userAgent: navigator.userAgent,
       data: data as unknown as Record<string, unknown>,
     });
@@ -691,9 +763,11 @@ export function installRenderLoopDetector(): () => void {
         record.type === "attributes"
           ? record.attributeName ?? undefined
           : undefined;
-      const state = stateFor(meta, attrName);
+      const anchor = anchorOf(record, record.target as Element);
+      const state = stateFor(meta, attrName, anchor);
       // The latest node's meta: a rebuilt node is a new element, classified anew.
       state.meta = meta;
+      state.anchor = anchor;
       state.events.push(now);
       state.lastEventAt = now;
 
@@ -724,7 +798,8 @@ export function installRenderLoopDetector(): () => void {
       // by the LEAF signature, so breadth = distinct nodes). Untracked when there
       // is no coarse root (never aggregate at bare document-body level).
       if (meta.aggregateRoot !== undefined) {
-        const agg = aggStateFor(meta.aggregateRoot);
+        const agg = aggStateFor(meta.aggregateRoot, anchor);
+        agg.anchor = anchor;
         agg.window.record(
           meta.signature,
           now,

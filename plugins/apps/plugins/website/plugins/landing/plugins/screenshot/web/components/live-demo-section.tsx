@@ -59,7 +59,10 @@ const FOOT_ROOM = 56;
 export function LiveDemoSection(): ReactNode {
   const { entered, gateEntries } = useDemoState();
   const { consumeReturn } = useDemoActions();
-  const [columnRef, column] = useElementSize((s) => s);
+  // Only the measure's width sizes the frame. Its height is the frame's own
+  // (plus the caption): selecting it re-rendered the section on every frame
+  // of the frame's 0.6 s growth, the height it had just set moving it.
+  const [columnRef, columnWidth] = useElementSize((s) => s.width);
   // A static render has no window; its frame is never grown (no click runs),
   // and only the grown frame reads the window's size.
   const viewport = useViewportSize(NO_WINDOW);
@@ -81,7 +84,7 @@ export function LiveDemoSection(): ReactNode {
       revealElement(figure, { behavior: "instant", block: "start" });
   }, [figure, consumeReturn]);
 
-  const frameStyle = frameSize(column.width, viewport, entered);
+  const frameStyle = frameSize(columnWidth, viewport, entered);
   return (
     <WebsiteBand section="screenshot" divider rhythm="section">
       <div ref={columnRef}>

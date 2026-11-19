@@ -423,3 +423,23 @@ export function findFiberRoot(): FiberRoot | null {
   }
   return null;
 }
+
+/**
+ * The components a DOM node renders under, nearest first: the names of the
+ * component fibers on its fiber's `return` chain (portals included — a portal's
+ * content returns through the component that opened it), or `null` when React
+ * does not own the node. What can have re-rendered it: a component that
+ * re-rendered on its own and rebuilt this node is on this chain.
+ */
+export function componentsAbove(node: Node): string[] | null {
+  const key = Object.keys(node).find((k) => k.startsWith("__reactFiber$"));
+  if (key === undefined) return null;
+  const names: string[] = [];
+  let fiber: Fiber | null =
+    (node as unknown as Record<string, Fiber>)[key] ?? null;
+  while (fiber) {
+    if (isComponentFiber(fiber)) names.push(getComponentName(fiber));
+    fiber = fiber.return;
+  }
+  return names;
+}

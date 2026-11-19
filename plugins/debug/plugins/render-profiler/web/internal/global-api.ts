@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { RENDER_PROFILER_GLOBAL } from "../../core";
 import type { RenderProfilerWindow } from "../../core";
 import type { Fiber } from "./react-types";
-import { isComponentFiber } from "./fiber-walk";
+import { componentsAbove, isComponentFiber } from "./fiber-walk";
 import { startSession, stopSession, getReport, isRunning } from "./session";
 
 // Components whose churn must never be attributed (the profiler's own pane UI),
@@ -50,6 +50,7 @@ export function installGlobalApi(): void {
     stop: () => stopSession(),
     getReport: () => getReport(),
     isRunning: () => isRunning(),
+    componentsAbove: (node) => componentsAbove(node),
   };
 }
 
