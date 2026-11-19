@@ -17,8 +17,17 @@
  * pulled whole responses at once and charged the link for bytes the browser
  * never read — the hero film put ~13 s of phantom traffic ahead of Enter on
  * fast 4G.
- * `--profile desktop` runs unshaped. CPU is not throttled: the boot stages are
- * this machine's.
+ * `--profile desktop` runs unshaped. `--cpu N` slows the CPU N× (Chrome's
+ * own `Emulation.setCPUThrottlingRate`, on the page AND on the demo's
+ * SharedWorker, sent as the tap attaches to it); without it the boot stages
+ * are this machine's.
+ *
+ * `--reads` records what the page asks the in-browser server, from the click
+ * to usable: every HTTP request it hands the host (method + path) and every
+ * live-state frame it sends (its `op` and resource `key`), read off the
+ * page's MessagePort traffic (an init script wraps `MessagePort.postMessage`
+ * before any page script runs). The distinct paths and keys are what the
+ * first screen reads; the boot line's plugin count is what the host started.
  *
  * The visitor clicks `--click-after` ms (1500) after the gate shows.
  *
@@ -46,6 +55,7 @@
 import type { Request as PwRequest } from "playwright";
 import {
   arg,
+  flag,
   numArg,
   pathUrl,
   report,
@@ -67,6 +77,79 @@ const USABLE_TIMEOUT_MS = numArg("timeout", 300_000);
 const CLICK_AFTER_MS = numArg("click-after", 1500);
 /** A tunnel's receive window on the shaped link, bytes (`--window <KB>`; 0: none). */
 const WINDOW = numArg("window", 512) * 1024;
+/** CPU slowdown, page and worker (`--cpu N`; 1: none). */
+const CPU = numArg("cpu", 1);
+/** Record the page → host requests and live frames (`--reads`). */
+const READS = flag("reads");
+
+/** One message the page sent the in-browser host (`--reads`). */
+interface HostRead {
+  at: number;
+  kind: "request" | "frame";
+  /** `GET /api/…` for a request; the frame's `op` for a frame. */
+  what: string;
+  /** A live frame's resource key. */
+  key?: string;
+}
+
+type ReadsWindow = Window & { __hostReads?: HostRead[] };
+
+/**
+ * Installed before any page script: every request and live frame the page
+ * posts to the host (port.ts's ToHost `request` / `frame`), with its time.
+ */
+function recordHostReads() {
+  const w = window as ReadsWindow;
+  const reads: HostRead[] = [];
+  w.__hostReads = reads;
+  const post = MessagePort.prototype.postMessage;
+  MessagePort.prototype.postMessage = function (
+    this: MessagePort,
+    message: unknown,
+    ...rest: unknown[]
+  ) {
+    const m = message as {
+      t?: string;
+      request?: { method: string; url: string };
+      frame?: string;
+    } | null;
+    if (m !== null && typeof m === "object") {
+      if (m.t === "request" && m.request !== undefined) {
+        const u = new URL(m.request.url, location.href);
+        reads.push({
+          at: performance.now(),
+          kind: "request",
+          what: `${m.request.method} ${u.pathname}`,
+        });
+      } else if (m.t === "frame" && typeof m.frame === "string") {
+        const f = JSON.parse(m.frame) as {
+          op?: string;
+          key?: string;
+          entries?: { key: string }[];
+        };
+        // A `sub-batch` (a replay) carries its subs as entries.
+        const keys =
+          typeof f.key === "string"
+            ? [f.key]
+            : (f.entries ?? []).map((e) => e.key);
+        if (keys.length === 0)
+          reads.push({
+            at: performance.now(),
+            kind: "frame",
+            what: f.op ?? "?",
+          });
+        for (const key of keys)
+          reads.push({
+            at: performance.now(),
+            kind: "frame",
+            what: f.op ?? "?",
+            key,
+          });
+      }
+    }
+    return (post as (...a: unknown[]) => void).call(this, message, ...rest);
+  } as typeof MessagePort.prototype.postMessage;
+}
 
 interface Fetched {
   who: "page" | "worker";
@@ -107,14 +190,25 @@ await withBrowser(async (h) => {
   const url = pathUrl(arg("path") ?? "/");
   for (let run = 1; run <= RUNS; run++) {
     const shaper = shape === null ? null : await startShaper(shape, WINDOW);
-    const tap = await tapSharedWorkerRequests(h.browser);
+    const throttle = {
+      method: "Emulation.setCPUThrottlingRate",
+      params: { rate: CPU },
+    };
+    const tap = await tapSharedWorkerRequests(h.browser, {
+      onAttach: CPU > 1 ? [throttle] : [],
+    });
     const context = await h.browser.newContext({
       viewport: { width: 1440, height: 900 },
       ...(shaper === null
         ? {}
         : { proxy: { server: `http://127.0.0.1:${shaper.port}` } }),
     });
+    if (READS) await context.addInitScript(recordHostReads);
     const page = await context.newPage();
+    if (CPU > 1) {
+      const cdp = await context.newCDPSession(page);
+      await cdp.send("Emulation.setCPUThrottlingRate", { rate: CPU });
+    }
     const pageFetched: Fetched[] = [];
     const onFinished = (req: PwRequest) => {
       void (async () => {
@@ -167,6 +261,7 @@ await withBrowser(async (h) => {
       const downAtClick = shaper?.downBytes() ?? 0;
       const backlogAtClick = shaper?.backlogMs() ?? 0;
       const clickAt = Date.now();
+      const clickAtPage = await page.evaluate(() => performance.now());
       await gate.click();
       // Usable: the boot screen gone (the host ready, the app mounted in the
       // embed), then no loader left on the page.
@@ -177,6 +272,11 @@ await withBrowser(async (h) => {
       const bootGoneAt = Date.now();
       await waitForNotBusy(page, { timeoutMs: USABLE_TIMEOUT_MS });
       const usableAt = Date.now();
+      const usableAtPage = await page.evaluate(() => performance.now());
+      const reads = READS
+        ? ((await page.evaluate(() => (window as ReadsWindow).__hostReads)) ??
+          [])
+        : [];
       const downAtUsable = shaper?.downBytes() ?? 0;
       // What still arrives right after (a late chunk, an image).
       await page.waitForTimeout(3000);
@@ -207,7 +307,7 @@ await withBrowser(async (h) => {
         (f) => f.sentAt >= clickAt - 50 && f.finishedAt > usableAt + 50,
       );
       console.log(
-        `\n── run ${run}/${RUNS}${VISITS === 1 ? "" : ` · visit ${visit}/${VISITS}`} · ${PROFILE}${shape === null ? "" : ` (${shape.downKbps / 1000} Mbps down, ${shape.rttMs} ms RTT)`} · ${url}`,
+        `\n── run ${run}/${RUNS}${VISITS === 1 ? "" : ` · visit ${visit}/${VISITS}`} · ${PROFILE}${shape === null ? "" : ` (${shape.downKbps / 1000} Mbps down, ${shape.rttMs} ms RTT)`} · cpu ${CPU}× · ${url}`,
       );
       console.log(
         `homepage gate shown at ${gateAt - navAt} ms, clicked ${clickAt - gateAt} ms later; click → boot screen gone ${bootGoneAt - clickAt} ms → no loader left ${usableAt - clickAt} ms`,
@@ -292,6 +392,31 @@ await withBrowser(async (h) => {
       console.log(
         `sent uncompressed (> 20 KB): ${uncompressed.length} files, ${mb(uncompressed.reduce((s, f) => s + f.encodedBytes, 0))}`,
       );
+      if (READS) {
+        const window = reads.filter(
+          (x) => x.at >= clickAtPage && x.at <= usableAtPage,
+        );
+        const requests = new Map<string, number>();
+        const keys = new Map<string, number>();
+        const ops = new Map<string, number>();
+        for (const x of window) {
+          if (x.kind === "request")
+            requests.set(x.what, (requests.get(x.what) ?? 0) + 1);
+          else {
+            ops.set(x.what, (ops.get(x.what) ?? 0) + 1);
+            if (x.key !== undefined)
+              keys.set(x.key, (keys.get(x.key) ?? 0) + 1);
+          }
+        }
+        console.log(
+          `reads click → usable: ${requests.size} distinct requests (${[...requests.values()].reduce((a, b) => a + b, 0)} sent), ` +
+            `${keys.size} distinct live keys; frame ops: ${[...ops].map(([o, n]) => `${o} ${n}`).join(", ")}`,
+        );
+        for (const [w, n] of [...requests].toSorted())
+          console.log(`  req  ${n}× ${w}`);
+        for (const [k, n] of [...keys].toSorted())
+          console.log(`  key  ${n}× ${k}`);
+      }
       r.ok(
         `run ${run}${VISITS === 1 ? "" : ` visit ${visit}`}: the demo became usable`,
         true,

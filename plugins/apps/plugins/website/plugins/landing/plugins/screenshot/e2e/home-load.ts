@@ -37,6 +37,20 @@
  * routing turns the HTTP cache off, so a blocked run's repeat visit is
  * another cold one.
  *
+ * `--coverage` adds one more cold load (same phone, link and CPU; its times
+ * are not reported — coverage slows the page) under V8 precise coverage,
+ * taken the frame first paint lands in (the page shows nothing before all
+ * its early code ran, then all of it at once). The upfront set is every
+ * script that finished before first paint; per set it prints the files and
+ * their wire bytes, the source modules they hold (each script's source map,
+ * first-party vs npm) with their generated size, and how many of those
+ * modules ran by first paint: INITIALISED (a route chunk wraps each module in
+ * an `__esmMin` init — the init ran) and CALLED (another function of it ran).
+ * A module's wire bytes are its share of its script's generated characters
+ * times the script's wire bytes — an estimate. Source maps are read over an
+ * unshaped context. Also prints, for every run, when the last byte before
+ * first paint arrived.
+ *
  * Bytes on an HTTPS target: compare CDP's count with the link's. CDP charges
  * a media request only what the media stack read; the link also carries
  * what the HTTP/2 stream window let in that nobody read (how the hero film's
@@ -45,15 +59,21 @@
  * Manual only — nothing runs this automatically.
  *   ./equin run plugins/apps/plugins/website/plugins/landing/plugins/screenshot/e2e/home-load.ts \
  *     --url https://equin.ai [--profile fast4g|slow4g|desktop] [--cpu 4] [--runs 1] [--visits 2]
- *     [--window <KB>] [--path /] [--top 15] [--cpu-profile] [--block <text>] [--out <prefix>] [--no-record]
+ *     [--window <KB>] [--path /] [--top 15] [--cpu-profile] [--coverage] [--block <text>] [--out <prefix>] [--no-record]
  */
-import type { CDPSession, Page } from "playwright";
+import type { Browser, CDPSession, Page } from "playwright";
 import {
   arg,
   flag,
+  isNpmSource,
+  modulesOf,
   numArg,
   pathUrl,
+  ranModules,
+  readScriptMaps,
   report,
+  startCoverage,
+  takeCoverage,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { PROFILES, startShaper } from "./internal/shaper";
@@ -74,6 +94,8 @@ const TTI_TIMEOUT_MS = numArg("timeout", 90_000);
 const CPU_PROFILE = flag("cpu-profile");
 /** Abort every request whose URL contains this text (`--block <text>`): what a load costs without it. */
 const BLOCK = arg("block");
+/** One more cold load under V8 coverage: what of the upfront code ran by first paint (`--coverage`). */
+const COVERAGE = flag("coverage");
 
 /** Lighthouse's mobile device (Moto G Power). */
 const PHONE = {
@@ -306,6 +328,116 @@ const short = (url: string) => {
   return p.length > 90 ? `${p.slice(0, 87)}…` : p;
 };
 
+/**
+ * One cold load under V8 coverage, taken the frame first paint lands in:
+ * the upfront set (scripts finished before first paint), its modules, and
+ * which of them ran.
+ */
+async function coveragePass(
+  browser: Browser,
+  shape: (typeof PROFILES)[string] | null,
+  url: string,
+): Promise<void> {
+  const shaper = shape === null ? null : await startShaper(shape, WINDOW);
+  const context = await browser.newContext({
+    ...PHONE,
+    ...(shaper === null
+      ? {}
+      : { proxy: { server: `http://127.0.0.1:${shaper.port}` } }),
+  });
+  const page = await context.newPage();
+  const cdp = await context.newCDPSession(page);
+  await cdp.send("Network.enable");
+  if (CPU > 1) await cdp.send("Emulation.setCPUThrottlingRate", { rate: CPU });
+  const reqs = tapNetwork(cdp);
+  let navMono: number | null = null;
+  cdp.on(
+    "Network.requestWillBeSent",
+    (e: { timestamp: number; type?: string }) => {
+      if (navMono === null && e.type === "Document") navMono = e.timestamp;
+    },
+  );
+  await startCoverage(cdp);
+  await page.goto(url, { waitUntil: "commit" });
+  await page.waitForFunction(
+    () => performance.getEntriesByName("first-contentful-paint").length > 0,
+    undefined,
+    { polling: "raf", timeout: TTI_TIMEOUT_MS },
+  );
+  const coverage = await takeCoverage(cdp);
+  const fcp = await page.evaluate(
+    () => performance.getEntriesByName("first-contentful-paint")[0]!.startTime,
+  );
+  if (navMono === null) throw new Error("no Document request seen");
+  const nav0 = navMono as number;
+  const upfront = [...reqs.values()].filter(
+    (q) =>
+      q.type === "Script" &&
+      !q.failed &&
+      q.done !== null &&
+      (q.done - nav0) * 1000 <= fcp,
+  );
+  await context.close();
+  await shaper?.close();
+
+  // The source maps, over an unshaped context of the same origin.
+  const reader = await browser.newContext();
+  const readerPage = await reader.newPage();
+  await readerPage.goto(new URL("/robots.txt", url).href);
+  const maps = await readScriptMaps(
+    readerPage,
+    upfront.map((q) => q.url),
+  );
+  await reader.close();
+
+  // A module's wire bytes: its share of its script's generated characters.
+  const wireOf = new Map(upfront.map((q) => [q.url, q.bytes]));
+  const modules = new Map<string, { chars: number; wire: number }>();
+  for (const map of maps.values()) {
+    const scriptChars = map.text.length;
+    const wire = wireOf.get(map.href) ?? 0;
+    for (const [src, { chars }] of modulesOf([map])) {
+      const e = modules.get(src) ?? { chars: 0, wire: 0 };
+      e.chars += chars;
+      e.wire += scriptChars === 0 ? 0 : (wire * chars) / scriptChars;
+      modules.set(src, e);
+    }
+  }
+  const { initialised, called } = ranModules(coverage, maps);
+  const sum = (names: Iterable<string>) => {
+    let n = 0;
+    let fp = 0;
+    let chars = 0;
+    let wire = 0;
+    let fpWire = 0;
+    for (const s of names) {
+      const m = modules.get(s);
+      if (m === undefined) continue;
+      n++;
+      chars += m.chars;
+      wire += m.wire;
+      if (!isNpmSource(s)) {
+        fp++;
+        fpWire += m.wire;
+      }
+    }
+    return `${n} modules (${fp} ours, ${n - fp} npm), ${kb(chars)} generated, ~${kb(wire)} on the wire (ours ~${kb(fpWire)}, npm ~${kb(wire - fpWire)})`;
+  };
+  const unmapped = upfront.filter((q) => !maps.has(q.url));
+  console.log(
+    `\n── coverage at first paint (${Math.round(fcp)} ms, coverage on: not a timing) · ${url}`,
+  );
+  console.log(
+    `upfront set: ${upfront.length} scripts, ${kb(upfront.reduce((t, q) => t + q.bytes, 0))} on the wire; ${maps.size} with a source map` +
+      (unmapped.length === 0
+        ? ""
+        : ` (no map: ${unmapped.map((q) => `${short(q.url)} ${kb(q.bytes)}`).join(", ")})`),
+  );
+  console.log(`  held:        ${sum(modules.keys())}`);
+  console.log(`  initialised: ${sum(initialised)}`);
+  console.log(`  called:      ${sum(called)}`);
+}
+
 await withBrowser(async (h) => {
   const r = report(`home-load (${PROFILE}, cpu ${CPU}×)`);
   if (!(PROFILE in PROFILES))
@@ -486,8 +618,9 @@ await withBrowser(async (h) => {
         const blocking = new Map(
           snap.resources.map((x) => [x.name, x.blocking]),
         );
+        const lastByte = Math.max(0, ...beforeFcp.map((q) => toPage(q.done!)));
         console.log(
-          `before first paint: ${beforeFcp.length} requests, ${kb(beforeFcp.reduce((s, q) => s + q.bytes, 0))}:`,
+          `before first paint: ${beforeFcp.length} requests, ${kb(beforeFcp.reduce((s, q) => s + q.bytes, 0))}; last byte in at ${ms(lastByte)}, first paint ${ms(fcp - lastByte)} after it:`,
         );
         for (const q of beforeFcp.slice(0, 40))
           console.log(
@@ -528,5 +661,6 @@ await withBrowser(async (h) => {
     await context.close();
     await shaper?.close();
   }
+  if (COVERAGE) await coveragePass(h.browser, shape, url);
   await r.finish();
 });

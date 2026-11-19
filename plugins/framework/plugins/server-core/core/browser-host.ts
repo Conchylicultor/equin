@@ -38,7 +38,7 @@ import {
 } from "./error-reporter";
 import { hostHttpRoutes } from "./host-routes";
 import { sinkHandler } from "./sink-handler";
-import { getProfilingData } from "./profiler";
+import { getProfilingData, type PhaseId } from "./profiler";
 import {
   closeResourceKeySet,
   notificationsWsHandler,
@@ -117,7 +117,14 @@ function hostError(report: ServerErrorReport): BrowserHostError {
 export interface BrowserHostBoot {
   /** Graph nodes booted (a plugin's server and machine halves count apart). */
   plugins: number;
-  /** In order: `graph` (load → register → ready barrier, migrations included), `ready` (`onReady` → `onAllReady`), `seed` (only when the host was given one). */
+  /**
+   * In order: `graph` (load → register → ready barrier, migrations included),
+   * then three parts of it — `graph:import` (importing the plugins' modules,
+   * the load waves), `graph:register` and `graph:barrier` (from the first
+   * plugin's hook of that phase starting to the last one ending; the
+   * barrier is `onReadyBlocking`) — then `ready` (`onReady` → `onAllReady`),
+   * `seed` (only when the host was given one).
+   */
   stages: { name: string; ms: number }[];
   /** The slowest plugin hooks of the boot (`register` / `onReadyBlocking` / `onReady` / `onAllReady`), longest first. */
   slowest: { label: string; ms: number }[];
@@ -150,6 +157,22 @@ export async function bootBrowserHost(
   // its transport opens every other socket path inert (as it does central's).
 
   const t1 = performance.now();
+  // The load waves run one after another, so their spans add up to the
+  // import's wall time; a hook phase's wall time is its spans' extent.
+  const graphSpans = getProfilingData().spans;
+  const importMs = graphSpans
+    .filter((s) => s.phase === "load" && s.id.startsWith("load:wave-"))
+    .reduce((sum, s) => sum + s.durationMs, 0);
+  const extentMs = (phase: PhaseId) => {
+    const of = graphSpans.filter((s) => s.phase === phase);
+    if (of.length === 0) return 0;
+    return (
+      Math.max(...of.map((s) => s.startMs + s.durationMs)) -
+      Math.min(...of.map((s) => s.startMs))
+    );
+  };
+  const registerMs = extentMs("register");
+  const barrierMs = extentMs("onReadyBlocking");
   await runPostReadyPhases(ordered);
   const t2 = performance.now();
 
@@ -200,6 +223,9 @@ export async function bootBrowserHost(
       plugins: ordered.length,
       stages: [
         { name: "graph", ms: Math.round(t1 - t0) },
+        { name: "graph:import", ms: Math.round(importMs) },
+        { name: "graph:register", ms: Math.round(registerMs) },
+        { name: "graph:barrier", ms: Math.round(barrierMs) },
         { name: "ready", ms: Math.round(t2 - t1) },
         // Only when one ran: a host starting from stored data (or a snapshot)
         // reports no seed at all.

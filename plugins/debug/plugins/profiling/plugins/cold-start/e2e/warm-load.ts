@@ -46,8 +46,13 @@ import {
   DEFAULT_VIEWPORT,
   detectOsColorScheme,
   flag,
+  isNpmSource as isNpm,
   numArg,
   pageUrl,
+  ranModules,
+  readScriptMaps as readMaps,
+  startCoverage,
+  takeCoverage,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import {
@@ -204,109 +209,6 @@ async function measureIsolated(
   return { files: set.preloads.length, ...row };
 }
 
-// ── Source maps: which source module a generated offset belongs to ──────────
-
-const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
-/** Per generated line, the [column, source index] segments in column order. */
-function decodeMappings(mappings: string): [number, number][][] {
-  const lines: [number, number][][] = [];
-  let source = 0;
-  for (const line of mappings.split(";")) {
-    const segs: [number, number][] = [];
-    let col = 0;
-    for (const seg of line.split(",")) {
-      if (seg === "") continue;
-      const fields: number[] = [];
-      let value = 0;
-      let shift = 0;
-      for (const ch of seg) {
-        const digit = B64.indexOf(ch);
-        value += (digit & 31) << shift;
-        if (digit & 32) shift += 5;
-        else {
-          fields.push(value & 1 ? -(value >>> 1) : value >>> 1);
-          value = 0;
-          shift = 0;
-        }
-      }
-      col += fields[0] ?? 0;
-      if (fields.length >= 4) {
-        source += fields[1] ?? 0;
-        segs.push([col, source]);
-      }
-    }
-    lines.push(segs);
-  }
-  return lines;
-}
-
-interface ScriptMap {
-  text: string;
-  sources: string[];
-  lineStarts: number[];
-  lines: [number, number][][];
-}
-
-function sourceAt(map: ScriptMap, offset: number): string | null {
-  let lo = 0;
-  let hi = map.lineStarts.length - 1;
-  while (lo < hi) {
-    const mid = (lo + hi + 1) >> 1;
-    if ((map.lineStarts[mid] ?? 0) <= offset) lo = mid;
-    else hi = mid - 1;
-  }
-  const col = offset - (map.lineStarts[lo] ?? 0);
-  const segs = map.lines[lo] ?? [];
-  let best: number | null = null;
-  for (const [c, s] of segs) {
-    if (c > col) break;
-    best = s;
-  }
-  return best === null ? null : (map.sources[best] ?? null);
-}
-
-const isNpm = (source: string) => source.includes("node_modules/");
-
-async function readMaps(
-  page: Page,
-  hrefs: string[],
-): Promise<Map<string, ScriptMap>> {
-  const raw = await page.evaluate(async (hs) => {
-    const got: {
-      href: string;
-      text: string;
-      map: { sources: string[]; mappings: string } | null;
-    }[] = [];
-    for (const href of hs) {
-      const text = await (await fetch(href)).text();
-      const res = await fetch(`${href}.map`);
-      got.push({
-        href,
-        text,
-        map: res.ok
-          ? ((await res.json()) as { sources: string[]; mappings: string })
-          : null,
-      });
-    }
-    return got;
-  }, hrefs);
-  const maps = new Map<string, ScriptMap>();
-  for (const { href, text, map } of raw) {
-    if (map === null) continue;
-    const lineStarts = [0];
-    for (let i = 0; i < text.length; i++)
-      if (text[i] === "\n") lineStarts.push(i + 1);
-    maps.set(href, {
-      text,
-      sources: map.sources,
-      lineStarts,
-      lines: decodeMappings(map.mappings),
-    });
-  }
-  return maps;
-}
-
 // ── Run ─────────────────────────────────────────────────────────────────────
 
 const median = (xs: number[]) => {
@@ -369,48 +271,15 @@ const result = await withBrowser(async (h) => {
   if (coverage) {
     const page = await context.newPage();
     const cdp = await context.newCDPSession(page);
-    await cdp.send("Profiler.enable");
-    await cdp.send("Profiler.startPreciseCoverage", {
-      callCount: true,
-      detailed: false,
-    });
+    await startCoverage(cdp);
     await page.goto(url, { waitUntil: "commit" });
     await waitForMark(page, ROUTE_CONTENT);
-    const { result: scripts } = (await cdp.send(
-      "Profiler.takePreciseCoverage",
-    )) as {
-      result: {
-        url: string;
-        functions: {
-          functionName: string;
-          ranges: { startOffset: number; count: number }[];
-        }[];
-      }[];
-    };
-    // A module "initialised" had its `__esmMin` init run (its top-level
-    // code); a module "called" had some OTHER function of it run — the
-    // meaning of "ran" in the 2026-11-13 measure (§12.3), which counted
-    // called functions in per-plugin artifacts that had no init wrappers.
-    const ranSources = new Set<string>();
-    const calledSources = new Set<string>();
-    for (const s of scripts) {
-      const map = maps.get(s.url);
-      if (map === undefined) continue;
-      for (const f of s.functions) {
-        const r = f.ranges[0];
-        if (r === undefined || r.count === 0 || r.startOffset === 0) continue;
-        const src = sourceAt(map, r.startOffset);
-        if (src === null) continue;
-        ranSources.add(src);
-        const before = map.text.slice(
-          Math.max(0, r.startOffset - 12),
-          r.startOffset,
-        );
-        const isInit =
-          f.functionName.startsWith("init_") || /__esmMin\(\(?$/.test(before);
-        if (!isInit) calledSources.add(src);
-      }
-    }
+    // "Initialised": its `__esmMin` init ran; "called": another function of
+    // it ran — the 2026-11-13 meaning of "ran" (§12.3).
+    const { initialised: ranSources, called: calledSources } = ranModules(
+      await takeCoverage(cdp),
+      maps,
+    );
     await page.close();
     const ranUpfront = [...ranSources].filter((s) => upfrontSources.has(s));
     const calledUpfront = [...calledSources].filter((s) =>

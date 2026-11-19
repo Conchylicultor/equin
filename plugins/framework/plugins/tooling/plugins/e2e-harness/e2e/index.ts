@@ -62,6 +62,15 @@ export { describeRenderEnv, renderEnvLines } from "./render-env";
 export type { RenderEnv } from "./render-env";
 export { detectOsColorScheme } from "./color-scheme";
 export type { ColorScheme } from "./color-scheme";
+// Source modules of a page's scripts (source maps) and which ran (V8 coverage).
+export {
+  isNpmSource,
+  modulesOf,
+  ranModules,
+  readScriptMaps,
+  startCoverage,
+  takeCoverage,
+} from "./source-modules";
 // Playwright never attaches to a SharedWorker — see shared-worker-requests.ts.
 export { tapSharedWorkerRequests } from "./shared-worker-requests";
 export type {

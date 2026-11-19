@@ -95,8 +95,20 @@ interface RunningWorker {
   enabled: boolean;
 }
 
+/** What a tap does to each worker besides recording its requests. */
+export interface SharedWorkerTapOptions {
+  /**
+   * CDP commands sent to each worker as soon as it is attached, before its
+   * Network domain is on (e.g. `Emulation.setCPUThrottlingRate`, to run the
+   * worker on a slower CPU as a page is). A command the worker refuses fails
+   * the tap, loudly.
+   */
+  onAttach?: readonly { method: string; params?: Record<string, unknown> }[];
+}
+
 export async function tapSharedWorkerRequests(
   browser: Browser,
+  options: SharedWorkerTapOptions = {},
 ): Promise<SharedWorkerTap> {
   const cdp: CDPSession = await browser.newBrowserCDPSession();
   const requests: SharedWorkerRequest[] = [];
@@ -131,6 +143,11 @@ export async function tapSharedWorkerRequests(
         });
         worker.sessionId = sessionId;
         sessions.set(sessionId, worker);
+        for (const command of options.onAttach ?? [])
+          await cdp.send("Target.sendMessageToTarget", {
+            sessionId,
+            message: JSON.stringify({ id: nextId++, ...command }),
+          });
         const id = nextId++;
         enableCalls.set(sessionId, id);
         await cdp.send("Target.sendMessageToTarget", {
