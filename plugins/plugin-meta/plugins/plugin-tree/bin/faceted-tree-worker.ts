@@ -25,7 +25,7 @@ import {
 // re-entrant, and a refresh must see the one before it applied.
 //
 // Each worker lists the checkout with git when it starts (backed by git's
-// fsmonitor where it is on: an agent checkout, not main). It used to start from the last
+// fsmonitor where it is on: an agent checkout, not main's slot). It used to start from the last
 // worker's checkpoint instead, replaying the FSEvents journal since then —
 // but that history is volume-wide: fseventsd delivers every event under the
 // stream's root (on main, every agent's checkout below `.claude/worktrees/`;

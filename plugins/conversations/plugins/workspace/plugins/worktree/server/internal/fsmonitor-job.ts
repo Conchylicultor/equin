@@ -27,12 +27,22 @@ import { worktreePrepareJob } from "./prepare-job";
 const fsmonitorLog = defineLogSink({
   id: "worktree-fsmonitor",
   description:
-    "Agent checkouts' git fsmonitor daemons: one line per reconcile — how many are on, which were started, stopped or had their index token renewed, and any failure.",
+    "Main's and the agent checkouts' git fsmonitor daemons: one line per reconcile — how many are on, which were started, stopped or had their index token renewed, and any failure.",
 });
 
 /**
- * Keeps git's fsmonitor daemon running for exactly the attempt checkouts the
- * user has not finished with (`attempts_v.retained`), on main.
+ * Keeps git's fsmonitor daemon running for main's own checkout (always) and
+ * for exactly the attempt checkouts the user has not finished with
+ * (`attempts_v.retained`), on main.
+ *
+ * Main's checkout has no `setupWorktree`: this job is its whole lifecycle —
+ * the first pass turns it on (`core.fsmonitor` in
+ * `.git/equin-fsmonitor.config`, included for main's git dir only), and every pass after
+ * restarts its daemon if it died or runs throttled and renews its index token
+ * if stale. A pass that cannot fails the job (a job-attempt-failed report).
+ * Between passes a dead daemon costs today's full scans, never a wrong
+ * answer: git auto-starts one, and a token it did not issue is answered
+ * "everything".
  *
  * A checkout's daemon is STARTED by `setupWorktree` when its agent gets it
  * (`infra/worktree`). This job is the rest of the lifecycle:
@@ -77,7 +87,7 @@ const fsmonitorLog = defineLogSink({
 export const fsmonitorReconcileJob = defineJob({
   name: "worktree.fsmonitor-reconcile",
   description:
-    "Keeps git's file-watching daemon running for the agent checkouts still in use (so git reads there cost what changed, not every file), and stops it for the ones whose conversations are closed.",
+    "Keeps git's file-watching daemon running for main's own checkout and the agent checkouts still in use (so git reads there cost what changed, not every file), and stops it for the agent checkouts whose conversations are closed.",
   // Bounded spawns per checkout (each `timeoutMs`), and an index refresh
   // (~1 s, seconds cold) for each checkout whose daemon restarted — after a
   // reboot, every retained checkout's, one after the other.
@@ -137,15 +147,29 @@ export const fsmonitorReconcileJob = defineJob({
         want: retained === undefined ? "unknown" : retained ? "on" : "off",
       };
     });
-    const result = await reconcileCheckoutFsmonitors(checkouts, {
-      orphanRoot: `${main.gitDir}/worktrees`,
-      tier: "background",
-      // A resume may have taken the checkout back since the read above.
-      stillOff: async (c) =>
-        (await attemptRetention([nameOf(c.path)])).get(nameOf(c.path)) ===
-        false,
-      signal,
-    });
+    // Main's own checkout (the repo root): always on (D12) — a git there (the
+    // human's, a push's merge) otherwise stats its ~26k files. Decided by no
+    // attempt row and set up by no prepare run, so nothing races it but a git
+    // writer there, which the token renewal's compare-and-swap publish steps
+    // aside for. First, so a failure elsewhere never delays it. Main's slots
+    // are not here: `infra/git/fsmonitor`'s CLAUDE.md.
+    const mainCheckout: FsmonitorCheckout = {
+      path: main.path,
+      gitDir: main.gitDir,
+      want: "on",
+    };
+    const result = await reconcileCheckoutFsmonitors(
+      [mainCheckout, ...checkouts],
+      {
+        orphanRoot: `${main.gitDir}/worktrees`,
+        tier: "background",
+        // A resume may have taken the checkout back since the read above.
+        stillOff: async (c) =>
+          (await attemptRetention([nameOf(c.path)])).get(nameOf(c.path)) ===
+          false,
+        signal,
+      },
+    );
     fsmonitorLog.publish(
       `${describeFsmonitorReconcile(result)}; not set up yet ${notReady.size}${notReady.size ? ` (${[...notReady].map((e) => nameOf(e.path)).join(", ")})` : ""}`,
     );
@@ -186,7 +210,7 @@ export const fsmonitorOnConversationEndedJob = defineJob({
 export const fsmonitorReconcileWarmup = defineWarmup({
   name: "worktree.fsmonitor-reconcile",
   description:
-    "Queues a pass over the agent checkouts' file-watching daemons at startup, so after a reboot their git reads are fast again within minutes.",
+    "Queues a pass over main's and the agent checkouts' file-watching daemons at startup, so after a reboot their git reads are fast again within minutes.",
   scope: "host",
   run: async () => {
     await fsmonitorReconcileJob.enqueue({});

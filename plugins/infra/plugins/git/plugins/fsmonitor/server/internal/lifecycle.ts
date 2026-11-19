@@ -82,14 +82,83 @@ async function ensureWorktreeConfig(
   if (r.exitCode !== 0) throw failed(wtPath, args, r);
 }
 
+/**
+ * The file holding the MAIN worktree's `core.fsmonitor`, in its git dir,
+ * read through an `includeIf "gitdir:<its git dir>"` in the shared config —
+ * never its `config.worktree`: `git worktree add` copies the main worktree's
+ * `config.worktree` into every checkout it makes (git ≥ 2.36, measured), so a
+ * plain add (Claude Code's own `agent-*` worktrees, a human's) would get a
+ * daemon nobody owns. The include matches the main worktree's git dir only;
+ * a linked checkout's is `<it>/worktrees/<id>`.
+ */
+const MAIN_FSMONITOR_CONFIG = "equin-fsmonitor.config";
+
+/**
+ * Where a checkout's `core.fsmonitor` is written, as `git config` options.
+ * `use: "set"` also makes that place read (the repo's
+ * `extensions.worktreeConfig`, main's include); an unset only removes.
+ */
+async function fsmonitorConfigScope(
+  wtPath: string,
+  use: "set" | "unset",
+  signal?: AbortSignal,
+): Promise<string[]> {
+  const args = [
+    "rev-parse",
+    "--path-format=absolute",
+    "--git-dir",
+    "--git-common-dir",
+  ];
+  const r = await git(wtPath, args, "background", signal);
+  if (r.exitCode !== 0) throw failed(wtPath, args, r);
+  const [gitDir, commonDir] = r.stdout.trim().split("\n");
+  if (gitDir === undefined || commonDir === undefined) {
+    throw new Error(
+      `[fsmonitor] git -C ${wtPath} ${args.join(" ")} printed ${JSON.stringify(r.stdout)}: expected two lines`,
+    );
+  }
+  if (gitDir !== commonDir) {
+    if (use === "set") await ensureWorktreeConfig(wtPath, signal);
+    return ["--worktree"];
+  }
+  if (use === "set") await ensureMainInclude(wtPath, gitDir, signal);
+  return ["--file", join(gitDir, MAIN_FSMONITOR_CONFIG)];
+}
+
+/** The shared config's include of {@link MAIN_FSMONITOR_CONFIG}, added once. */
+async function ensureMainInclude(
+  wtPath: string,
+  gitDir: string,
+  signal?: AbortSignal,
+): Promise<void> {
+  // A gitdir: pattern is a glob; this one must match exactly one path.
+  if (/[*?[\\]/.test(gitDir)) {
+    throw new Error(
+      `[fsmonitor] cannot scope core.fsmonitor to the main worktree of ${wtPath}: its git dir ${gitDir} holds a glob character, which an includeIf "gitdir:" pattern would read as one`,
+    );
+  }
+  const key = `includeIf.gitdir:${gitDir}.path`;
+  const getArgs = ["config", "--local", "--get-all", key];
+  const get = await git(wtPath, getArgs, "background", signal);
+  // 1: the key is not set.
+  if (get.exitCode !== 0 && get.exitCode !== 1) {
+    throw failed(wtPath, getArgs, get);
+  }
+  if (get.stdout.split("\n").includes(MAIN_FSMONITOR_CONFIG)) return;
+  const addArgs = ["config", "--local", "--add", key, MAIN_FSMONITOR_CONFIG];
+  const add = await git(wtPath, addArgs, "background", signal);
+  if (add.exitCode !== 0) throw failed(wtPath, addArgs, add);
+}
+
 /** What starting a checkout's fsmonitor found. */
 export type FsmonitorStart = "started" | "running";
 
 /**
  * Turn git's builtin fsmonitor on for one checkout: `core.fsmonitor=true` in
- * its own `config.worktree` (so every git in it — the agent's, our reads, a
- * build's tree scans — asks the daemon instead of stat-ing every file), then
- * start the daemon.
+ * its own `config.worktree` — the main worktree's in
+ * {@link MAIN_FSMONITOR_CONFIG} — (so every git in it — the agent's, our
+ * reads, a build's tree scans — asks the daemon instead of stat-ing every
+ * file), then start the daemon.
  *
  * The daemon is started at `foreground`, whoever asks: it inherits the tier
  * of the `start` that spawns it and lives on, and every read's cookie wait
@@ -101,8 +170,8 @@ export async function startCheckoutFsmonitor(
   wtPath: string,
   signal?: AbortSignal,
 ): Promise<FsmonitorStart> {
-  await ensureWorktreeConfig(wtPath, signal);
-  const setArgs = ["config", "--worktree", "core.fsmonitor", "true"];
+  const scope = await fsmonitorConfigScope(wtPath, "set", signal);
+  const setArgs = ["config", ...scope, "core.fsmonitor", "true"];
   const set = await git(wtPath, setArgs, "background", signal);
   if (set.exitCode !== 0) throw failed(wtPath, setArgs, set);
   const startArgs = ["fsmonitor--daemon", "start"];
@@ -127,9 +196,10 @@ export async function stopCheckoutFsmonitor(
   wtPath: string,
   signal?: AbortSignal,
 ): Promise<FsmonitorStop> {
-  const unsetArgs = ["config", "--worktree", "--unset-all", "core.fsmonitor"];
+  const scope = await fsmonitorConfigScope(wtPath, "unset", signal);
+  const unsetArgs = ["config", ...scope, "--unset-all", "core.fsmonitor"];
   const unset = await git(wtPath, unsetArgs, "background", signal);
-  // 5: the key was not set.
+  // 5: the key was not set (or, for --file, the file does not exist).
   if (unset.exitCode !== 0 && unset.exitCode !== 5) {
     throw failed(wtPath, unsetArgs, unset);
   }
@@ -345,14 +415,16 @@ export async function ensureCheckoutFsmonitor(
 // two spawns (or a start skipped). The config write and the stop are
 // idempotent.
 async function mayHaveFsmonitorConfig(gitDir: string): Promise<boolean> {
-  try {
-    return /fsmonitor/i.test(
-      await readFile(join(gitDir, "config.worktree"), "utf8"),
-    );
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return false;
-    throw err;
+  for (const file of ["config.worktree", MAIN_FSMONITOR_CONFIG]) {
+    try {
+      if (/fsmonitor/i.test(await readFile(join(gitDir, file), "utf8"))) {
+        return true;
+      }
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    }
   }
+  return false;
 }
 
 async function exists(path: string): Promise<boolean> {

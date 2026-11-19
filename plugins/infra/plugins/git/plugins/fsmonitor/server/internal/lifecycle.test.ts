@@ -95,7 +95,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  for (const { path } of Object.values(worktrees)) {
+  for (const path of [repo, ...Object.values(worktrees).map((w) => w.path)]) {
     await spawnCaptured([GIT, "-C", path, "fsmonitor--daemon", "stop"], {
       timeoutMs: 60_000,
     });
@@ -263,4 +263,73 @@ test("reconcile: on is started with a current token, off is stopped, unknown is 
     orphans: [],
     failures: [],
   });
+});
+
+/** core.fsmonitor as a git in `path` reads it, the host's own config ignored. */
+async function fsmonitorSetting(path: string): Promise<string | null> {
+  const r = await spawnCaptured(
+    [GIT, "-C", path, "config", "--get", "core.fsmonitor"],
+    {
+      timeoutMs: 60_000,
+      env: {
+        ...process.env,
+        GIT_CONFIG_GLOBAL: "/dev/null",
+        GIT_CONFIG_NOSYSTEM: "1",
+      },
+    },
+  );
+  if (r.exitCode === 1) return null;
+  if (r.exitCode !== 0) throw new Error(`git config failed: ${r.stderr}`);
+  return r.stdout.trim();
+}
+
+test("the MAIN worktree is turned on through a gitdir-scoped include — not config.worktree, which `git worktree add` copies — so no linked checkout, made before or after, is on", async () => {
+  const before = await addWorktree("wt-before-main");
+  const mainGitDir = join(repo, ".git");
+  const opts = {
+    orphanRoot: join(repo, ".git", "worktrees"),
+    tier: "background" as const,
+    stillOff: async () => true,
+  };
+  const r = await reconcileCheckoutFsmonitors(
+    [{ path: repo, gitDir: mainGitDir, want: "on" }],
+    opts,
+  );
+  expect(r.failures).toEqual([]);
+  expect(r.started).toEqual([repo]);
+  expect(await fsmonitorSetting(repo)).toBe("true");
+  expect(
+    readFileSync(join(mainGitDir, "equin-fsmonitor.config"), "utf8"),
+  ).toMatch(/fsmonitor = true/);
+  const shared = readFileSync(join(mainGitDir, "config"), "utf8");
+  expect(shared).toContain(`[includeIf "gitdir:${mainGitDir}"]`);
+  expect(shared).not.toMatch(/fsmonitor = /);
+  expect(indexTokenPid(mainGitDir)).toBe(await daemonOf(mainGitDir));
+
+  // A plain `git worktree add` after main is on: nothing copied.
+  const after = join(root, "wt-after-main");
+  await git(repo, "worktree", "add", "-q", after, "-b", "wt-after-main");
+  for (const path of [before.path, after]) {
+    expect(await fsmonitorSetting(path)).toBeNull();
+  }
+  expect(await daemonOf(before.gitDir)).toBeNull();
+
+  // Again: nothing to do, and the include is not added twice.
+  const again = await reconcileCheckoutFsmonitors(
+    [{ path: repo, gitDir: mainGitDir, want: "on" }],
+    opts,
+  );
+  expect(again).toMatchObject({ started: [], renewed: [], failures: [] });
+  expect(
+    readFileSync(join(mainGitDir, "config"), "utf8").split("includeIf").length,
+  ).toBe(2);
+
+  // Off: the include's file loses the key, the daemon stops.
+  const pid = (await daemonOf(mainGitDir))!;
+  expect(await stopCheckoutFsmonitor(repo)).toEqual({
+    config: "unset",
+    daemon: "stopped",
+  });
+  expect(await fsmonitorSetting(repo)).toBeNull();
+  await waitGone(pid);
 });

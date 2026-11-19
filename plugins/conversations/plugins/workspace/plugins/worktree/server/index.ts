@@ -13,7 +13,7 @@ import { worktreeWorkspace } from "./internal/worktree-workspace";
 
 export default {
   description:
-    "The worktree workspace: a conversation runs in its attempt's git checkout of this repo (`.claude/worktrees/<id>`), with a forked DB and config dir — checked out by the supervised worktree.prepare job (a detached child a restart does not kill) that the spawn job requests and waits on, resumable while the checkout exists. Keeps git's fsmonitor daemon running for exactly the checkouts whose attempt is still retained (worktree.fsmonitor-reconcile, main only: on a conversation closing, at start and every 10 minutes).",
+    "The worktree workspace: a conversation runs in its attempt's git checkout of this repo (`.claude/worktrees/<id>`), with a forked DB and config dir — checked out by the supervised worktree.prepare job (a detached child a restart does not kill) that the spawn job requests and waits on, resumable while the checkout exists. Keeps git's fsmonitor daemon running for main's own checkout and for exactly the checkouts whose attempt is still retained (worktree.fsmonitor-reconcile, main only: on a conversation closing, at start and every 10 minutes).",
   contributions: [
     Trigger({
       on: conversationStatusChanged,
