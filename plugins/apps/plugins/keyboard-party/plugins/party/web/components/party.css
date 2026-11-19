@@ -22,13 +22,11 @@
   --kp-bg: linear-gradient(180deg, #7fd3ff 0%, #b8ecff 60%, #c9f5b4 60.2%, #8fdc7a 100%);
   --kp-glow: 0 6px 0 rgb(0 0 0 / 0.12);
   --kp-word: #1b2a4a;
-  --kp-star: transparent;
 }
 .kp-root[data-scene="paper"] {
   --kp-bg: #fbf6ec;
   --kp-glow: 0 5px 0 rgb(60 40 10 / 0.1);
   --kp-word: #3a2f25;
-  --kp-star: transparent;
 }
 
 .kp-stage {
@@ -41,40 +39,31 @@
   touch-action: none;
 }
 
-/* twinkling backdrop stars (only the night scene paints them) */
+/*
+ * twinkling backdrop stars (the night scene only): each star is its own tiny
+ * dot twinkling on its own. Twinkling two full-stage layers of gradient stars
+ * instead had the compositor redraw the whole stage twice every frame, forever
+ * — two thirds of its work, idle or not, and what a key press's frame waited on.
+ */
 .kp-stars {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background-image:
-    radial-gradient(1.5px 1.5px at 12% 18%, var(--kp-star), transparent),
-    radial-gradient(1.5px 1.5px at 27% 62%, var(--kp-star), transparent),
-    radial-gradient(1.5px 1.5px at 41% 9%, var(--kp-star), transparent),
-    radial-gradient(1.5px 1.5px at 58% 44%, var(--kp-star), transparent),
-    radial-gradient(1.5px 1.5px at 66% 23%, var(--kp-star), transparent),
-    radial-gradient(1.5px 1.5px at 79% 71%, var(--kp-star), transparent),
-    radial-gradient(1.5px 1.5px at 88% 12%, var(--kp-star), transparent),
-    radial-gradient(1.5px 1.5px at 6% 79%, var(--kp-star), transparent),
-    radial-gradient(1.5px 1.5px at 93% 48%, var(--kp-star), transparent),
-    radial-gradient(1.5px 1.5px at 35% 33%, var(--kp-star), transparent),
-    radial-gradient(1.5px 1.5px at 51% 83%, var(--kp-star), transparent),
-    radial-gradient(1.5px 1.5px at 72% 56%, var(--kp-star), transparent);
+}
+.kp-star {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  margin: -1.5px 0 0 -1.5px;
+  background: radial-gradient(closest-side, var(--kp-star), transparent);
   animation: kp-twinkle 4s ease-in-out infinite;
 }
-.kp-stars::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image:
-    radial-gradient(1px 1px at 18% 41%, var(--kp-star), transparent),
-    radial-gradient(1px 1px at 33% 88%, var(--kp-star), transparent),
-    radial-gradient(1px 1px at 47% 57%, var(--kp-star), transparent),
-    radial-gradient(1px 1px at 62% 6%, var(--kp-star), transparent),
-    radial-gradient(1px 1px at 84% 34%, var(--kp-star), transparent),
-    radial-gradient(1px 1px at 9% 52%, var(--kp-star), transparent),
-    radial-gradient(1px 1px at 76% 91%, var(--kp-star), transparent),
-    radial-gradient(1px 1px at 97% 77%, var(--kp-star), transparent);
-  animation: kp-twinkle 3s ease-in-out 1.5s infinite;
+.kp-star-small {
+  width: 2px;
+  height: 2px;
+  margin: -1px 0 0 -1px;
+  animation-duration: 3s;
+  animation-delay: 1.5s;
 }
 @keyframes kp-twinkle {
   50% {
@@ -98,6 +87,10 @@
 .kp-hello-gone {
   opacity: 0;
   transform: translate(-50%, -50%) scale(0.6);
+}
+/* gone, the keys stop bobbing: an invisible animation still costs every frame */
+.kp-hello-gone .kp-hello-key {
+  animation-play-state: paused;
 }
 .kp-hello-key {
   display: grid;

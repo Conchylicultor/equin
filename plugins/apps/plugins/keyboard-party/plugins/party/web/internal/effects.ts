@@ -150,6 +150,17 @@ const RAINBOW = [
 ];
 const CONFETTI_SHAPES = ["▲", "■", "●", "★", "♥", "◆", "✿"];
 
+/**
+ * A node's inline style. Its text size is `fontPx`, never `fontSize`: the node
+ * rounds it to a whole pixel. Blink keeps a font (and its shaped glyphs) per
+ * exact size, so the random fractional sizes particles were drawn at made every
+ * one a font of its own, shaped from scratch — a firework's layout took 38 ms
+ * instead of 3 ms.
+ */
+type NodeStyles = Omit<Partial<CSSStyleDeclaration>, "fontSize"> & {
+  readonly fontPx?: number;
+};
+
 export class PartyEffects {
   private recentSpots: Point[] = [];
 
@@ -158,8 +169,19 @@ export class PartyEffects {
     private readonly audio: PartyAudio,
   ) {}
 
+  /**
+   * The layer's size, read ONCE per key, before any node of it is appended. An
+   * effect reads it many times between appends; reading `clientWidth` there
+   * forced a synchronous layout of every node added so far (a firework's three
+   * shots: three layouts of ~100 nodes, ~12 ms each, inside the key handler).
+   */
+  private w = 0;
+  private h = 0;
+
   /** Plays one key's effect; `at` places a letter (a tap) instead of a free spot. */
   play(effect: KeyEffect, opts: PartyOptions, at?: Point): void {
+    this.w = this.layer.clientWidth;
+    this.h = this.layer.clientHeight;
     switch (effect.kind) {
       case "letter":
         return this.letter(effect.letter, effect.index, opts, at);
@@ -203,16 +225,9 @@ export class PartyEffects {
 
   // ---------- helpers ----------
 
-  private get w() {
-    return this.layer.clientWidth;
-  }
-  private get h() {
-    return this.layer.clientHeight;
-  }
-
   private node(
     className: string,
-    styles: Partial<CSSStyleDeclaration>,
+    { fontPx, ...styles }: NodeStyles,
     text: string | null,
     opts: PartyOptions,
   ): HTMLDivElement {
@@ -222,6 +237,7 @@ export class PartyEffects {
     const el = document.createElement("div");
     el.className = className;
     Object.assign(el.style, styles);
+    if (fontPx !== undefined) el.style.fontSize = `${Math.round(fontPx)}px`;
     if (text != null) el.textContent = text;
     this.layer.append(el);
     return el;
@@ -294,7 +310,7 @@ export class PartyEffects {
         {
           left: `${p.x}px`,
           top: `${p.y}px`,
-          fontSize: `${rand(size[0], size[1])}px`,
+          fontPx: rand(size[0], size[1]),
           color: color((hue + rand(-40, 40) + 360) % 360, rand(55, 72)),
         },
         pick(shapes),
@@ -352,7 +368,7 @@ export class PartyEffects {
       {
         left: `${p.x}px`,
         top: `${p.y}px`,
-        fontSize: `${size}px`,
+        fontPx: size,
         color: color(hue),
         webkitTextStroke: `${Math.max(3, size / 40)}px ${color(hue, 38)}`,
       },
@@ -372,7 +388,7 @@ export class PartyEffects {
         {
           left: `${p.x + side * size * 0.62}px`,
           top: `${p.y - size * 0.1}px`,
-          fontSize: `${size * 0.55}px`,
+          fontPx: size * 0.55,
         },
         picture.emoji,
         opts,
@@ -418,7 +434,7 @@ export class PartyEffects {
           {
             left: `${p.x}px`,
             top: `${p.y + size * 0.62}px`,
-            fontSize: `${Math.max(22, size * 0.16)}px`,
+            fontPx: Math.max(22, size * 0.16),
           },
           null,
           opts,
@@ -461,7 +477,7 @@ export class PartyEffects {
       {
         left: `${this.w / 2}px`,
         top: `${y - sz * 1.1}px`,
-        fontSize: `${sz * 1.3}px`,
+        fontPx: sz * 1.3,
         color: color(hue),
       },
       String(n),
@@ -480,7 +496,7 @@ export class PartyEffects {
         {
           left: `${x}px`,
           top: `${y + sz * 0.35}px`,
-          fontSize: `${n === 0 ? sz * 1.6 : sz}px`,
+          fontPx: n === 0 ? sz * 1.6 : sz,
         },
         COUNT_PICTURES[n] ?? "🎈",
         opts,
@@ -641,7 +657,7 @@ export class PartyEffects {
     const duration = this.dur(1300, opts);
     const el = this.node(
       "kp-picture",
-      { left: `${start.x}px`, top: `${start.y}px`, fontSize: "80px" },
+      { left: `${start.x}px`, top: `${start.y}px`, fontPx: 80 },
       emoji,
       opts,
     );
@@ -791,7 +807,7 @@ export class PartyEffects {
       {
         left: `${p.x}px`,
         top: `${p.y}px`,
-        fontSize: `${Math.min(this.w, this.h) * 0.22}px`,
+        fontPx: Math.min(this.w, this.h) * 0.22,
         color: color(hue),
       },
       key.length === 1 ? key : "✨",

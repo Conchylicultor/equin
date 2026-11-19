@@ -24,6 +24,30 @@ interface Bead {
   readonly hue: number;
 }
 
+/** The night sky's stars, in % of the stage; `small` ones twinkle on their own beat. */
+const STARS: readonly { x: number; y: number; small?: true }[] = [
+  { x: 12, y: 18 },
+  { x: 27, y: 62 },
+  { x: 41, y: 9 },
+  { x: 58, y: 44 },
+  { x: 66, y: 23 },
+  { x: 79, y: 71 },
+  { x: 88, y: 12 },
+  { x: 6, y: 79 },
+  { x: 93, y: 48 },
+  { x: 35, y: 33 },
+  { x: 51, y: 83 },
+  { x: 72, y: 56 },
+  { x: 18, y: 41, small: true },
+  { x: 33, y: 88, small: true },
+  { x: 47, y: 57, small: true },
+  { x: 62, y: 6, small: true },
+  { x: 84, y: 34, small: true },
+  { x: 9, y: 52, small: true },
+  { x: 76, y: 91, small: true },
+  { x: 97, y: 77, small: true },
+];
+
 /** A bead's width plus its gap, and the trail's side padding, in px. */
 const BEAD_PITCH = 54;
 const TRAIL_PADDING = 32;
@@ -125,7 +149,17 @@ export function PartyStage() {
         onPointerDown={onPointerDown}
         onContextMenu={(e) => e.preventDefault()}
       >
-        <div className="kp-stars" aria-hidden />
+        {config.scene === "night" ? (
+          <div className="kp-stars" aria-hidden>
+            {STARS.map((s) => (
+              <i
+                key={`${s.x},${s.y}`}
+                className={s.small ? "kp-star kp-star-small" : "kp-star"}
+                style={{ left: `${s.x}%`, top: `${s.y}%` }}
+              />
+            ))}
+          </div>
+        ) : null}
         <div
           className={started ? "kp-hello kp-hello-gone" : "kp-hello"}
           aria-hidden
