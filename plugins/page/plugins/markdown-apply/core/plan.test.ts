@@ -1188,7 +1188,7 @@ describe("a change names exactly the fields it changes", () => {
     const rows = rowsOf([raw("text", { text: runs("alpha") })]);
     const plan = planOf(rows, "# alpha");
     expect(plan.patch.updates).toEqual([
-      { id: "b1", changes: { type: "heading-1" } },
+      { id: "b1", ofType: "text", changes: { type: "heading-1" } },
     ]);
     expect(plan.textEdits).toEqual([]);
   });
@@ -1502,7 +1502,9 @@ describe("fuzz: one edit at a time", () => {
       const plan = planOf(rows, markdownOf(edited));
       expect({ seed, updates: plan.patch.updates }).toEqual({
         seed,
-        updates: [{ id: target.id, changes: { type: nextType } }],
+        updates: [
+          { id: target.id, ofType: target.type, changes: { type: nextType } },
+        ],
       });
       expect({
         seed,

@@ -309,7 +309,13 @@ await withBrowser(async (h) => {
   // trashed row is skipped. No flag: the patch's shape is the guarantee.
   const patchRes = await postPatch({
     creates: [],
-    updates: [{ id: idN, changes: { data: { text: [{ text: "ZOMBIE" }] } } }],
+    updates: [
+      {
+        id: idN,
+        ofType: "text",
+        changes: { data: { text: [{ text: "ZOMBIE" }] } },
+      },
+    ],
     deleteIds: [],
   });
   r.ok(

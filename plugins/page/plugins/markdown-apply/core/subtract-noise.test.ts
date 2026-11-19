@@ -53,18 +53,32 @@ const runs = (text: string) => [{ text }];
 
 describe("subtractNoise: a write the round trip makes too is not the caller's", () => {
   test("an identical update is dropped", () => {
-    const update: BlockUpdate = { id: "b1", changes: { parentId: "b0" } };
+    const update: BlockUpdate = {
+      id: "b1",
+      ofType: "text",
+      changes: { parentId: "b0" },
+    };
     const out = subtractNoise(
       plan({ updates: [update] }),
-      plan({ updates: [{ id: "b1", changes: { parentId: "b0" } }] }),
+      plan({
+        updates: [{ id: "b1", ofType: "text", changes: { parentId: "b0" } }],
+      }),
     );
     expect(out.patch.updates).toEqual([]);
   });
 
   test("an identical rank write is dropped, Rank being a value object", () => {
     const out = subtractNoise(
-      plan({ updates: [{ id: "b1", changes: { rank: Rank.from("a1") } }] }),
-      plan({ updates: [{ id: "b1", changes: { rank: Rank.from("a1") } }] }),
+      plan({
+        updates: [
+          { id: "b1", ofType: "text", changes: { rank: Rank.from("a1") } },
+        ],
+      }),
+      plan({
+        updates: [
+          { id: "b1", ofType: "text", changes: { rank: Rank.from("a1") } },
+        ],
+      }),
     );
     expect(out.patch.updates).toEqual([]);
   });
@@ -87,8 +101,16 @@ describe("subtractNoise: a write the round trip makes too is not the caller's", 
 
   test("an update whose data differs only in key order is dropped", () => {
     const out = subtractNoise(
-      plan({ updates: [{ id: "b1", changes: { data: { a: 1, b: 2 } } }] }),
-      plan({ updates: [{ id: "b1", changes: { data: { b: 2, a: 1 } } }] }),
+      plan({
+        updates: [
+          { id: "b1", ofType: "text", changes: { data: { a: 1, b: 2 } } },
+        ],
+      }),
+      plan({
+        updates: [
+          { id: "b1", ofType: "text", changes: { data: { b: 2, a: 1 } } },
+        ],
+      }),
     );
     expect(out.patch.updates).toEqual([]);
   });
@@ -98,11 +120,16 @@ describe("subtractNoise: a real edit on a block the round trip also touched surv
   test("same block, different data", () => {
     const update: BlockUpdate = {
       id: "b1",
+      ofType: "text",
       changes: { data: { text: "new" } },
     };
     const out = subtractNoise(
       plan({ updates: [update] }),
-      plan({ updates: [{ id: "b1", changes: { data: { text: "old" } } }] }),
+      plan({
+        updates: [
+          { id: "b1", ofType: "text", changes: { data: { text: "old" } } },
+        ],
+      }),
     );
     expect(out.patch.updates).toEqual([update]);
   });
@@ -110,11 +137,16 @@ describe("subtractNoise: a real edit on a block the round trip also touched surv
   test("same block, different rank", () => {
     const update: BlockUpdate = {
       id: "b1",
+      ofType: "text",
       changes: { rank: Rank.from("a2") },
     };
     const out = subtractNoise(
       plan({ updates: [update] }),
-      plan({ updates: [{ id: "b1", changes: { rank: Rank.from("a1") } }] }),
+      plan({
+        updates: [
+          { id: "b1", ofType: "text", changes: { rank: Rank.from("a1") } },
+        ],
+      }),
     );
     expect(out.patch.updates).toEqual([update]);
   });
@@ -124,20 +156,29 @@ describe("subtractNoise: a real edit on a block the round trip also touched surv
     // `type` as well is a different write however `parentId` compares.
     const update: BlockUpdate = {
       id: "b1",
+      ofType: "text",
       changes: { parentId: "b0", type: "heading-1" },
     };
     const out = subtractNoise(
       plan({ updates: [update] }),
-      plan({ updates: [{ id: "b1", changes: { parentId: "b0" } }] }),
+      plan({
+        updates: [{ id: "b1", ofType: "text", changes: { parentId: "b0" } }],
+      }),
     );
     expect(out.patch.updates).toEqual([update]);
   });
 
   test("same change set, different block", () => {
-    const update: BlockUpdate = { id: "b2", changes: { parentId: "b0" } };
+    const update: BlockUpdate = {
+      id: "b2",
+      ofType: "text",
+      changes: { parentId: "b0" },
+    };
     const out = subtractNoise(
       plan({ updates: [update] }),
-      plan({ updates: [{ id: "b1", changes: { parentId: "b0" } }] }),
+      plan({
+        updates: [{ id: "b1", ofType: "text", changes: { parentId: "b0" } }],
+      }),
     );
     expect(out.patch.updates).toEqual([update]);
   });
@@ -154,7 +195,11 @@ describe("subtractNoise: a real edit on a block the round trip also touched surv
   test("two identical writes cancel against one, not both", () => {
     // A multiset difference: two writes that happen to be identical are still
     // two writes, and one occurrence in the noise plan cancels one of them.
-    const update: BlockUpdate = { id: "b1", changes: { parentId: "b0" } };
+    const update: BlockUpdate = {
+      id: "b1",
+      ofType: "text",
+      changes: { parentId: "b0" },
+    };
     const out = subtractNoise(
       plan({ updates: [update, { ...update }] }),
       plan({ updates: [{ ...update }] }),
@@ -185,16 +230,18 @@ describe("subtractNoise: stats describe what survives", () => {
       plan({
         creates: [block("b9", {})],
         updates: [
-          { id: "b1", changes: { rank: Rank.from("a1") } },
-          { id: "b2", changes: { parentId: "b0" } },
-          { id: "b3", changes: { data: { text: "kept" } } },
+          { id: "b1", ofType: "text", changes: { rank: Rank.from("a1") } },
+          { id: "b2", ofType: "text", changes: { parentId: "b0" } },
+          { id: "b3", ofType: "text", changes: { data: { text: "kept" } } },
         ],
         deleteIds: ["b4", "b5"],
         textEdits: [{ blockId: "b6", runs: runs("kept") }],
         survived: 7,
       }),
       plan({
-        updates: [{ id: "b1", changes: { rank: Rank.from("a1") } }],
+        updates: [
+          { id: "b1", ofType: "text", changes: { rank: Rank.from("a1") } },
+        ],
         deleteIds: ["b4"],
       }),
     );
@@ -215,8 +262,8 @@ describe("subtractNoise: stats describe what survives", () => {
   test("the absorbed count is the difference in write count", () => {
     const full = plan({
       updates: [
-        { id: "b1", changes: { parentId: "b0" } },
-        { id: "b2", changes: { parentId: "b0" } },
+        { id: "b1", ofType: "text", changes: { parentId: "b0" } },
+        { id: "b2", ofType: "text", changes: { parentId: "b0" } },
       ],
       deleteIds: ["b3"],
       textEdits: [{ blockId: "b4", runs: runs("noise") }],
@@ -225,7 +272,7 @@ describe("subtractNoise: stats describe what survives", () => {
     const out = subtractNoise(
       full,
       plan({
-        updates: [{ id: "b1", changes: { parentId: "b0" } }],
+        updates: [{ id: "b1", ofType: "text", changes: { parentId: "b0" } }],
         textEdits: [{ blockId: "b4", runs: runs("noise") }],
       }),
     );
@@ -235,7 +282,7 @@ describe("subtractNoise: stats describe what survives", () => {
 
   test("an empty noise plan changes nothing", () => {
     const full = plan({
-      updates: [{ id: "b1", changes: { parentId: "b0" } }],
+      updates: [{ id: "b1", ofType: "text", changes: { parentId: "b0" } }],
       deleteIds: ["b2"],
       textEdits: [{ blockId: "b3", runs: runs("x") }],
       survived: 4,

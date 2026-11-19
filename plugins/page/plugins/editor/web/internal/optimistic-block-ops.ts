@@ -25,6 +25,7 @@ import {
   type BlockOp,
   type BlockOpContext,
   type BlockPatch,
+  applicableChanges,
 } from "../../core";
 import type { Block } from "../../core";
 
@@ -304,6 +305,10 @@ function allFields(row: Block): BlockFieldChanges {
  * would change nothing, and the op can (must) confirm against a base without
  * the row rather than replaying forever. That is the whole of what the retired
  * `updateOnly` flag was approximating.
+ *
+ * An update whose row no longer has the type it was computed for is judged on
+ * its positional fields only (`applicableChanges`) — what both sides wrote of
+ * it.
  */
 function patchLanded(
   blocks: Block[],
@@ -320,8 +325,9 @@ function patchLanded(
   }
   for (const u of patch.updates) {
     const cur = byId.get(u.id);
-    if (!cur) continue;
-    if (!fieldsReflected(cur, u.changes, compareData)) return false;
+    const changes = applicableChanges(cur, u);
+    if (changes === null) continue;
+    if (!fieldsReflected(cur!, changes, compareData)) return false;
   }
   for (const id of patch.deleteIds) {
     if (byId.has(id)) return false;
@@ -420,7 +426,16 @@ export function applyPatch(
   restoreIds: ReadonlySet<string>,
 ): Block[] {
   const createById = new Map(patch.creates.map((b) => [b.id, b]));
-  const changesById = new Map(patch.updates.map((u) => [u.id, u.changes]));
+  // What of each update still applies to THIS base (`applicableChanges`: the
+  // row is here; a row converted since keeps only the positional fields) —
+  // the same reduction the server writer makes.
+  const rowById = new Map(blocks.map((b) => [b.id, b]));
+  const changesById = new Map(
+    patch.updates.flatMap((u) => {
+      const changes = applicableChanges(rowById.get(u.id), u);
+      return changes === null ? [] : [[u.id, changes] as const];
+    }),
+  );
   const deleted = new Set(patch.deleteIds);
   // Drop the explicitly-deleted ids plus their descendants (mirrors the server's
   // FK cascade), so an undo that re-deletes a subtree-root clears the subtree.

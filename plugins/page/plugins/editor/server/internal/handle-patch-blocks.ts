@@ -3,7 +3,12 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { patchBlocks } from "../../core";
-import { namesField, type BlockPatch } from "../../core";
+import {
+  namesField,
+  applicableChanges,
+  type BlockPatch,
+  type BlockPatchWire,
+} from "../../core";
 import { BlockSchema, PAGE_BLOCK_TYPE, type Block } from "../../core";
 import { _blocks } from "./tables";
 import { liveBlocks } from "./live-blocks";
@@ -36,6 +41,12 @@ type BlockExecutor = NodePgDatabase;
  *    definition — which is what keeps a debounced projection flush racing a
  *    history restore from resurrecting a deleted block. Only `creates` may bring
  *    a row into existence (or back: an id matching a soft-deleted row restores).
+ *  - **An update's `data` and `type` apply only to the type it was computed
+ *    for.** Its `data` is shaped for `ofType`; on a row another writer
+ *    converted meanwhile (a `/page` turning the line into a sub-page while its
+ *    text projection was still debouncing) they are dropped — never a 400 for
+ *    a `data` the writer could not have shaped for a type it never saw — and
+ *    only its positional fields are written.
  *
  * Trash symmetry (zero client changes):
  *  - **Un-trash-on-create.** Every delete is a trash, so a create whose id
@@ -67,6 +78,19 @@ export async function applyPageBlockPatch(
   pageId: PageScope,
   patch: BlockPatch,
   executor: BlockExecutor = db,
+): Promise<{ blocks: Block[]; watermark: string }> {
+  return applyPatchWire(pageId, patch, executor);
+}
+
+/**
+ * The write itself, over the WIRE shape — which also admits an older tab's
+ * updates without `ofType`. Only the HTTP handler hands it one; every server
+ * producer goes through {@link applyPageBlockPatch}, held to `BlockPatch`.
+ */
+async function applyPatchWire(
+  pageId: PageScope,
+  patch: BlockPatchWire,
+  executor: BlockExecutor,
 ): Promise<{ blocks: Block[]; watermark: string }> {
   // One id may not be both written and deleted. `diffBlocks` never emits that
   // shape, and the writer trashes the delete set BEFORE it writes anything, so
@@ -154,8 +178,13 @@ export async function applyPageBlockPatch(
       // above, which never reaches here.)
       const overwrites = creates.filter((b) => stored.has(b.id));
 
-      // An update naming a row that is not live is a skip — see the header.
-      const updates = patch.updates.filter((u) => stored.has(u.id));
+      // An update naming a row that is not live is a skip; one whose row no
+      // longer has the type it was computed for (`ofType`) writes only where
+      // the row sits — see the header and `applicableChanges`.
+      const updates = patch.updates.flatMap((u) => {
+        const changes = applicableChanges(stored.get(u.id), u);
+        return changes === null ? [] : [{ id: u.id, changes }];
+      });
 
       // --- Closed-world guard ---------------------------------------------------
       // A patch holds ONE page's lock, so the rows it creates may join exactly
@@ -268,5 +297,5 @@ export async function applyPageBlockPatch(
 
 /** The HTTP face of {@link applyPageBlockPatch} — validation and nothing else. */
 export const handlePatchBlocks = implement(patchBlocks, ({ params, body }) =>
-  applyPageBlockPatch(params.pageId, body),
+  applyPatchWire(params.pageId, body, db),
 );

@@ -366,7 +366,7 @@ describe("applyPatch", () => {
       blocks,
       {
         creates: [],
-        updates: [{ id: "A", changes: { expanded: false } }],
+        updates: [{ id: "A", ofType: "callout", changes: { expanded: false } }],
         deleteIds: [],
       },
       none,
@@ -407,7 +407,7 @@ describe("applyPatch", () => {
       blocks,
       {
         creates: [],
-        updates: [{ id: "C", changes: { parentId: null } }],
+        updates: [{ id: "C", ofType: "text", changes: { parentId: null } }],
         deleteIds: ["P"],
       },
       none,
@@ -443,7 +443,9 @@ describe("isPatchReflected", () => {
   test("`data` is not compared, even when the patch names it", () => {
     const patch = {
       creates: [],
-      updates: [{ id: "A", changes: { data: { text: "projected" } } }],
+      updates: [
+        { id: "A", ofType: "text", changes: { data: { text: "projected" } } },
+      ],
       deleteIds: [],
     };
     expect(
@@ -481,7 +483,9 @@ describe("isPatchReflected", () => {
   test("a data-only patch is confirmed by ANY snapshot — its predicate cannot fail", () => {
     const dataOnly = {
       creates: [],
-      updates: [{ id: "A", changes: { data: { text: "projected" } } }],
+      updates: [
+        { id: "A", ofType: "text", changes: { data: { text: "projected" } } },
+      ],
       deleteIds: [],
     };
     // Row present, text stale — the write demonstrably has NOT landed.
@@ -499,13 +503,13 @@ describe("isPatchReflected", () => {
   test("only the NAMED fields are compared", () => {
     const patch = {
       creates: [],
-      updates: [{ id: "A", changes: { expanded: true } }],
+      updates: [{ id: "A", ofType: "text", changes: { expanded: true } }],
       deleteIds: [],
     };
-    // `data`/`type`/`parentId` all differ from anything — irrelevant, unnamed.
+    // `data`/`parentId` differ from anything — irrelevant, unnamed.
     expect(
       isPatchReflected(
-        [mk("A", "Z", a, { expanded: true, type: "quote", text: "x" })],
+        [mk("A", "Z", a, { expanded: true, text: "x" })],
         patch,
         none,
       ),
@@ -545,7 +549,7 @@ describe("isPatchAbsorbed", () => {
   const base = [mk("A", null, a, { text: "old" }), mk("B", null, after(a))];
   const dataOnly = {
     creates: [],
-    updates: [{ id: "A", changes: { data: { text: "new" } } }],
+    updates: [{ id: "A", ofType: "text", changes: { data: { text: "new" } } }],
     deleteIds: [],
   };
 
@@ -574,7 +578,9 @@ describe("isPatchAbsorbed", () => {
   test("`data` equality is by VALUE, not reference (a re-serialized identical payload is absorbed)", () => {
     const same = {
       creates: [],
-      updates: [{ id: "A", changes: { data: { text: "old" } } }],
+      updates: [
+        { id: "A", ofType: "text", changes: { data: { text: "old" } } },
+      ],
       deleteIds: [],
     };
     expect(isPatchAbsorbed(base, same, none)).toBe(true);
@@ -589,7 +595,9 @@ describe("isPatchAbsorbed", () => {
       {
         patch: {
           creates: [],
-          updates: [{ id: "A", changes: { data: { text: "old" } } }],
+          updates: [
+            { id: "A", ofType: "text", changes: { data: { text: "old" } } },
+          ],
           deleteIds: [],
         },
         expected: true,
@@ -598,7 +606,7 @@ describe("isPatchAbsorbed", () => {
       {
         patch: {
           creates: [],
-          updates: [{ id: "A", changes: { type: "heading" } }],
+          updates: [{ id: "A", ofType: "text", changes: { type: "heading" } }],
           deleteIds: [],
         },
         expected: false,
@@ -606,7 +614,7 @@ describe("isPatchAbsorbed", () => {
       {
         patch: {
           creates: [],
-          updates: [{ id: "A", changes: { parentId: "B" } }],
+          updates: [{ id: "A", ofType: "text", changes: { parentId: "B" } }],
           deleteIds: [],
         },
         expected: false,
@@ -614,7 +622,9 @@ describe("isPatchAbsorbed", () => {
       {
         patch: {
           creates: [],
-          updates: [{ id: "A", changes: { rank: Rank.from(after(a)) } }],
+          updates: [
+            { id: "A", ofType: "text", changes: { rank: Rank.from(after(a)) } },
+          ],
           deleteIds: [],
         },
         expected: false,
@@ -622,7 +632,7 @@ describe("isPatchAbsorbed", () => {
       {
         patch: {
           creates: [],
-          updates: [{ id: "A", changes: { expanded: true } }],
+          updates: [{ id: "A", ofType: "text", changes: { expanded: true } }],
           deleteIds: [],
         },
         expected: false,
@@ -655,7 +665,13 @@ describe("isPatchAbsorbed", () => {
   test("an update naming an absent row is vacuously satisfied under both", () => {
     const projected = {
       creates: [],
-      updates: [{ id: "GONE", changes: { data: { text: "projected" } } }],
+      updates: [
+        {
+          id: "GONE",
+          ofType: "text",
+          changes: { data: { text: "projected" } },
+        },
+      ],
       deleteIds: [],
     };
     expect(isPatchAbsorbed(base, projected, none)).toBe(true);
@@ -673,7 +689,9 @@ describe("isPatchAbsorbed", () => {
   test("a PRESENT row's data still counts for the guard (the projection applies optimistically)", () => {
     const projected = {
       creates: [],
-      updates: [{ id: "A", changes: { data: { text: "projected" } } }],
+      updates: [
+        { id: "A", ofType: "text", changes: { data: { text: "projected" } } },
+      ],
       deleteIds: [],
     };
     expect(isPatchAbsorbed(base, projected, none)).toBe(false);
@@ -692,7 +710,9 @@ describe("isPatchAbsorbed", () => {
 describe("updates never create", () => {
   const projected = {
     creates: [],
-    updates: [{ id: "A", changes: { data: { text: "projected" } } }],
+    updates: [
+      { id: "A", ofType: "text", changes: { data: { text: "projected" } } },
+    ],
     deleteIds: [],
   };
 
@@ -737,7 +757,7 @@ describe("updates never create", () => {
   test("isPatchReflected still compares named columns for present rows", () => {
     const moved = {
       creates: [],
-      updates: [{ id: "A", changes: { parentId: "B" } }],
+      updates: [{ id: "A", ofType: "text", changes: { parentId: "B" } }],
       deleteIds: [],
     };
     expect(isPatchReflected([mk("A", null, a)], moved, none)).toBe(false);
@@ -830,7 +850,7 @@ describe("restore creates are presence-only", () => {
     // restore must not paint its recorded copy over the server's row.
     const mixed = {
       ...undoDelete,
-      updates: [{ id: "S", changes: { expanded: true } }],
+      updates: [{ id: "S", ofType: "text", changes: { expanded: true } }],
     };
     const out = applyPatch(serverTruth, mixed, restoring);
     expect(out.find((b) => b.id === "T")).toBe(restoredT);
@@ -843,7 +863,7 @@ describe("restore creates are presence-only", () => {
     const toggleT = buildPatchOverlayOp(
       {
         creates: [],
-        updates: [{ id: "T", changes: { expanded: true } }],
+        updates: [{ id: "T", ofType: "toggle", changes: { expanded: true } }],
         deleteIds: [],
       },
       { restoreIds: none },
@@ -877,7 +897,7 @@ describe("sameOverlayTarget", () => {
     const upd = buildPatchOverlayOp(
       {
         creates: [],
-        updates: [{ id: "A", changes: { expanded: true } }],
+        updates: [{ id: "A", ofType: "text", changes: { expanded: true } }],
         deleteIds: [],
       },
       { restoreIds: none },
@@ -919,7 +939,9 @@ describe("sameOverlayTarget", () => {
     const projection = buildPatchOverlayOp(
       {
         creates: [],
-        updates: [{ id: "NEW", changes: { data: { text: "typed" } } }],
+        updates: [
+          { id: "NEW", ofType: "text", changes: { data: { text: "typed" } } },
+        ],
         deleteIds: [],
       },
       { restoreIds: none },
@@ -988,7 +1010,7 @@ describe("predictOp targets", () => {
     buildPatchOverlayOp(
       {
         creates: [],
-        updates: [{ id, changes: { data: { text: "typed" } } }],
+        updates: [{ id, ofType: "text", changes: { data: { text: "typed" } } }],
         deleteIds: [],
       },
       { restoreIds: none },
@@ -1208,5 +1230,69 @@ describe("predictOp targets", () => {
         tailed.effect,
       ),
     ).toBe(true);
+  });
+});
+
+// An update's `data` is shaped for the type its writer saw (`ofType`). The
+// report that forced it: `/page` converted a line server-side while the line's
+// text projection was still debouncing; the projection then sent `{ text }`
+// for what was now a `page` row, and the server refused it (400).
+describe("an update applies only to the type it was computed for", () => {
+  const projection = {
+    creates: [],
+    updates: [
+      { id: "A", ofType: "text", changes: { data: { text: "typed" } } },
+    ],
+    deleteIds: [],
+  };
+  const pageRow = (): Block => ({
+    ...mk("A", null, a),
+    type: "page",
+    data: { title: "Made", icon: null },
+  });
+
+  test("applyPatch leaves a row converted since untouched", () => {
+    const base = [pageRow()];
+    expect(applyPatch(base, projection, none)).toEqual(base);
+  });
+
+  test("both predicates read it as landed (nothing left to do)", () => {
+    expect(isPatchAbsorbed([pageRow()], projection, none)).toBe(true);
+    expect(isPatchReflected([pageRow()], projection, none)).toBe(true);
+    expect(() =>
+      applyOverlayOp(
+        [pageRow()],
+        buildPatchOverlayOp(projection, { restoreIds: none }),
+      ),
+    ).toThrow(OpNoLongerApplies);
+  });
+
+  test("a converted row still MOVES: only `data`/`type` are dropped", () => {
+    // Undo of a wrap whose line became a page meanwhile: the line moves back
+    // out of the wrapper the same patch deletes — it must not cascade with it.
+    const wrapper = { ...mk("W", null, a), type: "callout" };
+    const line: Block = { ...pageRow(), parentId: "W" };
+    const undo = {
+      creates: [],
+      updates: [
+        {
+          id: "A",
+          ofType: "text",
+          changes: { parentId: null, data: { text: "old" } },
+        },
+      ],
+      deleteIds: ["W"],
+    };
+    const next = applyPatch([wrapper, line], undo, none);
+    expect(next.map((b) => b.id)).toEqual(["A"]);
+    expect(next[0]!.parentId).toBeNull();
+    expect(next[0]!.data).toEqual({ title: "Made", icon: null });
+    expect(isPatchReflected(next, undo, none)).toBe(true);
+  });
+
+  test("the same update still applies to a row of its type", () => {
+    const [row] = applyPatch([mk("A", null, a)], projection, none);
+    expect(row!.data).toEqual({ text: "typed" });
+    expect(isPatchAbsorbed([mk("A", null, a)], projection, none)).toBe(false);
   });
 });

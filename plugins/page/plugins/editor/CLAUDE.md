@@ -1582,7 +1582,7 @@ type BlockFieldChanges = Partial<
 
 interface BlockPatch {
   creates: Block[];
-  updates: { id: string; changes: BlockFieldChanges }[];
+  updates: { id: string; ofType: string; changes: BlockFieldChanges }[];
   deleteIds: string[];
 }
 ```
@@ -1594,6 +1594,16 @@ interface BlockPatch {
   `applyPatch`, `isPatchReflected` — vacuously absorbed — and the server). A create
   matching a soft-deleted row restores that row's WHOLE trash entry, consumes it, and is
   excluded from the write (stored row wins). Confirmed by presence (`restoreIds`).
+- **An update's `data` and `type` apply only to the type it was computed for**
+  (`ofType`, required; `applicableChanges`, the one reduction the server writer,
+  `applyPatch` and both patch predicates read). A row's `data` is shaped by its
+  type, and the writer cannot see a conversion another writer made (`/page` and
+  Turn into → Page convert server-side, off the overlay — the line's debounced
+  text projection then sent `{text}` for a `page` row, a 400). On such a row the
+  update writes only its positional fields (`parentId`, `rank`, `expanded`):
+  dropping a move too would let a delete in the same patch cascade over the row
+  (undo of a wrap). `patchesFromDiff` derives `ofType` (redo: `before.type`,
+  undo: `after.type`). Optional on the wire only, for tabs built before it.
 - Both predicates compare exactly the NAMED fields over one comparator (`dataEqual`,
   the diff's own); they differ only on `data` (above).
 - **The server writes only named columns** (`handle-patch-blocks.ts`); `parseBlockData`
@@ -2622,6 +2632,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `BlockOpContext`
     - `BlockPage`
     - `BlockPatch`
+    - `BlockPatchWire`
     - `BlockSemantics`
     - `BlockSemanticsAttrs`
     - `BlockTag`
@@ -2671,6 +2682,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `TurnIntoPageBody`
     - `UpdateBlockBody`
   - Exports (values):
+    - `applicableChanges`
     - `applyBlockOp`
     - `applyBlockOpEndpoint`
     - `blockAuthorOf`

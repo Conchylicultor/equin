@@ -320,7 +320,7 @@ describe("groupPatchByOwnerPage", () => {
       creates: [mk("t2", BASE, BASE), mk("a3", "shell-a", "shell-a")],
       // An update carries no pageId (it names only what it changes), so its
       // owner is resolved from the union.
-      updates: [{ id: "a1", changes: { expanded: true } }],
+      updates: [{ id: "a1", ofType: "text", changes: { expanded: true } }],
       deleteIds: ["a2", "t1"],
     };
     const groups = groupPatchByOwnerPage(patch, ownerOf);
@@ -342,14 +342,16 @@ describe("groupPatchByOwnerPage", () => {
     const groups = groupPatchByOwnerPage(
       {
         creates: [],
-        updates: [{ id: "gone-a", changes: { expanded: false } }],
+        updates: [
+          { id: "gone-a", ofType: "text", changes: { expanded: false } },
+        ],
         deleteIds: ["gone-a"],
       },
       ownerOf,
     );
     expect(groups.get("shell-a")).toEqual({
       creates: [],
-      updates: [{ id: "gone-a", changes: { expanded: false } }],
+      updates: [{ id: "gone-a", ofType: "text", changes: { expanded: false } }],
       deleteIds: ["gone-a"],
     });
   });
@@ -365,7 +367,9 @@ describe("groupPatchByOwnerPage", () => {
       groupPatchByOwnerPage(
         {
           creates: [],
-          updates: [{ id: "ghost", changes: { expanded: true } }],
+          updates: [
+            { id: "ghost", ofType: "text", changes: { expanded: true } },
+          ],
           deleteIds: [],
         },
         ownerOf,
@@ -381,8 +385,8 @@ describe("translatePatchForStore", () => {
     const patch: BlockPatch = {
       creates: [mk("p-top", "page-p", "link-1"), mk("t2", BASE, BASE)],
       updates: [
-        { id: "p-two", changes: { parentId: "link-1" } },
-        { id: "t3", changes: { parentId: BASE } },
+        { id: "p-two", ofType: "text", changes: { parentId: "link-1" } },
+        { id: "t3", ofType: "text", changes: { parentId: BASE } },
       ],
       deleteIds: ["x"],
     };
@@ -398,7 +402,7 @@ describe("translatePatchForStore", () => {
   test("identity — the same reference — when nothing rewrites", () => {
     const patch: BlockPatch = {
       creates: [mk("t2", BASE, BASE)],
-      updates: [{ id: "t3", changes: { expanded: true } }],
+      updates: [{ id: "t3", ofType: "text", changes: { expanded: true } }],
       deleteIds: [],
     };
     expect(translatePatchForStore(patch, new Map())).toBe(patch);

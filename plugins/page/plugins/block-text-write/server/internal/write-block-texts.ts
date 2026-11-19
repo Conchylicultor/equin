@@ -19,9 +19,10 @@ export interface BlockTextEdit {
   runs: RichText;
 }
 
-/** The two columns this write reads off a live row. */
+/** The columns this write reads off a live row. */
 interface LiveRow {
   id: string;
+  type: string;
   data: unknown;
 }
 
@@ -152,7 +153,13 @@ export async function writeBlockTexts(
     const row = now.get(edit.blockId)!;
     return sameRuns(runsOfNode(row), edit.runs)
       ? []
-      : [{ id: row.id, changes: { data: projectedData(row.data, edit.runs) } }];
+      : [
+          {
+            id: row.id,
+            ofType: row.type,
+            changes: { data: projectedData(row.data, edit.runs) },
+          },
+        ];
   });
   if (updates.length > 0) {
     await applyPageBlockPatch(
@@ -171,7 +178,7 @@ async function loadLiveRows(
 ): Promise<Map<string, LiveRow>> {
   if (ids.length === 0) return new Map();
   const rows = await executor
-    .select({ id: liveBlocks.id, data: liveBlocks.data })
+    .select({ id: liveBlocks.id, type: liveBlocks.type, data: liveBlocks.data })
     .from(liveBlocks)
     .where(
       and(eq(liveBlocks.pageId, pageId), inArray(liveBlocks.id, [...ids])),

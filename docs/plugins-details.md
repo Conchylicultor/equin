@@ -46304,6 +46304,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BlockOpContext`
           - `BlockPage`
           - `BlockPatch`
+          - `BlockPatchWire`
           - `BlockSemantics`
           - `BlockSemanticsAttrs`
           - `BlockTag`
@@ -46353,6 +46354,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TurnIntoPageBody`
           - `UpdateBlockBody`
         - Exports (values):
+          - `applicableChanges`
           - `applyBlockOp`
           - `applyBlockOpEndpoint`
           - `blockAuthorOf`

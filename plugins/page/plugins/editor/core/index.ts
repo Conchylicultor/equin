@@ -103,6 +103,7 @@ export {
   changedFields,
   dataEqual,
   namesField,
+  applicableChanges,
   diffBlocks,
   writtenIds,
   patchesFromDiff,
@@ -110,6 +111,7 @@ export {
 } from "./block-diff";
 export type {
   BlockPatch,
+  BlockPatchWire,
   BlockUpdate,
   BlockFieldChanges,
   BlockDiff,

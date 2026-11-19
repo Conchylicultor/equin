@@ -218,12 +218,16 @@ describe("patchesFromDiff", () => {
     expect(redo.creates).toEqual([]);
     expect(redo.deleteIds).toEqual([]);
     expect(redo.updates).toEqual([
-      { id: "A", changes: { data: { text: [{ text: "hi" }] } } },
+      {
+        id: "A",
+        ofType: "callout",
+        changes: { data: { text: [{ text: "hi" }] } },
+      },
     ]);
     // The undo inverts EXACTLY the same field set — never the whole row, so it
     // cannot restate `type` either.
     expect(undo.updates).toEqual([
-      { id: "A", changes: { data: { text: [] } } },
+      { id: "A", ofType: "callout", changes: { data: { text: [] } } },
     ]);
     expect(Object.keys(undo.updates[0]!.changes)).toEqual(["data"]);
   });
@@ -273,11 +277,15 @@ describe("patchesFromDiff", () => {
 
     // Forward: create C, retype A, delete B.
     expect(redo.creates.map((b) => b.id)).toEqual(["C"]);
-    expect(redo.updates).toEqual([{ id: "A", changes: { type: "heading" } }]);
+    expect(redo.updates).toEqual([
+      { id: "A", ofType: "text", changes: { type: "heading" } },
+    ]);
     expect(redo.deleteIds).toEqual(["B"]);
     // Reverse: re-create B, retype A back, delete C.
     expect(undo.creates.map((b) => b.id)).toEqual(["B"]);
-    expect(undo.updates).toEqual([{ id: "A", changes: { type: "text" } }]);
+    expect(undo.updates).toEqual([
+      { id: "A", ofType: "heading", changes: { type: "text" } },
+    ]);
     expect(undo.deleteIds).toEqual(["C"]);
   });
 });

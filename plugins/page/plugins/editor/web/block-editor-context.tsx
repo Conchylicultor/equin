@@ -1465,6 +1465,7 @@ export function BlockEditorProviderInner({
             updates: [
               {
                 id: blockId,
+                ofType: row.type,
                 changes: {
                   data: { ...((row.data as object | null) ?? {}), text: runs },
                 },
@@ -1483,6 +1484,7 @@ export function BlockEditorProviderInner({
             updates: [
               {
                 id: blockId,
+                ofType: row.type,
                 changes: {
                   data: { ...((row.data as object | null) ?? {}), text: runs },
                 },

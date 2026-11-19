@@ -340,7 +340,13 @@ describe("assertAgentAuthoredPlan — every write inside a card", () => {
     const cards = judgePage(
       planOf({
         creates: [create("fresh", PAGE, agentNotesBlock.type)],
-        updates: [{ id: "prose", changes: { rank: Rank.between(null, null) } }],
+        updates: [
+          {
+            id: "prose",
+            ofType: "text",
+            changes: { rank: Rank.between(null, null) },
+          },
+        ],
       }),
     );
     expect(cards).toEqual(["fresh"]);
@@ -391,7 +397,11 @@ describe("assertAgentAuthoredPlan — every write inside a card", () => {
     // agent's own card, attributed to the agent, without deleting a character.
     expect(() => {
       judgePage(
-        planOf({ updates: [{ id: "prose", changes: { parentId: "notes" } }] }),
+        planOf({
+          updates: [
+            { id: "prose", ofType: "text", changes: { parentId: "notes" } },
+          ],
+        }),
       );
     }).toThrow(/did not COME from inside an agent-authored block/);
   });
@@ -469,7 +479,13 @@ describe("assertAgentAuthoredPlan — a human-authored card is a hole in the age
     expect(() => {
       judgePage(
         planOf({
-          updates: [{ id: "answer-line", changes: { parentId: "notes" } }],
+          updates: [
+            {
+              id: "answer-line",
+              ofType: "text",
+              changes: { parentId: "notes" },
+            },
+          ],
         }),
       );
     }).toThrow(/came from INSIDE <zz-authored> card answer/);
@@ -478,7 +494,15 @@ describe("assertAgentAuthoredPlan — a human-authored card is a hole in the age
   test("refuses moving the card itself", () => {
     expect(() => {
       judgePage(
-        planOf({ updates: [{ id: "answer", changes: { parentId: PAGE } }] }),
+        planOf({
+          updates: [
+            {
+              id: "answer",
+              ofType: humanish.type,
+              changes: { parentId: PAGE },
+            },
+          ],
+        }),
       );
     }).toThrow(/the document rewrites or moves the <zz-authored> card answer/);
   });
@@ -563,7 +587,13 @@ describe("assertAgentAuthoredPlan — minting a closed card is the SAME walk", (
     expect(() => {
       judgePage(
         planOf({
-          updates: [{ id: "note-line", changes: { type: privateish.type } }],
+          updates: [
+            {
+              id: "note-line",
+              ofType: "text",
+              changes: { type: privateish.type },
+            },
+          ],
         }),
       );
     }).toThrow(/turns block note-line into a <zz-withheld> card/);
@@ -669,7 +699,11 @@ describe("assertAgentAuthoredPlan — the cards to stamp", () => {
       judgePage(
         planOf({
           updates: [
-            { id: "prose", changes: { rank: Rank.between(null, null) } },
+            {
+              id: "prose",
+              ofType: "text",
+              changes: { rank: Rank.between(null, null) },
+            },
           ],
         }),
       ),
@@ -753,7 +787,11 @@ describe("an agent-authored page — every block in it is the agent's", () => {
         planOf({
           deleteIds: ["a-line"],
           updates: [
-            { id: "a-sub", changes: { rank: Rank.between(null, null) } },
+            {
+              id: "a-sub",
+              ofType: "page",
+              changes: { rank: Rank.between(null, null) },
+            },
           ],
         }),
       ),

@@ -28,10 +28,61 @@ export type BlockFieldChanges = Partial<
   Pick<Block, "parentId" | "type" | "data" | "rank" | "expanded">
 >;
 
-/** One row's field-scoped change set. `changes` is never empty by construction. */
+/**
+ * One row's field-scoped change set. `changes` is never empty by construction.
+ *
+ * `ofType` is the type the writer SAW the row as when it computed `changes` —
+ * the type a `data` value is shaped for. A row's `data` schema is its type's,
+ * so a `data` written for a `text` row is not a `page` row's data: when
+ * another writer changed the row's type in between (a `/page` or "Turn into →
+ * Page" converting the line server-side while its text projection was still
+ * debouncing, another tab's conversion), the update no longer applies, and it
+ * writes only where the row sits, never its `type` or `data` (see
+ * {@link applicableChanges}). Required, so no producer can send a `data` whose
+ * shape the server would judge against a type the writer never saw.
+ */
 export interface BlockUpdate {
   id: string;
+  ofType: string;
   changes: BlockFieldChanges;
+}
+
+/**
+ * What of `update` still applies to `row` (the row as it stands where the
+ * update is about to land — server truth under the lock, or a client overlay
+ * base): `null` when nothing does, else the change set to write. The single
+ * definition the server writer and the client overlay both read, so they can
+ * never disagree about what an update did.
+ *
+ * - **No row ⇒ `null`**: an update never creates.
+ * - **The row's type is not `ofType` ⇒ only the POSITIONAL fields**
+ *   (`parentId`, `rank`, `expanded`). `data` is shaped for `ofType`, and
+ *   `type` converts FROM it, so both are dropped; where the row sits does not
+ *   depend on its type, and dropping a move would let a delete in the same
+ *   patch cascade over the row it meant to move out (undo of a wrap, redo of
+ *   an `unwrap`). `null` when nothing positional remains.
+ *
+ * An update that itself changed `type` and has landed reads as the second arm
+ * (the row is now `changes.type`): its positional half is what is left to
+ * compare, which is the right answer for both callers.
+ *
+ * `ofType` absent is the wire form of a tab built before the field existed:
+ * no precondition, the old behaviour.
+ */
+export function applicableChanges(
+  row: { type: string } | undefined,
+  update: { ofType?: string; changes: BlockFieldChanges },
+): BlockFieldChanges | null {
+  if (row === undefined) return null;
+  if (update.ofType === undefined || row.type === update.ofType) {
+    return update.changes;
+  }
+  const positional: BlockFieldChanges = {};
+  const { changes } = update;
+  if (namesField(changes, "parentId")) positional.parentId = changes.parentId;
+  if (namesField(changes, "rank")) positional.rank = changes.rank;
+  if (namesField(changes, "expanded")) positional.expanded = changes.expanded;
+  return Object.keys(positional).length > 0 ? positional : null;
 }
 
 /**
@@ -73,10 +124,20 @@ export const BlockFieldChangesSchema = z.object({
 export const BlockPatchSchema = z.object({
   creates: z.array(BlockSchema),
   updates: z.array(
-    z.object({ id: z.string(), changes: BlockFieldChangesSchema }),
+    z.object({
+      id: z.string(),
+      // Optional on the WIRE only: a tab built before `ofType` existed still
+      // sends updates without it (no precondition — see `applicableChanges`).
+      // Every producer here is held to `BlockUpdate`, where it is required.
+      ofType: z.string().optional(),
+      changes: BlockFieldChangesSchema,
+    }),
   ),
   deleteIds: z.array(z.string()),
 });
+
+/** A patch as the endpoint accepts it — {@link BlockPatch} or an older tab's. */
+export type BlockPatchWire = z.infer<typeof BlockPatchSchema>;
 
 /**
  * Does `changes` NAME `field` — i.e. does this patch claim authority over that
@@ -322,6 +383,7 @@ export function patchesFromDiff(diff: BlockDiff): {
       creates: diff.inserted,
       updates: diff.updated.map((u) => ({
         id: u.after.id,
+        ofType: u.before.type,
         changes: u.changes,
       })),
       deleteIds: diff.deletedIds,
@@ -330,6 +392,7 @@ export function patchesFromDiff(diff: BlockDiff): {
       creates: diff.deleted,
       updates: diff.updated.map((u) => ({
         id: u.before.id,
+        ofType: u.after.type,
         changes: fieldsOf(u.before, u.changes),
       })),
       deleteIds: diff.inserted.map((b) => b.id),

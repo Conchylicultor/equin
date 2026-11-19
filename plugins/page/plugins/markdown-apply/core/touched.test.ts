@@ -482,7 +482,7 @@ describe("a soft line break keeps its block on ONE line", () => {
 describe("moves", () => {
   test("out of a boundary onto the page body fails on the NEW side", () => {
     const plan = planOf({
-      updates: [{ id: "b3", changes: { parentId: PAGE_ID } }],
+      updates: [{ id: "b3", ofType: "text", changes: { parentId: PAGE_ID } }],
     });
     expect(violationsOf(plan)).toEqual([
       { blockId: "b3", how: "updated", side: "new", reason: "escaped" },
@@ -494,7 +494,7 @@ describe("moves", () => {
     // The rule is about being inside the caller's open set, not about staying in
     // one card.
     const plan = planOf({
-      updates: [{ id: "b3", changes: { parentId: "b4" } }],
+      updates: [{ id: "b3", ofType: "text", changes: { parentId: "b4" } }],
     });
     expect(violationsOf(plan)).toEqual([]);
   });
@@ -506,8 +506,12 @@ describe("moves", () => {
     // destination look like a card.
     const plan = planOf({
       updates: [
-        { id: "b2", changes: { parentId: PAGE_ID } },
-        { id: "b3", changes: { data: { text: runs("edited") } } },
+        { id: "b2", ofType: OPEN_TYPE, changes: { parentId: PAGE_ID } },
+        {
+          id: "b3",
+          ofType: "text",
+          changes: { data: { text: runs("edited") } },
+        },
       ],
     });
     expect(violationsOf(plan)).toEqual([]);
@@ -521,14 +525,26 @@ describe("T4: field granularity", () => {
   test("a rank-only update to page prose is NOT a violation", () => {
     const plan = planOf({
       creates: [create("new", PAGE_ID, OPEN_TYPE)],
-      updates: [{ id: "b1", changes: { rank: Rank.between(null, null) } }],
+      updates: [
+        {
+          id: "b1",
+          ofType: "text",
+          changes: { rank: Rank.between(null, null) },
+        },
+      ],
     });
     expect(violationsOf(plan)).toEqual([]);
   });
 
   test("the SAME row with a `data` change is a violation", () => {
     const plan = planOf({
-      updates: [{ id: "b1", changes: { data: { text: runs("rewritten") } } }],
+      updates: [
+        {
+          id: "b1",
+          ofType: "text",
+          changes: { data: { text: runs("rewritten") } },
+        },
+      ],
     });
     expect(violationsOf(plan)).toEqual([
       { blockId: "b1", how: "updated", side: "new", reason: "escaped" },
@@ -542,7 +558,9 @@ describe("T4: field granularity", () => {
     // row it came from was open body. Both are only caught by the old chain.
     for (const changes of [{ type: OPEN_TYPE }, { parentId: "b2" }]) {
       expect(
-        violationsOf(planOf({ updates: [{ id: "b1", changes }] })),
+        violationsOf(
+          planOf({ updates: [{ id: "b1", ofType: "text", changes }] }),
+        ),
       ).toEqual([
         { blockId: "b1", how: "updated", side: "old", reason: "escaped" },
       ]);
@@ -554,6 +572,7 @@ describe("T4: field granularity", () => {
       updates: [
         {
           id: "b1",
+          ofType: "text",
           changes: {
             rank: Rank.between(null, null),
             data: { text: runs("x") },
@@ -566,7 +585,13 @@ describe("T4: field granularity", () => {
 
   test("`touchedBlocks` still reports a rank-only update as a write", () => {
     const plan = planOf({
-      updates: [{ id: "b1", changes: { rank: Rank.between(null, null) } }],
+      updates: [
+        {
+          id: "b1",
+          ofType: "text",
+          changes: { rank: Rank.between(null, null) },
+        },
+      ],
     });
     expect(touchedBlocks(plan).updated).toEqual(["b1"]);
   });
@@ -672,7 +697,13 @@ describe("writing inside a closed card", () => {
     expect(
       nestedViolations(
         planOf({
-          updates: [{ id: "b5", changes: { data: { text: runs("x") } } }],
+          updates: [
+            {
+              id: "b5",
+              ofType: "text",
+              changes: { data: { text: runs("x") } },
+            },
+          ],
         }),
       ),
     ).toEqual([
@@ -721,7 +752,11 @@ describe("minting a closed card", () => {
     // old chain is not also reported.
     expect(
       nestedViolations(
-        planOf({ updates: [{ id: "b3", changes: { type: CLOSED_TYPE } }] }),
+        planOf({
+          updates: [
+            { id: "b3", ofType: "text", changes: { type: CLOSED_TYPE } },
+          ],
+        }),
       ),
     ).toEqual([
       { blockId: "b3", how: "updated", side: "new", reason: "enclosed" },
@@ -748,7 +783,9 @@ describe("removing something from a closed card", () => {
     // protects them and into its own. Only the old chain says otherwise.
     expect(
       nestedViolations(
-        planOf({ updates: [{ id: "b5", changes: { parentId: "b2" } }] }),
+        planOf({
+          updates: [{ id: "b5", ofType: "text", changes: { parentId: "b2" } }],
+        }),
       ),
     ).toEqual([
       { blockId: "b5", how: "updated", side: "old", reason: "enclosed" },
@@ -794,7 +831,9 @@ describe("the scope root", () => {
     // so the card the apply is rooted at counts as the boundary it is.
     const plan = planOf({
       creates: [create("n", "b2", "text")],
-      updates: [{ id: "b3", changes: { data: { text: runs("x") } } }],
+      updates: [
+        { id: "b3", ofType: "text", changes: { data: { text: runs("x") } } },
+      ],
       deleteIds: [],
     });
     expect(violationsOf(plan, fixture(), "b2")).toEqual([]);
@@ -855,7 +894,7 @@ describe("the enclosure: what the scope root sits inside", () => {
     const plan = planOf({
       textEdits: [{ blockId: "b1", runs: runs("rewritten") }],
       deleteIds: ["b3"],
-      updates: [{ id: "b5", changes: { parentId: PAGE_ID } }],
+      updates: [{ id: "b5", ofType: "text", changes: { parentId: PAGE_ID } }],
     });
     expect(violationsOf(plan, fixture(), PAGE_ID, "open")).toEqual([]);
   });
@@ -936,7 +975,13 @@ describe("a row that declares through its DATA", () => {
     expect(
       violationsOf(
         planOf({
-          updates: [{ id: "s", changes: { data: { owner: "agent" } } }],
+          updates: [
+            {
+              id: "s",
+              ofType: DATA_TYPE,
+              changes: { data: { owner: "agent" } },
+            },
+          ],
         }),
         rows,
       ),
@@ -950,7 +995,13 @@ describe("touchedBlocks", () => {
   test("reports every channel, in the plan's own order", () => {
     const plan = planOf({
       creates: [create("c1", "b2", "text"), create("c2", "b2", "text")],
-      updates: [{ id: "b1", changes: { rank: Rank.between(null, null) } }],
+      updates: [
+        {
+          id: "b1",
+          ofType: "text",
+          changes: { rank: Rank.between(null, null) },
+        },
+      ],
       deleteIds: ["b3"],
       textEdits: [{ blockId: "b5", runs: runs("x") }],
     });

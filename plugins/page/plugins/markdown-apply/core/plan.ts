@@ -717,7 +717,7 @@ export function planMarkdownApply<R extends StoredRow>(
     }
 
     if (Object.keys(changes).length > 0) {
-      updates.push({ id: row.id, changes });
+      updates.push({ id: row.id, ofType: row.type, changes });
       if (changes.parentId !== undefined || changes.rank !== undefined)
         moved += 1;
     }
@@ -820,7 +820,7 @@ export function planMarkdownApply<R extends StoredRow>(
     appended.forEach((shell, k) => {
       const changes: BlockFieldChanges = { rank: ranks[k]! };
       if (shell.parentId !== rootId) changes.parentId = rootId;
-      updates.push({ id: shell.id, changes });
+      updates.push({ id: shell.id, ofType: shell.type, changes });
       moved += 1;
     });
   }

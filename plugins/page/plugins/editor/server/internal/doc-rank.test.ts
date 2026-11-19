@@ -678,6 +678,7 @@ describe("writer oracle: every structural writer keeps I-DR", () => {
                     updates: [
                       {
                         id: row.id,
+                        ofType: row.type,
                         changes: { data: payloadFor(row.type, "edited") },
                       },
                     ],
@@ -700,6 +701,7 @@ describe("writer oracle: every structural writer keeps I-DR", () => {
                     updates: [
                       {
                         id: row.id,
+                        ofType: row.type,
                         changes: { rank: Rank.between(Rank.from(last), null) },
                       },
                     ],
@@ -884,7 +886,11 @@ describe("reconcile cost", () => {
       {
         creates: [],
         updates: [
-          { id: "p", changes: { data: payloadFor("para", "typing…") } },
+          {
+            id: "p",
+            ofType: "para",
+            changes: { data: payloadFor("para", "typing…") },
+          },
         ],
         deleteIds: [],
       },

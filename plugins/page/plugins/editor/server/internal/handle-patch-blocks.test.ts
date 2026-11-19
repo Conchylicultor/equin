@@ -536,6 +536,7 @@ describe("applyPageBlockPatch — the delete set follows the forest as written",
       updates: [
         {
           id: "c1a",
+          ofType: "text",
           changes: { parentId: "P", rank: Rank.from("a0V") },
         },
       ],
@@ -561,7 +562,9 @@ describe("applyPageBlockPatch — the delete set follows the forest as written",
     // unique index is partial on `deleted_at IS NULL`, so the trash has to land
     // first for the slot to be free.
     await patch({
-      updates: [{ id: "c2", changes: { rank: Rank.from("a0") } }],
+      updates: [
+        { id: "c2", ofType: "text", changes: { rank: Rank.from("a0") } },
+      ],
       deleteIds: ["c1"],
     });
 
@@ -578,7 +581,7 @@ describe("applyPageBlockPatch — the delete set follows the forest as written",
     await seedPage();
 
     const viaUpdate = await patch({
-      updates: [{ id: "c2", changes: { expanded: false } }],
+      updates: [{ id: "c2", ofType: "text", changes: { expanded: false } }],
       deleteIds: ["c2"],
     }).catch((e: unknown) => e);
     expect(viaUpdate).toBeInstanceOf(HttpError);
@@ -614,7 +617,11 @@ describe("applyPageBlockPatch — blind-writer rules still hold", () => {
 
     await patch({
       updates: [
-        { id: "c2", changes: { data: { text: [{ text: "late flush" }] } } },
+        {
+          id: "c2",
+          ofType: "text",
+          changes: { data: { text: [{ text: "late flush" }] } },
+        },
       ],
     });
 
@@ -622,6 +629,30 @@ describe("applyPageBlockPatch — blind-writer rules still hold", () => {
     expect(c2?.deletedAt).toBeInstanceOf(Date);
     expect(c2?.trashEntryId).toBe(entry.id);
     expect(await entries()).toHaveLength(1);
+  });
+
+  test("an update computed for another type writes only where the row sits, never a 400", async () => {
+    // The report that forced `ofType`: a `/page` converted a line while its
+    // text projection was debouncing, and the projection's `{ text }` reached
+    // a `page` row. The mirror image here: a `data` shaped for a `page`,
+    // landing on a row that is (still, or again) `text`.
+    await seedPage();
+    const before = await storedData("c2");
+
+    await patch({
+      updates: [
+        {
+          id: "c2",
+          ofType: "page",
+          changes: { parentId: "c1", data: { title: "Made", icon: null } },
+        },
+      ],
+    });
+
+    expect(await storedData("c2")).toEqual(before);
+    expect((await row("c2"))?.type).toBe("text");
+    // The move does not depend on the type, so it still lands.
+    expect((await row("c2"))?.parentId).toBe("c1");
   });
 });
 
@@ -817,7 +848,9 @@ describe("applyPageBlockPatch — the workspace root (pageId null)", () => {
   test("updates and deletes a root page it reads under the root lock", async () => {
     await seedPage();
     await rootPatch({
-      updates: [{ id: "P", changes: { rank: Rank.from("a9") } }],
+      updates: [
+        { id: "P", ofType: "page", changes: { rank: Rank.from("a9") } },
+      ],
     });
     expect(await row("P")).toMatchObject({ rank: "a9" });
     await rootPatch({ deleteIds: ["P"] });
@@ -872,6 +905,7 @@ describe("a data edit never changes a page's author — refused on every rewrite
         updates: [
           {
             id: "HUMAN",
+            ofType: "page",
             changes: { data: { title: "HUMAN", icon: null, author: "agent" } },
           },
         ],
@@ -886,7 +920,11 @@ describe("a data edit never changes a page's author — refused on every rewrite
     await refusedWith(
       patch({
         updates: [
-          { id: "AGENT", changes: { data: { title: "Renamed", icon: null } } },
+          {
+            id: "AGENT",
+            ofType: "page",
+            changes: { data: { title: "Renamed", icon: null } },
+          },
         ],
       }),
       409,
@@ -897,6 +935,7 @@ describe("a data edit never changes a page's author — refused on every rewrite
       updates: [
         {
           id: "AGENT",
+          ofType: "page",
           changes: { data: { ...agentData("Findings"), title: "Renamed" } },
         },
       ],
@@ -1001,9 +1040,13 @@ describe("applyPageBlockPatch — a move that names only `parentId`", () => {
 
     await patch({
       updates: [
-        { id: "x", changes: { parentId: "B" } },
-        { id: "y", changes: { parentId: "B" } },
-        { id: "q", changes: { parentId: "B", rank: Rank.from("a2") } },
+        { id: "x", ofType: "text", changes: { parentId: "B" } },
+        { id: "y", ofType: "text", changes: { parentId: "B" } },
+        {
+          id: "q",
+          ofType: "text",
+          changes: { parentId: "B", rank: Rank.from("a2") },
+        },
       ],
     });
 
