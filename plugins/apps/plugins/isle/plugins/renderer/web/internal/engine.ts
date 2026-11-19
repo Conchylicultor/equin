@@ -61,13 +61,13 @@ import {
 } from "./ground";
 import { islandsNearTile, OCEAN_FLAT } from "./ground-pixels";
 import { leaseBakePool, type PoolLease } from "./bake-pool";
+import { SolidMasks } from "./solid-mask";
 import {
   canvas,
   ctx2d,
   glowSprite,
   put,
   seeded,
-  solidOf,
   ss,
   strHash,
   type Ctx,
@@ -414,6 +414,8 @@ export class IsleEngine {
   /** A worker's job failed (a bug, not an absence of workers): thrown by the next frame. */
   private failure: Error | null = null;
   private art: BuildingArt;
+  /** The cut-outs a person behind something is cut by, read in a worker. */
+  private readonly solids: SolidMasks;
   /** The furniture the scene waits for, being laid out in the workers. */
   private furnitureWait: Promise<void> | null = null;
   private glyphTints = new Map<string, HTMLCanvasElement>();
@@ -570,6 +572,9 @@ export class IsleEngine {
     this.g = ctx2d(this.canvas);
     this.lease = opts.workers ? leaseBakePool() : null;
     this.art = this.newArt();
+    this.solids = new SolidMasks(this.lease?.pool ?? null, (err) => {
+      this.failure ??= err;
+    });
     const ocean = this.pixelJob((pool) => pool.ocean());
     this.oceanJob = { it: bakeOcean(ocean), px: ocean };
     const rnd = this.rnd;
@@ -907,8 +912,7 @@ export class IsleEngine {
         this.time === "night"
           ? this.sprites.props.lamp.night
           : this.sprites.props.lamp.day,
-      drawBuilding: (g, b, solid) =>
-        this.art.draw(g, b, b.x, b.y, solid, solidOf),
+      drawBuilding: (g, b, cut) => this.art.draw(g, b, b.x, b.y, cut),
     });
     // what changed → which tiles to throw away
     const prev = this.scene?.items ?? new Map();
@@ -2901,7 +2905,7 @@ export class IsleEngine {
         lg.setTransform(k, 0, 0, k, ox - sx, oy - sy);
         paint(lg);
         lg.globalCompositeOperation = "destination-out";
-        for (const o of front) o.draw(lg, true);
+          for (const o of front) o.draw(lg, this.solids.of);
         lg.globalCompositeOperation = "source-over";
         g.setTransform(1, 0, 0, 1, 0, 0);
         g.drawImage(pc, 0, 0, W, H, sx, sy, W, H);

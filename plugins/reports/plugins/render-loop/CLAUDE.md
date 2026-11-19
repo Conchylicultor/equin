@@ -109,9 +109,11 @@ does not own.
   - Exports (types):
     - `AnimationHostProps`
     - `ForeignDomHostProps`
+    - `InlineAnimationHostProps`
   - Exports (values):
     - `AnimationHost`
     - `ForeignDomHost`
+    - `InlineAnimationHost`
 - Server:
   - Contributes: `report-kind` "render-loop"
   - Uses: `reports.ReportKind`
@@ -121,6 +123,7 @@ does not own.
     - `ui/tokens/font-family --font-mono`
   - Imported by:
     - `apps/sonata/session`
+    - `apps/website/pages/foundations`
     - `apps/website/pages/story/data-views`
     - `apps/website/pages/story/essay`
     - `apps/website/pages/story/heads`

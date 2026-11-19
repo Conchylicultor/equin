@@ -20,6 +20,22 @@ export function AnimationHost(props: AnimationHostProps) {
   return <div {...props} {...{ [ANIMATION_HOST_ATTR]: "" }} />;
 }
 
+/** An inline host's own props: a span's, without anything React could render inside it. */
+export type InlineAnimationHostProps = Omit<
+  ComponentPropsWithRef<"span">,
+  "children" | "dangerouslySetInnerHTML"
+>;
+
+/**
+ * {@link AnimationHost} as a span, for where only phrasing content may stand
+ * (inside a `<button>`: the foundations page's pieces mount their live
+ * drawings into one). The same rule: React renders the empty box, the script
+ * builds and animates everything inside it.
+ */
+export function InlineAnimationHost(props: InlineAnimationHostProps) {
+  return <span {...props} {...{ [ANIMATION_HOST_ATTR]: "" }} />;
+}
+
 /** A foreign renderer's host props: a div's, children included. */
 export type ForeignDomHostProps = ComponentPropsWithRef<"div">;
 

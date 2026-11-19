@@ -1,5 +1,5 @@
 // The renderer's small drawing kit: canvases, sprites (drawn once at 2×,
-// placed by their ground anchor), the solid cut-out of a painted canvas, inked
+// placed by their ground anchor), inked
 // lines and irregular blobs.
 
 import { mulberry32 } from "@plugins/packages/plugins/seeded-random/core";
@@ -62,36 +62,19 @@ export function sprite(
 }
 
 /**
- * What of a painted canvas hides a person standing behind it: its alpha, the
- * near-transparent parts (a cast shadow, washes) cut away. Read once per canvas.
+ * Places a sprite with its anchor at (x, y), scaled by k; `cut`: its cut-out
+ * only (`solid-mask.ts`'s `Cutter`, typed here structurally so the kit stays a leaf).
  */
-const SOLID_A = 100;
-const solidMasks = new WeakMap<HTMLCanvasElement, HTMLCanvasElement>();
-export function solidOf(c: HTMLCanvasElement): HTMLCanvasElement {
-  const hit = solidMasks.get(c);
-  if (hit) return hit;
-  const m = canvas(c.width, c.height);
-  const mg = ctx2d(m, { willReadFrequently: true });
-  mg.drawImage(c, 0, 0);
-  const im = mg.getImageData(0, 0, m.width, m.height);
-  const d = im.data;
-  for (let i = 3; i < d.length; i += 4) if (d[i]! < SOLID_A) d[i] = 0;
-  mg.putImageData(im, 0, 0);
-  solidMasks.set(c, m);
-  return m;
-}
-
-/** Places a sprite with its anchor at (x, y), scaled by k; `solid`: its cut-out only. */
 export function put(
   g: Ctx,
   s: Sprite,
   x: number,
   y: number,
   k = 1,
-  solid = false,
+  cut?: (c: HTMLCanvasElement) => CanvasImageSource,
 ): void {
   g.drawImage(
-    solid ? solidOf(s.c) : s.c,
+    cut ? cut(s.c) : s.c,
     x - s.ax * k,
     y - s.ay * k,
     s.w * k,

@@ -15,7 +15,9 @@ Phase 5 is in: the bakes run in module workers, and the `dev` plugin's growth ex
 - **Workers** (`renderer/web/internal/bake.worker.ts`, pooled by `bake-pool.ts`): ground tiles' per-pixel
   colour and water mask (`ground-pixels.ts`), island previews, island shapes and the home carve (built ahead
   by `useIslandShapes` for `islandsInPlay`, restored with `IslandPlan.restore` / `adoptHomeCarve`), each
-  island's furniture, buildings' hit masks (`hit-mask.ts`, handed over in idle time), the open sea's texture
+  island's furniture, buildings' hit masks (`hit-mask.ts`, handed over in idle time), the solid cut-outs a person
+  behind something is cut by (`solid-mask.ts`: never a canvas readback on the page — until one lands, the whole
+  painting cuts), the open sea's texture
   (`oceanKernel`; tiles drawn before it lands are redrawn), and placing the apps with no plot yet
   (`usePlacedResidents`: `placeResidents`, hundreds of ms on a first visit). Nothing heavy runs in the task
   that opens the island — a click mounting it runs its effects inside that click. The worker runs the

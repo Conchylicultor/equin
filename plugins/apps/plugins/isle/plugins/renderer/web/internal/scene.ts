@@ -16,6 +16,7 @@ import {
 import type { SceneBuilding } from "./buildings";
 import type { FurnitureStore } from "./furniture";
 import { put, type Ctx, type Sprite } from "./kit";
+import type { Cutter } from "./solid-mask";
 import { DOCK_LEN, type SpriteSet } from "./sprites";
 
 export const TILE = 512;
@@ -43,7 +44,8 @@ export interface Static {
   readonly y0: number;
   readonly x1: number;
   readonly y1: number;
-  readonly draw: (g: Ctx, solid?: boolean) => void;
+  /** `cut`: drawn as its cut-out only (over a person behind it). */
+  readonly draw: (g: Ctx, cut?: Cutter) => void;
   readonly tree?: boolean;
   readonly building?: SceneBuilding;
 }
@@ -63,7 +65,7 @@ export interface Scene {
 /** What a static's draw reads at draw time (it changes with the time of day). */
 export interface SceneEnv {
   lamp(): Sprite;
-  drawBuilding(g: Ctx, b: SceneBuilding, solid: boolean): void;
+  drawBuilding(g: Ctx, b: SceneBuilding, cut?: Cutter): void;
 }
 
 const boxesHit = (a: Box, b: Box) =>
@@ -126,8 +128,8 @@ export function realizeScene(
         (rk.land && inSq(rk.x, rk.y, 20))
       )
         return;
-      stat(`r:${M.seed}:${I.id}:${i}`, rk.y, o, (g, solid) =>
-        put(g, rk.sp, rk.x, rk.y, k, solid),
+      stat(`r:${M.seed}:${I.id}:${i}`, rk.y, o, (g, cut) =>
+        put(g, rk.sp, rk.x, rk.y, k, cut),
       );
       if (rk.land) solids.push([rk.x, rk.y, rk.s * 0.6]);
     });
@@ -138,7 +140,7 @@ export function realizeScene(
         `t:${M.seed}:${I.id}:${i}`,
         t.y,
         o,
-        (g, solid) => put(g, t.s, t.x, t.y, t.k, solid),
+        (g, cut) => put(g, t.s, t.x, t.y, t.k, cut),
         { tree: true },
       );
       solids.push([t.x, t.y - 2, 6 * t.k]);
@@ -147,8 +149,8 @@ export function realizeScene(
       const sp = SP.props.bushes[o.v]!;
       const b = box(o.x, o.y, sp, o.k);
       if (occ.near(o.x, o.y, 28) || !boxClear(b) || inSq(o.x, o.y, 20)) return;
-      stat(`bu:${M.seed}:${I.id}:${i}`, o.y, b, (g, solid) =>
-        put(g, sp, o.x, o.y, o.k, solid),
+      stat(`bu:${M.seed}:${I.id}:${i}`, o.y, b, (g, cut) =>
+        put(g, sp, o.x, o.y, o.k, cut),
       );
       solids.push([o.x, o.y, 10]);
     });
@@ -156,8 +158,8 @@ export function realizeScene(
       const sp = SP.props.stump;
       const b = box(o.x, o.y, sp);
       if (occ.near(o.x, o.y, 28) || !boxClear(b) || inSq(o.x, o.y, 20)) return;
-      stat(`su:${M.seed}:${I.id}:${i}`, o.y, b, (g, solid) =>
-        put(g, sp, o.x, o.y, 1, solid),
+      stat(`su:${M.seed}:${I.id}:${i}`, o.y, b, (g, cut) =>
+        put(g, sp, o.x, o.y, 1, cut),
       );
       solids.push([o.x, o.y, 7]);
     });
@@ -176,8 +178,8 @@ export function realizeScene(
       const b = box(x, y, lampDay);
       if (H(x, y) < 0.1 || !boxClear(b) || inSq(x, y, 0) || occ.near(x, y, 16))
         continue;
-      stat(`l:${rd.key}:${n}`, y, b, (g, solid) =>
-        put(g, env.lamp(), x, y, 1, solid),
+      stat(`l:${rd.key}:${n}`, y, b, (g, cut) =>
+        put(g, env.lamp(), x, y, 1, cut),
       );
       solids.push([x, y, 5]);
       lights.push([x, y - 52, 58]);
@@ -185,8 +187,8 @@ export function realizeScene(
   }
   for (const q of layout.squares) {
     if (q.camp) {
-      stat(`camp:${q.key}`, q.y - 4, box(q.x, q.y, SP.campStones), (g, solid) =>
-        put(g, SP.campStones, q.x, q.y, 1, solid),
+      stat(`camp:${q.key}`, q.y - 4, box(q.x, q.y, SP.campStones), (g, cut) =>
+        put(g, SP.campStones, q.x, q.y, 1, cut),
       );
       solids.push([q.x, q.y, 22]);
       (
@@ -198,16 +200,16 @@ export function realizeScene(
       ).forEach(([dx, dy, sp], j) => {
         const x = q.x + dx;
         const y = q.y + dy;
-        stat(`campd:${q.key}:${j}`, y, box(x, y, sp), (g, solid) =>
-          put(g, sp, x, y, 1, solid),
+        stat(`campd:${q.key}:${j}`, y, box(x, y, sp), (g, cut) =>
+          put(g, sp, x, y, 1, cut),
         );
         solids.push([x, y, 10]);
       });
     }
   }
   for (const w of wellsOf(layout)) {
-    stat(`well:${w.key}`, w.y, box(w.x, w.y, SP.props.well), (g, solid) =>
-      put(g, SP.props.well, w.x, w.y, 1, solid),
+    stat(`well:${w.key}`, w.y, box(w.x, w.y, SP.props.well), (g, cut) =>
+      put(g, SP.props.well, w.x, w.y, 1, cut),
     );
     solids.push([w.x, w.y - 4, 24]);
   }
@@ -217,7 +219,7 @@ export function realizeScene(
       b.key,
       b.y,
       [b.x + x0, b.y + y0, b.x + x1, b.y + y1],
-      (g, solid) => env.drawBuilding(g, b, solid ?? false),
+      (g, cut) => env.drawBuilding(g, b, cut),
       {
         building: b,
       },
@@ -238,11 +240,11 @@ export function realizeScene(
         Math.max(x, ex) + 40,
         Math.max(y, ey) + 40,
       ],
-      (g, solid) => {
+      (g, cut) => {
         g.save();
         g.translate(x, y);
         g.rotate(da);
-        put(g, SP.dock, 0, 0, 1, solid);
+        put(g, SP.dock, 0, 0, 1, cut);
         g.restore();
       },
     );
@@ -252,12 +254,12 @@ export function realizeScene(
       p.key,
       -1e6 + 1,
       [p.x - 220, p.y - 220, p.x + 220, p.y + 220],
-      (g, solid) => {
+      (g, cut) => {
         g.save();
         g.translate(p.x, p.y);
         g.rotate(p.ang);
         g.scale(0.75, 1);
-        put(g, SP.dock, 0, 0, 1, solid);
+        put(g, SP.dock, 0, 0, 1, cut);
         g.restore();
       },
     );

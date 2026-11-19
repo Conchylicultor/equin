@@ -10,6 +10,7 @@ import type {
 } from "@plugins/apps/plugins/isle/plugins/buildings/core";
 import type { Pt } from "@plugins/apps/plugins/isle/plugins/world/core";
 import { canvas, ctx2d, type Ctx } from "./kit";
+import type { Cutter } from "./solid-mask";
 import { MASK_C, MASK_DIL, maskFromAlpha, type Mask } from "./hit-mask";
 
 const MASK_A_ANIM = 140;
@@ -222,23 +223,10 @@ export class BuildingArt {
     return e.c;
   }
 
-  draw(
-    g: Ctx,
-    b: SceneBuilding,
-    x = b.x,
-    y = b.y,
-    solid = false,
-    solidOf?: (c: HTMLCanvasElement) => HTMLCanvasElement,
-  ): void {
+  draw(g: Ctx, b: SceneBuilding, x = b.x, y = b.y, cut?: Cutter): void {
     const c = this.bake(b);
     const [x0, y0, x1, y1] = b.bounds;
-    g.drawImage(
-      solid && solidOf ? solidOf(c) : c,
-      x + x0,
-      y + y0,
-      x1 - x0,
-      y1 - y0,
-    );
+    g.drawImage(cut ? cut(c) : c, x + x0, y + y0, x1 - x0, y1 - y0);
   }
 
   private maskOf(b: SceneBuilding): Mask {

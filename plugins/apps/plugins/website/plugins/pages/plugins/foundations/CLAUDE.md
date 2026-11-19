@@ -122,6 +122,7 @@ variables.
     - `primitives/pane.Pane`
     - `primitives/pane.useOpenPane`
     - `primitives/shortcuts.useSurfaceShortcuts`
+    - `reports/render-loop.InlineAnimationHost`
     - `ui/theme-engine.ThemeEngine`
   - Exports (values): `foundationsPane`
 - Server:

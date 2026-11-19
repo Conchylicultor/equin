@@ -59,6 +59,8 @@ export interface BakeJobs {
   };
   /** A building's hit mask, read from its painted bitmap. */
   mask: { job: { kind: "mask"; bmp: ImageBitmap; bounds: Box }; out: Mask };
+  /** A painted canvas's cut-out: the solid part a person behind it is cut by (`solid-mask.ts`). */
+  solid: { job: { kind: "solid"; bmp: ImageBitmap }; out: ImageBitmap };
 }
 
 export type BakeKind = keyof BakeJobs;

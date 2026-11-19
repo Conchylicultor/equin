@@ -360,6 +360,12 @@ export function createCardRuntime(
   };
   host.addEventListener("click", onClick);
   host.addEventListener("keydown", onKey);
+  // back on screen: the state each card shows gets its full time first, as after a pause
+  const onDocVisibility = () => {
+    if (!document.hidden) restartHolds();
+    schedule();
+  };
+  document.addEventListener("visibilitychange", onDocVisibility);
 
   // ---------- autoplay: one clock, ticking only cards that are open and on screen ----------
   function onVisibility(inst: Inst, entries: IntersectionObserverEntry[]) {
@@ -385,7 +391,8 @@ export function createCardRuntime(
   function schedule() {
     clearTimeout(timer);
     timer = undefined;
-    if (paused) return;
+    // nobody looks at a hidden tab: its cards hold where they are
+    if (paused || document.hidden) return;
     let next = Infinity;
     insts.forEach((inst) => {
       if (ticking(inst) && inst.auto) next = Math.min(next, inst.auto.next);
@@ -407,6 +414,12 @@ export function createCardRuntime(
       auto.next = now + hold(inst);
     });
     schedule();
+  }
+  function restartHolds() {
+    const now = performance.now();
+    insts.forEach((i) => {
+      if (i.auto) i.auto.next = now + hold(i);
+    });
   }
   function holdAuto(inst: Inst) {
     if (!inst.auto) return;
@@ -431,12 +444,7 @@ export function createCardRuntime(
     unmount,
     pause(on) {
       paused = on;
-      if (!on) {
-        const now = performance.now();
-        insts.forEach((i) => {
-          if (i.auto) i.auto.next = now + hold(i);
-        });
-      }
+      if (!on) restartHolds();
       schedule();
     },
     live: () => live,
@@ -446,6 +454,7 @@ export function createCardRuntime(
       clearTimeout(timer);
       host.removeEventListener("click", onClick);
       host.removeEventListener("keydown", onKey);
+      document.removeEventListener("visibilitychange", onDocVisibility);
     },
   };
 }

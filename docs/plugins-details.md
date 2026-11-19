@@ -13371,6 +13371,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/pane.Pane`
                   - `primitives/pane.useOpenPane`
                   - `primitives/shortcuts.useSurfaceShortcuts`
+                  - `reports/render-loop.InlineAnimationHost`
                   - `ui/theme-engine.ThemeEngine`
                 - Exports (values): `foundationsPane`
               - Server:
@@ -60913,9 +60914,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `AnimationHostProps`
           - `ForeignDomHostProps`
+          - `InlineAnimationHostProps`
         - Exports (values):
           - `AnimationHost`
           - `ForeignDomHost`
+          - `InlineAnimationHost`
       - Server:
         - Contributes: `report-kind` "render-loop"
         - Uses: `reports.ReportKind`
@@ -60925,6 +60928,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/font-family --font-mono`
         - Imported by:
           - `apps/sonata/session`
+          - `apps/website/pages/foundations`
           - `apps/website/pages/story/data-views`
           - `apps/website/pages/story/essay`
           - `apps/website/pages/story/heads`

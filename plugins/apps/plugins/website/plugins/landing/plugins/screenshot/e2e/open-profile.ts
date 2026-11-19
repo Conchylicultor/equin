@@ -38,7 +38,7 @@ import {
 import { bootDemo, demoPath, embedRoot } from "./internal/demo-pages";
 
 const USAGE =
-  "open-profile.ts --at <location> --click <text> [--until <text>] [--throttle 4] [--settle 4000] [--runs 1] [--top 25] [--no-profile] [--out <dir>]";
+  "open-profile.ts --at <location> --click <text> [--until <text>] [--throttle 4] [--settle 4000] [--runs 1] [--top 25] [--no-profile] [--force] [--gpu] [--out <dir>]";
 const AT = requireArg("at", USAGE);
 const CLICK = requireArg("click", USAGE);
 const THROTTLE = numArg("throttle", 4);
@@ -51,6 +51,13 @@ const OUT = arg("out");
 const UNTIL = arg("until");
 // `--no-profile`: measure only — a CDP profiler slows what it samples.
 const PROFILE = !flag("no-profile");
+// `--force`: click without waiting for the element to hold still — an
+// animated button (the Isle's bobbing Start) is never "stable" to Playwright.
+const FORCE = flag("force");
+// `--gpu`: render with the machine's GPU, as a visitor's browser does — a
+// canvas readback (`getImageData`) costs a GPU round trip there, and nothing
+// under the default software raster.
+const GPU = flag("gpu");
 
 interface ProfileNode {
   id: number;
@@ -194,227 +201,241 @@ interface Measured {
   }[];
 }
 
-await withBrowser(async (h) => {
-  const r = report(`demo: profile of clicking "${CLICK}" at ${AT}`);
-  for (let run = 0; run < RUNS; run++) {
-    const { page } = await h.session();
-    const url = pathUrl(demoPath(AT));
-    const target = embedRoot(page).getByText(CLICK, { exact: false }).first();
+await withBrowser(
+  async (h) => {
+    const r = report(`demo: profile of clicking "${CLICK}" at ${AT}`);
+    for (let run = 0; run < RUNS; run++) {
+      const { page } = await h.session();
+      const url = pathUrl(demoPath(AT));
+      const target = embedRoot(page).getByText(CLICK, { exact: false }).first();
 
-    const browserCdp = await h.browser.newBrowserCDPSession();
-    // Every host worker CDP reaches: a context can run more than one
-    // `/worker-tree.` SharedWorker, and only one of them is the demo's host —
-    // so each is profiled, and the busiest one reported.
-    const workers: ((m: string, p?: object) => Promise<unknown>)[] = [];
-    browserCdp.on(
-      "Target.targetCreated",
-      ({
-        targetInfo,
-      }: {
-        targetInfo: { targetId: string; type: string; url: string };
-      }) => {
-        if (
-          targetInfo.type !== "shared_worker" ||
-          !targetInfo.url.includes("/worker-tree.")
-        )
-          return;
-        void (async () => {
-          const { sessionId } = await browserCdp.send("Target.attachToTarget", {
-            targetId: targetInfo.targetId,
-            flatten: false,
-          });
-          const call = workerCaller(browserCdp, sessionId);
-          await call("Profiler.enable");
-          await call("Profiler.setSamplingInterval", { interval: 200 });
-          workers.push(call);
-        })();
-      },
-    );
-    await browserCdp.send("Target.setDiscoverTargets", { discover: true });
-
-    await bootDemo(page, url, { marker: `[data-app-embed] :text("${CLICK}")` });
-    await target.waitFor({ timeout: 30_000 });
-    // Let the boot's own work settle before the click.
-    await page.waitForTimeout(3000);
-
-    const pageCdp = await page.context().newCDPSession(page);
-    await pageCdp.send("Emulation.setCPUThrottlingRate", { rate: THROTTLE });
-    await pageCdp.send("Profiler.enable");
-    await pageCdp.send("Profiler.setSamplingInterval", { interval: 200 });
-    await page.evaluate(() => {
-      const w = window as unknown as { __open: Measured };
-      w.__open = {
-        clickAt: null,
-        interaction: null,
-        frames: [],
-        untilAt: null,
-      };
-      // The click's own pointerdown, at dispatch: every time below is from it.
-      addEventListener(
-        "pointerdown",
-        () => {
-          w.__open.clickAt ??= performance.now();
-        },
-        { capture: true },
-      );
-      new PerformanceObserver((list) => {
-        for (const e of list.getEntries() as PerformanceEventTiming[]) {
-          const at = w.__open.clickAt;
-          // The click's own entries (pointerdown → click), not a hover;
-          // an entry's start is the input's timestamp, before its dispatch.
-          if (at === null || e.startTime + e.duration < at) continue;
-          if (!/^(pointerdown|pointerup|mousedown|mouseup|click)$/.test(e.name))
-            continue;
+      const browserCdp = await h.browser.newBrowserCDPSession();
+      // Every host worker CDP reaches: a context can run more than one
+      // `/worker-tree.` SharedWorker, and only one of them is the demo's host —
+      // so each is profiled, and the busiest one reported.
+      const workers: ((m: string, p?: object) => Promise<unknown>)[] = [];
+      browserCdp.on(
+        "Target.targetCreated",
+        ({
+          targetInfo,
+        }: {
+          targetInfo: { targetId: string; type: string; url: string };
+        }) => {
           if (
-            w.__open.interaction !== null &&
-            w.__open.interaction.duration >= e.duration
+            targetInfo.type !== "shared_worker" ||
+            !targetInfo.url.includes("/worker-tree.")
           )
-            continue;
-          w.__open.interaction = {
-            name: e.name,
-            duration: e.duration,
-            inputDelay: e.processingStart - e.startTime,
-            processing: e.processingEnd - e.processingStart,
-            presentation: e.startTime + e.duration - e.processingEnd,
-          };
-        }
-      }).observe({
-        type: "event",
-        durationThreshold: 16,
-        buffered: false,
-      } as PerformanceObserverInit);
-      new PerformanceObserver((list) => {
-        for (const e of list.getEntries() as unknown as {
-          startTime: number;
-          duration: number;
-          blockingDuration: number;
-          scripts: {
-            invoker: string;
-            sourceFunctionName: string;
-            sourceURL: string;
-            duration: number;
-          }[];
-        }[]) {
-          const at = w.__open.clickAt;
-          if (at === null || e.startTime + e.duration < at) continue;
-          w.__open.frames.push({
-            start: Math.round(e.startTime - at),
-            duration: Math.round(e.duration),
-            blocking: Math.round(e.blockingDuration),
-            scripts: e.scripts.map((s) => ({
-              invoker: s.invoker,
-              fn: s.sourceFunctionName,
-              src: s.sourceURL.split("/artifacts/")[1] ?? s.sourceURL,
-              duration: Math.round(s.duration),
-            })),
-          });
-        }
-      }).observe({ type: "long-animation-frame", buffered: false });
-    });
-    if (UNTIL !== undefined)
-      await page.evaluate((text) => {
-        const w = window as unknown as { __open: Measured };
-        const root = document.querySelector("[data-app-embed]");
-        if (root === null) throw new Error("open-profile: no [data-app-embed]");
-        // Checked once a frame (a measurement, not app code): the frame
-        // the text first shows in.
-        const check = () => {
-          if (w.__open.clickAt !== null && root.textContent.includes(text)) {
-            w.__open.untilAt = performance.now();
             return;
-          }
-          requestAnimationFrame(check);
+          void (async () => {
+            const { sessionId } = await browserCdp.send(
+              "Target.attachToTarget",
+              {
+                targetId: targetInfo.targetId,
+                flatten: false,
+              },
+            );
+            const call = workerCaller(browserCdp, sessionId);
+            await call("Profiler.enable");
+            await call("Profiler.setSamplingInterval", { interval: 200 });
+            workers.push(call);
+          })();
+        },
+      );
+      await browserCdp.send("Target.setDiscoverTargets", { discover: true });
+
+      await bootDemo(page, url, {
+        marker: `[data-app-embed] :text("${CLICK}")`,
+      });
+      await target.waitFor({ timeout: 30_000 });
+      // Let the boot's own work settle before the click.
+      await page.waitForTimeout(3000);
+
+      const pageCdp = await page.context().newCDPSession(page);
+      await pageCdp.send("Emulation.setCPUThrottlingRate", { rate: THROTTLE });
+      await pageCdp.send("Profiler.enable");
+      await pageCdp.send("Profiler.setSamplingInterval", { interval: 200 });
+      await page.evaluate(() => {
+        const w = window as unknown as { __open: Measured };
+        w.__open = {
+          clickAt: null,
+          interaction: null,
+          frames: [],
+          untilAt: null,
         };
-        requestAnimationFrame(check);
-      }, UNTIL);
-    // Only the workers reached by now are profiled (one CDP attaches later
-    // was never started, so it is never stopped).
-    const profiled = PROFILE ? [...workers] : [];
-    if (PROFILE) {
-      await pageCdp.send("Profiler.start");
-      for (const call of profiled) await call("Profiler.start");
-    }
-    await target.click();
-    await page.waitForTimeout(SETTLE_MS);
-    const pageProfile = PROFILE
-      ? ((await pageCdp.send("Profiler.stop")) as { profile: CpuProfile })
-          .profile
-      : null;
-    const workerProfiles = PROFILE
-      ? await Promise.all(
-          profiled.map(
-            async (call) =>
-              ((await call("Profiler.stop")) as { profile: CpuProfile })
-                .profile,
-          ),
-        )
-      : [];
-    // The demo's host is the worker that did the work.
-    const workerProfile =
-      workerProfiles
-        .map((p) => ({ p, busy: busyMs(p) }))
-        .sort((a, b) => b.busy - a.busy)[0]?.p ?? null;
-    await pageCdp.send("Emulation.setCPUThrottlingRate", { rate: 1 });
-    const m = await page.evaluate(
-      () => (window as unknown as { __open: Measured }).__open,
-    );
-    const i = m.interaction;
-    console.info(
-      `run ${run + 1}: landed ${page.url()}\n  interaction: ${
-        i === null
-          ? "none ≥16 ms"
-          : `${i.name} ${Math.round(i.duration)} ms (input ${Math.round(i.inputDelay)}, processing ${Math.round(i.processing)}, presentation ${Math.round(i.presentation)})`
-      }`,
-    );
-    if (UNTIL !== undefined)
+        // The click's own pointerdown, at dispatch: every time below is from it.
+        addEventListener(
+          "pointerdown",
+          () => {
+            w.__open.clickAt ??= performance.now();
+          },
+          { capture: true },
+        );
+        new PerformanceObserver((list) => {
+          for (const e of list.getEntries() as PerformanceEventTiming[]) {
+            const at = w.__open.clickAt;
+            // The click's own entries (pointerdown → click), not a hover;
+            // an entry's start is the input's timestamp, before its dispatch.
+            if (at === null || e.startTime + e.duration < at) continue;
+            if (
+              !/^(pointerdown|pointerup|mousedown|mouseup|click)$/.test(e.name)
+            )
+              continue;
+            if (
+              w.__open.interaction !== null &&
+              w.__open.interaction.duration >= e.duration
+            )
+              continue;
+            w.__open.interaction = {
+              name: e.name,
+              duration: e.duration,
+              inputDelay: e.processingStart - e.startTime,
+              processing: e.processingEnd - e.processingStart,
+              presentation: e.startTime + e.duration - e.processingEnd,
+            };
+          }
+        }).observe({
+          type: "event",
+          durationThreshold: 16,
+          buffered: false,
+        } as PerformanceObserverInit);
+        new PerformanceObserver((list) => {
+          for (const e of list.getEntries() as unknown as {
+            startTime: number;
+            duration: number;
+            blockingDuration: number;
+            scripts: {
+              invoker: string;
+              sourceFunctionName: string;
+              sourceURL: string;
+              duration: number;
+            }[];
+          }[]) {
+            const at = w.__open.clickAt;
+            if (at === null || e.startTime + e.duration < at) continue;
+            w.__open.frames.push({
+              start: Math.round(e.startTime - at),
+              duration: Math.round(e.duration),
+              blocking: Math.round(e.blockingDuration),
+              scripts: e.scripts.map((s) => ({
+                invoker: s.invoker,
+                fn: s.sourceFunctionName,
+                src: s.sourceURL.split("/artifacts/")[1] ?? s.sourceURL,
+                duration: Math.round(s.duration),
+              })),
+            });
+          }
+        }).observe({ type: "long-animation-frame", buffered: false });
+      });
+      if (UNTIL !== undefined)
+        await page.evaluate((text) => {
+          const w = window as unknown as { __open: Measured };
+          const root = document.querySelector("[data-app-embed]");
+          if (root === null)
+            throw new Error("open-profile: no [data-app-embed]");
+          // Checked once a frame (a measurement, not app code): the frame
+          // the text first shows in.
+          const check = () => {
+            if (w.__open.clickAt !== null && root.textContent.includes(text)) {
+              w.__open.untilAt = performance.now();
+              return;
+            }
+            requestAnimationFrame(check);
+          };
+          requestAnimationFrame(check);
+        }, UNTIL);
+      // Only the workers reached by now are profiled (one CDP attaches later
+      // was never started, so it is never stopped).
+      const profiled = PROFILE ? [...workers] : [];
+      if (PROFILE) {
+        await pageCdp.send("Profiler.start");
+        for (const call of profiled) await call("Profiler.start");
+      }
+      await target.click({ force: FORCE });
+      await page.waitForTimeout(SETTLE_MS);
+      const pageProfile = PROFILE
+        ? ((await pageCdp.send("Profiler.stop")) as { profile: CpuProfile })
+            .profile
+        : null;
+      const workerProfiles = PROFILE
+        ? await Promise.all(
+            profiled.map(
+              async (call) =>
+                ((await call("Profiler.stop")) as { profile: CpuProfile })
+                  .profile,
+            ),
+          )
+        : [];
+      // The demo's host is the worker that did the work.
+      const workerProfile =
+        workerProfiles
+          .map((p) => ({ p, busy: busyMs(p) }))
+          .sort((a, b) => b.busy - a.busy)[0]?.p ?? null;
+      await pageCdp.send("Emulation.setCPUThrottlingRate", { rate: 1 });
+      const m = await page.evaluate(
+        () => (window as unknown as { __open: Measured }).__open,
+      );
+      const i = m.interaction;
       console.info(
-        `  "${UNTIL}" shown at: ${
-          m.untilAt === null || m.clickAt === null
-            ? "never"
-            : `+${Math.round(m.untilAt - m.clickAt)} ms`
+        `run ${run + 1}: landed ${page.url()}\n  interaction: ${
+          i === null
+            ? "none ≥16 ms"
+            : `${i.name} ${Math.round(i.duration)} ms (input ${Math.round(i.inputDelay)}, processing ${Math.round(i.processing)}, presentation ${Math.round(i.presentation)})`
         }`,
       );
-    console.info(`  host workers profiled: ${workerProfiles.length}`);
-    const blocking = m.frames.reduce((a, f) => a + f.blocking, 0);
-    const busy = m.frames.filter((f) => f.blocking > 0);
-    const last = busy.at(-1);
-    console.info(
-      `  long frames after the click: ${m.frames.length}, blocking ${blocking} ms in total, the last blocking one ending at +${last === undefined ? 0 : last.start + last.duration} ms`,
-    );
-    console.info(
-      "  long animation frames (+ms from the click, duration, blocking):",
-    );
-    for (const f of m.frames) {
-      console.info(`    +${f.start} ${f.duration} ms (blocking ${f.blocking})`);
-      for (const s of f.scripts)
+      if (UNTIL !== undefined)
         console.info(
-          `      ${String(s.duration).padStart(5)} ms  ${s.invoker} → ${s.fn} ${s.src}`,
+          `  "${UNTIL}" shown at: ${
+            m.untilAt === null || m.clickAt === null
+              ? "never"
+              : `+${Math.round(m.untilAt - m.clickAt)} ms`
+          }`,
         );
-    }
-    if (pageProfile !== null)
-      for (const line of summarize("page", pageProfile)) console.info(line);
-    if (workerProfile !== null)
-      for (const line of summarize("worker", workerProfile)) console.info(line);
-    else console.info("worker: not attached");
-    if (OUT !== undefined) {
-      mkdirSync(OUT, { recursive: true });
+      console.info(`  host workers profiled: ${workerProfiles.length}`);
+      const blocking = m.frames.reduce((a, f) => a + f.blocking, 0);
+      const busy = m.frames.filter((f) => f.blocking > 0);
+      const last = busy.at(-1);
+      console.info(
+        `  long frames after the click: ${m.frames.length}, blocking ${blocking} ms in total, the last blocking one ending at +${last === undefined ? 0 : last.start + last.duration} ms`,
+      );
+      console.info(
+        "  long animation frames (+ms from the click, duration, blocking):",
+      );
+      for (const f of m.frames) {
+        console.info(
+          `    +${f.start} ${f.duration} ms (blocking ${f.blocking})`,
+        );
+        for (const s of f.scripts)
+          console.info(
+            `      ${String(s.duration).padStart(5)} ms  ${s.invoker} → ${s.fn} ${s.src}`,
+          );
+      }
       if (pageProfile !== null)
-        writeFileSync(
-          `${OUT}/page-${run + 1}.cpuprofile`,
-          JSON.stringify(pageProfile),
-        );
+        for (const line of summarize("page", pageProfile)) console.info(line);
       if (workerProfile !== null)
-        writeFileSync(
-          `${OUT}/worker-${run + 1}.cpuprofile`,
-          JSON.stringify(workerProfile),
-        );
+        for (const line of summarize("worker", workerProfile))
+          console.info(line);
+      else console.info("worker: not attached");
+      if (OUT !== undefined) {
+        mkdirSync(OUT, { recursive: true });
+        if (pageProfile !== null)
+          writeFileSync(
+            `${OUT}/page-${run + 1}.cpuprofile`,
+            JSON.stringify(pageProfile),
+          );
+        if (workerProfile !== null)
+          writeFileSync(
+            `${OUT}/worker-${run + 1}.cpuprofile`,
+            JSON.stringify(workerProfile),
+          );
+      }
+      r.ok(
+        `run ${run + 1}: measured`,
+        i !== null,
+        i === null ? "no interaction" : `${Math.round(i.duration)} ms`,
+      );
+      await browserCdp.detach();
     }
-    r.ok(
-      `run ${run + 1}: measured`,
-      i !== null,
-      i === null ? "no interaction" : `${Math.round(i.duration)} ms`,
-    );
-    await browserCdp.detach();
-  }
-  await r.finish();
-});
+    await r.finish();
+  },
+  { gpu: GPU },
+);

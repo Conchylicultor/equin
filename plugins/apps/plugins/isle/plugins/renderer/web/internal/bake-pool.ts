@@ -209,6 +209,10 @@ export class BakePool {
   mask(bmp: ImageBitmap, bounds: Box): Promise<BakeAnswer<"mask">> {
     return this.post<"mask">({ kind: "mask", bmp, bounds }, null, [bmp]);
   }
+
+  solid(bmp: ImageBitmap): Promise<BakeAnswer<"solid">> {
+    return this.post<"solid">({ kind: "solid", bmp }, null, [bmp]);
+  }
 }
 
 let shared: { pool: BakePool; leases: number } | null = null;

@@ -3,10 +3,15 @@ import { Reports } from "@plugins/reports/web";
 import { RenderLoopController } from "./internal/render-loop-controller";
 import { RenderLoopKindView } from "./components/render-loop-kind-view";
 
-export { AnimationHost, ForeignDomHost } from "./components/animation-host";
+export {
+  AnimationHost,
+  ForeignDomHost,
+  InlineAnimationHost,
+} from "./components/animation-host";
 export type {
   AnimationHostProps,
   ForeignDomHostProps,
+  InlineAnimationHostProps,
 } from "./components/animation-host";
 
 export default {

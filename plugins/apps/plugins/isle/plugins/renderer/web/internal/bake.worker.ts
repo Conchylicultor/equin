@@ -1,6 +1,7 @@
 // A bake worker: colours ground tiles and island previews, builds island
 // shapes and the home carve, lays out each island's furniture (coast,
-// boulders, trees), and reads buildings' hit masks — off the page's
+// boulders, trees), and reads buildings' hit masks and the cut-outs people
+// behind things are cut by — off the page's
 // thread, with the very same code the page runs (`ground-pixels.ts`,
 // `hit-mask.ts`, the world core), so what it answers is bit-identical to what
 // the page would have made. Started by `bake-pool.ts`
@@ -18,6 +19,7 @@ import type { BakeJob, BakeJobs, FromWorker, ToWorker } from "./bake-protocol";
 import { buildFurniture } from "./furniture";
 import { groundKernel, oceanKernel, previewKernel } from "./ground-pixels";
 import { maskFromAlpha } from "./hit-mask";
+import { solidInPlace } from "./solid-mask";
 
 interface WorkerScope {
   onmessage: ((e: MessageEvent<ToWorker>) => void) | null;
@@ -106,6 +108,19 @@ function run(job: BakeJob): { out: unknown; transfer: Transferable[] } {
         bounds,
       );
       return { out, transfer: [out.raw.buffer, out.bits.buffer] };
+    }
+    case "solid": {
+      const { bmp } = job;
+      const c = new OffscreenCanvas(bmp.width, bmp.height);
+      const g = c.getContext("2d", { willReadFrequently: true });
+      if (!g) throw new Error("isle bake worker: no 2D context");
+      g.drawImage(bmp, 0, 0);
+      bmp.close();
+      const im = g.getImageData(0, 0, c.width, c.height);
+      solidInPlace(im.data);
+      g.putImageData(im, 0, 0);
+      const out: BakeJobs["solid"]["out"] = c.transferToImageBitmap();
+      return { out, transfer: [out] };
     }
   }
 }

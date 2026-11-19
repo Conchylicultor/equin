@@ -15,6 +15,7 @@ import {
   track,
 } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
 import { WebsiteScrollCue } from "@plugins/apps/plugins/website/plugins/shell/web";
+import { InlineAnimationHost } from "@plugins/reports/plugins/render-loop/web";
 import { CARDS } from "../internal/cards";
 import { AgentCrew } from "./agent-crew";
 import { LAYERS, type IcebergPiece } from "../internal/iceberg/data";
@@ -269,7 +270,10 @@ function Piece({
         {piece.name}
       </span>
       <span className="iceberg-desc">{piece.desc}</span>
-      {piece.card && <span className="vz" data-card={piece.card} />}
+      {/* the card runtime builds and animates the card inside: an animation host, not a render loop */}
+      {piece.card && (
+        <InlineAnimationHost className="vz" data-card={piece.card} />
+      )}
     </button>
   );
 }
