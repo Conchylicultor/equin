@@ -6,7 +6,7 @@ This plugin ships:
 
 - The `@equin/pgbouncer-<platform>` binary as an optionalDependency in `package.json` so `bun install` lands the binary.
 - `scripts/start.ts` — standalone lifecycle script that handles binary resolution, config generation, and pgbouncer spawn. Invoked by the gateway's generic service supervisor via `~/.equin/state/db-config/database.json`.
-- The `pgbouncer` lockstep group (`package.json` `dependencyPolicy`) keeps the four platforms on one version, and its `wraps` reads the `pgbouncer_<x>_<y>_<z>` tags of github.com/pgbouncer/pgbouncer. The wrappers publish themselves: a daily run of github.com/equinai/pgbouncer-embedded's Build and Publish workflow builds and publishes every new PgBouncer tag, so there is no manual publish step. The wrapper's version IS the PgBouncer version (`@equin/pgbouncer` 1.26.1 wraps PgBouncer 1.26.1; releases up to 1.25.7 numbered their own patches), so the whole version is compared, and a wrapper-only rebuild rides the next upstream release. A PgBouncer release no `@equin/pgbouncer-*` release wraps yet is listed BLOCKED in the weekly upgrade task: the auto-publish has not caught up, so check its latest run, fix it and re-run.
+- The `pgbouncer` lockstep group (`package.json` `dependencyPolicy`) keeps the four platforms on one version, and its `wraps` reads the `pgbouncer_<x>_<y>_<z>` tags of github.com/pgbouncer/pgbouncer. The wrappers publish themselves: a daily run of github.com/equinai/pgbouncer-embedded's Build and Publish workflow builds and publishes every new PgBouncer tag, so there is no manual publish step. A wrapper version names the PgBouncer release it wraps and a rebuild count, in its patch number: PgBouncer X.Y.Z rebuild R is `X.Y.(Z*100+R)` (1.26.1 rebuild 1 = `1.26.101`; versions up to 1.26.1 are the release they name). `wraps.revisions` tells the npm updater so (`wrappedRelease`), and the whole wrapped release is compared. A change to the build ships without waiting for upstream: merge it in pgbouncer-embedded, then `gh workflow run "Build and Publish" -R equinai/pgbouncer-embedded -f version=<release> -f rebuild=<next>` (its README, "Patch-only rebuilds"). A PgBouncer release no `@equin/pgbouncer-*` release wraps yet is listed BLOCKED in the weekly upgrade task: the auto-publish has not caught up, so check its latest run, fix it and re-run.
 - The `pgbouncer-binary` dependency (the `binary` child): an `infra/deps` `npmPackageCopy` of that package into `cache/deps/pgbouncer-binary/<identity>/`, pinned (holder `machine-pgbouncer`). The start script runs the pinned copy, never the checkout's `node_modules` (a `bun install` there replaced the binary under the running daemon, and the next start ran the new one silently). Only a fresh start resolves the binary (a reattach runs none); the first one on a machine pins the checkout's install; afterwards a different declared version is only logged. The switch is `./equin deps pin pgbouncer-binary`, then a restart of PgBouncer. A release keeps `PGBOUNCER_BIN`.
 - `shared/` constants (PGBOUNCER_PORT, PGBOUNCER_SOCKET_DIR, config/log/pid paths) reused by the database client layer.
 
@@ -49,6 +49,24 @@ PgBouncer uses a catch-all `* = host=<PG_SOCKET_DIR> port=5433` — any database
 
 Config files (`pgbouncer.ini`, `userlist.txt`) at `~/.equin/postgres/` are rendered from the lane table (`renderPgbouncerConfig` in `core`, bound to this install's paths by `server`'s `pgbouncerConfigFiles`). Two writers, one rendering: the start script writes them before spawning a fresh daemon, and every backend's database driver calls `machine`'s `convergePgbouncerConfig` at boot — rewrite (atomically) only when the files differ from the rendering, then `SIGHUP` the running daemon (verified to be PgBouncer by its pid's command). The second is what applies a lane-table change: the gateway re-runs the start script only at its own start, and a reattached daemon keeps the config of its own start. With `auth_type = trust` the userlist is what lets a user log in at all: an unlisted user gets `"trust" authentication failed`.
 
+## Socket buffers
+
+Every socket PgBouncer has is a Unix socket, and on macOS a Unix stream
+socket's send buffer is 8 KB — the sender's buffer bounds what is in flight —
+so a backend read a large reply 8 KB per event-loop turn (768 KB: 97 reads,
+15 s while a restarting backend's turns took 150 ms). Our build carries a
+patch (`patches/0001-unix-socket-buffer.patch` in pgbouncer-embedded) that
+applies `tcp_socket_buffer` to Unix sockets too, client-facing and towards
+Postgres, and the rendered config sets it to `LOCAL_SOCKET_BUFFER_BYTES`
+(1 MiB, `core/internal/socket-buffer.ts`, which says why that size); the app
+pools raise their own end to the same number. An unpatched binary reads the
+same key and applies it to no socket, so the config is valid for whichever
+binary is pinned. Guard: the `pgbouncer:unix-socket-buffer` check
+(`check/`) runs the declared binary with the rendered config between a fake
+Postgres and a client that blocks its loop, and fails when a 768 KB reply
+takes more than a few reads. Measurements and the upstream proposal:
+[`research/2026-11-19-global-local-socket-buffers.md`](../../../../research/2026-11-19-global-local-socket-buffers.md).
+
 ## Lifecycle
 
 The gateway supervisor starts PgBouncer after Postgres (service index 1 in `database.json`). The supervisor's watchdog probes the socket every 2s and attempts one restart on failure.
@@ -83,7 +101,9 @@ The pre-relay `postgres/pgbouncer.log` is moved into that rotation (as the newes
     - `infra/launcher`
     - `infra/paths/root-migration`
 - Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `shared/internal/paths.ts` (debt)
+  - Exempts itself from:
+    - `boundaries/no-platform-api` — `shared/internal/paths.ts` (debt)
+    - `check-thread-safety/no-blocking-check-work` — `check/internal/socket-buffer-probe.ts` (sanctioned)
 - Machine:
   - Exports (types): `PgbouncerConvergence`
   - Exports (values): `convergePgbouncerConfig`
@@ -95,6 +115,7 @@ The pre-relay `postgres/pgbouncer.log` is moved into that rotation (as the newes
     - `PgbouncerLaneSpec`
   - Exports (values):
     - `laneUser`
+    - `LOCAL_SOCKET_BUFFER_BYTES`
     - `PGBOUNCER_LANES`
     - `renderPgbouncerConfig`
 - Shared:

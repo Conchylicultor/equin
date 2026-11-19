@@ -25,6 +25,7 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "database/plugins/derived-updated-at", id: "database.derived-updated-at", loader: () => import("@plugins/database/plugins/derived-updated-at/check"), dependsOn: [] },
   { pluginPath: "database/plugins/embedded", id: "database.embedded", loader: () => import("@plugins/database/plugins/embedded/check"), dependsOn: [] },
   { pluginPath: "database/plugins/migrations", id: "database.migrations", loader: () => import("@plugins/database/plugins/migrations/check"), dependsOn: ["database/plugins/derived-updated-at", "framework/plugins/server-core", "framework/plugins/tooling/plugins/codegen", "infra/plugins/namespace", "infra/plugins/paths"] },
+  { pluginPath: "database/plugins/pgbouncer", id: "database.pgbouncer", loader: () => import("@plugins/database/plugins/pgbouncer/check"), dependsOn: [] },
   { pluginPath: "database/plugins/sql-writes", id: "database.sql-writes", loader: () => import("@plugins/database/plugins/sql-writes/check"), dependsOn: ["database/plugins/derived-updated-at", "database/plugins/migrations", "framework/plugins/tooling/plugins/exempt", "plugin-meta/plugins/plugin-records"] },
   { pluginPath: "debug/plugins/profiling/plugins/boot", id: "debug.profiling.boot", loader: () => import("@plugins/debug/plugins/profiling/plugins/boot/check"), dependsOn: ["plugin-meta/plugins/plugin-records"] },
   { pluginPath: "debug/plugins/sentinel", id: "debug.sentinel", loader: () => import("@plugins/debug/plugins/sentinel/check"), dependsOn: [] },

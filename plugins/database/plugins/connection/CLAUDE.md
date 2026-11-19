@@ -283,8 +283,22 @@ on a statement says whether it was a big reply read on a busy loop (tens of
 reads) or Postgres being slow (one read). It reclassifies nothing: the time
 stays the statement's.
 
-PgBouncer's `tcp_socket_buffer` does not apply to Unix sockets (its
-`tune_socket` returns early for them), and Postgres sets no `SO_SNDBUF` on one.
+**Both ends now send through 1 MiB** (`LOCAL_SOCKET_BUFFER_BYTES`,
+`database/pgbouncer`): our PgBouncer build applies `tcp_socket_buffer` to Unix
+sockets too (upstream returns early for them; github.com/equinai/pgbouncer-embedded's
+`patches/`), and the app pools raise their own connection's `SO_SNDBUF` on
+connect (`database#machine`, through `packages/socket-buffer`). Measured on a
+loop whose turns take 150 ms: a 768 KB reply 97 reads / 15.1 s → 2 reads /
+0.16 s, a 768 KB statement 16.9 s → 0.16 s. The `pgbouncer:unix-socket-buffer`
+check runs the declared binary with the rendered config and fails if a large
+reply takes more than a few reads.
+
+Still at 8 KB: Postgres's own sends (it sets no `SO_SNDBUF` on a Unix
+socket). Through PgBouncer that hop does not reach the app's loop — PgBouncer
+drains it at once into its 1 MiB client buffer (the 0.16 s above includes it).
+A DIRECT connection (`admin`, the job pools, LISTEN) still reads 8 KB per turn;
+only the app pools' statements carry `replyReads`, so how much that costs is
+not measured.
 
 ## Pool names
 

@@ -7,6 +7,7 @@ import {
   patternProblem,
   tagVersions,
   upstreamRows,
+  wrappedRelease,
 } from "./upstream";
 
 const AT = "2026-10-01T00:00:00.000Z";
@@ -167,5 +168,53 @@ describe("upstreamRows", () => {
     test("once that group has it, no row: the lockstep group reports the lag", () => {
       expect(afterRows(["18.3.0-beta.17", "18.6.0-beta.1"])).toEqual([]);
     });
+  });
+});
+
+describe("wraps.revisions: a rebuild count in the patch", () => {
+  const bouncer: Group = {
+    id: "pgbouncer",
+    members: ["@x/pgb-a"],
+    agree: "version",
+    reason: "one build per platform",
+    wraps: {
+      name: "PgBouncer",
+      tags: {
+        repo: "https://example.com/pgb",
+        pattern: "^pgbouncer_(\\d+)_(\\d+)_(\\d+)$",
+      },
+      agree: "version",
+      prerequisite: "publish PgBouncer <version>",
+      revisions: { digits: 2, legacyThrough: "1.26.1" },
+    },
+  };
+
+  test("versions past legacyThrough wrap major.minor.(patch div 100)", () => {
+    const w = bouncer.wraps;
+    expect(wrappedRelease("1.26.101", w)).toBe("1.26.1");
+    expect(wrappedRelease("1.26.200", w)).toBe("1.26.2");
+    expect(wrappedRelease("1.27.3", w)).toBe("1.27.0");
+    // Up to legacyThrough a version wraps the release it names.
+    expect(wrappedRelease("1.26.1", w)).toBe("1.26.1");
+    expect(wrappedRelease("1.25.7", w)).toBe("1.25.7");
+    // Without revisions, a version is its release.
+    expect(wrappedRelease("1.26.101", undefined)).toBe("1.26.101");
+  });
+
+  function bouncerRows(published: string[], release: string) {
+    return upstreamRows({
+      groups: [bouncer],
+      packuments: new Map([["@x/pgb-a", pkg(...published)]]),
+      installed: new Map([["@x/pgb-a", published.at(-1)!]]),
+      upstream: new Map([[bouncer.id, { release, taggedAt: TAGGED }]]),
+      holds: [],
+      today: "2026-10-16",
+    });
+  }
+
+  test("a rebuild of 1.26.1 does not count as wrapping 1.26.2", () => {
+    expect(bouncerRows(["1.26.1", "1.26.101"], "1.26.2")).toHaveLength(1);
+    expect(bouncerRows(["1.26.1", "1.26.101"], "1.26.1")).toEqual([]);
+    expect(bouncerRows(["1.26.101", "1.26.200"], "1.26.2")).toEqual([]);
   });
 });

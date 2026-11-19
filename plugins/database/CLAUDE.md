@@ -569,7 +569,9 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `trimToNewest`
     - `writeAtomically`
 - Machine:
-  - Uses: `database/pgbouncer.convergePgbouncerConfig`
+  - Uses:
+    - `database/pgbouncer.convergePgbouncerConfig`
+    - `packages/socket-buffer.raiseSocketSendBuffer`
   - Exports (values): `claimSchemaOwnerBoot`
 - Core:
   - Uses:

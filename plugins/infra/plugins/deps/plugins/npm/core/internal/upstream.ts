@@ -97,14 +97,35 @@ function publishedBy(
   });
 }
 
-/** Whether any of `published` names `release` (or newer) on `agree`. */
+/**
+ * The upstream release a wrapper version wraps: the version itself, unless the
+ * group's `wraps.revisions` says it carries a rebuild count in its patch
+ * (then `major.minor.(patch div 10^digits)`, for versions after
+ * `legacyThrough`). A prerelease or other non-`X.Y.Z` version is left as is.
+ */
+export function wrappedRelease(
+  version: string,
+  wraps: Wraps | undefined,
+): string {
+  const revisions = wraps?.revisions;
+  if (revisions === undefined) return version;
+  const m = /^(\d+)\.(\d+)\.(\d+)$/.exec(version);
+  if (m === null) return version;
+  if (order(version, revisions.legacyThrough) <= 0) return version;
+  const patch = Math.floor(Number(m[3]) / 10 ** revisions.digits);
+  return `${m[1]}.${m[2]}.${patch}`;
+}
+
+/** Whether any of `published` (wrapper versions, read by `wraps`) names `release` (or newer) on `agree`. */
 function reaches(
   published: readonly string[],
   release: string,
   agree: Agree,
+  wraps: Wraps | undefined,
 ): boolean {
   return published.some(
-    (v) => order(floor(v, agree), floor(release, agree)) >= 0,
+    (v) =>
+      order(floor(wrappedRelease(v, wraps), agree), floor(release, agree)) >= 0,
   );
 }
 
@@ -138,7 +159,14 @@ export function upstreamRows(args: {
     if (tagged === undefined)
       throw new Error(`No upstream release fetched for group "${g.id}".`);
     const newest = tagged.release;
-    if (reaches(publishedBy(g.members, args.packuments), newest, wraps.agree))
+    if (
+      reaches(
+        publishedBy(g.members, args.packuments),
+        newest,
+        wraps.agree,
+        wraps,
+      )
+    )
       continue;
     const row = {
       name: `${wraps.name} (upstream of group \`${g.id}\`)`,
@@ -168,7 +196,12 @@ export function upstreamRows(args: {
         `group "${g.id}": wraps.after names group "${wraps.after}", which no dependencyPolicy declares (\`./equin check deps-npm:policy\`).`,
       );
     if (
-      reaches(publishedBy(after.members, args.packuments), newest, wraps.agree)
+      reaches(
+        publishedBy(after.members, args.packuments),
+        newest,
+        wraps.agree,
+        after.wraps,
+      )
     )
       continue;
     rows.push({

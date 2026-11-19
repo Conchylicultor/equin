@@ -109,8 +109,13 @@ Declared in the `package.json` that owns the dependency, next to it:
   side takes over. A hold naming a member of the wrapper group and covering the
   upstream release makes the row HELD. A tag pattern matching nothing throws.
   `deps-npm:wrappers-declared` makes every dependency in a root `ownScopes`
-  scope belong to a group with `wraps`. Today: `pgbouncer` (PgBouncer,
-  `version` — the wrapper's version is PgBouncer's own) and `pg-client`
+  scope belong to a group with `wraps`. A wrapper whose versions carry a rebuild
+  count says so with `wraps.revisions: { digits, legacyThrough }`: past
+  `legacyThrough`, the last `digits` digits of the patch are the rebuild and
+  the version wraps `major.minor.(patch div 10^digits)` (`wrappedRelease`), so
+  a rebuild of 1.26.1 (`1.26.101`) never reads as wrapping 1.26.2.
+  Today: `pgbouncer` (PgBouncer, `version`, with `revisions` — 1.26.101 is
+  PgBouncer 1.26.1 rebuild 1) and `pg-client`
   (PostgreSQL, `after` `embedded-postgres`: its CI smoke test needs the
   matching server).
 - **Patched packages** (`patchedDependencies`) are BLOCKED on porting the

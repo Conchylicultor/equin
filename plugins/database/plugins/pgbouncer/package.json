@@ -4,10 +4,10 @@
   "private": true,
   "version": "0.0.1",
   "optionalDependencies": {
-    "@equin/pgbouncer-darwin-arm64": "^1.26.1",
-    "@equin/pgbouncer-darwin-x64": "^1.26.1",
-    "@equin/pgbouncer-linux-x64": "^1.26.1",
-    "@equin/pgbouncer-linux-arm64": "^1.26.1"
+    "@equin/pgbouncer-darwin-arm64": "^1.26.101",
+    "@equin/pgbouncer-darwin-x64": "^1.26.101",
+    "@equin/pgbouncer-linux-x64": "^1.26.101",
+    "@equin/pgbouncer-linux-arm64": "^1.26.101"
   },
   "dependencyPolicy": {
     "groups": [
@@ -28,6 +28,7 @@
             "pattern": "^pgbouncer_(\\d+)_(\\d+)_(\\d+)$"
           },
           "agree": "version",
+          "revisions": { "digits": 2, "legacyThrough": "1.26.1" },
           "prerequisite": "the daily auto-publish of github.com/equinai/pgbouncer-embedded has not published @equin/pgbouncer-* for PgBouncer <version>: check its latest Build and Publish run (`gh run list -R equinai/pgbouncer-embedded -w 'Build and Publish'`; `gh workflow enable` it if GitHub disabled it after 60 days without activity), fix it and re-run, then upgrade"
         }
       }

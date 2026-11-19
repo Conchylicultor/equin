@@ -56,6 +56,22 @@ export const WrapsSchema = z
      * has, the lockstep group spanning both reports the lag from the registry.
      */
     after: z.string().min(1).optional(),
+    /**
+     * The wrapper's versions carry a rebuild count, so a change to the build
+     * ships without waiting for an upstream release: every version after
+     * `legacyThrough` keeps the count in the last `digits` decimal digits of
+     * its patch (`digits` 2: PgBouncer 1.26.1 rebuild 1 is `1.26.101`, 1.27.0
+     * rebuild 3 is `1.27.3`), and wraps `major.minor.(patch div 10^digits)`;
+     * a version up to `legacyThrough` wraps the release it names. Read by
+     * `wrappedRelease`. Absent: a version is the release it wraps (on `agree`).
+     */
+    revisions: z
+      .object({
+        digits: z.number().int().min(1).max(4),
+        legacyThrough: z.string().regex(/^\d+\.\d+\.\d+$/),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 export type Wraps = z.infer<typeof WrapsSchema>;

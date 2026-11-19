@@ -24578,7 +24578,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `trimToNewest`
       - `writeAtomically`
   - Machine:
-    - Uses: `database/pgbouncer.convergePgbouncerConfig`
+    - Uses:
+      - `database/pgbouncer.convergePgbouncerConfig`
+      - `packages/socket-buffer.raiseSocketSendBuffer`
     - Exports (values): `claimSchemaOwnerBoot`
   - Core:
     - Uses:
@@ -25394,7 +25396,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/launcher`
           - `infra/paths/root-migration`
       - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `shared/internal/paths.ts` (debt)
+        - Exempts itself from:
+          - `boundaries/no-platform-api` — `shared/internal/paths.ts` (debt)
+          - `check-thread-safety/no-blocking-check-work` — `check/internal/socket-buffer-probe.ts` (sanctioned)
       - Machine:
         - Exports (types): `PgbouncerConvergence`
         - Exports (values): `convergePgbouncerConfig`
@@ -25406,6 +25410,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PgbouncerLaneSpec`
         - Exports (values):
           - `laneUser`
+          - `LOCAL_SOCKET_BUFFER_BYTES`
           - `PGBOUNCER_LANES`
           - `renderPgbouncerConfig`
       - Shared:
@@ -34465,6 +34470,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `active-data` (1 debt)
                   - `config_v2` (1 debt)
                   - `database/migrations` (2 debt)
+                  - `database/pgbouncer` (0 debt)
                   - `framework/tooling/checks/bun-runtime` (1 debt)
                   - `framework/tooling/checks/css-vars-single-owner` (1 debt)
                   - `framework/tooling/checks/css-vars-supplied` (1 debt)
@@ -44994,6 +45000,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `createSmoothClockModel`
           - `SMOOTH_CLOCK_MAX_SLEW`
           - `SMOOTH_CLOCK_SNAP_SEC`
+    - **`socket-buffer`** — A connected socket's kernel send buffer, read and raised through bun:ffi on macOS and Linux: socketBufferSizes(socket) reads SO_SNDBUF / SO_RCVBUF, raiseSocketSendBuffer(socket, bytes) raises SO_SNDBUF to at least bytes and never lowers it. On a macOS Unix stream socket the sender's SO_SNDBUF (8 KB by default) bounds what is in flight, so a large write leaves one buffer per event-loop turn.
+      - Cross-plugin:
+        - Imported by: `database`
+      - Machine:
+        - Exports (types):
+          - `SendBufferRaise`
+          - `SocketBufferSizes`
+        - Exports (values):
+          - `raiseSocketSendBuffer`
+          - `socketBufferSizes`
     - **`source-digest`** — Digest of the code a source set loads: sourceDigest(sets) — sha256 over the static runtime import closure of the modules each set includes (repo files by relative path and bytes, packages by name@version, builtins by name; type-only imports erased), computed once per process, every defined set started at a serving backend's boot. What persisted or inherited state stamps itself with, so a cache built by other code is refused without a version anyone bumps. Central's reach to the source-digest closure walk: closureChangedSince(entries, sinceMs) — whether nothing a closure loads (repo files, package resolution entries) changed since an instant, by inode change time — and sourceDigest(sets), the digest of the code a set loads. The same walk the server barrel serves (shared/), so central reads its code exactly as a backend does: restart-skip's judgement, and central's own code build (build/central-build-id).
       - Cross-plugin:
         - Imported by:

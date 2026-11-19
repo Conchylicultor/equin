@@ -31,6 +31,7 @@ per-file synchronous work (`checks/CLAUDE.md`, "The check thread is shared" and
     - `active-data` (1 debt)
     - `config_v2` (1 debt)
     - `database/migrations` (2 debt)
+    - `database/pgbouncer` (0 debt)
     - `framework/tooling/checks/bun-runtime` (1 debt)
     - `framework/tooling/checks/css-vars-single-owner` (1 debt)
     - `framework/tooling/checks/css-vars-supplied` (1 debt)

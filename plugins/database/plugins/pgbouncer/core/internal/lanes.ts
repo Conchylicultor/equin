@@ -17,6 +17,8 @@
 // `app-background` pool. This is isolation, not headroom.
 // See research/2026-11-04-global-pgbouncer-pool-per-lane.md.
 
+import { LOCAL_SOCKET_BUFFER_BYTES } from "./socket-buffer";
+
 export type PgbouncerLane = "interactive" | "background";
 
 export interface PgbouncerLaneSpec {
@@ -123,6 +125,12 @@ export interface PgbouncerConfigFiles {
  * every (database, lane) pool used in the last hour — worktrees, forks,
  * throwaway test databases — against the lanes' cluster caps.
  *
+ * `tcp_socket_buffer` is applied to Unix sockets too by our PgBouncer build
+ * (github.com/equinai/pgbouncer-embedded's `patches/`): every socket here is
+ * one (`listen_addr =` is empty, Postgres is dialled on its socket). An
+ * unpatched binary reads the same key and applies it to no socket, so the
+ * config stays valid whichever binary the machine has pinned.
+ *
  * And no `logfile`: PgBouncer runs in the foreground with its stderr on the
  * gateway's log relay (the start script), so its log is the gateway's bounded
  * service channel, never a file it appends to forever.
@@ -150,6 +158,7 @@ max_client_conn = 200
 auth_type = trust
 auth_file = ${inputs.userlistFile}
 pidfile = ${inputs.pidFile}
+tcp_socket_buffer = ${LOCAL_SOCKET_BUFFER_BYTES}
 `;
   const userlist = LANES.map(
     (lane) => `"${laneUser(inputs.baseUser, lane)}" ""\n`,

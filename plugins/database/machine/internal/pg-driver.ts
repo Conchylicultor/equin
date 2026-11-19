@@ -1,7 +1,8 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
-import type { Pool, PoolClient } from "pg";
+import { Socket } from "node:net";
+import type { Client, ClientBase, Pool, PoolClient } from "pg";
 import {
   retryUntil,
   exponential,
@@ -40,9 +41,11 @@ import {
 import { tagSqlWithOrigin } from "@plugins/database/plugins/connection/core";
 import {
   laneUser,
+  LOCAL_SOCKET_BUFFER_BYTES,
   PGBOUNCER_LANES,
   type PgbouncerLane,
 } from "@plugins/database/plugins/pgbouncer/core";
+import { raiseSocketSendBuffer } from "@plugins/packages/plugins/socket-buffer/machine";
 import { convergePgbouncerConfig } from "@plugins/database/plugins/pgbouncer/machine";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { isHostSingleton } from "@plugins/infra/plugins/paths/core";
@@ -717,6 +720,30 @@ export interface LanePools {
 }
 
 /**
+ * A statement leaves the app as fast as PgBouncer can take it: raise the
+ * connection's send buffer to `LOCAL_SOCKET_BUFFER_BYTES` (PgBouncer's own,
+ * `database/pgbouncer`). On a macOS Unix socket the sender's buffer bounds what
+ * is in flight, 8 KB by default, and Bun writes once per event-loop turn — a
+ * 768 KB statement (a live-state snapshot upsert) took 16.9 s to send on a
+ * loop whose turns took 150 ms, 0.16 s with this. Linux's default is already
+ * larger, and the raise never lowers a buffer.
+ */
+//
+// Run as the pools' `onConnect`, not a `connect` listener: a failure (a
+// connection PgBouncer dropped right after login) fails that acquire, never
+// the process.
+function raiseStatementSendBuffer(client: ClientBase): void {
+  // Every pool client is a pg `Client` (a `DbClient`), whose stream is the
+  // `net.Socket` it dialled.
+  const stream = (client as unknown as Client).connection.stream;
+  if (!(stream instanceof Socket))
+    throw new TypeError(
+      "raiseStatementSendBuffer: this pool client's stream is not a net.Socket",
+    );
+  raiseSocketSendBuffer(stream, LOCAL_SOCKET_BUFFER_BYTES);
+}
+
+/**
  * Build both lane pools for one database, the wrapper installed. Exported for
  * the lane-isolation test, which runs it against a throwaway database.
  */
@@ -729,6 +756,7 @@ export function createLanePools(database: string): LanePools {
     ),
     max: INTERACTIVE_POOL_SIZE,
     idleTimeoutMillis: 20_000,
+    onConnect: raiseStatementSendBuffer,
   });
   const background = createDbPool({
     name: "app-background",
@@ -738,6 +766,7 @@ export function createLanePools(database: string): LanePools {
     ),
     max: BACKGROUND_POOL_SIZE,
     idleTimeoutMillis: 20_000,
+    onConnect: raiseStatementSendBuffer,
   });
   // Every connection of either lane tags its statements with their origin.
   front.on("connect", tagClientQueriesWithOrigin);

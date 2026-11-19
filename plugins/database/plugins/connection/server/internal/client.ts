@@ -722,6 +722,14 @@ export interface CreateDbPoolOptions {
    */
   idleTimeoutMillis: number;
   allowExitOnIdle?: boolean;
+  /**
+   * Run on every new connection before the pool hands it out (pg-pool's
+   * `onConnect`). A throw fails THAT acquire — the connection is ended and the
+   * caller gets the error — never the process: pg-pool's `connect` event fires
+   * from inside pg's socket `data` handler, where a throwing listener is an
+   * uncaught exception. Per-connection setup that can fail belongs here.
+   */
+  onConnect?: (client: ClientBase) => void;
   /** The default per-call bound in place of `QUERY_DEADLINE_MS`. Tests only. */
   deadlineMs?: number;
 }
@@ -752,6 +760,9 @@ export function createDbPool(options: CreateDbPoolOptions): Pool {
     idleTimeoutMillis: options.idleTimeoutMillis,
     ...(options.allowExitOnIdle !== undefined
       ? { allowExitOnIdle: options.allowExitOnIdle }
+      : {}),
+    ...(options.onConnect !== undefined
+      ? { onConnect: options.onConnect }
       : {}),
     Client: PooledDbClient as unknown as new () => ClientBase,
   });
