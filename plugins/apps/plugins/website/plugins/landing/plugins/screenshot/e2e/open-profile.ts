@@ -38,7 +38,7 @@ import {
 import { bootDemo, demoPath, embedRoot } from "./internal/demo-pages";
 
 const USAGE =
-  "open-profile.ts --at <location> --click <text> [--throttle 4] [--settle 4000] [--runs 1] [--top 25] [--no-profile] [--out <dir>]";
+  "open-profile.ts --at <location> --click <text> [--until <text>] [--throttle 4] [--settle 4000] [--runs 1] [--top 25] [--no-profile] [--out <dir>]";
 const AT = requireArg("at", USAGE);
 const CLICK = requireArg("click", USAGE);
 const THROTTLE = numArg("throttle", 4);
@@ -46,6 +46,9 @@ const SETTLE_MS = numArg("settle", 4000);
 const RUNS = numArg("runs", 1);
 const TOP = numArg("top", 25);
 const OUT = arg("out");
+// `--until <text>`: also time the click until this text shows in the embed
+// (the opened thing's content, read from the worker — what the visitor waits for).
+const UNTIL = arg("until");
 // `--no-profile`: measure only — a CDP profiler slows what it samples.
 const PROFILE = !flag("no-profile");
 
@@ -67,6 +70,20 @@ function shortUrl(url: string): string {
   const path = new URL(url, "http://x").pathname;
   const m = /\/artifacts\/([^/]+)\/([^/]+)$/.exec(path);
   return m === null ? path : `${m[1]}/${m[2]}`;
+}
+
+/** The profile's non-idle sampled time, in ms. */
+function busyMs(p: CpuProfile): number {
+  const idle = new Set(
+    p.nodes
+      .filter((n) => n.callFrame.functionName === "(idle)")
+      .map((n) => n.id),
+  );
+  let us = 0;
+  (p.samples ?? []).forEach((s, i) => {
+    if (!idle.has(s)) us += p.timeDeltas?.[i] ?? 0;
+  });
+  return us / 1000;
 }
 
 /** Self and total (inclusive) time per function, from the sample deltas. */
@@ -167,6 +184,8 @@ interface Measured {
     processing: number;
     presentation: number;
   } | null;
+  /** performance.now() of the first frame showing `--until`'s text. */
+  untilAt: number | null;
   frames: {
     start: number;
     duration: number;
@@ -183,12 +202,10 @@ await withBrowser(async (h) => {
     const target = embedRoot(page).getByText(CLICK, { exact: false }).first();
 
     const browserCdp = await h.browser.newBrowserCDPSession();
-    // Set once CDP reaches the worker (a callback TS cannot follow: a holder, not a let).
-    const worker: {
-      call: ((m: string, p?: object) => Promise<unknown>) | null;
-    } = {
-      call: null,
-    };
+    // Every host worker CDP reaches: a context can run more than one
+    // `/worker-tree.` SharedWorker, and only one of them is the demo's host —
+    // so each is profiled, and the busiest one reported.
+    const workers: ((m: string, p?: object) => Promise<unknown>)[] = [];
     browserCdp.on(
       "Target.targetCreated",
       ({
@@ -198,8 +215,7 @@ await withBrowser(async (h) => {
       }) => {
         if (
           targetInfo.type !== "shared_worker" ||
-          !targetInfo.url.includes("/worker-tree.") ||
-          worker.call !== null
+          !targetInfo.url.includes("/worker-tree.")
         )
           return;
         void (async () => {
@@ -210,7 +226,7 @@ await withBrowser(async (h) => {
           const call = workerCaller(browserCdp, sessionId);
           await call("Profiler.enable");
           await call("Profiler.setSamplingInterval", { interval: 200 });
-          worker.call = call;
+          workers.push(call);
         })();
       },
     );
@@ -227,7 +243,12 @@ await withBrowser(async (h) => {
     await pageCdp.send("Profiler.setSamplingInterval", { interval: 200 });
     await page.evaluate(() => {
       const w = window as unknown as { __open: Measured };
-      w.__open = { clickAt: null, interaction: null, frames: [] };
+      w.__open = {
+        clickAt: null,
+        interaction: null,
+        frames: [],
+        untilAt: null,
+      };
       // The click's own pointerdown, at dispatch: every time below is from it.
       addEventListener(
         "pointerdown",
@@ -290,9 +311,28 @@ await withBrowser(async (h) => {
         }
       }).observe({ type: "long-animation-frame", buffered: false });
     });
+    if (UNTIL !== undefined)
+      await page.evaluate((text) => {
+        const w = window as unknown as { __open: Measured };
+        const root = document.querySelector("[data-app-embed]");
+        if (root === null) throw new Error("open-profile: no [data-app-embed]");
+        // Checked once a frame (a measurement, not app code): the frame
+        // the text first shows in.
+        const check = () => {
+          if (w.__open.clickAt !== null && root.textContent.includes(text)) {
+            w.__open.untilAt = performance.now();
+            return;
+          }
+          requestAnimationFrame(check);
+        };
+        requestAnimationFrame(check);
+      }, UNTIL);
+    // Only the workers reached by now are profiled (one CDP attaches later
+    // was never started, so it is never stopped).
+    const profiled = PROFILE ? [...workers] : [];
     if (PROFILE) {
       await pageCdp.send("Profiler.start");
-      if (worker.call !== null) await worker.call("Profiler.start");
+      for (const call of profiled) await call("Profiler.start");
     }
     await target.click();
     await page.waitForTimeout(SETTLE_MS);
@@ -300,11 +340,20 @@ await withBrowser(async (h) => {
       ? ((await pageCdp.send("Profiler.stop")) as { profile: CpuProfile })
           .profile
       : null;
+    const workerProfiles = PROFILE
+      ? await Promise.all(
+          profiled.map(
+            async (call) =>
+              ((await call("Profiler.stop")) as { profile: CpuProfile })
+                .profile,
+          ),
+        )
+      : [];
+    // The demo's host is the worker that did the work.
     const workerProfile =
-      worker.call === null || !PROFILE
-        ? null
-        : ((await worker.call("Profiler.stop")) as { profile: CpuProfile })
-            .profile;
+      workerProfiles
+        .map((p) => ({ p, busy: busyMs(p) }))
+        .sort((a, b) => b.busy - a.busy)[0]?.p ?? null;
     await pageCdp.send("Emulation.setCPUThrottlingRate", { rate: 1 });
     const m = await page.evaluate(
       () => (window as unknown as { __open: Measured }).__open,
@@ -317,6 +366,15 @@ await withBrowser(async (h) => {
           : `${i.name} ${Math.round(i.duration)} ms (input ${Math.round(i.inputDelay)}, processing ${Math.round(i.processing)}, presentation ${Math.round(i.presentation)})`
       }`,
     );
+    if (UNTIL !== undefined)
+      console.info(
+        `  "${UNTIL}" shown at: ${
+          m.untilAt === null || m.clickAt === null
+            ? "never"
+            : `+${Math.round(m.untilAt - m.clickAt)} ms`
+        }`,
+      );
+    console.info(`  host workers profiled: ${workerProfiles.length}`);
     const blocking = m.frames.reduce((a, f) => a + f.blocking, 0);
     const busy = m.frames.filter((f) => f.blocking > 0);
     const last = busy.at(-1);

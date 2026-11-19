@@ -263,6 +263,18 @@ describe("usesThrowawayTestDb", () => {
     ).toBe(false);
   });
 
+  test("accepts a PGlite opened on a temp dir the test makes", () => {
+    const src = `const dir = mkdtempSync(join(tmpdir(), "x-"));
+const pg = new PGlite({ fs: new NodeFS(dir) });`;
+    expect(usesThrowawayTestDb(TEST_PATH, src)).toBe(true);
+  });
+
+  test("rejects a PGlite opened on a data dir the test did not make", () => {
+    expect(
+      usesThrowawayTestDb(TEST_PATH, `new PGlite("/var/data/shared")`),
+    ).toBe(false);
+  });
+
   test("rejects a NON-test file that opens an in-memory PGlite", () => {
     expect(usesThrowawayTestDb(SRC_PATH, "createPgliteDriver();")).toBe(false);
   });

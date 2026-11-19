@@ -1,4 +1,5 @@
 import {
+  IdbFs,
   PGlite,
   type QueryOptions,
   type Results,
@@ -10,6 +11,7 @@ import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { sql } from "drizzle-orm";
 import type { DatabaseDriverImpl, Db } from "@plugins/database/server";
 import type { HostStorage } from "@plugins/framework/plugins/browser-server/plugins/host-storage/core";
+import { WriteTrackedFs } from "./write-tracked-fs";
 
 // A channel is spliced into the LISTEN statement as an identifier.
 const CHANNEL_RE = /^[a-z_][a-z0-9_]*$/;
@@ -124,6 +126,23 @@ async function shiftClock(pglite: PGlite, ms: number): Promise<void> {
 }
 
 /**
+ * Where a persistent data dir lives, as PGlite options. IndexedDB (`idb://`,
+ * a browser host) goes through a filesystem that writes back only what
+ * changed: PGlite syncs after every query, reads included, and IDBFS's sync
+ * walks the whole data dir and every stored key to find out
+ * (`WriteTrackedFs`). Any other dir (a disk path — a test's `nodefs`) writes
+ * through to the disk and its sync does nothing, so PGlite picks it itself.
+ */
+function persistentFs(
+  dir: string,
+): { fs: WriteTrackedFs } | { dataDir: string } {
+  const IDB = "idb://";
+  return dir.startsWith(IDB)
+    ? { fs: new WriteTrackedFs(new IdbFs(dir.slice(IDB.length))) }
+    : { dataDir: dir };
+}
+
+/**
  * A `DatabaseDriver` over PGlite — Postgres compiled to WASM, in this process.
  *
  * The drizzle instance is PGlite's own (`drizzle-orm/pglite`); it shares the
@@ -154,7 +173,11 @@ export function createPgliteDriver(
     const pglite =
       dir === undefined
         ? new PGlite(load)
-        : new PGlite(dir, { relaxedDurability: true, ...load });
+        : new PGlite({
+            ...persistentFs(dir),
+            relaxedDurability: true,
+            ...load,
+          });
     if (start.from === "snapshot") owedShiftMs = start.shiftMs;
     // `PGlite.syncToFs()` returns at once under relaxed durability (its sync
     // runs behind the query lock, unawaited), so a flush syncs the filesystem

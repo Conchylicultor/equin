@@ -21,6 +21,17 @@ the computer names it to take it back.
   memory (a test). `server/internal/stored-data.test.ts` reopens an on-disk
   database (`nodefs`) and applies the next version's migrations over it — a
   phased group with claimed data — keeping its rows.
+- **A read never writes back.** PGlite syncs its filesystem after every query
+  outside a transaction, reads included, and IDBFS's sync stats every file and
+  every stored key (half the worker's work opening a demo conversation). The
+  `idb://` dir is opened through `WriteTrackedFs`
+  (`server/internal/write-tracked-fs.ts`): it wraps the Emscripten FS calls
+  that change a file outside the in-memory root and passes a sync on only when
+  one ran since the last — decided by the filesystem, so no caller or query
+  shape can get it wrong. Syncs are serialized, and a clean sync waits for the
+  one in flight, so a flush still means "everything before it is stored".
+  PGlite's `transaction()` syncs nothing at COMMIT: the change stays marked
+  until the next query's sync or the storage's flush.
 - **A snapshot's database** (`storage.databaseStart: { from: "snapshot",
   dataDir, shiftMs }`): opened with `loadDataDir`, then — in `ready()`, before
   anything reads it — every `timestamp` / `timestamptz` column of every public

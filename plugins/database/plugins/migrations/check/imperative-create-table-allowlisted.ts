@@ -51,23 +51,30 @@ const ALLOWLIST_SRC_REL =
 // (`createPgliteDriver()` / `new PGlite()` with no data dir): Postgres compiled
 // to WASM inside the test process, gone with it, and never the cluster the
 // worktree DB lives on — so `orphaned-db-tables` cannot see its tables either.
-// Only the argument-less call counts: a data dir is storage that outlives the
-// test.
+// The argument-less call is in memory. A PGlite given options counts only
+// when the test also makes its own temp dir (`mkdtemp` / `mkdtempSync`): a
+// data dir the test chose and removes, on the same in-process engine — a
+// data dir it did not make (an `idb://` name, a shared path) is storage that
+// can outlive the test, and stays covered.
 const TEST_FILE_RE = /\.test\.tsx?$/;
 const TEST_DB_FIXTURE_IMPORT_RE =
   /from\s+["']@plugins\/database\/plugins\/db-test-fixture\/server\/testing["']/;
 const IN_MEMORY_PGLITE_RE = /\b(?:createPgliteDriver|new\s+PGlite)\s*\(\s*\)/;
+const PGLITE_OPEN_RE = /\b(?:createPgliteDriver|new\s+PGlite)\s*\(/;
+const TEMP_DIR_RE = /\bmkdtemp(?:Sync)?\s*\(/;
 
 /**
  * PURE helper (exported for unit testing): does this file create its tables in a
- * throwaway database — one provisioned by the db-test-fixture primitive, or an
- * in-memory PGlite it opens itself? Takes the file's own source so the decision
+ * throwaway database — one provisioned by the db-test-fixture primitive, or a
+ * PGlite it opens itself, in memory or on a temp dir it makes? Takes the file's own source so the decision
  * is evidence-based (a real import or call), never a path convention alone.
  */
 export function usesThrowawayTestDb(path: string, src: string): boolean {
   return (
     TEST_FILE_RE.test(path) &&
-    (TEST_DB_FIXTURE_IMPORT_RE.test(src) || IN_MEMORY_PGLITE_RE.test(src))
+    (TEST_DB_FIXTURE_IMPORT_RE.test(src) ||
+      IN_MEMORY_PGLITE_RE.test(src) ||
+      (PGLITE_OPEN_RE.test(src) && TEMP_DIR_RE.test(src)))
   );
 }
 
