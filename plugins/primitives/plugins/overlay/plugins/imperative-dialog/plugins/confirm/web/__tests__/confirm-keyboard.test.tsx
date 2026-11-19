@@ -117,7 +117,9 @@ describe("confirm dialog keyboard", () => {
   // A failed mutation is the real shape of this case anyway.
   it("keeps the dialog open and shows the error when the action fails", async () => {
     const onConfirm = vi.fn(() =>
-      Promise.reject(new EndpointError(500, "the server said no")),
+      Promise.reject(
+        new EndpointError("POST /api/test", 500, "the server said no"),
+      ),
     );
     const { body, onClose, onConfirmed } = renderBody(onConfirm);
 

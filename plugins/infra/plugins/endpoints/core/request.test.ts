@@ -4,6 +4,7 @@ import { defineEndpoint } from "./define-endpoint";
 import { EndpointError, EndpointNetworkError } from "./endpoint-error";
 import { readEndpointResponse, sendEndpointRequest } from "./request";
 import { FetchRequestError } from "@plugins/primitives/plugins/networking/plugins/request-guard/core";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 
 const collect = defineEndpoint({
   route: "POST /api/x/collect",
@@ -148,5 +149,33 @@ describe("readEndpointResponse — a refusal names its request", () => {
       return;
     }
     throw new Error("expected a refusal");
+  });
+});
+
+describe("EndpointError's crash identity", () => {
+  const refused = async (
+    endpoint: Parameters<typeof readEndpointResponse>[0],
+    status: number,
+  ): Promise<EndpointError> => {
+    try {
+      await readEndpointResponse(endpoint, new Response("no", { status }));
+    } catch (err) {
+      if (err instanceof EndpointError) return err;
+      throw err;
+    }
+    throw new Error("expected a refusal");
+  };
+  const other = defineEndpoint({ route: "POST /api/notifications" });
+
+  test("is its route and status, so refused calls of different routes are different reports", async () => {
+    // report-1795027021-vfag0v: a 403 toast write and an analytics 400 shared
+    // one report — the same throw site, so the same stack.
+    const a = await refused(collect, 400);
+    const b = await refused(other, 403);
+    expect(crashFieldsOf(a).scope).toBe("POST /api/x/collect 400");
+    expect(crashFieldsOf(b).scope).toBe("POST /api/notifications 403");
+    expect(crashFieldsOf(await refused(collect, 500)).scope).toBe(
+      "POST /api/x/collect 500",
+    );
   });
 });

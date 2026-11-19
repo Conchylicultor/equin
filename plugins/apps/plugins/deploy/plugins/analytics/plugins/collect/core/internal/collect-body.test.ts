@@ -20,6 +20,10 @@ describe("pagePathOf", () => {
     expect(
       pagePathOf("/demo/at/desktop/places;view.places.presets=all~eyJmaWx0"),
     ).toBe("/demo/at/desktop/places");
+    // In the live demo the app's URL is an encoded embed tail (report-1795027021-vfag0v).
+    expect(
+      pagePathOf("/demo/at/places%3Bview.places.presets%3Dall~eyJmaWx0?x=1"),
+    ).toBe("/demo/at/places");
     expect(pagePathOf("/sonata;view.sonata.library=all/song/s1")).toBe(
       "/sonata/song/s1",
     );

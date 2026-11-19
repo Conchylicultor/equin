@@ -1,3 +1,4 @@
+import { SubjectError } from "@plugins/packages/plugins/error-subject/core";
 import { FetchRequestError } from "@plugins/primitives/plugins/networking/plugins/request-guard/core";
 
 /**
@@ -5,16 +6,23 @@ import { FetchRequestError } from "@plugins/primitives/plugins/networking/plugin
  * when it parses. `readEndpointResponse` words the message to name the request
  * (`HTTP <status> from <route>: <why>` — `describeRefusal`), so an unhandled
  * one says what was refused; a page's toast still prefers the body's own
- * message (`getEndpointErrorMessage`). The bare `HTTP <status>` default is for
- * a caller that has no route to name.
+ * message (`getEndpointErrorMessage`).
+ *
+ * It is thrown from one shared place (`readEndpointResponse`) for every
+ * endpoint, so its stack — what a crash fingerprints — is the same whatever
+ * was refused: every refused call landed on one report, and a fixed 403 read
+ * as "regressed" when an unrelated 400 fired (report-1795027021-vfag0v). So it
+ * is a `SubjectError` whose subject is the route and the status
+ * (`POST /api/x 400`): one report per refused route and status.
  */
-export class EndpointError extends Error {
+export class EndpointError extends SubjectError {
   constructor(
+    public readonly route: string,
     public readonly status: number,
     public readonly body: unknown,
-    message = `HTTP ${status}`,
+    message = `HTTP ${status} from ${route}`,
   ) {
-    super(message);
+    super(message, { subject: `${route} ${status}` });
   }
 }
 

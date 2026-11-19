@@ -50,7 +50,11 @@ export async function* readNdjson<
         body,
       });
     }
-    throw new EndpointError(res.status, body ?? `HTTP ${res.status}`);
+    throw new EndpointError(
+      endpoint.route,
+      res.status,
+      body ?? `HTTP ${res.status}`,
+    );
   }
   const reader = res.body!.getReader();
   const decoder = new TextDecoder();

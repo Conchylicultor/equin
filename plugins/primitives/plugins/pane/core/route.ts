@@ -430,13 +430,32 @@ export function splitSurfaceViewPart(part: string): {
  * a consumer that records a path as a page (analytics) reads it through this —
  * one page whatever the visitor filtered, and never their filter values.
  * Declared keyed params (`;lens=notation`) and positional parts are kept.
+ *
+ * An embed tail (`<page>/at/<location>`) holds the embedded app's own URL with
+ * each part `encodeURIComponent`ed — its `;view.*` keys spelled `%3Bview.…`.
+ * The tail is read back, reduced the same way (recursively), and written
+ * again; a tail with nothing to drop is kept byte for byte.
  */
 export function pathWithoutSurfaceViews(path: string): string {
-  if (!path.includes(";")) return path;
-  return path
-    .split("/")
-    .map((part) => splitSurfaceViewPart(part).base)
-    .join("/");
+  if (!path.includes(";") && !/%3B/i.test(path)) return path;
+  const parts = path.split("/");
+  const out: string[] = [];
+  for (let i = 0; i < parts.length; i++) {
+    const tail = readEmbedTail(parts, i);
+    if (tail) {
+      const location = tail[EMBED_PLACE_KEY]!;
+      const reduced = pathWithoutSurfaceViews(location);
+      out.push(
+        EMBED_TAIL_MARK,
+        ...(reduced === location
+          ? parts.slice(i + 1)
+          : wildcardParts(reduced.replace(/^\/+/, ""))),
+      );
+      return out.join("/");
+    }
+    out.push(splitSurfaceViewPart(parts[i]!).base);
+  }
+  return out.join("/");
 }
 
 /** The surface view keys `params` holds, sorted. */

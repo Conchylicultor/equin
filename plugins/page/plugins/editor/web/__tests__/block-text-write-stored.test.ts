@@ -121,14 +121,19 @@ function fakeServer(
         ? new Uint8Array(await body.arrayBuffer())
         : new Uint8Array();
     if (endpoint === blockDocInit) {
-      if (opts?.purged) throw new EndpointError(404, "block not found");
+      if (opts?.purged)
+        throw new EndpointError("POST /api/test", 404, "block not found");
       inits.push(bytes);
       // First-writer-wins: the stored state when there is one, else the seed.
       return { state: toBase64(stored ?? bytes) };
     }
     if (endpoint === blockDocUpdate) {
       if (opts?.rejectUpdate !== undefined)
-        throw new EndpointError(opts.rejectUpdate, "rejected");
+        throw new EndpointError(
+          "POST /api/test",
+          opts.rejectUpdate,
+          "rejected",
+        );
       deltas.push(bytes);
       return undefined;
     }

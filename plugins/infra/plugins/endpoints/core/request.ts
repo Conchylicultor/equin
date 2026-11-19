@@ -244,9 +244,14 @@ export async function readEndpointResponse<
       describe?.(res.status, rawBody) ??
       describeRefusal(endpoint.route, res.status, errorBody);
     if (isAgentWriteRefusal(res.status, errorBody)) {
-      throw new EndpointAgentWriteRefusedError(res.status, errorBody, message);
+      throw new EndpointAgentWriteRefusedError(
+        endpoint.route,
+        res.status,
+        errorBody,
+        message,
+      );
     }
-    throw new EndpointError(res.status, errorBody, message);
+    throw new EndpointError(endpoint.route, res.status, errorBody, message);
   }
 
   if (res.status === 204 || !endpoint.responseCodec) {

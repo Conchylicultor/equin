@@ -410,7 +410,9 @@ describe("useOptimisticResource", () => {
     // state (cloud `error` + Retry), not an undo; the prediction stays.
     const live = createLiveStateHarness();
     const mutate = vi.fn(() =>
-      Promise.reject(new EndpointError(503, { message: "busy" })),
+      Promise.reject(
+        new EndpointError("POST /api/test", 503, { message: "busy" }),
+      ),
     );
     const { rows } = await mountRows(live, mutate);
 
@@ -435,7 +437,13 @@ describe("useOptimisticResource", () => {
     });
     const onError = vi.fn();
     const mutate = vi.fn(() =>
-      Promise.reject(new EndpointError(400, "destination is outside the page")),
+      Promise.reject(
+        new EndpointError(
+          "POST /api/test",
+          400,
+          "destination is outside the page",
+        ),
+      ),
     );
     const { result } = mountPositional(live, () =>
       useOptimisticResource(rowsValue, {
@@ -483,7 +491,9 @@ describe("useOptimisticResource", () => {
       optimisticRejectionSink.register((r) => {
         reports.push(r);
       });
-      const mutate = vi.fn(() => Promise.reject(new EndpointError(status, {})));
+      const mutate = vi.fn(() =>
+        Promise.reject(new EndpointError("POST /api/test", status, {})),
+      );
       const { rows } = await mountRows(live, mutate);
 
       await act(async () => {
@@ -508,7 +518,7 @@ describe("useOptimisticResource", () => {
     });
     await settleQueues();
     await act(async () => {
-      calls[0]!.reject(new EndpointError(409, "conflict"));
+      calls[0]!.reject(new EndpointError("POST /api/test", 409, "conflict"));
     });
     await waitFor(() => expect(sent()).toEqual([2, 3]));
     expect(rows().data).toEqual([3]); // 2 rejected and gone, 3 still predicted
@@ -521,7 +531,7 @@ describe("useOptimisticResource", () => {
     const live = createLiveStateHarness();
     const mutate = vi
       .fn<(n: number) => Promise<MutateResult>>()
-      .mockRejectedValueOnce(new EndpointError(500, {}))
+      .mockRejectedValueOnce(new EndpointError("POST /api/test", 500, {}))
       .mockResolvedValue(undefined);
     const { rows } = await mountRows(live, mutate);
 
@@ -668,7 +678,9 @@ describe("useOptimisticResource", () => {
     // The server already answered; a reconnect doesn't change that answer.
     // Only an explicit retry() re-sends.
     const live = createLiveStateHarness();
-    const mutate = vi.fn(() => Promise.reject(new EndpointError(503, {})));
+    const mutate = vi.fn(() =>
+      Promise.reject(new EndpointError("POST /api/test", 503, {})),
+    );
     const { rows } = await mountRows(live, mutate);
 
     await act(async () => {
@@ -884,7 +896,9 @@ describe("useOptimisticResource", () => {
     expect(sent()).toEqual([2]);
 
     await act(async () => {
-      calls[0]!.reject(new EndpointError(503, { message: "busy" }));
+      calls[0]!.reject(
+        new EndpointError("POST /api/test", 503, { message: "busy" }),
+      );
     });
     await waitFor(() => expect(sent()).toEqual([2, 3]));
     expect(rows().failed.map((f) => f.vars)).toEqual([2]);
@@ -1676,7 +1690,9 @@ describe("useOptimisticResource — the unconfirmed deadline", () => {
   it("a permanently rejected op clears its deadline", async () => {
     const value = deadlineValue("rejected");
     const live = createLiveStateHarness();
-    const mutate = vi.fn(() => Promise.reject(new EndpointError(400, "nope")));
+    const mutate = vi.fn(() =>
+      Promise.reject(new EndpointError("POST /api/test", 400, "nope")),
+    );
     const { rows } = await mountRows(live, mutate, { value });
     fakeDeadlines();
 
@@ -2037,7 +2053,9 @@ describe("useOptimisticResource — confirm latency samples", () => {
   it("a rejected op emits nothing", async () => {
     const value = latencyValue("rejected");
     const live = createLiveStateHarness();
-    const mutate = vi.fn(() => Promise.reject(new EndpointError(400, "nope")));
+    const mutate = vi.fn(() =>
+      Promise.reject(new EndpointError("POST /api/test", 400, "nope")),
+    );
     const { rows } = await mountRows(live, mutate, { value });
 
     await act(async () => {

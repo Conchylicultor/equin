@@ -229,7 +229,7 @@ describe("finding #3 — a doc-update 409 must not wedge the provider", () => {
     // First flush 409s (doc row gone); the doc-init probe then SUCCEEDS
     // (block alive) — echoing back whatever state was posted.
     server
-      .mockRejectedValueOnce(new EndpointError(409, null))
+      .mockRejectedValueOnce(new EndpointError("POST /api/test", 409, null))
       .mockImplementationOnce(async ({ opts }) => {
         const body = (opts as unknown as { body: Blob }).body;
         const buf = await body.arrayBuffer();
@@ -267,8 +267,8 @@ describe("finding #3 — a doc-update 409 must not wedge the provider", () => {
     const { doc, provider } = await syncedProvider("blk-deleted");
     localEdit(doc, " typed");
     server
-      .mockRejectedValueOnce(new EndpointError(409, null))
-      .mockRejectedValueOnce(new EndpointError(404, null));
+      .mockRejectedValueOnce(new EndpointError("POST /api/test", 409, null))
+      .mockRejectedValueOnce(new EndpointError("POST /api/test", 404, null));
 
     await runFlush();
     await flushMicrotasks();
@@ -444,7 +444,9 @@ describe("finding #5 — the save state reported to the sync-status cloud", () =
   test("a durable (non-409) HTTP rejection on flush → `error`, thrown loudly; retryFlush recovers", async () => {
     const { doc, provider } = await syncedProvider("blk-rejected");
 
-    server.mockRejectedValueOnce(new EndpointError(500, null));
+    server.mockRejectedValueOnce(
+      new EndpointError("POST /api/test", 500, null),
+    );
     localEdit(doc, " typed");
     const rejections = await withUnhandledRejections(() => runFlush());
 
@@ -476,8 +478,8 @@ describe("finding #5 — the save state reported to the sync-status cloud", () =
     const { doc, provider } = await syncedProvider("blk-gone");
     localEdit(doc, " typed");
     server
-      .mockRejectedValueOnce(new EndpointError(409, null))
-      .mockRejectedValueOnce(new EndpointError(404, null));
+      .mockRejectedValueOnce(new EndpointError("POST /api/test", 409, null))
+      .mockRejectedValueOnce(new EndpointError("POST /api/test", 404, null));
 
     await runFlush();
     await flushMicrotasks();

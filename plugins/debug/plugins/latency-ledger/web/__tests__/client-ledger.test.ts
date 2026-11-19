@@ -37,7 +37,7 @@ afterEach(() => {
 
 describe("client ledger flush", () => {
   it("keeps a batch the server could not take (5xx) for the next flush", async () => {
-    send.mockRejectedValueOnce(new EndpointError(503, null));
+    send.mockRejectedValueOnce(new EndpointError("POST /api/test", 503, null));
     recordInteraction(interaction("/a"));
     await flush();
     send.mockResolvedValueOnce({ ok: true });
@@ -46,7 +46,9 @@ describe("client ledger flush", () => {
   });
 
   it("drops a batch the server refused (4xx) and throws", async () => {
-    send.mockRejectedValueOnce(new EndpointError(400, { message: "bad" }));
+    send.mockRejectedValueOnce(
+      new EndpointError("POST /api/test", 400, { message: "bad" }),
+    );
     recordInteraction(interaction("/bad"));
     await expect(flush()).rejects.toThrow("HTTP 400");
     send.mockResolvedValueOnce({ ok: true });

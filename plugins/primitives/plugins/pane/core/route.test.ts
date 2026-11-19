@@ -403,6 +403,16 @@ describe("surface view keys", () => {
     );
     expect(pathWithoutSurfaceViews("/a;junk=1/b")).toBe("/a;junk=1/b");
     expect(pathWithoutSurfaceViews("/plain/path")).toBe("/plain/path");
+    // An embed tail spells the embedded app's own `;view` keys encoded.
+    expect(
+      pathWithoutSurfaceViews(
+        "/demo/at/places%3Bview.places.presets%3Dall~eyJmaWx0/place/p%3Bview.x%3D1",
+      ),
+    ).toBe("/demo/at/places/place/p");
+    expect(
+      pathWithoutSurfaceViews("/demo;view.a=1/at/song/s%40b%3Blens%3Dn"),
+    ).toBe("/demo/at/song/s%40b%3Blens%3Dn");
+    expect(pathWithoutSurfaceViews("/demo/at/a%40b")).toBe("/demo/at/a%40b");
   });
 
   test("project out of, and apart from, a slot's params", () => {
