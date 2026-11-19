@@ -314,6 +314,9 @@ export function WedgeWatchdog() {
       // fire). Hidden is not frozen: a hidden tab that runs measures the
       // server's silence as well as a visible one (2026-11-12: hidden tabs
       // measured reports.list:rows unanswered 18–111 s, muted as suspended).
+      // A frame the server never read while it answered the trail at once
+      // never gets here either: live-state replaced that dead connection
+      // (`unansweredVerdict`), the visitor's link, not the server's fault.
       const visibleMs = deadlines.visibleMsSince(Date.now() - r.oldestWaitMs);
       const file = () =>
         wedge(

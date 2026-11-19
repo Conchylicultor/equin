@@ -31,6 +31,14 @@ others — there is no leader to lose. Design:
   going quiet then (a network change, one large frame on a slow link) is TCP's
   to judge. Tabs on one socket must name the same heartbeat (one dialect
   does): another value is a `fatal` attach.
+- **A consumer that shows a connection dead replaces it
+  (`replaceConnection(conn)`).** live-state does when a sub the server never
+  read (its answer trail, asked over HTTP and answered at once, says
+  `no-record`) shows the open connection no longer carries frames: the worker
+  closes it and reconnects (`ws-unread`, `SocketOwner.replaceConnection`) —
+  only while `conn` is still the open connection, so a later one is never
+  cut for an old one's fault. An in-browser server's socket has no link and
+  throws if asked.
 - **The worker bundles only this plugin's own files.** Import maps do not reach
   workers, and an artifact's address hashes only its own plugin, so
   web-artifacts' inline audit fails the build on any other first-party import

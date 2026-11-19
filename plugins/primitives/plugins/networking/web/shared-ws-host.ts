@@ -223,6 +223,9 @@ export function createSharedWsHost(deps: SharedWsHostDeps): SharedWsHost {
           case "check-link":
             owner?.checkLink();
             return;
+          case "replace-connection":
+            owner?.replaceConnection(msg.conn);
+            return;
           case "test-fault":
             owner?.fault(msg.fault);
             return;

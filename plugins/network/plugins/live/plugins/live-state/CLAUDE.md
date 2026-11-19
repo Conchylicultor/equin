@@ -746,6 +746,21 @@ Details:
   `trail` | `silent` past `ANSWER_TRAIL_WAIT_MS` | `failed`) — traced as
   `unanswered-trail …` either way. `describeUnansweredTrail` words it.
   Pinned by `notifications-unanswered.test.ts`.
+- **A frame the server never read is the link's, not the server's**
+  (`unansweredVerdict`). When the trail says `no-record` and the server
+  answered the question within `PROMPT_TRAIL_MS` (its thread reads at once),
+  on a network socket, the connection died while it still reads "open": the
+  client asks the socket to replace it (`TransportSocket.replaceConnection`,
+  networking's `ws-unread`), whose open replays every sub — traced
+  `unanswered-dead-link …`, never reported. The connection that replaced it
+  is replaced only once: until it answers a sub, a frame it leaves unread too
+  is reported (past the link). A slow trail answer, any other trail, a failed
+  or silent question and an in-browser server are reported as before
+  (equin.ai, report-1794962221-4ztwpq: a tab's socket read "open" 38 s after
+  its frames stopped arriving; the fresh one was answered in 100 ms).
+  Hidden time is not taken out of this wait: a deadline that fires on time
+  shows the page ran, so the wait is the link's or the server's, whichever
+  the trail names.
 - **Update latency sample** (`clientLatencySink`, signal `update`): one sample
   per applied pushed frame carrying `timing`
   (`{ changedAt, sentAt, deliverMs }`).

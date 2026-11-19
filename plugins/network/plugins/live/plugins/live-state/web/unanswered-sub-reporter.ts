@@ -159,4 +159,47 @@ export function describeUnansweredTrail(t: UnansweredTrail): string {
   }
 }
 
+/**
+ * The longest round trip of the answer-trail question (this tab's own clock:
+ * asked → answer here) that still shows the server's thread reading at once.
+ * A server whose thread is stuck or queued answers the question late too, so
+ * past this its `no-record` cannot clear it.
+ */
+export const PROMPT_TRAIL_MS = 2_000;
+
+/**
+ * What an unanswered sub on a socket shows, once its server's trail is in:
+ * - `dead-link` — the server answered the trail question at once
+ *   (`PROMPT_TRAIL_MS`) and never read the sub frame (`no-record`), on a
+ *   network link: the thread that would have read it is free, so the frame
+ *   is held by the connection, which died while it still reads "open" (a
+ *   network path a sleep or a move left behind, a TCP retransmission
+ *   backoff). The fix is a fresh connection (`replaceConnection`), whose
+ *   replay re-sends every sub — not a report about the server.
+ * - `report` — anything else: the server read it and did not answer (or
+ *   answered and the answer was lost), its thread is slow or silent, the
+ *   question failed, the server is in this browser (no link to lose) — or
+ *   `connection` is itself the replacement of a dead link and has not
+ *   answered anything yet: a frame a fresh connection leaves unread too is
+ *   past the link, and is reported.
+ */
+export function unansweredVerdict(
+  trail: UnansweredTrail,
+  ctx: {
+    server: UnansweredServer;
+    /** The connection the subs went unanswered on (`null`: not open). */
+    connection: string | null;
+    /** The connection that replaced a dead link and has answered nothing yet. */
+    replacement: string | null;
+  },
+): "dead-link" | "report" {
+  if (ctx.server === "in-browser") return "report";
+  if (ctx.connection === null || ctx.connection === ctx.replacement)
+    return "report";
+  if (trail.kind !== "trail") return "report";
+  if (trail.trail.request.kind !== "no-record") return "report";
+  if (trail.repliedAt - trail.askedAt > PROMPT_TRAIL_MS) return "report";
+  return "dead-link";
+}
+
 export const unansweredSubReportSink = defineReportSink<UnansweredSubReport>();

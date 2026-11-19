@@ -1131,6 +1131,9 @@ function pageBackend(): Transport {
         attachedTabs: 1,
         connection: "page-conn",
         setLastWill: () => {},
+        replaceConnection: () => {
+          throw new Error("this test socket has no link to replace");
+        },
         close: () => {},
         send(data) {
           const msg = JSON.parse(data) as {

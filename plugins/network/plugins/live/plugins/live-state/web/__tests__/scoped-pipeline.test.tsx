@@ -61,6 +61,9 @@ function backend(who: string, watermark: string) {
         attachedTabs: 1,
         connection: `${who}-conn`,
         setLastWill: () => {},
+        replaceConnection: () => {
+          throw new Error("this test socket has no link to replace");
+        },
         close: () => {
           closed++;
         },

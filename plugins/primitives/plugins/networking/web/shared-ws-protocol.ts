@@ -7,7 +7,7 @@
 import type { NetDiagEvent } from "./net-diag-bus";
 import type { WsStatus } from "./ws-status-bus";
 
-export const SHARED_WS_PROTO = 5;
+export const SHARED_WS_PROTO = 6;
 
 /** Tab → worker. */
 export type TabToWorker =
@@ -39,6 +39,12 @@ export type TabToWorker =
    * worker doubts a socket that has carried nothing since (`SocketOwner.checkLink`).
    */
   | { kind: "check-link" }
+  /**
+   * The tab showed the open connection `conn` does not carry its frames to the
+   * server: the worker replaces it, if it is still the open one
+   * (`SocketOwner.replaceConnection`).
+   */
+  | { kind: "replace-connection"; conn: string }
   /** The tab is leaving (pagehide / close): release the port now. */
   | { kind: "detach" }
   /** A fault injected by an e2e test hook (`core/ws-test-hook.ts`); never sent otherwise. */

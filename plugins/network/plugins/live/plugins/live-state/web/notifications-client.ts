@@ -63,6 +63,7 @@ import {
   describeUnansweredTrail,
   unansweredServer,
   unansweredSubReportSink,
+  unansweredVerdict,
   type UnansweredTrail,
 } from "./unanswered-sub-reporter";
 import { toResourceError } from "./resource-error";
@@ -760,6 +761,18 @@ interface SocketChannel {
    * before it, so no wait is judged from earlier than this. 0 = never.
    */
   unansweredRanSince?: number;
+  /**
+   * A connection this channel asked to replace as a dead link
+   * (`unansweredVerdict` → `dead-link`), until the next open: that open's
+   * connection becomes `unreadReplacement`.
+   */
+  replacingDeadLink?: string;
+  /**
+   * The connection that replaced a dead link, until it answers a sub: a sub
+   * it leaves unread too is reported, never replaced again — a frame a fresh
+   * connection does not carry either is past the link.
+   */
+  unreadReplacement?: string;
 }
 
 /**
@@ -767,7 +780,10 @@ interface SocketChannel {
  * registers a sub synchronously on receipt and always answers it, so past this
  * the frame or its answer was lost between this tab and the server while the
  * transport still reads "open" — reported (`unansweredSubReportSink`), never
- * silently retried.
+ * silently retried. Except when the server's answer trail shows the connection
+ * itself dead (`unansweredVerdict`: it never read the frame while it answers
+ * HTTP at once): that connection is replaced, its open replaying every sub,
+ * and a replacement that leaves a frame unread too is reported.
  */
 export const UNANSWERED_SUB_MS = 15_000;
 
@@ -2494,6 +2510,10 @@ export class NotificationsClient {
         () => ({ what: `open ${kind}`, detail: `${channel.subs.size} subs` }),
         () => {
           channel.opens++;
+          if (channel.replacingDeadLink !== undefined) {
+            channel.unreadReplacement = channel.ws.connection ?? undefined;
+            channel.replacingDeadLink = undefined;
+          }
           // Before the replay: its answers are addressed to the tabs holding each
           // tuple, never fanned out to every tab on the socket. Every tab sends it
           // (the frame is idempotent); a server that predates it ignores it and
@@ -2707,6 +2727,7 @@ export class NotificationsClient {
    * dropped answer (stale version, another derivation) is still an answer.
    */
   private noteAnswered(
+    channel: SocketChannel,
     entry: ActiveSub,
     answer: { id?: number; tabId?: string },
   ): void {
@@ -2714,8 +2735,11 @@ export class NotificationsClient {
       entry.awaiting !== undefined &&
       answer.tabId === this.tabId &&
       answer.id === entry.awaiting.id
-    )
+    ) {
       entry.awaiting = undefined;
+      // A connection that replaced a dead link carries frames both ways.
+      channel.unreadReplacement = undefined;
+    }
   }
 
   /**
@@ -2782,6 +2806,7 @@ export class NotificationsClient {
     trace(
       `unanswered socket=${socket} server=${server} count=${late.length} oldestKey=${oldest.key} oldestParams=${paramsKey(oldest.params)} waitMs=${oldestWaitMs} tabs=${channel.ws.attachedTabs ?? "?"} conn=${channel.ws.connection ?? "-"}`,
     );
+    const connection = channel.ws.connection;
     const report = {
       server,
       count: late.length,
@@ -2789,7 +2814,7 @@ export class NotificationsClient {
       oldestParams: paramsKey(oldest.params),
       oldestWaitMs,
       attachedTabs: channel.ws.attachedTabs,
-      connection: channel.ws.connection,
+      connection,
     };
     // Where the server stands on the oldest — asked whether or not this
     // transport reports, so the tab's own log has it either way.
@@ -2797,6 +2822,27 @@ export class NotificationsClient {
       trace(
         `unanswered-trail key=${oldest.key} params=${paramsKey(oldest.params)} ${describeUnansweredTrail(trail)}`,
       );
+      // The server is free and never read the frame: the connection is dead
+      // while it reads "open". A fresh one (its open replays every sub) is
+      // the fix — the visitor's link, not the server's fault, so no report.
+      if (
+        connection !== null &&
+        unansweredVerdict(trail, {
+          server,
+          connection,
+          replacement: channel.unreadReplacement ?? null,
+        }) === "dead-link"
+      ) {
+        trace(
+          `unanswered-dead-link socket=${socket} conn=${connection} count=${late.length}: replacing the connection`,
+        );
+        // Still the open connection? A later one never saw these frames
+        // (its open replayed them), so it is left alone.
+        if (channel.ws.connection !== connection) return;
+        channel.replacingDeadLink = connection;
+        channel.ws.replaceConnection(connection);
+        return;
+      }
       // Telemetry this transport's traffic raised: a scope that drops its
       // telemetry reports none (the traces are this tab's own log).
       if (!this.telemetry) return;
@@ -3014,7 +3060,7 @@ export class NotificationsClient {
         );
         return;
       }
-      this.noteAnswered(entry, msg);
+      this.noteAnswered(channel, entry, msg);
       // Mark the store first (a contract refusal means this bundle is out of
       // date), then heal through the one error channel: the HTTP read now gets
       // the typed 409/404 body, so `q.error` names the reason.
@@ -3094,7 +3140,7 @@ export class NotificationsClient {
       return;
     }
     if (msg.kind === "sub-ack" || msg.kind === "up-to-date")
-      this.noteAnswered(entry, msg);
+      this.noteAnswered(channel, entry, msg);
     if (msg.version <= entry.version) {
       // An ack at a version this tab already holds (an HTTP prime answered at
       // the same version) is still the server's word on the tuple at

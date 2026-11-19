@@ -38,6 +38,15 @@ export type NetDiagEvent =
       silentMs: number;
       heartbeatMs: number;
     }
+  /**
+   * A consumer showed the open connection `conn` does not carry its frames to
+   * the server (`SocketOwner.replaceConnection`): a frame it sent went unread
+   * while the server, asked over HTTP, answered at once (live-state's
+   * unanswered sub whose answer trail is `no-record`). The owner closes it and
+   * reconnects — a link that died while it still reads "open", recorded,
+   * never a server fault.
+   */
+  | { type: "ws-unread"; url: string; conn: string }
   // --- tab ports joining / leaving the SharedWorker (shared-ws-host.ts) ---
   | { type: "port-attached"; url: string; ports: number }
   | {

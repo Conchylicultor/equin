@@ -20,6 +20,7 @@ export type TransportSocket = Pick<
   | "send"
   | "close"
   | "setLastWill"
+  | "replaceConnection"
   | "onopen"
   | "onmessage"
   | "attachedTabs"

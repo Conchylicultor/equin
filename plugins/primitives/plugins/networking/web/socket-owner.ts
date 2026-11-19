@@ -284,6 +284,27 @@ export class SocketOwner {
     }, WAKE_SETTLE_MS);
   }
 
+  /**
+   * A consumer showed the open connection `conn` does not carry its frames to
+   * the server — a frame it sent went unread while the server, asked over
+   * another channel, answered at once (live-state: an unanswered sub whose
+   * answer trail is `no-record`). Such a link died while it still reads
+   * "open" (a network path that changed, a TCP retransmission backoff) and
+   * holds every frame sent into it until TCP gives up, a minute or more
+   * later; a fresh connection is answered in a round trip. So it is replaced
+   * (`ws-unread`) — only while `conn` is still the open connection: a later
+   * one never saw the frame.
+   */
+  replaceConnection(conn: string): void {
+    const ws = this.ws;
+    if (this.closed || this.conn !== conn) return;
+    if (!ws || ws.readyState !== WS_OPEN) return;
+    this.events.onDiag({ type: "ws-unread", url: this.url, conn });
+    this.detach(ws);
+    ws.close();
+    this.lost();
+  }
+
   private clearSettle(): void {
     if (this.settle === null) return;
     clearTimeout(this.settle);

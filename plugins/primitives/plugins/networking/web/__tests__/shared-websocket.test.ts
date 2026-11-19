@@ -773,6 +773,48 @@ describe("SharedWebSocket — reported recoveries", () => {
     expect(hub.server.openSockets()).toHaveLength(1);
   });
 
+  // A consumer that showed the open connection does not carry its frames
+  // (live-state: a sub the server never read while it answered over HTTP)
+  // asks for a fresh one — only for the connection it judged.
+  test("replaceConnection replaces the open connection it names, and the next open replays", async () => {
+    const hub = createTransportHub();
+    const sws = new SharedWebSocket(URL_PATH, hub.tab().hooks);
+    built.push(sws);
+    let opens = 0;
+    sws.onopen = () => {
+      opens++;
+    };
+    await flush();
+    hub.server.all()[0]!.open();
+    await flush();
+    const conn = sws.connection!;
+    expect(opens).toBe(1);
+
+    sws.replaceConnection(conn);
+    await flush();
+    expect(diag.find((e) => e.type === "ws-unread")).toMatchObject({ conn });
+    expect(hub.server.all()[0]!.readyState).toBe(CLOSED);
+    await vi.advanceTimersByTimeAsync(5_000); // reconnect backoff
+    hub.server.all()[1]!.open();
+    await flush();
+    expect(opens).toBe(2);
+    expect(sws.connection).not.toBe(conn);
+  });
+
+  test("replaceConnection naming a connection that is no longer open leaves the current one alone", async () => {
+    const hub = createTransportHub();
+    const sws = new SharedWebSocket(URL_PATH, hub.tab().hooks);
+    built.push(sws);
+    await flush();
+    hub.server.all()[0]!.open();
+    await flush();
+
+    sws.replaceConnection("an-earlier-connection");
+    await flush();
+    expect(diag.some((e) => e.type === "ws-unread")).toBe(false);
+    expect(hub.server.openSockets()).toHaveLength(1);
+  });
+
   test("a live tab whose liveness lock the worker was granted is told, reports port-evicted, and re-attaches", async () => {
     const hub = createTransportHub();
     const tab = hub.tab();

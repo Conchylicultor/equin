@@ -36,6 +36,13 @@ function connectedSocket(server: BrowserServer, url: string): TransportSocket {
     setLastWill(data) {
       will = data;
     },
+    // A server in this page has no link to lose: a frame it never read is
+    // its own fault, reported (live-state never asks one to be replaced).
+    replaceConnection(conn) {
+      throw new Error(
+        `[browser-server] asked to replace connection ${conn} of ${url}: a server in this browser is reached without a network link`,
+      );
+    },
     close() {
       if (closed) return;
       closed = true;
@@ -92,6 +99,11 @@ function inertSocket(url: string): TransportSocket {
     connection: null,
     send() {},
     setLastWill() {},
+    replaceConnection(conn) {
+      throw new Error(
+        `[browser-server] asked to replace connection ${conn} of ${url}, a socket that never opens`,
+      );
+    },
     close() {},
   };
 }

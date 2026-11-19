@@ -376,6 +376,25 @@ export class SharedWebSocket {
     }
   }
 
+  /**
+   * The consumer showed the open connection `conn` does not carry its frames
+   * to the server (a frame it sent went unread while the server, asked over
+   * HTTP, answered at once): the worker replaces it if it is still the open
+   * one (`SocketOwner.replaceConnection`, `ws-unread`), and the next open
+   * replays the consumer's state on a connection that answers.
+   */
+  replaceConnection(conn: string): void {
+    if (this.closed) return;
+    // Only to a worker that holds this tab's attach: a queued request would
+    // be about a connection the worker may no longer hold.
+    if (this.session?.attached) {
+      this.session.port.postMessage({
+        kind: "replace-connection",
+        conn,
+      } satisfies TabToWorker);
+    }
+  }
+
   close(): void {
     if (this.closed) return;
     this.closed = true;

@@ -54,6 +54,12 @@ Watches this page's connection to its backends and says so.
   A `ws-silent` (the shared socket replaced, on a page's resume, a link a
   sleep left carrying nothing) is never a wedge: it is the visitor's network,
   and the replacement is the fix — the socket's own diag, in the tab's log.
+  Nor is a `ws-unread`: live-state replaced a connection whose sub frame the
+  server never read while it answered the trail question at once — such an
+  unanswered sub never reaches the watchdog (live-state CLAUDE.md, *A frame
+  the server never read is the link's*). An unanswered sub is judged on the
+  page's whole running time, hidden included (a deadline that fired late
+  already restarted): the visible seconds in its message are context only.
 - **`getHealth` / `waitForRestart`** — the `/api/health` client helpers.
   `/api/health` admits a deployed site's **visitor** (`access: { visitor }`):
   every page probes its own host through it, and owner-only it answered a

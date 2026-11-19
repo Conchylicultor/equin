@@ -53,6 +53,9 @@ function inertSocket(): TransportSocket {
     attachedTabs: 1,
     connection: null,
     setLastWill: () => {},
+    replaceConnection: () => {
+      throw new Error("this test socket has no link to replace");
+    },
     close: () => {},
     send: () => {},
   };

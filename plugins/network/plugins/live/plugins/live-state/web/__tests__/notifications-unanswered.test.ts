@@ -24,7 +24,14 @@
  *   - the report carries where the server stands on the oldest sub (its
  *     answer trail, asked over the same transport for that very request), or
  *     the server's silence past `ANSWER_TRAIL_WAIT_MS`, or the question's
- *     failure — never dropped for want of one.
+ *     failure — never dropped for want of one;
+ *   - a frame the server never read while it answers the trail question at
+ *     once is the connection's, not the server's: the dead link is replaced
+ *     (its open replays every sub) and nothing is reported — unless the
+ *     replacement leaves one unread too, or the server is slow on the
+ *     question, or it runs in this browser (equin.ai, report-1794962221-4ztwpq:
+ *     a woken tab's socket read "open" for 38 s after its frames stopped
+ *     arriving; a fresh one was answered in 100 ms).
  *
  * Conventions follow the sibling suites: `clientLog` mocked to a no-op, fake
  * timers per test, every client `destroy()`-ed in afterEach.
@@ -52,6 +59,7 @@ import {
 } from "../notifications-client";
 import {
   ANSWER_TRAIL_WAIT_MS,
+  PROMPT_TRAIL_MS,
   describeUnansweredTrail,
   unansweredSubReportSink,
   type UnansweredSubReport,
@@ -74,8 +82,23 @@ function trailOf(at: number): AnswerTrail {
   };
 }
 
-/** How the fake server answers the trail question. */
-type TrailAnswer = "trail" | "never" | "not-found";
+/** A server's trail: it never read the sub frame, its read gate idle. */
+function noRecordTrailOf(at: number): AnswerTrail {
+  return {
+    at,
+    request: { kind: "no-record" },
+    queued: null,
+    loading: null,
+    gate: { active: 0, queued: 0, max: 6, holders: [] },
+  };
+}
+
+/**
+ * How the fake server answers the trail question: `no-record` at once, or
+ * `no-record-slow` past `PROMPT_TRAIL_MS` (its thread busy).
+ */
+type TrailAnswer =
+  "trail" | "no-record" | "no-record-slow" | "never" | "not-found";
 
 const pushSchema = z.object({ status: z.string() });
 
@@ -124,6 +147,20 @@ describe("NotificationsClient — unanswered subs", () => {
           case "trail":
             return Promise.resolve(
               new Response(JSON.stringify(trailOf(Date.now()))),
+            );
+          case "no-record":
+            return Promise.resolve(
+              new Response(JSON.stringify(noRecordTrailOf(Date.now()))),
+            );
+          case "no-record-slow":
+            return new Promise<Response>((resolve) =>
+              setTimeout(
+                () =>
+                  resolve(
+                    new Response(JSON.stringify(noRecordTrailOf(Date.now()))),
+                  ),
+                PROMPT_TRAIL_MS + 1,
+              ),
             );
           case "never":
             return new Promise<Response>(() => {});
@@ -220,6 +257,137 @@ describe("NotificationsClient — unanswered subs", () => {
         trail: { kind: "silent", waitedMs: ANSWER_TRAIL_WAIT_MS },
       }),
     ]);
+  });
+
+  /** The replay frame `socket` got, with its entries' request ids. */
+  function replayOn(socket: FakeWebSocket) {
+    const batch = socket
+      .sentJson()
+      .filter((f) => f.op === "sub-batch")
+      .at(-1);
+    if (batch === undefined) throw new Error("no replay on this socket");
+    return batch as { entries: { id: number; key: string }[] };
+  }
+
+  /** Let the dead link's replacement dial, then open it. */
+  async function openReplacement(
+    hub: ReturnType<typeof createTransportHub>,
+  ): Promise<FakeWebSocket> {
+    await vi.advanceTimersByTimeAsync(5_000); // reconnect backoff
+    const next = hub.server.all().at(-1)!;
+    next.open();
+    await flush();
+    return next;
+  }
+
+  test("a frame the server never read, while it answers at once, replaces the dead connection — and is not reported", async () => {
+    const { hub, client, socket } = await setup({
+      open: true,
+      trail: "no-record",
+    });
+    client.observe("k", {}, undefined, { schema: pushSchema });
+    await flush();
+
+    await vi.advanceTimersByTimeAsync(UNANSWERED_SUB_MS);
+    await flush();
+    expect(reports).toHaveLength(0);
+    expect(socket.readyState).toBe(WebSocket.CLOSED);
+
+    // The replacement replays the sub; the server answers it at once.
+    const next = await openReplacement(hub);
+    expect(hub.server.all()).toHaveLength(2);
+    const [entry] = replayOn(next).entries;
+    expect(entry!.key).toBe("k");
+    next.serverSend({
+      kind: "sub-ack",
+      id: entry!.id,
+      tabId: "tab-a",
+      key: "k",
+      params: {},
+      value: { status: "ok" },
+      version: 1,
+    });
+    await vi.advanceTimersByTimeAsync(UNANSWERED_SUB_MS * 3);
+    expect(reports).toHaveLength(0);
+  });
+
+  test("a replacement that leaves a frame unread too is reported: past the link", async () => {
+    const { hub, client } = await setup({ open: true, trail: "no-record" });
+    client.observe("k", {}, undefined, { schema: pushSchema });
+    await flush();
+    await vi.advanceTimersByTimeAsync(UNANSWERED_SUB_MS);
+    await flush();
+    expect(reports).toHaveLength(0);
+
+    const next = await openReplacement(hub);
+    await vi.advanceTimersByTimeAsync(UNANSWERED_SUB_MS);
+    await flush();
+    expect(reports).toEqual([
+      expect.objectContaining({
+        oldestKey: "k",
+        connection: expect.any(String),
+      }),
+    ]);
+    // Reported, not replaced again.
+    expect(next.readyState).toBe(WebSocket.OPEN);
+    expect(hub.server.all()).toHaveLength(2);
+  });
+
+  test("a replacement that answered once is trusted as a link again", async () => {
+    const { hub, client } = await setup({ open: true, trail: "no-record" });
+    client.observe("k", {}, undefined, { schema: pushSchema });
+    await flush();
+    await vi.advanceTimersByTimeAsync(UNANSWERED_SUB_MS);
+    await flush();
+    const next = await openReplacement(hub);
+    const [entry] = replayOn(next).entries;
+    next.serverSend({
+      kind: "sub-ack",
+      id: entry!.id,
+      tabId: "tab-a",
+      key: "k",
+      params: {},
+      value: { status: "ok" },
+      version: 1,
+    });
+    await flush();
+
+    // Later this link dies too: replaced again, not reported.
+    client.observe("k2", {}, undefined, { schema: pushSchema });
+    await flush();
+    await vi.advanceTimersByTimeAsync(UNANSWERED_SUB_MS);
+    await flush();
+    expect(reports).toHaveLength(0);
+    expect(next.readyState).toBe(WebSocket.CLOSED);
+  });
+
+  test("a frame never read by a server slow on the trail question is reported: its thread may be what holds it", async () => {
+    const { client, socket } = await setup({
+      open: true,
+      trail: "no-record-slow",
+    });
+    client.observe("k", {}, undefined, { schema: pushSchema });
+    await flush();
+    await vi.advanceTimersByTimeAsync(UNANSWERED_SUB_MS + PROMPT_TRAIL_MS + 1);
+    await flush();
+    expect(reports).toEqual([expect.objectContaining({ oldestKey: "k" })]);
+    expect(socket.readyState).toBe(WebSocket.OPEN);
+  });
+
+  test("a frame a server in this browser never read is reported: no link to lose", async () => {
+    const { client, socket } = await setup({
+      open: true,
+      server: "in-browser",
+      trail: "no-record",
+    });
+    client.observe("k", {}, undefined, { schema: pushSchema });
+    await flush();
+    await vi.advanceTimersByTimeAsync(UNANSWERED_SUB_MS);
+    await flush();
+    expect(reports).toEqual([
+      expect.objectContaining({ server: "in-browser", oldestKey: "k" }),
+    ]);
+    expect(socket.readyState).toBe(WebSocket.OPEN);
   });
 
   test("a trail question the server refuses is reported as failed, named", async () => {
