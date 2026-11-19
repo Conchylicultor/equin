@@ -35,11 +35,13 @@ throws on an invalid URL); anything else is rethrown.
     - `apps/deploy/ssh-setup`
     - `apps/events/event-list`
     - `apps/events/events-core`
+    - `apps/prototypes/files`
     - `apps/sonata/transcription`
     - `auth`
     - `companions/browser-extension`
     - `conversations/conversation-view/jsonl-viewer/tool-call/web-fetch`
     - `conversations/conversation-view/jsonl-viewer/tool-call/web-search`
+    - `database`
     - `framework/http-router`
     - `framework/principal`
     - `infra/endpoints`

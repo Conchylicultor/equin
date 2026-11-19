@@ -60,7 +60,8 @@ ruleTester.run("no-api-above-floor", rule, {
     ),
     // A local shadowing a newer global.
     valid(`export {}; const URLPattern = class {}; new URLPattern();`),
-    // Server code runs on Bun, not in a visitor's browser.
+    // Server code runs on Bun, not in a visitor's browser — unless a browser
+    // host's worker loads it (the browser-floor:worker-closure check says so).
     valid(`URL.canParse("x");`, SERVER_CASE),
   ],
   invalid: [
@@ -79,5 +80,11 @@ ruleTester.run("no-api-above-floor", rule, {
     invalid(`new URLPattern({ pathname: "/a" });`),
     // A newer DOM member on an old interface.
     invalid(`document.body.checkVisibility();`),
+    // A server file a browser host's worker loads, as the
+    // browser-floor:worker-closure check runs the rule on it.
+    {
+      ...invalid(`URL.canParse("x");`, 1, SERVER_CASE),
+      options: [{ shipsToBrowser: true }] as [{ shipsToBrowser?: boolean }],
+    },
   ],
 });

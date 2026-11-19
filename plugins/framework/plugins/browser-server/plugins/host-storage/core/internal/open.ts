@@ -479,11 +479,12 @@ async function deleteAll(prefix: string, last: string): Promise<void> {
           .map((d) => d.name)
           .filter((n): n is string => n !== undefined && n.includes(prefix))
       : // No listing below Firefox 126 (the browser floor is 115): delete the
-        // names the storage can have — PGlite's IDBFS database for its
-        // `idb://${prefix}db` data dir, named by its mount point or by its
-        // data dir (both tried: deleting an absent database succeeds), and
-        // the stores.
-        [`/pglite/${prefix}db`, `${prefix}db`, last];
+        // names the storage has — PGlite's IDBFS database for its
+        // `idb://${prefix}db` data dir, and the stores. Emscripten's IDBFS
+        // names its database by the mount point (`getDB(mount.mountpoint)`),
+        // and PGlite mounts `idb://<dir>` at `/pglite/<dir>` (its IdbFs
+        // `init`, as of @electric-sql/pglite 0.5.12).
+        [`/pglite/${prefix}db`, last];
   for (const n of names.filter((n) => n !== last)) await idbDelete(n);
   await idbDelete(last);
 }

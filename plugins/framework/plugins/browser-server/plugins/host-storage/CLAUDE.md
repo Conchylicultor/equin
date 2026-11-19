@@ -21,8 +21,9 @@ serveBrowserHost({
 
 - **The storage is the host's option; where its data starts is the app's policy.**
   `{ kind: "memory" }` is lost with the worker (tests, an ephemeral host);
-  `{ kind: "persistent", name }` is IndexedDB: `equin-host--<name>--db`
-  (PGlite's `idb://` data dir) and `equin-host--<name>--stores` (the host
+  `{ kind: "persistent", name }` is IndexedDB: `/pglite/equin-host--<name>--db`
+  (PGlite's `idb://equin-host--<name>--db` data dir — IDBFS names its
+  database by the mount point, `/pglite/<dir>`) and `equin-host--<name>--stores` (the host
   stores' entries, keyed [store, key], plus the lifecycle record). A local app
   starts empty; a demo declares a starting snapshot (`start`, below).
 - **A starting snapshot** (`core/internal/snapshot.ts`): the database's data

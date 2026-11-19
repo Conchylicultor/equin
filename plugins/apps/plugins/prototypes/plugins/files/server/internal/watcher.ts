@@ -5,6 +5,7 @@ import {
   type DataWatch,
 } from "@plugins/infra/plugins/paths/plugins/data-files/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import { promiseWithResolvers } from "@plugins/packages/plugins/floor-compat/core";
 import { createCoalescer } from "@plugins/packages/plugins/coalesce/core";
 import { yieldMacrotask } from "@plugins/packages/plugins/macrotask-yield/core";
 import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
@@ -97,7 +98,7 @@ let firstLoad: Promise<void> | null = null;
  * subscribe settles it as failed, and each waiter throws its error.
  */
 type WatchStart = { ok: true } | { ok: false; error: unknown };
-let watchLive = Promise.withResolvers<WatchStart>();
+let watchLive = promiseWithResolvers<WatchStart>();
 
 /**
  * The prototypes a tree change named while the records were not loaded yet
@@ -320,7 +321,7 @@ export async function startPrototypesWatcher(): Promise<void> {
     seenDuringBaseline = null;
     // Whoever waits for the watch fails with why; a later start re-arms it.
     const failed = watchLive;
-    watchLive = Promise.withResolvers<WatchStart>();
+    watchLive = promiseWithResolvers<WatchStart>();
     failed.resolve({ ok: false, error: err });
     throw err;
   }
@@ -363,7 +364,7 @@ export async function stopPrototypesWatcher(): Promise<void> {
   if (!started) return;
   started = false;
   firstLoad = null;
-  watchLive = Promise.withResolvers<WatchStart>();
+  watchLive = promiseWithResolvers<WatchStart>();
   prototypeRecords.reset();
   seenDuringBaseline = null;
   absorbedAtBoot = null;

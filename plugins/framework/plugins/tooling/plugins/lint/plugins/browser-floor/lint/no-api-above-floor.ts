@@ -202,9 +202,14 @@ function isFeatureTested(
  * the property name), so the checker is asked about few accesses.
  *
  * Out of reach of the rule, by design: a member reached through a computed
- * key or a destructuring, and server code booted in a browser worker (the
- * demo's in-browser server runs `server/` code — it is checked where it is
- * written only if it sits in a browser-built folder).
+ * key or a destructuring.
+ *
+ * Which `server/` and `bin/` files ship to a browser (the demo's in-browser
+ * server boots them in a worker) is a fact of the browser host's whole
+ * closure, which a per-file rule cannot see: the `browser-floor:worker-closure`
+ * check computes it and runs this rule on those files with
+ * `{ shipsToBrowser: true }`, so a server file no browser loads stays free to
+ * use newer built-ins.
  */
 export default createRule({
   name: "no-api-above-floor",
@@ -215,15 +220,29 @@ export default createRule({
         "Browser-built code uses only built-ins every browser of the floor (BROWSER_FLOOR) has, per MDN's browser-compat-data: a newer one crashes the page for visitors on older browsers.",
       requiresTypeChecking: true,
     },
-    schema: [],
+    schema: [
+      {
+        type: "object",
+        properties: {
+          // The file ships to a browser whatever folder it sits in — set by
+          // the `browser-floor:worker-closure` check, never by the repo config.
+          shipsToBrowser: { type: "boolean" },
+        },
+        additionalProperties: false,
+      },
+    ],
     messages: {
       aboveFloor:
         '`{{name}}` is newer than equin\'s browser floor — missing in {{needs}} ({{key}}). Browser code runs on {{floor}} (browser-floor\'s BROWSER_FLOOR): a visitor on an older browser crashes on it (equin.ai\'s home page did on `URL.canParse`, 2026-11-19). Use its floor-safe spelling from `@plugins/packages/plugins/floor-compat/core` when it has one (`canParseUrl`, `parseUrl`, `jsonResponse`, `promiseWithResolvers`), else feature-test it (`typeof X === "function"`, `"name" in obj`) and keep a fallback — a use behind the test passes.',
     },
   },
-  defaultOptions: [],
-  create(context) {
-    if (!isBrowserBuilt(context.filename, context.cwd)) return {};
+  defaultOptions: [{ shipsToBrowser: false }] as [{ shipsToBrowser?: boolean }],
+  create(context, [{ shipsToBrowser }]) {
+    if (
+      shipsToBrowser !== true &&
+      !isBrowserBuilt(context.filename, context.cwd)
+    )
+      return {};
     const table = aboveFloorTable();
     const services = ESLintUtils.getParserServices(context);
     const checker = services.program.getTypeChecker();

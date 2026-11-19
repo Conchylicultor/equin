@@ -14,6 +14,7 @@ import {
 } from "@plugins/database/plugins/migrations/server";
 import { db, DatabaseDriver } from "./driver";
 import type { SchemaOwner } from "@plugins/framework/plugins/server-core/core";
+import { promiseWithResolvers } from "@plugins/packages/plugins/floor-compat/core";
 
 // The derived set the schema layer installs, read at the call site (see the
 // boot comment in `../index.ts`) — by the boot layer and by the deferred
@@ -62,7 +63,7 @@ export type DeferredContractSettlement =
   /** An `exec` child: the serving backend owns the schema and its contract. */
   | { kind: "not-owner" };
 
-const settlement = Promise.withResolvers<DeferredContractSettlement>();
+const settlement = promiseWithResolvers<DeferredContractSettlement>();
 
 /** Settle {@link deferredContractSettled} (the first call wins). */
 export function settleDeferredContract(
