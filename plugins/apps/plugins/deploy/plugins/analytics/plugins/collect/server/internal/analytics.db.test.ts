@@ -84,8 +84,11 @@ import { runAnalyticsQuery } from "./report";
 import {
   countVisits,
   readVisitGroups,
+  readVisitPages,
+  readVisitPagesByPath,
   readVisitWindow,
   readVisitsById,
+  type VisitPage,
   type VisitWindowQuery,
 } from "./sessions";
 import { assertDaysRolledUp } from "./retention";
@@ -912,6 +915,52 @@ describe("sessions", () => {
       expect(await ask({ where: narrowed(...where) })).toHaveLength(visits);
       expect(await countOf(narrowed(...where))).toBe(visits);
     }
+  });
+
+  test("the page list: a window most visited first, cut, searched and read by path", async () => {
+    const PATH_FILTERABLE = { path: liveText() };
+    const pages = (q: { where?: Filter; after?: VisitPage; limit: number }) =>
+      readVisitPages(t.db, {
+        where: q.where,
+        filterable: PATH_FILTERABLE,
+        ...(q.after ? { after: q.after } : {}),
+        limit: q.limit,
+      });
+    const whole = await pages({ limit: 1000 });
+    expect(whole.length).toBeGreaterThan(2);
+    // Visits descending, then path ascending (code point).
+    expect(whole).toEqual(
+      [...whole].sort((a, b) =>
+        a.visits === b.visits
+          ? a.path < b.path
+            ? -1
+            : 1
+          : b.visits - a.visits,
+      ),
+    );
+    // Windows of 2, each cut after the last, tile the whole list.
+    const tiled: VisitPage[] = [];
+    for (;;) {
+      const w = await pages({ limit: 2, after: tiled.at(-1) });
+      tiled.push(...w);
+      if (w.length < 2) break;
+    }
+    expect(tiled).toEqual(whole);
+    // A search keeps the matching paths with their counts.
+    expect(
+      await pages({ where: clause("path", "contains", "harn"), limit: 1000 }),
+    ).toEqual(whole.filter((p) => p.path.includes("harn")));
+    // By path: the same counts, an unvisited path absent.
+    const [first, second] = whole;
+    expect(
+      (
+        await readVisitPagesByPath(t.db, [
+          second!.path,
+          first!.path,
+          "/never-visited",
+        ])
+      ).sort((a, b) => b.visits - a.visits || (a.path < b.path ? -1 : 1)),
+    ).toEqual([first!, second!]);
   });
 
   test("groupings: each value with its count, count descending", async () => {

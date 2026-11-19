@@ -2169,7 +2169,19 @@ const fields = [
 - **Facets** (`facets: ["kind", …]`): text columns whose options are READ
   (`CollectFacetOptions`, `web/internal/facet-options.tsx`) →
   `optionsResult: FieldOptionsResult`.
-  - `FieldDef` takes `options` XOR `optionsResult`.
+  - `FieldDef` takes ONE of `options` / `optionsResult` / `optionsWindow`.
+  - **An open value set** — a column whose values grow with the data (a
+    site's visited pages), which no read may hold whole — is
+    `optionsWindow: optionsWindow(collection, { where, search, option })`
+    (core; set through `fieldOverrides`): data, not a hook — the filter
+    picker reads one `useLive` window of the collection itself, only while
+    open: the scope (`where`) for the top of the set in the collection's
+    default order, AND `contains` on the `search` column (a text column,
+    tsc) as the user types (debounced) — the server searches, never the
+    picker over a partial list. `canGrow` reads as "more values than shown".
+    A selected value outside the window keeps its chip. A facet field or a
+    presentation reading options whole beside it throws. Reference: the
+    deploy Sessions tab's Pages filter.
   - Value-sorted; a full grouping is the error arm (never truncated).
   - A facet field declaring `options`, or an unread facet, throws.
 - **`FieldDef.column`** maps a field onto a column (minted only by
@@ -2770,6 +2782,7 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `FieldGroupingSet`
     - `FieldOption`
     - `FieldOptionsResult`
+    - `FieldOptionsWindow`
     - `FieldOverride`
     - `FieldOverrides`
     - `FieldRowRead`
@@ -2887,6 +2900,7 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `isSectionsToolbar`
     - `nextLinkedHover`
     - `optionDescendants`
+    - `optionsWindow`
     - `orderFieldsBySection`
     - `PARENT_FIELD_ID`
     - `presetIdKind`

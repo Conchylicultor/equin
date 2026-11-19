@@ -31,11 +31,15 @@ export {
   countVisits,
   readVisitGroups,
   readVisitPages,
+  readVisitPagesByPath,
   readVisitsById,
   readVisitWindow,
 } from "./internal/sessions";
 export type {
   VisitFilterable,
+  VisitPage,
+  VisitPageCut,
+  VisitPageFilterable,
   VisitReads,
   VisitWindowQuery,
 } from "./internal/sessions";

@@ -1,3 +1,5 @@
+export { optionsWindow } from "./internal/options-window";
+export type { FieldOptionsWindow } from "./internal/options-window";
 export { defineDataView } from "./internal/define-data-view";
 export type { DataViewId } from "./internal/define-data-view";
 

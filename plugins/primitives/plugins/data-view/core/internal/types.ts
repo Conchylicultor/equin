@@ -28,6 +28,7 @@ import type {
 } from "@plugins/primitives/plugins/tree/core";
 import type { DataViewId } from "./define-data-view";
 import type { GroupByRule } from "./grouping";
+import type { FieldOptionsWindow } from "./options-window";
 import type { FilterScope } from "./filter-scope";
 import type { Nesting } from "./nesting";
 import type { PlacementSpec, Slot } from "./placement";
@@ -661,8 +662,9 @@ export type FieldOptionsResult =
   | { readonly status: "ready"; readonly options: readonly FieldOption[] };
 
 /**
- * A field's option set is declared (`options`) or read (`optionsResult`) —
- * never both, so no reader has to pick which one wins.
+ * A field's option set is declared (`options`), read whole (`optionsResult`)
+ * or read as a searched window (`optionsWindow`) — never two of them, so no
+ * reader has to pick which one wins.
  */
 type FieldOptionsSpec =
   | {
@@ -671,12 +673,24 @@ type FieldOptionsSpec =
        *  group-by section label. See {@link FieldOption}. */
       options?: FieldOption[];
       optionsResult?: never;
+      optionsWindow?: never;
     }
   | {
       options?: never;
       /** The closed value set as a read state (see {@link FieldOptionsResult}).
        *  Read by the filter input, which renders its loading and error arms. */
       optionsResult: FieldOptionsResult;
+      optionsWindow?: never;
+    }
+  | {
+      options?: never;
+      optionsResult?: never;
+      /**
+       * An open value set, read one window at a time by the filter input
+       * (see {@link FieldOptionsWindow}). Only the filter input reads it; a
+       * cell shows the raw value.
+       */
+      optionsWindow: FieldOptionsWindow;
     };
 
 /**
@@ -723,7 +737,7 @@ export interface FieldCollectionRowRead<TRow> {
   readonly cell: (row: TRow, read: unknown) => ReactNode;
 }
 
-/** A field of a DataView's schema. `options` xor `optionsResult` (see {@link FieldOptionsSpec}). */
+/** A field of a DataView's schema. One of `options` / `optionsResult` / `optionsWindow` (see {@link FieldOptionsSpec}). */
 export type FieldDef<TRow> = FieldDefBase<TRow> & FieldOptionsSpec;
 
 /** Every {@link FieldDef} property but its option set. */
@@ -2117,6 +2131,13 @@ export type FieldOverride<TRow> = Partial<
    * `options`; the filter input renders its loading and error arms.
    */
   optionsResult?: FieldOptionsResult;
+  /**
+   * The field's option set as a searched WINDOW of a live collection
+   * (`FieldOptionsWindow`, built by `optionsWindow`) — for a column whose values grow with the data,
+   * which no read may hold whole. Replaces any declared `options`; never set
+   * beside `optionsResult`.
+   */
+  optionsWindow?: FieldOptionsWindow;
 };
 
 /**

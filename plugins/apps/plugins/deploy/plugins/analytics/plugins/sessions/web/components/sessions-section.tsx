@@ -27,11 +27,14 @@ import {
   type DataViewPaging,
   type DataViewSourceProps,
 } from "@plugins/primitives/plugins/data-view/web";
-import type {
-  FieldOptionsResult,
-  FilterGroup,
-  QuickFilter,
-  QuickFilterOption,
+import {
+  optionsWindow,
+  type FieldOption,
+  type FieldOptionsResult,
+  type FieldOptionsWindow,
+  type FilterGroup,
+  type QuickFilter,
+  type QuickFilterOption,
 } from "@plugins/primitives/plugins/data-view/core";
 import {
   Inset,
@@ -43,7 +46,6 @@ import {
   deploymentSessions,
   sessionOf,
   type SessionRow,
-  type SitePage,
 } from "../../core";
 import { axisMaxS } from "../internal/axis";
 import { sourceOf } from "../internal/facts";
@@ -207,7 +209,13 @@ function ExhibitVisits({
     for (const row of rows)
       for (const path of row.pages)
         visits.set(path, (visits.get(path) ?? 0) + 1);
-    return pageOptionsOf([...visits].map(([path, n]) => ({ path, visits: n })));
+    return {
+      status: "ready",
+      options: [...visits]
+        .map(([path, n]) => ({ path, visits: n }))
+        .sort((a, b) => b.visits - a.visits || (a.path < b.path ? -1 : 1))
+        .map(pageOptionOf),
+    };
   }, [rows]);
   return (
     <VisitsBundle
@@ -216,28 +224,38 @@ function ExhibitVisits({
       rows={rows}
       readiness={READY}
       paging={undefined}
-      pageOptions={pageOptions}
+      pageOptions={{ optionsResult: pageOptions }}
       filter={filter}
     />
   );
 }
 
-/**
- * A site's visited paths as the Pages filter's options, most visited first
- * (a list read whole, so the order is the one the picker shows).
- */
-function pageOptionsOf(pages: readonly SitePage[]): FieldOptionsResult {
+/** A visited path as a Pages filter option, its visit count as the hint. */
+function pageOptionOf(p: { path: string; visits: number }): FieldOption {
   return {
-    status: "ready",
-    options: [...pages]
-      .sort((a, b) => b.visits - a.visits || (a.path < b.path ? -1 : 1))
-      .map((p) => ({
-        value: p.path,
-        label: p.path,
-        hint: `${p.visits} ${p.visits === 1 ? "visit" : "visits"}`,
-      })),
+    value: p.path,
+    label: p.path,
+    hint: `${p.visits} ${p.visits === 1 ? "visit" : "visits"}`,
   };
 }
+
+/**
+ * The Pages filter's options for one site: a window of its visited paths
+ * (`deploy-analytics.pages`, run on the copy) — the most visited, or those
+ * whose path contains the picker's search. A site's paths grow with its
+ * traffic, so the picker never holds them all.
+ */
+function sitePagesWindow(deploymentId: string): FieldOptionsWindow {
+  return optionsWindow(deploymentPages, {
+    where: clause("deploymentId", "eq", deploymentId),
+    search: "path",
+    option: (p) => pageOptionOf(p),
+  });
+}
+
+/** How the Pages filter reads its options: whole (the exhibit's loaded rows) or as a window (a site's). */
+type PageOptions =
+  { optionsResult: FieldOptionsResult } | { optionsWindow: FieldOptionsWindow };
 const rowKeyOf = (row: SessionRow): string => row.key;
 const NO_ROWS: readonly SessionRow[] = [];
 
@@ -263,18 +281,12 @@ function SiteVisits({
     narrowBy: view,
     total: true,
   });
-  // The Pages filter offers every path the site's visits hit, not just the
-  // loaded window's: the list pages through time, the filter runs on the copy.
-  const sitePages = useLive(deploymentPages, { deploymentId });
-  const pageOptions = useMemo((): FieldOptionsResult => {
-    switch (sitePages.status) {
-      case "loading":
-      case "error":
-        return sitePages;
-      case "ready":
-        return pageOptionsOf(sitePages.data);
-    }
-  }, [sitePages]);
+  // The Pages filter offers the site's visited paths, not just the loaded
+  // window's: the list pages through time, the filter runs on the copy.
+  const pageOptions = useMemo(
+    (): PageOptions => ({ optionsWindow: sitePagesWindow(deploymentId) }),
+    [deploymentId],
+  );
   return (
     <VisitsBundle
       deploymentId={deploymentId}
@@ -292,10 +304,10 @@ function SiteVisits({
  * Every field but the site, which every read is scoped by; the Pages filter
  * offers the site's visited paths (`pageOptions`).
  */
-function overridesOf(pageOptions: FieldOptionsResult) {
+function overridesOf(pageOptions: PageOptions) {
   return fieldOverrides(deploymentSessions, {
     deploymentId: { visible: false, filterable: false },
-    pages: { optionsResult: pageOptions },
+    pages: pageOptions,
   });
 }
 
@@ -422,7 +434,7 @@ function VisitsBundle({
   rows: readonly SessionRow[];
   readiness: ResourceReadiness;
   paging: Omit<DataViewPaging<SessionRow>, "isPaged"> | undefined;
-  pageOptions: FieldOptionsResult;
+  pageOptions: PageOptions;
   /** The active view's filter — which pages it asks for. */
   filter: FilterGroup | null;
 }): ReactElement {

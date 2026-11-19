@@ -696,10 +696,25 @@ export function listSchema(input: {
     base = base.map((f) => {
       const override = overrides.byId[f.id];
       if (override === undefined) return f;
-      // A read option set replaces the declared one: `options` xor `optionsResult`.
-      const { options: _declared, ...rest } = f;
+      // A read option set replaces the declared one: one of `options` /
+      // `optionsResult` / `optionsWindow`.
+      if (
+        override.optionsResult !== undefined &&
+        override.optionsWindow !== undefined
+      ) {
+        throw new Error(
+          `data-view: the override of "${f.id}" reads its options both whole (\`optionsResult\`) and as a window (\`optionsWindow\`) — one of them.`,
+        );
+      }
+      const {
+        options: _declared,
+        optionsResult: _read,
+        optionsWindow: _window,
+        ...rest
+      } = f;
       return (
-        override.optionsResult === undefined
+        override.optionsResult === undefined &&
+        override.optionsWindow === undefined
           ? { ...f, ...override }
           : { ...rest, ...override }
       ) as FieldDef<unknown>;
@@ -757,7 +772,16 @@ function FieldOptionsLevel(props: {
     () =>
       fields.map((f): FieldDef<unknown> => {
         if (f.id !== reader.id) return f;
-        const { options: _declared, optionsResult: _prior, ...rest } = f;
+        if (f.optionsWindow !== undefined)
+          throw new Error(
+            `data-view: field "${f.id}" reads its options as a window (\`optionsWindow\`) — an open set — but its presentation also reads them whole (\`useOptions\`); one of them.`,
+          );
+        const {
+          options: _declared,
+          optionsResult: _prior,
+          optionsWindow: _priorWindow,
+          ...rest
+        } = f;
         // A single value presents as an enum of the options; a multi-valued
         // field (`values` — tags) keeps its type, whose filter takes the
         // options as a multi-select.

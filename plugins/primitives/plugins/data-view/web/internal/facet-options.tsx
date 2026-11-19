@@ -98,6 +98,11 @@ export function facetFieldColumns(
   for (const field of fields) {
     const column = columnOf.get(field.id);
     if (column === undefined || !facetSet.has(column)) continue;
+    if (field.optionsWindow !== undefined) {
+      throw new Error(
+        `data-view: field "${field.id}" reads its options as a window (\`optionsWindow\`), but its column "${column}" is a facet of "${collectionKey}" — a facet reads them whole; one of them.`,
+      );
+    }
     if (field.options !== undefined) {
       throw new Error(
         `data-view: field "${field.id}" declares \`options\`, but its column "${column}" is a facet of "${collectionKey}" — a facet's options are read, not declared.`,
@@ -126,7 +131,7 @@ export function withFacetOptions(
     const column = facetColumnOf.get(field.id);
     if (column === undefined) return field;
     // `facetFieldColumns` checked it declares no `options`.
-    const { options: _declared, ...rest } = field;
+    const { options: _declared, optionsWindow: _window, ...rest } = field;
     return { ...rest, optionsResult: resultOf(column) ?? LOADING };
   });
 }

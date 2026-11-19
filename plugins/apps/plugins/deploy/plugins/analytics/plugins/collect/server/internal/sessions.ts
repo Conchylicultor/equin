@@ -214,29 +214,100 @@ export async function readVisitGroups<F extends VisitFilterable>(
   });
 }
 
+/** A cut in the page list's order (visits descending, then path ascending by code point). */
+export interface VisitPageCut {
+  visits: number;
+  path: string;
+}
+
+/** The page list's one filterable column: the path. */
+export type VisitPageFilterable = { path?: FilterColumn };
+
+/** A visited path and how many visits hit it. */
+export interface VisitPage {
+  path: string;
+  visits: number;
+}
+
+const VisitPageRow = z.object({
+  path: z.string(),
+  visits: z.coerce.number().int(),
+});
+
 /**
  * The paths the site's visits hit, each with how many visits hit it — the
  * values the list's `pages` column takes (a visit's page memberships: every
- * distinct path of its hits, `visitMembershipValues`), most visited first,
- * then by path. At most `limit` come back: a caller that must have them all
- * asks one more than it can show and refuses when it gets it.
+ * distinct path of its hits, `visitMembershipValues`) — as a window: most
+ * visited first, then by path (code point), the paths matching `where`
+ * (over `path`) inside `(after, until]`, at most `limit`.
+ *
+ * A window, never the whole set: a site's paths grow with its traffic (a
+ * page per id a visitor opens), so a reader asks for the top of the list or
+ * searches it. Costs one GROUP BY over the retained hits (90 days), whatever
+ * the window.
  */
 export async function readVisitPages(
   dbx: VisitReads,
-  q: { limit: number },
-): Promise<{ path: string; visits: number }[]> {
+  q: {
+    where: Filter | undefined;
+    filterable: VisitPageFilterable;
+    after?: VisitPageCut;
+    until?: VisitPageCut;
+    limit: number;
+  },
+): Promise<VisitPage[]> {
+  const pathFilter =
+    filterSql(
+      q.where as Filter<Record<string, FilterColumn>> | undefined,
+      { path: sql`h.path` },
+      q.filterable as Record<string, FilterColumn>,
+    ) ?? sql`TRUE`;
+  const cuts = [
+    ...(q.after
+      ? [
+          sql`(p.visits < ${q.after.visits} OR (p.visits = ${q.after.visits} AND p.path COLLATE "C" > ${q.after.path}))`,
+        ]
+      : []),
+    ...(q.until
+      ? [
+          sql`(p.visits > ${q.until.visits} OR (p.visits = ${q.until.visits} AND p.path COLLATE "C" <= ${q.until.path}))`,
+        ]
+      : []),
+  ];
+  const cut = cuts.length === 0 ? sql`TRUE` : sql.join(cuts, sql` AND `);
   return executeRows(dbx, {
     label: "analytics.visitPages",
-    row: z.object({
-      path: z.string(),
-      visits: z.coerce.number().int(),
-    }),
+    row: VisitPageRow,
+    query: sql`SELECT p.path, p.visits FROM (
+        SELECT h.path AS path, count(DISTINCT h.visit_id)::int AS visits
+        FROM analytics_hits h
+        JOIN analytics_visits v ON v.id = h.visit_id
+        WHERE ${pathFilter}
+        GROUP BY 1
+      ) p
+      WHERE ${cut}
+      ORDER BY p.visits DESC, p.path COLLATE "C" ASC
+      LIMIT ${q.limit}`,
+  });
+}
+
+/** These paths with how many visits hit each (any order; a path no visit hit is absent). */
+export async function readVisitPagesByPath(
+  dbx: VisitReads,
+  paths: readonly string[],
+): Promise<VisitPage[]> {
+  if (paths.length === 0) return [];
+  return executeRows(dbx, {
+    label: "analytics.visitPagesByPath",
+    row: VisitPageRow,
     query: sql`SELECT h.path AS path, count(DISTINCT h.visit_id)::int AS visits
       FROM analytics_hits h
       JOIN analytics_visits v ON v.id = h.visit_id
-      GROUP BY 1
-      ORDER BY 2 DESC, h.path COLLATE "C"
-      LIMIT ${q.limit}`,
+      WHERE h.path IN (${sql.join(
+        paths.map((p) => sql`${p}`),
+        sql`, `,
+      )})
+      GROUP BY 1`,
   });
 }
 

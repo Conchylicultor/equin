@@ -357,6 +357,9 @@ after new visits, a rollup and a retention sweep arrive as deltas.
     - `CollectContext`
     - `CountryLookup`
     - `VisitFilterable`
+    - `VisitPage`
+    - `VisitPageCut`
+    - `VisitPageFilterable`
     - `VisitReads`
     - `VisitWindowQuery`
   - Exports (values):
@@ -364,6 +367,7 @@ after new visits, a rollup and a retention sweep arrive as deltas.
     - `countVisits`
     - `readVisitGroups`
     - `readVisitPages`
+    - `readVisitPagesByPath`
     - `readVisitsById`
     - `readVisitWindow`
     - `recordCollect`

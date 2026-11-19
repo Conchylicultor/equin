@@ -2040,6 +2040,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `CollectContext`
                   - `CountryLookup`
                   - `VisitFilterable`
+                  - `VisitPage`
+                  - `VisitPageCut`
+                  - `VisitPageFilterable`
                   - `VisitReads`
                   - `VisitWindowQuery`
                 - Exports (values):
@@ -2047,6 +2050,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `countVisits`
                   - `readVisitGroups`
                   - `readVisitPages`
+                  - `readVisitPagesByPath`
                   - `readVisitsById`
                   - `readVisitWindow`
                   - `recordCollect`
@@ -2402,7 +2406,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `buildSnapshot` — Parse a DB-IP `start,end,CC` CSV (no header row) into snapshot bytes.
                   - `createIpCountryLookup` — A lookup over the snapshot file at `snapshotPath()`, read lazily on the first lookup (one ~16 MB read, shared by lookups that arrive while it runs) and then held in memory.
                   - Types: `IpCountryLookup`
-            - **`sessions`** — Sessions tab of a site's page, shown only when the deployment's composition ships the collect plugin: one row per anonymous visit (country, time, device and software, source, first visit or returning, channel), its journey on a shared log time axis (pages split by their share of the visit, the read line and section ticks, action icons, each named on hover) with its duration and actions; opening a row shows its timeline (each page, the sections reached and when, the actions in order, the exit), and clicking a page — or Replay — opens the visit replayed in a side pane of the site, on this instance's own app framed chromeless (site/:deploymentId/:tab?/replay/:visitId/:page?; a former base path moved to the app's current one): at the visitor's viewport, its recorded load as a veil, pages opened in-app, sections scrolled to when reached, actions as toasts, stretches away dimmed or skipped, with a scrubber, speeds and a step list. Read from this computer's copy of the site's analytics (site-mirror, its freshness line above the list; loading until a first whole copy is in place) as live key-range pages: the views (All / With actions / 2+ pages / Bounced) are saved filters, and every filter — whose visits, the device, any field — runs on the copy, a narrowed view carried in the URL. Serves a deployment's visits (deploy-analytics.sessions) from this computer's copy of the site's analytics tables (site-mirror's replica): collect's own visit-list SQL — the window, the rows by key, the groupings and the count, each filter compiled by collect — and the paths its visits hit (deploy-analytics.pages, the Pages filter's options), run on the copy, re-read whenever a pull applies a page to it.
+            - **`sessions`** — Sessions tab of a site's page, shown only when the deployment's composition ships the collect plugin: one row per anonymous visit (country, time, device and software, source, first visit or returning, channel), its journey on a shared log time axis (pages split by their share of the visit, the read line and section ticks, action icons, each named on hover) with its duration and actions; opening a row shows its timeline (each page, the sections reached and when, the actions in order, the exit), and clicking a page — or Replay — opens the visit replayed in a side pane of the site, on this instance's own app framed chromeless (site/:deploymentId/:tab?/replay/:visitId/:page?; a former base path moved to the app's current one): at the visitor's viewport, its recorded load as a veil, pages opened in-app, sections scrolled to when reached, actions as toasts, stretches away dimmed or skipped, with a scrubber, speeds and a step list. Read from this computer's copy of the site's analytics (site-mirror, its freshness line above the list; loading until a first whole copy is in place) as live key-range pages: the views (All / With actions / 2+ pages / Bounced) are saved filters, and every filter — whose visits, the device, any field — runs on the copy, a narrowed view carried in the URL. Serves a deployment's visits (deploy-analytics.sessions) from this computer's copy of the site's analytics tables (site-mirror's replica): collect's own visit-list SQL — the window, the rows by key, the groupings and the count, each filter compiled by collect — and the paths its visits hit (deploy-analytics.pages, the Pages filter's options: a window, most visited first, searched by path), run on the copy, re-read whenever a pull applies a page to it.
               - Web:
                 - Slots:
                   - `sources`
@@ -2451,6 +2455,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Server:
                 - Contributes:
                   - `resource.declare` "deploy-analytics.pages"
+                  - `resource.declare` "deploy-analytics.pages:rows"
                   - `resource.declare` "deploy-analytics.sessions"
                   - `resource.declare` "deploy-analytics.sessions:count"
                   - `resource.declare` "deploy-analytics.sessions:groups"
@@ -2460,25 +2465,29 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/deploy/analytics/collect.countVisits`
                   - `apps/deploy/analytics/collect.readVisitGroups`
                   - `apps/deploy/analytics/collect.readVisitPages`
+                  - `apps/deploy/analytics/collect.readVisitPagesByPath`
                   - `apps/deploy/analytics/collect.readVisitsById`
                   - `apps/deploy/analytics/collect.readVisitWindow`
+                  - `apps/deploy/analytics/collect.VisitPage`
+                  - `apps/deploy/analytics/collect.VisitPageCut`
                   - `apps/deploy/analytics/collect.VisitReads`
                   - `apps/deploy/site-mirror/pull.onSiteMirrorApplied`
                   - `apps/deploy/site-mirror/pull.readSiteMirror`
                   - `database/table-mirror/replica.tableMirrorReplicas`
                   - `network/live.serveCollection`
-                  - `network/live.serveValue`
                 - Resources:
-                  - `deploy-analytics.pages` (push, notified, capped: MAX_SITE_PAGES)
+                  - `deploy-analytics.pages` (keyed, window)
+                  - `deploy-analytics.pages:groups` (push)
+                  - `deploy-analytics.pages:rows` (keyed, point)
                   - `deploy-analytics.sessions` (keyed, window)
                   - `deploy-analytics.sessions:count` (push)
                   - `deploy-analytics.sessions:groups` (push)
                   - `deploy-analytics.sessions:rows` (keyed, point)
               - Core:
-                - Uses: 22 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md)
+                - Uses: 21 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md)
                   - `apps/deploy/analytics/collect` ×9
-                  - `network/live` ×3
                   - `fields/text/config` ×2
+                  - `network/live` ×2
                   - `fields/bool/config.boolField`
                   - `fields/date/config.dateField`
                   - `fields/duration/config.durationField`
@@ -2493,12 +2502,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values):
                   - `deploymentPages`
                   - `deploymentSessions`
-                  - `MAX_SITE_PAGES`
                   - `parseSessionKey`
+                  - `parseSitePageKey`
                   - `sessionKey`
                   - `sessionOf`
                   - `sessionRowOf`
+                  - `sitePageKey`
                   - `startedAtKeyText`
+                  - `visitsKeyText`
               - Cross-plugin:
                 - Uses tokens: 29 vars — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md)
                   - `ui/tokens/color-palette` ×14
@@ -53135,6 +53146,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FieldGroupingSet`
           - `FieldOption`
           - `FieldOptionsResult`
+          - `FieldOptionsWindow`
           - `FieldOverride`
           - `FieldOverrides`
           - `FieldRowRead`
@@ -53252,6 +53264,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isSectionsToolbar`
           - `nextLinkedHover`
           - `optionDescendants`
+          - `optionsWindow`
           - `orderFieldsBySection`
           - `PARENT_FIELD_ID`
           - `presetIdKind`

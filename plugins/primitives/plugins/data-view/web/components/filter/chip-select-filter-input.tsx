@@ -8,12 +8,19 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { and, clause } from "@plugins/network/plugins/live/plugins/filter/core";
 import type {
   FieldOption,
   FieldOptionsResult,
+  FieldOptionsWindow,
   FilterValueInputProps,
 } from "../../../core";
-import { selectChoices } from "../../internal/select-choices";
+import {
+  selectChoices,
+  type SelectChoice,
+} from "../../internal/select-choices";
+import { SEARCH_DEBOUNCE_MS, useDebounced } from "../../internal/live-source";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -46,6 +53,13 @@ const helpIcon = symbol("help");
  * shows the read's state in the popover while it is not ready: loading, or the
  * failure with its Retry. Never an empty grid, which would claim the column
  * has no values (and mark every selected value "not listed").
+ *
+ * A field whose values are an OPEN set (`optionsWindow` — a site's visited
+ * pages) is read one window at a time while the popover is open: the top of
+ * the set, or — as the user types — the rows whose search column contains
+ * it, run by the server, never filtered from a partial list here. A
+ * window with more past it says so; a selected value outside the window
+ * still gets its chip first (to be clicked off), never marked "not listed".
  */
 export function ChipSelectFilterInput(
   props: FilterValueInputProps & { multiple: boolean },
@@ -55,9 +69,9 @@ export function ChipSelectFilterInput(
     status: "ready",
     options: props.field.options ?? NO_OPTIONS,
   };
+  const window = props.field.optionsWindow;
   const options = state.status === "ready" ? state.options : NO_OPTIONS;
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
 
   const selected = multiple
     ? Array.isArray(props.value)
@@ -90,17 +104,6 @@ export function ChipSelectFilterInput(
         ? labelFor(first)
         : `${selected.length} selected`;
 
-  const choices = selectChoices(options, selected);
-
-  const q = query.trim().toLowerCase();
-  const visible = q
-    ? choices.filter(
-        ({ option }) =>
-          option.label.toLowerCase().includes(q) ||
-          option.value.toLowerCase().includes(q),
-      )
-    : choices;
-
   return (
     <InlinePopover
       resetOnClose
@@ -119,6 +122,89 @@ export function ChipSelectFilterInput(
         />
       }
     >
+      {window !== undefined ? (
+        // Read only while open: a closed picker holds no window.
+        open && (
+          <WindowedChoices window={window} selected={selected} onPick={pick} />
+        )
+      ) : (
+        <ClosedChoices state={state} selected={selected} onPick={pick} />
+      )}
+    </InlinePopover>
+  );
+}
+
+/** The picker over a closed option set: every option, searched in memory. */
+function ClosedChoices({
+  state,
+  selected,
+  onPick,
+}: {
+  state: FieldOptionsResult;
+  selected: readonly string[];
+  onPick: (value: string) => void;
+}): ReactNode {
+  const [query, setQuery] = useState("");
+  if (state.status === "loading") return <Loading label="Loading options…" />;
+  if (state.status === "error")
+    return (
+      <ResourceErrorInline
+        variant="inline"
+        error={state.error}
+        refetch={state.refetch}
+        subject="this field's values"
+      />
+    );
+  const choices = selectChoices(state.options, selected);
+  const q = query.trim().toLowerCase();
+  const visible = q
+    ? choices.filter(
+        ({ option }) =>
+          option.label.toLowerCase().includes(q) ||
+          option.value.toLowerCase().includes(q),
+      )
+    : choices;
+  return (
+    <Stack gap="sm">
+      {choices.length > 6 && (
+        <ChoicesSearch value={query} onChange={setQuery} />
+      )}
+      <ChoiceGrid choices={visible} selected={selected} onPick={onPick} />
+    </Stack>
+  );
+}
+
+/**
+ * The picker over an open option set: one window of its collection — the top
+ * in the collection's default order, or the rows whose search column contains
+ * the typed text — the selected values first (outside the window too, so
+ * each can be clicked off), then the window.
+ */
+function WindowedChoices({
+  window,
+  selected,
+  onPick,
+}: {
+  window: FieldOptionsWindow;
+  selected: readonly string[];
+  onPick: (value: string) => void;
+}): ReactNode {
+  const [query, setQuery] = useState("");
+  const search = useDebounced(query.trim(), SEARCH_DEBOUNCE_MS);
+  const state = useLive(
+    window.collection,
+    {
+      where:
+        search === ""
+          ? window.where
+          : and(window.where, clause(window.search, "contains", search)),
+    },
+    // A new search keeps the previous window on screen until it answers.
+    { resetKey: window.collection.key },
+  );
+  return (
+    <Stack gap="sm">
+      <ChoicesSearch value={query} onChange={setQuery} />
       {state.status === "loading" ? (
         <Loading label="Loading options…" />
       ) : state.status === "error" ? (
@@ -129,44 +215,81 @@ export function ChipSelectFilterInput(
           subject="this field's values"
         />
       ) : (
-        <Stack gap="sm">
-          {choices.length > 6 && (
-            <SearchInput
-              appearance="menu"
-              autoFocus
-              placeholder="Search…"
-              keep={transient(
-                "picker query in a popover that closes on remount; several filter rules share one pane",
-              )}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
+        <>
+          <ChoiceGrid
+            // A selected value outside the window is not "unlisted": the
+            // window shows only part of the set.
+            choices={selectChoices(state.data.map(window.option), selected).map(
+              (c) => ({
+                ...c,
+                listed: true,
+              }),
+            )}
+            selected={selected}
+            onPick={onPick}
+          />
+          {state.canGrow && (
+            <Placeholder tone="muted">
+              More values than shown — search to find others.
+            </Placeholder>
           )}
-          {visible.length > 0 ? (
-            <Stack direction="row" gap="xs" wrap>
-              {visible.map(({ option, listed }) => (
-                <ToggleChip
-                  key={option.value}
-                  active={selected.includes(option.value)}
-                  variant="ghost"
-                  icon={listed ? undefined : <Icon icon={helpIcon} />}
-                  tooltip={
-                    listed
-                      ? undefined
-                      : `${option.value} — not one of this field's listed options`
-                  }
-                  onClick={() => pick(option.value)}
-                >
-                  {option.label}
-                </ToggleChip>
-              ))}
-            </Stack>
-          ) : (
-            <Placeholder tone="muted">No matches</Placeholder>
-          )}
-        </Stack>
+        </>
       )}
-    </InlinePopover>
+    </Stack>
+  );
+}
+
+function ChoicesSearch({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}): ReactNode {
+  return (
+    <SearchInput
+      appearance="menu"
+      autoFocus
+      placeholder="Search…"
+      keep={transient(
+        "picker query in a popover that closes on remount; several filter rules share one pane",
+      )}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    />
+  );
+}
+
+function ChoiceGrid({
+  choices,
+  selected,
+  onPick,
+}: {
+  choices: readonly SelectChoice[];
+  selected: readonly string[];
+  onPick: (value: string) => void;
+}): ReactNode {
+  if (choices.length === 0)
+    return <Placeholder tone="muted">No matches</Placeholder>;
+  return (
+    <Stack direction="row" gap="xs" wrap>
+      {choices.map(({ option, listed }) => (
+        <ToggleChip
+          key={option.value}
+          active={selected.includes(option.value)}
+          variant="ghost"
+          icon={listed ? undefined : <Icon icon={helpIcon} />}
+          tooltip={
+            listed
+              ? undefined
+              : `${option.value} — not one of this field's listed options`
+          }
+          onClick={() => onPick(option.value)}
+        >
+          {option.label}
+        </ToggleChip>
+      ))}
+    </Stack>
   );
 }
 

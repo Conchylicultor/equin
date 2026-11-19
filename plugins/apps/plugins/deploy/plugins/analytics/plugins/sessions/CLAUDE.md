@@ -83,7 +83,16 @@ Served `source: "external"` (`server/internal/served.ts`) on this computer's
   in the URL; a hand-edited rule
   selects no segment. A third, **Pages** (an operand quick filter: `pages
   contains-any-of [paths]`, the site's visited paths as its options), keeps
-  the visits that went through any of the picked pages.
+  the visits that went through any of the picked pages. Its options are a
+  WINDOW, never the whole set (`deploy-analytics.pages`, a window
+  `liveCollection` keyed `<deploymentId>/<path>`, scoped by site like the
+  sessions list, ordered by visits descending then path, page 50, `maxLimit`
+  200): the picker shows the 50 most visited and, as one types, the paths
+  containing the search (`path contains q`, run on the copy by collect's
+  `readVisitPages`), saying when more lie past the window — data-view's
+  `optionsWindow`. A site's paths grow with its traffic (the demo mints a
+  path per page, file and prototype a visitor opens: equin.ai passed 600 in
+  its first week), so a complete list had no bound to stay under.
 - **Focused pages**: the pages the view's filter asks for (the Pages quick
   filter's operand, or a top-level `pages contains` rule — `focusPagesOf`)
   ride the window as `LaneWindow.focusPages`; each row's journey bar and the
@@ -181,7 +190,7 @@ Mockup: `proto-1794566734-a58es0`.
 
 ## Plugin reference
 
-- Description: Sessions tab of a site's page, shown only when the deployment's composition ships the collect plugin: one row per anonymous visit (country, time, device and software, source, first visit or returning, channel), its journey on a shared log time axis (pages split by their share of the visit, the read line and section ticks, action icons, each named on hover) with its duration and actions; opening a row shows its timeline (each page, the sections reached and when, the actions in order, the exit), and clicking a page — or Replay — opens the visit replayed in a side pane of the site, on this instance's own app framed chromeless (site/:deploymentId/:tab?/replay/:visitId/:page?; a former base path moved to the app's current one): at the visitor's viewport, its recorded load as a veil, pages opened in-app, sections scrolled to when reached, actions as toasts, stretches away dimmed or skipped, with a scrubber, speeds and a step list. Read from this computer's copy of the site's analytics (site-mirror, its freshness line above the list; loading until a first whole copy is in place) as live key-range pages: the views (All / With actions / 2+ pages / Bounced) are saved filters, and every filter — whose visits, the device, any field — runs on the copy, a narrowed view carried in the URL. Serves a deployment's visits (deploy-analytics.sessions) from this computer's copy of the site's analytics tables (site-mirror's replica): collect's own visit-list SQL — the window, the rows by key, the groupings and the count, each filter compiled by collect — and the paths its visits hit (deploy-analytics.pages, the Pages filter's options), run on the copy, re-read whenever a pull applies a page to it.
+- Description: Sessions tab of a site's page, shown only when the deployment's composition ships the collect plugin: one row per anonymous visit (country, time, device and software, source, first visit or returning, channel), its journey on a shared log time axis (pages split by their share of the visit, the read line and section ticks, action icons, each named on hover) with its duration and actions; opening a row shows its timeline (each page, the sections reached and when, the actions in order, the exit), and clicking a page — or Replay — opens the visit replayed in a side pane of the site, on this instance's own app framed chromeless (site/:deploymentId/:tab?/replay/:visitId/:page?; a former base path moved to the app's current one): at the visitor's viewport, its recorded load as a veil, pages opened in-app, sections scrolled to when reached, actions as toasts, stretches away dimmed or skipped, with a scrubber, speeds and a step list. Read from this computer's copy of the site's analytics (site-mirror, its freshness line above the list; loading until a first whole copy is in place) as live key-range pages: the views (All / With actions / 2+ pages / Bounced) are saved filters, and every filter — whose visits, the device, any field — runs on the copy, a narrowed view carried in the URL. Serves a deployment's visits (deploy-analytics.sessions) from this computer's copy of the site's analytics tables (site-mirror's replica): collect's own visit-list SQL — the window, the rows by key, the groupings and the count, each filter compiled by collect — and the paths its visits hit (deploy-analytics.pages, the Pages filter's options: a window, most visited first, searched by path), run on the copy, re-read whenever a pull applies a page to it.
 - Web:
   - Slots:
     - `sources`
@@ -230,6 +239,7 @@ Mockup: `proto-1794566734-a58es0`.
 - Server:
   - Contributes:
     - `resource.declare` "deploy-analytics.pages"
+    - `resource.declare` "deploy-analytics.pages:rows"
     - `resource.declare` "deploy-analytics.sessions"
     - `resource.declare` "deploy-analytics.sessions:count"
     - `resource.declare` "deploy-analytics.sessions:groups"
@@ -239,25 +249,29 @@ Mockup: `proto-1794566734-a58es0`.
     - `apps/deploy/analytics/collect.countVisits`
     - `apps/deploy/analytics/collect.readVisitGroups`
     - `apps/deploy/analytics/collect.readVisitPages`
+    - `apps/deploy/analytics/collect.readVisitPagesByPath`
     - `apps/deploy/analytics/collect.readVisitsById`
     - `apps/deploy/analytics/collect.readVisitWindow`
+    - `apps/deploy/analytics/collect.VisitPage`
+    - `apps/deploy/analytics/collect.VisitPageCut`
     - `apps/deploy/analytics/collect.VisitReads`
     - `apps/deploy/site-mirror/pull.onSiteMirrorApplied`
     - `apps/deploy/site-mirror/pull.readSiteMirror`
     - `database/table-mirror/replica.tableMirrorReplicas`
     - `network/live.serveCollection`
-    - `network/live.serveValue`
   - Resources:
-    - `deploy-analytics.pages` (push, notified, capped: MAX_SITE_PAGES)
+    - `deploy-analytics.pages` (keyed, window)
+    - `deploy-analytics.pages:groups` (push)
+    - `deploy-analytics.pages:rows` (keyed, point)
     - `deploy-analytics.sessions` (keyed, window)
     - `deploy-analytics.sessions:count` (push)
     - `deploy-analytics.sessions:groups` (push)
     - `deploy-analytics.sessions:rows` (keyed, point)
 - Core:
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/deploy/analytics/collect` ×9
-    - `network/live` ×3
     - `fields/text/config` ×2
+    - `network/live` ×2
     - `fields/bool/config.boolField`
     - `fields/date/config.dateField`
     - `fields/duration/config.durationField`
@@ -272,12 +286,14 @@ Mockup: `proto-1794566734-a58es0`.
   - Exports (values):
     - `deploymentPages`
     - `deploymentSessions`
-    - `MAX_SITE_PAGES`
     - `parseSessionKey`
+    - `parseSitePageKey`
     - `sessionKey`
     - `sessionOf`
     - `sessionRowOf`
+    - `sitePageKey`
     - `startedAtKeyText`
+    - `visitsKeyText`
 - Cross-plugin:
   - Uses tokens: 29 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/color-palette` ×14
