@@ -47,6 +47,41 @@ function List({ ids, selected }: { ids: string[]; selected: string }) {
   );
 }
 
+const LabelledRow = memo(function LabelledRow({
+  id,
+  label,
+  state,
+}: {
+  id: string;
+  label: string;
+  state: LatestStore<State>;
+}): ReactNode {
+  useLayoutEffect(() => {
+    renders[id] = (renders[id] ?? 0) + 1;
+  });
+  const selected = useLatestSelector(state, (s) => s.selected === id);
+  return <span data-testid={id}>{`${label} ${selected ? "on" : "off"}`}</span>;
+});
+
+function Labelled({
+  ids,
+  label,
+  selected,
+}: {
+  ids: string[];
+  label: string;
+  selected: string;
+}) {
+  const state = useLatestStore<State>({ selected });
+  return (
+    <>
+      {ids.map((id) => (
+        <LabelledRow key={id} id={id} label={label} state={state} />
+      ))}
+    </>
+  );
+}
+
 describe("useLatestStore / useLatestSelector", () => {
   it("re-renders only the rows whose answer changed", () => {
     for (const k of Object.keys(renders)) delete renders[k];
@@ -61,6 +96,20 @@ describe("useLatestStore / useLatestSelector", () => {
     // The same value again (a new object): nobody re-renders.
     act(() => rerender(<List ids={["a", "b", "c"]} selected="b" />));
     expect(renders).toEqual({ a: 2, b: 2, c: 1 });
+  });
+
+  it("a row re-rendered by the render that changed the value renders once, with the new answer", () => {
+    for (const k of Object.keys(renders)) delete renders[k];
+    const { getByTestId, rerender } = render(
+      <Labelled ids={["a", "b"]} label="x" selected="a" />,
+    );
+    expect(renders).toEqual({ a: 1, b: 1 });
+    // Every row's own props change (the label) in the same render as the
+    // selection: each renders once, and never again to be corrected.
+    act(() => rerender(<Labelled ids={["a", "b"]} label="y" selected="b" />));
+    expect(getByTestId("a").textContent).toBe("y off");
+    expect(getByTestId("b").textContent).toBe("y on");
+    expect(renders).toEqual({ a: 2, b: 2 });
   });
 
   it("a row mounted by the render that changed the value reads the new value", () => {

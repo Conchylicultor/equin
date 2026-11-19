@@ -182,7 +182,17 @@ export function useVirtualRows<T>({
   "use no memo";
   // "use no memo" -- @tanstack/react-virtual returns a mutable Virtualizer whose state mutates outside React's render cycle (incompatible-library); compiling it risks stale windowed rows.
   const measureRef = useRef<HTMLDivElement>(null);
-  const [scrollEl, setScrollEl] = useState<HTMLElement | null>(null);
+  // The scroller, with the viewport size it had when found: handed to the
+  // virtualizer as its `initialRect`, so the first render that enables it
+  // already draws the window. Without it the virtualizer computes an empty
+  // range (a 0 px viewport) and re-renders itself once its observer reports
+  // the size — one more commit, and one more forced layout, per window that
+  // mounts (a search result set crossing a windowing threshold).
+  const [scroller, setScroller] = useState<{
+    el: HTMLElement;
+    rect: { width: number; height: number };
+  } | null>(null);
+  const scrollEl = scroller?.el ?? null;
   const [scrollMargin, setScrollMargin] = useState(0);
   // The first commit renders no window (the virtualizer waits for its
   // scroller), so the caller renders one invisible probe of a real row
@@ -250,17 +260,27 @@ export function useVirtualRows<T>({
 
   // Resolve the scroll container and the region's offset within it once mounted
   // (refs are attached by layout-effect time). A layout effect runs before
-  // paint, so the windowed rows appear without a blank frame.
+  // paint, so the windowed rows appear without a blank frame. Everything the
+  // window needs is measured here, in one layout read, and set in one batch:
+  // the next commit draws the final window (the margin's items too — the
+  // resize observer's first measure, below, then changes nothing).
   useLayoutEffect(() => {
     const sizer = measureRef.current;
     if (!sizer) return;
     const parent = findScrollParent(sizer);
-    setScrollEl(parent);
+    setScroller({
+      el: parent,
+      // What virtual-core's own rect observer reads (`clientWidth/Height`).
+      rect: { width: parent.clientWidth, height: parent.clientHeight },
+    });
     setScrollMargin(
       sizer.getBoundingClientRect().top -
         parent.getBoundingClientRect().top +
         parent.scrollTop,
     );
+    setMarginItems(items);
+    // Mount only: later changes are the resize observer's (below).
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the items the mount measured the margin for; every later items change is re-measured by the observer
   }, []);
 
   // The region's offset moves whenever content ABOVE it changes height — with
@@ -320,6 +340,7 @@ export function useVirtualRows<T>({
     enabled: scrollEl !== null,
     getScrollElement: () => scrollEl,
     initialOffset: () => scrollEl?.scrollTop ?? 0,
+    initialRect: scroller?.rect,
     // One size for every row: the size the first row measured turned out to
     // have, once one did — `estimateSize` is only a first guess (the table's
     // constant). A wrong estimate is paid every time the window reaches a

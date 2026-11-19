@@ -13,7 +13,7 @@
 //   ./equin run plugins/apps/plugins/places/plugins/places-map/e2e/search-perf.ts \
 //     [--path /about/demo/at/places] [--query paris] [--cpu 4] [--rounds 1] [--top 25] [--fiber-top 0]
 //     [--field "Search or add places"]
-//     [--no-profile] [--trace] [--out "$EQUIN_SCRATCH/search"]
+//     [--no-profile] [--trace] [--hooks] [--out "$EQUIN_SCRATCH/search"]
 //
 // `--field` is the search field's placeholder, so the same run measures any
 // DataView's search (`--path /agents/tasks --field "Search…"`: the Tasks list).
@@ -48,6 +48,9 @@ const profiling = !process.argv.includes("--no-profile");
 // A Chrome trace of the run, split per step by main-thread event (script,
 // style, layout, paint …) — what the "no JS" part of a keystroke is.
 const tracing = process.argv.includes("--trace");
+// Every commit with when it ran and, per component it started from, the state
+// hooks that changed (by hook index) — what set each commit off.
+const hooks = process.argv.includes("--hooks");
 
 interface ProfileNode {
   id: number;
@@ -111,7 +114,7 @@ function median(xs: readonly number[]): number {
 function printTrace(buf: Buffer): void {
   const perStep = new Map<
     string,
-    { input: number[]; longest: number[]; total: number[] }
+    { input: number[]; longest: number[]; total: number[]; redundant: number[] }
   >();
   if (out !== "/dev/null") writeFileSync(`${out}.trace.json`, buf);
   const { traceEvents } = JSON.parse(buf.toString()) as {
@@ -172,15 +175,48 @@ function printTrace(buf: Buffer): void {
       ),
     );
     const longest = Math.max(0, ...tops.map((t) => t.dur ?? 0)) / 1000;
+    // Forced style + layout: a pass run inside script (a layout read on the
+    // commit path) rather than by the frame. The first of a task lays out
+    // what the task changed, which the frame would pay anyway; every later
+    // one re-does it for what a further commit changed — the redundant part.
+    const forced = { passes: 0, redundant: 0, redundantMs: 0 };
+    for (const t of tops) {
+      const end = t.ts + (t.dur ?? 0);
+      const inside = complete.filter((e) => e.ts >= t.ts && e.ts < end);
+      let seen = 0;
+      for (const e of inside) {
+        if (e.name !== "Layout" && e.name !== "UpdateLayoutTree") continue;
+        const inScript = inside.some(
+          (s) =>
+            (s.name === "FunctionCall" || s.name === "EventDispatch") &&
+            s.ts <= e.ts &&
+            s.ts + (s.dur ?? 0) >= e.ts + (e.dur ?? 0),
+        );
+        if (!inScript) continue;
+        forced.passes++;
+        // A style recalc and the layout after it are one pass.
+        if (e.name === "UpdateLayoutTree") seen++;
+        if (seen > 1) {
+          if (e.name === "UpdateLayoutTree") forced.redundant++;
+          forced.redundantMs += (e.dur ?? 0) / 1000;
+        }
+      }
+    }
     const step = marks[i]!.name.slice(3);
-    const row = perStep.get(step) ?? { input: [], longest: [], total: [] };
+    const row = perStep.get(step) ?? {
+      input: [],
+      longest: [],
+      total: [],
+      redundant: [],
+    };
     row.input.push((inputTask?.dur ?? 0) / 1000);
     row.longest.push(longest);
     row.total.push(total);
+    row.redundant.push(forced.redundantMs);
     perStep.set(step, row);
     if (rounds > 1) continue;
     console.log(
-      `[trace] ${step}: main thread ${total.toFixed(0)} ms, the keystroke's task ${((inputTask?.dur ?? 0) / 1000).toFixed(0)} ms, longest task ${longest.toFixed(0)} ms`,
+      `[trace] ${step}: main thread ${total.toFixed(0)} ms, the keystroke's task ${((inputTask?.dur ?? 0) / 1000).toFixed(0)} ms, longest task ${longest.toFixed(0)} ms, forced style+layout ${forced.passes} events (${forced.redundant} passes after a task's first: ${forced.redundantMs.toFixed(0)} ms)`,
     );
     for (const [name, ms] of [...self.entries()]
       .sort((a, b) => b[1] - a[1])
@@ -198,7 +234,7 @@ function printTrace(buf: Buffer): void {
     all.longest.push(...row.longest);
     all.total.push(...row.total);
     console.log(
-      `[trace] ${step.padEnd(18)} median: keystroke's task ${median(row.input).toFixed(0).padStart(4)} ms · longest task ${median(row.longest).toFixed(0).padStart(4)} ms · main thread ${median(row.total).toFixed(0).padStart(4)} ms`,
+      `[trace] ${step.padEnd(18)} median: keystroke's task ${median(row.input).toFixed(0).padStart(4)} ms · longest task ${median(row.longest).toFixed(0).padStart(4)} ms · main thread ${median(row.total).toFixed(0).padStart(4)} ms · redundant forced layout ${median(row.redundant).toFixed(0).padStart(3)} ms`,
     );
   }
   console.log(
@@ -224,94 +260,178 @@ await withBrowser(async (h) => {
   // every component fiber that did work (React's PerformedWork flag) — on a
   // fiber object the commit before did not hold, since a subtree that bailed
   // out whole keeps its old fibers, flags and all.
-  await page.addInitScript(() => {
-    const w = window as unknown as {
-      __spCommits: {
-        names: Record<string, number>;
-        roots: Record<string, number>;
-        total: number;
-        mounted: number;
-        outline: string[];
-      }[];
-      __REACT_DEVTOOLS_GLOBAL_HOOK__?: unknown;
-    };
-    w.__spCommits = [];
-    interface Fiber {
-      tag: number;
-      flags: number;
-      type: unknown;
-      child: Fiber | null;
-      sibling: Fiber | null;
-      alternate: Fiber | null;
-    }
-    const nameOf = (t: unknown): string => {
-      if (typeof t === "function")
-        return (
-          (t as { displayName?: string; name: string }).displayName ?? t.name
-        );
-      if (t !== null && typeof t === "object") {
-        const o = t as {
-          displayName?: string;
-          render?: unknown;
-          type?: unknown;
-        };
-        return o.displayName ?? nameOf(o.render ?? o.type);
+  // Only for one round: the hook walks every fiber of every commit (~1 s of
+  // main thread over a 3-round run), which would skew the timings `--rounds`
+  // compares — and a multi-round run prints no counts.
+  if (rounds === 1)
+    await page.addInitScript(() => {
+      const w = window as unknown as {
+        __spCommits: {
+          names: Record<string, number>;
+          roots: Record<string, number>;
+          total: number;
+          mounted: number;
+          outline: string[];
+          t: number;
+          task: number;
+          why: string[];
+        }[];
+        __REACT_DEVTOOLS_GLOBAL_HOOK__?: unknown;
+      };
+      w.__spCommits = [];
+      interface Fiber {
+        tag: number;
+        flags: number;
+        type: unknown;
+        child: Fiber | null;
+        sibling: Fiber | null;
+        alternate: Fiber | null;
+        memoizedState: Hook | null;
       }
-      return "?";
-    };
-    const seen = new WeakMap<object, WeakSet<Fiber>>();
-    w.__REACT_DEVTOOLS_GLOBAL_HOOK__ = {
-      supportsFiber: true,
-      renderers: new Map(),
-      inject: () => 1,
-      checkDCE: () => {},
-      onScheduleFiberRoot: () => {},
-      onCommitFiberUnmount: () => {},
-      onPostCommitFiberRoot: () => {},
-      onCommitFiberRoot: (_id: number, root: { current: Fiber }) => {
-        const prev = seen.get(root) ?? new WeakSet<Fiber>();
-        const now = new WeakSet<Fiber>();
-        seen.set(root, now);
-        const names: Record<string, number> = {};
-        const roots: Record<string, number> = {};
-        let total = 0;
-        // Rendered for the first time (no previous fiber to update): a row
-        // a new result mounted, as opposed to one that re-rendered.
-        let mounted = 0;
-        // Each fiber with whether a component above it rendered: the top-most
-        // rendered components are the commit's roots — what set it off.
-        const outline: string[] = [];
-        const stack: [Fiber, boolean, number][] = [[root.current, false, 0]];
-        while (stack.length > 0) {
-          const [f, under, depth] = stack.pop()!;
-          now.add(f);
-          let rendered = false;
-          if (
-            [0, 1, 11, 14, 15].includes(f.tag) &&
-            (f.flags & 1) !== 0 &&
-            !prev.has(f)
-          ) {
-            const n = nameOf(f.type) || "(anonymous)";
-            names[n] = (names[n] ?? 0) + 1;
-            if (!under) roots[n] = (roots[n] ?? 0) + 1;
-            if (outline.length < 1500)
-              outline.push(`${" ".repeat(Math.min(depth, 60))}${n}`);
-            total++;
-            if (f.alternate === null) mounted++;
-            rendered = true;
-          }
-          if (f.sibling) stack.push([f.sibling, under, depth]);
-          if (f.child)
-            stack.push([
-              f.child,
-              under || rendered,
-              depth + (rendered ? 1 : 0),
-            ]);
+      interface Hook {
+        memoizedState: unknown;
+        queue: unknown;
+        next: Hook | null;
+      }
+      // A state value, short: enough to tell which hook it is.
+      const preview = (v: unknown): string => {
+        if (v instanceof Set) return `Set(${v.size})`;
+        if (v instanceof Map) return `Map(${v.size})`;
+        if (Array.isArray(v)) return `Array(${v.length})`;
+        if (v !== null && typeof v === "object")
+          return `{${Object.keys(v).slice(0, 4).join(",")}}`;
+        return String(v).slice(0, 40);
+      };
+      // The state hooks of a component that changed since its last commit —
+      // what made it render on its own (none: a context it reads changed).
+      const changedHooks = (f: Fiber): string | null => {
+        // A class component's memoizedState is its state, not a hook list.
+        if (f.tag === 1) return null;
+        const out: string[] = [];
+        let h = f.memoizedState;
+        let a = f.alternate?.memoizedState ?? null;
+        for (let i = 0; h != null; i++, h = h.next, a = a?.next ?? null) {
+          if (h.queue == null || a == null) continue;
+          if (h.memoizedState === a.memoizedState) continue;
+          // A `useLatestSelector` re-render: the counter is followed by the
+          // ref holding the selector and the answer it rendered.
+          const latest = (
+            h.next?.memoizedState as {
+              current?: { select?: unknown; answer?: unknown };
+            } | null
+          )?.current;
+          out.push(
+            typeof latest?.select === "function"
+              ? `#${i}=selector(${String(latest.select).replace(/\s+/g, " ").slice(0, 80)} → ${preview(latest.answer)})`
+              : `#${i}=${preview(h.memoizedState)}`,
+          );
         }
-        w.__spCommits.push({ names, roots, total, mounted, outline });
-      },
-    };
-  });
+        return out.length === 0 ? null : out.join(" ");
+      };
+      const nameOf = (t: unknown): string => {
+        if (typeof t === "function")
+          return (
+            (t as { displayName?: string; name: string }).displayName ?? t.name
+          );
+        if (t !== null && typeof t === "object") {
+          const o = t as {
+            displayName?: string;
+            render?: unknown;
+            type?: unknown;
+          };
+          return o.displayName ?? nameOf(o.render ?? o.type);
+        }
+        return "?";
+      };
+      const seen = new WeakMap<object, WeakSet<Fiber>>();
+      // Which task each commit ran in: a commit with no task open opens one,
+      // closed by a message posted then — which runs before React's next
+      // scheduler slice (posted at the end of the slice in flight).
+      let task = 0;
+      let taskOpen = false;
+      const closer = new MessageChannel();
+      closer.port1.onmessage = () => {
+        taskOpen = false;
+      };
+      w.__REACT_DEVTOOLS_GLOBAL_HOOK__ = {
+        supportsFiber: true,
+        renderers: new Map(),
+        inject: () => 1,
+        checkDCE: () => {},
+        onScheduleFiberRoot: () => {},
+        onCommitFiberUnmount: () => {},
+        onPostCommitFiberRoot: () => {},
+        onCommitFiberRoot: (_id: number, root: { current: Fiber }) => {
+          if (!taskOpen) {
+            task++;
+            taskOpen = true;
+            closer.port2.postMessage(null);
+          }
+          const prev = seen.get(root) ?? new WeakSet<Fiber>();
+          const now = new WeakSet<Fiber>();
+          seen.set(root, now);
+          const names: Record<string, number> = {};
+          const roots: Record<string, number> = {};
+          let total = 0;
+          // Rendered for the first time (no previous fiber to update): a row
+          // a new result mounted, as opposed to one that re-rendered.
+          let mounted = 0;
+          // Each fiber with whether a component above it rendered: the top-most
+          // rendered components are the commit's roots — what set it off.
+          const outline: string[] = [];
+          const why: Record<string, number> = {};
+          const stack: [Fiber, boolean, number][] = [[root.current, false, 0]];
+          while (stack.length > 0) {
+            const [f, under, depth] = stack.pop()!;
+            now.add(f);
+            let rendered = false;
+            if (
+              [0, 1, 11, 14, 15].includes(f.tag) &&
+              (f.flags & 1) !== 0 &&
+              !prev.has(f)
+            ) {
+              const n = nameOf(f.type) || "(anonymous)";
+              names[n] = (names[n] ?? 0) + 1;
+              if (!under) roots[n] = (roots[n] ?? 0) + 1;
+              // Any component whose own state changed — a root, or one nested
+              // under another that rendered in the same commit.
+              if (f.alternate !== null) {
+                const changed = changedHooks(f);
+                const entry =
+                  changed !== null
+                    ? `${n}[${changed}]`
+                    : !under
+                      ? `${n}[context/props]`
+                      : null;
+                if (entry !== null) why[entry] = (why[entry] ?? 0) + 1;
+              }
+              if (outline.length < 1500)
+                outline.push(`${" ".repeat(Math.min(depth, 60))}${n}`);
+              total++;
+              if (f.alternate === null) mounted++;
+              rendered = true;
+            }
+            if (f.sibling) stack.push([f.sibling, under, depth]);
+            if (f.child)
+              stack.push([
+                f.child,
+                under || rendered,
+                depth + (rendered ? 1 : 0),
+              ]);
+          }
+          w.__spCommits.push({
+            names,
+            roots,
+            total,
+            mounted,
+            outline,
+            t: performance.now(),
+            task,
+            why: Object.entries(why).map(([e, k]) => (k > 1 ? `${e}×${k}` : e)),
+          });
+        },
+      };
+    });
   await page.goto(url, { waitUntil: "commit" });
   const input = page.getByPlaceholder(field);
   await input.waitFor({ timeout: 180_000 });
@@ -374,6 +494,7 @@ await withBrowser(async (h) => {
     )) as Timing[];
   const results: { step: string; timings: Timing[] }[] = [];
   const commits = async (step: string) => {
+    if (rounds > 1) return;
     const all = await page.evaluate(() =>
       (
         window as unknown as {
@@ -383,6 +504,9 @@ await withBrowser(async (h) => {
             total: number;
             mounted: number;
             outline: string[];
+            t: number;
+            task: number;
+            why: string[];
           }[];
         }
       ).__spCommits.splice(0),
@@ -403,8 +527,13 @@ await withBrowser(async (h) => {
             c.outline.join("\n"),
           );
       });
+    if (hooks)
+      for (const c of all)
+        console.log(
+          `    task ${String(c.task).padStart(4)} @${c.t.toFixed(1)} ${String(c.total).padStart(5)} (${c.mounted} mounted) ${c.why.join(" · ")}`,
+        );
     for (const c of all)
-      if (c.total >= 50)
+      if (c.total >= 50 && !hooks)
         console.log(
           `    commit of ${c.total} (${c.mounted} mounted) from ${Object.entries(
             c.roots,
