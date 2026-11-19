@@ -12,7 +12,7 @@ import {
   partyConfig,
   type KeyEffect,
 } from "../../core";
-import { PartyAudio } from "../internal/audio";
+import { hush, PartyAudio } from "../internal/audio";
 import { PartyEffects, type PartyOptions } from "../internal/effects";
 import { PartyControls } from "./party-controls";
 import "./party.css";
@@ -89,7 +89,7 @@ export function PartyStage() {
     return () => {
       effectsRef.current = null;
       audio.dispose();
-      speechSynthesis.cancel();
+      hush();
       layer.replaceChildren();
     };
   }, []);

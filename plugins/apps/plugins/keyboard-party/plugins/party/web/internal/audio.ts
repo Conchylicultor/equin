@@ -1,4 +1,5 @@
 import { holdReload } from "@plugins/primitives/plugins/dom/plugins/reload-readiness/web";
+import { speechSupport } from "@plugins/primitives/plugins/dom/plugins/speech-synthesis/web";
 import type { Instrument } from "../../core";
 
 /**
@@ -151,12 +152,18 @@ export class PartyAudio {
 
 /**
  * Speech after a sound. Each call cancels what is still being said, so mashing
- * keys speaks only the latest — never a backlog.
+ * keys speaks only the latest — never a backlog. Silent where the browser has
+ * no speech synthesis: the party still plays its sounds and pictures.
  */
 export function say(text: string): void {
-  speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.rate = 0.9;
-  u.pitch = 1.35;
-  speechSynthesis.speak(u);
+  const speech = speechSupport();
+  if (speech.kind === "unsupported") return;
+  speech.cancel();
+  speech.speak(text, { rate: 0.9, pitch: 1.35 });
+}
+
+/** Stops whatever is still being said (the stage unmounting). */
+export function hush(): void {
+  const speech = speechSupport();
+  if (speech.kind === "supported") speech.cancel();
 }

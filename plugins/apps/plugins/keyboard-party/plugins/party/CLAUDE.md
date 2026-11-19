@@ -18,6 +18,7 @@
     - `primitives/dom/element-fullscreen.useFullscreenSupport`
     - `primitives/dom/reload-readiness.holdReload`
     - `primitives/dom/scroll-reveal.focusElement`
+    - `primitives/dom/speech-synthesis.speechSupport`
     - `primitives/icon-button.IconButton`
   - Exports (values): `PartyStage`
 - Server:

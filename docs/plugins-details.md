@@ -6113,6 +6113,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/dom/element-fullscreen.useFullscreenSupport`
               - `primitives/dom/reload-readiness.holdReload`
               - `primitives/dom/scroll-reveal.focusElement`
+              - `primitives/dom/speech-synthesis.speechSupport`
               - `primitives/icon-button.IconButton`
             - Exports (values): `PartyStage`
           - Server:
@@ -54197,6 +54198,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `scroll-safety/no-adhoc-scroll-into-view` — `web/internal/use-reveal-on-active.ts` (sanctioned)
               - `scroll-safety/no-adhoc-scroll-write` — `web/internal/use-reveal-on-active.ts` (sanctioned)
               - `scroll-safety/no-scrolling-focus` — `web/internal/focus-element.ts` (sanctioned)
+        - **`speech-synthesis`** — The browser's speech synthesis (Web Speech API), only where it exists: speechSupport(win?) answers unsupported (some Android browsers, in-app webviews and privacy-hardened builds have no speechSynthesis) or supported with speak(text, options) and cancel() — so a caller must branch before it can speak, and goes silent where the browser cannot talk. Its lint rule (no-raw-speech-synthesis) sends every other speechSynthesis / SpeechSynthesisUtterance use here.
+          - Cross-plugin:
+            - Imported by: `apps/keyboard-party/party`
+          - Web:
+            - Exports (types):
+              - `SpeakOptions`
+              - `SpeechSupport`
+            - Exports (values): `speechSupport`
         - **`static-render`** (excluded) — One static render of a pane to HTML for robots (never hydrated): createStaticRenderer declares the process a static render, loads the composition's plugins, hydrates a boot snapshot through the boot task's own hydrate path, and renders a path through the real provider stack and a static pane store, failing loudly with the pane and the component path.
           - Web:
             - Uses:

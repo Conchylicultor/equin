@@ -6640,6 +6640,10 @@
       "name": "@equin/plugin-primitives-dom-scroll-reveal",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/dom/plugins/speech-synthesis": {
+      "name": "@equin/plugin-primitives-dom-speech-synthesis",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/dom/plugins/static-render": {
       "name": "@equin/plugin-primitives-dom-static-render",
       "version": "0.0.1",
@@ -11488,6 +11492,8 @@
     "@equin/plugin-primitives-dom-render-mode": ["@equin/plugin-primitives-dom-render-mode@workspace:plugins/primitives/plugins/dom/plugins/render-mode"],
 
     "@equin/plugin-primitives-dom-scroll-reveal": ["@equin/plugin-primitives-dom-scroll-reveal@workspace:plugins/primitives/plugins/dom/plugins/scroll-reveal"],
+
+    "@equin/plugin-primitives-dom-speech-synthesis": ["@equin/plugin-primitives-dom-speech-synthesis@workspace:plugins/primitives/plugins/dom/plugins/speech-synthesis"],
 
     "@equin/plugin-primitives-dom-static-render": ["@equin/plugin-primitives-dom-static-render@workspace:plugins/primitives/plugins/dom/plugins/static-render"],
 

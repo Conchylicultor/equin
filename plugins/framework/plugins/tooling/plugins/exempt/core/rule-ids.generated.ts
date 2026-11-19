@@ -203,6 +203,7 @@ export type ExemptableRuleId =
   | "space-ramp/no-dead-spacing"
   | "spacer/no-split-slot-row"
   | "spawn-safety/no-raw-bun-spawn"
+  | "speech-synthesis/no-raw-speech-synthesis"
   | "sql-column/no-asserted-column-type"
   | "sql-projection/no-asserted-sql-type"
   | "sql-rows/no-unparsed-sql-rows"

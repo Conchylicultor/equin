@@ -677,6 +677,7 @@ export const browserHost = {
     "primitives.dom.reload-readiness",
     "primitives.dom.render-mode",
     "primitives.dom.scroll-reveal",
+    "primitives.dom.speech-synthesis",
     "primitives.dom.tree-focus",
     "primitives.dom.web-storage",
     "primitives.dom.web-storage.health",
