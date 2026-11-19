@@ -74,6 +74,7 @@ saying so, never dropped.
     - `change-feed-exclusion` "site_reports"
   - Uses:
     - `apps/deploy/analytics/host-only.capBodySize`
+    - `apps/deploy/analytics/host-only.isBotUserAgent`
     - `apps/deploy/analytics/host-only.requestClientIp`
     - `database.db`
     - `database/sql-column.parsedJson`
@@ -112,6 +113,7 @@ saying so, never dropped.
   - Imported by:
     - `apps/deploy/site-reports`
     - `apps/deploy/site-reports/channel`
+    - `apps/deploy/site-reports/channel/slow-load`
     - `apps/deploy/site-reports/import`
   - Endpoint callers: `channel`
 

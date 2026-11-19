@@ -34,6 +34,10 @@ export type SiteReportEntry = z.infer<typeof SiteReportEntrySchema>;
 export const SiteReportsBodySchema = z
   .object({
     reports: cappedList(SiteReportEntrySchema, { max: L.maxBatch }).min(1),
+    // Whether the page runs under automation (`navigator.webdriver`): such a
+    // batch is counted as an `automated` drop, never stored. Absent from a
+    // page released before it, which is read as a visitor's, as it was then.
+    automated: z.boolean().optional(),
   })
   .strict();
 export type SiteReportsBody = z.infer<typeof SiteReportsBodySchema>;

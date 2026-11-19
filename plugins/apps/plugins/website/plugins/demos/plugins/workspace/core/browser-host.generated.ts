@@ -954,6 +954,7 @@ export const browserHost = {
   negated: [
     "active-data.event-source",
     "apps.deploy.site-reports.channel",
+    "apps.deploy.site-reports.channel.slow-load",
     "apps.desktop.wallpaper.openverse",
     "apps.home.tour",
     "apps.isle.dev",

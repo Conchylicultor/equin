@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-deploy-site-reports-channel-slow-load",
+  "description": "A site page's slow load as a report: a visitor's page that took 3 s or more to be ready (or was left hidden before it was), sent through the site's report channel.",
+  "private": true,
+  "version": "0.0.1"
+}

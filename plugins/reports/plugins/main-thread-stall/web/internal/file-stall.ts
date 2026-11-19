@@ -1,6 +1,7 @@
 import { report } from "@plugins/reports/web";
 import { clientSlowOpSink } from "@plugins/debug/plugins/slow-ops/plugins/sink/core";
 import {
+  coarseClient,
   mainThreadStallSummary,
   type MainThreadStallDraft,
   type MainThreadStallPayload,
@@ -9,7 +10,6 @@ import {
 } from "../../core";
 import { asEpochMs } from "@plugins/primitives/plugins/perfs/plugins/page-clock/core";
 import { STALL } from "./constants";
-import { coarseClient } from "./coarse-client";
 import { topFunction } from "./stall-machine";
 import type { TabEvidence } from "@plugins/reports/plugins/main-thread-stall/plugins/tab-evidence/core";
 import type { HeapWatch } from "./heap-watch";

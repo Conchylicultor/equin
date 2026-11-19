@@ -123,7 +123,7 @@ async function submit(
 ): Promise<SiteReportsResponse> {
   // Decode exactly as the route does, so the body bounds are under test too.
   const body = SiteReportsBodySchema.parse({ reports: entries });
-  return intake.submit(body.reports, ip);
+  return intake.submit(body.reports, { kind: "visitor", ip });
 }
 
 async function dropTotal(): Promise<number> {
@@ -267,6 +267,33 @@ describe("site-reports intake under load", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]!.message).toEndWith("third cause");
     expect(rows[0]!.count).toBe(3);
+  });
+
+  test("a bot's or an automated page's batch is counted, never stored, and spends no visitor budget", async () => {
+    const { intake } = setup();
+    const ip = "192.0.2.30";
+    for (const sender of [{ kind: "bot" }, { kind: "automated" }] as const) {
+      for (let i = 0; i < SITE_REPORT_LIMITS.perVisitorBatches + 2; i++) {
+        const body = SiteReportsBodySchema.parse({ reports: [crash("bot")] });
+        expect(await intake.submit(body.reports, sender)).toEqual({
+          kind: "accepted",
+          accepted: 0,
+          dropped: 1,
+        });
+      }
+    }
+    // The visitor at the same address still has their whole budget.
+    const r = await submit(intake, [crash("person")], ip);
+    expect(r).toEqual({ kind: "accepted", accepted: 1, dropped: 0 });
+    await intake.flush();
+    const rows = await t.db.select().from(siteReports);
+    expect(rows.map((row) => row.message)).toEqual([crash("person").message]);
+    const drops = await t.db.select().from(siteReportDrops);
+    const n = SITE_REPORT_LIMITS.perVisitorBatches + 2;
+    expect(Object.fromEntries(drops.map((d) => [d.reason, d.count]))).toEqual({
+      bot: n,
+      automated: n,
+    });
   });
 
   test("an unknown kind or a payload its schema refuses is dropped and counted", async () => {

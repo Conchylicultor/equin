@@ -3793,11 +3793,40 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses:
                   - `infra/endpoints.fetchEndpointOver`
                   - `primitives/networking/page-transport.pageTransport`
+                  - `primitives/scope/automation.AUTOMATED_BROWSER`
                   - `reports.reportChannel`
               - Exemptions:
                 - Exempts itself from:
                   - `networking/no-page-transport` — `web/internal/channel.ts` (sanctioned)
                   - `report-sink/collect-through-companion` — `web/index.ts` (sanctioned)
+              - Plugins:
+                - **`slow-load`** (excluded) — A site page's slow load as a report: judged once per page load from the boot trace (first byte, first paint, the route's content commit) — ready at or past 3 s, or hidden before ready after 3 s — and filed through report() as slow-page-load with the coarse browser (family, OS) and network class only. Excluded from every composition (base-exclusions) under its parent channel; the website names it — elsewhere the app's own slow-ops page-load signal covers loads. The slow-page-load report kind on the site's server: the schema and fingerprint (one row per slowest stretch × phone or not) the site's intake identifies a visitor's slow load by.
+                  - Web:
+                    - Contributes: `Core.Root` → `SlowLoadReporter`
+                    - Uses:
+                      - `primitives/perfs/boot-trace.subscribeBootTrace`
+                      - `reports.report`
+                  - Server:
+                    - Contributes: `report-kind` "slow-page-load"
+                    - Uses: `reports.ReportKind`
+                  - Core:
+                    - Uses:
+                      - `reports/main-thread-stall.StallClient`
+                      - `reports/main-thread-stall.StallClientSchema`
+                    - Exports (types):
+                      - `LoadMilestones`
+                      - `SlowLoadPhase`
+                      - `SlowPageLoadPayload`
+                    - Exports (values):
+                      - `CONNECTION_TYPES`
+                      - `judgeHiddenLoad`
+                      - `judgeReadyLoad`
+                      - `SLOW_LOAD_PHASES`
+                      - `SLOW_PAGE_LOAD_BAR_MS`
+                      - `SLOW_PAGE_LOAD_KIND`
+                      - `slowPageLoadFingerprint`
+                      - `SlowPageLoadPayloadSchema`
+                      - `slowPageLoadSummary`
             - **`import`** — Errors a deployed site's visitors hit, read hourly from the site's box over SSH (its mirror change stream, reduced as it arrives) into this computer's Reports as untrusted website-visitor reports (never auto-investigated, fenced as data when investigated by hand). Web half: the kind's Debug → Reports summary view — a Website visitors badge, then the site, the page and the visitor's error as plain text (never markup or a link) with the site's own occurrence count. Reads the errors a deployed site's visitors hit into this computer's Reports: the box's site_reports change stream (site-mirror, outbound SSH only) goes through the reduce step as the replica's sink — every row strictly parsed and reduced to typed, clamped fields, the site's payload never copied but reduced structurally (identifier keys, typed scalars, every string a sanitised plain line, capped and counted — so every kind's diagnostic data reaches the local report), no raw row stored here (only the mirror's content-free key index) — at most 50 rows per deployment per hourly run, each page ONE incident of the website-visitor-error kind (a reconciliation's catch-up rings no bell), source website-visitor — untrusted: never on the worklist automations read, fenced as data when investigated by hand.
               - Web:
                 - Contributes: `Reports.KindView` → `WebsiteVisitorSummary`
@@ -3845,6 +3874,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `change-feed-exclusion` "site_reports"
                 - Uses:
                   - `apps/deploy/analytics/host-only.capBodySize`
+                  - `apps/deploy/analytics/host-only.isBotUserAgent`
                   - `apps/deploy/analytics/host-only.requestClientIp`
                   - `database.db`
                   - `database/sql-column.parsedJson`
@@ -3883,6 +3913,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by:
                   - `apps/deploy/site-reports`
                   - `apps/deploy/site-reports/channel`
+                  - `apps/deploy/site-reports/channel/slow-load`
                   - `apps/deploy/site-reports/import`
                 - Endpoint callers: `channel`
         - **`ssh-setup`** — SSH setup for deploy servers: owns the whole key flow (generate / paste-and-derive / fingerprint / install command / verify the connection / replace) as a collapsible section that always renders, and decorates it with the matched SshProvider's console prose when the server's console URL identifies one.
@@ -34000,8 +34031,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards/module-extension.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 204 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
-              - `apps` ×62
+            - Imported by: 205 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+              - `apps` ×63
               - `primitives` ×29
               - `conversations` ×26
               - `page` ×26
@@ -34054,8 +34085,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `waitForNotBusy`
                   - `waitForScreenReady`
               - Cross-plugin:
-                - Imported by: 67 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/REFERENCE.md)
-                  - `apps` ×24
+                - Imported by: 68 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/REFERENCE.md)
+                  - `apps` ×25
                   - `conversations` ×11
                   - `primitives` ×11
                   - `page` ×8
@@ -34827,8 +34858,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `Core.Root`
           - `Core.Boot`
-        - Slot contributors: 45 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
-          - `Core.Root` ×43
+        - Slot contributors: 46 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+          - `Core.Root` ×44
           - `Core.Boot` ×2
       - Core:
         - Uses:
@@ -34904,9 +34935,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `whenPageCanFetch`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 114 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+        - Imported by: 115 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
           - `primitives` ×26
-          - `apps` ×19
+          - `apps` ×20
           - `reports` ×8
           - `ui` ×8
           - `apps-core` ×6
@@ -40002,9 +40033,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `namespaceUrl`
           - `resolveNamespaceAlias`
       - Cross-plugin:
-        - Imported by: 87 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
+        - Imported by: 88 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
+          - `apps` ×15
           - `framework` ×15
-          - `apps` ×14
           - `infra` ×12
           - `debug` ×11
           - `conversations` ×7
@@ -57415,6 +57446,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps/deploy/analytics/collect`
+              - `apps/deploy/site-reports/channel/slow-load`
               - `debug/boot-profile`
               - `debug/profiling/cold-start`
               - `debug/slow-ops`
@@ -57789,6 +57821,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`automation`** — Whether this page is driven by automation (AUTOMATED_BROWSER: navigator.webdriver — Playwright, an e2e run, the agent browser): the one definition every beacon marks its signals with, so a report names who saw it instead of muting it.
           - Cross-plugin:
             - Imported by:
+              - `apps/deploy/site-reports/channel`
               - `debug/latency-ledger`
               - `debug/profiling/tab-memory`
               - `debug/slow-ops`
@@ -59990,14 +60023,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `versionSkewCode`
       - `versionSkewExplains`
   - Cross-plugin:
-    - Imported by: 91 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 92 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×34
       - `debug` ×21
       - `conversations` ×7
       - `infra` ×6
+      - `apps` ×4
       - `build` ×4
       - `database` ×4
-      - `apps` ×3
       - `framework` ×3
       - `tasks` ×2
       - `active-data/report`
@@ -60490,6 +60523,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `CLIENT_FAMILIES`
           - `CLIENT_OSES`
+          - `coarseClient`
           - `dominantLayer`
           - `InteractionBreakdownSchema`
           - `interactionTargetKey`
@@ -60510,7 +60544,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/font-family --font-mono`
-        - Imported by: `apps/deploy/site-reports/import`
+        - Imported by:
+          - `apps/deploy/site-reports/channel/slow-load`
+          - `apps/deploy/site-reports/import`
       - Plugins:
         - **`tab-evidence`** — What a browser tab's own thread ran over a window, as evidence a report carries: the JS stacks its rolling JS Self-Profiling trace sampled (StallStacks) and its JS heap around it (StallMemory), with the markdown sections a task renders them as. Never identity. A leaf, so slow-ops (whose sink main-thread-stall feeds) can carry it on a `main-thread` slow-op report without a cycle.
           - Cross-plugin:

@@ -21,6 +21,7 @@ clip long tasks to the boot window.
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/analytics/collect`
+    - `apps/deploy/site-reports/channel/slow-load`
     - `debug/boot-profile`
     - `debug/profiling/cold-start`
     - `debug/slow-ops`

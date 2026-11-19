@@ -1,4 +1,4 @@
-import type { StallClient } from "../../core";
+import type { StallClient } from "./main-thread-stall-kind";
 
 /**
  * The browser family and OS a user agent string names — nothing finer (no

@@ -296,7 +296,8 @@ a real occurrence says which it was.
 ## Which browser
 
 `client` (`StallClientSchema`): the browser's family and OS only, read from
-the user agent by the filing tab (`web/internal/coarse-client.ts`, pure) —
+the user agent by the filing tab (`core/coarse-client.ts`, pure — also
+used by the website's slow-load report) —
 never the user agent, a version or a device. Evidence only, like `stacks`:
 not on `MainThreadStallDraft`, so never part of the fingerprint or summary.
 
@@ -357,6 +358,7 @@ renderer forever — so the script kills it with CDP `Page.crash`.
   - Exports (values):
     - `CLIENT_FAMILIES`
     - `CLIENT_OSES`
+    - `coarseClient`
     - `dominantLayer`
     - `InteractionBreakdownSchema`
     - `interactionTargetKey`
@@ -377,7 +379,9 @@ renderer forever — so the script kills it with CDP `Page.crash`.
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/font-family --font-mono`
-  - Imported by: `apps/deploy/site-reports/import`
+  - Imported by:
+    - `apps/deploy/site-reports/channel/slow-load`
+    - `apps/deploy/site-reports/import`
 - Sub-plugins:
   - **`tab-evidence`** — What a browser tab's own thread ran over a window, as evidence a report carries: the JS stacks its rolling JS Self-Profiling trace sampled (StallStacks) and its JS heap around it (StallMemory), with…
 

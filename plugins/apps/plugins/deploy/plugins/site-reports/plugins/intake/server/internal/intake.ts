@@ -67,10 +67,18 @@ export interface FlushStats {
   inserted: number;
 }
 
+/**
+ * Who sent a batch, as the route judged it (`sender.ts`): a visitor, by the
+ * address the admission gate keys on, or something that is not one — counted
+ * under its reason, never stored.
+ */
+export type SiteReportSender =
+  { kind: "visitor"; ip: string } | { kind: "bot" } | { kind: "automated" };
+
 export interface SiteReportsIntake {
   submit(
     entries: readonly SiteReportEntry[],
-    ip: string,
+    sender: SiteReportSender,
   ): Promise<SiteReportsResponse>;
   /** Write what is pending (the timer calls it; a test or shutdown may too). */
   flush(): Promise<FlushStats>;
@@ -115,10 +123,19 @@ export function createSiteReportsIntake(deps: IntakeDeps): SiteReportsIntake {
 
   async function submit(
     entries: readonly SiteReportEntry[],
-    ip: string,
+    sender: SiteReportSender,
   ): Promise<SiteReportsResponse> {
+    // Not a visitor: counted, never read further and never charged to the
+    // admission budgets a visitor's reports need.
+    if (sender.kind !== "visitor") {
+      drop(sender.kind, entries.length);
+      return { kind: "accepted", accepted: 0, dropped: entries.length };
+    }
     const now = deps.now();
-    const admission = deps.admission.admit(await deps.visitorKey(ip), now);
+    const admission = deps.admission.admit(
+      await deps.visitorKey(sender.ip),
+      now,
+    );
     if (!admission.admitted) {
       drop(admission.reason, entries.length);
       return { kind: "rate-limited", retryAfterS: admission.retryAfterS };

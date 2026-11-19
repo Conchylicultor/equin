@@ -21,6 +21,23 @@ describe("isBotUserAgent", () => {
     expect(isBotUserAgent("python-requests/2.32")).toBe(true);
     expect(isBotUserAgent("")).toBe(true);
   });
+  test("page-speed testers are bots: their loads are throttled on purpose", () => {
+    expect(
+      isBotUserAgent(
+        "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36 Chrome-Lighthouse",
+      ),
+    ).toBe(true);
+    expect(
+      isBotUserAgent(
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 GTmetrix",
+      ),
+    ).toBe(true);
+    expect(
+      isBotUserAgent(
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36 PingdomPageSpeed/1.0 (pingbot/2.0; +http://www.pingdom.com/)",
+      ),
+    ).toBe(true);
+  });
   test("real browsers, and headless Chrome, are not", () => {
     expect(isBotUserAgent(UA.chromeMac)).toBe(false);
     expect(isBotUserAgent(UA.safariIphone)).toBe(false);

@@ -12,7 +12,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`browser`** [exempt] [10 sub-plugins] — Web browser app: each tab is a page in a real Chromium on the machine (persistent profile, so logins stick), streamed to a canvas with input sent back.
     - **`chord`** [test helpers] [exempt] [9 sub-plugins] — Chord — a chord ear trainer that plays loops of real songs whose chords you have turned on, asks you to name each chord, and keeps track of how well you know each one.
     - **`debug`** [1 sub-plugin] — Debug app.
-    - **`deploy`** [test helpers] [exempt] [34 sub-plugins] — The Deploy task category: the category tasks filed from the Deploy app, such as a failed deploy's investigation, are grouped under.
+    - **`deploy`** [test helpers] [exempt] [35 sub-plugins] — The Deploy task category: the category tasks filed from the Deploy app, such as a failed deploy's investigation, are grouped under.
     - **`desktop`** [exempt] [11 sub-plugins] — Desktop — the floating-window desktop mode as an app: windows over a wallpaper, one bottom shelf (launcher, pinned apps, running windows, tray), virtual desktops, overview and a window switcher.
     - **`events`** [exempt] [23 sub-plugins] — Events — track events from pluggable sources in one database.
     - **`file-explorer`** [exempt] [7 sub-plugins] — File explorer app.

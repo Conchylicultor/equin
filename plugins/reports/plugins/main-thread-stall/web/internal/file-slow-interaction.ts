@@ -1,13 +1,13 @@
 import { report } from "@plugins/reports/web";
 import { clientSlowOpSink } from "@plugins/debug/plugins/slow-ops/plugins/sink/core";
 import {
+  coarseClient,
   dominantLayer,
   interactionTargetLabel,
   slowInteractionSummary,
   type SlowInteractionDraft,
 } from "../../core";
 import type { StallStacks } from "@plugins/reports/plugins/main-thread-stall/plugins/tab-evidence/core";
-import { coarseClient } from "./coarse-client";
 import { INTERACTION, type InteractionVerdict } from "./interaction-judge";
 
 // The slow-op every slow interaction lands as: one row per target (what was

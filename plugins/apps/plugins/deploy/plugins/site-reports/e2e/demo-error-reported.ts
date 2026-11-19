@@ -11,6 +11,8 @@
  *     straight from the deploy's database) holds one row for it whose count
  *     is 3 — and its path is the page's pathname, no query.
  *  (The thrown errors are the point: the run's PAGEERROR lines are expected.)
+ *  The run poses as a visitor (`navigator.webdriver` false): the intake
+ *  stores nothing an automated page sends.
  *
  * Manual only. Needs the website composition built from this checkout:
  *   ./equin build --composition website
@@ -35,6 +37,14 @@ await withBrowser(async (h) => {
     "site-reports: an error in the website's live demo reaches the site's server",
   );
   const { page } = await h.session();
+  // The intake counts a page under automation (`navigator.webdriver`) as an
+  // `automated` drop and stores nothing, so this run poses as a visitor's
+  // browser: the flag reads false before any page script does.
+  await page.addInitScript(() => {
+    Object.defineProperty(Navigator.prototype, "webdriver", {
+      get: () => false,
+    });
+  });
   const posted: { path: string }[] = [];
   page.on("request", (req: Request) => {
     const { pathname } = new URL(req.url());

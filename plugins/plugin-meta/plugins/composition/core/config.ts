@@ -813,6 +813,9 @@ export const compositionsConfig = defineConfig({
         // site's own public intake (`…site-reports.intake`): the site's server
         // has no reports engine. Design:
         // research/2026-11-11-global-website-demo-error-reports.md.
+        // `…site-reports.channel.slow-load`: a visitor's slow page load as a
+        // report through that channel (main's own loads are slow-ops'
+        // `page-load`, so it ships only here, under the channel's exclusion).
         app("website", {
           entryPoints: [
             "apps.website.**",
@@ -821,6 +824,7 @@ export const compositionsConfig = defineConfig({
             "integrations.google-maps.browser-config",
             "apps.deploy.site-reports.intake",
             "apps.deploy.site-reports.channel",
+            "apps.deploy.site-reports.channel.slow-load",
           ],
           extraExtends: ["reporters"],
           excludes: ["agent-runtime", "auth"],

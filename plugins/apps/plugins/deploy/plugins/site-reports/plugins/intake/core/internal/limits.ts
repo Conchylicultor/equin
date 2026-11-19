@@ -37,6 +37,14 @@ export const SITE_REPORT_LIMITS = {
  * counted in `site_report_drops`, per window — never queued, never silent.
  */
 export const SITE_REPORT_DROP_REASONS = [
+  // The request's user agent names a crawler or an HTTP library
+  // (analytics/host-only's isBotUserAgent — the same rule analytics counts
+  // visits by): not a person's page.
+  "bot",
+  // The page said it runs under automation (`navigator.webdriver` —
+  // Playwright, an agent's browser, an e2e run): what it hit is the
+  // automation's, not a visitor's.
+  "automated",
   // The visitor spent their batches for this window.
   "visitor-budget",
   // Every visitor together spent the window's batches.

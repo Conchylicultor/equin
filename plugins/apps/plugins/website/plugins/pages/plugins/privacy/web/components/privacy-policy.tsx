@@ -15,7 +15,9 @@ import "./privacy.css";
  *
  * Every fact here is the analytics plugin's (`apps/deploy/analytics/collect`:
  * its recorded fields, `RAW_RETENTION_DAYS`, `IDENTITY_WINDOW_DAYS`,
- * `CONSENT_KEY_DAYS`); a change there is a change to this page.
+ * `CONSENT_KEY_DAYS`) and the site's problem reports' (`apps/deploy/site-reports`:
+ * errors, freezes and slow loads, with the coarse browser and network class);
+ * a change there is a change to this page.
  */
 export function PrivacyPolicy() {
   return (
@@ -48,6 +50,12 @@ export function PrivacyPolicy() {
           </dd>
           <dt>Timing</dt>
           <dd>How long the page took to load.</dd>
+          <dt>Problems</dt>
+          <dd>
+            When something breaks, freezes or loads slowly: what went wrong and
+            on which page, with the browser and system family and the kind of
+            network. Nothing that says who you are.
+          </dd>
         </dl>
 
         <h2>Telling a return visit from a new one</h2>

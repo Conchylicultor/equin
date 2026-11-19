@@ -1,6 +1,7 @@
 import { fetchEndpointOver } from "@plugins/infra/plugins/endpoints/web";
 import { pageTransport } from "@plugins/primitives/plugins/networking/plugins/page-transport/web";
 import type { ReportChannel } from "@plugins/reports/web";
+import { AUTOMATED_BROWSER } from "@plugins/primitives/plugins/scope/plugins/automation/web";
 import { siteReportsEndpoint } from "@plugins/apps/plugins/deploy/plugins/site-reports/plugins/intake/core";
 import { createReportBatcher } from "./batcher";
 import { toSiteReport } from "./to-entry";
@@ -17,7 +18,13 @@ export const siteReportBatcher = createReportBatcher({
       siteReportsEndpoint,
       {},
       // `report: false`: a failed batch must never file a report about itself.
-      { body: { reports }, keepalive, report: false },
+      // `automated`: a page under automation says so, and the intake counts
+      // its batch as such instead of storing it beside visitors' reports.
+      {
+        body: { reports, automated: AUTOMATED_BROWSER },
+        keepalive,
+        report: false,
+      },
     ),
   schedule: (fn, delayMs) => {
     setTimeout(fn, delayMs);

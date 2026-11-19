@@ -11,6 +11,7 @@ import { createFanOutGate, ReportKind } from "@plugins/reports/server";
 import { SITE_REPORT_LIMITS, siteReportsEndpoint } from "../../core";
 import { createAdmissionGate } from "./admission";
 import { createSiteReportsIntake } from "./intake";
+import { siteReportSender } from "./sender";
 import { createVisitorKey } from "./visitor-key";
 
 // The process's one intake: its gates and its pending aggregate are in memory,
@@ -37,7 +38,14 @@ export const handleSubmitSiteReports = rawEndpointHandler(
   capBodySize(
     SITE_REPORT_LIMITS.maxBodyBytes,
     implement(siteReportsEndpoint, ({ body, req }) =>
-      intake.submit(body.reports, requestClientIp(req)),
+      intake.submit(
+        body.reports,
+        siteReportSender({
+          ip: requestClientIp(req),
+          userAgent: req.headers.get("user-agent") ?? "",
+          automated: body.automated ?? false,
+        }),
+      ),
     ),
   ),
 );

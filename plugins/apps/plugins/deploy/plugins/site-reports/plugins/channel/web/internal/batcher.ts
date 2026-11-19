@@ -165,8 +165,9 @@ export function createReportBatcher(deps: BatcherDeps): ReportBatcher {
       return;
     }
     const batch: { held: Held; count: number }[] = [];
-    // `{"reports":[` + `]}`, then each entry and its comma.
-    let bodyBytes = 14;
+    // `{"reports":[` + `],"automated":false}` (the channel's flag, at its
+    // longest), then each entry and its comma.
+    let bodyBytes = 32;
     for (const h of held.values()) {
       if (h.unsent === 0) continue;
       const size = entryBytes(h.report) + 1;
