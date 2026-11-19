@@ -95,6 +95,7 @@ describe("render-loop idle gates", () => {
       },
       stop: () => {},
       getReport: () => ({ commitsPerSec: 0, initiators: [] }),
+      componentsAbove: () => [],
     } as unknown as RenderProfilerWindow[typeof RENDER_PROFILER_GLOBAL];
     for (; i < 6 * 60; i += 1) await frame(() => flip(i), 1000 / 60);
     await new Promise((r) => setTimeout(r, 1600));
@@ -109,6 +110,7 @@ describe("render-loop idle gates", () => {
       start: () => {},
       stop: () => {},
       getReport: () => ({ commitsPerSec: 0, initiators: [] }),
+      componentsAbove: () => [],
     } as unknown as RenderProfilerWindow[typeof RENDER_PROFILER_GLOBAL];
     for (let i = 0; i < 6 * 60; i += 1) await frame(() => flip(i), 1000 / 60);
     await new Promise((r) => setTimeout(r, 1600));
