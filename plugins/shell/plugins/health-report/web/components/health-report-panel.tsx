@@ -26,15 +26,16 @@ import { InfoRowView, QuietRowsView, StatusRowView } from "./health-row";
 type SealedRow = SealContributions<HealthReportRow>;
 
 /**
- * A row with nothing beyond its summary — what `foldQuietRows` may fold. A
- * `remedy` does not count: it is drawn only while the row is not ok, and a
- * folded row is ok.
+ * A row that shows nothing at rest beyond its summary — what `foldQuietRows`
+ * may fold. A `glance` or `actions` are drawn on the row itself, so they keep
+ * it out. A `component` does not count: it is a detail behind the row's own
+ * chevron, still one click away inside the card. Nor does a `remedy`: it is
+ * drawn only while the row is not ok, and a folded row is ok.
  */
 function isPlain(row: SealedRow): boolean {
   return (
     row.kind === "status" &&
     row.glance === undefined &&
-    row.component === undefined &&
     row.actions === undefined
   );
 }

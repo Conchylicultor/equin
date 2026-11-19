@@ -357,6 +357,34 @@ describe("the report", () => {
     expect(summary("socket-summary")).toBeTruthy();
   });
 
+  it("folds a fine row with a detail too, still expandable inside the card", async () => {
+    function Detail() {
+      return <div data-testid="detail">storage detail</div>;
+    }
+    renderReport([
+      status("Connection", { state: "ok", summary: "conn-summary" }),
+      status(
+        "storage",
+        { state: "ok", summary: "storage-summary" },
+        { title: "Browser storage", component: Detail },
+      ),
+      status(
+        "queue",
+        { state: "ok", summary: "queue-summary" },
+        { title: "Job queue", glance: () => <div>bars</div> },
+      ),
+    ]);
+    await openReport();
+    // A glance is drawn at rest, so its row stays out of the card.
+    expect(summary("queue-summary")).toBeTruthy();
+    expect(summary("All 2 normal")).toBeTruthy();
+    expect(screen.queryByText("storage-summary")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: /System checks/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Browser storage/ }));
+    expect(screen.getByTestId("detail")).toBeTruthy();
+  });
+
   it("is green with an info row alone", () => {
     renderReport([info("worktree")]);
     expect(button().dataset.health).toBe("ok");

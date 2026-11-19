@@ -96,8 +96,9 @@ adds its marks, so being merely out of date never turns either dot orange. The
 row itself still draws attention, and the verdict still names it.
 
 **Quiet rows fold into one card** (`foldQuietRows`, pure, bun-tested): a
-status row with nothing beyond its summary (no `glance`, `component` or
-`actions`; a `remedy` is not drawn while `ok`, so it does not count) that is
+status row with nothing beyond its summary at rest (no `glance` or `actions`;
+a `component` detail sits behind the row's own chevron, still expandable inside
+the card, and a `remedy` is not drawn while `ok`, so neither counts) that is
 `ok` only says "fine", so two or more of them collapse into one card — "System checks", "All N normal" (a generic title, never the folded titles: that list grows with every contributor) — that lists each when expanded. A row
 leaves the card the moment it is not `ok`, so a problem is never behind a
 chevron — but it stays beside it (just above), where it sat while fine: every

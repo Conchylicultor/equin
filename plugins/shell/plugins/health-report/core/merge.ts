@@ -179,7 +179,8 @@ export type ReportItem<R> =
  * beside it, after every other row.
  *
  * A row is quiet when it is a status row with nothing to show beyond its
- * summary (`isPlain`: no glance, no detail, no actions) and it is `ok`: a line
+ * summary at rest (`isPlain`: no glance, no actions — a detail behind its own
+ * chevron does not count) and it is `ok`: a line
  * that only says "fine". Several of them stacked are noise, so they collapse
  * into one card that lists them when expanded. The moment one is not `ok` it
  * leaves the card so a problem is never hidden behind a chevron — but it stays
