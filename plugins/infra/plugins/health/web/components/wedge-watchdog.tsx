@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import {
   CONNECT_DEADLINE_MS,
+  SOCKET_RECOVERY_MS,
   subscribeNetDiag,
   subscribeWsStatus,
   type NetDiagEvent,
@@ -15,6 +16,7 @@ import {
 } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useToast, type Toast } from "@plugins/shell/plugins/notifications/web";
 import { getHealth, reachHost } from "../internal/client";
+import { createConnectStallWatch } from "../internal/connect-stall-watch";
 import { createSocketDownWatch } from "../internal/socket-down-watch";
 import { PUSH_STALL_MS } from "../internal/push-stall";
 import { wedgeReportSink } from "../internal/wedge-report-sink";
@@ -191,11 +193,14 @@ export function WedgeWatchdog() {
     // --- Signal 1: socket-down wedge ---
     // One deadline per url: armed on connecting/reconnecting/closed, cleared
     // on open, elapsed after SOCKET_DOWN_MS of visible time in total — and
-    // filed only once the host is shown answering HTTP (a host the page cannot
-    // reach at all is the visitor's network: the window restarts instead).
+    // filed only once the socket stayed down a whole recovery window after its
+    // host was shown answering HTTP (a host the page cannot reach at all is
+    // the visitor's network: the window restarts instead; one that answers as
+    // the link comes back sees the socket reopen within the recovery window).
     const socketDown = createSocketDownWatch({
       deadlines,
       downMs: SOCKET_DOWN_MS,
+      recoveryMs: SOCKET_RECOVERY_MS,
       reach: reachHost,
       onWedge: (url, status) => {
         const channelKind = liveStateSocketKind(url);
@@ -224,7 +229,15 @@ export function WedgeWatchdog() {
     // Each recovery (a hung handshake abandoned, an evicted port re-attached)
     // is published BEFORE it heals; reporting it here is what keeps the
     // recovery from hiding the cause.
+    const connectStalls = createConnectStallWatch({
+      now: () => Date.now(),
+      reach: reachHost,
+    });
     const onDiag = (ev: NetDiagEvent) => {
+      if (ev.type === "ws-open") {
+        connectStalls.opened(ev.url);
+        return;
+      }
       if (ev.type === "ws-connect-stalled") {
         const kind = diagSocketKind(ev.url);
         if (kind === null) return;
@@ -244,29 +257,34 @@ export function WedgeWatchdog() {
         // the page runs is reported as socket-down, on the same visible clock.
         const visibleMs = deadlines.visibleMsSince(stalledSince);
         if (visibleMs < CONNECT_DEADLINE_MS) return;
-        // The host must answer HTTP for the stall to be the live-state path's:
-        // a page that cannot reach its host at all (no answer) is looking at
-        // the visitor's network, and files nothing — a socket still down once
-        // the host answers is socket-down's (`reachHost`, `internal/client.ts`).
+        // The stall is the live-state path's only once a handshake DIALED on
+        // a link shown working — after the host answered HTTP — stalls too,
+        // and the host still answers (`connect-stall-watch.ts`). A page that
+        // cannot reach its host at all (no answer) is looking at the
+        // visitor's network; one whose host answers as the link comes back
+        // sees its next attempt open. A socket still down once the link
+        // works is socket-down's too.
         // A server (re)booting during the attempt held the handshake at the
         // gateway for the whole deadline — a boot that slow is a fault of its
         // own, split into its own task by that fact.
-        void reachHost().then((reach) => {
-          if (reach.kind === "no-answer") return;
+        void connectStalls.stalled(ev.url, stalledSince).then((stall) => {
+          if (stall === null) return;
+          const { reach } = stall;
           const health = reach.health;
+          const dialed = `dialed ${Math.round((stalledSince - stall.hostAnsweredAt) / 1000)}s after the host answered HTTP`;
           if (health !== null && health.startedAt > stalledSince) {
             wedge(
               toast,
               "connect-stalled",
               `connect-stalled:${kind}:restart`,
-              `${detail}; held by a server boot (up since ${new Date(health.startedAt).toISOString()})`,
+              `${detail}, ${dialed}; held by a server boot (up since ${new Date(health.startedAt).toISOString()})`,
             );
           } else {
             wedge(
               toast,
               "connect-stalled",
               `connect-stalled:${kind}`,
-              `${detail}; server ${health === null ? `answered its health check with HTTP ${reach.status}` : `up since ${new Date(health.startedAt).toISOString()}`}`,
+              `${detail}, ${dialed}; server ${health === null ? `answered its health check with HTTP ${reach.status}` : `up since ${new Date(health.startedAt).toISOString()}`}`,
             );
           }
         });

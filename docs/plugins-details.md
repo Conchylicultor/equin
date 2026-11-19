@@ -37988,6 +37988,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/live-state.useNotificationsChannelStatuses`
           - `primitives/networking.CONNECT_DEADLINE_MS`
           - `primitives/networking.NetDiagEvent`
+          - `primitives/networking.SOCKET_RECOVERY_MS`
           - `primitives/networking.subscribeNetDiag`
           - `primitives/networking.subscribeWsStatus`
           - `primitives/networking/page-transport.pageTransport`
@@ -56004,6 +56005,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `requestTimingOf`
           - `RESOURCE_TIMING_WAIT_MS`
           - `SharedWebSocket`
+          - `SOCKET_RECOVERY_MS`
           - `stampIssuer`
           - `subscribeNetDiag`
           - `subscribeWsStatus`

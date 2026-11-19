@@ -38,6 +38,19 @@ Watches this page's connection to its backends and says so.
   socket-down restarts its window instead (`socket-down-watch.ts`), so a
   socket still down once the host answers is reported one window later. An
   in-browser server's unanswered sub needs no network and is never gated.
+  **An answer proves the link only from when it arrives.** A visitor whose
+  link drops has its health request hang — not fail — and answered the
+  instant the link returns, a moment before the socket (dialed into the dead
+  link) reopens (equin.ai, 2026-11-19: answered at 05:13:38.281, reopened at
+  .450; a handshake dialed at 05:21:47 into the outage, health answered at
+  05:22:01.95). So socket-down files only once the socket stays down a whole
+  `SOCKET_RECOVERY_MS` (networking: the connect deadline plus the longest
+  reconnect delay) AFTER the host answered, and the host still answers then;
+  connect-stalled files only for a handshake DIALED after the host answered
+  that stalls too (`connect-stall-watch.ts`) — the stall before it only
+  records the answer, and the socket opening settles it as the visitor's
+  link. The cost: a server-side handshake hang that heals on the very next
+  attempt is no longer filed from the page.
 - **`getHealth` / `waitForRestart`** — the `/api/health` client helpers.
   `/api/health` admits a deployed site's **visitor** (`access: { visitor }`):
   every page probes its own host through it, and owner-only it answered a
@@ -62,6 +75,7 @@ Watches this page's connection to its backends and says so.
     - `network/live/live-state.useNotificationsChannelStatuses`
     - `primitives/networking.CONNECT_DEADLINE_MS`
     - `primitives/networking.NetDiagEvent`
+    - `primitives/networking.SOCKET_RECOVERY_MS`
     - `primitives/networking.subscribeNetDiag`
     - `primitives/networking.subscribeWsStatus`
     - `primitives/networking/page-transport.pageTransport`

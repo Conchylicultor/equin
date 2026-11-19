@@ -33,6 +33,7 @@ import {
   caddySite,
   GATEWAY_API_PREFIX,
   EDGE_RESTART_HOLD_SEC,
+  EDGE_STREAM_CLOSE_DELAY_HOURS,
   convergeScript,
 } from "./converge-script";
 
@@ -96,6 +97,7 @@ describe("caddySite", () => {
 \treverse_proxy 127.0.0.1:9100 {
 \t\tlb_try_duration ${EDGE_RESTART_HOLD_SEC}s
 \t\tlb_try_interval 250ms
+\t\tstream_close_delay ${EDGE_STREAM_CLOSE_DELAY_HOURS}h
 \t}
 }
 `,

@@ -1,6 +1,6 @@
 import { firedLate } from "./late-fire";
 import type { NetDiagEvent } from "./net-diag-bus";
-import { ReconnectSchedule } from "./reconnect-backoff";
+import { RECONNECT_MAX_DELAY_MS, ReconnectSchedule } from "./reconnect-backoff";
 import type { SocketFault } from "./shared-ws-protocol";
 import type { MakeWebSocket, WebSocketLike } from "./transport-types";
 import type { WsStatus } from "./ws-status-bus";
@@ -17,6 +17,16 @@ const WS_OPEN = 1;
  * handshake for seconds; this catches the attempt that is never answered.
  */
 export const CONNECT_DEADLINE_MS = 15_000;
+
+/**
+ * The longest a socket takes to open again once its link works: a handshake
+ * dialed while the link was down can hang until its deadline
+ * (`CONNECT_DEADLINE_MS`) — a SYN sent into a dead network is not resent the
+ * moment the network returns — and the next attempt waits at most the longest
+ * reconnect delay. A socket still not open this long after its host was shown
+ * answering HTTP failed on a link that works: the fault is past the link.
+ */
+export const SOCKET_RECOVERY_MS = CONNECT_DEADLINE_MS + RECONNECT_MAX_DELAY_MS;
 
 export interface SocketOwnerEvents {
   /** Every status transition; `conn` names the server connection while "open". */

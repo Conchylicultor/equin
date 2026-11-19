@@ -263,6 +263,7 @@ built on them — see
     - `requestTimingOf`
     - `RESOURCE_TIMING_WAIT_MS`
     - `SharedWebSocket`
+    - `SOCKET_RECOVERY_MS`
     - `stampIssuer`
     - `subscribeNetDiag`
     - `subscribeWsStatus`

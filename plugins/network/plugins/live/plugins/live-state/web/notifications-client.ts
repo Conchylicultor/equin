@@ -1235,7 +1235,15 @@ export class NotificationsClient {
    * returns only the subs that were genuinely behind.
    *
    * A sub is a genuine miss iff all three hold:
-   *  - it had a baseline before the probe (`prevVersion >= 0`),
+   *  - it had a SOCKET baseline before the probe: a sub-ack applied since its
+   *    last (re)subscribe (`lastAckVersion >= 0`). A version from anywhere
+   *    else names no state of the tuple's tracking span: an HTTP prime of a
+   *    tuple the server did not track yet reports the server's version clock,
+   *    and the tuple's first sub-ack — still in flight when the probe starts,
+   *    landing inside its window — opens the span at a higher version. That
+   *    is the sub's first answer, not a frame it missed (equin.ai, 2026-11-19
+   *    05:33:51 UTC: a tab 3 s old, its `icons.runtime-symbols` tuples primed
+   *    over HTTP at 733, reported missed at 734 — an immutable value);
    *  - its resync sub-ack revealed a higher server version
    *    (`lastAckVersion > prevVersion`) — the gap, AND
    *  - no live frame landed for it during the probe (`liveFrameSeq` unchanged) —
@@ -1264,6 +1272,8 @@ export class NotificationsClient {
       SocketChannel,
     ][]) {
       for (const [id, sub] of channel.subs) {
+        // No socket baseline yet: its first sub-ack is still to come (see above).
+        if (sub.lastAckVersion < 0) continue;
         before.push({
           id,
           socket: kind,
@@ -1294,7 +1304,6 @@ export class NotificationsClient {
       // Reopened mid-probe: a re-baseline, never a miss (see the doc above).
       if (channel!.opens !== b.prevOpens) continue;
       if (
-        b.prevVersion >= 0 &&
         sub.lastAckVersion > b.prevVersion &&
         sub.liveFrameSeq === b.prevLiveSeq
       ) {
@@ -3078,6 +3087,12 @@ export class NotificationsClient {
     if (msg.kind === "sub-ack" || msg.kind === "up-to-date")
       this.noteAnswered(entry, msg);
     if (msg.version <= entry.version) {
+      // An ack at a version this tab already holds (an HTTP prime answered at
+      // the same version) is still the server's word on the tuple at
+      // (re)subscribe: it gives the sub its socket baseline
+      // (`probeMissedUpdates`), though there is nothing to apply.
+      if (msg.kind === "sub-ack" || msg.kind === "up-to-date")
+        entry.lastAckVersion = Math.max(entry.lastAckVersion, msg.version);
       trace(
         `drop key=${msg.key} params=${pk} msgVersion=${msg.version} haveVersion=${entry.version} reason=stale-version`,
       );

@@ -391,6 +391,20 @@ WantedBy=multi-user.target
 export const EDGE_RESTART_HOLD_SEC = 60;
 
 /**
+ * How long a WebSocket a visitor opened under the previous Caddy config keeps
+ * running after a reload (`stream_close_delay`). Caddy's default is 0: every
+ * reload — a converge whose site block changed — closes every upgraded
+ * connection at once (equin.ai, 2026-11-19 04:51:39 and 04:52:17 UTC: two
+ * reloads, ~48 live sockets cut each time, every tab reconnecting and
+ * replaying its subs in the same second). The upstream is the install's own
+ * loopback gateway, the same under either config, so an old stream is still
+ * served correctly; the bound only stops a stream from pinning the old config
+ * forever. A gateway or unit restart still ends its sockets — that is the
+ * backend going away, not the edge.
+ */
+export const EDGE_STREAM_CLOSE_DELAY_HOURS = 6;
+
+/**
  * The gateway's reserved control-API prefix (`gateway/proxy.go`: every
  * `/gateway/…` path is the gateway's own, on every host). Never served
  * publicly — see {@link caddySite}.
@@ -439,6 +453,9 @@ export function caddySite(
   // `reverse_proxy`, so its position in the block is not what makes it win.
   // `hostOnly()` on the backend is the second, independent guard.
   //
+  // `stream_close_delay` keeps visitors' WebSockets open across a reload
+  // ({@link EDGE_STREAM_CLOSE_DELAY_HOURS}).
+  //
   // `respond <GATEWAY_API_PREFIX>* 404` refuses the gateway's own control
   // API (stop / restart / hold a backend, deploy, list the box's services and
   // paths) the same way. The gateway is the first guard: a request that came
@@ -474,6 +491,7 @@ export function caddySite(
 \treverse_proxy ${listenAddress(loopbackPort)} {
 \t\tlb_try_duration ${EDGE_RESTART_HOLD_SEC}s
 \t\tlb_try_interval 250ms
+\t\tstream_close_delay ${EDGE_STREAM_CLOSE_DELAY_HOURS}h
 \t}
 }
 `;

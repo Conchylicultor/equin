@@ -1291,4 +1291,84 @@ describe("NotificationsClient — HTTP fetch path", () => {
       ).rejects.toThrow(/content-type/);
     });
   });
+
+  // equin.ai 2026-11-19 05:33:51 UTC: a 3 s old tab primed its
+  // `icons.runtime-symbols` tuples over HTTP (the server's version clock: the
+  // tuples were not tracked yet), went hidden and came back before their first
+  // sub-ack; the probe read that ack (734) as revealing a frame missed after
+  // 733 — of an immutable value.
+  test("probeMissedUpdates: a sub with no sub-ack yet (an HTTP-primed value) has no baseline to miss from", async () => {
+    const { client, socket, fetchQueue } = await setup();
+    client.observe("k", { id: "c1" }, undefined, { schema: pushSchema });
+    await flush();
+    fetchQueue.push(
+      makeResponse({
+        body: { value: { status: "a" }, version: 733, epoch: "b1" },
+      }),
+    );
+    await client.fetchOverHttp(
+      "k",
+      { id: "c1" },
+      undefined,
+      { schema: pushSchema },
+      "prime",
+    );
+    const probe = client.probeMissedUpdates(200);
+    await flush();
+    // The sub's first answer: the server opened the tuple's span above 733.
+    socket.serverSend({
+      kind: "sub-ack",
+      key: "k",
+      params: { id: "c1" },
+      value: { status: "a" },
+      version: 734,
+      epoch: "b1",
+    });
+    await flush();
+    await vi.advanceTimersByTimeAsync(200);
+    expect(await probe).toEqual([]);
+  });
+
+  test("probeMissedUpdates: an HTTP-primed sub whose first sub-ack matched its version still has a baseline", async () => {
+    const { client, socket, fetchQueue } = await setup();
+    client.observe("k", { id: "c1" }, undefined, { schema: pushSchema });
+    await flush();
+    fetchQueue.push(
+      makeResponse({
+        body: { value: { status: "a" }, version: 5, epoch: "b1" },
+      }),
+    );
+    await client.fetchOverHttp(
+      "k",
+      { id: "c1" },
+      undefined,
+      { schema: pushSchema },
+      "prime",
+    );
+    // The first sub-ack at the version already held: dropped, yet an answer.
+    socket.serverSend({
+      kind: "sub-ack",
+      key: "k",
+      params: { id: "c1" },
+      value: { status: "a" },
+      version: 5,
+      epoch: "b1",
+    });
+    await flush();
+    const probe = client.probeMissedUpdates(200);
+    await flush();
+    socket.serverSend({
+      kind: "sub-ack",
+      key: "k",
+      params: { id: "c1" },
+      value: { status: "b" },
+      version: 9,
+      epoch: "b1",
+    });
+    await flush();
+    await vi.advanceTimersByTimeAsync(200);
+    expect(await probe).toMatchObject([
+      { key: "k", prevVersion: 5, ackVersion: 9 },
+    ]);
+  });
 });

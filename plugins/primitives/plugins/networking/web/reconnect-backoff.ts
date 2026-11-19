@@ -13,10 +13,19 @@
  * maps do not reach workers. The web-artifacts inline audit fails the build on
  * any other first-party import.
  */
+const RECONNECT_BASE_MS = 500;
+const RECONNECT_CAP_MS = 5000;
+const JITTER_MIN = 0.5;
+const JITTER_SPAN = 1;
+
 export function RECONNECT_DELAY(attempt: number): number {
-  const base = Math.min(500 * 2 ** attempt, 5000);
-  return base * (0.5 + Math.random());
+  const base = Math.min(RECONNECT_BASE_MS * 2 ** attempt, RECONNECT_CAP_MS);
+  return base * (JITTER_MIN + JITTER_SPAN * Math.random());
 }
+
+/** The longest delay `RECONNECT_DELAY` can answer: the cap at its widest jitter. */
+export const RECONNECT_MAX_DELAY_MS =
+  RECONNECT_CAP_MS * (JITTER_MIN + JITTER_SPAN);
 
 /**
  * The reconnect half of a reconnecting transport: the attempt counter, the one

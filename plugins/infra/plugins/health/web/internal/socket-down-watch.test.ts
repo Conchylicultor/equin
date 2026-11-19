@@ -5,6 +5,7 @@ import { createVisibleDeadlines } from "./visible-deadline";
 
 const URL = "wss://equin.ai/ws/notifications";
 const DOWN_MS = 15_000;
+const RECOVERY_MS = 20_000;
 const ANSWERED: HostReach = {
   kind: "answered",
   status: 200,
@@ -35,6 +36,7 @@ function harness() {
   const watch = createSocketDownWatch({
     deadlines,
     downMs: DOWN_MS,
+    recoveryMs: RECOVERY_MS,
     reach: () => {
       probes += 1;
       return Promise.resolve(host);
@@ -67,13 +69,48 @@ function harness() {
 }
 
 describe("socket-down watch", () => {
-  test("a socket down while its host answers is a wedge (a real one still files)", async () => {
+  test("a socket that stays down a whole recovery window after its host answered is a wedge", async () => {
     const h = harness();
     h.watch.status(URL, "reconnecting");
-    await h.advance(14_000);
+    await h.advance(15_000);
+    expect(h.wedges).toEqual([]);
+    expect(h.probes()).toBe(1);
+    await h.advance(RECOVERY_MS - 1_000);
     expect(h.wedges).toEqual([]);
     await h.advance(1_000);
-    expect(h.wedges).toEqual([{ at: 16_000, status: "reconnecting" }]);
+    // asked again at the end of the window: the host still answers
+    expect(h.probes()).toBe(2);
+    expect(h.wedges).toEqual([
+      { at: 16_000 + RECOVERY_MS, status: "reconnecting" },
+    ]);
+  });
+
+  // equin.ai 2026-11-19 05:13:18–05:13:38 UTC: a visitor's link dropped. The
+  // health request hung and was answered the instant the link came back
+  // (.281), 170 ms before the socket reopened (.450) — filed as socket-down.
+  test("a socket that reopens once its host answers — the link came back — files nothing", async () => {
+    const h = harness();
+    h.watch.status(URL, "reconnecting");
+    await h.advance(15_000); // the host answers: the link is back
+    expect(h.probes()).toBe(1);
+    await h.advance(1_000);
+    h.watch.status(URL, "open");
+    await h.advance(60_000);
+    expect(h.wedges).toEqual([]);
+    expect(h.probes()).toBe(1);
+  });
+
+  test("a link that drops again during the recovery window restarts the judgement", async () => {
+    const h = harness();
+    h.watch.status(URL, "reconnecting");
+    await h.advance(15_000); // answered
+    h.setHost({ kind: "no-answer" });
+    await h.advance(RECOVERY_MS); // asked again: no answer
+    expect(h.wedges).toEqual([]);
+    expect(h.probes()).toBe(2);
+    h.watch.status(URL, "open");
+    await h.advance(60_000);
+    expect(h.wedges).toEqual([]);
   });
 
   test("a socket that reopens within the window files nothing", async () => {
@@ -110,10 +147,10 @@ describe("socket-down watch", () => {
     await h.advance(40_000);
     expect(h.wedges).toEqual([]);
     h.setHost(ANSWERED); // the link is back, the socket is not
-    await h.advance(DOWN_MS);
+    await h.advance(DOWN_MS + RECOVERY_MS);
     expect(h.wedges.length).toBe(1);
     expect(h.wedges[0]!.at).toBeLessThanOrEqual(
-      1_000 + 40_000 + DOWN_MS + 5_000,
+      1_000 + 40_000 + DOWN_MS + RECOVERY_MS + 5_000,
     );
   });
 
@@ -121,8 +158,10 @@ describe("socket-down watch", () => {
     const h = harness();
     h.setHost({ kind: "answered", status: 502, health: null });
     h.watch.status(URL, "connecting");
-    await h.advance(DOWN_MS);
-    expect(h.wedges).toEqual([{ at: 16_000, status: "connecting" }]);
+    await h.advance(DOWN_MS + RECOVERY_MS);
+    expect(h.wedges).toEqual([
+      { at: 16_000 + RECOVERY_MS, status: "connecting" },
+    ]);
   });
 
   test("a socket that reopens while the host is being asked files nothing", async () => {
@@ -138,6 +177,7 @@ describe("socket-down watch", () => {
         clearTimeout: () => {},
       }),
       downMs: DOWN_MS,
+      recoveryMs: RECOVERY_MS,
       reach: () => new Promise((resolve) => (answer = resolve)),
       onWedge: (_u, s) => wedges.push(s),
     });
@@ -149,5 +189,35 @@ describe("socket-down watch", () => {
     await Promise.resolve();
     await Promise.resolve();
     expect(wedges).toEqual([]);
+  });
+
+  test("a probe in flight across a reopen and a new drop judges nothing", async () => {
+    let answer: (r: HostReach) => void = () => {};
+    let now = 0;
+    const timers: (() => void)[] = [];
+    const wedges: string[] = [];
+    const watch = createSocketDownWatch({
+      deadlines: createVisibleDeadlines({
+        now: () => now,
+        isHidden: () => false,
+        setTimeout: (fn) => timers.push(fn),
+        clearTimeout: () => {},
+      }),
+      downMs: DOWN_MS,
+      recoveryMs: RECOVERY_MS,
+      reach: () => new Promise((resolve) => (answer = resolve)),
+      onWedge: (_u, s) => wedges.push(s),
+    });
+    watch.status(URL, "reconnecting");
+    now = DOWN_MS;
+    timers.shift()!(); // the down window ends: the host is asked
+    watch.status(URL, "open");
+    watch.status(URL, "reconnecting"); // a new drop, its own window armed
+    expect(timers.length).toBe(1);
+    answer(ANSWERED); // the first episode's probe lands
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(wedges).toEqual([]);
+    expect(timers.length).toBe(1); // no recovery window for the old episode
   });
 });
