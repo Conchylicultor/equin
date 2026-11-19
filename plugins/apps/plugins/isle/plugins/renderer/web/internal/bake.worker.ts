@@ -11,11 +11,12 @@
 import {
   adoptHomeCarve,
   homeCarveGrid,
+  placeResidents,
   WorldModel,
 } from "@plugins/apps/plugins/isle/plugins/world/core";
 import type { BakeJob, BakeJobs, FromWorker, ToWorker } from "./bake-protocol";
 import { buildFurniture } from "./furniture";
-import { groundKernel, previewKernel } from "./ground-pixels";
+import { groundKernel, oceanKernel, previewKernel } from "./ground-pixels";
 import { maskFromAlpha } from "./hit-mask";
 
 interface WorkerScope {
@@ -61,6 +62,12 @@ function run(job: BakeJob): { out: unknown; transfer: Transferable[] } {
       const out: BakeJobs["ground"]["out"] = data(k);
       return { out, transfer: [k.img.buffer, k.mask.buffer] };
     }
+    case "ocean": {
+      const k = oceanKernel();
+      k.rows(0, k.h);
+      const out: BakeJobs["ocean"]["out"] = data(k);
+      return { out, transfer: [k.img.buffer] };
+    }
     case "preview": {
       const M = modelOf(job.seed);
       const k = previewKernel(M, M.island(job.island));
@@ -73,6 +80,14 @@ function run(job: BakeJob): { out: unknown; transfer: Transferable[] } {
       const out: BakeJobs["furniture"]["out"] = buildFurniture(
         M,
         M.island(job.island),
+      );
+      return { out, transfer: [] };
+    }
+    case "place": {
+      const out: BakeJobs["place"]["out"] = placeResidents(
+        modelOf(job.seed),
+        job.placement,
+        job.residents,
       );
       return { out, transfer: [] };
     }

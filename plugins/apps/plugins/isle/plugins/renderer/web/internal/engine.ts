@@ -51,15 +51,15 @@ import {
   GT,
   WAIT,
   bakeGroundTile,
+  bakeOcean,
   bakePreview,
   drawReeds,
   heightOver,
-  oceanTexture,
   type BakeStep,
   type GroundTile,
   type Preview,
 } from "./ground";
-import { islandsNearTile } from "./ground-pixels";
+import { islandsNearTile, OCEAN_FLAT } from "./ground-pixels";
 import { leaseBakePool, type PoolLease } from "./bake-pool";
 import {
   canvas,
@@ -372,7 +372,9 @@ export class IsleEngine {
   } | null = null;
   private readonly sprites: SpriteSet = makeSprites();
   private readonly rnd = this.sprites.rnd;
-  private readonly oceanPat: CanvasPattern;
+  /** The open sea's texture, once baked (its bake job until then): tiles drawn before it are not final. */
+  private oceanPat: CanvasPattern | null = null;
+  private oceanJob: Job<HTMLCanvasElement> | null = null;
   private readonly people = new People();
   private readonly wolf = new Werewolf(this.rnd);
   private readonly fireworks = new Fireworks(this.rnd);
@@ -568,9 +570,8 @@ export class IsleEngine {
     this.g = ctx2d(this.canvas);
     this.lease = opts.workers ? leaseBakePool() : null;
     this.art = this.newArt();
-    const pat = this.g.createPattern(oceanTexture(), "repeat");
-    if (!pat) throw new Error("isle renderer: no ocean pattern");
-    this.oceanPat = pat;
+    const ocean = this.pixelJob((pool) => pool.ocean());
+    this.oceanJob = { it: bakeOcean(ocean), px: ocean };
     const rnd = this.rnd;
     for (let i = 1; i < RIVER.length; i++) {
       const [ax, ay] = RIVER[i - 1]!;
@@ -1256,6 +1257,20 @@ export class IsleEngine {
     }
   }
 
+  /** The sea's texture, baked first: once it lands, every tile drawn without it is drawn again. */
+  private stepOcean(left: () => boolean): void {
+    const job = this.oceanJob;
+    if (!job) return;
+    let r = job.it.next();
+    while (!r.done && r.value !== WAIT && left()) r = job.it.next();
+    if (!r.done) return;
+    const pat = this.g.createPattern(r.value, "repeat");
+    if (!pat) throw new Error("isle renderer: no ocean pattern");
+    this.oceanPat = pat;
+    this.oceanJob = null;
+    for (const e of this.tileCache.values()) e.stale = true;
+  }
+
   /** Previews first, then the ground tiles in view nearest the centre, then nearby, within the budget. */
   private stepBakes(budgetMs: number, view: readonly number[]): void {
     const M = this.M;
@@ -1264,6 +1279,7 @@ export class IsleEngine {
     if (!M || !furniture || !layout) return;
     const t0 = performance.now();
     const left = () => performance.now() - t0 < budgetMs;
+    this.stepOcean(left);
     this.trimGround(view);
     for (let i = 0; i < this.previewJobs.length && left();) {
       const j = this.previewJobs[i]!;
@@ -1411,7 +1427,7 @@ export class IsleEngine {
     return (this.ground.has(k) || !this.groundKeySet.has(k)) && !!e && e.final;
   }
 
-  /** → false when it had to use the coarse preview. */
+  /** → false when it had to use the coarse preview, or the sea's texture is not baked yet. */
   private paintGround(
     tg: Ctx,
     X0: number,
@@ -1419,14 +1435,14 @@ export class IsleEngine {
     X1: number,
     Y1: number,
   ): boolean {
-    tg.fillStyle = this.oceanPat;
+    tg.fillStyle = this.oceanPat ?? OCEAN_FLAT;
     tg.fillRect(X0, Y0, X1 - X0, Y1 - Y0);
     const k = tileKey(Math.floor(X0 / GT), Math.floor(Y0 / GT));
     const G = this.ground.get(k);
     if (G?.c) {
       G.used = this.frameNo;
       tg.drawImage(G.c, X0, Y0, GT, GT);
-      return true;
+      return this.oceanPat !== null;
     }
     tg.imageSmoothingQuality = "high";
     for (const I of this.layout?.islands ?? []) {
@@ -1450,7 +1466,10 @@ export class IsleEngine {
         ey - sy,
       );
     }
-    return !this.islandAt(Math.floor(X0 / GT), Math.floor(Y0 / GT));
+    return (
+      this.oceanPat !== null &&
+      !this.islandAt(Math.floor(X0 / GT), Math.floor(Y0 / GT))
+    );
   }
 
   /** A tile: its ground (terrain, roads, squares, lots) and what stands on it (bridges, reeds, docks, scenery, buildings). */

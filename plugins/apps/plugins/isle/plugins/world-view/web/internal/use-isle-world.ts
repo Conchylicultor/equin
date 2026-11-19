@@ -24,12 +24,12 @@ import {
 import { isleApp } from "@plugins/apps/plugins/isle/plugins/shell/core";
 import {
   WorldModel,
-  placeResidents,
   residentOf,
   type Placement,
 } from "@plugins/apps/plugins/isle/plugins/world/core";
 import {
   useIslandShapes,
+  usePlacedResidents,
   type IsleApp,
   type TimeOfDay,
 } from "@plugins/apps/plugins/isle/plugins/renderer/web";
@@ -147,12 +147,24 @@ export function useIsleWorld(): IsleWorld {
   });
   // the island shapes placing and drawing read, built in the bake workers first
   const shapes = useIslandShapes(model, stored);
-  // the apps with no plot yet: placed by the pure world, claimed (first writer wins)
-  const pending = useMemo(() => {
-    if (!model || !residents || !stored || shapes !== "ready") return null;
-    const rs = residents.map((r) => residentOf(r.app, r.app.spec));
-    return placementWrites(stored, placeResidents(model, stored, rs));
-  }, [model, residents, stored, shapes]);
+  // the apps with no plot yet: placed by the pure world (in a bake worker),
+  // claimed (first writer wins)
+  const placing = useMemo(
+    () => residents?.map((r) => residentOf(r.app, r.app.spec)) ?? null,
+    [residents],
+  );
+  const placed = usePlacedResidents(
+    model,
+    shapes === "ready" ? stored : null,
+    placing,
+  );
+  const pending = useMemo(
+    () =>
+      stored && placed && placed !== "loading"
+        ? placementWrites(stored, placed)
+        : null,
+    [stored, placed],
+  );
   // A failed claim is the world's failure (below), shown by the pane's error
   // boundary with its Retry — never a toast over a title card that would wait
   // on "Building new houses" forever, since a placement read is claimed once.
@@ -186,7 +198,7 @@ export function useIsleWorld(): IsleWorld {
         return { kind: "loading", what: "Painting the signs" };
       if (shapes !== "ready")
         return { kind: "loading", what: "Shaping the islands" };
-      if (pending?.length)
+      if (placed === "loading" || pending?.length)
         return { kind: "loading", what: "Building new houses" };
       return {
         kind: "ready",

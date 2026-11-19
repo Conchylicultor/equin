@@ -8,6 +8,7 @@
 
 import {
   fbm,
+  hash,
   vnoise,
   type Island,
   type WorldModel,
@@ -247,6 +248,62 @@ export function previewKernel(M: WorldModel, I: Island): PreviewKernel {
       for (let y = y0; y < y1; y++)
         for (let x = 0; x < qw; x++)
           px(X0 + x * Q, Y0 + y * Q, img, (y * qw + x) * 4);
+    },
+  };
+}
+
+/** The open sea's mean colour: what stands in for its texture until that is baked. */
+export const OCEAN_FLAT = ((c: Rgb) =>
+  `rgb(${Math.round(c[0])}, ${Math.round(c[1])}, ${Math.round(c[2])})`)(
+  mixTo([0, 0, 0], DEEP_C, ABYSS_C, 0.55),
+);
+
+/** The open sea's texture side: one seamless tile, repeated under everything. */
+export const OCEAN_N = 512;
+
+const smooth = (t: number) => t * t * (3 - 2 * t);
+
+/** Value noise that wraps every `P` cells, so the texture tiles seamlessly. */
+function periodicNoise(x: number, y: number, P: number): number {
+  const xi = Math.floor(x);
+  const yi = Math.floor(y);
+  const u = smooth(x - xi);
+  const v = smooth(y - yi);
+  const m = (n: number) => ((n % P) + P) % P;
+  const a = hash(m(xi), m(yi));
+  const b = hash(m(xi + 1), m(yi));
+  const c = hash(m(xi), m(yi + 1));
+  const d = hash(m(xi + 1), m(yi + 1));
+  return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+}
+
+/**
+ * The open sea, {@link OCEAN_N}² px: long streaks, a slow wobble between the
+ * deep and abyss blues, and a fine grain. The same for every world — but
+ * 786k pixels of three noises each, so it bakes like a tile (a worker, else a
+ * slice of rows per frame), never in the task that opens the island.
+ */
+export function oceanKernel(): PixelKernel {
+  const N = OCEAN_N;
+  const img = new Uint8ClampedArray(N * N * 4);
+  const col: Rgb = [0, 0, 0];
+  return {
+    w: N,
+    h: N,
+    img,
+    rows(y0, y1) {
+      for (let y = y0; y < y1; y++)
+        for (let x = 0; x < N; x++) {
+          const streak = periodicNoise(x / 64, y / 16, 8) - 0.5;
+          const wob = periodicNoise(x / 128, y / 128, 4) - 0.5;
+          const grain = periodicNoise(x / 3.2, y / 3.2, 160) - 0.5;
+          mixTo(col, DEEP_C, ABYSS_C, 0.55 + wob * 0.5);
+          const i = (y * N + x) * 4;
+          img[i] = col[0] + streak * 14 + grain * 6;
+          img[i + 1] = col[1] + streak * 14 + grain * 6;
+          img[i + 2] = col[2] + streak * 14 + grain * 6;
+          img[i + 3] = 255;
+        }
     },
   };
 }

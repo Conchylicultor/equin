@@ -35,8 +35,8 @@ channels — nothing here files one itself:
     - `Pane.Register` "isle"
     - `ConfigV2.WebRegister` "isle"
     - `BackgroundMusic.Source` "isle"
-  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps/isle/renderer` ×7
+  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/isle/renderer` ×8
     - `config_v2` ×4
     - `apps-core/tabs` ×3
     - `apps-core` ×2

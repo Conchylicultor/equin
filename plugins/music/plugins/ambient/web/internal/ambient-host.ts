@@ -20,17 +20,24 @@ export interface AmbientSnapshot {
  * music going after the view is gone are the same engine, on the same
  * AudioContext.
  *
- * The context is built on the first {@link AmbientHost.retain} — suspended, no
- * sound before a gesture — and closed on the last release. Built at retain,
- * never in a gesture: constructing a page's first AudioContext blocks the main
- * thread while the browser opens the audio output (~130 ms headless, seconds
- * on a real Mac's output device), and the reverb impulse is a few hundred
- * thousand samples to fill; built in the gesture, it froze the click that
- * asked for sound (Isle's Start, 2.2 s). Retained ahead, the gesture only
- * resumes — microseconds.
+ * The context is built after the first {@link AmbientHost.retain} — suspended,
+ * no sound before a gesture — and closed on the last release. Never in a
+ * gesture: constructing a page's first AudioContext blocks the main thread
+ * while the browser opens the audio output (~130 ms headless, seconds on a
+ * real Mac's output device), and the reverb impulse is a few hundred thousand
+ * samples to fill; built in the gesture, it froze the click that asked for
+ * sound (Isle's Start, 2.2 s). Retained ahead, the gesture only resumes —
+ * microseconds.
+ *
+ * Nor in the task that retains it: a holder retains from an effect, and a view
+ * mounted by a click runs its effects inside that click (React flushes a
+ * discrete update's effects before the handler returns) — building there froze
+ * the click that opened the Isle (report-1795095421-e0eipc). So retain only
+ * schedules the build, after the next paint; an {@link AmbientHost.unlock}
+ * that comes first builds it then (the gesture asked for sound).
  */
 export interface AmbientHost {
-  /** Holds the engine (building it on the first hold); call the returned release once. */
+  /** Holds the engine (building it after the next paint on the first hold); call the returned release once. */
   retain(): () => void;
   /**
    * Resumes the AudioContext — call it from a user gesture's handler (a
@@ -55,6 +62,8 @@ export interface AmbientHost {
 export function createAmbientHost(): AmbientHost {
   let holds = 0;
   let built: { ctx: AudioContext; ambient: Ambient } | null = null;
+  /** The scheduled build's cancel, while one waits for the next paint. */
+  let scheduled: (() => void) | null = null;
   let wanted: { on: boolean; mood: AmbientMood } = { on: false, mood: "lofi" };
   let gain = 1;
   let ducked = false;
@@ -84,18 +93,26 @@ export function createAmbientHost(): AmbientHost {
     publish();
   }
 
-  function build() {
+  function build(): { ctx: AudioContext; ambient: Ambient } {
     const ctx = new AudioContext();
     const ambient = createAmbient(ctx, { mood: wanted.mood });
     ambient.setGain(gain);
     ambient.duck(ducked);
-    built = { ctx, ambient };
+    const b = { ctx, ambient };
+    built = b;
     ctx.onstatechange = apply;
     if (wanted.on) void ctx.resume();
     apply();
+    return b;
+  }
+
+  function cancelScheduled() {
+    scheduled?.();
+    scheduled = null;
   }
 
   function teardown() {
+    cancelScheduled();
     if (!built) return;
     const { ctx, ambient } = built;
     built = null;
@@ -116,7 +133,11 @@ export function createAmbientHost(): AmbientHost {
   return {
     retain() {
       holds++;
-      if (!built) build();
+      if (!built && !scheduled)
+        scheduled = afterNextPaint(() => {
+          scheduled = null;
+          if (holds > 0 && !built) build();
+        });
       let released = false;
       return () => {
         if (released) throw new Error("AmbientHost: released twice");
@@ -126,9 +147,14 @@ export function createAmbientHost(): AmbientHost {
       };
     },
     unlock() {
-      if (!built)
+      if (holds === 0)
         throw new Error("AmbientHost: unlock() while nobody holds it");
-      void built.ctx.resume();
+      let b = built;
+      if (!b) {
+        cancelScheduled();
+        b = build();
+      }
+      void b.ctx.resume();
     },
     set(opts) {
       wanted = { on: opts.on, mood: opts.mood ?? wanted.mood };
@@ -149,6 +175,21 @@ export function createAmbientHost(): AmbientHost {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
+  };
+}
+
+/**
+ * Run `fn` once the next frame has painted — the first task after the
+ * rendering step that follows the next animation frame. Returns the cancel.
+ */
+function afterNextPaint(fn: () => void): () => void {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const frame = requestAnimationFrame(() => {
+    timeout = setTimeout(fn, 0);
+  });
+  return () => {
+    cancelAnimationFrame(frame);
+    if (timeout !== undefined) clearTimeout(timeout);
   };
 }
 

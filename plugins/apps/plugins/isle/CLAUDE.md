@@ -15,7 +15,10 @@ Phase 5 is in: the bakes run in module workers, and the `dev` plugin's growth ex
 - **Workers** (`renderer/web/internal/bake.worker.ts`, pooled by `bake-pool.ts`): ground tiles' per-pixel
   colour and water mask (`ground-pixels.ts`), island previews, island shapes and the home carve (built ahead
   by `useIslandShapes` for `islandsInPlay`, restored with `IslandPlan.restore` / `adoptHomeCarve`), each
-  island's furniture, and buildings' hit masks (`hit-mask.ts`, handed over in idle time). The worker runs the
+  island's furniture, buildings' hit masks (`hit-mask.ts`, handed over in idle time), the open sea's texture
+  (`oceanKernel`; tiles drawn before it lands are redrawn), and placing the apps with no plot yet
+  (`usePlacedResidents`: `placeResidents`, hundreds of ms on a first visit). Nothing heavy runs in the task
+  that opens the island — a click mounting it runs its effects inside that click. The worker runs the
   page's own modules, so every bake is bit-identical (`dev/e2e/bake-identity.ts`); where workers cannot run,
   everything bakes on the page. The worker bundles cross-plugin code (`world/core`), which web-artifacts
   allows because a page worker's whole closure is its artifact's address (web-artifacts `CLAUDE.md`).

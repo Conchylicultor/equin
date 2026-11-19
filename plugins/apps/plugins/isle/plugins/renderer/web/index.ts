@@ -3,6 +3,8 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 export { IsleEngine, ISLE_FONTS } from "./internal/engine";
 export { useIslandShapes } from "./internal/shapes";
 export type { IslandShapes } from "./internal/shapes";
+export { usePlacedResidents } from "./internal/placement";
+export type { PlacedResidents } from "./internal/placement";
 export type {
   ClickModifiers,
   EngineHooks,

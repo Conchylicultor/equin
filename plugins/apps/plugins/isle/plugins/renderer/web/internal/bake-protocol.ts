@@ -3,7 +3,11 @@
 // structured clone, the big results by transfer.
 
 import type { Box } from "@plugins/apps/plugins/isle/plugins/buildings/core";
-import type { IslandShapeData } from "@plugins/apps/plugins/isle/plugins/world/core";
+import type {
+  IslandShapeData,
+  Placement,
+  Resident,
+} from "@plugins/apps/plugins/isle/plugins/world/core";
 import type { GroundKernel, PixelKernel, PreviewKernel } from "./ground-pixels";
 import type { FurnitureData } from "./furniture";
 import type { Mask } from "./hit-mask";
@@ -31,6 +35,8 @@ export interface BakeJobs {
     };
     out: Pixels<GroundKernel>;
   };
+  /** The open sea's seamless texture (the same for every world). */
+  ocean: { job: { kind: "ocean" }; out: Pixels<PixelKernel> };
   /** An island's coarse preview (its shape loaded first). */
   preview: {
     job: { kind: "preview"; seed: number; island: number };
@@ -40,6 +46,16 @@ export interface BakeJobs {
   furniture: {
     job: { kind: "furniture"; seed: number; island: number };
     out: FurnitureData;
+  };
+  /** Places every resident with no plot yet (`placeResidents`; the shapes in play loaded first). */
+  place: {
+    job: {
+      kind: "place";
+      seed: number;
+      placement: Placement;
+      residents: readonly Resident[];
+    };
+    out: Placement;
   };
   /** A building's hit mask, read from its painted bitmap. */
   mask: { job: { kind: "mask"; bmp: ImageBitmap; bounds: Box }; out: Mask };

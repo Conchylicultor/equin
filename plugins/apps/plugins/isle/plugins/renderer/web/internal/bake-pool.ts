@@ -15,7 +15,10 @@ import type { Box } from "@plugins/apps/plugins/isle/plugins/buildings/core";
 import {
   homeCarveBuilt,
   homeCarveGrid,
+  islandsInPlay,
   type Island,
+  type Placement,
+  type Resident,
   type WorldModel,
 } from "@plugins/apps/plugins/isle/plugins/world/core";
 import type {
@@ -174,6 +177,10 @@ export class BakePool {
     );
   }
 
+  ocean(): Promise<BakeAnswer<"ocean">> {
+    return this.post<"ocean">({ kind: "ocean" }, null);
+  }
+
   preview(M: WorldModel, I: Island): Promise<BakeAnswer<"preview">> {
     return this.post<"preview">(
       { kind: "preview", seed: M.seed, island: I.id },
@@ -185,6 +192,17 @@ export class BakePool {
     return this.post<"furniture">(
       { kind: "furniture", seed: M.seed, island: I.id },
       { M, islands: [I] },
+    );
+  }
+
+  place(
+    M: WorldModel,
+    placement: Placement,
+    residents: readonly Resident[],
+  ): Promise<BakeAnswer<"place">> {
+    return this.post<"place">(
+      { kind: "place", seed: M.seed, placement, residents },
+      { M, islands: islandsInPlay(M, placement) },
     );
   }
 

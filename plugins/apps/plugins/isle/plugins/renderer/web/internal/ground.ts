@@ -10,7 +10,6 @@
 import {
   LAKE,
   RIVER,
-  hash,
   riverWidth,
   type Island,
   type WorldModel,
@@ -18,25 +17,20 @@ import {
 import { blob, canvas, ctx2d, seeded, type Ctx, type Rnd } from "./kit";
 import type { FurnitureStore } from "./furniture";
 import {
-  ABYSS_C,
-  DEEP_C,
   GT,
   elevationOver,
   groundKernel,
   heightOver,
-  mixTo,
+  oceanKernel,
   PREVIEW_Q,
   previewKernel,
   type GroundKernel,
   type PixelKernel,
   type PreviewKernel,
-  type Rgb,
 } from "./ground-pixels";
 import type { Pixels } from "./bake-protocol";
 
 export { GT, heightOver };
-
-const sm = (t: number) => t * t * (3 - 2 * t);
 
 /** What a bake step yields while a worker colours its pixels: nothing to do on the page meanwhile. */
 export const WAIT = Symbol("isle bake: waiting on a worker");
@@ -81,41 +75,12 @@ function pixelCanvas(
   return c;
 }
 
-function periodicNoise(x: number, y: number, P: number): number {
-  const xi = Math.floor(x);
-  const yi = Math.floor(y);
-  const u = sm(x - xi);
-  const v = sm(y - yi);
-  const m = (n: number) => ((n % P) + P) % P;
-  const a = hash(m(xi), m(yi));
-  const b = hash(m(xi + 1), m(yi));
-  const c = hash(m(xi), m(yi + 1));
-  const d = hash(m(xi + 1), m(yi + 1));
-  return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
-}
-
-/** The open sea: one seamless 512 px texture, tiled under everything. */
-export function oceanTexture(): HTMLCanvasElement {
-  const N = 512;
-  const c = canvas(N, N);
-  const g = ctx2d(c);
-  const img = g.createImageData(N, N);
-  const d = img.data;
-  const col: Rgb = [0, 0, 0];
-  for (let y = 0; y < N; y++)
-    for (let x = 0; x < N; x++) {
-      const streak = periodicNoise(x / 64, y / 16, 8) - 0.5;
-      const wob = periodicNoise(x / 128, y / 128, 4) - 0.5;
-      const grain = periodicNoise(x / 3.2, y / 3.2, 160) - 0.5;
-      mixTo(col, DEEP_C, ABYSS_C, 0.55 + wob * 0.5);
-      const i = (y * N + x) * 4;
-      d[i] = col[0] + streak * 14 + grain * 6;
-      d[i + 1] = col[1] + streak * 14 + grain * 6;
-      d[i + 2] = col[2] + streak * 14 + grain * 6;
-      d[i + 3] = 255;
-    }
-  g.putImageData(img, 0, 0);
-  return c;
+/** The open sea's seamless texture: a worker's pixels, else coloured here a band of rows per slice. */
+export function* bakeOcean(
+  job: PixelJob<PixelKernel> | null,
+): Generator<BakeStep, HTMLCanvasElement, void> {
+  const p = yield* coloured(job, oceanKernel, 4);
+  return pixelCanvas(p.img, p.w, p.h);
 }
 
 /** An island's coarse preview (1/8 resolution), shown where a tile is not baked yet. */
