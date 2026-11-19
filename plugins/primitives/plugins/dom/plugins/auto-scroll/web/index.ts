@@ -1,4 +1,8 @@
-import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import {
+  Core,
+  type PluginDefinition,
+} from "@plugins/framework/plugins/web-sdk/core";
+import { BrowserHoldRelease } from "./browser-hold-release";
 
 export { useStickyScroll } from "./use-sticky-scroll";
 export type {
@@ -42,6 +46,6 @@ export type { FindScrollParentOptions } from "./internal/find-scroll-parent";
 
 export default {
   description:
-    "The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, a scroll glided frame by frame on a given CSS curve so it moves in step with a transition beside it (glideScroll), gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross, or restoreScrollOffset from a caller's own snapshot), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves, or — visibleOnly — a picture of only what shows), an inner scroller's offset kept across a page reload (useScrollAcrossReload, put back as async content arrives until reached or the reader takes over) and across an unloaded subtree's revival (ScrollRevival: an in-app tab mounted again), and the shared findScrollParent discovery.",
-  contributions: [],
+    "The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, a scroll glided frame by frame on a given CSS curve so it moves in step with a transition beside it (glideScroll), gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross, or restoreScrollOffset from a caller's own snapshot), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves, or — visibleOnly — a picture of only what shows), an inner scroller's offset kept across a page reload (useScrollAcrossReload, put back as async content arrives until reached or the reader takes over) and across an unloaded subtree's revival (ScrollRevival: an in-app tab mounted again), the shared findScrollParent discovery, and — mounted once at Core.Root — the browser's hold on a fragment target released at the reader's first input (WebKit re-reveals a #id / text-fragment target after every layout until the DOCUMENT is scrolled, which an inner scroller never is: an animated page pulled the reader back on every frame).",
+  contributions: [Core.Root({ component: BrowserHoldRelease, scope: "page" })],
 } satisfies PluginDefinition;

@@ -27,6 +27,8 @@ that wants it. Today that is six roles:
 - **scroll carried to a clone** — `cloneWithScroll` (a stand-in drawn while
   React removes the original, e.g. a miller column fading out)
 - **scroll-container discovery** — `findScrollParent`
+- **the browser's fragment hold released when the reader acts** — `BrowserHoldRelease`
+  (mounted once at `Core.Root`; see below)
 
 ## `KeepAnchorAcross` — content resized above the reader must not move them
 
@@ -201,6 +203,24 @@ restore is pending, and is disconnected the moment it lands or the reader acts.
 it: an entry from THIS document is an in-app revisit, which opens at the top the
 way following a link does. A restore is a compensation: it announces nothing.
 
+## `BrowserHoldRelease` — a fragment link must not hold the reader
+
+After a navigation to a fragment (`#id`, `#:~:text=…`), WebKit re-reveals the
+target after **every layout** until the reader scrolls the *document*
+(`LocalFrameView::scrollToAnchor` / `scrollToPendingTextFragmentRange`, from
+`performPostLayoutTasks`). The app never scrolls the document: every pane body
+is an inner scroller, and iOS Safari scrolls one in the UI process without
+marking the frame user-scrolled. So the hold never ended, and a page that lays
+out all the time (the story's animated figures) pulled the reader back to the
+target on every frame: equin.ai's text-fragment links "bounced" on iOS.
+
+A programmatic scroll of the frame ends the hold (`setScrollOffsetWithOptions`
+clears the anchor and cancels the pending text fragment), so on the reader's
+first input (touch, wheel, pointer down, key) after a load or a `hashchange`,
+the root mount writes the scrolling element's own offset back to it. That moves
+nothing and costs one layout per arming. Chrome and Firefox have no such hold;
+there it is a no-op. Repro: `e2e/fragment-hold.ts`.
+
 ## `useEdgeAutoScroll` — the gesture contract
 
 While a gesture's pointer sits in the top or bottom edge band of its scroll
@@ -240,8 +260,9 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
 
 ## Plugin reference
 
-- Description: The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, a scroll glided frame by frame on a given CSS curve so it moves in step with a transition beside it (glideScroll), gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross, or restoreScrollOffset from a caller's own snapshot), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves, or — visibleOnly — a picture of only what shows), an inner scroller's offset kept across a page reload (useScrollAcrossReload, put back as async content arrives until reached or the reader takes over) and across an unloaded subtree's revival (ScrollRevival: an in-app tab mounted again), and the shared findScrollParent discovery.
+- Description: The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, a scroll glided frame by frame on a given CSS curve so it moves in step with a transition beside it (glideScroll), gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross, or restoreScrollOffset from a caller's own snapshot), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves, or — visibleOnly — a picture of only what shows), an inner scroller's offset kept across a page reload (useScrollAcrossReload, put back as async content arrives until reached or the reader takes over) and across an unloaded subtree's revival (ScrollRevival: an in-app tab mounted again), the shared findScrollParent discovery, and — mounted once at Core.Root — the browser's hold on a fragment target released at the reader's first input (WebKit re-reveals a #id / text-fragment target after every layout until the DOCUMENT is scrolled, which an inner scroller never is: an animated page pulled the reader back on every frame).
 - Web:
+  - Contributes: `Core.Root` → `BrowserHoldRelease`
   - Uses:
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`

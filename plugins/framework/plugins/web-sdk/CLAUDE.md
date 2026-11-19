@@ -403,8 +403,8 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
   - Slots:
     - `Core.Root`
     - `Core.Boot`
-  - Slot contributors: 46 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Core.Root` ×44
+  - Slot contributors: 47 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Core.Root` ×45
     - `Core.Boot` ×2
 - Core:
   - Uses:
@@ -483,8 +483,8 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `whenPageCanFetch`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
-  - Imported by: 116 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives` ×27
+  - Imported by: 117 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives` ×28
     - `apps` ×20
     - `reports` ×8
     - `ui` ×8
