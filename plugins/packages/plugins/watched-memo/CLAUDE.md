@@ -14,9 +14,14 @@ into one trailing pass), `refcount-hub` (one change source per key) and
   use-scoped gate slot (the live read gate holds one only around a read's own
   DB / fs / spawn uses), the wait charged as `memo-opening:<name>` — since
   pass 1 is the watch's work, not the reader's.
-  A reader whose pass 1 ends with no value (the pass failed, or the last
-  watcher left first) falls to the probe path, and is marked so:
-  `memo-opening-failed:<name>` / `memo-opening-closed:<name>`.
+  The last watcher leaving does not strand those readers: once pass 1 has
+  started, it answers them (its value, or its failure) even though the closed
+  entry keeps nothing — they never redo its reads on the probe path (a tab
+  reloading onto a new build at main's restart dropped and reopened its
+  watches mid-pass; each waiting read paid two more whole-checkout `git
+  status` and the diff, 0.7–2.5 s). A reader whose pass 1 ends with no value
+  (it failed, or the entry closed before it started) takes the probe path,
+  marked `memo-opening-failed:<name>` / `memo-opening-closed:<name>`.
 - **Every pass computes** — no skip on an equal signature: a write read
   mid-pass and then undone puts the signature back while the value still
   shows it.
@@ -44,7 +49,7 @@ into one trailing pass), `refcount-hub` (one change source per key) and
 - `trigger({ resync: true })` is a resync: the source lost events (`file-watcher`'s
   `onLost`, `checkout-watch`'s `onResync`), so anything may have moved.
 - The last watcher leaving drops the key's value and its probe entry at once
-  (readers awaiting pass 1 fall to the probe path). There is no warm-on-close
+  (readers awaiting pass 1 take its answer once it started, else the probe path). There is no warm-on-close
   and no `prime`.
 
 Freshness: every change after the source is live is heard after it, pass 1

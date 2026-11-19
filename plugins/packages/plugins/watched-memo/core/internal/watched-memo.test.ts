@@ -410,18 +410,46 @@ describe("createWatchedMemo — first settles", () => {
     stop();
   });
 
-  test("on release while pass 1 runs: the waiting get takes the probe path at once", async () => {
+  test("on release while pass 1 runs: the waiting get takes pass 1's value, no second read", async () => {
     const { w, memo } = world();
     w.gateNext = true;
     const stop = await memo.watch("k", () => {});
-    const got = memo.get("k");
+    let settled = false;
+    const got = memo.get("k").finally(() => {
+      settled = true;
+    });
+    await settle();
+    expect(w.facts).toBe(1);
+    stop();
+    await settle();
+    expect(settled).toBe(false);
+    w.content = "c1";
+    w.gates[0]!.resolve();
+    // Pass 1 read c0 after the get asked; nothing re-read for it.
+    expect(await got).toEqual({ content: "c0", dirty: "d0" });
+    expect(w.facts).toBe(1);
+    expect(w.computes).toBe(1);
+    expect(w.signatures).toBe(0);
+  });
+
+  test("on release while pass 1 runs: a pass-1 failure sends the waiting get to the probe path", async () => {
+    const { w, memo } = world();
+    w.gateNext = true;
+    const stop = await memo.watch("k", () => {});
+    let settled = false;
+    const got = memo.get("k").finally(() => {
+      settled = true;
+    });
     await settle();
     stop();
     w.gateNext = false;
-    // Answered by the probe path without waiting on the held pass.
-    expect(await got).toEqual({ content: "c0", dirty: "d0" });
-    w.gates[0]!.resolve();
     await settle();
+    // Still waiting on the started pass 1, not sent to the probe by the close.
+    expect(settled).toBe(false);
+    w.gates[0]!.reject(new Error("boom"));
+    expect(await got).toEqual({ content: "c0", dirty: "d0" });
+    // Pass 1's read, then the probe's (and its re-check before caching).
+    expect(w.facts).toBe(3);
   });
 });
 

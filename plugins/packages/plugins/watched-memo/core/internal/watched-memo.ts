@@ -117,6 +117,11 @@ interface Entry<T, F> {
   closed: boolean;
   /** Set once the change source is live: a trigger before then is moot. */
   live: boolean;
+  /**
+   * Set once pass 1 has started: from then on IT answers the readers waiting
+   * on it — a close does not strand them (see `close`).
+   */
+  firstStarted: boolean;
   emit: () => void;
 }
 
@@ -201,7 +206,11 @@ export function createWatchedMemo<T, F, N = never>(
     entry: Entry<T, F>,
     causes: readonly PassCause<N>[],
   ): Promise<void> {
-    if (entry.closed) return;
+    if (entry.closed) {
+      settleFirst(entry, { ok: false, why: "closed" });
+      return;
+    }
+    if (entry.state.kind === "opening") entry.firstStarted = true;
     let value: T;
     let facts: F;
     try {
@@ -219,7 +228,10 @@ export function createWatchedMemo<T, F, N = never>(
     } catch (error) {
       // Not rethrown: the coalescer would raise it unhandled. The probe path
       // re-raises the real error to every reader that asks.
-      if (entry.closed) return;
+      if (entry.closed) {
+        settleFirst(entry, { ok: false, why: "failed" });
+        return;
+      }
       if (entry.state.kind === "opening") {
         // Readers awaiting pass 1 fall through to the probe path themselves.
         entry.state.settle({ ok: false, why: "failed" });
@@ -230,7 +242,15 @@ export function createWatchedMemo<T, F, N = never>(
       entry.emit();
       return;
     }
-    if (entry.closed) return;
+    if (entry.closed) {
+      // Closed while this ran: it writes nothing and tells nobody, but the
+      // readers that waited on pass 1 take its value — stale by at most this
+      // pass, like any pass-1 value (a live reader's re-subscribe opens a new
+      // watch, whose own pass 1 and notify supersede it) — instead of a probe
+      // repeating the same reads.
+      settleFirst(entry, { ok: true, value });
+      return;
+    }
     const state = entry.state;
     if (state.kind === "opening") {
       entry.state = { kind: "watched", value, facts };
@@ -257,7 +277,15 @@ export function createWatchedMemo<T, F, N = never>(
       // otherwise keep the key's probe entry for good.
       cache.delete(entry.key);
     }
-    settleFirst(entry, { ok: false, why: "closed" });
+    // Readers waiting on pass 1 are answered by it once it has started (the
+    // pass settles them, value or failure): a close does not throw away work
+    // already half done for them to redo it all on the probe path. That was
+    // the cost of a tab reloading onto a new build at main's restart — its
+    // re-subscribed watches dropped then reopened while pass 1 ran, and every
+    // waiting read paid `facts` twice more (two whole-checkout `git status`)
+    // plus the compute: 0.7–2.5 s per read, 2026-11-19. Before pass 1 starts
+    // there is nothing to wait for: they take the probe path at once.
+    if (!entry.firstStarted) settleFirst(entry, { ok: false, why: "closed" });
   }
 
   const hub = createRefcountHub<void>(async (key, emit) => {
@@ -271,6 +299,7 @@ export function createWatchedMemo<T, F, N = never>(
       holders: 0,
       closed: false,
       live: false,
+      firstStarted: false,
       emit: () => emit(),
     };
     entries.set(key, entry);
@@ -374,8 +403,8 @@ export function createWatchedMemo<T, F, N = never>(
         released = true;
         entry.holders -= 1;
         // Close at once — before the source's stop, which the hub defers
-        // until an open in flight lands — so readers awaiting pass 1 are
-        // answered now.
+        // until an open in flight lands — so readers awaiting a pass 1 that
+        // has not started are answered now (one that has answers them).
         if (entry.holders === 0) close(entry);
         hold.release();
       };
