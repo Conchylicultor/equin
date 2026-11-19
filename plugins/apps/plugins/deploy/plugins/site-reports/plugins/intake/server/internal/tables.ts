@@ -11,6 +11,7 @@ import {
   parsedJson,
   parsedText,
 } from "@plugins/database/plugins/sql-column/server";
+import { REPORT_CATEGORIES } from "@plugins/reports/core";
 import { SITE_REPORT_DROP_REASONS } from "../../core";
 
 /**
@@ -31,6 +32,13 @@ export const siteReports = pgTable(
     /** `<kind>:<the kind's own fingerprint>`. */
     fingerprint: text("fingerprint").primaryKey(),
     kind: text("kind").notNull(),
+    /**
+     * The kind's own category (`error` / `slow-op`), from this server's
+     * registry: the computer's import keeps it (a slow load is a slow op
+     * there too) without having to register every site-only kind. Null on a
+     * row last written before it was kept.
+     */
+    category: parsedText("category", z.enum(REPORT_CATEGORIES)),
     source: text("source").notNull(),
     message: text("message").notNull(),
     data: parsedJson("data", z.record(z.string(), z.unknown())).notNull(),

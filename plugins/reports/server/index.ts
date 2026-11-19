@@ -14,7 +14,11 @@ export type {
   ReportNoiseRuleSpec,
   ReportNoiseInput,
 } from "./internal/noise-rules";
-export { ReportKind, isReportKindRegistered } from "./internal/report-kinds";
+export {
+  ReportKind,
+  isReportKindRegistered,
+  reportKindCategory,
+} from "./internal/report-kinds";
 export type {
   ReportKindSpec,
   ReportKindVariant,

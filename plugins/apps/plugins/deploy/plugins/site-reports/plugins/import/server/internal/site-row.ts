@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { REPORT_CATEGORIES } from "@plugins/reports/core";
 import type { MirrorRow } from "@plugins/database/plugins/table-mirror/core";
 import {
   SiteReportRecordSchema,
@@ -14,6 +15,8 @@ export const SITE_REPORTS_TABLE = "site_reports";
 const SiteReportRowSchema = z.object({
   fingerprint: z.string(),
   kind: z.string(),
+  // Absent from a box released before the intake kept it.
+  category: z.enum(REPORT_CATEGORIES).nullable().optional(),
   source: z.string(),
   message: z.string(),
   data: z.record(z.string(), z.unknown()),
@@ -36,6 +39,7 @@ export function siteReportRecordOfRow(row: MirrorRow): SiteReportRecord {
   return SiteReportRecordSchema.parse({
     fingerprint: r.fingerprint,
     kind: r.kind,
+    category: r.category ?? null,
     source: r.source,
     message: r.message,
     data: r.data,

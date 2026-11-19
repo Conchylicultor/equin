@@ -23,6 +23,7 @@ describe("siteReportRecordOfRow", () => {
     expect(siteReportRecordOfRow(row())).toEqual({
       fingerprint: "crash:abc",
       kind: "crash",
+      category: null,
       source: "browser-error",
       message: "boom",
       data: { stack: "Error: boom" },
@@ -33,6 +34,14 @@ describe("siteReportRecordOfRow", () => {
       firstSeenAt: "2026-11-12T01:00:00.500Z",
       lastSeenAt: "2026-11-12T03:00:00.000Z",
     });
+  });
+
+  test("the category the site's intake stamped is kept; a box without it reads null", () => {
+    expect(siteReportRecordOfRow(row({ category: "slow-op" })).category).toBe(
+      "slow-op",
+    );
+    expect(siteReportRecordOfRow(row({ category: null })).category).toBe(null);
+    expect(() => siteReportRecordOfRow(row({ category: "fast" }))).toThrow();
   });
 
   test("a column a newer box adds is dropped unread", () => {

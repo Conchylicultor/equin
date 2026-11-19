@@ -14,6 +14,7 @@ function record(over: Partial<SiteReportRecord> = {}): SiteReportRecord {
   return {
     fingerprint: "crash:abc123",
     kind: "crash",
+    category: null,
     source: "browser-error",
     message: "TypeError: x is undefined",
     data: {

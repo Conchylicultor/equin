@@ -101,3 +101,19 @@ export const ReportKind = defineServerContribution<ReportKindSpec>(
 export function isReportKindRegistered(kind: string): boolean {
   return ReportKind.getContributions().some((k) => k.kind === kind);
 }
+
+/**
+ * The category (`error` / `slow-op`) a registered kind declares, or
+ * `unregistered` when no plugin in this composition registers `kind` — for a
+ * caller that re-files another host's reports under its own kinds and must
+ * keep their category (site-reports' import: a visitor's slow load is a slow
+ * op here too, not an error).
+ */
+export function reportKindCategory(
+  kind: string,
+): { kind: "registered"; category: ReportCategory } | { kind: "unregistered" } {
+  const spec = ReportKind.getContributions().find((k) => k.kind === kind);
+  return spec
+    ? { kind: "registered", category: spec.meta.category }
+    : { kind: "unregistered" };
+}

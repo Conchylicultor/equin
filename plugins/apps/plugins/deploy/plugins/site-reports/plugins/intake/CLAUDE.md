@@ -23,6 +23,9 @@ Every number is `SITE_REPORT_LIMITS` (`core/internal/limits.ts`).
    - Each entry goes through its registered `ReportKind`'s own `schema` and
      `fingerprint`, the identity the reports engine gives it. An unknown kind
      or invalid data is dropped.
+   - The row keeps the kind's `category` (`error` / `slow-op`) from this
+     registry, so the computer's import files a slow load as a slow op
+     without registering the site-only kinds itself.
    - A NEW fingerprint passes the reports **fan-out ceiling**
      (`createFanOutGate` from `reports/server`, the engine's own gate and
      `reportsConfig`).
@@ -97,6 +100,7 @@ saying so, never dropped.
     - `infra/endpoints.defineEndpoint`
     - `packages/list-bound.cappedList`
     - `reports.CLIENT_REPORT_SOURCES`
+    - `reports.REPORT_CATEGORIES`
   - Exports (types):
     - `SiteReportDropReason`
     - `SiteReportEntry`

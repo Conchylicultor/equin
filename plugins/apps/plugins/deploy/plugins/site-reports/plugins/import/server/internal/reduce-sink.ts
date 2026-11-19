@@ -5,11 +5,8 @@ import type {
 } from "@plugins/apps/plugins/deploy/plugins/site-mirror/plugins/pull/server";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { recordReportIncident } from "@plugins/reports/plugins/engine/server";
-import {
-  reduceSiteReport,
-  WEBSITE_VISITOR_ERROR_KIND,
-  websiteVisitorErrorSummary,
-} from "../../core";
+import { reduceSiteReport, websiteVisitorErrorSummary } from "../../core";
+import { importedKindOf } from "./kind";
 import { SITE_REPORTS_TABLE, siteReportRecordOfRow } from "./site-row";
 
 const log = Log.channel("site-reports-import");
@@ -79,7 +76,8 @@ export function reduceSink(site: SiteMirrorSite): MirrorCustomSink {
         records.map((record) => {
           const data = reduceSiteReport(record, site);
           return {
-            kind: WEBSITE_VISITOR_ERROR_KIND,
+            // The site kind's own category decides: a slow load is a slow op.
+            kind: importedKindOf(record),
             source: "website-visitor" as const,
             message: websiteVisitorErrorSummary(data),
             data,

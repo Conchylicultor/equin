@@ -1,6 +1,6 @@
 {
-  "id": "a250919b-ea37-485d-b940-faec2f166d3e",
-  "prevId": "5e5de393-5537-46c3-ad6a-ac76c52ba1f4",
+  "id": "d85ac621-8f7e-4ff1-b8c2-0591df62f09a",
+  "prevId": "a250919b-ea37-485d-b940-faec2f166d3e",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -2610,6 +2610,12 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "category": {
+          "name": "category",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "source": {
           "name": "source",

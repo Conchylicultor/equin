@@ -145,6 +145,7 @@ before it) beside the total, worded by `formatReportActivity`
     - `isReportKindRegistered`
     - `reportInvestigationSink`
     - `ReportKind`
+    - `reportKindCategory`
     - `ReportNoiseRule`
     - `ReportRecorded`
   - Resources:

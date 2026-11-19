@@ -9,8 +9,19 @@ import {
   CLIENT_OSES,
 } from "@plugins/reports/plugins/main-thread-stall/core";
 
-/** The report kind a website visitor's error is recorded as on the computer. */
+/**
+ * The report kind a website visitor's error is recorded as on the computer:
+ * a site report whose own kind is an error (`crash`, …), or one this computer
+ * does not register.
+ */
 export const WEBSITE_VISITOR_ERROR_KIND = "website-visitor-error";
+/**
+ * The report kind a website visitor's slowness is recorded as on the
+ * computer: a site report whose own kind is a slow op (a slow page load, a
+ * main-thread stall, a slow interaction, a render loop). The same payload as
+ * the error kind; only where it is read differs (category, bell wording).
+ */
+export const WEBSITE_VISITOR_SLOWNESS_KIND = "website-visitor-slowness";
 
 /**
  * Every bound of what one imported report may hold. The reduction

@@ -1,6 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import type { ReportCategory } from "@plugins/reports/core";
 import type { FanOutGate, ReportKindSpec } from "@plugins/reports/server";
 import {
   SITE_REPORT_LIMITS,
@@ -16,7 +17,7 @@ import { siteReportDrops, siteReports } from "./tables";
 export type IntakeKind = Pick<
   ReportKindSpec,
   "kind" | "schema" | "fingerprint" | "fanOutExempt"
-> & { meta: Pick<ReportKindSpec["meta"], "fanOutPerWindow"> };
+> & { meta: Pick<ReportKindSpec["meta"], "fanOutPerWindow" | "category"> };
 
 export interface IntakeLimits {
   windowMs: number;
@@ -39,6 +40,8 @@ export interface IntakeDeps {
 
 interface PendingRow {
   kind: string;
+  /** The kind's own category, from this server's registry. */
+  category: ReportCategory;
   source: string;
   message: string;
   data: Record<string, unknown>;
@@ -195,6 +198,7 @@ export function createSiteReportsIntake(deps: IntakeDeps): SiteReportsIntake {
     if (pending.size >= limits.maxPending) return "pending-cap";
     pending.set(key, {
       kind: entry.kind,
+      category: spec.meta.category,
       source: entry.source,
       message: entry.message,
       data: entry.data,
@@ -279,6 +283,7 @@ export function createSiteReportsIntake(deps: IntakeDeps): SiteReportsIntake {
           .values({
             fingerprint,
             kind: r.kind,
+            category: r.category,
             source: r.source,
             message: r.message,
             data: r.data,
@@ -294,6 +299,7 @@ export function createSiteReportsIntake(deps: IntakeDeps): SiteReportsIntake {
             set: {
               count,
               lastSeenAt,
+              category: r.category,
               message: r.message,
               data: r.data,
               path: r.path,
@@ -314,6 +320,7 @@ export function createSiteReportsIntake(deps: IntakeDeps): SiteReportsIntake {
           .set({
             count,
             lastSeenAt,
+            category: r.category,
             message: r.message,
             data: r.data,
             path: r.path,

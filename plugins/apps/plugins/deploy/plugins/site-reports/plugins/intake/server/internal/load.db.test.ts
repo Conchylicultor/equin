@@ -52,7 +52,7 @@ const crashKind: IntakeKind = {
   kind: "crash",
   schema: CrashPayloadSchema,
   fingerprint: crashFingerprint,
-  meta: {},
+  meta: { category: "error" },
 };
 
 let t: TestDb;

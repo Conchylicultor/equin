@@ -3827,9 +3827,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `slowPageLoadFingerprint`
                       - `SlowPageLoadPayloadSchema`
                       - `slowPageLoadSummary`
-            - **`import`** — Errors a deployed site's visitors hit, read hourly from the site's box over SSH (its mirror change stream, reduced as it arrives) into this computer's Reports as untrusted website-visitor reports (never auto-investigated, fenced as data when investigated by hand). Web half: the kind's Debug → Reports summary view — a Website visitors badge, then the site, the page and the visitor's error as plain text (never markup or a link) with the site's own occurrence count. Reads the errors a deployed site's visitors hit into this computer's Reports: the box's site_reports change stream (site-mirror, outbound SSH only) goes through the reduce step as the replica's sink — every row strictly parsed and reduced to typed, clamped fields, the site's payload never copied but reduced structurally (identifier keys, typed scalars, every string a sanitised plain line, capped and counted — so every kind's diagnostic data reaches the local report), no raw row stored here (only the mirror's content-free key index) — at most 50 rows per deployment per hourly run, each page ONE incident of the website-visitor-error kind (a reconciliation's catch-up rings no bell), source website-visitor — untrusted: never on the worklist automations read, fenced as data when investigated by hand.
+            - **`import`** — Errors and slowness a deployed site's visitors hit, read hourly from the site's box over SSH (its mirror change stream, reduced as it arrives) into this computer's Reports as untrusted website-visitor reports (never auto-investigated, fenced as data when investigated by hand). Web half: both kinds' Debug → Reports summary view — a Website visitors badge, then the site, the page and the visitor's error as plain text (never markup or a link) with the site's own occurrence count. Reads the errors and slowness a deployed site's visitors hit into this computer's Reports: the box's site_reports change stream (site-mirror, outbound SSH only) goes through the reduce step as the replica's sink — every row strictly parsed and reduced to typed, clamped fields, the site's payload never copied but reduced structurally (identifier keys, typed scalars, every string a sanitised plain line, capped and counted — so every kind's diagnostic data reaches the local report), no raw row stored here (only the mirror's content-free key index) — at most 50 rows per deployment per hourly run, each page ONE incident, each row of the website-visitor-error or website-visitor-slowness kind by its site kind's own category (so a visitor's slow load or freeze is a slow op here too) (a reconciliation's catch-up rings no bell), source website-visitor — untrusted: never on the worklist automations read, fenced as data when investigated by hand.
               - Web:
-                - Contributes: `Reports.KindView` → `WebsiteVisitorSummary`
+                - Contributes:
+                  - `Reports.KindView` → `WebsiteVisitorSummary`
+                  - `Reports.KindView` → `WebsiteVisitorSummary`
                 - Uses:
                   - `primitives/css/badge.Badge`
                   - `primitives/css/cluster.Cluster`
@@ -3837,11 +3839,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Server:
                 - Contributes:
                   - `report-kind` "website-visitor-error"
+                  - `report-kind` "website-visitor-slowness"
                   - `site-mirror-sink` "site_reports"
                 - Uses:
                   - `apps/deploy/site-mirror/pull.SiteMirrorSink`
                   - `primitives/log-channels.Log`
                   - `reports.ReportKind`
+                  - `reports.reportKindCategory`
                   - `reports.ReportRow`
                   - `reports/engine.recordReportIncident`
               - Core:
@@ -3864,6 +3868,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `reduceSiteReport`
                   - `VISITOR_ERROR_LIMITS`
                   - `WEBSITE_VISITOR_ERROR_KIND`
+                  - `WEBSITE_VISITOR_SLOWNESS_KIND`
                   - `WebsiteVisitorErrorSchema`
                   - `websiteVisitorErrorSummary`
             - **`intake`** — Owns site_reports and site_report_drops: the public POST /api/site-reports endpoint a site page's report channel posts batches to (body capped at 64 KB, at most 10 reports; per-visitor and global batch budgets per minute keyed by a per-process salted IP hash, never stored; each report identified by its ReportKind's own schema and fingerprint and a new fingerprint admitted through the reports fan-out ceiling), aggregated in memory and flushed once a minute as one upsert per fingerprint, the table capped at 2,000 rows, every refusal counted per minute and reason, a 30-day sweep, and the site_reports mirror set (the change stream the deploy app's site-reports/import reduces).
@@ -3897,6 +3902,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/endpoints.defineEndpoint`
                   - `packages/list-bound.cappedList`
                   - `reports.CLIENT_REPORT_SOURCES`
+                  - `reports.REPORT_CATEGORIES`
                 - Exports (types):
                   - `SiteReportDropReason`
                   - `SiteReportEntry`
@@ -59943,6 +59949,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `isReportKindRegistered`
       - `reportInvestigationSink`
       - `ReportKind`
+      - `reportKindCategory`
       - `ReportNoiseRule`
       - `ReportRecorded`
     - Resources:
