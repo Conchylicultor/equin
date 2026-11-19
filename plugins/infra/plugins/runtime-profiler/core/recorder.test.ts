@@ -1354,6 +1354,12 @@ describe("joins — a delivery is not judged on its run's join waits", () => {
       { wallMs: 1000, waitMs: 500, ioMs: 400 },
       { wallMs: 50, waitMs: 0, ioMs: 0 },
     ]);
+    // The same io union is summed on the label's aggregate, beside its wait.
+    const agg = getRuntimeProfile().aggregates.loader.find(
+      (a) => a.label === "build.deployment",
+    );
+    expect(agg?.waitTotalMs).toBe(500);
+    expect(agg?.ioTotalMs).toBe(400);
   });
 });
 

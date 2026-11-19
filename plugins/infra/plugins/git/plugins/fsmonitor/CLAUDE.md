@@ -32,7 +32,11 @@ not the checkout or the cache.
 - `reconcileCheckoutFsmonitors(checkouts, { orphanRoot, tier, stillOff })` —
   converge each checkout on `on` / `off` / `unknown` (left alone); `stillOff`
   is asked again just before a stop. Signals a daemon whose checkout's
-  registration is gone. Failures are collected per checkout.
+  registration is gone. Failures are collected per checkout. The `on`
+  checkouts are first asked where they stand four at a time (read-only: one
+  `git diff-files` each, ~0.2 s); only what must change — a start, restart,
+  renewal or stop — runs one checkout at a time. Asked one after the other,
+  ~45 retained checkouts held the job's slot 7–10 s per pass (2026-11-19).
 - `listRunningDaemons()` (one `ps`: pid → throttled), `listFsmonitorDaemons()`
   (+ one `lsof`: each daemon's socket names its git dir; best effort).
 

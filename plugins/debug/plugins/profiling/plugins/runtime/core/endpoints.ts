@@ -75,6 +75,9 @@ const aggregateSchema = z.object({
   // subtree depth) + childMs (union of direct-child executions, overlapping
   // waits) and selfMs = wall − union(waits ∪ children).
   waitTotalMs: sinceAdded,
+  // The `io` part of waitTotalMs (git children, file calls, workers): work
+  // done on the op's behalf, not a queue it waited in.
+  ioTotalMs: sinceAdded,
   childTotalMs: sinceAdded,
   selfTotalMs: sinceAdded,
   // Max duration within the rolling ~5-min window (0 if idle past it), vs the

@@ -571,7 +571,11 @@ async function checkSlotHogs(
 // sub-second sliver, and one that makes the reported hold a slight
 // UNDER-statement of the slot's true occupancy rather than an over-statement.
 async function checkSlotBlocked(floorMs: number): Promise<void> {
-  const { aggregates } = getRuntimeProfile();
+  const { aggregates, gates } = getRuntimeProfile();
+  // The job's own awaited work, never a gate it was blocked on (`blockedTrip`).
+  const ioLayers = new Set(
+    gates.filter((g) => g.kind === "io").map((g) => g.layer),
+  );
   const now = Date.now();
   const windowMs = lastJobSampleAtMs === 0 ? 0 : now - lastJobSampleAtMs;
   lastJobSampleAtMs = now;
@@ -585,7 +589,7 @@ async function checkSlotBlocked(floorMs: number): Promise<void> {
     // window. Same seed rule as op-rate's `windowDelta`.
     if (!prev) continue;
 
-    const trip = blockedTrip(prev, cur, floorMs);
+    const trip = blockedTrip(prev, cur, floorMs, ioLayers);
     if (!trip) continue;
 
     await recordReport({

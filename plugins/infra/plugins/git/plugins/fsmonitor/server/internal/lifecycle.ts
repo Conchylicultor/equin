@@ -307,6 +307,46 @@ async function daemonAnswersToken(
   return !/query\/trivial-response:1/.test(r.stderr);
 }
 
+/** The running daemon that issued the index's token, if one does. */
+async function tokenDaemon(
+  gitDir: string,
+  running: ReadonlyMap<number, RunningDaemon>,
+): Promise<RunningDaemon | undefined> {
+  const pid = await indexTokenPid(gitDir);
+  return pid === null ? undefined : running.get(pid);
+}
+
+/**
+ * Where a checkout that should run an fsmonitor stands — read-only, so any
+ * number of checkouts can be asked at once:
+ *
+ * - `current`: configured, its index's token names a running, unthrottled
+ *   daemon, and that daemon answers it with what changed (nothing to do);
+ * - `resynced`: its daemon runs but answered "everything" — it resynced
+ *   (FSEvents dropped events) and issued a new token under the same pid, so
+ *   the token needs renewing;
+ * - `down`: no running daemon issued its token, or that daemon is throttled,
+ *   or it is not configured — start (or restart) it, then renew.
+ */
+type OnState = "current" | "resynced" | "down";
+
+async function onState(
+  wtPath: string,
+  gitDir: string,
+  live: ReadonlyMap<number, RunningDaemon>,
+  signal?: AbortSignal,
+): Promise<OnState> {
+  const before = await tokenDaemon(gitDir, live);
+  if (
+    before === undefined ||
+    before.throttled ||
+    !(await mayHaveFsmonitorConfig(gitDir))
+  ) {
+    return "down";
+  }
+  return (await daemonAnswersToken(wtPath, signal)) ? "current" : "resynced";
+}
+
 /** What {@link ensureCheckoutFsmonitor} found and did. */
 export interface FsmonitorEnsure {
   /**
@@ -345,20 +385,12 @@ async function convergeOn(
   live: ReadonlyMap<number, RunningDaemon>,
   tier: CheckoutTier,
   signal?: AbortSignal,
+  /** Its {@link onState}, when the caller already probed it. */
+  probed?: OnState,
 ): Promise<FsmonitorEnsure | null> {
-  const tokenDaemon = async (running: ReadonlyMap<number, RunningDaemon>) => {
-    const pid = await indexTokenPid(gitDir);
-    return pid === null ? undefined : running.get(pid);
-  };
-  const before = await tokenDaemon(live);
-  if (
-    before !== undefined &&
-    !before.throttled &&
-    (await mayHaveFsmonitorConfig(gitDir))
-  ) {
-    // Its daemon runs — but a daemon that resynced (FSEvents dropped events)
-    // issued a new token under the same pid, so ask the daemon itself.
-    if (await daemonAnswersToken(wtPath, signal)) return null;
+  const state = probed ?? (await onState(wtPath, gitDir, live, signal));
+  if (state === "current") return null;
+  if (state === "resynced") {
     const was = await indexTokenPid(gitDir);
     return {
       daemon: "running",
@@ -369,6 +401,7 @@ async function convergeOn(
       },
     };
   }
+  const before = await tokenDaemon(gitDir, live);
   let daemon: FsmonitorEnsure["daemon"];
   if (before?.throttled) {
     await stopDaemon(wtPath, signal);
@@ -379,7 +412,9 @@ async function convergeOn(
   }
   const was = await indexTokenPid(gitDir);
   let publish = await refreshCheckoutIndex(wtPath, tier, signal);
-  if ((await tokenDaemon(await listRunningDaemons(signal)))?.throttled) {
+  if (
+    (await tokenDaemon(gitDir, await listRunningDaemons(signal)))?.throttled
+  ) {
     await stopDaemon(wtPath, signal);
     await startCheckoutFsmonitor(wtPath, signal);
     daemon = "restarted";
@@ -461,6 +496,32 @@ export interface FsmonitorReconcile {
   failures: { path: string; error: string }[];
 }
 
+/** How many checkouts the reconcile asks at once (background-tier children). */
+const PROBE_CONCURRENCY = 4;
+
+/** What asking one checkout found: `null` for one not wanted `on`. */
+type Probe = { state: OnState } | { error: string } | null;
+
+/** `fn` over `items`, at most `limit` at a time, results in item order. */
+async function mapBounded<T, R>(
+  items: readonly T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const out: R[] = new Array<R>(items.length);
+  let next = 0;
+  const lane = async () => {
+    while (next < items.length) {
+      const i = next++;
+      out[i] = await fn(items[i]!);
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, lane),
+  );
+  return out;
+}
+
 /**
  * Converge the machine's fsmonitor daemons on what the caller wants: every
  * `on` checkout configured, its daemon running and its index token current;
@@ -488,6 +549,27 @@ export async function reconcileCheckoutFsmonitors(
 ): Promise<FsmonitorReconcile> {
   const { orphanRoot, tier, stillOff, signal } = opts;
   let live = await listRunningDaemons(signal);
+  // Every `on` checkout is asked where it stands first, several at once: the
+  // ask is read-only (one `git diff-files` per checkout, ~0.2 s for an
+  // index of ~26k entries), and nearly every pass finds every checkout
+  // current. One after the other, ~45 retained checkouts held a job slot
+  // 7–10 s per pass (2026-11-19). Whatever must change — a start, a restart,
+  // a renewal, a stop — still runs one checkout at a time below.
+  // A daemon that dies after its checkout was asked is caught next pass.
+  const probes = await mapBounded(
+    checkouts,
+    PROBE_CONCURRENCY,
+    async (c): Promise<Probe> => {
+      if (c.want !== "on") return null;
+      signal?.throwIfAborted();
+      try {
+        return { state: await onState(c.path, c.gitDir, live, signal) };
+      } catch (err) {
+        if (signal?.aborted) throw err;
+        return { error: err instanceof Error ? err.message : String(err) };
+      }
+    },
+  );
   const out: FsmonitorReconcile = {
     on: 0,
     started: [],
@@ -496,12 +578,24 @@ export async function reconcileCheckoutFsmonitors(
     orphans: [],
     failures: [],
   };
-  for (const c of checkouts) {
+  for (const [i, c] of checkouts.entries()) {
     signal?.throwIfAborted();
     try {
       if (c.want === "on") {
         out.on++;
-        const done = await convergeOn(c.path, c.gitDir, live, tier, signal);
+        const probe = probes[i]!;
+        if ("error" in probe) {
+          out.failures.push({ path: c.path, error: probe.error });
+          continue;
+        }
+        const done = await convergeOn(
+          c.path,
+          c.gitDir,
+          live,
+          tier,
+          signal,
+          probe.state,
+        );
         if (done !== null) {
           if (done.daemon !== "running") out.started.push(c.path);
           if (done.token.kind === "renewed") out.renewed.push(c.path);

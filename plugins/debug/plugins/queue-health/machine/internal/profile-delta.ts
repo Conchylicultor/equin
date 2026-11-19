@@ -36,7 +36,9 @@ export interface JobSpanSample {
   count: number;
   totalMs: number;
   waitTotalMs: number;
-  /** Σ per-record wait unions by admission-gate layer. */
+  /** The part of `waitTotalMs` that was `io` — the job's own awaited work. */
+  ioTotalMs: number;
+  /** Σ per-record wait unions by layer (gates, joins and `io` alike). */
   waits: Record<string, number>;
 }
 
@@ -48,6 +50,7 @@ export function sampleOf(agg: Aggregate): JobSpanSample {
     count: agg.count,
     totalMs: agg.totalMs,
     waitTotalMs: agg.waitTotalMs,
+    ioTotalMs: agg.ioTotalMs,
     waits: { ...(agg.waits ?? {}) },
   };
 }
@@ -57,9 +60,12 @@ export interface BlockedTrip {
   runs: number;
   /** Per-run wall-clock hold of the worker slot. */
   holdMs: number;
-  /** Per-run union of admission-gate waits charged inside that hold. */
+  /**
+   * Per-run time blocked inside that hold: the wait union less its `io` part
+   * (a gate's queue, another run joined).
+   */
   waitMs: number;
-  /** `holdMs - waitMs` — the job's own time. */
+  /** `holdMs - waitMs` — the job's own time, its awaited children included. */
   workMs: number;
   /** The single gate that contributed most of the wait, and its per-run ms. */
   layer: string;
@@ -70,6 +76,15 @@ export interface BlockedTrip {
 
 /**
  * Did this job hold its slots to WAIT rather than to work, over the window?
+ *
+ * What it waited ON for its own sake is work, not blocking: an `io` wait (a
+ * git child, a file call, a worker — the runtime profiler's `WaitKind`) is
+ * work done on the job's behalf, judged where it happens (`wait <layer>`) or
+ * as the job's own time. So `io` is taken off the wait (`ioTotalMs`) and its
+ * layers (`ioLayers`, the profile's `gates` of kind `io`) are never named as
+ * the gate: since every captured child became an `io` wait (2a8e29dfab), a
+ * job whose work IS running git — `worktree.fsmonitor-reconcile` — read as
+ * "0 s of work, blocked on spawn:git".
  *
  * Two conditions, both on per-run averages:
  *  1. the average run waited at least `floorMs` — a 200 ms handler that waits
@@ -86,12 +101,19 @@ export function blockedTrip(
   prev: JobSpanSample,
   cur: JobSpanSample,
   floorMs: number,
+  ioLayers: ReadonlySet<string>,
 ): BlockedTrip | null {
   const runs = windowDelta(prev.count, cur.count);
   if (runs === null || runs <= 0) return null;
 
   const holdTotalMs = windowDelta(prev.totalMs, cur.totalMs) ?? 0;
-  const waitTotalMs = windowDelta(prev.waitTotalMs, cur.waitTotalMs) ?? 0;
+  // Each record's io union is ≤ its wait union, so this is ≥ 0 per record; a
+  // reset between samples can make the two deltas disagree, hence the clamp.
+  const waitTotalMs = Math.max(
+    0,
+    (windowDelta(prev.waitTotalMs, cur.waitTotalMs) ?? 0) -
+      (windowDelta(prev.ioTotalMs, cur.ioTotalMs) ?? 0),
+  );
 
   const waitMs = waitTotalMs / runs;
   const holdMs = holdTotalMs / runs;
@@ -106,6 +128,7 @@ export function blockedTrip(
     ...Object.keys(prev.waits),
     ...Object.keys(cur.waits),
   ])) {
+    if (ioLayers.has(layer)) continue;
     const ms = windowDelta(prev.waits[layer] ?? 0, cur.waits[layer] ?? 0) ?? 0;
     if (ms > 0) layers.push({ layer, ms: ms / runs });
   }

@@ -238,7 +238,8 @@ the two came from different snapshots. Reports fire only when a threshold trips:
   is hold and knows nothing about what the handler is doing inside it. The
   wait/work split exists only in the runtime profiler's in-memory `job` spans
   (`recordEntrySpan("job", jobName, …)` around `job.run()`), whose `waitTotalMs`
-  and per-layer `waits` are exactly the admission gates' wait charges. So
+  and per-layer `waits`, less their `io` part (below), are the admission gates'
+  and joins' wait charges. So
   `checkSlotBlocked` diffs the profiler's cumulative per-label counters against a
   module-level baseline — the same pull-and-diff `debug/op-rate` does on the same
   profile — and trips when the average run waited ≥ `slotBlockedWaitSeconds` AND
@@ -256,6 +257,14 @@ the two came from different snapshots. Reports fire only when a threshold trips:
   It runs every 10th tick, not every tick: materializing the whole profile is far
   heavier than this watchdog's two bounded aggregates, and five minutes of runs
   average better than thirty seconds of them.
+
+  **A job's own `io` is work, not blocking.** Every captured child (`spawn:<program>`,
+  `git:<subcommand>`), file call and worker answer is an `io` wait in the
+  profiler — work done on the job's behalf. So the detector takes the
+  aggregate's `ioTotalMs` off `waitTotalMs` and never names an `io` layer (the
+  profile's `gates` of kind `io`) as the gate; `workMs` includes those
+  children. Before (2026-11-19), `worktree.fsmonitor-reconcile` — whose work
+  IS ~45 `git diff-files` — read as "0 s of work, blocked on `spawn:git`".
 
 ## Summary endpoint + MCP tool
 

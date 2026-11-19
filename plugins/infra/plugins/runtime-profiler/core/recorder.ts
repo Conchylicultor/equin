@@ -460,6 +460,14 @@ export interface Aggregate {
   lastMs: number;
   /** Σ per-record waitMs (each a union ≤ that record's wall). Per-call avg = /count. */
   waitTotalMs: number;
+  /**
+   * Σ per-record union of its `io` waits alone (each ≤ that record's waitMs):
+   * the part of `waitTotalMs` that was work done on the op's behalf (a git
+   * child, a file call, a worker) — see `EntryCost.ioMs`. So
+   * `waitTotalMs − ioTotalMs` is the time it queued on a gate or joined
+   * another run.
+   */
+  ioTotalMs: number;
   /** Σ per-record childMs. */
   childTotalMs: number;
   /** Σ per-record selfMs. */
@@ -1515,6 +1523,7 @@ interface AggregateInternal {
   maxAtMs: number;
   lastMs: number;
   waitTotalMs: number;
+  ioTotalMs: number;
   childTotalMs: number;
   selfTotalMs: number;
   /**
@@ -2181,6 +2190,8 @@ function record(
   /** The innermost open entry a filed claim starts at (see `claimEnclosing`). */
   claimFrom?: EntryContext,
   latency?: boolean,
+  /** The union of this run's `io` waits (≤ `waitMs`) — see `Aggregate.ioTotalMs`. */
+  ioMs = 0,
 ): boolean {
   if (profilingDisabled()) return false;
   // Drop spans produced inside a runWithoutProfiling scope before any aggregate,
@@ -2200,6 +2211,7 @@ function record(
     agg.totalMs += durationMs;
     agg.lastMs = durationMs;
     agg.waitTotalMs += waitMs;
+    agg.ioTotalMs += ioMs;
     agg.childTotalMs += childMs;
     agg.selfTotalMs += selfMs;
     if (durationMs > agg.maxMs) {
@@ -2215,6 +2227,7 @@ function record(
       maxAtMs: atMs,
       lastMs: durationMs,
       waitTotalMs: waitMs,
+      ioTotalMs: ioMs,
       childTotalMs: childMs,
       selfTotalMs: selfMs,
       recentBuckets: [],
@@ -3497,6 +3510,10 @@ export async function recordEntrySpan<T>(
       ctx.excludedUnion.unionMs,
       claims,
       ctx.parent,
+      undefined,
+      // Clipped to the wait union: that track takes more intervals, so it can
+      // freeze its floor (TRACK_SPAN_CAP) before the io track does.
+      Math.min(waitMs, ctx.ioUnion ? ctx.ioUnion.unionMs : 0),
     );
     // A root entry filed as its own slow op is a claim on its lane: a later
     // run of the lane queued behind it waited on an op already filed.
@@ -3556,6 +3573,7 @@ export function getRuntimeProfile(): {
           maxMs: agg.maxMs,
           lastMs: agg.lastMs,
           waitTotalMs: agg.waitTotalMs,
+          ioTotalMs: agg.ioTotalMs,
           childTotalMs: agg.childTotalMs,
           selfTotalMs: agg.selfTotalMs,
           recentMaxMs,
