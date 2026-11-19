@@ -234,8 +234,9 @@ export function mountBacklog(fig: HTMLElement): () => void {
   const L = backlogSide("Task list", false),
     R = backlogSide("Agents + no friction", true);
   const more = document.createElement("div");
-  more.className = "more";
-  more.hidden = true;
+  // the "+ N more" line keeps its place while empty, so its arrival moves nothing below
+  more.className = "more off";
+  more.textContent = "+ 0 more";
   L.side.append(more);
   fig.replaceChildren(L.side, R.side);
   const SHOWN = 5,
@@ -307,7 +308,7 @@ export function mountBacklog(fig: HTMLElement): () => void {
     count(L, open.length);
     // a new row's age moves first: the age clock wakes for it (only while the figure runs)
     if (timer) tickAges();
-    more.hidden = open.length <= SHOWN;
+    more.classList.toggle("off", open.length <= SHOWN);
     more.textContent = `+ ${open.length - SHOWN} more`;
     // right: an agent takes it, deploys it, and it leaves
     const el = row(title, "agent working", true);
@@ -365,7 +366,7 @@ export function mountBacklog(fig: HTMLElement): () => void {
     tickAges();
     clearTimeout(ageTimer);
     count(L, 14);
-    more.hidden = false;
+    more.classList.remove("off");
     more.textContent = `+ ${14 - SHOWN} more`;
     return () => fig.replaceChildren();
   }

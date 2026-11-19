@@ -313,10 +313,14 @@
   }
 }
 
-/* the backlog: rows grow in and collapse out, so the rest of the list slides instead of jumping */
+/* the backlog: rows grow in and collapse out, so the rest of the list slides instead of jumping.
+   Each box is a fixed height (five rows) and clips what spills past it: the rows come and go
+   forever, and a figure whose height followed them would move the page under the reader — Safari
+   has no scroll anchoring to hold the text still (a text-fragment link to the line below bounced). */
 .story-essay .rowsbox {
   display: grid;
-  min-height: 190px;
+  height: 190px;
+  overflow: hidden;
   align-content: start;
 }
 .story-essay .sides {
@@ -372,6 +376,9 @@
   color: var(--fg3);
   font-size: 12.5px;
   white-space: nowrap;
+}
+.story-essay .side .more.off {
+  visibility: hidden;
 }
 .story-essay .side .more {
   padding: 8px 0;
@@ -448,8 +455,9 @@
   .story-essay .ln:has(.on) {
     padding: 0 10px;
   }
+  /* stacked under the task list, the agents' side shows four rows */
   .story-essay .side:last-child .rowsbox {
-    min-height: 80px;
+    height: 150px;
   }
   .story-essay .ln .on {
     font-size: 13px;
