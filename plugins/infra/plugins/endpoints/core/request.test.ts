@@ -1,7 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { defineEndpoint } from "./define-endpoint";
-import { EndpointError, EndpointNetworkError } from "./endpoint-error";
+import {
+  EndpointError,
+  EndpointNetworkError,
+  EndpointResponseUnreadableError,
+} from "./endpoint-error";
 import { readEndpointResponse, sendEndpointRequest } from "./request";
 import { FetchRequestError } from "@plugins/primitives/plugins/networking/plugins/request-guard/core";
 import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
@@ -177,5 +181,82 @@ describe("EndpointError's crash identity", () => {
     expect(crashFieldsOf(await refused(collect, 500)).scope).toBe(
       "POST /api/x/collect 500",
     );
+  });
+});
+
+describe("readEndpointResponse — a 2xx it cannot decode names its request", () => {
+  async function failure(res: Response): Promise<unknown> {
+    try {
+      await readEndpointResponse(collect, res);
+    } catch (err) {
+      return err;
+    }
+    throw new Error("expected a failure");
+  }
+
+  test("an empty 200 with no declared length: unreadable, route and status named", async () => {
+    const err = await failure(new Response(null, { status: 200 }));
+    expect(err).toBeInstanceOf(EndpointResponseUnreadableError);
+    expect(err).toBeInstanceOf(EndpointError);
+    const e = err as EndpointResponseUnreadableError;
+    expect(e.route).toBe("POST /api/x/collect");
+    expect(e.status).toBe(200);
+    expect(e.receivedBytes).toBe(0);
+    expect(e.cause).toBeInstanceOf(SyntaxError);
+    expect(e.message).toStartWith(
+      "HTTP 200 from POST /api/x/collect: unreadable response body (0 bytes, no length declared: ",
+    );
+  });
+
+  test("a whole body that is not JSON: unreadable, with its declared length", async () => {
+    const err = await failure(
+      new Response("<html>", {
+        status: 200,
+        headers: { "content-length": "6" },
+      }),
+    );
+    expect(err).toBeInstanceOf(EndpointResponseUnreadableError);
+    expect((err as Error).message).toContain("6 of 6 declared bytes");
+  });
+
+  test("fewer bytes than declared: the answer was cut short — a network error", async () => {
+    const err = await failure(
+      new Response('{"ok":', {
+        status: 200,
+        headers: { "content-length": "11" },
+      }),
+    );
+    expect(err).toBeInstanceOf(EndpointNetworkError);
+    expect(err).toBeInstanceOf(TypeError);
+    expect((err as Error).message).toBe(
+      "POST /api/x/collect: the answer was cut short: 6 of 11 bytes arrived (HTTP 200)",
+    );
+  });
+
+  test("a compressed reply's length is not compared: unreadable", async () => {
+    const err = await failure(
+      new Response("", {
+        status: 200,
+        headers: { "content-length": "40", "content-encoding": "br" },
+      }),
+    );
+    expect(err).toBeInstanceOf(EndpointResponseUnreadableError);
+  });
+
+  test("a body stream that fails mid-read: a network error naming the route", async () => {
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        controller.error(new TypeError("network error"));
+      },
+    });
+    const err = await failure(new Response(body, { status: 200 }));
+    expect(err).toBeInstanceOf(EndpointNetworkError);
+    expect((err as Error).message).toBe("POST /api/x/collect: network error");
+  });
+
+  test("a schema mismatch passes through untouched", async () => {
+    const err = await failure(Response.json({ ok: "yes" }));
+    expect(err).not.toBeInstanceOf(EndpointError);
+    expect(err).not.toBeInstanceOf(TypeError);
   });
 });

@@ -4,6 +4,8 @@ import {
   EndpointAgentWriteRefusedError,
   EndpointError,
   EndpointNetworkError,
+  EndpointResponseUnreadableError,
+  ResponseBodyDecodeError,
 } from "./endpoint-error";
 import { isAgentWriteRefusal, SAFE_METHODS } from "./agent-write";
 import { extractPath, interpolatePath } from "./route-params";
@@ -206,7 +208,9 @@ function refusalWords(body: unknown): string | null {
  * `EndpointError` (refined to `EndpointAgentWriteRefusedError` for main's
  * agent-write refusal), carrying the body —
  * JSON when it parses, else its text; a 2xx decodes through the response
- * codec, `void` for a 204 or an endpoint declaring no response.
+ * codec, `void` for a 204 or an endpoint declaring no response. A 2xx body
+ * that cannot be decoded throws an error naming the route too
+ * ({@link unreadableAnswer}).
  */
 export async function readEndpointResponse<
   Route extends string,
@@ -257,7 +261,64 @@ export async function readEndpointResponse<
   if (res.status === 204 || !endpoint.responseCodec) {
     return undefined as EndpointAnswer<TResponse>;
   }
-  return (await endpoint.responseCodec.decodeResponse(
-    res,
-  )) as EndpointAnswer<TResponse>;
+  try {
+    return (await endpoint.responseCodec.decodeResponse(
+      res,
+    )) as EndpointAnswer<TResponse>;
+  } catch (err) {
+    throw unreadableAnswer(endpoint.route, res, err);
+  }
+}
+
+/**
+ * What a 2xx whose body could not be decoded is, as an error naming the
+ * request (an unhandled one reaches Reports with only its message):
+ *
+ * - The body stream failed mid-read (the browser's `TypeError`), or fewer
+ *   bytes arrived than the reply declared (`Content-Length`, when no
+ *   `Content-Encoding` makes it a compressed size): the answer was lost on
+ *   the way — an `EndpointNetworkError`, the same "no full answer" every
+ *   caller and the crash collector already tell apart from a bug.
+ * - Otherwise the server's own answer is not what the codec reads (an empty
+ *   or non-JSON body): `EndpointResponseUnreadableError`, with the route, the
+ *   status and the bytes received.
+ *
+ * Anything else the codec threw (a schema's parse error) passes through.
+ */
+function unreadableAnswer(route: string, res: Response, err: unknown): unknown {
+  if (err instanceof TypeError && !(err instanceof EndpointNetworkError)) {
+    return new EndpointNetworkError(route, err);
+  }
+  if (!(err instanceof ResponseBodyDecodeError)) return err;
+  const declared = declaredBodyBytes(res);
+  if (declared !== null && err.receivedBytes < declared) {
+    return new EndpointNetworkError(
+      route,
+      new TypeError(
+        `the answer was cut short: ${err.receivedBytes} of ${declared} bytes arrived (HTTP ${res.status})`,
+      ),
+    );
+  }
+  return new EndpointResponseUnreadableError(
+    route,
+    res.status,
+    err.receivedBytes,
+    declared,
+    err.syntaxError,
+  );
+}
+
+/**
+ * The body length a reply declares, in the bytes the page reads: its
+ * `Content-Length`, unless a `Content-Encoding` makes that the compressed
+ * size. Null when it declares none (chunked, HTTP/2 without one, compressed).
+ */
+function declaredBodyBytes(res: Response): number | null {
+  const encoding = res.headers.get("content-encoding");
+  if (encoding !== null && encoding.trim().toLowerCase() !== "identity")
+    return null;
+  const length = res.headers.get("content-length");
+  if (length === null) return null;
+  const bytes = Number(length);
+  return Number.isInteger(bytes) && bytes >= 0 ? bytes : null;
 }

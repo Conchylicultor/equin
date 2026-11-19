@@ -27,6 +27,55 @@ export class EndpointError extends SubjectError {
 }
 
 /**
+ * A 2xx reply whose body its response codec could not decode — empty, or not
+ * JSON — while nothing says it was cut short in transit (that one is an
+ * `EndpointNetworkError`: `readEndpointResponse`). The browser's own error (a
+ * bare `SyntaxError: Unexpected end of JSON input`) named neither the request
+ * nor the reply (report-1795088221-wc8q1w); this one says the route, the
+ * status and how many bytes arrived of how many declared.
+ */
+export class EndpointResponseUnreadableError extends EndpointError {
+  override readonly name = "EndpointResponseUnreadableError";
+  constructor(
+    route: string,
+    status: number,
+    readonly receivedBytes: number,
+    readonly declaredBytes: number | null,
+    cause: SyntaxError,
+  ) {
+    super(
+      route,
+      status,
+      null,
+      `HTTP ${status} from ${route}: unreadable response body (${describeBytes(receivedBytes, declaredBytes)}: ${cause.message})`,
+    );
+    this.cause = cause;
+  }
+}
+
+function describeBytes(received: number, declared: number | null): string {
+  if (declared === null) return `${received} bytes, no length declared`;
+  return `${received} of ${declared} declared bytes`;
+}
+
+/**
+ * The JSON codec's decode failure: the body arrived (`receivedBytes` of it)
+ * but is not JSON. Thrown by the codec, which knows no route;
+ * `readEndpointResponse` turns it into the error that names the request.
+ */
+export class ResponseBodyDecodeError extends Error {
+  override readonly name = "ResponseBodyDecodeError";
+  constructor(
+    readonly receivedBytes: number,
+    readonly syntaxError: SyntaxError,
+  ) {
+    super(`response body is not JSON: ${syntaxError.message}`, {
+      cause: syntaxError,
+    });
+  }
+}
+
+/**
  * Main refused the write because the request came from an agent session
  * (`agentWrite` — main is read-only for agents). Not a bug of the endpoint,
  * nor of the caller: the message tells the agent to reproduce on its own

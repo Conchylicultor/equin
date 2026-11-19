@@ -1,6 +1,7 @@
 import type { z } from "zod";
 import { HttpError } from "./http-error";
 import { jsonResponse } from "@plugins/packages/plugins/floor-compat/core";
+import { ResponseBodyDecodeError } from "./endpoint-error";
 
 /**
  * A transport codec for an endpoint body/response payload.
@@ -63,7 +64,20 @@ export function json<T>(schema?: z.ZodType<T>): Codec<T> {
       return jsonResponse(value);
     },
     async decodeResponse(res) {
-      const raw: unknown = await res.json();
+      // Read as text, then parse: a body that is not JSON (empty, cut short)
+      // says how much of it arrived (`ResponseBodyDecodeError`), which
+      // `res.json()`'s bare SyntaxError cannot.
+      const text = await res.text();
+      let raw: unknown;
+      try {
+        raw = JSON.parse(text);
+      } catch (err) {
+        if (!(err instanceof SyntaxError)) throw err;
+        throw new ResponseBodyDecodeError(
+          new TextEncoder().encode(text).byteLength,
+          err,
+        );
+      }
       return schema ? schema.parse(raw) : (raw as T);
     },
   };
