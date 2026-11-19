@@ -21,13 +21,26 @@ export async function hostDataStored(name: string): Promise<boolean> {
   const dbName = storesDbName(name);
   const existing = await indexedDB.databases();
   if (!existing.some((db) => db.name === dbName)) return false;
-  const db = await new Promise<IDBDatabase>((resolve, reject) => {
+  const db = await new Promise<IDBDatabase | null>((resolve, reject) => {
     // No version: an existing database opens as it is, never upgraded.
     const req = indexedDB.open(dbName);
+    let absent = false;
+    // An upgrade here means the database went between `databases()` and
+    // this open (a wipe): it is not there. Created now, it would be an empty
+    // version 1 without the host's object stores, which the host's own open
+    // (at version 1) would then never upgrade — so the creation is aborted.
+    req.onupgradeneeded = () => {
+      absent = true;
+      req.transaction!.abort();
+    };
     req.onsuccess = () => resolve(req.result);
-    req.onerror = () =>
-      reject(req.error ?? new Error(`IndexedDB: could not open ${dbName}`));
+    req.onerror = () => {
+      if (absent) resolve(null);
+      else
+        reject(req.error ?? new Error(`IndexedDB: could not open ${dbName}`));
+    };
   });
+  if (db === null) return false;
   try {
     if (!db.objectStoreNames.contains(META_STORE)) return false;
     const lifecycle = await new Promise<Lifecycle | undefined>(

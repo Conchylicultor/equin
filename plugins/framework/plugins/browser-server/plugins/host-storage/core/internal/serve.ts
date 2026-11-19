@@ -14,6 +14,7 @@ import {
   type PortEnd,
   type ServedHost,
 } from "@plugins/framework/plugins/browser-server/core";
+import { BootInterruptedError, isSuspendedUpgradeAbort } from "./errors";
 import { declareHostStorage } from "./host-storage";
 import {
   openHostStorage,
@@ -84,6 +85,50 @@ export function serveBrowserHost(opts: {
   const { scope } = opts;
   const shared = "onconnect" in scope;
   let storage: OpenedHostStorage | null = null;
+  const openAndBoot = async (): Promise<HostBooted> => {
+    const opening = performance.now();
+    storage = await openHostStorage(
+      opts.storage.kind === "memory"
+        ? opts.storage
+        : {
+            ...opts.storage,
+            // A tab of the same host joins this one (`ownership.ts`): only
+            // a SharedWorker can be joined, by its name.
+            identity: {
+              build: scope.location.href,
+              worker: shared ? scope.name : null,
+            },
+            onSuperseded: async (why) => served.end(why),
+          },
+    );
+    declareHostStorage(storage);
+    const openedMs = Math.round(performance.now() - opening);
+    try {
+      const host = await opts.boot(storage);
+      await storage.booted();
+      // The boot report says where the data came from, what loading the
+      // worker's own code cost, and what opening the storage cost (a
+      // snapshot's load included) before the graph booted.
+      return {
+        ...host,
+        boot: {
+          ...host.boot,
+          stages: [
+            { name: "script", ms: scriptMs },
+            { name: "storage", ms: openedMs },
+            ...host.boot.stages,
+          ],
+          data: originLabel(storage.origin),
+          createdAt: performance.timeOrigin,
+        },
+      };
+    } catch (err) {
+      // A host that cannot boot holds the storage for nothing: release it,
+      // so another tab (or a fixed build) can open it.
+      await storage.close();
+      throw err;
+    }
+  };
   const served: ServedHost = serveHost({
     accept(serve) {
       if (shared) {
@@ -98,46 +143,12 @@ export function serveBrowserHost(opts: {
       }
     },
     async boot() {
-      const opening = performance.now();
-      storage = await openHostStorage(
-        opts.storage.kind === "memory"
-          ? opts.storage
-          : {
-              ...opts.storage,
-              // A tab of the same host joins this one (`ownership.ts`): only
-              // a SharedWorker can be joined, by its name.
-              identity: {
-                build: scope.location.href,
-                worker: shared ? scope.name : null,
-              },
-              onSuperseded: async (why) => served.end(why),
-            },
-      );
-      declareHostStorage(storage);
-      const openedMs = Math.round(performance.now() - opening);
       try {
-        const host = await opts.boot(storage);
-        await storage.booted();
-        // The boot report says where the data came from, what loading the
-        // worker's own code cost, and what opening the storage cost (a
-        // snapshot's load included) before the graph booted.
-        return {
-          ...host,
-          boot: {
-            ...host.boot,
-            stages: [
-              { name: "script", ms: scriptMs },
-              { name: "storage", ms: openedMs },
-              ...host.boot.stages,
-            ],
-            data: originLabel(storage.origin),
-            createdAt: performance.timeOrigin,
-          },
-        };
+        return await openAndBoot();
       } catch (err) {
-        // A host that cannot boot holds the storage for nothing: release it,
-        // so another tab (or a fixed build) can open it.
-        await storage.close();
+        // The browser suspended the page mid-boot and aborted an IndexedDB
+        // upgrade under it: not a fault — the page boots a fresh worker.
+        if (isSuspendedUpgradeAbort(err)) throw new BootInterruptedError(err);
         throw err;
       }
     },

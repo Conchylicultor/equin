@@ -142,6 +142,13 @@ const STOPPED_MESSAGES: Record<StopReason, string> = {
     "This browser cannot run the demo in two tabs at once, and it is now open in another tab. Reload to continue in this one.",
 };
 
+/**
+ * How many interrupted boots (`HostRefusal` `interrupted`: the page was
+ * suspended mid-upgrade) one start follows before it fails: a page is
+ * suspended again only by a navigation, so a few is already improbable.
+ */
+const MAX_BOOT_INTERRUPTIONS = 3;
+
 /** What one start of the scope's host comes to. */
 interface ScopeStart {
   onReady(host: ScopeHost): void;
@@ -221,6 +228,8 @@ function startScopeServer(
     let connected: Awaited<ReturnType<typeof connectHost>>;
     let framing: Promise<FrameServing>;
     let hosted: PortServer;
+    /** Boots the browser cut short so far (`interrupted`), bounded by `MAX_BOOT_INTERRUPTIONS`. */
+    let interruptions = 0;
     // Until a worker serves this page: one that declines because the same
     // host already serves the data as another worker (`join`) sends this tab
     // there — a tab joins the running host, never takes it.
@@ -272,6 +281,25 @@ function startScopeServer(
             }
             continue;
           }
+          case "interrupted":
+            // The browser suspended this page (back/forward cache) while the
+            // host was creating its IndexedDB and aborted that upgrade; the
+            // page runs again now. That worker retires (its boot threw), so
+            // start a fresh one past its generation — as after a retirement
+            // — rather than asking a closing worker again. Bounded: WebKit
+            // raises it only for a suspended page, so one that keeps
+            // arriving is something else, and fails loudly.
+            interruptions += 1;
+            if (interruptions > MAX_BOOT_INTERRUPTIONS) {
+              throw new Error(
+                `[demo-scope] ${scenario.id}: the host's boot was interrupted ${interruptions} times in a row — the browser keeps aborting its IndexedDB upgrade although this page runs`,
+              );
+            }
+            console.info(
+              `[demo-scope] ${scenario.id}: the host's boot was interrupted while this page was suspended — starting it again`,
+            );
+            generations.advance(connected.generation);
+            continue;
           case "outdated":
             report.onStopped("updated");
             return;

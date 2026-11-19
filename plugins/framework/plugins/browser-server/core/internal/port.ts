@@ -102,7 +102,16 @@ export type HostRefusal =
    * `worker`: the page connects to it instead (a tab joins the running host,
    * never takes it).
    */
-  | { kind: "join"; worker: string };
+  | { kind: "join"; worker: string }
+  /**
+   * The browser cut the boot short because it suspended the page: WebKit
+   * aborts an IndexedDB open whose upgrade (creating a database) is answered
+   * while the requesting page — or the worker serving it — sits in the
+   * back/forward cache ("Version change transaction on cached page is
+   * aborted to unblock other connections"). Nothing failed: the page starts
+   * the host again, on a fresh worker, once it is shown again.
+   */
+  | { kind: "interrupted" };
 
 /** Page → worker. */
 export type ToHost =

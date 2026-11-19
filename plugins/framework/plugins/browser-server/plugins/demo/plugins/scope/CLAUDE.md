@@ -68,6 +68,11 @@ seed — so the unchanged app reads demo data through `useLive` /
   stale tab) declines with `{ kind: "join", worker }`: the scope joins that
   generation (`HostGenerations.join`) and connects there — no screen. A
   Reset or a retirement is followed the same way.
+- **A boot the browser interrupted starts again.** A host declining
+  `{ kind: "interrupted" }` (WebKit aborted its IndexedDB upgrade while the
+  page was in the back/forward cache — `host-storage`) is neither a failure
+  nor reported: the scope advances past that worker's generation and
+  connects again, booting a fresh host.
 - **When the host will not serve this page**, the cause decides the message
   (`StopReason`, an exhaustive map): `updated` — equin was updated in another
   tab (another build took the data, or the data is from newer code) — or

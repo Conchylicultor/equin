@@ -793,6 +793,44 @@ describe("<DemoScope>", () => {
     localStorage.clear();
   });
 
+  it("a host whose boot the browser interrupted (page suspended mid-upgrade) starts again on the next generation: no failure, no report", async () => {
+    let boots = 0;
+    const reported: unknown[] = [];
+    const onError = (e: ErrorEvent) => reported.push(e.error);
+    window.addEventListener("error", onError);
+    try {
+      const view = await renderAsync(
+        <PluginProvider plugins={PLUGINS}>
+          <Boundary>
+            <DemoScope
+              scenario={scenarioOf(() => {
+                boots += 1;
+                if (boots === 1) {
+                  throw new HostRefusedError(
+                    { kind: "interrupted" },
+                    "the browser aborted an IndexedDB upgrade while the page was suspended",
+                  );
+                }
+                return storyServer();
+              }, "interrupted")}
+            >
+              <p>in the demo</p>
+            </DemoScope>
+          </Boundary>
+        </PluginProvider>,
+      );
+      await waitFor(() => expect(view.getByText("in the demo")).toBeTruthy());
+      expect(boots).toBe(2);
+      // Past the interrupted worker's generation: never asked for again.
+      expect(trackHostGenerations("interrupted").current()).toBe(1);
+      expect(view.queryByTestId("boundary")).toBeNull();
+      expect(reported).toEqual([]);
+    } finally {
+      window.removeEventListener("error", onError);
+      localStorage.clear();
+    }
+  });
+
   it("a host whose data is from newer code says equin was updated, with a Reload", async () => {
     const view = await renderAsync(
       <PluginProvider plugins={PLUGINS}>
