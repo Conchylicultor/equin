@@ -134,13 +134,20 @@ type StopReason =
   /** Another version of equin, loaded in another tab, holds the demo's data (or wrote it). */
   | "updated"
   /** This browser has no SharedWorker, and another tab's own host took the data. */
-  | "unshared";
+  | "unshared"
+  /**
+   * The browser refuses this page the storage the host keeps its data in
+   * (`hostDataStored` answered `blocked`): no host is started.
+   */
+  | "storage-blocked";
 
 const STOPPED_MESSAGES: Record<StopReason, string> = {
   updated:
     "equin was updated in another tab. Reload this tab to continue on the new version.",
   unshared:
     "This browser cannot run the demo in two tabs at once, and it is now open in another tab. Reload to continue in this one.",
+  "storage-blocked":
+    "The demo runs equin inside your browser and keeps its data there, but this browser blocks site storage for this page (cookies and site data blocked, private settings, or an embedded frame). Allow site data for this site, then reload.",
 };
 
 /**
@@ -526,9 +533,6 @@ export function DemoScope({
   const [visitor, setVisitor] = useState<"checking" | "gate" | "in">(
     !gated ? "in" : resume === false ? "gate" : "checking",
   );
-  const [checkFailed, setCheckFailed] = useState<{ error: unknown } | null>(
-    null,
-  );
   const cameIn = useEventCallback((how: DemoEntry) => onEnter?.(how));
   // Whether the host may start: once the visitor entered, or behind the gate
   // once this browser is found to hold the data (nothing large to download).
@@ -545,21 +549,47 @@ export function DemoScope({
   const [state, setState] = useState<ScopeState>(
     gated ? { kind: "idle" } : { kind: "booting", progress: null },
   );
+  // Whether this browser holds the host's data — or refuses the page the
+  // storage it would keep it in. Asked once, before any host starts: a gated
+  // scope starts at once behind its gate where the data is held, and no
+  // scope starts a host the browser denies its storage (it would fail on
+  // its first write); that is drawn once the visitor is in.
+  const [storage, setStorage] = useState<"checking" | "usable" | "blocked">(
+    scenario.storage === null ? "usable" : "checking",
+  );
   useEffect(() => {
-    if (started || scenario.storage === null) return;
+    if (scenario.storage === null) return;
     let live = true;
     hostDataStored(scenario.storage).then(
       (held) => {
-        if (live && held) setStarted(true);
+        if (!live) return;
+        if (held.kind === "blocked") {
+          console.warn(
+            `[demo] this browser refuses the page IndexedDB (${held.error}): the demo cannot keep its data, so its host is not started`,
+          );
+          setStorage("blocked");
+          setState({ kind: "stopped", why: "storage-blocked" });
+          return;
+        }
+        setStorage("usable");
+        if (held.kind === "stored") setStarted(true);
       },
+      // Any other failure of the check is a bug of ours, reported — and no
+      // reason to keep the visitor out: the host is let start as for a first
+      // visit (its own open says loudly if the storage truly fails).
       (error: unknown) => {
-        if (live) setState({ kind: "failed", error });
+        if (!live) return;
+        reportError(error);
+        setStorage("usable");
       },
     );
     return () => {
       live = false;
     };
-  }, [started, scenario.storage]);
+  }, [scenario.storage]);
+  // The host starts once the visitor is in (or the data is held), and the
+  // browser was found to give it its storage.
+  const hostStarts = started && storage === "usable";
   useEffect(() => {
     if (visitor !== "checking") return;
     let live = true;
@@ -574,8 +604,13 @@ export function DemoScope({
         setStarted(true);
         cameIn("joined");
       },
+      // Not knowing whether another tab is in is no reason to take the page
+      // down (on the website, the error boundary is the whole site's): the
+      // failure is reported, and this tab shows the gate as for a first visit.
       (error: unknown) => {
-        if (live) setCheckFailed({ error });
+        if (!live) return;
+        reportError(error);
+        setVisitor("gate");
       },
     );
     return () => {
@@ -607,7 +642,7 @@ export function DemoScope({
     setReconnects((r) => r + 1);
   });
   useEffect(() => {
-    if (!started) return;
+    if (!hostStarts) return;
     // A reset throws away the scope's browser-side state with its data (the
     // drafts and view state its plugins kept in Web Storage, in every tab):
     // here, once the old subtree has unmounted and written its last.
@@ -666,12 +701,12 @@ export function DemoScope({
       // The next server (a host still booting) is not this one.
       setState({ kind: "booting", progress: null });
     };
-  }, [started, scenario, generations, resets, reconnects]);
+  }, [hostStarts, scenario, generations, resets, reconnects]);
   // The scope's web plugins this page holds on demand (a page whose own
   // composition lacks the demo's apps — the standalone site), loaded alongside
   // the host's boot, once the host may start: nothing before the gate on a
   // first visit.
-  const scopePlugins = useScopePlugins(scenario.host, started);
+  const scopePlugins = useScopePlugins(scenario.host, hostStarts);
   const host = state.kind === "ready" ? state.host : null;
   const declaredKeys = inputKeys.join("\n");
   useEffect(() => {
@@ -718,9 +753,9 @@ export function DemoScope({
     return holdBackgroundLoads();
   }, [visitorWaits]);
   // Only a gated scope (`boot` set) is ever outside. The gate comes first: a
-  // host started behind it (stored data) that failed or was declined says so
-  // once the visitor enters, never in place of the gate.
-  if (checkFailed !== null) throw checkFailed.error;
+  // host started behind it (stored data) that failed or was declined — or one
+  // the browser's storage refusal keeps from starting — says so once the
+  // visitor enters, never in place of the gate.
   // A resumed visit is in, even on the render pass that adjusts the state.
   const outside = resume === true ? "in" : visitor;
   if (outside === "checking" && boot !== undefined)

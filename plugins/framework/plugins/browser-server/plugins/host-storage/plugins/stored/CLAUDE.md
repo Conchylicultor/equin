@@ -7,6 +7,11 @@ booting anything and without creating the database when it is absent
 host: `demo/scope`'s gate (a first visit waits for Enter equin, since starting
 downloads the whole server and its data).
 
+The answer is a typed result — `stored` / `absent` / `blocked` — never a
+rejection for a browser that refuses the page IndexedDB (a `SecurityError`:
+cookies and site data blocked, a sandboxed frame): `blocked` is a state the
+page draws (the demo says it needs browser storage), not a crash.
+
 It also owns the IndexedDB layout it reads (`layout.ts`: the storage's
 database names, the entries and meta stores, the lifecycle record), which
 `host-storage`'s open writes — one spelling for both. A leaf, so the gate can
@@ -22,7 +27,9 @@ ask without loading the rest of host-storage.
     - `framework/browser-server/demo/scope`
     - `framework/browser-server/host-storage`
 - Core:
-  - Exports (types): `Lifecycle`
+  - Exports (types):
+    - `HostDataStored`
+    - `Lifecycle`
   - Exports (values):
     - `ENTRIES_STORE`
     - `hostDataStored`

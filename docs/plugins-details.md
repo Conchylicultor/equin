@@ -31998,7 +31998,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `framework/browser-server/demo/scope`
                   - `framework/browser-server/host-storage`
               - Core:
-                - Exports (types): `Lifecycle`
+                - Exports (types):
+                  - `HostDataStored`
+                  - `Lifecycle`
                 - Exports (values):
                   - `ENTRIES_STORE`
                   - `hostDataStored`

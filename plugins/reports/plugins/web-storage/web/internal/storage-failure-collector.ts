@@ -14,7 +14,14 @@ import { report } from "@plugins/reports/web";
 // version skew or an unmigrated schema change — the engine tells which. The errorType carries owner +
 // reason and no stack, so a burst of refusals is ONE deduped row whose count
 // climbs — and a toast nobody saw still reaches Debug → Reports.
+//
+// Except `blocked`: the browser refuses the page its storage (cookies and site
+// data blocked, a sandboxed or third-party frame) — the visitor's own setting,
+// nothing in our code to fix, and on a public site one such visitor filed a
+// crash per owner (report-1795106221-7xm6wv, -g0zfjx, -4nub2j). The user still
+// hears it (the health toast), and the store's refusal counts still show it.
 export function collectStorageFailure(f: StorageFailure): void {
+  if (f.reason === "blocked") return;
   void report({
     kind: "crash",
     // An entry another build's schema wrote is its own source: the

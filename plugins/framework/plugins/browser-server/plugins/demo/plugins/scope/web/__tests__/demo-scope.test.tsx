@@ -27,12 +27,20 @@ vi.mock(
   }),
 );
 
-// Whether this browser holds a scenario's data: a storage named "held" does.
+// Whether this browser holds a scenario's data: a storage named "held" does,
+// and one named "blocked" is refused by the browser (site data blocked).
 vi.mock(
   "@plugins/framework/plugins/browser-server/plugins/host-storage/plugins/stored/core",
   async (importOriginal) => ({
     ...(await importOriginal<object>()),
-    hostDataStored: (name: string) => Promise.resolve(name === "held"),
+    hostDataStored: (name: string) =>
+      Promise.resolve(
+        name === "held"
+          ? { kind: "stored" }
+          : name === "blocked"
+            ? { kind: "blocked", error: "SecurityError" }
+            : { kind: "absent" },
+      ),
   }),
 );
 
@@ -462,6 +470,72 @@ describe("<DemoScope>", () => {
     act(() => enter!());
     await waitFor(() => expect(seen.greeting).toBe("hello ada (demo)"));
     expect(start).toHaveBeenCalledTimes(1);
+  });
+
+  it("where the browser refuses the host its storage, no host starts and the visitor is told why once entered — never the page's error boundary", async () => {
+    stubLocks([]);
+    const scenario = scenarioOf();
+    const start = vi.fn(scenario.host.start);
+    const blocked: DemoScenario = {
+      ...scenario,
+      host: { ...scenario.host, start },
+      storage: "blocked",
+    };
+    const seen: { boots: string[] } = { boots: [] };
+    let enter: (() => void) | null = null;
+    const { container } = await renderAsync(
+      <PluginProvider plugins={PLUGINS}>
+        <DemoScope
+          scenario={blocked}
+          boot={(state) => {
+            seen.boots.push(state.kind);
+            if (state.kind === "gate") enter = state.enter;
+            return null;
+          }}
+        >
+          <div />
+        </DemoScope>
+      </PluginProvider>,
+    );
+    // The gate first, as for any visit.
+    await waitFor(() => expect(seen.boots).toContain("gate"));
+    act(() => enter!());
+    await waitFor(() =>
+      expect(
+        container.querySelector('[data-demo-stopped="storage-blocked"]'),
+      ).not.toBeNull(),
+    );
+    expect(start).not.toHaveBeenCalled();
+  });
+
+  it("where the browser refuses Web Locks, the presence check shows the gate instead of throwing", async () => {
+    const refusal = new DOMException(
+      "The operation is insecure.",
+      "SecurityError",
+    );
+    Object.defineProperty(navigator, "locks", {
+      value: {
+        query: () => Promise.reject(refusal),
+        request: () => Promise.reject(refusal),
+      },
+      configurable: true,
+    });
+    const seen: { boots: string[] } = { boots: [] };
+    await renderAsync(
+      <PluginProvider plugins={PLUGINS}>
+        <DemoScope
+          scenario={scenarioOf()}
+          boot={(state) => {
+            seen.boots.push(state.kind);
+            return null;
+          }}
+        >
+          <div />
+        </DemoScope>
+      </PluginProvider>,
+    );
+    await waitFor(() => expect(seen.boots).toContain("gate"));
+    Reflect.deleteProperty(navigator, "locks");
   });
 
   it("a resumed demo (its page's URL names it) skips the gate: only its loading, then the demo", async () => {
