@@ -73,7 +73,15 @@ may commit and resize more, settled the same way (at most 10 passes, then it
 throws, naming the observations that kept resizing — their element's
 `data-source` or tag, and their last boxes — so a report says which observer
 loops). A phase that commits nothing reads nothing; the root's phase reaches
-every depth and records nothing.
+every connected depth and reads no box.
+
+A commit can also **detach** an element that is still observed (a component
+whose observer kept an element React replaced: virtual-rows' boxes above its
+list when the DataView toolbar remounts). The browser reports it as 0×0 at a
+detached node's depth, above any delivery, so it is held back whatever depth
+it was observed at. The snapshot therefore notes every connected observation
+(a deeper one without reading its box), and one the commit detached is
+answered and restarted like a resize.
 
 Not covered: a change of the content box alone (padding, with the border box
 and client box unchanged) — the browser still reports that one, and the

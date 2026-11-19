@@ -110,6 +110,27 @@ describe("commitInPhase", () => {
     release();
   });
 
+  it("answers an observed element the commit detaches, at any depth: the browser could only hold its 0×0 back", () => {
+    const { deep, deeper } = tree();
+    const frames = stubFrames();
+    const { observer, observed } = fakeObserver();
+    const heldBack = vi.fn();
+    // A component keeps observing an element React replaced (virtual-rows'
+    // boxes above its list, when the DataView toolbar remounts).
+    const release = observeInPhase(observer, deeper, heldBack);
+
+    runAsAfterLayout(() => commitInPhase(() => deeper.remove()), [deep]);
+
+    expect(heldBack).toHaveBeenCalledTimes(1);
+    expect(observed.has(deeper)).toBe(false);
+    for (const cb of frames) cb(0);
+    expect(observed.has(deeper)).toBe(true);
+    // Already detached at the next phase: not answered again.
+    runAsAfterLayout(() => commitInPhase(() => {}), [deep]);
+    expect(heldBack).toHaveBeenCalledTimes(1);
+    release();
+  });
+
   it("an unchanged box, or a released observation, is not answered", () => {
     const { shallow, deep, widths } = tree();
     stubFrames();

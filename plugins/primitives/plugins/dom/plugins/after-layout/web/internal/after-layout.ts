@@ -129,7 +129,7 @@ function unobserveNative(observer: ResizeObserver, el: Element): void {
  * was before the phase's first commit — taken lazily by {@link commitInPhase},
  * so a phase that commits nothing reads nothing. Compared when the phase ends.
  */
-let snapshot: Map<Observation, Box> | null = null;
+let snapshot: Map<Observation, Box | null> | null = null;
 
 /**
  * A DOM without a layout engine (jsdom, which says so in its user agent) has
@@ -218,7 +218,7 @@ export function runAsAfterLayout(
  * React commit, before layout) it is a plain `flushSync`.
  */
 export function commitInPhase(update: () => void): void {
-  if (inPhase && snapshot === null) snapshot = shallowBoxes();
+  if (inPhase && snapshot === null) snapshot = snapshotObservations();
   flushSync(update);
 }
 
@@ -420,13 +420,15 @@ function formatBox(b: Box): string {
     : `${layout}/${client}`;
 }
 
-/** The box of every connected observation the running phase's delivery can no
- * longer reach: at or above its shallowest target. */
-function shallowBoxes(): Map<Observation, Box> {
-  const boxes = new Map<Observation, Box>();
+/**
+ * Every connected observation, before the phase's first commit: with its box
+ * when the running delivery can no longer reach it (at or above its shallowest
+ * target), else null — a deeper one is held back only if the commit DETACHES
+ * it (see {@link settle}), which needs no layout read to tell.
+ */
+function snapshotObservations(): Map<Observation, Box | null> {
+  const boxes = new Map<Observation, Box | null>();
   const depth = shallowestDepth(phaseDelivered ?? []);
-  // The root's broadcast reaches every depth below it.
-  if (depth === 0) return boxes;
   for (const obs of observations) {
     if (!obs.el.isConnected) {
       // A library observer that drops a detached target without unobserving
@@ -437,8 +439,11 @@ function shallowBoxes(): Map<Observation, Box> {
         forgetLibrary(obs);
       continue;
     }
-    if (depthOf(obs.el) > depth) continue;
-    boxes.set(obs, boxOf(obs.el));
+    // The root's broadcast reaches every connected depth below it.
+    boxes.set(
+      obs,
+      depth > 0 && depthOf(obs.el) <= depth ? boxOf(obs.el) : null,
+    );
   }
   return boxes;
 }
@@ -466,10 +471,20 @@ function settle(): void {
     snapshot = null;
     const resized: Observation[] = [];
     for (const [obs, box] of before) {
-      if (obs.released || !obs.el.isConnected) continue;
+      if (obs.released) continue;
+      // Detached by the commit while still observed (a component kept its
+      // observer on an element React replaced): the browser reports it as a
+      // 0×0 box with no depth to speak of, which no delivery in this step can
+      // reach — held back, whatever depth it was observed at.
+      const detached = !obs.el.isConnected;
+      if (!detached && box === null) continue;
       const now = boxOf(obs.el);
-      if (sameBox(box, now)) continue;
+      if (!detached && sameBox(box!, now)) continue;
       resized.push(obs);
+      if (box === null) {
+        trail.set(obs, [...(trail.get(obs) ?? []), now]);
+        continue;
+      }
       const boxes = trail.get(obs);
       if (boxes === undefined) trail.set(obs, [box, now]);
       else if (!sameBox(boxes[boxes.length - 1]!, box)) boxes.push(box, now);
