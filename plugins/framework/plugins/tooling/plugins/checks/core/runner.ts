@@ -848,122 +848,122 @@ export async function runChecks(
   let results: CheckOutcome[];
   try {
     const runSelected = async (check: Check): Promise<CheckOutcome> => {
-        // The check's slot in the gate, held as a lease rather than through a
-        // `gate.run` wrap: a check that joins another run's in-flight check
-        // gives it back for the wait and re-takes it before doing work
-        // (`check-flight.ts` — holding it through the wait would park a
-        // `--jobs 1` run behind another run's check). Released when the check
-        // settles, whatever it did with it in between.
-        const slot = gateSlot(gate);
-        // The wait to be admitted, ahead of the body; 0 when a slot was free.
-        const queuedMs = await slot.acquire();
+      // The check's slot in the gate, held as a lease rather than through a
+      // `gate.run` wrap: a check that joins another run's in-flight check
+      // gives it back for the wait and re-takes it before doing work
+      // (`check-flight.ts` — holding it through the wait would park a
+      // `--jobs 1` run behind another run's check). Released when the check
+      // settles, whatever it did with it in between.
+      const slot = gateSlot(gate);
+      // The wait to be admitted, ahead of the body; 0 when a slot was free.
+      const queuedMs = await slot.acquire();
+      try {
+        // FIRST: wait for this check's own event-loop turn. Without it every
+        // admitted check started on a MICROTASK (the gate grants through a
+        // resolved promise), so ~100 checks ran their synchronous start-up —
+        // `cacheSignature()`, then `run()` up to its first `await` — back to
+        // back, before any timer or I/O callback could run: the thread
+        // watch's tick, a heartbeat, another check's socket.
+        //
+        // A microtask yield (`await Promise.resolve()`) would change
+        // nothing: microtasks drain before the loop moves on. Nor would a
+        // plain `await yieldMacrotask()` here: every check would queue its
+        // yield for the SAME turn and resume in one batch. The turn queue
+        // chains them, so a full loop turn runs between one check's
+        // start-up and the next.
+        //
+        // Ahead of `wallStart`, so the wait for a turn is neither queue
+        // (`queuedMs`) nor work (`durationMs`); both keep their meaning.
+        await startTurn();
+        // INSIDE the gate, both of them, and that placement is the entire
+        // point of the change rather than an incidental detail.
+        //
+        // `wallStart` used to be taken at `.map` time — before this callback
+        // could possibly run — so under an unbounded wave every recorded
+        // `durationMs` was the wave's own length rather than the check's
+        // cost. That is how twelve unrelated checks came to "cost" 260s each,
+        // and it would come back verbatim if this line drifted back outside:
+        // the queue would simply move from the wave into every duration.
+        //
+        // `checkStarted` follows it for the reader's sake: `--status` names a
+        // hang as `started − ended`, so "started" has to keep meaning
+        // "running". A queued check is neither, and is derived instead
+        // (`CheckRunProgress.queued`).
+        const wallStart = performance.now();
+        progress.checkStarted(check.id);
+        if (--notStarted === 0) holds.admissionClosed();
+        const holder = holds.forCheck();
+        const observations: CheckObservation[] = [];
+        let outcome: CheckOutcome | undefined;
+        // Every child the check spawns that dies of a signal, recorded by
+        // the spawn primitives. A body that RETURNS is read against them in
+        // `runBody` (before a flight publishes its verdict); this watch is
+        // for a body that throws.
+        const kills = watchChildKills();
         try {
-          // FIRST: wait for this check's own event-loop turn. Without it every
-          // admitted check started on a MICROTASK (the gate grants through a
-          // resolved promise), so ~100 checks ran their synchronous start-up —
-          // `cacheSignature()`, then `run()` up to its first `await` — back to
-          // back, before any timer or I/O callback could run: the thread
-          // watch's tick, a heartbeat, another check's socket.
-          //
-          // A microtask yield (`await Promise.resolve()`) would change
-          // nothing: microtasks drain before the loop moves on. Nor would a
-          // plain `await yieldMacrotask()` here: every check would queue its
-          // yield for the SAME turn and resume in one batch. The turn queue
-          // chains them, so a full loop turn runs between one check's
-          // start-up and the next.
-          //
-          // Ahead of `wallStart`, so the wait for a turn is neither queue
-          // (`queuedMs`) nor work (`durationMs`); both keep their meaning.
-          await startTurn();
-          // INSIDE the gate, both of them, and that placement is the entire
-          // point of the change rather than an incidental detail.
-          //
-          // `wallStart` used to be taken at `.map` time — before this callback
-          // could possibly run — so under an unbounded wave every recorded
-          // `durationMs` was the wave's own length rather than the check's
-          // cost. That is how twelve unrelated checks came to "cost" 260s each,
-          // and it would come back verbatim if this line drifted back outside:
-          // the queue would simply move from the wave into every duration.
-          //
-          // `checkStarted` follows it for the reader's sake: `--status` names a
-          // hang as `started − ended`, so "started" has to keep meaning
-          // "running". A queued check is neither, and is derived instead
-          // (`CheckRunProgress.queued`).
-          const wallStart = performance.now();
-          progress.checkStarted(check.id);
-          if (--notStarted === 0) holds.admissionClosed();
-          const holder = holds.forCheck();
-          const observations: CheckObservation[] = [];
-          let outcome: CheckOutcome | undefined;
-          // Every child the check spawns that dies of a signal, recorded by
-          // the spawn primitives. A body that RETURNS is read against them in
-          // `runBody` (before a flight publishes its verdict); this watch is
-          // for a body that throws.
-          const kills = watchChildKills();
-          try {
-            // Its file calls counted as its own, written on its `end`.
-            outcome = await kills.run(() =>
-              progress.inCheck(check.id, () =>
-                holds.run(holder, () =>
-                  runOne(check, wallStart, observations, slot),
-                ),
+          // Its file calls counted as its own, written on its `end`.
+          outcome = await kills.run(() =>
+            progress.inCheck(check.id, () =>
+              holds.run(holder, () =>
+                runOne(check, wallStart, observations, slot),
               ),
-            );
-            return outcome;
-          } catch (err) {
-            // A check that throws FAILS ITSELF; it does not abort the run.
-            // Its throw used to reject this `Promise.all`, and the outer catch
-            // then ended the whole run with only `run aborted: Error: …` — the
-            // check was never named, and every other check's verdict was lost.
-            // On 2026-09-10, `fork-schema-drift`'s Postgres connect timeout did
-            // exactly that to whole runs. Converted here, the throw is a fatal
-            // FAIL that keeps the stack: it reaches the progress `end` record
-            // and the transcript through the `finally` below, and the console
-            // through the ordinary print loop, like any other failure. Nothing
-            // is swallowed — the run still fails, just with a name on it. (This
-            // also catches the per-check cache bookkeeping around the body; the
-            // stack says which threw.)
-            const thrown = thrownOutcome(check, err, {
-              wallStart,
-              durationMs: Math.round(performance.now() - wallStart),
-              observations,
-            });
-            outcome = {
-              ...thrown,
-              result: withKillsSeen(thrown.result, kills.kills),
-            };
-            return outcome;
-          } finally {
-            holder.release();
-            // In a `finally` so the end is recorded on every path, a thrown
-            // check included — a check that never records its end would
-            // masquerade as the hang we are hunting.
-            progress.checkEnded(
-              check.id,
-              Math.round(performance.now() - wallStart),
-              outcome?.result.ok ?? false,
-              outcome?.cached ?? false,
-              Math.round(queuedMs),
-              outcome?.sharedFrom ?? null,
-            );
-            // The transcript is written as each check SETTLES, not from the print
-            // loop below — the loop runs after `Promise.all`, which a hung or
-            // killed run reaches never. A check that threw has an outcome too
-            // (the catch above built it); `outcome` is unset only if the runner
-            // itself failed, and the outer catch reports that.
-            if (outcome) {
-              transcript?.record({
-                checkId: check.id,
-                result: outcome.result,
-                cached: outcome.cached,
-                sharedFrom: outcome.sharedFrom,
-                observations: outcome.observations,
-              });
-            }
-          }
+            ),
+          );
+          return outcome;
+        } catch (err) {
+          // A check that throws FAILS ITSELF; it does not abort the run.
+          // Its throw used to reject this `Promise.all`, and the outer catch
+          // then ended the whole run with only `run aborted: Error: …` — the
+          // check was never named, and every other check's verdict was lost.
+          // On 2026-09-10, `fork-schema-drift`'s Postgres connect timeout did
+          // exactly that to whole runs. Converted here, the throw is a fatal
+          // FAIL that keeps the stack: it reaches the progress `end` record
+          // and the transcript through the `finally` below, and the console
+          // through the ordinary print loop, like any other failure. Nothing
+          // is swallowed — the run still fails, just with a name on it. (This
+          // also catches the per-check cache bookkeeping around the body; the
+          // stack says which threw.)
+          const thrown = thrownOutcome(check, err, {
+            wallStart,
+            durationMs: Math.round(performance.now() - wallStart),
+            observations,
+          });
+          outcome = {
+            ...thrown,
+            result: withKillsSeen(thrown.result, kills.kills),
+          };
+          return outcome;
         } finally {
-          slot.release();
+          holder.release();
+          // In a `finally` so the end is recorded on every path, a thrown
+          // check included — a check that never records its end would
+          // masquerade as the hang we are hunting.
+          progress.checkEnded(
+            check.id,
+            Math.round(performance.now() - wallStart),
+            outcome?.result.ok ?? false,
+            outcome?.cached ?? false,
+            Math.round(queuedMs),
+            outcome?.sharedFrom ?? null,
+          );
+          // The transcript is written as each check SETTLES, not from the print
+          // loop below — the loop runs after `Promise.all`, which a hung or
+          // killed run reaches never. A check that threw has an outcome too
+          // (the catch above built it); `outcome` is unset only if the runner
+          // itself failed, and the outer catch reports that.
+          if (outcome) {
+            transcript?.record({
+              checkId: check.id,
+              result: outcome.result,
+              cached: outcome.cached,
+              sharedFrom: outcome.sharedFrom,
+              observations: outcome.observations,
+            });
+          }
         }
+      } finally {
+        slot.release();
+      }
     };
     const firstRuns = phases.first.map((check) =>
       exclusive.run(() => runSelected(check)),
