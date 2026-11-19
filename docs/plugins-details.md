@@ -15942,6 +15942,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database/migrations`
               - `reports/engine`
               - `upstream`
+              - `wish/github-issue`
           - Server:
             - Exports (types): `AdoptHook`
             - Exports (values): `RestartSkip`
@@ -16128,6 +16129,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build/deployment`
           - `reports/engine`
           - `upstream`
+          - `wish/github-issue`
       - Exemptions:
         - Exempts itself from:
           - `boundaries/no-platform-api` — `server/internal/dist-trailers.ts`, `server/internal/retired-build-file.ts` (debt)
@@ -37857,6 +37859,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/attempt-work`
               - `tasks/tasks-core`
               - `upstream`
+              - `wish/github-issue`
           - Exemptions:
             - Exempts itself from:
               - `ids:pk-declared` — `server/internal/tables-ref-advanced.ts` (debt)
@@ -38098,6 +38101,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/version`
               - `integrations/github-events`
               - `upstream`
+              - `wish/github-issue`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `core/internal/commit-identity.ts`, `core/internal/publish-target.ts` (debt)
     - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers; watches for a live-state channel that stopped delivering (PUSH_STALL_MS, the threshold its Connection row — the connection-row sub-plugin — shares). Liveness endpoint used by clients to detect server restarts.
@@ -41032,7 +41036,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `spawnToFile`
           - `watchChildKills`
       - Cross-plugin:
-        - Imported by: 109 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
+        - Imported by: 110 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
           - `infra` ×33
           - `framework` ×32
           - `apps` ×9
@@ -41054,6 +41058,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `stats/commits`
           - `tasks`
           - `upstream`
+          - `wish/github-issue`
       - Exemptions:
         - Exempts itself from:
           - `spawn-safety/no-raw-bun-spawn` — `.` (sanctioned)
@@ -43300,7 +43305,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 363 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 364 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×91
           - `conversations` ×74
           - `debug` ×36
@@ -43335,6 +43340,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `screenshot`
           - `shell/notifications`
           - `tag-tree/engine`
+          - `wish/github-issue`
       - Exemptions:
         - Exempts itself from:
           - `live/no-legacy-resource-spelling` — `central/internal/serve-value.ts`, `server/internal/serve-collection.ts`, `server/internal/serve-off-feed.ts`, `server/internal/serve-union.ts`, `server/internal/serve-value.ts`, `web/internal/use-ancestors.ts`, `web/internal/use-live.ts`, `web/internal/use-pages.ts` (sanctioned)
@@ -45178,7 +45184,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TIMED_FS_CALLS`
           - `withFsCallTally`
       - Cross-plugin:
-        - Imported by: 191 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+        - Imported by: 192 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
           - `infra` ×59
           - `framework` ×29
           - `apps` ×16
@@ -45202,6 +45208,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `stats/commits`
           - `toolchain`
           - `ui/icons/icon-sets`
+          - `wish/github-issue`
       - Exemptions:
         - Exempts itself from:
           - `boundaries/no-platform-api` — `core/internal/timed-fs.ts`, `core/internal/fs-call-count.ts` (sanctioned)
@@ -54336,7 +54343,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live`
         - **`render-mode`** — Reading the browser while rendering, safely in both modes: useBrowserValue({ name, read, subscribe?, staticValue? }) (live: useSyncExternalStore, re-read on every change; static: staticValue, or a loud NoStaticValueError), useMediaQuery(query, staticValue), useViewportSize(staticValue), and useOwnedElement(name, create) — a DOM node a component mints once, which has no static form. The one place a render-time read of window / document / navigator / matchMedia happens (dom-access-safety/no-render-time-dom).
           - Cross-plugin:
-            - Imported by: 27 plugins — full list in [`plugins/primitives/plugins/dom/plugins/render-mode/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/render-mode/REFERENCE.md)
+            - Imported by: 28 plugins — full list in [`plugins/primitives/plugins/dom/plugins/render-mode/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/render-mode/REFERENCE.md)
               - `primitives` ×12
               - `apps` ×4
               - `companions/panel`
@@ -54350,6 +54357,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `screenshot/draw-on-app`
               - `tasks/worktree-identity`
               - `ui/theme-engine`
+              - `wish/github-issue`
           - Exemptions:
             - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/browser-value.ts` (debt)
           - Web:
@@ -68579,6 +68587,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Imported by:
       - `framework/cli/upstream`
       - `framework/cli/version`
+      - `wish/github-issue`
   - Plugins:
     - **`release`** — What an equin release is, as web-safe data: the release tag grammar (annotated `v<YYYY.MM.DD>[.<n>]` tags on main — parse, order, name the next one, display), the upstream.release-status live value (where this clone's main stands against the newest release upstream has cut) and the POST /api/upstream/check endpoint that re-asks upstream. A leaf, so the CLI, the server and the web read one definition.
       - Core:
@@ -68621,6 +68630,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/cli/version`
           - `installer/release-assets`
           - `upstream`
+          - `wish/github-issue`
 
 - **`wish`** — The Wish toolbar button: the entry point for anything the user wants done — a fix, a change, a new app. Files a task under "Wishes" with the current URL. Companion actions join it as segments of one split pill via WishSlots.Segment; WishSlots.HeaderAction adds actions to its popover header (Ask equin), WishSlots.FooterAction to its footer beside Launch (File on GitHub). WishField is the same wish as a companion’s section — the task composer with its own ↑, filing one task under Wishes about the page the DraftPage around it names, confirming inline (“Filed — an agent is on …”). On a phone the same field is the Wish sheet of the phone action button (PhoneActions.Action “wish”). Task category of the Wish toolbar button. Files tasks stamped "Wishes" via the shared task-draft-form primitive.
   - Web:
@@ -68722,16 +68732,34 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Uses: `framework/tooling/collected-dir.defineCollectedDir`
         - Exports (values): `viteCollectedDir`
-    - **`github-issue`** — File on GitHub: a button in the Wish popover's footer, beside Launch, that opens GitHub's new-issue form on the product's repository prefilled with the drafted wish and the page it is about, then clears the draft.
+    - **`github-issue`** — File on GitHub: a button in the Wish popover's footer, beside Launch, that opens GitHub's new-issue form on the product's repository prefilled with the drafted wish, the page it is about and the environment (equin version — release, commit, commits ahead of / behind the trunk — system and browser), then clears the draft.
       - Web:
         - Contributes: `WishSlots.FooterAction` "github-issue" → `FileOnGithubButton`
         - Uses:
+          - `network/live.useLive`
           - `primitives/css/clip.Clip`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/yield.yieldClass`
+          - `primitives/dom/render-mode.useBrowserValue`
           - `primitives/overlay/tooltip.TooltipDoc`
           - `ui/icons.Icon`
           - `wish.WishSlots`
+      - Server:
+        - Contributes:
+          - `resource.declare` "github-issue.environment"
+          - `restart-skip.adopted` "the commit an issue filed on GitHub names, and where it stands against the trunk"
+        - Resources: `github-issue.environment` (push, notified)
+      - Machine:
+        - Uses: `network/live.serveValue`
+      - Core:
+        - Uses: `network/live.liveValue`
+        - Exports (types):
+          - `IssueCode`
+          - `IssueEnvironment`
+        - Exports (values):
+          - `IssueCodeSchema`
+          - `issueEnvironment`
+          - `IssueEnvironmentSchema`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/density --space-xs`
 

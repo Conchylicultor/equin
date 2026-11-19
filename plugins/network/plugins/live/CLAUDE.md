@@ -1934,7 +1934,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `serveValueOn`
     - `sliceRange`
 - Cross-plugin:
-  - Imported by: 363 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 364 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×91
     - `conversations` ×74
     - `debug` ×36
@@ -1969,6 +1969,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `screenshot`
     - `shell/notifications`
     - `tag-tree/engine`
+    - `wish/github-issue`
 - Exemptions:
   - Exempts itself from:
     - `live/no-legacy-resource-spelling` — `central/internal/serve-value.ts`, `server/internal/serve-collection.ts`, `server/internal/serve-off-feed.ts`, `server/internal/serve-union.ts`, `server/internal/serve-value.ts`, `web/internal/use-ancestors.ts`, `web/internal/use-live.ts`, `web/internal/use-pages.ts` (sanctioned)

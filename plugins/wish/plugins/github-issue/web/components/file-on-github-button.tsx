@@ -7,6 +7,7 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import type { WishFooterActionProps } from "@plugins/wish/web";
+import { useEnvironmentNotes } from "../internal/use-environment-notes";
 
 const githubIcon = brand("github");
 
@@ -17,22 +18,33 @@ const WISH_LABEL = "Wish";
  * Sends the drafted wish to GitHub instead of an agent here: a real
  * `<a target="_blank">` to the repository's new-issue form, prefilled with the
  * wish (picks made readable, titled from its first line) and the page it is
- * about. The browser opens the tab on the user's click; the click also clears
- * the draft and closes the popover, as Launch does once it has filed.
+ * about, closed by the environment a maintainer asks for first: the equin
+ * version (release, commit, commits ahead of / behind the trunk), the system
+ * and the browser. The browser opens the tab on the user's click; the click
+ * also clears the draft and closes the popover, as Launch does once it has
+ * filed.
  */
 export function FileOnGithubButton({
   draft,
   pageUrl,
   discard,
 }: WishFooterActionProps) {
+  const environment = useEnvironmentNotes();
   const tooltip = (
     <TooltipDoc title="File on GitHub">
-      Open a GitHub issue with this wish instead of launching an agent.
+      Open a GitHub issue with this wish instead of launching an agent. The
+      issue names your equin version, system and browser.
     </TooltipDoc>
   );
-  if (draft.trim() === "") {
+  if (draft.trim() === "" || environment.kind === "loading") {
     return (
-      <Button variant="ghost" disabled tooltip={tooltip} className="gap-none">
+      <Button
+        variant="ghost"
+        disabled
+        loading={draft.trim() !== "" && environment.kind === "loading"}
+        tooltip={tooltip}
+        className="gap-none"
+      >
         <GithubFace />
       </Button>
     );
@@ -41,7 +53,10 @@ export function FileOnGithubButton({
     repoUrl: SOURCE_REPO_URL,
     text: draft,
     ...(pageUrl === null ? {} : { pageUrl }),
-    notes: ["Filed from the Wish button in the equin app"],
+    notes: [
+      ...environment.notes,
+      "Filed from the Wish button in the equin app",
+    ],
     labels: [WISH_LABEL],
   });
   return (

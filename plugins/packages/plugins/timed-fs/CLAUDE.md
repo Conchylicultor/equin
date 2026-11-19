@@ -167,7 +167,7 @@ its boot journal attribute that.
     - `TIMED_FS_CALLS`
     - `withFsCallTally`
 - Cross-plugin:
-  - Imported by: 191 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 192 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×59
     - `framework` ×29
     - `apps` ×16
@@ -191,6 +191,7 @@ its boot journal attribute that.
     - `stats/commits`
     - `toolchain`
     - `ui/icons/icon-sets`
+    - `wish/github-issue`
 - Exemptions:
   - Exempts itself from:
     - `boundaries/no-platform-api` — `core/internal/timed-fs.ts`, `core/internal/fs-call-count.ts` (sanctioned)

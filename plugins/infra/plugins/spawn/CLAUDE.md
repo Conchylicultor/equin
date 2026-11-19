@@ -355,7 +355,7 @@ presence only — **no re-exports**; import from `core/`.
     - `spawnToFile`
     - `watchChildKills`
 - Cross-plugin:
-  - Imported by: 109 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 110 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×33
     - `framework` ×32
     - `apps` ×9
@@ -377,6 +377,7 @@ presence only — **no re-exports**; import from `core/`.
     - `stats/commits`
     - `tasks`
     - `upstream`
+    - `wish/github-issue`
 - Exemptions:
   - Exempts itself from:
     - `spawn-safety/no-raw-bun-spawn` — `.` (sanctioned)

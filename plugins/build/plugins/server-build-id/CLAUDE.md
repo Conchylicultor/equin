@@ -61,6 +61,7 @@ So it is read once at boot. See `resource-protocol` / `resource-runtime`.
     - `build/deployment`
     - `reports/engine`
     - `upstream`
+    - `wish/github-issue`
 - Exemptions:
   - Exempts itself from:
     - `boundaries/no-platform-api` — `server/internal/dist-trailers.ts`, `server/internal/retired-build-file.ts` (debt)

@@ -14,6 +14,7 @@
     - `database/migrations`
     - `reports/engine`
     - `upstream`
+    - `wish/github-issue`
 - Server:
   - Exports (types): `AdoptHook`
   - Exports (values): `RestartSkip`

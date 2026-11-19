@@ -216,6 +216,7 @@ that fails re-probes and records what comes back.
     - `framework/cli/version`
     - `integrations/github-events`
     - `upstream`
+    - `wish/github-issue`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/internal/commit-identity.ts`, `core/internal/publish-target.ts` (debt)
 
