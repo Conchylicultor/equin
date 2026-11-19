@@ -42445,7 +42445,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `GeoMap.Renderer` "Google Maps" → `LazyBoundary`
           - `ExternalHosts.Declare` "maps.googleapis.com, maps.gstatic.com, mapsresources-pa.googleapis.com, fonts.googleapis.com, fonts.gstatic.com"
           - `LiveMapSetup.MapIdPreview` → `MapIdPreview`
-        - Uses: 28 symbols — full list in [`plugins/map/plugins/google/REFERENCE.md`](../plugins/map/plugins/google/REFERENCE.md)
+        - Uses: 29 symbols — full list in [`plugins/map/plugins/google/REFERENCE.md`](../plugins/map/plugins/google/REFERENCE.md)
           - `integrations/google-maps` ×5
           - `map` ×4
           - `map/pin-layer` ×3
@@ -42463,6 +42463,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/latest-ref.useLatestRef`
           - `primitives/lazy-component.lazyComponent`
           - `primitives/loading.Loading`
+          - `reports/render-loop.ForeignDomHost`
       - Server:
         - Contributes: `ConfigV2.Register` "config"
         - Uses: `config_v2.ConfigV2`
@@ -60401,8 +60402,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/ui-context.nearestSource`
           - `reports.report`
           - `reports.Reports`
-        - Exports (types): `AnimationHostProps`
-        - Exports (values): `AnimationHost`
+        - Exports (types):
+          - `AnimationHostProps`
+          - `ForeignDomHostProps`
+        - Exports (values):
+          - `AnimationHost`
+          - `ForeignDomHost`
       - Server:
         - Contributes: `report-kind` "render-loop"
         - Uses: `reports.ReportKind`
@@ -60417,6 +60422,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/website/pages/story/heads`
           - `apps/website/pages/story/skills-graph`
           - `apps/website/pages/vision`
+          - `map/google`
       - Core:
         - Exports (types):
           - `RenderLoopInitiator`

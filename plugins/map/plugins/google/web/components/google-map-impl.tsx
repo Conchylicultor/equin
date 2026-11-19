@@ -9,6 +9,7 @@ import {
   useMap,
   type PolylineProps,
 } from "@vis.gl/react-google-maps";
+import { ForeignDomHost } from "@plugins/reports/plugins/render-loop/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -158,7 +159,10 @@ function GoogleMapCanvas({
   const opening = initialCamera ?? roughView(opened);
 
   return (
-    <div ref={setHost} className="size-full">
+    // Google draws and rewrites its own DOM on every camera move (tiles,
+    // controls, panes), and so does the pin canvas: a foreign renderer's
+    // frames, never a render loop. React's own nodes inside stay watched.
+    <ForeignDomHost ref={setHost} className="size-full">
       <APIProvider
         apiKey={browserKey}
         onError={(err) =>
@@ -262,7 +266,7 @@ function GoogleMapCanvas({
           />
         </GoogleMap>
       </APIProvider>
-    </div>
+    </ForeignDomHost>
   );
 }
 

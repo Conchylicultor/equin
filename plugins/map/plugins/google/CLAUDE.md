@@ -131,7 +131,7 @@ The only map-vendor code in the repo. Everything else draws maps through
     - `GeoMap.Renderer` "Google Maps" → `LazyBoundary`
     - `ExternalHosts.Declare` "maps.googleapis.com, maps.gstatic.com, mapsresources-pa.googleapis.com, fonts.googleapis.com, fonts.gstatic.com"
     - `LiveMapSetup.MapIdPreview` → `MapIdPreview`
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `integrations/google-maps` ×5
     - `map` ×4
     - `map/pin-layer` ×3
@@ -149,6 +149,7 @@ The only map-vendor code in the repo. Everything else draws maps through
     - `primitives/latest-ref.useLatestRef`
     - `primitives/lazy-component.lazyComponent`
     - `primitives/loading.Loading`
+    - `reports/render-loop.ForeignDomHost`
 - Server:
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`

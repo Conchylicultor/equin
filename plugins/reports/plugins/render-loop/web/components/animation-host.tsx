@@ -19,3 +19,21 @@ export type AnimationHostProps = Omit<
 export function AnimationHost(props: AnimationHostProps) {
   return <div {...props} {...{ [ANIMATION_HOST_ATTR]: "" }} />;
 }
+
+/** A foreign renderer's host props: a div's, children included. */
+export type ForeignDomHostProps = ComponentPropsWithRef<"div">;
+
+/**
+ * The element a third-party library renders into imperatively while React
+ * also renders children of its own inside (a Google map: Google builds and
+ * rewrites its tiles, controls and panes on every camera move; our pins and
+ * controls are React portals among them). The library's writes are its
+ * rendering, not a re-render loop, so the detector skips every node React
+ * does not own — the same rule as {@link AnimationHost} — while the React
+ * nodes inside stay watched: a component re-rendering in a loop there still
+ * files. Unlike an animation host it takes children, since the library's own
+ * React bindings (vis.gl's `<Map>`) are rendered inside it.
+ */
+export function ForeignDomHost(props: ForeignDomHostProps) {
+  return <div {...props} {...{ [ANIMATION_HOST_ATTR]: "" }} />;
+}

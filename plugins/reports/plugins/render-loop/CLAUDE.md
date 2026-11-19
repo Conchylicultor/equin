@@ -39,6 +39,15 @@ script writing into one reads as a loop: the story's Backlog figure kept its
 counters and row lists in React and filed a 19/s cascade until it built them
 itself. With no `children` prop, that shape has no spelling.
 
+**A third-party renderer** (a Google map) is the same case with React
+children inside: the library builds and rewrites its own DOM on every camera
+move (tiles, controls, the scale text) while its React bindings and our
+portals render inside it. It draws inside `<ForeignDomHost>` (web), which
+takes children: the library's nodes are skipped, React's stay watched — a
+component looping inside it still files (`web/__tests__/foreign-dom-host.test.tsx`).
+Before it, an automated tab whose camera kept moving filed Google's own
+controls as 73–145/s loops (`map.google`, 2026-11-19).
+
 Every node's classification (skipped, or its culprit meta) is computed on its
 first record and cached in a WeakMap: the observer's per-record cost is O(1)
 for a node it has seen, which is what keeps an animation from making the
@@ -86,8 +95,12 @@ does not own.
     - `primitives/ui-context.nearestSource`
     - `reports.report`
     - `reports.Reports`
-  - Exports (types): `AnimationHostProps`
-  - Exports (values): `AnimationHost`
+  - Exports (types):
+    - `AnimationHostProps`
+    - `ForeignDomHostProps`
+  - Exports (values):
+    - `AnimationHost`
+    - `ForeignDomHost`
 - Server:
   - Contributes: `report-kind` "render-loop"
   - Uses: `reports.ReportKind`
@@ -102,6 +115,7 @@ does not own.
     - `apps/website/pages/story/heads`
     - `apps/website/pages/story/skills-graph`
     - `apps/website/pages/vision`
+    - `map/google`
 - Core:
   - Exports (types):
     - `RenderLoopInitiator`
