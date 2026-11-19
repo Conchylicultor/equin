@@ -19,9 +19,25 @@ import {
   type WorkerLaunch,
 } from "./registry";
 import type { newDeclState } from "./registry";
+import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
+import {
+  inAppScope,
+  unprobedScopeHost,
+} from "@plugins/packages/plugins/systemd-scope/core";
 import { holdPidFile, type HeldPidFile, type HeldRead } from "./pid-file-watch";
 
 type DeclState = ReturnType<typeof newDeclState>;
+
+/**
+ * Where a detached launch gets its own scope: Linux, the child looking for the
+ * user manager itself (no stat on this event loop, no fs in `server/`).
+ */
+function daemonScopeHost(): ReturnType<typeof unprobedScopeHost> {
+  return unprobedScopeHost({
+    platform: process.platform,
+    uid: process.getuid?.() ?? -1,
+  });
+}
 
 /** How long a stopped child gets after SIGTERM before SIGKILL. */
 const STOP_KILL_AFTER_MS = 5_000;
@@ -519,9 +535,23 @@ export function launchDetachedIn(
         ? bootstrap.failure
         : null,
   });
-  const proc = Bun.spawn(opts.argv, {
-    detached: true,
+  // A process that outlives its backend is not part of what serves: on a host
+  // with a systemd user manager it runs in a scope of its own (a `daemon`
+  // scope, packages/systemd-scope), never in the gateway's unit. systemd-oomd
+  // kills a whole leaf cgroup, so an agent or a browser host left in the
+  // gateway's unit was killed WITH the gateway, Postgres and every backend
+  // (research/2026-11-19-global-oomd-serving-set.md). `systemd-run --scope`
+  // execs the command: same pid, stdio and held descriptors.
+  const launch = inAppScope(daemonScopeHost(), {
+    argv: opts.argv,
     env: opts.env,
+    kind: "daemon",
+    label: `${state.spec.name}-${opts.instance ?? "default"}-${Date.now().toString(36)}`,
+    description: `${PRODUCT_NAME} ${state.spec.name}${opts.instance === undefined ? "" : ` ${opts.instance}`}`,
+  });
+  const proc = Bun.spawn(launch.argv, {
+    detached: true,
+    env: launch.env,
     cwd: opts.cwd,
     // fds 0–2, then each held descriptor as 3, 4, … (`holdFds`).
     stdio: [

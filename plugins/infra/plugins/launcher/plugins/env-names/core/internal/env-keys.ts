@@ -130,6 +130,8 @@ export const RUNTIME_WITHHELD_ENV = {
     "marks a hand-run build re-run under its own attached supervision (transcript + exit marker), so it mints its own build_runs row; set by that build for its child (cli/build run.ts)",
   BUILD_DETACHED:
     "marks a build that must outlive the process that started it: set by the backend for the build it spawns (build/machine run-build.ts), and by the gateway for main's convergence run, which a gateway restart must not end (gateway/main_deploy.go)",
+  OP_SCOPE_REEXEC:
+    "`<pid>:<unit>` — a heavy command re-executed (same pid) into its own op scope, set for that re-exec only, so the new image can tell it already entered one and never loops; read only when the pid is the reader's own (cli/bin register-commands.ts, packages/systemd-scope heavyCommandScope)",
   FOREGROUND_DEADLINE:
     "the instant (epoch ms) an agent's foreground Bash call is cut off; a PreToolUse guard exports it into that one command, and the op hand-off takes it out of the env of the op it detaches (cli/op-runtime foreground-handoff.ts)",
   TEST_HEARTBEAT:

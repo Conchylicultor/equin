@@ -99,6 +99,22 @@ interface CliLeafSpec<A extends readonly unknown[], O> {
    */
   readonly detachable?: boolean;
   /**
+   * This command's process tree can take gigabytes (a build, a check pass, a
+   * test run): it must never share a cgroup with what serves the app.
+   *
+   * On a Linux host with a systemd user manager, the mapper re-executes the
+   * command, same pid, in an `op` scope of its own (`packages/systemd-scope`
+   * `heavyCommandScope`) before its body loads — unless it already runs in
+   * one (a supervised run, main's deploy build, its parent op). systemd-oomd
+   * kills a whole leaf cgroup: left in the gateway's unit (a backend started
+   * it) or in an agent's scope, a heavy command killed for memory took the
+   * gateway, Postgres and every backend — or the agent — with it.
+   *
+   * Costs one more CLI start (~0.5 s) per top-level heavy command on such a
+   * host, nothing elsewhere.
+   */
+  readonly heavy?: boolean;
+  /**
    * Everything after the last declared positional argument belongs to the
    * COMMAND'S OWN payload, not to `./equin`.
    *
@@ -132,6 +148,7 @@ interface CliGroupSpec {
   readonly arguments?: never;
   readonly options?: never;
   readonly detachable?: never;
+  readonly heavy?: never;
   readonly passthroughArgs?: never;
 }
 
@@ -158,6 +175,7 @@ export interface CliCommand {
   readonly options?: readonly CliOptionSpec[];
   readonly subcommands?: readonly CliCommand[];
   readonly detachable?: boolean;
+  readonly heavy?: boolean;
   readonly passthroughArgs?: boolean;
   readonly run?: () => Promise<{ default: ErasedCliAction }>;
 }

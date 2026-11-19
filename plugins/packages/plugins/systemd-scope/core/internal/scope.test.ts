@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
+  heavyCommandScope,
+  inAppScope,
   inOwnScope,
   OOMD_KILL_MESSAGE_ID,
   readScopeOomdKill,
@@ -210,5 +212,125 @@ describe("readScopeOomdKill", () => {
     expect(bounds[0]).toBe(SCOPE_RECORD_WAIT_MS);
     for (const b of bounds) expect(b).toBeGreaterThan(0);
     expect(t).toBeLessThanOrEqual(SCOPE_RECORD_WAIT_MS + 4_000);
+  });
+});
+
+describe("inAppScope", () => {
+  test("in a named scope of its kind on a host with a user manager", () => {
+    const launch = inAppScope(HOST, {
+      argv: ["claude"],
+      env: {},
+      kind: "daemon",
+      label: "runtime-sdk.agent-c1-x",
+      description: "equin agent",
+    });
+    expect(launch.unit).toBe("equin-daemon-runtime-sdk.agent-c1-x.scope");
+    expect(launch.argv[0]).toBe("systemd-run");
+    expect(launch.argv.at(-1)).toBe("claude");
+  });
+  test("as it is where there is none", () => {
+    const launch = inAppScope(
+      { kind: "none", why: "darwin has no systemd" },
+      {
+        argv: ["claude"],
+        env: { A: "1" },
+        kind: "daemon",
+        label: "x",
+        description: "x",
+      },
+    );
+    expect(launch).toEqual({ argv: ["claude"], env: { A: "1" }, unit: null });
+  });
+});
+
+describe("heavyCommandScope", () => {
+  const leaf = (unit: string) => () =>
+    `0::/user.slice/user-1000.slice/user@1000.service/app.slice/${unit}\n`;
+  const base = {
+    host: HOST,
+    argv: ["bun", "bin/index.ts", "build"],
+    env: { PATH: "/usr/bin" },
+    label: "build-1-x",
+    description: "equin build",
+  };
+  test("leaves the gateway's unit (a backend started it) for an op scope of its own", () => {
+    const d = heavyCommandScope({
+      ...base,
+      procSelfCgroup: leaf("dev.equin.gateway.service"),
+    });
+    expect(d.kind).toBe("enter");
+    if (d.kind !== "enter") return;
+    expect(d.unit).toBe("equin-op-build-1-x.scope");
+    expect(d.argv.slice(-3)).toEqual(base.argv);
+  });
+  test("leaves an agent's daemon scope too: the agent outlives its build", () => {
+    expect(
+      heavyCommandScope({
+        ...base,
+        procSelfCgroup: leaf("equin-daemon-runtime-sdk.agent-c1.scope"),
+      }).kind,
+    ).toBe("enter");
+  });
+  test("stays in the op scope it was given (a supervised run, its parent op)", () => {
+    expect(
+      heavyCommandScope({
+        ...base,
+        procSelfCgroup: leaf("equin-op-build-1795052000-abcdef.scope"),
+      }),
+    ).toEqual({
+      kind: "stay",
+      why: "already in its op scope equin-op-build-1795052000-abcdef.scope",
+    });
+  });
+  test("re-executed but not in an op scope (cgroup v1): fails instead of looping", () => {
+    expect(() =>
+      heavyCommandScope({
+        ...base,
+        procSelfCgroup: () => "12:pids:/user.slice\n",
+        reexecuted: "equin-op-build-1-x.scope",
+      }),
+    ).toThrow("not entering another");
+  });
+  test("stays where it is on a host with no scopes, without reading a cgroup", () => {
+    expect(
+      heavyCommandScope({
+        ...base,
+        host: { kind: "none", why: "darwin has no systemd" },
+        procSelfCgroup: () => {
+          throw new Error("read on a host with no scopes");
+        },
+      }),
+    ).toEqual({ kind: "stay", why: "darwin has no systemd" });
+  });
+});
+
+describe("inAppScope, the child looking for the user manager", () => {
+  const launch = inAppScope(
+    { kind: "probe-in-child", runtimeDir: "/nonexistent-run/user/1000" },
+    {
+      // `printenv` exits 1 when the variable is unset: the environment as given.
+      argv: [
+        "sh",
+        "-c",
+        'echo "ran $0"; printenv XDG_RUNTIME_DIR || echo unset',
+        "cmd",
+      ],
+      env: { PATH: process.env["PATH"] },
+      kind: "op",
+      label: "probe-1",
+      description: "probe -- test",
+    },
+  );
+  test("names the scope it starts where there is a manager", () => {
+    expect(launch.unit).toBe("equin-op-probe-1.scope");
+    expect(launch.argv).toContain("systemd-run");
+    expect(launch.argv).toContain("--unit=equin-op-probe-1.scope");
+  });
+  test("with no manager's socket, runs the command itself, its environment as given", () => {
+    const run = Bun.spawnSync(launch.argv, {
+      env: launch.env as Record<string, string>,
+    });
+    expect(run.exitCode).toBe(0);
+    expect(run.stdout.toString()).toBe("ran cmd\nunset\n");
   });
 });

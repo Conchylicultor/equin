@@ -278,6 +278,11 @@ async function followLocked(
   const definition = await service.readDefinition();
   const held = await heldDep(gatewayBinary, MACHINE_GATEWAY_HOLDER);
   const from = held.kind === "held" ? gatewayBuild(held.ready).identity : null;
+  // Read before the attempt is recorded: a manager this run cannot reach
+  // (systemctl failing — 2026-11-19, `XDG_RUNTIME_DIR` missing) changed
+  // nothing, so the launch stays untried and the next run tries it, instead
+  // of being marked attempted forever.
+  const state = await service.state();
   await recordAttempt(key, "started");
   const report = (
     stage: GatewayRestartFailedPayload["stage"],
@@ -306,7 +311,6 @@ async function followLocked(
     return { kind: "refused", reason };
   }
 
-  const state = await service.state();
   const runningPid = state.kind === "loaded" ? state.pid : null;
   const installedFlags = before.installed.argv.slice(1);
   try {

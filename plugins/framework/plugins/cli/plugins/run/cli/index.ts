@@ -23,6 +23,9 @@ import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
  */
 export default defineCliCommand<[string, string[]], object>({
   name: "run",
+  // Its process tree can take gigabytes: on Linux it runs in an op scope of
+  // its own, apart from the gateway's unit (`heavy`, cli/core command.ts).
+  heavy: true,
   description:
     "Run a repo script (.ts/.tsx/.js/.jsx, and the .mts/.cts/.mjs/.cjs forms) " +
     "with THIS worktree's own dependencies. " +

@@ -4,6 +4,11 @@ import { basename } from "node:path";
 import { mkdir } from "node:fs/promises";
 import { openOwnedFd } from "@plugins/packages/plugins/owned-fd/core";
 import { exists } from "@plugins/packages/plugins/timed-fs/core";
+import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
+import {
+  inAppScope,
+  unprobedScopeHost,
+} from "@plugins/packages/plugins/systemd-scope/core";
 import {
   defineFileWatcher,
   type FileWatcher,
@@ -659,13 +664,33 @@ export async function startSupervisedRun(
         terminal: terminalPath,
         error: worktreeArtifacts.runError(worktree, kind.id, opts.runId),
       });
-      const proc = Bun.spawn(shim.argv, {
+      // A run is work, not what serves: on a host with a systemd user
+      // manager it runs in an `op` scope of its own (packages/systemd-scope),
+      // so systemd-oomd — which kills a whole leaf cgroup — can take the run
+      // alone, never the gateway's unit with it. A `./equin` op inside sees
+      // the scope and stays in it. `systemd-run --scope` execs the shim: the
+      // pid and process group signalled below are still the shim's.
+      const launch = inAppScope(
+        // The child looks for the user manager: no stat on this event loop.
+        unprobedScopeHost({
+          platform: process.platform,
+          uid: process.getuid?.() ?? -1,
+        }),
+        {
+          argv: shim.argv,
+          env: { ...process.env, ...shim.env, ...opts.envOverrides },
+          kind: "op",
+          label: `${kind.id}-${opts.runId}`,
+          description: `${PRODUCT_NAME} ${kind.id} ${opts.runId}`,
+        },
+      );
+      const proc = Bun.spawn(launch.argv, {
         cwd: opts.cwd,
         stdin: "ignore",
         stdout: fd.fd,
         stderr: fd.fd,
         detached: true,
-        env: { ...process.env, ...shim.env, ...opts.envOverrides },
+        env: launch.env,
       });
       pid = proc.pid;
     } finally {

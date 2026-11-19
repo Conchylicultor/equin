@@ -6,7 +6,19 @@ import {
   type HandoffOp,
 } from "@plugins/framework/plugins/cli/plugins/foreground-handoff/core";
 import { runHandedOff } from "@plugins/framework/plugins/cli/plugins/foreground-handoff/cli";
-import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import {
+  envName,
+  readEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
+import {
+  heavyCommandScope,
+  userScopeHost,
+} from "@plugins/packages/plugins/systemd-scope/core";
+import {
+  existsSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 
 /**
  * The ONE translation of a declared {@link CliCommand} into commander calls.
@@ -52,6 +64,62 @@ function handoffOf(
       `The foreground deadline is not an epoch-ms instant: ${JSON.stringify(raw)}.`,
     );
   return { op: spec.name, deadline };
+}
+
+/**
+ * Re-execute this heavy command in an `op` scope of its own when it does not
+ * run in one (`packages/systemd-scope` `heavyCommandScope`): `systemd-run
+ * --user --scope` registers the scope, then execs the same command line —
+ * same pid, stdio and environment, so the caller waiting on it notices
+ * nothing. Returns only when it stays where it is. A `systemd-run` that cannot
+ * start the scope exits non-zero with its reason, before the command runs: a
+ * failed command, said loudly.
+ */
+function enterOwnOpScope(verb: string): void {
+  const host = userScopeHost({
+    platform: process.platform,
+    uid: process.getuid?.() ?? -1,
+    exists: existsSync,
+  });
+  const decision = heavyCommandScope({
+    host,
+    procSelfCgroup: () => readFileSync("/proc/self/cgroup", "utf8"),
+    argv: [process.execPath, ...process.argv.slice(1)],
+    env: process.env,
+    label: `${verb}-${process.pid}-${Date.now().toString(36)}`,
+    description: `${PRODUCT_NAME} ${verb} (pid ${process.pid})`,
+    reexecuted: ownReexecMark(),
+  });
+  if (decision.kind === "stay") return;
+  const [runner, ...rest] = decision.argv;
+  const file = Bun.which(runner!, { PATH: decision.env["PATH"] ?? "" });
+  if (file === null)
+    throw new Error(
+      `${runner} is not on PATH, though this host's systemd user manager is up: cannot run \`${verb}\` apart from the gateway's unit.`,
+    );
+  // `process.execve` takes the whole argv, its first word included.
+  if (process.execve === undefined)
+    throw new Error(
+      `this Bun has no process.execve: cannot run \`${verb}\` apart from the gateway's unit.`,
+    );
+  process.execve(file, [runner!, ...rest], {
+    ...decision.env,
+    [envName("OP_SCOPE_REEXEC")]: `${process.pid}:${decision.unit}`,
+  });
+}
+
+/**
+ * The scope this very process was re-executed into, from the mark the
+ * previous image set — null for a mark a parent left (another pid): a
+ * descendant inherits the variable but was never re-executed itself.
+ */
+function ownReexecMark(): string | undefined {
+  const mark = readEnv("OP_SCOPE_REEXEC");
+  if (mark === undefined) return undefined;
+  const sep = mark.indexOf(":");
+  return mark.slice(0, sep) === String(process.pid)
+    ? mark.slice(sep + 1)
+    : undefined;
 }
 
 function attach(parent: Command, spec: CliCommand, topLevel = false): void {
@@ -114,6 +182,13 @@ function attach(parent: Command, spec: CliCommand, topLevel = false): void {
     // trailing Command is what makes `CliAction` the real call shape, so an
     // implementation never reaches around its own declaration into commander.
     const args = argv.slice(0, -1);
+
+    // A heavy command runs apart from what serves: on a host with a systemd
+    // user manager it re-executes itself (same pid) in an op scope of its own
+    // unless it already runs in one. Before the hand-off below, so the op it
+    // detaches starts in that scope; before the body loads, so nothing of it
+    // has run yet.
+    if (spec.heavy === true) enterOwnOpScope(spec.name);
 
     // An agent's foreground call: run as a detached op that hands itself off
     // before the call's limit, instead of in place where the limit would kill it.

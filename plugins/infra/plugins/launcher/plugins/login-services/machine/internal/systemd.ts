@@ -45,8 +45,24 @@ import type {
 
 const SYSTEMCTL_TIMEOUT_MS = 30_000;
 
+/**
+ * `systemctl --user …`, told where the user manager is. `systemctl --user`
+ * finds it through `XDG_RUNTIME_DIR`, which the runtime tree's declared
+ * environment does not carry (`infra/launcher/runtime-env`): without it every
+ * call from main's backend failed "Failed to connect to bus: No medium found"
+ * (Ubuntu 24.04, 2026-11-19), so main's follow step never rewrote an
+ * installed unit and a changed policy line (`OOMPolicy`,
+ * `ManagedOOMPreference`) never reached a running gateway. `/run/user/<uid>`
+ * is where systemd puts it (`packages/systemd-scope` derives it the same way).
+ */
 function systemctl(...args: string[]): string[] {
-  return ["systemctl", "--user", ...args];
+  return [
+    "env",
+    `XDG_RUNTIME_DIR=${process.env.XDG_RUNTIME_DIR || `/run/user/${process.getuid?.() ?? -1}`}`,
+    "systemctl",
+    "--user",
+    ...args,
+  ];
 }
 
 async function assertLingering(): Promise<void> {

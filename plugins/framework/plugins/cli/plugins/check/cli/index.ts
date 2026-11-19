@@ -46,6 +46,9 @@ export default defineCliCommand<
   }
 >({
   name: "check",
+  // Its process tree can take gigabytes: on Linux it runs in an op scope of
+  // its own, apart from the gateway's unit (`heavy`, cli/core command.ts).
+  heavy: true,
   description: "Run repo validation checks",
   arguments: [
     {

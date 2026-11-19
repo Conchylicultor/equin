@@ -21,6 +21,33 @@ The scope's `Result=oom-kill` is NOT the signal: it needs `OOMPolicy=stop`,
 which stops the whole scope on any kernel OOM kill inside it (one type-check
 worker killed would SIGTERM the build). Scopes here run `OOMPolicy=continue`.
 
+## What runs where (Linux with a user manager)
+
+The gateway's login unit is **what serves**: gateway, Postgres, PgBouncer,
+every backend. Its unit carries `ManagedOOMPreference=avoid`
+(`infra/launcher/login-services`' `systemd-unit.ts`): oomd ranks leaves by
+reclaim (pgscan) first, and the serving unit holds the page cache of every
+database file and checkout it reads, so without it the gateway out-reclaims
+an app that only holds anonymous memory and is the one killed (2026-11-19: a
+4.2 GB app, 63 gateway processes killed). systemd ≥ 250 honours the
+preference on a user unit owned by the monitored `user@<uid>.service`'s
+owner (`oomd_fetch_cgroup_oom_preference`).
+
+Everything else the app starts is a leaf of its own, through ONE wrapper,
+`inAppScope` (`<product>-<kind>-<label>.scope`):
+
+| kind | what | who wraps |
+| --- | --- | --- |
+| `daemon` | a process that outlives its backend: an sdk agent, a browser host, a release preview | `infra/spawn/daemon`'s `launchDetached` |
+| `op` | work that ends: a supervised run (a build, a job's child) | `infra/jobs/supervised-job`'s `startSupervisedRun` |
+| `op` | a heavy command (`build`, `push`, `check`, `test`, `run`) started anywhere else — by an agent, a terminal, a backend | the CLI mapper (`heavy: true`), re-executing itself, same pid (`heavyCommandScope`) |
+| `op` | main's deploy build | `framework/cli/build`'s `converge.ts` |
+
+The scope's name is the marker (`appScopeOf` reads `/proc/self/cgroup`): a
+heavy command already in an `op` scope stays there (a nested check is part
+of its build); one in an agent's `daemon` scope leaves it, so oomd killing
+the build leaves the agent to read the failure.
+
 ## API (`core/`)
 
 - `userScopeHost({ platform, uid, exists })` — `systemd` (Linux, the user
@@ -37,9 +64,21 @@ worker killed would SIGTERM the build). Scopes here run `OOMPolicy=continue`.
   journal, or nothing settled within 10 s — a bound on the user manager and
   journald, which write the records a moment after the caller's wait returns).
 
-`core/` spawns and reads nothing itself: the caller hands it a runner and an
-`exists`. User: main's convergence run (`framework/cli/build`'s
-`converge.ts`), whose build runs in `<build id>.scope`.
+- `inAppScope(host, { argv, env, kind, label, description })` — the app's
+  wrapper: `inOwnScope` under `scopeUnitName(kind, label)`, or the command
+  as it is where the host has no scopes (`unit` null).
+- `unprobedScopeHost({ platform, uid })` — for a caller that must not touch
+  the disk (a backend's event loop, a portable `server/` folder): Linux is
+  `probe-in-child`, and `inAppScope` then has `/bin/sh` look for the user
+  manager's socket and run the command plainly when there is none.
+- `heavyCommandScope({ host, procSelfCgroup, argv, env, label, description })`
+  — `enter` (the argv to re-exec through) unless the process already runs in
+  an `op` scope or the host has none.
+- `scopeUnitName(kind, label)`, `appScopeOf(procSelfCgroup)` — the name
+  grammar, written and read.
+
+`core/` spawns and reads nothing itself: the caller hands it a runner, an
+`exists` and the cgroup text.
 
 macOS has no counterpart: jetsam's kills are in the unified log only.
 
@@ -48,17 +87,28 @@ macOS has no counterpart: jetsam's kills are in the unified log only.
 ## Plugin reference
 
 - Description: A command in a systemd user scope of its own, and how that scope was ended: userScopeHost() says whether this process can start transient units in its user's systemd manager (Linux with the manager's private socket under /run/user/<uid>; none on macOS), inOwnScope() wraps an argv in `systemd-run --user --scope --collect -p OOMPolicy=continue` under a given unit name, and readScopeOomdKill() reads the user journal for systemd's structured record of systemd-oomd killing that unit (MESSAGE_ID unit-oomd-kill, USER_UNIT) — oomd-killed with the process count, not-oomd once the unit's stop is recorded without one, or unknown, never a guess. systemd-oomd (Ubuntu desktop) kills a whole cgroup without moving the kernel's oom_kill counter, so this record is the only evidence of its kill.
-- Cross-plugin:
-  - Imported by: `framework/cli/build`
 - Core:
+  - Uses: `framework/product-name.PRODUCT_NAME`
   - Exports (types):
     - `ScopeCommandRunner`
     - `ScopedCommand`
+    - `ScopeKind`
     - `ScopeOomdKill`
+    - `UnprobedScopeHost`
     - `UserScopeHost`
   - Exports (values):
+    - `appScopeOf`
+    - `heavyCommandScope`
+    - `inAppScope`
     - `inOwnScope`
     - `readScopeOomdKill`
+    - `scopeUnitName`
+    - `unprobedScopeHost`
     - `userScopeHost`
+- Cross-plugin:
+  - Imported by:
+    - `framework/cli/build`
+    - `infra/jobs/supervised-job`
+    - `infra/spawn/daemon`
 
 <!-- AUTOGENERATED:END -->

@@ -6,6 +6,16 @@ export type {
   ScopeCommandRunner,
   ScopedCommand,
   ScopeOomdKill,
+  UnprobedScopeHost,
   UserScopeHost,
 } from "./internal/scope";
-export { inOwnScope, readScopeOomdKill, userScopeHost } from "./internal/scope";
+export {
+  heavyCommandScope,
+  inAppScope,
+  inOwnScope,
+  readScopeOomdKill,
+  unprobedScopeHost,
+  userScopeHost,
+} from "./internal/scope";
+export type { ScopeKind } from "./internal/scope-name";
+export { appScopeOf, scopeUnitName } from "./internal/scope-name";

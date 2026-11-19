@@ -32577,17 +32577,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `recordPagePrincipal`
     - **`product-name`** — The product's own name, as data: PRODUCT_NAME (`equin`, always lowercase — what every person and agent reads) and LEGACY_PRODUCT_NAMES (the names it went by before, never written again), enforced by the product-name:legacy check over every tracked file; and LEGACY_IDS, the identifiers built from the old name that are kept for good (stored state, cross-version contracts), the one place they are spelled — enforced by product-name:legacy-id (and its mirrors by product-name:legacy-ids-in-sync). A dependency-free leaf, so a browser bundle, a server or a script can import it.
       - Cross-plugin:
-        - Imported by: 72 plugins — full list in [`plugins/framework/plugins/product-name/REFERENCE.md`](../plugins/framework/plugins/product-name/REFERENCE.md)
-          - `infra` ×16
+        - Imported by: 75 plugins — full list in [`plugins/framework/plugins/product-name/REFERENCE.md`](../plugins/framework/plugins/product-name/REFERENCE.md)
+          - `infra` ×18
           - `framework` ×13
           - `apps` ×10
           - `conversations` ×4
           - `database` ×4
           - `primitives` ×4
+          - `packages` ×3
           - `apps-core` ×2
           - `backup` ×2
           - `installer` ×2
-          - `packages` ×2
           - `page` ×2
           - `reports` ×2
           - `upstream` ×2
@@ -44890,18 +44890,29 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `sha1Hex`
           - `sha256Hex`
     - **`systemd-scope`** — A command in a systemd user scope of its own, and how that scope was ended: userScopeHost() says whether this process can start transient units in its user's systemd manager (Linux with the manager's private socket under /run/user/<uid>; none on macOS), inOwnScope() wraps an argv in `systemd-run --user --scope --collect -p OOMPolicy=continue` under a given unit name, and readScopeOomdKill() reads the user journal for systemd's structured record of systemd-oomd killing that unit (MESSAGE_ID unit-oomd-kill, USER_UNIT) — oomd-killed with the process count, not-oomd once the unit's stop is recorded without one, or unknown, never a guess. systemd-oomd (Ubuntu desktop) kills a whole cgroup without moving the kernel's oom_kill counter, so this record is the only evidence of its kill.
-      - Cross-plugin:
-        - Imported by: `framework/cli/build`
       - Core:
+        - Uses: `framework/product-name.PRODUCT_NAME`
         - Exports (types):
           - `ScopeCommandRunner`
           - `ScopedCommand`
+          - `ScopeKind`
           - `ScopeOomdKill`
+          - `UnprobedScopeHost`
           - `UserScopeHost`
         - Exports (values):
+          - `appScopeOf`
+          - `heavyCommandScope`
+          - `inAppScope`
           - `inOwnScope`
           - `readScopeOomdKill`
+          - `scopeUnitName`
+          - `unprobedScopeHost`
           - `userScopeHost`
+      - Cross-plugin:
+        - Imported by:
+          - `framework/cli/build`
+          - `infra/jobs/supervised-job`
+          - `infra/spawn/daemon`
     - **`thread-cpu-clock`** — CPU time of the calling thread (CLOCK_THREAD_CPUTIME_ID), read through bun:ffi on macOS and Linux: how long THIS thread actually ran, as opposed to how long it waited to be scheduled. Says so where it cannot tell.
       - Cross-plugin:
         - Imported by: `framework/tooling/checks`

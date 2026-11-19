@@ -4,6 +4,7 @@ import { readOomKillCount } from "@plugins/packages/plugins/host-memory/core";
 import {
   inOwnScope,
   readScopeOomdKill,
+  scopeUnitName,
   userScopeHost,
   type ScopeOomdKill,
 } from "@plugins/packages/plugins/systemd-scope/core";
@@ -563,7 +564,8 @@ interface BuildScope {
 }
 
 /**
- * The build's own systemd user scope, `<build id>.scope` (`packages/systemd-scope`):
+ * The build's own systemd user scope, an `op` scope named for its build id
+ * (`packages/systemd-scope`; the build's CLI sees it and stays in it):
  * on a host with a user manager the build is its own cgroup, so systemd-oomd
  * — which kills a whole leaf cgroup and moves no kernel counter — can take the
  * build without the gateway, and the user journal names the scope it killed.
@@ -582,7 +584,7 @@ function buildScope(buildId: string): BuildScope {
       wrap: (argv, env) => ({ argv, env }),
       oomdKill: async () => ({ kind: "unknown", why: host.why }),
     };
-  const unit = `${buildId}.scope`;
+  const unit = scopeUnitName("op", buildId);
   return {
     wrap: (argv, env) =>
       inOwnScope(host, {

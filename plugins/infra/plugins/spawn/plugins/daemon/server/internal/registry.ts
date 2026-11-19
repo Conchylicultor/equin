@@ -155,7 +155,12 @@ export interface WorkerLaunch extends DaemonStartCommon {
  */
 export type DetachedLaunch = DaemonStartCommon & {
   argv: string[];
-  env?: Record<string, string | undefined>;
+  /**
+   * The whole environment, never left to inheritance: on Linux the launch
+   * goes through systemd-run (its own scope), which needs one to add the
+   * user manager's runtime dir to and take it back out of.
+   */
+  env: Record<string, string | undefined>;
   cwd?: string;
   /** Where the long-lived process writes its pid (first line). */
   pidFile: AppPath;

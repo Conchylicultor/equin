@@ -21,6 +21,9 @@ export default defineCliCommand<
   }
 >({
   name: "push",
+  // Its process tree can take gigabytes: on Linux it runs in an op scope of
+  // its own, apart from the gateway's unit (`heavy`, cli/core command.ts).
+  heavy: true,
   description: "Commit (if -m provided), merge into main, and push",
   options: [
     {

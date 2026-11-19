@@ -19,6 +19,9 @@ import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
  */
 export default defineCliCommand({
   name: "build",
+  // Its process tree can take gigabytes: on Linux it runs in an op scope of
+  // its own, apart from the gateway's unit (`heavy`, cli/core command.ts).
+  heavy: true,
   description:
     "Build the app. Default posture: deploy THIS checkout into the live dev cluster " +
     "(frontend + backend + gateway registration) — the checkout's own app, or the " +

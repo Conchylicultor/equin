@@ -432,6 +432,7 @@ describe("launchDetached", () => {
     const r = recorder();
     const inst = decl.launchDetached({
       instance: "ok",
+      env: { PATH: process.env["PATH"] },
       // Writes the pid at the very end, just before exiting: the read after
       // the bootstrap's exit sees it whether or not the watch did yet.
       argv: ["/bin/sh", "-c", `sleep 30 & echo $! > ${pidFile}`],
@@ -471,6 +472,7 @@ describe("launchDetached", () => {
     ].join("\n");
     const inst = decl.launchDetached({
       instance: "race",
+      env: { PATH: process.env["PATH"] },
       argv: ["/bin/sh", "-c", script],
       pidFile,
       onState: r.onState,
@@ -489,6 +491,7 @@ describe("launchDetached", () => {
     const r = recorder();
     const inst = decl.launchDetached({
       instance: "fail",
+      env: { PATH: process.env["PATH"] },
       argv: ["/bin/sh", "-c", "exit 4"],
       pidFile,
       onState: r.onState,

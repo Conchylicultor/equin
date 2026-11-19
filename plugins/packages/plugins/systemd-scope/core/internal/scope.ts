@@ -28,6 +28,8 @@
 // worker) would SIGTERM the build, which then records itself `killed` instead
 // of judging the step it lost (`framework/cli/build`'s `failure-end.ts`).
 
+import { appScopeOf, scopeUnitName, type ScopeKind } from "./scope-name";
+
 /** systemd's `SD_MESSAGE_UNIT_OOMD_KILL`: "systemd-oomd killed N process(es) in this unit". */
 export const OOMD_KILL_MESSAGE_ID = "d989611b15e44c9dbf31e3c81256e4ed";
 
@@ -82,6 +84,25 @@ export function userScopeHost(i: {
       why: `no systemd user manager for uid ${i.uid} (${socket} is missing)`,
     };
   return { kind: "systemd", runtimeDir };
+}
+
+/**
+ * A Linux host whose user manager is not looked for by the caller: the
+ * spawned child looks (`[ -S <socket> ]`, see {@link inAppScope}). For a
+ * caller that must not touch the disk itself — a backend's event loop, where
+ * a synchronous stat can block every request behind a busy disk, and a
+ * portable `server/` folder, which may not reach the filesystem at all.
+ */
+export type UnprobedScopeHost = { kind: "probe-in-child"; runtimeDir: string };
+
+/** {@link UserScopeHost}'s twin for a caller that reads nothing: Linux, or none. */
+export function unprobedScopeHost(i: {
+  platform: string;
+  uid: number;
+}): UnprobedScopeHost | Extract<UserScopeHost, { kind: "none" }> {
+  if (i.platform !== "linux")
+    return { kind: "none", why: `${i.platform} has no systemd` };
+  return { kind: "probe-in-child", runtimeDir: `/run/user/${i.uid}` };
 }
 
 /** A command wrapped to run in a transient scope named {@link ScopedCommand.unit}. */
@@ -147,6 +168,65 @@ export function inOwnScope(
       "--",
       ...(hadRuntimeDir ? [] : ["env", "-u", "XDG_RUNTIME_DIR"]),
       ...cmd.argv,
+    ],
+  };
+}
+
+/**
+ * The command to spawn for one piece of the app's work that must not share
+ * the serving unit's cgroup: in a scope of its own named for it
+ * ({@link scopeUnitName}) where the host has a user manager, as it is
+ * elsewhere (macOS, a container) — `unit` null there.
+ *
+ * The one wrapper every spawner of such work calls (the CLI's heavy commands,
+ * the daemon primitive's detached launches, supervised runs, main's deploy
+ * build), so "what runs apart from the serving set" has one spelling.
+ */
+export function inAppScope(
+  host: UserScopeHost | UnprobedScopeHost,
+  cmd: {
+    argv: readonly string[];
+    env: Record<string, string | undefined>;
+    kind: ScopeKind;
+    /** Unique among live scopes: a run id, a build id, a pid and an instant. */
+    label: string;
+    description: string;
+  },
+): {
+  argv: string[];
+  env: Record<string, string | undefined>;
+  unit: string | null;
+} {
+  if (host.kind === "none")
+    return { argv: [...cmd.argv], env: cmd.env, unit: null };
+  const scoped = inOwnScope(
+    { kind: "systemd", runtimeDir: host.runtimeDir },
+    {
+      argv: cmd.argv,
+      env: cmd.env,
+      unit: scopeUnitName(cmd.kind, cmd.label),
+      description: cmd.description,
+    },
+  );
+  if (host.kind === "systemd") return scoped;
+  // The child looks for the user manager's socket: there, it execs
+  // systemd-run as {@link inOwnScope} built it; not there (a container, a
+  // host with no user session), it drops systemd-run's words up to and with
+  // `--` and execs what follows — the command, behind the `env -u` that takes
+  // the added XDG_RUNTIME_DIR back out. No word of systemd-run's is `--`
+  // (each option is one `--name=value` word). `unit` names the scope it
+  // starts when there is one.
+  return {
+    ...scoped,
+    argv: [
+      // By path: a launch environment may carry no PATH (an agent's), and
+      // sh's own default PATH then finds systemd-run and env.
+      "/bin/sh",
+      "-c",
+      'if [ -S "$1" ]; then shift; exec "$@"; fi; shift; while [ "$1" != "--" ]; do shift; done; shift; exec "$@"',
+      "sh",
+      `${host.runtimeDir}/systemd/private`,
+      ...scoped.argv,
     ],
   };
 }
@@ -291,4 +371,60 @@ export async function readScopeOomdKill(
     }
     await deps.wait(Math.min(SCOPE_RECORD_REREAD_MS, deadline - deps.now()));
   }
+}
+
+/**
+ * Where a heavy command (a build, a check pass, a test run) runs, decided as
+ * it starts: `enter` — re-exec itself, same pid, through `argv` (systemd-run
+ * starting an `op` scope, then the same command line); `stay` — it already
+ * runs where it should, or the host has no scopes.
+ *
+ * It stays in an `op` scope someone gave it (a supervised run, main's deploy
+ * build, the parent op of a nested check): that work is the one it belongs
+ * to. Anywhere else — the gateway's unit (a backend spawned it), an agent's
+ * `daemon` scope, a terminal's own scope — it enters one of its own, so
+ * systemd-oomd killing it takes it alone and leaves its starter (the
+ * gateway, the agent) to read the failure.
+ */
+export function heavyCommandScope(i: {
+  host: UserScopeHost;
+  /** `/proc/self/cgroup`'s text (only read on a host with scopes). */
+  procSelfCgroup: () => string;
+  /** The whole command line to run again, the executable first. */
+  argv: readonly string[];
+  env: Record<string, string | undefined>;
+  label: string;
+  description: string;
+  /**
+   * The scope THIS process was re-executed into, when it was (the caller
+   * keeps the mark for its own pid only, never a descendant's): it must
+   * then find itself there.
+   */
+  reexecuted?: string;
+}):
+  | { kind: "stay"; why: string }
+  | {
+      kind: "enter";
+      argv: string[];
+      env: Record<string, string | undefined>;
+      unit: string;
+    } {
+  if (i.host.kind === "none") return { kind: "stay", why: i.host.why };
+  const current = appScopeOf(i.procSelfCgroup());
+  if (current?.kind === "op")
+    return { kind: "stay", why: `already in its op scope ${current.unit}` };
+  // Re-executed into a scope it does not find itself in (cgroup v1, a
+  // systemd that put the scope elsewhere): entering again would loop, each
+  // pass a new scope. Said loudly instead.
+  if (i.reexecuted !== undefined)
+    throw new Error(
+      `[systemd-scope] re-executed into ${i.reexecuted}, but /proc/self/cgroup names no op scope (${JSON.stringify(i.procSelfCgroup().trim())}) — not entering another`,
+    );
+  const scoped = inOwnScope(i.host, {
+    argv: i.argv,
+    env: i.env,
+    unit: scopeUnitName("op", i.label),
+    description: i.description,
+  });
+  return { kind: "enter", ...scoped };
 }

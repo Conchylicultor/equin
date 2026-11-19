@@ -8,6 +8,9 @@ import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
  */
 export default defineCliCommand<[string[]], object>({
   name: "test",
+  // Its process tree can take gigabytes: on Linux it runs in an op scope of
+  // its own, apart from the gateway's unit (`heavy`, cli/core command.ts).
+  heavy: true,
   description:
     "Run the tests under the given paths with BOTH runners: `bun test` for the " +
     "co-located pure-logic suites and `vitest run` for the jsdom suites under " +

@@ -14,10 +14,11 @@ import type { InstalledJob } from "./login-service";
  *   the gateway's own shutdown is budgeted inside it.
  * - `KillMode=process` — a stop signals the main process ALONE, as launchd
  *   does. The gateway tears its own children (backends, Postgres, PgBouncer)
- *   down in order; and everything a backend spawned lives in this unit's cgroup
- *   too — every running agent process among them, started detached to outlive
- *   its backend — so systemd's default (SIGTERM the whole cgroup, SIGKILL what
- *   is left) would kill every agent on each `start --force`.
+ *   down in order; and what a backend spawned outside a scope of its own
+ *   lives in this unit's cgroup too (agents, supervised runs and heavy
+ *   commands run in scopes — `packages/systemd-scope` — but every other child
+ *   does not), so systemd's default (SIGTERM the whole cgroup, SIGKILL what
+ *   is left) would kill that work on each `start --force`.
  * - `OOMPolicy=continue` — when the kernel OOM-kills ONE process of the unit,
  *   that process alone dies. systemd's default (`stop`) answers any OOM kill
  *   in the unit's cgroup by stopping the whole unit: on an 8 GB Linux host
@@ -30,6 +31,18 @@ import type { InstalledJob } from "./login-service";
  *   parent reports it (a build's check child dying fails the build, loudly);
  *   the gateway relaunches a backend that died. launchd has no such
  *   whole-job policy: a memory kill there takes one process already.
+ * - `ManagedOOMPreference=avoid` — systemd-oomd (on by default on Ubuntu
+ *   desktop) kills a WHOLE leaf cgroup under memory pressure, picking the one
+ *   reclaiming the most page cache first. A login service is what serves the
+ *   app — the gateway's unit holds the gateway, Postgres, PgBouncer and every
+ *   backend, and with them the page cache of every database file and checkout
+ *   they read — so it out-reclaims an app that only holds anonymous memory:
+ *   on an 8 GB Ubuntu desktop (2026-11-19) a 4.2 GB app pushed the host into
+ *   pressure and oomd killed the gateway's unit, 63 processes, not the app.
+ *   `avoid` (honoured for a user unit owned by the user, systemd ≥ 250) ranks
+ *   the unit after every other candidate: oomd takes it only when nothing
+ *   else holds memory. The work a backend starts runs in scopes of its own
+ *   (`packages/systemd-scope`), so it is never shielded by this.
  *
  * The session decides when it runs:
  * - `background` — `WantedBy=default.target`: started with the user's service
@@ -68,6 +81,7 @@ RestartSec=10
 TimeoutStopSec=${SERVICE_STOP_TIMEOUT_S}
 KillMode=process
 OOMPolicy=continue
+ManagedOOMPreference=avoid
 StandardOutput=append:${path(spec.stdioLog)}
 StandardError=append:${path(spec.stdioLog)}
 
