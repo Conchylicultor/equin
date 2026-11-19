@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
-  popoverAnchorLostSink,
-  steadyAnchor,
+  steadyAnchor as makeSteadyAnchor,
   type PopoverAnchorLostFault,
 } from "../components/steady-anchor";
 
@@ -13,36 +12,37 @@ import {
  */
 
 afterEach(() => {
-  popoverAnchorLostSink.register(null);
   document.body.innerHTML = "";
+  faults = [];
 });
+
+let faults: PopoverAnchorLostFault[] = [];
+
+function steadyAnchor(target: Element) {
+  return makeSteadyAnchor(target, null, { current: null }, (f) =>
+    faults.push(f),
+  );
+}
 
 function boxed(el: Element, rect: DOMRect | null) {
   el.getClientRects = () => (rect ? [rect] : []) as unknown as DOMRectList;
   el.getBoundingClientRect = () => rect ?? new DOMRect();
 }
 
-function collect(): PopoverAnchorLostFault[] {
-  const faults: PopoverAnchorLostFault[] = [];
-  popoverAnchorLostSink.register((f) => faults.push(f));
-  return faults;
-}
-
 describe("steadyAnchor", () => {
   it("measures the anchor while it has a box", () => {
     const btn = document.body.appendChild(document.createElement("button"));
     boxed(btn, new DOMRect(1276, 7, 78, 32));
-    const anchor = steadyAnchor(btn, null, { current: null });
+    const anchor = steadyAnchor(btn);
     expect(anchor.getBoundingClientRect().x).toBe(1276);
     expect(anchor.contextElement).toBe(btn);
   });
 
-  it("keeps the last rect once the anchor is hidden, and files it once", () => {
-    const faults = collect();
+  it("keeps the last rect once the anchor is hidden, and reports the loss once", () => {
     const bar = document.body.appendChild(document.createElement("div"));
     const btn = bar.appendChild(document.createElement("button"));
     boxed(btn, new DOMRect(1276, 7, 78, 32));
-    const anchor = steadyAnchor(btn, null, { current: null });
+    const anchor = steadyAnchor(btn);
     anchor.getBoundingClientRect();
 
     bar.style.display = "none";
@@ -58,10 +58,9 @@ describe("steadyAnchor", () => {
   });
 
   it("re-arms when the box comes back, and follows it", () => {
-    const faults = collect();
     const btn = document.body.appendChild(document.createElement("button"));
     boxed(btn, new DOMRect(10, 10, 5, 5));
-    const anchor = steadyAnchor(btn, null, { current: null });
+    const anchor = steadyAnchor(btn);
     anchor.getBoundingClientRect();
     boxed(btn, null);
     anchor.getBoundingClientRect();
@@ -73,10 +72,9 @@ describe("steadyAnchor", () => {
   });
 
   it("names a detached anchor as detached", () => {
-    const faults = collect();
     const btn = document.body.appendChild(document.createElement("button"));
     boxed(btn, new DOMRect(10, 10, 5, 5));
-    const anchor = steadyAnchor(btn, null, { current: null });
+    const anchor = steadyAnchor(btn);
     anchor.getBoundingClientRect();
     btn.remove();
     expect(anchor.getBoundingClientRect().x).toBe(10);

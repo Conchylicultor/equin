@@ -7,11 +7,15 @@ import { defineReportSink } from "@plugins/primitives/plugins/report-sink/core";
  * — it left the document, or something hid it (`display: none` on it or an
  * ancestor). Floating UI measures such an element as an empty rect at the
  * viewport's origin, so the panel jumped to the screen's top-left corner;
- * {@link steadyAnchor} keeps it where it was instead, and files this.
+ * {@link steadyAnchor} keeps it where it was instead.
  *
- * The panel staying put is the cure for the symptom, not for the cause: an
- * anchor vanishing under an open popover is the bug of whoever hid it, and
- * this names it. Carried as elements (not strings) so the consumer that files
+ * An anchor HIDDEN under an open popover (a parent popover or dialog closing
+ * over it, its tab going to the background) closes the popover — `Popover`'s
+ * anchor-lost rule: a panel never floats on for a button the user can no
+ * longer see. What cannot close that way is filed into
+ * {@link popoverAnchorLostSink}: an anchor that left the document (the bug of
+ * whoever removed it under an open popover), or a hidden one whose popover is
+ * held open (`useHoldPopoverOpen`). Carried as elements (not strings) so the consumer that files
  * it — a plugin that may know the app's lineage attributes, which this
  * primitive must not — reads what it needs off them.
  */
@@ -29,7 +33,7 @@ export interface PopoverAnchorLostFault {
 }
 
 /**
- * Where a lost anchor goes in production. `reports/popover-anchor-lost`
+ * Where a lost anchor that did not close its popover goes in production. `reports/popover-anchor-lost`
  * registers the mapping to a filed report; with nothing registered `emit` only
  * holds a bounded backlog.
  */
@@ -59,16 +63,18 @@ function displayNoneAncestor(el: Element): Element | null {
  * the last rect it measured while it has none — so a popover never re-lays
  * itself out against a vanished element (an empty rect at 0,0: the panel in
  * the screen's top-left corner). Each time the element loses its box the loss
- * is emitted into {@link popoverAnchorLostSink} once; it re-arms when the box
- * comes back. A ref target is read at every measurement (falling back to
- * `fallback` while it is empty, as base-ui does), so a ref repointed at a new
- * node is measured as the new node. Refs, not getters, so a render can build
- * one without reading `.current`.
+ * is handed to `onLost` once (the popover decides what it means — see
+ * `Popover`'s anchor-lost rule); it re-arms when the box comes back. A ref
+ * target is read at every measurement (falling back to `fallback` while it is
+ * empty, as base-ui does), so a ref repointed at a new node is measured as the
+ * new node. Refs, not getters, so a render can build one without reading
+ * `.current`.
  */
 export function steadyAnchor(
   target: Element | RefObject<Element | null>,
   fallback: Element | null,
   positionerRef: RefObject<Element | null>,
+  onLost: (fault: PopoverAnchorLostFault) => void,
 ): SteadyAnchor {
   const resolve = () =>
     target instanceof Element ? target : (target.current ?? fallback);
@@ -89,7 +95,7 @@ export function steadyAnchor(
       }
       if (!lost) {
         lost = true;
-        popoverAnchorLostSink.emit({
+        onLost({
           cause,
           anchor: el,
           hiddenBy: cause === "no-box" ? displayNoneAncestor(el) : null,
@@ -124,23 +130,27 @@ export function useSteadyAnchor(
   anchor: PositionerAnchor,
   trigger: Element | null,
   positionerRef: RefObject<Element | null>,
+  onLost: (fault: PopoverAnchorLostFault) => void,
 ): PositionerAnchor {
   return useMemo(() => {
     // No anchor (`null` included, as base-ui reads it): the trigger.
     if (anchor == null)
-      return trigger ? steadyAnchor(trigger, null, positionerRef) : anchor;
-    if (isElement(anchor)) return steadyAnchor(anchor, null, positionerRef);
+      return trigger
+        ? steadyAnchor(trigger, null, positionerRef, onLost)
+        : anchor;
+    if (isElement(anchor))
+      return steadyAnchor(anchor, null, positionerRef, onLost);
     if (typeof anchor === "function") {
       // Base-ui calls it once per open; one steady anchor per call.
       return () => {
         const resolved = anchor();
         if (resolved !== null && !isElement(resolved)) return resolved;
         const el = resolved ?? trigger;
-        return el && steadyAnchor(el, null, positionerRef);
+        return el && steadyAnchor(el, null, positionerRef, onLost);
       };
     }
     if ("current" in anchor)
-      return steadyAnchor(anchor, trigger, positionerRef);
+      return steadyAnchor(anchor, trigger, positionerRef, onLost);
     return anchor;
-  }, [anchor, trigger, positionerRef]);
+  }, [anchor, trigger, positionerRef, onLost]);
 }

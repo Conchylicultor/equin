@@ -9,9 +9,14 @@ corner (the Wish popover did, with no reproduction).
 ui-kit's `PopoverContent` positions through a steady anchor
 (`ui-kit/web/components/steady-anchor.ts`): it measures the real element while
 it has a box and keeps the last rect while it has none, so the panel stays
-where it was. That cures the symptom only — the anchor vanishing under an open
-popover is the bug of whoever hid it — so each loss is emitted, as ELEMENTS,
-into `popoverAnchorLostSink`. This plugin **drains that sink**:
+where it was. A HIDDEN anchor (still in the document, `display: none` on it or
+an ancestor — a parent popover or dialog closing over it, its tab going to the
+background) then closes its popover: `Popover`'s anchor-lost rule, so no panel
+floats on for a button the user can no longer see, whoever hid it. What cannot
+close that way — an anchor that left the document (perhaps a trigger mid-
+remount), or a hidden one whose popover is held open (`useHoldPopoverOpen`) —
+is the bug of whoever removed or hid it, and is emitted, as ELEMENTS, into
+`popoverAnchorLostSink`. This plugin **drains that sink**:
 `collectPopoverAnchorLost` (a `ReportSinks.Collector` keyed by
 `primitives.css.ui-kit`) reads the popover, the
 anchor and the nearest `display: none` element up from it through ui-context's

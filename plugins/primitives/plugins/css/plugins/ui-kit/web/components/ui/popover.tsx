@@ -13,7 +13,11 @@ import type {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/popover-width";
 import { usePortalContainer } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
 import { usePopupAnchorAtRest } from "@plugins/primitives/plugins/overlay/plugins/popup-open/web";
-import { useSteadyAnchor } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/steady-anchor";
+import {
+  popoverAnchorLostSink,
+  useSteadyAnchor,
+  type PopoverAnchorLostFault,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/steady-anchor";
 import { useTransient } from "@plugins/primitives/plugins/kept-state/web";
 
 /**
@@ -38,6 +42,18 @@ const PopoverTriggerContext = React.createContext<Element | null>(null);
 const SetPopoverTriggerContext = React.createContext<
   ((el: Element | null) => void) | null
 >(null);
+
+/** Files a lost anchor — what a `PopoverContent` outside a `Popover` does. */
+const fileAnchorLost = (fault: PopoverAnchorLostFault): void => {
+  popoverAnchorLostSink.emit(fault);
+};
+
+/**
+ * What the enclosing popover does when its content's anchor loses its box —
+ * see the anchor-lost rule in `Popover`.
+ */
+const PopoverAnchorLostContext =
+  React.createContext<(fault: PopoverAnchorLostFault) => void>(fileAnchorLost);
 
 /**
  * Keep the enclosing popover open while `active` — for content that hands the
@@ -108,10 +124,37 @@ function Popover({
     }
     handleOpenChange(next, details);
   };
+  // The anchor-lost rule: an open popover whose anchor is HIDDEN — still in
+  // the document, drawn as nothing (`display: none` on it or an ancestor) —
+  // closes. Whatever hid it took the button away from the user: a parent
+  // popover or dialog closing over the button that opened this one (the app
+  // launcher's grid hiding its DataView's View options), its tab going to the
+  // background, a bar folding away. The panel must not float on for a button
+  // that is no longer there. Re-checked a microtask later (the measurement
+  // runs inside Floating UI's layout pass), so a box that comes straight back
+  // closes nothing. A held popover (`useHoldPopoverOpen`) cannot close, and an
+  // anchor that LEFT the document may be a trigger being remounted, its
+  // replacement on its way: both stay where the steady anchor keeps them and
+  // are filed, as before — the bug of whoever hid or removed the anchor.
+  const onAnchorLost = React.useCallback(
+    (fault: PopoverAnchorLostFault) => {
+      if (fault.cause !== "no-box" || holds.current > 0) {
+        fileAnchorLost(fault);
+        return;
+      }
+      queueMicrotask(() => {
+        const { anchor } = fault;
+        if (anchor.isConnected && anchor.getClientRects().length === 0)
+          actionsRef.current?.close();
+      });
+    },
+    [actionsRef],
+  );
   const [trigger, setTrigger] = React.useState<Element | null>(null);
   // Outside the Root: its children may be a payload render function.
   return (
     <PopoverEverOpenedContext.Provider value={everOpened}>
+      <PopoverAnchorLostContext.Provider value={onAnchorLost}>
       <SetPopoverTriggerContext.Provider value={setTrigger}>
         <PopoverTriggerContext.Provider value={trigger}>
       <PopoverHoldContext.Provider value={hold}>
@@ -126,6 +169,7 @@ function Popover({
       </PopoverHoldContext.Provider>
         </PopoverTriggerContext.Provider>
       </SetPopoverTriggerContext.Provider>
+      </PopoverAnchorLostContext.Provider>
     </PopoverEverOpenedContext.Provider>
   );
 }
@@ -240,11 +284,17 @@ function PopoverContent({
   // Never laid out against an anchor that lost its box (left the document, or
   // hidden under `display: none`): Floating UI would measure it as an empty
   // rect at the viewport's origin and throw the panel into the screen's
-  // top-left corner. The panel keeps its last place instead, and the loss is
-  // filed — it is the bug of whoever hid the anchor under an open popover.
+  // top-left corner. The panel keeps its last place instead, and the popover
+  // applies its anchor-lost rule (a hidden anchor closes it — see `Popover`).
   const trigger = React.useContext(PopoverTriggerContext);
+  const onAnchorLost = React.useContext(PopoverAnchorLostContext);
   const positionerRef = React.useRef<HTMLDivElement>(null);
-  const steadyAnchor = useSteadyAnchor(anchor, trigger, positionerRef);
+  const steadyAnchor = useSteadyAnchor(
+    anchor,
+    trigger,
+    positionerRef,
+    onAnchorLost,
+  );
   return (
     <MenuSurfaceProvider value={true}>
       <PopoverPrimitive.Portal

@@ -35,7 +35,7 @@ export function renderPopoverAnchorLostTask(row: ReportRow): {
     rawTitle.length > 120 ? `${rawTitle.slice(0, 117)}...` : rawTitle;
 
   const lines = [
-    `**An open popover's anchor lost its box.** ${data.message} Floating UI measures such an element as an empty rect at the viewport's origin, so the panel used to jump to the screen's top-left corner; ui-kit's \`PopoverContent\` now keeps it at its last place (\`steady-anchor.ts\`) and files this. The jump is gone, the cause is not: something hides or replaces the anchor while its popover is open.`,
+    `**An open popover's anchor lost its box.** ${data.message} Floating UI measures such an element as an empty rect at the viewport's origin, so the panel used to jump to the screen's top-left corner; ui-kit's \`PopoverContent\` now keeps it at its last place (\`steady-anchor.ts\`). An anchor merely hidden closes its popover (\`Popover\`'s anchor-lost rule), so this is filed only when that could not happen: the anchor left the document, or the popover was held open (\`useHoldPopoverOpen\`) while its anchor was hidden.`,
     "",
     `**Fault**`,
     `- **Cause:** \`${data.cause}\` — ${data.cause === "detached" ? "the anchor element left the document (unmounted, or re-rendered into a new node)" : "the anchor is in the document but generates no box"}`,
