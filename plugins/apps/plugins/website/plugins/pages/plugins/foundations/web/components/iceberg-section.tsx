@@ -16,6 +16,7 @@ import {
 } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
 import { WebsiteScrollCue } from "@plugins/apps/plugins/website/plugins/shell/web";
 import { CARDS } from "../internal/cards";
+import { AgentCrew } from "./agent-crew";
 import { LAYERS, type IcebergPiece } from "../internal/iceberg/data";
 import { openWidth, PIECE_FONT } from "../internal/iceberg/geometry";
 import {
@@ -202,8 +203,11 @@ const IcebergMarkup = memo(function IcebergMarkup({
           </section>
         ))}
         <footer className="iceberg-foot">
-          At the bottom of the iceberg is the loop that built everything above
-          it.
+          <AgentCrew />
+          <p className="iceberg-foot-line">
+            At the bottom of the iceberg are the agents that built everything
+            above it.
+          </p>
         </footer>
       </div>
       <nav className="iceberg-gauge" aria-label="Depth">

@@ -46,6 +46,19 @@
   --berg-rim-2: #3b82f6;
   /* the Harness mark: teal on the ice, cyan in the deep */
   --berg-teal: #0891b2;
+  /* the agents on the sea floor (agent-crew.css): the deep cards' own navy and grey-blue */
+  --berg-agent-shell: #151a23;
+  --berg-agent-line: rgba(169, 184, 202, 0.42);
+  --berg-agent-limb: rgba(169, 184, 202, 0.6);
+  --berg-agent-visor: #0a0d13;
+  --berg-agent-visor-line: rgba(59, 130, 246, 0.35);
+  --berg-agent-crate: rgba(59, 130, 246, 0.16);
+  --berg-agent-crate-line: rgba(59, 130, 246, 0.5);
+  --berg-agent-bubble: rgba(160, 200, 255, 0.4);
+  --berg-agent-floor-0: rgba(59, 130, 246, 0.16);
+  --berg-agent-floor-1: rgba(37, 99, 235, 0.05);
+  --berg-agent-floor-line: rgba(169, 184, 202, 0.14);
+  --berg-agent-name: #6c7889;
 
   --svh: 1vh;
   --fit: 1;
@@ -94,6 +107,10 @@
 .iceberg-foot {
   position: relative;
   z-index: 1;
+}
+/* the foot sits under the layers, so an agent carrying a block flies up behind their cards */
+.iceberg-foot {
+  z-index: 0;
 }
 
 /* ---------- the hero: the sky (hero + the apps) fills exactly the first screen; --fit shrinks it when short ---------- */
@@ -487,8 +504,11 @@
 }
 
 .iceberg-foot {
-  padding: 90px 16px 140px;
+  padding: 40px 16px 140px;
   text-align: center;
+}
+.iceberg-foot-line {
+  margin: 0;
   font-size: 15px;
   font-weight: 500;
   background: var(--berg-grad);
