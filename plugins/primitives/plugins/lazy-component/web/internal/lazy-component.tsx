@@ -14,7 +14,10 @@ import {
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { renderMode } from "@plugins/primitives/plugins/dom/plugins/render-mode/core";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { holdFirstPaint } from "@plugins/framework/plugins/web-sdk/core";
+import {
+  holdFirstPaint,
+  loadAcrossReachLoss,
+} from "@plugins/framework/plugins/web-sdk/core";
 import { startBackgroundLoad } from "@plugins/primitives/plugins/networking/plugins/background-loads/core";
 
 export interface LazyComponentOptions {
@@ -126,8 +129,14 @@ export function lazyComponent<P extends object>(
   let loading: Promise<{ default: ComponentType<P> }> | undefined;
   let loaded: ComponentType<P> | undefined;
   let state: ChunkState = { kind: "loading" };
+  // A chunk the browser dropped because the page lost its reach (hidden,
+  // offline, asleep, leaving) is asked again once the page is back, like a
+  // plugin's (web-sdk's page-reach): an idle preload in flight when a laptop
+  // closed rejected on wake, unhandled, as the visitor's crash (equin.ai
+  // /foundations, Firefox, report-1794609421-fk1a49). A failure while the
+  // page kept its reach is as loud as before.
   const load = () =>
-    (loading ??= loader().then(
+    (loading ??= loadAcrossReachLoss(loader).then(
       (m) => {
         loaded = m.default;
         state = { kind: "loaded" };

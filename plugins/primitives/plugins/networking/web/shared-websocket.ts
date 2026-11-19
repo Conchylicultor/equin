@@ -3,6 +3,12 @@ import { publishWsStatus, type WsStatus } from "./ws-status-bus";
 import { nativeWebSocket } from "@plugins/primitives/plugins/networking/plugins/request-guard/web";
 import { publishNetDiag } from "./net-diag-bus";
 import {
+  markPageReach,
+  pageReachLostSince,
+  whenPageCanFetch,
+  type ReachMark,
+} from "@plugins/framework/plugins/web-sdk/core";
+import {
   runMarked,
   type TaskMarkText,
 } from "@plugins/primitives/plugins/perfs/plugins/task-marks/core";
@@ -236,6 +242,8 @@ interface PortSession {
    * was gone.
    */
   lock: "held" | "ended" | `aborted:${string}`;
+  /** The page's reach when the worker was asked for (web-sdk's page-reach). */
+  reach: ReachMark;
 }
 
 // Drop-in replacement for the string-message subset of the native WebSocket
@@ -284,6 +292,11 @@ export class SharedWebSocket {
   private boundConn: string | null = null;
   /** `Date.now()` of each recent eviction (see the `released` message). */
   private evictions: number[] = [];
+  /**
+   * How many times this tab's worker failed to load after the page lost its
+   * reach — part of the worker's name from then on (`onWorkerError`).
+   */
+  private relaunches = 0;
 
   constructor(
     url: string | URL,
@@ -391,8 +404,10 @@ export class SharedWebSocket {
 
   private attach(): void {
     const portId = crypto.randomUUID();
+    const name = sharedWsWorkerName(this.absUrl, this.dialect);
+    const reach = markPageReach();
     const worker = this.makeSharedWorker(
-      sharedWsWorkerName(this.absUrl, this.dialect),
+      this.relaunches === 0 ? name : `${name}#relaunch-${this.relaunches}`,
     );
     const session: PortSession = {
       worker,
@@ -402,6 +417,7 @@ export class SharedWebSocket {
       queue: [],
       releaseLock: null,
       lock: "held",
+      reach,
     };
     this.session = session;
     // Both are entry points the browser calls: marked tasks, so a freeze
@@ -604,9 +620,39 @@ export class SharedWebSocket {
     runMarked("networking", step("attach"), () => this.attach());
   }
 
+  /**
+   * The worker failed to load or crashed. After the page lost its reach while
+   * it loaded — a sleep, mostly: a laptop closed while the page booted, and
+   * the worker script's request died with its connection — that is the
+   * visitor's network, not ours: attach again once the page is back (equin.ai
+   * /foundations, Firefox, report-1795099021-ohg6bc; the edge saw the page
+   * stop mid-load and resume 39 minutes later, the worker script never asked
+   * for). A failure while the page kept its reach stays loud.
+   *
+   * The new attach names its worker afresh (`#relaunch-<n>`): Firefox hands a
+   * SharedWorker made with the failed one's name within a few ms of the error
+   * to the dying instance, which never loads, errors or answers (measured in
+   * Playwright's Firefox 159: the same name hangs at 0–1 ms, starts from 5 ms
+   * on; another name starts at once). Tabs that woke from the same sleep each
+   * relaunch once, so they still share `#relaunch-1`'s socket.
+   */
   private onWorkerError(session: PortSession): void {
     if (session !== this.session) return;
     this.detach();
+    if (pageReachLostSince(session.reach)) {
+      console.warn(
+        `SharedWebSocket ${this.url}: the shared-ws worker failed to load while the page was hidden, offline, asleep or leaving — attaching again once the page is back`,
+      );
+      this.relaunches++;
+      this.boundConn = null;
+      this.readyState = SharedWebSocket.CONNECTING;
+      this.setStatus("connecting");
+      void whenPageCanFetch().then(() => {
+        if (this.closed || this.session !== null) return;
+        runMarked("networking", step("attach"), () => this.attach());
+      });
+      return;
+    }
     this.setStatus("closed");
     throw new Error(
       `SharedWebSocket ${this.url}: the shared-ws worker failed to load or crashed`,

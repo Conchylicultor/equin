@@ -53,6 +53,7 @@ export type {
 export { loadPlugins } from "./loader";
 export type { PluginEntry, PluginLoadError } from "./loader";
 export {
+  loadAcrossReachLoss,
   markPageReach,
   pageReachLostSince,
   whenPageCanFetch,

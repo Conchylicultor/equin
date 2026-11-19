@@ -95,7 +95,13 @@ others — there is no leader to lose. Design:
   page, and everything a consumer sees — queue-until-open, reconnects, `onopen`
   once per connection, addressed frames, wills, bfcache detach — unchanged.
   Only the cross-tab sharing is lost.
-- **Fail loudly.** A worker load error or a protocol mismatch throws.
+- **Fail loudly.** A worker load error or a protocol mismatch throws — except
+  a worker that failed to load after the page lost its reach while it loaded
+  (hidden, offline, asleep, leaving — web-sdk's `page-reach`): the script's
+  request died with the visitor's network, so the tab attaches again once the
+  page is back, on a worker named afresh (`#relaunch-<n>`). Firefox hands a
+  same-named SharedWorker made within a few ms of the failure to the dying
+  instance, which never loads, errors or answers.
 
 ## `Transport` — where a subtree's server traffic goes
 

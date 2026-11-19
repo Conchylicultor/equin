@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { loadPlugins } from "@plugins/framework/plugins/web-sdk/core";
 
-// A chunk the browser dropped while the page was hidden / offline / leaving is
+// A chunk the browser dropped while the page was hidden / offline / asleep / leaving is
 // loaded again once the page is back (web-sdk's page-reach); one that failed
 // while the page kept its reach fails at once, as before.
 
@@ -53,6 +53,35 @@ describe("loadPlugins across a loss of reach", () => {
     expect(errors).toHaveLength(0);
     expect(plugins).toHaveLength(1);
     expect(loader).toHaveBeenCalledTimes(2);
+  });
+
+  test("a failure after the device slept mid-load is loaded again (no event marks a sleep)", async () => {
+    // The lid closes with the tab in front: still visible and online, but the
+    // wall clock runs on while the performance timeline pauses.
+    const realNow = Date.now.bind(Date);
+    let slept = 0;
+    const spy = vi
+      .spyOn(Date, "now")
+      .mockImplementation(() => realNow() + slept);
+    try {
+      let calls = 0;
+      const loader = vi.fn(() => {
+        calls++;
+        if (calls === 1) {
+          slept = 39 * 60_000;
+          return Promise.reject(lost());
+        }
+        return Promise.resolve({ default: { description: "a" } });
+      });
+      const { plugins, errors } = await loadPlugins([
+        { pluginPath: "a", id: "a", loader },
+      ]);
+      expect(errors).toHaveLength(0);
+      expect(plugins).toHaveLength(1);
+      expect(loader).toHaveBeenCalledTimes(2);
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   test("a load that fails again with the page back is a failure", async () => {

@@ -34897,6 +34897,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/slot-declaration.recordCreatedSlot`
           - `framework/slot-declaration.slotIdFor`
           - `framework/tooling/collected-dir.defineCollectedDir`
+          - `primitives/perfs/page-clock.clockOffset`
+          - `primitives/perfs/page-clock.ClockOffset`
         - Exports (types):
           - `CompanionFlag`
           - `CompositionIdentity`
@@ -34933,6 +34935,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hasLoadErrorUnder`
           - `holdFirstPaint`
           - `isDeferredPluginPath`
+          - `loadAcrossReachLoss`
           - `loadPlugins`
           - `markDeferredLoadComplete`
           - `markDeferredPluginsFailed`
@@ -34963,8 +34966,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `whenPageCanFetch`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 115 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
-          - `primitives` ×26
+        - Imported by: 116 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+          - `primitives` ×27
           - `apps` ×20
           - `reports` ×8
           - `ui` ×8
@@ -57563,6 +57566,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `debug/slow-ops`
+              - `framework/web-sdk`
               - `primitives/perfs/page-pauses`
               - `reports/main-thread-stall`
           - Core:

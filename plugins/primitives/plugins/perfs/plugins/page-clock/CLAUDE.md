@@ -56,6 +56,7 @@ const sampleAt = perfToEpoch(asPerfMs(sample.timestamp), offset);
 - Cross-plugin:
   - Imported by:
     - `debug/slow-ops`
+    - `framework/web-sdk`
     - `primitives/perfs/page-pauses`
     - `reports/main-thread-stall`
 - Core:

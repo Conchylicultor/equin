@@ -529,6 +529,90 @@ describe("SharedWebSocket", () => {
       expect(hub.server.all()).toHaveLength(1);
     });
   });
+  describe("the worker failing to load", () => {
+    // A worker whose script never loaded: its error is fired by the test.
+    function failingThenReal(): {
+      names: string[];
+      failFirst: () => void;
+      hooks: {
+        makeSharedWorker: (name: string) => {
+          port: FakeMessagePort;
+          onerror: ((ev: ErrorEvent) => void) | null;
+        };
+      };
+      server: FakeWsServer;
+      locks: FakeLockManager;
+    } {
+      const server = new FakeWsServer();
+      const locks = new FakeLockManager();
+      const host = createSharedWsHost({ makeWebSocket: server.connect, locks });
+      const names: string[] = [];
+      let first: { onerror: ((ev: ErrorEvent) => void) | null } | null = null;
+      return {
+        names,
+        server,
+        locks,
+        failFirst: () => first!.onerror!(new ErrorEvent("error")),
+        hooks: {
+          makeSharedWorker: (name) => {
+            names.push(name);
+            const [tabPort, workerPort] = FakeMessagePort.pair();
+            if (names.length === 1) {
+              workerPort.onmessage = () => {}; // nothing runs behind it
+              const w = { port: tabPort, onerror: null };
+              first = w;
+              return w; // never connected: the script did not load
+            }
+            host.connect(workerPort);
+            return { port: tabPort, onerror: null };
+          },
+        },
+      };
+    }
+
+    test("after the device slept mid-load, the tab attaches again on a freshly named worker", async () => {
+      const w = failingThenReal();
+      const sws = track(
+        new SharedWebSocket(URL_PATH, {
+          makeSharedWorker: w.hooks.makeSharedWorker,
+          locks: w.locks,
+          pageLifecycle: null,
+        }),
+      );
+      const c = counter(sws);
+      await flush();
+      // The lid closes: the wall clock runs on, the performance timeline pauses.
+      vi.setSystemTime(Date.now() + 39 * 60_000);
+      expect(() => w.failFirst()).not.toThrow();
+      expect(sws.status).toBe("connecting");
+      await flush();
+      // Firefox hands a same-named SharedWorker made right after the error to
+      // the dying instance: the relaunch names its worker afresh.
+      expect(w.names).toHaveLength(2);
+      expect(w.names[1]).toBe(`${w.names[0]}#relaunch-1`);
+      w.server.all()[0]!.open();
+      await flush();
+      expect(sws.status).toBe("open");
+      expect(c.opens).toBe(1);
+    });
+
+    test("while the page kept its reach, it fails loudly", async () => {
+      const w = failingThenReal();
+      track(
+        new SharedWebSocket(URL_PATH, {
+          makeSharedWorker: w.hooks.makeSharedWorker,
+          locks: w.locks,
+          pageLifecycle: null,
+        }),
+      );
+      await flush();
+      expect(() => w.failFirst()).toThrow(
+        /the shared-ws worker failed to load or crashed/,
+      );
+      await flush();
+      expect(w.names).toHaveLength(1);
+    });
+  });
 });
 
 /**
