@@ -31,29 +31,13 @@ export const ClaudeSignInMethodSchema = z.enum(
 );
 
 /**
- * What a sign-in is for.
- *
- * - `computer` — the computer's own Claude Code login (the system account),
- *   in the way the user picked.
- * - `new-account` — another Claude account agents can run on, saved under
- *   `name` (`claude-cli/accounts`). Always a Claude subscription: the
- *   long-lived token an added account holds exists only for one (an API key is
- *   pasted instead), so a method has no spelling here.
- */
-export const ClaudeSignInTargetSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("computer"), method: ClaudeSignInMethodSchema }),
-  z.object({ kind: z.literal("new-account"), name: z.string().trim().min(1) }),
-]);
-export type ClaudeSignInTarget = z.infer<typeof ClaudeSignInTargetSchema>;
-
-/**
  * The computer's one sign-in, as it stands.
  *
  * - `idle` — none running (never started, cancelled, or dismissed).
  * - `waiting` — Claude Code waits for the browser. `url` is the page it asked
  *   to open (null until it has); `manualUrl` the page for another device,
  *   which shows a code to paste back (null until Claude Code shows it).
- * - `done` — signed in: the computer's login works, or the account was added.
+ * - `done` — signed in: the computer's login works.
  * - `failed` — Claude Code said why, or the app could not finish it.
  *
  * `id` names one run, so a code or a cancel from a tab that saw an older run
@@ -64,21 +48,19 @@ export const ClaudeSignInFlowSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("waiting"),
     id: z.string(),
-    target: ClaudeSignInTargetSchema,
+    method: ClaudeSignInMethodSchema,
     url: z.string().nullable(),
     manualUrl: z.string().nullable(),
   }),
   z.object({
     kind: z.literal("done"),
     id: z.string(),
-    target: ClaudeSignInTargetSchema,
-    /** The added account's id, for a `new-account` sign-in. */
-    accountId: z.string().optional(),
+    method: ClaudeSignInMethodSchema,
   }),
   z.object({
     kind: z.literal("failed"),
     id: z.string(),
-    target: ClaudeSignInTargetSchema,
+    method: ClaudeSignInMethodSchema,
     error: z.string(),
   }),
 ]);
@@ -97,12 +79,12 @@ export const claudeSignInFlow = liveValue("claude-sign-in.flow", {
 
 /**
  * Start a sign-in. One runs at a time on this computer: starting another
- * cancels the one running (the user asked again — a new method, Try again, an
- * account from another tab). Answers the new run's id.
+ * cancels the one running (the user asked again — a new method, Try again,
+ * another tab). Answers the new run's id.
  */
 export const startClaudeSignIn = defineEndpoint({
   route: "POST /api/claude-sign-in/start",
-  body: z.object({ target: ClaudeSignInTargetSchema }),
+  body: z.object({ method: ClaudeSignInMethodSchema }),
   response: z.object({ id: z.string() }),
   needsMachine: NEEDS_MACHINE,
 });

@@ -11,10 +11,9 @@ import {
   removeClaudeAccount,
   selectClaudeAccount,
   SYSTEM_ACCOUNT_ID,
-  CLAUDE_CREDENTIALS,
+  API_KEY_PREFIXES,
   type ClaudeAccounts,
 } from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
-import { AddClaudeAccountSignIn } from "@plugins/infra/plugins/claude-cli/plugins/sign-in/web";
 import type { ClaudeCodeStatus } from "@plugins/infra/plugins/claude-cli/plugins/availability/core";
 import { useConfigResult, useSetConfig } from "@plugins/config_v2/web";
 import { Avatar } from "@plugins/primitives/plugins/avatar/web";
@@ -39,7 +38,6 @@ import {
   StepNote,
 } from "@plugins/primitives/plugins/setup-steps/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
-import { Icon } from "@plugins/ui/plugins/icons/web";
 import { ForAudience } from "@plugins/audience/plugins/developer-mark/web";
 import {
   autoResumeConfig,
@@ -62,17 +60,16 @@ import { UsageBar } from "./claude-usage-glance";
 import { ErrorStoppedBanner } from "./error-stopped";
 
 // The Claude account menu's accounts (the agent manager's sidebar foot): which
-// Claude account new agents launch on.
-// Each account shows its weekly room only — the 5-hour session resets too
-// often to choose an account by. Picking one switches; agents already running
-// keep theirs until their process restarts. Adding or picking one reads its
-// limits at once (no agent turn needed), so its room shows straight away. An
-// API-key account has no plan limits: it is billed to its Console org (e.g.
-// the plan's monthly API credit). Nothing switches accounts on its own.
+// Claude account new agents launch on: the computer's own Claude Code login —
+// the only plan account — or an API key the user added.
+// The computer's login shows its weekly room only — the 5-hour session resets
+// too often to read at a glance. Picking one switches; agents already running
+// keep theirs until their process restarts. Picking the computer's login reads
+// its limits at once (no agent turn needed). An API key has no plan limits: it
+// is billed to its Console org (e.g. the plan's monthly API credit). Nothing
+// switches accounts on its own.
 
 const addIcon = symbol("add");
-const personIcon = symbol("person");
-const keyIcon = symbol("key");
 const removeIcon = symbol("close");
 
 const percent = (fraction: number) => `${Math.round(fraction * 100)}%`;
@@ -237,13 +234,13 @@ function ApiKeySteps({ input }: { input: ReactNode }) {
   );
 }
 
-const API_KEY_PREFIXES = CLAUDE_CREDENTIALS["api-key"].prefixes;
 const isApiKey = (key: string) =>
   API_KEY_PREFIXES.some((p) => key.startsWith(p));
 
 /**
- * Add an API key: get one from the Console, then paste it with a name. A plan
- * account is signed in to instead (`AddClaudeAccountSignIn`), never pasted.
+ * Add an API key: get one from the Console, then paste it with a name. The
+ * only account added here — a plan is the computer's own Claude Code login
+ * (`infra/claude-cli/accounts`).
  */
 function AddApiKeyForm({
   onAdded,
@@ -322,38 +319,6 @@ function AddApiKeyForm({
   );
 }
 
-/** How an account is being added, if one is (`choose`: picking how). */
-type Adding = "choose" | "sign-in" | "api-key" | null;
-
-/**
- * Add account's two ways, shown under the Add account row while it is open:
- * sign in to another Claude account, or use an API key.
- */
-function AddAccountChoices({
-  onPick,
-}: {
-  onPick: (how: "sign-in" | "api-key") => void;
-}) {
-  return (
-    <>
-      <ControlPanel.Row
-        icon={<Icon icon={personIcon} />}
-        detail="Claude subscription"
-        onSelect={() => onPick("sign-in")}
-      >
-        Sign in to another account
-      </ControlPanel.Row>
-      <ControlPanel.Row
-        icon={<Icon icon={keyIcon} />}
-        detail="Billed per use, no plan limits"
-        onSelect={() => onPick("api-key")}
-      >
-        Use an API key
-      </ControlPanel.Row>
-    </>
-  );
-}
-
 /**
  * The account menu's body (the agent manager's sidebar foot): the active
  * account with its session and week meters (and the limit banner, the
@@ -376,7 +341,7 @@ export function ClaudeAccountMenu({
   stopped: readonly ErrorStoppedConversation[];
   now: number;
 }) {
-  const [adding, setAdding] = useState<Adding>(null);
+  const [adding, setAdding] = useState(false);
   // The account this tab switched to: running agents stay where they were.
   const [switchedTo, setSwitchedTo] = useState<string | null>(null);
   // The switch shows at once; what depends on it landing (the usage read of
@@ -426,12 +391,6 @@ export function ClaudeAccountMenu({
     return reason === undefined
       ? { kind: "idle" }
       : { kind: "unreadable", reason };
-  };
-  const closeAdding = () => setAdding(null);
-  // A plan account signed in: read its limits at once.
-  const onSignedIn = (id: string) => {
-    setAdding(null);
-    readUsage(id);
   };
   const switchTo = (id: string) =>
     selectAccount.mutate(
@@ -511,18 +470,15 @@ export function ClaudeAccountMenu({
         <ControlPanel.Row
           muted
           icon={<Avatar symbol={addIcon} colorless />}
-          onSelect={() => setAdding(adding === "choose" ? null : "choose")}
+          detail="Billed per use, no plan limits"
+          onSelect={() => setAdding(!adding)}
         >
-          Add account
+          Add an API key
         </ControlPanel.Row>
-        {adding === "choose" ? (
-          <AddAccountChoices onPick={setAdding} />
-        ) : adding === "sign-in" ? (
-          <AddClaudeAccountSignIn onAdded={onSignedIn} onClose={closeAdding} />
-        ) : adding === "api-key" ? (
+        {adding ? (
           <AddApiKeyForm
-            onAdded={() => setAdding(null)}
-            onCancel={closeAdding}
+            onAdded={() => setAdding(false)}
+            onCancel={() => setAdding(false)}
           />
         ) : null}
         {switchedTo === active.id ? (

@@ -3,8 +3,6 @@ import {
   failureMessage,
   parseBrowserUrl,
   parseManualUrl,
-  parseSetupToken,
-  readSetupTokenScreen,
   signInArgs,
 } from "./cli-output";
 
@@ -14,26 +12,9 @@ const LOGIN_OUTPUT =
 
 describe("signInArgs", () => {
   test("signs the computer in with the picked method", () => {
-    expect(signInArgs({ kind: "computer", method: "claudeai" })).toEqual([
-      "auth",
-      "login",
-    ]);
-    expect(signInArgs({ kind: "computer", method: "console" })).toEqual([
-      "auth",
-      "login",
-      "--console",
-    ]);
-    expect(signInArgs({ kind: "computer", method: "sso" })).toEqual([
-      "auth",
-      "login",
-      "--sso",
-    ]);
-  });
-
-  test("adds an account through setup-token", () => {
-    expect(signInArgs({ kind: "new-account", name: "Work" })).toEqual([
-      "setup-token",
-    ]);
+    expect(signInArgs("claudeai")).toEqual(["auth", "login"]);
+    expect(signInArgs("console")).toEqual(["auth", "login", "--console"]);
+    expect(signInArgs("sso")).toEqual(["auth", "login", "--sso"]);
   });
 });
 
@@ -47,14 +28,6 @@ describe("parseManualUrl", () => {
   test("is null before it is printed", () => {
     expect(parseManualUrl("")).toBeNull();
     expect(parseManualUrl("Opening browser to sign in…\n")).toBeNull();
-  });
-
-  test("reads the URL setup-token draws below its prompt", () => {
-    expect(
-      parseManualUrl(
-        " Browser didn't open? Use the url below to sign in (c to copy)\n\n https://claude.com/cai/oauth/authorize?code=true&state=abc\n\n Paste code here if prompted >",
-      ),
-    ).toBe("https://claude.com/cai/oauth/authorize?code=true&state=abc");
   });
 
   test("reads through terminal colours", () => {
@@ -76,64 +49,6 @@ describe("parseBrowserUrl", () => {
   test("is null before anything was handed", () => {
     expect(parseBrowserUrl("")).toBeNull();
     expect(parseBrowserUrl("\n")).toBeNull();
-  });
-});
-
-describe("parseSetupToken", () => {
-  test("finds the token wherever it is printed", () => {
-    expect(
-      parseSetupToken(
-        "Your token:\n\u001b[1msk-ant-oat01-AbC_d-9\u001b[0m\nStore it safely.",
-      ),
-    ).toEqual({ kind: "token", token: "sk-ant-oat01-AbC_d-9" });
-  });
-
-  test("an API key is not a token", () => {
-    expect(parseSetupToken("sk-ant-api03-xyz")).toEqual({ kind: "no-token" });
-  });
-
-  test("nothing printed is no token", () => {
-    expect(parseSetupToken("")).toEqual({ kind: "no-token" });
-  });
-});
-
-describe("readSetupTokenScreen", () => {
-  test("waits while no retry prompt is drawn", () => {
-    expect(
-      readSetupTokenScreen(
-        " Opening browser to sign in…\n Paste code here if prompted >",
-      ),
-    ).toEqual({ kind: "waiting" });
-  });
-
-  test("is stuck on the retry prompt, with the error above it", () => {
-    expect(
-      readSetupTokenScreen(
-        " OAuth error: Request failed with status code 400\n\n\n Press Enter to retry.",
-      ),
-    ).toEqual({
-      kind: "stuck",
-      error: "OAuth error: Request failed with status code 400",
-    });
-  });
-
-  test("masks a credential in the error", () => {
-    expect(
-      readSetupTokenScreen(
-        "failed for sk-ant-oat01-secret_1\nPress Enter to retry.",
-      ),
-    ).toEqual({ kind: "stuck", error: "failed for sk-ant-…" });
-  });
-
-  test("never takes the paste prompt for the error", () => {
-    expect(
-      readSetupTokenScreen(
-        "Paste code here if prompted >\nPress Enter to retry.",
-      ),
-    ).toEqual({
-      kind: "stuck",
-      error: "Claude Code could not finish signing in.",
-    });
   });
 });
 

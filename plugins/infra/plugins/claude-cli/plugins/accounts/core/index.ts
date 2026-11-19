@@ -1,12 +1,10 @@
 export {
   addClaudeAccount,
+  API_KEY_PREFIXES,
   claudeAccountIds,
-  claudeAccountRefs,
   claudeAccounts,
   CLAUDE_CREDENTIAL_ENVS,
-  CLAUDE_CREDENTIALS,
   claudeCredentialEnv,
-  claudeCredentialKind,
   ClaudeAccountSchema,
   ClaudeAccountsSchema,
   ClaudeCredentialSchema,
@@ -15,11 +13,6 @@ export {
   selectClaudeAccount,
   SYSTEM_ACCOUNT_ID,
 } from "./internal/accounts";
-export type {
-  ClaudeAccount,
-  ClaudeAccounts,
-  ClaudeCredential,
-  ClaudeCredentialKind,
-} from "./internal/accounts";
+export type { ClaudeAccount, ClaudeAccounts } from "./internal/accounts";
 
 export { withStandInNames } from "./internal/display-names";

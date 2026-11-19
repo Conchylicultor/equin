@@ -6,7 +6,7 @@ import {
 } from "../core";
 import { handleAdd, handleRemove, handleSelect } from "./internal/routes";
 import { claudeAccountsServed } from "./internal/served";
-import { activeAccountFromFile } from "./internal/store";
+import { activeAccountFromFile, retirePlanAccounts } from "./internal/store";
 import { ActiveClaudeAccount } from "../server";
 
 export {
@@ -20,7 +20,8 @@ export type { SystemLogin } from "./internal/system-login";
 
 export default {
   description:
-    "The Claude accounts, desktop-only half: the machine-wide accounts file (each added account's name, the active one — readClaudeAccounts, selectClaudeAccountById), served as the claude-accounts push value off a watch of it, the active one provided as the ActiveClaudeAccount host service, and the add / remove / select endpoints that rewrite it (a token goes to the secrets store), watchClaudeAccounts — a callback on every rewrite of the file, from any backend — and readSystemLogin: the claude.ai account the computer's Claude Code is signed into (its user config's oauthAccount.accountUuid), the uuid a transcript's session-owner record names.",
+    "The Claude accounts, desktop-only half: the machine-wide accounts file (each added account's name, the active one — readClaudeAccounts, selectClaudeAccountById), served as the claude-accounts push value off a watch of it, the active one provided as the ActiveClaudeAccount host service, and the add / remove / select endpoints that rewrite it (a token goes to the secrets store), watchClaudeAccounts — a callback on every rewrite of the file, from any backend — and readSystemLogin: the claude.ai account the computer's Claude Code is signed into (its user config's oauthAccount.accountUuid), the uuid a transcript's session-owner record names. At boot it removes the plan accounts an older accounts file still holds, with their tokens (retirePlanAccounts): equin runs plans only on the computer's own login.",
+  onReady: retirePlanAccounts,
   httpRoutes: {
     [addClaudeAccount.route]: handleAdd,
     [removeClaudeAccount.route]: handleRemove,

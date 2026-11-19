@@ -1,21 +1,12 @@
 import { useEffect } from "react";
 import { openInBrowserTab } from "@plugins/primitives/plugins/link-gesture/web";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
-import type { ClaudeSignInFlow } from "../../core";
 import {
   claimAnnouncement,
   claimOpen,
   wasStartedHere,
 } from "../internal/started-here";
 import { useClaudeSignInFlow } from "../internal/use-sign-in";
-
-function doneMessage(
-  flow: Extract<ClaudeSignInFlow, { kind: "done" }>,
-): string {
-  return flow.target.kind === "computer"
-    ? "Signed in — agents can start"
-    : `Added ${flow.target.name}`;
-}
 
 /**
  * Mounted at the app root, so a run's page opens and its outcome is announced
@@ -37,7 +28,7 @@ export function ClaudeSignInHost() {
       toast({
         type: "claude-sign-in-done",
         variant: "success",
-        title: doneMessage(flow),
+        title: "Signed in — agents can start",
         description: "",
         category: "other",
       });

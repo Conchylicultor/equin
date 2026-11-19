@@ -49,10 +49,11 @@ export function accountWindows(
 ): AccountWindow[] {
   const listed = [
     { id: SYSTEM_ACCOUNT_ID, name: "This computer", metered: false },
+    // Every added account is an API key: billed per use, no plan window.
     ...accounts.accounts.map((a) => ({
       id: a.id,
       name: a.name,
-      metered: a.kind === "api-key",
+      metered: true,
     })),
   ];
   return listed.map((a): AccountWindow => {

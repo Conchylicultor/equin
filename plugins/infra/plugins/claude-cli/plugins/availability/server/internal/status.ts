@@ -111,7 +111,7 @@ export type LaunchReadiness =
  *
  * - the computer's own login (the system account): its Claude Code status,
  *   {@link checkClaudeCode};
- * - an added account (a plan token or an API key): ready. It brings its own
+ * - an added account (an API key): ready. It brings its own
  *   credential, handed to Claude Code in the agent's environment with every
  *   other one removed — the computer's login plays no part, so the computer
  *   being signed out must not hold it back. Nothing is probed: Claude Code's

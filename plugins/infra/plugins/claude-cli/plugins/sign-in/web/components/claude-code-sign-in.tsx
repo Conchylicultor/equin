@@ -17,8 +17,7 @@ import { ClaudeSignInPanel, type OpenSignInFlow } from "./sign-in-flow";
 
 /** The computer's run still open (waiting, or failed and not dismissed). */
 function openComputerFlow(flow: ClaudeSignInFlow): OpenSignInFlow | null {
-  if (flow.kind !== "waiting" && flow.kind !== "failed") return null;
-  return flow.target.kind === "computer" ? flow : null;
+  return flow.kind === "waiting" || flow.kind === "failed" ? flow : null;
 }
 
 /** The computer's sign-in still open here, if any (shared with `ClaudeCodeFix`). */
@@ -55,7 +54,7 @@ export function ClaudeCodeSignInRemedy() {
     <ClaudeSignInButton
       onSignIn={async (method) => {
         if (row && !row.open) row.toggle();
-        await actions.start({ kind: "computer", method });
+        await actions.start(method);
       }}
     />
   );

@@ -89,9 +89,7 @@ describe("claudeCodeRowVerdict", () => {
         ...inputs.data,
         accounts: {
           ...inputs.data.accounts,
-          accounts: [
-            { id: "acct-api", name: "API", addedAt: 1, kind: "api-key" },
-          ],
+          accounts: [{ id: "acct-api", name: "API", addedAt: 1 }],
           active: "acct-api",
         },
       },

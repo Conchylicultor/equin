@@ -23420,19 +23420,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CONVERSATION_RUNTIMES`
           - `ConversationRuntimeIdSchema`
           - `DEFAULT_CONVERSATION_RUNTIME`
-    - **`runtime-sdk`** — The health report's Claude Code row: Claude Code itself (critical while the computer is signed out, with the in-app Sign in — claude-cli/sign-in, 'Signing in…' while it runs — and Check again), the agent processes running — here, and in every other worktree (each as its task's chip) — the active Claude account's usage limits as meters (named by the account; the week collapsed, the session too expanded; attention while its limit is reached), the conversations an API error stopped (Resume all), and Manage accounts. The agent manager's sidebar foot: the Claude account new agents launch on with its weekly quota, opening the account menu (its session and week meters; each account's weekly room, add — signing in to another account in the app, or an API key — / remove / switch, auto-resume when a limit resets, and — for a developer only — Continue on another account when the active one is limited). The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and its rewind anchor — out of the change feed, being the consumer's per-batch checkpoint) and the conversations_ext_sdk_agent_stop side table (the part a live surface reads: the API-error stop and the account, written only when it changes), the pure event reducer, and the mapping of a launch onto the agent's options file; the runtime-sdk.error-stopped collection (active conversations whose agent's turn an API error stopped — a usage limit, a server error, a lost connection — with the CLI's kind of failure); the auto-resume setting (Resume agents when their usage limit resets).
+    - **`runtime-sdk`** — The health report's Claude Code row: Claude Code itself (critical while the computer is signed out, with the in-app Sign in — claude-cli/sign-in, 'Signing in…' while it runs — and Check again), the agent processes running — here, and in every other worktree (each as its task's chip) — the active Claude account's usage limits as meters (named by the account; the week collapsed, the session too expanded; attention while its limit is reached), the conversations an API error stopped (Resume all), and Manage accounts. The agent manager's sidebar foot: the Claude account new agents launch on with its weekly quota, opening the account menu (its session and week meters; each account's weekly room — the computer's own login, the only plan account, and the API keys added — add an API key / remove / switch, auto-resume when a limit resets, and — for a developer only — Continue on another account when the active one is limited). The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and its rewind anchor — out of the change feed, being the consumer's per-batch checkpoint) and the conversations_ext_sdk_agent_stop side table (the part a live surface reads: the API-error stop and the account, written only when it changes), the pure event reducer, and the mapping of a launch onto the agent's options file; the runtime-sdk.error-stopped collection (active conversations whose agent's turn an API error stopped — a usage limit, a server error, a lost connection — with the CLI's kind of failure); the auto-resume setting (Resume agents when their usage limit resets).
       - Web:
         - Contributes:
           - `HealthReport.Row` "Claude Code" → `ClaudeCodeRowDetail`
           - `Shell.Sidebar` "Claude account" → `ClaudeAccountFoot`
           - `ConfigV2.WebRegister` "runtime-sdk-auto-resume"
-        - Uses: 58 symbols — full list in [`plugins/conversations/plugins/runtime-sdk/REFERENCE.md`](../plugins/conversations/plugins/runtime-sdk/REFERENCE.md)
+        - Uses: 57 symbols — full list in [`plugins/conversations/plugins/runtime-sdk/REFERENCE.md`](../plugins/conversations/plugins/runtime-sdk/REFERENCE.md)
           - `primitives/css/ui-kit` ×7
           - `infra/claude-cli/availability` ×4
-          - `infra/claude-cli/sign-in` ×4
           - `infra/endpoints` ×4
           - `primitives/setup-steps` ×4
           - `config_v2` ×3
+          - `infra/claude-cli/sign-in` ×3
           - `primitives/css/meter` ×3
           - `primitives/data-view` ×3
           - `apps-core/tabs` ×2
@@ -33002,8 +33002,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withNotifyBatch`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 124 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
-          - `infra` ×29
+        - Imported by: 123 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
+          - `infra` ×28
           - `conversations` ×14
           - `debug` ×14
           - `tasks` ×13
@@ -36033,7 +36033,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ids:pk-declared` — `server/internal/tables.ts` (debt)
           - `investigate:failures-registered` — `core/resources.ts` (sanctioned)
       - Plugins:
-        - **`accounts`** — The Claude accounts' credentials, every host's half: each added account's plan token or API key in the secrets store — saved, deleted, and read by the agent at its start (claudeAccountCredential: its kind derived from the secret, null for the computer's own Claude Code login, a loud error when an added account's secret is gone).
+        - **`accounts`** — The Claude accounts' credentials, every host's half: each added account's API key in the secrets store — saved, deleted, and read by the agent at its start (claudeAccountCredential: null for the computer's own Claude Code login, a loud error when an added account's secret is gone).
           - Server:
             - Contributes:
               - `resource.declare` "claude-accounts"
@@ -36073,19 +36073,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types):
               - `ClaudeAccount`
               - `ClaudeAccounts`
-              - `ClaudeCredential`
-              - `ClaudeCredentialKind`
             - Exports (values):
               - `addClaudeAccount`
+              - `API_KEY_PREFIXES`
               - `CLAUDE_CREDENTIAL_ENVS`
-              - `CLAUDE_CREDENTIALS`
               - `claudeAccountIds`
-              - `claudeAccountRefs`
               - `claudeAccounts`
               - `ClaudeAccountSchema`
               - `ClaudeAccountsSchema`
               - `claudeCredentialEnv`
-              - `claudeCredentialKind`
               - `ClaudeCredentialSchema`
               - `NO_CLAUDE_ACCOUNTS`
               - `removeClaudeAccount`
@@ -36102,7 +36098,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/claude-cli/sdk`
               - `infra/claude-cli/sign-in`
               - `tasks/supervisor-roles/spend`
-        - **`availability`** — Claude Code availability, shown: the pieces of the health report's Claude Code row (useClaudeCodeHealth — critical while the computer is signed out — ClaudeCodeDetail with Claude Code's own note, ClaudeCodeActions' Check again; the row itself is the sdk runtime's, which adds the in-app sign-in, the Agent SDK and the running agents), useClaudeCodeLaunchBlock() for launch controls to disable themselves with where to sign in, and a re-check when the user returns to the window while it is blocked. Claude Code availability: probes whether the computer is signed in to Claude Code (the build the Agent SDK ships — one session on the computer's own login reading its initialize answer: version and account, no turn; the machine half serves the answer as the claude-code-status push value and POST /api/claude-code/recheck) and gives every launch path checkLaunchReadiness() / assertClaudeCodeReady() — asked about the account the launch runs on (the computer's login is checked only for the system account; an added plan token or API key brings its own credential) — so an agent that cannot run is refused up front, pointing at the in-app sign-in. onClaudeCodeProbed hands every fresh answer to work keyed off the Claude Code version (which moves only with an SDK upgrade).
+        - **`availability`** — Claude Code availability, shown: the pieces of the health report's Claude Code row (useClaudeCodeHealth — critical while the computer is signed out — ClaudeCodeDetail with Claude Code's own note, ClaudeCodeActions' Check again; the row itself is the sdk runtime's, which adds the in-app sign-in, the Agent SDK and the running agents), useClaudeCodeLaunchBlock() for launch controls to disable themselves with where to sign in, and a re-check when the user returns to the window while it is blocked. Claude Code availability: probes whether the computer is signed in to Claude Code (the build the Agent SDK ships — one session on the computer's own login reading its initialize answer: version and account, no turn; the machine half serves the answer as the claude-code-status push value and POST /api/claude-code/recheck) and gives every launch path checkLaunchReadiness() / assertClaudeCodeReady() — asked about the account the launch runs on (the computer's login is checked only for the system account; an added API key brings its own credential) — so an agent that cannot run is refused up front, pointing at the in-app sign-in. onClaudeCodeProbed hands every fresh answer to work keyed off the Claude Code version (which moves only with an SDK upgrade).
           - Web:
             - Contributes: `Core.Root` → `RecheckOnReturn`
             - Uses:
@@ -36210,13 +36206,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `bundledClaudeBin`
               - `BundledClaudeMissingError`
-        - **`sign-in`** — Signing in to Claude from the app, shown: the Claude Code row's pieces (ClaudeCodeSignInRemedy — the Sign in split button: Claude subscription / Anthropic Console / Single sign-on — ClaudeCodeSignInDetail — the run's panel: finish in your browser, Open the page again, Signing in on another device? with the copyable page and a code field, Cancel; failed: Claude Code's words, Close, Try again — and useClaudeCodeSignInHealth, 'Signing in…' while it runs), AddClaudeAccountSignIn for the Claude accounts (a name, then the same flow; the account appears once added), ClaudeCodeFix — a Claude Code block drawn with its fix inline (what is wrong, Sign in or the open run's panel, Check again), the one way a launch surface shows one — with ClaudeCodeFixButton (a Sign in button opening it, where a launch control has no room) and ClaudeCodeFixWhileBlocked (the fix only while the computer is blocked, for a past failure's record), and, at the root, the page a run this tab started opened in the browser and its outcome toasted, once.
+        - **`sign-in`** — Signing in to Claude from the app, shown: the Claude Code row's pieces (ClaudeCodeSignInRemedy — the Sign in split button: Claude subscription / Anthropic Console / Single sign-on — ClaudeCodeSignInDetail — the run's panel: finish in your browser, Open the page again, Signing in on another device? with the copyable page and a code field, Cancel; failed: Claude Code's words, Close, Try again — and useClaudeCodeSignInHealth, 'Signing in…' while it runs), ClaudeCodeFix — a Claude Code block drawn with its fix inline (what is wrong, Sign in or the open run's panel, Check again), the one way a launch surface shows one — with ClaudeCodeFixButton (a Sign in button opening it, where a launch control has no room) and ClaudeCodeFixWhileBlocked (the fix only while the computer is blocked, for a past failure's record), and, at the root, the page a run this tab started opened in the browser and its outcome toasted, once.
           - Web:
             - Contributes: `Core.Root` → `ClaudeSignInHost`
-            - Uses: 29 symbols — full list in [`plugins/infra/plugins/claude-cli/plugins/sign-in/REFERENCE.md`](../plugins/infra/plugins/claude-cli/plugins/sign-in/REFERENCE.md)
+            - Uses: 25 symbols — full list in [`plugins/infra/plugins/claude-cli/plugins/sign-in/REFERENCE.md`](../plugins/infra/plugins/claude-cli/plugins/sign-in/REFERENCE.md)
               - `primitives/css/ui-kit` ×7
               - `infra/endpoints` ×3
-              - `primitives/kept-state` ×2
               - `infra/claude-cli/availability.useClaudeCodeStatus`
               - `network/live/live-state.foldResource`
               - `network/live.useLive`
@@ -36228,14 +36223,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/spinner.Spinner`
               - `primitives/css/surface.Surface`
               - `primitives/css/text.Text`
-              - `primitives/latest-ref.useEventCallback`
               - `primitives/link-gesture.openInBrowserTab`
-              - `primitives/loading.Loading`
               - `primitives/overlay/popover.InlinePopover`
               - `shell/notifications.useToast`
               - `ui/icons.Icon`
             - Exports (values):
-              - `AddClaudeAccountSignIn`
               - `ClaudeCodeFix`
               - `ClaudeCodeFixButton`
               - `ClaudeCodeFixWhileBlocked`
@@ -36247,7 +36239,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Resources: `claude-sign-in.flow` (push, notified)
           - Machine:
             - Uses:
-              - `infra/claude-cli/accounts.addClaudeAccountWithCredential`
               - `infra/claude-cli/sdk.bundledClaudeBin`
               - `infra/endpoints.implementMachine`
               - `network/live.serveValue`
@@ -36262,14 +36253,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types):
               - `ClaudeSignInFlow`
               - `ClaudeSignInMethod`
-              - `ClaudeSignInTarget`
             - Exports (values):
               - `cancelClaudeSignIn`
               - `CLAUDE_SIGN_IN_METHODS`
               - `claudeSignInFlow`
               - `ClaudeSignInFlowSchema`
               - `ClaudeSignInMethodSchema`
-              - `ClaudeSignInTargetSchema`
               - `startClaudeSignIn`
               - `submitClaudeSignInCode`
           - Cross-plugin:
@@ -55515,7 +55504,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `seekPredicate`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), useEventCallback(fn) is the stable-identity callback built on it, and useLatestStore(value) / useLatestSelector(store, select) hand a per-render value down to many memoized readers, each re-rendering only when its own selected answer changes. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 91 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+        - Imported by: 90 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
           - `primitives` ×35
           - `apps` ×25
           - `page` ×5
@@ -55530,7 +55519,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/slow-ops`
           - `framework/browser-server/demo/scope`
           - `hints`
-          - `infra/claude-cli/sign-in`
           - `integrations/youtube`
           - `music/background`
           - `reorder`
@@ -55772,7 +55760,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 242 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 241 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×72
           - `conversations` ×26
           - `ui` ×24
@@ -55786,9 +55774,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `review` ×4
           - `apps-core` ×3
           - `auth` ×3
-          - `infra` ×3
           - `shell` ×3
           - `active-data` ×2
+          - `infra` ×2
           - `integrations` ×2
           - `map` ×2
           - `network` ×2

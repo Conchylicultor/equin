@@ -31,11 +31,12 @@ export function accountViews(
       detail: login,
       metered: false,
     },
+    // Every added account is an API key (`infra/claude-cli/accounts`).
     ...accounts.accounts.map((a) => ({
       id: a.id,
       name: a.name,
-      detail: a.kind === "api-key" ? "API key" : "Plan sign-in",
-      metered: a.kind === "api-key",
+      detail: "API key",
+      metered: true,
     })),
   ];
 }

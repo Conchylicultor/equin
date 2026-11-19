@@ -7,14 +7,13 @@ const signedOut: HealthStatus = {
   state: "critical",
   summary: "Claude Code is not signed in — agents cannot start",
 };
-const computer = { kind: "computer", method: "claudeai" } as const;
 
 describe("signInHealth", () => {
   test("a computer sign-in under way pulses, signing in", () => {
     const flow: ClaudeSignInFlow = {
       kind: "waiting",
       id: "1",
-      target: computer,
+      method: "claudeai",
       url: null,
       manualUrl: null,
     };
@@ -29,7 +28,7 @@ describe("signInHealth", () => {
     const flow: ClaudeSignInFlow = {
       kind: "failed",
       id: "1",
-      target: computer,
+      method: "claudeai",
       error: "closed",
     };
     expect(signInHealth(signedOut, flow)).toEqual({
@@ -42,7 +41,7 @@ describe("signInHealth", () => {
     const waiting: ClaudeSignInFlow = {
       kind: "waiting",
       id: "1",
-      target: computer,
+      method: "claudeai",
       url: null,
       manualUrl: null,
     };
@@ -53,14 +52,5 @@ describe("signInHealth", () => {
     });
     expect(signInHealth(signedOut, null)).toBe(signedOut);
     expect(signInHealth(signedOut, { kind: "idle" })).toBe(signedOut);
-    expect(
-      signInHealth(signedOut, {
-        kind: "waiting",
-        id: "2",
-        target: { kind: "new-account", name: "Work" },
-        url: null,
-        manualUrl: null,
-      }),
-    ).toBe(signedOut);
   });
 });

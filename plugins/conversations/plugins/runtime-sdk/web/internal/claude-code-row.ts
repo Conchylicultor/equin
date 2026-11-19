@@ -53,7 +53,7 @@ export function agentsPhrase(agents: AgentProcesses): string {
  *
  * - Claude Code signed out, unreadable or still loading → its own verdict
  *   (`cli`), unchanged: nothing below it can be vouched for — except the
- *   computer signed out while an added account (a plan token or an API key) is
+ *   computer signed out while an added account (an API key) is
  *   active: agents launch on that account's own credential (the launch gate,
  *   `checkLaunchReadiness`, asks the same), so the row reads on as below and
  *   says the computer's login is signed out in its summary.

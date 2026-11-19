@@ -12,74 +12,54 @@ import {
 } from "@plugins/packages/plugins/timed-fs/core";
 import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import { join } from "node:path";
-import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { HttpError } from "@plugins/infra/plugins/endpoints/core";
 import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
 import { SYSTEM_ACCOUNT_ID } from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
-import { addClaudeAccountWithCredential } from "@plugins/infra/plugins/claude-cli/plugins/accounts/machine";
 import { recheckClaudeCodeNow } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
 import { claudeCodeProblem } from "@plugins/infra/plugins/claude-cli/plugins/availability/core";
 import { bundledClaudeBin } from "@plugins/infra/plugins/claude-cli/plugins/sdk/machine";
 import { claudeSessionEnv } from "@plugins/infra/plugins/claude-cli/plugins/sdk/server";
-import type { ClaudeSignInFlow, ClaudeSignInTarget } from "../../core";
+import type { ClaudeSignInFlow, ClaudeSignInMethod } from "../../core";
 import { claudeSignInDir } from "../../data-dirs";
 import {
   failureMessage,
   parseBrowserUrl,
   parseManualUrl,
-  parseSetupToken,
-  readSetupTokenScreen,
   signInArgs,
 } from "./cli-output";
-import { createScreen, type Screen } from "./screen";
 import { currentSignInFlow, publishSignInFlow } from "./flow-state";
 
-// The computer's one sign-in: Claude Code's own `auth login` (the computer) or
-// `setup-token` (a new account), run as a child of this backend.
+// The computer's one sign-in: Claude Code's own `auth login`, run as a child
+// of this backend. Claude Code stores the login itself; the app never sees a
+// credential.
 //
 // Nothing is polled. Claude Code hands the sign-in page to a $BROWSER shim
 // that appends it to a file in the run's own folder; a watch of that folder
 // re-reads it on every change. The child's exit decides the outcome.
 //
-// - `auth login` writes plain text: its stdout/stderr are one file descriptor
-//   onto a file in the same folder, never a pipe (`infra/spawn`'s wedge), and
-//   only stdin is a pipe — a write-only sink, no stream pull — for the code
-//   the user pastes.
-// - `setup-token` is a terminal UI with no plain-text mode — without a
-//   terminal it shows nothing until it exits, and on an error it waits for
-//   Enter forever — so it runs under a pseudo-terminal whose output Bun pushes
-//   to a callback, drawn onto a terminal emulator (`screen.ts`) and read back
-//   as the text a person would see. Its retry prompt fails the run.
+// `auth login` writes plain text: its stdout/stderr are one file descriptor
+// onto a file in the same folder, never a pipe (`infra/spawn`'s wedge), and
+// only stdin is a pipe — a write-only sink, no stream pull — for the code the
+// user pastes.
 
 const OUTPUT = "output";
 const HANDED = "browser-url";
 const SHIM = "browser.sh";
 
-/** Wide enough that no URL or token Claude Code draws is wrapped. */
-const SCREEN_SIZE = { cols: 1000, rows: 50 } as const;
-
 /** A running Claude Code, as the run drives it. */
 interface Child {
   exited: Promise<number>;
-  /** Resolves once everything it wrote has been read. */
-  outputDone: Promise<void>;
   kill(): void;
-  /** Let go of what reads it — once the run has ended. */
-  close(): void;
   /** Type a line, as the user would. */
   send(line: string): Promise<void>;
 }
 
 interface Run {
   id: string;
-  target: ClaudeSignInTarget;
+  method: ClaudeSignInMethod;
   dir: AppPath;
   child: Child | null;
-  /** `setup-token`'s screen; `auth login` writes to the `output` file. */
-  screen: Screen | null;
-  /** The error `setup-token` stopped on, waiting for an Enter never sent. */
-  stuck: string | null;
   releaseWatch: (() => void | Promise<void>) | null;
 }
 
@@ -108,8 +88,8 @@ function isAlive(pid: number): boolean {
 }
 
 /**
- * Remove the folders of runs whose backend is gone (killed mid-sign-in): one
- * may hold a token Claude Code printed. Every backend on the machine shares
+ * Remove the folders of runs whose backend is gone (killed mid-sign-in).
+ * Every backend on the machine shares
  * the data dir, so a live backend's runs are left alone (this one's own ended
  * runs removed their folders already).
  */
@@ -140,28 +120,15 @@ async function readIfThere(path: AppPath): Promise<string> {
 }
 
 /** What Claude Code has said so far. */
-async function readOutput(run: Run): Promise<string> {
-  return run.screen
-    ? run.screen.text()
-    : await readIfThere(joinAppPath(run.dir, OUTPUT));
+function readOutput(run: Run): Promise<string> {
+  return readIfThere(joinAppPath(run.dir, OUTPUT));
 }
 
-/**
- * Re-read what Claude Code has said so far, and publish it if it moved. A
- * `setup-token` on its retry prompt is stopped: its exit fails the run.
- */
+/** Re-read what Claude Code has said so far, and publish it if it moved. */
 async function readProgressNow(run: Run): Promise<void> {
   const flow = currentSignInFlow();
   if (running !== run || flow.kind !== "waiting" || flow.id !== run.id) return;
   const output = await readOutput(run);
-  if (run.screen && run.stuck === null) {
-    const screen = readSetupTokenScreen(output);
-    if (screen.kind === "stuck") {
-      run.stuck = screen.error;
-      run.child?.kill();
-      return;
-    }
-  }
   const url = parseBrowserUrl(await readIfThere(joinAppPath(run.dir, HANDED)));
   const manualUrl = parseManualUrl(output);
   // The files were read asynchronously: publish only if the run is still the
@@ -176,14 +143,14 @@ async function readProgressNow(run: Run): Promise<void> {
 // over a newer one.
 const progressMutex = createKeyedMutex();
 
-/** Re-read a run's progress (from a watch or a screen draw: nothing awaits it). */
+/** Re-read a run's progress (from a watch: nothing awaits it). */
 function readProgress(run: Run): void {
   void runTracked("claude-sign-in.read-progress", () =>
     progressMutex.run(run.id, () => readProgressNow(run)),
   );
 }
 
-/** `auth login`: plain text into the run's `output` file, the code on stdin. */
+/** Plain text into the run's `output` file, the code on stdin. */
 async function spawnPlain(
   args: string[],
   dir: AppPath,
@@ -200,9 +167,7 @@ async function spawnPlain(
     });
     return {
       exited: child.exited,
-      outputDone: Promise.resolve(),
       kill: () => child.kill(),
-      close: () => {},
       send: async (line) => {
         await child.stdin.write(`${line}\n`);
         await child.stdin.flush();
@@ -213,51 +178,10 @@ async function spawnPlain(
   }
 }
 
-/**
- * `setup-token`: under a pseudo-terminal drawn onto `screen`, every write
- * re-reading the run's progress. Its terminal queries (device attributes, the
- * keyboard protocol) go unanswered, so it keeps to plain keys and a typed
- * line is the line and Enter.
- */
-async function spawnOnScreen(
-  args: string[],
-  dir: AppPath,
-  env: Record<string, string | undefined>,
-  screen: Screen,
-  onDrawn: () => void,
-): Promise<Child> {
-  const closed = Promise.withResolvers<void>();
-  const child = Bun.spawn([await bundledClaudeBin(), ...args], {
-    cwd: dir,
-    env,
-    terminal: {
-      ...SCREEN_SIZE,
-      data: (_terminal, bytes) => void screen.write(bytes).then(onDrawn),
-      exit: () => closed.resolve(),
-    },
-  });
-  const terminal = child.terminal;
-  if (!terminal) throw new Error("Bun.spawn gave setup-token no terminal");
-  return {
-    exited: child.exited,
-    outputDone: closed.promise.then(() => screen.drawn()),
-    kill: () => child.kill(),
-    close: () => {
-      terminal.close();
-      screen.dispose();
-    },
-    send: (line) => {
-      terminal.write(`${line}\r`);
-      return Promise.resolve();
-    },
-  };
-}
-
 /** Stop a run: its child, its watch, its folder. Idempotent. */
 async function endRun(run: Run): Promise<void> {
   if (running === run) running = null;
   run.child?.kill();
-  run.child?.close();
   const release = run.releaseWatch;
   run.releaseWatch = null;
   if (release) await release();
@@ -265,11 +189,11 @@ async function endRun(run: Run): Promise<void> {
 }
 
 /**
- * Start a sign-in of `target`, cancelling the one running: there is one
+ * Start a sign-in with `method`, cancelling the one running: there is one
  * sign-in at a time on this computer, and starting again is the user asking
  * again (another method, Try again, a second tab). Answers the run's id.
  */
-export async function startSignIn(target: ClaudeSignInTarget): Promise<string> {
+export async function startSignIn(method: ClaudeSignInMethod): Promise<string> {
   if (running) await endRun(running);
   const id = crypto.randomUUID();
   // The real path of the app's own sign-in dir.
@@ -277,17 +201,9 @@ export async function startSignIn(target: ClaudeSignInTarget): Promise<string> {
   await sweepOrphanedRuns(root);
   const dir = joinAppPath(root, runDirName(id));
   await mkdir(dir, { mode: 0o700 });
-  const run: Run = {
-    id,
-    target,
-    dir,
-    child: null,
-    screen: null,
-    stuck: null,
-    releaseWatch: null,
-  };
+  const run: Run = { id, method, dir, child: null, releaseWatch: null };
   running = run;
-  publish(run, { kind: "waiting", id, target, url: null, manualUrl: null });
+  publish(run, { kind: "waiting", id, method, url: null, manualUrl: null });
 
   run.releaseWatch = await acquireDirWatch({
     dir,
@@ -304,10 +220,6 @@ export async function startSignIn(target: ClaudeSignInTarget): Promise<string> {
     ...(await claudeSessionEnv(SYSTEM_ACCOUNT_ID)),
     BROWSER: await writeBrowserShim(dir),
   };
-  // A new account's token is only printed, never stored: its own config dir
-  // keeps the computer's login out of reach.
-  if (target.kind === "new-account")
-    env.CLAUDE_CONFIG_DIR = join(dir, "config");
 
   if (running !== run) {
     // Cancelled or replaced while the watch opened or the inputs resolved.
@@ -315,16 +227,7 @@ export async function startSignIn(target: ClaudeSignInTarget): Promise<string> {
     return id;
   }
 
-  const args = signInArgs(target);
-  if (target.kind === "new-account") {
-    const screen = createScreen(SCREEN_SIZE);
-    run.screen = screen;
-    run.child = await spawnOnScreen(args, dir, env, screen, () =>
-      readProgress(run),
-    );
-  } else {
-    run.child = await spawnPlain(args, dir, env);
-  }
+  run.child = await spawnPlain(signInArgs(method), dir, env);
   if (running !== run) {
     // Cancelled or replaced while the spawn resolved the executable: its
     // `endRun` found no child to stop, so this one is owned by nobody — end
@@ -343,62 +246,37 @@ export async function startSignIn(target: ClaudeSignInTarget): Promise<string> {
 async function settle(run: Run, child: Child): Promise<void> {
   const exitCode = await child.exited;
   if (running !== run) return; // cancelled or replaced: already ended
-  await child.outputDone;
-  if (running !== run) return;
   const output = await readOutput(run);
-  const { id, target } = run;
+  const { id, method } = run;
   try {
-    if (run.stuck !== null || exitCode !== 0) {
+    if (exitCode !== 0) {
       publish(run, {
         kind: "failed",
         id,
-        target,
-        error: run.stuck ?? failureMessage(output, exitCode),
+        method,
+        error: failureMessage(output, exitCode),
       });
       return;
     }
-    if (target.kind === "computer") {
-      // The health row flips through the probe's own push, and armed
-      // auto-start tasks resume on its `onClaudeCodeReady`.
-      const status = await recheckClaudeCodeNow();
-      publish(
-        run,
-        status.kind === "ready"
-          ? { kind: "done", id, target }
-          : {
-              kind: "failed",
-              id,
-              target,
-              error: `Claude Code finished signing in, but: ${claudeCodeProblem(status)}.`,
-            },
-      );
-      return;
-    }
-    const printed = parseSetupToken(output);
-    if (printed.kind === "no-token") {
-      // Never observed yet (see cli-output.ts): say so loudly, and never put
-      // the output itself in the report — it may hold a token we failed to read.
-      reportServerError({
-        message: `claude setup-token exited 0 without printing a token the app recognises (${output.length} characters of output)`,
-      });
-      publish(run, {
-        kind: "failed",
-        id,
-        target,
-        error: "setup-token finished without printing a token.",
-      });
-      return;
-    }
-    const account = await addClaudeAccountWithCredential(
-      target.name,
-      printed.token,
+    // The health row flips through the probe's own push, and armed
+    // auto-start tasks resume on its `onClaudeCodeReady`.
+    const status = await recheckClaudeCodeNow();
+    publish(
+      run,
+      status.kind === "ready"
+        ? { kind: "done", id, method }
+        : {
+            kind: "failed",
+            id,
+            method,
+            error: `Claude Code finished signing in, but: ${claudeCodeProblem(status)}.`,
+          },
     );
-    publish(run, { kind: "done", id, target, accountId: account.id });
   } catch (err) {
     publish(run, {
       kind: "failed",
       id,
-      target,
+      method,
       error: err instanceof Error ? err.message : String(err),
     });
     throw err;

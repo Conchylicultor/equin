@@ -4,13 +4,9 @@ import {
   setSecret,
 } from "@plugins/infra/plugins/secrets/server";
 import { defineSecretNamespace } from "@plugins/infra/plugins/secrets/core";
-import {
-  claudeCredentialKind,
-  SYSTEM_ACCOUNT_ID,
-  type ClaudeCredential,
-} from "../../core";
+import { API_KEY_PREFIXES, SYSTEM_ACCOUNT_ID } from "../../core";
 
-// Each added account's credential (a plan token or an API key), in the
+// Each added account's API key, in the
 // encrypted secrets store (namespace `claude-accounts`, keyed by account id) —
 // never in the accounts file.
 
@@ -30,19 +26,24 @@ export async function deleteClaudeAccountCredential(id: string): Promise<void> {
 }
 
 /**
- * The credential an agent on `id` signs in with, its kind derived from the
- * secret itself: `null` for the system account (Claude Code's own login). An
- * added account whose secret is gone throws — an agent must never fall back to
- * another account silently.
+ * The API key an agent on `id` signs in with: `null` for the system account
+ * (Claude Code's own login). An added account whose secret is gone throws — an
+ * agent must never fall back to another account silently — and so does one
+ * whose secret is not an API key: a plan token left from before added plan
+ * accounts were removed is never used (`core/internal/accounts.ts`).
  */
 export async function claudeAccountCredential(
   id: string,
-): Promise<ClaudeCredential | null> {
+): Promise<string | null> {
   if (id === SYSTEM_ACCOUNT_ID) return null;
   const secret = await getSecret({ namespace: TOKENS_NAMESPACE, key: id });
   if (secret === undefined)
     throw new Error(
       `The credential of Claude account "${id}" is missing from the secrets store — remove the account and add it again`,
     );
-  return { kind: claudeCredentialKind(secret), secret };
+  if (!API_KEY_PREFIXES.some((p) => secret.startsWith(p)))
+    throw new Error(
+      `Claude account "${id}" holds a plan sign-in token, not an API key — equin runs plans only on the computer's own Claude Code login; remove the account`,
+    );
+  return secret;
 }

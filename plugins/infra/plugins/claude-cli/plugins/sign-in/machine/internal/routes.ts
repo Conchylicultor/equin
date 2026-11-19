@@ -8,7 +8,7 @@ import { cancelSignIn, startSignIn, submitSignInCode } from "./run";
 
 export const handleStart = implementMachine(
   startClaudeSignIn,
-  async ({ body }) => ({ id: await startSignIn(body.target) }),
+  async ({ body }) => ({ id: await startSignIn(body.method) }),
 );
 
 export const handleCode = implementMachine(submitClaudeSignInCode, ({ body }) =>

@@ -4,12 +4,7 @@ export {
   claudeSignInFlow,
   ClaudeSignInFlowSchema,
   ClaudeSignInMethodSchema,
-  ClaudeSignInTargetSchema,
   startClaudeSignIn,
   submitClaudeSignInCode,
 } from "./internal/flow";
-export type {
-  ClaudeSignInFlow,
-  ClaudeSignInMethod,
-  ClaudeSignInTarget,
-} from "./internal/flow";
+export type { ClaudeSignInFlow, ClaudeSignInMethod } from "./internal/flow";

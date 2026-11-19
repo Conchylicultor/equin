@@ -5,15 +5,14 @@ import type { ClaudeSignInFlow } from "../../core";
  * The Claude Code row's verdict while the computer signs in. Only a KNOWN
  * signed-out row (`critical`) changes: a sign-in under way is `attention`,
  * pulsing ("Signing in…"); one that failed stays `critical` and says so.
- * Anything else — loading, unreadable, ready, a new account's sign-in — is the
- * row's own verdict.
+ * Anything else — loading, unreadable, ready — is the row's own verdict.
  */
 export function signInHealth(
   cli: HealthStatus,
   flow: ClaudeSignInFlow | null,
 ): HealthStatus {
   if (cli.state !== "critical" || flow === null) return cli;
-  if (flow.kind === "idle" || flow.target.kind !== "computer") return cli;
+  if (flow.kind === "idle") return cli;
   switch (flow.kind) {
     case "waiting":
       return {

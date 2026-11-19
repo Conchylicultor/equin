@@ -5,111 +5,80 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 
 // The Claude accounts agents can run on. One is always there: the account the
 // computer's Claude Code is signed into (its keychain; signed in from the app,
-// `claude-cli/sign-in`).
-// The others are added with a credential — a long-lived plan token from
-// the in-app sign-in (`setup-token`), or an API key (billed to the Console org, e.g. the
-// plan's monthly API credit); the credential lives in the encrypted secrets
-// store, never in this list. The choice is the machine's — every worktree's
-// agents launch on the active account.
+// `claude-cli/sign-in`) — the only plan (subscription) account equin runs on.
+// The others are Anthropic API keys (billed per use to their Console org, e.g.
+// the plan's monthly API credit), pasted by the user; the key lives in the
+// encrypted secrets store, never in this list. The choice is the machine's —
+// every worktree's agents launch on the active account.
+//
+// No added plan accounts. equin once signed in to more plans (Claude Code's
+// `setup-token`) and kept their tokens; Anthropic's terms say developers may
+// not "collect, store, or intermediate Claude.ai credentials or session
+// tokens", and plan limits "assume ordinary, individual usage". A plan account
+// is Claude Code's own login, which Claude Code stores itself. Files written
+// before hold such accounts; the machine half drops them (`store.ts`).
 
 /** The account the computer's Claude Code is signed into. */
 export const SYSTEM_ACCOUNT_ID = "system";
 
 /**
- * The credentials an added account can hold, as data: the prefixes each one
- * starts with, and the environment variable it reaches Claude Code in. A
- * credential's kind is derived from its prefix — never stated separately — so
- * the variable an agent signs in through cannot disagree with what was pasted.
+ * What an API key starts with: `sk-ant-api` is the original shape; keys the
+ * Console creates since ~2026-10 (personal / workspace keys) start with
+ * `sk-ant-usr`.
  */
-export const CLAUDE_CREDENTIALS = {
-  /** A plan sign-in (the in-app sign-in's `setup-token`): draws on the plan's limits. */
-  token: { prefixes: ["sk-ant-oat"], env: "CLAUDE_CODE_OAUTH_TOKEN" },
-  /**
-   * A Console API key: billed per use to its organization, no plan limits.
-   * `sk-ant-api` is the original shape; keys the Console creates since
-   * ~2026-10 (personal / workspace keys) start with `sk-ant-usr`.
-   */
-  "api-key": {
-    prefixes: ["sk-ant-api", "sk-ant-usr"],
-    env: "ANTHROPIC_API_KEY",
-  },
-} as const satisfies Record<
-  string,
-  { prefixes: readonly [string, ...string[]]; env: string }
->;
-export type ClaudeCredentialKind = keyof typeof CLAUDE_CREDENTIALS;
-const CREDENTIAL_KINDS = Object.keys(CLAUDE_CREDENTIALS) as [
-  ClaudeCredentialKind,
-  ...ClaudeCredentialKind[],
-];
+export const API_KEY_PREFIXES = ["sk-ant-api", "sk-ant-usr"] as const;
 
-/** Every variable a credential reaches Claude Code in. Its presence is how a session knows it runs on an added account. */
-export const CLAUDE_CREDENTIAL_ENVS: readonly string[] = CREDENTIAL_KINDS.map(
-  (k) => CLAUDE_CREDENTIALS[k].env,
-);
-
-/** The kind of credential `secret` is, or `null` when it is neither. */
-function credentialKindOf(secret: string): ClaudeCredentialKind | null {
-  return (
-    CREDENTIAL_KINDS.find((k) =>
-      CLAUDE_CREDENTIALS[k].prefixes.some((p) => secret.startsWith(p)),
-    ) ?? null
-  );
-}
+/** The variable an added account's API key reaches Claude Code in. */
+const API_KEY_ENV = "ANTHROPIC_API_KEY";
 
 /**
- * What a user pastes: a plan token (`sk-ant-oat…`) or an API key
- * (`sk-ant-api…` / `sk-ant-usr…`). Checked for its shape only: whether it still signs in shows
- * on the first agent launched with it.
+ * Every variable that signs Claude Code in from the environment, removed from
+ * an agent's environment but for the one its account sets — so a variable
+ * inherited from elsewhere can never sign an agent in as another account.
+ * `CLAUDE_CODE_OAUTH_TOKEN` (a plan token) is never set by equin, only
+ * stripped. Its presence is also how a session knows it does not run on the
+ * computer's own login (`guard/`).
+ */
+export const CLAUDE_CREDENTIAL_ENVS: readonly string[] = [
+  API_KEY_ENV,
+  "CLAUDE_CODE_OAUTH_TOKEN",
+];
+
+/**
+ * What a user pastes: an API key (`sk-ant-api…` / `sk-ant-usr…`). Checked
+ * for its shape only: whether it still signs in shows on the first agent
+ * launched with it.
  */
 export const ClaudeCredentialSchema = z
   .string()
   .trim()
   .regex(/^sk-ant-[A-Za-z0-9_-]{20,}$/, "Not a Claude credential (sk-ant-…)")
   .refine(
-    (s) => credentialKindOf(s) !== null,
-    "Neither a Claude sign-in token (sk-ant-oat…) nor an API key (sk-ant-api… / sk-ant-usr…)",
+    (s) => API_KEY_PREFIXES.some((p) => s.startsWith(p)),
+    "Not an API key (sk-ant-api… / sk-ant-usr…)",
   );
 
-/** The kind of a credential that passed {@link ClaudeCredentialSchema}; throws on any other string. */
-export function claudeCredentialKind(secret: string): ClaudeCredentialKind {
-  const kind = credentialKindOf(secret);
-  if (!kind) throw new Error("Not a Claude token or API key");
-  return kind;
-}
-
-/** An added account's credential, as an agent signs in with it. */
-export interface ClaudeCredential {
-  kind: ClaudeCredentialKind;
-  secret: string;
-}
-
 /**
- * Claude Code's environment for `credential`: `base` without any credential
- * variable, plus the one this credential's kind uses — so a variable inherited
- * from elsewhere can never sign an agent in as another account.
+ * Claude Code's environment for an added account's `apiKey`: `base` without
+ * any credential variable, plus the API key.
  */
 export function claudeCredentialEnv(
   base: Readonly<Record<string, string | undefined>>,
-  credential: ClaudeCredential,
+  apiKey: string,
 ): Record<string, string | undefined> {
   const env = { ...base };
   for (const name of CLAUDE_CREDENTIAL_ENVS) delete env[name];
-  env[CLAUDE_CREDENTIALS[credential.kind].env] = credential.secret;
+  env[API_KEY_ENV] = apiKey;
   return env;
 }
 
+/** An added account: an API key, billed per use — no plan limits. */
 export const ClaudeAccountSchema = z.object({
   id: z.string().min(1),
   /** The user's name for it: "Work", "Personal". */
   name: z.string().min(1),
   /** When it was added, epoch milliseconds. */
   addedAt: z.number().int().positive(),
-  /**
-   * The kind of credential it holds, derived from it when added. Accounts
-   * files written before API keys existed hold tokens only.
-   */
-  kind: z.enum(CREDENTIAL_KINDS).default("token"),
 });
 export type ClaudeAccount = z.infer<typeof ClaudeAccountSchema>;
 
@@ -132,19 +101,6 @@ export const NO_CLAUDE_ACCOUNTS: ClaudeAccounts = {
 /** Every account id: the system one first, then the added accounts. */
 export function claudeAccountIds(state: ClaudeAccounts): string[] {
   return [SYSTEM_ACCOUNT_ID, ...state.accounts.map((a) => a.id)];
-}
-
-/**
- * Every account as a launch weighs it, the system one first. `metered`: billed
- * per use (an API key) — no plan limits, so nothing ever says it is full.
- */
-export function claudeAccountRefs(
-  state: ClaudeAccounts,
-): { id: string; metered: boolean }[] {
-  return [
-    { id: SYSTEM_ACCOUNT_ID, metered: false },
-    ...state.accounts.map((a) => ({ id: a.id, metered: a.kind === "api-key" })),
-  ];
 }
 
 /** The accounts and the active one, pushed whenever they change. */

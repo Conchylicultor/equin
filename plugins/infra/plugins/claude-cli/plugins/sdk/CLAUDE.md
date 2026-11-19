@@ -12,8 +12,7 @@ file for the callers that must name it; every other session omits `bin` and
 the SDK runs the same build.
 
 - `claudeSessionEnv(account, base?)` — the environment: `base` (default the host
-  facts, `pickHostEnv`) plus an added account's credential (`claudeCredentialEnv`:
-  a plan token or an API key). The
+  facts, `pickHostEnv`) plus an added account's API key (`claudeCredentialEnv`). The
   system account adds nothing (the computer's own login). Branded
   `ClaudeSessionEnv`, so a session that skipped the account choice does not
   type-check.

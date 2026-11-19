@@ -33,7 +33,7 @@ export function useClaudeCodeHealth(): HealthStatus {
  * never as text pointing somewhere else.
  *
  * Only a KNOWN block of the account the launch runs on disables. An added
- * account (a plan token or an API key) brings its own credential, so the
+ * account (an API key) brings its own credential, so the
  * computer being signed out does not hold it back. While the status or the
  * accounts are loading, or the check itself could not answer, the control stays enabled and the server — which
  * asks again before starting anything — is the authority. So a launch is never

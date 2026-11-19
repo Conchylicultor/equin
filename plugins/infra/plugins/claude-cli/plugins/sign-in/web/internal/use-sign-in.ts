@@ -9,7 +9,7 @@ import {
   claudeSignInFlow,
   startClaudeSignIn,
   submitClaudeSignInCode,
-  type ClaudeSignInTarget,
+  type ClaudeSignInMethod,
 } from "../../core";
 import { markStartedHere } from "./started-here";
 
@@ -27,7 +27,7 @@ export type ClaudeSignInActions =
   | {
       kind: "available";
       /** Start a sign-in (cancelling the one running); resolves to its run id once it runs. */
-      start: (target: ClaudeSignInTarget) => Promise<string>;
+      start: (method: ClaudeSignInMethod) => Promise<string>;
       /** Hand the run `id` the code from the sign-in page. */
       submitCode: (id: string, code: string) => Promise<void>;
       /** Stop the run `id`, or dismiss its outcome. */
@@ -44,11 +44,11 @@ export function useClaudeSignInActions(): ClaudeSignInActions {
     throw new Error("Claude sign-in: endpoints disagree on the computer");
   return {
     kind: "available",
-    start: async (target) => {
+    start: async (method) => {
       const started = await fetchEndpoint(
         startClaudeSignIn,
         {},
-        { body: { target } },
+        { body: { method } },
       );
       if (started.kind === "unavailable") throw new Error(started.message);
       markStartedHere(started.value.id);

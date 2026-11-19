@@ -5,22 +5,23 @@ runs Claude Code's own sign-in (the build the Agent SDK ships,
 `bundledClaudeBin()`), opens its page in the browser, and shows where it
 stands. Plan: `research/2026-10-29-global-bundled-claude-code.md` (Phase 3).
 
-## Two targets
+## What it signs in
 
-- **`computer`** — the computer's own Claude Code login (the system account):
-  `auth login` with the method the user picked (`CLAUDE_SIGN_IN_METHODS`:
-  Claude subscription, Anthropic Console `--console`, Single sign-on `--sso`),
-  under the default `CLAUDE_CONFIG_DIR`. On success the machine half calls
-  `recheckClaudeCodeNow()` (`availability`): the health row flips through the
-  `claude-code-status` push and armed auto-start tasks resume through
-  `onClaudeCodeReady`. A re-check that still is not `ready` fails the run.
-- **`new-account`** — another Claude account agents can run on: `setup-token`
-  (a Claude subscription only, so the target has no method), under a scratch
-  `CLAUDE_CONFIG_DIR` in the run's folder so the computer's login is out of
-  reach, and under a pseudo-terminal (see below). The printed token goes straight to `addClaudeAccountWithCredential`
-  (`accounts/machine` → the secrets store): never logged, never in the live
-  value, never shown. An API key is still pasted (the Claude accounts'
-  "Use an API key").
+Only **the computer's own Claude Code login** (the system account): `auth
+login` with the method the user picked (`CLAUDE_SIGN_IN_METHODS`: Claude
+subscription, Anthropic Console `--console`, Single sign-on `--sso`), under
+the default `CLAUDE_CONFIG_DIR`. Claude Code stores the login itself — the app
+never sees a credential. On success the machine half calls
+`recheckClaudeCodeNow()` (`availability`): the health row flips through the
+`claude-code-status` push and armed auto-start tasks resume through
+`onClaudeCodeReady`. A re-check that still is not `ready` fails the run.
+
+There is no second target. The app once also signed in *another* plan
+account (`setup-token`, under a pseudo-terminal, its printed token saved to
+the secrets store); that is gone (2026-11) — Anthropic's terms say developers
+may not "collect, store, or intermediate Claude.ai credentials or session
+tokens". Another plan is used by signing the computer in to it here; an extra
+account is an API key, pasted (`claude-cli/accounts`).
 
 ## One run at a time — a new start cancels the running one
 
@@ -36,8 +37,8 @@ folder, which the next start sweeps — see below).
 
 ## The flow value — `claude-sign-in.flow`
 
-`idle` | `waiting { id, target, url, manualUrl }` | `done { id, target,
-accountId? }` | `failed { id, target, error }`, a `needsMachine` push value
+`idle` | `waiting { id, method, url, manualUrl }` | `done { id, method }` |
+`failed { id, method, error }`, a `needsMachine` push value
 served external + notified from the machine half's memory
 (`machine/internal/flow-state.ts`). No polling anywhere:
 
@@ -49,37 +50,12 @@ served external + notified from the machine half's memory
   descriptor** onto `<run>/output` (never a pipe — `infra/spawn`'s wedge),
   re-read by the same watch. Only stdin is a pipe — a write-only sink for the
   pasted code.
-- **`setup-token`** is a terminal UI with no plain-text mode. Without a
-  terminal it shows nothing until it exits, and after a refused code it waits
-  on "Press Enter to retry." forever — while the browser shows success either
-  way (its localhost callback redirects before the token exchange). So it runs
-  under a **pseudo-terminal** (`Bun.spawn`'s `terminal`), whose output Bun
-  pushes to a callback; it draws as a diff (cursor moves over cells already
-  right), so the bytes are replayed onto a terminal emulator
-  (`machine/internal/screen.ts`, `@xterm/headless`, 1000 columns so nothing
-  wraps) and read back as the text a person would see. Every draw re-reads the
-  run; the retry prompt fails it with the error above it and stops the child.
-  The outcome waits for the terminal's end of output, so nothing drawn is
-  lost. A pasted code is typed (the line and Enter).
 - What the output means is `machine/internal/cli-output.ts`, pure and tested:
-  the arguments per target, the manual URL (`auth login`'s `visit: <url>`, or
-  the URL `setup-token` draws below "Use the url below to sign in"), the
-  handed URL, the token, `setup-token`'s retry prompt, and a failure's message
-  (Claude Code's last line, never its paste prompt, any credential masked).
-  `screen.test.ts` replays a recorded `setup-token` session that was refused.
+  the arguments per method, the manual URL (`auth login`'s `visit: <url>`),
+  the handed URL, and a failure's message (Claude Code's last line, never its
+  paste prompt, any credential masked).
 - Run folders are `cache/claude-sign-in/<pid>-<id>` (`data-dirs`), mode 0700,
-  deleted when the run ends; a start sweeps folders whose backend is gone (one
-  may hold a printed token).
-
-### Open point: `setup-token`'s output
-
-How `setup-token` draws the token on success has not been observed under the
-pseudo-terminal yet (it needs one real sign-in); from its source, it draws the
-token under "Your OAuth token (valid for …):" and exits 0 about 500 ms later.
-The parser takes the first `sk-ant-oat…` on the screen; finding none fails the run with
-"setup-token finished without printing a token." and files a server error
-report (its output length only — never the output). Adjust
-`parseSetupToken` once a real run is seen.
+  deleted when the run ends; a start sweeps folders whose backend is gone.
 
 ## Web
 
@@ -91,15 +67,10 @@ report (its output length only — never the output). Adjust
   detail with the run's panel. `useClaudeCodeSignInHealth(cli)` folds the run
   into the row's verdict (`signInHealth`, tested): `attention` "Signing in…"
   (pulsing) while it runs, `critical` "Sign-in didn't finish" when it failed.
-- **The Claude accounts** (`runtime-sdk`'s `claude-accounts.tsx`):
-  `AddClaudeAccountSignIn` — a name, Sign in, then the same panel for the run
-  it started; `onAdded(accountId)` once the account is saved (it appears in
-  the list through `claude-accounts`), `onClose` when the run is cancelled,
-  dismissed or replaced.
 - **The panel** (`ClaudeSignInPanel`): waiting — "Finish signing in to Claude
   in your browser" (Anthropic Console for a Console sign-in), Cancel, *Open the
   page again*, and *Signing in on another device?* (when Claude Code shows
-  one — both commands do: the copyable page and a "Paste the code from the page" field +
+  one: the copyable page and a "Paste the code from the page" field +
   Continue); failed — Claude Code's words, Close, Try again.
 - **`ClaudeSignInHost`** (`Core.Root`): only the tab whose click started a
   run (`started-here.ts`) opens its page in the browser — once, when the URL
@@ -120,13 +91,12 @@ report (its output length only — never the output). Adjust
 
 ## Plugin reference
 
-- Description: Signing in to Claude from the app, shown: the Claude Code row's pieces (ClaudeCodeSignInRemedy — the Sign in split button: Claude subscription / Anthropic Console / Single sign-on — ClaudeCodeSignInDetail — the run's panel: finish in your browser, Open the page again, Signing in on another device? with the copyable page and a code field, Cancel; failed: Claude Code's words, Close, Try again — and useClaudeCodeSignInHealth, 'Signing in…' while it runs), AddClaudeAccountSignIn for the Claude accounts (a name, then the same flow; the account appears once added), ClaudeCodeFix — a Claude Code block drawn with its fix inline (what is wrong, Sign in or the open run's panel, Check again), the one way a launch surface shows one — with ClaudeCodeFixButton (a Sign in button opening it, where a launch control has no room) and ClaudeCodeFixWhileBlocked (the fix only while the computer is blocked, for a past failure's record), and, at the root, the page a run this tab started opened in the browser and its outcome toasted, once.
+- Description: Signing in to Claude from the app, shown: the Claude Code row's pieces (ClaudeCodeSignInRemedy — the Sign in split button: Claude subscription / Anthropic Console / Single sign-on — ClaudeCodeSignInDetail — the run's panel: finish in your browser, Open the page again, Signing in on another device? with the copyable page and a code field, Cancel; failed: Claude Code's words, Close, Try again — and useClaudeCodeSignInHealth, 'Signing in…' while it runs), ClaudeCodeFix — a Claude Code block drawn with its fix inline (what is wrong, Sign in or the open run's panel, Check again), the one way a launch surface shows one — with ClaudeCodeFixButton (a Sign in button opening it, where a launch control has no room) and ClaudeCodeFixWhileBlocked (the fix only while the computer is blocked, for a past failure's record), and, at the root, the page a run this tab started opened in the browser and its outcome toasted, once.
 - Web:
   - Contributes: `Core.Root` → `ClaudeSignInHost`
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×7
     - `infra/endpoints` ×3
-    - `primitives/kept-state` ×2
     - `infra/claude-cli/availability.useClaudeCodeStatus`
     - `network/live/live-state.foldResource`
     - `network/live.useLive`
@@ -138,14 +108,11 @@ report (its output length only — never the output). Adjust
     - `primitives/css/spinner.Spinner`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
-    - `primitives/latest-ref.useEventCallback`
     - `primitives/link-gesture.openInBrowserTab`
-    - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`
     - `shell/notifications.useToast`
     - `ui/icons.Icon`
   - Exports (values):
-    - `AddClaudeAccountSignIn`
     - `ClaudeCodeFix`
     - `ClaudeCodeFixButton`
     - `ClaudeCodeFixWhileBlocked`
@@ -157,7 +124,6 @@ report (its output length only — never the output). Adjust
   - Resources: `claude-sign-in.flow` (push, notified)
 - Machine:
   - Uses:
-    - `infra/claude-cli/accounts.addClaudeAccountWithCredential`
     - `infra/claude-cli/sdk.bundledClaudeBin`
     - `infra/endpoints.implementMachine`
     - `network/live.serveValue`
@@ -172,14 +138,12 @@ report (its output length only — never the output). Adjust
   - Exports (types):
     - `ClaudeSignInFlow`
     - `ClaudeSignInMethod`
-    - `ClaudeSignInTarget`
   - Exports (values):
     - `cancelClaudeSignIn`
     - `CLAUDE_SIGN_IN_METHODS`
     - `claudeSignInFlow`
     - `ClaudeSignInFlowSchema`
     - `ClaudeSignInMethodSchema`
-    - `ClaudeSignInTargetSchema`
     - `startClaudeSignIn`
     - `submitClaudeSignInCode`
 - Cross-plugin:

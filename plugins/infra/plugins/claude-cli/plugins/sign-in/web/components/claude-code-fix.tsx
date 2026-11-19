@@ -61,7 +61,7 @@ function FixActions({ block }: { block: ClaudeCodeBlock }) {
       {claudeCodeFix(block) === "sign-in" && actions.kind === "available" ? (
         <ClaudeSignInButton
           onSignIn={async (method) => {
-            await actions.start({ kind: "computer", method });
+            await actions.start(method);
           }}
         />
       ) : null}

@@ -25,9 +25,7 @@ type Actions = Extract<ClaudeSignInActions, { kind: "available" }>;
 
 /** Where the user finishes signing in: Claude, or the Console for a Console sign-in. */
 function siteName(flow: OpenSignInFlow): string {
-  return flow.target.kind === "computer" && flow.target.method === "console"
-    ? "Anthropic Console"
-    : "Claude";
+  return flow.method === "console" ? "Anthropic Console" : "Claude";
 }
 
 /** The page for another device, to copy, and the code it shows, to paste back. */
@@ -164,7 +162,7 @@ function Failed({
         </Button>
         <Button
           onClick={async () => {
-            const id = await actions.start(flow.target);
+            const id = await actions.start(flow.method);
             onRestarted?.(id);
           }}
         >

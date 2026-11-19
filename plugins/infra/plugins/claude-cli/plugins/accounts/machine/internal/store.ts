@@ -6,14 +6,17 @@ import { rename, writeFile } from "node:fs/promises";
 import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import {
-  claudeCredentialKind,
-  ClaudeAccountsSchema,
   NO_CLAUDE_ACCOUNTS,
   SYSTEM_ACCOUNT_ID,
   type ClaudeAccount,
   type ClaudeAccounts,
 } from "../../core";
 import { claudeAccountsDir } from "../../data-dirs";
+import {
+  accountsFileOf,
+  parseAccountsFile,
+  type AccountsFile,
+} from "./accounts-file";
 import {
   deleteClaudeAccountCredential,
   saveClaudeAccountCredential,
@@ -30,24 +33,34 @@ function claudeAccountsPath(): AppPath {
   return claudeAccountsDir.file(ACCOUNTS_FILE);
 }
 
-/** The accounts as saved; none added yet → the system account alone. */
-export async function readClaudeAccounts(): Promise<ClaudeAccounts> {
+/**
+ * The accounts file read: the accounts agents may run on (`state`), and the
+ * ids of the plan accounts an older file still holds (`planAccounts`) — never
+ * run on, the active choice falling back to the computer's own login when it
+ * named one.
+ */
+async function readAccountsFile(): Promise<AccountsFile> {
   let text: string;
   try {
     text = await readFile(claudeAccountsPath(), "utf8");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT")
-      return NO_CLAUDE_ACCOUNTS;
+      return { state: NO_CLAUDE_ACCOUNTS, planAccounts: [] };
     throw err;
   }
-  return ClaudeAccountsSchema.parse(JSON.parse(text));
+  return parseAccountsFile(JSON.parse(text));
+}
+
+/** The accounts as saved; none added yet → the system account alone. */
+export async function readClaudeAccounts(): Promise<ClaudeAccounts> {
+  return (await readAccountsFile()).state;
 }
 
 async function writeClaudeAccounts(state: ClaudeAccounts): Promise<void> {
   await claudeAccountsDir.ensure();
   const path = claudeAccountsPath();
   const tmp = asAppPath(`${path}.${process.pid}.tmp`);
-  await writeFile(tmp, JSON.stringify(state, null, 2));
+  await writeFile(tmp, JSON.stringify(accountsFileOf(state), null, 2));
   await rename(tmp, path);
 }
 
@@ -71,7 +84,6 @@ export async function addClaudeAccountWithCredential(
     id: `acct-${crypto.randomUUID().slice(0, 8)}`,
     name,
     addedAt: Date.now(),
-    kind: claudeCredentialKind(credential),
   };
   // The credential first: an account in the list always has one.
   await saveClaudeAccountCredential(account.id, credential);
@@ -107,6 +119,21 @@ export function selectClaudeAccountById(id: string): Promise<void> {
     if (state.active !== id)
       await writeClaudeAccounts({ ...state, active: id });
   });
+}
+
+/**
+ * Removes the plan accounts an older accounts file still holds, and their
+ * tokens from the secrets store (boot, `onReady`). The read already ignores
+ * them, so this only reclaims what they left; every backend runs it, and a
+ * second run finds nothing.
+ */
+export async function retirePlanAccounts(): Promise<void> {
+  const retired = await changeAccounts(async () => {
+    const { state, planAccounts } = await readAccountsFile();
+    if (planAccounts.length > 0) await writeClaudeAccounts(state);
+    return planAccounts;
+  });
+  for (const id of retired) await deleteClaudeAccountCredential(id);
 }
 
 /** The ActiveClaudeAccount host service on the desktop: the file's choice, read now. */
