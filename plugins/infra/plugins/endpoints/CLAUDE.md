@@ -545,6 +545,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `packages/inflight.createInflight`
     - `packages/semaphore.createSemaphore`
     - `primitives/embed/frame/agent.injectFrameAgent`
+    - `primitives/networking/request-guard.FetchRequestError`
   - Exports (types):
     - `AgentWrite`
     - `AnyEndpointDef`

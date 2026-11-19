@@ -1,3 +1,5 @@
+import { FetchRequestError } from "@plugins/primitives/plugins/networking/plugins/request-guard/core";
+
 /**
  * A request to an endpoint answered non-2xx; `body` is the reply, JSON-parsed
  * when it parses. `readEndpointResponse` words the message to name the request
@@ -37,7 +39,9 @@ export class EndpointAgentWriteRefusedError extends EndpointError {}
  * the browser's error as `cause`.
  *
  * It IS a `TypeError`, so every caller that already tells "no answer" from a
- * non-2xx with `err instanceof TypeError` keeps working unchanged.
+ * non-2xx with `err instanceof TypeError` keeps working unchanged. A page's
+ * fetch already names its URL (`FetchRequestError`, the request guard's): the
+ * route is said once, followed by the browser's own words.
  */
 export class EndpointNetworkError extends TypeError {
   override readonly name = "EndpointNetworkError";
@@ -45,6 +49,15 @@ export class EndpointNetworkError extends TypeError {
     public readonly route: string,
     cause: TypeError,
   ) {
-    super(`${route}: ${cause.message}`, { cause });
+    super(
+      `${route}: ${cause instanceof FetchRequestError ? cause.browserMessage : cause.message}`,
+      { cause },
+    );
+    // The page fetch's stack holds the frames of whoever called fetch (this
+    // error is built after the await, which lost them): keep those.
+    if (cause instanceof FetchRequestError && cause.stack !== undefined) {
+      const frames = cause.stack.split("\n").slice(1).join("\n");
+      this.stack = `${this.name}: ${this.message}\n${frames}`;
+    }
   }
 }

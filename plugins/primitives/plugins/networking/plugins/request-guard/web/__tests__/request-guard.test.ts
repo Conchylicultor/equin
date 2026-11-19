@@ -7,6 +7,7 @@ import {
   nativeWebSocket,
   requestGuardReportSink,
 } from "../guard";
+import { FetchRequestError } from "../../core";
 
 /** A constructor standing in for a native (no network in jsdom). */
 class FakeSocket {
@@ -172,5 +173,58 @@ describe("reporting and lifecycle", () => {
     await nativeFetch("/api/health");
     expect(fetchStub).toHaveBeenCalledTimes(1);
     expect(nativeWebSocket("ws://x.test/ws")).toBeInstanceOf(FakeSocket);
+  });
+});
+
+describe("a fetch that rejects names its request", () => {
+  const browserSays = "NetworkError when attempting to fetch resource.";
+  // Firefox's fetch error: a TypeError with no frame at all.
+  const reject = () => {
+    const err = new TypeError(browserSays);
+    err.stack = "";
+    fetchStub.mockRejectedValue(err);
+    return err;
+  };
+
+  async function rejection(p: Promise<unknown>): Promise<unknown> {
+    try {
+      await p;
+    } catch (err) {
+      return err;
+    }
+    throw new Error("expected a rejection");
+  }
+
+  it("through the guarded global fetch: method, path and the caller's frames", async () => {
+    install();
+    const cause = reject();
+    const err = await rejection(
+      fetch("/artifacts/x.js?v=1", { method: "post" }),
+    );
+    expect(err).toBeInstanceOf(FetchRequestError);
+    expect(err).toBeInstanceOf(TypeError);
+    const named = err as FetchRequestError;
+    expect(named.message).toBe(`POST /artifacts/x.js?v=1: ${browserSays}`);
+    expect(named.browserMessage).toBe(browserSays);
+    expect(named.cause).toBe(cause);
+    expect(named.stack).toMatch(/^FetchRequestError: POST \/artifacts/);
+    // The caller's frames, not the guard's own entry point.
+    expect(named.stack).toContain("request-guard.test");
+  });
+
+  it("through nativeFetch, another origin in full", async () => {
+    install();
+    reject();
+    const err = await rejection(nativeFetch("https://cdn.test/a.json"));
+    expect((err as FetchRequestError).message).toBe(
+      `GET https://cdn.test/a.json: ${browserSays}`,
+    );
+  });
+
+  it("an abort, or any other rejection, passes through untouched", async () => {
+    install();
+    const abort = new DOMException("aborted", "AbortError");
+    fetchStub.mockRejectedValue(abort);
+    expect(await rejection(nativeFetch("/x"))).toBe(abort);
   });
 });

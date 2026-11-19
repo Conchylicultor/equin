@@ -3,6 +3,7 @@ import { z } from "zod";
 import { defineEndpoint } from "./define-endpoint";
 import { EndpointError, EndpointNetworkError } from "./endpoint-error";
 import { readEndpointResponse, sendEndpointRequest } from "./request";
+import { FetchRequestError } from "@plugins/primitives/plugins/networking/plugins/request-guard/core";
 
 const collect = defineEndpoint({
   route: "POST /api/x/collect",
@@ -35,6 +36,35 @@ describe("sendEndpointRequest", () => {
       "POST /api/x/collect: NetworkError when attempting to fetch resource.",
     );
     expect(err.cause).toBe(cause);
+  });
+
+  test("a page fetch the request guard named: the route said once, the caller's frames kept", async () => {
+    const words = "Failed to fetch";
+    const named = new FetchRequestError(
+      "POST",
+      "/api/x/collect",
+      words,
+      new TypeError(words),
+    );
+    named.stack = `FetchRequestError: ${named.message}\n    at caller (app.js:1:1)`;
+    let caught: unknown;
+    try {
+      await sendEndpointRequest(
+        () => Promise.reject(named),
+        collect,
+        {},
+        { body: { n: 1 } },
+      );
+    } catch (err) {
+      caught = err;
+    }
+    const err = caught as EndpointNetworkError;
+    expect(err).toBeInstanceOf(EndpointNetworkError);
+    expect(err.message).toBe("POST /api/x/collect: Failed to fetch");
+    expect(err.cause).toBe(named);
+    expect(err.stack).toBe(
+      "EndpointNetworkError: POST /api/x/collect: Failed to fetch\n    at caller (app.js:1:1)",
+    );
   });
 
   test("an abort passes through as the sender threw it", () => {

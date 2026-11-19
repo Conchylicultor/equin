@@ -1,5 +1,6 @@
 import { EndpointNetworkError } from "@plugins/infra/plugins/endpoints/core";
 import type { HostReach } from "@plugins/infra/plugins/health/web";
+import { FetchRequestError } from "@plugins/primitives/plugins/networking/plugins/request-guard/core";
 
 // A request that got no HTTP answer at all, thrown where nothing caught it.
 //
@@ -31,13 +32,17 @@ const NO_ANSWER_MESSAGES: readonly RegExp[] = [
   /^The Internet connection appears to be offline\.?$/, // Safari
 ];
 
-/** Whether `err` is a fetch that got no HTTP answer at all. */
+/**
+ * Whether `err` is a fetch that got no HTTP answer at all. A page fetch's
+ * rejection names its request (`FetchRequestError`, the request guard's): the
+ * browser's own words are its `browserMessage`.
+ */
 export function isFetchNoAnswer(err: unknown): err is TypeError {
   if (err instanceof EndpointNetworkError) return true;
-  return (
-    err instanceof TypeError &&
-    NO_ANSWER_MESSAGES.some((re) => re.test(err.message))
-  );
+  if (!(err instanceof TypeError)) return false;
+  const words =
+    err instanceof FetchRequestError ? err.browserMessage : err.message;
+  return NO_ANSWER_MESSAGES.some((re) => re.test(words));
 }
 
 /**

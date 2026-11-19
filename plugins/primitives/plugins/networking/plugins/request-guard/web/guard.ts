@@ -2,7 +2,11 @@ import {
   defineReportSink,
   type ReportSink,
 } from "@plugins/primitives/plugins/report-sink/core";
-import { REQUEST_GUARD_INSTALLED_GLOBAL } from "../core";
+import {
+  FetchRequestError,
+  nameRequestUrl,
+  REQUEST_GUARD_INSTALLED_GLOBAL,
+} from "../core";
 
 /**
  * The page request guard: the runtime half (rung 4) of "the browser reads the
@@ -153,6 +157,51 @@ function requestMethod(input: RequestInfo | URL, init?: RequestInit): string {
   return method.toUpperCase();
 }
 
+/**
+ * Run one native fetch so that its rejection names the request: a `TypeError`
+ * (no answer, or a request the browser would not send) becomes a
+ * {@link FetchRequestError} carrying the method, the URL and the frames of the
+ * code that called fetch — `callSite`, an `Error` its entry point (the guarded
+ * `fetch`, `nativeFetch`) made when called, before the await lost them (Firefox
+ * gives fetch's own error no frame at all). An abort (a `DOMException`) and
+ * anything else pass through untouched.
+ */
+function namedFetch(
+  fn: typeof fetch,
+  callSite: Error,
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Promise<Response> {
+  return fn.call(globalThis, input, init).catch((err: unknown) => {
+    if (!(err instanceof TypeError) || err instanceof FetchRequestError) {
+      throw err;
+    }
+    const named = new FetchRequestError(
+      requestMethod(input, init),
+      nameRequestUrl(
+        requestUrl(input),
+        typeof document === "undefined" ? undefined : document.baseURI,
+      ),
+      err.message,
+      err,
+    );
+    named.stack = `${named.name}: ${named.message}\n${callerFrames(callSite)}`;
+    throw named;
+  });
+}
+
+/**
+ * The frames below the entry point that made `callSite`: V8 heads a stack
+ * with an "Error" line, Firefox and Safari list frames only; either way the
+ * first frame is the entry point itself, dropped so a crash's fingerprint (its
+ * top frames) is its caller's.
+ */
+function callerFrames(callSite: Error): string {
+  const lines = (callSite.stack ?? "").split("\n");
+  if (lines[0]?.startsWith("Error")) lines.shift();
+  return lines.slice(1).join("\n");
+}
+
 /** A constructor that refuses a guarded URL before constructing. */
 function guardedConstructor<
   C extends abstract new (...args: never[]) => object,
@@ -208,7 +257,7 @@ export function installRequestGuard(): () => void {
         requestUrl(input),
       );
       if (err) return Promise.reject(surface(err));
-      return nativeFn.call(g, input, init);
+      return namedFetch(nativeFn, new Error(), input, init);
     };
     // A host's `typeof fetch` may carry extras (Bun's `preconnect`) a page's
     // fetch has none of; the guard wraps the call only.
@@ -270,14 +319,19 @@ export function installRequestGuard(): () => void {
 /**
  * The native `fetch`, past the guard — the page transport's `fetch`. With no
  * guard installed (a jsdom suite, a host without the app entry) it is the
- * global `fetch`, read at call time, so a test's stub answers.
+ * global `fetch`, read at call time, so a test's stub answers. A rejection
+ * names its request ({@link FetchRequestError}), as the guarded `fetch`'s does.
  */
 export function nativeFetch(
   input: RequestInfo | URL,
   init?: RequestInit,
 ): Promise<Response> {
-  const fn = natives?.fetch ?? globalThis.fetch;
-  return fn.call(globalThis, input, init);
+  return namedFetch(
+    natives?.fetch ?? globalThis.fetch,
+    new Error(),
+    input,
+    init,
+  );
 }
 
 /**

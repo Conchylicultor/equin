@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { EndpointNetworkError } from "@plugins/infra/plugins/endpoints/core";
+import { FetchRequestError } from "@plugins/primitives/plugins/networking/plugins/request-guard/core";
 import type { HostReach } from "@plugins/infra/plugins/health/web";
 import { fileUnlessOffline, isFetchNoAnswer } from "./fetch-no-answer";
 
@@ -44,6 +45,15 @@ describe("isFetchNoAnswer", () => {
       "The Internet connection appears to be offline.",
     ])
       expect(isFetchNoAnswer(new TypeError(message))).toBe(true);
+  });
+
+  test("a page fetch named by the request guard, by the browser's own words", () => {
+    const named = (words: string) =>
+      new FetchRequestError("GET", "/x", words, new TypeError(words));
+    expect(
+      isFetchNoAnswer(named("NetworkError when attempting to fetch resource.")),
+    ).toBe(true);
+    expect(isFetchNoAnswer(named("Failed to parse URL from ::"))).toBe(false);
   });
 
   test("any other TypeError, or a non-TypeError with the same words, is not one", () => {

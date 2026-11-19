@@ -32,7 +32,8 @@ fetch", "NetworkError when attempting to fetch resource.", "Load failed") is
 filed only once the page's own host answers HTTP (`reachHost`, infra/health —
 the signal the live-state wedge watchdog files on). Host answers → the network
 is up and the request still failed (CORS, a blocked URL, a server that drops
-it): filed. No answer either → the visitor's network (an offline laptop, a
+it): filed — a page fetch's rejection names its URL and caller
+(`FetchRequestError`, request-guard; the test reads its `browserMessage`). No answer either → the visitor's network (an offline laptop, a
 phone's backgrounded tab), or the whole host: a console warning, no report.
 `web/internal/fetch-no-answer.ts`.
 

@@ -36930,6 +36930,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/inflight.createInflight`
           - `packages/semaphore.createSemaphore`
           - `primitives/embed/frame/agent.injectFrameAgent`
+          - `primitives/networking/request-guard.FetchRequestError`
         - Exports (types):
           - `AgentWrite`
           - `AnyEndpointDef`
@@ -56098,7 +56099,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `requestGuardReportSink`
           - Core:
             - Exports (values):
+              - `FetchRequestError`
               - `headRequestScript`
+              - `nameRequestUrl`
               - `REQUEST_GUARD_INSTALLED_GLOBAL`
     - **`outline`** — Umbrella for the outline primitive: the scroll-spy position half and the rail chrome half.
       - Plugins:
