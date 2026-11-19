@@ -177,7 +177,7 @@ export function rawFrameOf(f: StallFrame): RawFrame {
 export interface InteractionBegin {
   target: InteractionTarget;
   eventType: string;
-  /** Epoch ms of the event (timeOrigin + its timeStamp). */
+  /** Epoch ms of the event (its timeStamp on the wall clock: page-clock's perfToEpoch). */
   at: number;
 }
 

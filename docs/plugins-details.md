@@ -57464,6 +57464,31 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live`
               - `network/live/live-state`
               - `network/live/optimistic-mutation`
+        - **`page-clock`** — The two clocks a page (or worker) reads, as branded types: EpochMs (the wall clock, Date.now — keeps running while the device sleeps) and PerfMs (the performance timeline — entry.startTime, event.timeStamp, a profiler sample — which pauses while it sleeps on Android and macOS). perfToEpoch / epochToPerf are the only conversion, through the clocks' offset read at once (a ClockOffset), so a stamp taken since the last sleep lands where it happened; `performance.timeOrigin + stamp`, which lags by every sleep since the page loaded, is refused by the page-clock/no-time-origin-arithmetic lint rule.
+          - Cross-plugin:
+            - Imported by:
+              - `debug/slow-ops`
+              - `primitives/perfs/page-pauses`
+              - `reports/main-thread-stall`
+          - Core:
+            - Exports (types):
+              - `ClockOffset`
+              - `ClockReading`
+              - `EpochMs`
+              - `PerfMs`
+            - Exports (values):
+              - `asEpochMs`
+              - `asPerfMs`
+              - `clockOffset`
+              - `epochNow`
+              - `epochToPerf`
+              - `perfNow`
+              - `perfToEpoch`
+              - `perfToEpochAlong`
+              - `readClocks`
+          - Test helpers:
+            - Core: `@plugins/primitives/plugins/perfs/plugins/page-clock/core/testing`
+              - `clockReadingAt` — A clock reading for a test that does not stub the clocks: the timeline at `perf` while the wall clock read `epoch`.
         - **`page-pauses`** — Was this page paused during a span of wall-clock time? pausesDuring(start, end): how long it was hidden or frozen inside it (visibilitychange, Page Lifecycle freeze), and how long its main thread was stalled outside that (long animation frames ≥ 1 s, the bar main-thread-stall files its own slow-op at) — the one record every client latency consumer reads instead of tracking visibility itself; stallsKnownThrough(end) resolves once that record holds every long frame that ended by `end` (an entry reaches the page late, after its frame), which is when a span ending there may be judged.
           - Cross-plugin:
             - Imported by:

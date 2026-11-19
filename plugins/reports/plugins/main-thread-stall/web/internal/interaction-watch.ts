@@ -5,6 +5,17 @@ import type {
   StallFrame,
   StallTab,
 } from "../../core";
+import {
+  asEpochMs,
+  asPerfMs,
+  epochToPerf,
+  perfNow,
+  perfToEpoch,
+  clockOffset,
+  type ClockOffset,
+  type EpochMs,
+  type PerfMs,
+} from "@plugins/primitives/plugins/perfs/plugins/page-clock/core";
 import { STALL } from "./constants";
 import { fileSlowInteraction } from "./file-slow-interaction";
 import {
@@ -36,6 +47,8 @@ interface EventTimingEntry extends PerformanceEntry, EventTimingLike {
  */
 interface OwnEntry extends EventTimingLike {
   readonly target: Node | null;
+  /** The clocks' offset read on its delivery, right after its paint: what places it on the wall clock when judged a grace later. */
+  readonly clocks: ClockOffset;
 }
 
 // The dispatches that START an interaction: their handlers' time is never an
@@ -82,9 +95,9 @@ interface Dispatched extends Origin {
    * the frame that ran them, unlike its hardware timeStamp, which precedes the
    * frame by the input delay.
    */
-  ranAt: number;
+  ranAt: EpochMs;
   /** The same instant on the performance clock (Event Timing's). */
-  ranAtPerf: number;
+  ranAtPerf: PerfMs;
 }
 
 interface Pending {
@@ -165,11 +178,11 @@ export function installInteractionWatch(
     if (!kind) return;
     const key = ev instanceof KeyboardEvent ? keyClass(ev) : null;
     const target = interactionTarget(ev.target, kind, key);
-    const ranAtPerf = performance.now();
+    const ranAtPerf = perfNow();
     const begin: InteractionBegin = {
       target,
       eventType: ev.type,
-      at: Math.round(performance.timeOrigin + ev.timeStamp),
+      at: Math.round(perfToEpoch(asPerfMs(ev.timeStamp))),
     };
     dispatched.push({
       kind,
@@ -178,7 +191,7 @@ export function installInteractionWatch(
       tab: readTab(),
       begin,
       trusted: ev.isTrusted,
-      ranAt: performance.timeOrigin + ranAtPerf,
+      ranAt: perfToEpoch(ranAtPerf),
       ranAtPerf,
     });
     if (dispatched.length > INTERACTION.DISPATCH_RING) dispatched.shift();
@@ -247,7 +260,7 @@ export function installInteractionWatch(
     const payload: SlowInteractionDraft = {
       target,
       eventType: e.name,
-      startedAt: Math.round(performance.timeOrigin + e.startTime),
+      startedAt: Math.round(perfToEpoch(asPerfMs(e.startTime), e.clocks)),
       durationMs: Math.round(e.duration),
       ...phases,
       breakdown: a.breakdown,
@@ -276,8 +289,8 @@ export function installInteractionWatch(
     // Its own time (handlers → paint), on the wall clock: the input delay is
     // whatever held the thread before, never this interaction's stacks.
     const own = {
-      startedAt: performance.timeOrigin + e.processingStart,
-      endedAt: performance.timeOrigin + w.end,
+      startedAt: perfToEpoch(asPerfMs(e.processingStart), e.clocks),
+      endedAt: perfToEpoch(asPerfMs(w.end), e.clocks),
     };
     void fileSlowInteraction(payload, verdict, () => profiler.stacksIn(own));
   };
@@ -285,6 +298,7 @@ export function installInteractionWatch(
   let eventObserver: PerformanceObserver | null = null;
   if (eventTimingSupported()) {
     eventObserver = new PerformanceObserver((list) => {
+      const clocks = clockOffset();
       for (const raw of list.getEntries() as EventTimingEntry[]) {
         if (raw.interactionId === 0 || judged.includes(raw.interactionId))
           continue;
@@ -311,6 +325,7 @@ export function installInteractionWatch(
           processingEnd: raw.processingEnd,
           interactionId: raw.interactionId,
           target: raw.target,
+          clocks,
         };
         if (end - e.processingStart < INTERACTION.RECORD_MIN_MS) continue;
         slow.push({ start: e.processingStart, end });
@@ -366,7 +381,7 @@ export function installInteractionWatch(
       prune(end);
     },
     deferSlowFrame(frame, file) {
-      const start = frame.startedAt - performance.timeOrigin;
+      const start = epochToPerf(asEpochMs(frame.startedAt));
       const w = { start, end: start + frame.durationMs };
       after(INTERACTION.GRACE_MS, () => {
         if (!frameClaimed(w, slow)) file();

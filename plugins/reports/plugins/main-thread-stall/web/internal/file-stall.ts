@@ -7,6 +7,7 @@ import {
   type StallFrame,
   type StallTab,
 } from "../../core";
+import { asEpochMs } from "@plugins/primitives/plugins/perfs/plugins/page-clock/core";
 import { STALL } from "./constants";
 import { coarseClient } from "./coarse-client";
 import { topFunction } from "./stall-machine";
@@ -96,9 +97,10 @@ export async function fileSlowFrame(
   tab: StallTab,
   evidence: { profiler: StallProfiler; heap: HeapWatch },
 ): Promise<void> {
+  // A frame is on the wall clock from its delivery (toStallFrame).
   const window = {
-    startedAt: frame.startedAt,
-    endedAt: frame.startedAt + frame.durationMs,
+    startedAt: asEpochMs(frame.startedAt),
+    endedAt: asEpochMs(frame.startedAt + frame.durationMs),
   };
   emitSlowOp({
     tab,

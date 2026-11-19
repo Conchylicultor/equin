@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { asEpochMs } from "@plugins/primitives/plugins/perfs/plugins/page-clock/core";
+import { clockReadingAt } from "@plugins/primitives/plugins/perfs/plugins/page-clock/core/testing";
 import { STALL } from "./constants";
 import {
   reduceStallStacks,
@@ -9,6 +11,8 @@ import {
 
 const ORIGIN = 1_700_000_000_000;
 const IV = 20;
+/** No sleep: the performance timeline starts at ORIGIN on the wall clock. */
+const CLOCKS = [clockReadingAt(ORIGIN, 0)];
 
 // frames: 0 spin, 1 render, 2 onmessage; stacks: 0 = onmessage, 1 = render <
 // onmessage, 2 = spin < render < onmessage.
@@ -42,9 +46,9 @@ function kept(
   }
   return {
     trace: { ...BASE, samples },
-    timeOrigin: ORIGIN,
-    startedAt: ORIGIN + from,
-    stoppedAt: ORIGIN + to,
+    clocks: CLOCKS,
+    startedAt: asEpochMs(ORIGIN + from),
+    stoppedAt: asEpochMs(ORIGIN + to),
     full: false,
     ...over,
   };
@@ -62,8 +66,8 @@ describe("reduceStallStacks", () => {
     );
     const r = reduceStallStacks({
       traces: [t],
-      startedAt: ORIGIN + 5000,
-      endedAt: ORIGIN + 15_000,
+      startedAt: asEpochMs(ORIGIN + 5000),
+      endedAt: asEpochMs(ORIGIN + 15_000),
       sampleIntervalMs: IV,
     });
     if (r.kind !== "sampled") throw new Error(r.reason);
@@ -84,8 +88,8 @@ describe("reduceStallStacks", () => {
     const t = kept(0, 10_000, (at) => (at % 40 === 0 ? undefined : 2));
     const r = reduceStallStacks({
       traces: [t],
-      startedAt: ORIGIN,
-      endedAt: ORIGIN + 10_000,
+      startedAt: asEpochMs(ORIGIN),
+      endedAt: asEpochMs(ORIGIN + 10_000),
       sampleIntervalMs: IV,
     });
     if (r.kind !== "sampled") throw new Error(r.reason);
@@ -99,16 +103,16 @@ describe("reduceStallStacks", () => {
     const after = kept(9000, 20_000, () => 2);
     const r = reduceStallStacks({
       traces: [before, after],
-      startedAt: ORIGIN + 5000,
-      endedAt: ORIGIN + 12_000,
+      startedAt: asEpochMs(ORIGIN + 5000),
+      endedAt: asEpochMs(ORIGIN + 12_000),
       sampleIntervalMs: IV,
     });
     expect(r.kind).toBe("unavailable");
     expect(
       reduceStallStacks({
         traces: [],
-        startedAt: ORIGIN,
-        endedAt: ORIGIN + 1,
+        startedAt: asEpochMs(ORIGIN),
+        endedAt: asEpochMs(ORIGIN + 1),
         sampleIntervalMs: IV,
       }).kind,
     ).toBe("unavailable");
@@ -117,12 +121,12 @@ describe("reduceStallStacks", () => {
   test("rotated traces are joined: each owns the instants up to the next one's start", () => {
     // The old trace still holds samples past the new one's start (stop is
     // async): they must not be counted twice.
-    const a = kept(0, 6000, () => 2, { stoppedAt: ORIGIN + 6000 });
+    const a = kept(0, 6000, () => 2, { stoppedAt: asEpochMs(ORIGIN + 6000) });
     const b = kept(5000, 12_000, () => 1);
     const r = reduceStallStacks({
       traces: [b, a],
-      startedAt: ORIGIN + 2000,
-      endedAt: ORIGIN + 10_000,
+      startedAt: asEpochMs(ORIGIN + 2000),
+      endedAt: asEpochMs(ORIGIN + 10_000),
       sampleIntervalMs: IV,
     });
     if (r.kind !== "sampled") throw new Error(r.reason);
@@ -136,12 +140,12 @@ describe("reduceStallStacks", () => {
   test("a buffer that filled before the stall ended marks it truncated", () => {
     const t = kept(0, 7000, () => 2, {
       full: true,
-      stoppedAt: ORIGIN + 30_000,
+      stoppedAt: asEpochMs(ORIGIN + 30_000),
     });
     const r = reduceStallStacks({
       traces: [t],
-      startedAt: ORIGIN + 1000,
-      endedAt: ORIGIN + 20_000,
+      startedAt: asEpochMs(ORIGIN + 1000),
+      endedAt: asEpochMs(ORIGIN + 20_000),
       sampleIntervalMs: IV,
     });
     if (r.kind !== "sampled") throw new Error(r.reason);
@@ -150,12 +154,12 @@ describe("reduceStallStacks", () => {
   });
 
   test("a gap in sampling counts one interval, not the gap", () => {
-    const t = kept(0, 1000, () => 2, { stoppedAt: ORIGIN + 6000 });
+    const t = kept(0, 1000, () => 2, { stoppedAt: asEpochMs(ORIGIN + 6000) });
     t.trace.samples.push({ timestamp: 5000, stackId: 2 });
     const r = reduceStallStacks({
       traces: [t],
-      startedAt: ORIGIN,
-      endedAt: ORIGIN + 6000,
+      startedAt: asEpochMs(ORIGIN),
+      endedAt: asEpochMs(ORIGIN + 6000),
       sampleIntervalMs: IV,
     });
     if (r.kind !== "sampled") throw new Error(r.reason);
@@ -178,14 +182,14 @@ describe("reduceStallStacks", () => {
       traces: [
         {
           trace: { resources: [], frames, stacks, samples },
-          timeOrigin: ORIGIN,
-          startedAt: ORIGIN,
-          stoppedAt: ORIGIN + samples.length * IV,
+          clocks: CLOCKS,
+          startedAt: asEpochMs(ORIGIN),
+          stoppedAt: asEpochMs(ORIGIN + samples.length * IV),
           full: false,
         },
       ],
-      startedAt: ORIGIN,
-      endedAt: ORIGIN + samples.length * IV,
+      startedAt: asEpochMs(ORIGIN),
+      endedAt: asEpochMs(ORIGIN + samples.length * IV),
       sampleIntervalMs: IV,
     });
     if (r.kind !== "sampled") throw new Error(r.reason);

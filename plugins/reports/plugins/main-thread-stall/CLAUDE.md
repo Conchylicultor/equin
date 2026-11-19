@@ -107,6 +107,14 @@ when the thread froze samples THROUGH the freeze.
   it files. Otherwise `stacks` is `unavailable` with the reason (gone /
   unknown, filed by another tab, no `Profiler`, the browser refused one, no
   trace covered the stall's start) — never an empty `sampled`.
+- **One clock**: everything the watchdog compares is on the wall clock
+  (`Date.now()` pongs). Samples and LoAF entries are on the performance
+  timeline, which pauses while the device sleeps, so they are placed through
+  `primitives/perfs/page-clock` (a trace keeps both clocks read at its start,
+  each pulse and its stop; a LoAF or Event Timing entry is converted with the
+  offset read on delivery) — never `timeOrigin + stamp`,
+  which put an Android tab's samples 2.2 h before its stall
+  (report-1795091821-xwqzky; `stall-after-sleep.test.ts`).
 - **Reduction** (`web/internal/stack-profile.ts`, pure and tested): samples
   inside `[startedAt, endedAt)` aggregated by exact stack (innermost first,
   `name (url:line:col)`), the top 5 stacks and top 8 self-time frames, no-JS

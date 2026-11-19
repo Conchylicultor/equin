@@ -1,6 +1,13 @@
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import type { StallStacks } from "@plugins/reports/plugins/main-thread-stall/plugins/tab-evidence/core";
 import type { MainThreadStallDraft } from "../../core";
+import {
+  asEpochMs,
+  epochNow,
+  readClocks,
+  type ClockReading,
+  type EpochMs,
+} from "@plugins/primitives/plugins/perfs/plugins/page-clock/core";
 import { LOG_CHANNEL } from "./log-channel";
 import {
   reduceStallStacks,
@@ -46,7 +53,9 @@ type ProfilerCtor = new (opts: {
 
 interface Running {
   profiler: ProfilerInstance;
-  startedAt: number;
+  startedAt: EpochMs;
+  /** Both clocks read at its start and on each pulse (KeptTrace.clocks). */
+  clocks: ClockReading[];
   full: boolean;
 }
 
@@ -63,8 +72,8 @@ export interface StallProfiler {
    * ms) — a window it was alive through (a slow interaction it measured).
    */
   stacksIn(window: {
-    startedAt: number;
-    endedAt: number;
+    startedAt: EpochMs;
+    endedAt: EpochMs;
   }): Promise<StallStacks>;
   dispose(): void;
 }
@@ -91,21 +100,22 @@ export function installStallProfiler(): StallProfiler {
   if (unavailable) log({ unavailable });
 
   const prune = (): void => {
-    const now = Date.now();
+    const now = epochNow();
     kept = kept
       .filter((k) => now - k.stoppedAt <= PROFILE.RETAIN_MS)
       .slice(-PROFILE.RETAIN_TRACES);
   };
 
   const stop = (run: Running): void => {
-    const stoppedAt = Date.now();
-    const timeOrigin = performance.timeOrigin;
+    // Read in the task that stops it: every sample predates this instant.
+    const stoppedAt = epochNow();
+    const clocks = [...run.clocks, readClocks()];
     const settled = run.profiler.stop().then(
       (trace) => {
         if (disposed) return null;
         kept.push({
           trace,
-          timeOrigin,
+          clocks,
           startedAt: run.startedAt,
           stoppedAt,
           full: run.full,
@@ -141,7 +151,12 @@ export function installStallProfiler(): StallProfiler {
       log({ unavailable });
       return;
     }
-    const run: Running = { profiler, startedAt: Date.now(), full: false };
+    const run: Running = {
+      profiler,
+      startedAt: epochNow(),
+      clocks: [readClocks()],
+      full: false,
+    };
     // Fires once the thread is back: the buffer is spent, start a fresh one.
     profiler.addEventListener("samplebufferfull", () => {
       run.full = true;
@@ -168,8 +183,8 @@ export function installStallProfiler(): StallProfiler {
   document.addEventListener("visibilitychange", onVisibility);
 
   const stacksIn = async (window: {
-    startedAt: number;
-    endedAt: number;
+    startedAt: EpochMs;
+    endedAt: EpochMs;
   }): Promise<StallStacks> => {
     if (unavailable) return { kind: "unavailable", reason: unavailable };
     // The running profile may hold the window: finalize it (a fresh one
@@ -195,7 +210,10 @@ export function installStallProfiler(): StallProfiler {
   return {
     pulse() {
       if (!running) start();
-      else if (Date.now() - running.startedAt >= PROFILE.ROTATE_MS) rotate();
+      else if (epochNow() - running.startedAt >= PROFILE.ROTATE_MS) rotate();
+      // A reading each second places its samples across a sleep it ran
+      // through (bounded: ≤ ROTATE_MS / ping interval per run).
+      else running.clocks.push(readClocks());
     },
     async stacksFor(draft, ownTabId) {
       if (draft.ended !== "recovered")
@@ -209,7 +227,11 @@ export function installStallProfiler(): StallProfiler {
           reason:
             "filed by another tab: only the stalled tab holds the profile of its own thread",
         };
-      return stacksIn(draft);
+      // The watchdog measured it on the wall clock (`Date.now()` pongs).
+      return stacksIn({
+        startedAt: asEpochMs(draft.startedAt),
+        endedAt: asEpochMs(draft.endedAt),
+      });
     },
     stacksIn,
     dispose() {

@@ -107,7 +107,8 @@ function bootLine(
   const created =
     boot.createdAt === undefined
       ? ""
-      : `, worker created at ${Math.round(boot.createdAt - performance.timeOrigin)} ms`;
+      : // eslint-disable-next-line page-clock/no-time-origin-arithmetic -- two realms' timeOrigins (the worker's createdAt is its own), each a wall-clock reading: no stamp crosses clocks
+        `, worker created at ${Math.round(boot.createdAt - performance.timeOrigin)} ms`;
   return (
     `${scenarioId}: host ready in ${Math.round(waitedMs)} ms, asked at ${Math.round(askedAtMs)} ms${created} ` +
     `(worker ready at ${readyAtMs} ms: ${stages}; ${boot.plugins} plugins; data: ${boot.data ?? "none kept"}; ${framed}) — slowest: ${slowest}`

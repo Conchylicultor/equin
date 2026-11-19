@@ -34,7 +34,9 @@ export const StallFrameScriptSchema = z.object({
 export type StallFrameScript = z.infer<typeof StallFrameScriptSchema>;
 
 // One long animation frame (LoAF entry) on the wall clock: `startedAt` is epoch
-// ms (timeOrigin + startTime), the offsets are ms from the frame's start.
+// ms (its startTime through the clocks' offset at delivery — never
+// timeOrigin + startTime, which lags after a device sleep), the offsets are ms
+// from the frame's start.
 export const StallFrameSchema = z.object({
   startedAt: z.number(),
   durationMs: z.number(),

@@ -1,3 +1,8 @@
+import {
+  asPerfMs,
+  clockOffset,
+  perfToEpoch,
+} from "@plugins/primitives/plugins/perfs/plugins/page-clock/core";
 import { coveredMs, pushBounded, type Interval } from "./intervals";
 import { createStallRecord } from "./stall-record";
 
@@ -54,11 +59,14 @@ function observeStalls(): void {
     // Entry times are on the performance clock: place them on the wall clock
     // from the same instant read on both clocks, now — the entry is delivered
     // just after its frame, so no sleep can sit between the two.
-    const wallMinusPerf = Date.now() - performance.now();
+    const offset = clockOffset();
     // Every entry, short ones included: a later frame's arrival is what
     // proves the record complete up to it (`stallsKnownThrough`).
     for (const e of list.getEntries())
-      stallRecord.noteFrame(wallMinusPerf + e.startTime, e.duration);
+      stallRecord.noteFrame(
+        perfToEpoch(asPerfMs(e.startTime), offset),
+        e.duration,
+      );
   }).observe({ type, buffered: true });
 }
 

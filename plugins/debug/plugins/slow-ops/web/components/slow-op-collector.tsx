@@ -1,3 +1,7 @@
+import {
+  asPerfMs,
+  perfToEpoch,
+} from "@plugins/primitives/plugins/perfs/plugins/page-clock/core";
 import { useEffect } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useConfig } from "@plugins/config_v2/web";
@@ -103,8 +107,8 @@ export function SlowOpCollector() {
         // hidden through it is judged at the flush like any other span.
         if (transport)
           enqueueSlowOp(transport, {
-            startMs: performance.timeOrigin + info.transportStartedAtMs,
-            endMs: performance.timeOrigin + info.transportReadyAtMs,
+            startMs: perfToEpoch(asPerfMs(info.transportStartedAtMs)),
+            endMs: perfToEpoch(asPerfMs(info.transportReadyAtMs)),
           });
       }
     });

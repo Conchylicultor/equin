@@ -132,6 +132,7 @@ export type ExemptableRuleId =
   | "overlay/publishes-popup"
   | "owned-fd/no-raw-fd-close"
   | "owned-fd/no-raw-spawn-stdio-fd"
+  | "page-clock/no-time-origin-arithmetic"
   | "page-editor/no-adhoc-block-id"
   | "page-editor/no-adhoc-doc-write"
   | "page-editor/no-adhoc-forest-write"

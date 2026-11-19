@@ -1,3 +1,9 @@
+import {
+  asPerfMs,
+  clockOffset,
+  perfToEpoch,
+  type ClockOffset,
+} from "@plugins/primitives/plugins/perfs/plugins/page-clock/core";
 import type { StallFrame } from "../../core";
 import { STALL } from "./constants";
 
@@ -32,9 +38,16 @@ export function loafSupported(): boolean {
 const cap = (s: string): string =>
   s.length > STALL.STRING_CAP ? `${s.slice(0, STALL.STRING_CAP)}…` : s;
 
-/** A LoAF entry on the wall clock, its longest scripts first (capped). */
-export function toStallFrame(e: LoafEntry): StallFrame {
-  const startedAt = performance.timeOrigin + e.startTime;
+/**
+ * A LoAF entry on the wall clock, its longest scripts first (capped). Through
+ * the clocks' offset read now (`clocks`): the entry is delivered just after its
+ * frame, so no sleep sits between the two.
+ */
+export function toStallFrame(
+  e: LoafEntry,
+  clocks: ClockOffset = clockOffset(),
+): StallFrame {
+  const startedAt = perfToEpoch(asPerfMs(e.startTime), clocks);
   const offset = (t: number): number | null =>
     t > 0 ? Math.round(t - e.startTime) : null;
   return {

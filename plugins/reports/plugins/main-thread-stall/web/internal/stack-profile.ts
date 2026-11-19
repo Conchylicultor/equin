@@ -4,6 +4,12 @@
 // tested, stack-profile.test.ts) here.
 
 import type { StallStacks } from "@plugins/reports/plugins/main-thread-stall/plugins/tab-evidence/core";
+import {
+  asPerfMs,
+  perfToEpochAlong,
+  type ClockReading,
+  type EpochMs,
+} from "@plugins/primitives/plugins/perfs/plugins/page-clock/core";
 import { STALL } from "./constants";
 
 /** The JS Self-Profiling API's trace (https://wicg.github.io/js-self-profiling/#the-profilertrace-dictionary). */
@@ -16,19 +22,30 @@ export interface ProfilerTrace {
     column?: number;
   }[];
   stacks: { parentId?: number; frameId: number }[];
-  /** `timestamp`: ms since the document's timeOrigin. No `stackId`: no JS ran. */
+  /**
+   * `timestamp`: the performance timeline (ms since the document's
+   * timeOrigin, paused while the device sleeps). No `stackId`: no JS ran.
+   */
   samples: { timestamp: number; stackId?: number; marker?: string }[];
 }
 
 /** One stopped profiler run, on the wall clock (epoch ms). */
 export interface KeptTrace {
   trace: ProfilerTrace;
-  /** The document's `performance.timeOrigin`: sample timestamps are relative to it. */
-  timeOrigin: number;
-  /** When the profiler was started (epoch ms): no sample of it predates this. */
-  startedAt: number;
-  /** When it was stopped (epoch ms). */
-  stoppedAt: number;
+  /**
+   * Both clocks read along the run — at its start, on each pulse (1 Hz) and
+   * at its stop: what puts its samples on the wall clock, each through the
+   * next reading after it (page-clock's perfToEpochAlong), so a run the
+   * device slept through places the samples on either side of the sleep
+   * where they happened. Never `timeOrigin + timestamp`, which lags by every
+   * sleep since the page loaded (report-1795091821-xwqzky: an Android tab's
+   * samples landed hours before the stall they sampled).
+   */
+  clocks: ClockReading[];
+  /** When the profiler was started: no sample of it predates this. */
+  startedAt: EpochMs;
+  /** When it was stopped. */
+  stoppedAt: EpochMs;
   /** Its buffer filled: sampling stopped at its last sample, not at its stop. */
   full: boolean;
 }
@@ -86,8 +103,8 @@ function stackFrames(trace: ProfilerTrace, stackId: number): string[] {
  */
 export function reduceStallStacks(opts: {
   traces: readonly KeptTrace[];
-  startedAt: number;
-  endedAt: number;
+  startedAt: EpochMs;
+  endedAt: EpochMs;
   sampleIntervalMs: number;
 }): StallStacks {
   const { startedAt, endedAt, sampleIntervalMs } = opts;
@@ -127,7 +144,7 @@ export function reduceStallStacks(opts: {
     let lastAt = Number.NEGATIVE_INFINITY;
     for (let i = 0; i < samples.length; i++) {
       const s = samples[i]!;
-      const at = kept.timeOrigin + s.timestamp;
+      const at = perfToEpochAlong(asPerfMs(s.timestamp), kept.clocks);
       lastAt = at;
       const next = samples[i + 1];
       const raw = next ? next.timestamp - s.timestamp : sampleIntervalMs;
