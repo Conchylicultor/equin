@@ -15,6 +15,7 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { renderMode } from "@plugins/primitives/plugins/dom/plugins/render-mode/core";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { holdFirstPaint } from "@plugins/framework/plugins/web-sdk/core";
+import { startBackgroundLoad } from "@plugins/primitives/plugins/networking/plugins/background-loads/core";
 
 export interface LazyComponentOptions {
   /**
@@ -250,14 +251,16 @@ function preloadForFirstPaint(load: () => Promise<unknown>): void {
 
 /**
  * One-shot: run `load` when the main thread is next idle (Safari has no
- * `requestIdleCallback`: a macrotask then). Only in a page — a module evaluated
- * outside one (barrel introspection's fake `window` has no `document`) loads
+ * `requestIdleCallback`: a macrotask then) — a background load, so while the
+ * visitor waits on a download they asked for (`networking/background-loads`'s
+ * `holdBackgroundLoads`), it waits too, and starts once that is in. Only in
+ * a page — a module evaluated outside one (barrel introspection's fake `window` has no `document`) loads
  * nothing. A failed preload is left unhandled, so it is reported; the first
  * mount shares the same rejected import and throws into its boundary.
  */
 function preloadWhenIdle(load: () => Promise<unknown>): void {
   if (typeof document === "undefined") return;
-  const run = () => void load();
+  const run = () => startBackgroundLoad(() => void load());
   if (typeof requestIdleCallback === "function") requestIdleCallback(run);
   else setTimeout(run, 0);
 }

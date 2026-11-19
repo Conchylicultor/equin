@@ -3,6 +3,7 @@ import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { WithShortcuts } from "@plugins/primitives/plugins/shortcuts/web/testing";
 import { MediaPlayer, type MediaPlayerProps } from "../components/media-player";
 import { DIAL_PX_PER_STEP } from "../internal/math";
+import { holdBackgroundLoads } from "@plugins/primitives/plugins/networking/plugins/background-loads/core";
 import { DURATION, installMediaStub, stubRect } from "./media-stub";
 
 let media: ReturnType<typeof installMediaStub>;
@@ -553,6 +554,24 @@ describe("review fixes", () => {
     expect(video.getAttribute("preload")).toBe("metadata");
     fireEvent.click(button(root, "Play"));
     expect(video.getAttribute("preload")).toBe("auto");
+  });
+
+  it("preload: none while mounted under a background-loads hold, metadata once released", () => {
+    const release = holdBackgroundLoads();
+    const { video } = setup();
+    expect(video.getAttribute("preload")).toBe("none");
+    act(() => release());
+    expect(video.getAttribute("preload")).toBe("metadata");
+  });
+
+  it("preload: a hold taken after mount never lowers metadata", () => {
+    const { video } = setup();
+    const release = holdBackgroundLoads();
+    try {
+      expect(video.getAttribute("preload")).toBe("metadata");
+    } finally {
+      act(() => release());
+    }
   });
 
   it("two quick P presses ask for one window", async () => {

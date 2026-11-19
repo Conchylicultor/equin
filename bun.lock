@@ -6839,6 +6839,10 @@
       "name": "@equin/plugin-primitives-networking",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/networking/plugins/background-loads": {
+      "name": "@equin/plugin-primitives-networking-background-loads",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/networking/plugins/page-transport": {
       "name": "@equin/plugin-primitives-networking-page-transport",
       "version": "0.0.1",
@@ -11578,6 +11582,8 @@
     "@equin/plugin-primitives-multi-select": ["@equin/plugin-primitives-multi-select@workspace:plugins/primitives/plugins/multi-select"],
 
     "@equin/plugin-primitives-networking": ["@equin/plugin-primitives-networking@workspace:plugins/primitives/plugins/networking"],
+
+    "@equin/plugin-primitives-networking-background-loads": ["@equin/plugin-primitives-networking-background-loads@workspace:plugins/primitives/plugins/networking/plugins/background-loads"],
 
     "@equin/plugin-primitives-networking-page-transport": ["@equin/plugin-primitives-networking-page-transport@workspace:plugins/primitives/plugins/networking/plugins/page-transport"],
 

@@ -56085,6 +56085,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `transportWrapper` — A `wrapper` (`render` / `renderHook`) mounting `transport` above the tree.
           - Types: `FakeWsServerOptions`, `RenderWithTransportOptions`, `TabHandle`, `TransportHub`
       - Plugins:
+        - **`background-loads`** — Background loads yield to what the visitor waits on: holdBackgroundLoads() is taken while the visitor watches a download they asked for (the live demo's Enter), and startBackgroundLoad(start) — a download the page starts on its own, ahead of any ask (an idle code preload) — waits until the last hold is released. backgroundLoadsHeld / subscribeBackgroundLoads read it live (a video's metadata preload). A load already in flight is never recalled.
+          - Cross-plugin:
+            - Imported by:
+              - `framework/browser-server/demo/scope`
+              - `media/player`
+              - `primitives/lazy-component`
+          - Core:
+            - Exports (values):
+              - `backgroundLoadsHeld`
+              - `holdBackgroundLoads`
+              - `startBackgroundLoad`
+              - `subscribeBackgroundLoads`
         - **`page-transport`** — pageTransport: the page's own server as a Transport (same-origin SharedWebSocket, the native fetch past the page request guard, plain asset paths, machine, its telemetry reported). The app root mounts it; every other importer is a sanctioned exemption of networking/no-page-transport (page-wide telemetry, boot).
           - Web:
             - Uses:

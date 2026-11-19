@@ -17,6 +17,10 @@ import {
   isPointerModality,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
+import {
+  backgroundLoadsHeld,
+  subscribeBackgroundLoads,
+} from "@plugins/primitives/plugins/networking/plugins/background-loads/core";
 import { PortalHost } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
@@ -538,12 +542,26 @@ export function Player({
     mediaRef(node);
   };
 
+  // Before any play, the metadata is fetched ahead of an ask — a background
+  // load: a player mounted while the visitor waits on a download they asked
+  // for starts at `none`, and rises to `metadata` once that is in (Chrome
+  // starts a deferred load when `preload` rises from `none`). Never lowered
+  // back: a load under way is not recalled, and Chrome reads a `preload`
+  // lowered to `none` mid-load as no limit at all — it buffers the whole file.
+  const backgroundHeld = useSyncExternalStore(
+    subscribeBackgroundLoads,
+    backgroundLoadsHeld,
+    backgroundLoadsHeld,
+  );
+  const [metadataDeferred, setMetadataDeferred] = useState(backgroundHeld);
+  if (metadataDeferred && !backgroundHeld) setMetadataDeferred(false);
   const common = {
     ref: setMediaRef,
     className: "mp-media",
     src,
     autoPlay,
-    preload: autoPlay || played ? "auto" : "metadata",
+    preload:
+      autoPlay || played ? "auto" : metadataDeferred ? "none" : "metadata",
     onError: (e: SyntheticEvent<HTMLMediaElement>) =>
       onError?.(e.currentTarget.error),
     onPlay: () => onPlay?.(),

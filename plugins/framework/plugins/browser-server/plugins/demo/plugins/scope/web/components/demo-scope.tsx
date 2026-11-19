@@ -49,6 +49,7 @@ import { clearStorageScope } from "@plugins/primitives/plugins/dom/plugins/web-s
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { holdBackgroundLoads } from "@plugins/primitives/plugins/networking/plugins/background-loads/core";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -671,6 +672,22 @@ export function DemoScope({
   useEffect(() => {
     if (failure !== null && drawsFailure) reportError(failure);
   }, [failure, drawsFailure]);
+  // While the visitor waits for the demo they asked for (in, and its host or
+  // its plugins still coming), it is the page's one download that matters:
+  // background loads the page would start on its own (another page's code,
+  // a video's metadata) wait until it is in or has failed, rather than
+  // share a slow link with it. What already started is not recalled.
+  // An ungated scope (the demo page) is one the visitor opened for the demo.
+  const visitorWaits =
+    (resume === true || visitor === "in") &&
+    scopePlugins.kind !== "failed" &&
+    (state.kind === "idle" ||
+      state.kind === "booting" ||
+      (state.kind === "ready" && scopePlugins.kind === "pending"));
+  useEffect(() => {
+    if (!visitorWaits) return;
+    return holdBackgroundLoads();
+  }, [visitorWaits]);
   // Only a gated scope (`boot` set) is ever outside. The gate comes first: a
   // host started behind it (stored data) that failed or was declined says so
   // once the visitor enters, never in place of the gate.

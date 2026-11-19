@@ -9,10 +9,22 @@
  * is usable: its boot screen gone, then no loader left on the page. The network is shaped by a CONNECT proxy this script
  * runs (a token bucket per direction, shared by every connection, plus half
  * the RTT each way) — never DevTools throttling, which hangs these loads.
+ * Each connection holds at most a receive window (`--window`, 512 KB) on the
+ * link that the browser has not read: a response the browser stops reading
+ * (a video once it has its metadata) stops crossing the link, as over TCP
+ * (the window counts bytes handed to the local socket, so the loopback
+ * buffers add a few hundred KB to it). Without it (`--window 0`) the proxy
+ * pulled whole responses at once and charged the link for bytes the browser
+ * never read — the hero film put ~13 s of phantom traffic ahead of Enter on
+ * fast 4G.
  * `--profile desktop` runs unshaped. CPU is not throttled: the boot stages are
  * this machine's.
  *
- * What it prints, per run: the click → usable time, the host's boot line
+ * The visitor clicks `--click-after` ms (1500) after the gate shows.
+ *
+ * What it prints, per run: the click → usable time, what the link carried
+ * before the click and was still busy with at it, what the homepage had in
+ * flight then (the downloads the demo's compete with), the host's boot line
  * (`[demo-scope] … host ready in …`: its stages — `script` the worker's code,
  * `storage` opening the database with the snapshot's download and restore,
  * `graph` loading and booting the server plugins, `ready` the post-ready
@@ -23,7 +35,8 @@
  *
  * Manual only — nothing runs this automatically.
  *   ./equin run plugins/apps/plugins/website/plugins/landing/plugins/screenshot/e2e/enter-cost.ts \
- *     --url https://equin.ai [--profile desktop|fast4g|slow4g] [--runs 1] [--visits 1] [--top 25] [--out <prefix>] [--no-record]
+ *     --url https://equin.ai [--profile desktop|fast4g|slow4g] [--runs 1] [--visits 1] [--top 25]
+ *     [--click-after <ms>] [--window <KB>] [--out <prefix>] [--no-record]
  *
  * `--visits N` repeats the visit N times in the same page (about:blank, then
  * the homepage loaded again, Enter clicked again): from the 2nd on, a returning visitor — the
@@ -67,11 +80,23 @@ const OUT = arg("out") ?? "/tmp/enter-cost";
 /** Visits per run, in the same page: the 2nd on is a returning visitor (the demo's data stored, the HTTP cache warm). */
 const VISITS = numArg("visits", 1);
 const USABLE_TIMEOUT_MS = numArg("timeout", 300_000);
+/** How long after the gate shows the visitor clicks Enter, ms (`--click-after`). */
+const CLICK_AFTER_MS = numArg("click-after", 1500);
+/** A tunnel's receive window on the shaped link, bytes (`--window <KB>`; 0: none). */
+const WINDOW = numArg("window", 512) * 1024;
 
 interface Shaper {
   port: number;
   /** TLS bytes delivered to the browser so far. */
   downBytes(): number;
+  /**
+   * The downlink's bytes the browser received between two wall-clock
+   * instants, per what they answered: a plain-http tunnel's current request
+   * path, a TLS tunnel's host (its requests are encrypted).
+   */
+  deliveredBetween(from: number, to: number): Map<string, number>;
+  /** How long, from now, the downlink stays busy with what it holds, ms. */
+  backlogMs(): number;
   close(): Promise<void>;
 }
 
@@ -83,6 +108,9 @@ class Lane {
     private readonly bytesPerMs: number,
     private readonly oneWayMs: number,
   ) {}
+  backlogMs(): number {
+    return Math.max(0, this.nextFree - performance.now());
+  }
   /** When `len` bytes handed over now arrive, as a delay from now. */
   schedule(len: number): number {
     const now = performance.now();
@@ -98,12 +126,30 @@ async function startShaper(shape: Shape): Promise<Shaper> {
   const down = new Lane((shape.downKbps * 1000) / 8 / 1000, shape.rttMs / 2);
   const up = new Lane((shape.upKbps * 1000) / 8 / 1000, shape.rttMs / 2);
   const sockets = new Set<Socket>();
+  const delivered: Array<{ at: number; bytes: number; label: string }> = [];
   // One FIFO per direction of a tunnel: a chunk is written when its arrival
   // time comes, never before the chunk ahead of it (timers round to whole
   // ms, so one timer per chunk could swap two — and corrupt the TLS stream).
-  const pipe = (from: Socket, to: Socket, lane: Lane) => {
+  //
+  // A tunnel holds at most WINDOW bytes on the link that its receiver has not
+  // taken yet — TCP's receive window: when the browser stops reading a
+  // response (a <video preload="metadata"> once it has its metadata), its
+  // server stops sending, so the bytes it never reads never cross the link.
+  // Without it the proxy would pull every response from the local server at
+  // once and charge the link for all of it (`--window 0`: that model).
+  const pipe = (
+    from: Socket,
+    to: Socket,
+    lane: Lane,
+    label: (() => string) | null,
+  ) => {
     const queue: Array<{ at: number; chunk: Buffer | null }> = [];
     let timer: ReturnType<typeof setTimeout> | null = null;
+    let unread = 0;
+    const taken = (len: number) => {
+      unread -= len;
+      if (from.isPaused() && unread <= WINDOW / 2) from.resume();
+    };
     const drain = () => {
       timer = null;
       const now = performance.now();
@@ -111,7 +157,15 @@ async function startShaper(shape: Shape): Promise<Shaper> {
         const { chunk } = queue.shift()!;
         if (to.destroyed) return;
         if (chunk === null) to.end();
-        else to.write(chunk);
+        else {
+          if (label !== null)
+            delivered.push({
+              at: Date.now(),
+              bytes: chunk.length,
+              label: label(),
+            });
+          to.write(chunk, () => taken(chunk.length));
+        }
       }
       if (queue.length > 0)
         timer = setTimeout(drain, Math.max(0, queue[0]!.at - now));
@@ -125,6 +179,8 @@ async function startShaper(shape: Shape): Promise<Shaper> {
         );
     };
     from.on("data", (chunk: Buffer) => {
+      unread += chunk.length;
+      if (WINDOW > 0 && unread > WINDOW) from.pause();
       enqueue(performance.now() + lane.schedule(chunk.length), chunk);
     });
     from.on("end", () => {
@@ -153,10 +209,20 @@ async function startShaper(shape: Shape): Promise<Shaper> {
         const host = namespaceFromHost(h[1]!) === null ? h[1]! : "127.0.0.1";
         // Hold what else the client sends until the pipe listens.
         client.pause();
+        // The request a response answers: HTTP/1.1 answers in order, and
+        // the browser sends the next request on a connection only once the
+        // previous response is in, so the latest request line names it.
+        let current = new URL(line.split(" ")[1]!).pathname;
+        client.on("data", (chunk: Buffer) => {
+          const req = /^[A-Z]+ (http:\/\/\S+) HTTP/.exec(
+            chunk.toString("latin1", 0, 2048),
+          );
+          if (req !== null) current = new URL(req[1]!).pathname;
+        });
         const upstream = connect(Number(h[2] ?? 80), host, () => {
           setTimeout(() => {
-            pipe(upstream, client, down);
-            pipe(client, upstream, up);
+            pipe(upstream, client, down, () => current);
+            pipe(client, upstream, up, null);
             client.emit("data", head);
             client.resume();
           }, shape.rttMs);
@@ -171,8 +237,8 @@ async function startShaper(shape: Shape): Promise<Shaper> {
         // The tunnel opens after one round trip, as a real connection would.
         setTimeout(() => {
           client.write("HTTP/1.1 200 Connection Established\r\n\r\n");
-          pipe(upstream, client, down);
-          pipe(client, upstream, up);
+          pipe(upstream, client, down, () => m[1]!);
+          pipe(client, upstream, up, null);
         }, shape.rttMs);
       });
       sockets.add(upstream);
@@ -189,6 +255,14 @@ async function startShaper(shape: Shape): Promise<Shaper> {
   return {
     port: address.port,
     downBytes: () => down.bytes,
+    backlogMs: () => down.backlogMs(),
+    deliveredBetween: (from, to) => {
+      const out = new Map<string, number>();
+      for (const d of delivered)
+        if (d.at >= from && d.at < to)
+          out.set(d.label, (out.get(d.label) ?? 0) + d.bytes);
+      return out;
+    },
     close: () =>
       new Promise((resolve) => {
         for (const s of sockets) s.destroy();
@@ -289,9 +363,12 @@ await withBrowser(async (h) => {
       await page.goto(url, { waitUntil: "load" });
       const gate = page.locator(ENTER_DEMO).first();
       await gate.waitFor({ timeout: 120_000 });
-      // The homepage settled: what it fetched is not the click's.
-      await page.waitForTimeout(1500);
+      const gateAt = Date.now();
+      // The visitor reads a moment, then clicks: what the homepage still
+      // fetches then competes with the click's downloads (in flight, below).
+      await page.waitForTimeout(CLICK_AFTER_MS);
       const downAtClick = shaper?.downBytes() ?? 0;
+      const backlogAtClick = shaper?.backlogMs() ?? 0;
       const clickAt = Date.now();
       await gate.click();
       // Usable: the boot screen gone (the host ready, the app mounted in the
@@ -336,7 +413,7 @@ await withBrowser(async (h) => {
         `\n── run ${run}/${RUNS}${VISITS === 1 ? "" : ` · visit ${visit}/${VISITS}`} · ${PROFILE}${shape === null ? "" : ` (${shape.downKbps / 1000} Mbps down, ${shape.rttMs} ms RTT)`} · ${url}`,
       );
       console.log(
-        `homepage gate shown at ${clickAt - navAt - 1500} ms; click → boot screen gone ${bootGoneAt - clickAt} ms → no loader left ${usableAt - clickAt} ms`,
+        `homepage gate shown at ${gateAt - navAt} ms, clicked ${clickAt - gateAt} ms later; click → boot screen gone ${bootGoneAt - clickAt} ms → no loader left ${usableAt - clickAt} ms`,
       );
       console.log(
         `bytes click → usable: ${mb(total)} in ${afterClick.length} requests (CDP)` +
@@ -347,6 +424,44 @@ await withBrowser(async (h) => {
       console.log(
         `then, within 3 s of usable: ${mb(late.reduce((s, f) => s + f.encodedBytes, 0))} in ${late.length} requests`,
       );
+      if (shaper !== null) {
+        // The link's own view: what it carried before the click, what it was
+        // still busy with at it, and what it carried while the visitor
+        // waited — by what each byte answered.
+        const largest = (from: number, to: number) =>
+          [...shaper.deliveredBetween(from, to)].toSorted(
+            (a, b) => b[1] - a[1],
+          );
+        const line = ([label, bytes]: [string, number]) =>
+          `  ${kb(bytes).padStart(8)}  ${label.replace(/^\/artifacts\/[^/]+\//, "…/")}`;
+        const before = largest(navAt, clickAt);
+        console.log(
+          `link before the click: ${mb(before.reduce((t, [, b]) => t + b, 0))}, largest:`,
+        );
+        for (const e of before.slice(0, 5)) console.log(line(e));
+        console.log(
+          `link at the click: busy ${(backlogAtClick / 1000).toFixed(1)} s more with what it held; carried click → usable, largest:`,
+        );
+        for (const e of largest(clickAt, usableAt).slice(0, 8))
+          console.log(line(e));
+      }
+      // What the homepage asked for before the click and was still receiving
+      // after it: the downloads the demo's share of the link competes with.
+      const inFlight = [...pageFetched, ...workerFetched].filter(
+        (f) =>
+          f.sentAt >= navAt &&
+          f.sentAt < clickAt - 50 &&
+          f.finishedAt > clickAt,
+      );
+      console.log(
+        `in flight at the click (sent before it, done after): ${mb(inFlight.reduce((s, f) => s + f.encodedBytes, 0))} in ${inFlight.length} requests`,
+      );
+      for (const f of inFlight
+        .toSorted((a, b) => b.encodedBytes - a.encodedBytes)
+        .slice(0, 10))
+        console.log(
+          `  ${kb(f.encodedBytes).padStart(8)}  ${String(Math.round(f.sentAt - clickAt)).padStart(6)} → ${String(Math.round(f.finishedAt - clickAt)).padStart(6)} ms  ${f.who} ${short(f.url)}`,
+        );
       console.log(
         bootLine === null
           ? "boot line: (none seen)"
