@@ -1,7 +1,12 @@
 import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
-import { beginWait } from "@plugins/infra/plugins/runtime-profiler/core";
+import { beginDescribedWait } from "@plugins/infra/plugins/runtime-profiler/core";
+import {
+  gitWaitDetail,
+  indexTraceEnv,
+  splitIndexTrace,
+} from "./git-read-facts";
 
 // One bound for every git invocation routed through this file — which is the
 // point of the file, so a per-call number would just be a knob nobody could set
@@ -137,13 +142,35 @@ export async function tryRunGit(
   // The child's time is git's, not the caller's: an `io` wait on
   // `git:<subcommand>`, shown while it runs and charged as it ends — so a
   // span awaiting a slow `git status` names it (and slow-ops files a slow one
-  // as `wait git:status`) instead of booking it as its own work.
-  const end = beginWait(`git:${gitSubcommand(args)}`, "io");
-  const result = await spawnCaptured(
-    [GIT, "--no-optional-locks", "-C", cwd, ...args],
-    { timeoutMs: GIT_TIMEOUT_MS, stdin: opts.stdin },
-  ).finally(end);
-  const { exitCode, stdout, stderr } = result;
+  // as `wait git:status`) instead of booking it as its own work. The wait
+  // says what it read (`git-read-facts`): the kind of checkout, and for an
+  // index read whether git's fsmonitor spared it the scan and how many files
+  // it stat'ed — so a slow read names where it happened and why.
+  const subcommand = gitSubcommand(args);
+  const end = beginDescribedWait(`git:${subcommand}`, "io");
+  const traceEnv = indexTraceEnv(subcommand);
+  let result: Awaited<ReturnType<typeof spawnCaptured>>;
+  try {
+    result = await spawnCaptured(
+      [GIT, "--no-optional-locks", "-C", cwd, ...args],
+      {
+        timeoutMs: GIT_TIMEOUT_MS,
+        stdin: opts.stdin,
+        ...(traceEnv && { env: { ...process.env, ...traceEnv } }),
+      },
+    );
+  } catch (err) {
+    end(undefined);
+    throw err;
+  }
+  let split: ReturnType<typeof splitIndexTrace> | null = null;
+  try {
+    split = traceEnv ? splitIndexTrace(result.stderr) : null;
+  } finally {
+    end(gitWaitDetail(cwd, split?.facts ?? null));
+  }
+  const { exitCode, stdout } = result;
+  const stderr = split?.stderr ?? result.stderr;
   if (exitCode === 0) return { ok: true, stdout };
   // A KILLED child is not an answer, so it must not become one. Every caller of
   // the probe variant reads `ok: false` as git's verdict — "no such ref", "no

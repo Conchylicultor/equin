@@ -40813,6 +40813,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Aggregate`
           - `BootHookScope`
           - `ContextRunner`
+          - `DescribedWaitEnd`
           - `EntryContext`
           - `EntryCost`
           - `FlightSpan`
@@ -40839,12 +40840,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Track`
           - `WaitBand`
           - `WaitBreakdown`
+          - `WaitDetail`
           - `WaitEnd`
           - `WaitKind`
         - Exports (values):
           - `__contribute`
           - `__pushBand`
           - `beginDeferredWait`
+          - `beginDescribedWait`
           - `beginWait`
           - `captureContext`
           - `captureFlightWindow`

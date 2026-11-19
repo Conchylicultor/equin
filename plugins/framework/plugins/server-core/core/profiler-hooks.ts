@@ -34,7 +34,8 @@ export type ProfilerMeasureName =
   | "waitCount"
   | "longestWaitMs"
   | "replyReads"
-  | "replyBytes";
+  | "replyBytes"
+  | "lstats";
 
 /**
  * One loader entry's own table read-set as its span closes (`[]` included),

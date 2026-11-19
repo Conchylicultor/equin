@@ -68,6 +68,16 @@ was not:
   `[start, end]` into the context the wait STARTED in. A join is this shape
   (`inflight`'s `onJoin`: `() => beginWait(layer, "join")`), and so is the pg
   pool's `db-acquire` and a watched memo's `memo-opening`.
+- **`beginDescribedWait(layer, kind)` → `DescribedWaitEnd`** — `beginWait`
+  for a waiter that knows, once it is over, what the wait was for: its end
+  takes a `WaitDetail` (`variant` — which instance of the layer, a closed set;
+  `measures`; `subject` — the exact thing, e.g. a path) or `undefined`,
+  REQUIRED so the end is never handed to a `.then` that would pass it a value.
+  The detail rides on the `OpWait` when that one wait is filed (never on a
+  residue or a busy stretch, which sum many): `slow-ops` files it as the
+  sample's variant and measures, the subject on the trace. The git runner
+  (`primitives/commit-list`) uses it: a slow `wait git:status` names the
+  checkout kind and whether git's fsmonitor answered.
 - **`gateWaitHooks(layer, kind?)` → `{ onQueued, onWait }`** — the same split
   along a gate's two moments, for `packages/semaphore`'s `SlotOptions` and
   host-admission's pools (`defineHostPool` wires it on every acquire under
@@ -618,6 +628,7 @@ remaining allocations are one flat band array per completed entry span, and what
     - `Aggregate`
     - `BootHookScope`
     - `ContextRunner`
+    - `DescribedWaitEnd`
     - `EntryContext`
     - `EntryCost`
     - `FlightSpan`
@@ -644,12 +655,14 @@ remaining allocations are one flat band array per completed entry span, and what
     - `Track`
     - `WaitBand`
     - `WaitBreakdown`
+    - `WaitDetail`
     - `WaitEnd`
     - `WaitKind`
   - Exports (values):
     - `__contribute`
     - `__pushBand`
     - `beginDeferredWait`
+    - `beginDescribedWait`
     - `beginWait`
     - `captureContext`
     - `captureFlightWindow`

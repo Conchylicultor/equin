@@ -14,6 +14,9 @@ into one trailing pass), `refcount-hub` (one change source per key) and
   use-scoped gate slot (the live read gate holds one only around a read's own
   DB / fs / spawn uses), the wait charged as `memo-opening:<name>` — since
   pass 1 is the watch's work, not the reader's.
+  A reader whose pass 1 ends with no value (the pass failed, or the last
+  watcher left first) falls to the probe path, and is marked so:
+  `memo-opening-failed:<name>` / `memo-opening-closed:<name>`.
 - **Every pass computes** — no skip on an equal signature: a write read
   mid-pass and then undone puts the signature back while the value still
   shows it.

@@ -366,6 +366,7 @@ const MEASURE_LABEL: Record<SpanMeasure, (v: number) => string> = {
   replyReads: (v) => `${v} socket reads`,
   replyBytes: (v) =>
     v >= 1024 ? `${(v / 1024).toFixed(1)} KB reply` : `${v} B reply`,
+  lstats: (v) => `${v} lstat calls`,
 };
 
 // The numbers the slow spans carried: # max 42 subscribers · last 40.

@@ -133,9 +133,19 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
       if (!isReaderWait(wait)) return false;
       const threshold = resolveWaitThreshold(wait, thresholds);
       if (wait.ms < threshold) return false;
+      // One wait its waiter described (`beginDescribedWait`): which instance
+      // of the layer it was — a git child's checkout kind and whether its
+      // fsmonitor answered — and what it measured. A summed wait has none.
       const detail =
         wait.waits === undefined
-          ? undefined
+          ? wait.detail && {
+              ...(wait.detail.variant !== undefined && {
+                variant: wait.detail.variant,
+              }),
+              ...(wait.detail.measures !== undefined && {
+                measures: wait.detail.measures,
+              }),
+            }
           : {
               // A busy stretch's sample says it is the gate's queue holding
               // across ops, not one op's wait.
@@ -150,7 +160,15 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
         label: wait.layer,
         durationMs: wait.ms,
         thresholdMs: threshold,
-        detail: { caller: wait.caller, ...detail },
+        detail: {
+          caller: wait.caller,
+          ...detail,
+          // The exact thing waited on (a checkout path): on the trace only,
+          // never the aggregate's variant.
+          ...(wait.detail?.subject !== undefined && {
+            subject: wait.detail.subject,
+          }),
+        },
       });
       // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- observability write: recordSlowOp persists via its own background-lane/suppressed path; must stay profiler-invisible
       void recordSlowOp({

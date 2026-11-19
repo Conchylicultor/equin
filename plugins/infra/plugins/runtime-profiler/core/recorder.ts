@@ -179,6 +179,9 @@ export const SPAN_MEASURES = [
   "longestWaitMs",
   "replyReads",
   "replyBytes",
+  // lstat calls a git index read made (commit-list's git-read-facts): about
+  // every tracked file on a full scan, a handful when the fsmonitor answered.
+  "lstats",
 ] as const;
 export type SpanMeasure = (typeof SPAN_MEASURES)[number];
 export type SpanMeasures = Partial<Record<SpanMeasure, number>>;
@@ -1235,6 +1238,19 @@ export type WaitKind = "queue" | "join" | "io";
  */
 export type SlowWait = OpWait | GateBusyWait;
 
+/**
+ * What ONE wait was for, told by the code that waited, as it ended
+ * (`beginDescribedWait`): which instance of the layer it was (`variant` — a closed,
+ * low-cardinality set, e.g. the kind of checkout a git child read), numbers
+ * measured on it (`measures`), and the exact thing it waited on (`subject` —
+ * a path, high-cardinality, kept off the aggregate). Carried only by an
+ * `OpWait` filed as that one wait: a residue or a busy stretch sums many
+ * waits, and no one wait's detail describes the sum.
+ */
+export interface WaitDetail extends SpanDetail {
+  subject?: string;
+}
+
 interface SlowWaitBase {
   /** The gate's layer name (`read-admit`, `db-acquire`, …). */
   layer: string;
@@ -1262,6 +1278,8 @@ export interface OpWait extends SlowWaitBase {
    * sees, so a monitor may hold it to a latency bar rather than a work bar.
    */
   latency?: true;
+  /** A single wait only: what it was for, as its waiter told (`WaitDetail`). */
+  detail?: WaitDetail;
   busy?: never;
 }
 
@@ -1284,6 +1302,7 @@ export interface GateBusyWait extends SlowWaitBase {
    */
   waiterKinds: readonly SpanKind[];
   latency?: never;
+  detail?: never;
 }
 
 /**
@@ -2798,6 +2817,7 @@ function chargeWaitIn(
   layer: string,
   ms: number,
   kind: WaitKind,
+  detail?: WaitDetail,
 ): void {
   const waitEnd = now();
   // The interval this wait queued: where it lies on its gate's busy timeline.
@@ -2826,13 +2846,18 @@ function chargeWaitIn(
       0,
       0,
     );
-    if (!notifySlowWait({ layer, ms, caller }))
+    if (!notifySlowWait({ layer, ms, caller, ...(detail && { detail }) }))
       addGateBusy(layer, queued, 1, caller);
     return;
   }
   if (
     kind !== "join" &&
-    !notifySlowWait({ layer, ms, caller: { kind: cur.kind, label: cur.label } })
+    !notifySlowWait({
+      layer,
+      ms,
+      caller: { kind: cur.kind, label: cur.label },
+      ...(detail && { detail }),
+    })
   ) {
     const holder = nearestOpen(cur);
     if (holder) addResidue(holder, layer, ms, 1, queued);
@@ -2893,6 +2918,14 @@ const NO_WAIT_END = (): void => {};
 export type WaitEnd = () => void;
 
 /**
+ * A wait in progress whose waiter says, as it ends, what it was for
+ * (`beginDescribedWait`): the detail is REQUIRED — `undefined` when it has
+ * nothing to tell — so the end is never handed to a `.then` / `.finally` that
+ * would pass it some other value. Idempotent like `WaitEnd`.
+ */
+export type DescribedWaitEnd = (detail: WaitDetail | undefined) => void;
+
+/**
  * THE way a wait is metered: announce it as it STARTS, charge it as it ENDS.
  * From the call on, the wait shows on every open entry it runs under
  * (`FlightSpan.waiting` / `pendingWaitMs`); the returned `end()` stops showing
@@ -2914,15 +2947,31 @@ export type WaitEnd = () => void;
 export function beginWait(layer: string, kind: WaitKind): WaitEnd {
   if (profilingDisabled()) return NO_WAIT_END;
   if (suppressionRuntime.suppressed()) return NO_WAIT_END;
+  const end = beginDescribedWait(layer, kind);
+  return () => end(undefined);
+}
+
+/**
+ * `beginWait` for a waiter that knows, once the wait is over, what it was for
+ * — the instance of the layer (`WaitDetail.variant`), numbers measured on it,
+ * its exact subject: handed to `onSlowWait` when this one wait is filed, so a
+ * slow `git:status` names the checkout it read instead of only the layer.
+ */
+export function beginDescribedWait(
+  layer: string,
+  kind: WaitKind,
+): DescribedWaitEnd {
+  if (profilingDisabled()) return NO_WAIT_END;
+  if (suppressionRuntime.suppressed()) return NO_WAIT_END;
   const cur = contextRuntime.current();
   const startMs = now();
   const unannounce = announceWait(cur, layer, kind, startMs);
   let ended = false;
-  return () => {
+  return (detail) => {
     if (ended) return;
     ended = true;
     unannounce();
-    chargeWaitIn(cur, layer, now() - startMs, kind);
+    chargeWaitIn(cur, layer, now() - startMs, kind, detail);
   };
 }
 

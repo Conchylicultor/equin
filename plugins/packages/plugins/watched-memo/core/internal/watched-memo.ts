@@ -80,8 +80,12 @@ export interface WatchedMemo<T> {
   evict(key: string): void;
 }
 
-/** How pass 1 ended: its value, or `none` — the get falls to the probe path. */
-type FirstOutcome<T> = { ok: true; value: T } | { ok: false };
+/**
+ * How pass 1 ended: its value, or none — the get falls to the probe path —
+ * and why: the pass failed, or the entry closed (its last watcher left) first.
+ */
+type FirstOutcome<T> =
+  { ok: true; value: T } | { ok: false; why: "failed" | "closed" };
 
 type EntryState<T, F> =
   | {
@@ -218,7 +222,7 @@ export function createWatchedMemo<T, F, N = never>(
       if (entry.closed) return;
       if (entry.state.kind === "opening") {
         // Readers awaiting pass 1 fall through to the probe path themselves.
-        entry.state.settle({ ok: false });
+        entry.state.settle({ ok: false, why: "failed" });
         entry.state = { kind: "demoted", error };
         return;
       }
@@ -253,7 +257,7 @@ export function createWatchedMemo<T, F, N = never>(
       // otherwise keep the key's probe entry for good.
       cache.delete(entry.key);
     }
-    settleFirst(entry, { ok: false });
+    settleFirst(entry, { ok: false, why: "closed" });
   }
 
   const hub = createRefcountHub<void>(async (key, emit) => {
@@ -346,6 +350,10 @@ export function createWatchedMemo<T, F, N = never>(
         const end = beginWait(`memo-opening:${name}`, "join");
         const outcome = await entry.state.first.finally(end);
         if (outcome.ok) return outcome.value;
+        // Waited for pass 1 and got nothing: the reader pays the probe on top
+        // (a full `facts` read or two). Named, so a profile says how often
+        // and whether the pass failed or the watch closed under it.
+        markWait(`memo-opening-${outcome.why}:${name}`);
       }
       return probe(key);
     },
