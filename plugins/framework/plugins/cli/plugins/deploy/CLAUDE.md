@@ -70,6 +70,15 @@ keeps every address a tab used within a day (web-artifacts'
 `served-addresses`). Design:
 `research/2026-11-14-global-zero-wait-site-deploys.md`.
 
+**Every request the edge sees is logged, bounded.** Caddy writes one JSON line
+per request (protocol, status, size, full duration, client) to the install's
+`edgeAccessLogPath` (`/var/log/caddy/<composition>.access.log`), rotated past
+100 MB, 30 gzipped rolls, 14 days at most (`caddySite`). It is the box's only
+record of what a visitor's browser asked for and when it cancelled; Caddy's
+journal keeps only the responses it could not finish. Converge creates the file
+caddy-owned before `caddy validate` (root) can create it root-owned, which
+fails the reload with "permission denied".
+
 **A restart never answers a visitor with a 502.** Every restart of the unit (a
 host-changing ship, converge's restart gate, a crash) closes the loopback port
 until the new gateway binds. Caddy holds a request whose dial is refused for

@@ -214,6 +214,7 @@ function InstallBody({ deployment }: { deployment: Deployment }): ReactNode {
       <DerivedValue label="Install dir" value={install.installDir} />
       <DerivedValue label="systemd unit" value={install.unit} />
       <DerivedValue label="Caddy site" value={install.caddySitePath} />
+      <DerivedValue label="Access log" value={install.edgeAccessLogPath} />
     </Stack>
   );
 }

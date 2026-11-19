@@ -70,6 +70,12 @@ export const UNIT_TEMPLATE_PATH = "/etc/systemd/system/equin@.service";
 export const CADDY_SITES_DIR = "/etc/caddy/sites";
 
 /**
+ * Where Caddy writes each composition's edge access log. The Caddy package's
+ * own log dir (owned by its `caddy` user, which is who writes the file).
+ */
+export const CADDY_LOG_DIR = "/var/log/caddy";
+
+/**
  * systemd's instance-name specifier — the ONE thing systemd expands in
  * {@link UNIT_TEMPLATE_PATH}.
  *
@@ -126,6 +132,12 @@ export interface InstallLayout {
   readonly credentialsDropIn: string;
   /** This composition's Caddy site block. */
   readonly caddySitePath: string;
+  /**
+   * This composition's edge access log: one JSON line per request Caddy
+   * answered (or saw cancelled), size-bounded by Caddy's own rotation — the
+   * box's only record of what a visitor's browser actually asked for.
+   */
+  readonly edgeAccessLogPath: string;
 }
 
 /** Derive one composition's whole host layout from its name. */
@@ -145,6 +157,7 @@ export function deriveInstall(compositionId: string): InstallLayout {
     credentialsDir: `${installDir}/credentials`,
     credentialsDropIn: `/etc/systemd/system/${unit}.d/deploy-secrets.conf`,
     caddySitePath: `${CADDY_SITES_DIR}/${compositionId}.caddy`,
+    edgeAccessLogPath: `${CADDY_LOG_DIR}/${compositionId}.access.log`,
   });
 }
 

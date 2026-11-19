@@ -1,5 +1,6 @@
 import type { LoadedPlugin, PluginDefinition } from "./types";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
+import { loadAcrossReachLoss } from "./page-reach";
 
 export interface PluginEntry {
   pluginPath: string;
@@ -39,7 +40,11 @@ export async function loadPlugins(
   // the deliberate deferred-batch boot-perf design, buying nothing. If this ever
   // regressed, `plugin-render.test.tsx` (a load-only canary that loads every web
   // plugin) would fail loudly.
-  const results = await Promise.allSettled(entries.map((e) => e.loader()));
+  // A chunk the browser dropped while the page was hidden, offline or leaving
+  // is loaded again once the page is back, not failed (`page-reach.ts`).
+  const results = await Promise.allSettled(
+    entries.map((e) => loadAcrossReachLoss(e.loader)),
+  );
   const plugins: LoadedPlugin[] = [];
   const errors: PluginLoadError[] = [];
   const seenIds = new Set<string>();

@@ -389,6 +389,7 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
 ## Key Design Decisions
 
 - **Per-plugin error isolation (web)** — web plugins use dynamic `import()` for per-plugin error isolation; server/central use static imports. All plugins are known at build time (the generated registry lists them)
+- **A chunk lost to the page's own reach is loaded again** — `loadPlugins` wraps each import in `loadAcrossReachLoss` (`core/page-reach.ts`): an import that failed after the tab was hidden, went offline or began leaving is asked again once the page is visible and online (no timer); one that failed while the page kept its reach fails, and is reported, as before. Visitors' "Failed to fetch dynamically imported module" on equin.ai was this — the edge saw their browsers cancel or go silent, never an unanswered request. `DemoScope` applies the same rule to its host's boot (`markPageReach` / `pageReachLostSince` / `whenPageCanFetch`).
 - **No dependencies field** — import statements enforce dependency at build time
 - **No lifecycle hooks** — plugins use React's own lifecycle (useEffect, etc.)
 - **Slots are the only extension mechanism** — no special `root`, `background`, or other fields
@@ -426,6 +427,7 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `PluginLoadError`
     - `PluginLoadReport`
     - `PluginRegistry`
+    - `ReachMark`
     - `RootContribution`
     - `RootScope`
     - `RootSlot`
@@ -452,8 +454,10 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `markDeferredLoadComplete`
     - `markDeferredPluginsFailed`
     - `markDeferredPluginsLoaded`
+    - `markPageReach`
     - `MissingCompanionError`
     - `missingCompanions`
+    - `pageReachLostSince`
     - `partitionWebEntries`
     - `pluginLoadReportSink`
     - `PluginProvider`
@@ -473,6 +477,7 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `useScopedOutContributions`
     - `useScopePlugins`
     - `webCollectedDir`
+    - `whenPageCanFetch`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
   - Imported by: 114 plugins — full list in [REFERENCE.md](./REFERENCE.md)

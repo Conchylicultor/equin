@@ -34708,6 +34708,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PluginLoadError`
           - `PluginLoadReport`
           - `PluginRegistry`
+          - `ReachMark`
           - `RootContribution`
           - `RootScope`
           - `RootSlot`
@@ -34734,8 +34735,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `markDeferredLoadComplete`
           - `markDeferredPluginsFailed`
           - `markDeferredPluginsLoaded`
+          - `markPageReach`
           - `MissingCompanionError`
           - `missingCompanions`
+          - `pageReachLostSince`
           - `partitionWebEntries`
           - `pluginLoadReportSink`
           - `PluginProvider`
@@ -34755,6 +34758,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useScopedOutContributions`
           - `useScopePlugins`
           - `webCollectedDir`
+          - `whenPageCanFetch`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
         - Imported by: 114 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)

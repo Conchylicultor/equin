@@ -397,8 +397,25 @@ export const EDGE_RESTART_HOLD_SEC = 60;
  */
 export const GATEWAY_API_PREFIX = "/gateway/";
 
+/**
+ * The edge access log's bounds: Caddy rotates the file past
+ * {@link EDGE_ACCESS_LOG_ROLL_MB} (gzipping each roll, ~10x smaller), keeps
+ * {@link EDGE_ACCESS_LOG_ROLLS} of them and none older than
+ * {@link EDGE_ACCESS_LOG_KEEP_DAYS} — so the log costs at most ~400 MB of the
+ * box's disk whatever the traffic. One demo boot is ~700 module requests at
+ * ~350 B a line (headers dropped), so a roll holds ~400 demo boots and the
+ * whole log days of the busiest site traffic seen (2026-11-19).
+ */
+export const EDGE_ACCESS_LOG_ROLL_MB = 100;
+export const EDGE_ACCESS_LOG_ROLLS = 30;
+export const EDGE_ACCESS_LOG_KEEP_DAYS = 14;
+
 /** This deployment's Caddy site block: TLS in front, plain HTTP on loopback. */
-export function caddySite(hostnames: string[], loopbackPort: number): string {
+export function caddySite(
+  hostnames: string[],
+  loopbackPort: number,
+  accessLogPath: string,
+): string {
   // No `header_up Host`: each install runs its OWN gateway with
   // `-default-namespace <composition>`, and the gateway's `parseWorktree`
   // yields no worktree for anything not ending in `.localhost` — so a public
@@ -428,7 +445,28 @@ export function caddySite(hostnames: string[], loopbackPort: number): string {
   // through this edge is a visitor, never the owner, and `/gateway/*` answers
   // the owner only (`gateway/principal.go`). This is the second, so neither
   // alone stands between the internet and the box's controls.
+  //
+  // `log` is the edge access log: one JSON line per request (protocol — HTTP/2
+  // or HTTP/3 —, status, bytes, duration, client), written by the only layer
+  // that sees every request a visitor's browser sent, including the ones the
+  // browser cancels. Without it a visitor's failed module download could only
+  // be guessed at ("lost on the visitor's side"): the box kept a line only for
+  // a response it could not finish. Headers and TLS details are dropped: they
+  // are ~75% of a line and say nothing the protocol, client and URI do not
+  // (and the visitor's browser is in the site's analytics).
   return `${hostnames.join(", ")} {
+\tlog {
+\t\toutput file ${accessLogPath} {
+\t\t\troll_size ${EDGE_ACCESS_LOG_ROLL_MB}MiB
+\t\t\troll_keep ${EDGE_ACCESS_LOG_ROLLS}
+\t\t\troll_keep_for ${EDGE_ACCESS_LOG_KEEP_DAYS * 24}h
+\t\t}
+\t\tformat filter {
+\t\t\trequest>headers delete
+\t\t\trequest>tls delete
+\t\t\tresp_headers delete
+\t\t}
+\t}
 \tencode zstd gzip
 \trespond ${HOST_ONLY_PREFIX}* 404
 \trespond ${GATEWAY_API_PREFIX}* 404
@@ -512,6 +550,7 @@ UNIT_PATH=${sq(UNIT_TEMPLATE_PATH)}
 CADDYFILE=${sq(caddyfile)}
 CADDY_SITES=${sq(CADDY_SITES_DIR)}
 SITE=${sq(install.caddySitePath)}
+ACCESS_LOG=${sq(install.edgeAccessLogPath)}
 CADDY_KEYRING=${sq(keyring)}
 CADDY_LIST=${sq(sourceList)}
 FIREWALL_RULE=${sq(firewallRule)}
@@ -630,13 +669,27 @@ fi
 
 install -d -m 755 "$CADDY_SITES"
 cat > "$(staged "$SITE")" <<'CADDY_SITE_EOF'
-${caddySite(hostnames, loopbackPort)}CADDY_SITE_EOF
+${caddySite(hostnames, loopbackPort, install.edgeAccessLogPath)}CADDY_SITE_EOF
 # 0644: the caddy unit runs as User=caddy and must be able to READ its own site.
 if put "$SITE" 644 -; then
   caddy_changed=1
   echo "[~] wrote $SITE"
 else
   echo "[=] $SITE"
+fi
+# The site's access log is written by the caddy unit's own user — but the
+# \`caddy validate\` below runs as root and opens the log too, creating a
+# missing one root-owned 0600, which the running caddy then cannot open: the
+# reload fails with "permission denied" (applying the log by hand on equin.ai,
+# 2026-11-19). So the file exists, caddy-owned, before anything opens it.
+if [ "$(stat -c %U:%G "$ACCESS_LOG" 2>/dev/null)" = caddy:caddy ]; then
+  echo "[=] $ACCESS_LOG"
+else
+  install -d -o caddy -g caddy -m 755 "$(dirname "$ACCESS_LOG")"
+  touch "$ACCESS_LOG"
+  chown caddy:caddy "$ACCESS_LOG"
+  chmod 600 "$ACCESS_LOG"
+  echo "[~] $ACCESS_LOG owned by caddy"
 fi`
     : `if [ -e "$SITE" ]; then
   rm -f "$SITE"

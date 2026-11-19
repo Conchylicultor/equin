@@ -52,6 +52,12 @@ export type {
 } from "./types";
 export { loadPlugins } from "./loader";
 export type { PluginEntry, PluginLoadError } from "./loader";
+export {
+  markPageReach,
+  pageReachLostSince,
+  whenPageCanFetch,
+} from "./page-reach";
+export type { ReachMark } from "./page-reach";
 export { partitionWebEntries, isDeferredPluginPath } from "./load-tiers";
 export {
   hasFirstPaintHolds,

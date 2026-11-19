@@ -69,8 +69,26 @@ async function bash(
 
 describe("caddySite", () => {
   test("refuses the host-only routes publicly, ahead of the proxy", () => {
-    expect(caddySite(["equin.dev", "www.equin.dev"], 9100)).toBe(
+    expect(
+      caddySite(
+        ["equin.dev", "www.equin.dev"],
+        9100,
+        "/var/log/caddy/website.access.log",
+      ),
+    ).toBe(
       `equin.dev, www.equin.dev {
+\tlog {
+\t\toutput file /var/log/caddy/website.access.log {
+\t\t\troll_size 100MiB
+\t\t\troll_keep 30
+\t\t\troll_keep_for 336h
+\t\t}
+\t\tformat filter {
+\t\t\trequest>headers delete
+\t\t\trequest>tls delete
+\t\t\tresp_headers delete
+\t\t}
+\t}
 \tencode zstd gzip
 \trespond /api/host-only/* 404
 \trespond /gateway/* 404
@@ -85,15 +103,15 @@ describe("caddySite", () => {
   });
 
   test("refuses the gateway's control API publicly", () => {
-    expect(caddySite(["a.example"], 9100)).toContain(
-      `respond ${GATEWAY_API_PREFIX}* 404`,
-    );
+    expect(
+      caddySite(["a.example"], 9100, "/var/log/caddy/a.access.log"),
+    ).toContain(`respond ${GATEWAY_API_PREFIX}* 404`);
   });
 
   test("the refused path is the prefix hostOnly() guards", () => {
-    expect(caddySite(["a.example"], 9100)).toContain(
-      `respond ${HOST_ONLY_PREFIX}* 404`,
-    );
+    expect(
+      caddySite(["a.example"], 9100, "/var/log/caddy/a.access.log"),
+    ).toContain(`respond ${HOST_ONLY_PREFIX}* 404`);
   });
 });
 
@@ -129,6 +147,19 @@ describe("convergeScript (idempotence contract)", () => {
     ]) {
       expect(text).toContain(`if put "${target}"`);
     }
+  });
+
+  test("the access log is caddy-owned before root's caddy validate can create it", () => {
+    // validate (root) opening a missing log creates it root-owned 0600, and the
+    // running caddy then fails to reload with "permission denied".
+    const text = script(["equin.ai"]);
+    const owned = text.indexOf('chown caddy:caddy "$ACCESS_LOG"');
+    const validate = text.indexOf('caddy validate --config "$CADDYFILE"');
+    expect(owned).toBeGreaterThan(-1);
+    expect(owned).toBeLessThan(validate);
+    expect(text).toContain(
+      `ACCESS_LOG='${deriveInstall("website").edgeAccessLogPath}'`,
+    );
   });
 
   test("the env file names the deployment's public hostnames, none when it has none", () => {

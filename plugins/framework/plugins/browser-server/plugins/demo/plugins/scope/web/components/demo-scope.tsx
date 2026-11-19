@@ -62,8 +62,11 @@ import {
 } from "@plugins/primitives/plugins/networking/web";
 import { scopeIssuer } from "@plugins/primitives/plugins/networking/core";
 import {
+  markPageReach,
+  pageReachLostSince,
   PluginScope,
   useScopePlugins,
+  whenPageCanFetch,
 } from "@plugins/framework/plugins/web-sdk/core";
 import { RenderOrigin } from "@plugins/primitives/plugins/scope/plugins/render-origin/web";
 import { ScopeIconSymbols } from "@plugins/ui/plugins/icons/plugins/sprites/web";
@@ -586,29 +589,49 @@ export function DemoScope({
     // resource owned by this mount, so StrictMode's mount → unmount → mount
     // ends the first and keeps the second (an initialiser would start one a
     // discarded render never ends).
+    // A boot whose modules the browser dropped while the page was hidden,
+    // offline or leaving (a phone backgrounding the tab mid-download) is the
+    // visitor's network, not a failure: a fresh host once the page is back.
+    // web-sdk's `page-reach` — the same rule the page's plugin loader follows.
+    const reach = markPageReach();
+    let live = true;
     const stop = startScopeServer(
       scenario,
       generations,
       inputKeysRef.current,
       telemetryRef.current,
       {
-      onReady: (host) => setState({ kind: "ready", host }),
-      onStopped: (why) => setState({ kind: "stopped", why }),
-      onFollow: (why) => {
-        setState({ kind: "booting", progress: null });
-        if (why === "reset") setResets((r) => r + 1);
-        else setReconnects((r) => r + 1);
+        onReady: (host) => setState({ kind: "ready", host }),
+        onStopped: (why) => setState({ kind: "stopped", why }),
+        onFollow: (why) => {
+          setState({ kind: "booting", progress: null });
+          if (why === "reset") setResets((r) => r + 1);
+          else setReconnects((r) => r + 1);
+        },
+        onFailed: (error) => {
+          if (!pageReachLostSince(reach)) {
+            setState({ kind: "failed", error });
+            return;
+          }
+          console.warn(
+            "[demo] the host's boot failed while the page was hidden, offline or leaving — booting a fresh one once the page is back",
+            error,
+          );
+          void whenPageCanFetch().then(() => {
+            if (live) setReconnects((r) => r + 1);
+          });
+        },
+        onProgress: (progress) =>
+          setState((prev) =>
+            // `idle` until the first report: the host was not started before.
+            prev.kind === "booting" || prev.kind === "idle"
+              ? { kind: "booting", progress }
+              : prev,
+          ),
       },
-      onFailed: (error) => setState({ kind: "failed", error }),
-      onProgress: (progress) =>
-        setState((prev) =>
-          // `idle` until the first report: the host was not started before.
-          prev.kind === "booting" || prev.kind === "idle"
-            ? { kind: "booting", progress }
-            : prev,
-        ),
-    });
+    );
     return () => {
+      live = false;
       stop();
       // The next server (a host still booting) is not this one.
       setState({ kind: "booting", progress: null });
