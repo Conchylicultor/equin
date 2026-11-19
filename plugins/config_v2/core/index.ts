@@ -51,6 +51,7 @@ export {
   readonlyProxy,
 } from "./internal/config-proxy";
 export {
+  currentOrigin,
   effective,
   hasConflict,
   propagate,

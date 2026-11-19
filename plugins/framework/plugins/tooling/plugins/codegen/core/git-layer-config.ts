@@ -7,15 +7,15 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
-  computeHash,
+  currentOrigin,
   parseConfigFile,
   readTypedConfig,
 } from "@plugins/config_v2/core";
 import type {
   ConfigDescriptor,
+  ConfigFileContent,
   ConfigProxy,
   ConfigValues,
-  JsonValue,
 } from "@plugins/config_v2/core";
 import type { FieldsRecord } from "@plugins/fields/core";
 
@@ -60,13 +60,12 @@ function strictReadOnlyFileConfigProxy(filePath: AppPath): ConfigProxy {
  * `generateConfigOrigins`, so an edit to a descriptor's defaults (e.g. a
  * composition manifest in `plugin-meta/composition/core/config.ts`) would
  * otherwise not reach the registries until a SECOND build — and the first build
- * would fail `plugins-registry-in-sync` for no visible reason. Dropping the stale
- * origin here makes one build enough.
- *
- * This is the same staleness rule `nonStaleOverrideContent`
- * (`config_v2/core/internal/tier-logic.ts`) already applies to the OVERRIDE layer
- * — an override whose `@hash` no longer matches its origin is ignored — applied
- * one layer down, to the origin against its descriptor.
+ * would fail `plugins-registry-in-sync` for no visible reason. Reading the stale
+ * origin as the regeneration will write it (`currentOrigin`, config_v2 — the
+ * same rule the deploy posture's `readEffectiveConfigFromDisk` applies) makes
+ * one build enough. A committed override written against the old origin is then
+ * stale against the new one and ignored, exactly as the regenerated layer will
+ * resolve it.
  *
  * SCOPE. The comparison basis is `descriptor.defaults`, so this only works for a
  * descriptor whose origin IS its defaults — `originDefaultsFrom: "descriptor"`.
@@ -91,14 +90,13 @@ function nonStaleOriginProxy(
     );
   }
   const inner = strictReadOnlyFileConfigProxy(filePath);
-  const read = (): { content: JsonValue; hash: string | null } | null => {
+  const read = (): ConfigFileContent | null => {
     const data = inner.read();
     if (data === null) return null;
     // A file with no header at all is impossible here — the strict proxy already
     // threw. A header that no longer matches means "written by an older
-    // descriptor", which is exactly the stale case.
-    const current = computeHash(descriptor.defaults as unknown as JsonValue);
-    return data.hash !== null && data.hash !== current ? null : data;
+    // descriptor": read it as the regeneration will write it.
+    return currentOrigin(descriptor, data);
   };
   return { read, write: inner.write, exists: () => read() !== null };
 }
@@ -115,7 +113,7 @@ function nonStaleOriginProxy(
  * `readTypedConfig` returns `descriptor.defaults` when neither file exists, so a
  * fresh checkout (before any `./equin build` materializes the origin) still
  * validates the SEEDED defaults. That is intentional — no existence guard — and
- * it is the same answer {@link nonStaleOriginProxy} degrades a stale origin to.
+ * it is the same document {@link nonStaleOriginProxy} reads a stale origin as.
  *
  * `hierarchyPath` is the config's owning-plugin path (`asPath(pluginId)`); the
  * descriptor does not carry its plugin identity, so the caller supplies it.

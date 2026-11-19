@@ -59,6 +59,35 @@ function nonStaleOverrideContent(
   return ow === undefined || ow.syntaxErrors ? undefined : ow.content;
 }
 
+/**
+ * A committed (git-layer) origin as the build is about to write it.
+ *
+ * `config/<path>/<name>.origin.jsonc` is generated from the descriptor's
+ * defaults (`// @hash computeHash(defaults)`), and the build regenerates it in
+ * its manifest-codegen stage — AFTER stage 1 has already read config to decide
+ * what to build (the compositions a `--composition` build serves, the
+ * registries codegen writes). So a descriptor edited on the branch leaves the
+ * file on disk one generation behind for that whole first half of the build.
+ * A header that no longer matches the descriptor says exactly that, and the
+ * document the regeneration will write is known: the defaults themselves.
+ *
+ * Only a `originDefaultsFrom: "descriptor"` descriptor can be judged this way
+ * — a `"build"` origin is materialized by a codegen preparer (reorder's
+ * catalog) and never equals `descriptor.defaults`, so it is returned as read.
+ * An absent document stays absent: the caller decides what no git layer means.
+ */
+export function currentOrigin(
+  descriptor: Pick<ConfigDescriptor, "defaults" | "originDefaultsFrom">,
+  doc: ConfigFileContent | null,
+): ConfigFileContent | null {
+  if (doc === null || descriptor.originDefaultsFrom !== "descriptor") {
+    return doc;
+  }
+  const content = descriptor.defaults as unknown as JsonValue;
+  const hash = computeHash(content);
+  return doc.hash === hash ? doc : { content, hash };
+}
+
 export function effective(
   origin: ConfigProxy,
   overwrites: ConfigProxy,

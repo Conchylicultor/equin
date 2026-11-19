@@ -35,8 +35,12 @@ function write(rel: string, content: string): void {
 
 const twoFields = {
   enabled: boolField({ label: "Enabled", default: true }),
-  home: textField({ label: "Home" }),
+  home: textField({ label: "Home", default: "sonata" }),
 };
+// What codegen writes as the committed origin: the descriptor's defaults, under
+// their own hash.
+const gitDoc = { enabled: true, home: "sonata" };
+const gitHash = computeHash(gitDoc);
 
 function writeDoc(rel: string, content: JsonValue, hash: string): void {
   write(rel, `// @hash ${hash}\n${JSON.stringify(content)}\n`);
@@ -54,8 +58,7 @@ async function readEffective() {
 }
 
 test("resolves against the git origin, not a stale propagated user origin", async () => {
-  const gitDoc = { enabled: true, home: "sonata" };
-  writeDoc("config/p/cfg.origin.jsonc", gitDoc, "gitgitgitgit");
+  writeDoc("config/p/cfg.origin.jsonc", gitDoc, gitHash);
   // Propagated before `home` existed.
   const stale = { enabled: true };
   writeDoc("user/p/cfg.origin.jsonc", stale, computeHash(stale));
@@ -64,8 +67,7 @@ test("resolves against the git origin, not a stale propagated user origin", asyn
 });
 
 test("a user override wins only while written against the git-effective document", async () => {
-  const gitDoc = { enabled: true, home: "sonata" };
-  writeDoc("config/p/cfg.origin.jsonc", gitDoc, "gitgitgitgit");
+  writeDoc("config/p/cfg.origin.jsonc", gitDoc, gitHash);
   writeDoc("user/p/cfg.origin.jsonc", gitDoc, computeHash(gitDoc));
 
   const current = { enabled: false, home: "sonata" };
@@ -82,4 +84,19 @@ test("falls back to the user origin when the git layer has no document", async (
   writeDoc("user/p/cfg.origin.jsonc", doc, computeHash(doc));
 
   expect(await readEffective()).toEqual({ enabled: false, home: "x" });
+});
+
+// The build reads this before it regenerates the committed origins from the
+// descriptors, so a default edited on the branch is one generation ahead of
+// `config/…/*.origin.jsonc` for the whole first half of the build — a
+// `--composition` build served the previous composition list that way.
+test("a committed origin older than its descriptor reads as the descriptor's defaults", async () => {
+  const before = { enabled: true, home: "website" };
+  writeDoc("config/p/cfg.origin.jsonc", before, computeHash(before));
+  writeDoc("user/p/cfg.origin.jsonc", before, computeHash(before));
+  // Written against the old origin: stale against the regenerated one.
+  const mine = { enabled: false, home: "website" };
+  writeDoc("user/p/cfg.jsonc", mine, computeHash(before));
+
+  expect(await readEffective()).toEqual(gitDoc);
 });

@@ -7,6 +7,7 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
+  currentOrigin,
   effective,
   loadedProxy,
   readonlyProxy,
@@ -89,8 +90,15 @@ function resolveEffective<F extends FieldsRecord>(
   // still wins only while its `// @hash` matches the git-effective document,
   // exactly as it will at runtime once this build has propagated. The user
   // origin stands only when the git layer has no document at all.
+  //
+  // The committed origin itself is one generation behind for the same reason:
+  // the build reads this before it regenerates `config/…/*.origin.jsonc` from
+  // the descriptors, so a default edited on the branch (a composition's entry
+  // points) would be read as the previous one and the build would serve the
+  // old value with nothing saying so. `currentOrigin` reads it as the
+  // regeneration will write it.
   const gitEff = effective(
-    loadedProxy(gitOrigin ?? null),
+    loadedProxy(currentOrigin(descriptor, gitOrigin ?? null)),
     loadedProxy(gitOverwrites ?? null),
   );
   const origin: ConfigProxy =

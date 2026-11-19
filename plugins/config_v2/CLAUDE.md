@@ -592,6 +592,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `configV2ValuesSchema`
     - `configValues`
     - `createMemoryConfigStore`
+    - `currentOrigin`
     - `defineConfig`
     - `defineConfigMigration`
     - `deleteScope`

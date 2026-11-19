@@ -7,6 +7,7 @@
 - Description: A config's resolved value read straight off disk, with no server runtime and no build tooling: readEffectiveConfigFromDisk (this checkout's git layer as propagation will write it, under a namespace's user overrides; async for a backend, readEffectiveConfigFromDiskSync for a CLI step).
 - Core:
   - Uses:
+    - `config_v2.currentOrigin`
     - `config_v2.effective`
     - `config_v2.loadedProxy`
     - `config_v2.parseOverrideFile`

@@ -16883,6 +16883,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `configV2ValuesSchema`
       - `configValues`
       - `createMemoryConfigStore`
+      - `currentOrigin`
       - `defineConfig`
       - `defineConfigMigration`
       - `deleteScope`
@@ -17022,6 +17023,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`disk-read`** — A config's resolved value read straight off disk, with no server runtime and no build tooling: readEffectiveConfigFromDisk (this checkout's git layer as propagation will write it, under a namespace's user overrides; async for a backend, readEffectiveConfigFromDiskSync for a CLI step).
       - Core:
         - Uses:
+          - `config_v2.currentOrigin`
           - `config_v2.effective`
           - `config_v2.loadedProxy`
           - `config_v2.parseOverrideFile`
@@ -33675,9 +33677,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`unscoped-highlight-pseudo`**
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 164 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 165 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+              - `config_v2` ×17
               - `plugin-meta/parse-utils` ×17
-              - `config_v2` ×16
               - `framework/plugin-id` ×13
               - `network/live/resource-vocabulary` ×11
               - `plugin-meta/plugin-records` ×11
