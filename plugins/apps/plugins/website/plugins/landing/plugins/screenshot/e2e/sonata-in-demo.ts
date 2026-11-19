@@ -356,8 +356,14 @@ await withBrowser(async (h) => {
   await playFurElise("cold", { spaceFirst: false });
 
   // ── warm: the worker gone, its cache kept — no sample downloaded again ────
-  // Attached, the workers would outlive the page (see tapSharedWorkerRequests).
-  await worker.release();
+  // The cold worker's requests are counted once it ended: none of its can
+  // land in the warm pass's.
+  await page.goto("about:blank");
+  await renders(
+    "the demo's workers end once no page holds them",
+    async () => worker.workers().map((w) => w.url),
+    (urls) => urls.length === 0,
+  );
   const cold = cdnRequests();
   r.ok(
     "cold: the worker's asset mirror fetched the samples from the CDN",
@@ -373,12 +379,6 @@ await withBrowser(async (h) => {
         req.status >= 400,
     ),
     [],
-  );
-  await page.goto("about:blank");
-  await renders(
-    "the demo's workers end once no page holds them",
-    async () => worker.workers().map((w) => w.url),
-    (urls) => urls.length === 0,
   );
   await playFurElise("warm", { spaceFirst: true });
   r.eq(

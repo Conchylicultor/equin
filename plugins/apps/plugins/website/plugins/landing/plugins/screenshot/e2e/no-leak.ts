@@ -894,7 +894,7 @@ await withBrowser(async (h) => {
     reached.filter((host) => !declared.has(host)),
     [],
   );
-  await workerRequests.release();
+  await workerRequests.stop();
   r.eq("no page errors", captured.pageErrors, []);
   // Google's own console error when it cannot draw the vector map (headless
   // Chromium has no WebGL for it): it falls back to the raster map. Counted

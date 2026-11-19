@@ -23,7 +23,12 @@
  *
  * Manual only — nothing runs this automatically.
  *   ./equin run plugins/apps/plugins/website/plugins/landing/plugins/screenshot/e2e/enter-cost.ts \
- *     --url https://equin.ai [--profile desktop|fast4g|slow4g] [--runs 1] [--top 25] [--out <prefix>] [--no-record]
+ *     --url https://equin.ai [--profile desktop|fast4g|slow4g] [--runs 1] [--visits 1] [--top 25] [--out <prefix>] [--no-record]
+ *
+ * `--visits N` repeats the visit N times in the same page (about:blank, then
+ * the homepage loaded again, Enter clicked again): from the 2nd on, a returning visitor — the
+ * demo's data already stored in the browser, the HTTP cache warm. Each visit
+ * is measured from its own click.
  */
 import { createServer, connect, type Socket } from "node:net";
 import type { Request as PwRequest } from "playwright";
@@ -59,6 +64,8 @@ const PROFILE = arg("profile") ?? "fast4g";
 const RUNS = numArg("runs", 1);
 const TOP = numArg("top", 25);
 const OUT = arg("out") ?? "/tmp/enter-cost";
+/** Visits per run, in the same page: the 2nd on is a returning visitor (the demo's data stored, the HTTP cache warm). */
+const VISITS = numArg("visits", 1);
 const USABLE_TIMEOUT_MS = numArg("timeout", 300_000);
 
 interface Shaper {
@@ -272,105 +279,113 @@ await withBrowser(async (h) => {
         problems.push(`console error: ${text.slice(0, 600)}`);
     });
 
-    const navAt = Date.now();
-    await page.goto(url, { waitUntil: "load" });
-    const gate = page.locator(ENTER_DEMO).first();
-    await gate.waitFor({ timeout: 120_000 });
-    // The homepage settled: what it fetched is not the click's.
-    await page.waitForTimeout(1500);
-    const downAtClick = shaper?.downBytes() ?? 0;
-    const clickAt = Date.now();
-    await gate.click();
-    // Usable: the boot screen gone (the host ready, the app mounted in the
-    // embed), then no loader left on the page.
-    await page
-      .locator("[data-demo-boot]")
-      .first()
-      .waitFor({ state: "detached", timeout: USABLE_TIMEOUT_MS });
-    const bootGoneAt = Date.now();
-    await waitForNotBusy(page, { timeoutMs: USABLE_TIMEOUT_MS });
-    const usableAt = Date.now();
-    const downAtUsable = shaper?.downBytes() ?? 0;
-    // What still arrives right after (a late chunk, an image).
-    await page.waitForTimeout(3000);
-    for (const p of problems.slice(0, 15)) console.log(`  ! ${p}`);
-    if (problems.length > 15) console.log(`  ! … ${problems.length - 15} more`);
-    const shot = `${OUT}-${PROFILE}-run${run}.png`;
-    await page.screenshot({ path: shot });
-    console.log(`screenshot: ${shot}`);
+    for (let visit = 1; visit <= VISITS; visit++) {
+      // A returning visitor comes from elsewhere; what the previous visit's
+      // page aborted as it left is not this visit's.
+      if (visit > 1) await page.goto("about:blank");
+      problems.length = 0;
+      bootLine = null;
+      const navAt = Date.now();
+      await page.goto(url, { waitUntil: "load" });
+      const gate = page.locator(ENTER_DEMO).first();
+      await gate.waitFor({ timeout: 120_000 });
+      // The homepage settled: what it fetched is not the click's.
+      await page.waitForTimeout(1500);
+      const downAtClick = shaper?.downBytes() ?? 0;
+      const clickAt = Date.now();
+      await gate.click();
+      // Usable: the boot screen gone (the host ready, the app mounted in the
+      // embed), then no loader left on the page.
+      await page
+        .locator("[data-demo-boot]")
+        .first()
+        .waitFor({ state: "detached", timeout: USABLE_TIMEOUT_MS });
+      const bootGoneAt = Date.now();
+      await waitForNotBusy(page, { timeoutMs: USABLE_TIMEOUT_MS });
+      const usableAt = Date.now();
+      const downAtUsable = shaper?.downBytes() ?? 0;
+      // What still arrives right after (a late chunk, an image).
+      await page.waitForTimeout(3000);
+      for (const p of problems.slice(0, 15)) console.log(`  ! ${p}`);
+      if (problems.length > 15)
+        console.log(`  ! … ${problems.length - 15} more`);
+      const shot = `${OUT}-${PROFILE}-run${run}${VISITS === 1 ? "" : `-visit${visit}`}.png`;
+      await page.screenshot({ path: shot });
+      console.log(`screenshot: ${shot}`);
 
-    const workerFetched: Fetched[] = tap.requests
-      .filter((q) => q.encodedBytes !== undefined)
-      .map((q) => ({
-        who: "worker",
-        url: q.url,
-        encodedBytes: q.encodedBytes!,
-        encoding: q.contentEncoding ?? "",
-        sentAt: q.sentAt!,
-        finishedAt: q.finishedAt!,
-      }));
-    const afterClick = [...pageFetched, ...workerFetched].filter(
-      (f) => f.sentAt >= clickAt - 50 && f.finishedAt <= usableAt + 50,
-    );
-    const total = afterClick.reduce((s, f) => s + f.encodedBytes, 0);
-    // What the demo still fetched in the 3 s after usable: code moved past
-    // the mark is not code saved.
-    const late = [...pageFetched, ...workerFetched].filter(
-      (f) => f.sentAt >= clickAt - 50 && f.finishedAt > usableAt + 50,
-    );
-    console.log(
-      `\n── run ${run}/${RUNS} · ${PROFILE}${shape === null ? "" : ` (${shape.downKbps / 1000} Mbps down, ${shape.rttMs} ms RTT)`} · ${url}`,
-    );
-    console.log(
-      `homepage gate shown at ${clickAt - navAt - 1500} ms; click → boot screen gone ${bootGoneAt - clickAt} ms → no loader left ${usableAt - clickAt} ms`,
-    );
-    console.log(
-      `bytes click → usable: ${mb(total)} in ${afterClick.length} requests (CDP)` +
-        (shaper === null
-          ? ""
-          : `; proxy delivered ${mb(downAtUsable - downAtClick)}`),
-    );
-    console.log(
-      `then, within 3 s of usable: ${mb(late.reduce((s, f) => s + f.encodedBytes, 0))} in ${late.length} requests`,
-    );
-    console.log(
-      bootLine === null
-        ? "boot line: (none seen)"
-        : `boot line: ${String(bootLine)}`,
-    );
-    const byKind = new Map<string, { bytes: number; n: number }>();
-    for (const f of afterClick) {
-      const k = `${f.who}: ${kindOf(f.url)}`;
-      const e = byKind.get(k) ?? { bytes: 0, n: 0 };
-      e.bytes += f.encodedBytes;
-      e.n += 1;
-      byKind.set(k, e);
+      const workerFetched: Fetched[] = tap.requests
+        .filter((q) => q.encodedBytes !== undefined)
+        .map((q) => ({
+          who: "worker",
+          url: q.url,
+          encodedBytes: q.encodedBytes!,
+          encoding: q.contentEncoding ?? "",
+          sentAt: q.sentAt!,
+          finishedAt: q.finishedAt!,
+        }));
+      const afterClick = [...pageFetched, ...workerFetched].filter(
+        (f) => f.sentAt >= clickAt - 50 && f.finishedAt <= usableAt + 50,
+      );
+      const total = afterClick.reduce((s, f) => s + f.encodedBytes, 0);
+      // What the demo still fetched in the 3 s after usable: code moved past
+      // the mark is not code saved.
+      const late = [...pageFetched, ...workerFetched].filter(
+        (f) => f.sentAt >= clickAt - 50 && f.finishedAt > usableAt + 50,
+      );
+      console.log(
+        `\n── run ${run}/${RUNS}${VISITS === 1 ? "" : ` · visit ${visit}/${VISITS}`} · ${PROFILE}${shape === null ? "" : ` (${shape.downKbps / 1000} Mbps down, ${shape.rttMs} ms RTT)`} · ${url}`,
+      );
+      console.log(
+        `homepage gate shown at ${clickAt - navAt - 1500} ms; click → boot screen gone ${bootGoneAt - clickAt} ms → no loader left ${usableAt - clickAt} ms`,
+      );
+      console.log(
+        `bytes click → usable: ${mb(total)} in ${afterClick.length} requests (CDP)` +
+          (shaper === null
+            ? ""
+            : `; proxy delivered ${mb(downAtUsable - downAtClick)}`),
+      );
+      console.log(
+        `then, within 3 s of usable: ${mb(late.reduce((s, f) => s + f.encodedBytes, 0))} in ${late.length} requests`,
+      );
+      console.log(
+        bootLine === null
+          ? "boot line: (none seen)"
+          : `boot line: ${String(bootLine)}`,
+      );
+      const byKind = new Map<string, { bytes: number; n: number }>();
+      for (const f of afterClick) {
+        const k = `${f.who}: ${kindOf(f.url)}`;
+        const e = byKind.get(k) ?? { bytes: 0, n: 0 };
+        e.bytes += f.encodedBytes;
+        e.n += 1;
+        byKind.set(k, e);
+      }
+      console.log("by kind:");
+      for (const [k, e] of [...byKind].sort((a, b) => b[1].bytes - a[1].bytes))
+        console.log(
+          `  ${k.padEnd(34)} ${mb(e.bytes).padStart(9)}  ${String(e.n).padStart(4)} files`,
+        );
+      console.log(
+        `largest ${TOP} files (wire bytes, encoding, sent → done after click):`,
+      );
+      for (const f of afterClick
+        .toSorted((a, b) => b.encodedBytes - a.encodedBytes)
+        .slice(0, TOP))
+        console.log(
+          `  ${kb(f.encodedBytes).padStart(8)}  ${(f.encoding || "identity").padEnd(8)} ${String(Math.round(f.sentAt - clickAt)).padStart(6)} → ${String(Math.round(f.finishedAt - clickAt)).padStart(6)} ms  ${f.who} ${short(f.url)}`,
+        );
+      const uncompressed = afterClick.filter(
+        (f) => f.encoding === "" && f.encodedBytes > 20 * 1024,
+      );
+      console.log(
+        `sent uncompressed (> 20 KB): ${uncompressed.length} files, ${mb(uncompressed.reduce((s, f) => s + f.encodedBytes, 0))}`,
+      );
+      r.ok(
+        `run ${run}${VISITS === 1 ? "" : ` visit ${visit}`}: the demo became usable`,
+        true,
+        `${usableAt - clickAt} ms`,
+      );
     }
-    console.log("by kind:");
-    for (const [k, e] of [...byKind].sort((a, b) => b[1].bytes - a[1].bytes))
-      console.log(
-        `  ${k.padEnd(34)} ${mb(e.bytes).padStart(9)}  ${String(e.n).padStart(4)} files`,
-      );
-    console.log(
-      `largest ${TOP} files (wire bytes, encoding, sent → done after click):`,
-    );
-    for (const f of afterClick
-      .toSorted((a, b) => b.encodedBytes - a.encodedBytes)
-      .slice(0, TOP))
-      console.log(
-        `  ${kb(f.encodedBytes).padStart(8)}  ${(f.encoding || "identity").padEnd(8)} ${String(Math.round(f.sentAt - clickAt)).padStart(6)} → ${String(Math.round(f.finishedAt - clickAt)).padStart(6)} ms  ${f.who} ${short(f.url)}`,
-      );
-    const uncompressed = afterClick.filter(
-      (f) => f.encoding === "" && f.encodedBytes > 20 * 1024,
-    );
-    console.log(
-      `sent uncompressed (> 20 KB): ${uncompressed.length} files, ${mb(uncompressed.reduce((s, f) => s + f.encodedBytes, 0))}`,
-    );
-    r.ok(
-      `run ${run}: the demo became usable`,
-      true,
-      `${usableAt - clickAt} ms`,
-    );
     page.off("requestfinished", onFinished);
     await tap.stop();
     await context.close();

@@ -525,6 +525,6 @@ await withBrowser(async (h) => {
     captured.consoleErrors.filter((e) => !GOOGLE_RASTER_FALLBACK.test(e)),
     [],
   );
-  await worker.release();
+  await worker.stop();
   await r.finish();
 });
