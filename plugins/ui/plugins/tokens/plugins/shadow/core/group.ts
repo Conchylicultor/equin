@@ -42,13 +42,14 @@ export const shadowGroup = defineTokenGroup("shadow", {
   // step it always wore on light. On dark, a 10% black shadow does not show:
   // a theme whose popover is its canvas tone (shadcn's convention) drew menus
   // indistinguishable from the page and from each other. The dark default is
-  // the macOS menu edge: a dark 2px stroke outside the light `popoverBorder`
+  // the macOS menu edge: a dark 1px stroke outside the light `popoverBorder`
   // hairline (the double stroke that parts a submenu from the menu it lands
-  // on), an even halo on every side, and a deep drop below.
+  // on), a soft halo on every side, and a deep drop below. Kept to macOS's
+  // weight (1px, ~55% black): a 2px 85% ring read as a thick black outline.
   "shadow-popover": {
     default: "var(--shadow-md)",
     darkDefault:
-      "0 0 0 2px oklch(0 0 0 / 0.85), 0 0 20px 2px oklch(0 0 0 / 0.55), 0 12px 32px -8px oklch(0 0 0 / 0.6)",
+      "0 0 0 1px oklch(0 0 0 / 0.55), 0 0 16px 0px oklch(0 0 0 / 0.3), 0 12px 32px -8px oklch(0 0 0 / 0.55)",
     label: "Shadow popover",
   },
   // Floating chrome's shadow (`Surface level="float"`: a toolbar card or dock
