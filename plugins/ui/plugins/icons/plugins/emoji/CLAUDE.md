@@ -6,10 +6,15 @@ An emoji as a stored value, and the picker that picks one — the sibling of
 
 - **`core`** — `Emoji` (branded string), `EmojiSchema` (THE parse that mints
   one; every store decodes through it — page block data, backlinks, search
-  metadata) and `isEmoji(s)`: exactly one grapheme (`Intl.Segmenter`) matching
-  `\p{RGI_Emoji}` under the `v` flag. Fully-qualified only: `🗺️` with its VS16
-  passes, a bare `🗺` does not. The regex is built with `new RegExp(…, "v")`
-  because the repo's tsc target (ES2023) rejects a `v` literal.
+  metadata) and `isEmoji(s)`: the whole string one `^\p{RGI_Emoji}$` under the
+  `v` flag. Fully-qualified only: `🗺️` with its VS16 passes, a bare `🗺` does
+  not. The regex is built with `new RegExp(…, "v")` because the repo's tsc
+  target (ES2023) rejects a `v` literal — and only where `v` exists
+  (`"unicodeSets" in RegExp.prototype`): Safari < 17 throws on the flag at
+  module evaluation, which failed the page editor to load on equin.ai
+  (2026-11-19). There the UTS #51 sequence grammar under `u` stands in
+  (`EMOJI_SEQUENCE_SOURCE`): the same answers on every tested shape, though it
+  accepts a well-formed sequence that is not RGI; Bun always has `v`.
 - **`web`** — `<EmojiPicker value? onSelect>` over **frimousse** (headless,
   virtualized); every pick is re-parsed through `EmojiSchema`, so a value the
   schema rejects throws instead of being stored. `EMOJI_VERSION` caps the offered

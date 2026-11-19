@@ -1,7 +1,8 @@
 /**
  * The built-ins newer than the browser floor, read once per process from MDN's
  * browser-compat-data (`javascript.builtins.*` and `api.*`, two levels deep:
- * an interface or builtin, and its members).
+ * an interface or builtin, and its members), and the regular-expression syntax
+ * newer than it (`javascript.regular_expressions.*`, two levels deep).
  *
  * A member is listed only under an owner that itself meets the floor: every
  * member of a newer owner is reached through that owner (its constructor, or
@@ -29,6 +30,13 @@ export interface AboveFloorTable {
   globals: ReadonlyMap<string, AboveFloor>;
   /** Every member name of `members`, the syntactic gate. */
   memberNames: ReadonlySet<string>;
+  /**
+   * Regular-expression syntax newer than the floor, by its compat-data key
+   * under `javascript.regular_expressions` (`modifier`,
+   * `named_capturing_group.duplicate_named_capturing_groups`). A flag is a
+   * `RegExp` member (`unicodeSets` for `v`), in `members`.
+   */
+  regexpSyntax: ReadonlyMap<string, AboveFloor>;
 }
 
 interface SupportStatement {
@@ -141,7 +149,10 @@ const GLOBAL_SCOPES = new Set(["Window", "WorkerGlobalScope"]);
 
 function build(data: {
   api: Record<string, CompatNode>;
-  javascript: { builtins: Record<string, CompatNode> };
+  javascript: {
+    builtins: Record<string, CompatNode>;
+    regular_expressions: Record<string, CompatNode>;
+  };
 }): AboveFloorTable {
   const members = new Map<string, Map<string, AboveFloor>>();
   const globals = new Map<string, AboveFloor>();
@@ -177,7 +188,27 @@ function build(data: {
       }
     }
   }
-  return { members, globals, memberNames };
+  const regexpSyntax = new Map<string, AboveFloor>();
+  const prefix = "javascript.regular_expressions";
+  for (const [feature, node] of Object.entries(
+    data.javascript.regular_expressions,
+  )) {
+    const needs = missing(node);
+    if (needs !== null) {
+      regexpSyntax.set(feature, { key: `${prefix}.${feature}`, needs });
+      continue;
+    }
+    for (const [sub, subNode] of Object.entries(node)) {
+      if (sub === "__compat") continue;
+      const subNeeds = missing(subNode as CompatNode);
+      if (subNeeds !== null)
+        regexpSyntax.set(`${feature}.${sub}`, {
+          key: `${prefix}.${feature}.${sub}`,
+          needs: subNeeds,
+        });
+    }
+  }
+  return { members, globals, memberNames, regexpSyntax };
 }
 
 let table: AboveFloorTable | undefined;

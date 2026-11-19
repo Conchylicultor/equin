@@ -4337,6 +4337,7 @@
       "name": "@equin/plugin-framework-tooling-lint-browser-floor",
       "version": "0.0.1",
       "devDependencies": {
+        "@eslint-community/regexpp": "^4.12.2",
         "@mdn/browser-compat-data": "^8.1.9",
       },
     },

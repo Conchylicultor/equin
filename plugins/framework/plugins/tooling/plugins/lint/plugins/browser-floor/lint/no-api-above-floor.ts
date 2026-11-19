@@ -4,6 +4,7 @@ import ts from "typescript";
 import { aboveFloorTable, type AboveFloor } from "./above-floor";
 import { isBrowserBuilt } from "./browser-built";
 import { floorInWords } from "./browser-floor";
+import { regexpFeatures } from "./regexp-features";
 
 const createRule = lintRuleCreator(import.meta.url);
 
@@ -55,10 +56,23 @@ function isAmbientGlobal(node: ts.Node): boolean {
   }
 }
 
-/** The name of the interface / class / `declare var X: {…}` holding a member declaration. */
+/**
+ * The name of the interface / class / `declare var X: {…}` / `declare
+ * namespace X { var m }` holding a member declaration.
+ */
 function containerName(decl: ts.Declaration): string | undefined {
   const parent = decl.parent as ts.Node | undefined;
   if (parent === undefined) return undefined;
+  // `declare namespace Intl { var Segmenter: … }`: the declaration sits in a
+  // variable statement of the namespace's block.
+  if (
+    ts.isVariableDeclarationList(parent) &&
+    ts.isVariableStatement(parent.parent) &&
+    ts.isModuleBlock(parent.parent.parent) &&
+    ts.isModuleDeclaration(parent.parent.parent.parent) &&
+    ts.isIdentifier(parent.parent.parent.parent.name)
+  )
+    return parent.parent.parent.parent.name.text;
   if (ts.isInterfaceDeclaration(parent) || ts.isClassDeclaration(parent))
     return parent.name?.text;
   if (
@@ -201,8 +215,16 @@ function isFeatureTested(
  * Only names the data lists as newer are ever resolved (a syntactic gate on
  * the property name), so the checker is asked about few accesses.
  *
+ * Regular expressions too: a regex literal, or `new RegExp(source, flags)`
+ * with literal flags, whose flags (`v` — Safari 17) or syntax (modifiers
+ * `(?i:…)`, duplicate named groups) a floor browser lacks — read from the
+ * same data (`RegExp.unicodeSets`, `javascript.regular_expressions.*`) and
+ * parsed with regexpp. A flag behind a feature test of its `RegExp` member
+ * (`"unicodeSets" in RegExp.prototype`) passes.
+ *
  * Out of reach of the rule, by design: a member reached through a computed
- * key or a destructuring.
+ * key or a destructuring, the syntax of a regex whose source is computed, and
+ * a regex whose flags are.
  *
  * Which `server/` and `bin/` files ship to a browser (the demo's in-browser
  * server boots them in a worker) is a fact of the browser host's whole
@@ -232,6 +254,10 @@ export default createRule({
       },
     ],
     messages: {
+      regexpAboveFloor:
+        'This regular expression uses {{what}}, newer than equin\'s browser floor — missing in {{needs}} ({{key}}). Browser code runs on {{floor}} (browser-floor\'s BROWSER_FLOOR): an older browser throws where the regex is created — a literal is a parse error of the whole module, a `new RegExp(…)` throws "Invalid flags supplied to RegExp constructor" — so every importer of the module fails to load (equin.ai\'s page editor did, on emoji\'s `v` flag, 2026-11-19). Spell it without the feature, or build it behind a feature test of its flag (`"unicodeSets" in RegExp.prototype ? new RegExp(…, "v") : fallback`).',
+      regexpInvalid:
+        "This regular expression does not parse at ES2025 ({{error}}): it is invalid, or uses syntax newer than any browser equin supports (browser floor: {{floor}}).",
       aboveFloor:
         '`{{name}}` is newer than equin\'s browser floor — missing in {{needs}} ({{key}}). Browser code runs on {{floor}} (browser-floor\'s BROWSER_FLOOR): a visitor on an older browser crashes on it (equin.ai\'s home page did on `URL.canParse`, 2026-11-19). Use its floor-safe spelling from `@plugins/packages/plugins/floor-compat/core` when it has one (`canParseUrl`, `parseUrl`, `jsonResponse`, `promiseWithResolvers`), else feature-test it (`typeof X === "function"`, `"name" in obj`) and keep a fallback — a use behind the test passes.',
     },
@@ -303,7 +329,82 @@ export default createRule({
       report(node, node.name, hit);
     };
 
+    const regexpCheck = (
+      node: TSESTree.Node,
+      pattern: string | undefined,
+      flags: string,
+    ) => {
+      const features = regexpFeatures(pattern ?? "", flags);
+      if (!features.ok) {
+        context.report({
+          node,
+          messageId: "regexpInvalid",
+          data: { error: features.error, floor: floorInWords() },
+        });
+        return;
+      }
+      const regexpReport = (what: string, hit: AboveFloor) =>
+        context.report({
+          node,
+          messageId: "regexpAboveFloor",
+          data: { what, needs: hit.needs, key: hit.key, floor: floorInWords() },
+        });
+      for (const f of features.unknownFlags)
+        regexpReport(`the flag \`${f}\``, {
+          key: "no such flag",
+          needs: "every browser",
+        });
+      for (const member of features.flagMembers) {
+        const hit = table.members.get("RegExp")?.get(member);
+        if (hit === undefined || isFeatureTested(node, text, member)) continue;
+        regexpReport(`the \`${member}\` flag`, hit);
+      }
+      for (const feature of features.syntax) {
+        const hit = table.regexpSyntax.get(feature);
+        if (hit !== undefined) regexpReport(`\`${feature}\` syntax`, hit);
+      }
+    };
+
+    /** A string a regex argument spells as a literal, if it does. */
+    const literalString = (
+      n: TSESTree.Node | undefined,
+    ): string | undefined => {
+      if (n?.type === "Literal" && typeof n.value === "string") return n.value;
+      if (n?.type === "TemplateLiteral" && n.expressions.length === 0)
+        return n.quasis[0]?.value.cooked ?? undefined;
+      return undefined;
+    };
+
+    /**
+     * `new RegExp(source, flags)` / `RegExp(…)` on the global constructor,
+     * when its flags are spelled as a literal (its source too, for syntax). A regex
+     * literal source is checked as a literal already (it is created first);
+     * the call is checked again only when it passes other flags.
+     */
+    const checkRegExpCall = (
+      node: TSESTree.CallExpression | TSESTree.NewExpression,
+    ) => {
+      if (node.callee.type !== "Identifier" || node.callee.name !== "RegExp")
+        return;
+      const decls = symbolOf(node.callee)?.declarations ?? [];
+      if (decls.length === 0 || !decls.every(isAmbientGlobal)) return;
+      const [source, flagsArg] = node.arguments;
+      const regexSource = source?.type === "Literal" && "regex" in source;
+      if (regexSource && flagsArg === undefined) return;
+      const pattern = regexSource
+        ? source.regex.pattern
+        : literalString(source);
+      const flags = flagsArg === undefined ? "" : literalString(flagsArg);
+      if (flags === undefined) return;
+      // A computed source still has its literal flags checked.
+      regexpCheck(node, pattern, flags);
+    };
+
     return {
+      Literal(node) {
+        if ("regex" in node)
+          regexpCheck(node, node.regex.pattern, node.regex.flags);
+      },
       MemberExpression(node) {
         if (node.object.type === "Identifier") checkGlobal(node.object);
         if (node.computed || node.property.type !== "Identifier") return;
@@ -316,9 +417,11 @@ export default createRule({
       },
       CallExpression(node) {
         checkGlobal(node.callee);
+        checkRegExpCall(node);
       },
       NewExpression(node) {
         checkGlobal(node.callee);
+        checkRegExpCall(node);
       },
     };
   },

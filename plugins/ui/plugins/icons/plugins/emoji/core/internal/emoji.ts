@@ -7,23 +7,46 @@ import { z } from "zod";
  */
 export type Emoji = string & { readonly __brand: "Emoji" };
 
-// `v` (unicodeSets) is what makes `\p{RGI_Emoji}` — a property of STRINGS
-// (ZWJ sequences, flags, keycaps, skin-tone modifiers) — available. Built with
-// the constructor because the repo's tsc target (ES2023) rejects a `v` literal;
-// Bun (JSC) and every supported browser implement it.
-const RGI_EMOJI = new RegExp("^\\p{RGI_Emoji}$", "v");
-const graphemes = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+/**
+ * Exactly one RGI emoji, exactly: `\p{RGI_Emoji}` is a property of STRINGS
+ * (ZWJ sequences, flags, keycaps, skin-tone modifiers), which only the `v`
+ * (unicodeSets) flag makes available. Built with the constructor because the
+ * repo's tsc target (ES2023) rejects a `v` literal.
+ */
+const RGI_EMOJI_SOURCE = "^\\p{RGI_Emoji}$";
+
+/** One emoji element of a sequence: fully qualified, so a text-default `🗺` needs its VS16. */
+const ELEMENT =
+  "(?:\\p{Emoji_Modifier_Base}\\p{Emoji_Modifier}|(?!\\p{Regional_Indicator})\\p{Emoji_Presentation}|(?![#*0-9])\\p{Emoji}\\uFE0F)";
 
 /**
- * Whether `s` is exactly one emoji: a single grapheme cluster that is an RGI
- * emoji (fully-qualified, so `🗺️` with its VS16 passes and a bare `🗺` does not).
+ * The same shapes for an engine without `v` (Safari < 17, Firefox < 116 —
+ * below equin's browser floor of Safari 16.4 / Firefox 115): UTS #51's emoji
+ * sequence grammar spelled with per-character properties under `u` — a flag
+ * pair, a keycap, a tag sequence (subdivision flags), or fully-qualified
+ * elements joined by ZWJ. It accepts a well-formed sequence Unicode never
+ * recommended (an arbitrary ZWJ pair) where `\p{RGI_Emoji}` would not; the
+ * server (Bun) always has `v`, so what it stores is RGI-exact.
+ */
+export const EMOJI_SEQUENCE_SOURCE = `^(?:\\p{Regional_Indicator}{2}|[#*0-9]\\uFE0F\\u20E3|\\u{1F3F4}[\\u{E0061}-\\u{E007A}]+\\u{E007F}|${ELEMENT}(?:\\u200D${ELEMENT})*)$`;
+
+// Built at module evaluation, so it must not throw on a floor browser: an
+// engine without `v` throws "Invalid flags supplied to RegExp constructor"
+// here, which failed every importer to load (equin.ai's page editor and
+// page-link plugins, Safari 16, 2026-11-19).
+const EMOJI =
+  "unicodeSets" in RegExp.prototype
+    ? new RegExp(RGI_EMOJI_SOURCE, "v")
+    : new RegExp(EMOJI_SEQUENCE_SOURCE, "u");
+
+/**
+ * Whether `s` is exactly one emoji: the whole string one RGI emoji
+ * (fully-qualified, so `🗺️` with its VS16 passes and a bare `🗺` does not).
+ * The anchored match is the one-grapheme test: a second emoji, or a letter,
+ * leaves the `$` unmatched.
  */
 export function isEmoji(s: string): s is Emoji {
-  if (s.length === 0) return false;
-  const it = graphemes.segment(s)[Symbol.iterator]();
-  const first = it.next();
-  if (first.done === true || it.next().done !== true) return false;
-  return RGI_EMOJI.test(s);
+  return EMOJI.test(s);
 }
 
 /** THE parse that mints an {@link Emoji}. Every store of an emoji decodes through it. */

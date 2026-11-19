@@ -20,13 +20,19 @@ const SERVER_CASE = "server/case.ts";
 
 const at = (file: string) => `${LINT_DIR}/${file}`;
 const valid = (code: string, file = WEB_CASE) => ({ filename: at(file), code });
-const invalid = (code: string, count = 1, file = WEB_CASE) => ({
+type MessageId = "aboveFloor" | "regexpAboveFloor" | "regexpInvalid";
+const invalid = (
+  code: string,
+  count = 1,
+  file = WEB_CASE,
+  messageId: MessageId = "aboveFloor",
+) => ({
   filename: at(file),
   code,
-  errors: Array.from({ length: count }, () => ({
-    messageId: "aboveFloor" as const,
-  })),
+  errors: Array.from({ length: count }, () => ({ messageId })),
 });
+const invalidRegexp = (code: string, count = 1) =>
+  invalid(code, count, WEB_CASE, "regexpAboveFloor");
 
 const ruleTester = createTypedRuleTester({
   dir: LINT_DIR,
@@ -63,6 +69,19 @@ ruleTester.run("no-api-above-floor", rule, {
     // Server code runs on Bun, not in a visitor's browser — unless a browser
     // host's worker loads it (the browser-floor:worker-closure check says so).
     valid(`URL.canParse("x");`, SERVER_CASE),
+    // Regex flags and syntax the floor has: lookbehind (Safari 16.4), named
+    // groups, Unicode property escapes, `\u{…}`, `s` / `d` / `y`.
+    valid(
+      `export const r = /(?<=a)(?<name>b)\\k<name>\\p{L}\\u{1F600}/dgimsuy;`,
+    ),
+    valid(`export const r = new RegExp("(?<!a)\\\\p{L}", "u");`),
+    // Computed flags are out of reach.
+    valid(`export const r = (f: string) => new RegExp("\\\\p{RGI_Emoji}", f);`),
+    // A flag behind a feature test of its RegExp member.
+    valid(
+      `export const r = "unicodeSets" in RegExp.prototype ? new RegExp("\\\\p{RGI_Emoji}", "v") : /x/u;`,
+    ),
+    valid(`export const r = /[\\p{L}--a]/v;`, SERVER_CASE),
   ],
   invalid: [
     // The 2026-11-19 crash: Safari 17.
@@ -80,6 +99,31 @@ ruleTester.run("no-api-above-floor", rule, {
     invalid(`new URLPattern({ pathname: "/a" });`),
     // A newer DOM member on an old interface.
     invalid(`document.body.checkVisibility();`),
+    // A newer member of a namespace built-in: Intl.Segmenter (Firefox 125).
+    invalid(`export const s = new Intl.Segmenter();`),
+    // The 2026-11-19 crash: `v` (Safari 17), in the constructor and as a literal.
+    invalidRegexp(`export const r = new RegExp("^\\\\p{RGI_Emoji}$", "v");`),
+    invalidRegexp(`export const r = RegExp("a", \`v\`);`),
+    // A computed source still has its flags checked.
+    invalidRegexp(`export const r = (s: string) => new RegExp(s, "v");`),
+    invalidRegexp(`export const r = /^\\p{RGI_Emoji}$/v;`),
+    // A literal source is created first, whatever flags the call passes.
+    invalidRegexp(`export const r = new RegExp(/a/v, "g");`),
+    // A literal source re-flagged by the call: the call is checked too.
+    invalidRegexp(`export const r = new RegExp(/a/u, "v");`),
+    // Pattern modifiers (Safari 26) and duplicate named groups (Safari 17).
+    invalidRegexp(`export const r = /(?i:a)b/;`),
+    invalidRegexp(`export const r = /(?<y>\\d+)-x|x-(?<y>\\d+)/;`),
+    // A guard on something else guards nothing.
+    invalidRegexp(
+      `export const r = "hasIndices" in RegExp.prototype ? /a/v : /a/u;`,
+    ),
+    invalid(
+      `export const r = new RegExp("(", "");`,
+      1,
+      WEB_CASE,
+      "regexpInvalid",
+    ),
     // A server file a browser host's worker loads, as the
     // browser-floor:worker-closure check runs the rule on it.
     {

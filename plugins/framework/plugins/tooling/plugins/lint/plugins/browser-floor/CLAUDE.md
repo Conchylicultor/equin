@@ -10,8 +10,10 @@ Safari / iOS Safari 16.4** — every browser from March 2023 on (Firefox: its
 and X: equin.ai is public, and on 2026-11-19 a visitor's older Safari crashed
 its home page on `URL.canParse` (Safari 17).
 
-The floor is about **APIs**. Syntax is lowered by vite's default build target
-(`baseline-widely-available`: Chrome 107, Safari 16), already below it.
+The floor is about **APIs** and **regular expressions**. Other syntax is
+lowered by vite's default build target (`baseline-widely-available`: Chrome
+107, Safari 16), already below it — but no build lowers a regex flag or
+pattern syntax (see below).
 
 ## `browser-floor/no-api-above-floor`
 
@@ -37,6 +39,23 @@ declares the newest built-ins whatever browsers visitors run.
   feature-test it and keep a fallback.
 
 Not covered: a member reached by a computed key or destructuring.
+
+**Regular expressions too.** A regex literal, or `new RegExp(source, flags)`
+with literal flags, is parsed with regexpp (`lint/regexp-features.ts`): each
+flag is checked as its `RegExp` member (`v` → `unicodeSets`, Safari 17) and
+the pattern's syntax against `javascript.regular_expressions.*` (modifiers
+`(?i:…)`, duplicate named groups) — the same data, so raising the floor
+updates it too. A regex above the floor throws where it is CREATED: a literal
+is a parse error of the module, the constructor throws "Invalid flags supplied
+to RegExp constructor" at module evaluation — and every importer fails to load
+(equin.ai's page editor did on emoji's `v` regex, 2026-11-19). A flag behind a
+test of its member (`"unicodeSets" in RegExp.prototype ? … : fallback`)
+passes. Not covered: the syntax of a computed source, and computed flags. npm
+code is not linted: on 2026-11-19 a scan of every built chunk (app, vendor
+set, worker tree — ~5.3k regexes) found no above-floor regex outside emoji.
+
+The syntax note above ("lowered by vite") holds for syntax esbuild can lower;
+regex flags and syntax it cannot, so they are held here.
 
 ## `browser-floor:worker-closure` — the server code a browser runs
 
