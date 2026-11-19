@@ -98,3 +98,22 @@ for exactly this, and the check pass was the omission.
   runs at 2 GB too. That is unmeasured here, and the deploy's own run on the 8 GB VM is
   the measurement. live's read-misuse compile probe, a child of its own, is
   paced as a heavy process (4 GB) instead of inheriting the pass's pace.
+
+## End to end: a fresh 8 GB host's first update
+
+Fresh Tart Ubuntu 24.04 VM (8 GB, no swap, 4 CPUs), `install.sh --terminal` of main
+at eedbabee1c (this change, after 50fc491d6a's heavy-first pass and one-unit
+type-check profile): installed in 2 m 42 s. Then a headless Chromium tab was opened
+on `/agents` (MemAvailable 6.1 GB with it) and an empty commit was made on main, so the
+deploy ran the first cold check pass:
+
+- **Deployed**: `ok`, 13 m 22 s, no OOM kill (`oom_kill 0`), and the tab stayed open.
+- **Lowest MemAvailable: 1.1 GB.** The peak of the summed PSS was 6.3 GB.
+- Largest processes (RSS): type-check worker 3.09 GB (one-unit profile, paced at
+  1.5 GB as intended, so the check pass's 2 GB did not reach it); its 37 batch
+  processes 2.3–2.7 GB each, one at a time; the check process 2.48 GB (it reported a
+  2.7 GB footprint).
+- type-check: 1,176 CPU-s, 677 s wall.
+
+Raw data: `~/equin-vm-runs/check-pace-e2e/` (`mem-e2e.tsv`, read with `peak.py`;
+the deploy's build and check logs; the earlier runs' `rss-d2.log` / `span-d2.tsv`).
