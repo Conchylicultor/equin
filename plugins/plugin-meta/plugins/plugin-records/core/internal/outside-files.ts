@@ -34,4 +34,7 @@ export const outsideFilesOf: (repo: RepoFiles) => OutsideFiles = sharedMemo(
         throw err;
       }
     },
+  // Its identity keys the module graph: made again, every graph over the set
+  // would be walked again.
+  { forProcess: true },
 );

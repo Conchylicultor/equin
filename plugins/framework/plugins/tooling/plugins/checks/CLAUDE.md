@@ -362,6 +362,46 @@ from a `git merge-base` read the recording view cannot observe, and
 [`test-layout:runner-split`](../test-layout/check/index.ts) reads
 `bunfig.toml` / `vitest.config.ts` directly.
 
+## What a check memoized lives while a check that read it runs (`core/memo-lifetime.ts`)
+
+Every per-run memo — each `sharedMemo` (the codegen pass and its trees, the
+evaluated barrels, the registry context, the source analysis) and the masks —
+is keyed by the run's one file set, which the runner holds to the end. As
+plain `WeakMap`s they all lived until the pass ended, so while the type-check
+ran alone for minutes, the check process still held what every finished
+check had read: ~1.2 GB of live heap after a cold pass, against ~0.5 GB once
+released (research/2026-11-19-global-check-pass-memory-release.md).
+
+So the runner installs `packages/shared-work`'s memo holds, over the async
+context the check command hands it (`RunChecksOptions.memoContext`, an
+AsyncLocalStorage — `core/` carries no async-context API; installed by the
+first pass, never on import, so a build loading this barrel keeps plain
+memos): each check runs under a holder of its own, every memo entry it reads
+(hit or made) is held by it, and the holder lets go when the check settles.
+What a memo's producer reads from other memos is held by the entry it makes,
+and a memo keyed by another memo's value (the trees keyed by a codegen pass)
+holds that value's entry, so the pass stays the one its memo answers. Until
+every selected check has started, the pass holds every entry a check read as
+well, so a check still queued behind `--jobs` reuses what a finished one
+made. An entry nobody holds is the collector's; a check that asks for it
+later makes it again (off the records the first making wrote — the rerun is
+warm).
+
+- **A producer that must not run twice is `forProcess`** (`sharedMemo`'s
+  option): the live slot-declaration passes (once per process), the barrel
+  evaluations (a miss re-runs one), and plugin-records' per-set identities
+  (the module graph is keyed by the outside-files reader's identity).
+
+- **A new per-run memo is a `sharedMemo`** (object key) or a `heldValueMemo`
+  (value key, like the masks) — never a module-level `Map` / `WeakMap`
+  holding a check's work for the life of the process. `per-run-memo` (lint)
+  catches a map keyed by a file set; a map keyed by paths or `object` it
+  cannot see, so check the memo you write.
+- **An entry read outside any check's async context is pinned** for the life
+  of the process (the old behavior): work a check started in a context that
+  lost the check's (a callback some native API calls back in its own
+  context) keeps what it reads. That costs memory, never correctness.
+
 ## The check fan-out is gated, and the gate is an instrument
 
 `runChecks()` gates its per-check fan-out with a `createSemaphore` (the repo's
@@ -646,9 +686,10 @@ So check code:
   (`sliceCheckThread`, ~10 ms) before working and shares its result, so a loop
   over thousands of candidates yields by construction, and a file `grepCode`
   masked for one check — or a tree another check still holds — is free for the
-  next. A mask is kept for the run; a parse tree only while a holder keeps it
-  (weak memo — `mask-sync` parses the whole repo, ~1.4 GB of trees). A check
-  that needs a tree across calls holds it itself.
+  next. A mask is kept while a check that asked for it runs (above); a parse
+  tree only while a holder keeps it (weak memo — `mask-sync` parses the whole
+  repo, ~1.4 GB of trees). A check that needs a tree across calls holds it
+  itself.
 - **Yields in its own CPU loops** over thousands of items: `await
   sliceCheckThread()` between items. Not `await Promise.resolve()` — a
   microtask never lets a timer run.
@@ -691,16 +732,16 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
 
 - Description: Check runner and built-in checks for ./equin check
 - Core:
-  - Uses: 94 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 99 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework/tooling` ×12
     - `packages/timed-fs` ×11
+    - `packages/shared-work` ×9
     - `plugin-meta/plugin-records` ×9
     - `reports/check-thread-stall` ×8
     - `framework/tooling/exempt` ×7
     - `infra/spawn` ×5
     - `infra/stack-sampler` ×5
     - `infra/host-fs/user-path` ×4
-    - `packages/shared-work` ×4
     - `framework/tooling/checks/source-analysis` ×3
     - `infra/launcher/env-names` ×3
     - `packages/thread-cpu-clock` ×3

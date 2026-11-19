@@ -80,6 +80,9 @@ import type { CodegenPass } from "./codegen-pass";
  * `default` binding off a module the other loop is still evaluating. The memo
  * per root that preceded this one serialized them by accident; the lane states
  * it, for these two passes and for the five other loops in this process.
+ *
+ * `forProcess`: a check pass lets go of what its finished checks memoized
+ * (`checks/core/memo-lifetime.ts`), and these two may never be made again.
  */
 const declaredOf: Record<
   SlotScope,
@@ -88,12 +91,12 @@ const declaredOf: Record<
   registry: sharedMemo(
     "slot naming",
     (pass: CodegenPass) => runDeclarationPass(pass, "registry"),
-    { owner: (pass) => pass.repo },
+    { owner: (pass) => pass.repo, forProcess: true },
   ),
   source: sharedMemo(
     "slot naming",
     (pass: CodegenPass) => runDeclarationPass(pass, "source"),
-    { owner: (pass) => pass.repo },
+    { owner: (pass) => pass.repo, forProcess: true },
   ),
 };
 

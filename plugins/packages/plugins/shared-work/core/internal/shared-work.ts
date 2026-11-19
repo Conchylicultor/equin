@@ -1,3 +1,5 @@
+import { heldObjectMemo } from "./memo-holds";
+
 /**
  * How shared work runs: in a scope that counts it under `name`, never into
  * the unit (a check, a request) whose call happened to start it.
@@ -73,6 +75,11 @@ export function sharedWorkOver<T>(input: object, name: string, fn: () => T): T {
  * set a pass is over) is one unit's own input ({@link markOwnInput}), in which
  * case it IS that unit's work and runs in its scope.
  *
+ * Its value lives as long as its key — or, in a process that tracks its
+ * units (`installMemoHolds`, `memo-holds.ts`), only while a running unit holds it: a
+ * value no running unit read is the collector's, and the next ask makes it
+ * again (with that caller's `args`).
+ *
  * The one spelling of a per-run memo: a hand-rolled `WeakMap` / `Map` keyed by
  * a run's file set is a lint error (`shared-work-safety/per-run-memo`), so no
  * memo can forget the scope and charge a whole tree's reads to one check.
@@ -80,15 +87,28 @@ export function sharedWorkOver<T>(input: object, name: string, fn: () => T): T {
 export function sharedMemo<K extends object, A extends unknown[], V>(
   name: string,
   produce: (key: K, ...args: A) => V,
-  opts?: { owner?: (key: K) => object },
+  opts?: {
+    owner?: (key: K) => object;
+    /**
+     * Keep each value for the life of the process even where units release
+     * theirs: its producer does what must not run twice (a live
+     * slot-declaration pass), so it can never be made again.
+     */
+    forProcess?: boolean;
+  },
 ): (key: K, ...args: A) => V {
-  const memo = new WeakMap<K, V>();
+  // Held while a running unit reads it, where the process tracks units
+  // (`memo-holds.ts`); for the life of the key otherwise.
+  const memo = heldObjectMemo<K, V>();
   return (key, ...args) => {
     if (memo.has(key)) return memo.get(key) as V;
-    const value = sharedWorkOver(opts?.owner?.(key) ?? key, name, () =>
-      produce(key, ...args),
+    return memo.make(
+      key,
+      () =>
+        sharedWorkOver(opts?.owner?.(key) ?? key, name, () =>
+          produce(key, ...args),
+        ),
+      { forProcess: opts?.forProcess },
     );
-    memo.set(key, value);
-    return value;
   };
 }

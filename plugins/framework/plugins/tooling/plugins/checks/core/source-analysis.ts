@@ -1,9 +1,13 @@
 import {
   isOwnInput,
+  sharedMemo,
   sharedWork,
 } from "@plugins/packages/plugins/shared-work/core";
 import type TS from "typescript";
-import type { CheckContext } from "@plugins/framework/plugins/tooling/core";
+import type {
+  CheckContext,
+  RepoFiles,
+} from "@plugins/framework/plugins/tooling/core";
 import {
   createSourceAnalysis,
   readRepoCompilerOptions,
@@ -20,20 +24,17 @@ import { parsedTsSource } from "./source-work";
 // `ctx.repo()` records its reads — gets its own, so each read lands in its
 // read-set.
 
-const byRepo = new WeakMap<object, Promise<SourceAnalysis>>();
-
 let tsPromise: Promise<typeof TS> | undefined;
 function loadTs(): Promise<typeof TS> {
   return (tsPromise ??= import("typescript").then((m) => m.default));
 }
 
-/** The run's source analysis (see `checks/CLAUDE.md` § "Reading code"). */
-export async function sourceAnalysis(
-  ctx: Pick<CheckContext, "repo">,
-): Promise<SourceAnalysis> {
-  const repo = await ctx.repo();
-  let pending = byRepo.get(repo);
-  if (pending === undefined) {
+// One analysis per file set, held while a check that asked for it runs
+// (`sharedMemo`): its parses and resolutions are the bulk of a pass's live
+// heap, and a finished check's are nobody's.
+const analysisOver = sharedMemo(
+  "source analysis",
+  async (repo: RepoFiles): Promise<SourceAnalysis> => {
     // Over the run's set the analysis is shared by every check asking: a file
     // it reads is read once for all of them, so the read is no check's own.
     // Over one check's own (recording) set it serves that check alone, and
@@ -45,16 +46,19 @@ export async function sourceAnalysis(
           read: (rel: string) =>
             sharedWork("source analysis", () => repo.read(rel)),
         };
-    pending = (async () => {
-      const ts = await loadTs();
-      return createSourceAnalysis({
-        ts,
-        files,
-        parse: (source) => parsedTsSource(ts, source),
-        compilerOptions: await readRepoCompilerOptions(ts, files),
-      });
-    })();
-    byRepo.set(repo, pending);
-  }
-  return pending;
+    const ts = await loadTs();
+    return createSourceAnalysis({
+      ts,
+      files,
+      parse: (source) => parsedTsSource(ts, source),
+      compilerOptions: await readRepoCompilerOptions(ts, files),
+    });
+  },
+);
+
+/** The run's source analysis (see `checks/CLAUDE.md` § "Reading code"). */
+export async function sourceAnalysis(
+  ctx: Pick<CheckContext, "repo">,
+): Promise<SourceAnalysis> {
+  return analysisOver(await ctx.repo());
 }

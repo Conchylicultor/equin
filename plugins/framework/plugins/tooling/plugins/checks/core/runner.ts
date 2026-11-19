@@ -48,6 +48,8 @@ import {
   type ResolvedExemption,
 } from "@plugins/framework/plugins/tooling/plugins/exempt/core";
 import { withKillsSeen } from "./killed-pass";
+import { openPassHolds } from "./memo-lifetime";
+import type { MemoHolds } from "@plugins/packages/plugins/shared-work/core";
 import {
   thrownOutcome,
   type CheckObservation,
@@ -77,6 +79,12 @@ export interface LoadedCheck {
 }
 
 export interface RunChecksOptions {
+  /**
+   * The host's async context for memo holds (`memo-lifetime.ts`): which
+   * check's holder the running code is under. An AsyncLocalStorage in the
+   * check command — `core/` carries no async-context API of its own.
+   */
+  memoContext: MemoHolds;
   /**
    * The check registry, loaded (`checks/plugins/registry`'s `loadChecks`):
    * every check with the module its code lives in. Handed in rather than
@@ -823,6 +831,11 @@ export async function runChecks(
   // Hands each admitted check its own event-loop turn to start on — see the
   // first statement of the gate callback below.
   const startTurn = createTurnQueue();
+  // What the checks memoize lives while a check that read it runs
+  // (`memo-lifetime.ts`); every entry a check read is kept until the last
+  // selected check has started.
+  const holds = openPassHolds(options.memoContext);
+  let notStarted = selected.length;
 
   let results: CheckOutcome[];
   try {
@@ -871,6 +884,8 @@ export async function runChecks(
           // (`CheckRunProgress.queued`).
           const wallStart = performance.now();
           progress.checkStarted(check.id);
+          if (--notStarted === 0) holds.admissionClosed();
+          const holder = holds.forCheck();
           const observations: CheckObservation[] = [];
           let outcome: CheckOutcome | undefined;
           // Every child the check spawns that dies of a signal, recorded by
@@ -882,7 +897,9 @@ export async function runChecks(
             // Its file calls counted as its own, written on its `end`.
             outcome = await kills.run(() =>
               progress.inCheck(check.id, () =>
-                runOne(check, wallStart, observations, slot),
+                holds.run(holder, () =>
+                  runOne(check, wallStart, observations, slot),
+                ),
               ),
             );
             return outcome;
@@ -910,6 +927,7 @@ export async function runChecks(
             };
             return outcome;
           } finally {
+            holder.release();
             // In a `finally` so the end is recorded on every path, a thrown
             // check included — a check that never records its end would
             // masquerade as the hang we are hunting.

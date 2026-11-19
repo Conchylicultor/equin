@@ -33176,16 +33176,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values): `parseRuntimeException`
         - **`checks`** — Check runner and built-in checks for ./equin check
           - Core:
-            - Uses: 94 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
+            - Uses: 99 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
               - `framework/tooling` ×12
               - `packages/timed-fs` ×11
+              - `packages/shared-work` ×9
               - `plugin-meta/plugin-records` ×9
               - `reports/check-thread-stall` ×8
               - `framework/tooling/exempt` ×7
               - `infra/spawn` ×5
               - `infra/stack-sampler` ×5
               - `infra/host-fs/user-path` ×4
-              - `packages/shared-work` ×4
               - `framework/tooling/checks/source-analysis` ×3
               - `infra/launcher/env-names` ×3
               - `packages/thread-cpu-clock` ×3
@@ -44595,8 +44595,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/plugin-tree/faceted`
           - `plugin-meta/plugin-tree/structure-records`
       - Core:
-        - Exports (types): `SharedWorkScope`
+        - Exports (types):
+          - `HeldMemo`
+          - `MemoHolder`
+          - `MemoHolds`
+          - `SharedWorkScope`
         - Exports (values):
+          - `heldValueMemo`
+          - `installMemoHolds`
           - `installSharedWorkScope`
           - `isOwnInput`
           - `markOwnInput`

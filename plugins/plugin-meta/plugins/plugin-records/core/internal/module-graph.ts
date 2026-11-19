@@ -253,7 +253,11 @@ interface GraphState {
   compKeys: Map<string, string>;
   /** Contents read outside the set, by path (null: absent). */
   outsideContent: Map<string, Promise<string | null>>;
-  /** A plain file set's members, read once: its blob id and its scan share it. */
+  /**
+   * A plain file set's members, read once for their blob id and their scan,
+   * held from one to the other only (a snapshot names its blobs, so its
+   * scan's read is the only one and nothing is held).
+   */
   memberContent: Map<string, Promise<string | null>>;
   /**
    * Each specifier base path's resolution (see `resolveFrom`): a function of
@@ -328,8 +332,18 @@ async function growGraph(
   const hasBlobs =
     typeof (snapshot as Partial<RepoSnapshot>).blobOf === "function";
   const readMember = (rel: string): Promise<string | null> => {
+    if (hasBlobs) return snapshot.read(rel);
     let c = memberContent.get(rel);
     if (!c) memberContent.set(rel, (c = snapshot.read(rel)));
+    return c;
+  };
+  // The scan is a member's last read: its blob was taken at its level, before
+  // the scan, and a module is walked once. Kept past it, every module a cold
+  // walk scanned held its text for the life of the graph — the run, in a
+  // check pass (~21k texts, 116 MB of strings after the pass).
+  const takeMember = async (rel: string): Promise<string | null> => {
+    const c = await readMember(rel);
+    memberContent.delete(rel);
     return c;
   };
   const blobOf = async (rel: string): Promise<string> => {
@@ -447,7 +461,7 @@ async function growGraph(
               const src =
                 input.written?.get(path) ??
                 (snapshot.has(path)
-                  ? await readMember(path)
+                  ? await takeMember(path)
                   : await contentOutside(path));
               if (src === null)
                 throw new Error(`[plugin-records] cannot read module ${path}`);

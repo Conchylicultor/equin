@@ -1,3 +1,8 @@
+import { AsyncLocalStorage } from "node:async_hooks";
+import type {
+  MemoHolder,
+  MemoHolds,
+} from "@plugins/packages/plugins/shared-work/core";
 import {
   envName,
   readEnv,
@@ -216,6 +221,16 @@ function printProgress(): void {
 }
 
 /** How much of an adopted verdict a joiner prints before pointing at the file. */
+/**
+ * Which check's memo holder the running code is under (`checks/core`'s
+ * `memo-lifetime.ts`): the async context this host tracks it with.
+ */
+const memoHolderAls = new AsyncLocalStorage<MemoHolder>();
+const memoContext: MemoHolds = {
+  current: () => memoHolderAls.getStore(),
+  run: (holder, fn) => memoHolderAls.run(holder, fn),
+};
+
 const ADOPTED_TRANSCRIPT_LINES = 200;
 
 /**
@@ -468,6 +483,7 @@ const run: CliAction<
       const failures: { id: string; result: CheckResult }[] = [];
       const inconclusive: string[] = [];
       const runOpts: RunChecksOptions = {
+        memoContext,
         grant,
         loadChecks,
         // One step per individual check, so a `check` bar drills in to

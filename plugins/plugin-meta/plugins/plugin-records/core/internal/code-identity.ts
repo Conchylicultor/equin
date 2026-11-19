@@ -9,6 +9,8 @@ import { npmCodeKey } from "./npm-identity";
 const identitiesOf = sharedMemo(
   "plugin records",
   (_set: RepoFiles) => new Map<string, Promise<string>>(),
+  // A few hashes per producer, each a module-graph walk to make again.
+  { forProcess: true },
 );
 
 /**

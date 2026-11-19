@@ -8,8 +8,9 @@
 // exactly that. Here each call first awaits the thread's shared time slice, so
 // a loop of them yields about every 10 ms by construction; and each result is
 // shared, so a file masked by `grepCode` for one check, or parsed by one pass,
-// is free for the next. A mask is kept for the run (one check process is one
-// run); a parse tree only while someone holds it (see `parsedTsSource`).
+// is free for the next. A mask is kept while a check that asked for it runs
+// (`memo-lifetime.ts`); a parse tree only while someone holds it (see
+// `parsedTsSource`).
 //
 // Check code must use these, never `maskSource` / `createSourceFile` directly —
 // the `check-thread-safety/no-blocking-check-work` lint rule holds it.
@@ -17,6 +18,7 @@
 import type TS from "typescript";
 import { createTimeSlicer } from "@plugins/packages/plugins/macrotask-yield/core";
 import { maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { heldValueMemo } from "@plugins/packages/plugins/shared-work/core";
 
 /** A source a check works on: its repo-relative path and its text. */
 export interface SourceText {
@@ -42,12 +44,17 @@ export function sliceCheckThread(): Promise<void> {
  * A per-path memo whose entry is valid only for the exact text it was derived
  * from — a file read off another tree, or edited, recomputes. String equality
  * is a pointer check when both sides are the same read.
+ *
+ * Held while a check that asked for the entry runs (`heldValueMemo`,
+ * `memo-lifetime.ts`): a mask pins its file's text and its own, and a pass
+ * masks thousands of files — kept for the whole run, they were most of the
+ * strings a finished pass still held.
  */
 function textMemo<T>(): {
   get(source: SourceText): T | undefined;
   set(source: SourceText, value: T): void;
 } {
-  const entries = new Map<string, { src: string; value: T }>();
+  const entries = heldValueMemo<string, { src: string; value: T }>();
   return {
     get(source) {
       const hit = entries.get(source.rel);
@@ -56,7 +63,7 @@ function textMemo<T>(): {
         : undefined;
     },
     set(source, value) {
-      entries.set(source.rel, { src: source.src, value });
+      entries.make(source.rel, () => ({ src: source.src, value }));
     },
   };
 }
@@ -65,8 +72,8 @@ const masked = { code: textMemo<string>(), strings: textMemo<string>() };
 
 /**
  * `maskSource(source.src, opts)` — comments (and, by default, string interiors)
- * blanked, offsets kept — after yielding the check thread's slice, and kept for
- * the run.
+ * blanked, offsets kept — after yielding the check thread's slice, and kept
+ * while a check that asked for it runs.
  */
 export async function maskedSource(
   source: SourceText,

@@ -146,7 +146,9 @@ export const evaluateWebBarrels: (
 ) => Promise<BarrelEvaluation> = sharedMemo(
   "evaluated barrels",
   (pass) => evaluate(pass, ["web"]),
-  { owner: (pass) => pass.repo },
+  // Never made twice: a miss imports barrels live, and the declaration-
+  // dependent ones re-run the live declaration pass (once per process).
+  { owner: (pass) => pass.repo, forProcess: true },
 );
 
 /**
@@ -166,7 +168,8 @@ export const evaluateAllBarrels: (
     await all.barrels.resolveDeclarationDependent(all.refs);
     return all;
   },
-  { owner: (pass) => pass.repo },
+  // Never made twice: see evaluateWebBarrels.
+  { owner: (pass) => pass.repo, forProcess: true },
 );
 
 /** The slot naming of one scope over the evaluated records, per pass. */

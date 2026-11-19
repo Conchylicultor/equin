@@ -32,10 +32,14 @@ import { sha256Hex } from "@plugins/packages/plugins/string-hash/core";
  * Memoized per set (by identity): every producer of one build reads it once.
  */
 export const npmResolutionsKey: (set: RepoFiles) => Promise<string> =
-  sharedMemo("plugin records", async (set) => {
-    if (!set.has("bun.lock")) return "-";
-    return sha256Hex(lockfileNpmResolutions(await readLock(set)));
-  });
+  sharedMemo(
+    "plugin records",
+    async (set) => {
+      if (!set.has("bun.lock")) return "-";
+      return sha256Hex(lockfileNpmResolutions(await readLock(set)));
+    },
+    { forProcess: true },
+  );
 
 async function readLock(set: RepoFiles): Promise<string> {
   const text = await set.read("bun.lock");
@@ -54,12 +58,16 @@ function isBuiltin(pkg: string): boolean {
 }
 
 // Per set: its lockfile parsed once, and each package list's key.
-const lockOf = sharedMemo("plugin records", (set: RepoFiles) =>
-  readLock(set).then(parseBunLock),
+// Kept for the process (`forProcess`): read once per set, never again.
+const lockOf = sharedMemo(
+  "plugin records",
+  (set: RepoFiles) => readLock(set).then(parseBunLock),
+  { forProcess: true },
 );
 const codeKeysOf = sharedMemo(
   "plugin records",
   (_set: RepoFiles) => new Map<string, Promise<string>>(),
+  { forProcess: true },
 );
 
 /**
