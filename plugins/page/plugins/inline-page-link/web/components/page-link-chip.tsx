@@ -3,27 +3,34 @@ import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web"
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
-import { usePageReferent } from "@plugins/page/plugins/page-reference/web";
+import {
+  usePageNavigation,
+  usePageReferent,
+} from "@plugins/page/plugins/page-reference/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { INERT_ACTIVATION } from "../internal/inert-activation";
 
 const linkIcon = symbol("link");
 
 /**
- * Read-only equivalent of the editor's inline page-link chip
- * (`PageLinkInlineView`). Resolves the linked page's title + icon from its live
- * row in `pagesTree` and renders the same `LinkChip` shape — but never navigates
- * (a static render declares no page navigation), so its activation is inert:
- * the chip still isolates its click from whatever holds it. The preview layer
- * stays inert by design.
+ * THE chip of an inline page link — the one rendering of `[[page:<pageId>]]`,
+ * painted by the Lexical decorator (`page-link-inline-node.tsx`, inside its
+ * `TokenFrame`) and by `renderToken` on every surface that mounts no Lexical
+ * (a dormant text block, page history, diffs, the public site).
  *
- * It lives HERE, with the family that declares the token, rather than in
- * `read-only-view` — which used to own it and to name this token type by hand.
- * A read-only surface reaches it through `renderToken` on the registration in
- * `../internal/register`, so the surface names no token family at all and a new
- * one cannot be forgotten there.
+ * There used to be two: an editor chip that navigated and a "read-only" twin
+ * whose activation was hard-wired inert, on the theory that a static render
+ * declares no navigation. But a DORMANT block of the live editor is a static
+ * render too, so every page link in a line you were not typing in did nothing
+ * when clicked. Whether a chip can navigate is the host's answer, not the
+ * renderer's: both read `usePageNavigation()`, and a surface that declares none
+ * (a version diff, the public site) gets the inert chip on its own.
+ *
+ * Inert or not, the chip keeps an activation: `LinkChip` isolates its click, so
+ * pressing it never also activates the block or row around it.
  */
 export function PageLinkChip({ pageId }: { pageId: string }) {
+  const nav = usePageNavigation();
   const referent = usePageReferent(pageId);
 
   switch (referent.state) {
@@ -67,7 +74,8 @@ export function PageLinkChip({ pageId }: { pageId: string }) {
           <PageIcon icon={data.icon} fallback={linkIcon} className="size-3.5" />
         </Center>
       }
-      activation={INERT_ACTIVATION}
+      // A link: ⌘/middle-click opens the page in a new browser tab.
+      activation={nav?.open(pageId) ?? INERT_ACTIVATION}
     >
       {trashed ? (
         <span

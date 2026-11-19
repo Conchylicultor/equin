@@ -24,11 +24,17 @@ namespace can help it and it genuinely parses shape, pinned the same way.
 
 ## This plugin owns BOTH renderings of its token
 
-The Lexical decorator (`web/components/page-link-inline-node.tsx`) and the
-static chip (`web/components/page-link-chip.tsx`) are two renderings of one
-declaration, and the registration in `web/internal/register.tsx` carries both —
-the node for the editor, `renderToken` for every surface that mounts no Lexical
-(page history, version diffs, the public site).
+The Lexical decorator (`web/components/page-link-inline-node.tsx`) and
+`renderToken` are two mountings of ONE chip (`web/components/page-link-chip.tsx`),
+and the registration in `web/internal/register.tsx` carries both — the node for
+the editor (wrapped in `TokenFrame`, so a selection rings it as one object like
+every other decorated token), `renderToken` for every surface that mounts no
+Lexical (a dormant text block, page history, version diffs, the public site).
+
+Whether the chip navigates is the host's answer (`usePageNavigation()`), never
+the renderer's. The static chip used to be hard-wired inert — and a dormant
+block of the live editor is a static render, so page links in any line you were
+not typing in did nothing when clicked.
 
 `page/read-only-view` used to own that chip and to name this token type by hand.
 It named `page/math/inline` by hand too, and those two by hand were the whole of
@@ -59,7 +65,7 @@ cannot paint itself outside Lexical is a tsc error.
     - `primitives/text-editor/inline-chip.InlineTokenReferent`
     - `primitives/text-editor/inline-chip.InlineTokenReferentSource`
 - Web:
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `page/editor` ×9
     - `primitives/text-editor/caret-trigger` ×4
     - `network/live/live-state` ×3
@@ -70,6 +76,7 @@ cannot paint itself outside Lexical is a tsc error.
     - `primitives/css/placeholder.Placeholder`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/loading.Loading`
+    - `primitives/text-editor/token-extension/node.TokenFrame`
 - Core:
   - Uses: `primitives/text-editor/token-extension/node.defineInlineTokenNode`
   - Exports (types): `PageLinkFields`

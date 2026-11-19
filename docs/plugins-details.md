@@ -47199,7 +47199,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/text-editor/inline-chip.InlineTokenReferent`
           - `primitives/text-editor/inline-chip.InlineTokenReferentSource`
       - Web:
-        - Uses: 24 symbols — full list in [`plugins/page/plugins/inline-page-link/REFERENCE.md`](../plugins/page/plugins/inline-page-link/REFERENCE.md)
+        - Uses: 25 symbols — full list in [`plugins/page/plugins/inline-page-link/REFERENCE.md`](../plugins/page/plugins/inline-page-link/REFERENCE.md)
           - `page/editor` ×9
           - `primitives/text-editor/caret-trigger` ×4
           - `network/live/live-state` ×3
@@ -47210,6 +47210,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/placeholder.Placeholder`
           - `primitives/latest-ref.useEventCallback`
           - `primitives/loading.Loading`
+          - `primitives/text-editor/token-extension/node.TokenFrame`
       - Core:
         - Uses: `primitives/text-editor/token-extension/node.defineInlineTokenNode`
         - Exports (types): `PageLinkFields`

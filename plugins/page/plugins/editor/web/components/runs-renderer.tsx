@@ -171,8 +171,16 @@ export function RunsRenderer({ value }: RunsRendererProps) {
             // Lexical's decorator node reports. `static-text-geometry.ts`
             // walks text by these marks, so a caret or span over this DOM
             // lands at the offsets the live editor would.
+            //
+            // `select-none`: a selection across the line passes over the chip
+            // as one object, never highlighting its label's characters — what
+            // the live editor's `TokenFrame` does for the same token.
             return (
-              <span key={si} {...{ [TOKEN_LENGTH_ATTR]: seg.text.length }}>
+              <span
+                key={si}
+                className="select-none"
+                {...{ [TOKEN_LENGTH_ATTR]: seg.text.length }}
+              >
                 {rendered ?? renderText(seg.text)}
               </span>
             );
