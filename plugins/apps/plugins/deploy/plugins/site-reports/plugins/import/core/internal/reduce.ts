@@ -2,6 +2,7 @@ import { hashHex } from "@plugins/packages/plugins/string-hash/core";
 import { pathWithoutSurfaceViews } from "@plugins/primitives/plugins/pane/core";
 import type { SiteReportRecord } from "@plugins/apps/plugins/deploy/plugins/site-reports/plugins/intake/core";
 import { MainThreadStallPayloadSchema } from "@plugins/reports/plugins/main-thread-stall/core";
+import { CodeOriginSchema } from "@plugins/reports/plugins/crash/core";
 import {
   LONE_SURROGATE,
   SAFE_BUILD_ID,
@@ -453,5 +454,6 @@ export function reduceSiteReport(
     lastSeenAt: new Date(record.lastSeenAt).toISOString(),
     stall: record.kind === STALL_KIND ? reduceStall(record.data) : null,
     payload: reducePayload(record.data, hostnames),
+    codeOrigin: CodeOriginSchema.safeParse(record.data.codeOrigin).data ?? null,
   });
 }

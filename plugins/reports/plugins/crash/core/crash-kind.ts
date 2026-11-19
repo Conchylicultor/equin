@@ -3,6 +3,7 @@ import { normalizeMessage } from "@plugins/packages/plugins/error-subject/core";
 import type { ReportFingerprintContext } from "@plugins/reports/core";
 import { UiContextMetaSchema } from "@plugins/primitives/plugins/ui-context/core";
 import { ResizeLoopTraceSchema } from "./resize-loop";
+import { CodeOriginSchema } from "./code-origin";
 
 // The crash report payload, stored in the generic `data` jsonb column and
 // validated on ingest by the crash ReportKind. Mirrors the crash fields that
@@ -31,6 +32,10 @@ export const CrashPayloadSchema = z.object({
   // observer callbacks around it (./resize-loop.ts). Not part of the
   // fingerprint — every occurrence stays on the message's row.
   resizeLoop: ResizeLoopTraceSchema.nullable().optional(),
+  // For a window error / unhandled rejection: whose code its stack ran in
+  // (./code-origin.ts) — `foreign` when every frame is provably outside what
+  // the page serves (a browser extension). Not part of the fingerprint.
+  codeOrigin: CodeOriginSchema.optional(),
 });
 export type CrashPayload = z.infer<typeof CrashPayloadSchema>;
 

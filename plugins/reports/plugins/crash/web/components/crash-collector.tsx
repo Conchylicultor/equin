@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { report } from "@plugins/reports/web";
 import { claimsResizeLoopError } from "@plugins/primitives/plugins/dom/plugins/element-size/plugins/resize-loop-trace/web";
 import { EndpointAgentWriteRefusedError } from "@plugins/infra/plugins/endpoints/web";
@@ -12,6 +11,7 @@ import {
 import { isContextTeardown } from "../internal/context-teardown";
 import { fileUnlessOffline } from "../internal/fetch-no-answer";
 import { takeShellReports } from "../internal/shell-reports";
+import { crashFieldsWithOrigin } from "../internal/code-origin";
 
 // A Core.Root side-effect component (the old reports ReportCollector, now owned
 // by the crash kind). It owns the two browser crash signals that are window
@@ -42,7 +42,9 @@ export function CrashCollector() {
         userAgent: navigator.userAgent,
         // No Error object: no type either, so the message is the identity.
         data:
-          err === null ? { errorType: null, stack: null } : crashFieldsOf(err),
+          err === null
+            ? { errorType: null, stack: null }
+            : crashFieldsWithOrigin(err),
       });
     };
 
@@ -82,7 +84,7 @@ export function CrashCollector() {
             data:
               err === null
                 ? { errorType: null, stack: null }
-                : crashFieldsOf(err),
+                : crashFieldsWithOrigin(err),
           }),
         reachHost,
       );

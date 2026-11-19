@@ -8,6 +8,7 @@ import {
   CLIENT_FAMILIES,
   CLIENT_OSES,
 } from "@plugins/reports/plugins/main-thread-stall/core";
+import { CodeOriginSchema } from "@plugins/reports/plugins/crash/core";
 
 /**
  * The report kind a website visitor's error is recorded as on the computer:
@@ -395,6 +396,13 @@ export const WebsiteVisitorErrorSchema = z
      * every kind's diagnostic data; null on rows imported before it was kept.
      */
     payload: VisitorPayloadSchema.nullable().default(null),
+    /**
+     * Whose code a crash's stack ran in, as the visitor's page judged it
+     * (reports/crash's stackCodeOrigin): `foreign` — every frame outside what
+     * the page serves, a browser extension most likely. Null for other kinds,
+     * a crash without the verdict, and rows imported before it was kept.
+     */
+    codeOrigin: CodeOriginSchema.nullable().default(null),
   })
   .strict();
 export type WebsiteVisitorError = z.infer<typeof WebsiteVisitorErrorSchema>;

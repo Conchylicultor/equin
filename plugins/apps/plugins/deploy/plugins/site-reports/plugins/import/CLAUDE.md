@@ -188,6 +188,7 @@ reconcile mechanics are `table-mirror/replica`'s suite.
     - `packages/string-hash.hashHex`
     - `primitives/pane.pathWithoutSurfaceViews`
     - `reports.CLIENT_REPORT_SOURCES`
+    - `reports/crash.CodeOriginSchema`
     - `reports/main-thread-stall.CLIENT_FAMILIES`
     - `reports/main-thread-stall.CLIENT_OSES`
     - `reports/main-thread-stall.MainThreadStallPayloadSchema`

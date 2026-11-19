@@ -3855,6 +3855,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `packages/string-hash.hashHex`
                   - `primitives/pane.pathWithoutSurfaceViews`
                   - `reports.CLIENT_REPORT_SOURCES`
+                  - `reports/crash.CodeOriginSchema`
                   - `reports/main-thread-stall.CLIENT_FAMILIES`
                   - `reports/main-thread-stall.CLIENT_OSES`
                   - `reports/main-thread-stall.MainThreadStallPayloadSchema`
@@ -60306,9 +60307,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/list-bound.cappedList`
           - `primitives/ui-context.UiContextMetaSchema`
         - Exports (types):
+          - `CodeOrigin`
           - `CrashPayload`
           - `ResizeLoopTrace`
         - Exports (values):
+          - `CodeOriginSchema`
           - `crashFingerprint`
           - `CrashPayloadSchema`
           - `formatResizeLoopTrace`
@@ -60316,8 +60319,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RESIZE_LOOP_TARGETS_MAX`
           - `ResizeLoopTraceSchema`
           - `SHELL_REPORT_QUEUE_GLOBAL`
+          - `stackCodeOrigin`
       - Cross-plugin:
-        - Imported by: `infra/jobs/attempt-audit`
+        - Imported by:
+          - `apps/deploy/site-reports/import`
+          - `infra/jobs/attempt-audit`
     - **`endpoint-errors`** — Files crash tasks for bug-shaped handled endpoint errors (validation 400s and 5xx).
       - Web:
         - Contributes: `ReportSinks.Collector` "infra.endpoints"

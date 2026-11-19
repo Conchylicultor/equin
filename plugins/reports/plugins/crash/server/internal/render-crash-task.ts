@@ -39,7 +39,8 @@ function renderTitle(row: ReportRow): string {
   // Tag known-benign noise so the title itself reads as "expected", matching the
   // muted notification — not just a dimmed row with no explanation.
   const noisePrefix = row.noise ? "[noise] " : "";
-  const raw = `${stalePrefix}${noisePrefix}[crash] ${prefix}${row.message}`;
+  const foreignPrefix = data.codeOrigin === "foreign" ? "[not our code] " : "";
+  const raw = `${stalePrefix}${noisePrefix}${foreignPrefix}[crash] ${prefix}${row.message}`;
   return raw.length > 120 ? `${raw.slice(0, 117)}...` : raw;
 }
 
@@ -63,6 +64,12 @@ function renderDescription(row: ReportRow): string {
   } else if (row.staleOrigin) {
     lines.push(
       `**Origin:** only seen from outdated tabs so far (bundle ${row.lastBuildId}). That does not explain it: no occurrence proved version skew, so the bug is in that bundle's own code (or the server's), and is live until a build that fixes it.`,
+    );
+    lines.push("");
+  }
+  if (data.codeOrigin === "foreign") {
+    lines.push(
+      `**Origin:** not this page's code — every frame of the stack is outside what the page serves (another origin, an extension's scheme, or the document itself at a function none of its inline scripts names): a browser extension's page script, most likely. Nothing of ours to fix unless our page provoked it.`,
     );
     lines.push("");
   }

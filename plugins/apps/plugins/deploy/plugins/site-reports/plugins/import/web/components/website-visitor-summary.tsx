@@ -16,6 +16,9 @@ export function WebsiteVisitorSummary({ report }: { report: Report }) {
   return (
     <Cluster gap="sm">
       <Badge variant="warning">Website visitors</Badge>
+      {parsed.success && parsed.data.codeOrigin === "foreign" && (
+        <Badge variant="muted">Not our code</Badge>
+      )}
       <span>
         {parsed.success
           ? `${websiteVisitorErrorSummary(parsed.data)} · ${parsed.data.siteCount.toLocaleString("en-US")}× on the site`

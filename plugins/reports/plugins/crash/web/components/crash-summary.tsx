@@ -5,5 +5,11 @@ import type { Report } from "@plugins/reports/core";
 export function CrashSummary({ report }: { report: Report }) {
   const errorType =
     typeof report.data.errorType === "string" ? report.data.errorType : null;
-  return <>{errorType ? `${errorType}: ${report.message}` : report.message}</>;
+  const foreign = report.data.codeOrigin === "foreign" ? "[not our code] " : "";
+  return (
+    <>
+      {foreign}
+      {errorType ? `${errorType}: ${report.message}` : report.message}
+    </>
+  );
 }

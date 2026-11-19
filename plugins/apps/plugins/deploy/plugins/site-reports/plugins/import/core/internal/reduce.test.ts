@@ -42,6 +42,16 @@ function strings(value: unknown): string[] {
 }
 
 describe("reduceSiteReport", () => {
+  test("keeps the page's code-origin verdict, and only a known one", () => {
+    const withOrigin = (codeOrigin: unknown) =>
+      reduceSiteReport(record({ data: { ...record().data, codeOrigin } }), SITE)
+        .codeOrigin;
+    expect(withOrigin("foreign")).toBe("foreign");
+    expect(withOrigin("page")).toBe("page");
+    expect(withOrigin("<b>x</b>")).toBeNull();
+    expect(reduceSiteReport(record(), SITE).codeOrigin).toBeNull();
+  });
+
   test("keeps typed, clamped fields of an ordinary error", () => {
     const r = reduceSiteReport(record(), SITE);
     expect(r).toMatchObject({
