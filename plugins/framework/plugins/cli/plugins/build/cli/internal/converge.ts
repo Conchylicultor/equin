@@ -1,6 +1,12 @@
-import { readFile } from "@plugins/packages/plugins/timed-fs/core";
+import { existsSync, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { resolve } from "node:path";
 import { readOomKillCount } from "@plugins/packages/plugins/host-memory/core";
+import {
+  inOwnScope,
+  readScopeOomdKill,
+  userScopeHost,
+  type ScopeOomdKill,
+} from "@plugins/packages/plugins/systemd-scope/core";
 import { deadBuildExitCode } from "./failure-end";
 import {
   joinAppPath,
@@ -17,9 +23,12 @@ import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import {
   getMainRepoRoot,
   getWorktreeRoot,
+  signalExitCode,
+  spawnCaptured,
 } from "@plugins/infra/plugins/spawn/core";
 import { runInBuildSlot } from "@plugins/infra/plugins/git/plugins/main-slots/cli";
 import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
+import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
 import { runAttached } from "@plugins/infra/plugins/jobs/plugins/supervised-job/cli";
 import { createBuildRunRecorder } from "@plugins/build/plugins/run-ledger/cli";
 import {
@@ -400,6 +409,14 @@ async function convergeBuilds(
       const readOomKills = () =>
         readOomKillCount(process.platform, (path) => readFile(path, "utf8"));
       const oomKillsAtStart = await readOomKills();
+      // The build runs in a systemd scope of its own where the host has a
+      // user manager (Linux): systemd-oomd (Ubuntu desktop) kills whole
+      // cgroups, so in the gateway's cgroup an oomd kill took the gateway,
+      // Postgres and every backend with the build. In its own scope the build
+      // is its own leaf — the one oomd picks when it is what fills the memory —
+      // and the user journal records the kill: the one trace an oomd kill
+      // leaves (`buildScope`).
+      const scope = buildScope(buildId);
       let exitCode: number;
       if (checkout.kind === "main") {
         // Main builds in a SLOT (`infra/git/main-slots`): a linked worktree
@@ -415,6 +432,7 @@ async function convergeBuilds(
             buildId,
             buildArgs,
             env,
+            scope,
             log,
           });
         } catch (err) {
@@ -428,18 +446,24 @@ async function convergeBuilds(
           namespace,
           kindId: BUILD_RUN_KIND_ID,
           runId: buildId,
-          argv: [
-            process.execPath,
-            resolve(process.argv[1] ?? ""),
-            ...buildArgs,
-          ],
+          ...scope.wrap(
+            [process.execPath, resolve(process.argv[1] ?? ""), ...buildArgs],
+            env,
+          ),
           cwd: root,
-          env,
         });
       }
+      // Asked only of a build that died of SIGKILL: no other end is
+      // upgraded, and the read can wait seconds on the journal.
+      const sigkilled = exitCode === signalExitCode("SIGKILL");
+      const scopeKill: ScopeOomdKill = sigkilled
+        ? await scope.oomdKill()
+        : { kind: "unknown", why: "the build was not SIGKILLed" };
+      if (sigkilled)
+        log(`build ${buildId} was SIGKILLed — ${describeScopeKill(scopeKill)}`);
       exitCode = deadBuildExitCode(exitCode, {
-        atStart: oomKillsAtStart,
-        atEnd: await readOomKills(),
+        oomKills: { atStart: oomKillsAtStart, atEnd: await readOomKills() },
+        scope: scopeKill,
       });
       // The build closes its own row on every verdict; this is the backstop for
       // the ways it can end without one (a throw, an early exit, a signal), so
@@ -471,7 +495,7 @@ function describeExit(exitCode: number): string {
     case "killed":
       return ` (killed: ${killedSignalName(exitCode)} — not a verdict on the code)`;
     case "out-of-memory":
-      return " (out of memory: the host's OOM killer took the build or a step — not a verdict on the code)";
+      return " (out of memory: an out-of-memory killer — the kernel's or systemd-oomd — took the build or a step; not a verdict on the code)";
     case "interrupted":
     case "superseded":
       return ` (${status} — not a verdict on the code)`;
@@ -502,6 +526,7 @@ async function buildInSlot(i: {
   buildId: string;
   buildArgs: string[];
   env: Record<string, string | undefined>;
+  scope: BuildScope;
   log: (line: string) => void;
 }): Promise<number> {
   const startedAt = Date.now();
@@ -516,10 +541,74 @@ async function buildInSlot(i: {
         namespace: i.namespace,
         kindId: BUILD_RUN_KIND_ID,
         runId: i.buildId,
-        argv: [joinAppPath(slot, CLI_NAME), ...i.buildArgs],
+        ...i.scope.wrap([joinAppPath(slot, CLI_NAME), ...i.buildArgs], {
+          ...i.env,
+          ...env,
+        }),
         cwd: slot,
-        env: { ...i.env, ...env },
       });
     },
   );
+}
+
+/** Where a convergence run's build runs, and what its scope says once it ended. */
+interface BuildScope {
+  /** The build's command and environment, in its own scope when there is one. */
+  wrap(
+    argv: string[],
+    env: Record<string, string | undefined>,
+  ): { argv: string[]; env: Record<string, string | undefined> };
+  /** Whether systemd-oomd killed the build's scope (read after it ended). */
+  oomdKill(): Promise<ScopeOomdKill>;
+}
+
+/**
+ * The build's own systemd user scope, `<build id>.scope` (`packages/systemd-scope`):
+ * on a host with a user manager the build is its own cgroup, so systemd-oomd
+ * — which kills a whole leaf cgroup and moves no kernel counter — can take the
+ * build without the gateway, and the user journal names the scope it killed.
+ * `OOMPolicy=continue`, so a kernel OOM kill of one step still leaves the build
+ * to judge it (`buildFailureEnd`). Elsewhere (macOS: no counterpart a process
+ * can read) the build runs where it always did, and `oomdKill` is unknown.
+ */
+function buildScope(buildId: string): BuildScope {
+  const host = userScopeHost({
+    platform: process.platform,
+    uid: process.getuid?.() ?? -1,
+    exists: existsSync,
+  });
+  if (host.kind === "none")
+    return {
+      wrap: (argv, env) => ({ argv, env }),
+      oomdKill: async () => ({ kind: "unknown", why: host.why }),
+    };
+  const unit = `${buildId}.scope`;
+  return {
+    wrap: (argv, env) =>
+      inOwnScope(host, {
+        argv,
+        env,
+        unit,
+        description: `${PRODUCT_NAME} deploy ${buildId}`,
+      }),
+    oomdKill: () =>
+      readScopeOomdKill(host, unit, {
+        run: (argv, env, timeoutMs) =>
+          spawnCaptured(argv, { env: { ...process.env, ...env }, timeoutMs }),
+        wait: (ms) => Bun.sleep(ms),
+        now: () => Date.now(),
+      }),
+  };
+}
+
+/** What the build scope's journal said about a SIGKILL, for the run's log. */
+function describeScopeKill(kill: ScopeOomdKill): string {
+  switch (kill.kind) {
+    case "oomd-killed":
+      return `systemd-oomd killed its scope (${kill.processes ?? "?"} processes): out of memory`;
+    case "not-oomd":
+      return "not by systemd-oomd (its scope's stop is recorded without one)";
+    case "unknown":
+      return `whether systemd-oomd killed it is unknown: ${kill.why}`;
+  }
 }

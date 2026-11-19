@@ -5493,6 +5493,10 @@
         "@noble/hashes": "^2.4.0",
       },
     },
+    "plugins/packages/plugins/systemd-scope": {
+      "name": "@equin/plugin-packages-systemd-scope",
+      "version": "0.0.1",
+    },
     "plugins/packages/plugins/thread-cpu-clock": {
       "name": "@equin/plugin-packages-thread-cpu-clock",
       "version": "0.0.1",
@@ -10948,6 +10952,8 @@
     "@equin/plugin-packages-spawn-priority": ["@equin/plugin-packages-spawn-priority@workspace:plugins/packages/plugins/spawn-priority"],
 
     "@equin/plugin-packages-string-hash": ["@equin/plugin-packages-string-hash@workspace:plugins/packages/plugins/string-hash"],
+
+    "@equin/plugin-packages-systemd-scope": ["@equin/plugin-packages-systemd-scope@workspace:plugins/packages/plugins/systemd-scope"],
 
     "@equin/plugin-packages-thread-cpu-clock": ["@equin/plugin-packages-thread-cpu-clock@workspace:plugins/packages/plugins/thread-cpu-clock"],
 

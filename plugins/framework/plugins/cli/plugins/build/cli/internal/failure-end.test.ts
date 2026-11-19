@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { buildStatusOf } from "@plugins/build/plugins/build-status/core";
 import type { OomKillCount } from "@plugins/packages/plugins/host-memory/core";
+import type { ScopeOomdKill } from "@plugins/packages/plugins/systemd-scope/core";
 import { buildFailureEnd, deadBuildExitCode } from "./failure-end";
 
 const FINISHED = new Date("2026-11-18T12:00:00Z");
@@ -105,28 +106,49 @@ describe("buildFailureEnd", () => {
 
 describe("deadBuildExitCode", () => {
   const SIGKILL_EXIT = 128 + 9;
+  const NO_SCOPE: ScopeOomdKill = { kind: "unknown", why: "not in a scope" };
+  const NOT_OOMD: ScopeOomdKill = { kind: "not-oomd" };
+  const OOMD: ScopeOomdKill = { kind: "oomd-killed", processes: 6 };
   test("a build process SIGKILLed while the host counted an OOM kill ran out of memory", () => {
     const code = deadBuildExitCode(SIGKILL_EXIT, {
-      atStart: count(4),
-      atEnd: count(5),
+      oomKills: { atStart: count(4), atEnd: count(5) },
+      scope: NOT_OOMD,
     });
     expect(statusOf(code)).toBe("out-of-memory");
   });
-  test("a SIGKILL with no OOM kill counted stays killed", () => {
-    expect(deadBuildExitCode(SIGKILL_EXIT, NO_OOM)).toBe(SIGKILL_EXIT);
+  test("a build systemd-oomd killed with its scope ran out of memory, though the kernel counted nothing", () => {
+    const code = deadBuildExitCode(SIGKILL_EXIT, {
+      oomKills: NO_OOM,
+      scope: OOMD,
+    });
+    expect(statusOf(code)).toBe("out-of-memory");
+  });
+  test("a SIGKILL neither killer accounts for stays killed", () => {
+    expect(
+      deadBuildExitCode(SIGKILL_EXIT, { oomKills: NO_OOM, scope: NOT_OOMD }),
+    ).toBe(SIGKILL_EXIT);
+    expect(
+      deadBuildExitCode(SIGKILL_EXIT, { oomKills: NO_OOM, scope: NO_SCOPE }),
+    ).toBe(SIGKILL_EXIT);
   });
   test("an unknown counter never upgrades a kill", () => {
     expect(
       deadBuildExitCode(SIGKILL_EXIT, {
-        atStart: { kind: "unsupported", platform: "darwin" },
-        atEnd: { kind: "unsupported", platform: "darwin" },
+        oomKills: {
+          atStart: { kind: "unsupported", platform: "darwin" },
+          atEnd: { kind: "unsupported", platform: "darwin" },
+        },
+        scope: NO_SCOPE,
       }),
     ).toBe(SIGKILL_EXIT);
   });
   test("any other end is the build's own record, unchanged", () => {
     for (const code of [0, 1, 71, 75, 128 + 15]) {
       expect(
-        deadBuildExitCode(code, { atStart: count(1), atEnd: count(9) }),
+        deadBuildExitCode(code, {
+          oomKills: { atStart: count(1), atEnd: count(9) },
+          scope: OOMD,
+        }),
       ).toBe(code);
     }
   });

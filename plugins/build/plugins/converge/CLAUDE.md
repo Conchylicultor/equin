@@ -119,7 +119,9 @@ Two cases the retry covers by construction, both closed on 2026-11-18:
   the ledger, retried like a build that took the signal itself. When one of
   those kills is a SIGKILL and the host's OOM-kill counter moved during the
   build (Linux `/proc/vmstat` `oom_kill`), it exits `BUILD_EXIT_OUT_OF_MEMORY`
-  (71) instead — an `out-of-memory` row, retried the same way, and the one
+  (71) instead (the convergence run closes a build killed WHOLE the same way,
+  and also when systemd-oomd killed the build's own systemd scope —
+  `framework/cli/build`'s `deadBuildExitCode`, `packages/systemd-scope`) — an `out-of-memory` row, retried the same way, and the one
   no-verdict end the user is told of (a bell and a health-report row, since
   only free memory changes the next attempt). One real
   failure beside it (a type error, a failing check) keeps the build `failed`.

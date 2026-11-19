@@ -3,6 +3,7 @@ import {
   BUILD_EXIT_SUPERSEDED,
 } from "@plugins/build/plugins/build-status/core";
 import type { OomKillCount } from "@plugins/packages/plugins/host-memory/core";
+import type { ScopeOomdKill } from "@plugins/packages/plugins/systemd-scope/core";
 import { signalExitCode } from "@plugins/infra/plugins/spawn/core";
 
 /**
@@ -73,19 +74,38 @@ export function buildFailureEnd(i: {
 
 /**
  * The code the convergence run closes a build's row with when the build
- * PROCESS ended without recording its own: a SIGKILL while the host's OOM-kill
- * counter rose is `out-of-memory`. Without this, an OOM kill that took the
- * build itself (not a step — it is the biggest kill-first process when a
+ * PROCESS ended without recording its own: a SIGKILL that either out-of-memory
+ * killer accounts for is `out-of-memory`. Without this, an OOM kill that took
+ * the build itself (not a step — it is the biggest kill-first process when a
  * user's apps fill the machine) was a `killed` row, told to a developer only:
  * measured on an 8 GB Ubuntu VM with 5.3 GB held by another app, three
- * attempts in a row (2026-11-19). Any other code is returned unchanged.
+ * attempts in a row (2026-11-19).
+ *
+ * Two killers, two pieces of evidence:
+ *
+ * - the kernel's OOM killer moves the host's OOM-kill counter (`oomKills`,
+ *   read before and after the build);
+ * - systemd-oomd (Ubuntu desktop) kills the build's whole cgroup and moves no
+ *   counter; the build runs in a systemd scope of its own, and the user
+ *   journal's record of oomd killing that scope is the evidence (`scope`,
+ *   `packages/systemd-scope`'s `readScopeOomdKill`).
+ *
+ * An unknown on either side never upgrades a kill. Any other code is returned
+ * unchanged.
  */
 export function deadBuildExitCode(
   exitCode: number,
-  oomKills: { atStart: OomKillCount; atEnd: OomKillCount },
+  evidence: {
+    oomKills: { atStart: OomKillCount; atEnd: OomKillCount };
+    scope: ScopeOomdKill;
+  },
 ): number {
   if (exitCode !== signalExitCode("SIGKILL")) return exitCode;
-  const newOomKills = oomKillsBetween(oomKills.atStart, oomKills.atEnd);
+  if (evidence.scope.kind === "oomd-killed") return BUILD_EXIT_OUT_OF_MEMORY;
+  const newOomKills = oomKillsBetween(
+    evidence.oomKills.atStart,
+    evidence.oomKills.atEnd,
+  );
   return newOomKills !== null && newOomKills > 0
     ? BUILD_EXIT_OUT_OF_MEMORY
     : exitCode;

@@ -31,8 +31,11 @@ export const BUILD_EXIT_SUPERSEDED = 75;
  * Its own code rather than `128 + 9`, because a SIGKILL alone does not say
  * who sent it: the counter is the evidence, and it is read by the build that
  * saw the kill, so it is recorded with the outcome instead of re-guessed by a
- * reader. A host that cannot count OOM kills (macOS, an unreadable
- * `/proc/vmstat`) never ends with it — such a build stays `killed`.
+ * reader. The convergence run closes a build killed WHOLE with it on the same
+ * counter, or on the user journal's record that systemd-oomd (which kills a
+ * cgroup and moves no counter) killed the build's own systemd scope. A host
+ * that can say neither (macOS, an unreadable `/proc/vmstat` and journal)
+ * never ends with it — such a build stays `killed`.
  *
  * 71 is EX_OSERR from sysexits.h: "an operating system error has been
  * detected" — a resource the OS could not provide. Below 128, so the

@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-packages-systemd-scope",
+  "private": true,
+  "version": "0.0.1",
+  "description": "A command in a systemd user scope of its own, and how that scope was ended: userScopeHost() says whether this process can start transient units in its user's systemd manager (Linux with the manager's private socket under /run/user/<uid>; none on macOS), inOwnScope() wraps an argv in `systemd-run --user --scope --collect -p OOMPolicy=continue` under a given unit name, and readScopeOomdKill() reads the user journal for systemd's structured record of systemd-oomd killing that unit (MESSAGE_ID unit-oomd-kill, USER_UNIT) — oomd-killed with the process count, not-oomd once the unit's stop is recorded without one, or unknown, never a guess. systemd-oomd (Ubuntu desktop) kills a whole cgroup without moving the kernel's oom_kill counter, so this record is the only evidence of its kill."
+}

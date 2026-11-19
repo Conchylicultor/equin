@@ -307,8 +307,20 @@ retries it like `killed`. Unlike `killed` it is the user's news, told twice:
   namespace's history ended out of memory, naming the commit still running,
   pulsing while a build runs; absent otherwise, unknown while the history loads.
 
-A host that cannot count OOM kills (macOS) never upgrades a kill: its build
-stays `killed`, rather than guess.
+**systemd-oomd kills leave no counter.** Ubuntu desktop also runs
+systemd-oomd, which SIGKILLs a whole cgroup under memory pressure without the
+kernel's OOM killer, so `oom_kill` never moves. Main's convergence run starts
+its build in a systemd user scope of its own (`<build id>.scope`,
+`packages/systemd-scope`, `OOMPolicy=continue`): oomd then takes the build's
+cgroup alone — in the gateway's it took the gateway, Postgres and every
+backend with it — and the user manager writes a structured record of the kill
+to the user's journal. A build the convergence run sees SIGKILLed is
+`out-of-memory` when that record names its scope (`deadBuildExitCode`), told
+the same two ways.
+
+A host that can say neither (macOS — jetsam's kills are in the unified log, not
+a counter or a record a process can read cheaply) never upgrades a kill: its
+build stays `killed`, rather than guess.
 
 ## Tabs on an older build update themselves
 
