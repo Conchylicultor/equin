@@ -66,6 +66,7 @@ export type { ColorScheme } from "./color-scheme";
 export {
   isNpmSource,
   modulesOf,
+  pieceOf,
   ranModules,
   readScriptMaps,
   startCoverage,

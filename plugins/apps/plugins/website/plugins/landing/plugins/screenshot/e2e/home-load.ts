@@ -41,14 +41,21 @@
  * are not reported — coverage slows the page) under V8 precise coverage,
  * taken the frame first paint lands in (the page shows nothing before all
  * its early code ran, then all of it at once). The upfront set is every
- * script that finished before first paint; per set it prints the files and
+ * script the document declares (modulepreload / script src) that finished
+ * before first paint — a deferred chunk that raced the paint is counted
+ * apart; per set it prints the files and
  * their wire bytes, the source modules they hold (each script's source map,
  * first-party vs npm) with their generated size, and how many of those
  * modules ran by first paint: INITIALISED (a route chunk wraps each module in
  * an `__esmMin` init — the init ran) and CALLED (another function of it ran).
  * A module's wire bytes are its share of its script's generated characters
  * times the script's wire bytes — an estimate. Source maps are read over an
- * unshaped context. Also prints, for every run, when the last byte before
+ * unshaped context. Then the same split per PIECE — an npm package, or our
+ * plugin path to `--group-depth` levels (`network/live`) — as wire bytes
+ * sent / initialised / called, the non-script requests before first paint,
+ * the share of each stylesheet's rule text whose selector matches an
+ * element at first paint (pseudo-states stripped — an estimate),
+ * and every module's row as JSON (`<out>-coverage.json`). Also prints, for every run, when the last byte before
  * first paint arrived.
  *
  * Bytes on an HTTPS target: compare CDP's count with the link's. CDP charges
@@ -59,8 +66,9 @@
  * Manual only — nothing runs this automatically.
  *   ./equin run plugins/apps/plugins/website/plugins/landing/plugins/screenshot/e2e/home-load.ts \
  *     --url https://equin.ai [--profile fast4g|slow4g|desktop] [--cpu 4] [--runs 1] [--visits 2]
- *     [--window <KB>] [--path /] [--top 15] [--cpu-profile] [--coverage] [--block <text>] [--out <prefix>] [--no-record]
+ *     [--window <KB>] [--path /] [--top 15] [--cpu-profile] [--coverage [--group-depth 2]] [--block <text>] [--out <prefix>] [--no-record]
  */
+import { writeFile } from "node:fs/promises";
 import type { Browser, CDPSession, Page } from "playwright";
 import {
   arg,
@@ -69,6 +77,7 @@ import {
   modulesOf,
   numArg,
   pathUrl,
+  pieceOf,
   ranModules,
   readScriptMaps,
   report,
@@ -96,6 +105,8 @@ const CPU_PROFILE = flag("cpu-profile");
 const BLOCK = arg("block");
 /** One more cold load under V8 coverage: what of the upfront code ran by first paint (`--coverage`). */
 const COVERAGE = flag("coverage");
+/** `--coverage`: group our modules by plugin path to this depth (`--group-depth 2`: `network/live`). */
+const GROUP_DEPTH = numArg("group-depth", 2);
 
 /** Lighthouse's mobile device (Moto G Power). */
 const PHONE = {
@@ -365,17 +376,66 @@ async function coveragePass(
     { polling: "raf", timeout: TTI_TIMEOUT_MS },
   );
   const coverage = await takeCoverage(cdp);
+  // CSS beside the JS: per stylesheet, the text of its style rules and of
+  // those whose selector matches an element in the document at first paint
+  // (pseudo-states stripped, so :hover rules of a present element count).
+  const cssUse = await page.evaluate(() =>
+    [...document.styleSheets].map((sheet) => {
+      let all = 0;
+      let used = 0;
+      const walk = (rules: CSSRuleList) => {
+        for (const r of rules) {
+          if (r instanceof CSSStyleRule) {
+            all += r.cssText.length;
+            const sel = r.selectorText
+              .replace(/::?[a-z-]+(\([^)]*\))?/g, "")
+              .trim();
+            let hit = false;
+            try {
+              hit = sel === "" || document.querySelector(sel) !== null;
+            } catch (err) {
+              if (!(err instanceof DOMException)) throw err;
+            }
+            if (hit) used += r.cssText.length;
+            if (r.cssRules.length > 0) walk(r.cssRules);
+          } else if ("cssRules" in r) walk((r as CSSGroupingRule).cssRules);
+          else all += r.cssText.length;
+        }
+      };
+      walk(sheet.cssRules);
+      return { href: sheet.href, all, used };
+    }),
+  );
   const fcp = await page.evaluate(
     () => performance.getEntriesByName("first-contentful-paint")[0]!.startTime,
   );
   if (navMono === null) throw new Error("no Document request seen");
   const nav0 = navMono as number;
-  const upfront = [...reqs.values()].filter(
-    (q) =>
-      q.type === "Script" &&
-      !q.failed &&
-      q.done !== null &&
-      (q.done - nav0) * 1000 <= fcp,
+  const early = [...reqs.values()].filter(
+    (q) => !q.failed && q.done !== null && (q.done - nav0) * 1000 <= fcp,
+  );
+  // The DECLARED upfront set: the scripts the document names (its
+  // modulepreload links and script srcs). A deferred chunk that happens to
+  // finish before first paint is counted apart — it races the paint, so
+  // with it the set would change from run to run.
+  const declared = new Set(
+    await page.evaluate(() => [
+      ...[
+        ...document.querySelectorAll<HTMLLinkElement>(
+          'link[rel="modulepreload"]',
+        ),
+      ].map((l) => l.href),
+      ...[...document.querySelectorAll<HTMLScriptElement>("script[src]")].map(
+        (s) => s.src,
+      ),
+    ]),
+  );
+  const earlyScripts = early.filter((q) => q.type === "Script");
+  const upfront = earlyScripts.filter((q) => declared.has(q.url));
+  const raced = earlyScripts.filter((q) => !declared.has(q.url));
+  const nonScript = early.filter((q) => q.type !== "Script");
+  console.log(
+    `\nscripts before first paint: ${earlyScripts.length}; declared by the document (modulepreload / script src): ${upfront.length}, ${kb(upfront.reduce((t, q) => t + q.bytes, 0))}; deferred ones that landed before the paint (left out below): ${raced.length}, ${kb(raced.reduce((t, q) => t + q.bytes, 0))}`,
   );
   await context.close();
   await shaper?.close();
@@ -436,6 +496,176 @@ async function coveragePass(
   console.log(`  held:        ${sum(modules.keys())}`);
   console.log(`  initialised: ${sum(initialised)}`);
   console.log(`  called:      ${sum(called)}`);
+
+  // Per piece (npm package, or our plugin path to --group-depth): wire bytes
+  // sent / initialised / called. A script's characters no source maps to
+  // (bundler glue, the import-map preamble) are the "(unmapped)" piece.
+  interface Piece {
+    npm: boolean;
+    n: number;
+    sent: number;
+    init: number;
+    called: number;
+    nInit: number;
+    nCalled: number;
+    versions: Set<string>;
+  }
+  const pieces = new Map<string, Piece>();
+  const rows: Array<{
+    source: string;
+    piece: string;
+    npm: boolean;
+    version: string | null;
+    chars: number;
+    wire: number;
+    initialised: boolean;
+    called: boolean;
+  }> = [];
+  for (const [src, m] of modules) {
+    const { piece, npm, version } = pieceOf(src, GROUP_DEPTH);
+    const p = pieces.get(piece) ?? {
+      npm,
+      n: 0,
+      sent: 0,
+      init: 0,
+      called: 0,
+      nInit: 0,
+      nCalled: 0,
+      versions: new Set<string>(),
+    };
+    p.n++;
+    p.sent += m.wire;
+    if (version !== null) p.versions.add(version);
+    // npm code is not wrapped per module: initialised = called for it.
+    const isInit = initialised.has(src);
+    const isCalled = called.has(src) || (npm && isInit);
+    if (isInit) {
+      p.init += m.wire;
+      p.nInit++;
+    }
+    if (isCalled) {
+      p.called += m.wire;
+      p.nCalled++;
+    }
+    pieces.set(piece, p);
+    rows.push({
+      source: src,
+      piece,
+      npm,
+      version,
+      chars: m.chars,
+      wire: m.wire,
+      initialised: isInit,
+      called: isCalled,
+    });
+  }
+  let unmappedWire = 0;
+  for (const map of maps.values()) {
+    const mapped = [...modulesOf([map]).values()].reduce(
+      (t, x) => t + x.chars,
+      0,
+    );
+    const wire = wireOf.get(map.href) ?? 0;
+    if (map.text.length > 0)
+      unmappedWire += (wire * (map.text.length - mapped)) / map.text.length;
+  }
+  for (const q of unmapped) unmappedWire += q.bytes;
+  const line = (name: string, p: Piece) =>
+    `  ${kb(p.sent).padStart(7)} ${kb(p.init).padStart(7)} ${kb(p.called).padStart(7)}   ${`${p.n}/${p.nInit}/${p.nCalled}`.padStart(13)}  ${name}${p.npm ? " [npm]" : ""}${p.versions.size > 1 ? ` (${p.versions.size} versions: ${[...p.versions].join(", ")})` : ""}`;
+  console.log(
+    `\nby piece (--group-depth ${GROUP_DEPTH}), wire bytes: sent / initialised / called · modules sent/init/called`,
+  );
+  const ranked = [...pieces].toSorted((a, b) => b[1].sent - a[1].sent);
+  for (const [name, p] of ranked.slice(0, Math.max(TOP, 40)))
+    console.log(line(name, p));
+  if (ranked.length > Math.max(TOP, 40)) {
+    const rest = ranked.slice(Math.max(TOP, 40));
+    console.log(
+      `  … ${rest.length} more pieces, ${kb(rest.reduce((t, [, p]) => t + p.sent, 0))} sent`,
+    );
+  }
+  console.log(
+    `  ${kb(unmappedWire).padStart(7)}  (unmapped: bundler glue, scripts with no map)`,
+  );
+  for (const npm of [false, true]) {
+    const tot = ranked
+      .filter(([, p]) => p.npm === npm)
+      .reduce(
+        (t, [, p]) => ({
+          npm,
+          n: t.n + p.n,
+          sent: t.sent + p.sent,
+          init: t.init + p.init,
+          called: t.called + p.called,
+          nInit: t.nInit + p.nInit,
+          nCalled: t.nCalled + p.nCalled,
+          versions: t.versions,
+        }),
+        {
+          npm,
+          n: 0,
+          sent: 0,
+          init: 0,
+          called: 0,
+          nInit: 0,
+          nCalled: 0,
+          versions: new Set<string>(),
+        },
+      );
+    console.log(line(npm ? "= all npm" : "= all ours", tot));
+  }
+
+  // CSS: what matched by first paint (selector-level, an estimate).
+  let inlineAll = 0;
+  let inlineUsed = 0;
+  for (const c of cssUse) {
+    if (c.href === null) {
+      inlineAll += c.all;
+      inlineUsed += c.used;
+    } else
+      console.log(
+        `\ncss ${short(c.href)}: rules ${kb(c.all)} as text, of which a selector matching the page at first paint ${kb(c.used)} (${Math.round((100 * c.used) / Math.max(1, c.all))}%)`,
+      );
+  }
+  console.log(
+    `css inline (<style> blocks: theme tokens): rules ${kb(inlineAll)} as text, matching ${kb(inlineUsed)}`,
+  );
+
+  // The rest of what came before first paint, by kind.
+  console.log(
+    `\nnon-script before first paint: ${nonScript.length} requests, ${kb(nonScript.reduce((t, q) => t + q.bytes, 0))}`,
+  );
+  for (const q of nonScript.toSorted((a, b) => b.bytes - a.bytes))
+    console.log(
+      `  ${kb(q.bytes).padStart(7)}  ${q.type.padEnd(10)} ${short(q.url)}`,
+    );
+
+  const json = `${OUT}-coverage.json`;
+  await writeFile(
+    json,
+    JSON.stringify(
+      {
+        url,
+        fcp,
+        groupDepth: GROUP_DEPTH,
+        scripts: upfront.map((q) => ({
+          url: q.url,
+          bytes: q.bytes,
+          mapped: maps.has(q.url),
+        })),
+        nonScript: nonScript.map((q) => ({
+          url: q.url,
+          type: q.type,
+          bytes: q.bytes,
+        })),
+        unmappedWire,
+        modules: rows,
+      },
+      null,
+      1,
+    ),
+  );
+  console.log(`per-module rows: ${json}`);
 }
 
 await withBrowser(async (h) => {

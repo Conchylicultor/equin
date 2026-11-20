@@ -209,3 +209,58 @@ export function ranModules(
   }
   return { initialised, called };
 }
+
+/**
+ * The piece a source module belongs to, for grouping bytes by WHAT they are:
+ * an npm module → its package (`react-dom`, `@tanstack/query-core`; the last
+ * `node_modules/` on the path) and its version when the path names one (bun's
+ * `.bun/<name>@<version>/` store), so two copies of a library show up as two
+ * versions; one of ours → its plugin path to `depth` levels (`network/live`
+ * at 2, `network/live/live-state` at 3) — a plugin compiled into the web
+ * artifact store (`web-artifacts/store/<a.b.c>.<runtime>.<hash>/`) by its
+ * dotted id — or a build artifact (`(web-registry-…)`, `(<first dir>)`).
+ */
+export function pieceOf(
+  source: string,
+  depth = 2,
+): { piece: string; npm: boolean; version: string | null } {
+  const nm = source.lastIndexOf("node_modules/");
+  if (nm !== -1) {
+    const rest = source.slice(nm + "node_modules/".length).split("/");
+    const name = rest[0]?.startsWith("@")
+      ? `${rest[0]}/${rest[1] ?? ""}`
+      : (rest[0] ?? "?");
+    const store = /\.bun\/((?:@[^/+]+\+)?[^/@]+)@([^/+]+)/.exec(source);
+    return { piece: name, npm: true, version: store?.[2] ?? null };
+  }
+  const own = (ids: string[]) => ({
+    piece: ids.slice(0, depth).join("/"),
+    npm: false,
+    version: null,
+  });
+  const art = /web-artifacts\/store\/([^/]+)\//.exec(source);
+  if (art !== null) {
+    const dotted = art[1]!;
+    const m = /^(.+)\.(web|core|shared)\.[0-9a-f]+$/.exec(dotted);
+    if (m !== null) return own(m[1]!.split("."));
+    return {
+      piece: `(${dotted.replace(/\.[0-9a-f]+$/, "")})`,
+      npm: false,
+      version: null,
+    };
+  }
+  const path = source.replace(/^(\.\.\/|\.\/|\/)+/, "");
+  const at = path.indexOf("plugins/");
+  if (at === -1)
+    return {
+      piece: `(${path.split("/")[0] ?? path})`,
+      npm: false,
+      version: null,
+    };
+  // plugins/a/plugins/b/plugins/c/web/x.ts → [a, b, c]
+  const ids: string[] = [];
+  const parts = path.slice(at).split("/");
+  for (let i = 0; i + 1 < parts.length && parts[i] === "plugins"; i += 2)
+    ids.push(parts[i + 1]!);
+  return own(ids);
+}
