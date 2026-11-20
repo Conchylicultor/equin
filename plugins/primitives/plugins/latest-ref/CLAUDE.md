@@ -54,9 +54,9 @@ badge.
 
 - Description: Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), useEventCallback(fn) is the stable-identity callback built on it, and useLatestStore(value) / useLatestSelector(store, select) hand a per-render value down to many memoized readers, each re-rendering only when its own selected answer changes. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
 - Cross-plugin:
-  - Imported by: 90 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 91 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×35
-    - `apps` ×25
+    - `apps` ×26
     - `page` ×5
     - `conversations` ×3
     - `apps-core` ×2

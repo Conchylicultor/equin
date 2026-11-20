@@ -55,8 +55,10 @@ import {
   formatModifiedFull,
   formatSize,
   itemCount,
+  baseName,
   joinPath,
   nameStemEnd,
+  parentPath,
   type EntryFilter,
   type EntryRow,
   type FolderRefusal,
@@ -134,33 +136,66 @@ function buildRows(
     let rank: Rank | null = null;
     for (const entry of visibleEntries(dir, listing.entries, shows)) {
       rank = Rank.between(rank, null);
-      const path = joinPath(dir, entry.name);
-      rows.push({
-        id: path,
-        parentId,
-        rank,
-        fs,
-        name: entry.name,
-        path,
-        kind: entry.kind,
-        size: entry.size,
-        mtimeMs: entry.mtimeMs,
-        ...(entry.birthtimeMs !== undefined
-          ? { birthtimeMs: entry.birthtimeMs }
-          : {}),
-        ...(entry.atimeMs !== undefined ? { atimeMs: entry.atimeMs } : {}),
-        ...(entry.symlinkTarget !== undefined
-          ? { symlinkTarget: entry.symlinkTarget }
-          : {}),
-        hidden: entry.hidden,
-        browsable: isBrowsable(entry),
-        ...(entry.archive !== undefined ? { archive: entry.archive } : {}),
-      });
-      if (isBrowsable(entry)) walk(path, path);
+      const row = toEntryRow(fs, dir, entry, parentId, rank);
+      rows.push(row);
+      if (row.browsable) walk(row.path, row.path);
     }
   };
   walk(root, null);
   return rows;
+}
+
+/** `entry` of the listed folder `dir` as a row of the tree. */
+function toEntryRow(
+  fs: BrowsableFileSystem,
+  dir: string,
+  entry: FileEntry,
+  parentId: string | null,
+  rank: Rank,
+): EntryRow {
+  const path = joinPath(dir, entry.name);
+  return {
+    id: path,
+    parentId,
+    rank,
+    fs,
+    name: entry.name,
+    path,
+    kind: entry.kind,
+    size: entry.size,
+    mtimeMs: entry.mtimeMs,
+    ...(entry.birthtimeMs !== undefined
+      ? { birthtimeMs: entry.birthtimeMs }
+      : {}),
+    ...(entry.atimeMs !== undefined ? { atimeMs: entry.atimeMs } : {}),
+    ...(entry.symlinkTarget !== undefined
+      ? { symlinkTarget: entry.symlinkTarget }
+      : {}),
+    hidden: entry.hidden,
+    browsable: isBrowsable(entry),
+    ...(entry.archive !== undefined ? { archive: entry.archive } : {}),
+  };
+}
+
+/**
+ * The row of the listed entry at `path` (display form) — what a row action
+ * is handed — or `null` while its folder is not listed (or no longer holds
+ * it). Its rank is the row's own business (the tree's order), not an
+ * action's: a fresh one.
+ */
+export function entryRowAt(
+  fs: BrowsableFileSystem,
+  listings: Listings,
+  path: string,
+  home: string,
+): EntryRow | null {
+  const dir = parentPath(path, home);
+  if (dir === null) return null;
+  const listing = listings.get(dir);
+  if (listing?.kind !== "ok") return null;
+  const entry = listing.entries.find((e) => e.name === baseName(path));
+  if (entry === undefined) return null;
+  return toEntryRow(fs, dir, entry, dir, Rank.between(null, null));
 }
 
 /** A tree-view listing's state, as the lazy-children contract spells it. */

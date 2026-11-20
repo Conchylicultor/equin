@@ -3,8 +3,13 @@ import {
   absolutePath,
   displayPath,
 } from "@plugins/infra/plugins/host-account/core";
-import { EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import {
+  EndpointError,
+  useEndpointMutation,
+} from "@plugins/infra/plugins/endpoints/web";
+import {
+  computerFileCompress,
+  computerFileCopy,
   isValidEntryName,
   type FileRemoveResult,
 } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
@@ -36,6 +41,13 @@ export interface EntryEdits {
    * `trash` only where the system has a Trash.
    */
   remove: (paths: readonly string[], mode: RemoveMode) => Promise<string[]>;
+  /**
+   * Copy `paths` (absolute — a clipboard's) into `dir`: the copies' paths. A
+   * taken name gets the next free one. Only where the system copies.
+   */
+  copy: (paths: readonly string[], dir: string) => Promise<string[]>;
+  /** A .zip of `paths` (entries of one folder) beside them: its path. Only where the system compresses. */
+  compress: (paths: readonly string[]) => Promise<string | null>;
 }
 
 function refused(toast: Toast, title: string, description = ""): void {
@@ -67,6 +79,8 @@ export function useEntryEdits(system: ExplorerSystem): EntryEdits | null {
   const abs = useCallback((path: string) => absolutePath(path, home), [home]);
   const shown = useCallback((path: string) => displayPath(path, home), [home]);
   const { rename, create, delete: del, trash } = edits;
+  const copyInto = useEndpointMutation(computerFileCopy);
+  const compressAt = useEndpointMutation(computerFileCompress);
 
   const renameEntry = useCallback(
     async (path: string, name: string): Promise<string | null> => {
@@ -204,10 +218,107 @@ export function useEntryEdits(system: ExplorerSystem): EntryEdits | null {
     [trash, del, abs, confirm, toast],
   );
 
+  const copyEntries = useCallback(
+    async (paths: readonly string[], dir: string): Promise<string[]> => {
+      if (copyInto.kind === "unavailable") return [];
+      const result = await sent(
+        copyInto.mutateAsync({
+          body: { sources: [...paths], destDir: abs(dir) },
+        }),
+      );
+      if (result === null) return [];
+      switch (result.kind) {
+        case "missing":
+          refused(toast, `“${baseName(dir)}” no longer exists`);
+          return [];
+        case "denied":
+          refused(
+            toast,
+            `You don't have permission to add items to “${baseName(dir)}”`,
+          );
+          return [];
+        case "not-a-dir":
+          refused(toast, `“${baseName(dir)}” is not a folder`);
+          return [];
+        case "archive":
+          refused(toast, `Items can't be pasted into “${baseName(dir)}”`);
+          return [];
+        case "ok":
+          break;
+      }
+      const copied: string[] = [];
+      const why: string[] = [];
+      for (const outcome of result.results) {
+        const name = `“${baseName(outcome.from)}”`;
+        switch (outcome.kind) {
+          case "copied":
+            copied.push(shown(outcome.to));
+            break;
+          case "into-self":
+            why.push(`${name} can't be pasted into itself`);
+            break;
+          case "missing":
+            why.push(`${name} no longer exists`);
+            break;
+          case "denied":
+            why.push(`${name}: permission denied`);
+            break;
+          case "archive":
+            why.push(`${name} can't be copied from where it is`);
+            break;
+        }
+      }
+      if (why.length > 0) {
+        refused(
+          toast,
+          why.length === 1 ? why[0]! : `${why.length} items were not pasted`,
+          why.length === 1 ? "" : why.join("; "),
+        );
+      }
+      return copied;
+    },
+    [copyInto, abs, shown, toast],
+  );
+
+  const compressEntries = useCallback(
+    async (paths: readonly string[]): Promise<string | null> => {
+      if (compressAt.kind === "unavailable") return null;
+      const result = await sent(
+        compressAt.mutateAsync({ body: { paths: paths.map(abs) } }),
+      );
+      if (result === null) return null;
+      switch (result.kind) {
+        case "compressed":
+          return shown(result.path);
+        case "missing":
+          refused(toast, `“${baseName(result.path)}” no longer exists`);
+          return null;
+        case "denied":
+          refused(
+            toast,
+            `You don't have permission to compress in “${baseName(result.path)}”`,
+          );
+          return null;
+        case "archive":
+          refused(
+            toast,
+            `“${baseName(result.path)}” can't be compressed where it is`,
+          );
+          return null;
+        case "mixed-folders":
+          refused(toast, "Only items of one folder can be compressed together");
+          return null;
+      }
+    },
+    [compressAt, abs, shown, toast],
+  );
+
   if (!system.capabilities.edit) return null;
   return {
     rename: renameEntry,
     create: createEntry,
     remove: removeEntries,
+    copy: copyEntries,
+    compress: compressEntries,
   };
 }

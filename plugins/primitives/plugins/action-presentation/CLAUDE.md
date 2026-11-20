@@ -11,7 +11,7 @@ if (form === "compact") return <IconButton icon={VolumeIcon} label="Volume" onCl
 return <VolumeSlider />;
 ```
 
-A **rung** (`"full" | "compact" | "row"`) names a form the widget renders itself
+A **rung** (`"full" | "compact" | "row" | "menu-item"`) names a form the widget renders itself
 as, never a place — a widget rendered as itself inside a floating panel is still
 `"full"`, and is never told where it is. `yields`
 (`"never" | "late" | "normal" | "early"`) says how eagerly it gives up room
@@ -101,6 +101,20 @@ the one widget that declares `"row"` — it *is* the generic
 `{ icon, label, onClick }` shape — so everything built on it inherits the rung,
 and `variant` / `className` / `tooltip` / `side` are INERT in that form.
 
+## `MenuItemForm` — the same action, as a menu item
+
+A context menu (a `CursorAnchoredMenu`) is the opposite of the overflow panel:
+it mounts its items only while open and holds no live widget, so it IS a
+`role="menu"`, with arrow keys, typeahead and closing on select. Wrap each
+contributed action in `<MenuItemForm>` inside the menu's content: a widget that
+offered the `"menu-item"` rung (`IconButton`) draws itself as a
+`DropdownMenuItem` — its label the item's text, a destructive button a
+destructive item, its shortcut the trailing hint — and anything else renders
+as itself. That is how one item-action list is a row's hover cluster and its
+right-click menu at once (the file explorer's `FileBrowserSlots.RowActions`).
+No bar ever assigns `"menu-item"` (`adaptive-bar`'s `formFor` hands an
+evicted widget `"row"` or `"full"`), so declaring it changes nothing in a bar.
+
 ## Why there is no `probe`
 
 `probe` answered *"is this bucket empty for THIS row?"* (an action returns `null`
@@ -137,12 +151,14 @@ second mount. `ActionPresenceScope` / `useReportActionPresence` went with it.
   - Exports (values):
     - `ActionFormProvider`
     - `ActionFormShield`
+    - `MenuItemForm`
     - `PanelActionRow`
     - `useActionForm`
     - `useHoldShrink`
 - Cross-plugin:
   - Imported by:
     - `apps-core/tab-bar`
+    - `apps/file-explorer/browser`
     - `apps/prototypes/canvas`
     - `apps/website/improve`
     - `apps/website/shell`

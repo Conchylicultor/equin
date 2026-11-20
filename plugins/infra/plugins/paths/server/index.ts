@@ -56,6 +56,7 @@ export {
   GIT,
   LSOF,
   MACOS_TRASH,
+  SYSTEM_ZIP,
   MKFIFO,
   PGREP,
   PS,

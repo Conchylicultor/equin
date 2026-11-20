@@ -13,6 +13,7 @@ import { useToast, type Toast } from "@plugins/shell/plugins/notifications/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { baseName, type EntryRow } from "../../core";
 import { useHomeDir } from "../internal/host-path-source";
+import { useActionTargets } from "../internal/entry-action-host";
 
 const unarchiveIcon = symbol("unarchive");
 const checkIcon = symbol("check");
@@ -80,9 +81,11 @@ function extractToast(toast: Toast, result: FileExtractResult): void {
 export function ExtractAction({ row }: ItemActionProps<EntryRow>): ReactNode {
   const extract = useEndpointMutation(computerFileExtract);
   const toast = useToast();
+  const targets = useActionTargets(row);
   // Extracting writes beside the archive on the computer's disk: with no
   // computer behind the app there is no action to offer.
   if (
+    targets.length !== 1 ||
     row.fs !== "computer" ||
     row.archive === undefined ||
     extract.kind === "unavailable"
@@ -118,6 +121,9 @@ export function CopyPathAction({ row }: ItemActionProps<EntryRow>): ReactNode {
         ? absolutePath(row.path, home.home)
         : null;
   const { copy, copied } = useCopyToClipboard(path ?? "");
+  const targets = useActionTargets(row);
+  // One entry's path: a menu opened on several entries does not offer it.
+  if (targets.length !== 1) return null;
   return (
     <IconButton
       icon={copied ? checkIcon : contentCopyIcon}

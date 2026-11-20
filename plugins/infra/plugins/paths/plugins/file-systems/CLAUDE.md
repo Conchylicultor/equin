@@ -164,6 +164,9 @@ file viewer all name a file system and read through here.
     - `DraggedFiles`
     - `FileArchiveReason`
     - `FileCompletions`
+    - `FileCompressResult`
+    - `FileCopyOutcome`
+    - `FileCopyResult`
     - `FileCreateResult`
     - `FileDirPeek`
     - `FileEntry`
@@ -212,6 +215,8 @@ file viewer all name a file system and read through here.
     - `computerDirPeek`
     - `computerFileBytes`
     - `computerFileCompletions`
+    - `computerFileCompress`
+    - `computerFileCopy`
     - `computerFileCreate`
     - `computerFileDelete`
     - `computerFileExtract`
@@ -232,6 +237,7 @@ file viewer all name a file system and read through here.
     - `dirPeekOf`
     - `FILE_BYTES_MAX`
     - `FILE_COMPLETE_LIMIT`
+    - `FILE_COMPRESS_MAX_PATHS`
     - `FILE_DELETE_MAX_PATHS`
     - `FILE_LOCATIONS_MIME`
     - `FILE_MOVE_MAX_SOURCES`
@@ -240,6 +246,9 @@ file viewer all name a file system and read through here.
     - `FILE_TEXT_MAX_BYTES`
     - `FileArchiveReasonSchema`
     - `FileCompletionsSchema`
+    - `FileCompressResultSchema`
+    - `FileCopyOutcomeSchema`
+    - `FileCopyResultSchema`
     - `FileCreateResultSchema`
     - `FileDirPeekSchema`
     - `FileEntrySchema`

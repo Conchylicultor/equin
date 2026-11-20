@@ -3,6 +3,7 @@ import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import {
   Button,
   cn,
+  DropdownMenuItem,
   type DensityControlled,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ComponentProps, ReactNode } from "react";
@@ -43,16 +44,17 @@ export interface IconButtonProps
 }
 
 /**
- * A ladder rung this widget can render itself as. Module scope, not an inline
- * literal, purely for the reader: it is the one thing `IconButton` says about
- * itself to a bar, and it says it once. `useActionForm` keys its declaration on
+ * The ladder rungs this widget can render itself as: a labelled row (a bar's
+ * overflow panel) and a menu item (a context menu, `MenuItemForm`). Module
+ * scope, not an inline literal, purely for the reader: it is the one thing
+ * `IconButton` says about itself to a region, and it says it once. `useActionForm` keys its declaration on
  * the ladder's VALUE, so an inline literal would behave identically.
  *
  * Deliberately NOT `"compact"`: an icon button is already an icon-only square,
  * so it has no narrower form of itself to offer — below full it either stays as
  * it is or becomes a labelled row.
  */
-const ICON_BUTTON_LADDER = { shrinksTo: ["row"] } as const;
+const ICON_BUTTON_LADDER = { shrinksTo: ["row", "menu-item"] } as const;
 
 /**
  * `IconButton` IS the generic `{ icon, label, onClick }` action shape, so it is
@@ -77,6 +79,31 @@ export function IconButton({
   // answer, then one branch on it. With no bar above — every ordinary call site
   // — this is a constant `"full"` and the declaration is a no-op.
   const form = useActionForm(ICON_BUTTON_LADDER);
+  if (form === "menu-item") {
+    // One of a menu's items: the label is its text, a destructive button is a
+    // destructive item, and choosing it runs the click and closes the menu.
+    const { onClick, disabled } = props;
+    return (
+      <DropdownMenuItem
+        variant={variant === "destructive" ? "destructive" : "default"}
+        disabled={disabled ?? false}
+        // The button's handler, handed the item's click: the item is a
+        // `<div role="menuitem">`, not a `<button>` — the same click, on the
+        // element that stands for the button here.
+        onClick={
+          onClick === undefined
+            ? undefined
+            : (e) => onClick(e as unknown as Parameters<typeof onClick>[0])
+        }
+        shortcut={
+          shortcut === undefined ? undefined : formatShortcutLabel(shortcut)
+        }
+      >
+        <Icon icon={icon} active={active} />
+        {label}
+      </DropdownMenuItem>
+    );
+  }
   if (form === "row") {
     // Everything but the full-form-only dials rides along, so an IconButton
     // that is something's trigger (`render={<IconButton …/>}` on a menu) keeps

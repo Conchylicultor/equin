@@ -51,8 +51,12 @@ export interface FileSystemCapabilities {
   edit: boolean;
   /** Move entries to the system's Trash, to be put back (`computerFileTrash`). */
   trash: boolean;
+  /** Copy entries into a folder (a paste of copied entries: `computerFileCopy`). */
+  copy: boolean;
   /** Browse into an archive file like a folder, and extract it beside itself. */
   archives: boolean;
+  /** Compress entries into a .zip beside them (`computerFileCompress`). */
+  compress: boolean;
   /**
    * Hand a file to the computer's own apps (Open with default app, Reveal in
    * Finder), and drag it out of the page as a real file.
@@ -85,7 +89,9 @@ export const FILE_SYSTEMS: Readonly<
       move: true,
       edit: true,
       trash: true,
+      copy: true,
       archives: true,
+      compress: true,
       openNative: true,
       completions: true,
       volume: true,
@@ -98,7 +104,9 @@ export const FILE_SYSTEMS: Readonly<
       move: true,
       edit: true,
       trash: false,
+      copy: false,
       archives: false,
+      compress: false,
       openNative: false,
       completions: false,
       volume: false,
@@ -434,6 +442,38 @@ export const computerFileExtract = defineEndpoint({
   needsMachine: COMPUTER,
 });
 
+// ── compress (the computer's disk) ───────────────────────────────────────────
+
+export const FileCompressResultSchema = z.discriminatedUnion("kind", [
+  /** The new archive, absolute. */
+  z.object({ kind: z.literal("compressed"), path: z.string() }),
+  Missing,
+  Denied,
+  /** The paths do not all sit in one folder: there is no "beside them". */
+  z.object({ kind: z.literal("mixed-folders") }),
+  /** A path inside an archive: nothing on disk to compress. */
+  z.object({ kind: z.literal("archive"), path: z.string() }),
+]);
+export type FileCompressResult = z.infer<typeof FileCompressResultSchema>;
+
+/** How many entries one compress takes at most. */
+export const FILE_COMPRESS_MAX_PATHS = 1000;
+
+/**
+ * Compress entries of the computer's disk into a .zip beside them, the way
+ * the Finder does: one entry into `<its name>.zip`, several (of one folder)
+ * into `Archive.zip`; a taken name gets a number (`Archive 2.zip`), never
+ * overwritten. Built in a hidden sibling and moved into place once whole.
+ */
+export const computerFileCompress = defineEndpoint({
+  route: "POST /api/files/computer/compress",
+  body: z.object({
+    paths: z.array(z.string()).min(1).max(FILE_COMPRESS_MAX_PATHS),
+  }),
+  response: FileCompressResultSchema,
+  needsMachine: COMPUTER,
+});
+
 // ── open (the computer's disk) ───────────────────────────────────────────────
 
 export const FileOpenResultSchema = z.discriminatedUnion("kind", [
@@ -552,6 +592,52 @@ export const computerFileMove = defineEndpoint({
   route: "POST /api/files/computer/move",
   body: MoveBodySchema,
   response: FileMoveResultSchema,
+  needsMachine: COMPUTER,
+});
+
+// ── copy ─────────────────────────────────────────────────────────────────────
+
+/** What happened to one source of a copy. `from` is the source as sent. */
+export const FileCopyOutcomeSchema = z.discriminatedUnion("kind", [
+  /** Copied to `to`: its own name, or the Finder's next free one when taken. */
+  z.object({ kind: z.literal("copied"), from: z.string(), to: z.string() }),
+  /** A folder pasted into itself or one of its descendants. */
+  z.object({ kind: z.literal("into-self"), from: z.string() }),
+  z.object({ kind: z.literal("missing"), from: z.string() }),
+  z.object({ kind: z.literal("denied"), from: z.string() }),
+  /** A member inside an archive: nothing on disk to copy. */
+  z.object({ kind: z.literal("archive"), from: z.string() }),
+]);
+export type FileCopyOutcome = z.infer<typeof FileCopyOutcomeSchema>;
+
+export const FileCopyResultSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("ok"),
+    /** The resolved destination folder. */
+    destDir: z.string(),
+    /** One outcome per source, aligned with the request's `sources`. */
+    results: z.array(FileCopyOutcomeSchema),
+  }),
+  Missing,
+  Denied,
+  NotADir,
+  z.object({ kind: z.literal("archive"), path: z.string() }),
+]);
+export type FileCopyResult = z.infer<typeof FileCopyResultSchema>;
+
+/**
+ * Copy paths of the computer's disk into a folder — a paste of copied
+ * entries. Never replaces: a taken name gets the Finder's next free one
+ * (`a 2.txt`), so pasting into the folder the entries came from duplicates
+ * them. Each copy is built in a hidden sibling and moved into place whole.
+ */
+export const computerFileCopy = defineEndpoint({
+  route: "POST /api/files/computer/copy",
+  body: z.object({
+    sources: z.array(z.string()).min(1).max(FILE_MOVE_MAX_SOURCES),
+    destDir: z.string(),
+  }),
+  response: FileCopyResultSchema,
   needsMachine: COMPUTER,
 });
 

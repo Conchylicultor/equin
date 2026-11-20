@@ -41,6 +41,7 @@ import {
   type Activation,
 } from "@plugins/primitives/plugins/link-gesture/core";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
+import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   hasFileLocations,
   readFileLocations,
@@ -68,8 +69,13 @@ import { useMoveInto } from "../internal/move-into";
 import { useEntryEdits, type RemoveMode } from "../internal/entry-edits";
 import { useFileEditDrafts } from "../internal/file-edit";
 import { EntryMenu, type EntryMenuState } from "./entry-menu";
+import {
+  EntryActionHostProvider,
+  type EntryActionHost,
+} from "../internal/entry-action-host";
+import { setFileClipboard, useFileClipboard } from "../internal/file-clipboard";
 import { useViewportAtMost } from "../internal/use-viewport-at-most";
-import { FileTree } from "./file-tree";
+import { entryRowAt, FileTree } from "./file-tree";
 import { SplitPreview } from "./file-preview";
 import {
   FileBrowserFilter,
@@ -465,6 +471,114 @@ function Listing({ browser }: { browser: FileBrowserReady }): ReactNode {
     void edits.remove(paths, mode).then(forgetRemoved);
   };
 
+  const selectAll = (paths: readonly string[]) => {
+    if (paths.length === 0) return;
+    setSelection({ selected: new Set(paths), anchor: paths[0]! });
+  };
+
+  // ── the clipboard: copy / cut here, paste into a folder of this system ──
+  const clipboard = useFileClipboard();
+  const pasteable =
+    clipboard !== null && clipboard.fs === system.fs ? clipboard : null;
+  const toClipboard = (paths: readonly string[], mode: "copy" | "cut") =>
+    setFileClipboard({
+      fs: system.fs,
+      paths: paths.map((p) => absolutePath(p, home)),
+      mode,
+    });
+  const paste = (folder: string) => {
+    // The folder is the system's own when it is listed so, or sits in a
+    // folder listed so (a folder never opened has no listing of its own).
+    const onDiskFolder =
+      writable(folder) || (folder !== dir && writable(folderOf(folder)));
+    if (pasteable === null || edits === null || !onDiskFolder) return;
+    if (pasteable.mode === "copy") {
+      void edits.copy(pasteable.paths, folder).then(selectAll);
+      return;
+    }
+    // A cut is a move, spent once it lands.
+    void moveInto(pasteable.paths, absolutePath(folder, home)).then((moved) => {
+      if (moved.length === 0) return;
+      setFileClipboard(null);
+      forgetRemoved(moved.map((p) => displayPath(p, home)));
+    });
+  };
+
+  const onDisk = (path: string) => isOnDisk(listings, folderOf(path));
+  // What the row actions call, stable across renders (they run on a click);
+  // what they read while rendering (`onDisk`) follows the listings.
+  const startRename = useEventCallback((path: string) => {
+    setSelection(only(path));
+    setEditLabel({ id: path });
+  });
+  const removeFromHost = useEventCallback(removeEntries);
+  const toClipboardFromHost = useEventCallback(toClipboard);
+  const compress = useEventCallback((paths: readonly string[]) => {
+    if (edits === null) return;
+    void edits.compress(paths).then((path) => {
+      if (path !== null) setSelection(only(path));
+    });
+  });
+  const actionHost = useMemo<EntryActionHost>(
+    () => ({
+      system,
+      abs: (path) => absolutePath(path, home),
+      onDisk: (path) => isOnDisk(listings, parentPath(path, home) ?? dir),
+      startRename,
+      remove: removeFromHost,
+      toClipboard: toClipboardFromHost,
+      compress,
+    }),
+    [
+      system,
+      home,
+      dir,
+      listings,
+      startRename,
+      removeFromHost,
+      toClipboardFromHost,
+      compress,
+    ],
+  );
+
+  // ⌘C / ⌘X on the selected rows, ⌘V into this folder — while the listing
+  // has the focus (a text field keeps its own).
+  const selectedPaths = [...selection.selected];
+  const inListing = (e: KeyboardEvent) =>
+    e.target instanceof Element && e.target.closest("[data-tree-row]") !== null;
+  useSurfaceShortcuts([
+    {
+      id: "file-explorer.copy",
+      keys: "mod+c",
+      label: "Copy the selected items",
+      when: (e: KeyboardEvent) =>
+        inListing(e) &&
+        system.capabilities.copy &&
+        selectedPaths.length > 0 &&
+        selectedPaths.every(onDisk),
+      handler: () => toClipboard(selectedPaths, "copy"),
+    },
+    {
+      id: "file-explorer.cut",
+      keys: "mod+x",
+      label: "Cut the selected items",
+      when: (e: KeyboardEvent) =>
+        inListing(e) &&
+        system.capabilities.move &&
+        selectedPaths.length > 0 &&
+        selectedPaths.every(onDisk),
+      handler: () => toClipboard(selectedPaths, "cut"),
+    },
+    {
+      id: "file-explorer.paste",
+      keys: "mod+v",
+      label: "Paste into this folder",
+      when: (e: KeyboardEvent) =>
+        inListing(e) && pasteable !== null && writable(dir),
+      handler: () => paste(dir),
+    },
+  ]);
+
   const onContextMenu = (e: MouseEvent<HTMLElement>) => {
     if (edits === null) return;
     const target = e.target instanceof Element ? e.target : null;
@@ -474,26 +588,35 @@ function Listing({ browser }: { browser: FileBrowserReady }): ReactNode {
     const anchor = { x: e.clientX, y: e.clientY };
     const row = target?.closest<HTMLElement>("[data-tree-row]");
     const path = row?.dataset.treeId;
-    if (path === undefined) {
+    const entryRow =
+      path === undefined ? null : entryRowAt(system.fs, listings, path, home);
+    if (entryRow === null) {
       setMenu({
         anchor,
         target: { kind: "folder", dir },
+        folder: dir,
         writable: writable(dir),
+        folderWritable: writable(dir),
       });
       return;
     }
     // The Finder's rule: a right-click inside the selection acts on all of
     // it; outside, it selects the entry it landed on.
-    const inSelection = selection.selected.has(path);
-    if (!inSelection) setSelection(only(path));
+    const inSelection = selection.selected.has(entryRow.path);
+    if (!inSelection) setSelection(only(entryRow.path));
+    const folder = folderOf(entryRow.path);
     setMenu({
       anchor,
       target: {
         kind: "entry",
-        path,
-        paths: inSelection ? [...selection.selected] : [path],
+        row: entryRow,
+        paths: inSelection ? [...selection.selected] : [entryRow.path],
       },
-      writable: writable(folderOf(path)),
+      folder,
+      writable: writable(folder),
+      // A folder of a folder on disk is on disk itself (an archive is a
+      // file row), listed or not.
+      folderWritable: entryRow.kind === "dir" && writable(folder),
     });
   };
 
@@ -574,60 +697,65 @@ function Listing({ browser }: { browser: FileBrowserReady }): ReactNode {
   }
 
   return (
-    <Column
-      fill
-      className="h-full"
-      scrollBody={false}
-      body={
-        <Scroll
-          ref={treeRef}
-          {...background.props}
-          onContextMenu={onContextMenu}
-          className={cn(
-            "h-full rail-x-sm",
-            background.over && cn(DROP_TARGET_RING, "ring-inset"),
-          )}
-        >
-          {readers}
-          {rootListing?.kind === "ok" &&
-          rootListing.refreshError !== undefined ? (
-            // A re-read failed: the rows below are the last ones read.
-            <ResourceErrorInline
-              variant="inline"
-              error={rootListing.refreshError.error}
-              refetch={rootListing.refreshError.refetch}
-              subject="this folder's latest contents"
-            />
-          ) : null}
-          {body}
-          <EntryMenu
-            menu={menu}
-            onClose={() => setMenu(null)}
-            canTrash={system.capabilities.trash}
-            onRename={(path) => setEditLabel({ id: path })}
-            onNew={(kind) => {
+    <EntryActionHostProvider value={actionHost}>
+      <Column
+        fill
+        className="h-full"
+        scrollBody={false}
+        body={
+          <Scroll
+            ref={treeRef}
+            {...background.props}
+            onContextMenu={onContextMenu}
+            className={cn(
+              "h-full rail-x-sm",
+              background.over && cn(DROP_TARGET_RING, "ring-inset"),
+            )}
+          >
+            {readers}
+            {rootListing?.kind === "ok" &&
+            rootListing.refreshError !== undefined ? (
+              // A re-read failed: the rows below are the last ones read.
+              <ResourceErrorInline
+                variant="inline"
+                error={rootListing.refreshError.error}
+                refetch={rootListing.refreshError.refetch}
+                subject="this folder's latest contents"
+              />
+            ) : null}
+            {body}
+            <EntryMenu
+              menu={menu}
+              onClose={() => setMenu(null)}
+              canCreate={edits !== null}
+              canPaste={pasteable?.paths.length ?? 0}
+              onNew={(kind) => {
+                if (menu !== null) newEntry(menu.folder, kind);
+              }}
+              onPaste={() => {
               if (menu === null) return;
+                // A folder's own menu pastes into it; anything else, beside it.
               const t = menu.target;
-              newEntry(t.kind === "entry" ? folderOf(t.path) : t.dir, kind);
+                paste(
+                  t.kind === "entry" && t.row.kind === "dir"
+                    ? t.row.path
+                    : menu.folder,
+                );
             }}
-            onRemove={(mode) => {
-              if (menu?.target.kind === "entry") {
-                removeEntries(menu.target.paths, mode);
-              }
-            }}
+            />
+          </Scroll>
+        }
+        footer={
+          <StatusBar
+            dir={dir}
+            count={entries?.length ?? null}
+            unlisted={unlistedCount(rootListing)}
+            selected={selected}
+            selectedCount={selection.selected.size}
           />
-        </Scroll>
-      }
-      footer={
-        <StatusBar
-          dir={dir}
-          count={entries?.length ?? null}
-          unlisted={unlistedCount(rootListing)}
-          selected={selected}
-          selectedCount={selection.selected.size}
-        />
-      }
-    />
+        }
+      />
+    </EntryActionHostProvider>
   );
 }
 

@@ -5575,7 +5575,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/pane.useOpenPane`
               - `primitives/text-editor/paste-images.AttachmentSlots`
             - Exports (values): `attachmentPreviewPane`
-        - **`browser`** — The file explorer's browser over any file system this host serves (the computer's disk, the browser's storage; useExplorerSystem says what `~` is there and what it can do, useHomeSystem which one Files opens on): the browser's header as the shared FileBrowserHeader pane-header slot (back / forward / up, the system's path bar as each pane's title — FileBrowserPath —, a filter, show hidden, the lenses' hide-rule toggles and the folder view's own controls), borrowed by the Files folder column, the folder peek and the conversation's Files pane, whose host wraps its PaneChrome in FileBrowserProvider (PendingFileBrowserProvider while it has nothing to browse) over FileBrowserBody (the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget); <FileBrowser/>, the same in one box under a sub-header of the same items, for a host with no pane header; its FileBrowserSlots seams — RowActions, a row's hover actions (its own: Extract here on an archive, Copy path in the ⋯ menu), and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — a Miller row of a folder column (/files/browse/<folder>[;fs=<system>], the bare /files forwarding to the home system's home) and the open file's preview column beside it (…/preview/<open file>, pushed and closed so it slides in and out while the listing stays mounted; the old /files/<fs>/at/<folder>[/<open file>] forwards), so every location is a link and back / forward are the browser history; moves (drag onto a folder) and the other operations are offered only where the system has them; useExplorerFileTarget names any file's place there (its folder, the file previewed) as a pane's Expand target; useFileHostPath + useHostPathSource let any surface draw a file's place as the same host path bar. The preview's header is the shared FilePreviewHeader pane-header slot (the file's title, its renderer tabs, Open with default app) — borrowed by the Files preview column and the attachment preview, with FilePreviewProvider / useFilePreview / FilePreviewBody for a host's own pane; a browser hosted inside some other pane (the conversation's Files pane, the folder peek) previews its open file in a column of its own beside it — the shared preview-file/<file>[;fs=<system>] pane, through useBesidePreviewNavigator —, and <FileBrowser/> (no pane header) beside the listing under a sub-header of the same items. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading). Registers the Files start-folder config: the folder the file explorer opens on when launched.
+        - **`browser`** — The file explorer's browser over any file system this host serves (the computer's disk, the browser's storage; useExplorerSystem says what `~` is there and what it can do, useHomeSystem which one Files opens on): the browser's header as the shared FileBrowserHeader pane-header slot (back / forward / up, the system's path bar as each pane's title — FileBrowserPath —, a filter, show hidden, the lenses' hide-rule toggles and the folder view's own controls), borrowed by the Files folder column, the folder peek and the conversation's Files pane, whose host wraps its PaneChrome in FileBrowserProvider (PendingFileBrowserProvider while it has nothing to browse) over FileBrowserBody (the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget); <FileBrowser/>, the same in one box under a sub-header of the same items, for a host with no pane header; its FileBrowserSlots seams — RowActions, a row's actions, drawn in its hover cluster and, as menu items, in its right-click menu (its own: Open with default app, Reveal in Finder, Rename, Copy, Cut, Extract here, Compress, Copy path, Move to Trash, Delete — acting on the selection a right-click was opened on; the menu adds New text file, New folder and Paste, and ⌘C / ⌘X / ⌘V copy, cut and paste through the page's file clipboard), and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — a Miller row of a folder column (/files/browse/<folder>[;fs=<system>], the bare /files forwarding to the home system's home) and the open file's preview column beside it (…/preview/<open file>, pushed and closed so it slides in and out while the listing stays mounted; the old /files/<fs>/at/<folder>[/<open file>] forwards), so every location is a link and back / forward are the browser history; moves (drag onto a folder) and the other operations are offered only where the system has them; useExplorerFileTarget names any file's place there (its folder, the file previewed) as a pane's Expand target; useFileHostPath + useHostPathSource let any surface draw a file's place as the same host path bar. The preview's header is the shared FilePreviewHeader pane-header slot (the file's title, its renderer tabs, Open with default app) — borrowed by the Files preview column and the attachment preview, with FilePreviewProvider / useFilePreview / FilePreviewBody for a host's own pane; a browser hosted inside some other pane (the conversation's Files pane, the folder peek) previews its open file in a column of its own beside it — the shared preview-file/<file>[;fs=<system>] pane, through useBesidePreviewNavigator —, and <FileBrowser/> (no pane header) beside the listing under a sub-header of the same items. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading). Registers the Files start-folder config: the folder the file explorer opens on when launched.
           - Web:
             - Slots:
               - `filesHomePane.Actions`
@@ -5596,25 +5596,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FileBrowserSlots.Lens` ← `apps.file-explorer.git`
               - `FileBrowserSlots.RowActions` ← `apps.file-explorer.browser`
               - `FileBrowserSlots.RowActions` ← `apps.file-explorer.places`
-            - Contributes:
-              - `Pane.Register` "files-at"
-              - `Pane.Register` "files-browser-at"
-              - `Pane.Register` "files-computer-at"
-              - `Pane.Register` "files-home"
-              - `Pane.Register` "files-preview"
-              - `Pane.Register` "files-preview-beside"
-              - `ThemeEngine.SubTheme` "Files document"
-              - `FieldPresentation.Register` "collection:file-explorer.entry"
-              - `FileBrowserHeader` "nav" → `FileBrowserNav`
-              - `FileBrowserHeader` "filter" → `FileBrowserFilter`
-              - `FileBrowserHeader` "toggles" → `FileBrowserToggles`
-              - `FilePreviewHeader` "tabs" → `FilePreviewTabs`
-              - `FilePreviewHeader` "edit" → `FilePreviewEdit`
-              - `FilePreviewHeader` "open-with" → `OpenWithDefaultApp`
+            - Contributes: 25 contributions — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
+              - `FileBrowserSlots.RowActions` ×10
+              - `Pane.Register` ×6
+              - `FileBrowserHeader` ×3
+              - `FilePreviewHeader` ×3
               - `ConfigV2.WebRegister` "files"
-              - `FileBrowserSlots.RowActions` "extract" → `ExtractAction`
-              - `FileBrowserSlots.RowActions` "copy-path" → `CopyPathAction`
-            - Uses: 102 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
+              - `FieldPresentation.Register` "collection:file-explorer.entry"
+              - `ThemeEngine.SubTheme` "Files document"
+            - Uses: 107 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
               - `primitives/data-view` ×11
               - `primitives/pane` ×9
               - `primitives/css/ui-kit` ×7
@@ -5632,8 +5622,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/link-gesture` ×2
               - `primitives/networking` ×2
               - `primitives/overlay/cursor-menu` ×2
+              - `primitives/shortcuts` ×2
+              - `primitives/slot-render` ×2
               - `shell/notifications` ×2
               - `companions/menu-bar/app-window.useNativeFileDrag`
+              - `primitives/action-presentation.MenuItemForm`
               - `primitives/bar.Bar`
               - `primitives/css/center.Center`
               - `primitives/css/column.Column`
@@ -5648,13 +5641,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/dom/scroll-reveal.focusElement`
               - `primitives/file-type.FileTypeIcon`
               - `primitives/icon-button.IconButton`
+              - `primitives/latest-ref.useEventCallback`
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog.useOpenDialog`
               - `primitives/path-bar/folder-places.folderPlaces`
               - `primitives/scope/dom-scope.defineDomScope`
               - `primitives/scope/surface-id.useSurfaceTabId`
               - `primitives/search.SearchInput`
-              - `primitives/shortcuts.useSurfaceShortcuts`
               - `primitives/syntax-highlight/overlay-textarea.CodeTextarea`
               - `ui/icons.Icon`
               - `ui/theme-engine.ThemeEngine`
@@ -40806,6 +40799,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RUN_TRANSCRIPT_SUFFIX`
           - `SAMPLE`
           - `SERVER_CORE_RELATIVE`
+          - `SYSTEM_ZIP`
           - `WEB_CORE_RELATIVE`
           - `webDistDir`
           - `worktreeArtifacts`
@@ -41038,6 +41032,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DraggedFiles`
               - `FileArchiveReason`
               - `FileCompletions`
+              - `FileCompressResult`
+              - `FileCopyOutcome`
+              - `FileCopyResult`
               - `FileCreateResult`
               - `FileDirPeek`
               - `FileEntry`
@@ -41086,6 +41083,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `computerDirPeek`
               - `computerFileBytes`
               - `computerFileCompletions`
+              - `computerFileCompress`
+              - `computerFileCopy`
               - `computerFileCreate`
               - `computerFileDelete`
               - `computerFileExtract`
@@ -41106,6 +41105,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `dirPeekOf`
               - `FILE_BYTES_MAX`
               - `FILE_COMPLETE_LIMIT`
+              - `FILE_COMPRESS_MAX_PATHS`
               - `FILE_DELETE_MAX_PATHS`
               - `FILE_LOCATIONS_MIME`
               - `FILE_MOVE_MAX_SOURCES`
@@ -41114,6 +41114,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FILE_TEXT_MAX_BYTES`
               - `FileArchiveReasonSchema`
               - `FileCompletionsSchema`
+              - `FileCompressResultSchema`
+              - `FileCopyOutcomeSchema`
+              - `FileCopyResultSchema`
               - `FileCreateResultSchema`
               - `FileDirPeekSchema`
               - `FileEntrySchema`
@@ -50890,12 +50893,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `ActionFormProvider`
           - `ActionFormShield`
+          - `MenuItemForm`
           - `PanelActionRow`
           - `useActionForm`
           - `useHoldShrink`
       - Cross-plugin:
         - Imported by:
           - `apps-core/tab-bar`
+          - `apps/file-explorer/browser`
           - `apps/prototypes/canvas`
           - `apps/website/improve`
           - `apps/website/shell`
@@ -55911,6 +55916,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.DensityControlled`
+          - `primitives/css/ui-kit.DropdownMenuItem`
           - `primitives/overlay/tooltip.Kbd`
           - `primitives/shortcuts.formatShortcutLabel`
           - `ui/icons.Icon`
@@ -56131,9 +56137,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `seekPredicate`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), useEventCallback(fn) is the stable-identity callback built on it, and useLatestStore(value) / useLatestSelector(store, select) hand a per-render value down to many memoized readers, each re-rendering only when its own selected answer changes. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 90 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+        - Imported by: 91 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
           - `primitives` ×35
-          - `apps` ×25
+          - `apps` ×26
           - `page` ×5
           - `conversations` ×3
           - `apps-core` ×2
@@ -58932,8 +58938,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useDispatchOutcome`
           - `useSlotOrder`
       - Cross-plugin:
-        - Imported by: 101 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
-          - `apps` ×33
+        - Imported by: 102 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
+          - `apps` ×34
           - `primitives` ×15
           - `conversations` ×13
           - `apps-core` ×6

@@ -14,3 +14,9 @@ export const MKFIFO = Bun.which("mkfifo") ?? "mkfifo";
 export const MACOS_TRASH: string | null = Bun.which("trash", {
   PATH: "/usr/bin",
 });
+/**
+ * The system's `zip` (Info-ZIP, shipped with macOS): what Compress builds a
+ * .zip with. Looked up in the system's own bin folder only; `null` where it is
+ * not there.
+ */
+export const SYSTEM_ZIP: string | null = Bun.which("zip", { PATH: "/usr/bin" });

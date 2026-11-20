@@ -11,9 +11,12 @@ import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
  * A rung on the ladder — a form a widget renders ITSELF as. `"row"` is a
  * labelled row in the overflow panel (see `PanelActionRow`), NOT a menu item:
  * the panel is always mounted, so it is a plain dialog and never a
- * `role="menu"`.
+ * `role="menu"`. `"menu-item"` IS a menu item — the form an action takes in a
+ * menu that mounts it only while open (a context menu, `MenuItemForm`), where
+ * it is one of the menu's items (arrow keys, typeahead, closing on select).
+ * No bar ever assigns it.
  */
-export type ActionForm = "full" | "compact" | "row";
+export type ActionForm = "full" | "compact" | "row" | "menu-item";
 
 /** How eagerly a widget gives up room relative to its neighbours. */
 export type YieldEagerness = "never" | "late" | "normal" | "early";
@@ -100,6 +103,33 @@ export function ActionFormShield({
 }): ReactElement {
   return (
     <ItemFormChannelContext.Provider value={null}>
+      {children}
+    </ItemFormChannelContext.Provider>
+  );
+}
+
+/** The one channel every `MenuItemForm` hands out: a menu has no ledger, no holds. */
+const MENU_ITEM_CHANNEL: ItemFormChannel = {
+  form: "menu-item",
+  declare: () => () => {},
+  hold: () => () => {},
+};
+
+/**
+ * Renders `children` — one action — as an item of the menu around it: a
+ * widget that offered `"menu-item"` (`IconButton`) draws itself as a
+ * `DropdownMenuItem`; anything else renders as itself. Mount one per action,
+ * inside a menu's content (a `CursorAnchoredMenu`), so a list of contributed
+ * actions drawn as icon buttons elsewhere (a row's hover cluster) is the same
+ * list in a context menu.
+ */
+export function MenuItemForm({
+  children,
+}: {
+  children: ReactNode;
+}): ReactElement {
+  return (
+    <ItemFormChannelContext.Provider value={MENU_ITEM_CHANNEL}>
       {children}
     </ItemFormChannelContext.Provider>
   );

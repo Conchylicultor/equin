@@ -591,6 +591,7 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `RUN_TRANSCRIPT_SUFFIX`
     - `SAMPLE`
     - `SERVER_CORE_RELATIVE`
+    - `SYSTEM_ZIP`
     - `WEB_CORE_RELATIVE`
     - `webDistDir`
     - `worktreeArtifacts`

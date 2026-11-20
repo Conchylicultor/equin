@@ -18,6 +18,11 @@ free — including the ones inside a `RowActions` cluster, which are plain
 `IconButton`s — and with no bar above (every ordinary call site) the hook is a
 constant `"full"` and the declaration a no-op.
 
+It also declares `"menu-item"`: inside a context menu's `MenuItemForm` it
+renders as a `DropdownMenuItem` (icon, label, `shortcut` as the trailing hint,
+`variant="destructive"` as a destructive item) — so a row's hover actions are
+its right-click menu's items with no second definition.
+
 It deliberately does NOT declare `"compact"`: an icon button is already an
 icon-only square, so it has no narrower form of itself to offer.
 
@@ -55,6 +60,7 @@ icon+count button it stands in for — carries a per-site
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.DensityControlled`
+    - `primitives/css/ui-kit.DropdownMenuItem`
     - `primitives/overlay/tooltip.Kbd`
     - `primitives/shortcuts.formatShortcutLabel`
     - `ui/icons.Icon`
