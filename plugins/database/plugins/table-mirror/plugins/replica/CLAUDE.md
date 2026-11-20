@@ -59,6 +59,13 @@ const stop = await onReplicaApplied("analytics", (replicaId) => served.notify())
     savepoint) succeeds; otherwise the table starts empty, `copied_at` is
     cleared, and the reconcile refills it. A created or
     rebuilt table (or one added to the set) makes the replica reconcile.
+  - **Indexes follow in place**: a migration that only adds or drops an
+    index moves no column, so no fingerprint. At each pull's start every
+    table not just made LIKE public has its non-key indexes compared, by
+    definition from ` USING` on (no name; uniqueness relaxed as above;
+    exclusion constraints and indexes over omitted columns left out), with
+    `public.<t>`'s: a missing one is created on the copy, an extra one
+    dropped — one catalog query a pull, no rows moved, no reconcile.
 - **First sync** (`empty`): every table paged by `readMirrorCopy`, the floor
   the first page's `xmin`, then the stream until `done` — the only full copy.
   `withReplicaSchema` answers `ready: false` until then (`copied_at`), also
@@ -116,7 +123,8 @@ throwaway database, `fetch` the source's readers in-process (counting what
 travels): paged first copy, round trips, a cascade and a retention sweep, a
 moved unique value, reconcile past the horizon (deletes gone, only differing
 rows fetched), an epoch change, an in-flight write, the NOTIFY, concurrent
-pulls, a local rebuild fetching only rows whose new column differs,
+pulls, a local rebuild fetching only rows whose new column differs, a
+local index added / dropped followed in place with no row fetched,
 `source-older`, exact numeric / jsonb / bigint values, an unfinished first
 copy that stays unreadable through a reconcile, the custom sink's key index
 (and re-deliveries never handed to it),

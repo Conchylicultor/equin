@@ -837,6 +837,83 @@ describe("a custom sink", () => {
   });
 });
 
+describe("a local index change", () => {
+  const id = "rp-main-idx";
+  const { fetch, stats } = directFetch(mainSet);
+  const IndexRow = z.object({
+    tbl: z.string(),
+    oid: z.string(),
+    def: z.string(),
+  });
+
+  /** The copy's non-key indexes: table, oid and definition from ` USING` on. */
+  async function replicaIndexes(): Promise<z.infer<typeof IndexRow>[]> {
+    return executeRows(db, {
+      query: sql`SELECT t.relname::text AS tbl, x.indexrelid::text AS oid,
+                        substring(pg_get_indexdef(x.indexrelid) from ' USING .*$') AS def
+                 FROM pg_index x JOIN pg_class t ON t.oid = x.indrelid
+                 JOIN pg_namespace n ON n.oid = t.relnamespace
+                 WHERE n.nspname = ${await schemaOf(id)} AND NOT x.indisprimary
+                 ORDER BY 1, 3`,
+      row: IndexRow,
+    });
+  }
+  const shapes = async () =>
+    (await replicaIndexes()).map((r) => `${r.tbl}${r.def}`);
+
+  test("an index added or dropped locally is followed in place, with no row fetched", async () => {
+    await ensureReplica(db, { id, set: mainSet });
+    expect((await sync(id, mainSet, fetch)).outcome.kind).toBe("synced");
+    const made = await replicaIndexes();
+    expect(made.map((r) => `${r.tbl}${r.def}`)).toEqual([
+      "rp_child USING btree (parent_id)",
+      "rp_parent USING btree (name)",
+    ]);
+    // A pull with nothing changed leaves every index as it is.
+    expect((await sync(id, mainSet, fetch)).outcome.kind).toBe("synced");
+    expect(await replicaIndexes()).toEqual(made);
+
+    // The migration: indexes only — no column moves, so no fingerprint does.
+    await db.execute(
+      sql.raw(`
+      CREATE INDEX rp_child_path_idx ON rp_child (path);
+      CREATE INDEX rp_parent_at_idx ON rp_parent (at DESC) WHERE name <> '';
+      CREATE UNIQUE INDEX rp_pair_v_idx ON rp_pair (v, day) NULLS NOT DISTINCT;
+      CREATE INDEX rp_parent_secret_idx ON rp_parent (secret);
+      DROP INDEX rp_child_parent_idx;
+    `),
+    );
+    stats.copied = 0;
+    stats.rowsFetched = 0;
+    const r = await sync(id, mainSet, fetch);
+    expect(r).toMatchObject({ phase: "live", outcome: { kind: "synced" } });
+    expect(stats.copied).toBe(0);
+    expect(stats.rowsFetched).toBe(0);
+    // The omitted column's index stays out, as at the first copy; the unique one is relaxed.
+    expect(await shapes()).toEqual([
+      "rp_child USING btree (path)",
+      "rp_pair USING btree (v, day)",
+      "rp_parent USING btree (at DESC) WHERE (name <> ''::text)",
+      "rp_parent USING btree (name)",
+    ]);
+    const settled = await replicaIndexes();
+    expect((await sync(id, mainSet, fetch)).outcome.kind).toBe("synced");
+    expect(await replicaIndexes()).toEqual(settled);
+
+    await db.execute(
+      sql.raw(`
+      DROP INDEX rp_child_path_idx, rp_parent_at_idx, rp_pair_v_idx, rp_parent_secret_idx;
+      CREATE INDEX rp_child_parent_idx ON rp_child (parent_id);
+    `),
+    );
+    expect((await sync(id, mainSet, fetch)).outcome.kind).toBe("synced");
+    expect(await shapes()).toEqual([
+      "rp_child USING btree (parent_id)",
+      "rp_parent USING btree (name)",
+    ]);
+  });
+});
+
 describe("ownership", () => {
   test("dropReplica drops its schema; the sweep drops schemas no replica names", async () => {
     const { fetch } = directFetch(wideSet);

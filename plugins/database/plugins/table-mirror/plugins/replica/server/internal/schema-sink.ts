@@ -207,6 +207,94 @@ function refusedByNewDdl(err: unknown): boolean {
   return typeof code === "string" && /^2[23]/.test(code);
 }
 
+const IndexShapeRowSchema = z.object({
+  schema: z.string(),
+  tbl: z.string(),
+  index: z.string(),
+  shape: z.string(),
+  exclusion: z.boolean(),
+  omitted: z.boolean(),
+});
+
+/**
+ * An index as its definition spells it from ` USING` on (method, keys,
+ * INCLUDE, predicate) — no name, schema or table — with uniqueness relaxed as
+ * `createLike` relaxes it, so a replica index and the local index it was made
+ * from read the same.
+ */
+function indexShape(def: string): string {
+  return def.replace(/ NULLS NOT DISTINCT/, "");
+}
+
+/**
+ * Make each listed mirror table's indexes follow `public.<t>`'s: an index the
+ * local table gained since the copy was made LIKE it (a migration adding an
+ * index changes no column, so no fingerprint, so no rebuild) is created on
+ * the copy, one it dropped is dropped. Compared by shape (`indexShape`), the
+ * primary key left out (LIKE copies it, and a key change moves the columns'
+ * fingerprint), exclusion constraints and indexes over omitted columns left
+ * out as `createLike` leaves them out. Rows do not move: nothing to
+ * reconcile.
+ */
+async function followIndexes(
+  tx: ReplicaTx,
+  schema: string,
+  tables: readonly MirroredTable[],
+): Promise<void> {
+  if (tables.length === 0) return;
+  const omitted = tables.flatMap((t) => t.omit.map((c) => `${t.name}.${c}`));
+  const rows = await executeRows(tx, {
+    query: sql.raw(
+      `SELECT n.nspname::text AS schema, t.relname::text AS tbl, i.relname::text AS index,
+              substring(pg_get_indexdef(x.indexrelid) from ' USING .*$') AS shape,
+              x.indisexclusion AS exclusion,
+              EXISTS (
+                SELECT 1 FROM pg_depend d
+                JOIN pg_attribute a ON a.attrelid = d.refobjid AND a.attnum = d.refobjsubid
+                WHERE d.classid = 'pg_class'::regclass AND d.objid = x.indexrelid
+                  AND d.refobjid = x.indrelid AND d.refobjsubid > 0
+                  AND (t.relname::text || '.' || a.attname::text) = ANY(${textArray(omitted)})
+              ) AS omitted
+       FROM pg_index x
+       JOIN pg_class i ON i.oid = x.indexrelid
+       JOIN pg_class t ON t.oid = x.indrelid
+       JOIN pg_namespace n ON n.oid = t.relnamespace
+       WHERE n.nspname IN ('public', ${lit(schema)})
+         AND t.relname = ANY(${textArray(tables.map((tb) => tb.name))})
+         AND NOT x.indisprimary
+       ORDER BY i.relname`,
+    ),
+    row: IndexShapeRowSchema,
+    label: `table-mirror: indexes of ${schema} and public`,
+  });
+  for (const t of tables) {
+    const wanted = rows
+      .filter(
+        (r) =>
+          r.schema === "public" &&
+          r.tbl === t.name &&
+          !r.exclusion &&
+          !r.omitted,
+      )
+      .map((r) => indexShape(r.shape));
+    const held = rows.filter((r) => r.schema === schema && r.tbl === t.name);
+    const unmatched = [...wanted];
+    for (const ix of held) {
+      const at = unmatched.indexOf(indexShape(ix.shape));
+      if (at >= 0) {
+        unmatched.splice(at, 1);
+        continue;
+      }
+      await tx.execute(sql.raw(`DROP INDEX ${schema}.${ident(ix.index)}`));
+    }
+    for (const shape of unmatched) {
+      await tx.execute(
+        sql.raw(`CREATE INDEX ON ${schema}.${ident(t.name)}${shape}`),
+      );
+    }
+  }
+}
+
 const TableNameSchema = z.object({ name: z.string() });
 
 /** What preparing a sink did to the local side. */
@@ -221,7 +309,8 @@ export interface PreparedSink {
  * Make the replica's schema match the set as this install declares it: the
  * schema and every missing table created, a table whose local DDL changed
  * rebuilt (its fingerprint — the same catalog digest the source sends —
- * differs from the local one's), a table the set no longer lists dropped.
+ * differs from the local one's), every other table's indexes made the local
+ * ones in place (`followIndexes`), a table the set no longer lists dropped.
  */
 export async function prepareSchema(
   tx: ReplicaTx,
@@ -251,6 +340,7 @@ export async function prepareSchema(
   const local = await readTableFingerprints(tx, "public", set.tables);
   const mirror = await readTableFingerprints(tx, schema, set.tables);
   const changed: string[] = [];
+  const kept: MirroredTable[] = [];
   let emptied = false;
   for (const t of set.tables) {
     if (local[t.name] === undefined) {
@@ -264,8 +354,12 @@ export async function prepareSchema(
     } else if (mirror[t.name] !== local[t.name]) {
       if (!(await rebuild(tx, schema, t))) emptied = true;
       changed.push(t.name);
+    } else {
+      kept.push(t);
     }
   }
+  // A created or rebuilt table was just made LIKE public: its indexes are already the local ones.
+  await followIndexes(tx, schema, kept);
   return { changed, emptied };
 }
 
