@@ -54,3 +54,68 @@ export function partitionWebEntries<T extends { pluginPath: string }>(
   }
   return { eager, deferred };
 }
+
+/**
+ * Plan the deferred tier's registration: the active app's content first (its
+ * `priority` batch), then the `rest` drained in batches of `batchSize`, each
+ * batch one `registry.append`.
+ *
+ * The invariant: **a plugin never registers before a plugin it depends on**
+ * (its `dependsOn`, the codegen-derived import graph). A plugin that reads
+ * something another plugin registers — a `useConfig(descriptor)` whose
+ * `ConfigV2.WebRegister` lives in the descriptor's own plugin, a slot another
+ * plugin declares — imports it, so it depends on that plugin; registering it
+ * earlier mounts its contributions against a registry still missing the
+ * registration (Sonata's audio engine reading the look config before
+ * `apps.sonata.look` registered, report-1795199408-r8vxjo, when the page
+ * reached /sonata mid-drain). Importing the dependency's module is not enough:
+ * its contributions register only when its own entry's batch appends.
+ *
+ * So the plan is dependency-closed by construction:
+ *  - `priority` is the entries under `activePrefix` plus every deferred entry
+ *    they transitively depend on (another app's content they import included);
+ *  - `rest` is topo-ordered (dependencies first, input order otherwise kept),
+ *    so slicing it puts each entry's deferred dependencies in its own batch or
+ *    an earlier one.
+ * Dependencies outside `deferred` (the eager tier, registered first) are not
+ * followed. The import graph is a DAG (boundary checks); a cycle throws.
+ */
+export function planDeferredLoad<
+  T extends { pluginPath: string; dependsOn: readonly string[] },
+>(
+  deferred: readonly T[],
+  activePrefix: string | null,
+  batchSize: number,
+): { priority: T[]; rest: T[][] } {
+  const byPath = new Map(deferred.map((e) => [e.pluginPath, e] as const));
+  const ordered: T[] = [];
+  const placed = new Set<string>();
+  const stack = new Set<string>();
+  const visit = (e: T, trail: readonly string[]): void => {
+    if (placed.has(e.pluginPath)) return;
+    if (stack.has(e.pluginPath)) {
+      throw new Error(
+        `[plugins] deferred dependsOn cycle: ${[...trail, e.pluginPath].join(" → ")}`,
+      );
+    }
+    stack.add(e.pluginPath);
+    for (const d of e.dependsOn) {
+      const dep = byPath.get(d);
+      if (dep) visit(dep, [...trail, e.pluginPath]);
+    }
+    stack.delete(e.pluginPath);
+    placed.add(e.pluginPath);
+    ordered.push(e);
+  };
+  if (activePrefix !== null) {
+    for (const e of deferred)
+      if (e.pluginPath.startsWith(activePrefix)) visit(e, []);
+  }
+  const priority = [...ordered];
+  for (const e of deferred) visit(e, []);
+  const tail = ordered.slice(priority.length);
+  const rest: T[][] = [];
+  for (let i = 0; i < tail.length; i += batchSize)
+    rest.push(tail.slice(i, i + batchSize));
+  return { priority, rest };
+}

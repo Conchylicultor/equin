@@ -35398,6 +35398,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `missingCompanions`
           - `pageReachLostSince`
           - `partitionWebEntries`
+          - `planDeferredLoad`
           - `pluginLoadReportSink`
           - `PluginProvider`
           - `PluginScope`

@@ -462,6 +462,7 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `missingCompanions`
     - `pageReachLostSince`
     - `partitionWebEntries`
+    - `planDeferredLoad`
     - `pluginLoadReportSink`
     - `PluginProvider`
     - `PluginScope`

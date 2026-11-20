@@ -59,7 +59,11 @@ export {
   whenPageCanFetch,
 } from "./page-reach";
 export type { ReachMark } from "./page-reach";
-export { partitionWebEntries, isDeferredPluginPath } from "./load-tiers";
+export {
+  partitionWebEntries,
+  planDeferredLoad,
+  isDeferredPluginPath,
+} from "./load-tiers";
 export {
   hasFirstPaintHolds,
   holdFirstPaint,

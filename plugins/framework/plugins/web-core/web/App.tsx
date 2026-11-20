@@ -5,6 +5,7 @@ import {
   Core,
   loadPlugins,
   partitionWebEntries,
+  planDeferredLoad,
   markDeferredPluginsLoaded,
   markDeferredLoadComplete,
   markDeferredPluginsFailed,
@@ -462,14 +463,15 @@ function PageApp() {
       // for after the first paint. It is a boot task of its own ("App code"),
       // so the boot screen names it while it is pending, an overdue one is
       // reported, and Continue anyway paints without it.
+      // Dependency-closed (planDeferredLoad): a plugin never registers in a
+      // batch before the plugins it depends on, so a surface reached mid-drain
+      // never mounts a contribution whose own registrations are still missing.
       const activePrefix = resolveActiveAppPrefix(eagerResult.plugins, eager);
-      const priority: WebEntry[] = [];
-      const rest: WebEntry[] = [];
-      for (const e of deferred) {
-        if (activePrefix && e.pluginPath.startsWith(activePrefix))
-          priority.push(e);
-        else rest.push(e);
-      }
+      const { priority, rest } = planDeferredLoad(
+        deferred,
+        activePrefix,
+        DEFERRED_BATCH_SIZE,
+      );
       // No app content (a path outside every app) is loaded from the start.
       // Partial failure is tolerable (allSettled + collected errors): a broken
       // app-content chunk is reported, never fails the boot.
@@ -558,8 +560,9 @@ function PageApp() {
       // The rest of the deferred tier, AFTER the first app frame has
       // committed (never competing with it): drained in yielding idle batches.
       await appCommitted.promise;
-      for (let i = 0; i < rest.length && !cancelled; i += DEFERRED_BATCH_SIZE) {
-        await loadDeferredBatch(rest.slice(i, i + DEFERRED_BATCH_SIZE));
+      for (const batch of rest) {
+        if (cancelled) break;
+        await loadDeferredBatch(batch);
         // Breathe between batches so the queued socket grant + input + paint can
         // interleave instead of being starved by a long evaluation run.
         await yieldToMain();

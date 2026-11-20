@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { isDeferredPluginPath, partitionWebEntries } from "./load-tiers";
+import {
+  isDeferredPluginPath,
+  partitionWebEntries,
+  planDeferredLoad,
+} from "./load-tiers";
 import { DEFERRED_PLUGIN_PATHS } from "./web-tiers.generated";
 
 // These test the lookup's contract, not which plugins happen to be deferred
@@ -65,5 +69,69 @@ describe("partitionWebEntries", () => {
       UNKNOWN,
       STRUCTURALLY_EAGER[1],
     ]);
+  });
+});
+
+describe("planDeferredLoad", () => {
+  const e = (pluginPath: string, dependsOn: string[] = []) => ({
+    pluginPath,
+    dependsOn,
+  });
+  const paths = (xs: { pluginPath: string }[]) => xs.map((x) => x.pluginPath);
+
+  test("a dependency registers in the same batch or an earlier one, never later", () => {
+    // The Sonata shape: the engine (alphabetically first) depends on the
+    // mixer, which depends on the plugin registering the config it reads.
+    const deferred = [
+      e("apps/plugins/a/plugins/engine", ["apps/plugins/a/plugins/mixer"]),
+      e("apps/plugins/a/plugins/filler-1"),
+      e("apps/plugins/a/plugins/look", ["eager/plugin"]),
+      e("apps/plugins/a/plugins/mixer", ["apps/plugins/a/plugins/look"]),
+    ];
+    const { priority, rest } = planDeferredLoad(deferred, null, 1);
+    expect(priority).toEqual([]);
+    expect(rest.map(paths)).toEqual([
+      ["apps/plugins/a/plugins/look"],
+      ["apps/plugins/a/plugins/mixer"],
+      ["apps/plugins/a/plugins/engine"],
+      ["apps/plugins/a/plugins/filler-1"],
+    ]);
+  });
+
+  test("priority holds the active app's content plus every deferred plugin it depends on", () => {
+    const deferred = [
+      e("apps/plugins/a/plugins/x"),
+      e("apps/plugins/b/plugins/view", ["apps/plugins/a/plugins/y"]),
+      e("apps/plugins/a/plugins/y"),
+      e("apps/plugins/b/plugins/other"),
+    ];
+    const { priority, rest } = planDeferredLoad(
+      deferred,
+      "apps/plugins/b/",
+      24,
+    );
+    expect(paths(priority)).toEqual([
+      "apps/plugins/a/plugins/y",
+      "apps/plugins/b/plugins/view",
+      "apps/plugins/b/plugins/other",
+    ]);
+    expect(rest.map(paths)).toEqual([["apps/plugins/a/plugins/x"]]);
+  });
+
+  test("every entry is planned exactly once, input order kept among independent ones", () => {
+    const deferred = Array.from({ length: 50 }, (_, i) =>
+      e(`apps/plugins/a/plugins/p${i}`),
+    );
+    const { priority, rest } = planDeferredLoad(deferred, null, 24);
+    expect(priority).toEqual([]);
+    expect(rest.map((b) => b.length)).toEqual([24, 24, 2]);
+    expect(rest.flat()).toEqual(deferred);
+  });
+
+  test("a dependsOn cycle throws with its path", () => {
+    const deferred = [e("a", ["b"]), e("b", ["a"])];
+    expect(() => planDeferredLoad(deferred, null, 24)).toThrow(
+      /cycle: a → b → a/,
+    );
   });
 });
