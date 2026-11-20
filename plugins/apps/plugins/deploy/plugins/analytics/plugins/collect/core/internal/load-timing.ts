@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  MAX_PROTOCOL_LENGTH,
+  type FirstByteSplit,
+} from "@plugins/primitives/plugins/perfs/plugins/boot-trace/core";
 
 /**
  * How long a hard page load took, from the navigation's start (ms, the page's
@@ -8,6 +12,10 @@ import { z } from "zod";
  * - `fcpMs` — the first contentful paint.
  * - `readyMs` — the app was up: the later of the first contentful paint and
  *   the first commit showing the active app's content.
+ * - `firstByte` — where `ttfbMs` went (boot-trace's `FirstByteSplit`:
+ *   redirects and unload, DNS, TCP, TLS, request → response), so a slow first
+ *   byte says whether the visitor waited on the server or on their network.
+ *   Null when not measured; absent on loads recorded before it existed.
  *
  * Each is null when the browser did not measure it, or measured something that
  * is not load time (a page loaded in a background tab paints when it is first
@@ -23,11 +31,28 @@ export const MAX_LOAD_MS = 10 * 60 * 1000;
 
 const LoadMsSchema = z.number().int().positive().max(MAX_LOAD_MS).nullable();
 
+const PartMsSchema = z.number().int().nonnegative().max(MAX_LOAD_MS);
+
+/** The wire form of boot-trace's `FirstByteSplit` (whole ms, parts add up). */
+export const FirstByteSplitSchema = z
+  .object({
+    totalMs: PartMsSchema,
+    beforeFetchMs: PartMsSchema,
+    dnsMs: PartMsSchema,
+    tcpMs: PartMsSchema,
+    tlsMs: PartMsSchema,
+    waitMs: PartMsSchema,
+    otherMs: PartMsSchema,
+    protocol: z.string().max(MAX_PROTOCOL_LENGTH).nullable(),
+  })
+  .strict() satisfies z.ZodType<FirstByteSplit>;
+
 export const LoadTimingSchema = z
   .object({
     ttfbMs: LoadMsSchema,
     fcpMs: LoadMsSchema,
     readyMs: LoadMsSchema,
+    firstByte: FirstByteSplitSchema.nullable().optional(),
   })
   .strict();
 export type LoadTiming = z.infer<typeof LoadTimingSchema>;
@@ -41,4 +66,16 @@ export function loadMs(ms: number | null): number | null {
   if (ms === null || !Number.isFinite(ms) || ms <= 0) return null;
   const whole = Math.ceil(ms);
   return whole > MAX_LOAD_MS ? null : whole;
+}
+
+/**
+ * A measured split as stored: null when the browser gave none, or one whose
+ * total is not a plausible load (the same bound as every other phase).
+ */
+export function firstByteOf(
+  split: FirstByteSplit | null,
+): FirstByteSplit | null {
+  if (split === null || split.totalMs <= 0 || split.totalMs > MAX_LOAD_MS)
+    return null;
+  return split;
 }

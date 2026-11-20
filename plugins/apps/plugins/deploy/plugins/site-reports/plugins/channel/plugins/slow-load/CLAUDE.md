@@ -26,7 +26,9 @@ FCP and the route's content commit), ms from the navigation start:
 counting every slow load of its kind; the latest sample is the row's payload
 and path. **Payload**: the milestones, the bar, the coarse browser
 (`coarseClient`: family and OS, never the user agent) and the network class
-(`navigator.connection.effectiveType`, Chromium only) — nothing naming the
+(`navigator.connection.effectiveType`, Chromium only), and where the first
+byte went (`firstByte`: analytics' split — redirect/setup, DNS, TCP, TLS,
+request → response — named in the report's message) — nothing naming the
 visitor. Lighthouse-style speed testers are bots at the intake
 (`isBotUserAgent`), and automated browsers are dropped there too.
 
@@ -43,6 +45,7 @@ automated one is counted as a drop), against a local website build or
 - Web:
   - Contributes: `Core.Root` → `SlowLoadReporter`
   - Uses:
+    - `primitives/perfs/boot-trace.readFirstByteSplit`
     - `primitives/perfs/boot-trace.subscribeBootTrace`
     - `reports.report`
 - Server:
@@ -50,6 +53,7 @@ automated one is counted as a drop), against a local website build or
   - Uses: `reports.ReportKind`
 - Core:
   - Uses:
+    - `apps/deploy/analytics/collect.FirstByteSplitSchema`
     - `reports/main-thread-stall.StallClient`
     - `reports/main-thread-stall.StallClientSchema`
   - Exports (types):

@@ -2,6 +2,7 @@ import {
   IDLE_AFTER_MS,
   MAX_ENGAGED_MS,
   appendGap,
+  firstByteOf,
   loadMs,
   pagePathOf,
   type CollectBody,
@@ -11,6 +12,7 @@ import {
   type LoadTiming,
   type Viewport,
 } from "../../core";
+import type { FirstByteSplit } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/core";
 import type { LandingSource } from "./landing";
 
 /**
@@ -75,6 +77,8 @@ export interface TrackerDeps {
 /** When the page load reached each phase of {@link LoadTiming}, on the `now()` clock. */
 export interface LoadMilestones {
   firstByteAt: number | null;
+  /** Where the first byte went (boot-trace's split), null when not measured. */
+  firstByte: FirstByteSplit | null;
   firstContentfulPaintAt: number | null;
   readyAt: number | null;
 }
@@ -235,6 +239,7 @@ export function createTracker(deps: TrackerDeps): Tracker {
       at !== null && at < firstHiddenAt ? at : null;
     return {
       ttfbMs: loadMs(m.firstByteAt),
+      firstByte: firstByteOf(m.firstByte),
       fcpMs: loadMs(beforeHide(m.firstContentfulPaintAt)),
       readyMs: loadMs(beforeHide(m.readyAt)),
     };

@@ -65,7 +65,13 @@ export {
   gapsExtentMs,
 } from "./internal/gaps";
 export type { Gap, GapKind } from "./internal/gaps";
-export { LoadTimingSchema, MAX_LOAD_MS, loadMs } from "./internal/load-timing";
+export {
+  FirstByteSplitSchema,
+  firstByteOf,
+  LoadTimingSchema,
+  MAX_LOAD_MS,
+  loadMs,
+} from "./internal/load-timing";
 export type { LoadTiming } from "./internal/load-timing";
 export {
   MAX_PAGE_SECTIONS,

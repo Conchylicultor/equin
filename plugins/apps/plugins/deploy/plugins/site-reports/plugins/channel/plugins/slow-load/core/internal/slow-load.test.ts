@@ -8,10 +8,12 @@ import {
 } from "./slow-load";
 
 const phone = {
+  firstByte: null,
   client: { family: "safari", os: "ios" },
   connection: "4g",
 } as const;
 const laptop = {
+  firstByte: null,
   client: { family: "chrome", os: "macos" },
   connection: null,
 } as const;
@@ -111,5 +113,38 @@ describe("identity and message", () => {
     expect(slowPageLoadSummary(p)).toBe(
       "Slow page load: ready after 6.0 s (first byte 2.4 s, first paint 6.0 s) — mostly before the first paint; ios/safari, 4g",
     );
+  });
+});
+
+describe("the first byte's split", () => {
+  test("rides the payload and names its parts in the summary", () => {
+    const firstByte = {
+      totalMs: 3_297,
+      beforeFetchMs: 0,
+      dnsMs: 412,
+      tcpMs: 905,
+      tlsMs: 910,
+      waitMs: 1_050,
+      otherMs: 20,
+      protocol: "h2",
+    };
+    const p = judgeReadyLoad(
+      { ttfbMs: 3_297, fcpMs: 10_074, readyMs: 10_074 },
+      { ...laptop, firstByte },
+    );
+    expect(p?.firstByte).toEqual(firstByte);
+    expect(SlowPageLoadPayloadSchema.parse(p)).toEqual(p!);
+    expect(slowPageLoadSummary(p!)).toContain(
+      "[first byte: DNS 412 ms + TCP 905 ms + TLS 910 ms + request→response 1050 ms + other 20 ms over h2]",
+    );
+  });
+
+  test("a report filed before the split existed still parses, as null", () => {
+    const p = judgeReadyLoad(
+      { ttfbMs: 2_500, fcpMs: 3_100, readyMs: 3_400 },
+      phone,
+    )!;
+    const { firstByte: _, ...old } = p;
+    expect(SlowPageLoadPayloadSchema.parse(old).firstByte).toBeNull();
   });
 });

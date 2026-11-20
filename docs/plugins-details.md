@@ -2071,6 +2071,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/pane.currentRoutePath`
                   - `primitives/pane.usePathname`
                   - `primitives/perfs/boot-trace.getBootTrace`
+                  - `primitives/perfs/boot-trace.readFirstByteSplit`
                 - Exports (types):
                   - `AnalyticsConsent`
                   - `ConsentState`
@@ -2089,6 +2090,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `packages/list-bound.cappedRecord`
                   - `packages/list-bound.wholeList`
                   - `primitives/pane.pathWithoutSurfaceViews`
+                  - `primitives/perfs/boot-trace.FirstByteSplit`
+                  - `primitives/perfs/boot-trace.MAX_PROTOCOL_LENGTH`
                 - Exports (types):
                   - `AdditiveMetrics`
                   - `AnalyticsFilter`
@@ -2178,6 +2181,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `EventBodySchema`
                   - `EventPropsSchema`
                   - `FilterLevelSchema`
+                  - `firstByteOf`
+                  - `FirstByteSplitSchema`
                   - `firstRawDay`
                   - `GAP_KINDS`
                   - `gapsExtentMs`
@@ -2257,6 +2262,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/deploy/analytics/sessions`
                   - `apps/deploy/fixtures`
                   - `apps/deploy/site-messages/intake`
+                  - `apps/deploy/site-reports/channel/slow-load`
                   - `apps/website/improve`
                   - `apps/website/landing/hero`
                   - `apps/website/landing/layers`
@@ -3804,6 +3810,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - Web:
                     - Contributes: `Core.Root` → `SlowLoadReporter`
                     - Uses:
+                      - `primitives/perfs/boot-trace.readFirstByteSplit`
                       - `primitives/perfs/boot-trace.subscribeBootTrace`
                       - `reports.report`
                   - Server:
@@ -3811,6 +3818,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses: `reports.ReportKind`
                   - Core:
                     - Uses:
+                      - `apps/deploy/analytics/collect.FirstByteSplitSchema`
                       - `reports/main-thread-stall.StallClient`
                       - `reports/main-thread-stall.StallClientSchema`
                     - Exports (types):
@@ -57525,6 +57533,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `BootPhase`
               - `BootSpan`
               - `BootTrace`
+              - `FirstByteSplit`
               - `LongTask`
               - `NavTiming`
             - Exports (values):
@@ -57532,6 +57541,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `getBootTrace`
               - `markBootInstant`
               - `markBootInstantAtNextCommit`
+              - `readFirstByteSplit`
               - `recordBootSpan`
               - `refreshBootTrace`
               - `startBootSpan`
@@ -57546,13 +57556,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `BootSpan`
               - `BootTimingDetail`
               - `BootTrace`
+              - `FirstByteSplit`
               - `LongTask`
+              - `NavigationTimingFields`
               - `NavTiming`
             - Exports (values):
               - `BOOT_PLUGIN_TIMING_PREFIX`
               - `BOOT_TIMING_PREFIX`
               - `DEFERRED_LOAD_COMPLETE_ID`
               - `FIRST_DATA_COMMIT_ID`
+              - `firstByteSplit`
+              - `MAX_PROTOCOL_LENGTH`
               - `ROUTE_CONTENT_COMMIT_ID`
         - **`latency-signal`** — The closed vocabulary of client latency signals (update: a pushed change applied; confirm: an optimistic write confirmed), each a fixed tuple of named phases, as plain data; ClientLatencySample (a union on signal, so a missing or misspelled phase is a tsc error), the clientLatencySink observation sink producers emit into and consumers subscribe to, and splitPhases.
           - Core:

@@ -18,7 +18,12 @@ import type {
   BootTimingDetail,
   BootPluginLoadDetail,
 } from "../../core";
-import { BOOT_PLUGIN_TIMING_PREFIX, BOOT_TIMING_PREFIX } from "../../core";
+import {
+  BOOT_PLUGIN_TIMING_PREFIX,
+  BOOT_TIMING_PREFIX,
+  firstByteSplit,
+  type FirstByteSplit,
+} from "../../core";
 
 const spans: BootSpan[] = [];
 const longTasks: LongTask[] = [];
@@ -179,6 +184,18 @@ export function markBootInstantAtNextCommit(
   label: string,
 ): void {
   onNextCommit(() => markBootInstant(id, phase, label));
+}
+
+/**
+ * This page load's document first byte, split into where it went (redirects
+ * and unload, DNS, TCP, TLS, request → response), read from the browser's
+ * navigation entry. Null before the first byte, or without the entry.
+ */
+export function readFirstByteSplit(): FirstByteSplit | null {
+  const [entry] = performance.getEntriesByType(
+    "navigation",
+  ) as PerformanceNavigationTiming[];
+  return entry ? firstByteSplit(entry) : null;
 }
 
 function readNavTiming(): NavTiming | null {

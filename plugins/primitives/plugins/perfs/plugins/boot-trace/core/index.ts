@@ -13,3 +13,5 @@ export {
   ROUTE_CONTENT_COMMIT_ID,
   DEFERRED_LOAD_COMPLETE_ID,
 } from "./instants";
+export { firstByteSplit, MAX_PROTOCOL_LENGTH } from "./first-byte";
+export type { FirstByteSplit, NavigationTimingFields } from "./first-byte";

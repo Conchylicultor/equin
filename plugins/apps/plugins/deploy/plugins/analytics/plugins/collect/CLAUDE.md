@@ -212,6 +212,12 @@ Read from boot-trace in `web/internal/instance.ts` (every composition boots
 through `web-core`):
 
 - `ttfbMs` — document's first byte; `fcpMs` — first contentful paint.
+- `firstByte` — where `ttfbMs` went: boot-trace's `firstByteSplit`
+  (redirect/setup, DNS, TCP, TLS — the whole QUIC handshake on h3 —, request
+  → response, other; whole ms adding up to the total) and the protocol. Says
+  whether a slow first byte was the visitor's network (handshake round trips
+  to the one box) or the server (`waitMs`). Absent on loads stored before it
+  (2026-11-20), null when the browser gave none.
 - `readyMs` — later of FCP and the `route-content-commit` instant. Not
   `bootWindowEnd`: its first commit is the loading screen, so it repeats FCP.
 - A paint after the tab was first hidden is the tab being shown: `fcpMs` /
@@ -388,6 +394,7 @@ after new visits, a rollup and a retention sweep arrive as deltas.
     - `primitives/pane.currentRoutePath`
     - `primitives/pane.usePathname`
     - `primitives/perfs/boot-trace.getBootTrace`
+    - `primitives/perfs/boot-trace.readFirstByteSplit`
   - Exports (types):
     - `AnalyticsConsent`
     - `ConsentState`
@@ -406,6 +413,8 @@ after new visits, a rollup and a retention sweep arrive as deltas.
     - `packages/list-bound.cappedRecord`
     - `packages/list-bound.wholeList`
     - `primitives/pane.pathWithoutSurfaceViews`
+    - `primitives/perfs/boot-trace.FirstByteSplit`
+    - `primitives/perfs/boot-trace.MAX_PROTOCOL_LENGTH`
   - Exports (types):
     - `AdditiveMetrics`
     - `AnalyticsFilter`
@@ -495,6 +504,8 @@ after new visits, a rollup and a retention sweep arrive as deltas.
     - `EventBodySchema`
     - `EventPropsSchema`
     - `FilterLevelSchema`
+    - `firstByteOf`
+    - `FirstByteSplitSchema`
     - `firstRawDay`
     - `GAP_KINDS`
     - `gapsExtentMs`
@@ -574,6 +585,7 @@ after new visits, a rollup and a retention sweep arrive as deltas.
     - `apps/deploy/analytics/sessions`
     - `apps/deploy/fixtures`
     - `apps/deploy/site-messages/intake`
+    - `apps/deploy/site-reports/channel/slow-load`
     - `apps/website/improve`
     - `apps/website/landing/hero`
     - `apps/website/landing/layers`

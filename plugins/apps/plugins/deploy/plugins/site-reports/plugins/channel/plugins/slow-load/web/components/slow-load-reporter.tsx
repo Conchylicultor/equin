@@ -3,8 +3,12 @@ import {
   BOOT_TIMING_PREFIX,
   ROUTE_CONTENT_COMMIT_ID,
 } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/core";
-import { subscribeBootTrace } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
+import {
+  readFirstByteSplit,
+  subscribeBootTrace,
+} from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
 import { coarseClient } from "@plugins/reports/plugins/main-thread-stall/core";
+import { firstByteOf } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
 import { report } from "@plugins/reports/web";
 import {
   judgeHiddenLoad,
@@ -75,6 +79,7 @@ function file(payload: SlowPageLoadPayload): void {
 
 function context() {
   return {
+    firstByte: firstByteOf(readFirstByteSplit()),
     client: coarseClient(navigator.userAgent),
     connection: connectionType(),
   };

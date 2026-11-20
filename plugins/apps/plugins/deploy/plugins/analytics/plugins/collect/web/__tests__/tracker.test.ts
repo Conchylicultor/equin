@@ -17,7 +17,7 @@ import {
 const PV_A = "00000000-0000-4000-8000-00000000000a";
 const PV_B = "00000000-0000-4000-8000-00000000000b";
 /** The load of a page whose browser measured nothing: still sent, every phase null. */
-const NO_LOAD = { ttfbMs: null, fcpMs: null, readyMs: null };
+const NO_LOAD = { ttfbMs: null, fcpMs: null, readyMs: null, firstByte: null };
 
 /** A tracker over a fake clock and a recording send whose responses the test releases. */
 function harness(
@@ -46,6 +46,7 @@ function harness(
   const sections = new Map<string, string[]>();
   let milestones: LoadMilestones = {
     firstByteAt: null,
+    firstByte: null,
     firstContentfulPaintAt: null,
     readyAt: null,
   };
@@ -507,6 +508,7 @@ describe("away stretches", () => {
 describe("load timing", () => {
   const MILESTONES: LoadMilestones = {
     firstByteAt: 107.1,
+    firstByte: null,
     firstContentfulPaintAt: 1640.2,
     readyAt: 1700,
   };
@@ -556,7 +558,7 @@ describe("load timing", () => {
         pageviewId: PV_A,
         engagedMs: 0,
         gaps: [],
-        load: { ttfbMs: 108, fcpMs: 1641, readyMs: 1700 },
+        load: { ttfbMs: 108, fcpMs: 1641, readyMs: 1700, firstByte: null },
       },
     ]);
   });
@@ -582,6 +584,7 @@ describe("load timing", () => {
     // Shown a minute later: that is when it painted.
     h.setMilestones({
       firstByteAt: 90,
+      firstByte: null,
       firstContentfulPaintAt: 60_050,
       readyAt: 60_100,
     });
@@ -605,6 +608,7 @@ describe("load timing", () => {
     h.tracker.visible();
     h.setMilestones({
       firstByteAt: 90,
+      firstByte: null,
       firstContentfulPaintAt: 300,
       readyAt: 10_600,
     });
@@ -616,10 +620,30 @@ describe("load timing", () => {
     });
   });
 
+  it("carries where the first byte went", async () => {
+    const h = harness();
+    const firstByte = {
+      totalMs: 108,
+      beforeFetchMs: 2,
+      dnsMs: 20,
+      tcpMs: 30,
+      tlsMs: 30,
+      waitMs: 25,
+      otherMs: 1,
+      protocol: "h2",
+    };
+    h.setMilestones({ ...MILESTONES, firstByte });
+    h.tracker.pathChanged("/about");
+    await h.respond(0, { outcome: "pageview", pageviewId: PV_A });
+    h.tracker.hidden();
+    expect(engagements(h.sent)[0]).toMatchObject({ load: { firstByte } });
+  });
+
   it("an unmeasured or implausible phase is null, never 0", async () => {
     const h = harness();
     h.setMilestones({
       firstByteAt: 0,
+      firstByte: null,
       firstContentfulPaintAt: 11 * 60 * 1000,
       readyAt: null,
     });

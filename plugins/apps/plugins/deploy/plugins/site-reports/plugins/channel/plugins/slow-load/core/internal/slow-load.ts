@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { FirstByteSplitSchema } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
+import type { FirstByteSplit } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/core";
 import {
   StallClientSchema,
   type StallClient,
@@ -68,6 +70,12 @@ export const SlowPageLoadPayloadSchema = z
     /** For `not-ready`: how long after the navigation the page was hidden. */
     hiddenAtMs: LoadMsSchema,
     barMs: z.number().int().positive(),
+    /**
+     * Where the first byte went (analytics' split: redirects and unload, DNS,
+     * TCP, TLS, request → response). Null when the browser gave none, and on
+     * reports filed before it was recorded.
+     */
+    firstByte: FirstByteSplitSchema.nullable().default(null),
     client: StallClientSchema,
     connection: z.enum(CONNECTION_TYPES).nullable(),
   })
@@ -93,6 +101,8 @@ function largestPhase(m: LoadMilestones, readyMs: number): SlowLoadPhase {
 }
 
 interface Context {
+  /** The document's first byte, split (boot-trace's `readFirstByteSplit`). */
+  firstByte: FirstByteSplit | null;
   client: StallClient;
   connection: SlowPageLoadPayload["connection"];
   barMs?: number;
@@ -116,6 +126,7 @@ export function judgeReadyLoad(
     readyMs,
     hiddenAtMs: null,
     barMs,
+    firstByte: ctx.firstByte,
     client: ctx.client,
     connection: ctx.connection,
   };
@@ -143,6 +154,7 @@ export function judgeHiddenLoad(
     readyMs: null,
     hiddenAtMs: hidden,
     barMs,
+    firstByte: ctx.firstByte,
     client: ctx.client,
     connection: ctx.connection,
   };
@@ -169,6 +181,27 @@ function seconds(ms: number | null): string {
   return ms === null ? "—" : `${(ms / 1000).toFixed(1)} s`;
 }
 
+const SPLIT_WORDS: [keyof FirstByteSplit, string][] = [
+  ["beforeFetchMs", "redirect/setup"],
+  ["dnsMs", "DNS"],
+  ["tcpMs", "TCP"],
+  ["tlsMs", "TLS"],
+  ["waitMs", "request→response"],
+  ["otherMs", "other"],
+];
+
+/** `DNS 312 ms + TCP 905 ms + …` — the first byte's nonzero parts, over h2/h3. */
+function splitWords(split: FirstByteSplit): string {
+  const quic = split.protocol?.startsWith("h3") ?? false;
+  const parts = SPLIT_WORDS.flatMap(([key, label]) => {
+    const ms = split[key];
+    const word = quic && key === "tlsMs" ? "QUIC" : label;
+    return typeof ms === "number" && ms > 0 ? [`${word} ${ms} ms`] : [];
+  });
+  const over = split.protocol ? ` over ${split.protocol}` : "";
+  return `${parts.join(" + ")}${over}`;
+}
+
 /** The report's one-line message. */
 export function slowPageLoadSummary(p: SlowPageLoadPayload): string {
   const head =
@@ -176,5 +209,6 @@ export function slowPageLoadSummary(p: SlowPageLoadPayload): string {
       ? `Slow page load: not ready after ${seconds(p.hiddenAtMs)}`
       : `Slow page load: ready after ${seconds(p.readyMs)}`;
   const net = p.connection ? `, ${p.connection}` : "";
-  return `${head} (first byte ${seconds(p.ttfbMs)}, first paint ${seconds(p.fcpMs)}) — ${PHASE_WORDS[p.phase]}; ${p.client.os}/${p.client.family}${net}`;
+  const split = p.firstByte ? ` [first byte: ${splitWords(p.firstByte)}]` : "";
+  return `${head} (first byte ${seconds(p.ttfbMs)}, first paint ${seconds(p.fcpMs)}) — ${PHASE_WORDS[p.phase]}; ${p.client.os}/${p.client.family}${net}${split}`;
 }

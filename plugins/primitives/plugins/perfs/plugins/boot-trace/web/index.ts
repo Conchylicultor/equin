@@ -7,6 +7,7 @@ export type {
   LongTask,
   AssetTiming,
   BootTrace,
+  FirstByteSplit,
 } from "../core";
 export {
   startBootSpan,
@@ -19,6 +20,7 @@ export {
   useBootTrace,
   refreshBootTrace,
   bootWindowEnd,
+  readFirstByteSplit,
 } from "./internal/store";
 
 export default {
