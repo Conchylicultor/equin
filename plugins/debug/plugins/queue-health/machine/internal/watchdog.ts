@@ -23,6 +23,12 @@ import { queueHealthConfig } from "../../core";
 import { formatDurationMs } from "../../shared/format-duration";
 import { blockedTrip, sampleOf, type JobSpanSample } from "./profile-delta";
 import { foldDeadJobsByCause } from "./dead-job-cause";
+import {
+  awakeMs,
+  judgeBacklog,
+  stepClassStarvation,
+  type StarvationCandidate,
+} from "./awake-elapsed";
 
 // The queue-health watchdog: a raw `setInterval` on the backend's own event
 // loop, started from `onReady` and stopped in `onShutdown`.
@@ -90,15 +96,6 @@ const DEAD_JOB_EVERY_N_TICKS = 10;
 // a standing condition, not an instant — nothing is lost by looking less often.
 const SLOT_BLOCKED_EVERY_N_TICKS = 10;
 
-// How far the derived head-of-queue timestamp may drift between two samples and
-// still count as "the same row is still at the head". The head's `run_at` is
-// derived as `sampleWallClock - oldestOverdueMs`, so it carries this backend's
-// clock skew against Postgres (constant between samples, therefore cancelling)
-// plus per-query latency (tens of ms, occasionally more under load). One second
-// swallows the jitter without hiding a real advance: when a class actually
-// drains, its readyCount falls, which resets the candidate regardless.
-const HEAD_DRIFT_TOLERANCE_MS = 1_000;
-
 let tickCount = 0;
 
 // The ONLY state the wedge detector carries: which slots were held at the last
@@ -117,10 +114,7 @@ let wedgeCandidate: { ids: Set<string>; since: number } | null = null;
 // when this class's candidate was opened. Same shape as `wedgeCandidate` and
 // cleared under the same rule — the moment the class shows any sign of
 // draining, the clock starts over.
-const starvedCandidates = new Map<
-  HoldClass,
-  { headRunAtMs: number; readyCount: number; since: number }
->();
+const starvedCandidates = new Map<HoldClass, StarvationCandidate>();
 
 // Per-jobName baseline of the runtime profiler's cumulative job-span counters at
 // the previous slot-blocked sample. The profiler accumulates since boot, so the
@@ -187,10 +181,15 @@ export async function queueHealthTickOnce(): Promise<void> {
     queryQueueBacklog(),
     queryRunningJobs(),
   ]);
+  // The instant the snapshot describes. Every check measures its spans to
+  // here, not to a later `Date.now()`: a nap between the queries and a check
+  // would otherwise count in `sleptDuring` but not in `oldestOverdueMs`.
+  const sampledAt = Date.now();
 
-  await checkWedge(backlog, running, cfg.wedgeMinutes);
-  await checkClassStarvation(backlog, cfg.wedgeMinutes);
+  await checkWedge(backlog, running, cfg.wedgeMinutes, sampledAt);
+  await checkClassStarvation(backlog, cfg.wedgeMinutes, sampledAt);
   await checkBacklog(
+    sampledAt,
     backlog,
     cfg.backlogDepthThreshold,
     cfg.oldestOverdueMinutes,
@@ -228,6 +227,7 @@ async function checkWedge(
   backlog: QueueBacklogStat,
   running: RunningJobStat[],
   wedgeMinutes: number,
+  now: number,
 ): Promise<void> {
   const saturated = running.length >= TOTAL_JOB_SLOTS;
   const starving = backlog.readyCount > 0;
@@ -239,14 +239,19 @@ async function checkWedge(
   }
 
   const ids = new Set(running.map((r) => r.jobId));
-  const now = Date.now();
   if (!wedgeCandidate || !sameSet(wedgeCandidate.ids, ids)) {
     // First sample of this exact locked set. Open a candidate and wait — one
     // sample can never prove nothing is completing.
     wedgeCandidate = { ids, since: now };
     return;
   }
-  if (now - wedgeCandidate.since < wedgeMinutes * 60_000) return;
+  // AWAKE time since the set was first seen: a set unchanged across a nap
+  // proves nothing — no slot could free while the machine slept.
+  const frozenForMs = awakeMs(
+    now - wedgeCandidate.since,
+    sleptDuring(wedgeCandidate.since, now),
+  );
+  if (frozenForMs < wedgeMinutes * 60_000) return;
 
   // How long the slots have been held, read off graphile's `locked_at` rather
   // than off `wedgeCandidate.since`. Every slot has been held AT LEAST this
@@ -331,36 +336,30 @@ async function checkWedge(
 async function checkClassStarvation(
   backlog: QueueBacklogStat,
   wedgeMinutes: number,
+  now: number,
 ): Promise<void> {
-  const now = Date.now();
-
   for (const c of backlog.classes) {
-    if (c.readyCount === 0) {
+    const windowMs = Math.max(wedgeMinutes * 60_000, ceilingMsFor(c.hold));
+    const step = stepClassStarvation(
+      starvedCandidates.get(c.hold),
+      c,
+      now,
+      windowMs,
+      sleptDuring,
+    );
+    if (step.kind === "clear") {
       starvedCandidates.delete(c.hold);
       continue;
     }
-
-    const headRunAtMs = now - c.oldestOverdueMs;
-    const prev = starvedCandidates.get(c.hold);
-    const headFrozen =
-      prev !== undefined &&
-      Math.abs(headRunAtMs - prev.headRunAtMs) <= HEAD_DRIFT_TOLERANCE_MS;
-    const drained = prev !== undefined && c.readyCount < prev.readyCount;
-
-    if (!prev || !headFrozen || drained) {
+    if (step.kind === "open") {
       // Either the first sample of this class's head, or evidence that it is
       // moving. Re-open the candidate from here — the opening `readyCount` is
       // the floor condition 2 tests against for the rest of the window.
-      starvedCandidates.set(c.hold, {
-        headRunAtMs,
-        readyCount: c.readyCount,
-        since: now,
-      });
+      starvedCandidates.set(c.hold, step.candidate);
       continue;
     }
-
-    const windowMs = Math.max(wedgeMinutes * 60_000, ceilingMsFor(c.hold));
-    if (now - prev.since < windowMs) continue;
+    if (step.kind === "wait") continue;
+    const { starvedForMs } = step;
 
     // Attribute the starvation to the jobs actually sitting in this class's
     // ready queue. Fetched deep and filtered rather than taken from the default
@@ -380,14 +379,14 @@ async function checkClassStarvation(
         readyCount: c.readyCount,
         lockedCount: c.lockedCount,
         oldestOverdueMs: c.oldestOverdueMs,
-        starvedForMs: now - prev.since,
+        starvedForMs,
         windowMs,
         classes: occupancy(backlog.classes),
         topReady,
       },
       message:
         `${c.hold} class starved — nothing drained for ` +
-        `${formatDurationMs(now - prev.since)}; ${c.readyCount} ready, ` +
+        `${formatDurationMs(starvedForMs)} awake; ${c.readyCount} ready, ` +
         `oldest ${formatDurationMs(c.oldestOverdueMs)}, ` +
         `${reachableSlots(c.hold)} slots reachable`,
     });
@@ -416,37 +415,46 @@ async function checkDeadJobs(): Promise<void> {
   }
 }
 
-// Queue depth/stall. Trips on either depth or staleness; `stalled` = overdue but
-// nothing running (the worker is making no progress).
+// Queue depth/stall, on AWAKE overdue time (`judgeBacklog`): the oldest ready
+// row's wall-clock overdue less the sleep this process saw inside it, so a burst
+// that came due during a nap starts its clock at the wake and gets the same
+// drain time an awake burst gets. `stalled` = overdue with nothing running.
 async function checkBacklog(
+  now: number,
   backlog: QueueBacklogStat,
   backlogDepthThreshold: number,
   oldestOverdueMinutes: number,
 ): Promise<void> {
-  const { readyCount, lockedCount, oldestOverdueMs } = backlog;
-  const oldestThresholdMs = oldestOverdueMinutes * 60_000;
-
-  const stalled = lockedCount === 0 && oldestOverdueMs > oldestThresholdMs;
-  const tripped =
-    readyCount > backlogDepthThreshold || oldestOverdueMs > oldestThresholdMs;
-  if (!tripped) return;
+  const judged = judgeBacklog(
+    {
+      readyCount: backlog.readyCount,
+      lockedCount: backlog.lockedCount,
+      oldestOverdueMs: backlog.oldestOverdueMs,
+      sleptMs: sleptDuring(now - backlog.oldestOverdueMs, now),
+    },
+    { backlogDepthThreshold, oldestOverdueMinutes },
+  );
+  if (!judged) return;
+  const { readyCount, lockedCount, oldestOverdueMs, oldestAwakeOverdueMs } =
+    judged;
 
   // Attribute the rollup: which jobs are filling the ready queue. Only fetched
   // when the threshold has already tripped, so the healthy path stays two
   // aggregate queries.
   const topReady = await queryBacklogByJobName();
 
+  const overdue =
+    `oldest overdue ${Math.round(oldestAwakeOverdueMs / 1000)}s awake` +
+    (oldestAwakeOverdueMs < oldestOverdueMs
+      ? ` (${Math.round(oldestOverdueMs / 1000)}s with sleep)`
+      : "");
   await recordReport({
     kind: "queue-backlog",
     source: "server-queue-monitor",
-    data: { readyCount, oldestOverdueMs, lockedCount, stalled, topReady },
-    message: stalled
-      ? `STALLED — ${readyCount} ready, 0 running, oldest overdue ${Math.round(
-          oldestOverdueMs / 1000,
-        )}s`
-      : `${readyCount} ready, ${lockedCount} running, oldest overdue ${Math.round(
-          oldestOverdueMs / 1000,
-        )}s`,
+    data: { ...judged, topReady },
+    message: judged.stalled
+      ? `STALLED — ${readyCount} ready, 0 running, ${overdue}`
+      : `${readyCount} ready, ${lockedCount} running, ${overdue}`,
   });
 }
 
@@ -518,8 +526,11 @@ async function checkSlotHogs(
     const thresholdMs = deadlineMsFor(agg.hold) * slotHogDeadlineFraction;
     // AWAKE hold, like the deadline it is a fraction of: a slot held across a
     // nap held it for no work at all (wall clock where the platform cannot tell).
-    const slept = sleptDuring(now - agg.lockedForMs, now) ?? 0;
-    if (agg.lockedForMs - slept <= thresholdMs) continue;
+    const heldAwakeMs = awakeMs(
+      agg.lockedForMs,
+      sleptDuring(now - agg.lockedForMs, now),
+    );
+    if (heldAwakeMs <= thresholdMs) continue;
     await recordReport({
       kind: "queue-slot-hog",
       source: "server-queue-monitor",

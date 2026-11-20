@@ -57,7 +57,17 @@ function renderDescription(row: ReportRow, d: QueueBacklogPayload): string {
   }
   lines.push("");
   lines.push(`**Ready (overdue, unlocked):** ${d.readyCount}`);
-  lines.push(`**Oldest overdue:** ${formatDurationMs(d.oldestOverdueMs)}`);
+  if (
+    d.oldestAwakeOverdueMs !== undefined &&
+    d.oldestAwakeOverdueMs < d.oldestOverdueMs
+  ) {
+    lines.push(
+      `**Oldest overdue (awake):** ${formatDurationMs(d.oldestAwakeOverdueMs)} ` +
+        `— ${formatDurationMs(d.oldestOverdueMs)} on the wall clock, the rest slept through`,
+    );
+  } else {
+    lines.push(`**Oldest overdue:** ${formatDurationMs(d.oldestOverdueMs)}`);
+  }
   lines.push(`**Locked (running):** ${d.lockedCount}`);
   if (d.topReady && d.topReady.length > 0) {
     lines.push("");

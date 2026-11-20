@@ -51,10 +51,13 @@ const TopReadySchema = z.array(
 // waiting, how overdue the oldest one is, how many are currently locked (running),
 // and whether the worker is making no progress (stalled). `topReady` attributes
 // the ready backlog to the jobs filling it — OPTIONAL so already-stored reports
-// (filed before this field existed) still parse.
+// (filed before this field existed) still parse. `oldestOverdueMs` is the wall
+// clock; `oldestAwakeOverdueMs` — what the threshold is judged on — is that less
+// the sleep inside it, OPTIONAL for the same reason.
 export const QueueBacklogPayloadSchema = z.object({
   readyCount: z.number().int(),
   oldestOverdueMs: z.number().int(),
+  oldestAwakeOverdueMs: z.number().int().optional(),
   lockedCount: z.number().int(),
   stalled: z.boolean(),
   topReady: TopReadySchema.optional(),

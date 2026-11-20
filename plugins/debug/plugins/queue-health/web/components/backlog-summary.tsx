@@ -16,7 +16,8 @@ export function BacklogSummary({ report }: { report: Report }) {
   return (
     <Inline gap="xs">
       <span>
-        {d.readyCount} ready · oldest {formatDurationMs(d.oldestOverdueMs)} ·{" "}
+        {d.readyCount} ready · oldest{" "}
+        {formatDurationMs(d.oldestAwakeOverdueMs ?? d.oldestOverdueMs)} ·{" "}
         {d.lockedCount} running
       </span>
       {d.stalled ? <Badge variant="destructive">stalled</Badge> : null}
