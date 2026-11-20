@@ -39,6 +39,16 @@ seed — so the unchanged app reads demo data through `useLive` /
   plugin-load report), and `retry` loads them again — before, it threw to the
   page's error boundary, so a chunk lost after Enter equin took equin.ai's
   homepage down with it (report-1794951421-c3g90t).
+- **A failed host on stored data can start over.** Where what this browser
+  stored is what fails (a database the host cannot open — Safari's PGlite
+  `ERRORDATA_STACK_SIZE exceeded`, report-1795156708-k37rzk), a retry hits it
+  again and Reset needs a running host. So a failed host on a scenario
+  keeping data (`storage`), on a page with Web Locks, also offers `startOver`
+  (`null` otherwise — without them nothing keeps a host off the data, and the
+  worker keeps its data in memory anyway — and for plugins that did not load): the page wipes the storage itself
+  (`host-storage/stored`'s `wipeHostData`, under the storage's lock) and
+  boots a fresh host from the starting data, as after a Reset (browser-side
+  state cleared too). A wipe that fails is drawn `failed` with its error.
 - **A gate, where the page draws the boot** (`boot={(state) => …}`,
   `DemoBoot`: `gate` → `starting` with the worker's `HostProgress`). The
   visitor enters through the gate on every visit. Behind it, the scope asks

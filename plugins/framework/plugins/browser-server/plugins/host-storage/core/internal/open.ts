@@ -48,12 +48,13 @@ import {
   ENTRIES_STORE,
   LIFECYCLE_KEY,
   META_STORE,
+  deleteStorageDatabases,
   storagePrefix,
   storesDbName,
   type Lifecycle,
 } from "@plugins/framework/plugins/browser-server/plugins/host-storage/plugins/stored/core";
 import { reportDataProgress } from "@plugins/framework/plugins/browser-server/core";
-import { idbDelete, idbDone, idbOpen, idbRequest } from "./idb";
+import { idbDone, idbOpen, idbRequest } from "./idb";
 import { StorageNewerThanCodeError } from "./errors";
 import type {
   DatabaseStart,
@@ -196,7 +197,7 @@ async function openPersistent(
 
   const wipeStored = async (): Promise<void> => {
     db.close();
-    await deleteAll(prefix, storesName);
+    await deleteStorageDatabases(name);
     db = await idbOpen(storesName, [ENTRIES_STORE, META_STORE]);
   };
   const loadSnapshot = (ref: HostSnapshotRef): Promise<HostSnapshot> =>
@@ -462,7 +463,7 @@ async function openPersistent(
         // over a deleted database.
         await writeLifecycle({ ...current, state: "seeding" });
         await closeKeepingLock();
-        await deleteAll(prefix, storesName);
+        await deleteStorageDatabases(name);
       } finally {
         ownership.release();
       }
@@ -556,25 +557,4 @@ async function openInMemory(
     close,
     wipe: close,
   };
-}
-
-/**
- * Delete every IndexedDB database of the storage (`prefix`), PGlite's
- * included — the stores (`last`, which holds the lifecycle record) last.
- */
-async function deleteAll(prefix: string, last: string): Promise<void> {
-  const names =
-    typeof indexedDB.databases === "function"
-      ? (await indexedDB.databases())
-          .map((d) => d.name)
-          .filter((n): n is string => n !== undefined && n.includes(prefix))
-      : // No listing below Firefox 126 (the browser floor is 115): delete the
-        // names the storage has — PGlite's IDBFS database for its
-        // `idb://${prefix}db` data dir, and the stores. Emscripten's IDBFS
-        // names its database by the mount point (`getDB(mount.mountpoint)`),
-        // and PGlite mounts `idb://<dir>` at `/pglite/<dir>` (its IdbFs
-        // `init`, as of @electric-sql/pglite 0.5.12).
-        [`/pglite/${prefix}db`, last];
-  for (const n of names.filter((n) => n !== last)) await idbDelete(n);
-  await idbDelete(last);
 }

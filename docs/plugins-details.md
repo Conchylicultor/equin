@@ -31961,10 +31961,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/browser-server.retireLockName`
               - `framework/browser-server.ServedHost`
               - `framework/browser-server.serveHost`
+              - `framework/browser-server/host-storage/stored.deleteStorageDatabases`
               - `framework/browser-server/host-storage/stored.ENTRIES_STORE`
               - `framework/browser-server/host-storage/stored.Lifecycle`
               - `framework/browser-server/host-storage/stored.LIFECYCLE_KEY`
               - `framework/browser-server/host-storage/stored.META_STORE`
+              - `framework/browser-server/host-storage/stored.storageLockName`
               - `framework/browser-server/host-storage/stored.storagePrefix`
               - `framework/browser-server/host-storage/stored.storesDbName`
               - `primitives/dom/web-locks.webLocks`
@@ -32004,7 +32006,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Core: `@plugins/framework/plugins/browser-server/plugins/host-storage/core/testing`
               - `declareMemoryHostStorage` — Declare that this process's browser host keeps its state in memory — what a test that boots a browser graph (PGlite and the in-memory host stores) declares before `bootBrowserHost`, as a host's entry point declares its storage.
           - Plugins:
-            - **`stored`** — Whether this browser already holds a persistent browser host's data (hostDataStored(name)), read without booting anything — and the IndexedDB layout it reads, shared with host-storage's open (the storage's database names, the lifecycle record). A leaf, so a page can ask before it starts the host: a demo's gate.
+            - **`stored`** — Whether this browser already holds a persistent browser host's data (hostDataStored(name)), read without booting anything — and the IndexedDB layout it reads, shared with host-storage's open (the storage's database names, the lifecycle record). Also deletes it: deleteStorageDatabases, and wipeHostData — a page's wipe under the storage's lock, for when no host runs to ask (a demo whose boot failed on its stored data). A leaf, so a page can ask before it starts the host: a demo's gate.
               - Cross-plugin:
                 - Imported by:
                   - `framework/browser-server/demo/scope`
@@ -32014,12 +32016,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `HostDataStored`
                   - `Lifecycle`
                 - Exports (values):
+                  - `deleteStorageDatabases`
                   - `ENTRIES_STORE`
                   - `hostDataStored`
                   - `LIFECYCLE_KEY`
                   - `META_STORE`
+                  - `storageLockName`
                   - `storagePrefix`
                   - `storesDbName`
+                  - `wipeHostData`
         - **`test-host`** — Test harness that boots a slice of the app's server registry as a portable host under bun test: the registry or portable dependsOn closure of some roots, plus — derived, never hand-listed — one host provider per service the graph's modules declare (to a fixpoint), the committed migrations and config read off disk, and in-memory host storage.
           - Test helpers:
             - Server: `@plugins/framework/plugins/browser-server/plugins/test-host/server/testing`

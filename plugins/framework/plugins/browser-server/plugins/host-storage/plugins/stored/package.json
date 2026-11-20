@@ -2,5 +2,5 @@
   "name": "@equin/plugin-framework-browser-server-host-storage-stored",
   "version": "0.0.1",
   "private": true,
-  "description": "Whether this browser already holds a persistent browser host's data (hostDataStored(name)), read without booting anything — and the IndexedDB layout it reads, shared with host-storage's open (the storage's database names, the lifecycle record). A leaf, so a page can ask before it starts the host: a demo's gate."
+  "description": "Whether this browser already holds a persistent browser host's data (hostDataStored(name)), read without booting anything — and the IndexedDB layout it reads, shared with host-storage's open (the storage's database names, the lifecycle record). Also deletes it: deleteStorageDatabases, and wipeHostData — a page's wipe under the storage's lock, for when no host runs to ask (a demo whose boot failed on its stored data). A leaf, so a page can ask before it starts the host: a demo's gate."
 }

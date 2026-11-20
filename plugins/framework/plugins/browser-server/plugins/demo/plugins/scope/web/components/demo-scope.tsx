@@ -44,7 +44,11 @@ import {
   foldResource,
   NotificationsProvider,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
-import { hostDataStored } from "@plugins/framework/plugins/browser-server/plugins/host-storage/plugins/stored/core";
+import {
+  hostDataStored,
+  wipeHostData,
+} from "@plugins/framework/plugins/browser-server/plugins/host-storage/plugins/stored/core";
+import { webLocks } from "@plugins/primitives/plugins/dom/plugins/web-locks/core";
 import { clearStorageScope } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
@@ -434,7 +438,12 @@ type ScopeState =
  *   (`reportError`, as an uncaught error is; a plugin by the loader's
  *   plugin-load report); `retry` boots a fresh host, or loads the plugins
  *   again — fetching what was lost again. The page draws it in the demo's own box, so a demo that
- *   failed never takes the page around it down.
+ *   failed never takes the page around it down. `startOver` (a host that
+ *   failed, on a scenario keeping its data in this browser; else `null`)
+ *   throws away what this browser keeps of the demo and boots a fresh host
+ *   from the starting data — the way out when what is stored is what fails,
+ *   which a retry would hit again. No host need run: the page wipes the
+ *   storage itself (`wipeHostData`).
  */
 export type DemoBoot =
   | { kind: "checking" }
@@ -445,6 +454,7 @@ export type DemoBoot =
       cause: "host" | "plugins";
       error: unknown;
       retry(): void;
+      startOver: (() => Promise<void>) | null;
     };
 
 /**
@@ -648,6 +658,32 @@ export function DemoScope({
     setState({ kind: "booting", progress: null });
     setReconnects((r) => r + 1);
   });
+  // After a failed boot, from nothing: what this browser stored of the demo
+  // is thrown away (its storage wiped by the page — no host runs to ask),
+  // then a fresh host starts from the starting data, as after a Reset (the
+  // browser-side state cleared with it). A wipe that fails is drawn as the
+  // failure it is, and reported.
+  // Offered only where the page can hold the storage's lock: without Web
+  // Locks nothing keeps a host off the data, and the worker (none either,
+  // as a rule) keeps its data in memory — nothing stored to blame.
+  const storageName = scenario.storage;
+  const pageLocks = webLocks();
+  const canStartOver = storageName !== null && pageLocks.kind === "supported";
+  const startOver = useEventCallback(async () => {
+    if (storageName === null || pageLocks.kind !== "supported") {
+      throw new Error(
+        "[demo] start over: no stored data this page can wipe (no storage, or no Web Locks)",
+      );
+    }
+    try {
+      await wipeHostData(pageLocks.locks, storageName);
+    } catch (error: unknown) {
+      setState({ kind: "failed", error });
+      return;
+    }
+    setState({ kind: "booting", progress: null });
+    setResets((r) => r + 1);
+  });
   useEffect(() => {
     if (!hostStarts) return;
     // A reset throws away the scope's browser-side state with its data (the
@@ -781,7 +817,13 @@ export function DemoScope({
   // a retry (reported by the effect above), else it reaches the error boundary.
   if (state.kind === "failed") {
     if (boot === undefined) throw state.error;
-    return boot({ kind: "failed", cause: "host", error: state.error, retry });
+    return boot({
+      kind: "failed",
+      cause: "host",
+      error: state.error,
+      retry,
+      startOver: canStartOver ? startOver : null,
+    });
   }
   // The scope's on-demand plugins that did not load (a module of theirs the
   // visitor's network lost): drawn in the demo's box like a failed host, never
@@ -794,6 +836,8 @@ export function DemoScope({
       cause: "plugins",
       error: scopePlugins.error,
       retry: scopePlugins.retry,
+      // Plugins the network lost: nothing stored is at fault.
+      startOver: null,
     });
   }
   if (state.kind === "stopped") return <HostStopped why={state.why} />;

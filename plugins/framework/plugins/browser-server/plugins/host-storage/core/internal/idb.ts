@@ -46,21 +46,3 @@ export function idbOpen(
       );
   });
 }
-
-/**
- * Delete `name`. A delete another connection still holds is `blocked`, not
- * failed: it completes as soon as that connection closes (PGlite's filesystem
- * closes its own a moment after `close()` resolves), so this waits — loudly.
- */
-export function idbDelete(name: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.deleteDatabase(name);
-    req.onsuccess = () => resolve();
-    req.onerror = () =>
-      reject(req.error ?? new Error(`IndexedDB: could not delete ${name}`));
-    req.onblocked = () =>
-      console.warn(
-        `[host-storage] deleting ${name} waits for a connection still open on it`,
-      );
-  });
-}

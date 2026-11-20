@@ -29,6 +29,8 @@ vi.mock(
 
 // Whether this browser holds a scenario's data: a storage named "held" does,
 // and one named "blocked" is refused by the browser (site data blocked).
+// A page's wipe of a storage is recorded in `wiped`.
+const wiped = vi.hoisted((): string[] => []);
 vi.mock(
   "@plugins/framework/plugins/browser-server/plugins/host-storage/plugins/stored/core",
   async (importOriginal) => ({
@@ -41,6 +43,10 @@ vi.mock(
             ? { kind: "blocked", error: "SecurityError" }
             : { kind: "absent" },
       ),
+    wipeHostData: (_locks: unknown, name: string) => {
+      wiped.push(name);
+      return Promise.resolve();
+    },
   }),
 );
 
@@ -779,6 +785,82 @@ describe("<DemoScope>", () => {
       await waitFor(() => expect(view.getByText("in the demo")).toBeTruthy());
       expect(boots).toBe(2);
       expect(reported).toHaveLength(1);
+    } finally {
+      window.removeEventListener("error", onError);
+      localStorage.clear();
+    }
+  });
+
+  it("a failed host on stored data offers Start over: the page wipes the storage and a fresh host boots", async () => {
+    console.error = () => {};
+    const onError = (e: ErrorEvent) => e.preventDefault();
+    window.addEventListener("error", onError);
+    wiped.length = 0;
+    stubLocks([]);
+    try {
+      let boots = 0;
+      let startOver: (() => Promise<void>) | null = null;
+      const scenario = scenarioOf(() => {
+        boots += 1;
+        if (boots === 1) throw new Error("ERRORDATA_STACK_SIZE exceeded");
+        return storyServer();
+      }, "bad-data");
+      const view = await renderAsync(
+        <PluginProvider plugins={PLUGINS}>
+          <DemoScope
+            scenario={{ ...scenario, storage: "kept" }}
+            resume
+            boot={(state) => {
+              if (state.kind !== "failed") return null;
+              startOver = state.startOver;
+              return <p>could not start</p>;
+            }}
+          >
+            <p>in the demo</p>
+          </DemoScope>
+        </PluginProvider>,
+      );
+      await waitFor(() =>
+        expect(view.getByText("could not start")).toBeTruthy(),
+      );
+      expect(startOver).not.toBeNull();
+      await act(() => startOver!());
+      await waitFor(() => expect(view.getByText("in the demo")).toBeTruthy());
+      expect(wiped).toEqual(["kept"]);
+      expect(boots).toBe(2);
+    } finally {
+      window.removeEventListener("error", onError);
+      localStorage.clear();
+    }
+  });
+
+  it("a failed host that keeps no data offers no Start over", async () => {
+    console.error = () => {};
+    const onError = (e: ErrorEvent) => e.preventDefault();
+    window.addEventListener("error", onError);
+    try {
+      const seen: { startOver?: unknown } = {};
+      const view = await renderAsync(
+        <PluginProvider plugins={PLUGINS}>
+          <DemoScope
+            scenario={scenarioOf(() => {
+              throw new Error("boom");
+            }, "no-data")}
+            resume
+            boot={(state) => {
+              if (state.kind !== "failed") return null;
+              seen.startOver = state.startOver;
+              return <p>could not start</p>;
+            }}
+          >
+            <p>in the demo</p>
+          </DemoScope>
+        </PluginProvider>,
+      );
+      await waitFor(() =>
+        expect(view.getByText("could not start")).toBeTruthy(),
+      );
+      expect(seen.startOver).toBeNull();
     } finally {
       window.removeEventListener("error", onError);
       localStorage.clear();

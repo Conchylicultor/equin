@@ -33,6 +33,7 @@
 // memory instead, so no second worker can ever write under this one.
 
 import { HostRefusedError } from "@plugins/framework/plugins/browser-server/core";
+import { storageLockName } from "@plugins/framework/plugins/browser-server/plugins/host-storage/plugins/stored/core";
 import { StorageNewerThanCodeError } from "./errors";
 
 /** Which code a worker runs, and the SharedWorker name it serves under. */
@@ -137,7 +138,7 @@ export async function acquireOwnership(opts: {
   identity: OwnerIdentity;
   onSuperseded: (why: YieldReason) => Promise<void>;
 }): Promise<Ownership> {
-  const lockName = `equin-host:${opts.name}`;
+  const lockName = storageLockName(opts.name);
   const channel = new BroadcastChannel(lockName);
   const id = globalThis.crypto.randomUUID();
   const claim = (): void =>

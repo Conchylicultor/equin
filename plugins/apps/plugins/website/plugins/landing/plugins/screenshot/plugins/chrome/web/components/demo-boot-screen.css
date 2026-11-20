@@ -83,3 +83,7 @@
   margin-top: 10px;
   font-variant-numeric: tabular-nums;
 }
+/* Start over: the quieter way out under a failure's message. */
+.demo-boot-start-over {
+  margin-top: 6px;
+}

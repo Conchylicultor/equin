@@ -158,10 +158,12 @@ serveBrowserHost({
     - `framework/browser-server.retireLockName`
     - `framework/browser-server.ServedHost`
     - `framework/browser-server.serveHost`
+    - `framework/browser-server/host-storage/stored.deleteStorageDatabases`
     - `framework/browser-server/host-storage/stored.ENTRIES_STORE`
     - `framework/browser-server/host-storage/stored.Lifecycle`
     - `framework/browser-server/host-storage/stored.LIFECYCLE_KEY`
     - `framework/browser-server/host-storage/stored.META_STORE`
+    - `framework/browser-server/host-storage/stored.storageLockName`
     - `framework/browser-server/host-storage/stored.storagePrefix`
     - `framework/browser-server/host-storage/stored.storesDbName`
     - `primitives/dom/web-locks.webLocks`

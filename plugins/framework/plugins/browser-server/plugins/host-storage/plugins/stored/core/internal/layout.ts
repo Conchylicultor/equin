@@ -27,3 +27,10 @@ export interface Lifecycle {
   /** Per store, the ms its snapshot-loaded values still owe a shift to now. */
   owedShift?: Record<string, number>;
 }
+
+/**
+ * The exclusive Web Lock held by whoever has storage `name` open — the one
+ * worker serving it (`host-storage`'s ownership), or a page wiping it
+ * (`wipeHostData`): nothing opens or deletes it without holding it.
+ */
+export const storageLockName = (name: string): string => `equin-host:${name}`;

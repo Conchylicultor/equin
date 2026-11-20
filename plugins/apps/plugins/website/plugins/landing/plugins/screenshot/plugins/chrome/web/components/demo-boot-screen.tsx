@@ -8,6 +8,7 @@ import {
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Logo } from "@plugins/ui/plugins/logo/web";
 import { LOGO } from "@plugins/ui/plugins/logo/core";
+import { useConfirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
 import "./demo-boot-screen.css";
 
 const MB = 1024 * 1024;
@@ -49,7 +50,11 @@ const isStarting = (progress: HostProgress | null): boolean =>
  * - when it could not start, what happened and Try again, in the button's
  *   place — "part of it did not download" only when that is the cause (the
  *   demo's own plugins lost on the visitor's network), never for a server
- *   that failed to start — the page around it is untouched.
+ *   that failed to start — the page around it is untouched. Under it, where
+ *   the demo keeps data in this browser, Start over (confirmed): what this
+ *   browser stored of the demo is erased and it starts from its story — the
+ *   way out when the stored data is what fails, which Try again would hit
+ *   again.
  *
  * It fills its box: the website's demo band — or the whole
  * page, where the URL it opens is maximized.
@@ -102,11 +107,39 @@ export function DemoBootScreen({ state }: { state: DemoBoot }): ReactNode {
                   ? "equin could not start: part of it did not download."
                   : "equin could not start in this browser."}
               </Text>
+              {state.startOver !== null && (
+                <StartOverButton startOver={state.startOver} />
+              )}
             </>
           )}
         </div>
       </div>
     </div>
+  );
+}
+
+function StartOverButton({
+  startOver,
+}: {
+  startOver: () => Promise<void>;
+}): ReactNode {
+  const confirmDialog = useConfirmDialog();
+  return (
+    <Button
+      variant="link"
+      className="demo-boot-start-over"
+      onClick={() => {
+        void confirmDialog({
+          title: "Start the demo over?",
+          description:
+            "What this browser kept of the demo is erased, and it starts again from its story.",
+          confirmLabel: "Start over",
+          onConfirm: startOver,
+        });
+      }}
+    >
+      Start over
+    </Button>
   );
 }
 
