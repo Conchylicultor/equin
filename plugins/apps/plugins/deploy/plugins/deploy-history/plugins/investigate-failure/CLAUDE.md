@@ -44,13 +44,16 @@ an agent that a failure happened there would invent exactly that.
 
 ## Plugin reference
 
-- Description: Contributes the site page's failure banner (the newest run failed: its leg, the CLI's message verbatim, what the box still serves, Investigate) and the investigate row action to every failed run in a site's Deployments tab, launching an agent briefed on that failure — the CLI's own message verbatim, the run's identity and pinned bundle, and where the transcript is.
+- Description: Contributes the site page's failure banner (the newest run failed: its leg, the CLI's message verbatim, what the box still serves, Investigate) and the investigate row action to every failed run in a site's Deployments tab, launching an agent briefed on that failure (also offered on the health report's deployed-site row while its latest run failed) — the CLI's own message verbatim, the run's identity and pinned bundle, and where the transcript is.
 - Web:
   - Contributes:
     - `SiteBanner` "failed"
     - `DataViewSlots.CollectionItemAction` "deploy.run-history:investigate" → `CollectionInvestigate`
+    - `SiteLive.Action` "investigate" → `SiteInvestigateAction`
   - Uses:
+    - `apps/deploy/box-link/site-row.SiteLive`
     - `apps/deploy/deployments.SiteBanner`
+    - `network/live.rowOrStale`
     - `network/live.useLive`
     - `network/live/live-state.foldResource`
     - `network/live/live-state.ResourceResult`

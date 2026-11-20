@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-deploy-box-link-box",
+  "description": "Ships on the deployed box: the host-only box-link stream (hello, a beat every 15 s with the host's metrics, and every BoxSignal contribution's signals).",
+  "private": true,
+  "version": "0.0.1"
+}

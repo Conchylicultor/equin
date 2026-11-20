@@ -1,15 +1,21 @@
 import { Component, useEffect, type ErrorInfo, type ReactNode } from "react";
 import { boundaryReportSink } from "@plugins/primitives/plugins/error-boundary/web";
-import type { HealthStatus } from "../../core";
+import type { HealthStatus, SetRows } from "../../core";
 import { HealthReport } from "../slots";
-import { HealthStore, withStatus, withoutStatus } from "../internal/store";
+import {
+  HealthStore,
+  withStatus,
+  withStatusesUnder,
+  withoutSet,
+  withoutStatus,
+} from "../internal/store";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
+/** Why a check whose hook threw is unknown. */
+const CRASHED_SUMMARY = "This check crashed";
+
 /** What a check whose hook threw reports: grey, never green. */
-const CRASHED: HealthStatus = {
-  state: "unknown",
-  summary: "This check crashed",
-};
+const CRASHED: HealthStatus = { state: "unknown", summary: CRASHED_SUMMARY };
 
 /**
  * Publish one row's status into the report's store, and drop it on unmount.
@@ -55,8 +61,47 @@ function CrashedProbe({ id }: { id: string }): ReactNode {
   return null;
 }
 
-interface ProbeBoundaryProps {
+/**
+ * Publish one row set's rows into the store — everything under its id replaced
+ * in one write (`withStatusesUnder`), so a vanished item goes with it — and
+ * drop all of it on unmount. Same split as `usePublishStatus`.
+ */
+function usePublishSet(id: string, rows: SetRows): void {
+  const store = HealthStore.useStoreApi();
+  useEffect(() => {
+    store.setState((state) => withStatusesUnder(state, id, rows));
+  }, [store, id, rows]);
+  useEffect(() => {
+    return () => {
+      store.setState((state) => withoutSet(state, id));
+    };
+  }, [store, id]);
+}
+
+/** One row set's always-on reader: calls `useRows` once for the whole set. */
+function SetProbe({
+  id,
+  useRows,
+}: {
   id: string;
+  useRows: Hook<() => SetRows>;
+}): ReactNode {
+  const rows = useRows();
+  usePublishSet(id, rows);
+  return null;
+}
+
+const CRASHED_SET: SetRows = { kind: "error", summary: CRASHED_SUMMARY };
+
+/** A set whose hook threw: one grey row under the set's id, its items dropped. */
+function CrashedSetProbe({ id }: { id: string }): ReactNode {
+  usePublishSet(id, CRASHED_SET);
+  return null;
+}
+
+interface ProbeBoundaryProps {
+  /** What stands in for the probe once it has crashed. */
+  crashed: ReactNode;
   /** The slot's id, for the crash report. */
   slot: string;
   /** The contributing plugin, for the crash report. */
@@ -97,36 +142,49 @@ class ProbeBoundary extends Component<
   }
 
   render(): ReactNode {
-    return this.state.crashed ? (
-      <CrashedProbe id={this.props.id} />
-    ) : (
-      this.props.children
-    );
+    return this.state.crashed ? this.props.crashed : this.props.children;
   }
 }
 
 /**
- * Mounts one probe per registered status row. A row added later (a deferred
- * plugin tier loading) simply adds a probe; a row whose plugin goes away takes
- * its entry with it.
+ * Mounts one probe per registered status row and row set. A row added later (a
+ * deferred plugin tier loading) simply adds a probe; a row whose plugin goes
+ * away takes its entries with it.
  */
 export function StatusProbes(): ReactNode {
   const rows = HealthReport.Row.useContributions();
   const slot = HealthReport.Row.id;
   return (
     <>
-      {rows.map((row) =>
-        row.kind === "status" ? (
-          <ProbeBoundary
-            key={row.id}
-            id={row.id}
-            slot={slot}
-            label={row._pluginId ?? row.id}
-          >
-            <StatusProbe id={row.id} useStatus={row.useStatus} />
-          </ProbeBoundary>
-        ) : null,
-      )}
+      {rows.map((row) => {
+        const label = row._pluginId ?? row.id;
+        switch (row.kind) {
+          case "status":
+            return (
+              <ProbeBoundary
+                key={row.id}
+                crashed={<CrashedProbe id={row.id} />}
+                slot={slot}
+                label={label}
+              >
+                <StatusProbe id={row.id} useStatus={row.useStatus} />
+              </ProbeBoundary>
+            );
+          case "set":
+            return (
+              <ProbeBoundary
+                key={row.id}
+                crashed={<CrashedSetProbe id={row.id} />}
+                slot={slot}
+                label={label}
+              >
+                <SetProbe id={row.id} useRows={row.useRows} />
+              </ProbeBoundary>
+            );
+          case "info":
+            return null;
+        }
+      })}
     </>
   );
 }

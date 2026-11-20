@@ -68,7 +68,7 @@ with `releaseDetailRoute` and `{ runId }` would make this chip a cross-app link.
 
 ## Plugin reference
 
-- Description: The Activity page (/deploy/activity, its sidebar entry): every deploy run across every site as the merged runs surface (RunsDataView) with its own view pills — Recent, Running, Needs approval, Failed. Deployments tab of a site's page: this deployment's durable run ledger (`deploy_runs`) as a live DataView window (`deployRunHistory`, sortable and filterable by the surface's custom columns) — outcome and the leg a failure died on, verb, short commit, pinned release run, duration and relative time, with a failed run's CLI message verbatim. The record beside the in-memory live view, so what happened here survives a backend restart. Owns the row-action slot its children hang a failed run's next step off.
+- Description: The Activity page (/deploy/activity, its sidebar entry): every deploy run across every site as the merged runs surface (RunsDataView) with its own view pills — Recent, Running, Needs approval, Failed. Deployments tab of a site's page: this deployment's durable run ledger (`deploy_runs`) as a live DataView window (`deployRunHistory`, sortable and filterable by the surface's custom columns) — outcome and the leg a failure died on, verb, short commit, pinned release run, duration and relative time, with a failed run's CLI message verbatim. The record beside the in-memory live view, so what happened here survives a backend restart. Owns the row-action slot its children hang a failed run's next step off. In the health report's deployed-site row: Open run (the site's Deployments tab) while a deploy runs or after one failed.
 - Web:
   - Slots:
     - `DeployRunItemActions`
@@ -81,12 +81,15 @@ with `releaseDetailRoute` and `{ runId }` would make this chip a cross-app link.
     - `Deploy.Sidebar` "Activity"
     - `SiteTabs.View` "Deployments" → `DeployHistorySection`
     - `SiteOverview.Card` "deployments" → `DeployOverviewCard`
-  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps/deploy/deployments` ×8
+    - `SiteLive.Action` "open-run" → `SiteOpenRunAction`
+  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/deploy/deployments` ×9
     - `primitives/data-view` ×6
     - `network/live/live-state` ×3
     - `primitives/pane` ×3
     - `primitives/css/spacing` ×2
+    - `apps-core/tabs.useAppLinkProps`
+    - `apps/deploy/box-link/site-row.SiteLive`
     - `apps/deploy/shell.Deploy`
     - `network/live.useLive`
     - `primitives/app-shell.opensPane`

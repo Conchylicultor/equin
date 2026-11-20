@@ -10,7 +10,14 @@
  * `classify` is pure, so every branch is covered here with no process spawned.
  */
 import { describe, expect, test } from "bun:test";
-import { classify, failureMessage } from "./classify";
+import { tunnelFailureRetryable } from "../../core/failure-kind";
+import {
+  classify,
+  classifyTunnelStderr,
+  classifyTunnelStderrLine,
+  failureMessage,
+  tunnelFailureMessage,
+} from "./classify";
 
 /** ssh's own failures — DNS, connect, auth, host key — are all exit 255. */
 const SSH_FAIL = 255;
@@ -206,5 +213,79 @@ describe("failureMessage", () => {
     for (const kind of kinds) {
       expect(failureMessage(kind, "some stderr").length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("tunnel (long-lived ssh -N -L)", () => {
+  test("forwarding refused by the server, while ssh keeps running", () => {
+    const line =
+      "channel 2: open failed: administratively prohibited: open failed";
+    expect(classifyTunnelStderrLine(line)).toBe("forwarding-refused");
+    expect(tunnelFailureRetryable("forwarding-refused")).toBe(false);
+  });
+
+  test("a local listener that cannot be set up ends ssh as forwarding-refused", () => {
+    const stderr =
+      "unix_listener: cannot bind to path /tmp/sg-ssh-x/d0.sock: Permission denied\nCould not request local forwarding.\n";
+    expect(classifyTunnelStderr(stderr)).toBe("forwarding-refused");
+  });
+
+  test("a forward's target refusing one connection is not a session failure", () => {
+    const line = "channel 3: open failed: connect failed: Connection refused";
+    expect(classifyTunnelStderrLine(line)).toBeNull();
+    // …nor does it colour why the session later ended.
+    expect(
+      classifyTunnelStderr(
+        `${line}\nTimeout, server 1.2.3.4 not responding.\n`,
+      ),
+    ).toBe("disconnected");
+  });
+
+  test("a lost session is disconnected, and retryable", () => {
+    for (const stderr of [
+      "Timeout, server 1.2.3.4 not responding.\n",
+      "Connection to 1.2.3.4 closed by remote host.\n",
+      "Connection reset by 1.2.3.4 port 22\n",
+      "client_loop: send disconnect: Broken pipe\n",
+    ]) {
+      expect(classifyTunnelStderr(stderr)).toBe("disconnected");
+    }
+    expect(tunnelFailureRetryable("disconnected")).toBe(true);
+  });
+
+  test("dial failures read as the one-shot kinds", () => {
+    expect(
+      classifyTunnelStderr(
+        "ssh: connect to host 1.2.3.4 port 22: Connection refused\n",
+      ),
+    ).toBe("unreachable");
+    expect(
+      classifyTunnelStderr(
+        "ssh: Could not resolve hostname nope.invalid: nodename nor servname provided, or not known\n",
+      ),
+    ).toBe("dns");
+    expect(
+      classifyTunnelStderr("deploy@1.2.3.4: Permission denied (publickey).\n"),
+    ).toBe("auth");
+    expect(tunnelFailureRetryable("auth")).toBe(false);
+  });
+
+  test("a host-key banner wins over everything", () => {
+    const stderr =
+      "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n@    WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!     @\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\nHost key verification failed.\nConnection closed by 1.2.3.4 port 22\n";
+    expect(classifyTunnelStderr(stderr)).toBe("host-key-mismatch");
+    expect(tunnelFailureRetryable("host-key-mismatch")).toBe(false);
+  });
+
+  test("unmatched stderr stays unknown, with its line as the message", () => {
+    expect(classifyTunnelStderr("something new\n")).toBe("unknown");
+    expect(
+      classifyTunnelStderrLine(
+        "Warning: Permanently added 'x' to the list of known hosts.",
+      ),
+    ).toBeNull();
+    expect(tunnelFailureMessage("unknown", "something new\n")).toBe(
+      "something new",
+    );
   });
 });

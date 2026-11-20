@@ -40,6 +40,84 @@ import { HealthDot } from "./health-dot";
 type SealedRow = SealContributions<HealthReportRow>;
 type SealedStatusRow = Extract<SealedRow, { kind: "status" }>;
 type SealedInfoRow = Extract<SealedRow, { kind: "info" }>;
+type SealedSetRow = Extract<SealedRow, { kind: "set" }>;
+
+/**
+ * One status line of the report: a status row, one item of a row set (its
+ * own line, with its own expand state — the set's parts drawn for its
+ * `rowKey`), or a row set that has no items to show yet (pending or failed:
+ * one line under the set's title, without the per-item parts).
+ */
+export type StatusLine =
+  | { kind: "status"; id: string; row: SealedStatusRow }
+  | {
+      kind: "set-item";
+      id: string;
+      row: SealedSetRow;
+      rowKey: string;
+      title: string;
+    }
+  | { kind: "set-placeholder"; id: string; row: SealedSetRow };
+
+/** A line's contributed parts, already bound to the item they are drawn for. */
+interface LineParts {
+  glance?: (expanded: boolean) => ReactNode;
+  actions?: ReactNode;
+  remedy?: ReactNode;
+  /** The expandable detail; its presence is the chevron. */
+  detail?: () => ReactNode;
+}
+
+function partsOf(line: StatusLine): LineParts {
+  switch (line.kind) {
+    case "status": {
+      const { row } = line;
+      const { glance: Glance, actions: Actions, remedy: Remedy } = row;
+      return {
+        glance: Glance && ((expanded) => <Glance expanded={expanded} />),
+        actions: Actions && <Actions />,
+        remedy: Remedy && <Remedy />,
+        detail:
+          row.component &&
+          (() =>
+            renderIsolated(HealthReport.Row, row as unknown as Contribution)),
+      };
+    }
+    case "set-item": {
+      const { row, rowKey } = line;
+      const { glance: Glance, actions: Actions, remedy: Remedy } = row;
+      return {
+        glance:
+          Glance &&
+          ((expanded) => <Glance expanded={expanded} rowKey={rowKey} />),
+        actions: Actions && <Actions rowKey={rowKey} />,
+        remedy: Remedy && <Remedy rowKey={rowKey} />,
+        detail:
+          row.component &&
+          (() =>
+            renderIsolated(HealthReport.Row, row as unknown as Contribution, {
+              rowKey,
+            })),
+      };
+    }
+    case "set-placeholder":
+      // No item to draw the parts for.
+      return {};
+  }
+}
+
+/**
+ * A line that shows nothing at rest beyond its summary — what `foldQuietRows`
+ * may fold. A `glance` or `actions` are drawn on the line itself, so they keep
+ * it out. A `component` does not count: it is a detail behind the line's own
+ * chevron, still one click away inside the card. Nor does a `remedy`: it is
+ * drawn only while the row is not ok, and a folded row is ok. A set's lines
+ * read the set's declared shape, so a placeholder sits where its items will.
+ */
+export function isPlainLine(line: StatusLine): boolean {
+  const { row } = line;
+  return row.glance === undefined && row.actions === undefined;
+}
 
 /**
  * Contains a crash in a contributor's `glance` / `actions` to that one piece of
@@ -64,35 +142,28 @@ function ContributedPart({
 }
 
 /** The row's trailing controls, boundaried — or nothing when it declares none. */
-function contributedActions(row: SealedRow): ReactNode {
-  const Actions = row.actions;
-  if (!Actions) return null;
-  return (
-    <ContributedPart row={row}>
-      <Actions />
-    </ContributedPart>
-  );
+function contributedActions(row: SealedRow, actions: ReactNode): ReactNode {
+  if (actions === undefined) return null;
+  return <ContributedPart row={row}>{actions}</ContributedPart>;
 }
 
 /**
- * `actions`, followed by the row's `remedy` while the row needs a look
+ * `actions`, followed by the line's `remedy` while it needs a look
  * (`attention` / `critical`) — never while it is fine, which is what lets a row
  * with a remedy still fold into the quiet card.
  */
 function withRemedy(
-  row: SealedStatusRow,
+  row: SealedRow,
   level: ReturnType<typeof levelOf>,
   actions: ReactNode,
+  remedy: ReactNode,
 ): ReactNode {
-  const Remedy = row.remedy;
-  if (!Remedy || (level !== "attention" && level !== "critical"))
+  if (remedy === undefined || (level !== "attention" && level !== "critical"))
     return actions;
   return (
     <>
       {actions}
-      <ContributedPart row={row}>
-        <Remedy />
-      </ContributedPart>
+      <ContributedPart row={row}>{remedy}</ContributedPart>
     </>
   );
 }
@@ -206,20 +277,16 @@ function ExpandTrigger({
  * A row's glance, told whether the row is expanded: read off the row's own
  * `Collapsible`, absent on a row with no detail (never expanded).
  */
-function RowGlance({
-  Glance,
-}: {
-  Glance: NonNullable<SealedStatusRow["glance"]>;
-}) {
+function RowGlance({ glance }: { glance: NonNullable<LineParts["glance"]> }) {
   const expanded = useCollapsibleContext()?.open ?? false;
-  return <Glance expanded={expanded} />;
+  return glance(expanded);
 }
 
-/** The row's name in its current state: the state's own `title`, else the row's. */
-function titleOf(row: SealedStatusRow, status: ReportedStatus): string {
+/** The line's name in its current state: the state's own `title`, else the item's or row's. */
+function titleOf(line: StatusLine, status: ReportedStatus): string {
   if (status !== undefined && "title" in status && status.title !== undefined)
     return status.title;
-  return row.title;
+  return line.kind === "set-item" ? line.title : line.row.title;
 }
 
 /** The summary line; a row not reported yet (or saying nothing) is "Checking…". */
@@ -228,20 +295,69 @@ function summaryOf(status: ReportedStatus): string {
 }
 
 /**
- * A status row: dot, title, summary, optional glance, optional trailing actions.
- * A row that declares a `component` is expandable — the chevron exists exactly
- * when a detail does (detail-sections' rule) — and its detail is mounted only
- * while expanded.
+ * A status line: dot, title, summary, optional glance, optional trailing
+ * actions. A line whose row declares a `component` is expandable — the chevron
+ * exists exactly when a detail does (detail-sections' rule) — and its detail is
+ * mounted only while expanded. A row set's item is drawn exactly like a status
+ * row, its parts told which item they are for.
  */
 export function StatusRowView({
-  row,
+  line,
   status,
 }: {
-  row: SealedStatusRow;
+  line: StatusLine;
   status: ReportedStatus;
 }) {
+  const { row } = line;
   const level = levelOf(status);
-  const Glance = row.glance;
+  const parts = partsOf(line);
+  return (
+    <HealthLineView
+      status={status}
+      title={titleOf(line, status)}
+      glance={
+        parts.glance ? (
+          <ContributedPart row={row}>
+            <RowGlance glance={parts.glance} />
+          </ContributedPart>
+        ) : undefined
+      }
+      actions={withRemedy(
+        row,
+        level,
+        contributedActions(row, parts.actions),
+        parts.remedy,
+      )}
+      detail={parts.detail}
+    />
+  );
+}
+
+/**
+ * One line of the report as it is drawn, given its parts already rendered:
+ * the dot for `status`, `title`, the summary (tinted while it needs a look),
+ * `glance` under it, `actions` trailing, and — when `detail` is given — the
+ * chevron and the detail, mounted only while expanded (`defaultOpen` starts it
+ * so). The report's own lines are drawn through it, so a surface that shows a
+ * row on its own (an exhibit of a contributor's row) is the row, pixel for
+ * pixel — never a lookalike.
+ */
+export function HealthLineView({
+  status,
+  title,
+  glance,
+  actions,
+  detail,
+  defaultOpen = false,
+}: {
+  status: ReportedStatus;
+  title: string;
+  glance?: ReactNode;
+  actions?: ReactNode;
+  detail?: () => ReactNode;
+  defaultOpen?: boolean;
+}) {
+  const level = levelOf(status);
   // The dot at the header's size, so it reads at a glance beside the title.
   // A check that does not apply here is hollow: no status, nothing live.
   const leading = (
@@ -253,36 +369,27 @@ export function StatusRowView({
       )}
     </ControlSizeProvider>
   );
-  const actions = withRemedy(row, level, contributedActions(row));
   const text = (
     <RowText
       leading={leading}
-      title={titleOf(row, status)}
+      title={title}
       summary={summaryOf(status)}
       summaryClassName={SUMMARY_CLASS[level]}
-      extra={
-        Glance ? (
-          <ContributedPart row={row}>
-            <RowGlance Glance={Glance} />
-          </ContributedPart>
-        ) : undefined
-      }
+      extra={glance}
     />
   );
 
-  if (!row.component) {
+  if (!detail) {
     return <StaticRow actions={actions}>{text}</StaticRow>;
   }
   return (
-    <Collapsible>
+    <Collapsible defaultOpen={defaultOpen}>
       <ExpandTrigger actions={actions}>{text}</ExpandTrigger>
       <CollapsibleContent className="p-row">
         {/* Indented by an empty lead box, so the detail starts under the title. */}
         <Stack direction="row" gap="sm" align="start">
           <LeadBox />
-          <Fill>
-            {renderIsolated(HealthReport.Row, row as unknown as Contribution)}
-          </Fill>
+          <Fill>{detail()}</Fill>
         </Stack>
       </CollapsibleContent>
     </Collapsible>
@@ -298,11 +405,11 @@ export function StatusRowView({
  * rendered, each in its own boundary.
  */
 export function QuietRowsView({
-  rows,
+  lines,
   statuses,
   children,
 }: {
-  rows: ReadonlyArray<SealedStatusRow>;
+  lines: ReadonlyArray<StatusLine>;
   statuses: Readonly<Record<string, ReportedStatus>>;
   children: ReactNode;
 }) {
@@ -310,7 +417,7 @@ export function QuietRowsView({
     <ControlSizeProvider size="lg">
       <HealthDot
         level="ok"
-        pulsing={rows.some((row) => isTransitioning(statuses[row.id]))}
+        pulsing={lines.some((line) => isTransitioning(statuses[line.id]))}
       />
     </ControlSizeProvider>
   );
@@ -320,7 +427,7 @@ export function QuietRowsView({
         <RowText
           leading={leading}
           title="System checks"
-          summary={`All ${rows.length} normal`}
+          summary={`All ${lines.length} normal`}
           summaryClassName={SUMMARY_CLASS.ok}
         />
       </ExpandTrigger>
@@ -350,8 +457,12 @@ export function InfoRowView({
 }) {
   const info = useInfo();
   const icon = row.icon;
+  const Actions = row.actions;
   return (
-    <StaticRow className="bg-muted/40" actions={contributedActions(row)}>
+    <StaticRow
+      className="bg-muted/40"
+      actions={contributedActions(row, Actions && <Actions />)}
+    >
       <RowText
         leading={<Icon icon={icon} className="size-4 text-muted-foreground" />}
         title={info.title}

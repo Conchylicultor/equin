@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-deploy-remote-deploy-site-live",
+  "description": "Deploy in the health report's deployed-site row: the deploy in progress and the Deploy button.",
+  "private": true,
+  "version": "0.0.1"
+}

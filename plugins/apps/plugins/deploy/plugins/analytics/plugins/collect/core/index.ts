@@ -197,3 +197,9 @@ export {
   SECTION_REACH_PROP,
 } from "./internal/plugin-id";
 export { ANALYTICS_MIRROR_SET_ID } from "./internal/mirror";
+export {
+  PULSE_MINUTES,
+  VISITORS_NOW_WINDOW_MS,
+  VisitorPulseSchema,
+} from "./internal/pulse";
+export type { VisitorPulse } from "./internal/pulse";

@@ -201,7 +201,11 @@ export type OwnerBootRecord = { pid: number; startedAt: number } & (
  */
 export type ListenSessionName = Extract<
   DbPoolName,
-  "change-feed" | "schema-wait" | "replica-notify"
+  | "change-feed"
+  | "schema-wait"
+  | "replica-notify"
+  | "mirror-log-notify"
+  | "box-link-targets"
 >;
 
 /** What a LISTEN session (`DatabaseDriverImpl.listen`) reports to its opener. */

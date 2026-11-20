@@ -151,8 +151,65 @@ export interface InfoRow extends RowCommon {
   remedy?: never;
 }
 
+/** One item of a row set: a status row of its own, named by its `key`. */
+export interface SetItem {
+  /**
+   * Stable within the set: names the item to the set's `glance` / `component` /
+   * `actions` / `remedy` (as `rowKey`) and keys its status (`${setId}/${key}`).
+   */
+  key: string;
+  /** The item's name ("site.example.com"). A known state's `title` overrides it, as on a status row. */
+  title: string;
+  status: HealthStatus;
+}
+
+/**
+ * What a row set's `useRows` returns on every render: its items, or why there
+ * are none to show yet. Not known yet is a state (`pending`), never an empty
+ * list.
+ */
+export type SetRows =
+  | { kind: "pending" }
+  | { kind: "error"; summary: string }
+  | { kind: "ready"; rows: readonly SetItem[] };
+
+/** What a row set's per-item parts are rendered with: which item. */
+export interface SetItemProps {
+  rowKey: string;
+}
+
+/**
+ * A SET of status rows from one contribution: one row per item of a live list
+ * (one per deployed site). Each item is drawn and merged as an ordinary status
+ * row, where the set sits in the slot order; the parts below are the set's,
+ * told which item they are drawn for (`rowKey`) — one component instance per
+ * item, so a per-item hook inside them is legal.
+ *
+ * `useRows` is called on EVERY render of the report's host, like a status
+ * row's `useStatus`, and once per set: read ONE value that already holds every
+ * item's state. Per-item reads belong in `glance` / `component`, mounted only
+ * while the report is open.
+ *
+ * While `pending` the set is one grey "Checking…" row under `title`; on `error`
+ * one grey row with the summary; `ready` with no items draws nothing.
+ */
+export interface SetRow extends Omit<RowCommon, "actions"> {
+  kind: "set";
+  /** The set's name, drawn on its one row while pending or failed ("Sites"). */
+  title: string;
+  useRows: Hook<() => SetRows>;
+  /** As a status row's `glance`, per item. */
+  glance?: ComponentType<GlanceProps & SetItemProps>;
+  /** As a status row's `component`, per item: its presence gives every item a chevron. */
+  component?: ComponentType<SetItemProps>;
+  /** As a row's `actions`, per item. */
+  actions?: ComponentType<SetItemProps>;
+  /** As a status row's `remedy`, per item: drawn while that item needs a look. */
+  remedy?: ComponentType<SetItemProps>;
+}
+
 /** One contribution to `HealthReport.Row`. */
-export type HealthReportRow = StatusRow | InfoRow;
+export type HealthReportRow = StatusRow | InfoRow | SetRow;
 
 /** The fold of every status row's status — what the dot shows. */
 export interface HealthMerge {

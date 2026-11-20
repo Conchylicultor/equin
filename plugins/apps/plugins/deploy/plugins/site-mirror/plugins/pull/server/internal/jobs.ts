@@ -93,17 +93,22 @@ export async function ensureSiteReplica(
 /**
  * Ask for a pull of one replica: stamps `requested_at` (the status value's
  * "syncing" until the run ends) and enqueues the job — which coalesces with
- * one already pending for the replica.
+ * one already pending for the replica. `runAt` defers it (the box link's
+ * doorbell spacing pulls).
  */
 export async function requestPull(
   deploymentId: string,
   setId: string,
+  opts: { runAt?: Date } = {},
 ): Promise<void> {
   await db
     .update(siteMirrorReplicas)
     .set({ requestedAt: new Date() })
     .where(eq(siteMirrorReplicas.replicaId, replicaIdOf(deploymentId, setId)));
-  await siteMirrorPullJob.enqueue({ deploymentId, setId });
+  await siteMirrorPullJob.enqueue(
+    { deploymentId, setId },
+    opts.runAt === undefined ? undefined : { runAt: opts.runAt },
+  );
 }
 
 /**

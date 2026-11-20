@@ -37,6 +37,26 @@ export const analyticsMirror = defineMirrorSet({
   table's log rows and bumps the source's `epoch` (every replica reconciles).
   A write that bypasses triggers (`session_replication_role = replica`)
   leaves an upsert log row with no table row; the stream throws on it.
+- **The ring** — every log function, and the `TRUNCATE` one, ends with
+  `pg_notify('table_mirror_log', <set id>)` when its statement logged a row
+  (`IF FOUND`; a statement that touched nothing rings nobody; a truncate
+  always rings — the table's set read from a `CASE` generated into
+  `tm_truncated`, so a set change re-creates only that function body, never
+  a trigger). Postgres folds identical payloads within a transaction, so a
+  transaction rings each set at most once, at its commit; a rolled-back one
+  never. The channel is not the replica's `table_mirror` (a replica applied a
+  page). Because db-triggers stamps each function with its DDL's hash, an
+  existing install picks up a changed body at its next boot — no migration.
+  **`onMirrorLogAdvanced(fn: (setId) => void): Promise<unsubscribe>`**
+  (`./server/internal/notify.ts`, modelled on the replica's
+  `onReplicaApplied`) hears it: one `mirror-log-notify` LISTEN session
+  (`DatabaseDriver.listen`) shared by every subscriber while there is one;
+  resolves once the LISTEN is active, so a read made after it misses
+  nothing; rejects, subscribing nothing, when it cannot be opened. A lost
+  session is reopened, and once it is, `fn` is called with EVERY contributed
+  set (a ring may have been missed). A ring carries no data — it is the box
+  link's doorbell (the deploy app's box link); the cursored pull stays the data
+  path.
 - **Identity** (`table_mirror_source`, one row seeded at boot):
   `{ sourceId, systemIdentifier (pg_control_system()), epoch }`, plus the log
   `horizon`. **Fingerprints** (`readTableFingerprints(exec, schema, tables)`):
@@ -79,7 +99,7 @@ caller may ask for less (site-reports' 50 rows a page).
 
 ## Plugin reference
 
-- Description: The table mirror's source half: defineMirrorSet / MirrorSet (tables mirrored together) and NeverMirrored (tables whose rows never leave, refused at module eval and at boot); generated statement-level change-log triggers (one table_mirror_log row per primary key — cascaded deletes, retention and TRUNCATE included); the source identity and per-table fingerprints; the readers — the delta stream paged by a { floor, after } xid8 cursor, a first-sync copy, and reconciliation's key + hash walk and rows by key; and the daily log prune at the 30-day horizon, below which a replica is answered reconcile-required.
+- Description: The table mirror's source half: defineMirrorSet / MirrorSet (tables mirrored together) and NeverMirrored (tables whose rows never leave, refused at module eval and at boot); generated statement-level change-log triggers (one table_mirror_log row per primary key — cascaded deletes, retention and TRUNCATE included — each ringing the table_mirror_log NOTIFY channel with its set id, heard through onMirrorLogAdvanced); the source identity and per-table fingerprints; the readers — the delta stream paged by a { floor, after } xid8 cursor, a first-sync copy, and reconciliation's key + hash walk and rows by key; and the daily log prune at the 30-day horizon, below which a replica is answered reconcile-required.
 - Server:
   - Contributes:
     - `db-trigger-claim` "table-mirror"
@@ -87,6 +107,8 @@ caller may ask for less (site-reports' 50 rows a page).
   - Uses:
     - `database.DatabaseDriver`
     - `database.db`
+    - `database.ListenHandlers`
+    - `database.ListenSession`
     - `database/db-triggers.DbFunctionDdl`
     - `database/db-triggers.DbTriggerClaim`
     - `database/db-triggers.DbTriggerDdl`
@@ -98,6 +120,7 @@ caller may ask for less (site-reports' 50 rows a page).
   - DB schema: `plugins/database/plugins/table-mirror/plugins/source/server/internal/tables.ts`
   - Exports (types):
     - `MirroredTable`
+    - `MirrorLogAdvancedHandler`
     - `MirrorSetDefinition`
     - `MirrorSetSpec`
     - `NeverMirroredSpec`
@@ -111,6 +134,7 @@ caller may ask for less (site-reports' 50 rows a page).
     - `MirrorSet`
     - `mirrorSql`
     - `NeverMirrored`
+    - `onMirrorLogAdvanced`
     - `readMirrorChanges`
     - `readMirrorCopy`
     - `readMirrorKeys`

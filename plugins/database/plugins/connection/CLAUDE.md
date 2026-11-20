@@ -320,6 +320,8 @@ runtimes read, not a slot:
 | `change-feed` | the change-feed LISTEN client | this plugin's `listen-session.ts` (`openListenSession`), opened by `database#machine`'s `DatabaseDriver.listen` for `network/live/change-feed`'s `listener.ts` |
 | `schema-wait` | an `exec` child's LISTEN for its owner's schema stamp, while it waits out a deploy | `DatabaseDriver.listen("schema-wait", …)`, from `database`'s `await-schema-layer.ts` |
 | `replica-notify` | the table mirror's LISTEN for a replica's applied pages | `DatabaseDriver.listen("replica-notify", …)`, from `database/table-mirror/replica`'s `notify.ts` |
+| `mirror-log-notify` | the table mirror's LISTEN for its source log's advances | `DatabaseDriver.listen("mirror-log-notify", …)`, from `database/table-mirror/source`'s `notify.ts` |
+| `box-link-targets` | the box link's LISTEN for a change of what it links (deployments, servers, pinned host keys, stand-in boxes) | `DatabaseDriver.listen("box-link-targets", …)`, from `apps/deploy/box-link/link`'s `targets-notify.ts` |
 | `events-test` | the events-test harness's stand-in worker sessions | `infra/events-test` `crash-recovery.ts`, `superseded.ts`, `queue-lock-no-steal.ts` |
 | `cluster-start` | the embedded cluster's start script's one session (base database, cluster settings), on every start the gateway's supervisor runs — the bound is what lets a wedged-but-bound postmaster fail the start instead of hanging it | `database/embedded` `scripts/start.ts` `ensureClusterState` |
 

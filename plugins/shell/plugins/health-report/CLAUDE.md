@@ -11,7 +11,7 @@ a contribution from the plugin that owns that fact.
 
 ## Contributing a row
 
-Two kinds, and the kind is the whole contract:
+Three kinds, and the kind is the whole contract:
 
 ```ts
 import { HealthReport } from "@plugins/shell/plugins/health-report/web";
@@ -34,6 +34,18 @@ HealthReport.Row({
   icon: MdAccountTree,
   useInfo: useWorktreeIdentity,   // () => { title, summary }
   actions: WorktreeActions,
+});
+
+// A row set: one contribution, one status row per item of a live list.
+HealthReport.Row({
+  kind: "set",
+  id: "sites",
+  title: "Sites",                 // its one row while pending / failed
+  useRows: useSiteRows,           // () => SetRows
+  glance: SitePulse,              // optional, ({ rowKey, expanded })
+  component: SiteDetail,          // optional, ({ rowKey })
+  actions: SiteActions,           // optional, ({ rowKey })
+  remedy: DeploySite,             // optional, ({ rowKey })
 });
 ```
 
@@ -70,6 +82,25 @@ HealthReport.Row({
   `actions` only while the row is `attention` or `critical`. It does not keep
   the row out of the quiet card (see Merge), so a row that is summary-only
   while fine can still offer a fix when it is not.
+- **A row set is N status rows from one contribution** (one per deployed
+  site). `useRows` returns `{ kind: "pending" }`, `{ kind: "error", summary }`
+  or `{ kind: "ready", rows: { key, title, status }[] }` (`SetRows`); it runs
+  all the time, like `useStatus`, and once for the whole set — read ONE value
+  that already holds every item's state. Each item is then an ordinary status
+  row: merged and counted on its own, drawn where the set sits in the slot
+  order, folded like any quiet row, with its own expand state. Its `title` is
+  the item's (a known state's `title` still overrides it). The parts are the
+  set's, told which item they draw (`rowKey`, `SetItemProps`) — one component
+  instance per item, so per-item reads (a live value keyed by the item) go
+  there, mounted only while the report is open. While `pending` the set is
+  one grey "Checking…" row under its `title`; on `error` one grey row with the
+  summary; `ready` with no items draws nothing and does not move the dot. Two
+  items sharing a key crash the set's check.
+- **Show your row on its own with `HealthLineView`** (web barrel): one line
+  drawn from its parts (`status`, `title`, `glance`, `actions`, `detail`,
+  `defaultOpen`) — the very component the report draws each status line and
+  set item through, so an exhibit of a contributor's row
+  (`box-link/site-row`'s `site-row/<state>`) is the row, pixel for pixel.
 - **Point at your own pane from `actions`.** The report has no footer and never
   names a contributor's pane.
 
@@ -115,24 +146,30 @@ quiet ones (`foldQuietRows`). Never by status, so a row keeps its place when it
 turns red (the dot and verdict already say what is wrong). A row carries no
 order number — `defineSlot` would reject one.
 
-The layout order is a read (`useSlotOrder` returns a `ResourceResult`): until
-it is known the open report is a loading state — no verdict (it derives from
-the rows) and no rows, never the rows in raw registration order. A failed
+The The layout order is a read (`useSlotOrder` returns a `ResourceResult`): until
+it is known the open report's body is a loading state — no rows, never the rows
+in raw registration order. The header's verdict is drawn over every status the
+probes have published (the same set the dot merges). A failed
 refresh keeps the last-known order; a first read that fails shows the error
 with Retry. The dot is not gated: the probes are mounted per contribution and
 the merge reads no order.
 
 ## Host mechanics
 
-`HealthReportButton` owns a scoped store (`Record<rowId, HealthStatus>`) and
-mounts one headless probe per status row. Each probe calls its row's hook
-unconditionally (one component per contribution, so every hook call is
-rules-of-hooks clean) and publishes into the store; unmounting removes the
-entry. The dot reads the merge through a selector, so it re-renders only when
+`HealthReportButton` owns a scoped store (`statuses`: `Record<id, HealthStatus>`;
+`sets`: each ready row set's items, in order) and mounts one headless probe per
+status row and row set. Each probe calls its row's hook unconditionally (one
+component per contribution, so every hook call is rules-of-hooks clean) and
+publishes into the store; unmounting removes the entry. A set's probe publishes
+with `withStatusesUnder`, which replaces everything under the set's id — its
+own entry and every `${id}/${key}` — in one write, so a vanished item is
+dropped with it; `reportedStatusesOf` is the one read of what a row feeds the
+merge (the dot, the header). The dot reads the merge through a selector, so it re-renders only when
 what it shows changes.
 
 A probe whose hook throws is caught by its own boundary, which publishes
-`{ state: "unknown", summary: "This check crashed" }` — a crashing check greys
+`{ state: "unknown", summary: "This check crashed" }` (a set: one such row
+under its id, its items dropped) — a crashing check greys
 the dot, never greens it — and files the crash through the error-boundary
 plugin's `boundaryReportSink`, like every other boundary. Each panel row is
 drawn through `renderAsContribution` (slot-render's item middlewares and box:

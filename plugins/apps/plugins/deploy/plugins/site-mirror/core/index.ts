@@ -10,3 +10,9 @@ export {
   mirrorKeysEndpoint,
   mirrorRowsEndpoint,
 } from "./internal/routes";
+export {
+  MIRROR_BOX_SIGNAL_SOURCE,
+  MIRROR_SIGNAL_THROTTLE_MS,
+  MirrorBoxSignalSchema,
+  type MirrorBoxSignal,
+} from "./internal/signal";

@@ -11,12 +11,14 @@ import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Deploy } from "@plugins/apps/plugins/deploy/plugins/shell/web";
 import { opensPane } from "@plugins/primitives/plugins/app-shell/web";
 import { activityPane } from "./panes";
+import { SiteLive } from "@plugins/apps/plugins/deploy/plugins/box-link/plugins/site-row/web";
+import { SiteOpenRunAction } from "./components/site-live-open-run";
 
 export { DeployRunItemActions } from "./slots";
 
 export default {
   description:
-    "The Activity page (/deploy/activity, its sidebar entry): every deploy run across every site as the merged runs surface (RunsDataView) with its own view pills — Recent, Running, Needs approval, Failed. Deployments tab of a site's page: this deployment's durable run ledger (`deploy_runs`) as a live DataView window (`deployRunHistory`, sortable and filterable by the surface's custom columns) — outcome and the leg a failure died on, verb, short commit, pinned release run, duration and relative time, with a failed run's CLI message verbatim. The record beside the in-memory live view, so what happened here survives a backend restart. Owns the row-action slot its children hang a failed run's next step off.",
+    "The Activity page (/deploy/activity, its sidebar entry): every deploy run across every site as the merged runs surface (RunsDataView) with its own view pills — Recent, Running, Needs approval, Failed. Deployments tab of a site's page: this deployment's durable run ledger (`deploy_runs`) as a live DataView window (`deployRunHistory`, sortable and filterable by the surface's custom columns) — outcome and the leg a failure died on, verb, short commit, pinned release run, duration and relative time, with a failed run's CLI message verbatim. The record beside the in-memory live view, so what happened here survives a backend restart. Owns the row-action slot its children hang a failed run's next step off. In the health report's deployed-site row: Open run (the site's Deployments tab) while a deploy runs or after one failed.",
   contributions: [
     Pane.Register({ pane: activityPane }),
     Deploy.Sidebar({
@@ -36,6 +38,8 @@ export default {
       column: "side",
       component: DeployOverviewCard,
     }),
+    // The health report's site row: Open run while a deploy runs or failed.
+    SiteLive.Action({ id: "open-run", component: SiteOpenRunAction }),
   ],
   slots: {
     itemActions: DeployRunItemActions,

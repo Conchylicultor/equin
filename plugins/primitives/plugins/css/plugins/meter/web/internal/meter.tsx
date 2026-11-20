@@ -5,7 +5,8 @@ import {
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 /** The fill's colour: what the reading means, not a colour name. */
-export type MeterTone = "default" | "warning" | "destructive" | "muted";
+export type MeterTone =
+  "default" | "success" | "warning" | "destructive" | "muted";
 
 /** The bar's thickness. */
 export type MeterSize = "default" | "thin";
@@ -38,6 +39,8 @@ const FILL_CLASS: Record<MeterTone, string> = {
   // The accent as it reads on a surface — the palette's text twin of the
   // primary fill, so a deep primary stays visible on a dark surface.
   default: "bg-primary-text",
+  // A reading that is healthy news (a server's load well within its means).
+  success: "bg-success",
   warning: "bg-warning",
   destructive: "bg-destructive",
   // A neutral share: present, but no news either way.

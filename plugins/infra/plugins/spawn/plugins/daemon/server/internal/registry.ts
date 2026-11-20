@@ -25,21 +25,35 @@ export type DaemonWhere = "every-worktree" | "main" | "host-singleton";
  * - `never` — it stays exited until its owner stops (or restarts) it.
  * - `backoff` — respawn after `minMs`, doubling to `maxMs`. An instance that
  *   dies within `rapidExitMs` of its spawn never got going; after
- *   `maxRapidFailures` such deaths in a row the supervisor gives up, loudly.
- *   `healthy` is what resets the counters: `ready` — the instance says so
- *   (`ctx.ready()`, a worker's ready frame); `survival` — it outlived
- *   `rapidExitMs`.
+ *   `maxRapidFailures` such deaths in a row the supervisor gives up, loudly —
+ *   unless `giveUp: "never"`, which keeps respawning at the `maxMs` ceiling
+ *   for as long as the instance is wanted (a link to a remote peer that must
+ *   outlast any outage: the laptop offline for a day is not a reason to stop
+ *   trying). `healthy` is what resets the counters: `ready` — the instance
+ *   says so (`ctx.ready()` from a process's `onSpawn` or a worker's
+ *   `onMessage`); `survival` — it outlived `rapidExitMs`.
  */
 export type DaemonRestart =
   | { kind: "never" }
-  | {
-      kind: "backoff";
-      healthy: "ready" | "survival";
-      minMs?: number;
-      maxMs?: number;
-      rapidExitMs?: number;
+  | (BackoffCommon & {
+      /** Default: give up after `maxRapidFailures` rapid deaths in a row. */
+      giveUp?: "after-rapid-failures";
       maxRapidFailures?: number;
-    };
+    })
+  | (BackoffCommon & {
+      /** Never enter `gave-up`: respawn forever, at most `maxMs` apart. */
+      giveUp: "never";
+      /** Nothing counts toward a give-up that cannot happen. */
+      maxRapidFailures?: never;
+    });
+
+interface BackoffCommon {
+  kind: "backoff";
+  healthy: "ready" | "survival";
+  minMs?: number;
+  maxMs?: number;
+  rapidExitMs?: number;
+}
 
 export interface DaemonSpec<R extends DaemonRestart = DaemonRestart> {
   /** Stable code name, unique per process (`sentinel.sampler`). */
@@ -75,7 +89,25 @@ export interface DaemonSpec<R extends DaemonRestart = DaemonRestart> {
 export type DaemonState =
   "starting" | "running" | "respawning" | "gave-up" | "exited";
 
-/** One supervision transition, in order, as `onState` receives it. */
+/**
+ * How an incarnation's process ended: its exit status, or the signal that
+ * killed it (then `code` is `null` — a signalled process has no status).
+ */
+export interface DaemonExit {
+  code: number | null;
+  signal: string | null;
+}
+
+/**
+ * One supervision transition, in order, as `onState` receives it.
+ *
+ * The transitions an exit causes (`respawning`, `gave-up`, `exited`) carry
+ * `exit`: the process's `{ code, signal }` for the process arm, `null` for an
+ * arm whose end has no exit status (a worker thread; a pid-file follow, which
+ * is not the process's parent). A process arm's stderr lines all arrive
+ * before the transition its exit causes (see `spawnProcess`), so an observer
+ * classifying the stderr of a death has all of it then.
+ */
 export type DaemonTransition =
   | { state: "starting"; at: number }
   | { state: "running"; at: number }
@@ -85,9 +117,21 @@ export type DaemonTransition =
       inMs: number;
       deaths: number;
       lastError: string | null;
+      exit: DaemonExit | null;
     }
-  | { state: "gave-up"; at: number; deaths: number; lastError: string | null }
-  | { state: "exited"; at: number; lastError: string | null }
+  | {
+      state: "gave-up";
+      at: number;
+      deaths: number;
+      lastError: string | null;
+      exit: DaemonExit | null;
+    }
+  | {
+      state: "exited";
+      at: number;
+      lastError: string | null;
+      exit: DaemonExit | null;
+    }
   | { state: "stopped"; at: number };
 
 /** How an instance came to be — and so how its liveness is known. */
@@ -109,7 +153,7 @@ export interface DaemonStartCommon {
   onLog?: (line: string) => void;
 }
 
-export interface ProcessLaunch extends DaemonStartCommon {
+interface ProcessLaunchBase extends DaemonStartCommon {
   /** The command; a function is called at each spawn (respawns included). */
   argv: string[] | (() => string[]);
   env?: Record<string, string | undefined>;
@@ -117,15 +161,44 @@ export interface ProcessLaunch extends DaemonStartCommon {
   /**
    * Each stderr line, while it runs. Omitted → stderr is ignored. stdout is
    * always ignored: a daemon reports through files or channels, not a pipe
-   * someone must keep draining.
+   * someone must keep draining. Every line of an incarnation is delivered
+   * before the transition its exit causes.
    */
   onStderrLine?: (line: string) => void;
 }
 
 export interface WorkerLaunchContext {
-  /** A `ready`-healthy daemon says its spawn came up: counters reset. */
+  /**
+   * A `ready`-healthy daemon says its spawn came up: counters reset, and the
+   * instance is `running`. Ignored once the incarnation has ended, or after
+   * the first call.
+   */
   ready(): void;
 }
+
+/** What a process launch's `onSpawn` gets, once per incarnation. */
+export interface ProcessSpawnContext extends WorkerLaunchContext {
+  /** The incarnation's OS pid. */
+  readonly pid: number;
+}
+
+/**
+ * Right after each spawn (respawns included): where a `ready`-healthy
+ * process daemon starts watching for the sign its incarnation came up (a
+ * socket appearing, a line on stderr) and calls `ctx.ready()`.
+ */
+type OnProcessSpawn = (ctx: ProcessSpawnContext) => void;
+
+/**
+ * A process launch. On a `healthy: "ready"` declaration `onSpawn` is
+ * REQUIRED (tsc) — it is the process arm's only way to say ready, and an
+ * instance that can never say it would sit in `starting` forever.
+ */
+export type ProcessLaunch<R extends DaemonRestart = DaemonRestart> =
+  ProcessLaunchBase &
+    (R extends { healthy: "ready" }
+      ? { onSpawn: OnProcessSpawn }
+      : { onSpawn?: OnProcessSpawn });
 
 export interface WorkerLaunch extends DaemonStartCommon {
   url: URL;
@@ -211,7 +284,20 @@ export interface DaemonInstance {
   stop(): Promise<void>;
 }
 
-export interface WorkerDaemonInstance extends DaemonInstance {
+/** A supervised instance (process or worker arm): this backend is its parent. */
+export interface SupervisedDaemonInstance extends DaemonInstance {
+  /**
+   * Spawn now if no incarnation is alive: skip a pending respawn's wait (a
+   * wake from sleep, a user's Retry), or bring back a `gave-up` / `exited`
+   * instance. The backoff restarts from `minMs` and the rapid-death count
+   * from zero — what was failing before may be fixed now. A live
+   * incarnation (`starting` / `running`) is left alone: never killed.
+   * Throws once the instance is stopped.
+   */
+  respawnNow(): "respawned" | "already-alive";
+}
+
+export interface WorkerDaemonInstance extends SupervisedDaemonInstance {
   /** Post to the current worker; a no-op between incarnations. */
   postMessage(message: unknown): void;
   /**
@@ -224,14 +310,14 @@ export interface WorkerDaemonInstance extends DaemonInstance {
   awaitReply<T>(reply: Promise<T>): Promise<T>;
 }
 
-export interface DaemonDeclBase {
+export interface DaemonDeclBase<R extends DaemonRestart = DaemonRestart> {
   readonly name: string;
   readonly _kind: "daemon";
   readonly _factory: "defineDaemon";
   readonly _doc: { label: string; detail: string };
   register(): void;
   /** Spawn a child process and supervise it. */
-  spawnProcess(opts: ProcessLaunch): DaemonInstance;
+  spawnProcess(opts: ProcessLaunch<R>): SupervisedDaemonInstance;
   /** Spawn a Bun Worker thread and supervise it. */
   spawnWorker(opts: WorkerLaunch): WorkerDaemonInstance;
 }
@@ -249,7 +335,7 @@ export interface UnsupervisedDeclExtras {
  * process it did not parent.
  */
 export type DaemonDecl<R extends DaemonRestart = DaemonRestart> =
-  DaemonDeclBase &
+  DaemonDeclBase<R> &
     (R extends { kind: "never" } ? UnsupervisedDeclExtras : unknown);
 
 /** How a runtime hosts daemons: where they run and who declared them. */
@@ -306,7 +392,8 @@ export function backoffPolicy(restart: DaemonRestart): {
   minMs: number;
   maxMs: number;
   rapidExitMs: number;
-  maxRapidFailures: number;
+  /** When the supervisor gives up: after N rapid deaths in a row, or never. */
+  giveUp: { afterRapidFailures: number } | "never";
 } | null {
   if (restart.kind === "never") return null;
   return {
@@ -314,8 +401,13 @@ export function backoffPolicy(restart: DaemonRestart): {
     minMs: restart.minMs ?? DEFAULT_BACKOFF.minMs,
     maxMs: restart.maxMs ?? DEFAULT_BACKOFF.maxMs,
     rapidExitMs: restart.rapidExitMs ?? DEFAULT_BACKOFF.rapidExitMs,
-    maxRapidFailures:
-      restart.maxRapidFailures ?? DEFAULT_BACKOFF.maxRapidFailures,
+    giveUp:
+      restart.giveUp === "never"
+        ? "never"
+        : {
+            afterRapidFailures:
+              restart.maxRapidFailures ?? DEFAULT_BACKOFF.maxRapidFailures,
+          },
   };
 }
 

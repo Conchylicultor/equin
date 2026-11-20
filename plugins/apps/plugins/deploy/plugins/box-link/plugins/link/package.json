@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-deploy-box-link-link",
+  "description": "Local only: one SSH tunnel per server and one stream client per deployment, the pure link-state reducer, the deploy.box-links and deploy.site-health live values, the side-table of the last state, onBoxSignal / onBoxHello, and the retry endpoint.",
+  "private": true,
+  "version": "0.0.1"
+}

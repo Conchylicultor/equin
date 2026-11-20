@@ -1,7 +1,8 @@
 /**
  * The ONE hermetic OpenSSH invocation. `sshRun` and `sshUpload` are both thin
  * wrappers over `runHermetic`, and differ only in the program name, the
- * trailing positional arguments, and two documented constants.
+ * trailing positional arguments, and two documented constants; a long-lived
+ * `ssh` (a tunnel, `sshTunnelArgv`) is built from the same handle.
  *
  * That is the whole point of this file. The isolation flags below are
  * security-critical — they are what makes "this key reaches this host" a fact
@@ -11,9 +12,11 @@
  * option block, the host-key policy and the failure classification exist once,
  * so `scp` cannot drift from `ssh`.
  *
- * The key is materialized into a `mkdtemp` scratch dir at mode 0600 and the
- * whole dir is `rm -rf`'d in `finally`, the same shape (and the same lifetime
- * discipline) as the existing `ssh-keygen` helper in deploy/servers.
+ * The key is materialized into a `mkdtemp` scratch dir at mode 0600 by
+ * `materializeHermetic`, whose handle owns that dir until `dispose()` — a
+ * one-shot `runHermetic` disposes in `finally`, the same shape (and the same
+ * lifetime discipline) as the existing `ssh-keygen` helper in deploy/servers;
+ * a tunnel holds it for as long as it may respawn.
  */
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { readFile } from "@plugins/packages/plugins/timed-fs/core";
@@ -47,9 +50,14 @@ const CONNECT_TIMEOUT_FRACTION = 0.6;
  */
 const CONNECT_TIMEOUT_CAP_SEC = 15;
 
-/** How long OpenSSH's own `ConnectTimeout` gets, in whole seconds. */
-function connectTimeoutSec(timeoutMs: number): number {
-  const fromBudget = Math.round((timeoutMs * CONNECT_TIMEOUT_FRACTION) / 1000);
+/**
+ * How long OpenSSH's own `ConnectTimeout` gets, in whole seconds. With no
+ * whole-attempt budget (a long-lived `ssh`, which no spawn deadline bounds)
+ * the dial gets the cap.
+ */
+function connectTimeoutSec(budgetMs: number | null): number {
+  if (budgetMs === null) return CONNECT_TIMEOUT_CAP_SEC;
+  const fromBudget = Math.round((budgetMs * CONNECT_TIMEOUT_FRACTION) / 1000);
   return Math.max(1, Math.min(CONNECT_TIMEOUT_CAP_SEC, fromBudget));
 }
 
@@ -67,9 +75,9 @@ function isolationOptions(opts: {
   target: SshTarget;
   keyPath: string;
   knownHostsPath: string;
-  timeoutMs: number;
+  budgetMs: number | null;
 }): string[] {
-  const { target, keyPath, knownHostsPath, timeoutMs } = opts;
+  const { target, keyPath, knownHostsPath, budgetMs } = opts;
   return [
     // Never prompt for anything: no password, no passphrase, no
     // host-key confirmation. A prompt would block on a TTY read forever.
@@ -112,7 +120,7 @@ function isolationOptions(opts: {
     // timeout itself. The handshake past connect is bounded by the spawn
     // deadline below — which is why that deadline exists.
     "-o",
-    `ConnectTimeout=${connectTimeoutSec(timeoutMs)}`,
+    `ConnectTimeout=${connectTimeoutSec(budgetMs)}`,
     "-i",
     keyPath,
     "-o",
@@ -120,6 +128,107 @@ function isolationOptions(opts: {
     "-o",
     `User=${target.user}`,
   ];
+}
+
+/**
+ * A materialized hermetic session: the scratch dir holding the 0600 key and
+ * the pinned (or, in `learn` mode, empty) `known_hosts`, and the one way to
+ * build an OpenSSH-family argv that uses them. The CALLER owns the lifetime:
+ * the dir lives until `dispose()` — a one-shot run disposes in `finally`, a
+ * long-lived `ssh` (a tunnel) when it will never be respawned again.
+ */
+export interface HermeticHandle {
+  /**
+   * The private scratch dir (mode 0700, `mkdtemp`). A caller may put its own
+   * per-session files beside the key — a tunnel's local sockets — and they
+   * go with it on `dispose()`.
+   */
+  readonly dir: string;
+  /** The host the session dials, for the caller's positionals. */
+  readonly host: string;
+  /**
+   * `[program, …isolation options, …extra, …positionals]`. `extra` comes
+   * AFTER the isolation block on purpose: OpenSSH keeps the FIRST value it
+   * reads for an option, so nothing in `extra` can override an isolation
+   * flag. Throws after `dispose()` (the key it names is gone).
+   */
+  argv(
+    program: "ssh" | "scp",
+    extra: readonly string[],
+    positionals: readonly string[],
+  ): string[];
+  /**
+   * The `known_hosts` line `accept-new` learned (`learn` mode), or `null`
+   * when ssh wrote none — see `readLearnedHostKey`.
+   */
+  learnedHostKey(): Promise<string | null>;
+  /** Remove the scratch dir (key included). Idempotent. */
+  dispose(): Promise<void>;
+}
+
+/**
+ * Write `target`'s key and host-key pin into a fresh scratch dir and return
+ * the handle that owns it. A local fault (cannot write the scratch key)
+ * throws, with nothing left behind.
+ *
+ * `budgetMs` is the whole attempt's wall-clock budget, from which OpenSSH's
+ * `ConnectTimeout` is derived (see `CONNECT_TIMEOUT_FRACTION`); omit it for a
+ * long-lived `ssh` that no deadline bounds, and the dial gets the cap.
+ */
+export async function materializeHermetic(
+  target: SshTarget,
+  opts: { budgetMs?: number } = {},
+): Promise<HermeticHandle> {
+  const dir = await mkdtemp(join(tmpdir(), "sg-ssh-"));
+  const keyPath = join(dir, "id");
+  const knownHostsPath = join(dir, "known_hosts");
+  try {
+    await Promise.all([
+      // OpenSSH refuses a private key readable by anyone else, and requires the
+      // file to end in a newline.
+      writeFile(keyPath, ensureTrailingNewline(target.privateKey), {
+        mode: 0o600,
+      }),
+      // In `learn` mode this starts empty and ssh appends what it accepts.
+      writeFile(
+        knownHostsPath,
+        target.hostKey.mode === "pinned"
+          ? ensureTrailingNewline(target.hostKey.knownHostsLine)
+          : "",
+        { mode: 0o600 },
+      ),
+    ]);
+  } catch (err) {
+    await rm(dir, { recursive: true, force: true });
+    throw err;
+  }
+  const options = isolationOptions({
+    target,
+    keyPath,
+    knownHostsPath,
+    budgetMs: opts.budgetMs ?? null,
+  });
+  let disposed = false;
+  return {
+    dir,
+    host: target.host,
+    argv(program, extra, positionals) {
+      if (disposed) {
+        throw new Error(
+          `[ssh] the hermetic session in ${dir} was disposed — its key is gone; materialize a new one`,
+        );
+      }
+      return [program, ...options, ...extra, ...positionals];
+    },
+    learnedHostKey: async () =>
+      target.hostKey.mode === "learn"
+        ? await readLearnedHostKey(knownHostsPath)
+        : null,
+    async dispose() {
+      disposed = true;
+      await rm(dir, { recursive: true, force: true });
+    },
+  };
 }
 
 /** A successful hermetic invocation. `stdout` is `""` for programs that say nothing. */
@@ -131,7 +240,8 @@ export interface HermeticSuccess {
 }
 
 /**
- * Run one hermetic OpenSSH-family program against `target`.
+ * Run one hermetic OpenSSH-family program against `target`, on a session
+ * materialized for this run and disposed in `finally`.
  *
  * Never throws for a remote-side problem — an unreachable host, a rejected key
  * and a changed host key are all expected states of a machine the user is still
@@ -156,29 +266,9 @@ export async function runHermetic(opts: {
 }): Promise<HermeticSuccess | SshFailure> {
   const { program, target, positionals, ownFailureExit } = opts;
   const timeoutMs = target.timeoutMs ?? opts.defaultTimeoutMs;
-  const dir = await mkdtemp(join(tmpdir(), "sg-ssh-"));
+  const session = await materializeHermetic(target, { budgetMs: timeoutMs });
   try {
-    const keyPath = join(dir, "id");
-    const knownHostsPath = join(dir, "known_hosts");
-    await Promise.all([
-      // OpenSSH refuses a private key readable by anyone else, and requires the
-      // file to end in a newline.
-      writeFile(keyPath, ensureTrailingNewline(target.privateKey), { mode: 0o600 }),
-      // In `learn` mode this starts empty and ssh appends what it accepts.
-      writeFile(
-        knownHostsPath,
-        target.hostKey.mode === "pinned"
-          ? ensureTrailingNewline(target.hostKey.knownHostsLine)
-          : "",
-        { mode: 0o600 },
-      ),
-    ]);
-
-    const argv = [
-      program,
-      ...isolationOptions({ target, keyPath, knownHostsPath, timeoutMs }),
-      ...positionals(target.host),
-    ];
+    const argv = session.argv(program, [], positionals(session.host));
 
     const result = await spawnCaptured(argv, {
       timeoutMs,
@@ -193,8 +283,7 @@ export async function runHermetic(opts: {
         ok: true,
         stdout: result.stdout,
         stderr: result.stderr,
-        learnedHostKey:
-          target.hostKey.mode === "learn" ? await readLearnedHostKey(knownHostsPath) : null,
+        learnedHostKey: await session.learnedHostKey(),
       };
     }
 
@@ -209,7 +298,7 @@ export async function runHermetic(opts: {
       exitCode,
     };
   } finally {
-    await rm(dir, { recursive: true, force: true });
+    await session.dispose();
   }
 }
 

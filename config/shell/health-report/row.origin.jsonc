@@ -1,4 +1,4 @@
-// @hash e6860999fb54
+// @hash 2c2a135ed9e2
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,6 +7,7 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
+    "apps.deploy.box-link.site-row:sites",
     "build:build-out-of-memory",
     "conversations.runtime-sdk:claude-code",
     "database.query-deadline:database",

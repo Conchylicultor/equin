@@ -13,7 +13,7 @@
  * what makes `classify.test.ts` able to pin every branch against verbatim
  * OpenSSH samples.
  */
-import type { SshFailureKind } from "../../core";
+import type { SshFailureKind, SshTunnelFailureKind } from "../../core";
 
 /**
  * `ssh` reports ALL of its own failures — DNS, connect, auth, host key — as
@@ -28,11 +28,24 @@ export const SSH_OWN_FAILURE_EXIT = 255;
  * most security-relevant thing to never mislabel, and `timeout`'s substrings
  * would otherwise catch text that a more specific kind should own.
  */
-const STDERR_PATTERNS: ReadonlyArray<{ kind: SshFailureKind; patterns: readonly string[] }> = [
-  {
-    kind: "host-key-mismatch",
-    patterns: ["host key verification failed", "remote host identification has changed"],
-  },
+interface PatternRow<K extends string> {
+  kind: K;
+  patterns: readonly string[];
+}
+
+/** Only kinds both vocabularies have: the tunnel table reuses these rows. */
+type SharedKind = Extract<SshFailureKind, SshTunnelFailureKind>;
+
+const HOST_KEY_ROW: PatternRow<SharedKind> = {
+  kind: "host-key-mismatch",
+  patterns: [
+    "host key verification failed",
+    "remote host identification has changed",
+  ],
+};
+
+/** Every shared row after the host-key one, in order. */
+const DIAL_ROWS: ReadonlyArray<PatternRow<SharedKind>> = [
   {
     kind: "dns",
     patterns: [
@@ -58,6 +71,11 @@ const STDERR_PATTERNS: ReadonlyArray<{ kind: SshFailureKind; patterns: readonly 
     kind: "auth",
     patterns: ["permission denied (publickey", "too many authentication failures"],
   },
+];
+
+const STDERR_PATTERNS: ReadonlyArray<PatternRow<SshFailureKind>> = [
+  HOST_KEY_ROW,
+  ...DIAL_ROWS,
 ];
 
 /**
@@ -142,4 +160,114 @@ function firstMeaningfulLine(stderr: string): string {
     if (trimmed !== "") return trimmed;
   }
   return "";
+}
+
+// ---------------------------------------------------------------------------
+// Long-lived ssh (a tunnel)
+
+/**
+ * The tunnel table: the one-shot rows, plus the two kinds only a long-lived
+ * `ssh -N -L …` has. `forwarding-refused` sits right after the host-key row —
+ * it is as final, and its lines must never be read as a network kind.
+ * `disconnected` goes last: its wording ("Connection closed by …") also ends
+ * a dial that a more specific row explains.
+ */
+const TUNNEL_PATTERNS: ReadonlyArray<PatternRow<SshTunnelFailureKind>> = [
+  HOST_KEY_ROW,
+  {
+    kind: "forwarding-refused",
+    patterns: [
+      // The server forbids forwarding for this user (AllowTcpForwarding no,
+      // a `restrict` key option). A local forward is only asked for when a
+      // connection arrives, so this comes while ssh keeps running.
+      "administratively prohibited",
+      // The local listener could not be set up; with ExitOnForwardFailure ssh
+      // exits on it.
+      "could not request local forwarding",
+      "unix_listener:",
+      "cannot listen to path",
+    ],
+  },
+  ...DIAL_ROWS,
+  {
+    kind: "disconnected",
+    patterns: [
+      // ServerAliveCountMax keep-alives went unanswered.
+      "not responding",
+      // "Connection to <host> closed by remote host." (a live session) and
+      // "Connection closed by <host> port 22" (dropped before auth).
+      "closed by remote host",
+      "connection closed by",
+      "connection reset by",
+      "broken pipe",
+    ],
+  },
+];
+
+/**
+ * A forward's TARGET refusing one connection — `channel 3: open failed:
+ * connect failed: Connection refused` — is not a failure of the ssh session:
+ * the tunnel is up, nothing listens on the remote port. The local client
+ * sees that as its own connection closing (and tells "the peer is not
+ * running" apart there); read here, its "Connection refused" would pass for
+ * `unreachable`. So such lines are not evidence of anything.
+ */
+function isForwardTargetLine(lowerLine: string): boolean {
+  return lowerLine.includes("open failed: connect failed");
+}
+
+function matchTunnel(lowerText: string): SshTunnelFailureKind | null {
+  for (const { kind, patterns } of TUNNEL_PATTERNS) {
+    if (patterns.some((p) => lowerText.includes(p))) return kind;
+  }
+  return null;
+}
+
+/**
+ * Classify ONE stderr line of a long-lived `ssh`, as it arrives — `null` when
+ * the line names no failure (a warning, a forward's target refusing one
+ * connection). What a supervisor reads to stop a tunnel that can never work
+ * (a non-retryable kind, `tunnelFailureRetryable`) while ssh itself keeps
+ * running: a refused forward is reported per connection, never by an exit.
+ */
+export function classifyTunnelStderrLine(
+  line: string,
+): SshTunnelFailureKind | null {
+  const lower = line.toLowerCase();
+  if (isForwardTargetLine(lower)) return null;
+  return matchTunnel(lower);
+}
+
+/**
+ * Classify why a long-lived `ssh` ended, from all of its stderr: the most
+ * specific kind any line names (table order), `unknown` when none does —
+ * the raw stderr is then the diagnosis, never guessed at.
+ */
+export function classifyTunnelStderr(stderr: string): SshTunnelFailureKind {
+  const evidence = stderr
+    .toLowerCase()
+    .split("\n")
+    .filter((line) => !isForwardTargetLine(line))
+    .join("\n");
+  return matchTunnel(evidence) ?? "unknown";
+}
+
+/** The one-line summary of a tunnel failure — {@link failureMessage}'s twin. */
+export function tunnelFailureMessage(
+  kind: SshTunnelFailureKind,
+  stderr: string,
+): string {
+  switch (kind) {
+    case "dns":
+    case "unreachable":
+    case "timeout":
+    case "auth":
+    case "host-key-mismatch":
+    case "unknown":
+      return failureMessage(kind, stderr);
+    case "forwarding-refused":
+      return "The server refused the port forward — forwarding is disabled for this user, or the local socket could not be bound.";
+    case "disconnected":
+      return "The SSH session was lost — the server stopped answering or closed the connection.";
+  }
 }

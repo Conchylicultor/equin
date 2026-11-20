@@ -108,6 +108,19 @@ export async function markServerBoxIsThisInstance(
 }
 
 /**
+ * The servers whose box is THIS instance (marked with
+ * {@link markServerBoxIsThisInstance}): read through this instance's own
+ * gateway, never over SSH. The box link reads it to link a demo's stand-in
+ * box without a tunnel. Its table is `deploy_host_stand_ins`.
+ */
+export async function standInServerIds(): Promise<ReadonlySet<string>> {
+  const rows = await db
+    .select({ serverId: deployHostStandIns.serverId })
+    .from(deployHostStandIns);
+  return new Set(rows.map((r) => r.serverId));
+}
+
+/**
  * Ask a deployment's box one host-only route and parse its answer with
  * `schema`. Resolves the deployment's server and pinned SSH target (an
  * unverified server is refused, never trusted), then curls

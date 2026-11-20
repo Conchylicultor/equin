@@ -27,6 +27,8 @@ export type {
 // deploy app runs them on this computer's copy of a site's tables
 // (site-mirror) — collect's own SQL, wherever the tables are.
 export { runAnalyticsQuery } from "./internal/report";
+// The pulse (visitors now, today, the last hour per minute), run the same way.
+export { readVisitorPulse } from "./internal/pulse";
 export {
   countVisits,
   readVisitGroups,

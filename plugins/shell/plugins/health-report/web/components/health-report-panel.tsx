@@ -19,25 +19,64 @@ import {
   type ReportedStatus,
 } from "../../core";
 import { HealthReport } from "../slots";
-import { HealthStore } from "../internal/store";
+import {
+  HealthStore,
+  reportedStatusesOf,
+  setItemId,
+  type HealthReportState,
+} from "../internal/store";
 import { HealthDot } from "./health-dot";
-import { InfoRowView, QuietRowsView, StatusRowView } from "./health-row";
+import {
+  InfoRowView,
+  isPlainLine,
+  QuietRowsView,
+  StatusRowView,
+  type StatusLine,
+} from "./health-row";
 
 type SealedRow = SealContributions<HealthReportRow>;
+type SealedInfoRow = Extract<SealedRow, { kind: "info" }>;
 
 /**
- * A row that shows nothing at rest beyond its summary — what `foldQuietRows`
- * may fold. A `glance` or `actions` are drawn on the row itself, so they keep
- * it out. A `component` does not count: it is a detail behind the row's own
- * chevron, still one click away inside the card. Nor does a `remedy`: it is
- * drawn only while the row is not ok, and a folded row is ok.
+ * One line of the report, as `sortRows` / `foldQuietRows` arrange it: an info
+ * row, or a status line — a row set already expanded into its items, so the
+ * fold treats each item as an ordinary row.
  */
-function isPlain(row: SealedRow): boolean {
-  return (
-    row.kind === "status" &&
-    row.glance === undefined &&
-    row.actions === undefined
-  );
+type ReportLine =
+  | { kind: "info"; id: string; row: SealedInfoRow }
+  | { kind: "status"; id: string; line: StatusLine };
+
+function statusLine(line: StatusLine): ReportLine {
+  return { kind: "status", id: line.id, line };
+}
+
+/** The report's lines, in the order the rows are given: each row set where it sits, as its items. */
+function linesOf(
+  rows: readonly SealedRow[],
+  state: HealthReportState,
+): ReportLine[] {
+  return rows.flatMap((row): ReportLine[] => {
+    switch (row.kind) {
+      case "info":
+        return [{ kind: "info", id: row.id, row }];
+      case "status":
+        return [statusLine({ kind: "status", id: row.id, row })];
+      case "set": {
+        const items = state.sets[row.id];
+        if (items === undefined)
+          return [statusLine({ kind: "set-placeholder", id: row.id, row })];
+        return items.map((item) =>
+          statusLine({
+            kind: "set-item",
+            id: setItemId(row.id, item.key),
+            row,
+            rowKey: item.key,
+            title: item.title,
+          }),
+        );
+      }
+    }
+  });
 }
 
 /**
@@ -47,21 +86,23 @@ function isPlain(row: SealedRow): boolean {
  * the plugin that contributed it rather than the report.
  */
 function ContributedRow({
-  row,
+  line,
   statuses,
 }: {
-  row: SealedRow;
+  line: ReportLine;
   statuses: Readonly<Record<string, ReportedStatus>>;
 }) {
-  return renderAsContribution(
-    HealthReport.Row,
-    row,
-    row.kind === "status" ? (
-      <StatusRowView row={row} status={statuses[row.id]} />
-    ) : (
-      <InfoRowView row={row} useInfo={row.useInfo} />
-    ),
-  );
+  return line.kind === "status"
+    ? renderAsContribution(
+        HealthReport.Row,
+        line.line.row,
+        <StatusRowView line={line.line} status={statuses[line.id]} />,
+      )
+    : renderAsContribution(
+        HealthReport.Row,
+        line.row,
+        <InfoRowView row={line.row} useInfo={line.row.useInfo} />,
+      );
 }
 
 /**
@@ -90,7 +131,7 @@ function ContributedRow({
  */
 export function HealthReportHeader() {
   const order = useSlotOrder(HealthReport.Row);
-  const statuses = HealthStore.useStore();
+  const state = HealthStore.useStore();
   const rows =
     order.status === "ready"
       ? order.data
@@ -99,9 +140,9 @@ export function HealthReportHeader() {
         : undefined;
   const statusList =
     rows === undefined
-      ? Object.values(statuses)
+      ? Object.values(state.statuses)
       : rows.flatMap((row) =>
-          row.kind === "status" ? [statuses[row.id]] : [],
+          row.kind === "info" ? [] : reportedStatusesOf(state, row),
         );
   // The same dot as the action bar's: an ambient row (the machine busy) is
   // shown as it is in its own row and named by the verdict, but never
@@ -148,11 +189,16 @@ export function HealthReportPanel() {
 
 /** The report once its rows' order is known — see {@link HealthReportPanel}. */
 function HealthReportPanelReady({ rows }: { rows: readonly SealedRow[] }) {
-  const statuses = HealthStore.useStore();
-  const statusOf = (row: SealedRow) =>
-    row.kind === "status" ? statuses[row.id] : undefined;
+  const state = HealthStore.useStore();
+  const { statuses } = state;
+  const statusOf = (line: ReportLine) =>
+    line.kind === "status" ? statuses[line.id] : undefined;
+  const isPlain = (line: ReportLine) =>
+    line.kind === "status" && isPlainLine(line.line);
   // An `absent` row has nothing to say here: it is not drawn at all.
-  const shown = rows.filter((row) => statusOf(row)?.state !== "absent");
+  const shown = linesOf(rows, state).filter(
+    (line) => statusOf(line)?.state !== "absent",
+  );
   const items = foldQuietRows(sortRows(shown), statusOf, isPlain);
 
   return (
@@ -166,19 +212,23 @@ function HealthReportPanelReady({ rows }: { rows: readonly SealedRow[] }) {
             item.kind === "row" ? (
               <ContributedRow
                 key={item.row.id}
-                row={item.row}
+                line={item.row}
                 statuses={statuses}
               />
             ) : (
               <QuietRowsView
                 key="quiet"
-                rows={item.rows.flatMap((row) =>
-                  row.kind === "status" ? [row] : [],
+                lines={item.rows.flatMap((line) =>
+                  line.kind === "status" ? [line.line] : [],
                 )}
                 statuses={statuses}
               >
-                {item.rows.map((row) => (
-                  <ContributedRow key={row.id} row={row} statuses={statuses} />
+                {item.rows.map((line) => (
+                  <ContributedRow
+                    key={line.id}
+                    line={line}
+                    statuses={statuses}
+                  />
                 ))}
               </QuietRowsView>
             ),

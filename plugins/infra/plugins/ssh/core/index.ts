@@ -3,5 +3,9 @@
 // `node:fs` / the spawn primitive. The client half of the plugin is this and
 // nothing else — running ssh is `server/` only.
 
-export { SshFailureKindSchema } from "./failure-kind";
-export type { SshFailureKind } from "./failure-kind";
+export {
+  SshFailureKindSchema,
+  SshTunnelFailureKindSchema,
+  tunnelFailureRetryable,
+} from "./failure-kind";
+export type { SshFailureKind, SshTunnelFailureKind } from "./failure-kind";

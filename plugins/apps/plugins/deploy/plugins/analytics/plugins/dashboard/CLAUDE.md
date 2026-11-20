@@ -45,6 +45,39 @@ the one rule `clickRow` checks before it adds or replaces a filter (a row that
 would not fit is disabled with the reason). A test pins the worst case under
 the limit.
 
+## The pulse
+
+`deploy-analytics.pulse` (`deploymentPulse`, `core/internal/pulse.ts`; params
+`deploymentId`) — a deployment's visitors now / today / the last hour per
+minute, for the site row's Visitors section. Served exactly like the report
+(`server/internal/pulse-served.ts`): collect's own `readVisitorPulse` inside
+`readSiteMirror(deploymentId, "analytics", …)` as of `sourceNow`, pushed by
+`onSiteMirrorApplied` (throttled to one a second), refused `missing` for a
+deleted deployment. The answer is `pulse` (collect's `VisitorPulse` with
+`kind`) or `not-copied` — never zeros standing in for a copy that is not
+there. Read with `useAnalyticsPulse(deploymentId)` (`web/internal`): a
+`ResourceResult` of that union.
+
+## In the health report's site row
+
+This plugin draws the visitors in [`box-link/site-row`](../../../box-link/plugins/site-row/CLAUDE.md)'s
+row (`web/components/site-visitors.tsx`), for a deployment that ships the
+collector (`useShipsAnalytics`):
+
+- `SiteLive.Glance` **visitors-now** — "7 visitors now" on the title line;
+  dimmed while the link is stale (`siteFreshness`), "—" while the box is not
+  answering (down / unreachable / refused); nothing until the pulse is known
+  (its block says why).
+- `SiteLive.Section` **visitors** — "312 today", then every `SiteVisitors.Note`
+  (this plugin's slot: a note after the count, `{ deploymentId, stale }` —
+  inbox's "2 new messages"), the last hour as sixty bars (the newest solid,
+  grey once stale) and its freshness under the right end ("now · synced live"
+  / "synced 4m ago"). Not copied yet is a loading block ("Copying…"), never
+  zero.
+
+Both carry an `exhibit` drawing the same view from a fixture pulse (the
+prototype's hour) for the row's exhibit states.
+
 ## When the section shows
 
 `useShipsAnalytics` asks host-query's `useDeploymentShips` (over
@@ -103,19 +136,24 @@ Run with `./equin test plugins/apps/plugins/deploy/plugins/analytics/plugins/das
 
 ## Plugin reference
 
-- Description: Analytics tab of a site's page, shown only when the deployment's composition ships the collect plugin: range and comparison controls, KPI tiles choosing a trend line with a dashed previous period, ranked Pages / Sources / Locations / Devices / Events panels whose rows filter the whole dashboard (one filter on ranges past the raw window), and what one visit records. Reads the report computed from this computer's copy of the site's tables (pushed as the copy syncs), under the copy's freshness line; loading until a first copy is in place, an explicit state for a refusal or a failed read. Serves a deployment's analytics report: collect's own runAnalyticsQuery run on this computer's copy of the site's analytics tables (site-mirror's readSiteMirror, as of the box's clock at the last page synced), pushed on each page the copy applies — report, refused, or not-copied while no whole first copy is in place (rendered as loading).
+- Description: Analytics tab of a site's page, shown only when the deployment's composition ships the collect plugin: range and comparison controls, KPI tiles choosing a trend line with a dashed previous period, ranked Pages / Sources / Locations / Devices / Events panels whose rows filter the whole dashboard (one filter on ranges past the raw window), and what one visit records. In the health report's deployed-site row: visitors now on its title line and the Visitors block (today with its SiteVisitors.Note notes, the last hour as a sparkline with its freshness). Reads the report computed from this computer's copy of the site's tables (pushed as the copy syncs), under the copy's freshness line; loading until a first copy is in place, an explicit state for a refusal or a failed read. Serves a deployment's analytics report: collect's own runAnalyticsQuery run on this computer's copy of the site's analytics tables (site-mirror's readSiteMirror, as of the box's clock at the last page synced), pushed on each page the copy applies — report, refused, or not-copied while no whole first copy is in place (rendered as loading); and its pulse (deploy-analytics.pulse: visitors now, today and the last hour per minute, collect's readVisitorPulse on the same copy, as of the same clock).
 - Web:
+  - Slots: `SiteVisitors.Note`
+  - Slot contributors: `SiteVisitors.Note` ← `apps.deploy.site-messages.inbox`
   - Contributes:
+    - `SiteLive.Glance` "visitors-now" → `VisitorsNow`
+    - `SiteLive.Section` "visitors" → `VisitorsSection`
     - `SiteTabs.View` "Analytics" → `AnalyticsSection`
     - `SiteOverview.Card` "traffic" → `TrafficCard`
     - `SiteOverview.Card` "top" → `TopCards`
     - `SiteOverview.Card` "owner-devices" → `OwnerDevicesCard`
-  - Uses: 42 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 53 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/deploy/box-link/site-row` ×8
     - `apps/deploy/deployments` ×6
     - `apps/deploy/host-query` ×4
+    - `primitives/css/ui-kit` ×3
     - `primitives/css/coords` ×2
     - `primitives/css/text` ×2
-    - `primitives/css/ui-kit` ×2
     - `primitives/kept-state` ×2
     - `primitives/link-gesture` ×2
     - `apps/deploy/site-mirror/pull.MirrorFreshness`
@@ -139,11 +177,20 @@ Run with `./equin test plugins/apps/plugins/deploy/plugins/analytics/plugins/das
     - `primitives/icon-button.IconButton`
     - `primitives/link-gesture/new-tab.NewTabLink`
     - `primitives/loading.Loading`
+    - `primitives/relative-time.formatRelativeTime`
+    - `primitives/slot-render.defineRenderSlot`
     - `ui/icons.Icon`
+  - Exports (types):
+    - `SiteVisitorsNote`
+    - `SiteVisitorsNoteProps`
+  - Exports (values): `SiteVisitors`
 - Server:
-  - Contributes: `resource.declare` "deploy-analytics.report"
+  - Contributes:
+    - `resource.declare` "deploy-analytics.pulse"
+    - `resource.declare` "deploy-analytics.report"
   - Uses:
     - `apps/deploy/analytics/collect.analyticsMirrorTables`
+    - `apps/deploy/analytics/collect.readVisitorPulse`
     - `apps/deploy/analytics/collect.runAnalyticsQuery`
     - `apps/deploy/deployments._deployDeployments`
     - `apps/deploy/site-mirror/pull.onSiteMirrorApplied`
@@ -151,17 +198,23 @@ Run with `./equin test plugins/apps/plugins/deploy/plugins/analytics/plugins/das
     - `database.db`
     - `database/table-mirror/replica.tableMirrorReplicas`
     - `network/live.serveValue`
-  - Resources: `deploy-analytics.report` (push, notified)
+  - Resources:
+    - `deploy-analytics.pulse` (push, notified)
+    - `deploy-analytics.report` (push, notified)
 - Core:
   - Uses:
     - `apps/deploy/analytics/collect.AnalyticsFilter`
     - `apps/deploy/analytics/collect.AnalyticsQueryResultSchema`
     - `apps/deploy/analytics/collect.AnalyticsQuerySchema`
+    - `apps/deploy/analytics/collect.VisitorPulseSchema`
     - `network/live.liveValue`
     - `network/live/canonical-params.canonicalJson`
-  - Exports (types): `DeploymentAnalyticsResult`
+  - Exports (types):
+    - `DeploymentAnalyticsResult`
+    - `DeploymentPulse`
   - Exports (values):
     - `deploymentAnalytics`
+    - `deploymentPulse`
     - `filtersFit`
 - Cross-plugin:
   - Uses tokens:
@@ -174,11 +227,14 @@ Run with `./equin test plugins/apps/plugins/deploy/plugins/analytics/plugins/das
     - `ui/tokens/color-palette --popover`
     - `ui/tokens/color-palette --popover-foreground`
     - `ui/tokens/color-palette --primary`
+    - `ui/tokens/color-palette --strong-foreground`
     - `ui/tokens/color-palette --success`
     - `ui/tokens/density --control-height-xs`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-weight-semibold`
+  - Imported by: `apps/deploy/site-messages/inbox`
 - Test helpers:
   - Web: `@plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/web/testing`
     - `metrics`

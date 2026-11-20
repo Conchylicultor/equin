@@ -148,7 +148,11 @@ function policyWords(d: DaemonSnapshot): string {
     p.healthy === "ready"
       ? "healthy once it signals ready"
       : `healthy once it outlives ${p.rapidExitMs / 1000} s`;
-  return `Backoff ${p.minMs / 1000}–${p.maxMs / 1000} s; gives up after ${p.maxRapidFailures} exits within ${p.rapidExitMs / 1000} s of spawn; ${healthy}`;
+  const giveUp =
+    p.giveUp === "never"
+      ? "never gives up"
+      : `gives up after ${p.giveUp.afterRapidFailures} exits within ${p.rapidExitMs / 1000} s of spawn`;
+  return `Backoff ${p.minMs / 1000}–${p.maxMs / 1000} s; ${giveUp}; ${healthy}`;
 }
 
 /** How liveness is known — a property of how its instances were started, so

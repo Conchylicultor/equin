@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-deploy-box-link-site-row",
+  "description": "The health report's deployed-site rows: one row per deployment from deploy.site-health, its body and footer drawn from the SiteLive.Glance / Section / Action render slots each owning plugin contributes to.",
+  "private": true,
+  "version": "0.0.1"
+}

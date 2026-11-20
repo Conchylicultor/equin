@@ -1,4 +1,4 @@
-// @hash e6860999fb54
+// @hash 2c2a135ed9e2
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -30,6 +30,8 @@
     "database.query-deadline:database",
     // The server's own work.
     "debug.queue-health:job-queue",
+    // The sites this computer deployed, one row each: the servers beyond this one.
+    "apps.deploy.box-link.site-row:sites",
     // About the whole machine, not the server you are on.
     "debug.sentinel.health-row:machine-watcher",
     // The machine's disk and file system, as the host monitor outside the app sees them.

@@ -4,6 +4,9 @@ import { HealthReport } from "./slots";
 import { HealthReportButton } from "./components/health-report-button";
 
 export { HealthReport } from "./slots";
+// One line of the report drawn from its parts: what an exhibit of a
+// contributor's row renders, so it is the row itself, never a lookalike.
+export { HealthLineView } from "./components/health-row";
 export type {
   HealthInfo,
   HealthMark,
@@ -11,6 +14,10 @@ export type {
   HealthState,
   HealthStatus,
   InfoRow,
+  SetItem,
+  SetItemProps,
+  SetRow,
+  SetRows,
   StatusRow,
 } from "../core";
 

@@ -21,6 +21,7 @@ import {
   stopOnCodeAdopted,
   type DaemonInstance,
   type DaemonTransition,
+  type ProcessSpawnContext,
 } from "./registry";
 
 // The supervision loop, driven with real child processes and Bun Workers: a
@@ -183,6 +184,234 @@ describe("spawnProcess", () => {
     expect(() => decl.spawnProcess({ instance: "dup", argv: sleeper })).toThrow(
       /already running/,
     );
+  });
+});
+
+describe("spawnProcess: exit status", () => {
+  const decl = defineDaemon({
+    name: "test.process-exit",
+    description: "A test child whose exits are read.",
+    startedBy: "on-demand",
+    where: "every-worktree",
+    restart: { kind: "backoff", healthy: "survival", minMs: 10, maxMs: 20 },
+  });
+  decl.register();
+
+  test("an exit carries { code, signal }, after every stderr line", async () => {
+    const r = recorder();
+    const events: string[] = [];
+    const inst = decl.spawnProcess({
+      instance: "code",
+      argv: [
+        process.execPath,
+        "-e",
+        "process.stderr.write('one\\ntwo\\n'); process.exit(3)",
+      ],
+      onStderrLine: (line) => events.push(`line:${line}`),
+      onState: (t) => {
+        if (t.state === "respawning") events.push("respawning");
+        r.onState(t);
+      },
+    });
+    live.push(inst);
+    await r.waitFor((s) => s.some((t) => t.state === "respawning"));
+    const t = r.states.find((x) => x.state === "respawning");
+    if (t?.state !== "respawning") throw new Error("unreachable");
+    expect(t.exit).toEqual({ code: 3, signal: null });
+    expect(events.slice(0, 3)).toEqual(["line:one", "line:two", "respawning"]);
+  });
+
+  test("a signalled exit has no code, only the signal", async () => {
+    const r = recorder();
+    const inst = decl.spawnProcess({
+      instance: "signal",
+      argv: sleeper,
+      onState: r.onState,
+    });
+    live.push(inst);
+    if (inst.pid === null) throw new Error("no pid");
+    process.kill(inst.pid, "SIGKILL");
+    await r.waitFor((s) => s.some((t) => t.state === "respawning"));
+    const t = r.states.find((x) => x.state === "respawning");
+    if (t?.state !== "respawning") throw new Error("unreachable");
+    expect(t.exit).toEqual({ code: null, signal: "SIGKILL" });
+  });
+});
+
+describe("spawnProcess: healthy ready", () => {
+  const decl = defineDaemon({
+    name: "test.process-ready",
+    description: "A test child that says when it is up.",
+    startedBy: "on-demand",
+    where: "every-worktree",
+    restart: { kind: "backoff", healthy: "ready", minMs: 10, maxMs: 20 },
+  });
+  decl.register();
+
+  test("onSpawn's ctx.ready() moves it from starting to running", async () => {
+    const r = recorder();
+    const spawned: { ctx: ProcessSpawnContext | null } = { ctx: null };
+    const inst = decl.spawnProcess({
+      instance: "later",
+      argv: [
+        process.execPath,
+        "-e",
+        "process.stderr.write('up\\n'); setInterval(() => {}, 1000)",
+      ],
+      onSpawn: (c) => {
+        spawned.ctx = c;
+      },
+      // The sign it came up: a line, read after the spawn returned.
+      onStderrLine: (line) => {
+        if (line === "up") spawned.ctx?.ready();
+      },
+      onState: r.onState,
+    });
+    live.push(inst);
+    expect(inst.state).toBe("starting");
+    expect(spawned.ctx?.pid).toBe(inst.pid ?? undefined);
+    await r.waitFor((s) => s.some((t) => t.state === "running"));
+    expect(r.states.map((t) => t.state)).toEqual(["starting", "running"]);
+    expect(inst.state).toBe("running");
+  });
+
+  test("ready() called inside onSpawn is not overwritten by the pre-ready state", () => {
+    const r = recorder();
+    const inst = decl.spawnProcess({
+      instance: "at-once",
+      argv: sleeper,
+      onSpawn: (c) => c.ready(),
+      onState: r.onState,
+    });
+    live.push(inst);
+    expect(inst.state).toBe("running");
+    expect(r.states.map((t) => t.state)).toEqual(["starting", "running"]);
+  });
+
+  test("a ready launch without onSpawn is a type error, and refused at runtime", () => {
+    const call = () =>
+      // @ts-expect-error — onSpawn is required on a healthy: "ready" declaration.
+      decl.spawnProcess({ instance: "no-signal", argv: sleeper });
+    expect(call).toThrow(/needs `onSpawn`/);
+    expect(
+      listDaemons()
+        .find((d) => d.name === "test.process-ready")
+        ?.instances.some((i) => i.instance === "no-signal"),
+    ).toBe(false);
+  });
+});
+
+describe("spawnProcess: giveUp never", () => {
+  const decl = defineDaemon({
+    name: "test.process-never-give-up",
+    description: "A test child that is respawned forever.",
+    startedBy: "on-demand",
+    where: "every-worktree",
+    restart: {
+      kind: "backoff",
+      healthy: "survival",
+      minMs: 5,
+      maxMs: 10,
+      giveUp: "never",
+    },
+  });
+  decl.register();
+
+  test("rapid deaths past the default limit keep respawning", async () => {
+    const r = recorder();
+    const inst = decl.spawnProcess({
+      instance: "crash",
+      argv: crasher,
+      onState: r.onState,
+      onLog: r.onLog,
+    });
+    live.push(inst);
+    await r.waitFor(
+      (s) => s.filter((t) => t.state === "respawning").length >= 8,
+      30_000,
+    );
+    expect(r.states.some((t) => t.state === "gave-up")).toBe(false);
+    const last = r.states.findLast((t) => t.state === "respawning");
+    if (last?.state !== "respawning") throw new Error("unreachable");
+    // The wait stays at the ceiling.
+    expect(last.inMs).toBe(10);
+    expect(last.deaths).toBeGreaterThanOrEqual(8);
+  }, 30_000);
+
+  test("maxRapidFailures has no meaning beside giveUp never (tsc)", () => {
+    expect(() =>
+      defineDaemon({
+        name: "test.process-never-give-up-typed",
+        description: "Never registered: only its type is checked.",
+        startedBy: "on-demand",
+        where: "every-worktree",
+        restart: {
+          kind: "backoff",
+          healthy: "survival",
+          giveUp: "never",
+          // @ts-expect-error — a give-up count beside giveUp: "never".
+          maxRapidFailures: 3,
+        },
+      }),
+    ).not.toThrow();
+  });
+});
+
+describe("respawnNow", () => {
+  const decl = defineDaemon({
+    name: "test.process-respawn-now",
+    description: "A test child respawned on request.",
+    startedBy: "on-demand",
+    where: "every-worktree",
+    // A wait no test sits through: only respawnNow can bring it back in time.
+    restart: {
+      kind: "backoff",
+      healthy: "survival",
+      minMs: 60_000,
+      maxMs: 120_000,
+    },
+  });
+  decl.register();
+
+  test("skips a pending respawn's wait", async () => {
+    const r = recorder();
+    const inst = decl.spawnProcess({
+      instance: "skip",
+      argv: sleeper,
+      onState: r.onState,
+      onLog: r.onLog,
+    });
+    live.push(inst);
+    const firstPid = inst.pid;
+    if (firstPid === null) throw new Error("no pid");
+    process.kill(firstPid, "SIGKILL");
+    await r.waitFor((s) => s.some((t) => t.state === "respawning"));
+    expect(inst.state).toBe("respawning");
+    expect(inst.pid).toBeNull();
+    expect(inst.respawnNow()).toBe("respawned");
+    expect(inst.state).toBe("running");
+    expect(inst.pid).not.toBeNull();
+    expect(inst.pid).not.toBe(firstPid);
+    // The cancelled timer does not spawn a second incarnation later.
+    const snap = listDaemons()
+      .find((d) => d.name === "test.process-respawn-now")
+      ?.instances.find((i) => i.instance === "skip");
+    expect(snap?.restarts).toBe(1);
+  });
+
+  test("leaves a live incarnation alone", () => {
+    const inst = decl.spawnProcess({ instance: "alive", argv: sleeper });
+    live.push(inst);
+    const pid = inst.pid;
+    expect(inst.respawnNow()).toBe("already-alive");
+    expect(inst.pid).toBe(pid);
+    expect(pid !== null && pidAlive(pid)).toBe(true);
+  });
+
+  test("throws once the instance is stopped", async () => {
+    const inst = decl.spawnProcess({ instance: "gone", argv: sleeper });
+    await inst.stop();
+    expect(() => inst.respawnNow()).toThrow(/after stop\(\)/);
   });
 });
 

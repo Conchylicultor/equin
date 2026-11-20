@@ -53,6 +53,7 @@ plugin ships on the box, and SSH must not.
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/analytics/collect`
+    - `apps/deploy/box-link/box`
     - `apps/deploy/deploy-secrets`
     - `apps/deploy/host-query`
     - `apps/deploy/site-messages/intake`

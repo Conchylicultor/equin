@@ -32,3 +32,57 @@ export const SshFailureKindSchema = z.enum([
 ]);
 
 export type SshFailureKind = z.infer<typeof SshFailureKindSchema>;
+
+/**
+ * Why a long-lived `ssh` (a tunnel: `-N` and local forwards, no remote
+ * command) failed or is failing, read from its stderr.
+ *
+ * Its own vocabulary rather than more members of {@link SshFailureKindSchema}:
+ * a one-shot run can never report a refused forward or a dropped session, and
+ * a tunnel can never report `command-failed` (it runs none) — sharing one enum
+ * would make every consumer of either handle a kind that cannot happen.
+ */
+export const SshTunnelFailureKindSchema = z.enum([
+  "dns",
+  "unreachable",
+  "timeout",
+  "auth",
+  "host-key-mismatch",
+  /**
+   * A forward could not be set up or was refused: the local socket could not
+   * be bound, or the server forbids TCP forwarding for this user
+   * (`administratively prohibited`). Retrying cannot fix it.
+   */
+  "forwarding-refused",
+  /**
+   * An established session was lost: keep-alives unanswered (`Timeout, server
+   * … not responding`), the peer closed or reset it, the pipe broke.
+   */
+  "disconnected",
+  /** Unclassified — carries raw stderr, never silently absorbed. */
+  "unknown",
+]);
+
+export type SshTunnelFailureKind = z.infer<typeof SshTunnelFailureKindSchema>;
+
+/**
+ * Whether respawning the tunnel can fix a failure of this kind. A rejected
+ * key, a changed host key and a forbidden forward need the user to act;
+ * respawning would only hammer the host with the same refused attempt. The
+ * network kinds pass on their own; `unknown` is retried (with backoff) and
+ * stays visible as what it is.
+ */
+export function tunnelFailureRetryable(kind: SshTunnelFailureKind): boolean {
+  switch (kind) {
+    case "auth":
+    case "host-key-mismatch":
+    case "forwarding-refused":
+      return false;
+    case "dns":
+    case "unreachable":
+    case "timeout":
+    case "disconnected":
+    case "unknown":
+      return true;
+  }
+}

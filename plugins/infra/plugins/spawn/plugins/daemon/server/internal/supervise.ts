@@ -9,12 +9,14 @@ import {
   releaseInstance,
   setState,
   type AttachOptions,
+  type DaemonExit,
   type DaemonInstance,
   type DaemonStartCommon,
   type DaemonTransition,
   type SpawnedCode,
   type DetachedLaunch,
   type ProcessLaunch,
+  type SupervisedDaemonInstance,
   type WorkerDaemonInstance,
   type WorkerLaunch,
 } from "./registry";
@@ -41,6 +43,15 @@ function daemonScopeHost(): ReturnType<typeof unprobedScopeHost> {
 
 /** How long a stopped child gets after SIGTERM before SIGKILL. */
 const STOP_KILL_AFTER_MS = 5_000;
+
+/**
+ * How long a process's exit waits for its stderr to close, so every line is
+ * delivered before the exit's transition. The pipe closes with the child
+ * unless a grandchild inherited it and lives on — a process we do not
+ * control, hence a bound rather than an unbounded wait: past it the exit is
+ * reported and the late lines still arrive, after it.
+ */
+const STDERR_DRAIN_AFTER_EXIT_MS = 1_000;
 type InstanceRec = ReturnType<typeof claimInstance>;
 
 /** What one incarnation looks like to the supervisor, whatever it runs on. */
@@ -54,10 +65,11 @@ interface Incarnation {
 
 /**
  * Spawn one incarnation. `onExit` is called exactly once when it ends, with a
- * reason a person reads ("exited with code 1", the worker's error).
+ * reason a person reads ("exited with code 1", the worker's error) and the
+ * process's exit status (`null` for a worker).
  */
 type Spawner = (hooks: {
-  onExit: (reason: string) => void;
+  onExit: (reason: string, exit: DaemonExit | null) => void;
   ready: () => void;
 }) => Incarnation;
 
@@ -99,9 +111,9 @@ function defaultLog(line: string): void {
 
 /**
  * The ONE supervision loop: spawn, watch for the exit, respawn with a doubling
- * backoff, and give up loudly after too many rapid deaths. Both arms with an
- * exit event (process, worker) run through it, so the policy cannot drift
- * between them.
+ * backoff, and give up loudly after too many rapid deaths (unless the policy
+ * says `giveUp: "never"`). Both arms with an exit event (process, worker) run
+ * through it, so the policy cannot drift between them.
  */
 function supervise(
   state: DeclState,
@@ -109,7 +121,7 @@ function supervise(
   common: DaemonStartCommon,
   spawn: Spawner,
   backoffOverride?: { minMs: number; maxMs: number },
-): { stop(): Promise<void> } {
+): { stop(): Promise<void>; respawnNow(): "respawned" | "already-alive" } {
   const policy = backoffPolicy(state.spec.restart);
   const minMs = backoffOverride?.minMs ?? policy?.minMs ?? 0;
   const maxMs = backoffOverride?.maxMs ?? policy?.maxMs ?? 0;
@@ -137,21 +149,29 @@ function supervise(
     spawnedAt = Date.now();
     readyThisSpawn = false;
     let ended = false;
+    // `ready()` may be called inside `spawn` (a process's `onSpawn` that
+    // finds its sign already there): the state it sets must land after the
+    // pre-ready state below, not be overwritten by it.
+    let spawning = true;
+    const becomeRunning = (): void => {
+      setState(state, rec, "running");
+      emit({ state: "running", at: Date.now() });
+    };
     const incarnation = spawn({
-      onExit: (reason) => {
+      onExit: (reason, exit) => {
         if (ended) return;
         ended = true;
         if (current === incarnation) current = null;
-        onExit(reason);
+        onExit(reason, exit);
       },
       ready: () => {
         if (ended || readyThisSpawn) return;
         readyThisSpawn = true;
         markHealthy();
-        setState(state, rec, "running");
-        emit({ state: "running", at: Date.now() });
+        if (!spawning) becomeRunning();
       },
     });
+    spawning = false;
     current = incarnation;
     rec.info.pid = incarnation.pid;
     rec.info.spawnedAt = new Date(spawnedAt);
@@ -162,13 +182,15 @@ function supervise(
     if (policy?.healthy !== "ready") {
       setState(state, rec, "running");
       if (rec.info.restarts === 0) emit({ state: "running", at: Date.now() });
+    } else if (readyThisSpawn && !ended) {
+      becomeRunning();
     } else {
       // Still `starting` (first spawn) or `respawning` until ready().
       setState(state, rec, rec.info.restarts === 0 ? "starting" : "respawning");
     }
   };
 
-  const onExit = (reason: string): void => {
+  const onExit = (reason: string, exit: DaemonExit | null): void => {
     rec.info.pid = null;
     rec.info.spawnedAt = null;
     rec.code = null;
@@ -178,7 +200,7 @@ function supervise(
     closeRun(state, rec, "failed", reason);
     if (policy === null) {
       setState(state, rec, "exited");
-      emit({ state: "exited", at: Date.now(), lastError });
+      emit({ state: "exited", at: Date.now(), lastError, exit });
       log(`${label(state, rec)} exited: ${reason}. It is not restarted.`);
       return;
     }
@@ -189,17 +211,27 @@ function supervise(
     lastError = reason;
     rapidFailures = rapid ? rapidFailures + 1 : 0;
     deaths += 1;
-    if (rapidFailures >= policy.maxRapidFailures) {
+    if (
+      policy.giveUp !== "never" &&
+      rapidFailures >= policy.giveUp.afterRapidFailures
+    ) {
       setState(state, rec, "gave-up");
-      emit({ state: "gave-up", at: Date.now(), deaths, lastError });
+      emit({ state: "gave-up", at: Date.now(), deaths, lastError, exit });
       log(
-        `${label(state, rec)} died ${String(policy.maxRapidFailures)} times within ${String(policy.rapidExitMs)}ms of spawn — giving up. It is NOT running. Last error: ${reason}`,
+        `${label(state, rec)} died ${String(policy.giveUp.afterRapidFailures)} times within ${String(policy.rapidExitMs)}ms of spawn — giving up. It is NOT running. Last error: ${reason}`,
       );
       return;
     }
     const inMs = backoffMs;
     setState(state, rec, "respawning");
-    emit({ state: "respawning", at: Date.now(), inMs, deaths, lastError });
+    emit({
+      state: "respawning",
+      at: Date.now(),
+      inMs,
+      deaths,
+      lastError,
+      exit,
+    });
     log(
       `${label(state, rec)} exited (${reason}) — respawning in ${String(inMs)}ms`,
     );
@@ -216,6 +248,26 @@ function supervise(
   start();
 
   return {
+    respawnNow() {
+      if (stopping) {
+        throw new Error(
+          `[daemon] ${label(state, rec)}: respawnNow() after stop() — the instance is gone; start a new one`,
+        );
+      }
+      if (current !== null) return "already-alive";
+      if (respawnTimer !== null) {
+        clearTimeout(respawnTimer);
+        respawnTimer = null;
+      }
+      // Asked for on purpose (a wake, a Retry): what kept failing may be
+      // fixed, so the next death waits `minMs` again, not the ceiling.
+      backoffMs = minMs;
+      rapidFailures = 0;
+      log(`${label(state, rec)} respawned on request`);
+      rec.info.restarts += 1;
+      start();
+      return "respawned";
+    },
     async stop() {
       if (stopping) return;
       stopping = true;
@@ -238,25 +290,31 @@ function supervise(
 
 /**
  * Drain a child's stream line by line for its whole life. Fire-and-forget: it
- * ends when the child exits and the stream closes.
+ * ends when the child exits and the stream closes — then `onEnd` runs (after
+ * the last line; also when the read failed, whose error still surfaces).
  */
 function pumpLines(
   stream: ReadableStream<Uint8Array>,
   onLine: (line: string) => void,
+  onEnd?: () => void,
 ): void {
   // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- drains a long-lived child's output for its whole lifetime: I/O-bound, not main-thread CPU; a bg span would stay open as long as the child lives.
   void (async () => {
-    const decoder = new TextDecoder();
-    let buffer = "";
-    // Cast: the DOM lib's ReadableStream lacks the async-iterator declaration
-    // Bun provides at runtime.
-    for await (const chunk of stream as unknown as AsyncIterable<Uint8Array>) {
-      buffer += decoder.decode(chunk, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() ?? "";
-      for (const line of lines) if (line.length > 0) onLine(line);
+    try {
+      const decoder = new TextDecoder();
+      let buffer = "";
+      // Cast: the DOM lib's ReadableStream lacks the async-iterator declaration
+      // Bun provides at runtime.
+      for await (const chunk of stream as unknown as AsyncIterable<Uint8Array>) {
+        buffer += decoder.decode(chunk, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) if (line.length > 0) onLine(line);
+      }
+      if (buffer.length > 0) onLine(buffer);
+    } finally {
+      onEnd?.();
     }
-    if (buffer.length > 0) onLine(buffer);
   })();
 }
 
@@ -271,26 +329,63 @@ function exitReason(code: number | null, signal: string | null): string {
 export function spawnProcessIn(
   state: DeclState,
   opts: ProcessLaunch,
-): DaemonInstance {
+): SupervisedDaemonInstance {
+  // tsc requires `onSpawn` on a ready-healthy declaration's launch; a caller
+  // holding the widened types gets the same refusal here, before any spawn.
+  if (
+    state.spec.restart.kind === "backoff" &&
+    state.spec.restart.healthy === "ready" &&
+    opts.onSpawn === undefined
+  ) {
+    throw new Error(
+      `[daemon] ${state.spec.name}: a \`healthy: "ready"\` process launch needs \`onSpawn\` — it is the only way the process arm can say ready`,
+    );
+  }
   const rec = claimInstance(state, opts.instance, "process", null);
-  const sup = supervise(state, rec, opts, ({ onExit }) => {
+  const sup = supervise(state, rec, opts, ({ onExit, ready }) => {
     const argv = typeof opts.argv === "function" ? opts.argv() : opts.argv;
+    const onLine = opts.onStderrLine;
+    // The exit's transition comes after the last stderr line: an exit seen
+    // while stderr is still open waits for its end (or the drain bound).
+    let stderrOpen = false;
+    let pendingExit: (() => void) | null = null;
+    let drainBound: ReturnType<typeof setTimeout> | null = null;
+    const flushExit = (): void => {
+      if (drainBound !== null) clearTimeout(drainBound);
+      drainBound = null;
+      const report = pendingExit;
+      pendingExit = null;
+      report?.();
+    };
     const proc = Bun.spawn(argv, {
       cwd: opts.cwd,
       env: opts.env,
       stdin: "ignore",
       stdout: "ignore",
-      stderr: opts.onStderrLine === undefined ? "ignore" : "pipe",
+      stderr: onLine === undefined ? "ignore" : "pipe",
       onExit: (_p, code, signalCode) => {
-        onExit(
-          exitReason(code, signalCode === null ? null : String(signalCode)),
-        );
+        const exit: DaemonExit = {
+          code: signalCode === null ? code : null,
+          signal: signalCode === null ? null : String(signalCode),
+        };
+        pendingExit = () => {
+          onExit(exitReason(exit.code, exit.signal), exit);
+        };
+        if (!stderrOpen) {
+          flushExit();
+          return;
+        }
+        drainBound = setTimeout(flushExit, STDERR_DRAIN_AFTER_EXIT_MS);
       },
     });
-    const onLine = opts.onStderrLine;
     if (onLine !== undefined && proc.stderr instanceof ReadableStream) {
-      pumpLines(proc.stderr, onLine);
+      stderrOpen = true;
+      pumpLines(proc.stderr, onLine, () => {
+        stderrOpen = false;
+        flushExit();
+      });
     }
+    opts.onSpawn?.({ pid: proc.pid, ready });
     return {
       pid: proc.pid,
       code: processCode(argv),
@@ -306,7 +401,10 @@ export function spawnProcessIn(
       },
     };
   });
-  return instanceHandle(state, rec, sup.stop);
+  // Assigned onto the handle, not spread: its `pid` / `state` are getters.
+  return Object.assign(instanceHandle(state, rec, sup.stop), {
+    respawnNow: sup.respawnNow,
+  });
 }
 
 export function spawnWorkerIn(
@@ -342,7 +440,7 @@ export function spawnWorkerIn(
       // supervision point.
       w.addEventListener("close", () => {
         if (worker === w) worker = null;
-        onExit(lastError ?? "worker exited");
+        onExit(lastError ?? "worker exited", null);
       });
       opts.onSpawn?.(w);
       return {
@@ -371,6 +469,7 @@ export function spawnWorkerIn(
       return handle.state;
     },
     stop: handle.stop,
+    respawnNow: sup.respawnNow,
     postMessage(message: unknown) {
       worker?.postMessage(message);
     },
@@ -429,7 +528,8 @@ function followPidFile(
     if (rec.run === null) openRun(state, rec);
     closeRun(state, rec, "failed", reason);
     setState(state, rec, "exited");
-    emit({ state: "exited", at: Date.now(), lastError: reason });
+    // Not the process's parent: no exit status to report.
+    emit({ state: "exited", at: Date.now(), lastError: reason, exit: null });
     // Nothing can follow a final exit: stop watching.
     if (final) held.release();
   };

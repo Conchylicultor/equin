@@ -77,10 +77,10 @@ The menu-bar helper's `LEGACY_PORT` is its one declared exemption.
     - `renderGatewayPortRecord`
     - `servedGatewayPort`
 - Cross-plugin:
-  - Imported by: 38 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 39 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×7
+    - `apps` ×6
     - `framework` ×6
-    - `apps` ×5
     - `infra` ×5
     - `conversations` ×3
     - `auth` ×2

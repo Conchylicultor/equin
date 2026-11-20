@@ -39,6 +39,7 @@ import {
   readMirrorRows,
 } from "./read";
 import { tableMirrorMarks } from "./tables";
+import { MIRROR_LOG_CHANNEL } from "./triggers";
 
 // The source half against a real Postgres: the generated triggers, the
 // readers' cursor and bounds, the horizon, and the key + hash walk.
@@ -506,5 +507,97 @@ describe("never mirrored", () => {
     expect(() => assertMirrorSetsAllowed([set, set], [])).toThrow(
       /contributed twice/,
     );
+  });
+});
+
+describe("the mirror-log NOTIFY", () => {
+  const P3 = "00000000-0000-4000-8000-000000000003";
+  let listener: Client;
+  const heardPayloads: string[] = [];
+
+  beforeAll(async () => {
+    listener = new Client({ connectionString: t.connectionString });
+    await listener.connect();
+    listener.on("notification", (n) => {
+      if (n.channel === MIRROR_LOG_CHANNEL) heardPayloads.push(n.payload ?? "");
+    });
+    await listener.query(`LISTEN ${MIRROR_LOG_CHANNEL}`);
+  });
+
+  afterAll(async () => {
+    await listener.end();
+  });
+
+  /** Run `statements` (one transaction per call), then what the listener heard. */
+  async function heard(statements: string): Promise<string[]> {
+    await listener.query(`SELECT 1`); // drains an earlier statement's notices
+    heardPayloads.length = 0;
+    await db.execute(sql.raw(statements));
+    await listener.query(`SELECT 1`); // drains pending notifications
+    return [...heardPayloads];
+  }
+
+  test("an insert rings the set, once per transaction whatever it touched", async () => {
+    expect(
+      await heard(`BEGIN;
+        INSERT INTO tm_parent (id, name, at, secret) VALUES ('${P3}', 'three', now(), 's');
+        INSERT INTO tm_child VALUES ('n1', '${P3}', '/n1'), ('n2', '${P3}', '/n2');
+        COMMIT;`),
+    ).toEqual(["tm_test"]);
+  });
+
+  test("an update rings, a key moved by it included", async () => {
+    expect(
+      await heard(`UPDATE tm_child SET path = '/n1b' WHERE id = 'n1'`),
+    ).toEqual(["tm_test"]);
+    expect(
+      await heard(`UPDATE tm_child SET id = 'n1moved' WHERE id = 'n1'`),
+    ).toEqual(["tm_test"]);
+  });
+
+  test("a statement that changed no row rings nobody", async () => {
+    expect(
+      await heard(`UPDATE tm_child SET path = '/x' WHERE id = 'no-such-row'`),
+    ).toEqual([]);
+    expect(
+      await heard(`DELETE FROM tm_child WHERE id = 'no-such-row'`),
+    ).toEqual([]);
+  });
+
+  test("a delete rings", async () => {
+    expect(await heard(`DELETE FROM tm_child WHERE id = 'n2'`)).toEqual([
+      "tm_test",
+    ]);
+  });
+
+  test("a cascaded delete rings (the parent's and the children's triggers fold to one)", async () => {
+    // A child left alone, so only the cascade can log it.
+    await db.execute(
+      sql.raw(`INSERT INTO tm_child VALUES ('n3', '${P3}', '/n3')`),
+    );
+    expect(await heard(`DELETE FROM tm_parent WHERE id = '${P3}'`)).toEqual([
+      "tm_test",
+    ]);
+    const logged = await db.execute(
+      sql.raw(
+        `SELECT deleted FROM table_mirror_log WHERE tbl = 'tm_child' AND pk = '{"id": "n3"}'`,
+      ),
+    );
+    expect(logged.rows).toEqual([{ deleted: true }]);
+  });
+
+  test("a truncate rings", async () => {
+    await db.execute(
+      sql.raw(`INSERT INTO tm_pair VALUES ('2026-11-19', 'n', 1)`),
+    );
+    expect(await heard(`TRUNCATE tm_pair`)).toEqual(["tm_test"]);
+  });
+
+  test("a rolled-back transaction rings nobody", async () => {
+    expect(
+      await heard(`BEGIN;
+        INSERT INTO tm_pair VALUES ('2026-11-19', 'rb', 1);
+        ROLLBACK;`),
+    ).toEqual([]);
   });
 });

@@ -9,7 +9,7 @@ div), each with its own height, track colour and fill.
 <Meter
   value={0.51}                 // 0..1, clamped when drawn (over 1 draws full)
   label="Week usage"           // aria-label (required)
-  tone="default"               // default (accent) | warning | destructive | muted
+  tone="default"               // default (accent) | success | warning | destructive | muted
   size="default"               // default (5px) | thin (3px)
   marker={0.32}                // optional target / pace tick
   markerLabel="An even pace through the week"
@@ -18,7 +18,8 @@ div), each with its own height, track colour and fill.
 ```
 
 - **Tone is what the reading means**, not a colour: `default` is the accent as
-  text (`primary-text`, readable on any surface), `warning` amber,
+  text (`primary-text`, readable on any surface), `success` green (a healthy
+  reading), `warning` amber,
   `destructive` coral, `muted` for a neutral share. A caller maps its own
   levels onto it (`UsageLevel` → tone).
 - **Width is the container's.** The meter is `w-full`; size it with layout
@@ -59,10 +60,13 @@ Exhibit: `meter/gallery`.
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --primary-text`
+    - `ui/tokens/color-palette --success`
     - `ui/tokens/color-palette --warning`
   - Imported by:
     - `apps/browser/webview`
     - `apps/chord/song-index`
+    - `apps/deploy/box-link/site-row`
+    - `apps/deploy/remote-deploy/site-live`
     - `apps/file-explorer/places`
     - `apps/sonata/playback-history`
     - `conversations/runtime-sdk`

@@ -15,6 +15,7 @@ export interface CollectedEntry {
 export const exhibitsEntries: CollectedEntry[] = [
   { pluginPath: "active-data/plugins/go", id: "active-data.go", loader: () => import("@plugins/active-data/plugins/go/exhibits"), dependsOn: [] },
   { pluginPath: "apps/plugins/deploy/plugins/analytics/plugins/sessions", id: "apps.deploy.analytics.sessions", loader: () => import("@plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/exhibits"), dependsOn: [] },
+  { pluginPath: "apps/plugins/deploy/plugins/box-link/plugins/site-row", id: "apps.deploy.box-link.site-row", loader: () => import("@plugins/apps/plugins/deploy/plugins/box-link/plugins/site-row/exhibits"), dependsOn: [] },
   { pluginPath: "apps/plugins/isle/plugins/dev", id: "apps.isle.dev", loader: () => import("@plugins/apps/plugins/isle/plugins/dev/exhibits"), dependsOn: ["primitives/plugins/css/plugins/ui-kit"] },
   { pluginPath: "apps/plugins/website/plugins/demos/plugins/workspace", id: "apps.website.demos.workspace", loader: () => import("@plugins/apps/plugins/website/plugins/demos/plugins/workspace/exhibits"), dependsOn: [] },
   { pluginPath: "build", id: "build", loader: () => import("@plugins/build/exhibits"), dependsOn: [] },

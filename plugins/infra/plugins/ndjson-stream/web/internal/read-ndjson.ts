@@ -9,6 +9,7 @@ import {
   type WriteEndpoint,
 } from "@plugins/infra/plugins/endpoints/core";
 import type { Transport } from "@plugins/primitives/plugins/networking/web";
+import { ndjsonFrames } from "../../shared/ndjson-lines";
 
 // Async generator yielding one parsed JSON frame per line, over the caller's
 // transport (`useTransport()`), so a stream inside a scoped subtree never
@@ -56,17 +57,10 @@ export async function* readNdjson<
       body ?? `HTTP ${res.status}`,
     );
   }
-  const reader = res.body!.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() ?? "";
-    for (const line of lines) {
-      if (line.trim()) yield JSON.parse(line) as Record<string, unknown>;
-    }
+  if (res.body === null) {
+    throw new Error(`${endpoint.route}: the streamed response has no body`);
+  }
+  for await (const frame of ndjsonFrames(res.body)) {
+    yield frame as Record<string, unknown>;
   }
 }

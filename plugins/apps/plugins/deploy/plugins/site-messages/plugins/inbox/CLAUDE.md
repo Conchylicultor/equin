@@ -4,7 +4,8 @@ The site page's **Messages** tab (and the Overview's messages card and the
 tab's badge): what visitors sent through the deployed site's contact form
 ([`intake`](../intake/CLAUDE.md)) — every message, read from this computer's
 copy of the site's `site_messages` ([`site-mirror`](../../../site-mirror/CLAUDE.md),
-the intake's `site_messages` mirror set). It stores nothing of its own.
+the intake's `site_messages` mirror set). The only thing it stores is how far
+the user has read each site's messages (*New messages* below).
 
 - **Read**: `siteMessagesInbox` (`deploy-site-messages.inbox`,
   `core/internal/inbox.ts`), a live window collection — newest first, 50 rows
@@ -39,6 +40,35 @@ the intake's `site_messages` mirror set). It stores nothing of its own.
 - **Overview card**: the newest three accepted messages (`useLive` window,
   limit 3). **Badge**: accepted messages of the last 7 days, a `:count` read.
 
+## New messages
+
+There is no per-message read state; "new" is everything received after a
+per-site **seen mark**:
+
+- **Stored** in `deploy_deployments_ext_messages_seen` (an entity extension of
+  deployments, `server/internal/tables.ts`; shape `messagesSeenShape` in
+  `shared/`): `seenAt`, the **site's clock** (the copy's `sourceNow`) when the
+  user last saw the list — so it compares with `createdAt` on one clock, and
+  everything the copy held then was on screen. No row: never opened.
+- **Read** by id: `deploy-site-messages.seen` (`siteMessagesSeen`, lookup-only,
+  through the change feed).
+- **Moved** by `POST /api/deploy/deployments/:id/messages-seen`
+  (`markSiteMessagesSeen`): reads the copy's `sourceNow`, upserts it with
+  `GREATEST` (never backwards); 404 for a deleted deployment, 409 while the
+  copy is not readable. The Messages tab's list calls it as it shows, and again
+  whenever the new count turns positive while it stays open.
+- **Counted** by `useNewMessagesCount(deploymentId)` (`web/internal`): the inbox's
+  own `:count` read of accepted messages with `createdAt > seenAt` (all
+  accepted ones without a mark), as a union — `loading` / `error` /
+  `no-intake` / `not-copied { syncing }` / `ready { count }` — never a zero
+  standing in for an unknown. `useMarkMessagesSeen(deploymentId)` returns the
+  mark-seen call, for any other surface that shows the list.
+- **Shown** in the health report's site row as a `SiteVisitors.Note`
+  (`analytics/dashboard`'s slot, after the Visitors block's count): " · N new
+  messages", a link to the Messages tab — only while the count is known and
+  positive and the link to the box is live (a stale row shows what it last
+  heard). Its `exhibit` draws "2 new messages".
+
 Tests: `server/internal/reads.db.test.ts` (the SQL on real Postgres: paging
 both ways at its own cuts over colliding instants, until cuts, filters,
 search, count, groups, `:rows`, an unscoped read refused).
@@ -47,19 +77,24 @@ search, count, groups, `:rows`, an unscoped read refused).
 
 ## Plugin reference
 
-- Description: Messages tab of a site's page, shown only when the deployment's composition ships the site-messages intake: every message visitors sent through the site, from this computer's copy of the site's messages (site-mirror), as a live DataView paged, searched and filtered in SQL (received, from as a reply link, the message with its full text on open, verdict, notification state), under the copy's freshness line; the Overview's newest-messages card and the tab's 7-day badge read the same copy. Serves deploy-site-messages.inbox: a deployed site's contact-form messages as a live window over this computer's copy of the site's site_messages (site-mirror's replica of the intake's mirror set) — newest first, filtered, searched, grouped and counted in SQL on the copy, re-read whenever a sync applies a page.
+- Description: Messages tab of a site's page, shown only when the deployment's composition ships the site-messages intake: every message visitors sent through the site, from this computer's copy of the site's messages (site-mirror), as a live DataView paged, searched and filtered in SQL (received, from as a reply link, the message with its full text on open, verdict, notification state), under the copy's freshness line; the Overview's newest-messages card, the tab's 7-day badge and the health report's deployed-site row ("N new messages" since the tab was last opened, linking to it) read the same copy. Serves deploy-site-messages.inbox: a deployed site's contact-form messages as a live window over this computer's copy of the site's site_messages (site-mirror's replica of the intake's mirror set) — newest first, filtered, searched, grouped and counted in SQL on the copy, re-read whenever a sync applies a page. Owns the deploy_deployments_ext_messages_seen side-table — how far the user has read each site's messages, as the site's clock when they last opened the Messages tab — served by id (deploy-site-messages.seen) and moved forward by POST /api/deploy/deployments/:id/messages-seen.
 - Web:
   - Contributes:
     - `DataViewSlots.CollectionItemAction` "deploy-site-messages.inbox:investigate" → `CollectionInvestigate`
+    - `SiteVisitors.Note` "new-messages" → `NewMessagesNote`
     - `SiteTabs.View` "Messages" → `MessagesSection`
     - `SiteOverview.Card` "messages" → `MessagesCard`
-  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps/deploy/deployments` ×7
+  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/deploy/deployments` ×8
     - `primitives/data-view` ×4
     - `apps/deploy/host-query` ×3
-    - `network/live` ×2
+    - `network/live` ×3
     - `primitives/relative-time` ×2
+    - `apps-core/tabs.useAppLinkProps`
+    - `apps/deploy/analytics/dashboard.SiteVisitors`
+    - `apps/deploy/box-link/site-row.SiteLiveAside`
     - `apps/deploy/site-mirror/pull.MirrorFreshness`
+    - `infra/endpoints.useEndpointMutation`
     - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/card.Card`
     - `primitives/css/fill.Fill`
@@ -77,20 +112,30 @@ search, count, groups, `:rows`, an unscoped read refused).
     - `resource.declare` "deploy-site-messages.inbox:count"
     - `resource.declare` "deploy-site-messages.inbox:groups"
     - `resource.declare` "deploy-site-messages.inbox:rows"
+    - `resource.declare` "deploy-site-messages.seen:rows"
   - Uses:
+    - `apps/deploy/deployments._deployDeployments`
     - `apps/deploy/site-messages/intake.siteMessages`
     - `apps/deploy/site-mirror/pull.onSiteMirrorApplied`
     - `apps/deploy/site-mirror/pull.readSiteMirror`
+    - `database.db`
     - `database/sql-projection.parsed`
     - `database/table-mirror/replica.ReplicaTx`
     - `database/table-mirror/replica.tableMirrorReplicas`
+    - `infra/endpoints.HttpError`
+    - `infra/endpoints.implement`
+    - `infra/entity-extensions.defineExtension`
     - `network/live.serveCollection`
     - `network/live/filter.filterSql`
+  - DB schema: `plugins/apps/plugins/deploy/plugins/site-messages/plugins/inbox/server/internal/tables.ts`
+  - Entity extension of: `apps/deploy/deployments` (table `deploy_deployments_ext_messages_seen`)
   - Resources:
     - `deploy-site-messages.inbox` (keyed, window)
     - `deploy-site-messages.inbox:count` (push)
     - `deploy-site-messages.inbox:groups` (push)
     - `deploy-site-messages.inbox:rows` (keyed, point)
+    - `deploy-site-messages.seen:rows` (keyed, point)
+  - Routes: `POST /api/deploy/deployments/:id/messages-seen`
 - Core:
   - Uses:
     - `apps/deploy/site-messages/intake.NOTIFY_STATES`
@@ -109,6 +154,13 @@ search, count, groups, `:rows`, an unscoped read refused).
     - `siteMessageRowId`
     - `siteMessagesInbox`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/color-palette --border`
+  - Uses tokens:
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/type-scale --font-weight-semibold`
+- Shared:
+  - Exports (values):
+    - `markSiteMessagesSeen`
+    - `messagesSeenShape`
+    - `siteMessagesSeen`
 
 <!-- AUTOGENERATED:END -->

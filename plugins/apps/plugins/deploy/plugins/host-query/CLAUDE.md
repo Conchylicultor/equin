@@ -54,7 +54,9 @@ instance's own gateway (`namespaceUrl(runtimeNamespace(), path)`, owner
 principal, one hop, the same 10 s deadline) instead of SSH, and maps it onto
 the same failures: network error -> `request-failed` 7, 404 -> `route-missing`,
 any other HTTP >= 400 -> `request-failed` 22. No SSH key or pinned host key is needed. Used by
-`deploy/fixtures` (`box: "this-instance"`).
+`deploy/fixtures` (`box: "this-instance"`). `standInServerIds()` lists the
+marked servers (the box link links them through this instance's gateway, no
+tunnel); `deployHostStandIns` is exported for the box link's targets trigger.
 
 `server/internal/query-over-ssh.ts` holds the argv, the mapping and the query
 with its two effects injected, tested without a box.
@@ -78,7 +80,7 @@ Run the tests with `./equin test plugins/apps/plugins/deploy/plugins/host-query`
 
 ## Plugin reference
 
-- Description: The deploy app's shared pieces for a section that reads its deployment's box over SSH: HostQueryFailureState renders every way the read can fail (no SSH key, unverified host, SSH failure, failed request, unreadable answer) in one vocabulary, and useDeploymentShips(deploymentId, pluginId) answers whether the deployment's composition closure includes a plugin (useShipsGate: the tab gate over it — shown unless the answer is no). hostOnlyQueryOverSsh(deploymentId, path, schema, { maxAnswerBytes? }): resolves a deployment's server and pinned SSH target, curls one host-only route of the install through its own gateway on the loopback port (two SSH sessions at most), refuses an answer over maxAnswerBytes unread (curl --max-filesize on the box, re-checked here), and answers the parsed answer, which of SSH, the request or the answer failed, or not-found. markServerBoxIsThisInstance(serverId) marks a demo's server whose box is this instance: its host-only routes are answered through this instance's own gateway, no SSH (the same answer cap applies).
+- Description: The deploy app's shared pieces for a section that reads its deployment's box over SSH: HostQueryFailureState renders every way the read can fail (no SSH key, unverified host, SSH failure, failed request, unreadable answer) in one vocabulary, and useDeploymentShips(deploymentId, pluginId) answers whether the deployment's composition closure includes a plugin (useShipsGate: the tab gate over it — shown unless the answer is no). hostOnlyQueryOverSsh(deploymentId, path, schema, { maxAnswerBytes? }): resolves a deployment's server and pinned SSH target, curls one host-only route of the install through its own gateway on the loopback port (two SSH sessions at most), refuses an answer over maxAnswerBytes unread (curl --max-filesize on the box, re-checked here), and answers the parsed answer, which of SSH, the request or the answer failed, or not-found. markServerBoxIsThisInstance(serverId) marks a demo's server whose box is this instance: its host-only routes are answered through this instance's own gateway, no SSH (the same answer cap applies); standInServerIds() lists those servers.
 - Web:
   - Uses:
     - `network/live.LiveRowResult`
@@ -107,8 +109,10 @@ Run the tests with `./equin test plugins/apps/plugins/deploy/plugins/host-query`
     - `HostQueryAnswer`
     - `HostQueryOptions`
   - Exports (values):
+    - `deployHostStandIns`
     - `hostOnlyQueryOverSsh`
     - `markServerBoxIsThisInstance`
+    - `standInServerIds`
 - Core:
   - Uses: `infra/ssh.SshFailureKindSchema`
   - Exports (types): `HostQueryFailure`
@@ -120,6 +124,7 @@ Run the tests with `./equin test plugins/apps/plugins/deploy/plugins/host-query`
   - Imported by:
     - `apps/deploy/analytics/dashboard`
     - `apps/deploy/analytics/sessions`
+    - `apps/deploy/box-link/link`
     - `apps/deploy/fixtures`
     - `apps/deploy/site-messages/inbox`
     - `apps/deploy/site-mirror/pull`

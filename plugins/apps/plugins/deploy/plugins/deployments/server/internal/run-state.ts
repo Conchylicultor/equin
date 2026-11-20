@@ -107,6 +107,37 @@ export const deployRunsServed = serveValue(deployRuns, {
   loader: () => Object.fromEntries(runs),
 });
 
+/** Told a deployment's entry in the live view changed (a run began, moved or ended). */
+export type DeployRunListener = (run: DeployRun) => void;
+const runListeners = new Set<DeployRunListener>();
+
+function publishEntry(run: DeployRun): void {
+  runs.set(run.deploymentId, run);
+  for (const fn of runListeners) fn(run);
+}
+
+/**
+ * The live view's entry for one deployment — its most recent run as this
+ * process knows it — or `undefined` when it has none (never deployed). For a
+ * server-side reader of the same truth `deploy.runs` serves; its change
+ * signal is {@link onDeployRunChanged} (and `deployRunsServed` for a value
+ * that recomputes on it).
+ */
+export function latestDeployRun(deploymentId: string): DeployRun | undefined {
+  return runs.get(deploymentId);
+}
+
+/**
+ * Call `fn` with a deployment's entry whenever the live view writes it — a
+ * run claimed, a phase moved, a run ended (and each entry seeded at boot).
+ * Synchronous, in the writer's turn: `fn` must not throw or block. Returns
+ * the unsubscribe.
+ */
+export function onDeployRunChanged(fn: DeployRunListener): () => void {
+  runListeners.add(fn);
+  return () => runListeners.delete(fn);
+}
+
 /**
  * Rebuild one run's live-view entry from its ledger row and publish it.
  *
@@ -130,7 +161,7 @@ async function publishLiveRun(
     .where(eq(_deployRuns.id, deployRunIdKind.key(runId)));
   if (!row) throw new Error(`[deploy] no run row for ${runId}`);
   const run = liveRunOf(row, phase);
-  runs.set(run.deploymentId, run);
+  publishEntry(run);
   deployRunsServed.notify();
   return run;
 }
@@ -769,7 +800,7 @@ async function seedNewestRuns(): Promise<void> {
         ? await phaseOfOpenRow(row.legRunId)
         : (row.phaseFailed ?? "ship");
     const run = liveRunOf(row, phase);
-    runs.set(run.deploymentId, run);
+    publishEntry(run);
     seeded = true;
   }
   if (seeded) deployRunsServed.notify();

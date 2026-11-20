@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
@@ -28,6 +28,10 @@ import { siteMessagesInbox, type SiteMessageRow } from "../../core";
 import { INTAKE_PLUGIN_ID } from "../internal/intake-plugin-id";
 import { SPAM_REASON_LABEL, firstLine, replyHref } from "../internal/present";
 import { useMessagesCopy } from "../internal/use-messages-copy";
+import {
+  useMarkMessagesSeen,
+  useNewMessagesCount,
+} from "../internal/use-new-messages";
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
 const MESSAGES_VIEW = defineDataView("deploy.site-messages");
@@ -148,6 +152,14 @@ function MessageList({ deploymentId }: { deploymentId: string }): ReactNode {
     [deploymentId],
   );
   const [openId, setOpenId] = useState<string | null>(null);
+  // The list is on screen: everything the copy holds is seen — once as it
+  // shows, and again whenever a sync brings a message while it stays open.
+  const markSeen = useMarkMessagesSeen(deploymentId);
+  const fresh = useNewMessagesCount(deploymentId);
+  const newCount = fresh.kind === "ready" ? fresh.count : null;
+  useEffect(() => {
+    if (newCount === null || newCount > 0) markSeen();
+  }, [markSeen, newCount]);
   return (
     <Stack gap="md">
       <DataView<SiteMessageRow>

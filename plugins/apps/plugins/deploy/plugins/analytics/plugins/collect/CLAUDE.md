@@ -303,6 +303,31 @@ audience × filters × compare, over two clocks, plus the sessions window and
 its counts (the visit list's window, count and groups), equal on `public` and on the copy — after the first copy and again
 after new visits, a rollup and a retention sweep arrive as deltas.
 
+## The pulse
+
+`readVisitorPulse(dbx, now)` (`server/internal/pulse.ts`, server barrel;
+shape `VisitorPulse` in core) — a site's numbers right now, visitors only (the
+owner's visits never count), read where the tables are like the report (the
+deploy app runs it on its copy with the copy's `sourceNow` as `now`):
+
+- `visitorsNow` — distinct visitors whose visit's `last_at` is in
+  `(now − VISITORS_NOW_WINDOW_MS (5 min), now]` (an engagement beacon counts);
+- `visitorsToday` — `visitorCounts` over the raw visits of `utcDay(now)`, the
+  report's own count;
+- `sparkline` — `PULSE_MINUTES` (60) per-minute distinct-visitor counts over
+  `(now − 1 h, now]`, oldest first: a visitor counts in each minute they had a
+  pageview or an event in (a beacon is not a hit).
+
+Both recent reads start from `analytics_visits_last_at_idx`. Pinned in
+`analytics.db.test.ts` (*pulse*, and in the mirror parity loop).
+
+**Existing copies do not get a new index.** A replica table is created `LIKE
+public.<t> INCLUDING INDEXES` once; its local rebuild runs only when the
+table's fingerprint changes, and the fingerprint is columns only
+(`readTableFingerprints`). So a replica created before
+`analytics_visits_last_at_idx` reads the pulse without it until it is
+dropped and re-copied.
+
 ## Runtime notes
 
 - The rollup and retention crons are `perWorktree: true` **on purpose**. A

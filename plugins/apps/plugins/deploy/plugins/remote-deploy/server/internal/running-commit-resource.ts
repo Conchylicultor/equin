@@ -10,7 +10,7 @@ import {
 } from "@plugins/release/plugins/bundles/server";
 import { _deployRuns } from "@plugins/apps/plugins/deploy/plugins/deployments/server";
 import { deploymentIdKind } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
-import { runningCommit } from "../../core";
+import { runningCommit, type RunningCommit } from "../../core";
 import {
   computeRunningCommit,
   MAIN_REF,
@@ -42,6 +42,22 @@ async function latestShip(deploymentId: string): Promise<LatestShip> {
 }
 
 /**
+ * What one deployment is running, against `main` — the `deploy.running-commit`
+ * answer, for a server-side reader (the site-health fold). Reads
+ * `deploy_runs` and git; its change signals are the same as the value's:
+ * a run row landing, `main` moving (`refHeadServed`).
+ */
+export async function readRunningCommit(
+  deploymentId: string,
+): Promise<RunningCommit> {
+  return computeRunningCommit(await latestShip(deploymentId), {
+    subject: (sha) => readCommitSubject(sha, REPO_ROOT),
+    mainSha: () => readRefSha(MAIN_REF, REPO_ROOT),
+    behind: (sha, ref) => countCommitsBehind(sha, ref, REPO_ROOT),
+  });
+}
+
+/**
  * Server half of `deploy.running-commit`.
  *
  * External because half its truth is git, which the change feed cannot see;
@@ -59,10 +75,5 @@ export const runningCommitServed = serveValue(runningCommit, {
       "the newest succeeded ship of the deployment — any run row landing may be it",
   },
   recomputeOn: [refHeadServed],
-  loader: async ({ deploymentId }) =>
-    computeRunningCommit(await latestShip(deploymentId), {
-      subject: (sha) => readCommitSubject(sha, REPO_ROOT),
-      mainSha: () => readRefSha(MAIN_REF, REPO_ROOT),
-      behind: (sha, ref) => countCommitsBehind(sha, ref, REPO_ROOT),
-    }),
+  loader: ({ deploymentId }) => readRunningCommit(deploymentId),
 });

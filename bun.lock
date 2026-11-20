@@ -395,6 +395,22 @@
       "name": "@equin/plugin-apps-deploy-analytics-sessions",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/deploy/plugins/box-link": {
+      "name": "@equin/plugin-apps-deploy-box-link",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/deploy/plugins/box-link/plugins/box": {
+      "name": "@equin/plugin-apps-deploy-box-link-box",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/deploy/plugins/box-link/plugins/link": {
+      "name": "@equin/plugin-apps-deploy-box-link-link",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/deploy/plugins/box-link/plugins/site-row": {
+      "name": "@equin/plugin-apps-deploy-box-link-site-row",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/deploy/plugins/composition": {
       "name": "@equin/plugin-apps-deploy-composition",
       "version": "0.0.1",
@@ -449,6 +465,10 @@
     },
     "plugins/apps/plugins/deploy/plugins/remote-deploy": {
       "name": "@equin/plugin-apps-deploy-remote-deploy",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/deploy/plugins/remote-deploy/plugins/site-live": {
+      "name": "@equin/plugin-apps-deploy-remote-deploy-site-live",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/deploy/plugins/servers": {
@@ -8559,6 +8579,14 @@
 
     "@equin/plugin-apps-deploy-analytics-sessions": ["@equin/plugin-apps-deploy-analytics-sessions@workspace:plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions"],
 
+    "@equin/plugin-apps-deploy-box-link": ["@equin/plugin-apps-deploy-box-link@workspace:plugins/apps/plugins/deploy/plugins/box-link"],
+
+    "@equin/plugin-apps-deploy-box-link-box": ["@equin/plugin-apps-deploy-box-link-box@workspace:plugins/apps/plugins/deploy/plugins/box-link/plugins/box"],
+
+    "@equin/plugin-apps-deploy-box-link-link": ["@equin/plugin-apps-deploy-box-link-link@workspace:plugins/apps/plugins/deploy/plugins/box-link/plugins/link"],
+
+    "@equin/plugin-apps-deploy-box-link-site-row": ["@equin/plugin-apps-deploy-box-link-site-row@workspace:plugins/apps/plugins/deploy/plugins/box-link/plugins/site-row"],
+
     "@equin/plugin-apps-deploy-composition": ["@equin/plugin-apps-deploy-composition@workspace:plugins/apps/plugins/deploy/plugins/composition"],
 
     "@equin/plugin-apps-deploy-deploy-history": ["@equin/plugin-apps-deploy-deploy-history@workspace:plugins/apps/plugins/deploy/plugins/deploy-history"],
@@ -8586,6 +8614,8 @@
     "@equin/plugin-apps-deploy-local-serve": ["@equin/plugin-apps-deploy-local-serve@workspace:plugins/apps/plugins/deploy/plugins/local-serve"],
 
     "@equin/plugin-apps-deploy-remote-deploy": ["@equin/plugin-apps-deploy-remote-deploy@workspace:plugins/apps/plugins/deploy/plugins/remote-deploy"],
+
+    "@equin/plugin-apps-deploy-remote-deploy-site-live": ["@equin/plugin-apps-deploy-remote-deploy-site-live@workspace:plugins/apps/plugins/deploy/plugins/remote-deploy/plugins/site-live"],
 
     "@equin/plugin-apps-deploy-servers": ["@equin/plugin-apps-deploy-servers@workspace:plugins/apps/plugins/deploy/plugins/servers"],
 

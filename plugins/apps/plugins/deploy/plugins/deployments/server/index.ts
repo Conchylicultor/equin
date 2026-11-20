@@ -28,7 +28,13 @@ import { deploymentIdKind, deployRunIdKind } from "../core";
 
 export { _deployDeployments, _deployRuns } from "./internal/tables";
 export { DeployGates } from "./internal/gate";
-export { publishWrittenRuns } from "./internal/run-state";
+export {
+  deployRunsServed,
+  latestDeployRun,
+  onDeployRunChanged,
+  publishWrittenRuns,
+  type DeployRunListener,
+} from "./internal/run-state";
 export type {
   DeployGate,
   DeployGateSubject,

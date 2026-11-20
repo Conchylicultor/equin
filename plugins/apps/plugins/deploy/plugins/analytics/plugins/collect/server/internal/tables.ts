@@ -141,6 +141,9 @@ export const analyticsVisits = pgTable(
     index("analytics_visits_day_idx").on(t.day),
     // The sessions list's walk: newest first by `(started_at, id)`, from a key.
     index("analytics_visits_started_at_id_idx").on(t.startedAt, t.id),
+    // The pulse (visitors now, the last hour's per-minute counts): the
+    // visits active since an instant, read every time the copy syncs.
+    index("analytics_visits_last_at_idx").on(t.lastAt),
   ],
 );
 

@@ -38,7 +38,6 @@ import {
   deployRuns,
   runDeployment,
   type Deployment,
-  type DeployPhase,
   type DeployRun,
   type DeployRunRecord,
 } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
@@ -46,18 +45,19 @@ import { useServerHealth } from "@plugins/apps/plugins/deploy/plugins/health/web
 import { RELEASE_LOG_CHANNEL } from "@plugins/release/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
-import { runningCommit, shortSha } from "../../core";
+import {
+  DEPLOY_PHASE_TITLES,
+  deployLabelOf,
+  runningCommit,
+  shortSha,
+} from "../../core";
 
 const rocketIcon = symbol("rocket-launch");
 const commitIcon = symbol("commit");
 const checkIcon = symbol("check");
 
 /** The legs of an `update`, in the order they run, as the strip names them. */
-const PHASES: ReadonlyArray<{ id: DeployPhase; title: string }> = [
-  { id: "converge", title: "Converge host" },
-  { id: "build", title: "Build bundle" },
-  { id: "ship", title: "Ship & health-check" },
-];
+const PHASES = DEPLOY_PHASE_TITLES;
 
 /** What the live run map says of this site: its most recent run, if any. */
 function useLatestRun(
@@ -103,22 +103,10 @@ export function DeployButton({ deployment }: SiteProps): ReactNode {
   const run = latest.status === "ready" ? latest.data : undefined;
   const running = run?.status === "running";
   // Until both reads land the label claims nothing about state: plain Deploy.
-  const known = latest.status === "ready" && commit.status === "ready";
-  const label = !known
-    ? "Deploy"
-    : running
-      ? "Deploying…"
-      : run?.status === "failed"
-        ? "Retry deploy"
-        : commit.status === "ready" &&
-            commit.data.kind === "known" &&
-            commit.data.behindMain > 0
-          ? `Deploy ${plural(commit.data.behindMain, "commit")}`
-          : run === undefined &&
-              commit.status === "ready" &&
-              commit.data.kind === "unknown"
-            ? "Deploy"
-            : "Redeploy";
+  const label =
+    latest.status === "ready" && commit.status === "ready"
+      ? deployLabelOf(run ?? null, commit.data)
+      : "Deploy";
 
   return (
     <Button

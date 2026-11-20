@@ -35,10 +35,14 @@ export {
 } from "./internal/read";
 export { readSourceIdentity, readTableFingerprints } from "./internal/identity";
 export { mirrorSql } from "./internal/sql";
+export {
+  onMirrorLogAdvanced,
+  type MirrorLogAdvancedHandler,
+} from "./internal/notify";
 
 export default {
   description:
-    "The table mirror's source half: defineMirrorSet / MirrorSet (tables mirrored together) and NeverMirrored (tables whose rows never leave, refused at module eval and at boot); generated statement-level change-log triggers (one table_mirror_log row per primary key — cascaded deletes, retention and TRUNCATE included); the source identity and per-table fingerprints; the readers — the delta stream paged by a { floor, after } xid8 cursor, a first-sync copy, and reconciliation's key + hash walk and rows by key; and the daily log prune at the 30-day horizon, below which a replica is answered reconcile-required.",
+    "The table mirror's source half: defineMirrorSet / MirrorSet (tables mirrored together) and NeverMirrored (tables whose rows never leave, refused at module eval and at boot); generated statement-level change-log triggers (one table_mirror_log row per primary key — cascaded deletes, retention and TRUNCATE included — each ringing the table_mirror_log NOTIFY channel with its set id, heard through onMirrorLogAdvanced); the source identity and per-table fingerprints; the readers — the delta stream paged by a { floor, after } xid8 cursor, a first-sync copy, and reconciliation's key + hash walk and rows by key; and the daily log prune at the 30-day horizon, below which a replica is answered reconcile-required.",
   contributions: [
     // Installed by this plugin's own call in onReadyBlocking (derived from the
     // contributed sets, one table per transaction), never by the schema layer.

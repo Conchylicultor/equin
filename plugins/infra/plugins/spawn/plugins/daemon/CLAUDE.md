@@ -34,9 +34,15 @@ await p.stop();
 
 Four ways to start an instance — the arm decides how liveness is known:
 
-- **`spawnProcess({ argv, env?, cwd?, onStderrLine? })`** — a child process.
-  `argv` may be a function, read at each spawn. stdout is ignored; stderr is
-  piped line by line only when `onStderrLine` is given. Liveness: the exit event.
+- **`spawnProcess({ argv, env?, cwd?, onStderrLine?, onSpawn? })`** — a child
+  process. `argv` may be a function, read at each spawn. stdout is ignored;
+  stderr is piped line by line only when `onStderrLine` is given, and every
+  line of an incarnation is delivered before the transition its exit causes
+  (the exit waits up to 1 s for the pipe to close — a grandchild may hold it).
+  `onSpawn(ctx)` runs after each spawn with `{ pid, ready() }`: a
+  `healthy: "ready"` process says it came up there (a socket appearing, a
+  line on stderr). On a ready declaration `onSpawn` is **required** (tsc, and
+  a runtime refusal for a widened caller). Liveness: the exit event.
 - **`spawnWorker({ url, argv?, env?, onSpawn?, onMessage, onError?, stop? })`** —
   a Bun Worker. `onMessage(data, ctx)` gets `ctx.ready()` for a
   `healthy: "ready"` daemon; `stop(worker)` is the graceful half of a stop
@@ -68,11 +74,20 @@ declaration (tsc): nothing here can respawn what it is not the parent of.
   A start outside `where` throws; a second live instance of a key throws.
 - **One supervision loop** (`server/internal/supervise.ts`): respawn after 1 s,
   doubling to 30 s; a death within 2 s of spawn is rapid, and 5 in a row give
-  up (`gave-up`, a loud line through `onLog`, the run `failed`). `healthy`
-  resets the counters: `ready` on `ctx.ready()`, `survival` once a spawn
-  outlives the rapid window. `onState` sees every transition
-  (`starting`, `running`, `respawning`, `gave-up`, `exited`, `stopped`) — the
-  sentinel maps them onto its status file.
+  up (`gave-up`, a loud line through `onLog`, the run `failed`) — unless the
+  policy says `giveUp: "never"` (typed: no `maxRapidFailures` beside it),
+  which respawns forever at most `maxMs` apart: for a link to a remote peer
+  that must outlast any outage. `healthy` resets the counters: `ready` on
+  `ctx.ready()`, `survival` once a spawn outlives the rapid window.
+  `onState` sees every transition (`starting`, `running`, `respawning`,
+  `gave-up`, `exited`, `stopped`) — the sentinel maps them onto its status
+  file. The ones an exit causes carry `exit`: the process's
+  `{ code, signal }`, `null` for a worker or a pid-file follow.
+- **`respawnNow()`** (process and worker instances): spawn now when no
+  incarnation is alive — skips a pending respawn's wait, or brings back a
+  `gave-up` / `exited` instance — and restart the backoff from `minMs`
+  (a wake from sleep, a user's Retry). A live incarnation is left alone
+  (`"already-alive"`, never killed); after `stop()` it throws.
 - Each incarnation is a run: `running` while alive, `succeeded` when stopped on
   purpose, `failed` when it exited on its own (a daemon has no successful way
   to end by itself).
@@ -137,7 +152,7 @@ declaration (tsc): nothing here can respawn what it is not the parent of.
 
 ## Plugin reference
 
-- Description: defineDaemon: the one declared long-lived process or thread a backend runs on its own — a named, described declaration (startedBy boot | on-demand, where every-worktree | main | host-singleton, restart never | backoff) whose spawnProcess / spawnWorker supervise a child process or Bun Worker (one respawn loop: doubling backoff, give-up after repeated rapid exits, healthy on survival or a ready signal), and whose launchDetached / attach follow a detached process by its pid file. Records per declaration its instances (pid, since, restarts, last exit) and each incarnation as a run for the Background activity catalog (onDaemonActivity / listDaemons / daemonRecentRuns).
+- Description: defineDaemon: the one declared long-lived process or thread a backend runs on its own — a named, described declaration (startedBy boot | on-demand, where every-worktree | main | host-singleton, restart never | backoff) whose spawnProcess / spawnWorker supervise a child process or Bun Worker (one respawn loop: doubling backoff, give-up after repeated rapid exits unless giveUp "never", healthy on survival or a ready signal — a process's onSpawn ctx.ready() or a worker's; respawnNow skips a pending wait; exit transitions carry the process's { code, signal }), and whose launchDetached / attach follow a detached process by its pid file. Records per declaration its instances (pid, since, restarts, last exit) and each incarnation as a run for the Background activity catalog (onDaemonActivity / listDaemons / daemonRecentRuns).
 - Server:
   - Uses:
     - `infra/file-watcher.defineFileWatcher`
@@ -148,6 +163,7 @@ declaration (tsc): nothing here can respawn what it is not the parent of.
     - `DaemonArm`
     - `DaemonDecl`
     - `DaemonDeclBase`
+    - `DaemonExit`
     - `DaemonInstance`
     - `DaemonInstanceInfo`
     - `DaemonRestart`
@@ -160,7 +176,9 @@ declaration (tsc): nothing here can respawn what it is not the parent of.
     - `DetachedLaunch`
     - `PidFileRead`
     - `ProcessLaunch`
+    - `ProcessSpawnContext`
     - `SpawnedCode`
+    - `SupervisedDaemonInstance`
     - `SupervisedIncarnation`
     - `UnsupervisedDeclExtras`
     - `WorkerDaemonInstance`
@@ -182,6 +200,7 @@ declaration (tsc): nothing here can respawn what it is not the parent of.
 - Cross-plugin:
   - Imported by:
     - `apps/browser/engine`
+    - `apps/deploy/box-link/link`
     - `build/restart-skip`
     - `conversations/runtime-sdk`
     - `debug/paging-probe`

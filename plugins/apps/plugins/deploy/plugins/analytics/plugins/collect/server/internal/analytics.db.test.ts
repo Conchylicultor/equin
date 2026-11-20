@@ -81,6 +81,7 @@ import {
 } from "./collect";
 import { analyticsMirror } from "./mirror";
 import { runAnalyticsQuery } from "./report";
+import { readVisitorPulse } from "./pulse";
 import {
   countVisits,
   readVisitGroups,
@@ -1621,6 +1622,69 @@ describe("sliding identity", () => {
   });
 });
 
+describe("pulse", () => {
+  // A day nothing else touches, rolled back after.
+  const day = "2026-09-25";
+  const send = (
+    dbx: Parameters<typeof recordCollect>[0],
+    ip: string,
+    body: z.input<typeof CollectBodySchema>,
+    now: Date,
+  ) =>
+    recordCollect(
+      dbx,
+      CollectBodySchema.parse(body),
+      { ip, userAgent: UA.chromeMac, acceptLanguage: "en-US", now },
+      (addr) => countries.lookup(addr),
+    );
+
+  test("visitors now, today and per minute over the last hour, as of the given instant, owner left out", async () => {
+    expect(
+      t.db.transaction(async (tx) => {
+        const page = { kind: "pageview" as const, host, path: "/" };
+        // Before the hour: today only.
+        await send(tx, "198.51.100.1", page, at(day, "08:30"));
+        // Exactly an hour before `now`: outside the hour (it is `(now - 1h, now]`).
+        await send(tx, "198.51.100.2", page, at(day, "08:53"));
+        // One visit, two minutes of the hour.
+        await send(tx, "198.51.100.3", page, at(day, "09:00"));
+        await send(
+          tx,
+          "198.51.100.3",
+          { kind: "event", host, path: "/", name: "improve_open" },
+          at(day, "09:20"),
+        );
+        // Active within the last 5 minutes.
+        await send(tx, "198.51.100.4", page, at(day, "09:50"));
+        // The owner, active now too: never counted.
+        await send(
+          tx,
+          "198.51.100.5",
+          { ...page, owner: true },
+          at(day, "09:51"),
+        );
+        // After `now` (a later page of the box's clock): not yet.
+        await send(tx, "198.51.100.6", page, at(day, "09:58"));
+
+        const now = at(day, "09:53");
+        const pulse = await readVisitorPulse(tx, now);
+        expect(pulse.visitorsNow).toBe(1);
+        // Everyone whose visit started today but the owner (the report's own count,
+        // which does not read the clock past the day).
+        expect(pulse.visitorsToday).toBe(5);
+        expect(pulse.asOf).toBe(now.toISOString());
+        expect(pulse.sparkline).toHaveLength(60);
+        const expected = new Array<number>(60).fill(0);
+        expected[59 - 53] = 1; // 09:00
+        expected[59 - 33] = 1; // 09:20
+        expected[59 - 3] = 1; // 09:50
+        expect(pulse.sparkline).toEqual(expected);
+        tx.rollback();
+      }),
+    ).rejects.toThrow(TransactionRollbackError);
+  });
+});
+
 describe("mirror parity: the copy answers every report as the source does", () => {
   // Source and replica in one database, as the demo's stand-in box: the
   // source is `public` (everything the suites above recorded, rolled up and
@@ -1730,6 +1794,9 @@ describe("mirror parity: the copy answers every report as the source does", () =
         );
         expect(g.mirror).toEqual(g.source);
       }
+      // The pulse (the site row's visitors now / today / last hour).
+      const p = await both((dbx) => readVisitorPulse(dbx, now));
+      expect(p.mirror).toEqual(p.source);
     }
     return { reports, withVisits };
   }

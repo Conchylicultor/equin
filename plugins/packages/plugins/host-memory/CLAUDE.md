@@ -7,6 +7,7 @@
 - Description: The host's memory, one shape on macOS and Linux: readHostMemory() reads vm_stat on macOS, /proc/meminfo and /proc/vmstat on Linux, into what the system can hand out (available), kernel memory no process carries (macOS wired; Linux what is neither free, on a page LRU nor reclaimable slab), the RAM processes hold (macOS anonymous + compressor; Linux AnonPages + Shmem), the compressor's size and the swap / compression counters — or unsupported on another OS. readOomKillCount() reads the kernel's OOM-kill count since boot (Linux /proc/vmstat oom_kill), as a typed result: unsupported on macOS, unstated on a kernel without the line, unreadable when the read fails — never a 0 that could read as no kills.
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/box-link/box`
     - `debug/health-monitor`
     - `debug/sentinel/machine-usage`
     - `framework/cli/build`

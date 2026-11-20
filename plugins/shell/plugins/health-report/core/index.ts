@@ -10,6 +10,10 @@ export type {
   HealthStatus,
   InfoRow,
   RowLevel,
+  SetItem,
+  SetItemProps,
+  SetRow,
+  SetRows,
   StatusRow,
 } from "./types";
 export {

@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-deploy-box-link",
+  "description": "The permanent link from this computer to each deployed site's box: the NDJSON stream protocol (hello, beat, signal), the link-state union and the deploy.box-links live value; the box half serving the stream and the local half holding one tunnel per server and one stream per deployment.",
+  "private": true,
+  "version": "0.0.1"
+}

@@ -22,6 +22,6 @@ import type { HealthReportRow } from "../core";
  */
 export const HealthReport = {
   Row: defineRenderSlot<HealthReportRow>({
-    docLabel: (row) => (row.kind === "status" ? row.title : row.id),
+    docLabel: (row) => (row.kind === "info" ? row.id : row.title),
   }),
 };

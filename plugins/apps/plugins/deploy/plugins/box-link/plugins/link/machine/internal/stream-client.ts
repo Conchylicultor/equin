@@ -1,0 +1,254 @@
+import {
+  NdjsonParseError,
+  readNdjson,
+} from "@plugins/infra/plugins/ndjson-stream/server";
+import { reportServerError } from "@plugins/framework/plugins/server-core/core";
+import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import { setAwakeTimeout } from "@plugins/infra/plugins/host/plugins/machine-sleep/server";
+import {
+  BOX_LINK_STREAM_PATH,
+  readBoxFrame,
+  type BoxBeatFrame,
+  type BoxHelloFrame,
+} from "@plugins/apps/plugins/deploy/plugins/box-link/core";
+
+/** No frame for this long (three missed beats): the stream is dead. */
+export const STREAM_WATCHDOG_MS = 45_000;
+
+/** Reconnect backoff after a failed or ended stream: 2 s doubling to 2 min. */
+const BACKOFF_MIN_MS = 2_000;
+const BACKOFF_MAX_MS = 2 * 60_000;
+
+/** How the stream request reaches the box. */
+export type StreamTransport = (
+  path: string,
+  signal: AbortSignal,
+) => Promise<Response>;
+
+/** What one stream tells its link, frame by frame. */
+export interface StreamEvents {
+  hello(frame: BoxHelloFrame): void;
+  beat(frame: BoxBeatFrame): void;
+  signal(source: string, payload: unknown): void;
+  /** The box has no stream route (404): idle until kicked. */
+  routeMissing(error: string): void;
+  /** The stream failed or ended (equin not answering, or gone quiet). */
+  failed(error: string): void;
+}
+
+/** Why one attempt ended. */
+type AttemptEnd =
+  | { kind: "route-missing"; error: string }
+  | { kind: "failed"; error: string; heardHello: boolean }
+  | { kind: "aborted" };
+
+class WatchdogFired extends Error {
+  constructor() {
+    super(`no frame from the box for ${String(STREAM_WATCHDOG_MS / 1000)} s`);
+    this.name = "WatchdogFired";
+  }
+}
+
+function errorText(err: unknown): string {
+  if (err instanceof Error) {
+    const cause = (err as { cause?: unknown }).cause;
+    return cause instanceof Error
+      ? `${err.message} (${cause.message})`
+      : err.message;
+  }
+  return String(err);
+}
+
+/**
+ * One attempt: open the stream, read it to its end. Every frame re-arms the
+ * watchdog (awake time: a sleep is the wake kick's to handle, not a timeout).
+ * A malformed frame or line is a protocol bug — reported, and the attempt
+ * ends as failed.
+ */
+async function attempt(
+  transport: StreamTransport,
+  events: StreamEvents,
+  outer: AbortSignal,
+): Promise<AttemptEnd> {
+  const inner = new AbortController();
+  const onOuter = () => inner.abort(outer.reason);
+  outer.addEventListener("abort", onOuter, { once: true });
+  let cancelWatchdog = () => {};
+  const arm = () => {
+    cancelWatchdog();
+    cancelWatchdog = setAwakeTimeout(
+      () => inner.abort(new WatchdogFired()),
+      STREAM_WATCHDOG_MS,
+    );
+  };
+  let heardHello = false;
+  try {
+    arm();
+    let res: Response;
+    try {
+      res = await transport(BOX_LINK_STREAM_PATH, inner.signal);
+    } catch (err) {
+      if (outer.aborted) return { kind: "aborted" };
+      if (inner.signal.reason instanceof WatchdogFired) {
+        return {
+          kind: "failed",
+          error: inner.signal.reason.message,
+          heardHello,
+        };
+      }
+      // The tunnel is up but nothing answers behind it (ssh: "connect
+      // failed"), or this instance's own gateway refused: equin is not up.
+      return {
+        kind: "failed",
+        error: `the stream request failed: ${errorText(err)}`,
+        heardHello,
+      };
+    }
+    if (res.status === 404) {
+      await res.body?.cancel();
+      return {
+        kind: "route-missing",
+        error: "the box answered 404 for the box-link stream",
+      };
+    }
+    if (!res.ok || res.body === null) {
+      await res.body?.cancel();
+      return {
+        kind: "failed",
+        error: `the box answered HTTP ${String(res.status)}`,
+        heardHello,
+      };
+    }
+    try {
+      for await (const value of readNdjson(res.body, inner.signal)) {
+        arm();
+        const read = readBoxFrame(value);
+        switch (read.kind) {
+          case "skip":
+            break;
+          case "producer-error":
+            return {
+              kind: "failed",
+              error: `the box's stream failed: ${read.message}`,
+              heardHello,
+            };
+          case "malformed":
+            reportServerError({
+              message: `[box-link] a malformed stream frame: ${read.message}`,
+              scope: "box-link:stream-frame",
+            });
+            return {
+              kind: "failed",
+              error: `a malformed frame: ${read.message}`,
+              heardHello,
+            };
+          case "frame": {
+            const frame = read.frame;
+            if (frame.kind === "hello") {
+              heardHello = true;
+              events.hello(frame);
+            } else if (frame.kind === "beat") events.beat(frame);
+            else events.signal(frame.source, frame.payload);
+            break;
+          }
+        }
+      }
+      return { kind: "failed", error: "the box closed the stream", heardHello };
+    } catch (err) {
+      if (outer.aborted) return { kind: "aborted" };
+      if (err instanceof WatchdogFired) {
+        return { kind: "failed", error: err.message, heardHello };
+      }
+      if (err instanceof NdjsonParseError) {
+        reportServerError({
+          message: `[box-link] an unparseable stream line: ${err.message}`,
+          scope: "box-link:stream-frame",
+        });
+        return { kind: "failed", error: err.message, heardHello };
+      }
+      // The connection broke mid-stream (the tunnel or the box went away).
+      return {
+        kind: "failed",
+        error: `the stream broke: ${errorText(err)}`,
+        heardHello,
+      };
+    }
+  } finally {
+    cancelWatchdog();
+    outer.removeEventListener("abort", onOuter);
+    inner.abort();
+  }
+}
+
+/**
+ * One deployment's stream client: while enabled, it holds the stream open,
+ * reconnecting after a failure with a bounded backoff (a bound around a
+ * network peer — the box — not a fix for our own code; reset by a hello).
+ * A 404 leaves it idle until `kick()`. `kick()` reconnects now (skipping a
+ * backoff wait), `disable()` drops the stream and any wait.
+ */
+export interface StreamClient {
+  enable(): void;
+  disable(): void;
+  kick(): void;
+}
+
+export function createStreamClient(
+  label: string,
+  transport: StreamTransport,
+  events: StreamEvents,
+): StreamClient {
+  let enabled = false;
+  let running: AbortController | null = null;
+  let cancelWait: (() => void) | null = null;
+  let backoffMs = BACKOFF_MIN_MS;
+
+  function clearWait(): void {
+    cancelWait?.();
+    cancelWait = null;
+  }
+
+  function connect(): void {
+    if (!enabled || running !== null) return;
+    clearWait();
+    const ctl = new AbortController();
+    running = ctl;
+    void runTracked(`box-link: stream ${label}`, async () => {
+      const end = await attempt(transport, events, ctl.signal);
+      if (running === ctl) running = null;
+      if (end.kind === "aborted" || !enabled) return;
+      if (end.kind === "route-missing") {
+        events.routeMissing(end.error);
+        return;
+      }
+      if (end.heardHello) backoffMs = BACKOFF_MIN_MS;
+      events.failed(end.error);
+      const wait = backoffMs;
+      backoffMs = Math.min(backoffMs * 2, BACKOFF_MAX_MS);
+      cancelWait = setAwakeTimeout(() => {
+        cancelWait = null;
+        connect();
+      }, wait);
+    });
+  }
+
+  return {
+    enable() {
+      if (enabled) return;
+      enabled = true;
+      backoffMs = BACKOFF_MIN_MS;
+      connect();
+    },
+    disable() {
+      enabled = false;
+      clearWait();
+      running?.abort();
+      running = null;
+    },
+    kick() {
+      if (!enabled) return;
+      backoffMs = BACKOFF_MIN_MS;
+      connect();
+    },
+  };
+}

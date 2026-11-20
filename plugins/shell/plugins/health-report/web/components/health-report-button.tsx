@@ -16,7 +16,7 @@ import {
   type ReportedStatus,
 } from "../../core";
 import { HealthReport } from "../slots";
-import { HealthStore } from "../internal/store";
+import { HealthStore, reportedStatusesOf } from "../internal/store";
 import { BUTTON_TINT_CLASS } from "../internal/tone";
 import { HealthDot } from "./health-dot";
 import { HealthReportHeader, HealthReportPanel } from "./health-report-panel";
@@ -56,11 +56,17 @@ function HealthReportTrigger({
   activities: readonly Activity[];
 }) {
   const rows = HealthReport.Row.useContributions();
-  const ids = rows.flatMap((row) => (row.kind === "status" ? [row.id] : []));
-  const idsKey = ids.join("\n");
+  // Every row that can move the dot: status rows and row sets (each set's
+  // items are read from the store, so they need no key here).
+  const merged = rows.flatMap((row) =>
+    row.kind === "info" ? [] : [{ kind: row.kind, id: row.id }],
+  );
+  const idsKey = merged.map((row) => `${row.kind}:${row.id}`).join("\n");
   const view = HealthStore.useSelector(
     (state): DotView => {
-      const statuses: ReportedStatus[] = ids.map((id) => state[id]);
+      const statuses: ReportedStatus[] = merged.flatMap((row) =>
+        reportedStatusesOf(state, row),
+      );
       return { ...mergeDot(statuses), verdict: verdictOf(statuses) };
     },
     [idsKey],

@@ -50,6 +50,17 @@ export const DB_POOL_NAMES = [
   /** The table mirror's LISTEN for a replica's applied pages (`database/table-mirror/replica`). */
   "replica-notify",
   /**
+   * The table mirror's LISTEN for its source log's advances
+   * (`database/table-mirror/source`'s `onMirrorLogAdvanced`).
+   */
+  "mirror-log-notify",
+  /**
+   * The box link's LISTEN for a change of what it links — deployments,
+   * servers, their pinned host keys, stand-in boxes
+   * (`apps/deploy/box-link/link`).
+   */
+  "box-link-targets",
+  /**
    * The session holding this process's schema-generation lock, on which a
    * deferred contract waits out older code (`database#machine`).
    */

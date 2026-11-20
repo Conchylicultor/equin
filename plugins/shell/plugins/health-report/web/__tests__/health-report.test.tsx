@@ -24,7 +24,14 @@ import {
   boundaryReportSink,
   type BoundaryErrorReport,
 } from "@plugins/primitives/plugins/error-boundary/web";
-import type { HealthReportRow, HealthStatus, StatusRow } from "../../core";
+import type {
+  HealthReportRow,
+  HealthStatus,
+  SetItemProps,
+  SetRow,
+  SetRows,
+  StatusRow,
+} from "../../core";
 import { HealthReport } from "../slots";
 import { HealthReportButton } from "../components/health-report-button";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -391,7 +398,7 @@ describe("the report", () => {
     expect(button().textContent).toBe("");
   });
 
-  it("is a loading state — no verdict, no rows — while the row order is not known", async () => {
+  it("is a loading state — no rows — while the row order is not known", async () => {
     // A layout engine whose order for every slot is still loading.
     const pendingOrder = {
       id: "health-report-test-pending-order",
@@ -413,7 +420,196 @@ describe("the report", () => {
     await openReport();
     const dialog = screen.getByRole("dialog");
     expect(dialog.querySelector('[aria-busy="true"]')).not.toBeNull();
-    // Neither the verdict (it derives from the rows) nor any row is drawn.
-    expect(screen.queryByText("look-summary")).toBeNull();
+    // No row is drawn (the header's verdict, over the published statuses, is).
+    expect(
+      screen.queryByText("look-summary", { selector: ".text-caption" }),
+    ).toBeNull();
+  });
+});
+
+describe("row sets", () => {
+  /** A set whose rows are driven from the test. */
+  function liveSet(initial: SetRows, extra: Partial<SetRow> = {}) {
+    let current = initial;
+    const listeners = new Set<() => void>();
+    const useRows = () =>
+      useSyncExternalStore(
+        (l) => {
+          listeners.add(l);
+          return () => listeners.delete(l);
+        },
+        () => current,
+        () => current,
+      );
+    const row: SetRow = {
+      kind: "set",
+      id: "sites",
+      title: "Sites",
+      useRows,
+      ...extra,
+    };
+    const set = (next: SetRows) =>
+      act(() => {
+        current = next;
+        for (const l of listeners) l();
+      });
+    return { row, set };
+  }
+
+  const ok = (summary: string): HealthStatus => ({ state: "ok", summary });
+
+  it("is one pending row under the set's title until its rows are known", async () => {
+    const { row } = liveSet({ kind: "pending" });
+    renderReport([status("a", ok("fine")), row]);
+    expect(button().dataset.health).toBe("unknown");
+    expect(button().getAttribute("aria-label")).toBe("Checking…");
+    expect(dotClass()).toContain("animate-pulse");
+
+    await openReport();
+    expect(screen.getByText("Sites")).toBeTruthy();
+    expect(summary("Checking…")).toBeTruthy();
+  });
+
+  it("is one grey row with the summary when its rows cannot be read", async () => {
+    const { row } = liveSet({ kind: "error", summary: "Sites unreadable" });
+    renderReport([row]);
+    expect(button().dataset.health).toBe("unknown");
+    expect(button().getAttribute("aria-label")).toBe("Sites unreadable");
+    expect(dotClass()).not.toContain("animate-pulse");
+  });
+
+  it("merges each item as its own row, and draws nothing for no items", async () => {
+    const { row, set } = liveSet({
+      kind: "ready",
+      rows: [
+        { key: "one", title: "one.example", status: ok("live") },
+        {
+          key: "two",
+          title: "two.example",
+          status: { state: "attention", summary: "deploy failed" },
+        },
+        {
+          key: "three",
+          title: "three.example",
+          status: { state: "critical", summary: "down" },
+        },
+      ],
+    });
+    renderReport([status("a", ok("fine")), row]);
+    expect(button().dataset.health).toBe("critical");
+    expect(button().textContent).toBe("2");
+    expect(button().getAttribute("aria-label")).toBe("2 things need attention");
+
+    await openReport();
+    expect(screen.getByText("two.example")).toBeTruthy();
+    expect(summary("deploy failed")).toBeTruthy();
+    expect(summary("down")).toBeTruthy();
+    // The ok item folds with the other quiet row.
+    expect(summary("All 2 normal")).toBeTruthy();
+
+    set({ kind: "ready", rows: [] });
+    expect(button().dataset.health).toBe("ok");
+    expect(screen.queryByText("two.example")).toBeNull();
+    expect(screen.queryByText("Sites")).toBeNull();
+  });
+
+  it("drops an item that vanished from the list", async () => {
+    const { row, set } = liveSet({
+      kind: "ready",
+      rows: [
+        { key: "one", title: "one.example", status: ok("live") },
+        {
+          key: "two",
+          title: "two.example",
+          status: { state: "critical", summary: "down" },
+        },
+      ],
+    });
+    renderReport([row]);
+    expect(button().dataset.health).toBe("critical");
+    await openReport();
+    expect(screen.getByText("two.example")).toBeTruthy();
+
+    set({
+      kind: "ready",
+      rows: [{ key: "one", title: "one.example", status: ok("live") }],
+    });
+    expect(button().dataset.health).toBe("ok");
+    expect(screen.queryByText("two.example")).toBeNull();
+    expect(screen.getByText("one.example")).toBeTruthy();
+  });
+
+  it("expands one item at a time, its detail and parts drawn for its key", async () => {
+    function Detail({ rowKey }: SetItemProps) {
+      return <div data-testid="detail">detail of {rowKey}</div>;
+    }
+    const { row } = liveSet(
+      {
+        kind: "ready",
+        rows: [
+          { key: "one", title: "one.example", status: ok("live") },
+          { key: "two", title: "two.example", status: ok("live") },
+        ],
+      },
+      {
+        component: Detail,
+        actions: ({ rowKey }) => <span>act {rowKey}</span>,
+        glance: ({ rowKey, expanded }) => (
+          <span>
+            glance {rowKey} {expanded ? "open" : "closed"}
+          </span>
+        ),
+      },
+    );
+    renderReport([row]);
+    await openReport();
+    expect(screen.getByText("act two")).toBeTruthy();
+    expect(screen.queryByTestId("detail")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: /two\.example/ }));
+    expect(screen.getByTestId("detail").textContent).toBe("detail of two");
+    expect(screen.getByText("glance two open")).toBeTruthy();
+    expect(screen.getByText("glance one closed")).toBeTruthy();
+  });
+
+  it("folds plain items with the other quiet rows", async () => {
+    const { row } = liveSet({
+      kind: "ready",
+      rows: [
+        { key: "one", title: "one.example", status: ok("one-summary") },
+        { key: "two", title: "two.example", status: ok("two-summary") },
+      ],
+    });
+    renderReport([status("a", ok("a-summary")), row]);
+    await openReport();
+    expect(summary("All 3 normal")).toBeTruthy();
+    expect(screen.queryByText("one-summary")).toBeNull();
+  });
+
+  it("greys the dot when its hook throws, files the crash, keeps its siblings", async () => {
+    console.error = () => {};
+    const reports: BoundaryErrorReport[] = [];
+    boundaryReportSink.register((r) => {
+      reports.push(r);
+    });
+    renderReport([
+      status("healthy", ok("Server connected")),
+      {
+        kind: "set",
+        id: "sites",
+        title: "Sites",
+        useRows: () => {
+          throw new Error("set exploded");
+        },
+      },
+    ]);
+    expect(button().dataset.health).toBe("unknown");
+    expect(button().getAttribute("aria-label")).toBe("This check crashed");
+    await waitFor(() => expect(reports).toHaveLength(1));
+    expect(reports[0]?.error.message).toBe("set exploded");
+
+    await openReport();
+    expect(screen.getByText("Sites")).toBeTruthy();
+    expect(summary("Server connected")).toBeTruthy();
   });
 });
