@@ -4,7 +4,7 @@
  * behind a lazy reference (design check of 2026-11-20, task-1795208483-6ggeec).
  *
  *   ./equin run plugins/framework/plugins/tooling/plugins/import-closure/scripts/measure-definition-closure.ts \
- *     --host server|web [--policy B|A] [--state <dir>] [--step all|discover|strict|timed|baseline|bundle] [--runs 5]
+ *     --host server|web --state <scratch dir> [--policy B|A] [--step all|discover|strict|timed|baseline|bundle] [--runs 5]
  *
  * How: a Bun loader plugin rewrites every repo module so each import binding
  * is a lazy reference. A reference only PASSED along (a component handed to a
@@ -28,7 +28,8 @@
  *
  * Children import nothing of the repo statically, so no real module is loaded
  * before the loader plugin is installed. Measures the main composition's
- * committed registries; state defaults to `$EQUIN_SCRATCH/definition-closure-<host>-<policy>`.
+ * committed registries. `--state` holds the kept set and rewritten sources
+ * between rounds (one directory per host and policy).
  */
 import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -48,13 +49,11 @@ const arg = (n: string, d?: string): string => {
 };
 const HOST = arg("--host", "server") as "server" | "web";
 const POLICY = arg("--policy", "B") as "A" | "B";
-const STATE = arg(
-  "--state",
-  join(
-    process.env.EQUIN_SCRATCH ?? ".",
-    `definition-closure-${HOST}-${POLICY}`,
-  ),
-);
+const STATE = arg("--state", "");
+if (STATE === "")
+  throw new Error(
+    "--state <dir> is required: a scratch directory the rounds keep their kept set and rewritten sources in",
+  );
 const MODE = arg("--child", "");
 
 const ASSET_RE =
