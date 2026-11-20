@@ -294,9 +294,10 @@ function startScopeServer(
             continue;
           }
           case "interrupted":
-            // The browser suspended this page (back/forward cache) while the
-            // host was creating its IndexedDB and aborted that upgrade; the
-            // page runs again now. That worker retires (its boot threw), so
+            // The browser suspended this page (back/forward cache, a
+            // background tab) while the host was booting and cut its
+            // IndexedDB work short (an upgrade, a transaction); the page runs
+            // again now. That worker retires (its boot threw), so
             // start a fresh one past its generation — as after a retirement
             // — rather than asking a closing worker again. Bounded: WebKit
             // raises it only for a suspended page, so one that keeps
@@ -304,7 +305,7 @@ function startScopeServer(
             interruptions += 1;
             if (interruptions > MAX_BOOT_INTERRUPTIONS) {
               throw new Error(
-                `[demo-scope] ${scenario.id}: the host's boot was interrupted ${interruptions} times in a row — the browser keeps aborting its IndexedDB upgrade although this page runs`,
+                `[demo-scope] ${scenario.id}: the host's boot was interrupted ${interruptions} times in a row — the browser keeps cutting its IndexedDB work short although this page runs`,
               );
             }
             console.info(

@@ -124,18 +124,29 @@ serveBrowserHost({
   answers no claim: a fresh worker started meanwhile waits on the lock and
   opens the wiped storage, rather than taking this one over.
 - **A boot the browser interrupts is declined, not failed** (`errors.ts`):
-  WebKit aborts an IndexedDB open whose upgrade — creating a database: the
-  stores' on a first visit or after a snapshot replaced outdated data,
-  PGlite's IDBFS on every fresh one — is answered while the page (or the
-  worker serving it) sits in the back/forward cache ("Version change
-  transaction on cached page is aborted to unblock other connections",
-  WebCore's `IDBConnectionProxy::completeOpenDBRequest`; report-1795070221-uzvq63).
-  The upgrade never ran. `serveBrowserHost` turns that error
-  (`isSuspendedUpgradeAbort`, anywhere in the cause chain) into
+  WebKit cuts a context's IndexedDB work short when the context is
+  suspended (its page in the back/forward cache, a background tab's
+  process) and that work stands in the way of another context on the same
+  database (another tab, its worker). An open whose upgrade — creating a
+  database: the stores' on a first visit or after a snapshot replaced
+  outdated data, PGlite's IDBFS on every fresh one — is answered then is
+  aborted ("Version change transaction on cached page is aborted to unblock
+  other connections", WebCore's `IDBConnectionProxy::completeOpenDBRequest`;
+  report-1795070221-uzvq63). A transaction in progress then is aborted on
+  the server (`UniqueIDBDatabase::abortInProgressTransactionsOfSuspendedClientsIfNeeded`),
+  which the context learns once it runs again: each request it still had
+  queued fails "Attempt to <op> without an in-progress transaction" (PGlite's
+  IDBFS sync deleting a removed file, report-1795189021-x5spzw), its commit
+  "Transaction was aborted while its process was suspended". Nothing cut
+  short committed. `serveBrowserHost` turns those errors
+  (`isSuspensionAbort`, anywhere in the cause chain) into
   `BootInterruptedError` (`{ kind: "interrupted" }`): the worker retires as
   after any thrown boot, and the page — running again — starts a fresh one
   past its generation (`demo/scope`). What it left is what a fresh open
-  handles: no database, or a lifecycle record still `seeding` (wiped).
+  handles: no database, a lifecycle record still `seeding` (wiped), or a
+  booted storage short of the cut write (as after a tab closed mid-write).
+  Not reproducible in Playwright's WebKit, which neither keeps pages in the
+  back/forward cache nor suspends processes.
   `hostDataStored` (the page's gate) never creates the database: an open
   that would upgrade means it is gone, and the creation is aborted — an
   empty version 1 without the object stores would never be upgraded by the

@@ -14,7 +14,7 @@ import {
   type PortEnd,
   type ServedHost,
 } from "@plugins/framework/plugins/browser-server/core";
-import { BootInterruptedError, isSuspendedUpgradeAbort } from "./errors";
+import { BootInterruptedError, isSuspensionAbort } from "./errors";
 import { declareHostStorage } from "./host-storage";
 import {
   openHostStorage,
@@ -150,9 +150,10 @@ export function serveBrowserHost(opts: {
       try {
         return await openAndBoot();
       } catch (err) {
-        // The browser suspended the page mid-boot and aborted an IndexedDB
-        // upgrade under it: not a fault — the page boots a fresh worker.
-        if (isSuspendedUpgradeAbort(err)) throw new BootInterruptedError(err);
+        // The browser suspended the page mid-boot and cut its IndexedDB work
+        // short (an upgrade, a transaction): not a fault — the page boots a
+        // fresh worker.
+        if (isSuspensionAbort(err)) throw new BootInterruptedError(err);
         throw err;
       }
     },

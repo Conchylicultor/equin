@@ -79,8 +79,8 @@ seed — so the unchanged app reads demo data through `useLive` /
   generation (`HostGenerations.join`) and connects there — no screen. A
   Reset or a retirement is followed the same way.
 - **A boot the browser interrupted starts again.** A host declining
-  `{ kind: "interrupted" }` (WebKit aborted its IndexedDB upgrade while the
-  page was in the back/forward cache — `host-storage`) is neither a failure
+  `{ kind: "interrupted" }` (WebKit cut its IndexedDB work short while the
+  page was suspended — back/forward cache, a background tab — `host-storage`) is neither a failure
   nor reported: the scope advances past that worker's generation and
   connects again, booting a fresh host.
 - **When the host will not serve this page**, the cause decides the message

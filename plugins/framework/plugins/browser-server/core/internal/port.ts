@@ -106,11 +106,12 @@ export type HostRefusal =
   | { kind: "join"; worker: string }
   /**
    * The browser cut the boot short because it suspended the page: WebKit
-   * aborts an IndexedDB open whose upgrade (creating a database) is answered
-   * while the requesting page — or the worker serving it — sits in the
-   * back/forward cache ("Version change transaction on cached page is
-   * aborted to unblock other connections"). Nothing failed: the page starts
-   * the host again, on a fresh worker, once it is shown again.
+   * aborts the IndexedDB work (an upgrade creating a database, a transaction
+   * in progress) of a page — or the worker serving it — suspended in the
+   * back/forward cache or as a background tab, when it blocks another
+   * context on the same database (`host-storage`'s `isSuspensionAbort`).
+   * Nothing failed: the page starts the host again, on a fresh worker, once
+   * it runs again.
    */
   | { kind: "interrupted" };
 
