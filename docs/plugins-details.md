@@ -5738,6 +5738,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `itemCount`
               - `joinPath`
               - `locationKey`
+              - `nameStemEnd`
               - `parentPath`
               - `pathChain`
           - Cross-plugin:

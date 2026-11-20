@@ -168,6 +168,7 @@
     - `itemCount`
     - `joinPath`
     - `locationKey`
+    - `nameStemEnd`
     - `parentPath`
     - `pathChain`
 - Cross-plugin:

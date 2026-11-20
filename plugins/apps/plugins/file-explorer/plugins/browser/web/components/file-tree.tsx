@@ -56,6 +56,7 @@ import {
   formatSize,
   itemCount,
   joinPath,
+  nameStemEnd,
   type EntryFilter,
   type EntryRow,
   type FolderRefusal,
@@ -507,6 +508,12 @@ export function FileTree({
               onEdit: (row, next) => {
                 if (typeof next === "string") onRename(row, next);
               },
+              // A file's name is selected without its extension, so typing
+              // keeps it; a folder's whole.
+              editSelection: (row: EntryRow, value: string) => [
+                0,
+                row.kind === "dir" ? value.length : nameStemEnd(value),
+              ],
             },
           }),
     [onRename],

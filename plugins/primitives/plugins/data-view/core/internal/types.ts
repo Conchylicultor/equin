@@ -873,6 +873,12 @@ interface FieldDefBase<TRow> {
    * in practice (a field is scalar or multi). Consumer owns persistence.
    */
   onEditValues?: (row: TRow, next: string[]) => void | Promise<void>;
+  /**
+   * What a text edit of this field starts with selected, as `[start, end]`
+   * offsets into the value being edited — a file's name without its
+   * extension, as a file manager selects it. Absent: the whole value.
+   */
+  editSelection?: (row: TRow, value: string) => readonly [number, number];
   /** Default: true when `value` is present. */
   sortable?: boolean;
   /**
@@ -2133,6 +2139,8 @@ export type FieldOverride<TRow> = Partial<
    * `cell`.
    */
   onEdit?(row: TRow, next: FieldValue): void | Promise<void>;
+  /** What a text edit starts with selected (`FieldDefBase.editSelection`) — a method, like `cell`. */
+  editSelection?(row: TRow, value: string): readonly [number, number];
   /**
    * The field's option set as the list READS it (`FieldOptionsResult`) — the
    * values a column takes within the list's own scope (one site's visited

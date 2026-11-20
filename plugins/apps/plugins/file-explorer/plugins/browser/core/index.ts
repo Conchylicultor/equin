@@ -2,6 +2,7 @@ export {
   baseName,
   isWithin,
   joinPath,
+  nameStemEnd,
   parentPath,
   pathChain,
 } from "./internal/paths";

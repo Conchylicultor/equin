@@ -20,6 +20,17 @@ export function baseName(path: string): string {
   return cut < 0 ? path : path.slice(cut + 1);
 }
 
+/**
+ * Where a file's name ends before its extension (`report` of `report.pdf`,
+ * `archive.tar` of `archive.tar.gz`) — what a rename selects first, as the
+ * Finder does. A name with no extension, or a dotfile (`.zshrc`), ends at
+ * its length.
+ */
+export function nameStemEnd(name: string): number {
+  const dot = name.lastIndexOf(".");
+  return dot > 0 ? dot : name.length;
+}
+
 /** The directory holding `path`, in the same form; `null` at the filesystem root. */
 export function parentPath(path: string, home: string): string | null {
   if (path === "/") return null;

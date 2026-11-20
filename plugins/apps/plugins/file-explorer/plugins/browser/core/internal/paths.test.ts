@@ -1,11 +1,26 @@
 import { describe, expect, test } from "bun:test";
-import { baseName, isWithin, joinPath, parentPath, pathChain } from "./paths";
+import {
+  baseName,
+  isWithin,
+  joinPath,
+  nameStemEnd,
+  parentPath,
+  pathChain,
+} from "./paths";
 import { decodeOpenParam, encodeOpenParam } from "./location";
 import { formatCount, formatModified, formatSize } from "./format";
 
 const HOME_ABS = "/h/me";
 
 describe("paths", () => {
+  test("a name's stem ends before its last extension; a dotfile has none", () => {
+    expect(nameStemEnd("report.pdf")).toBe(6);
+    expect(nameStemEnd("archive.tar.gz")).toBe(11);
+    expect(nameStemEnd("Makefile")).toBe(8);
+    expect(nameStemEnd(".zshrc")).toBe(6);
+    expect(nameStemEnd("")).toBe(0);
+  });
+
   test("join at the root and below", () => {
     expect(joinPath("/", "etc")).toBe("/etc");
     expect(joinPath("~", "Downloads")).toBe("~/Downloads");
