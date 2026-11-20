@@ -42,15 +42,24 @@ backoff (2 s → 2 min, reset by a hello — a bound around a network peer); a
 404 leaves it idle until kicked. A malformed frame or line is reported
 (`box-link:stream-frame`) and ends the attempt.
 
-Request-level outcomes map onto the reducer: 404 → `outdated
-(route-missing)`; a refused or broken request, a non-OK status, the stream
-closing, the watchdog → a `down` failure; the tunnel's exit → an
-`unreachable` failure (`sshKind` from its stderr).
+Request-level outcomes map onto the reducer, on evidence: 404 → `outdated
+(route-missing)`; the box ANSWERING with a failure (a non-OK status, the
+stream it closed, a bad frame) → a `down` failure; the tunnel's exit → an
+`unreachable` failure (`sshKind` from its stderr). A failure with NO answer
+(the request or the connection broke, the watchdog) cannot tell the tunnel
+dying from equin not listening — when a tunnel dies, the stream's failure
+lands before the tunnel's exit. Through a tunnel it is an `unanswered`
+event, concluding nothing; it becomes `down` only once ssh shows the
+session answered after the attempt began (a forward's target refused —
+`infra/ssh`'s `isForwardTargetRefusal`), whichever arrives first
+(`machine/internal/tunnel-evidence.ts`), and the tunnel's exit names it
+`unreachable` otherwise. A stand-in has no tunnel to doubt: no answer is
+`down`.
 
 ## The state machine (`shared/reducer.ts`, pure)
 
 `reduceLink(prev, event, env)` — events `hello`, `beat`, `heard`, `failure {
-failure: down | unreachable, sshKind, error }`, `refused`, `route-missing`,
+failure: down | unreachable, sshKind, error }`, `unanswered { error }`, `refused`, `route-missing`,
 `grace-check`, `wake`, `restart`; `env` the facts read at the instant
 (`sleptMs` since the box was last heard — `machine-sleep`'s `sleptDuring` —
 and whether a deploy run of the deployment is active). Grace is 2 min:
@@ -62,6 +71,11 @@ and whether a deploy run of the deployment is active). Grace is 2 min:
 - connecting / down / unreachable → a failure: its class at once, unless a
   deploy runs (`restarting`) or — for a first connect — the computer just
   slept.
+- `unanswered` never settles a link: connecting / down / unreachable stay
+  as they are (the error recorded); from live it opens the grace with `then`
+  what the link already was, else `down` — a placeholder the tunnel's exit
+  overwrites at once, and backed by the time the grace ends (a tunnel still
+  up past ssh's ~45 s keep-alive bound has answered).
 - `wake` gives a down / unreachable / reconnecting link a fresh grace
   (`slept`); the manager also respawns every tunnel and reconnects every
   stream.

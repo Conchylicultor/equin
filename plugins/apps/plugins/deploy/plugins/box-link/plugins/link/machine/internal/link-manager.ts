@@ -43,8 +43,10 @@ import { openTunnel, type Tunnel } from "./tunnel";
 import {
   createStreamClient,
   type StreamClient,
+  type StreamFailure,
   type StreamTransport,
 } from "./stream-client";
+import { createTunnelEvidence, type TunnelEvidence } from "./tunnel-evidence";
 import { dispatchBoxHello, dispatchBoxSignal } from "../../shared/signals";
 import { dropLink, linkOf, linkedDeploymentIds, setLink } from "./store";
 import { boxLinksServed, siteHealthServed } from "./served";
@@ -62,6 +64,8 @@ interface ServerEntry {
   /** The SSH tunnel (`ssh` targets only); `null` once it refused. */
   tunnel: Tunnel | null;
   streams: Map<string, StreamClient>;
+  /** What the tunnel's live incarnation showed of itself (`ssh` targets). */
+  evidence: TunnelEvidence;
 }
 
 const servers = new Map<string, ServerEntry>();
@@ -158,12 +162,51 @@ function throughSocket(socket: string, d: LinkDeployment): StreamTransport {
     });
 }
 
+function downFailure(deploymentId: string, error: string): void {
+  dispatch(deploymentId, {
+    kind: "failure",
+    at: Date.now(),
+    failure: "down",
+    sshKind: null,
+    error,
+  });
+}
+
+/**
+ * A stream's failure, on evidence: the box answered → `down`. With no answer
+ * there is no tunnel to doubt on a stand-in (this instance's own gateway did
+ * not answer: `down`); through a tunnel it is `down` only once ssh shows it
+ * answered — until then it concludes nothing, and the tunnel's exit names it.
+ */
+function onStreamFailed(
+  deploymentId: string,
+  evidence: TunnelEvidence | null,
+  f: StreamFailure,
+): void {
+  if (f.answered || evidence === null) {
+    evidence?.heard(deploymentId);
+    downFailure(deploymentId, f.error);
+    return;
+  }
+  if (evidence.unanswered(deploymentId, f.startedAt, f.error) === "down") {
+    downFailure(deploymentId, f.error);
+    return;
+  }
+  dispatch(deploymentId, {
+    kind: "unanswered",
+    at: Date.now(),
+    error: f.error,
+  });
+}
+
 function streamFor(
   deploymentId: string,
   transport: StreamTransport,
+  evidence: TunnelEvidence | null,
 ): StreamClient {
   return createStreamClient(deploymentId, transport, {
     hello(frame) {
+      evidence?.heard(deploymentId);
       const hello = {
         buildId: frame.buildId,
         startedAt: frame.startedAt,
@@ -185,14 +228,8 @@ function streamFor(
     routeMissing(error) {
       dispatch(deploymentId, { kind: "route-missing", at: Date.now(), error });
     },
-    failed(error) {
-      dispatch(deploymentId, {
-        kind: "failure",
-        at: Date.now(),
-        failure: "down",
-        sshKind: null,
-        error,
-      });
+    failed(failure) {
+      onStreamFailed(deploymentId, evidence, failure);
     },
   });
 }
@@ -226,12 +263,17 @@ async function openServer(target: LinkTarget): Promise<void> {
       dispatch(d.deploymentId, { kind: "restart", at });
     }
   }
-  const entry: ServerEntry = { target, tunnel: null, streams: new Map() };
+  const entry: ServerEntry = {
+    target,
+    tunnel: null,
+    streams: new Map(),
+    evidence: createTunnelEvidence(),
+  };
   servers.set(target.serverId, entry);
   switch (target.kind) {
     case "stand-in":
       for (const d of target.deployments) {
-        const stream = streamFor(d.deploymentId, throughOwnGateway);
+        const stream = streamFor(d.deploymentId, throughOwnGateway, null);
         entry.streams.set(d.deploymentId, stream);
         stream.enable();
       }
@@ -254,12 +296,21 @@ async function openServer(target: LinkTarget): Promise<void> {
         target.deployments,
         {
           ready() {
+            entry.evidence.reset();
             for (const s of entry.streams.values()) {
               s.enable();
               s.kick();
             }
           },
+          answered() {
+            for (const { deploymentId, error } of entry.evidence.sshAnswered(
+              Date.now(),
+            )) {
+              downFailure(deploymentId, error);
+            }
+          },
           lost(kind, message) {
+            entry.evidence.reset();
             for (const s of entry.streams.values()) s.disable();
             for (const id of ids) {
               dispatch(id, {
@@ -290,7 +341,7 @@ async function openServer(target: LinkTarget): Promise<void> {
         const socket = tunnel.sockets.get(d.deploymentId)!;
         entry.streams.set(
           d.deploymentId,
-          streamFor(d.deploymentId, throughSocket(socket, d)),
+          streamFor(d.deploymentId, throughSocket(socket, d), entry.evidence),
         );
       }
       return;

@@ -47,7 +47,7 @@ every reconnect runs one catch-up pull.
 | `connecting` | started (tunnel spawned / stream opened), no hello yet |
 | `live` | hello received, beats current |
 | `reconnecting { cause, graceUntil, then, sshKind }` | was live, lost, within its 2 min grace. `cause`: `slept` (this computer slept since the box was last heard), `restarting` (a deploy run of the deployment is active), `network` (otherwise). `then`: what it settles on once the grace runs out |
-| `down` | SSH answers, equin does not (stream refused, 502, closed, 45 s silent) |
+| `down` | SSH answers, equin does not — on positive evidence only: the box answered with a failure (502, a closed stream), or ssh said nothing listens behind the forward |
 | `unreachable { sshKind }` | the SSH transport fails |
 | `refused { reason }` | `auth`, `host-key-mismatch`, `forwarding-refused`, `no-ssh-key`, `unverified` — the user must act; nothing retries it |
 | `outdated { reason }` | the box answers 404 (`route-missing`: its release predates the stream) or another protocol `v` — deploy it again; retried after the next successful deploy run |

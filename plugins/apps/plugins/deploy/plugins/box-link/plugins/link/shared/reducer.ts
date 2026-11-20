@@ -27,8 +27,10 @@ export type LinkEvent =
   /** Any other frame (a signal): the box is still talking. */
   | { kind: "heard"; at: number }
   /**
-   * The link failed in a way a retry may fix: `down` (the tunnel is up, the
-   * stream refused / 502 / closed / timed out) or `unreachable` (the SSH
+   * The link failed in a way a retry may fix, and the driver has the
+   * evidence for which way: `down` (SSH answered while equin did not — the
+   * box answered HTTP with an error or closed the stream, or ssh said the
+   * forward's target refused the connection) or `unreachable` (the SSH
    * transport failed, `sshKind` when ssh said why).
    */
   | {
@@ -38,6 +40,13 @@ export type LinkEvent =
       sshKind: SshTunnelFailureKind | null;
       error: string;
     }
+  /**
+   * The stream got NO answer through the tunnel (the request or the
+   * connection broke, nothing came back): the tunnel dying and equin not
+   * listening look the same from here, so it concludes nothing — whichever
+   * evidence follows (the tunnel's exit, or ssh answering) does.
+   */
+  | { kind: "unanswered"; at: number; error: string }
   /** A failure only the user can fix: nothing retries it. */
   | { kind: "refused"; at: number; reason: LinkRefusal; error: string | null }
   /** The box has no stream route (404). */
@@ -106,20 +115,56 @@ function excuse(env: LinkEnv): ReconnectCause | null {
   return null;
 }
 
+/**
+ * What an unanswered stream leaves a grace to settle on, when no evidence
+ * has named the class yet: what the link already was, else `down`. That is
+ * only a placeholder until the grace runs out (2 min), and by then it is
+ * backed: a dying tunnel reports its exit at once (overwriting it with
+ * `unreachable`), and one still up past ssh's keep-alive bound (~45 s) has
+ * answered — SSH answers, equin does not.
+ */
+function pendingClass(s: LinkState): {
+  then: LinkFailureClass;
+  sshKind: SshTunnelFailureKind | null;
+} {
+  switch (s.kind) {
+    case "reconnecting":
+      return { then: s.then, sshKind: s.sshKind };
+    case "unreachable":
+      return { then: "unreachable", sshKind: s.sshKind };
+    case "connecting":
+    case "live":
+    case "down":
+    case "refused":
+    case "outdated":
+      return { then: "down", sshKind: null };
+  }
+}
+
 function onFailure(
   prev: BoxLink,
-  ev: Extract<LinkEvent, { kind: "failure" }>,
+  ev: Extract<LinkEvent, { kind: "failure" | "unanswered" }>,
   env: LinkEnv,
 ): BoxLink {
   const next = { ...prev, lastError: ev.error };
   const s = prev.state;
   // The user must act: a transport failure does not hide that.
   if (s.kind === "refused") return next;
+  // A conclusive failure names its class; an unanswered one names none, so
+  // it may open or extend a grace but never settles the link.
+  const known =
+    ev.kind === "failure"
+      ? {
+          then: ev.failure,
+          sshKind: ev.failure === "unreachable" ? ev.sshKind : null,
+        }
+      : null;
   const cause = excuse(env);
   if (s.kind === "live" || s.kind === "reconnecting") {
     const inGrace = s.kind === "live" || ev.at < s.graceUntil;
     if (!inGrace && cause === null) {
-      return withState(next, settled(ev.failure, ev.sshKind), ev.at);
+      if (known === null) return next;
+      return withState(next, settled(known.then, known.sshKind), ev.at);
     }
     const graceUntil =
       s.kind === "reconnecting" && inGrace
@@ -132,8 +177,7 @@ function onFailure(
         // Once excused, the excuse names it; a plain loss is the network.
         cause: cause ?? (s.kind === "reconnecting" ? s.cause : "network"),
         graceUntil,
-        then: ev.failure,
-        sshKind: ev.failure === "unreachable" ? ev.sshKind : null,
+        ...(known ?? pendingClass(s)),
       },
       ev.at,
     );
@@ -151,13 +195,15 @@ function onFailure(
         kind: "reconnecting",
         cause,
         graceUntil: ev.at + LINK_GRACE_MS,
-        then: ev.failure,
-        sshKind: ev.failure === "unreachable" ? ev.sshKind : null,
+        ...(known ?? pendingClass(s)),
       },
       ev.at,
     );
   }
-  return withState(next, settled(ev.failure, ev.sshKind), ev.at);
+  // Unanswered: still connecting (or still what it settled on) until the
+  // tunnel's exit or ssh answering says which it is.
+  if (known === null) return next;
+  return withState(next, settled(known.then, known.sshKind), ev.at);
 }
 
 /** The next record of one deployment's link. */
@@ -186,6 +232,7 @@ export function reduceLink(
     case "heard":
       return { ...prev, lastHeardAt: ev.at };
     case "failure":
+    case "unanswered":
       return onFailure(prev, ev, env);
     case "refused":
       return withState(

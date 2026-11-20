@@ -216,6 +216,15 @@ function isForwardTargetLine(lowerLine: string): boolean {
   return lowerLine.includes("open failed: connect failed");
 }
 
+/**
+ * Whether ONE stderr line of a long-lived `ssh` says a forward's target
+ * refused a connection — positive evidence the session is up (the server
+ * answered the channel open) while nothing listens behind the forward.
+ */
+export function isForwardTargetRefusal(line: string): boolean {
+  return isForwardTargetLine(line.toLowerCase());
+}
+
 function matchTunnel(lowerText: string): SshTunnelFailureKind | null {
   for (const { kind, patterns } of TUNNEL_PATTERNS) {
     if (patterns.some((p) => lowerText.includes(p))) return kind;

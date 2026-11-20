@@ -5,6 +5,7 @@ import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
   classifyTunnelStderr,
   classifyTunnelStderrLine,
+  isForwardTargetRefusal,
   materializeHermetic,
   sshTunnelArgv,
   tunnelFailureMessage,
@@ -63,6 +64,11 @@ export const boxLinkSocketWatcher = defineFileWatcher({
 export interface TunnelEvents {
   /** Every forward's socket is bound: the streams may connect. */
   ready(): void;
+  /**
+   * The live session answered: a forward's target refused a connection
+   * (ssh: `open failed: connect failed`) — SSH is up, nothing listens behind.
+   */
+  answered(): void;
   /** An incarnation ended; the daemon respawns it. */
   lost(kind: SshTunnelFailureKind, message: string): void;
   /** ssh said something a respawn cannot fix: the tunnel is stopped for good. */
@@ -178,6 +184,7 @@ export async function openTunnel(
       argv,
       onStderrLine: (line) => {
         stderr.push(line);
+        if (isForwardTargetRefusal(line)) events.answered();
         // A forbidden forward does not end ssh: it says so per connection.
         const kind = classifyTunnelStderrLine(line);
         if (kind !== null && !tunnelFailureRetryable(kind)) {

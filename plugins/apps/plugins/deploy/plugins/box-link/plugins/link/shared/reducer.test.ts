@@ -338,6 +338,99 @@ describe("reduceLink", () => {
   });
 });
 
+describe("a stream that got no answer (the tunnel or equin: unknown)", () => {
+  const unanswered = (at: number): LinkEvent => ({
+    kind: "unanswered",
+    at,
+    error: "the stream request failed: socket closed",
+  });
+  const tunnelExit = (at: number): LinkEvent => ({
+    kind: "failure",
+    at,
+    failure: "unreachable",
+    sshKind: "disconnected",
+    error: "The SSH session was lost",
+  });
+  const connecting = linkIn({ kind: "connecting" });
+
+  /** Every state a sequence of events passes through, from `start`. */
+  function walk(start: BoxLink, events: LinkEvent[], env = quiet): LinkState[] {
+    const seen: LinkState[] = [];
+    let link = start;
+    for (const ev of events) {
+      link = reduceLink(link, ev, env);
+      seen.push(link.state);
+    }
+    return seen;
+  }
+
+  test("first connect: the failure arriving before the tunnel's exit never reads down", () => {
+    const seen = walk(connecting, [unanswered(T0 + 1), tunnelExit(T0 + 2)]);
+    expect(seen.map((s) => s.kind)).toEqual(["connecting", "unreachable"]);
+    expect(seen.at(-1)).toEqual({
+      kind: "unreachable",
+      sshKind: "disconnected",
+    });
+  });
+
+  test("first connect: ssh answering after it concludes down", () => {
+    const seen = walk(connecting, [unanswered(T0 + 1), down(T0 + 2)]);
+    expect(seen.map((s) => s.kind)).toEqual(["connecting", "down"]);
+  });
+
+  test("it records the error without moving a settled link", () => {
+    for (const state of [
+      { kind: "unreachable", sshKind: "timeout" },
+      { kind: "down" },
+    ] as const) {
+      const next = reduceLink(linkIn(state), unanswered(T0 + 1), quiet);
+      expect(next.state).toEqual(state);
+      expect(next.lastError).toBe("the stream request failed: socket closed");
+    }
+  });
+
+  test("live: it opens the grace, and the tunnel's exit names its class", () => {
+    const seen = walk(live, [unanswered(T0 + 1), tunnelExit(T0 + 2)]);
+    expect(seen.map((s) => s.kind)).toEqual(["reconnecting", "reconnecting"]);
+    expect(seen.at(-1)).toEqual({
+      kind: "reconnecting",
+      cause: "network",
+      graceUntil: T0 + 1 + LINK_GRACE_MS,
+      then: "unreachable",
+      sshKind: "disconnected",
+    });
+  });
+
+  test("reconnecting: it keeps the class evidence already named", () => {
+    const prev = linkIn({
+      ...reconnecting(T0 + LINK_GRACE_MS, "unreachable"),
+      sshKind: "timeout",
+    });
+    expect(reduceLink(prev, unanswered(T0 + 1), quiet).state).toEqual(
+      prev.state,
+    );
+  });
+
+  test("past its grace, it does not settle a reconnecting link (grace-check does)", () => {
+    const prev = linkIn(reconnecting(T0));
+    expect(reduceLink(prev, unanswered(T0 + 1), quiet).state).toEqual(
+      prev.state,
+    );
+  });
+
+  test("a deploy run still excuses it on a first connect", () => {
+    expect(reduceLink(connecting, unanswered(T0 + 1), deploying).state).toEqual(
+      {
+        kind: "reconnecting",
+        cause: "restarting",
+        graceUntil: T0 + 1 + LINK_GRACE_MS,
+        then: "down",
+        sshKind: null,
+      },
+    );
+  });
+});
+
 describe("linkStateChanged", () => {
   test("a later grace deadline is not a change", () => {
     expect(linkStateChanged(reconnecting(1), reconnecting(2))).toBe(false);

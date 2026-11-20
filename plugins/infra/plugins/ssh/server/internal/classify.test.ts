@@ -15,6 +15,7 @@ import {
   classify,
   classifyTunnelStderr,
   classifyTunnelStderrLine,
+  isForwardTargetRefusal,
   failureMessage,
   tunnelFailureMessage,
 } from "./classify";
@@ -233,6 +234,13 @@ describe("tunnel (long-lived ssh -N -L)", () => {
   test("a forward's target refusing one connection is not a session failure", () => {
     const line = "channel 3: open failed: connect failed: Connection refused";
     expect(classifyTunnelStderrLine(line)).toBeNull();
+    // …it is evidence the session answered (nothing listens behind it).
+    expect(isForwardTargetRefusal(line)).toBe(true);
+    expect(
+      isForwardTargetRefusal(
+        "channel 2: open failed: administratively prohibited: open failed",
+      ),
+    ).toBe(false);
     // …nor does it colour why the session later ended.
     expect(
       classifyTunnelStderr(

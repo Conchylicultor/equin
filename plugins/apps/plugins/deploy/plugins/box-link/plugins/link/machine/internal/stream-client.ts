@@ -32,14 +32,28 @@ export interface StreamEvents {
   signal(source: string, payload: unknown): void;
   /** The box has no stream route (404): idle until kicked. */
   routeMissing(error: string): void;
-  /** The stream failed or ended (equin not answering, or gone quiet). */
-  failed(error: string): void;
+  /** The stream failed or ended — see {@link StreamFailure}. */
+  failed(failure: StreamFailure): void;
+}
+
+/**
+ * How one attempt failed. `answered`: the box itself answered (an HTTP
+ * error, a stream it closed, a frame it sent wrong) — so the transport
+ * carried the request and equin is what failed. Otherwise nothing came back
+ * (the request or the connection broke, or silence): through a tunnel, that
+ * cannot tell the tunnel dying from equin not listening. `startedAt` is
+ * when the attempt began (epoch ms).
+ */
+export interface StreamFailure {
+  error: string;
+  answered: boolean;
+  startedAt: number;
 }
 
 /** Why one attempt ended. */
 type AttemptEnd =
   | { kind: "route-missing"; error: string }
-  | { kind: "failed"; error: string; heardHello: boolean }
+  | { kind: "failed"; error: string; answered: boolean; heardHello: boolean }
   | { kind: "aborted" };
 
 class WatchdogFired extends Error {
@@ -92,14 +106,16 @@ async function attempt(
         return {
           kind: "failed",
           error: inner.signal.reason.message,
+          answered: false,
           heardHello,
         };
       }
-      // The tunnel is up but nothing answers behind it (ssh: "connect
-      // failed"), or this instance's own gateway refused: equin is not up.
+      // No answer: the tunnel died, or it is up and nothing answers behind
+      // it (ssh: "connect failed") — the link manager tells which.
       return {
         kind: "failed",
         error: `the stream request failed: ${errorText(err)}`,
+        answered: false,
         heardHello,
       };
     }
@@ -115,6 +131,7 @@ async function attempt(
       return {
         kind: "failed",
         error: `the box answered HTTP ${String(res.status)}`,
+        answered: true,
         heardHello,
       };
     }
@@ -129,6 +146,7 @@ async function attempt(
             return {
               kind: "failed",
               error: `the box's stream failed: ${read.message}`,
+              answered: true,
               heardHello,
             };
           case "malformed":
@@ -139,6 +157,7 @@ async function attempt(
             return {
               kind: "failed",
               error: `a malformed frame: ${read.message}`,
+              answered: true,
               heardHello,
             };
           case "frame": {
@@ -152,23 +171,40 @@ async function attempt(
           }
         }
       }
-      return { kind: "failed", error: "the box closed the stream", heardHello };
+      // A chunked stream only ends cleanly on the box's own last chunk.
+      return {
+        kind: "failed",
+        error: "the box closed the stream",
+        answered: true,
+        heardHello,
+      };
     } catch (err) {
       if (outer.aborted) return { kind: "aborted" };
       if (err instanceof WatchdogFired) {
-        return { kind: "failed", error: err.message, heardHello };
+        return {
+          kind: "failed",
+          error: err.message,
+          answered: false,
+          heardHello,
+        };
       }
       if (err instanceof NdjsonParseError) {
         reportServerError({
           message: `[box-link] an unparseable stream line: ${err.message}`,
           scope: "box-link:stream-frame",
         });
-        return { kind: "failed", error: err.message, heardHello };
+        return {
+          kind: "failed",
+          error: err.message,
+          answered: true,
+          heardHello,
+        };
       }
       // The connection broke mid-stream (the tunnel or the box went away).
       return {
         kind: "failed",
         error: `the stream broke: ${errorText(err)}`,
+        answered: false,
         heardHello,
       };
     }
@@ -213,6 +249,7 @@ export function createStreamClient(
     const ctl = new AbortController();
     running = ctl;
     void runTracked(`box-link: stream ${label}`, async () => {
+      const startedAt = Date.now();
       const end = await attempt(transport, events, ctl.signal);
       if (running === ctl) running = null;
       if (end.kind === "aborted" || !enabled) return;
@@ -221,7 +258,7 @@ export function createStreamClient(
         return;
       }
       if (end.heardHello) backoffMs = BACKOFF_MIN_MS;
-      events.failed(end.error);
+      events.failed({ error: end.error, answered: end.answered, startedAt });
       const wait = backoffMs;
       backoffMs = Math.min(backoffMs * 2, BACKOFF_MAX_MS);
       cancelWait = armAwakeDeadline(wait, () => {

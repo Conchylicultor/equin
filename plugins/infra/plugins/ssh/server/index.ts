@@ -9,6 +9,7 @@ export type { SshForward } from "./internal/tunnel";
 export {
   classifyTunnelStderr,
   classifyTunnelStderrLine,
+  isForwardTargetRefusal,
   tunnelFailureMessage,
 } from "./internal/classify";
 export type {
