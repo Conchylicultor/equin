@@ -1413,9 +1413,24 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
       // reads only `route`/`pending`. `routesEqual` compares options only, so a
       // no-op rebuild leaves an in-memory hint intact; only a genuine
       // back/forward rebuilds the slot without it.
-      const newRoute = state.route.map((s) =>
-        createSlot(s.paneId, s.params, s.options ?? {}, {}, s.uuid),
+      // A slot whose uuid is on screen IS that instance (an in-place rewrite —
+      // `setParams`, an `inPlace` open — kept it across the entries): it keeps
+      // its instanceId, so its column stays mounted and only its params move.
+      const onScreen = new Map(
+        currentSlots().map((s) => [s.uuid, s.instanceId]),
       );
+      const newRoute = state.route.map((s) => {
+        const slot = createSlot(
+          s.paneId,
+          s.params,
+          s.options ?? {},
+          {},
+          s.uuid,
+        );
+        const instanceId =
+          s.uuid === undefined ? undefined : onScreen.get(s.uuid);
+        return instanceId === undefined ? slot : { ...slot, instanceId };
+      });
       const index = nonEmptyIndex(state.index);
       if (
         currentState.kind === "resolved" &&
@@ -2318,6 +2333,8 @@ export interface OpenRequest {
    * the target's address.
    */
   insert?: boolean;
+  /** Keep the instances the new route stands where they stand. See {@link OpenPaneOpts.inPlace}. */
+  inPlace?: boolean;
 }
 
 /**
@@ -2379,6 +2396,45 @@ export function computeOpen(
   params: Record<string, string>,
   opts: OpenRequest,
   currentIndex: Record<string, string> = NO_PARAMS,
+): OpenComputation {
+  const next = computeModeOpen(
+    currentRoute,
+    callerInstanceId,
+    target,
+    params,
+    opts,
+    currentIndex,
+  );
+  if (opts.inPlace !== true || !next.changed) return next;
+  return { ...next, route: keepInstancesInPlace(currentRoute, next.route) };
+}
+
+/**
+ * `next` with every slot standing where a slot of the SAME pane stands in
+ * `current` (same position, same pane id) carrying that slot's instance — its
+ * `instanceId` and `uuid` — so the column stays mounted and only its address
+ * changes, as with `setParams`. The rest of the route is `next`'s own.
+ */
+function keepInstancesInPlace(
+  current: PaneSlot[],
+  next: PaneSlot[],
+): PaneSlot[] {
+  return next.map((slot, i) => {
+    const here = current[i];
+    return here?.paneId === slot.paneId
+      ? { ...slot, instanceId: here.instanceId, uuid: here.uuid }
+      : slot;
+  });
+}
+
+/** {@link computeOpen} for the mode alone, every slot it mints a fresh instance. */
+function computeModeOpen(
+  currentRoute: PaneSlot[],
+  callerInstanceId: number | undefined,
+  target: PaneInternal,
+  params: Record<string, string>,
+  opts: OpenRequest,
+  currentIndex: Record<string, string>,
 ): OpenComputation {
   const options = opts.options ?? {};
   const hint = opts.hint ?? {};
@@ -4303,6 +4359,17 @@ export interface OpenPaneOpts<
    * address that only ever forwarded.
    */
   replace?: boolean;
+  /**
+   * A move WITHIN what is on screen, not to something else: every slot of the
+   * new route standing where a slot of the same pane stands now (same
+   * position, same pane) keeps that instance — mounted, its state and column
+   * kept — and only its address changes, as with `useSetParams`; the slots
+   * the open adds are fresh and the ones it drops close. For a pane whose
+   * params are a place inside one surface (a folder browser going up a level
+   * with its file preview beside it): the header, the preview and whatever
+   * else does not depend on the place stay as they are.
+   */
+  inPlace?: boolean;
 }
 
 export function useOpenPane(): OpenPaneFn {

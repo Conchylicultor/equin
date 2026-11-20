@@ -60,8 +60,10 @@ import { useHomeSystem } from "./internal/explorer-system";
 // `;fs` names the file system — absent, the computer's disk. Every location is
 // therefore a link, and back / forward are the browser history:
 //
-// - another folder is a fresh route (`mode: "root"`): a new entry and a new
-//   folder column, so the filter and selection start over;
+// - another folder is a new entry moving the folder column IN PLACE (an
+//   `inPlace` root open): the column, its header and the preview beside it
+//   stay mounted — only the listing (keyed by its folder) starts over, and the
+//   filter is the new folder's;
 // - opening a file pushes the preview column beside the folder's (replacing
 //   the one open there), closing it closes that column — the folder column is
 //   never remounted, so the listing keeps its scroll and expansion, and the
@@ -208,14 +210,15 @@ function systemOf(fs: string | undefined): BrowsableFileSystem | null {
 type OpenPaneFn = ReturnType<typeof useOpenPane>;
 
 /**
- * Files on `location`, from scratch: its folder column, with the open file's
- * preview column beside it when there is one (built from the preview's
- * declared parent).
+ * Files on `location`, as a route of its own: its folder column, with the open
+ * file's preview column beside it when there is one (built from the preview's
+ * declared parent). `inPlace` — a move within Files on screen — keeps the
+ * columns already standing there mounted, only their address changing.
  */
 function locationTarget(
   openPane: OpenPaneFn,
   location: ExplorerLocation,
-  opts: { replace?: boolean } = {},
+  opts: { replace?: boolean; inPlace?: boolean } = {},
 ): LinkTarget {
   const folder = folderParams(location.fs, location.dir);
   return location.open === null
@@ -522,8 +525,12 @@ function FilesFolderBrowser({
     [fs, dir, openParam],
   );
   const openPane = useOpenPane();
+  // Another folder moves this column in place: its header and the preview
+  // beside it stay mounted (the same file previewed is not reloaded); only the
+  // listing, keyed by its folder, starts over.
   const go = useCallback(
-    (next: ExplorerLocation) => locationTarget(openPane, next),
+    (next: ExplorerLocation) =>
+      locationTarget(openPane, next, { inPlace: true }),
     [openPane],
   );
   const openTarget = useCallback(
@@ -596,7 +603,8 @@ export function useExplorerLocation(): ExplorerLocation | null {
 /**
  * The routed explorer on `dir` of `fs` — with `open` previewed beside it,
  * when given — as a link (a new history entry; ⌘/middle-click opens it in a
- * new browser tab).
+ * new browser tab). Moves the folder column on screen in place, as the
+ * browser's own moves do.
  */
 export function useExplorerFolderTarget(): (
   fs: BrowsableFileSystem,
@@ -605,5 +613,9 @@ export function useExplorerFolderTarget(): (
 ) => LinkTarget {
   const openPane = useOpenPane();
   return (fs, dir, open) =>
-    locationTarget(openPane, { fs, dir, open: open ?? null });
+    locationTarget(
+      openPane,
+      { fs, dir, open: open ?? null },
+      { inPlace: true },
+    );
 }

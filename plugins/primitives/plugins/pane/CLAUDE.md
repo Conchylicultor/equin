@@ -330,6 +330,14 @@ Modes:
 - `"append"` — after the route's LAST pane, replacing it when it's the same
   pane type. The positional open for global chrome (no caller).
 
+`inPlace: true` (any mode) is a move WITHIN what is on screen: every slot of
+the computed route standing where a slot of the same pane stands now keeps
+that instance (no remount — only its address changes, as with
+`useSetParams`); added slots are fresh, dropped ones close. Files' folder
+moves use it, so the header and the file preview beside the folder stay
+mounted. Back / forward likewise keep the instance of every restored slot
+whose uuid is on screen.
+
 `replace: true` writes the open as a history replace rather than a push — a
 redirect: a legacy URL's pane forwarding to its successor, so Back skips the
 address that only ever forwarded.
