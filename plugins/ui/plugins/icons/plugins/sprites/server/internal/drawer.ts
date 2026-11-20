@@ -32,6 +32,14 @@ export interface RuntimeSymbolDrawerImpl {
     key: StyleKey,
     names: readonly SavedSymbolName[],
   ): Promise<readonly string[]>;
+  /**
+   * Whether `draw(key, names)` answers from memory right now: every one of
+   * `names` is drawn in `key` already. A name never drawn loads the sets
+   * (the computer's ~19 MB from disk, a browser host's bundled set over the
+   * network), so a read asking for it takes a read-admission slot
+   * (`icons.runtime-symbols`' `readCost`).
+   */
+  holds(key: StyleKey, names: readonly SavedSymbolName[]): boolean;
 }
 
 export const RuntimeSymbolDrawer = defineHostService<RuntimeSymbolDrawerImpl>(

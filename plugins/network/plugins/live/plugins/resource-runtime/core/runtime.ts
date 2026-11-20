@@ -403,6 +403,21 @@ type MembershipRecord =
  */
 export type ReadCost = "io" | "memory";
 
+/**
+ * A resource's declared read cost — see `ResourceDefinition.readCost`: one
+ * cost for every read, or a rule asked per read for a resource only some of
+ * whose tuples are held.
+ */
+export type ReadCostRule<P = ResourceParams> =
+  ReadCost | ((params: P, read: ReadKind) => ReadCost);
+
+/**
+ * Which read a per-read cost rule is asked about: the loader's (`load`) or
+ * the `revalidate` probe's (`probe`) — a probe often reads less (a hash
+ * compare) than the load it may spare.
+ */
+export type ReadKind = "load" | "probe";
+
 /** A resource's declared freshness — see `ResourceDefinition.freshness`. */
 export interface ResourceFreshness {
   kind: "notified" | "immutable" | "fixed" | "snapshot";
@@ -620,8 +635,15 @@ export interface ResourceDefinition<
    * Checked at runtime: a `"memory"` read slower than
    * `MEMORY_READ_BUDGET_MS` is reported, once per key — the declaration is
    * wrong, or its memo was cold.
+   *
+   * A function of the params when only SOME tuples are held — a memo filled
+   * per tuple (a glyph drawn before is a lookup; one never drawn loads its
+   * set from disk or the network). Asked at each read's admission: `"memory"`
+   * only while everything that read needs is held, else `"io"` (a slot).
+   * Every read it called memory is checked against the budget, warm or not —
+   * the rule just said nothing is left to build.
    */
-  readCost?: ReadCost;
+  readCost?: ReadCostRule<P>;
   /**
    * Subscription-authorization seam (deferred; single-instance-per-user). Runs
    * on the subscribe path — before the refcount bump, `onFirstSubscribe`, and
@@ -1017,7 +1039,7 @@ interface ServerResourceOptionsBase<
   /** Conditional-revalidation ETag signature — see `ResourceDefinition.revalidate`. */
   revalidate?: ResourceDefinition<T, P>["revalidate"];
   /** What one read costs, for read admission — see `ResourceDefinition.readCost`. */
-  readCost?: ReadCost;
+  readCost?: ReadCostRule<P>;
   /** Deferred subscription-authorization seam — see `ResourceDefinition.authorize`. */
   authorize?: ResourceDefinition<T, P>["authorize"];
   /**
@@ -1827,7 +1849,7 @@ interface RegistryEntry {
     follows?: HeldFollows,
   ) => Promise<string>;
   /** Declared read cost (`ResourceDefinition.readCost`): `"memory"` reads take no read-admission slot. */
-  readCost?: ReadCost;
+  readCost?: ReadCostRule;
   /**
    * Deferred subscription-authorization seam (see `ResourceDefinition.authorize`).
    * Undefined ⇒ every subscription to this resource is allowed (the shipped
@@ -4232,7 +4254,9 @@ export function createResourceRuntime(
   // reading ships one frame with no floor (the safe direction above), and its
   // capture arms the next flight.
   function readsDb(entry: RegistryEntry): boolean {
-    if (entry.readCost === "memory") return false;
+    // Either form: a declared read cost says what a read does besides
+    // memory (sets from disk or the network), never Postgres.
+    if (entry.readCost !== undefined && entry.readCost !== "io") return false;
     if (entry.externalSource === true && opts.lastReadSet !== undefined) {
       const last = opts.lastReadSet(entry.key);
       if (last !== undefined && last.length === 0) return false;
@@ -4704,7 +4728,7 @@ export function createResourceRuntime(
                   seedEtag,
                   seedAckTx,
                 })
-              : admitRead(entry, { pk, probe: false }, wanted, load);
+              : admitRead(entry, { params, pk, probe: false }, wanted, load);
           }
         : load,
       {
@@ -4738,24 +4762,38 @@ export function createResourceRuntime(
   // no slot: it has no I/O for the gate to bound, and queueing it FIFO behind
   // reads that do would make the cheapest read as slow as the slowest. Timed,
   // so a declaration its reads do not keep is reported (`checkMemoryRead`).
+  // A per-read rule (`ReadCostRule` as a function) is asked here, with the
+  // read's params (`null` for a point batch's union read — never a memory
+  // read: `pointBatchOf` refuses any declared read cost).
   function admitRead<T>(
     entry: RegistryEntry,
-    read: { pk: string; probe: boolean },
+    read: { params: ResourceParams | null; pk: string; probe: boolean },
     wanted: () => boolean,
     body: () => Promise<T>,
   ): Promise<T> {
     const key = entry.key;
     const label = `${read.probe ? "revalidate " : ""}${gateLabel(key, read.pk)}`;
-    if (entry.readCost === "memory") {
+    const rule = entry.readCost;
+    const perRead = typeof rule === "function";
+    const cost: ReadCost | undefined = perRead
+      ? read.params === null
+        ? "io"
+        : rule(read.params, read.probe ? "probe" : "load")
+      : rule;
+    if (cost === "memory") {
       if (!wanted()) return Promise.reject(new ReadAbandoned(key));
       const t0 = performance.now();
       const tuple = `${read.probe ? "probe" : "load"}\0${read.pk}`;
-      const warm = memoryReadWarm(key, tuple);
-      const settled = () =>
-        settleMemoryRead(key, tuple, warm, label, performance.now() - t0);
+      // A per-read rule just said everything is held: no cold build to excuse.
+      const warm = perRead || memoryReadWarm(key, tuple);
       const run = body();
-      // Observes only — the caller handles the read's own rejection.
-      void run.then(settled, settled);
+      // Observes only — the caller handles the read's own rejection. A failed
+      // read leaves its tuple cold: the memo it was building is not kept (a
+      // failed set load is retried by the next read, which builds it again).
+      void run.then(
+        () => settleMemoryRead(key, tuple, warm, label, performance.now() - t0),
+        () => undefined,
+      );
       return run;
     }
     // Queued from here until the slot comes (or the read is dropped): the
@@ -4813,7 +4851,7 @@ export function createResourceRuntime(
       entry.externalSource === true ||
       entry.revalidate !== undefined ||
       entry.bytes === true ||
-      entry.readCost === "memory"
+      (entry.readCost !== undefined && entry.readCost !== "io")
     ) {
       return undefined;
     }
@@ -4947,8 +4985,11 @@ export function createResourceRuntime(
     };
     // A rejection the members did not see yet (the loader's, the gate's)
     // settles every one; a settled member ignores it.
-    void admitRead(entry, { pk: firstPk, probe: false }, wanted, () =>
-      runPointBatch(entry, point, batch.members),
+    void admitRead(
+      entry,
+      { params: null, pk: firstPk, probe: false },
+      wanted,
+      () => runPointBatch(entry, point, batch.members),
     ).then(undefined, (err: unknown) => {
       if (openPointBatches.get(slot) === batch) openPointBatches.delete(slot);
       for (const m of batch.members) m.reject(err);
@@ -5192,7 +5233,7 @@ export function createResourceRuntime(
         const run = () =>
           admitRead(
             entry,
-            { pk, probe: true },
+            { params, pk, probe: true },
             () => reader !== "sub" || entry.tracked.has(pk),
             () => {
               admitted = true;
@@ -6345,7 +6386,9 @@ export function createResourceRuntime(
         ((params: ResourceParams) => Promise<FollowReached>) | undefined,
       revalidate: def.revalidate as
         ((params: ResourceParams) => Promise<string>) | undefined,
-      ...(def.readCost !== undefined ? { readCost: def.readCost } : {}),
+      ...(def.readCost !== undefined
+        ? { readCost: def.readCost as ReadCostRule }
+        : {}),
       authorize: def.authorize as
         ((params: ResourceParams) => boolean | Promise<boolean>) | undefined,
       validateParams: def.validateParams ?? acceptAnyParams,

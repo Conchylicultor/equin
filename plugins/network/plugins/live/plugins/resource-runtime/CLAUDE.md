@@ -763,8 +763,16 @@ All but the version are co-produced by the starter. A push drain mints
   captures no watermark (it reads no Postgres). Checked: a read of a WARM
   tuple (one of its reads already completed) slower than
   `MEMORY_READ_BUDGET_MS` (250 ms) is reported once per key — reads before
-  that are exempt (the memo's cold build). Default `"io"`.
-  `runtime-read-cost.test.ts`.
+  that are exempt (the memo's cold build). A FAILED read leaves its tuple
+  cold: the memo it was building is not kept, so the retry that builds it is
+  exempt too (report-1795199821-k4k6x9 was a retry after a failed import).
+  Default `"io"`. **A per-read rule** (`ReadCostRule` as a function of the
+  params and the read kind — `load` or `probe`, a probe often a hash compare)
+  is asked at admission, for a resource only some of whose tuples are held: a read it calls `"io"` takes a slot, one it calls `"memory"` runs at
+  once and is held to the budget even cold (the rule just said nothing is
+  left to build). A point batch never asks it (any declared cost refuses
+  batching). A declared cost of either form reads no Postgres
+  (no watermark capture). `runtime-read-cost.test.ts`.
 - **A read nobody is owed is dropped at its slot (`ReadAbandoned`).** When its
   slot comes, a subscription's read — and its
   `revalidate` probe — runs only while its tuple is tracked (any socket, a

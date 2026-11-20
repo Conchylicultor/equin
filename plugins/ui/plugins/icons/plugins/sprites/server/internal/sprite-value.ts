@@ -22,8 +22,17 @@ export const iconSpriteServed = serveValue(iconSprite, {
       "a tuple is drawn from the shipped open icon sets, content-addressed — no owner data",
   },
   // A slice of the drawer's per-host memo (one build per sprite group,
-  // shared by every reader): no slot, never queued behind git reads.
-  readCost: "memory",
+  // shared by every reader): no slot, never queued behind git reads — once
+  // built. The build reads its set (from disk, or over the network on a
+  // browser host): a read that would run it takes a slot.
+  // The probe is a hash compare.
+  readCost: ({ hash, key }, read) =>
+    read === "load" &&
+    isSpriteKey(key) &&
+    hash === SpriteDrawer.get().manifestHash &&
+    !SpriteDrawer.get().holds(key)
+      ? "io"
+      : "memory",
   changes: {
     immutable: {
       reason: "content-addressed by the drawer's hash",

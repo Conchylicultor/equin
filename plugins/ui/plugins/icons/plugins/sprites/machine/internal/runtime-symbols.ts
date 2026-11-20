@@ -13,6 +13,8 @@ import { PACKAGE, setIdentity, withSymbolSets } from "./symbol-sets";
 // picker reaches the whole set, a batch at a time, and it now pays for the
 // names it shows. A failed pass keeps nothing.
 const drawn = new Map<StyleKey, Map<SavedSymbolName, Promise<string>>>();
+// Per style key, the names whose pass has landed: drawing them is a lookup.
+const landed = new Map<StyleKey, Set<SavedSymbolName>>();
 
 function symbolsOf(
   key: StyleKey,
@@ -40,8 +42,14 @@ function symbolsOf(
       }
       throw err;
     });
+    let done = landed.get(key);
+    if (done === undefined) landed.set(key, (done = new Set()));
+    const doneNames = done;
     for (const name of missing) {
-      const symbol = pass.then((symbols) => symbols.get(name)!);
+      const symbol = pass.then((symbols) => {
+        doneNames.add(name);
+        return symbols.get(name)!;
+      });
       pending.set(name, symbol);
       held.set(name, symbol);
     }
@@ -58,5 +66,9 @@ export const installedSetsDrawer: RuntimeSymbolDrawerImpl = {
   identity: [PACKAGE.regular, PACKAGE.light].map(setIdentity).join("\n"),
   draw(key: StyleKey, names: readonly SavedSymbolName[]) {
     return symbolsOf(key, names);
+  },
+  holds(key: StyleKey, names: readonly SavedSymbolName[]) {
+    const done = landed.get(key);
+    return done !== undefined && names.every((name) => done.has(name));
   },
 };

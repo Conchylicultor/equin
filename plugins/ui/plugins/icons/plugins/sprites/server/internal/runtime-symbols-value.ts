@@ -8,7 +8,7 @@ import {
 } from "@plugins/ui/plugins/icons/core";
 import { isSavedSymbolName } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
 import { MAX_RUNTIME_SYMBOLS_PER_READ, runtimeSymbolsValue } from "../../core";
-import { runtimeSymbols, symbolsHash } from "./drawer";
+import { RuntimeSymbolDrawer, runtimeSymbols, symbolsHash } from "./drawer";
 import { SpriteDrawer } from "./sprite-drawer";
 
 /**
@@ -107,6 +107,41 @@ export async function drawGlyphs(
   );
 }
 
+/**
+ * Whether drawing `names` of `key` is a lookup right now: the host's drawer
+ * drew every one of them already (a Material style), or built the sprite
+ * they are picked from (a Lucide key). Otherwise the read loads a set —
+ * from disk on the computer, over the network on a browser host.
+ */
+function glyphsHeld(key: GlyphKey, names: readonly string[]): boolean {
+  return isStyleKey(key)
+    ? RuntimeSymbolDrawer.get().holds(key, names.filter(isSavedSymbolName))
+    : SpriteDrawer.get().holds(key);
+}
+
+/**
+ * What one read of a tuple costs (`readCost`): the probe (a hash compare), a
+ * refused tuple, or one whose glyphs are held answers from memory; any other
+ * load draws from its set and takes a read-admission slot.
+ */
+function runtimeSymbolsReadCost(
+  {
+    hash,
+    key,
+    names: raw,
+  }: {
+    hash: string;
+    key: string;
+    names: string;
+  },
+  read: "load" | "probe",
+): "memory" | "io" {
+  if (read === "probe") return "memory";
+  const names = raw === "" ? [] : raw.split(",");
+  if (glyphTupleRefusal(hash, key, names) !== null) return "memory";
+  return glyphsHeld(key as GlyphKey, names) ? "memory" : "io";
+}
+
 /** One glyph batch, refused as the value declares. */
 export async function loadRuntimeSymbols({
   hash,
@@ -141,9 +176,11 @@ export const runtimeSymbolsServed = serveValue(runtimeSymbolsValue, {
     every:
       "a tuple is drawn from the shipped open icon sets, content-addressed — no owner data",
   },
-  // A pick from the drawers' memos (per style on the desktop; the host's
-  // store, else the bundled set, on a browser host).
-  readCost: "memory",
+  // A pick from the drawers' memos while they hold every glyph asked —
+  // per style on the desktop, the host's store on a browser host. A glyph
+  // never drawn loads its set (19 MB from disk on the computer, an 8 MB
+  // chunk over the network on a browser host): that read takes a slot.
+  readCost: runtimeSymbolsReadCost,
   changes: {
     immutable: {
       reason:

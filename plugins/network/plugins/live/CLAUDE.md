@@ -1310,7 +1310,11 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));
   built once per process): reads skip read admission instead of queueing
   behind git / file / DB reads. A slow repeat read is reported
   (resource-runtime, *A memory read takes no slot*). Omit when a read may do
-  I/O.
+  I/O. **`readCost: (subject) => "memory" | "io"`** when only some tuples are
+  held — a memo filled per tuple (`icons.runtime-symbols`: a glyph drawn
+  before is a lookup, one never drawn loads its set from disk or over the
+  network): asked at each read's admission, `"memory"` only while everything
+  the read needs is held now.
 - **Refusals.** A loader that can't answer well-formed params (missing file,
   unknown id) throws `v.refuse(code, msg)` (`ResourceRefusal`) with a code the
   `liveValue` declares in `refusals: [...]` (any form).

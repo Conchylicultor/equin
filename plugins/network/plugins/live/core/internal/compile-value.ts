@@ -76,7 +76,8 @@ import {
 //                         may be declared (`bothLifecycles`).
 // - `revalidate`        → passed through.
 // - `readCost`          → passed through (external only): `"memory"` reads
-//                         skip read admission.
+//                         skip read admission; a per-subject rule is decoded
+//                         like every hook's subject and asked per read.
 // - `follows`           → `{ followed }` beside the subject in the loader,
 //                         `revalidate`, a paged value's `meta` and
 //                         `whileFollowing.over`, each read fresh in the hook's
@@ -103,6 +104,13 @@ import {
 
 /** Where a value's truth lives: Postgres (change feed) or anything else (`notify`). */
 export type LiveValueSource = "db" | "external";
+
+/**
+ * What one read of a served value costs, for read admission: `"io"` takes a
+ * slot, `"memory"` answers from what this process holds (resource-runtime's
+ * `ReadCost`).
+ */
+export type LiveReadCost = "io" | "memory";
 
 /**
  * How an EXTERNAL value's answer changes — required on the external arm (a db
@@ -443,8 +451,19 @@ export type ServeValueOptions<
    * behind reads doing git / file / database I/O. Omitted: a read takes a
    * slot. A `"memory"` read that turns out slow is reported (the runtime's
    * `ResourceDefinition.readCost`). A db value reads Postgres: never memory.
+   *
+   * A function of the subject when only SOME tuples answer from memory —
+   * a memo filled per tuple (drawn glyphs: a name drawn before is a lookup,
+   * one never drawn loads its set): asked at each read's admission, it
+   * answers `"memory"` only while everything the read needs is held now,
+   * `"io"` otherwise (that read takes a slot). Asked for the `revalidate`
+   * probe too (`read: "probe"`), which often reads less than the load. A
+   * declared cost of either form says the value reads no Postgres. Every read it called memory
+   * is held to the budget — there is no cold build left to excuse.
    */
-  readCost?: Src extends "db" ? never : "memory";
+  readCost?: Src extends "db"
+    ? never
+    : "memory" | ((subject: P, read: "load" | "probe") => LiveReadCost);
   /**
    * Which tuples a deployed site's visitor may read, for a PARAMETERIZED
    * value whose declaration grants `access: { visitor }` — required there
@@ -1635,7 +1654,7 @@ export function compileValueOf<T, P extends Record<string, string>, S>(
   const revalidate = opts.revalidate as
     ((...args: unknown[]) => Promise<string>) | undefined;
   const visitorTuple = visitorTupleOf<P, S>(value, opts.visitorTuple, subjects);
-  const readCost = opts.readCost as "memory" | undefined;
+  const readCost = readCostOf<P, S>(value, opts.readCost, subjects);
   if (readCost !== undefined && !external) {
     // Unreachable from typed code (`readCost` is `never` on a db value).
     throw new Error(
@@ -1686,6 +1705,27 @@ export function compileValueOf<T, P extends Record<string, string>, S>(
  * visitor access, refused on any other. `{ every }` answers every tuple
  * (absent from the runtime: its whole-resource access already does).
  */
+/**
+ * {@link ServeValueOptions.readCost} as the runtime takes it: `"memory"` as
+ * is, a per-subject rule over the wire params (decoded as every hook's
+ * subject is), anything else refused.
+ */
+function readCostOf<P extends Record<string, string>, S>(
+  value: LiveValue<unknown, P, LiveValueOrigin>,
+  rule: unknown,
+  subjects: Subjects<P, S>,
+):
+  "memory" | ((params: P, read: "load" | "probe") => LiveReadCost) | undefined {
+  if (rule === undefined || rule === "memory") return rule;
+  if (typeof rule === "function") {
+    const fn = rule as (subject: S, read: "load" | "probe") => LiveReadCost;
+    return (params, read) => fn(subjects.of(params), read);
+  }
+  throw new Error(
+    `serveValue("${value.key}"): \`readCost\` is "memory" or a function of the subject answering "memory" | "io" — got ${JSON.stringify(rule)}.`,
+  );
+}
+
 function visitorTupleOf<P extends Record<string, string>, S>(
   value: LiveValue<unknown, P, LiveValueOrigin>,
   rule: unknown,

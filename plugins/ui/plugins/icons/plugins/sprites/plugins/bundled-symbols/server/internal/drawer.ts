@@ -1,4 +1,5 @@
 import type { IconifyJSON } from "@iconify/types";
+import { loadAcrossReachLoss } from "@plugins/framework/plugins/web-sdk/core";
 import {
   hostStorage,
   type HostStorage,
@@ -61,11 +62,14 @@ function drawingKey(key: StyleKey, name: SavedSymbolName): string {
 }
 
 // The set, parsed once a drawing is missing, then kept: an icon picker asks
-// for a batch per frame while it scrolls. A failed load is not kept.
+// for a batch per frame while it scrolls. Its chunk is fetched over the
+// network: one lost to the device going offline or to sleep mid-load is
+// asked again once it is back (`loadAcrossReachLoss`), as a plugin chunk is.
+// Any other failed load is not kept, and fails loudly.
 let sets: Promise<SymbolSets> | null = null;
 
 function bundledSets(): Promise<SymbolSets> {
-  sets ??= BUNDLED_SET.load().then(
+  sets ??= loadAcrossReachLoss(() => BUNDLED_SET.load()).then(
     (regular): SymbolSets => ({ regular, light: NO_LIGHT_SET }),
     (err: unknown) => {
       sets = null;
@@ -111,6 +115,10 @@ async function drawHeld(
 export const bundledSymbolsDrawer: RuntimeSymbolDrawerImpl = {
   identity: IDENTITY,
   draw: (key, names) => drawHeld(key, names, false),
+  holds: (key, names) => {
+    const { symbols } = drawnSymbols();
+    return names.every((name) => symbols.has(drawingKey(key, name)));
+  },
 };
 
 /**

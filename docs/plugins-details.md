@@ -35419,11 +35419,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `whenPageCanFetch`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 117 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+        - Imported by: 119 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
           - `primitives` ×28
           - `apps` ×20
+          - `ui` ×10
           - `reports` ×8
-          - `ui` ×8
           - `apps-core` ×6
           - `debug` ×6
           - `framework` ×4

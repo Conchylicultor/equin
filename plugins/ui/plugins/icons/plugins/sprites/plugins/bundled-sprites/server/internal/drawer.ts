@@ -14,6 +14,7 @@ import {
   type SpriteDrawerImpl,
 } from "@plugins/ui/plugins/icons/plugins/sprites/server";
 import { sha256Hex } from "@plugins/packages/plugins/string-hash/core";
+import { loadAcrossReachLoss } from "@plugins/framework/plugins/web-sdk/core";
 import { LUCIDE_SET } from "./lucide-set";
 
 /**
@@ -36,11 +37,18 @@ async function build(group: Group): Promise<Map<SpriteKey, string>> {
     const set = await readSetiSet();
     return buildSetiSprite(set, Object.keys(set.icons).sort());
   }
-  return buildLucideSprites(await LUCIDE_SET.load(), Object.keys(LUCIDE_MAP));
+  // A chunk fetched over the network: asked again once the device is back
+  // if it was lost going offline or to sleep (`loadAcrossReachLoss`).
+  return buildLucideSprites(
+    await loadAcrossReachLoss(() => LUCIDE_SET.load()),
+    Object.keys(LUCIDE_MAP),
+  );
 }
 
 // One build per group per host, memoized: the sets are parsed once.
 const builds = new Map<Group, Promise<Map<SpriteKey, string>>>();
+// The groups whose build has landed: a sprite of one is a memory read.
+const built = new Set<Group>();
 
 const manifestHash = sha256Hex(
   [
@@ -57,19 +65,29 @@ export const bundledSpriteDrawer: SpriteDrawerImpl = {
   draw: async (key) => {
     const group = groupOf(key);
     if (group === null) return { kind: "not-drawn-here" };
-    let built = builds.get(group);
-    if (built === undefined) {
+    let building = builds.get(group);
+    if (building === undefined) {
       // A failed build is not cached: the next read retries (and fails
       // loudly again).
-      built = build(group).catch((err: unknown) => {
-        builds.delete(group);
-        throw err;
-      });
-      builds.set(group, built);
+      building = build(group).then(
+        (sprites) => {
+          built.add(group);
+          return sprites;
+        },
+        (err: unknown) => {
+          builds.delete(group);
+          throw err;
+        },
+      );
+      builds.set(group, building);
     }
-    const markup = (await built).get(key);
+    const markup = (await building).get(key);
     if (markup === undefined)
       throw new Error(`[icons] the bundled "${group}" build has no "${key}"`);
     return { kind: "drawn", markup };
+  },
+  holds: (key) => {
+    const group = groupOf(key);
+    return group === null || built.has(group);
   },
 };

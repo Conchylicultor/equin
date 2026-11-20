@@ -22,6 +22,13 @@ export interface SpriteDrawerImpl {
   readonly manifestHash: string;
   /** Sprite `key`, a whole `<svg>…</svg>` of `<symbol>`s. */
   draw(key: SpriteKey): Promise<DrawnSprite>;
+  /**
+   * Whether `draw(key)` answers from memory right now: its sprite is built
+   * (or this host draws no such sprite). False while the build has not run
+   * or is running — it reads the sets from disk or the network — so a read
+   * asking for it takes a read-admission slot (`readCost`).
+   */
+  holds(key: SpriteKey): boolean;
 }
 
 export const SpriteDrawer = defineHostService<SpriteDrawerImpl>(

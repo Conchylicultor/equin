@@ -36,8 +36,11 @@ import {
 // performance timeline pauses (`primitives/perfs/page-clock`), and their
 // offset grows by the time asleep.
 //
-// Off a page (a worker, bun) there is no visibility to lose: every load keeps
-// its reach and the wrapper is a plain call.
+// A worker (the demo's in-browser server is a SharedWorker serving every tab)
+// has no visibility of its own, but it does go offline and to sleep with the
+// device: its `offline` events and its two clocks say so, as a page's do, so
+// its loads (an icon set imported on a miss) are asked again the same way.
+// Off a browser (bun) there is no reach to lose: the wrapper is a plain call.
 
 /**
  * How far the clocks must drift apart during a load to say the device slept.
@@ -55,7 +58,19 @@ function onPage(): boolean {
   return typeof document !== "undefined" && typeof window !== "undefined";
 }
 
+function inWorker(): boolean {
+  const scope = (globalThis as { WorkerGlobalScope?: unknown })
+    .WorkerGlobalScope;
+  return typeof scope === "function" && globalThis instanceof scope;
+}
+
+/** A browser realm whose reach can be lost: a page, or a worker. */
+function inBrowser(): boolean {
+  return onPage() || inWorker();
+}
+
 function canFetchNow(): boolean {
+  if (!onPage()) return navigator.onLine;
   return document.visibilityState !== "hidden" && navigator.onLine;
 }
 
@@ -65,12 +80,14 @@ function watch(): void {
   const lost = () => {
     reachLosses++;
   };
+  // A worker's global scope fires `offline` as a window does.
+  globalThis.addEventListener("offline", lost);
+  if (!onPage()) return;
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") lost();
   });
   // Page Lifecycle (Chromium): a frozen page's loads are cancelled.
   document.addEventListener("freeze", lost);
-  window.addEventListener("offline", lost);
   window.addEventListener("pagehide", lost);
 }
 
@@ -82,7 +99,7 @@ export interface ReachMark {
 }
 
 export function markPageReach(): ReachMark {
-  if (!onPage()) return { losses: 0, offset: clockOffset() };
+  if (!inBrowser()) return { losses: 0, offset: clockOffset() };
   watch();
   return { losses: reachLosses, offset: clockOffset() };
 }
@@ -95,7 +112,7 @@ export function markPageReach(): ReachMark {
  * that may never come.
  */
 export function pageReachLostSince(mark: ReachMark): boolean {
-  if (!onPage()) return false;
+  if (!inBrowser()) return false;
   return (
     reachLosses !== mark.losses || clockOffset() - mark.offset >= SLEEP_MIN_MS
   );
@@ -107,7 +124,17 @@ export function pageReachLostSince(mark: ReachMark): boolean {
  * runs, which is right for a load nobody will see.
  */
 export function whenPageCanFetch(): Promise<void> {
-  if (!onPage() || canFetchNow()) return Promise.resolve();
+  if (!inBrowser() || canFetchNow()) return Promise.resolve();
+  if (!onPage()) {
+    return new Promise((resolve) => {
+      const check = () => {
+        if (!canFetchNow()) return;
+        globalThis.removeEventListener("online", check);
+        resolve();
+      };
+      globalThis.addEventListener("online", check);
+    });
+  }
   return new Promise((resolve) => {
     const check = () => {
       if (!canFetchNow()) return;

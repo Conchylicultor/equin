@@ -117,4 +117,99 @@ describe("readCost: memory", () => {
     for (const res of await Promise.all(reads)) expect(res.status).toBe(200);
     expect(reports).toEqual([]);
   });
+
+  test("a failed read leaves its tuple cold: the retry that builds the memo is exempt", async () => {
+    // report-1795199821-k4k6x9: a set import failed (the visitor's network),
+    // the next read loaded it — and was reported as a slow WARM read.
+    const reports: string[] = [];
+    const h = createHarness({
+      reportError: (context) => reports.push(context),
+    });
+    let attempt = 0;
+    h.runtime.defineExternalResource({
+      key: "mem",
+      mode: "invalidate",
+      schema: z.string(),
+      readCost: "memory",
+      loader: async () => {
+        attempt++;
+        if (attempt === 1)
+          throw new Error("Failed to fetch dynamically imported module");
+        if (attempt === 2) await new Promise((r) => setTimeout(r, 300));
+        return "v";
+      },
+    });
+
+    expect((await get(h, "mem")).status).toBe(500);
+    reports.length = 0; // the loader failure itself
+    expect((await get(h, "mem")).status).toBe(200);
+    expect(reports).toEqual([]);
+  });
+});
+
+describe("readCost: a per-read rule", () => {
+  test("a read the rule calls io takes a slot; one it calls memory does not", async () => {
+    const h = createHarness();
+    const ctl = controllable("v");
+    for (let k = 0; k < 8; k++) {
+      h.runtime.defineExternalResource({
+        key: `io${k}`,
+        mode: "push",
+        schema: z.string(),
+        loader: () => ctl.loader(),
+      });
+    }
+    const held = new Set(["a"]);
+    h.runtime.defineExternalResource({
+      key: "glyphs",
+      mode: "push",
+      schema: z.string(),
+      readCost: (params, read) =>
+        read === "probe" || held.has(params.name ?? "") ? "memory" : "io",
+      loader: (params) => Promise.resolve(`drawn ${params.name}`),
+    });
+
+    ctl.block();
+    for (let k = 0; k < 8; k++) await h.subscribe(`io${k}`);
+    expect(h.runtime.readGateStats()).toMatchObject({ active: 6, queued: 2 });
+
+    await h.subscribe("glyphs", { name: "a" });
+    await h.subscribe("glyphs", { name: "b" });
+    await tick();
+    const acked = (name: string) =>
+      h.frames.some(
+        (f) =>
+          f.kind === "sub-ack" &&
+          f.key === "glyphs" &&
+          (f.params as { name?: string } | undefined)?.name === name,
+      );
+    expect(acked("a")).toBe(true);
+    // "b" is not held: it queues for a slot behind the I/O reads.
+    expect(acked("b")).toBe(false);
+    expect(h.runtime.readGateStats()).toMatchObject({ active: 6, queued: 3 });
+
+    ctl.release();
+    await tick();
+    expect(acked("b")).toBe(true);
+  });
+
+  test("a read the rule called memory is held to the budget on its first read", async () => {
+    const reports: string[] = [];
+    const h = createHarness({
+      reportError: (context) => reports.push(context),
+    });
+    h.runtime.defineExternalResource({
+      key: "mem",
+      mode: "invalidate",
+      schema: z.string(),
+      readCost: () => "memory",
+      loader: async () => {
+        await new Promise((r) => setTimeout(r, 300));
+        return "v";
+      },
+    });
+    expect((await get(h, "mem")).status).toBe(200);
+    expect(reports).toHaveLength(1);
+    expect(reports[0]).toContain('"mem" is declared readCost "memory"');
+  });
 });

@@ -48,6 +48,15 @@ is now the glyph (`GlyphKey`, name — the parent's "Glyphs and sprites").
   (`web/internal/boot.ts`) provides them before the first render. A changed
   first frame adds ONE batch; nothing cached is fetched again. A 409 (a hash
   the server moved past) is dropped from the memory and asked live.
+- **A read is memory only while its glyphs are held** (`readCost`, a per-read
+  rule): both drawers answer `holds(…)` — every name drawn already in that
+  style (`RuntimeSymbolDrawer`), the sprite group built (`SpriteDrawer`) — and
+  a read asking for anything else takes a read-admission slot, since it loads
+  a set: ~19 MB from disk on the computer, an 8 MB chunk over the network on
+  a browser host. `icons.sprite` declares the same rule. On a browser host the
+  bundled sets' chunks load through web-sdk's `loadAcrossReachLoss`: one lost
+  to the device going offline or to sleep (a worker sees both) is asked again
+  once it is back; any other failure is loud.
 - **Whole sprites** only for `brands` (resident, `RESIDENT_SPRITE_KEYS`, head
   asset `GET /api/icons/sprite-assets/:hash/:key`) and `seti` (on demand), as
   `icons.sprite` `{ hash, key }` — refused `unknown-key`, `stale-manifest`,

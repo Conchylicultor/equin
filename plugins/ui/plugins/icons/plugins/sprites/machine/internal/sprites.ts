@@ -156,15 +156,24 @@ async function loadSet(key: SetKey): Promise<SetBuild> {
   return await withSymbolSets(symbolSprites);
 }
 
+// The sets whose build has landed: a sprite of one is a memory read.
+const built = new Set<SetKey>();
+
 function buildOf(setKey: SetKey): Promise<SetBuild> {
   let build = builds.get(setKey);
   if (!build) {
     // A failed build is not cached: the next request retries (and fails
     // loudly again). The rejection still reaches this caller.
-    build = loadSet(setKey).catch((err: unknown) => {
-      builds.delete(setKey);
-      throw err;
-    });
+    build = loadSet(setKey).then(
+      (done) => {
+        built.add(setKey);
+        return done;
+      },
+      (err: unknown) => {
+        builds.delete(setKey);
+        throw err;
+      },
+    );
     builds.set(setKey, build);
   }
   return build;
@@ -202,4 +211,5 @@ export async function manifestSymbolBody(name: SymbolName): Promise<IconBody> {
 export const installedSetsSpriteDrawer: SpriteDrawerImpl = {
   manifestHash,
   draw: async (key) => ({ kind: "drawn", markup: await spriteFor(key) }),
+  holds: (key) => built.has(setOf(key)),
 };
