@@ -33,6 +33,7 @@ import { PageIcon } from "@plugins/page/plugins/editor/web";
 import { usePageReferenceTint } from "@plugins/page/plugins/page-reference/web";
 import { pageDetailPane } from "../panes";
 import { createPageWithSeed } from "../internal/create-page-with-seed";
+import { useOpenNewPage } from "../internal/new-page-focus";
 import { PageTree } from "../slots";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -145,6 +146,7 @@ export function PagesSidebar() {
   const fetchEndpoint = useFetchEndpoint();
   const overrides = useSidebarOverrides();
   const openPane = useOpenPane();
+  const openNewPage = useOpenNewPage();
   const tintOf = usePageReferenceTint();
   const selectedId = pageDetailPane.useRouteEntry()?.params.pageId;
   const hasMarkers = PageTree.RowMarker.useContributions().length > 0;
@@ -204,7 +206,7 @@ export function PagesSidebar() {
   const creators = useMemo<CreateOption[]>(() => {
     const createRootPage = async () => {
       const id = await createPageWithSeed(fetchEndpoint, { parentId: null });
-      openPane(pageDetailPane, { pageId: id }, { mode: "push" });
+      openNewPage(id);
     };
     return [
       {
@@ -217,7 +219,7 @@ export function PagesSidebar() {
         views: ["pages"],
       },
     ];
-  }, [fetchEndpoint, openPane]);
+  }, [fetchEndpoint, openNewPage]);
 
   // The DataView's section headers ARE the sidebar chrome (no
   // SidebarPaneSection): every view instance stacks in config order under its

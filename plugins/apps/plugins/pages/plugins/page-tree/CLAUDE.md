@@ -258,6 +258,7 @@ it, so an id means the same thing wherever it is clicked.
     - `useBlockTargetLink`
     - `useBlockTargetTitle`
     - `useBlockTypeLabel`
+    - `useOpenNewPage`
 - Core:
   - Uses: `primitives/pane.defineRoute`
   - Exports (values):

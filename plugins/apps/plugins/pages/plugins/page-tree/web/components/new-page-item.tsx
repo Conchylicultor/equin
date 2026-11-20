@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { PagesSidebarRow } from "@plugins/apps/plugins/pages/plugins/shell/web";
-import { pageDetailPane } from "../panes";
+import { useOpenNewPage } from "../internal/new-page-focus";
 import { createPageWithSeed } from "../internal/create-page-with-seed";
 
 const addIcon = symbol("add");
@@ -11,7 +10,7 @@ const addIcon = symbol("add");
 /**
  * Sidebar "New page": creates a root page and opens it BESIDE the sidebar
  * (`push` — the Pages sidebar is persistent chrome that stays put, the same
- * mode its tree rows open in). A sidebar row of its own, styled like Trash, so
+ * mode its tree rows open in), with the caret in its title. A sidebar row of its own, styled like Trash, so
  * the footer reads `New page` / `Trash`; the Private section header's `+` is
  * the same creation, closer to where the page lands.
  *
@@ -20,13 +19,13 @@ const addIcon = symbol("add");
  */
 export function NewPageItem() {
   const fetchEndpoint = useFetchEndpoint();
-  const openPane = useOpenPane();
+  const openNewPage = useOpenNewPage();
   const [busy, setBusy] = useState(false);
   const create = async () => {
     setBusy(true);
     try {
       const id = await createPageWithSeed(fetchEndpoint, { parentId: null });
-      openPane(pageDetailPane, { pageId: id }, { mode: "push" });
+      openNewPage(id);
     } finally {
       setBusy(false);
     }

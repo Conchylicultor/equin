@@ -123,7 +123,7 @@ function PageHeaderInner({
         </Stack>
       )}
 
-      <PageTitle field={title} body={body} ref={titleRef} />
+      <PageTitle pageId={pageId} field={title} body={body} ref={titleRef} />
 
       {page && (
         // The under-title band opens 10px under the title (this pad plus the

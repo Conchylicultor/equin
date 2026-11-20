@@ -7206,6 +7206,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useBlockTargetLink`
               - `useBlockTargetTitle`
               - `useBlockTypeLabel`
+              - `useOpenNewPage`
           - Core:
             - Uses: `primitives/pane.defineRoute`
             - Exports (values):
@@ -7400,13 +7401,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes: `PagesWelcome.Section` → `QuickCreateSection`
                 - Uses:
                   - `apps/pages/page-tree.createPageWithSeed`
-                  - `apps/pages/page-tree.pageDetailPane`
+                  - `apps/pages/page-tree.useOpenNewPage`
                   - `apps/pages/welcome.PagesWelcome`
                   - `infra/endpoints.useFetchEndpoint`
                   - `primitives/css/card.Card`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
-                  - `primitives/pane.useOpenPane`
                   - `ui/icons.Icon`
               - Cross-plugin:
                 - Uses tokens:
@@ -57406,8 +57406,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --spacing`
-        - Imported by: 220 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `apps` ×79
+        - Imported by: 219 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `apps` ×78
           - `conversations` ×33
           - `debug` ×29
           - `active-data` ×14

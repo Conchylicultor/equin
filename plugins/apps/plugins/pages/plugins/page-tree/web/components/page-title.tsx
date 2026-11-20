@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useImperativeHandle,
   useRef,
   type KeyboardEvent,
@@ -12,6 +13,7 @@ import type {
 } from "@plugins/page/plugins/editor/web";
 import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { claimNewPageFocus } from "../internal/new-page-focus";
 
 /** Any modifier turns an arrow into a selection/word move, never a surface crossing. */
 function isModified(event: KeyboardEvent<HTMLInputElement>): boolean {
@@ -36,10 +38,12 @@ function isModified(event: KeyboardEvent<HTMLInputElement>): boolean {
  * below always parks the caret at its end. Nothing here knows about blocks.
  */
 export function PageTitle({
+  pageId,
   field,
   body,
   ref,
 }: {
+  pageId: string;
   field: EditableField<string>;
   /** The caret surface below — the page body. Absent while the editor mounts. */
   body?: RefObject<BlockEditorHandle | null>;
@@ -62,6 +66,16 @@ export function PageTitle({
     }),
     [],
   );
+
+  // A page the user just created opens with the caret here, so its name can be
+  // typed straight away (`useOpenNewPage` files the request; this claims it).
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el || !claimNewPageFocus(pageId)) return;
+    // At the end, so a template's title is extended rather than typed over.
+    focusElement(el, { reveal: false });
+    el.setSelectionRange(el.value.length, el.value.length);
+  }, [pageId]);
 
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.nativeEvent.isComposing) return;
