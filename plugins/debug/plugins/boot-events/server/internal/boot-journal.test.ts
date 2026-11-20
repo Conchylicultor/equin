@@ -39,6 +39,7 @@ describe("summariseBootJournals", () => {
     expect(boot.diedIn).toEqual({
       id: "onReadyBlocking:config_v2",
       startMs: 76950,
+      pending: null,
     });
     expect(boot.slowest).toEqual([
       { id: "onReadyBlocking:database", ms: 14703 },
@@ -58,8 +59,45 @@ describe("summariseBootJournals", () => {
       open("load:wave-2", 370),
     ]).get(PSA)!;
     expect(boot.importedAtMs).toBeNull();
-    expect(boot.diedIn).toEqual({ id: "load:wave-2", startMs: 370 });
+    expect(boot.diedIn).toEqual({
+      id: "load:wave-2",
+      startMs: 370,
+      pending: null,
+    });
     expect(boot.darwinbgMs).toBeNull();
+  });
+
+  // A wave whose imports all settled but one (a top-level await that never
+  // resolves): its tail is journaled as it shrinks, so the stuck import is
+  // named, not just its wave.
+  test("stuck mid-wave: the wave's last pending imports name the stuck one", () => {
+    const pending = (id: string, atMs: number, names: string[]) =>
+      line({ e: "pending", id, atMs, pending: names });
+    const boot = summariseBootJournals([
+      line({
+        e: "open",
+        id: "load:wave-24",
+        startMs: 1391,
+        members: ["a", "b", "c", "d", "e"],
+      }),
+      pending("load:wave-24", 1400, ["a (core)"]),
+      pending("load:wave-24", 1450, ["b", "d", "e"]),
+      pending("load:wave-24", 1460, ["d", "e"]),
+      pending("load:wave-24", 1470, ["d"]),
+    ]).get(PSA)!;
+    expect(boot.diedIn).toEqual({
+      id: "load:wave-24",
+      startMs: 1391,
+      pending: ["d"],
+    });
+    expect(boot.lastEntryAtMs).toBe(1470);
+  });
+
+  test("a small wave's members are its pending imports from its open", () => {
+    const boot = summariseBootJournals([
+      line({ e: "open", id: "load:wave-3", startMs: 500, members: ["x", "y"] }),
+    ]).get(PSA)!;
+    expect(boot.diedIn?.pending).toEqual(["x", "y"]);
   });
 
   test("a boot the gateway moved out of darwinbg, and boots kept apart", () => {

@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { readChannelJson } from "@plugins/primitives/plugins/log-channels/plugins/log-files/server";
-import { BOOT_JOURNAL_CHANNEL } from "@plugins/framework/plugins/server-core/core";
+import {
+  BOOT_JOURNAL_CHANNEL,
+  PENDING_JOURNALED,
+} from "@plugins/framework/plugins/server-core/core";
 
 // The boot journal (server-core's `installBootJournal`, written by a serving
 // backend as its boot accrues: every checkpoint, each load wave and each
@@ -16,7 +19,19 @@ const SpanSchema = z.object({
   durationMs: z.number(),
 });
 const EntrySchema = z.union([
-  z.object({ e: z.literal("open"), id: z.string(), startMs: z.number() }),
+  z.object({
+    e: z.literal("open"),
+    id: z.string(),
+    startMs: z.number(),
+    // Only spans that name what they hold carry it (a load wave's plugins).
+    members: z.array(z.string()).optional(),
+  }),
+  z.object({
+    e: z.literal("pending"),
+    id: z.string(),
+    atMs: z.number(),
+    pending: z.array(z.string()),
+  }),
   z.object({ e: z.literal("span"), span: SpanSchema }),
   z.object({ e: z.literal("checkpoint"), checkpoint: CheckpointSchema }),
 ]);
@@ -26,10 +41,11 @@ const JournalLineSchema = z.object({
 });
 type JournalLine = z.infer<typeof JournalLineSchema>;
 
-// ~100 lines per boot (a line per checkpoint, wave open/close, blocking-hook
-// open and slow span), so this covers a worktree's last ~20 boots — the
+// ~260 lines per boot (a line per checkpoint, wave open/close, blocking-hook
+// open and slow span, plus ~130 `pending` lines — each wave's last few
+// in-flight imports), so this covers a worktree's last ~15 boots — the
 // attempts a watchdog tick or a timeline window asks about.
-const MAX_LINES = 2000;
+const MAX_LINES = 4000;
 
 /** The steps a summary ranks: the import waves and the blocking hooks. */
 const RANKED_PHASES = new Set(["load", "onReadyBlocking"]);
@@ -46,7 +62,17 @@ export interface BootJournalSummary {
   lastEntryAtMs: number;
   /** Plugin imports done (`after-import`), or null — it never finished importing. */
   importedAtMs: number | null;
-  diedIn: { id: string; startMs: number } | null;
+  diedIn: {
+    id: string;
+    startMs: number;
+    /**
+     * What the step was still waiting on, when its journal says: a load
+     * wave's in-flight imports (its last `pending` line, or its members when
+     * it holds no more than `PENDING_JOURNALED`). Null when unknown — more
+     * were in flight than a wave journals, or the step is not a wave.
+     */
+    pending: string[] | null;
+  } | null;
   /** The longest finished import waves and blocking hooks, longest first. */
   slowest: { id: string; ms: number }[];
   /**
@@ -83,13 +109,23 @@ export function summariseBootJournals(
   const out = new Map<number, BootJournalSummary>();
   for (const [processStartedAt, entries] of byBoot) {
     const open = new Map<string, number>();
+    const pendingOf = new Map<string, string[]>();
     const finished: { id: string; ms: number }[] = [];
     const checkpoints = new Map<string, number>();
     let lastEntryAtMs = 0;
     for (const entry of entries) {
       if (entry.e === "open") {
         open.set(entry.id, entry.startMs);
+        if (
+          entry.members !== undefined &&
+          entry.members.length > 0 &&
+          entry.members.length <= PENDING_JOURNALED
+        )
+          pendingOf.set(entry.id, entry.members);
         lastEntryAtMs = Math.max(lastEntryAtMs, entry.startMs);
+      } else if (entry.e === "pending") {
+        pendingOf.set(entry.id, entry.pending);
+        lastEntryAtMs = Math.max(lastEntryAtMs, entry.atMs);
       } else if (entry.e === "span") {
         const { span } = entry;
         open.delete(span.id);
@@ -105,7 +141,7 @@ export function summariseBootJournals(
     let diedIn: BootJournalSummary["diedIn"] = null;
     for (const [id, startMs] of open)
       if (diedIn === null || startMs >= diedIn.startMs)
-        diedIn = { id, startMs };
+        diedIn = { id, startMs, pending: pendingOf.get(id) ?? null };
     const startedDarwinbg = checkpoints.has("darwinbg-at-start");
     out.set(processStartedAt, {
       processStartedAt,

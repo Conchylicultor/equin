@@ -51,6 +51,7 @@ export {
   BOOT_JOURNAL_CHANNEL,
   getProfilingData,
   installBootJournal,
+  PENDING_JOURNALED,
   profilerStart,
   recordMemoryCheckpoint,
   untimedStep,

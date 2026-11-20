@@ -15,7 +15,9 @@ import { assertHostServices } from "./host-service";
 import { collectContributions } from "./contributions";
 import { reportServerError } from "./error-reporter";
 import {
+  journalPending,
   LOAD_SPAN_FLOOR_MS,
+  PENDING_JOURNALED,
   profileBootHook,
   profilerStart,
   recordMemoryCheckpoint,
@@ -225,8 +227,9 @@ export async function loadServerPlugins(
     // mid-wave (the readiness deadline is a SIGKILL) still says which wave and
     // which plugins it was importing. Each barrel past LOAD_SPAN_FLOOR_MS gets
     // a span of its own — the wave's time, attributed.
+    const waveId = `load:wave-${w + 1}`;
     const endWave = profilerStart(
-      `load:wave-${w + 1}`,
+      waveId,
       "load",
       `Load wave ${w + 1}/${waves.length} (${wave.length} plugins)`,
       undefined,
@@ -250,10 +253,15 @@ export async function loadServerPlugins(
     // (In a bundle — a `bun --compile` release, a browser host — the race cannot
     // occur; warming there only evaluates a bundled barrel a little earlier.)
     const took: { plugin: string; ms: number }[] = [];
+    // The wave's in-flight imports, its tail journaled as it shrinks: an
+    // import that never settles (a top-level await on something that never
+    // resolves) leaves its name as the wave's last `pending` line.
+    const inFlight = trackInFlight(waveId);
     const coreLoads = wave.flatMap((n) => {
       const load = n.entry.core;
       return load === null ? [] : [{ pluginPath: n.pluginPath, load }];
     });
+    inFlight.begin(coreLoads.map(({ pluginPath }) => `${pluginPath} (core)`));
     await Promise.allSettled(
       coreLoads.map(({ pluginPath, load }) =>
         timedLoad(
@@ -262,10 +270,12 @@ export async function loadServerPlugins(
           pluginPath,
           load,
           took,
+          inFlight.settled,
         ),
       ),
     );
 
+    inFlight.begin(wave.map((n) => n.pluginPath));
     const results = await Promise.allSettled(
       wave.map(
         (n) =>
@@ -275,6 +285,7 @@ export async function loadServerPlugins(
             n.pluginPath,
             n.entry.loader,
             took,
+            inFlight.settled,
           ) as Promise<{ default: ServerPluginDefinition }>,
       ),
     );
@@ -342,6 +353,7 @@ async function timedLoad<T>(
   pluginPath: string,
   load: () => Promise<T>,
   took: { plugin: string; ms: number }[],
+  settled: (label: string) => void,
 ): Promise<T> {
   const end = profilerStart(id, "load", label, pluginPath, {
     floorMs: LOAD_SPAN_FLOOR_MS,
@@ -351,7 +363,38 @@ async function timedLoad<T>(
     return await load();
   } finally {
     took.push({ plugin: label, ms: end() });
+    settled(label);
   }
+}
+
+/**
+ * A load wave's in-flight imports (labels), journaled (`journalPending`)
+ * whenever the set changes while it holds 1…`PENDING_JOURNALED` of them —
+ * as a phase begins (a small wave) and as each import settles. A boot stuck
+ * on an import that never settles thus names it; a normal boot pays at most
+ * a few lines a wave. Past `PENDING_JOURNALED` stuck at once, the wave's
+ * `open` members are all a reader has.
+ */
+function trackInFlight(waveId: string): {
+  begin: (labels: readonly string[]) => void;
+  settled: (label: string) => void;
+} {
+  const pending = new Set<string>();
+  const journalTail = (): void => {
+    if (pending.size > 0 && pending.size <= PENDING_JOURNALED)
+      journalPending(waveId, [...pending].sort());
+  };
+  return {
+    begin(labels) {
+      pending.clear();
+      for (const l of labels) pending.add(l);
+      journalTail();
+    },
+    settled(label) {
+      pending.delete(label);
+      journalTail();
+    },
+  };
 }
 
 /** How many of a wave's slowest imports its journaled span names. */

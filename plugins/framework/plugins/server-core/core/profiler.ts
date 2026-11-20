@@ -115,7 +115,21 @@ export type BootJournalEntry =
       /** A load wave's slowest barrel imports (their own spans stay in memory). */
       slowest?: readonly { plugin: string; ms: number }[];
     }
-  | { e: "checkpoint"; checkpoint: MemoryCheckpoint };
+  | { e: "checkpoint"; checkpoint: MemoryCheckpoint }
+  /**
+   * What an open span (a load wave) still waits on, journaled each time its
+   * in-flight set changes while it holds at most `PENDING_JOURNALED` members:
+   * a boot stuck on an import that never settles says WHICH, not just which
+   * wave (its last `pending` before the journal ends).
+   */
+  | { e: "pending"; id: string; atMs: number; pending: readonly string[] };
+
+/**
+ * A load wave journals its in-flight imports once at most this many remain —
+ * a wave's tail, the few a stuck boot can be waiting on, without a line per
+ * import (a boot's ~1000 imports are its own spans in memory only).
+ */
+export const PENDING_JOURNALED = 3;
 
 /**
  * A finished span is journaled when it took at least this long (every `load`
@@ -153,6 +167,21 @@ export function installBootJournal(
   write: (entry: BootJournalEntry) => void,
 ): void {
   journal = write;
+}
+
+/**
+ * Journal what the open span `id` still waits on (`pending`, at most
+ * `PENDING_JOURNALED`, the caller's set): the in-flight imports of a load
+ * wave, as they change. In memory nothing — the span's own close records
+ * how it ended.
+ */
+export function journalPending(id: string, pending: readonly string[]): void {
+  journal?.({
+    e: "pending",
+    id,
+    atMs: Math.round(performance.now() - bootStart),
+    pending,
+  });
 }
 
 export function profilerStart(

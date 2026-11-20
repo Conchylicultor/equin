@@ -20,9 +20,13 @@ export function describeBootPhases(
   j: BootWedgeJournal | undefined,
 ): string | null {
   if (j === undefined) return null;
+  const waitingOn =
+    j.diedIn !== null && j.diedWaitingOn != null && j.diedWaitingOn.length > 0
+      ? `, waiting on ${j.diedWaitingOn.join(", ")}`
+      : "";
   const where =
     j.diedIn !== null
-      ? `in ${j.diedIn} at ${humanMs(j.lastEntryAtMs)}`
+      ? `in ${j.diedIn}${waitingOn} at ${humanMs(j.lastEntryAtMs)}`
       : `last heard at ${humanMs(j.lastEntryAtMs)}`;
   const parts: string[] = [
     j.importedAtMs !== null
@@ -50,9 +54,11 @@ export function describeBootPhases(
 export function describeBootWedge(d: BootWedgePayload): string {
   const phases = describeBootPhases(d.journal);
   const tail = phases === null ? "" : ` — ${phases}`;
+  const asleep =
+    d.sleptMs !== undefined ? ` awake (+${humanMs(d.sleptMs)} asleep)` : "";
   switch (d.state) {
     case "booting":
-      return `${d.worktree} boot not ready after ${humanMs(d.wedgedMs)}; the gateway is still waiting on it${tail}`;
+      return `${d.worktree} boot not ready after ${humanMs(d.wedgedMs)}${asleep}; the gateway is still waiting on it${tail}`;
     case "failed":
       return (
         `${d.worktree} unusable for ${humanMs(d.wedgedMs)}: the gateway gave up on its boot` +

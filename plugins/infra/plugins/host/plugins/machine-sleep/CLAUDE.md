@@ -74,6 +74,7 @@ reaches the browser within one tick.
   - Imported by:
     - `conversations/conversation-view/op-status`
     - `database/lock-watch`
+    - `debug/boot-watchdog`
     - `debug/health-monitor`
     - `debug/profiling/ops`
     - `debug/queue-health`

@@ -56,6 +56,16 @@ like a live wedge; before 2026-11-05 this watchdog filed such dead boots as
     nothing for it and no longer holds the failure (it restarted, or the idle
     sweeper ran) — the next request boots it again.
 
+**Un-ready time is awake time.** The budget is spent only while the machine
+is awake: the sleep main's process saw inside the span (machine-sleep's
+`sleptDuring`) is taken off. A nap freezes the booting process and its
+journal's clock alike, so a boot the Mac slept through is no slower for it —
+on 2026-11-20 a backend started the second a lid-shut Mac entered a 934 s
+maintenance sleep, and the first tick on wake filed it "not ready after 16m
+… in load:wave-24 at 1s"; it was ready 1.6 s later. A sleep main did not live
+through (before its own start) or a platform without the clocks counts as
+awake — never in the boot's favour. The report says how long it slept.
+
 **One report per boot.** Every verdict but **booting** says the boot's
 process is gone (killed at its readiness deadline, or replaced): a fact about
 a past boot. It is filed once, then the watchdog **settles the boot** by
@@ -76,7 +86,10 @@ later `ready` line for the same boot still wins over a `dead` one.
 
 **Every report names where the boot's time went** — from its own boot journal
 (boot-events' `readBootJournals`): the step it was in when it stopped (a load
-wave or blocking hook opens a journal line as it starts), when its imports
+wave or blocking hook opens a journal line as it starts) and, for a load
+wave, the imports it was still waiting on (the loader journals a wave's
+in-flight set each time it changes while 1–3 remain — `pending` lines — so an
+import that never settles is named, not just its wave), when its imports
 finished, its longest import waves and blocking hooks, and how long it ran
 darwinbg. Rendered once (`core/describe.ts`) for the message, the task text
 and the Reports row. Legacy `open` rows (the old "still live" state) still

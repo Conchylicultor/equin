@@ -21,6 +21,7 @@ import {
 import { classifyNeverReady, isSettledVerdict } from "./classify-wedge";
 import { readFleet } from "./read-fleet";
 import { listWorktreeDirsAsync } from "@plugins/infra/plugins/paths/server";
+import { sleptDuring } from "@plugins/infra/plugins/host/plugins/machine-sleep/server";
 import type { BootEvent } from "@plugins/debug/plugins/boot-events/server";
 
 // Main-only wedged-boot watchdog. Runs every minute in the MAIN backend only —
@@ -117,11 +118,16 @@ export const bootWatchdogMonitorJob = defineJob({
         // report — boot-events files it, error and stack, through the report
         // outbox — and measured to the next start its "un-ready" time would be
         // however long the agent took to rebuild (classifyNeverReady skips it).
+        // Un-ready time is awake time: the sleep this (main) process saw
+        // inside the span is taken off. Where the platform cannot tell
+        // (null), or for a sleep before main's own start, the wall clock
+        // judges alone — never in the boot's favour.
         const verdict = classifyNeverReady(
           ev,
           fleet,
           now,
           cfg.bootReadyBudgetMs,
+          (start, end) => sleptDuring(start, end) ?? 0,
         );
         if (verdict === null) continue;
         journals ??= await readBootJournals(wt);
@@ -136,6 +142,7 @@ export const bootWatchdogMonitorJob = defineJob({
               lastEntryAtMs: journal.lastEntryAtMs,
               importedAtMs: journal.importedAtMs,
               diedIn: journal.diedIn?.id ?? null,
+              diedWaitingOn: journal.diedIn?.pending ?? null,
               slowest: journal.slowest,
               darwinbgMs: journal.darwinbgMs,
             },

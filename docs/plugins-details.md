@@ -32965,6 +32965,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `onResourcePush`
           - `ownCpuMs`
           - `peerProcUsage`
+          - `PENDING_JOURNALED`
           - `persistedDefinitions`
           - `persistedKeys`
           - `physFootprintBytes`
@@ -38670,6 +38671,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `conversations/conversation-view/op-status`
               - `database/lock-watch`
+              - `debug/boot-watchdog`
               - `debug/health-monitor`
               - `debug/profiling/ops`
               - `debug/queue-health`

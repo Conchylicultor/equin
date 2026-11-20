@@ -49,6 +49,10 @@ export const BootWedgeJournalSchema = z.object({
   importedAtMs: z.number().nullable(),
   // The step still open when the journal ends — where it was when it stopped.
   diedIn: z.string().nullable(),
+  // What that step was still waiting on — a load wave's in-flight imports —
+  // when its journal says; null/absent when unknown (journals before
+  // 2026-11-20, or more in flight than a wave journals).
+  diedWaitingOn: z.array(z.string()).nullable().optional(),
   // Its longest finished import waves and blocking hooks, longest first.
   slowest: z.array(z.object({ id: z.string(), ms: z.number() })),
   // How long it ran darwinbg (spawned demoted, not yet moved), or null.
@@ -65,7 +69,11 @@ export const BootWedgePayloadSchema = z.object({
   // (supersededAtMs ?? now) − processStartedAt. For a `failed` boot this is
   // how long the worktree has been unusable, not how long the process lived
   // (the journal's `lastEntryAtMs` bounds that).
+  // AWAKE time since 2026-11-20: the machine's sleep inside the span is
+  // taken off (`sleptMs` says how much), since a nap freezes the boot too.
   wedgedMs: z.number(),
+  // The machine's sleep inside that span, when it slept.
+  sleptMs: z.number().optional(),
   state: BootWedgeStateSchema,
   // Set only for a superseded wedge — the superseding attempt's start, which
   // bounds the outage.

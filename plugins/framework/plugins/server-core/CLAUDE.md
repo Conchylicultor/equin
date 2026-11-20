@@ -682,6 +682,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `onResourcePush`
     - `ownCpuMs`
     - `peerProcUsage`
+    - `PENDING_JOURNALED`
     - `persistedDefinitions`
     - `persistedKeys`
     - `physFootprintBytes`

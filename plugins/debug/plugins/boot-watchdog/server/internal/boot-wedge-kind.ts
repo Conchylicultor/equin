@@ -64,7 +64,11 @@ function renderDescription(row: ReportRow, d: BootWedgePayload): string {
     `The backend for worktree \`${d.worktree}\` ${stateWord}. Its process ` +
       `started ${new Date(d.processStartedAt).toISOString()} and never wrote a ` +
       `boot \`ready\` line within its **${d.budgetMs}ms** budget; the worktree ` +
-      `has had no ready backend from it for **${humanMs(d.wedgedMs)}**.`,
+      `has had no ready backend from it for **${humanMs(d.wedgedMs)}** of ` +
+      `awake time` +
+      (d.sleptMs !== undefined
+        ? ` (the machine also slept ${humanMs(d.sleptMs)} meanwhile, not counted).`
+        : "."),
   );
   const phases = describeBootPhases(d.journal);
   if (phases !== null) {
@@ -96,7 +100,9 @@ function renderDescription(row: ReportRow, d: BootWedgePayload): string {
   lines.push("");
   lines.push(`**Worktree:** \`${d.worktree}\``);
   lines.push(`**Process started:** ${new Date(d.processStartedAt).toISOString()}`);
-  lines.push(`**Un-ready for:** ${d.wedgedMs}ms`);
+  lines.push(`**Un-ready for (awake):** ${d.wedgedMs}ms`);
+  if (d.sleptMs !== undefined)
+    lines.push(`**Machine asleep meanwhile:** ${d.sleptMs}ms`);
   lines.push(`**Budget:** ${d.budgetMs}ms`);
   lines.push(`**State:** ${d.state}`);
   if (d.state === "superseded" && d.supersededAtMs !== undefined) {

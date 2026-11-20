@@ -10,7 +10,10 @@ export interface FleetEntry {
 
 export interface WedgeVerdict {
   state: Exclude<BootWedgeState, "open">;
+  /** Un-ready AWAKE time: the wall span less the sleep inside it. */
   wedgedMs: number;
+  /** The machine's sleep inside the span, when it slept (> 0). */
+  sleptMs?: number;
   supersededAtMs?: number;
   fleetState?: string;
   gatewayError?: string;
@@ -42,18 +45,34 @@ export function classifyNeverReady(
   fleet: ReadonlyMap<string, FleetEntry> | null,
   now: number,
   budgetMs: number,
+  sleptDuring: (startMs: number, endMs: number) => number,
 ): WedgeVerdict | null {
   if (ev.readyAt !== null || ev.exitedAt !== null || ev.deadBy !== null)
     return null;
-  const wedgedMs = (ev.supersededAtMs ?? now) - ev.processStartedAt;
+  // The budget is spent by AWAKE time only. A nap freezes the booting process
+  // and every clock it reads alike (its journal's ms pause too), so a boot
+  // the Mac slept through is no slower for it: 2026-11-20 a backend started
+  // the second a lid-shut Mac entered a 934 s maintenance sleep, and the
+  // first tick on wake filed it "not ready after 16m … in load:wave-24 at
+  // 1s" — it was ready 1.6 s later, having run ~3 s in all.
+  const endMs = ev.supersededAtMs ?? now;
+  const sleptMs = Math.max(0, sleptDuring(ev.processStartedAt, endMs));
+  const wedgedMs = endMs - ev.processStartedAt - sleptMs;
   if (wedgedMs < budgetMs) return null;
+  const slept = sleptMs > 0 ? { sleptMs } : {};
   if (ev.supersededAtMs !== null)
-    return { state: "superseded", wedgedMs, supersededAtMs: ev.supersededAtMs };
+    return {
+      state: "superseded",
+      wedgedMs,
+      ...slept,
+      supersededAtMs: ev.supersededAtMs,
+    };
   if (fleet === null) return null;
   const entry = fleet.get(ev.worktree);
   if (entry === undefined) return null;
   const base = {
     wedgedMs,
+    ...slept,
     fleetState: entry.state,
     ...(entry.lastSpawnErr !== "" && { gatewayError: entry.lastSpawnErr }),
   };
