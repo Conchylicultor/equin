@@ -68,6 +68,15 @@ export const PageDetail = {
    * `Section`, a card below the whole document.
    */
   UnderTitle: defineRenderSlot<PageHeaderPart>({ docLabel: (p) => p.id }),
+  /**
+   * An entry of the page's "⋯" menu in the page-detail header (Add to
+   * favorites, …). Each contribution renders its own `DropdownMenuItem` for
+   * the open page; the menu closes on the item's click. Move to trash is the
+   * menu's own last entry, after a separator — it is not contributed.
+   */
+  MenuItem: defineRenderSlot<{
+    component: ComponentType<{ pageId: string }>;
+  }>({ docLabel: (p) => p.id }),
   Section: pageDetailSections.Section,
   /** Renders every contributed section. Mounted by `pageDetailPane`. */
   Host: pageDetailSections.Host,

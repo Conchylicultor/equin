@@ -94,6 +94,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "apps.mail.threads.mail-threads.actions", pluginId: "apps.mail.threads", configName: "mail-threads.actions" },
   { slotId: "apps.pages.page-tree.block-detail.actions", pluginId: "apps.pages.page-tree", configName: "block-detail.actions" },
   { slotId: "apps.pages.page-tree.header-tool", pluginId: "apps.pages.page-tree", configName: "header-tool" },
+  { slotId: "apps.pages.page-tree.menu-item", pluginId: "apps.pages.page-tree", configName: "menu-item" },
   { slotId: "apps.pages.page-tree.overlay", pluginId: "apps.pages.page-tree", configName: "overlay" },
   { slotId: "apps.pages.page-tree.page-detail.actions", pluginId: "apps.pages.page-tree", configName: "page-detail.actions" },
   { slotId: "apps.pages.page-tree.pages-tree.actions", pluginId: "apps.pages.page-tree", configName: "pages-tree.actions" },

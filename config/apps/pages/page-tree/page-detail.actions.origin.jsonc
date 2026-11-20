@@ -1,4 +1,4 @@
-// @hash ff350250c718
+// @hash 1256c1ad5359
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -10,7 +10,7 @@
     "apps.pages.copy-id:copy-id",
     "apps.pages.history:edited",
     "apps.pages.page-author:page-author",
-    "apps.pages.starred:star",
+    "apps.pages.page-tree:page-menu",
     "primitives.pane:title"
   ]
 }

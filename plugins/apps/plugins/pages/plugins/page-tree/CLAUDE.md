@@ -157,6 +157,7 @@ it, so an id means the same thing wherever it is clicked.
   - Slots:
     - `PageDetail.HeaderTool`
     - `PageDetail.UnderTitle`
+    - `PageDetail.MenuItem`
     - `PageDetail.Section`
     - `PageDetail.Overlay`
     - `PageTree.RowActions`
@@ -169,6 +170,7 @@ it, so an id means the same thing wherever it is clicked.
     - `PageDetail.HeaderTool` ← `apps.pages.page-tree`
     - `PageDetail.UnderTitle` ← `apps.pages.page-tags`
     - `PageDetail.UnderTitle` ← `apps.pages.page-tree`
+    - `PageDetail.MenuItem` ← `apps.pages.starred`
     - `PageDetail.Overlay` ← `apps.pages.page-outline`
     - `PageTree.RowActions` ← `apps.pages.page-tree`
     - `PageTree.RowActions` ← `apps.pages.starred`
@@ -176,7 +178,7 @@ it, so an id means the same thing wherever it is clicked.
     - `pageDetailPane.Actions` ← `apps.pages.copy-id`
     - `pageDetailPane.Actions` ← `apps.pages.history`
     - `pageDetailPane.Actions` ← `apps.pages.page-author`
-    - `pageDetailPane.Actions` ← `apps.pages.starred`
+    - `pageDetailPane.Actions` ← `apps.pages.page-tree`
     - `pageDetailPane.Actions` ← `primitives.pane`
     - `blockDetailPane.Actions` ← `primitives.pane`
     - `pagesTreePane.Actions` ← `primitives.pane`
@@ -190,10 +192,11 @@ it, so an id means the same thing wherever it is clicked.
     - `PageDetail.HeaderTool` "change-icon" → `ChangeIconTool`
     - `PageDetail.HeaderTool` "add-cover" → `AddCoverTool`
     - `PageDetail.UnderTitle` "backlinks" → `BacklinksUnderTitle`
+    - `pageDetailPane.Actions` "page-menu" → `PageMenuAction`
     - `PageTree.RowActions` "delete" → `DeletePageAction`
     - `PageTree.RowActions` "add-below" → `AddPageBelowAction`
-  - Uses: 100 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/ui-kit` ×9
+  - Uses: 105 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×14
     - `page/editor` ×8
     - `primitives/data-view` ×8
     - `primitives/pane` ×6

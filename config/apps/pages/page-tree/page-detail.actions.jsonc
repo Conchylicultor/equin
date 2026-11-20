@@ -1,4 +1,4 @@
-// @hash ff350250c718
+// @hash 1256c1ad5359
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -13,7 +13,8 @@
   // pushes everything ABOUT the page to the far end: "Edited 2h ago" first — a
   // quiet fact you read, which also opens the page's version history on click
   // — then the kind pill (a state you read at a glance, tinted on an agent
-  // page, and a rare switch to flip) and Star. No authored `⋯` bucket: the bar
+  // page, and a rare switch to flip) and, last, the page's own `⋯` menu
+  // (Add to favorites, Move to trash). No authored overflow bucket: the bar
   // still relocates whatever does not fit behind its own `⋯` when the pane is
   // narrow. The pane's own Expand and Close sit beyond these, painted by the
   // pane chrome rather than this slot.
@@ -23,6 +24,6 @@
     { "type": "spacer", "id": "page-actions" },
     "apps.pages.history:edited",
     "apps.pages.page-author:page-author",
-    "apps.pages.starred:star"
+    "apps.pages.page-tree:page-menu"
   ]
 }

@@ -7105,6 +7105,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Slots:
               - `PageDetail.HeaderTool`
               - `PageDetail.UnderTitle`
+              - `PageDetail.MenuItem`
               - `PageDetail.Section`
               - `PageDetail.Overlay`
               - `PageTree.RowActions`
@@ -7117,6 +7118,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PageDetail.HeaderTool` ← `apps.pages.page-tree`
               - `PageDetail.UnderTitle` ← `apps.pages.page-tags`
               - `PageDetail.UnderTitle` ← `apps.pages.page-tree`
+              - `PageDetail.MenuItem` ← `apps.pages.starred`
               - `PageDetail.Overlay` ← `apps.pages.page-outline`
               - `PageTree.RowActions` ← `apps.pages.page-tree`
               - `PageTree.RowActions` ← `apps.pages.starred`
@@ -7124,7 +7126,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `pageDetailPane.Actions` ← `apps.pages.copy-id`
               - `pageDetailPane.Actions` ← `apps.pages.history`
               - `pageDetailPane.Actions` ← `apps.pages.page-author`
-              - `pageDetailPane.Actions` ← `apps.pages.starred`
+              - `pageDetailPane.Actions` ← `apps.pages.page-tree`
               - `pageDetailPane.Actions` ← `primitives.pane`
               - `blockDetailPane.Actions` ← `primitives.pane`
               - `pagesTreePane.Actions` ← `primitives.pane`
@@ -7138,10 +7140,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PageDetail.HeaderTool` "change-icon" → `ChangeIconTool`
               - `PageDetail.HeaderTool` "add-cover" → `AddCoverTool`
               - `PageDetail.UnderTitle` "backlinks" → `BacklinksUnderTitle`
+              - `pageDetailPane.Actions` "page-menu" → `PageMenuAction`
               - `PageTree.RowActions` "delete" → `DeletePageAction`
               - `PageTree.RowActions` "add-below" → `AddPageBelowAction`
-            - Uses: 100 symbols — full list in [`plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md)
-              - `primitives/css/ui-kit` ×9
+            - Uses: 105 symbols — full list in [`plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md)
+              - `primitives/css/ui-kit` ×14
               - `page/editor` ×8
               - `primitives/data-view` ×8
               - `primitives/pane` ×6
@@ -7301,14 +7304,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/pages/welcome`
               - `apps/places/places-map`
               - `page/inline-date`
-        - **`starred`** — Favorites/starred pages for the Pages app: presents the exposed `starred` field of the Pages sidebar DataView (Favorites is a filtered list view) plus star toggles on page-tree rows and the page header. Starred-pages side-table (page_blocks_ext_starred): presence-only marker plus the star toggle endpoint, and its presence exposed as the `starred` field of every list whose rows are blocks (LiveColumns.Expose).
+        - **`starred`** — Favorites/starred pages for the Pages app: presents the exposed `starred` field of the Pages sidebar DataView (Favorites is a filtered list view) plus a star toggle on page-tree rows and a favorites entry in the page's ⋯ menu. Starred-pages side-table (page_blocks_ext_starred): presence-only marker plus the star toggle endpoint, and its presence exposed as the `starred` field of every list whose rows are blocks (LiveColumns.Expose).
           - Web:
             - Contributes:
               - `FieldPresentation.Register` "exposure:page_blocks_ext_starred"
               - `PageTree.RowActions` "star" → `StarRowAction`
-              - `pageDetailPane.Actions` "star" → `StarHeaderAction`
+              - `PageDetail.MenuItem` "star" → `StarMenuItem`
             - Uses:
-              - `apps/pages/page-tree.pageDetailPane`
+              - `apps/pages/page-tree.PageDetail`
               - `apps/pages/page-tree.PageTree`
               - `infra/endpoints.useEndpointMutation`
               - `network/live.FieldPresentation`
@@ -7316,7 +7319,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live/live-state.mapResource`
               - `network/live/live-state.ResourceErrorInline`
               - `network/live/live-state.ResourceResult`
+              - `primitives/css/ui-kit.DropdownMenuItem`
               - `primitives/icon-button.IconButton`
+              - `primitives/loading.Loading`
+              - `ui/icons.Icon`
             - Exports (types): `StarredPageRow`
             - Exports (values): `StarredPageRowSchema`
           - Server:
@@ -52640,9 +52646,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 480 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 481 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×114
-              - `apps` ×110
+              - `apps` ×111
               - `conversations` ×55
               - `page` ×27
               - `debug` ×25
@@ -55871,8 +55877,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 241 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
-          - `apps` ×72
+        - Imported by: 242 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+          - `apps` ×73
           - `conversations` ×26
           - `ui` ×24
           - `debug` ×20
@@ -59811,8 +59817,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 304 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×304
+    - Contributes: 305 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×305
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -59836,8 +59842,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 303 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×303
+    - Contributes: 304 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×304
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:

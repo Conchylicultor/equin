@@ -18,6 +18,7 @@ import {
 } from "./components/header-tools";
 import { DeletePageAction } from "./components/delete-page-action";
 import { AddPageBelowAction } from "./components/add-page-below-action";
+import { PageMenuAction } from "./components/page-menu";
 import { PageDetail, PageTree } from "./slots";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
@@ -75,6 +76,7 @@ export default {
       component: BacklinksUnderTitle,
       useAvailable: useHasBacklinks,
     }),
+    pageDetailPane.Actions({ id: "page-menu", component: PageMenuAction }),
     PageTree.RowActions({ id: "delete", component: DeletePageAction }),
     PageTree.RowActions({ id: "add-below", component: AddPageBelowAction }),
   ],
