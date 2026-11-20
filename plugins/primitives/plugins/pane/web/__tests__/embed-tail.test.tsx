@@ -155,10 +155,26 @@ describe("parsing an embed tail", () => {
     });
   });
 
-  it("is no tail when a part holds a raw `;` (a retired `;full=1` link)", () => {
-    expect(parsed("/at/desktop/sonata;full=1")).toBe("unresolved");
-    expect(parsed("/et-host/et-child/at/agents;full=1")).toBe("unresolved");
+  it("reads a part holding a raw `;` as the app spells it, undecoded", () => {
+    // Typed or pasted in the embedded app's own spelling: its keyed params,
+    // an encoded `/` kept inside its value.
+    expect(parsed("/at/sonata/song/s1;lens=notation;grid=C%2FE")).toEqual({
+      slots: [],
+      index: { [PLACE]: "/sonata/song/s1;lens=notation;grid=C%2FE" },
+    });
+    expect(parsed("/et-host/et-child/at/agents;full=1")).toEqual({
+      slots: [
+        ["et-host", {}],
+        ["et-child", { [PLACE]: "/agents;full=1" }],
+      ],
+      index: {},
+    });
+    // No tail: a pane with no keyed params still reads a raw `;` as text.
     expect(parsed("/et-host/et-child;full=1")).toBe("unresolved");
+  });
+
+  it("is no tail when a part is no valid percent-encoding", () => {
+    expect(parsed("/at/agents/%zz")).toBe("unresolved");
   });
 
   it("is no tail with nothing after `at`", () => {

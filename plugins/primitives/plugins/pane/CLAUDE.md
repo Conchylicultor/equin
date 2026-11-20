@@ -148,8 +148,10 @@ address can hold it.
   spelled as the URL's tail — `<the page's URL>/at/<location parts>`
   (`splitEmbedTail`), each part encoded — instead of a `;view.…` pair;
   anywhere else (or on a last segment ending open), plainly. A tail part
-  holding a raw `;` is no tail (a stale `;full=1` link of the retired
-  maximized flag reads as no route: not found). `parseUrl` tries the
+  holding a raw `;` is the embedded app's own spelling, typed or pasted
+  (`/at/sonata/song/x;lens=notation`), read as it stands — not decoded, so an
+  encoded `/` in a value stays in it; a part that is no valid
+  percent-encoding is no tail. `parseUrl` tries the
   plain chain first and reads a tail only when that fails, so a route with a
   real `at` segment keeps matching. `embedTailPath(location)` spells one for
   a script addressing an embed from outside.

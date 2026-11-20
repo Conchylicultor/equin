@@ -509,9 +509,11 @@ export function onlySurfaceViews(
 // `/at/<location parts>` (each part encoded, so no tail part ever holds a raw
 // `;`) instead of as a `;view.…` pair. Anywhere else (a pane that is not the
 // last, one whose segment ends open) the key keeps the plain `;view.…`
-// spelling; both read back to the same route. A tail part with a raw `;` (a
-// stale `;full=1` bookmark from the retired maximized flag) is no tail: the
-// URL reads as a route without one, or none.
+// spelling; both read back to the same route. A tail part holding a raw `;`
+// was never written by the router: it is the embedded app's own URL part,
+// typed or pasted as the app spells it (`song-x;lens=notation`), and is read
+// as it stands — never decoded, so an encoded `/` in one of its values
+// (`C%2FE`) stays inside the value.
 // ---------------------------------------------------------------------------
 
 /** The surface whose view is an embed's location (an app-rooted URL, `/agents/c/x`). */
@@ -543,23 +545,40 @@ export function splitEmbedTail(params: Record<string, string>): {
 /**
  * Read an embed location back: `parts` (a URL's `/`-split parts) at `at` — the
  * index of an `at` part — as the surface-view param it spells, or `null` when
- * `at` does not start one (no location after it, or a part holding a raw `;`,
- * which no written tail does).
+ * `at` does not start one (no location after it, or a part that is no valid
+ * percent-encoding — the address bar is untrusted input). Each written part
+ * is decoded; a part holding a raw `;` is the embedded app's own spelling
+ * (see the section comment) and is kept as it stands.
  */
 export function readEmbedTail(
   parts: readonly string[],
   at: number,
 ): Record<string, string> | null {
   if (parts[at] !== EMBED_TAIL_MARK || at + 1 >= parts.length) return null;
-  const rest = parts.slice(at + 1);
-  if (rest.some((p) => p.includes(";"))) return null;
-  const location =
-    "/" +
-    rest
-      .map((p) => decodeURIComponent(p))
-      .join("/")
-      .replace(/^\/+/, "");
+  const rest: string[] = [];
+  for (const part of parts.slice(at + 1)) {
+    const read = readTailPart(part);
+    if (read === null) return null;
+    rest.push(read);
+  }
+  const location = "/" + rest.join("/").replace(/^\/+/, "");
   return { [EMBED_PLACE_KEY]: location };
+}
+
+/**
+ * One embed tail part as the embedded app spells it: a written part decoded
+ * (the router encodes each one, so it never holds a raw `;`), a part holding
+ * a raw `;` as it stands (the app's own spelling, typed or pasted), or `null`
+ * for one that is no valid percent-encoding (`%zz`, typed).
+ */
+function readTailPart(part: string): string | null {
+  if (part.includes(";")) return part;
+  try {
+    return decodeURIComponent(part);
+  } catch (err) {
+    if (err instanceof URIError) return null;
+    throw err;
+  }
 }
 
 /**
