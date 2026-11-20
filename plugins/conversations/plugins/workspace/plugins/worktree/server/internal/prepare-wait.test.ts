@@ -32,6 +32,11 @@ function world(opts: {
    * (the install between), instead of both at once.
    */
   writesFirst?: boolean;
+  /**
+   * The open run ends while `filesReady` starts the agent — between the
+   * loop's read of the run and its wait (a spare checkout's usual timing).
+   */
+  endsDuringFilesReady?: boolean;
 }) {
   let state = opts.state;
   const outcomes = [...(opts.outcomes ?? [])];
@@ -53,7 +58,8 @@ function world(opts: {
   if (opts.openRun) startRun();
 
   let written = false;
-  const advance = (): void => {
+  /** Time passing: the next thing that happens in the world, if anything. */
+  const advance = (): boolean => {
     if (
       run?.open &&
       opts.writesFirst &&
@@ -63,7 +69,7 @@ function world(opts: {
       written = true;
       state = "complete";
       log.push(`written:${run.id}`);
-      return;
+      return true;
     }
     if (run?.open) {
       written = false;
@@ -83,11 +89,15 @@ function world(opts: {
         };
       }
       log.push(`ended:${run.id}`);
-    } else if (pendingRequest) {
+      return true;
+    }
+    if (pendingRequest) {
       pendingRequest = false;
       startRun();
       log.push(`claimed:${run!.id}`);
+      return true;
     }
+    return false;
   };
 
   const deps: PrepareDeps = {
@@ -112,6 +122,7 @@ function world(opts: {
     },
     filesReady: () => {
       log.push("files-ready");
+      if (opts.endsDuringFilesReady) advance();
       return Promise.resolve();
     },
   };
@@ -123,13 +134,24 @@ function world(opts: {
       steps.set(name, value);
       return value;
     },
-    waitFor: <T>(
+    // `ctx.waitFor`'s contract: once armed, the wait asks its recheck; what
+    // happened before that is otherwise unheard. Then time passes — and a
+    // wait woken by nothing that happened is its timeout.
+    waitFor: async <T>(
       _event: unknown,
-      waitOpts?: { where?: Partial<T>; name?: string },
+      waitOpts: {
+        where?: Partial<T>;
+        name?: string;
+        settled: { recheck: () => Promise<boolean> } | { noRecheck: string };
+      },
     ): Promise<T | null> => {
-      log.push(`wait:${JSON.stringify(waitOpts?.where)}`);
-      advance();
-      return Promise.resolve(null);
+      log.push(`wait:${JSON.stringify(waitOpts.where)}`);
+      if ("recheck" in waitOpts.settled && (await waitOpts.settled.recheck())) {
+        log.push("rechecked");
+        return null;
+      }
+      if (!advance()) log.push("timeout");
+      return null;
     },
     sleep: (ms: number): Promise<void> => {
       log.push(`sleep:${String(ms)}`);
@@ -183,6 +205,29 @@ describe("prepareWorktree", () => {
       'wait:{"kindId":"worktreeprepare","runId":"run-0"}',
       "ended:run-0",
     ]);
+  });
+
+  test("a run that ends while the agent starts is seen by the wait's recheck — never waited out to its timeout", async () => {
+    // 2026-11-20: a quarter of spare launches waited exactly PREPARE_WAIT_MS
+    // here — the run's end was announced before the wait was armed.
+    const w = world({
+      state: "absent",
+      writesFirst: true,
+      endsDuringFilesReady: true,
+    });
+    await prepareWorktree(w.ctx, "att-1", w.deps);
+    expect(w.log).toEqual([
+      "request",
+      'wait:{"attemptId":"att-1"}',
+      "claimed:run-0",
+      'wait:{"attemptId":"att-1"}',
+      "written:run-0",
+      "files-ready",
+      "ended:run-0",
+      'wait:{"kindId":"worktreeprepare","runId":"run-0"}',
+      "rechecked",
+    ]);
+    expect(w.log).not.toContain("timeout");
   });
 
   test("files ready is called once per walk, however many passes see them", async () => {
@@ -278,10 +323,7 @@ describe("prepareWorktree", () => {
     const firstCtx = {
       step: w.ctx.step,
       sleep: w.ctx.sleep,
-      waitFor: <T>(
-        event: unknown,
-        o?: { where?: Partial<T>; name?: string },
-      ) => {
+      waitFor: <T>(event: unknown, o: Parameters<typeof waitFor<T>>[1]) => {
         if (!suspended) {
           suspended = true;
           // Time passes while suspended: the request is claimed.

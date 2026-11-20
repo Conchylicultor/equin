@@ -221,6 +221,26 @@ GC and the sweeper's superseded DELETE discard the logs of the rows they remove
 — only row-owned run ids, since a baked (keyed/resume) id is shared with
 whatever row holds that key next.
 
+## A wait re-reads its condition once armed: `settled`
+
+A durable wait is "observe, then wait": read the state, find the thing not
+done, `ctx.waitFor` its event. An event only reaches a wait whose trigger
+exists when it fires, so anything landing between the read and the arming is
+unheard, and the wait runs out its whole timeout on something already over —
+an exact-timeout latency with no failure anywhere. On 2026-11-20 a quarter of
+spare-worktree launches waited exactly 30 s this way (`prepareWorktree` read
+its checkout run open, started the agent for ~1.5 s, and the run ended in
+between).
+
+So `waitFor` requires `settled`: `{ recheck }` is called AFTER the trigger and
+the timeout racer are armed; `true` resolves the wait at once (`null`, like a
+timeout — go and look; recorded `resolved`, so a replay reads the same) and
+cancels the racer. If a waker resolved the wait first, it already queued the
+run's resume, so the handler suspends rather than run twice. `{ noRecheck:
+"<why>" }` is the spelled exception for a wait no state can answer (the next
+occurrence of something). A timeout firing should mean the thing really did
+not happen — never shorten one to hide a missed wake.
+
 ## A fork inherits no run
 
 A run belongs to the database whose queue ran it. A worktree's database is

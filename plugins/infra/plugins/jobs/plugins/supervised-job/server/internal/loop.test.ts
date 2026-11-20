@@ -113,9 +113,11 @@ function createCtx(onWait?: (name: string) => void): {
       },
       waitFor: <T extends Record<string, unknown>>(
         _event: unknown,
-        opts?: { name?: string },
+        opts: Parameters<LoopCtx["waitFor"]>[1],
       ): Promise<T | null> => {
-        const name = opts?.name ?? "";
+        // A run's end must be re-read once the wait is armed (`settled`).
+        if (!("recheck" in opts.settled)) throw new Error("wait without recheck");
+        const name = opts.name ?? "";
         waits.push(name);
         onWait?.(name);
         // `null` is the timeout arm, and the loop must treat it exactly as it

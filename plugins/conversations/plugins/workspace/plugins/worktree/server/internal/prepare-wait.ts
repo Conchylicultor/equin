@@ -145,10 +145,28 @@ export async function prepareWorktree(
       await deps.filesReady();
       filesReady = true;
     }
+    // What this pass saw, read again once a wait is armed: the run it read
+    // having ended (or another one being newest), or the files it found
+    // missing being there, is what the wait is for — and an event for it
+    // that fired before the wait was armed reaches nobody. The spawn starts
+    // its agent between the two reads above and the wait (`filesReady`,
+    // ~1.5 s), and a spare's run often ends right there: before this
+    // recheck, those launches waited out PREPARE_WAIT_MS (2026-11-20).
+    const seen = {
+      runId: run?.id ?? null,
+      open: run?.open === true,
+      filesReady,
+    };
+    const moved = async (): Promise<boolean> => {
+      const now = await deps.latestRun();
+      if ((now?.id ?? null) !== seen.runId) return true;
+      if ((now?.open === true) !== seen.open) return true;
+      return !seen.filesReady && (await deps.checkoutState()) === "complete";
+    };
     if (run?.open) {
       await (filesReady
-        ? wait(ctx, deps.kindId, run.id, i)
-        : waitProgress(ctx, attemptId, i));
+        ? wait(ctx, deps.kindId, run.id, i, moved)
+        : waitProgress(ctx, attemptId, i, moved));
       continue;
     }
     const ours = request !== null && run !== null && run.id !== request.after;
@@ -159,8 +177,8 @@ export async function prepareWorktree(
       // attempt's checkout to move instead: the run writing them says so.
       pendingWakes++;
       await (filesReady
-        ? wait(ctx, deps.kindId, null, i)
-        : waitProgress(ctx, attemptId, i));
+        ? wait(ctx, deps.kindId, null, i, moved)
+        : waitProgress(ctx, attemptId, i, moved));
       continue;
     }
     if (
@@ -229,6 +247,7 @@ async function wait(
   kindId: string,
   runId: string | null,
   i: number,
+  recheck: () => Promise<boolean>,
 ): Promise<void> {
   // The payload is discarded: a wake-up, never the answer. A timeout and an
   // event are the same instruction — go and look.
@@ -236,6 +255,7 @@ async function wait(
     where: runId === null ? { kindId } : { kindId, runId },
     timeoutMs: PREPARE_WAIT_MS,
     name: `prepare:wait:${i}`,
+    settled: { recheck },
   });
 }
 
@@ -249,10 +269,12 @@ async function waitProgress(
   ctx: Pick<JobCtx, "waitFor">,
   attemptId: string,
   i: number,
+  recheck: () => Promise<boolean>,
 ): Promise<void> {
   await ctx.waitFor<CheckoutProgressPayload>(checkoutProgress, {
     where: { attemptId },
     timeoutMs: PREPARE_WAIT_MS,
     name: `prepare:files:${i}`,
+    settled: { recheck },
   });
 }

@@ -175,6 +175,11 @@ export async function awaitRelease(
       where: { kindId: RELEASE_RUN_KIND_ID, runId: opts.releaseId },
       timeoutMs: RELEASE_WAIT_MS,
       name: `${opts.name}:${iteration}`,
+      // The release may have been claimed or ended since the read above.
+      settled: {
+        recheck: async () =>
+          (await observeRelease(opts)).state !== progress.state,
+      },
     });
   }
 }

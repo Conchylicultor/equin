@@ -14,9 +14,17 @@ export async function afterTurn(
   conversationId: string,
   opts?: { timeoutMs?: number; name?: string },
 ): Promise<ConversationTurnCompletedPayload | null> {
-  return ctx.waitFor<ConversationTurnCompletedPayload>(conversationTurnCompleted, {
-    where: { conversationId },
-    timeoutMs: opts?.timeoutMs,
-    name: opts?.name,
-  });
+  return ctx.waitFor<ConversationTurnCompletedPayload>(
+    conversationTurnCompleted,
+    {
+      where: { conversationId },
+      timeoutMs: opts?.timeoutMs,
+      name: opts?.name,
+      settled: {
+        noRecheck:
+          "debt: the turn's end is not re-read — a turn that ends before the " +
+          "trigger is armed (a finalize job picked up late) costs the caller its timeout",
+      },
+    },
+  );
 }

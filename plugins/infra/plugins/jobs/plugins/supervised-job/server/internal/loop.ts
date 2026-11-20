@@ -96,6 +96,12 @@ export async function awaitSupervisedRun(
       where: { kindId: opts.kind.id, runId: opts.runId },
       timeoutMs: RUN_ENDED_WAIT_MS,
       name: `${opts.name}:${iteration}`,
+      // The marker may have landed since the read above, its emit unheard.
+      settled: {
+        recheck: async () =>
+          (await observeRun(opts.kind.id, opts.runId, opts.pid, new Date()))
+            .state === "ended",
+      },
     });
   }
 }

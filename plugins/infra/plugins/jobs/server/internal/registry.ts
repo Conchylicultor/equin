@@ -116,7 +116,10 @@ export interface JobCtx {
    * timeout. Every wait is bounded by construction: `opts.timeoutMs` defaults
    * to {@link DEFAULT_WAIT_TIMEOUT_MS} and is clamped to {@link
    * MAX_WAIT_TIMEOUT_MS} — pass `opts.unbounded: true` for the rare
-   * genuinely-forever wait. DO NOT wrap in try/catch — suspend is signaled by a
+   * genuinely-forever wait. `opts.settled` is required: the condition
+   * re-read once the trigger is armed (`{ recheck }`), so an event that fired
+   * between the caller's observation and the wait resolves it at once instead
+   * of costing the whole timeout — or `{ noRecheck: "<why>" }`. DO NOT wrap in try/catch — suspend is signaled by a
    * sentinel error that the worker catches; swallowing it hangs the workflow.
    * If you must catch (e.g. wrapping in your own retry), gate the catch on
    * `isSuspendSignal(err)` and re-throw.
@@ -127,7 +130,7 @@ export interface JobCtx {
       readonly def: { name: string };
       readonly filter: Record<string, unknown>;
     },
-    opts?: WaitForOptions<T>,
+    opts: WaitForOptions<T>,
   ): Promise<T | null>;
   /**
    * Suspend until `ms` have elapsed. Same try/catch caveat as `waitFor` —
