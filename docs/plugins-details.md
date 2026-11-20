@@ -17341,7 +17341,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `report-kind` "conversation-stuck-turn"
       - `report-kind` "held-turn-undelivered"
       - `resource.declare` "conversations.partial-message"
-    - Uses: 91 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+    - Uses: 92 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
       - `tasks/tasks-core` ×27
       - `conversations/turn-ledger` ×15
       - `conversations/transcript-watcher` ×8
@@ -17363,6 +17363,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `conversations/workspace/launch-option.getTaskWorkspace`
       - `database/fork-point.databaseForkedAt`
       - `infra/attachments.getAttachment`
+      - `infra/host/machine-sleep.sleptDuring`
       - `infra/paths.claudeTranscriptPath`
       - `infra/warmup.defineWarmup`
       - `reports/engine.recordReport`
@@ -37996,7 +37997,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Register: `defineSupervisedJob('main-slots.reclaim')`
           - Core:
             - Uses: 48 symbols — full list in [`plugins/infra/plugins/git/plugins/main-slots/REFERENCE.md`](../plugins/infra/plugins/git/plugins/main-slots/REFERENCE.md)
-              - `infra/git/main-slots/boot-lease` ×21
+              - `infra/git/main-slots/boot-lease` ×20
               - `packages/timed-fs` ×6
               - `infra/paths` ×5
               - `infra/namespace` ×4
@@ -38006,6 +38007,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/launcher/env-names.readEnv`
               - `infra/paths/repo-root.REPO_ROOT`
               - `infra/spawn.getMainRepoRoot`
+              - `packages/sleep-clock.sleepStampNow`
             - Exports (types):
               - `DrainSlowPayload`
               - `HandedBuildSlot`
@@ -38090,14 +38092,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/host-fs/user-path.joinAppPath`
                   - `packages/flock.flockSharedSync`
                   - `packages/owned-fd.openOwnedFdSync`
-                  - `packages/sleep-clock.readSleepClock`
+                  - `packages/sleep-clock.sleepStampNow`
+                  - `packages/sleep-clock/stamp.awakeBetween`
+                  - `packages/sleep-clock/stamp.isSleepStamp`
+                  - `packages/sleep-clock/stamp.SleepStamp`
                   - `packages/timed-fs.existsSync`
                   - `packages/timed-fs.readFileSync`
                   - `packages/timed-fs.statSync`
                 - Exports (types):
                   - `DrainRecord`
                   - `HeldPastSwitch`
-                  - `SleepMark`
                   - `SlotHolder`
                   - `SlotHolderKind`
                   - `SlotLeaseHold`
@@ -38118,7 +38122,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `renderDrainRecord`
                   - `renderHolder`
                   - `renderUnserved`
-                  - `sleepMarkNow`
                   - `SLOT_DRAIN_LOG_DIR`
                   - `SLOT_HANDED_FILE`
                   - `SLOT_HOLDER_KINDS`
@@ -38386,35 +38389,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `listCpuHolders`
               - `publishFleetMemory`
               - `pushPool`
-              - `readClocks`
               - `readHolderPeaks`
               - `recordHolderPeak`
               - `repoPushLock`
               - `withE2eGrant`
               - `withHostGrant`
-          - Cross-plugin:
-            - Imported by:
-              - `database/admin`
-              - `debug/profiling/boot-bench`
-              - `debug/sentinel/machine-usage`
-              - `framework/cli/build`
-              - `framework/cli/check`
-              - `framework/cli/op-runtime`
-              - `framework/cli/push`
-              - `framework/cli/test`
-              - `framework/tooling/checks/type-check`
-              - `framework/tooling/checks/type-check/backstop`
-              - `infra/host/host-read-pool`
-              - `infra/jobs/supervised-job`
-              - `infra/safe-fetch/browser-fetch`
-              - `infra/worktree`
-              - `reports/fleet-memory-unmeasured`
-          - Exemptions:
-            - Exempts itself from:
-              - `host-pools-declared` — `server` (sanctioned)
-              - `boundaries/no-platform-api` — `core/internal/budget.ts`, `server/internal/pool.ts`, `server/internal/fleet-memory.ts`, `server/internal/holders.ts` (debt)
-              - `watcher-safety/no-raw-fs-watch` — `server/internal/fleet-memory.ts` (sanctioned)
           - Core:
+            - Uses:
+              - `packages/sleep-clock/stamp.awakeBetween`
+              - `packages/sleep-clock/stamp.ClockStamp`
+              - `packages/sleep-clock/stamp.SleepStamp`
             - Exports (types):
               - `AdmissionNow`
               - `CpuBudget`
@@ -38461,6 +38445,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PER_UNIT_BYTES`
               - `rawFleetCeiling`
               - `unmeasuredWindow`
+          - Cross-plugin:
+            - Imported by:
+              - `database/admin`
+              - `debug/profiling/boot-bench`
+              - `debug/sentinel/machine-usage`
+              - `framework/cli/build`
+              - `framework/cli/check`
+              - `framework/cli/op-runtime`
+              - `framework/cli/push`
+              - `framework/cli/test`
+              - `framework/tooling/checks/type-check`
+              - `framework/tooling/checks/type-check/backstop`
+              - `infra/host/host-read-pool`
+              - `infra/jobs/supervised-job`
+              - `infra/safe-fetch/browser-fetch`
+              - `infra/worktree`
+              - `reports/fleet-memory-unmeasured`
+          - Exemptions:
+            - Exempts itself from:
+              - `host-pools-declared` — `server` (sanctioned)
+              - `boundaries/no-platform-api` — `core/internal/budget.ts`, `server/internal/pool.ts`, `server/internal/fleet-memory.ts`, `server/internal/holders.ts` (debt)
+              - `watcher-safety/no-raw-fs-watch` — `server/internal/fleet-memory.ts` (sanctioned)
         - **`host-read-pool`** — Shared host-wide budget for CPU/IO-heavy git/filesystem reads: withHeavyReadSlot admits at most a few heavy reads at once across all worktree servers.
           - Server:
             - Uses: `infra/host/host-admission.defineHostPool`
@@ -38644,7 +38650,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `FS_LATENCY_MONITOR_PLATFORM_REASON`
                   - `FS_LATENCY_MONITOR_PLATFORMS`
                   - `START_MONITOR_COMMAND`
-        - **`machine-sleep`** — useSleepNow(): the machine.sleep live value (and useSleepNowForFold: the reading as op-log's `sleepNow` fold parameter, unknown while loading or where the computer cannot be read) — the box's sleep clock, so a live surface can count a nap as asleep rather than as work. The machine's sleep clock, read and published: publishSleepReading() re-reads it and tells its listeners only when it changed — called by an existing periodic observer, so a wake reaches the browser without a poller of its own — with currentSleepReading() and onSleepReadingChanged() for the machine half that serves it as the machine.sleep live value, sleptDuring(start, end) — the sleep this process saw inside a wall-clock span — awakeSpanStart(end, awakeMs) — the wall-clock instant that much awake time before end, stepping over those sleeps — setAwakeTimeout(fn, awakeMs), a timer that a sleep does not spend, and wakeBefore(at, within) — the sleep whose wake came just before an instant, so what a wake explains can say the machine had just woken.
+        - **`machine-sleep`** — useSleepNow(): the machine.sleep live value (and useSleepNowForFold: the reading as op-log's `sleepNow` fold parameter, unknown while loading or where the computer cannot be read) — the box's sleep clock, so a live surface can count a nap as asleep rather than as work. The machine's sleep clock, read and published: publishSleepReading() re-reads it and tells its listeners only when it changed — called by an existing periodic observer, so a wake reaches the browser without a poller of its own — with currentSleepReading() and onSleepReadingChanged() for the machine half that serves it as the machine.sleep live value, sleptDuring(start, end) — the sleep this process saw inside a wall-clock span — awakeSpanStart(end, awakeMs) — the wall-clock instant that much awake time before end, stepping over those sleeps, and wakeBefore(at, within) — the sleep whose wake came just before an instant, so what a wake explains can say the machine had just woken.
           - Server:
             - Contributes: `resource.declare` "machine.sleep"
             - Exports (types):
@@ -38655,7 +38661,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `currentSleepReading`
               - `onSleepReadingChanged`
               - `publishSleepReading`
-              - `setAwakeTimeout`
               - `sleptDuring`
               - `wakeBefore`
             - Resources: `machine.sleep` (push, notified)
@@ -38676,6 +38681,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SleepNowSchema`
           - Cross-plugin:
             - Imported by:
+              - `conversations`
               - `conversations/conversation-view/op-status`
               - `database/lock-watch`
               - `debug/boot-watchdog`
@@ -41102,14 +41108,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/host-fs/user-path.AppPath`
           - `infra/host-fs/user-path.asAppPath`
           - `infra/host-fs/user-path.joinAppPath`
+          - `packages/deadline.armAwakeDeadline`
           - `packages/flock.holdParentLifeline`
           - `packages/owned-fd.openOwnedFd`
           - `packages/owned-fd.OwnedFd`
           - `packages/proc-rusage.PeakFootprint`
           - `packages/proc-rusage.peakFootprintReportEnv`
           - `packages/proc-rusage.readPeakFootprintReport`
-          - `packages/sleep-clock.AwakeClockReading`
-          - `packages/sleep-clock.readAwakeClock`
           - `packages/spawn-priority.spawnAtTier`
           - `packages/timed-fs.readFile`
         - Exports (types):
@@ -44421,17 +44426,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/plugin-tree`
           - `reports/outbox`
           - `shell/document-head`
-    - **`deadline`** — Bound an await: withDeadline(work, budgetMs, onTimeout) races a promise against a one-shot timer, rejecting with the caller's own error on expiry (the work's own rejection wins when it comes first) and always clearing the timer. It never cancels the work — the caller keeps its handle and decides what a still-running promise means.
+    - **`deadline`** — Bound an await, on AWAKE time: withDeadline(work, budgetMs, onTimeout) races a promise against armAwakeDeadline — the one timer a machine sleep does not spend (performance.now pauses through sleep; a setTimeout does not, so it re-arms for what is left) — rejecting with the caller's own error on expiry (the work's own rejection wins when it comes first) and always clearing the timer. It never cancels the work — the caller keeps its handle and decides what a still-running promise means.
       - Cross-plugin:
         - Imported by:
           - `conversations`
           - `conversations/runtime-sdk`
           - `database`
+          - `database/connection`
+          - `framework/cli/bootstrap`
           - `infra/claude-cli/sdk`
+          - `infra/jobs`
           - `infra/safe-fetch/browser-fetch`
+          - `infra/spawn`
           - `network/live/live-state-snapshot`
       - Core:
-        - Exports (values): `withDeadline`
+        - Exports (types):
+          - `AwakeClock`
+          - `AwakeDeadlineOptions`
+        - Exports (values):
+          - `armAwakeDeadline`
+          - `awakeClock`
+          - `withDeadline`
     - **`error-subject`** — What an error is about, carried by the error: SubjectError (a shared throw site — the migration runner, the trigger installer — names the one subject it failed for), errorSubject(err) (the subjects along the cause chain plus the innermost class code, ENOENT / SQLSTATE) and crashFieldsOf(err, scope?) — the errorType / stack / scope every crash filer derives from an error, and normalizeMessage(message) — a message as an identity (ids, hashes and numbers stripped), shared by every kind and subject keyed on a failure's text, so a shared throw site's failures land on one report row per cause instead of one for all. Enforced by error-subject/crash-fields-of.
       - Cross-plugin:
         - Imported by: 35 plugins — full list in [`plugins/packages/plugins/error-subject/REFERENCE.md`](../plugins/packages/plugins/error-subject/REFERENCE.md)
@@ -45002,14 +45017,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `auth`
+          - `debug/boot-events`
+          - `debug/boot-watchdog`
           - `debug/health-monitor`
           - `debug/profiling/op-log`
+          - `debug/sentinel/machine-usage`
           - `framework/cli/test`
           - `infra/file-watcher`
+          - `infra/git/main-slots`
           - `infra/git/main-slots/boot-lease`
           - `infra/host/host-admission`
           - `infra/host/machine-sleep`
-          - `infra/spawn`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/sleep-clock.ts` (debt)
       - Core:
@@ -45019,9 +45037,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SleepMeter`
           - `SleepReading`
         - Exports (values):
+          - `clockStampNow`
           - `createSleepMeter`
           - `readAwakeClock`
           - `readSleepClock`
+          - `sleepStampNow`
+      - Plugins:
+        - **`stamp`** — The one way to judge an age on awake time: ClockStamp (a wall instant plus the machine's sleep clock at it — boot and cumulative time asleep), and awakeBetween(from, to) — the wall span between two stamps, the sleep inside it and the awake time left, whichever processes took them; sleptBetween for the sleep alone. Pure and web-safe (no bun:ffi): sleep-clock reads the stamp (clockStampNow), anything stores and compares it.
+          - Cross-plugin:
+            - Imported by:
+              - `debug/boot-watchdog`
+              - `infra/git/main-slots/boot-lease`
+              - `infra/host/host-admission`
+          - Core:
+            - Exports (types):
+              - `AwakeSpan`
+              - `ClockStamp`
+              - `SleepStamp`
+            - Exports (values):
+              - `awakeBetween`
+              - `isSleepStamp`
+              - `sleptBetween`
     - **`smooth-clock`** — Smooth clock over a stepping time source: createSmoothClockModel turns readings that advance in steps (an embedded player's posted playhead, an AudioContext's buffer-quantized currentTime) into a continuous line slewed toward each new reading (at most 5 % off the rate) and snapped only on a jump — so whatever renders or plays against it advances every frame instead of stuttering.
       - Cross-plugin:
         - Imported by:

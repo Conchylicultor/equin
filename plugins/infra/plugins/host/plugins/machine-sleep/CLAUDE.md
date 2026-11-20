@@ -11,7 +11,8 @@ The machine's sleep clock as a live value, so a browser can tell a nap from work
   reading changed (a new boot, a new `wakeAtMs`, or ≥1 ms more sleep — read jitter
   never pushes). In practice it pushes once per wake. `currentSleepReading()` /
   `onSleepReadingChanged()` are what the machine half serves from. Over the
-  sleeps it has placed: `sleptDuring(start, end)` (slow-ops), `awakeSpanStart`
+  sleeps it has placed: `sleptDuring(start, end)` (slow-ops, the stuck-turn
+  bound, a pre-stamp boot line), `awakeSpanStart`
   (the job sweeper's grace) and `wakeBefore(at, within)` — the sleep whose wake
   came just before an instant (the reports engine stamps it on an occurrence). A process
   knows the sleeps it lived through, plus the one before its first reading:
@@ -32,6 +33,11 @@ The machine's sleep clock as a live value, so a browser can tell a nap from work
 last event can be hours old, so nothing it already holds says the machine just
 slept. The backend publishes the reading.
 
+**Which tool for an age** (an awake timer, a stored stamp, or this
+process's `sleptDuring`): `packages/sleep-clock/CLAUDE.md`. A timer that a
+sleep does not spend is `packages/deadline`'s `armAwakeDeadline` (this plugin's
+own `setAwakeTimeout` folded into it).
+
 **No poller here.** The health-monitor process sampler, which already ticks every
 10 s, calls `publishSleepReading()` on each tick and once at startup. A wake
 reaches the browser within one tick.
@@ -40,7 +46,7 @@ reaches the browser within one tick.
 
 ## Plugin reference
 
-- Description: useSleepNow(): the machine.sleep live value (and useSleepNowForFold: the reading as op-log's `sleepNow` fold parameter, unknown while loading or where the computer cannot be read) — the box's sleep clock, so a live surface can count a nap as asleep rather than as work. The machine's sleep clock, read and published: publishSleepReading() re-reads it and tells its listeners only when it changed — called by an existing periodic observer, so a wake reaches the browser without a poller of its own — with currentSleepReading() and onSleepReadingChanged() for the machine half that serves it as the machine.sleep live value, sleptDuring(start, end) — the sleep this process saw inside a wall-clock span — awakeSpanStart(end, awakeMs) — the wall-clock instant that much awake time before end, stepping over those sleeps — setAwakeTimeout(fn, awakeMs), a timer that a sleep does not spend, and wakeBefore(at, within) — the sleep whose wake came just before an instant, so what a wake explains can say the machine had just woken.
+- Description: useSleepNow(): the machine.sleep live value (and useSleepNowForFold: the reading as op-log's `sleepNow` fold parameter, unknown while loading or where the computer cannot be read) — the box's sleep clock, so a live surface can count a nap as asleep rather than as work. The machine's sleep clock, read and published: publishSleepReading() re-reads it and tells its listeners only when it changed — called by an existing periodic observer, so a wake reaches the browser without a poller of its own — with currentSleepReading() and onSleepReadingChanged() for the machine half that serves it as the machine.sleep live value, sleptDuring(start, end) — the sleep this process saw inside a wall-clock span — awakeSpanStart(end, awakeMs) — the wall-clock instant that much awake time before end, stepping over those sleeps, and wakeBefore(at, within) — the sleep whose wake came just before an instant, so what a wake explains can say the machine had just woken.
 - Server:
   - Contributes: `resource.declare` "machine.sleep"
   - Exports (types):
@@ -51,7 +57,6 @@ reaches the browser within one tick.
     - `currentSleepReading`
     - `onSleepReadingChanged`
     - `publishSleepReading`
-    - `setAwakeTimeout`
     - `sleptDuring`
     - `wakeBefore`
   - Resources: `machine.sleep` (push, notified)
@@ -72,6 +77,7 @@ reaches the browser within one tick.
     - `SleepNowSchema`
 - Cross-plugin:
   - Imported by:
+    - `conversations`
     - `conversations/conversation-view/op-status`
     - `database/lock-watch`
     - `debug/boot-watchdog`

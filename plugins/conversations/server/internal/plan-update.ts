@@ -64,6 +64,13 @@ export interface PlanContext {
   forkedAt: Date | null;
   now: number;
   /**
+   * ms the machine slept inside a wall-clock span (machine-sleep's
+   * `sleptDuring`, 0 where it cannot be told): the stuck-turn bound counts
+   * AWAKE time — a nap freezes the agent holding the turn as much as the
+   * clock it is judged on.
+   */
+  sleptDuring: (startMs: number, endMs: number) => number;
+  /**
    * Whether the live session id passed `sessionGate` — the async gate the
    * shell runs only when {@link sessionCandidate} names one.
    */
@@ -190,6 +197,7 @@ export function liveStatusFor(
   lastSubmitAt: Date | null,
   pendingTurnSince: Date | null,
   now: number,
+  sleptDuring: (startMs: number, endMs: number) => number = () => 0,
 ): LiveStatus {
   const submittedSince =
     lastSubmitAt !== null &&
@@ -201,7 +209,10 @@ export function liveStatusFor(
       pendingTurnSince.getTime(),
       info.statusWrittenAt?.getTime() ?? 0,
     );
-    if (now - restingWithIt < STUCK_TURN_MS)
+    // Awake time: on a Mac that slept through the 5 min, the agent did not
+    // sit on the turn — it was frozen with everything else, and the first
+    // sweep after the wake would call every agent with a queued turn stuck.
+    if (now - restingWithIt - sleptDuring(restingWithIt, now) < STUCK_TURN_MS)
       return { status: "working", workingOn: "turn" };
     // Background work still wakes it on its own: busy, as it says.
     if (info.workingOn === null)
@@ -319,7 +330,13 @@ function planLive(
   const heldOpen = ctx.questionHold === "open";
   const live: LiveStatus = heldOpen
     ? { status: "waiting" }
-    : liveStatusFor(info, ctx.lastSubmitAt, ctx.pendingTurnSince, ctx.now);
+    : liveStatusFor(
+        info,
+        ctx.lastSubmitAt,
+        ctx.pendingTurnSince,
+        ctx.now,
+        ctx.sleptDuring,
+      );
   const desired =
     live.status === "stuck" ? ({ status: "waiting" } as const) : live;
   const desiredWorkingOn =

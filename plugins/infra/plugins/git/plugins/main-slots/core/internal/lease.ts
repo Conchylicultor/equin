@@ -1,3 +1,4 @@
+import { sleepStampNow } from "@plugins/packages/plugins/sleep-clock/core";
 import { mkdir, rename, unlink, utimes, writeFile } from "node:fs/promises";
 import {
   joinAppPath,
@@ -31,7 +32,6 @@ import {
   releaseRecordSync,
   parseHolder,
   parseUnserved,
-  sleepMarkNow,
   renderDrainRecord,
   renderHolder,
   SLOT_DRAIN_LOG_DIR,
@@ -155,7 +155,7 @@ async function noteRelease(
     // instant); the sleep clock reads the present, and the sleep after that
     // instant is not in the span — so the wall clock, as before (a holder
     // killed overnight would otherwise have every hour of the night taken out).
-    asleepNow: found.foundDead ? null : sleepMarkNow(),
+    asleepNow: found.foundDead ? null : sleepStampNow(),
     foundDead: found.foundDead,
   });
   if (record === null) return;

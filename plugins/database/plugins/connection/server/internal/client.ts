@@ -27,7 +27,7 @@ import {
   type InFlightDbCall,
   type QueryDeadlineEvent,
 } from "./deadline";
-import { armAwakeDeadline } from "./awake-timer";
+import { armAwakeDeadline } from "@plugins/packages/plugins/deadline/core";
 import { SQL_LABEL_MAX, sqlLabel } from "./sql-label";
 import {
   IDLE_IN_TRANSACTION_TIMEOUT_SQLSTATE,
@@ -422,17 +422,21 @@ export class DbClient extends Client {
     const call = this.#capture("connect", CONNECT_CALL_LABEL);
     const pending: PendingCall = { client: this, call };
     let settled = false;
-    const cancel = armAwakeDeadline(call.startedAt, call.deadlineMs, () => {
-      if (settled) return;
-      settled = true;
-      const expiry = this.#expiry(call);
-      pendingCalls.delete(pending);
-      // Hand the error over BEFORE closing. Inside a pool the callback is
-      // pg-pool's `newClient` handler: it drops the client from its pool,
-      // pulses the queue and fails the waiting checkout.
-      const err = this.#lose(call, callback);
-      this.#report(call, err, expiry);
-    });
+    const cancel = armAwakeDeadline(
+      call.deadlineMs,
+      () => {
+        if (settled) return;
+        settled = true;
+        const expiry = this.#expiry(call);
+        pendingCalls.delete(pending);
+        // Hand the error over BEFORE closing. Inside a pool the callback is
+        // pg-pool's `newClient` handler: it drops the client from its pool,
+        // pulses the queue and fails the waiting checkout.
+        const err = this.#lose(call, callback);
+        this.#report(call, err, expiry);
+      },
+      { startedAt: call.startedAt },
+    );
     pendingCalls.add(pending);
     try {
       pgConnect.call(this, (...result: unknown[]) => {
@@ -542,16 +546,20 @@ export class DbClient extends Client {
         pendingCalls.delete(pending);
         reject(err);
       };
-      const cancel = armAwakeDeadline(call.startedAt, call.deadlineMs, () => {
-        if (settled) return;
-        settled = true;
-        const expiry = this.#expiry(call);
-        this.#inFlight.delete(fail);
-        pendingCalls.delete(pending);
-        const err = this.#lose(call);
-        reject(err);
-        this.#report(call, err, expiry);
-      });
+      const cancel = armAwakeDeadline(
+        call.deadlineMs,
+        () => {
+          if (settled) return;
+          settled = true;
+          const expiry = this.#expiry(call);
+          this.#inFlight.delete(fail);
+          pendingCalls.delete(pending);
+          const err = this.#lose(call);
+          reject(err);
+          this.#report(call, err, expiry);
+        },
+        { startedAt: call.startedAt },
+      );
       this.#inFlight.add(fail);
       pendingCalls.add(pending);
       // A late outcome (after the deadline, or after another call lost the

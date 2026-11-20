@@ -1,5 +1,5 @@
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
-import { setAwakeTimeout } from "@plugins/infra/plugins/host/plugins/machine-sleep/server";
+import { armAwakeDeadline } from "@plugins/packages/plugins/deadline/core";
 import { deadlineMsFor, type HoldClass } from "../../core/hold";
 import {
   jobDeadlineSink,
@@ -34,7 +34,7 @@ import { JobDeadlineExceededError } from "../../server/internal/deadline-error";
 // exists: the point at which we say so out loud rather than assuming the first
 // one worked.
 //
-// Both timers count AWAKE time (machine-sleep's `setAwakeTimeout`). A deadline
+// Both timers count AWAKE time (packages/deadline's `armAwakeDeadline`). A deadline
 // bounds work this machine does, and a nap is not work — but the platform timer
 // counts sleep. On 2026-11-14 the laptop went to sleep as a
 // `supervisor-events.flush` run started and woke 918 s later: the 10 min `seconds`
@@ -78,7 +78,7 @@ export function armDeadline(args: ArmDeadlineArgs): () => void {
 
   let cancelZombie: (() => void) | null = null;
 
-  const cancelDeadline = setAwakeTimeout(() => {
+  const cancelDeadline = armAwakeDeadline(deadlineMs, () => {
     // The abort comes FIRST. Everything after it is announcement, and a
     // failure to announce must not delay the one action that can actually stop
     // the handler.
@@ -104,7 +104,7 @@ export function armDeadline(args: ArmDeadlineArgs): () => void {
     // fires, and that is a materially different fact from "it overran" — so it
     // gets its own arm rather than being folded into a retry of the first.
     //
-    cancelZombie = setAwakeTimeout(() => {
+    cancelZombie = armAwakeDeadline(ZOMBIE_GRACE_MS, () => {
       // Write the slot off BEFORE announcing. The accounting is what the floor
       // check reads, and it must be true before anything acts on it — including
       // the floor check at the bottom of this callback, which may end this
@@ -129,8 +129,8 @@ export function armDeadline(args: ArmDeadlineArgs): () => void {
       // left. This is the one call in this file that can end the process, and
       // it is deliberately last so the zombie is recorded and reported first.
       void checkSlotFloor();
-    }, ZOMBIE_GRACE_MS);
-  }, deadlineMs);
+    });
+  });
 
   // Idempotent: `disarm()` is called from a `finally` that can run after either
   // timer has already fired, and cancelling an elapsed or already-cancelled

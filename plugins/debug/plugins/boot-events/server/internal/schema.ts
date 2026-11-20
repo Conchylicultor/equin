@@ -1,4 +1,16 @@
 import { z } from "zod";
+import type { SleepStamp } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
+
+/**
+ * The machine's sleep clock when a start line was written (packages/sleep-clock's
+ * `sleepStampNow`): what lets the boot watchdog age a never-ready boot by AWAKE
+ * time exactly, whichever process judges it. Absent on lines written before it
+ * was recorded, null where the platform cannot read it.
+ */
+const SleepStampSchema = z.object({
+  boot: z.string(),
+  asleepMs: z.number(),
+}) satisfies z.ZodType<SleepStamp>;
 
 // Boot lines — two per boot since the `phase: "start"` cutover, plus an
 // `exited` line for a boot whose process ended before its ready line. All values are
@@ -32,6 +44,7 @@ export const BootLineSchema = z.union([
     worktree: z.string(),
     processStartedAt: z.number(),
     phase: z.literal("start"),
+    sleep: SleepStampSchema.nullable().optional(),
   }),
   z.object({
     sampledAt: z.number(),
@@ -77,4 +90,11 @@ export interface BootEvent {
   exitedAt: number | null;
   deadBy: number | null;
   supersededAtMs: number | null;
+  /**
+   * The sleep clock at this boot's start line (`null`: not recorded, or not
+   * readable), and at the superseding boot's — the stamps the watchdog ages
+   * the un-ready span by.
+   */
+  startSleep: SleepStamp | null;
+  supersededSleep: SleepStamp | null;
 }

@@ -324,7 +324,7 @@ a normal wait:
   - Register: `defineSupervisedJob('main-slots.reclaim')`
 - Core:
   - Uses: 48 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra/git/main-slots/boot-lease` ×21
+    - `infra/git/main-slots/boot-lease` ×20
     - `packages/timed-fs` ×6
     - `infra/paths` ×5
     - `infra/namespace` ×4
@@ -334,6 +334,7 @@ a normal wait:
     - `infra/launcher/env-names.readEnv`
     - `infra/paths/repo-root.REPO_ROOT`
     - `infra/spawn.getMainRepoRoot`
+    - `packages/sleep-clock.sleepStampNow`
   - Exports (types):
     - `DrainSlowPayload`
     - `HandedBuildSlot`

@@ -10,7 +10,7 @@ import {
   SLOT_UNSERVED_FILE,
   type SlotHolder,
 } from "./layout";
-import { sleepMarkNow } from "./sleep-mark";
+import { sleepStampNow } from "@plugins/packages/plugins/sleep-clock/core";
 
 // The release half of the slow-drain report, synchronous: a lease let go
 // (explicitly, or by an exit handler) compares the instant against its slot's
@@ -55,7 +55,7 @@ export function noteLeaseReleaseSync(i: {
     now: i.now ?? new Date(),
     // The sleep clock reads the PRESENT: a span ending at a given past `now`
     // is judged on the wall clock rather than less sleep that came after it.
-    asleepNow: i.now === undefined ? sleepMarkNow() : null,
+    asleepNow: i.now === undefined ? sleepStampNow() : null,
   });
   if (record === null) return false;
   const dir = join(i.admin, SLOT_DRAIN_LOG_DIR);

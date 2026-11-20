@@ -8,6 +8,12 @@
 // checkout (a linked worktree has its own git dir), inside the git dir so git
 // never lists it and no check's tree hash sees it.
 
+import {
+  awakeBetween,
+  isSleepStamp,
+  type SleepStamp,
+} from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
+
 /** The lock file: a shared flock while code runs from the slot, exclusive while a build writes it. */
 export const SLOT_LOCK_FILE = "tree.lock";
 
@@ -168,17 +174,6 @@ export function parseHolder(file: string, text: string): SlotHolder {
   return { ...(parsed as SlotHolder), label: parsed.label ?? null };
 }
 
-/**
- * The machine's sleep clock at one instant, as a stamp stores it
- * (packages/sleep-clock's `readSleepClock`: which boot, and the time asleep
- * since it). Two marks of one boot differ by exactly the sleep between them,
- * whichever processes read them.
- */
-export interface SleepMark {
-  boot: string;
-  asleepMs: number;
-}
-
 /** The {@link SLOT_UNSERVED_FILE} stamp. */
 export interface UnservedStamp {
   /** ISO instant the slot's last app left it. */
@@ -190,17 +185,11 @@ export interface UnservedStamp {
    * sleep out of the span ({@link heldPastSwitch}). `null`: the platform
    * cannot tell, or a stamp written before it was recorded.
    */
-  asleep: SleepMark | null;
+  asleep: SleepStamp | null;
 }
 
 export function renderUnserved(stamp: UnservedStamp): string {
   return `${JSON.stringify(stamp)}\n`;
-}
-
-function isSleepMark(v: unknown): v is SleepMark {
-  if (typeof v !== "object" || v === null) return false;
-  const m = v as Partial<SleepMark>;
-  return typeof m.boot === "string" && typeof m.asleepMs === "number";
 }
 
 export function parseUnserved(file: string, text: string): UnservedStamp {
@@ -212,7 +201,7 @@ export function parseUnserved(file: string, text: string): UnservedStamp {
     typeof parsed.reportAfterMs !== "number" ||
     (parsed.asleep !== undefined &&
       parsed.asleep !== null &&
-      !isSleepMark(parsed.asleep))
+      !isSleepStamp(parsed.asleep))
   ) {
     throw new Error(`main-slots: unserved stamp ${file} is malformed: ${text}`);
   }
@@ -246,22 +235,16 @@ export interface HeldPastSwitch {
 export function heldPastSwitch(
   stamp: UnservedStamp,
   now: Date,
-  asleepNow: SleepMark | null,
+  asleepNow: SleepStamp | null,
 ): HeldPastSwitch {
-  const heldPastSwitchMs = now.getTime() - Date.parse(stamp.at);
-  const sleptMs =
-    stamp.asleep !== null &&
-    asleepNow !== null &&
-    stamp.asleep.boot === asleepNow.boot
-      ? Math.min(
-          Math.max(0, heldPastSwitchMs),
-          Math.max(0, asleepNow.asleepMs - stamp.asleep.asleepMs),
-        )
-      : null;
+  const span = awakeBetween(
+    { wallMs: Date.parse(stamp.at), sleep: stamp.asleep },
+    { wallMs: now.getTime(), sleep: asleepNow },
+  );
   return {
-    heldPastSwitchMs,
-    sleptMs,
-    awakeMs: heldPastSwitchMs - (sleptMs ?? 0),
+    heldPastSwitchMs: span.wallMs,
+    sleptMs: span.sleptMs,
+    awakeMs: span.awakeMs,
   };
 }
 
@@ -340,8 +323,8 @@ export function drainRecordFor(i: {
   slot: string;
   commit: string | null;
   now: Date;
-  /** The sleep clock at `now` (`sleepMarkNow()`); `null`: cannot be told. */
-  asleepNow: SleepMark | null;
+  /** The sleep clock at `now` (`sleepStampNow()`); `null`: cannot be told. */
+  asleepNow: SleepStamp | null;
   /** The holder was found dead at `now`, not released (see {@link DrainRecord.foundDead}). */
   foundDead?: boolean;
 }): DrainRecord | null {

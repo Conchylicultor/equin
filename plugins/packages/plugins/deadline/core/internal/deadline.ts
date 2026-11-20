@@ -1,5 +1,7 @@
+import { armAwakeDeadline } from "./awake-deadline";
+
 /**
- * Await `work`, for at most `budgetMs`.
+ * Await `work`, for at most `budgetMs` of AWAKE time (`armAwakeDeadline`).
  *
  * For an await that carries no timeout option of its own — a module import, a
  * promise a bug may never settle. On expiry it rejects with `onTimeout()`: the
@@ -18,17 +20,18 @@ export async function withDeadline<T>(
   budgetMs: number,
   onTimeout: () => Error,
 ): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
+  let cancel: (() => void) | undefined;
   try {
     return await Promise.race([
       work,
       new Promise<never>((_resolve, reject) => {
-        timer = setTimeout(() => reject(onTimeout()), budgetMs);
+        // AWAKE time: a nap freezes `work` too, so it spends none of its budget.
+        cancel = armAwakeDeadline(budgetMs, () => reject(onTimeout()));
       }),
     ]);
   } finally {
     // Always cleared, on every path: a live timer would hold the event loop open
     // for the rest of the budget after a fast success.
-    clearTimeout(timer);
+    cancel?.();
   }
 }

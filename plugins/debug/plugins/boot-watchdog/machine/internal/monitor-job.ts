@@ -22,6 +22,7 @@ import { classifyNeverReady, isSettledVerdict } from "./classify-wedge";
 import { readFleet } from "./read-fleet";
 import { listWorktreeDirsAsync } from "@plugins/infra/plugins/paths/server";
 import { sleptDuring } from "@plugins/infra/plugins/host/plugins/machine-sleep/server";
+import { clockStampNow } from "@plugins/packages/plugins/sleep-clock/core";
 import type { BootEvent } from "@plugins/debug/plugins/boot-events/server";
 
 // Main-only wedged-boot watchdog. Runs every minute in the MAIN backend only —
@@ -51,7 +52,7 @@ export const bootWatchdogMonitorJob = defineJob({
     const cfg = getConfig(bootWatchdogConfig);
     if (!cfg.enabled) return;
 
-    const now = Date.now();
+    const { wallMs: now, sleep: nowSleep } = clockStampNow();
     // Read the gateway fleet ONCE per tick (null = unreadable this tick).
     const fleet = await readFleet();
     // Unreadable fleet ⇒ no sweep this tick: it is the only source of which
@@ -128,6 +129,7 @@ export const bootWatchdogMonitorJob = defineJob({
           now,
           cfg.bootReadyBudgetMs,
           (start, end) => sleptDuring(start, end) ?? 0,
+          nowSleep,
         );
         if (verdict === null) continue;
         journals ??= await readBootJournals(wt);

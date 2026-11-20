@@ -1,5 +1,9 @@
 import type { BootEvent } from "@plugins/debug/plugins/boot-events/server";
 import type { BootWedgeState } from "../../core";
+import {
+  awakeBetween,
+  type SleepStamp,
+} from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 
 /** One worktree as the gateway lists it (`GET /gateway/worktrees`). */
 export interface FleetEntry {
@@ -46,6 +50,7 @@ export function classifyNeverReady(
   now: number,
   budgetMs: number,
   sleptDuring: (startMs: number, endMs: number) => number,
+  nowSleep: SleepStamp | null = null,
 ): WedgeVerdict | null {
   if (ev.readyAt !== null || ev.exitedAt !== null || ev.deadBy !== null)
     return null;
@@ -55,8 +60,20 @@ export function classifyNeverReady(
   // the second a lid-shut Mac entered a 934 s maintenance sleep, and the
   // first tick on wake filed it "not ready after 16m … in load:wave-24 at
   // 1s" — it was ready 1.6 s later, having run ~3 s in all.
+  //
+  // Exact where the boot's start line carries the sleep clock (and so does
+  // its end: the superseding boot's start line, or this tick): the stamps'
+  // difference, whoever judges — sleeps before main's own start included.
+  // A line from before the stamp falls back to the sleeps main's process
+  // saw (`sleptDuring`).
   const endMs = ev.supersededAtMs ?? now;
-  const sleptMs = Math.max(0, sleptDuring(ev.processStartedAt, endMs));
+  const endSleep = ev.supersededAtMs === null ? nowSleep : ev.supersededSleep;
+  const span = awakeBetween(
+    { wallMs: ev.processStartedAt, sleep: ev.startSleep },
+    { wallMs: endMs, sleep: endSleep },
+  );
+  const sleptMs =
+    span.sleptMs ?? Math.max(0, sleptDuring(ev.processStartedAt, endMs));
   const wedgedMs = endMs - ev.processStartedAt - sleptMs;
   if (wedgedMs < budgetMs) return null;
   const slept = sleptMs > 0 ? { sleptMs } : {};

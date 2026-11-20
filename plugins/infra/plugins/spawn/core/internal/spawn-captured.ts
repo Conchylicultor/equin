@@ -12,7 +12,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { holdParentLifeline } from "@plugins/packages/plugins/flock/core";
 import { spawnAtTier } from "@plugins/packages/plugins/spawn-priority/core";
-import { armAwakeDeadline } from "./awake-deadline";
+import { armAwakeDeadline } from "@plugins/packages/plugins/deadline/core";
 import { ChildKilledError } from "./child-killed";
 import { noteChildEnded } from "./kill-watch";
 import { childEnv } from "./child-env";

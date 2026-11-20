@@ -1,5 +1,10 @@
 import { z } from "zod";
 import {
+  awakeBetween,
+  type ClockStamp,
+  type SleepStamp,
+} from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
+import {
   cpuBudget,
   laneSplit,
   PER_UNIT_BYTES,
@@ -56,17 +61,11 @@ import { HolderReadingSchema, type HolderReading } from "./holders";
 // that op is an interactive one (`laneCapacity`) — bar on a host of `B ≤ 2`,
 // where background shares it at low priority.
 
-/**
- * Where the machine's sleep clock stood at one instant (packages/sleep-clock's
- * `readSleepClock`, less its `wakeAtMs`): two stamps of one `boot` differ in
- * `asleepMs` by exactly the time the machine slept between them, whichever
- * processes took them.
- */
-export const SleepStampSchema = z.object({
+/** A stored sleep stamp (packages/sleep-clock/stamp's `SleepStamp`), parsed. */
+const SleepStampSchema = z.object({
   boot: z.string(),
   asleepMs: z.number().nonnegative(),
-});
-export type SleepStamp = z.infer<typeof SleepStampSchema>;
+}) satisfies z.ZodType<SleepStamp>;
 
 /**
  * One reading of the fleet's memory, published by main's owner sampler (see
@@ -118,25 +117,11 @@ export type FleetMemoryReading = z.infer<typeof FleetMemoryReadingSchema>;
  */
 export const FLEET_MEMORY_LEASE_MS = 120_000;
 
-/** The instant admission is judged at: the wall clock and, where readable, the sleep clock. */
-export interface AdmissionNow {
-  wallMs: number;
-  sleep: SleepStamp | null;
-}
-
 /**
- * How long the machine slept between a reading and `now`: the sleep-clock
- * difference when both were stamped in one boot, else 0 (cannot tell — the
- * wall clock then judges alone, never in the reading's favour).
+ * The instant admission is judged at: the wall clock and, where readable, the
+ * sleep clock (packages/sleep-clock's `clockStampNow`).
  */
-export function sleptSince(
-  reading: FleetMemoryReading,
-  now: AdmissionNow,
-): number {
-  if (reading.sleep === null || now.sleep === null) return 0;
-  if (reading.sleep.boot !== now.sleep.boot) return 0;
-  return Math.max(0, now.sleep.asleepMs - reading.sleep.asleepMs);
-}
+export type AdmissionNow = ClockStamp;
 
 /** What the fleet is charged and what it may have, in bytes and in slots. */
 export interface FleetWindow {
@@ -322,7 +307,12 @@ export function fleetAdmission(
       sampledAt: null,
       slots: unmeasuredWindow(host),
     };
-  const ageMs = now.wallMs - reading.sampledAt - sleptSince(reading, now);
+  // Aged by AWAKE time (FLEET_MEMORY_LEASE_MS): where the sleep cannot be
+  // told, the wall clock judges alone — never in the reading's favour.
+  const ageMs = awakeBetween(
+    { wallMs: reading.sampledAt, sleep: reading.sleep },
+    now,
+  ).awakeMs;
   if (ageMs > FLEET_MEMORY_LEASE_MS)
     return {
       kind: "unmeasured",

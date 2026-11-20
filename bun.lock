@@ -5486,6 +5486,10 @@
       "name": "@equin/plugin-packages-sleep-clock",
       "version": "0.0.1",
     },
+    "plugins/packages/plugins/sleep-clock/plugins/stamp": {
+      "name": "@equin/plugin-packages-sleep-clock-stamp",
+      "version": "0.0.1",
+    },
     "plugins/packages/plugins/smooth-clock": {
       "name": "@equin/plugin-packages-smooth-clock",
       "version": "0.0.1",
@@ -10998,6 +11002,8 @@
     "@equin/plugin-packages-single-flight": ["@equin/plugin-packages-single-flight@workspace:plugins/packages/plugins/single-flight"],
 
     "@equin/plugin-packages-sleep-clock": ["@equin/plugin-packages-sleep-clock@workspace:plugins/packages/plugins/sleep-clock"],
+
+    "@equin/plugin-packages-sleep-clock-stamp": ["@equin/plugin-packages-sleep-clock-stamp@workspace:plugins/packages/plugins/sleep-clock/plugins/stamp"],
 
     "@equin/plugin-packages-smooth-clock": ["@equin/plugin-packages-smooth-clock@workspace:plugins/packages/plugins/smooth-clock"],
 

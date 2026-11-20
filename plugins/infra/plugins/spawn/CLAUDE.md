@@ -335,14 +335,13 @@ presence only — **no re-exports**; import from `core/`.
     - `infra/host-fs/user-path.AppPath`
     - `infra/host-fs/user-path.asAppPath`
     - `infra/host-fs/user-path.joinAppPath`
+    - `packages/deadline.armAwakeDeadline`
     - `packages/flock.holdParentLifeline`
     - `packages/owned-fd.openOwnedFd`
     - `packages/owned-fd.OwnedFd`
     - `packages/proc-rusage.PeakFootprint`
     - `packages/proc-rusage.peakFootprintReportEnv`
     - `packages/proc-rusage.readPeakFootprintReport`
-    - `packages/sleep-clock.AwakeClockReading`
-    - `packages/sleep-clock.readAwakeClock`
     - `packages/spawn-priority.spawnAtTier`
     - `packages/timed-fs.readFile`
   - Exports (types):

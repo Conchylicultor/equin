@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { SleepClockReading } from "@plugins/packages/plugins/sleep-clock/core";
 import {
-  armAwakeTimeout,
   awakeSpanStartMs,
   createSleepPublisher,
   lastSleepOf,
@@ -216,97 +215,6 @@ describe("awakeSpanStart", () => {
     });
     expect(h.p.awakeSpanStart(110_000, 30_000)).toBe(20_000);
     expect(harness({ supported: false }).p.awakeSpanStart(1, 1)).toBeNull();
-  });
-});
-
-describe("armAwakeTimeout", () => {
-  // A fake clock and timer queue: `advance` moves the wall clock, firing every
-  // timer that comes due on the way (as the platform timer does at a wake).
-  function env() {
-    let now = 0;
-    let timers: { at: number; fn: () => void; id: number }[] = [];
-    let next = 0;
-    return {
-      env: {
-        now: () => now,
-        setTimeout: (fn: () => void, ms: number) => {
-          const id = next++;
-          timers.push({ at: now + ms, fn, id });
-          return id;
-        },
-        clearTimeout: (h: unknown) => {
-          timers = timers.filter((t) => t.id !== h);
-        },
-      },
-      advance(to: number) {
-        for (;;) {
-          const due = timers
-            .filter((t) => t.at <= to)
-            .sort((a, b) => a.at - b.at)[0];
-          if (!due) break;
-          now = due.at;
-          timers = timers.filter((t) => t !== due);
-          due.fn();
-        }
-        now = to;
-      },
-    };
-  }
-
-  test("a sleep inside the span does not spend it", () => {
-    const h = harness({
-      supported: true,
-      boot: BOOT,
-      asleepMs: 0,
-      wakeAtMs: null,
-      sleepAtMs: null,
-    });
-    const t = env();
-    let fired = 0;
-    armAwakeTimeout(h.p, () => fired++, 600_000, t.env);
-    // Asleep from 2 s to 920 s; the platform timer fires at the wake.
-    h.set({
-      supported: true,
-      boot: BOOT,
-      asleepMs: 918_000,
-      wakeAtMs: 920_000,
-      sleepAtMs: null,
-    });
-    t.advance(921_000);
-    expect(fired).toBe(0);
-    // 598 s of awake time were still owed after the wake.
-    t.advance(920_000 + 598_000 - 1);
-    expect(fired).toBe(0);
-    t.advance(920_000 + 598_000);
-    expect(fired).toBe(1);
-  });
-
-  test("no sleep: fires on time; cancel stops it", () => {
-    const h = harness({
-      supported: true,
-      boot: BOOT,
-      asleepMs: 0,
-      wakeAtMs: null,
-      sleepAtMs: null,
-    });
-    const t = env();
-    let fired = 0;
-    armAwakeTimeout(h.p, () => fired++, 1000, t.env);
-    t.advance(1000);
-    expect(fired).toBe(1);
-    const cancel = armAwakeTimeout(h.p, () => fired++, 1000, t.env);
-    cancel();
-    t.advance(5000);
-    expect(fired).toBe(1);
-  });
-
-  test("where the platform cannot tell, it is a wall-clock timer", () => {
-    const h = harness({ supported: false });
-    const t = env();
-    let fired = 0;
-    armAwakeTimeout(h.p, () => fired++, 1000, t.env);
-    t.advance(1000);
-    expect(fired).toBe(1);
   });
 });
 

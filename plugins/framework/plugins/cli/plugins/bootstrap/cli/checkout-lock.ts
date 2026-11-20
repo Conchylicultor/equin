@@ -1,3 +1,4 @@
+import { awakeClock } from "@plugins/packages/plugins/deadline/core";
 import { mkdirSync, openSync, writeFileSync } from "fs";
 import { adoptFd, type OwnedFd } from "@plugins/packages/plugins/owned-fd/core";
 import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
@@ -139,7 +140,11 @@ export async function acquireCheckoutLock(
   const capMs = opts.capMs ?? adaptiveTimeoutMs(600_000, 1_800_000);
   const stallMs = opts.stallMs ?? adaptiveTimeoutMs(1_800_000, 3_600_000);
 
-  const startedAt = Date.now();
+  // Every bound here runs on the AWAKE clock (packages/deadline's
+  // `awakeClock`): a Mac asleep through the wait ran neither this waiter nor
+  // the holder, so a night of maintenance sleep must not read as a holder
+  // that "has not advanced for 40 min" or a 10 min cap spent.
+  const startedAt = awakeClock();
   let warned = false;
   let diagnosed = false;
   let holder: HolderClock | null = null;
@@ -171,10 +176,11 @@ export async function acquireCheckoutLock(
       return makeRelease(lock);
     }
 
-    const now = Date.now();
+    const now = awakeClock();
+    const wallNow = Date.now();
     if (now - observedAt >= observeEveryMs) {
       observedAt = now;
-      holder = observe(holder, lockPath, now, opts.observeHolder);
+      holder = observe(holder, lockPath, now, wallNow, opts.observeHolder);
     }
     // `observe` always runs on the first contended pass, so `holder` is set.
     const clock = holder!;
@@ -193,7 +199,7 @@ export async function acquireCheckoutLock(
       // one line per change, so a long wait explains itself as it goes.
       console.log(
         `Still waiting for the ${opts.what} lock; ` +
-          describeObservation(clock, now),
+          describeObservation(clock, wallNow),
       );
       clock.announced = clock.state;
     }
@@ -214,7 +220,7 @@ export async function acquireCheckoutLock(
       diagnosed = true;
       console.log(
         `Still waiting (${seconds(now - startedAt)}) for the ${opts.what} lock; ` +
-          describeObservation(clock, now),
+          describeObservation(clock, wallNow),
       );
     }
     await Bun.sleep(pollMs);
@@ -228,11 +234,11 @@ export async function acquireCheckoutLock(
  */
 interface HolderClock {
   pid: number | null;
-  /** When this waiter first saw this holder. */
+  /** When this waiter first saw this holder (awake clock). */
   since: number;
   /**
    * The last instant the holder was known to be moving or legitimately
-   * blocked. A working holder's stall is measured from here.
+   * blocked (awake clock). A working holder's stall is measured from here.
    */
   quietSince: number;
   observation: HolderObservation;
@@ -245,6 +251,7 @@ function observe(
   prev: HolderClock | null,
   lockPath: string,
   now: number,
+  wallNow: number,
   observeHolder: ((pid: number) => HolderObservation) | undefined,
 ): HolderClock {
   const pid = readHolderPid(lockPath);
@@ -266,7 +273,12 @@ function observe(
     // Blocked, not wedged: nothing a queued holder does counts against it.
     clock.quietSince = now;
   } else if (observation.kind === "working") {
-    clock.quietSince = Math.max(clock.quietSince, observation.lastAdvanceAt);
+    // The holder's advance is a wall instant (its op log): placed on the
+    // awake clock as if the time since it were all awake — never in the
+    // holder's favour; a sleep since was already counted out at the
+    // observations made before it.
+    const advancedAt = now - Math.max(0, wallNow - observation.lastAdvanceAt);
+    clock.quietSince = Math.max(clock.quietSince, advancedAt);
   }
   clock.state =
     observation.kind === "waiting"
@@ -307,6 +319,7 @@ function timeoutMessage(
   }
 }
 
+/** `now` is the WALL clock: the observation's own instants are wall instants. */
 function describeObservation(clock: HolderClock, now: number): string {
   const obs = clock.observation;
   const pid = clock.pid === null ? "the holder" : `pid ${clock.pid}`;

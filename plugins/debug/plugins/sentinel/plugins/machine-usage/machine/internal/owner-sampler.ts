@@ -3,7 +3,6 @@ import {
   cpuPool,
   listCpuHolders,
   publishFleetMemory,
-  readClocks,
   readHolderPeaks,
   recordHolderPeak,
 } from "@plugins/infra/plugins/host/plugins/host-admission/server";
@@ -13,6 +12,7 @@ import {
   type HostMemoryIo,
 } from "@plugins/packages/plugins/host-memory/core";
 import { readFile } from "@plugins/packages/plugins/timed-fs/core";
+import { clockStampNow } from "@plugins/packages/plugins/sleep-clock/core";
 import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { summarizeOwners, type CpuBaseline } from "../../core";
@@ -131,7 +131,7 @@ async function publishFleetReading({
   const memory = read.memory;
   // Both clocks, so admission ages the reading by the time the machine was
   // awake: a nap freezes this sampler and the memory it measures alike.
-  const clocks = readClocks();
+  const clocks = clockStampNow();
   await publishFleetMemory({
     sampledAt: clocks.wallMs,
     sleep: clocks.sleep,

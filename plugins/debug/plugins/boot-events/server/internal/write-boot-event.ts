@@ -1,3 +1,4 @@
+import { clockStampNow } from "@plugins/packages/plugins/sleep-clock/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { openDynamicSink } from "@plugins/infra/plugins/file-sink/core";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
@@ -74,7 +75,16 @@ export function writeBootStartEvent(): void {
         line: JSON.stringify(line),
       }),
     );
-  append({ sampledAt: Date.now(), worktree, processStartedAt, phase: "start" });
+  // Both clocks: the watchdog ages a boot that never gets ready by the time
+  // the machine was awake since this line, not by a nap it slept through.
+  const at = clockStampNow();
+  append({
+    sampledAt: at.wallMs,
+    worktree,
+    processStartedAt,
+    phase: "start",
+    sleep: at.sleep,
+  });
   process.once("exit", () => {
     if (ready) return;
     const now = Date.now();

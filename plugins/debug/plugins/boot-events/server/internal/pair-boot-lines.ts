@@ -1,3 +1,4 @@
+import type { SleepStamp } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 import type { BootEvent, BootLine } from "./schema";
 
 // Pure pairing of parsed boot lines into BootEvents — co-located bun tests.
@@ -33,6 +34,8 @@ export function pairBootLines(lines: readonly BootLine[]): BootEvent[] {
         exitedAt: null,
         deadBy: null,
         supersededAtMs: null,
+        startSleep: null,
+        supersededSleep: null,
       });
     } else if (
       line.phase === "start" &&
@@ -45,6 +48,8 @@ export function pairBootLines(lines: readonly BootLine[]): BootEvent[] {
         exitedAt: exits.get(line.processStartedAt) ?? null,
         deadBy: deaths.get(line.processStartedAt) ?? null,
         supersededAtMs: null,
+        startSleep: line.sleep ?? null,
+        supersededSleep: null,
       });
     }
   }
@@ -54,7 +59,10 @@ export function pairBootLines(lines: readonly BootLine[]): BootEvent[] {
   // that). Sort a copy by start time to find successors.
   if (unpaired.length > 0) {
     const startsByWorktree = new Map<string, number[]>();
+    const sleepAtStart = new Map<number, SleepStamp | null>();
     for (const line of lines) {
+      if (line.phase === "start")
+        sleepAtStart.set(line.processStartedAt, line.sleep ?? null);
       // Only start (and ready) lines are attempts; the terminal lines repeat
       // their boot's processStartedAt.
       if (line.phase === "exited" || line.phase === "dead") continue;
@@ -67,6 +75,8 @@ export function pairBootLines(lines: readonly BootLine[]): BootEvent[] {
       const starts = startsByWorktree.get(ev.worktree)!;
       const next = starts.find((s) => s > ev.processStartedAt);
       ev.supersededAtMs = next ?? null;
+      ev.supersededSleep =
+        next === undefined ? null : (sleepAtStart.get(next) ?? null);
     }
     events.push(...unpaired);
   }

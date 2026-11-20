@@ -19,6 +19,8 @@ const boot = (over: Partial<BootEvent> = {}): BootEvent => ({
   exitedAt: null,
   deadBy: null,
   supersededAtMs: null,
+  startSleep: null,
+  supersededSleep: null,
   ...over,
 });
 const fleet = (state: string, lastSpawnErr = "") =>
@@ -218,5 +220,58 @@ describe("classifyNeverReady", () => {
       sleptMs: 933_570,
       fleetState: "starting",
     });
+  });
+
+  test("a stamped start line is aged by the sleep clock, whoever judges", () => {
+    // main's own process saw no sleep (it started after the nap): only the
+    // stamps can tell, and they win over its in-process view.
+    const stamped = boot({ startSleep: { boot: "B", asleepMs: 1_000 } });
+    expect(
+      classifyNeverReady(
+        stamped,
+        fleet("starting"),
+        at(934_000),
+        BUDGET,
+        NO_SLEEP,
+        {
+          boot: "B",
+          asleepMs: 1_000 + 933_570,
+        },
+      ),
+    ).toBeNull();
+    // A superseded boot is aged to the next boot's own start stamp.
+    expect(
+      classifyNeverReady(
+        boot({
+          startSleep: { boot: "B", asleepMs: 0 },
+          supersededAtMs: at(1_000_000),
+          supersededSleep: { boot: "B", asleepMs: 700_000 },
+        }),
+        fleet("running"),
+        at(2_000_000),
+        BUDGET,
+        NO_SLEEP,
+        { boot: "B", asleepMs: 9_999_999 },
+      ),
+    ).toEqual({
+      state: "superseded",
+      wedgedMs: 300_000,
+      sleptMs: 700_000,
+      supersededAtMs: at(1_000_000),
+    });
+    // A reboot in between: the stamps cannot compare, the fallback judges.
+    expect(
+      classifyNeverReady(
+        stamped,
+        fleet("starting"),
+        at(934_000),
+        BUDGET,
+        NO_SLEEP,
+        {
+          boot: "C",
+          asleepMs: 0,
+        },
+      ),
+    ).toMatchObject({ state: "booting", wedgedMs: 934_000 });
   });
 });

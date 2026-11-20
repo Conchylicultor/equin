@@ -70,7 +70,7 @@ pg-pool's own `pool.query`, and a bare client. So the deadline is **one
 - **Not pg's `connectionTimeoutMillis`.** It bounds only the connect, counts
   a sleep as elapsed, and reports nothing.
 - **The clock counts awake time only** (`armAwakeDeadline`,
-  `server/internal/awake-timer.ts`). See "A sleep is not a silent connection".
+  `packages/deadline` — the one awake timer). See "A sleep is not a silent connection".
 - **Queue wait is not bounded.** Waiting for a free connection is back-pressure,
   and every held connection has its own bound that frees it.
 
@@ -356,7 +356,7 @@ the enqueue pool's wiring.
 `database/server` (the app pool), `database/admin`, `network/live/change-feed` and
 `infra/jobs` all build connections, and `jobs` sits below plenty of things that
 import `database`. So this plugin imports nothing of theirs: only `pg`,
-`primitives/report-sink`, `infra/runtime-profiler/core`,
+`packages/deadline`, `primitives/report-sink`, `infra/runtime-profiler/core`,
 `infra/runtime-identity/core` and `framework/product-name/core` (the
 `application_name` prefix).
 

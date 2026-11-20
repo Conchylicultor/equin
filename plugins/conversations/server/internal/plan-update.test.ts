@@ -51,6 +51,7 @@ function ctx(overrides: Partial<PlanContext> = {}): PlanContext {
   return {
     forkedAt: null,
     now: NOW,
+    sleptDuring: () => 0,
     sessionAccepted: false,
     questionHold: null,
     lastSubmitAt: null,
@@ -787,6 +788,14 @@ describe("liveStatusFor — a turn an idle agent never starts makes it stuck", (
         null,
         REST,
         NOW,
+      ),
+    ).toEqual({ status: "working", workingOn: "turn" });
+  });
+
+  test("a nap inside the bound is not time at rest: still working", () => {
+    expect(
+      liveStatusFor(info({ statusWrittenAt: REST }), null, REST, NOW, (s, e) =>
+        Math.min(e - s, STUCK_TURN_MS - 60_000),
       ),
     ).toEqual({ status: "working", workingOn: "turn" });
   });

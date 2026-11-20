@@ -1,4 +1,8 @@
 import { dlopen, ptr } from "bun:ffi";
+import type {
+  ClockStamp,
+  SleepStamp,
+} from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 
 // <time.h> clock ids on darwin. CLOCK_MONOTONIC_RAW is mach_continuous_time: it
 // keeps running while the machine sleeps. CLOCK_UPTIME_RAW is mach_absolute_time:
@@ -148,6 +152,25 @@ export function readSleepClock(): SleepClockReading {
     wakeAtMs: readTimevalMs("kern.waketime"),
     sleepAtMs: readTimevalMs("kern.sleeptime"),
   };
+}
+
+/**
+ * The sleep clock right now as a stamp stores it (`{ boot, asleepMs }`), or
+ * `null` where the platform cannot read it. Compare two with the stamp
+ * plugin's `sleptBetween` / `awakeBetween`.
+ */
+export function sleepStampNow(): SleepStamp | null {
+  const r = readSleepClock();
+  return r.supported ? { boot: r.boot, asleepMs: r.asleepMs } : null;
+}
+
+/**
+ * This instant on both clocks — the wall clock and the sleep clock — the one
+ * stamp every watchdog, lease and staleness judge takes at the start of what
+ * it later ages (`awakeBetween(start, clockStampNow())`).
+ */
+export function clockStampNow(): ClockStamp {
+  return { wallMs: Date.now(), sleep: sleepStampNow() };
 }
 
 /**

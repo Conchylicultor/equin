@@ -2,5 +2,5 @@
   "name": "@equin/plugin-packages-deadline",
   "private": true,
   "version": "0.0.1",
-  "description": "Bound an await: withDeadline(work, budgetMs, onTimeout) races a promise against a one-shot timer, rejecting with the caller's own error on expiry (the work's own rejection wins when it comes first) and always clearing the timer. It never cancels the work — the caller keeps its handle and decides what a still-running promise means."
+  "description": "Bound an await, on AWAKE time: withDeadline(work, budgetMs, onTimeout) races a promise against armAwakeDeadline \u2014 the one timer a machine sleep does not spend (performance.now pauses through sleep; a setTimeout does not, so it re-arms for what is left) \u2014 rejecting with the caller's own error on expiry (the work's own rejection wins when it comes first) and always clearing the timer. It never cancels the work \u2014 the caller keeps its handle and decides what a still-running promise means."
 }

@@ -107,7 +107,7 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `report-kind` "conversation-stuck-turn"
     - `report-kind` "held-turn-undelivered"
     - `resource.declare` "conversations.partial-message"
-  - Uses: 91 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 92 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×27
     - `conversations/turn-ledger` ×15
     - `conversations/transcript-watcher` ×8
@@ -129,6 +129,7 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `conversations/workspace/launch-option.getTaskWorkspace`
     - `database/fork-point.databaseForkedAt`
     - `infra/attachments.getAttachment`
+    - `infra/host/machine-sleep.sleptDuring`
     - `infra/paths.claudeTranscriptPath`
     - `infra/warmup.defineWarmup`
     - `reports/engine.recordReport`

@@ -1,3 +1,5 @@
+import { sleepStampNow } from "@plugins/packages/plugins/sleep-clock/core";
+import type { SleepStamp } from "@plugins/packages/plugins/sleep-clock/plugins/stamp/core";
 import { rename, unlink } from "node:fs/promises";
 import {
   joinAppPath,
@@ -9,9 +11,7 @@ import {
   heldPastSwitch,
   parseDrainRecord,
   SLOT_DRAIN_LOG_DIR,
-  sleepMarkNow,
   slotHolderRole,
-  type SleepMark,
 } from "@plugins/infra/plugins/git/plugins/main-slots/plugins/boot-lease/core";
 import {
   reapDeadHolders,
@@ -44,7 +44,7 @@ export interface ReclaimOptions {
   fileDrainSlow?: (report: DrainSlowPayload) => Promise<boolean>;
   now?: Date;
   /** The sleep clock at `now`. Default: read now (`null`: cannot be told — the wall clock). */
-  asleepNow?: SleepMark | null;
+  asleepNow?: SleepStamp | null;
   /** How a removed slot's tree is deleted. Default: a recursive `rm`. */
   removeTree?: RemoveTree;
 }
@@ -127,7 +127,7 @@ async function reclaimLocked(
   const states = await slotStates();
   // Read with `now`: the sleep a still-holding span is judged without.
   const asleepNow =
-    opts.asleepNow === undefined ? sleepMarkNow() : opts.asleepNow;
+    opts.asleepNow === undefined ? sleepStampNow() : opts.asleepNow;
 
   const filed: DrainSlowPayload[] = [];
   for (const s of states) {
@@ -208,7 +208,7 @@ async function drainRecordsOf(
 function stillHolding(
   s: SlotState,
   now: Date,
-  asleepNow: SleepMark | null,
+  asleepNow: SleepStamp | null,
 ): DrainSlowPayload[] {
   if (s.state !== "draining" || s.unserved === null) return [];
   const held = heldPastSwitch(s.unserved, now, asleepNow);

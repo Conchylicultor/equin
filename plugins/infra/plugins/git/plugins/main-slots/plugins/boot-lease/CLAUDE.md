@@ -53,14 +53,16 @@ it loads code from the slot. See the parent `main-slots` for what a slot is.
     - `infra/host-fs/user-path.joinAppPath`
     - `packages/flock.flockSharedSync`
     - `packages/owned-fd.openOwnedFdSync`
-    - `packages/sleep-clock.readSleepClock`
+    - `packages/sleep-clock.sleepStampNow`
+    - `packages/sleep-clock/stamp.awakeBetween`
+    - `packages/sleep-clock/stamp.isSleepStamp`
+    - `packages/sleep-clock/stamp.SleepStamp`
     - `packages/timed-fs.existsSync`
     - `packages/timed-fs.readFileSync`
     - `packages/timed-fs.statSync`
   - Exports (types):
     - `DrainRecord`
     - `HeldPastSwitch`
-    - `SleepMark`
     - `SlotHolder`
     - `SlotHolderKind`
     - `SlotLeaseHold`
@@ -81,7 +83,6 @@ it loads code from the slot. See the parent `main-slots` for what a slot is.
     - `renderDrainRecord`
     - `renderHolder`
     - `renderUnserved`
-    - `sleepMarkNow`
     - `SLOT_DRAIN_LOG_DIR`
     - `SLOT_HANDED_FILE`
     - `SLOT_HOLDER_KINDS`

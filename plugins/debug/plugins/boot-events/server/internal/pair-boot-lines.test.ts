@@ -45,6 +45,8 @@ describe("pairBootLines", () => {
         exitedAt: null,
         deadBy: null,
         supersededAtMs: null,
+        startSleep: null,
+        supersededSleep: null,
       },
     ]);
   });
@@ -59,6 +61,8 @@ describe("pairBootLines", () => {
         exitedAt: null,
         deadBy: null,
         supersededAtMs: null,
+        startSleep: null,
+        supersededSleep: null,
       },
     ]);
   });
@@ -72,6 +76,8 @@ describe("pairBootLines", () => {
       exitedAt: null,
       deadBy: null,
       supersededAtMs: null,
+      startSleep: null,
+      supersededSleep: null,
     });
   });
 
@@ -90,6 +96,8 @@ describe("pairBootLines", () => {
         exitedAt: null,
         deadBy: null,
         supersededAtMs: T0 + 30_000,
+        startSleep: null,
+        supersededSleep: null,
       },
       {
         worktree: "wt-a",
@@ -98,6 +106,8 @@ describe("pairBootLines", () => {
         exitedAt: null,
         deadBy: null,
         supersededAtMs: T0 + 60_000,
+        startSleep: null,
+        supersededSleep: null,
       },
       {
         worktree: "wt-a",
@@ -106,6 +116,8 @@ describe("pairBootLines", () => {
         exitedAt: null,
         deadBy: null,
         supersededAtMs: null,
+        startSleep: null,
+        supersededSleep: null,
       },
     ]);
   });
@@ -130,6 +142,8 @@ describe("pairBootLines", () => {
         exitedAt: T0 + 3_000,
         deadBy: null,
         supersededAtMs: T0 + 170_000,
+        startSleep: null,
+        supersededSleep: null,
       },
       {
         worktree: "wt-a",
@@ -138,6 +152,8 @@ describe("pairBootLines", () => {
         exitedAt: null,
         deadBy: null,
         supersededAtMs: null,
+        startSleep: null,
+        supersededSleep: null,
       },
     ]);
   });
@@ -151,6 +167,8 @@ describe("pairBootLines", () => {
       exitedAt: T0 + 2_000,
       deadBy: null,
       supersededAtMs: null,
+      startSleep: null,
+      supersededSleep: null,
     });
   });
 
@@ -164,6 +182,8 @@ describe("pairBootLines", () => {
         exitedAt: null,
         deadBy: T0 + 600_000,
         supersededAtMs: null,
+        startSleep: null,
+        supersededSleep: null,
       },
     ]);
   });

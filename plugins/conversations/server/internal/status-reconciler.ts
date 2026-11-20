@@ -1,4 +1,5 @@
 import { databaseForkedAt } from "@plugins/database/plugins/fork-point/server";
+import { sleptDuring } from "@plugins/infra/plugins/host/plugins/machine-sleep/server";
 import { dirname } from "node:path";
 import { z } from "zod";
 import {
@@ -279,6 +280,7 @@ async function planFor(
   const plan = planConversationUpdate(row, liveness, {
     forkedAt: live.forkedAt,
     now: Date.now(),
+    sleptDuring: (start, end) => sleptDuring(start, end) ?? 0,
     sessionAccepted: gate === "accepted",
     questionHold: holds.get(row.id) ?? null,
     lastSubmitAt: submits.get(row.id) ?? null,

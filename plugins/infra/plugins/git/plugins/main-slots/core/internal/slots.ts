@@ -1,3 +1,4 @@
+import { sleepStampNow } from "@plugins/packages/plugins/sleep-clock/core";
 import {
   mkdir,
   rename,
@@ -35,7 +36,6 @@ import {
   MAIN_SLOT_SERVED_FILE,
   parseUnserved,
   renderUnserved,
-  sleepMarkNow,
   SLOT_UNSERVED_FILE,
   slotHolderRole,
   type SlotHolder,
@@ -191,7 +191,7 @@ export async function stampUnserved(
     renderUnserved({
       at: stamp.at.toISOString(),
       reportAfterMs: stamp.reportAfterMs,
-      asleep: sleepMarkNow(),
+      asleep: sleepStampNow(),
     }),
   );
 }
