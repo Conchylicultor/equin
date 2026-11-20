@@ -185,6 +185,9 @@ export interface RegisteredJob {
   /** Recurring schedule, if the job declared one. Read by the worker at
    * startup to build graphile-worker cron items. */
   schedule?: ScheduleSpec;
+  /** Why this job can never run on this host — see the field's doc on
+   * {@link DefineJobSpec}. `undefined` when it can. */
+  cannotRunHere?: string;
   /** Serialization lane, if the job declared one (see {@link SerialSpec}).
    * Read by the host queue on every insertion (`JobQueue`), so the queue name
    * is a property of the registered job rather than of any call site. */
@@ -444,6 +447,16 @@ interface BaseJobSpec<
    * small and name a resource rather than an input.
    */
   serial?: SerialSpec;
+  /**
+   * This job can never run on this host, and why, in words a person reads —
+   * a fact of the machine decided once, when the job is defined (a host too
+   * small for the rigid share its work takes: `defineSupervisedJob`'s
+   * `hostShare`). Its schedule is never installed (`resolveJobCron` answers
+   * `null`), `enqueue` refuses with this reason, and the Background catalog
+   * lists it as not running here, saying why — one plain statement instead of
+   * a failed run every time the schedule fires. `undefined`: it can.
+   */
+  cannotRunHere?: string;
 }
 
 /**
@@ -603,6 +616,11 @@ export function defineJob<
   if (typeof spec.dedup === "object" && spec.dedup.settle !== undefined) {
     assertSettleSpec(spec.name, spec.dedup.settle);
   }
+  if (spec.cannotRunHere !== undefined && spec.cannotRunHere.trim() === "") {
+    throw new Error(
+      `[jobs] ${spec.name}: \`cannotRunHere\` must say why, or be left out`,
+    );
+  }
   if (spec.hold === "minutes" && spec.inProcess.trim() === "") {
     throw new Error(
       `[jobs] ${spec.name}: hold "minutes" needs a non-empty \`inProcess\` ` +
@@ -628,6 +646,11 @@ export function defineJob<
         `[jobs] ${spec.name} is enqueued but not registered in this backend — ` +
           `add it to its plugin's \`register\` list. No runner can run a job ` +
           `no plugin registered: the row would be dead-lettered as an unknown job.`,
+      );
+    }
+    if (spec.cannotRunHere !== undefined) {
+      throw new Error(
+        `[jobs] ${spec.name} cannot run on this machine: ${spec.cannotRunHere}`,
       );
     }
     // Parse once at enqueue time so the serialized payload is already in
@@ -743,6 +766,7 @@ export function defineJob<
         slowThresholdMs: spec.slowThresholdMs,
         schedule: spec.schedule,
         serial: spec.serial,
+        cannotRunHere: spec.cannotRunHere,
         enqueue,
       });
     },
@@ -815,7 +839,8 @@ export function listRegisteredJobs(): RegisteredJob[] {
 
 /**
  * The crontab a scheduled job resolves to RIGHT NOW: the literal, or the
- * resolver's answer (`null` ⇒ the schedule is disabled). `null` for an
+ * resolver's answer (`null` ⇒ the schedule is disabled, as it always is for a
+ * job that `cannotRunHere`). `null` for an
  * unscheduled job too — the caller asks this only of a job with a `schedule`.
  * The one reading of a schedule, shared by the cron install and every display
  * of it, so they cannot disagree about whether a job is scheduled.
@@ -823,6 +848,8 @@ export function listRegisteredJobs(): RegisteredJob[] {
 export function resolveJobCron(job: RegisteredJob): string | null {
   const { schedule } = job;
   if (!schedule) return null;
+  // A job this host can never run is never scheduled here (`cannotRunHere`).
+  if (job.cannotRunHere !== undefined) return null;
   const cron =
     typeof schedule.cron === "function" ? schedule.cron() : schedule.cron;
   if (!cron || !cron.trim()) return null;

@@ -342,3 +342,70 @@ export function laneSplit(B: number): CpuBudget {
   const backgroundLimit = Math.max(1, B - reservedInteractive);
   return { B, reservedInteractive, backgroundLimit };
 }
+
+/**
+ * Whether a RIGID share — `units` slots at once, never fewer (`withHostGrant`'s
+ * `min: max`) — can EVER be granted in `lane` on a host. A static fact of the
+ * host, never of the moment: the lane's static window (`cpuBudget`: the
+ * background lane's `backgroundLimit`, the interactive lane's whole `B`) is
+ * the most it can ever hold, whatever the measured memory window does.
+ *
+ * Read once by whatever schedules such work (`defineSupervisedJob`'s
+ * `hostShare`), so a host too small for it shows that as a fact about the
+ * host — the job never scheduled, the reason in words — instead of a run that
+ * fails every time it is tried. The acquire still refuses the same share
+ * loudly (`AcquireHooks.min` above the lane's window), so a scheduler that
+ * skipped this question fails at its first run, never waits for ever.
+ */
+export type RigidShareFit =
+  | { fits: true }
+  | {
+      fits: false;
+      lane: Lane;
+      units: number;
+      /** The most this lane can ever hold on this host. */
+      ceiling: number;
+      /** The smallest host this share fits on: its RAM and cores. */
+      needs: HostFacts;
+      /** What a person reads: what it needs, what this machine has. */
+      words: string;
+    };
+
+/** The most a lane's static window holds on a `B`-slot pool. */
+function laneCeiling(lane: Lane, B: number): number {
+  return lane === "interactive" ? B : laneSplit(B).backgroundLimit;
+}
+
+export function rigidShareFit(
+  share: { lane: Lane; units: number },
+  host: HostFacts = thisHost(),
+): RigidShareFit {
+  const { lane, units } = share;
+  if (!Number.isInteger(units) || units < 1) {
+    throw new Error(
+      `rigidShareFit: units must be a positive integer, got ${String(units)}`,
+    );
+  }
+  const ceiling = laneCeiling(lane, cpuBudget(host).B);
+  if (units <= ceiling) return { fits: true };
+  // The smallest pool whose lane holds `units`, and the host that sizes the
+  // pool to it: `B = min(cpus, floor(ram × 0.5 / PER_UNIT_BYTES))`.
+  let B = 1;
+  while (laneCeiling(lane, B) < units) B++;
+  const needs: HostFacts = { cpus: B, ramBytes: (B * PER_UNIT_BYTES) / 0.5 };
+  // Binary gigabytes, as the OS sells and shows them ("a 16 GB Mac"): the
+  // need rounded up, what the host has rounded to the nearest.
+  const gb = (bytes: number, round: (n: number) => number): string =>
+    `${round(bytes / 2 ** 30)} GB`;
+  return {
+    fits: false,
+    lane,
+    units,
+    ceiling,
+    needs,
+    words:
+      `needs a machine with at least ${gb(needs.ramBytes, Math.ceil)} of RAM and ${needs.cpus} cores ` +
+      `(${units} ${lane} slots at once); this one has ${gb(host.ramBytes, Math.round)} and ${host.cpus} cores, ` +
+      `so its ${lane} lane never holds more than ${ceiling}`,
+  };
+}

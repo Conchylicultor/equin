@@ -399,9 +399,16 @@ the returned `slots` in an in-process `createSemaphore(slots)`
   elastic share would admit it on a few GB, and — while its work has under 10
   ledger records — reserve it only `units × PER_UNIT_BYTES` of that short
   grant; a rigid share is reserved its whole weight from its first run.
-  Background lane only; a `min` above the lane's window on this host
-  (`backgroundLimit`) throws rather than wait for ever (a 16 GB host cannot
-  run the backstop).
+  Background lane only; a `min` above the lane's static window on this host
+  (`backgroundLimit`) throws rather than wait for ever — `withHostGrant`
+  first, in the words of `rigidShareFit` (core: does a rigid share of N slots
+  EVER fit this lane here, and if not, the smallest machine it needs — 5
+  background slots need ≥ 47 GB of RAM and 7 cores). That verdict is a static
+  fact of the host, so whatever SCHEDULES such work reads it once instead of
+  failing every run: a supervised job declares `hostShare` and, where it does
+  not fit, `cannotRunHere` (`infra/jobs`) keeps it unscheduled and says why in
+  the Background catalog. A host that fits statically still waits for the
+  measured window like any acquire.
 - `grant.run(fn)` — spend one unit through the in-process semaphore. Every heavy
   child (a type-check worker, tsc, vite, the Chromium suite) goes through it.
   `grant.run(fn, { units })` spends more than one — see *Weighted spend* below.
@@ -550,6 +557,7 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
     - `HostPoolId`
     - `Lane`
     - `Priority`
+    - `RigidShareFit`
     - `UnmeasuredCause`
   - Exports (values):
     - `admissionSlots`
@@ -576,6 +584,7 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
     - `peaksByWork`
     - `PER_UNIT_BYTES`
     - `rawFleetCeiling`
+    - `rigidShareFit`
     - `unmeasuredWindow`
 - Cross-plugin:
   - Imported by:

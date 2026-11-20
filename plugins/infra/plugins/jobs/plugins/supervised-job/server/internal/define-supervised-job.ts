@@ -8,7 +8,11 @@ import {
   type ScheduleSpec,
 } from "@plugins/infra/plugins/jobs/server";
 import type { LogChannel } from "@plugins/primitives/plugins/log-channels/server";
-import type { HostPoolId } from "@plugins/infra/plugins/host/plugins/host-admission/core";
+import {
+  rigidShareFit,
+  type HostPoolId,
+  type Lane,
+} from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import type { RunTerminal } from "../../core";
 import {
   applyFailurePolicy,
@@ -157,6 +161,21 @@ interface SupervisedJobBase<N extends string, S extends z.ZodType> {
    * the LATEST payload, which would merge two distinct requests.
    */
   schedule?: ScheduleSpec;
+  /**
+   * The RIGID host `cpu` share the child takes — `units` slots of `lane` at
+   * once, never fewer (`withHostGrant({ lane, max: units, min: units })`):
+   * work whose peak cannot narrow to a short grant, such as the type-check
+   * backstop's whole-program oracle. Declared here so it is decided ONCE
+   * whether this machine can ever grant it (`rigidShareFit`, a static fact of
+   * the host): where it cannot, the job `cannotRunHere` — never scheduled, an
+   * enqueue refused, the Background catalog saying what machine it needs —
+   * instead of a run that fails on the acquire every time it fires.
+   *
+   * Read the units from the same constant the child acquires with, so the
+   * two cannot disagree; if they do, the child's acquire still refuses a
+   * share above the lane's window loudly.
+   */
+  hostShare?: { lane: Lane; units: number };
 }
 
 /** The two bodies that run ONE child per attempt. */
@@ -487,9 +506,12 @@ export function defineSupervisedJob<N extends string, S extends z.ZodType>(
       });
   }
 
+  const fit =
+    spec.hostShare === undefined ? null : rigidShareFit(spec.hostShare);
   const common = {
     name: spec.name,
     description: spec.description,
+    ...(fit === null || fit.fits ? {} : { cannotRunHere: fit.words }),
     factory: "defineSupervisedJob",
     hold,
     input: spec.input,

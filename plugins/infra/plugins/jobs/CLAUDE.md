@@ -47,6 +47,20 @@ spec — never restate them. `defineRetention` derives its own sentence from the
 table and TTL; `defineWarmup` and `defineCorpusIndex` require one too. An empty
 string is refused at define time.
 
+## A job this machine can never run: `cannotRunHere`
+
+Some work needs more machine than some installs have — a rigid host share
+wider than a small Mac's background lane. That is a fact of the host, decided
+once when the job is defined, not a failure to rediscover on every tick:
+`cannotRunHere: "<why, in words>"` keeps the schedule uninstalled
+(`resolveJobCron` answers `null`, the one reading both queues and the catalog
+share), refuses `enqueue` with the reason, and lists the job in the
+Background catalog as "Never on this machine" with the reason as a fact.
+Nobody writes it by hand today: `defineSupervisedJob` derives it from its
+`hostShare` (host-admission's `rigidShareFit`). A new requirement of the same
+kind derives it the same way — never a run that fails because the host is
+small.
+
 ## A job runs only if a plugin registers it
 
 A runner resolves a row's handler by name from its registry, filled from every

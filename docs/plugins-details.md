@@ -38422,6 +38422,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `HostPoolId`
               - `Lane`
               - `Priority`
+              - `RigidShareFit`
               - `UnmeasuredCause`
             - Exports (values):
               - `admissionSlots`
@@ -38448,6 +38449,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `peaksByWork`
               - `PER_UNIT_BYTES`
               - `rawFleetCeiling`
+              - `rigidShareFit`
               - `unmeasuredWindow`
           - Cross-plugin:
             - Imported by:

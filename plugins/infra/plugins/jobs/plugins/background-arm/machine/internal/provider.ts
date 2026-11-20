@@ -132,7 +132,10 @@ function triggerOf(job: RegisteredJob, now: Date): BackgroundTrigger {
     return {
       kind: "cron",
       expr: declared,
-      words: "Disabled",
+      // A setting turned it off, or this machine can never run it (its
+      // reason is a fact below, `factsOf`).
+      words:
+        job.cannotRunHere === undefined ? "Disabled" : "Never on this machine",
       nextAt: null,
       disabled: true,
     };
@@ -173,6 +176,9 @@ function lastRunOf(
 
 function factsOf(job: RegisteredJob): BackgroundFact[] {
   const facts: BackgroundFact[] = [
+    ...(job.cannotRunHere === undefined
+      ? []
+      : [{ label: "Why not here", value: job.cannotRunHere }]),
     { label: "Duration class", value: job.hold },
     { label: "Attempts", value: String(job.maxAttempts) },
   ];

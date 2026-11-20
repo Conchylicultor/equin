@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
+import { typeCheckWorkerUnits } from "@plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { defineSupervisedJob } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
@@ -33,6 +34,12 @@ const backstopLog = defineLogSink({
  * (`boot:closure-digestable`).
  *
  * `runAttempts: 1`: the next daily tick is the retry.
+ *
+ * `hostShare`: the child takes a RIGID background share of the dual weight
+ * (`../../cli/run.ts`, the same `typeCheckWorkerUnits("dual")`). On a machine
+ * whose background lane can never hold it (under ~47 GB of RAM: a 16, 32 or 36 GB
+ * Mac) the job is never scheduled and the Background catalog says what it
+ * needs — not a failed run every night.
  */
 export const typeCheckBackstopJob = defineSupervisedJob({
   name: "type-check.backstop",
@@ -42,6 +49,7 @@ export const typeCheckBackstopJob = defineSupervisedJob({
   channel: backstopLog,
   schedule: { cron: "30 4 * * *" }, // daily at 04:30 UTC; main only
   runAttempts: 1,
+  hostShare: { lane: "background", units: typeCheckWorkerUnits("dual") },
   argv: () => ({
     argv: [`./${CLI_NAME}`, "type-check-backstop"],
     cwd: REPO_ROOT,

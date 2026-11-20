@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
-import { assertDefinedJobsRegistered, defineJob } from "./registry";
+import {
+  assertDefinedJobsRegistered,
+  defineJob,
+  listRegisteredJobs,
+  resolveJobCron,
+} from "./registry";
 
 // A runner resolves a row's handler by name from its own registry, so a row
 // queued for a job no plugin registered is an "unknown job" on every runner
@@ -74,5 +79,56 @@ describe("assertDefinedJobsRegistered", () => {
     await defineJob({ ...spec, name: "jobs.registry-test.taken" }).register();
     defineJob({ ...spec, name: "jobs.registry-test.taken" });
     expect(unregisteredNames()).toContain("jobs.registry-test.taken");
+  });
+});
+
+// A job this machine can never run (a rigid share wider than its lane) is a
+// fact decided once — never scheduled, never enqueued — instead of a run that
+// fails every time its schedule fires.
+describe("cannotRunHere", () => {
+  const spec = {
+    description: "A test job.",
+    hold: "instant",
+    input: z.object({}).default({}),
+    event: z.never(),
+    dedup: "singleton",
+    schedule: { cron: "30 4 * * *" },
+    run: async () => {},
+  } as const;
+
+  test("its schedule resolves to nothing and an enqueue says why", async () => {
+    const job = defineJob({
+      ...spec,
+      name: "jobs.registry-test.too-small",
+      cannotRunHere: "needs a machine with at least 47 GB of RAM",
+    });
+    await job.register();
+    const registered = listRegisteredJobs().find(
+      (j) => j.name === "jobs.registry-test.too-small",
+    );
+    if (registered === undefined) throw new Error("not registered");
+    expect(resolveJobCron(registered)).toBeNull();
+    expect(job.enqueue({})).rejects.toThrow(
+      /too-small cannot run on this machine: needs a machine with at least 47 GB/,
+    );
+  });
+
+  test("a job that can run keeps its schedule", async () => {
+    await defineJob({ ...spec, name: "jobs.registry-test.fits" }).register();
+    const registered = listRegisteredJobs().find(
+      (j) => j.name === "jobs.registry-test.fits",
+    );
+    if (registered === undefined) throw new Error("not registered");
+    expect(resolveJobCron(registered)).toBe("30 4 * * *");
+  });
+
+  test("an empty reason is refused at define time", () => {
+    expect(() =>
+      defineJob({
+        ...spec,
+        name: "jobs.registry-test.blank",
+        cannotRunHere: " ",
+      }),
+    ).toThrow(/must say why/);
   });
 });

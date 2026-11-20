@@ -21,7 +21,11 @@ file.
   far heavier than a batched worker), then a worker slot. The grant is RIGID
   (`min: max`): unlike a batched worker the oracle cannot shrink to a short
   grant, so it waits for its whole weight rather than run ~16 GB on a share of
-  a few — and an inherited grant smaller than the weight is refused. Not part of any
+  a few — and an inherited grant smaller than the weight is refused. The job
+  declares that share (`hostShare`), so on a machine whose background lane
+  can never hold it (under ~47 GB of RAM: a 16, 32 or 36 GB Mac) it is never
+  scheduled, and Debug → Background activity says what it needs, instead of
+  failing every night. Not part of any
   build. Its run is recorded in the worker memory log like every worker's
   (`spawnTypeCheckWorker`), with the oracle's footprint, and
   `type-check:worker-weight-measured` holds the weight to it. The transcript's
@@ -31,6 +35,18 @@ file.
   `run` body: the backend imports a `run` body to schedule it, and this one
   would put the check runner in the serving backend's closure
   (`boot:closure-digestable`). Run it by hand to reproduce a nightly run.
+
+**What a host without it loses.** The backstop guards the incremental
+type-check's KEYS (and affected sets), not one checkout's code: a divergence
+is a bug in the type-check plugin, and it shows on any tree that exercises it.
+Main's daily run on the developer's 64 GB machine checks those keys against
+the canonical repo — the largest, most varied tree there is — so a key bug is
+found there for every install. What a small install loses is only a key bug
+that its OWN tree alone would exercise (a shape of code the canonical repo
+lacks): its stale verdicts go unseen until a full check (a cold store) runs.
+That residual is accepted rather than covered by a substitute: a cheaper
+oracle (a full check of a subset) could not see the cross-file reads a key
+misses, which is exactly what the whole-program check is for.
 
 Design: `research/2026-10-21-global-type-check-two-programs.md`.
 

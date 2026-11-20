@@ -11,6 +11,7 @@ import {
   grantPriority,
   HOST_POOLS,
   laneCapacity,
+  rigidShareFit,
   type FleetAdmission,
   type FleetMemoryUnmeasuredPayload,
   type Grant,
@@ -170,6 +171,19 @@ export async function withHostGrant<T>(
   },
   fn: (grant: Grant) => Promise<T>,
 ): Promise<T> {
+  // A rigid share this host can never hold is refused before any wait, in
+  // the words that say what machine it needs (`rigidShareFit`) — the same
+  // verdict a job declaring it reads once to never schedule it
+  // (`defineSupervisedJob`'s `hostShare`). The acquire would refuse it too.
+  // Background only: an interactive rigid share is refused by the acquire
+  // for being interactive, whatever its size.
+  if (opts.min !== undefined && opts.lane === "background") {
+    const fit = rigidShareFit({ lane: opts.lane, units: opts.min });
+    if (!fit.fits)
+      throw new Error(
+        `withHostGrant(${opts.work}): a rigid share of ${opts.min} slots can never be granted here — it ${fit.words}`,
+      );
+  }
   // Filed at most once per acquire, at the first unmeasured state it acts on;
   // awaited before the grant returns, so a process cannot exit with it still
   // in flight. Its outcome is captured as a value the moment it settles (a

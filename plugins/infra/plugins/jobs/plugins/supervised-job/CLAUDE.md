@@ -127,6 +127,16 @@ after a restart the next claim could otherwise lose to the previous attempt's
 still-open row, and that memoized loss ended the ladder silently. A claim lost on
 attempt ≥ 2 now throws.
 
+### `hostShare`: a rigid share decided once
+
+A child that takes a RIGID host `cpu` share (`withHostGrant({ min: max })`,
+work whose peak cannot narrow) declares it: `hostShare: { lane, units }`.
+`defineSupervisedJob` asks host-admission's `rigidShareFit` once; where this
+machine's lane can never hold it, the job `cannotRunHere` (`infra/jobs`):
+never scheduled, enqueue refused, the catalog saying what machine it needs.
+The child acquires from the same constant; if the two ever disagree, its
+acquire refuses loudly. Today: the type-check backstop.
+
 ## Long work, short runs
 
 The handler is short at both ends and empty in the middle:

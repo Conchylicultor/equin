@@ -5,6 +5,7 @@ export type {
   CpuBudget,
   HostFacts,
   HostPoolId,
+  RigidShareFit,
 } from "./internal/budget";
 export {
   PER_UNIT_BYTES,
@@ -15,6 +16,7 @@ export {
   rawFleetCeiling,
   cpuBudget,
   grantPriority,
+  rigidShareFit,
 } from "./internal/budget";
 export type { Grant, GrantHooks, GrantShare } from "./internal/grant";
 export {
