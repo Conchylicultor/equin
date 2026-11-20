@@ -19,9 +19,12 @@ import {
   type ResourceResult,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
+  sameIdentity,
   useLibrarySong,
   useLoadDocument,
+  useLoadedDocument,
   useSongDocument,
+  type FileIdentity,
 } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import { barStartBeat } from "@plugins/apps/plugins/sonata/plugins/score/core";
@@ -50,16 +53,25 @@ import {
   songLibrary,
 } from "../core";
 import {
-  SongLinkImport,
+  AddToLibraryButton,
+  LinkPreviewReader,
   carriesSongLink,
+  linkPreviewIdentity,
+  linkTitle,
   useLinkCreator,
+  useLinkPreviewSettings,
   withoutLink,
+  type LinkCreator,
   type PlayerParams,
 } from "./song-link";
+import type { LinkPreviewResult } from "./slots";
 import type { SongHydration } from "./hydrate-sources";
 import { SongHydrator } from "./song-hydrator";
 import { SonataLibrarySurface } from "./components/library-surface";
 import { SongTitle } from "./components/song-title-field";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { SectionDock } from "./components/section-pane";
 import { useSectionPaneCollapsed } from "./components/panels-toggle";
 import { PlayerHeader } from "./components/player-header";
@@ -192,9 +204,10 @@ export function sonataSongLink(songId: string, bar?: number): string {
 
 /** Canonical song title from its live library row, or the optimistic open hint. */
 function useSongTitle(
-  { songId: songIdParam }: { songId: string },
+  params: PlayerParams,
   hint: Hint<{ title: string }>,
 ): string | undefined {
+  const songIdParam = params.songId;
   // `key` upgrades a pre-rewrite bare-uuid URL to the stored `song-<uuid>`.
   const song = useLive(songLibrary, { id: songIdKind.key(songIdParam) });
   // `canonical` stays `undefined` until the row settles — precisely what
@@ -206,7 +219,12 @@ function useSongTitle(
     {
       loading: () => undefined,
       error: (_error, stale) => stale,
-      ready: (title) => title,
+      // A song this library does not have, previewed from a share link: the
+      // link's title is the only one it has.
+      ready: (title) =>
+        title === undefined && carriesSongLink(params)
+          ? linkTitle(params)
+          : title,
     },
   );
   return hint.pick("title", canonical);
@@ -445,13 +463,10 @@ function SonataPlayerSurface(): ReactElement {
   }, [linked, songFound, paramsRef, setParams]);
 
   // A link to a song this library does not have (the resolve gate let it
-  // through because the link can recreate it): offer to add it.
+  // through because the link can recreate it): the song as the link carries
+  // it, played without being kept, its "Add to library" beside the title.
   if (row.status === "ready" && !row.found) {
-    return (
-      <PlayerMessage>
-        <SongLinkImport songId={songId} params={params} />
-      </PlayerMessage>
-    );
+    return <LinkPreviewSurface songId={songId} params={params} bar={bar} />;
   }
 
   if (!hydrated) {
@@ -491,6 +506,144 @@ function SonataPlayerSurface(): ReactElement {
 }
 
 /**
+ * A share link to a song this library does not have, previewed: the song the
+ * link carries (its creating part's source, the other parts' settings — the
+ * groove) loaded as a file document — nothing of it is persisted and no
+ * setting is writable — in the same immersive player, with the link's title
+ * and "Add to library" in the header. Adding it makes it a library song, and
+ * the surface then opens it as any other (the address goes back to plain).
+ *
+ * Waits for the deferred tier, which holds the link parts, as a library
+ * song's hydration does.
+ */
+function LinkPreviewSurface({
+  songId,
+  params,
+  bar,
+}: {
+  songId: string;
+  params: PlayerParams;
+  bar: number | undefined;
+}): ReactNode {
+  const creator = useLinkCreator(params);
+  const deferredComplete = useDeferredLoadComplete();
+  const loaded = useLoadedDocument();
+  const setParams = sonataPlayerPane.useSetParams();
+  const id = songIdKind.key(songId);
+  const identity = linkPreviewIdentity(id, params);
+  if (creator === null) {
+    // The resolve gate lets a missing song through only for a link that can
+    // create it.
+    throw new Error("Sonata: previewing a link that names no song to create");
+  }
+  if (loaded === null || !sameIdentity(loaded.identity, identity)) {
+    if (!deferredComplete)
+      return (
+        <PlayerMessage>
+          <Loading />
+        </PlayerMessage>
+      );
+    return (
+      <LinkPreviewReader key={creator.part.key} creator={creator}>
+        {(preview) => (
+          <LinkPreviewLoader
+            identity={identity}
+            params={params}
+            creator={creator}
+            preview={preview}
+            bar={bar}
+          />
+        )}
+      </LinkPreviewReader>
+    );
+  }
+  return (
+    <PlayerDisplayBinding
+      displayId={params.lens ?? null}
+      onDisplayChange={(lens) =>
+        setParams({ ...params, lens: lens ?? undefined })
+      }
+    >
+      <ImmersivePlayer
+        title={
+          <Line className={cn("gap-sm px-2xs", yieldClass("x"))}>
+            <Text variant="subheading" className="font-bold">
+              {identity.name}
+            </Text>
+            <AddToLibraryButton songId={id} params={params} />
+          </Line>
+        }
+      />
+    </PlayerDisplayBinding>
+  );
+}
+
+/**
+ * Loads a link's preview once its creating part has it (an Ultimate Guitar
+ * tab fetched), at the URL's bar, and shows what stands before that: loading,
+ * or the failure (a tab UG refuses).
+ */
+function LinkPreviewLoader({
+  identity,
+  params,
+  creator,
+  preview,
+  bar,
+}: {
+  identity: FileIdentity;
+  params: PlayerParams;
+  creator: LinkCreator;
+  preview: LinkPreviewResult;
+  bar: number | undefined;
+}): ReactNode {
+  const loadDocument = useLoadDocument();
+  const { requestSeekOnLoad } = useSession();
+  const settings = useLinkPreviewSettings(params, creator);
+  const latest = useLatestRef({ identity, settings, bar });
+  const loadedRef = useRef(false);
+  const ready = preview.status === "ready" ? preview.data : null;
+  useEffect(() => {
+    if (ready === null || loadedRef.current) return;
+    loadedRef.current = true;
+    const now = latest.current;
+    const target = now.bar;
+    if (target !== undefined) {
+      requestSeekOnLoad((loaded) => barStartBeat(loaded, target));
+    }
+    loadDocument(now.identity, { [ready.sourceId]: ready.raw }, now.settings);
+  }, [ready, latest, loadDocument, requestSeekOnLoad]);
+
+  if (preview.status === "unavailable") {
+    return (
+      <PlayerMessage>
+        <Text tone="muted">{preview.message}</Text>
+      </PlayerMessage>
+    );
+  }
+  return matchResource(preview, {
+    loading: () => (
+      <PlayerMessage>
+        <Loading />
+      </PlayerMessage>
+    ),
+    error: (error) => (
+      <PlayerMessage>
+        <ResourceErrorInline
+          error={error}
+          refetch={preview.refetch}
+          variant="block"
+        />
+      </PlayerMessage>
+    ),
+    ready: () => (
+      <PlayerMessage>
+        <Loading />
+      </PlayerMessage>
+    ),
+  });
+}
+
+/**
  * The immersive player: the active display fills the window and everything
  * else floats over it — the header band (back, the title, the toolbar pill),
  * the progression capsule centred over the notes, and the section dock at the
@@ -504,7 +657,7 @@ function SonataPlayerSurface(): ReactElement {
  * bar, because its top chrome is not a row above the body but a band floating
  * over it.
  */
-function ImmersivePlayer() {
+function ImmersivePlayer({ title }: { title?: ReactNode } = {}) {
   const [collapsed] = useSectionPaneCollapsed();
   // Eased on the dock's clock, so the notes (and the capsule over them) give
   // way as the panel unfolds instead of jumping.
@@ -526,6 +679,7 @@ function ImmersivePlayer() {
 
       <Placed x="fill" y={{ start: 0 }} layer="float">
         <PlayerHeader
+          title={title}
           tools={
             <sonataPlayerPane.Actions.Render controlSize="lg">
               {(item) => <PaneHeaderCell {...item} />}

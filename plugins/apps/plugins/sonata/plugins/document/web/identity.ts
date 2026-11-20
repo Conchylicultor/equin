@@ -5,15 +5,27 @@
  *
  *  - `library`: a saved Sonata song. Its per-song settings are persisted by
  *    their feature plugins and settled by the registered observers.
- *  - `file`: content read from a file outside the library (`key` names the
- *    file, e.g. its file-ref key; `name` is what the user knows it as — its
- *    file name — where a library song has its title). It has no persisted
- *    settings: every setting reads its `absent` value, and no setting can be
- *    written.
+ *  - `file`: content from outside the library — a file opened for preview,
+ *    or a shared song link not added yet (`key` names it, e.g. its file-ref
+ *    key; `name` is what the user knows it as — its file name, the link's
+ *    title — where a library song has its title). It has no persisted
+ *    settings: every setting reads the value it was loaded with (a link's
+ *    groove), else its `absent` value, and no setting can be written.
  */
-export type SongIdentity =
-  | { kind: "library"; songId: string }
-  | { kind: "file"; key: string; name: string };
+export type SongIdentity = LibraryIdentity | FileIdentity;
+
+/** A saved Sonata song (see {@link SongIdentity}). */
+export interface LibraryIdentity {
+  kind: "library";
+  songId: string;
+}
+
+/** Content from outside the library (see {@link SongIdentity}). */
+export interface FileIdentity {
+  kind: "file";
+  key: string;
+  name: string;
+}
 
 /**
  * `identity` as one stable string (`library:<songId>` / `file:<key>`) — what

@@ -19,6 +19,8 @@ export type {
   SourceContext,
   SourceCreateOption,
   SongLinkValue,
+  SongLinkPreview,
+  LinkPreviewResult,
   SourceHydration,
 } from "./slots";
 // The player pane is the OWNER of the player's header slot

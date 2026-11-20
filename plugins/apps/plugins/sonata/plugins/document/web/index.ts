@@ -2,7 +2,13 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { SonataDocument } from "./slots";
 
 export { SonataDocument } from "./slots";
-export { sameIdentity, songIdentityKey, type SongIdentity } from "./identity";
+export {
+  sameIdentity,
+  songIdentityKey,
+  type FileIdentity,
+  type LibraryIdentity,
+  type SongIdentity,
+} from "./identity";
 export {
   SongDocumentProvider,
   documentRelays,
@@ -12,12 +18,15 @@ export {
 } from "./document";
 export {
   defineSongSetting,
+  settingValue,
+  type SettingValue,
   type SongSetting,
   type SongSettingFailure,
   type SongSettingKey,
 } from "./song-setting";
 export {
   useLoadDocument,
+  useLoadedDocument,
   useLibrarySong,
   useLibrarySongLoad,
   useSongSetting,
@@ -25,6 +34,8 @@ export {
   useFailSongSetting,
   type LibrarySong,
   type LibrarySongLoad,
+  type LoadDocument,
+  type LoadedDocument,
 } from "./loaded-song";
 export { usePersistSourceEdit, type EditedSource } from "./persist-source-edit";
 export { SongSettingsMount, useMountedSongId } from "./song-setting-mount";
@@ -45,6 +56,6 @@ export {
 
 export default {
   description:
-    "Sonata song document: a song's identity (a library song or a file), its sources' raw input and its per-song settings as one per-surface state, composed into a score through the source → merge → transpose → voicing → key → spelling → analyzer → chord-mode → swing pipeline. Defines the SonataDocument.{Source,Analyzer,SongSetting} registries; a file document settles every setting to its default and mounts no observer.",
+    "Sonata song document: a song's identity (a library song or a file), its sources' raw input and its per-song settings as one per-surface state, composed into a score through the source → merge → transpose → voicing → key → spelling → analyzer → chord-mode → swing pipeline. Defines the SonataDocument.{Source,Analyzer,SongSetting} registries; a file document (a file, or a shared song link not added yet) settles every setting to the value it was loaded with, else its default, and mounts no observer.",
   slots: { ...SonataDocument },
 } satisfies PluginDefinition;

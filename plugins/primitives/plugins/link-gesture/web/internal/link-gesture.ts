@@ -152,6 +152,21 @@ export const browserTabAddressSink = defineInstallSink<
 });
 
 /**
+ * The absolute URL a new browser tab opens for `url` — and so the URL that
+ * shows `url` to anyone it is sent to (a copied share link). An in-app path
+ * (`/agents/c/42`) is written the way the tab set the user is in shows it
+ * ({@link browserTabAddressSink}: the page's under its surface mode's route
+ * prefix, the desktop's `/desktop`; an app embed's on the page that hosts it,
+ * the live demo's `/about/demo/at/…`), so it comes up the same; an absolute
+ * URL is itself.
+ */
+export function browserTabUrl(url: string): string {
+  const inApp = url.startsWith("/") && !url.startsWith("//");
+  const address = inApp ? browserTabAddressSink.peek()(url) : url;
+  return new URL(address, window.location.origin).href;
+}
+
+/**
  * Open a URL in a new browser tab — the one place that is spelled. Takes an
  * app path of THIS origin (`/agents/c/42`, addressed by
  * {@link browserTabAddressSink} — by default under the active route prefix,
@@ -162,12 +177,7 @@ export const browserTabAddressSink = defineInstallSink<
  * opened from.
  */
 export function openInBrowserTab(url: string): void {
-  // An in-app path opens the way the tab set the user is in shows it (the
-  // page's: under its surface mode's route prefix, the desktop's `/desktop`),
-  // so the new tab comes up the same.
-  const inApp = url.startsWith("/") && !url.startsWith("//");
-  const address = inApp ? browserTabAddressSink.peek()(url) : url;
-  const target = new URL(address, window.location.origin);
+  const target = new URL(browserTabUrl(url));
   const features =
     target.origin === window.location.origin
       ? "noopener"

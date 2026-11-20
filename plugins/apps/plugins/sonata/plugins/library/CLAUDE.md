@@ -54,11 +54,22 @@ a newline `~`, a `;` `!`, `*` escaping a literal one — so the address reads
   song is never older than a link to it from this library, so a link never
   overwrites it. A song it does NOT have, named by a link carrying a `create`
   part: the resolve gate answers `found` (pending until the deferred tier, which
-  holds the parts, settles) and the surface shows `SongLinkImport` — the
-  title and an "Add to library" button that creates the song under the link's
-  id, then hands every other part its value. Asked, never done on open.
+  holds the parts, settles) and the surface PREVIEWS it (`LinkPreviewSurface`):
+  the creating part's `usePreview(value)` gives its source's raw (the grid at
+  once; a UG tab fetched — `unavailable` where the host cannot read UG), every
+  other part's `previewSetting(value)` a per-song setting (the groove), and
+  the song loads as a FILE document (`song-link:<id>`, named by the link's
+  title — nothing persisted, no setting writable) into the same immersive
+  player, the header showing the link's title and **Add to library**
+  (`AddToLibraryButton`): creates the song under the link's id, then hands
+  every other part its value (`apply`). Asked, never done on open.
   Once the song is in the library (already, or just added), the surface
-  replaces the address with the plain one (`withoutLink`).
+  replaces the address with the plain one (`withoutLink`) and opens it as a
+  library song.
+- **The copied URL** is `browserTabUrl(path)` (`link-gesture`): the address a
+  new browser tab opens — inside the website's live demo, the demo page at the
+  song (`/about/demo/at/sonata/song/…`, the place's parts encoded), not
+  Sonata's own path.
 
 ### Hydration (`Library.Source.useHydration`, `SongHydrator`)
 
@@ -337,21 +348,22 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `Pane.Register` "sonata-library"
     - `Pane.Register` "sonata-player"
     - `Pane.Register` "sonata-song-peek"
-  - Uses: 100 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 104 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×14
+    - `apps/sonata/document` ×7
     - `network/live` ×7
     - `primitives/data-view` ×7
     - `apps/sonata/shell` ×6
     - `network/live/live-state` ×6
     - `primitives/css/ui-kit` ×6
     - `apps/sonata/player` ×5
-    - `apps/sonata/document` ×4
     - `infra/endpoints` ×3
     - `primitives/kept-state` ×3
     - `apps/sonata/view-options` ×2
     - `primitives/css/layer` ×2
     - `primitives/css/spacing` ×2
     - `primitives/latest-ref` ×2
+    - `primitives/link-gesture` ×2
     - `apps/sonata/mini-player.SonataMiniPlayer`
     - `apps/sonata/primitives/glass.Glass`
     - `apps/sonata/session.useSession`
@@ -376,7 +388,6 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `primitives/dom/web-storage.defineStore`
     - `primitives/editable-field.useEditableField`
     - `primitives/icon-button.IconButton`
-    - `primitives/link-gesture.linkProps`
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog.useOpenDialog`
     - `primitives/relative-time.formatRelativeTime`
@@ -384,8 +395,10 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `shell/notifications.useToast`
     - `ui/icons.Icon`
   - Exports (types):
+    - `LinkPreviewResult`
     - `OpenSong`
     - `SongCoverAnswer`
+    - `SongLinkPreview`
     - `SongLinkValue`
     - `SourceContext`
     - `SourceCreateOption`

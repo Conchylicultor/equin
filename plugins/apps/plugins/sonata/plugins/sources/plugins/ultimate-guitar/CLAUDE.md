@@ -258,12 +258,12 @@ reported) — the kind worth surfacing as crash tasks, not just toasts.
     - `FieldPresentation.Register` "exposure:sonata_songs_ext_ultimate_guitar"
     - `Library.Cover` "ultimate-guitar"
     - `Library.SongLink` "ug"
-  - Uses: 47 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 48 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/live-state` ×6
     - `primitives/css/ui-kit` ×6
     - `network/live` ×4
     - `apps/sonata/document` ×3
-    - `apps/sonata/library` ×2
+    - `apps/sonata/library` ×3
     - `infra/endpoints` ×2
     - `primitives/css/layer` ×2
     - `primitives/kept-state` ×2

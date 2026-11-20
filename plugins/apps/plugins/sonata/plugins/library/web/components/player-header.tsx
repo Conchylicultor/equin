@@ -35,7 +35,14 @@ import { SongTitle } from "./song-title-field";
  * The band itself is click-through: only its title and its pill take the
  * pointer, so the notes under the rest of it stay draggable.
  */
-export function PlayerHeader({ tools }: { tools: ReactNode }) {
+export function PlayerHeader({
+  tools,
+  title,
+}: {
+  tools: ReactNode;
+  /** In place of the song's title block (a previewed share link's title). */
+  title?: ReactNode;
+}) {
   const { contentOwnsTopChrome, leadingControl } =
     useContext(SurfaceChromeContext);
   const reservesFloatingBar = useReservesFloatingBar();
@@ -55,7 +62,7 @@ export function PlayerHeader({ tools }: { tools: ReactNode }) {
             ? leadingControl
             : null}
           <BackToLibrary />
-          <TitleBlock />
+          {title ?? <TitleBlock />}
         </Line>
       </ControlSizeProvider>
       <Fill />

@@ -3,12 +3,16 @@ import { rowOrStale, useLiveReader } from "@plugins/network/plugins/live/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useOpenDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { browserTabUrl } from "@plugins/primitives/plugins/link-gesture/web";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { sonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/core";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+import type {
+  FileIdentity,
+  SettingValue,
+} from "@plugins/apps/plugins/sonata/plugins/document/web";
 import {
   fromLinkText,
   SONG_LINK_KEYS,
@@ -17,7 +21,7 @@ import {
   type SongLinkKey,
   toLinkText,
 } from "../core";
-import { Library, type SongLinkValue } from "./slots";
+import { Library, type LinkPreviewResult, type SongLinkValue } from "./slots";
 import { useCurrentSong } from "./use-current-song";
 import { useOpenSong } from "./open-song";
 
@@ -43,6 +47,7 @@ type LinkParams = Partial<Record<SongLinkKey | "title", string>>;
 const UNTITLED = "Shared song";
 
 const shareIcon = symbol("share");
+const addIcon = symbol("add");
 
 /** Whether `params` carry any of the song link's own keys (a share link). */
 export function carriesSongLink(params: PlayerParams): boolean {
@@ -122,7 +127,10 @@ export function ShareSongButton(): ReactNode {
       title: toLinkText(song.title),
       ...link,
     });
-    const url = new URL(path, window.location.href).href;
+    // The address that shows the song where the user is: inside an embed
+    // (the website's live demo) its host page at that place, not the app's
+    // own path on this origin.
+    const url = browserTabUrl(path);
     await navigator.clipboard.writeText(url);
     toast({
       type: "sonata-song-link-copied",
@@ -165,33 +173,98 @@ function LinkPartReader({
   return null;
 }
 
+/** A creating link part: one whose song a link can preview and add. */
+type CreatorPart = SongLinkPart & {
+  usePreview: NonNullable<SongLinkPart["usePreview"]>;
+  create: NonNullable<SongLinkPart["create"]>;
+};
+
+/** The link's creating part, with the value the link carries for it. */
+export interface LinkCreator {
+  part: CreatorPart;
+  value: string;
+}
+
 /**
  * The part of a link that can bring its song into being (a `create` part
  * whose key the link carries), with its value — or `null` when the link
  * names no song this library could create.
  */
-export function useLinkCreator(
-  params: PlayerParams,
-): { part: SongLinkPart; value: string } | null {
+export function useLinkCreator(params: PlayerParams): LinkCreator | null {
   const parts = Library.SongLink.useContributions();
   for (const part of parts) {
     const value = params[part.key];
-    if (part.create !== undefined && value !== undefined) {
-      return { part, value };
+    if (
+      part.create !== undefined &&
+      part.usePreview !== undefined &&
+      value !== undefined
+    ) {
+      return { part: part as CreatorPart, value };
     }
   }
   return null;
 }
 
+/** The title a link carries for its song, readable (`Shared song` for none). */
+export function linkTitle(params: PlayerParams): string {
+  return params.title === undefined ? UNTITLED : fromLinkText(params.title);
+}
+
 /**
- * A link to a song this library does not have, that carries what it takes to
- * create it: the song's title and an "Add to library" button, which creates
- * the song under the link's id from the creating part, then hands every other
- * part its value. Asked, never done on open, so a link only ever writes to the
- * library because its reader chose to keep it. Once the song exists, the
- * player opens it like any other.
+ * The document a link to a song this library does not have is previewed as:
+ * a file document (nothing of it persisted, no setting writable), keyed by the
+ * link's song id and named by its title.
  */
-export function SongLinkImport({
+export function linkPreviewIdentity(
+  songId: SongId,
+  params: PlayerParams,
+): FileIdentity {
+  return { kind: "file", key: `song-link:${songId}`, name: linkTitle(params) };
+}
+
+/**
+ * What a link carries beside its song, as the preview plays it: every other
+ * part's setting (`previewSetting` — the groove), so the song sounds as it
+ * will once added. A value a part cannot read is skipped.
+ */
+export function useLinkPreviewSettings(
+  params: PlayerParams,
+  creator: LinkCreator,
+): SettingValue[] {
+  const parts = Library.SongLink.useContributions();
+  const values: SettingValue[] = [];
+  for (const part of parts) {
+    const value = params[part.key];
+    if (part === creator.part || value === undefined) continue;
+    const setting = part.previewSetting?.(value);
+    if (setting !== undefined && setting !== null) values.push(setting);
+  }
+  return values;
+}
+
+/**
+ * The song a link carries, as its creating part reads it (an Ultimate Guitar
+ * tab is fetched): one hook, so it is its own element — keyed by the part by
+ * whoever renders it, since another link's creator is another hook.
+ */
+export function LinkPreviewReader({
+  creator,
+  children,
+}: {
+  creator: LinkCreator;
+  children: (preview: LinkPreviewResult) => ReactNode;
+}): ReactNode {
+  return children(creator.part.usePreview(creator.value));
+}
+
+/**
+ * "Add to library", beside a previewed link's title: creates the song under
+ * the link's id from the creating part, then hands every other part its
+ * value. Asked, never done on open, so a link only ever writes to the library
+ * because its reader chose to keep it. Once the song exists, the player opens
+ * it like any other. A failure (UG refusing the tab) is said in a toast.
+ */
+export function AddToLibraryButton({
   songId,
   params,
 }: {
@@ -204,21 +277,19 @@ export function SongLinkImport({
   const readLive = useLiveReader();
   const openDialog = useOpenDialog();
   const openSong = useOpenSong();
-  const [failure, setFailure] = useState<string | null>(null);
-  const title =
-    params.title === undefined ? UNTITLED : fromLinkText(params.title);
+  const toast = useToast();
+  const title = linkTitle(params);
 
   if (creator === null) {
     throw new Error(
-      "SongLinkImport: rendered for a link that names no song to create",
+      "AddToLibraryButton: rendered for a link that names no song to create",
     );
   }
 
   const add = async () => {
-    setFailure(null);
     const ctx = { fetchEndpoint, readLive, openDialog, openSong };
     try {
-      await creator.part.create?.(ctx, {
+      await creator.part.create(ctx, {
         id: songId,
         title,
         value: creator.value,
@@ -230,20 +301,20 @@ export function SongLinkImport({
       }
     } catch (err) {
       if (!(err instanceof Error)) throw err;
-      setFailure(err.message);
+      toast({
+        type: "sonata-song-link-add-failed",
+        variant: "error",
+        title: "Could not add the song",
+        description: err.message,
+        category: "other",
+      });
     }
   };
 
   return (
-    <Stack direction="col" gap="md">
-      <Stack direction="col" gap="xs">
-        <Text variant="heading">{title}</Text>
-        <Text tone="muted">A shared song that is not in your library yet.</Text>
-      </Stack>
-      <div>
-        <Button onClick={add}>Add to library</Button>
-      </div>
-      {failure !== null && <Text tone="destructive">{failure}</Text>}
-    </Stack>
+    <Button onClick={add}>
+      <Icon icon={addIcon} />
+      Add to library
+    </Button>
   );
 }

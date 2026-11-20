@@ -130,7 +130,7 @@ directives establish); the selected voicing strategy from the shared
     - `FieldPresentation.Register` "exposure:sonata_songs_ext_chord_grid"
     - `Library.Cover` "chord-grid"
     - `Library.SongLink` "grid"
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/sonata/document` ×3
     - `network/live` ×3
     - `primitives/kept-state` ×3
@@ -141,6 +141,7 @@ directives establish); the selected voicing strategy from the shared
     - `primitives/css/ui-kit` ×2
     - `apps/sonata/shell.Sonata`
     - `infra/endpoints.useEndpointMutation`
+    - `network/live/live-state.readyResource`
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/fill.Fill`

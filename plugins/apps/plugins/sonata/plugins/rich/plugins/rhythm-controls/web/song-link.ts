@@ -1,6 +1,8 @@
 import {
   chordModeSetting,
   defaultGroove,
+  grooveSetting,
+  settingValue,
   useHasVoicedChords,
   useSongDocument,
   useSongSetting,
@@ -51,14 +53,28 @@ function useGrooveLinkValue(): SongLinkValue {
 }
 
 /**
- * The groove's part of a song's link: the accompaniment, and — on a song just
- * created from a link — that link's accompaniment written as the song's. A
+ * The groove's part of a song's link: the accompaniment — played by the
+ * link's preview, and, on a song just created from the link, written as the
+ * song's. A
  * value that is not a groove is skipped (the song keeps the default), like a
  * malformed `;bar`.
  */
 export const grooveSongLink = Library.SongLink({
   key: "groove",
   useValue: useGrooveLinkValue,
+  previewSetting: (value) => {
+    const decoded = decodeGrooveLink(value);
+    if (!decoded.ok) return null;
+    const g = decoded.groove;
+    return settingValue(grooveSetting, {
+      hands: { bass: g.bass, chord: g.chord },
+      bassFigurationId: g.bassFigurationId,
+      chordFigurationId: g.chordFigurationId,
+      bassVoicing: g.bassVoicing,
+      chordVoicing: g.chordVoicing,
+      restartOnChordChange: g.restartOnChordChange,
+    });
+  },
   apply: async ({ fetchEndpoint }, { id, value }) => {
     const decoded = decodeGrooveLink(value);
     if (!decoded.ok) return;

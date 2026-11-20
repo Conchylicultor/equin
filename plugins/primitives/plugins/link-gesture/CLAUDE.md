@@ -55,8 +55,11 @@ bare `open()` is a type error. `runActivation(activation, gesture)` likewise.
 A new in-app (equin) tab is not a link gesture: it is reachable only from
 an explicit menu entry (`navigate(url, { newTab: true })`).
 
-- `browserTabAddressSink` decides how `openInBrowserTab` writes an in-app
-  path: `apps-core/tabs` installs the tab set the user is in's address (the
+- `browserTabUrl(url)` is the absolute URL such a tab opens — what a copied
+  share link must be too, so it opens where the user is (inside the live
+  demo, the demo page at that place, not the app's own path).
+- `browserTabAddressSink` decides how `openInBrowserTab` / `browserTabUrl`
+  write an in-app path: `apps-core/tabs` installs the tab set the user is in's address (the
   page's: under its route prefix; an app embed's: its host's, `/demo`'s
   full-screen demo at that place). Until installed, the page's route prefix.
 
@@ -145,6 +148,7 @@ resolver returning one. Fix: spread `openPane.link(…)`, or pass `openPane.to(�
   - Exports (values):
     - `activationProps`
     - `browserTabAddressSink`
+    - `browserTabUrl`
     - `gestureOf`
     - `linkGestureProps`
     - `linkProps`

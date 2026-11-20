@@ -9183,7 +9183,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/sonata/sources/midi`
               - `apps/sonata/sources/musicxml`
-        - **`document`** — Sonata song document: a song's identity (a library song or a file), its sources' raw input and its per-song settings as one per-surface state, composed into a score through the source → merge → transpose → voicing → key → spelling → analyzer → chord-mode → swing pipeline. Defines the SonataDocument.{Source,Analyzer,SongSetting} registries; a file document settles every setting to its default and mounts no observer.
+        - **`document`** — Sonata song document: a song's identity (a library song or a file), its sources' raw input and its per-song settings as one per-surface state, composed into a score through the source → merge → transpose → voicing → key → spelling → analyzer → chord-mode → swing pipeline. Defines the SonataDocument.{Source,Analyzer,SongSetting} registries; a file document (a file, or a shared song link not added yet) settles every setting to the value it was loaded with, else its default, and mounts no observer.
           - Web:
             - Slots:
               - `SonataDocument.Source`
@@ -9210,9 +9210,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types):
               - `DocumentContent`
               - `EditedSource`
+              - `FileIdentity`
+              - `LibraryIdentity`
               - `LibrarySong`
               - `LibrarySongLoad`
+              - `LoadDocument`
+              - `LoadedDocument`
               - `RhythmGroove`
+              - `SettingValue`
               - `SongDocumentValue`
               - `SongIdentity`
               - `SongSetting`
@@ -9226,6 +9231,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `grooveSetting`
               - `keyAutoDetectSetting`
               - `sameIdentity`
+              - `settingValue`
               - `SonataDocument`
               - `SongDocumentProvider`
               - `songIdentityKey`
@@ -9239,6 +9245,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useLibrarySong`
               - `useLibrarySongLoad`
               - `useLoadDocument`
+              - `useLoadedDocument`
               - `useMountedSongId`
               - `usePersistSourceEdit`
               - `useSongDocument`
@@ -9323,21 +9330,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "sonata-library"
               - `Pane.Register` "sonata-player"
               - `Pane.Register` "sonata-song-peek"
-            - Uses: 100 symbols — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
+            - Uses: 104 symbols — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
               - `primitives/pane` ×14
+              - `apps/sonata/document` ×7
               - `network/live` ×7
               - `primitives/data-view` ×7
               - `apps/sonata/shell` ×6
               - `network/live/live-state` ×6
               - `primitives/css/ui-kit` ×6
               - `apps/sonata/player` ×5
-              - `apps/sonata/document` ×4
               - `infra/endpoints` ×3
               - `primitives/kept-state` ×3
               - `apps/sonata/view-options` ×2
               - `primitives/css/layer` ×2
               - `primitives/css/spacing` ×2
               - `primitives/latest-ref` ×2
+              - `primitives/link-gesture` ×2
               - `apps/sonata/mini-player.SonataMiniPlayer`
               - `apps/sonata/primitives/glass.Glass`
               - `apps/sonata/session.useSession`
@@ -9362,7 +9370,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/dom/web-storage.defineStore`
               - `primitives/editable-field.useEditableField`
               - `primitives/icon-button.IconButton`
-              - `primitives/link-gesture.linkProps`
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog.useOpenDialog`
               - `primitives/relative-time.formatRelativeTime`
@@ -9370,8 +9377,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `shell/notifications.useToast`
               - `ui/icons.Icon`
             - Exports (types):
+              - `LinkPreviewResult`
               - `OpenSong`
               - `SongCoverAnswer`
+              - `SongLinkPreview`
               - `SongLinkValue`
               - `SourceContext`
               - `SourceCreateOption`
@@ -10718,8 +10727,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ConfigV2.WebRegister` "groove-presets"
                   - `SonataDocument.SongSetting` "rhythm-sync" → `RhythmObserver`
                   - `Library.SongLink` "groove"
-                - Uses: 60 symbols — full list in [`plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/REFERENCE.md)
-                  - `apps/sonata/document` ×11
+                - Uses: 61 symbols — full list in [`plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/REFERENCE.md)
+                  - `apps/sonata/document` ×12
                   - `primitives/css/ui-kit` ×11
                   - `network/live/live-state` ×6
                   - `apps/sonata/primitives/rhythm-circle` ×3
@@ -11121,7 +11130,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `FieldPresentation.Register` "exposure:sonata_songs_ext_chord_grid"
                   - `Library.Cover` "chord-grid"
                   - `Library.SongLink` "grid"
-                - Uses: 28 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/REFERENCE.md)
+                - Uses: 29 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/REFERENCE.md)
                   - `apps/sonata/document` ×3
                   - `network/live` ×3
                   - `primitives/kept-state` ×3
@@ -11132,6 +11141,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/ui-kit` ×2
                   - `apps/sonata/shell.Sonata`
                   - `infra/endpoints.useEndpointMutation`
+                  - `network/live/live-state.readyResource`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/cluster.Cluster`
                   - `primitives/css/fill.Fill`
@@ -11450,12 +11460,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `FieldPresentation.Register` "exposure:sonata_songs_ext_ultimate_guitar"
                   - `Library.Cover` "ultimate-guitar"
                   - `Library.SongLink` "ug"
-                - Uses: 47 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/REFERENCE.md)
+                - Uses: 48 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/REFERENCE.md)
                   - `network/live/live-state` ×6
                   - `primitives/css/ui-kit` ×6
                   - `network/live` ×4
                   - `apps/sonata/document` ×3
-                  - `apps/sonata/library` ×2
+                  - `apps/sonata/library` ×3
                   - `infra/endpoints` ×2
                   - `primitives/css/layer` ×2
                   - `primitives/kept-state` ×2
@@ -43847,8 +43857,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 321 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
-              - `apps` ×85
+            - Imported by: 322 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+              - `apps` ×86
               - `conversations` ×50
               - `debug` ×31
               - `ui` ×26
@@ -55771,6 +55781,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `activationProps`
           - `browserTabAddressSink`
+          - `browserTabUrl`
           - `gestureOf`
           - `linkGestureProps`
           - `linkProps`

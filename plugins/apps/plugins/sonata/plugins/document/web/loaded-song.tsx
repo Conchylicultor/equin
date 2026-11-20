@@ -1,8 +1,14 @@
 import { useMemo, type ReactNode } from "react";
 import { defineScopedStore } from "@plugins/primitives/plugins/scope/plugins/scoped-store/web";
 import { SonataDocument } from "./slots";
-import { sameIdentity, type SongIdentity } from "./identity";
+import {
+  sameIdentity,
+  type FileIdentity,
+  type LibraryIdentity,
+  type SongIdentity,
+} from "./identity";
 import type {
+  SettingValue,
   SongSetting,
   SongSettingFailure,
   SongSettingKey,
@@ -42,8 +48,8 @@ interface LoadedSong {
   loadedRawById: Readonly<Record<string, unknown>>;
   /**
    * The song's settled settings — a setting not in here is pending (or
-   * failed). Always empty for a file document, whose settings all read their
-   * `absent` value (see {@link readSetting}).
+   * failed). For a file document, the values it was loaded with; every other
+   * setting of it reads its `absent` value (see {@link readSetting}).
    */
   settings: ReadonlyMap<SongSettingKey<unknown>, unknown>;
   /**
@@ -92,21 +98,29 @@ export function LoadedSongProvider({ children }: { children: ReactNode }) {
  * song's settings, whatever song the app shows as open at that moment (a song
  * played in the background, a player not mounted yet).
  */
-export function useLoadDocument(): (
-  identity: SongIdentity,
-  rawById: Readonly<Record<string, unknown>>,
-) => void {
+export function useLoadDocument(): LoadDocument {
   const api = loadedSongStore.useStoreApi();
   return useMemo(
     () =>
-      (identity: SongIdentity, rawById: Readonly<Record<string, unknown>>) =>
-        api.setState((prev) =>
-          prev !== null && sameIdentity(prev.identity, identity)
+      (
+        identity: SongIdentity,
+        rawById: Readonly<Record<string, unknown>>,
+        values: readonly SettingValue[] = [],
+      ) =>
+        api.setState((prev) => {
+          // A file document's settings are the values it is loaded with —
+          // read-only, so a reload of it takes the new ones.
+          const fileSettings =
+            identity.kind === "file"
+              ? new Map(values.map((v) => [v.key, v.value]))
+              : null;
+          return prev !== null && sameIdentity(prev.identity, identity)
             ? {
                 ...prev,
                 loads: prev.loads + 1,
                 rawById,
                 loadedRawById: rawById,
+                ...(fileSettings !== null && { settings: fileSettings }),
               }
             : {
                 identity,
@@ -114,12 +128,27 @@ export function useLoadDocument(): (
                 loads: (prev?.loads ?? 0) + 1,
                 rawById,
                 loadedRawById: rawById,
-                settings: NO_SETTINGS,
+                settings: fileSettings ?? NO_SETTINGS,
                 failures: NO_FAILURES,
-              },
-        ),
+              };
+        }),
     [api],
-  );
+  ) as LoadDocument;
+}
+
+/**
+ * {@link useLoadDocument}'s loader. Only a file document takes setting values
+ * (a shared link's groove): a library song's settings are its own persisted
+ * ones, settled by their observers — never handed in by a load.
+ */
+export interface LoadDocument {
+  (identity: LibraryIdentity, rawById: Readonly<Record<string, unknown>>): void;
+  (
+    identity: FileIdentity,
+    rawById: Readonly<Record<string, unknown>>,
+    values?: readonly SettingValue[],
+  ): void;
+  (identity: SongIdentity, rawById: Readonly<Record<string, unknown>>): void;
 }
 
 /**
@@ -326,7 +355,14 @@ function readSetting<T>(
   registered: ReadonlySet<SongSettingKey<unknown>>,
 ): SongSetting<T> {
   if (loaded?.identity.kind === "file") {
-    return { kind: "settled", value: key.absent };
+    // The value the file was loaded with (`settingValue`, typed `T`), else
+    // the setting's default: a file has no persisted settings to wait on.
+    return {
+      kind: "settled",
+      value: loaded.settings.has(key)
+        ? (loaded.settings.get(key) as T)
+        : key.absent,
+    };
   }
   if (loaded !== null && loaded.settings.has(key)) {
     // The value was written through `useWriteSongSetting(key)`, typed `T`.

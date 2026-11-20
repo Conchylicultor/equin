@@ -57,3 +57,22 @@ export function defineSongSetting<T>(
 ): SongSettingKey<T> {
   return { name, absent };
 }
+
+/**
+ * One setting's value a file document is loaded WITH (`useLoadDocument`'s
+ * third argument) — what a shared song link carries (its groove), read as the
+ * setting's value in place of its `absent` one. Built by {@link settingValue},
+ * so the value is checked against the setting's own type.
+ */
+export interface SettingValue {
+  readonly key: SongSettingKey<unknown>;
+  readonly value: unknown;
+}
+
+/** `value` for the setting `key`, as a file document is loaded with it. */
+export function settingValue<T>(
+  key: SongSettingKey<T>,
+  value: T,
+): SettingValue {
+  return { key: key as SongSettingKey<unknown>, value };
+}

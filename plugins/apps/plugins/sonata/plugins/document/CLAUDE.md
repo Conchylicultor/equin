@@ -97,7 +97,7 @@ availability gates over the composed score.
 
 ## Plugin reference
 
-- Description: Sonata song document: a song's identity (a library song or a file), its sources' raw input and its per-song settings as one per-surface state, composed into a score through the source → merge → transpose → voicing → key → spelling → analyzer → chord-mode → swing pipeline. Defines the SonataDocument.{Source,Analyzer,SongSetting} registries; a file document settles every setting to its default and mounts no observer.
+- Description: Sonata song document: a song's identity (a library song or a file), its sources' raw input and its per-song settings as one per-surface state, composed into a score through the source → merge → transpose → voicing → key → spelling → analyzer → chord-mode → swing pipeline. Defines the SonataDocument.{Source,Analyzer,SongSetting} registries; a file document (a file, or a shared song link not added yet) settles every setting to the value it was loaded with, else its default, and mounts no observer.
 - Web:
   - Slots:
     - `SonataDocument.Source`
@@ -124,9 +124,14 @@ availability gates over the composed score.
   - Exports (types):
     - `DocumentContent`
     - `EditedSource`
+    - `FileIdentity`
+    - `LibraryIdentity`
     - `LibrarySong`
     - `LibrarySongLoad`
+    - `LoadDocument`
+    - `LoadedDocument`
     - `RhythmGroove`
+    - `SettingValue`
     - `SongDocumentValue`
     - `SongIdentity`
     - `SongSetting`
@@ -140,6 +145,7 @@ availability gates over the composed score.
     - `grooveSetting`
     - `keyAutoDetectSetting`
     - `sameIdentity`
+    - `settingValue`
     - `SonataDocument`
     - `SongDocumentProvider`
     - `songIdentityKey`
@@ -153,6 +159,7 @@ availability gates over the composed score.
     - `useLibrarySong`
     - `useLibrarySongLoad`
     - `useLoadDocument`
+    - `useLoadedDocument`
     - `useMountedSongId`
     - `usePersistSourceEdit`
     - `useSongDocument`

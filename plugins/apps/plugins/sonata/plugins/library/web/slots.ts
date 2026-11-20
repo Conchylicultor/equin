@@ -3,7 +3,10 @@ import type { FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import type { LiveReader } from "@plugins/network/plugins/live/web";
 import type { OpenDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
-import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
+import type {
+  ResourceResult,
+  ResourceUnavailable,
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import {
@@ -11,6 +14,7 @@ import {
   type CoverContent,
   type CreateOption,
 } from "@plugins/primitives/plugins/data-view/web";
+import type { SettingValue } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import type { Song, SongId, SongLinkKey } from "../core";
 import type { OpenSong } from "./open-song";
 
@@ -123,6 +127,45 @@ export type SourceCreateOption = Omit<
 export type SongLinkValue =
   { known: false } | { known: true; value: string | null };
 
+/**
+ * What a creating link part makes of its value for a preview of a song this
+ * library does not have: the raw input of the source it creates (keyed under
+ * `sourceId`, as that source's own hydration would hand it over).
+ */
+export interface SongLinkPreview {
+  sourceId: string;
+  raw: unknown;
+}
+
+/**
+ * A link part's preview as read: loading, failed, ready — or `unavailable`,
+ * when it needs what this host does not have (an Ultimate Guitar tab is read
+ * by the computer; the website's in-browser demo has none).
+ */
+export type LinkPreviewResult =
+  ResourceResult<SongLinkPreview> | ResourceUnavailable;
+
+/**
+ * How a link part brings a song into being, when it can: both halves, so a
+ * part that can create a song can always be previewed first.
+ *
+ * - `usePreview` — read for a link to a song this library does not have: the
+ *   song as the link carries it ({@link SongLinkPreview}), live — `loading`
+ *   while it is fetched (an Ultimate Guitar tab), `error` when it cannot be,
+ *   `unavailable` where this host cannot read it.
+ * - `create` — the reader's "Add to library": creates the song with the
+ *   link's id, title and this value.
+ */
+type SongLinkCreator =
+  | {
+      usePreview: Hook<(value: string) => LinkPreviewResult>;
+      create: (
+        ctx: SourceContext,
+        song: { id: SongId; title: string; value: string },
+      ) => Promise<void>;
+    }
+  | { usePreview?: never; create?: never };
+
 export const Library = {
   Source: defineSlot<{
     /** Stable id of the source (matches its `SonataDocument.Source` id / `rawById` key). */
@@ -151,29 +194,32 @@ export const Library = {
    *   The player's Share button copies a link with every part, and the song's
    *   title beside them — offered only once a `create` part has a value (a
    *   song another library can be given).
-   * - `create` — set on a part that can bring a song into being (a chord grid,
-   *   an Ultimate Guitar tab): creates the song with the link's id, title and
-   *   this value.
+   * - `usePreview` + `create` — set on a part that can bring a song into
+   *   being (a chord grid, an Ultimate Guitar tab): the song as the link
+   *   carries it, played before it is kept, and its "Add to library"
+   *   ({@link SongLinkCreator}).
    * - `apply` — writes this part's link value onto a song just created from
    *   the link. A value it cannot read is skipped (a link is typed, pasted or
    *   stale — like `;bar`), so the song still opens.
+   * - `previewSetting` — the per-song setting this part's link value stands
+   *   for while the link is previewed (the groove), so the preview sounds as
+   *   the song will once added; `null` for a value it cannot read.
    *
    * A song this library HAS keeps its own content: a link only fills in a song
    * that is missing (the stored song is never older than a link to it from
    * this library, so it wins).
    */
-  SongLink: defineSlot<{
-    key: SongLinkKey;
-    useValue: Hook<() => SongLinkValue>;
-    create?: (
-      ctx: SourceContext,
-      song: { id: SongId; title: string; value: string },
-    ) => Promise<void>;
-    apply?: (
-      ctx: SourceContext,
-      song: { id: SongId; value: string },
-    ) => Promise<void>;
-  }>({ docLabel: (c) => c.key }),
+  SongLink: defineSlot<
+    {
+      key: SongLinkKey;
+      useValue: Hook<() => SongLinkValue>;
+      apply?: (
+        ctx: SourceContext,
+        song: { id: SongId; value: string },
+      ) => Promise<void>;
+      previewSetting?: (value: string) => SettingValue | null;
+    } & SongLinkCreator
+  >({ docLabel: (c) => c.key }),
   /**
    * The cover seam: each contribution answers for the songs it knows
    * (`cover(song)`, a hook-free read of the row — it is called per card per

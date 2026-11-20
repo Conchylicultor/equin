@@ -11,7 +11,10 @@ import {
   fromLinkText,
   toLinkText,
 } from "@plugins/apps/plugins/sonata/plugins/library/core";
-import { asChordGridRaw, compile } from "../../core";
+import { useMemo } from "react";
+import { readyResource } from "@plugins/network/plugins/live/plugins/live-state/web";
+import type { LinkPreviewResult } from "@plugins/apps/plugins/sonata/plugins/library/web";
+import { asChordGridRaw, compile, type ChordGridRaw } from "../../core";
 import { createChordGridSong } from "../../shared/endpoints";
 import { CHORD_GRID_SOURCE_ID } from "../constants";
 
@@ -29,15 +32,24 @@ function useGridLinkValue(): SongLinkValue {
   };
 }
 
+/** A link's grid as the chord grid's raw — known at once: the link carries it. */
+function useGridPreview(value: string): LinkPreviewResult {
+  return useMemo(() => {
+    const raw: ChordGridRaw = { text: fromLinkText(value) };
+    return readyResource({ sourceId: CHORD_GRID_SOURCE_ID, raw });
+  }, [value]);
+}
+
 /**
  * The chord grid's part of a song's link: the grid text, and — for a link to
- * a song this library does not have — the song itself, created under the
- * link's id and title with the grid's derived metrics (measured as the editor
- * does).
+ * a song this library does not have — the song itself: previewed from the
+ * link's grid, then (Add to library) created under the link's id and title
+ * with the grid's derived metrics (measured as the editor does).
  */
 export const chordGridSongLink = Library.SongLink({
   key: "grid",
   useValue: useGridLinkValue,
+  usePreview: useGridPreview,
   create: async ({ fetchEndpoint }, { id, title, value }) => {
     const text = fromLinkText(value);
     const score = compile({ text });

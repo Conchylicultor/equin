@@ -3,6 +3,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 export {
   activationProps,
   browserTabAddressSink,
+  browserTabUrl,
   gestureOf,
   linkGestureProps,
   linkProps,
