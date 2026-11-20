@@ -142,6 +142,14 @@ describe("NotificationsClient — unanswered subs", () => {
       server: opts.server,
       telemetry: opts.telemetry,
       fetchImpl: (input) => {
+        // A sub made before the socket was ever open also primes its value
+        // over HTTP (`observe`); that read is not the trail question, and
+        // stays in flight here (a host still booting).
+        if (
+          new URL(String(input), "http://x").pathname !==
+          "/api/resources/_answer"
+        )
+          return new Promise<Response>(() => {});
         asked.push(String(input));
         switch (opts.trail ?? "trail") {
           case "trail":

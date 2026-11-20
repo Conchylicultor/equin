@@ -801,30 +801,16 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
 
   // `hasValue` — a real value has landed at least once (`dataUpdatedAt` leaves
   // epoch 0 only on a successful load). The internal branches below key off
-  // it, not on "loaded and not errored", so an error does not re-prime or
-  // re-time the mount→settle metric. A skipped read has none.
+  // it, not on "loaded and not errored", so an error does not re-time the
+  // mount→settle metric. A skipped read has none.
   const hasValue = !skipped && q.dataUpdatedAt !== 0;
   // The one typed failure (memoized per raw error, so every observer of the
   // query shares one `ResourceError` identity).
   const error = skipped || q.error === null ? null : toResourceError(q.error);
 
-  // Cold-start accelerator: if this resource mounts before the live-state
-  // transport has EVER been ready (a cold deep-link — the notifications socket is
-  // starved for seconds by main-thread saturation), fetch the first value over
-  // plain HTTP in parallel with the socket coming up, so content settles ~2.5s
-  // sooner instead of waiting on the batched WS sub-ack. Fires at most once per
-  // (key,params), only while still pending (no hydrated/boot-snapshot value), and
-  // only on genuine cold start. Warm navigations (transport already opened once)
-  // skip this entirely, so the warm path is unchanged. The later WS sub-ack
-  // reconciles via the shared version guard.
-  const primedKeyRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (hasValue || skipped) return;
-    if (notifications.hasEverBeenReady(origin)) return;
-    if (primedKeyRef.current === keyStr) return;
-    primedKeyRef.current = keyStr;
-    void notifications.primeFromHttp(key, p, origin);
-  }, [hasValue, skipped, keyStr, notifications, key, origin, p]);
+  // The cold-start HTTP prime (a tuple subscribed before the transport was
+  // ever ready) is the SUB's, sent by `observe` on its 0→1 — never a reader's,
+  // so N readers mounting while it is in flight cost one read, not N.
 
   // Count this read as "still waiting for data" from mount until its first value
   // lands (the cleanup runs on the `hasValue` flip, on unmount, and on a key
@@ -1064,23 +1050,11 @@ export function useResources<T, P extends ResourceParams = ResourceParams>(
     [byTuple, tupleKeys],
   );
 
-  // Tuples with no value yet: counted as pending mounts, and — before the
-  // transport was ever ready — primed over HTTP once each, as `useResource`
-  // does for its one tuple.
+  // Tuples with no value yet: counted as pending mounts. (A cold-start HTTP
+  // prime is the sub's own, sent by `observe` — see `useResource`.)
   const waitingJson = JSON.stringify(
     tupleKeys.filter((_, i) => states[i]?.hasValue !== true),
   );
-  const primedRef = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    if (notifications.hasEverBeenReady(origin)) return;
-    const waiting = new Set(JSON.parse(waitingJson) as string[]);
-    list.forEach((p, i) => {
-      const k = tupleKeys[i]!;
-      if (!waiting.has(k) || primedRef.current.has(k)) return;
-      primedRef.current.add(k);
-      void notifications.primeFromHttp(key, p, origin);
-    });
-  }, [notifications, origin, key, list, tupleKeys, waitingJson]);
   const releasesRef = useRef<Map<string, () => void>>(new Map());
   useEffect(() => {
     const waiting = new Set(JSON.parse(waitingJson) as string[]);

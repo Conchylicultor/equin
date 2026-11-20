@@ -611,6 +611,11 @@ interface ActiveSub {
    */
   socketValue: boolean;
   /**
+   * This sub's cold-start HTTP prime is in flight (`primeIfCold`): at most one
+   * per tuple at a time, however many readers join it meanwhile.
+   */
+  priming?: true;
+  /**
    * The HTTP body the cached value came from (its backend's boot and version),
    * read only while `socketValue` is false: when a backend other than the
    * socket's answers this tab's reads, its next answer is compared against its
@@ -1135,8 +1140,8 @@ export class NotificationsClient {
   }
 
   /** Has the transport for this origin's channel EVER reached "open"? A one-way
-   *  latch (never reset) used by useResource to decide whether a cold-start HTTP
-   *  prime is warranted. */
+   *  latch (never reset) used by `observe` to decide whether a fresh sub's
+   *  cold-start HTTP prime is warranted. */
   hasEverBeenReady(origin?: ResourceOrigin): boolean {
     return this.firstReadyByKind[socketKindFor(origin)] !== null;
   }
@@ -1671,6 +1676,9 @@ export class NotificationsClient {
         channel.pendingTeardown.delete(id);
       }
       existing.refcount++;
+      // A reader joining a tuple still without a value re-primes it if no
+      // prime is in flight (the first one failed: a host still booting).
+      this.primeIfCold(existing, key, params, origin);
       this.emitDebug();
       return;
     }
@@ -1693,7 +1701,40 @@ export class NotificationsClient {
     });
     trace(`observe key=${key} params=${pk} refcount=1`);
     this.sendSub(channel, key, params, seed?.frame);
+    this.primeIfCold(channel.subs.get(id)!, key, params, origin);
     this.emitDebug();
+  }
+
+  /**
+   * Cold-start accelerator, owned by the SUB: a tuple observed before this
+   * origin's transport was ever ready, with no value yet (none hydrated, none
+   * cached), reads its first value over plain HTTP in parallel with the
+   * socket coming up; the later sub-ack reconciles through the shared version
+   * guard. One read in flight per tuple however many readers mount meanwhile
+   * — a prime per reader (the hooks' own, before) sent the in-browser demo
+   * ~130 identical config reads while its host booted. A reader observing
+   * after a prime settled without a value (it failed) primes again.
+   */
+  private primeIfCold(
+    entry: ActiveSub,
+    key: string,
+    params: ResourceParams,
+    origin: ResourceOrigin | undefined,
+  ): void {
+    if (
+      entry.priming ||
+      this.hasEverBeenReady(origin) ||
+      this.queryClient.getQueryData(queryKeyFor(key, params)) !== undefined
+    )
+      return;
+    entry.priming = true;
+    void (async () => {
+      try {
+        await this.primeFromHttp(key, params, origin);
+      } finally {
+        delete entry.priming;
+      }
+    })();
   }
 
   /**

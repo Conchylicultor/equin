@@ -74,7 +74,7 @@ tuples of ONE resource (network/live's paged read;
 `useLive(value, [p1, p2, …])`).
 
 Each tuple is read exactly as `useResource` reads it (shared
-`tupleQueryOptions`, refcount, prime, pending count, `reportTupleSettled` → Slow
+`tupleQueryOptions`, refcount, the sub's cold-start prime, pending count, `reportTupleSettled` → Slow
 Ops) and yields `ResourceResult`s in list order. No `select`, no `gate`.
 
 - The sub set moves by **diff**: a kept tuple is never unobserved/re-observed;
@@ -384,7 +384,11 @@ doc-comment is the spec). Callers:
 
 - `useResource`'s `queryFn` (`"fallback"`; errors → `q.error`);
 - `primeFromHttp` (`"prime"`, fire-and-forget; network/HTTP/stale errors
-  swallowed, schema failure rethrown).
+  swallowed, schema failure rethrown). Sent by `observe` for the SUB, never
+  per reader (`primeIfCold`): a tuple observed before its socket was ever
+  open, with nothing cached, gets one read in flight however many readers
+  join it; a reader joining after a prime settled with no value primes
+  again. Pinned by `notifications-cold-prime.test.ts`.
 
 Same version guard as WS frames; returns the effective cached value. Pinned by
 `notifications-http-fetch.test.ts`.
