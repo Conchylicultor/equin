@@ -76,6 +76,9 @@ export async function agentsUnder(
             FROM sub
             JOIN ${_attempts} a ON a.task_id = sub.id
             JOIN ${_conversations} c ON c.attempt_id = a.id
+           -- The task's own agent: never a side chat opened beside it (one
+           -- stating its own mandate — tasks-core's conversations.mandate_ref).
+           WHERE c.mandate_ref IS NULL
            ORDER BY a.task_id, c.created_at DESC, c.id DESC
         )
         SELECT t.id AS task_id, t.title, tv.status::text AS task_status, l.id AS conversation_id, l.status,
@@ -114,8 +117,9 @@ function toAgent(
 
 /**
  * The agent `ref` names, anywhere — a task id, or a conversation id standing
- * for its task: the task and its LATEST conversation (the one a message
- * reaches, as `list_agents` and event turns name it). `null` when `ref` names
+ * for its task: the task and its LATEST conversation working under the
+ * task's mandate — never a side chat beside it (the one a message reaches, as
+ * `list_agents` and event turns name it). `null` when `ref` names
  * neither.
  */
 export async function agentOf(
@@ -143,7 +147,7 @@ export async function agentOf(
                    c.status_unverified_since IS NOT NULL AS unverified
               FROM ${_attempts} a
               JOIN ${_conversations} c ON c.attempt_id = a.id
-             WHERE a.task_id = target.id
+             WHERE a.task_id = target.id AND c.mandate_ref IS NULL
              ORDER BY c.created_at DESC, c.id DESC
              LIMIT 1
           ) l ON true`,

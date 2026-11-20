@@ -148,6 +148,7 @@ function prepared(taskId: string): PreparedConversation {
     rawPrompt: "do the thing",
     launchTurn: { text: "do the thing", typedText: "do the thing" },
     preprompt: undefined,
+    statedMandate: undefined,
     workspace: {
       attemptId,
       path: `/tmp/${attemptId}`,

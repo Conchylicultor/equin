@@ -7,6 +7,7 @@ import { dirname, join } from "node:path";
 import {
   createTask,
   createAttempt,
+  conversationStatedMandate,
   getAttemptRow,
   insertConversation,
   getConversation,
@@ -22,7 +23,12 @@ import {
   type DbExecutor,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import type { EmitTx } from "@plugins/infra/plugins/events/server";
-import type { MandateRef } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
+import type {
+  MandateId,
+  MandateRef,
+} from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
+import { interactiveMandate } from "@plugins/tasks/plugins/mandate-presets/core";
+import { db } from "@plugins/database/server";
 import type {
   ConversationLaunch,
   TaskFiling,
@@ -231,6 +237,9 @@ export interface PreparedConversation {
   // The preprompt this conversation runs under, snapshotted on the commit —
   // the instructions every spawn of it appends to the system prompt.
   preprompt: ConversationPrepromptSnapshot | undefined;
+  // The mandate the conversation states in place of its task's, stored on its
+  // row (`conversationMandate` reads it first); undefined: its task's.
+  statedMandate: MandateId | undefined;
   // The attempt's workspace: its path and the spec it was launched with.
   workspace: WorkspaceAt;
   create: SpawnCreate;
@@ -446,6 +455,18 @@ export async function prepareConversation(
     ? await getConversationPreprompt(opts.forkFromConversationId)
     : await taskPreprompt(effectiveTaskId);
 
+  // The mandate. The conversation that runs its task works under the task's;
+  // a conversation opened BESIDE it in the same attempt (a side chat, a
+  // launch prompt) is a plain one — `interactive` — never a second holder of
+  // what the task states (a supervisor's powers, its events, its tree watch).
+  // A fork keeps its source's: it continues that conversation.
+  const statedMandate = opts.forkFromConversationId
+    ? ((await conversationStatedMandate(opts.forkFromConversationId, db)) ??
+      undefined)
+    : target.kind === "reuse"
+      ? interactiveMandate.id
+      : undefined;
+
   // Thinking mode: the launching task's, for the same reason as the preprompt.
   // Threaded to the runtime as CLI args (ultracode rides --settings).
   const effort = await resolveTaskEffort(effectiveTaskId);
@@ -461,6 +482,7 @@ export async function prepareConversation(
     rawPrompt: opts.prompt,
     launchTurn,
     preprompt,
+    statedMandate,
     workspace,
     target,
     create: {
@@ -532,6 +554,7 @@ export async function commitConversation(
       model: p.model,
       launch: p.launch,
       kind: p.kind,
+      mandateId: p.statedMandate,
     },
     tx,
   );

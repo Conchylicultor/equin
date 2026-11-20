@@ -25,6 +25,16 @@ task resolves to a policy. Plan:
   re-file to the root (`prepareRefile`, shared by `updateTask` and the drag
   move) copies the ref the task had. Never the grants: a change to a
   definition reaches every tree under it, running ones included.
+- **A conversation's own mandate** — `conversations.mandate_ref` (tasks-core,
+  server-only, `conversationStatedMandate`): NULL for the conversation that
+  runs its task (it works under the task's), stated at insert otherwise. A
+  conversation opened BESIDE it in the same attempt (the fork-conversation
+  side chat, a launch prompt) states `interactive` — a plain conversation,
+  never a second supervisor; a fork copies its source's (decided in
+  conversations' `prepareConversation`). `conversationMandate` reads it first,
+  keeping the task's tree and scope; the task's agent (`message_agent`,
+  `list_agents`, a role session's event delivery) is only a conversation with
+  none.
 - **Effective mandate** — tasks-core's `tasks_ext_mandate`: every task's
   nearest `mandate_ref`, kept exact in the same transaction as each write that
   moves it (`refreshEffectiveMandates`; re-derived whole on boot), exposed as
@@ -74,6 +84,7 @@ automations define theirs through `defineAutomation({ mandate })`.
     - `database.db`
     - `network/live.serveValue`
     - `tasks/orchestration/mandate/definitions.mandateDefinitionEntries`
+    - `tasks/tasks-core.conversationStatedMandate`
     - `tasks/tasks-core.getConversation`
     - `tasks/tasks-core.nearestMandate`
   - Exports (types):

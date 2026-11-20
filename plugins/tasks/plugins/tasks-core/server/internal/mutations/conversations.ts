@@ -28,6 +28,7 @@ import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { withTaskStatusBatch, type DbExecutor } from "../status-batch";
 import type { EmitTx } from "@plugins/infra/plugins/events/server";
 import { withTaskStatusChange } from "../status-scope";
+import type { MandateId } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 
 export interface InsertConversationInput {
   id: string;
@@ -40,6 +41,11 @@ export interface InsertConversationInput {
   /** Never `working`: only the status reconciler knows what a turn is busy on. */
   status?: Exclude<ConversationStatus, "working">;
   title?: string | null;
+  /**
+   * The mandate it works under in place of its task's (the server-only
+   * `mandateRef` column); omitted, its task's. Stated once, at insert.
+   */
+  mandateId?: MandateId;
 }
 
 /**
@@ -196,6 +202,7 @@ export async function insertConversation(
       kind: input.kind ?? "user",
       status: input.status ?? "starting",
       title: input.title ?? task?.title ?? null,
+      mandateRef: input.mandateId ?? null,
     });
   });
   const [row] = await exec

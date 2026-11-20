@@ -526,6 +526,7 @@ serves them.
     - `conversationRuntimesServed`
     - `ConversationSchema`
     - `conversationSessionTailsServed`
+    - `conversationStatedMandate`
     - `conversationStatusChanged`
     - `conversationWorkspacesServed`
     - `createAttempt`

@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray, max, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNull, max, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, type DbExecutor } from "@plugins/database/server";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
@@ -193,7 +193,10 @@ async function gather(
     });
 }
 
-/** The conversation a role's live session runs in now, or null before its agent started. */
+/** The conversation a role's live session runs in now, or null before its
+ * agent started. Only one working under the session's own mandate (no stated
+ * mandate of its own): a side chat opened beside it is a plain conversation,
+ * never handed the role's events. */
 async function sessionConversation(
   sessionTaskId: string,
   exec: DbExecutor,
@@ -202,7 +205,12 @@ async function sessionConversation(
     .select({ id: _conversations.id })
     .from(_attempts)
     .innerJoin(_conversations, eq(_conversations.attemptId, _attempts.id))
-    .where(eq(_attempts.taskId, sessionTaskId))
+    .where(
+      and(
+        eq(_attempts.taskId, sessionTaskId),
+        isNull(_conversations.mandateRef),
+      ),
+    )
     .orderBy(desc(_conversations.createdAt), desc(_conversations.id))
     .limit(1);
   return row?.id ?? null;

@@ -3,6 +3,7 @@ import { db } from "@plugins/database/server";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import type { McpToolContext } from "@plugins/infra/plugins/mcp/server";
 import {
+  conversationStatedMandate,
   getConversation,
   nearestMandate,
 } from "@plugins/tasks/plugins/tasks-core/server";
@@ -66,19 +67,27 @@ export type ConversationMandate =
  * on every MCP request, all in parallel. */
 const conversationMandates = createInflight("conversation-mandate");
 
-/** The effective mandate of the task a conversation works on; `none` for a
- * conversation without a task (or that does not exist) — nothing granted. */
+/** The effective mandate of a conversation: the one it states itself (a side
+ * chat opened beside its task's own conversation states `interactive`), else
+ * its task's; `none` for a conversation without a task (or that does not
+ * exist) — nothing granted. A stated mandate keeps the tree (`rootTaskId`) and
+ * the place in it (`at`) of its task's: it changes what the conversation may
+ * do, not where it works. */
 export function conversationMandate(
   conversationId: string,
 ): Promise<ConversationMandate> {
   return conversationMandates.run(conversationId, async () => {
     const conversation = await getConversation(conversationId);
     if (conversation === null) return { kind: "none" } as const;
-    const mandate = await mandateOf(conversation.taskId);
+    const [mandate, stated] = await Promise.all([
+      mandateOf(conversation.taskId),
+      conversationStatedMandate(conversationId, db),
+    ]);
     if (mandate.kind === "none") return mandate;
     const at: GrantScope =
       mandate.rootTaskId === conversation.taskId ? "root" : "below";
-    return { ...mandate, at };
+    if (stated === null) return { ...mandate, at };
+    return { ...mandate, mandateId: stated, policy: policyOf(stated), at };
   });
 }
 

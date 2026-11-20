@@ -196,69 +196,85 @@ const attemptDeliveriesEntity = defineEntity(attemptDeliveriesEntityRef, {
 });
 export const _attemptDeliveries = attemptDeliveriesEntity.table;
 
-const conversationsEntity = defineEntity(conversationsEntityRef, {
-  primaryKey: "id",
-  // Which columns move `updatedAt` (derived by a DB trigger; a write to it
-  // raises). New messages are tracked by the status proxy: a turn enters
-  // `working` and the reply leaves it; closing (`done`) counts. Resume
-  // (waiting <-> starting, or `resumingSince`), a pane dying (-> gone), viewing and hibernation
-  // do not. A turn starting or ending while background work keeps the status
-  // `working` moves it through `workingOn` instead (into / out of `turn`).
-  updatedAt: {
-    touchedBy: {
-      id: false,
-      attemptId: false,
-      title: true,
-      model: true,
-      status: { into: ["working", "done"], outOf: ["working"] },
-      runtime: false,
-      kind: false,
-      claudeSessionId: false,
-      waitingFor: false,
-      workingOn: { into: ["turn"], outOf: ["turn"] },
-      statusUnverifiedSince: false,
-      statusSince: false,
-      launchCause: false,
-      launchedFrom: false,
-      createdAt: false,
-      endedAt: false,
-      closeRequested: false,
-      hibernatedAt: false,
-      resumingSince: false,
-      lastViewedAt: false,
-    },
-  },
-  columns: {
-    attemptId: {
-      references: {
-        column: () => attemptsEntity.table.id,
-        onDelete: "cascade",
+// Server-only columns of `conversations`: never on the wire (`conversations_v`
+// leaves them out).
+const conversationServerFields = {
+  // The mandate this conversation works under IN PLACE of its task's
+  // (`tasks/orchestration/mandate`'s `conversationMandate`). NULL = its task's
+  // — the conversation that runs the task. A conversation opened beside it in
+  // the same attempt (a side chat) states `interactive`, so it is a plain
+  // conversation, never a second supervisor; a fork copies its source's.
+  mandateRef: nullable(textField()),
+};
+
+const conversationsEntity = defineEntity(
+  conversationsEntityRef,
+  conversationServerFields,
+  {
+    primaryKey: "id",
+    // Which columns move `updatedAt` (derived by a DB trigger; a write to it
+    // raises). New messages are tracked by the status proxy: a turn enters
+    // `working` and the reply leaves it; closing (`done`) counts. Resume
+    // (waiting <-> starting, or `resumingSince`), a pane dying (-> gone), viewing and hibernation
+    // do not. A turn starting or ending while background work keeps the status
+    // `working` moves it through `workingOn` instead (into / out of `turn`).
+    updatedAt: {
+      touchedBy: {
+        id: false,
+        attemptId: false,
+        title: true,
+        model: true,
+        status: { into: ["working", "done"], outOf: ["working"] },
+        runtime: false,
+        kind: false,
+        claudeSessionId: false,
+        waitingFor: false,
+        workingOn: { into: ["turn"], outOf: ["turn"] },
+        statusUnverifiedSince: false,
+        statusSince: false,
+        launchCause: false,
+        launchedFrom: false,
+        createdAt: false,
+        endedAt: false,
+        closeRequested: false,
+        hibernatedAt: false,
+        resumingSince: false,
+        lastViewedAt: false,
+        mandateRef: false,
       },
     },
-    status: { default: "starting" },
-    runtime: { default: "sdk" },
-    kind: { default: "user" },
-    createdAt: { default: defaultNow() },
-    updatedAt: { default: defaultNow() },
-    closeRequested: { default: false },
+    columns: {
+      attemptId: {
+        references: {
+          column: () => attemptsEntity.table.id,
+          onDelete: "cascade",
+        },
+      },
+      status: { default: "starting" },
+      runtime: { default: "sdk" },
+      kind: { default: "user" },
+      createdAt: { default: defaultNow() },
+      updatedAt: { default: defaultNow() },
+      closeRequested: { default: false },
+    },
+    // attempts_v / tasks_v derive status via per-attempt correlated subqueries on
+    // conversations.attempt_id, several of them filtered by status (max_ended_at,
+    // has_live_conv `status NOT IN ('gone','done')`, has_waiting `status='waiting'`).
+    // The composite (attempt_id, status) serves both the bare attempt_id lookups
+    // and the status-filtered ones; without it these are full seq scans of the
+    // conversations table per attempt on every cascade.
+    indexes: (t) => [
+      index("conversations_attempt_id_status_idx").on(t.attemptId, t.status),
+      // Backs the All-conversations DataView's default keyset (createdAt DESC, id
+      // ASC tiebreaker) so the global list pages index-only at scale.
+      index("conversations_created_id_idx").on(t.createdAt, t.id),
+      // Which conversation a written transcript belongs to: the live session id
+      // (the chain's floor) looked up from a transcript-write event's session id
+      // (conversations/usage).
+      index("conversations_claude_session_id_idx").on(t.claudeSessionId),
+    ],
   },
-  // attempts_v / tasks_v derive status via per-attempt correlated subqueries on
-  // conversations.attempt_id, several of them filtered by status (max_ended_at,
-  // has_live_conv `status NOT IN ('gone','done')`, has_waiting `status='waiting'`).
-  // The composite (attempt_id, status) serves both the bare attempt_id lookups
-  // and the status-filtered ones; without it these are full seq scans of the
-  // conversations table per attempt on every cascade.
-  indexes: (t) => [
-    index("conversations_attempt_id_status_idx").on(t.attemptId, t.status),
-    // Backs the All-conversations DataView's default keyset (createdAt DESC, id
-    // ASC tiebreaker) so the global list pages index-only at scale.
-    index("conversations_created_id_idx").on(t.createdAt, t.id),
-    // Which conversation a written transcript belongs to: the live session id
-    // (the chain's floor) looked up from a transcript-write event's session id
-    // (conversations/usage).
-    index("conversations_claude_session_id_idx").on(t.claudeSessionId),
-  ],
-});
+);
 export const _conversations = conversationsEntity.table;
 
 // The compiled derived-`updatedAt` specs of this cluster's entities, for the
