@@ -116,7 +116,9 @@ await withBrowser(async (h) => {
     r.ok(
       "the host's boot report says its data is in memory",
       consoleLines.some((l) =>
-        /\[demo-scope\].*data: snapshot, in memory \(no Web Locks in this worker\)/.test(l),
+        /\[demo-scope\].*data: snapshot, in memory \(no Web Locks in this worker\)/.test(
+          l,
+        ),
       ),
       consoleLines.find((l) => l.includes("[demo-scope]"))?.slice(0, 400),
     );
