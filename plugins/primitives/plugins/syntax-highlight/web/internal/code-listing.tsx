@@ -33,13 +33,30 @@ export interface CodeListingProps {
   emptyText?: string;
 }
 
+/**
+ * The text metrics of every code listing (font, size, line height) — what
+ * an editor drawn over the same code must share for the switch between the
+ * two to move nothing.
+ */
+export const CODE_TEXT = "font-mono text-caption leading-5";
+
+/**
+ * One line number in a listing's gutter (its width, the gap after it, its
+ * ink), followed by its line's code — the same cell an editor's gutter draws.
+ */
+export const CODE_GUTTER_CELL =
+  "inline-block w-11 pr-lg select-none text-right text-muted-foreground/50 tabular-nums";
+
+/** The box of a `pane` listing's code: inset, as wide as its longest line. */
+const PANE_CODE_BOX = "min-h-full w-max min-w-full p-md";
+
 function makeLineNumberTransformer(startLine: number): ShikiTransformer {
   return {
     line(node, lineIdx) {
       node.children.unshift({
         type: "element",
         tagName: "span",
-        properties: { class: "ln" },
+        properties: { class: CODE_GUTTER_CELL },
         children: [{ type: "text", value: String(startLine + lineIdx - 1) }],
       });
     },
@@ -63,9 +80,18 @@ const HIGHLIGHT_STYLE =
   "<style>.shiki .line[data-highlighted]{background-color:rgba(250,200,50,0.18);display:block;width:100%}</style>";
 const withHighlightStyle = (out: string) => `${HIGHLIGHT_STYLE}${out}`;
 
-// Every `[&>pre]:` / `[&_.ln]:` class below styles markup shiki injects through
+/** Puts `className` on the `<pre>` shiki writes. */
+function preClassTransformer(className: string): ShikiTransformer {
+  return {
+    pre(node) {
+      this.addClassToHast(node, className);
+    },
+  };
+}
+
+// Every `[&>pre]:` class below styles markup shiki injects through
 // dangerouslySetInnerHTML — we never hold those elements, so no primitive can
-// wrap them. `[&_.ln]` is the line-number gutter.
+// wrap them.
 
 /**
  * The surface a `pane` listing draws on: a scroll box filling its host's
@@ -121,10 +147,13 @@ export function CodeListing({
   // re-runs on real input changes.
   const transformers = useMemo<ShikiTransformer[]>(() => {
     const t = [makeLineNumberTransformer(startLine)];
+    if (variant === "pane") {
+      t.push(preClassTransformer(`${CODE_TEXT} ${PANE_CODE_BOX}`));
+    }
     if (highlightLine != null)
       t.push(makeHighlightTransformer(startLine, highlightLine));
     return t;
-  }, [startLine, highlightLine]);
+  }, [startLine, highlightLine, variant]);
 
   const { html } = useHighlightedHtml(code, resolvedLang, {
     dark,
@@ -161,8 +190,8 @@ export function CodeListing({
       <ContentScope>
         <CodePaneSurface>
           <pre
-            // eslint-disable-next-line text/no-adhoc-typography -- leading-5 fixes mono code line-height for line-number gutter alignment, distinct from caption's tighter line-height
-            className="whitespace-pre-wrap break-words p-md font-mono text-caption leading-5"
+            // eslint-disable-next-line text/no-adhoc-typography -- CODE_TEXT's leading-5 fixes mono code line-height for line-number gutter alignment, distinct from caption's tighter line-height
+            className={`whitespace-pre-wrap break-words p-md ${CODE_TEXT}`}
           >
             {code}
           </pre>
@@ -184,18 +213,13 @@ export function CodeListing({
   return (
     <ContentScope>
       {variant === "pane" ? (
-        <CodePaneSurface
-          ref={containerRef}
-          // eslint-disable-next-line text/no-adhoc-typography -- [&>pre]:leading-5 fixes mono code line-height for line-number gutter alignment
-          className="[&>pre]:min-h-full [&>pre]:w-max [&>pre]:min-w-full [&>pre]:p-md [&>pre]:font-mono [&>pre]:text-caption [&>pre]:leading-5 [&_.ln]:inline-block [&_.ln]:w-11 [&_.ln]:pr-lg [&_.ln]:select-none [&_.ln]:text-right [&_.ln]:text-muted-foreground/50 [&_.ln]:tabular-nums"
-          html={html}
-        />
+        <CodePaneSurface ref={containerRef} html={html} />
       ) : (
         <Scroll
           ref={containerRef}
           axis="both"
           // eslint-disable-next-line layout/no-adhoc-layout -- `[&>pre]:overflow-auto` is a child-pre clip targeted via arbitrary variant on dangerouslySetInnerHTML output; not expressible through Stack/Inset/Scroll on the child
-          className="max-h-[280px] [&>pre]:overflow-auto [&>pre]:rounded-md [&>pre]:bg-muted [&>pre]:p-md [&>pre]:font-mono [&>pre]:text-caption [&_.ln]:inline-block [&_.ln]:w-11 [&_.ln]:pr-lg [&_.ln]:select-none [&_.ln]:text-right [&_.ln]:text-muted-foreground/50 [&_.ln]:tabular-nums"
+          className="max-h-[280px] [&>pre]:overflow-auto [&>pre]:rounded-md [&>pre]:bg-muted [&>pre]:p-md [&>pre]:font-mono [&>pre]:text-caption"
           dangerouslySetInnerHTML={{ __html: html }}
         />
       )}

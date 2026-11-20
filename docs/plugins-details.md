@@ -51900,9 +51900,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 188 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+            - Imported by: 189 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
               - `apps` ×52
-              - `primitives` ×33
+              - `primitives` ×34
               - `conversations` ×28
               - `debug` ×18
               - `page` ×11
@@ -52364,10 +52364,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Rigid`
               - `rigidClass`
           - Cross-plugin:
-            - Imported by: 149 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+            - Imported by: 150 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
               - `apps` ×37
               - `conversations` ×29
-              - `primitives` ×20
+              - `primitives` ×21
               - `debug` ×14
               - `page` ×8
               - `tasks` ×8
@@ -59059,6 +59059,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HighlightedHtmlResult`
           - `UseHighlightedHtmlOptions`
         - Exports (values):
+          - `CODE_GUTTER_CELL`
+          - `CODE_TEXT`
           - `codeBackground`
           - `CodeListing`
           - `CodePaneSurface`
@@ -59182,11 +59184,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `primitives/css/clip.Clip`
               - `primitives/css/clip.clipClasses`
+              - `primitives/css/fill.fillClasses`
               - `primitives/css/layer.layerClasses`
+              - `primitives/css/rigid.rigidClass`
               - `primitives/css/text.textVariantClass`
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.Textarea`
-              - `primitives/syntax-highlight.codeBackground`
+              - `primitives/syntax-highlight.CODE_GUTTER_CELL`
+              - `primitives/syntax-highlight.CODE_TEXT`
+              - `primitives/syntax-highlight.CodePaneSurface`
               - `primitives/syntax-highlight.getHighlighter`
               - `primitives/syntax-highlight.languageForPath`
               - `primitives/syntax-highlight.SHIKI_LANGS`

@@ -34,6 +34,12 @@ export interface OverlayTextareaProps {
   onCaretClick?: (offset: number) => void;
   /** Take the focus when it mounts (an editor the person just opened). */
   autoFocus?: boolean;
+  /**
+   * The text metrics both layers share (font, size, line height, padding,
+   * wrapping, tab size) — default a prose field's, wrapping. A code editor
+   * passes its listing's, so it draws its text where the listing does.
+   */
+  metrics?: string;
 }
 
 /**
@@ -85,10 +91,11 @@ export function OverlayTextarea({
   className,
   onCaretClick,
   autoFocus,
+  metrics = METRICS,
 }: OverlayTextareaProps) {
   return (
     <Clip className={cn("relative", className)}>
-      <pre aria-hidden className={METRICS}>
+      <pre aria-hidden className={metrics}>
         {value === "" ? (
           // Sizes the empty field to the hint; a lone space keeps one line.
           <span className="invisible">{placeholder || " "}</span>
@@ -126,7 +133,7 @@ export function OverlayTextarea({
           clipClasses({ axis: "both", fill: false }),
           "h-full w-full resize-none border-0 bg-transparent outline-none",
           "text-transparent caret-foreground placeholder:text-muted-foreground",
-          METRICS,
+          metrics,
         )}
       />
     </Clip>

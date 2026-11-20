@@ -10,6 +10,8 @@ export { useDarkMode } from "./internal/use-dark-mode";
 export { HighlightedCode } from "./internal/highlighted-code";
 export { JsonCode } from "./internal/json-code";
 export {
+  CODE_GUTTER_CELL,
+  CODE_TEXT,
   CodeListing,
   CodePaneSurface,
   type CodeListingProps,

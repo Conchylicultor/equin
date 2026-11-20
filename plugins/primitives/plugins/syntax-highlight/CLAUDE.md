@@ -19,6 +19,8 @@
     - `HighlightedHtmlResult`
     - `UseHighlightedHtmlOptions`
   - Exports (values):
+    - `CODE_GUTTER_CELL`
+    - `CODE_TEXT`
     - `codeBackground`
     - `CodeListing`
     - `CodePaneSurface`

@@ -38,11 +38,15 @@ so `decorate` would return the injected markup).
   - Uses:
     - `primitives/css/clip.Clip`
     - `primitives/css/clip.clipClasses`
+    - `primitives/css/fill.fillClasses`
     - `primitives/css/layer.layerClasses`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/text.textVariantClass`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.Textarea`
-    - `primitives/syntax-highlight.codeBackground`
+    - `primitives/syntax-highlight.CODE_GUTTER_CELL`
+    - `primitives/syntax-highlight.CODE_TEXT`
+    - `primitives/syntax-highlight.CodePaneSurface`
     - `primitives/syntax-highlight.getHighlighter`
     - `primitives/syntax-highlight.languageForPath`
     - `primitives/syntax-highlight.SHIKI_LANGS`

@@ -1,7 +1,12 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { BundledLanguage, BundledTheme, HighlighterGeneric } from "shiki";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import {
-  codeBackground,
+  CODE_GUTTER_CELL,
+  CODE_TEXT,
+  CodePaneSurface,
   getHighlighter,
   languageForPath,
   SHIKI_LANGS,
@@ -50,25 +55,28 @@ export interface CodeTextareaProps {
   /** The file the text is: its extension picks the language. */
   path: string;
   ariaLabel: string;
-  /** Box chrome beyond the code surface (a min height, a radius) — never metrics. */
-  className?: string;
   /** Take the focus when it mounts. */
   autoFocus?: boolean;
 }
 
+/** The editor's text where the listing draws its code: unwrapped, beside the gutter. */
+const EDITOR_METRICS = cn(CODE_TEXT, "whitespace-pre");
+
 /**
- * A file's text, editable, in the colours its listing reads in: an
- * {@link OverlayTextarea} whose underlay is the text tokenized by shiki in the
- * scheme's theme (colour and italics only — never a weight, which would move
- * the caret), on that theme's background. Plain until the highlighter and the
- * language have loaded, and for a language shiki does not know.
+ * A file's text, editable, laid out as its pane listing (`CodeListing`
+ * variant `pane`) reads: the same surface, inset, gutter of line numbers and
+ * text metrics, unwrapped — so switching between reading and editing moves
+ * no character. An {@link OverlayTextarea} whose underlay is the text
+ * tokenized by shiki in the scheme's theme (colour and italics only — never a
+ * weight, which would move the caret). Plain until the highlighter and the
+ * language have loaded, and for a language shiki does not know. Fills its
+ * host's height, scrolling both ways.
  */
 export function CodeTextarea({
   value,
   onChange,
   path,
   ariaLabel,
-  className,
   autoFocus,
 }: CodeTextareaProps): ReactNode {
   const dark = useDarkMode();
@@ -103,19 +111,33 @@ export function CodeTextarea({
       </span>
     ));
   };
+  // One number per line, as the textarea counts them (a trailing newline
+  // opens a line of its own).
+  const lineCount = value.split("\n").length;
   return (
-    <div
-      // The code's own surface, as the listing paints it.
-      style={{ background: codeBackground(dark) }}
-      className={className}
-    >
-      <OverlayTextarea
-        value={value}
-        onChange={onChange}
-        decorate={decorate}
-        ariaLabel={ariaLabel}
-        autoFocus={autoFocus}
-      />
-    </div>
+    <CodePaneSurface>
+      <div
+        // eslint-disable-next-line layout/no-adhoc-layout -- the listing's code box (inset, as wide as its longest line) holding the gutter beside the text, both top-aligned so their lines pair up
+        className="flex min-h-full w-max min-w-full items-start p-md"
+      >
+        <pre aria-hidden className={cn(CODE_TEXT, rigidClass())}>
+          {Array.from({ length: lineCount }, (_, i) => (
+            <span key={i}>
+              {i > 0 ? "\n" : null}
+              <span className={CODE_GUTTER_CELL}>{i + 1}</span>
+            </span>
+          ))}
+        </pre>
+        <OverlayTextarea
+          value={value}
+          onChange={onChange}
+          decorate={decorate}
+          ariaLabel={ariaLabel}
+          autoFocus={autoFocus}
+          metrics={EDITOR_METRICS}
+          className={fillClasses("x")}
+        />
+      </div>
+    </CodePaneSurface>
   );
 }

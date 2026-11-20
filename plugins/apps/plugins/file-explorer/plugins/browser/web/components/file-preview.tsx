@@ -430,8 +430,9 @@ function FileTextEditor({
       scrollBody={false}
       data-files-preview=""
       body={
+        // The read body's boxes, so the code stays where it was read.
         <Scroll
-          axis="y"
+          axis="both"
           className="h-full"
           onKeyDown={(e) => {
             if ((e.metaKey || e.ctrlKey) && e.key === "s") {
@@ -440,14 +441,19 @@ function FileTextEditor({
             }
           }}
         >
-          <CodeTextarea
-            value={edit.text}
-            onChange={edit.setText}
-            path={path}
-            ariaLabel={`Edit ${baseName(path)}`}
-            className="min-h-full"
-            autoFocus={edit.focus}
-          />
+          <Theme
+            name={subThemeScope(filesDocumentTheme)}
+            surface="none"
+            className="h-full"
+          >
+            <CodeTextarea
+              value={edit.text}
+              onChange={edit.setText}
+              path={path}
+              ariaLabel={`Edit ${baseName(path)}`}
+              autoFocus={edit.focus}
+            />
+          </Theme>
         </Scroll>
       }
     />
