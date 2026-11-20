@@ -46,6 +46,23 @@ export const REFUSAL_WORDS: Record<LinkRefusal, string> = {
 };
 
 /**
+ * What the user does about a refused link — the alert's second half. Each
+ * ends in Retry now: a refusal is never retried on its own. A server key
+ * installed before the box link (`restrict,pty` without forwarding) is
+ * `forwarding-refused`; the install command now allows the loopback forward.
+ */
+const REFUSAL_FIX: Record<LinkRefusal, string> = {
+  auth: "install the key again from the server's SSH key section, then Retry now",
+  "host-key-mismatch":
+    "verify the connection again from the server's SSH key section if the server was rebuilt, then Retry now",
+  "forwarding-refused":
+    "run the install command from the server's SSH key section again (it now allows the link's loopback forward), then Retry now",
+  "no-ssh-key": "set up a key in the server's SSH key section, then Retry now",
+  unverified:
+    "verify the connection in the server's SSH key section, then Retry now",
+};
+
+/**
  * The site's line in the health report — its state as a `HealthStatus`, from
  * the one `deploy.site-health` entry (the design's table):
  *
@@ -197,6 +214,7 @@ export function siteAlert(site: SiteHealth): SiteAlert | null {
         return {
           tone: "critical",
           lead: `Can't connect: ${REFUSAL_WORDS[state.reason]}`,
+          rest: REFUSAL_FIX[state.reason],
         };
       case "outdated":
         return {

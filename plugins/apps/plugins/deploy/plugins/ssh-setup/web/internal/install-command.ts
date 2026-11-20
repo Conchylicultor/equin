@@ -1,4 +1,5 @@
 import type { SshKey } from "@plugins/apps/plugins/deploy/plugins/servers/web";
+import { TUNNEL_KEY_OPTIONS } from "@plugins/infra/plugins/ssh/core";
 
 /**
  * A comment we are willing to interpolate into the `sed` address. The `sed`
@@ -28,6 +29,11 @@ function quote(value: string): string {
  *   PTY is not a privilege boundary when the key already grants root command
  *   execution. Drop `,pty` if a future deploy path never needs a tty. Note a
  *   pre-7.2 sshd (2016) rejects `restrict` and so rejects the whole line.
+ * - **`TUNNEL_KEY_OPTIONS`** (`port-forwarding,permitopen="127.0.0.1:*"`)
+ *   turns local forwards back on, confined to the server's own loopback —
+ *   the box link's tunnel (`box-link/link`) forwards to the deployed equin's
+ *   loopback port and is refused (`forwarding-refused`) without it. Still no
+ *   pivot: the key's shell reaches that loopback anyway.
  * - **`sed -i.bak '/ <comment>$/d'`** makes the command self-cleaning: we own
  *   the comment and it is stable across regenerations, so re-running install
  *   after a replace removes the key this app installed last time. `-i.bak`
@@ -41,7 +47,7 @@ function quote(value: string): string {
  *   leading-`-` handling.
  */
 export function installCommand(key: SshKey): string {
-  const line = `restrict,pty ${key.publicKey}`;
+  const line = `restrict,pty,${TUNNEL_KEY_OPTIONS} ${key.publicKey}`;
   const clean = SAFE_COMMENT.test(key.comment)
     ? ` && sed -i.bak ${quote(`/ ${key.comment}$/d`)} ~/.ssh/authorized_keys`
     : "";

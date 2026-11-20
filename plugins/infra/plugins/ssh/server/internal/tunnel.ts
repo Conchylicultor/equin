@@ -8,6 +8,7 @@
  * `defineDaemon` process, respawned with backoff) and keeps the handle alive
  * — the key and the sockets live in its dir — for as long as it may respawn.
  */
+import { TUNNEL_REMOTE_HOST } from "../../core";
 import type { HermeticHandle } from "./session";
 
 /**
@@ -97,5 +98,5 @@ function forwardSpec({ localSocket, remotePort }: SshForward): string {
       `[ssh] tunnel remote port ${String(remotePort)} is not a TCP port`,
     );
   }
-  return `${localSocket}:127.0.0.1:${String(remotePort)}`;
+  return `${localSocket}:${TUNNEL_REMOTE_HOST}:${String(remotePort)}`;
 }

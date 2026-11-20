@@ -41728,6 +41728,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/deploy/box-link/link`
           - `apps/deploy/health`
           - `apps/deploy/host-query`
+          - `apps/deploy/ssh-setup`
           - `framework/cli/deploy`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/session.ts`, `server/internal/upload.ts` (debt)
@@ -41755,6 +41756,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `SshFailureKindSchema`
           - `SshTunnelFailureKindSchema`
+          - `TUNNEL_KEY_OPTIONS`
+          - `TUNNEL_REMOTE_HOST`
           - `tunnelFailureRetryable`
     - **`stack-sampler`** — The one owner of bun:jsc's JSC sampling profiler: claimStackSampler(owner) arms it once per process and hands a single reader drain() → normalized stacks (innermost → outermost, JSC's no-line sentinel as null), refusing a second owner because every read empties the shared buffer. Bun-only leaf in core, so a CLI process and a server can both import it; frameKey is the one spelling of a frame's identity.
       - Cross-plugin:

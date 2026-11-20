@@ -162,3 +162,15 @@ describe("siteFreshness / siteAlert / siteTitle", () => {
     expect(siteTitle({ ...site(LIVE), hostname: null })).toBe("website");
   });
 });
+
+describe("siteAlert on a refused link", () => {
+  it("says why and what to do: re-run the install command, then Retry", () => {
+    expect(
+      siteAlert(site({ kind: "refused", reason: "forwarding-refused" })),
+    ).toEqual({
+      tone: "critical",
+      lead: "Can't connect: forwarding is disabled on the server",
+      rest: "run the install command from the server's SSH key section again (it now allows the link's loopback forward), then Retry now",
+    });
+  });
+});

@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import type { SshKey } from "@plugins/apps/plugins/deploy/plugins/servers/web";
 import { installCommand } from "./install-command";
 
+const OPTIONS = `restrict,pty,port-forwarding,permitopen="127.0.0.1:*"`;
+
 const BLOB =
   "AAAAC3NzaC1lZDI1NTE5AAAAIJk1r7Xz2VqQwqRPq1J8v3wKZ6f0Lm9dQxK4tYh2sJ0e";
 
@@ -15,11 +17,9 @@ function key(comment: string): SshKey {
 }
 
 describe("installCommand", () => {
-  test("installs the key with the restrict,pty prefix", () => {
+  test("installs the key restricted, forwarding only to the loopback", () => {
     const cmd = installCommand(key("equin-deploy-srv-1"));
-    expect(cmd).toContain(
-      `restrict,pty ssh-ed25519 ${BLOB} equin-deploy-srv-1`,
-    );
+    expect(cmd).toContain(`${OPTIONS} ssh-ed25519 ${BLOB} equin-deploy-srv-1`);
   });
 
   test("appends via printf with a leading newline, never echo", () => {
@@ -45,13 +45,13 @@ describe("installCommand", () => {
     expect(cmd).not.toContain("sed");
     // The key is still installed — refusing to clean is not refusing to work.
     expect(cmd).toContain("authorized_keys");
-    expect(cmd).toContain("restrict,pty ssh-ed25519");
+    expect(cmd).toContain(`${OPTIONS} ssh-ed25519`);
   });
 
   test("single-quotes the installed line so a quoted comment cannot break out", () => {
     const cmd = installCommand(key("equin-deploy-srv'1"));
     expect(cmd).toContain(
-      `printf '\\n%s\\n' 'restrict,pty ssh-ed25519 ${BLOB} equin-deploy-srv'\\''1'`,
+      `printf '\\n%s\\n' '${OPTIONS} ssh-ed25519 ${BLOB} equin-deploy-srv'\\''1'`,
     );
   });
 });
