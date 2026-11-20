@@ -8,6 +8,7 @@
   - Imported by:
     - `apps/mail/gmail-api`
     - `apps/mail/sync`
+    - `backup/targets/google-drive`
     - `database`
     - `framework/cli/build`
     - `infra/events-test`

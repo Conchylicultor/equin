@@ -45,7 +45,7 @@ export async function runGoogleDriveTarget(
   const folderId = await ensureFolder(accessToken);
 
   const filename = `${PRODUCT_NAME}-backup-${basename(archive.stagingDir)}.tar.gz`;
-  const { webViewLink } = await uploadToDrive(
+  const { webViewLink, recovered } = await uploadToDrive(
     archive.archivePath,
     folderId,
     filename,
@@ -65,5 +65,14 @@ export async function runGoogleDriveTarget(
     };
   }
 
-  return { targetId: "google-drive", ok: true, detail: webViewLink };
+  // A survived network failure is still worth seeing on the run card: a link
+  // that keeps resetting is how a future outright failure announces itself.
+  return {
+    targetId: "google-drive",
+    ok: true,
+    detail:
+      recovered > 0
+        ? `${webViewLink} (resumed after ${recovered} network failure(s))`
+        : webViewLink,
+  };
 }
