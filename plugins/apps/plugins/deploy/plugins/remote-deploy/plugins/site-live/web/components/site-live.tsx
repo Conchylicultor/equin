@@ -40,7 +40,9 @@ import {
  */
 export function DeployingSection({ site }: SiteLiveProps): ReactNode {
   const { run } = site;
-  if (run?.status !== "running") return null;
+  // Only an `update` has legs to draw; a converge, ship or restart is one step,
+  // which the row's summary and action already say.
+  if (run?.status !== "running" || run.verb !== "update") return null;
   const current = PHASES.findIndex((p) => p.id === run.phase);
   return (
     <Stack gap="xs">
@@ -97,101 +99,131 @@ export function DeployingSection({ site }: SiteLiveProps): ReactNode {
   );
 }
 
-// ─── Deploy (SiteLive.Action) ────────────────────────────────────────────────
+// ─── Deploy / Restart site (SiteLive.Action) ─────────────────────────────────
 
 /**
- * Whether the site row offers Deploy, and why it cannot be pressed: hidden
- * while a deploy runs (the row shows it) or after one failed (Investigate is
- * the next step), and while the site is live and current; offered when main is
- * ahead, the site is down, or its release is too old for the link; blocked —
- * with the reason — while the connection to the box is lost.
+ * The row's primary action — the next step for the site — and why it cannot
+ * be pressed:
+ *
+ * - **Restart site** while the server answers but equin does not (`down`):
+ *   the `restart` verb — the service restarted on the release it already
+ *   has, behind the ship's health gate, recorded as a run. Drawn pending
+ *   ("Restarting…") while that run is in flight.
+ * - **Deploy** when main is ahead or the release is too old for the link;
+ *   blocked — with the reason — while the connection to the box is lost.
+ * - Nothing while a deploy runs (the row shows it), after a run failed
+ *   (Investigate is the next step), or while the site is live and current.
  */
-type RowDeploy = { kind: "hidden" } | { kind: "shown"; blocked: string | null };
+type RowAction =
+  | { kind: "hidden" }
+  | { kind: "deploy"; blocked: string | null }
+  | { kind: "restart"; running: boolean };
 
-function rowDeployOf(site: SiteHealth): RowDeploy {
+function rowActionOf(site: SiteHealth): RowAction {
   const { run, release } = site;
-  if (run?.status === "running" || run?.status === "failed")
-    return { kind: "hidden" };
+  if (run?.status === "running") {
+    return run.verb === "restart"
+      ? { kind: "restart", running: true }
+      : { kind: "hidden" };
+  }
+  if (run?.status === "failed") return { kind: "hidden" };
   if (site.link.kind === "linked") {
     switch (site.link.link.state.kind) {
       case "reconnecting":
         return {
-          kind: "shown",
+          kind: "deploy",
           blocked: "Waiting for the connection to come back",
         };
       case "unreachable":
         return {
-          kind: "shown",
+          kind: "deploy",
           blocked: "The server can't be reached over SSH",
         };
       case "refused":
         return {
-          kind: "shown",
+          kind: "deploy",
           blocked: "Fix the connection to the server first",
         };
       case "down":
+        return { kind: "restart", running: false };
       case "outdated":
-        return { kind: "shown", blocked: null };
+        return { kind: "deploy", blocked: null };
       case "connecting":
       case "live":
         break;
     }
   }
   return release.kind === "known" && release.behindMain > 0
-    ? { kind: "shown", blocked: null }
+    ? { kind: "deploy", blocked: null }
     : { kind: "hidden" };
 }
 
 const DEPLOY_TIP =
   "Build, upload and switch with no downtime — reverted on its own if the new version fails its health check";
+const RESTART_TIP = "Restart equin's service on the server";
 
-/** The row's Deploy button as it looks: the label, and the reason it is blocked. */
-function RowDeployButton({
+/** The row's action button as it looks: the label, and the reason it is blocked. */
+function RowActionButton({
   site,
+  action,
   blocked,
   pending,
-  onDeploy,
+  onPress,
 }: {
   site: SiteHealth;
+  action: Exclude<RowAction, { kind: "hidden" }>;
   blocked: string | null;
   pending: boolean;
-  onDeploy?: () => void;
+  onPress?: () => void;
 }): ReactNode {
+  const restart = action.kind === "restart";
   return (
     <Button
       disabled={blocked !== null}
-      tooltip={blocked ?? DEPLOY_TIP}
+      tooltip={blocked ?? (restart ? RESTART_TIP : DEPLOY_TIP)}
       loading={pending}
-      onClick={onDeploy}
+      onClick={onPress}
     >
-      {deployLabelOf(site.run, site.release)}
+      {restart
+        ? action.running
+          ? "Restarting…"
+          : "Restart site"
+        : deployLabelOf(site.run, site.release)}
     </Button>
   );
 }
 
 /** The live button, once the deployment's record is known (its server's gate). */
-function LiveRowDeploy({
+function LiveRowAction({
   deployment,
   site,
-  linkBlocked,
+  action,
 }: {
   deployment: Deployment;
   site: SiteHealth;
-  linkBlocked: string | null;
+  action: Exclude<RowAction, { kind: "hidden" }>;
 }): ReactNode {
   // The same gate as the site page's Deploy (something already running on the
-  // server, an unverified server), after the link's own reason.
+  // server, an unverified server), after the link's own reason. A restart in
+  // flight is the thing running, so it is drawn pending instead.
   const serverBlocked = useBlockedReason(deployment);
-  const deploy = useEndpointMutation(runDeployment);
+  const run = useEndpointMutation(runDeployment);
+  const running = action.kind === "restart" && action.running;
   return (
-    <RowDeployButton
+    <RowActionButton
       site={site}
-      blocked={linkBlocked ?? serverBlocked}
-      pending={deploy.isPending}
-      onDeploy={() =>
-        deploy.mutate({
+      action={action}
+      blocked={
+        running
+          ? null
+          : ((action.kind === "deploy" ? action.blocked : null) ??
+            serverBlocked)
+      }
+      pending={running || run.isPending}
+      onPress={() =>
+        run.mutate({
           params: { id: deployment.id },
-          body: { verb: "update" },
+          body: { verb: action.kind === "restart" ? "restart" : "update" },
         })
       }
     />
@@ -199,39 +231,44 @@ function LiveRowDeploy({
 }
 
 /**
- * Deploy, in the health report's site row: the site page's own `update`
- * (`runDeployment`), labelled as there (`deployLabelOf`), offered when it is
- * the next step (`rowDeployOf`).
+ * The health report's site row's primary action: the site page's own
+ * `update` (`runDeployment`), labelled as there (`deployLabelOf`), or Restart
+ * site (the `restart` verb) while equin is down on the box — whichever is the
+ * next step (`rowActionOf`).
  */
 export function SiteDeployAction({
   deploymentId,
   site,
 }: SiteLiveProps): ReactNode {
   const deployment = rowOrStale(useLive(deployments, { id: deploymentId }));
-  const shown = rowDeployOf(site);
-  if (shown.kind === "hidden") return null;
+  const action = rowActionOf(site);
+  if (action.kind === "hidden") return null;
   if (deployment === undefined) {
     // The record is still on its way: the button, held until it lands.
     return (
-      <RowDeployButton site={site} blocked={shown.blocked} pending={true} />
+      <RowActionButton
+        site={site}
+        action={action}
+        blocked={action.kind === "deploy" ? action.blocked : null}
+        pending={true}
+      />
     );
   }
-  return (
-    <LiveRowDeploy
-      deployment={deployment}
-      site={site}
-      linkBlocked={shown.blocked}
-    />
-  );
+  return <LiveRowAction deployment={deployment} site={site} action={action} />;
 }
 
-/** Deploy in an exhibit state: the same button, gated by the link alone. */
+/** The action in an exhibit state: the same button, gated by the link alone. */
 export function SiteDeployActionExhibit({
   site,
 }: SiteLiveExhibitProps): ReactNode {
-  const shown = rowDeployOf(site);
-  if (shown.kind === "hidden") return null;
+  const action = rowActionOf(site);
+  if (action.kind === "hidden") return null;
   return (
-    <RowDeployButton site={site} blocked={shown.blocked} pending={false} />
+    <RowActionButton
+      site={site}
+      action={action}
+      blocked={action.kind === "deploy" ? action.blocked : null}
+      pending={action.kind === "restart" && action.running}
+    />
   );
 }

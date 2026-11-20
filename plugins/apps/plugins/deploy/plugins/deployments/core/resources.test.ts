@@ -42,6 +42,7 @@ describe("deploy.run-history", () => {
       "update",
       "converge",
       "ship",
+      "restart",
     ]);
     expect(f.startedAt.domain).toBe("instant");
     expect(f.deploymentId.domain).toBe("text");

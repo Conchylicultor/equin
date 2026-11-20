@@ -98,10 +98,15 @@ converged and running an install no row describes any more.
 ## The UI launches the CLI; it does not reimplement it
 
 `POST /api/deploy/deployments/:id/run` spawns exactly
-`./equin deploy converge|ship <composition> --server <serverId>` and streams
+`./equin deploy converge|ship|restart <composition> --server <serverId>` and streams
 its output into the durable **`deploy`** log channel — the split `release`
-(CLI) / Studio (UI) already uses. (`update` is a _sequence_ of those two spawns —
-see below — not a third command.) The endpoint owns two verdicts and no others:
+(CLI) / Studio (UI) already uses. (`update` is a _sequence_ of converge and
+ship — see below — not a command of its own.) `restart` restarts the installed
+service on the release it already has and holds the ship's health gate: the
+health report's site row offers it as *Restart site* while the server answers
+but equin does not (box-link's `down`), and it is recorded like any run —
+ledger row, transcript, history. Like converge and ship it is one leg
+(`<runId>.restart`), has no phases, and holds the server's lock. The endpoint owns two verdicts and no others:
 
 - **404** — no such deployment.
 - **409** — a run is already in flight **on this server**. Scoped to the server,
@@ -202,7 +207,8 @@ defineSupervisedJob({
 
 ### Deploy gates — `needs-approval`
 
-Before any leg spawns, for every verb, the sequence asks every `DeployGates.Gate`
+Before any leg spawns, for every verb that puts something on the host (all but
+`restart`, which restarts what is already there), the sequence asks every `DeployGates.Gate`
 contribution (`server/internal/gate.ts`) — memoized as the `gate` step, so a resumed
 run is not re-judged mid-way. A gate answers `pass` or `needs-approval` with the
 sentence to show; any refusal ends the run `needs-approval` (`holdRunForApproval`,

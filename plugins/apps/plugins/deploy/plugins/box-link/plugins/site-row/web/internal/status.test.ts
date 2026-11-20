@@ -73,6 +73,27 @@ describe("siteStatus", () => {
     expect(s).toMatchObject({ state: "info", transitioning: true });
   });
 
+  it("reads a restart in flight as restarting, even while down", () => {
+    const down = site({ kind: "down" }, { run: "running" });
+    const restarting: SiteHealth = {
+      ...down,
+      run:
+        down.run === null
+          ? null
+          : { ...down.run, verb: "restart", phase: null },
+    };
+    expect(siteStatus(restarting)).toEqual({
+      state: "info",
+      transitioning: true,
+      summary: `Restarting · since ${new Date(T).toLocaleTimeString(undefined, {
+        hour: "numeric",
+        minute: "2-digit",
+      })}`,
+    });
+    // An update in flight does not hide an outage.
+    expect(siteStatus(down).state).toBe("critical");
+  });
+
   it("needs attention after a failed deploy, or a release too old", () => {
     expect(siteStatus(site(LIVE, { run: "failed" })).state).toBe("attention");
     expect(

@@ -262,7 +262,7 @@ export const deployRunFields = {
   serverId: textField({ label: "Server" }),
   compositionId: textField({ label: "Composition" }),
   /**
-   * `converge` / `ship` / `update` — what the run was asked to do. The closed
+   * `converge` / `ship` / `update` / `restart` — what the run was asked to do. The closed
    * set, declared (not derived from the loaded rows, a server-paginated window
    * that would offer only the verbs on the page).
    */
@@ -272,6 +272,7 @@ export const deployRunFields = {
       update: { label: "Update" },
       converge: { label: "Converge" },
       ship: { label: "Ship" },
+      restart: { label: "Restart" },
     },
   }),
   /** The `release_runs.id` this `ship` pinned. Null on a converge, or a bare ship. */

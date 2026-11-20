@@ -26,6 +26,7 @@ import {
   asDeployLeg,
   finalLeg,
   firstLeg,
+  legPhase,
   legArgv,
   legRunId,
   parseLegRunId,
@@ -153,7 +154,7 @@ export function onDeployRunChanged(fn: DeployRunListener): () => void {
  */
 async function publishLiveRun(
   runId: string,
-  phase: DeployPhase,
+  phase: DeployPhase | null,
 ): Promise<DeployRun> {
   const [row] = await db
     .select()
@@ -169,7 +170,7 @@ async function publishLiveRun(
 /** One ledger row as its live-view entry; `phase` applies to an `update` only. */
 function liveRunOf(
   row: typeof _deployRuns.$inferSelect,
-  phase: DeployPhase,
+  phase: DeployPhase | null,
 ): DeployRun {
   // Parsed rather than cast: `verb` and `status` are plain `text` columns, and a
   // value outside the union must fail here rather than reach the client as a
@@ -407,7 +408,8 @@ export async function setRunPhase(
 export async function failRun(
   runId: string,
   message: string,
-  phase: DeployPhase,
+  /** The leg an `update` was on; null for a single-verb run, which has no phases. */
+  phase: DeployPhase | null,
 ): Promise<void> {
   await endRunBeforeLeg(runId, { status: "failed", message, phase });
 }
@@ -436,7 +438,7 @@ async function endRunBeforeLeg(
   end: {
     status: "failed" | "needs-approval";
     message: string;
-    phase: DeployPhase;
+    phase: DeployPhase | null;
     /** Where a held run is resolved (`DeployGatesVerdict.resolveIn`); none for a failure. */
     approvalSections?: readonly string[];
   },
@@ -652,14 +654,14 @@ async function closeDeployRow(
       status: ok ? "succeeded" : "failed",
       // Only an `update` has legs to name; a single-verb run's failing phase is
       // its verb, which the row already carries.
-      phaseFailed: !ok && verb === "update" ? parsed.leg : null,
+      phaseFailed: !ok && verb === "update" ? legPhase(parsed.leg) : null,
       finishedAt: terminal.finishedAt,
       exitCode: terminal.exitCode,
       message: ok ? null : verbFailureMessage(ending),
     })
     .where(and(eq(_deployRuns.id, row.id), isNull(_deployRuns.finishedAt)));
 
-  await publishLiveRun(row.id, parsed.leg);
+  await publishLiveRun(row.id, legPhase(parsed.leg));
 }
 
 /**
@@ -701,7 +703,7 @@ function reattachRun(legId: string): void {
     try {
       // The leg that is running is the phase — for an `update`. A single-verb
       // run has no phases, and `publishLiveRun` drops the argument for it.
-      await publishLiveRun(parsed.runId, parsed.leg);
+      await publishLiveRun(parsed.runId, legPhase(parsed.leg));
     } catch (err) {
       // Deliberately not rethrown — see the docblock. Shaped like the
       // supervisor's own `reportRunFailure`, so a reattach failure and a
@@ -816,10 +818,12 @@ export async function publishWrittenRuns(): Promise<void> {
 }
 
 /** Which phase an open row is in, from the leg it names and whether it ran. */
-async function phaseOfOpenRow(legId: string | null): Promise<DeployPhase> {
+async function phaseOfOpenRow(
+  legId: string | null,
+): Promise<DeployPhase | null> {
   if (legId === null) return "converge";
   const parsed = parseLegRunId(legId);
   if (parsed === null) return "converge";
   if (parsed.leg === "ship" && !(await legStarted(legId))) return "build";
-  return parsed.leg;
+  return legPhase(parsed.leg);
 }

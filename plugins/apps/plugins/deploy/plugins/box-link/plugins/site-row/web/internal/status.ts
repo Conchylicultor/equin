@@ -54,6 +54,7 @@ export const REFUSAL_WORDS: Record<LinkRefusal, string> = {
  * | live, up to date | `ok` |
  * | live, behind main | `info` (a new version waits — not a problem) |
  * | deploying | `info`, transitioning |
+ * | restarting (a Restart site run, even while down) | `info`, transitioning |
  * | reconnecting | `attention`, transitioning |
  * | deploy failed / outdated | `attention` |
  * | down / unreachable / refused | `critical` |
@@ -68,6 +69,15 @@ export function siteStatus(site: SiteHealth): HealthStatus {
   const since = site.link.kind === "linked" ? site.link.link.since : null;
   const prefix = site.link.kind === "linked" ? "Live" : "Linked from main";
 
+  // A restart in flight is what the user just asked for, and the reason the
+  // box does not answer: it reads as the restart, not as the outage.
+  if (run?.status === "running" && run.verb === "restart") {
+    return {
+      state: "info",
+      transitioning: true,
+      summary: `Restarting · since ${clockTime(run.startedAt)}`,
+    };
+  }
   // What the box itself says comes first: a site that is not answering is
   // not "deploying" or "behind", whatever its last run did.
   switch (linkState?.kind) {

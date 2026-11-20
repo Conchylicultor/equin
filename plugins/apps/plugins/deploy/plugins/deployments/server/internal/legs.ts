@@ -1,12 +1,12 @@
 import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
-import type { DeployVerb } from "../../core/runs";
+import type { DeployPhase, DeployVerb } from "../../core/runs";
 
 /**
  * A **leg**: one spawned `./equin deploy` command inside one deploy run.
  *
  * A run and a leg are not the same thing, and this file exists because the
  * supervised-run primitive names legs while everything else here names runs. A
- * `converge` or a `ship` is one leg; an `update` is two legs with a release
+ * `converge`, a `ship` or a `restart` is one leg; an `update` is two legs with a release
  * build between them (that build spawns nothing of its own here — it is another
  * plugin's job, waited on durably — so it is a phase, never a leg).
  *
@@ -24,7 +24,7 @@ import type { DeployVerb } from "../../core/runs";
  * whose memo remembers the child it spawned and whose wait is durable, so "who
  * is sequencing this run" stopped being a question about which process is alive.
  */
-export type DeployLeg = "converge" | "ship";
+export type DeployLeg = "converge" | "ship" | "restart";
 
 /**
  * `.` rather than `-`, because a run id is already full of dashes: with a dot
@@ -33,7 +33,7 @@ export type DeployLeg = "converge" | "ship";
  */
 const LEG_SEPARATOR = ".";
 
-const LEGS: readonly DeployLeg[] = ["converge", "ship"];
+const LEGS: readonly DeployLeg[] = ["converge", "ship", "restart"];
 
 /** The supervised-run id of one leg of `runId`. */
 export function legRunId(runId: string, leg: DeployLeg): string {
@@ -116,7 +116,7 @@ export function legArgv(
 
 /** Which leg a verb spawns first. An `update` always converges before it ships. */
 export function firstLeg(verb: DeployVerb): DeployLeg {
-  return verb === "ship" ? "ship" : "converge";
+  return verb === "update" ? "converge" : verb;
 }
 
 /**
@@ -130,5 +130,13 @@ export function firstLeg(verb: DeployVerb): DeployLeg {
  * workflow can answer it.
  */
 export function finalLeg(verb: DeployVerb): DeployLeg {
-  return verb === "converge" ? "converge" : "ship";
+  return verb === "update" ? "ship" : verb;
+}
+
+/**
+ * The live phase a leg stands for — only an `update`'s legs are phases (its
+ * converge and its ship); a `restart` is never part of one, so it has none.
+ */
+export function legPhase(leg: DeployLeg): DeployPhase | null {
+  return leg === "restart" ? null : leg;
 }

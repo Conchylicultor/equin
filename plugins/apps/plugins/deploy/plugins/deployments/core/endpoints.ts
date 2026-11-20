@@ -130,6 +130,12 @@ export const RunDeploymentBodySchema = z.discriminatedUnion("verb", [
    * there is no way to ask for a deploy of the wrong bundle to the wrong host.
    */
   z.object({ verb: z.literal("update") }),
+  /**
+   * Restart the installed unit and hold the health gate — for a site whose
+   * server answers but whose equin has stopped. Ships nothing, converges
+   * nothing, so it takes no fields either.
+   */
+  z.object({ verb: z.literal("restart") }),
 ]);
 export type RunDeploymentBody = z.infer<typeof RunDeploymentBodySchema>;
 

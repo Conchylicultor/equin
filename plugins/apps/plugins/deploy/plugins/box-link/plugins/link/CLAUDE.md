@@ -82,6 +82,8 @@ and whether a deploy run of the deployment is active). Grace is 2 min:
 - `refused` is sticky (a transport failure does not hide it); `outdated`
   lasts until a successful deploy run of the deployment (then `restart`) or
   a Retry.
+- A successful deploy run of a `down` deployment (a Restart site, a deploy)
+  reconnects its stream at once instead of waiting out the backoff.
 
 Table-driven tests: `shared/reducer.test.ts`.
 

@@ -114,6 +114,21 @@ settle_gate() {
   return 3
 }`;
 
+/**
+ * `journal_tail` — what a failed gate prints so its log says why: the unit's
+ * journal and the gateway's own log. Reads `$UNIT` and `$DATA`, which every
+ * script that defines it sets (the activate and restart scripts).
+ */
+export const JOURNAL_TAIL_SH = `journal_tail() {
+  echo "--- journalctl -u $UNIT -n 200 ---" >&2
+  journalctl -u "$UNIT" -n 200 --no-pager >&2 || true
+  local gw="$DATA/logs/gateway/gateway.log"
+  if [ -f "$gw" ]; then
+    echo "--- tail -n 60 $gw ---" >&2
+    tail -n 60 "$gw" >&2 || true
+  fi
+}`;
+
 // ── D4: bundle discovery + the activate script ────────────────────────────────
 //
 // Bundle discovery itself lives in `@plugins/release/plugins/bundles` — the one
@@ -218,15 +233,7 @@ fi
 printf '%s\\n' "$EXTRACT" > "$RELEASE_DIR/$EXTRACTED_AT"
 echo "[+] extracted to $EXTRACT"
 
-journal_tail() {
-  echo "--- journalctl -u $UNIT -n 200 ---" >&2
-  journalctl -u "$UNIT" -n 200 --no-pager >&2 || true
-  local gw="$DATA/logs/gateway/gateway.log"
-  if [ -f "$gw" ]; then
-    echo "--- tail -n 60 $gw ---" >&2
-    tail -n 60 "$gw" >&2 || true
-  fi
-}
+${JOURNAL_TAIL_SH}
 
 # ── 2. Swap, or restart the host. ────────────────────────────────────────────
 # \`launch swap\` exits 0 once the gateway serves this release's backend (the

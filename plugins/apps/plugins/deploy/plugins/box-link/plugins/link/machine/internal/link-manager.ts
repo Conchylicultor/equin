@@ -419,8 +419,15 @@ function streamOf(
 /** A successful deploy run of an `outdated` box: it may serve the stream now. */
 function onRun(run: { deploymentId: string; status: string }): void {
   if (run.status !== "succeeded") return;
-  if (linkOf(run.deploymentId)?.state.kind !== "outdated") return;
-  dispatch(run.deploymentId, { kind: "restart", at: Date.now() });
+  const kind = linkOf(run.deploymentId)?.state.kind;
+  // An outdated link starts over: the deploy may have shipped the stream.
+  if (kind === "outdated") {
+    dispatch(run.deploymentId, { kind: "restart", at: Date.now() });
+  } else if (kind !== "down") {
+    return;
+  }
+  // A run that passed its health gate (a deploy, a Restart site) means equin
+  // answers again: reconnect now rather than at the end of the backoff.
   streamOf(run.deploymentId)?.stream?.kick();
 }
 

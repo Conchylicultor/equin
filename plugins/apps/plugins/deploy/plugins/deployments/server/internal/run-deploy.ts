@@ -30,7 +30,7 @@ import {
 } from "../../core/runs";
 import type { RunDeploymentBody } from "../../core/endpoints";
 import { deployLog } from "./deploy-log";
-import { legArgv, type DeployLeg } from "./legs";
+import { legArgv, legPhase, type DeployLeg } from "./legs";
 import { readTranscriptTail } from "./transcript";
 import { verbSucceeded, type VerbEnding } from "./verb-outcome";
 import {
@@ -170,22 +170,27 @@ async function runDeploy(
   const run = await loadRun(runId);
 
   // The phase a failure would be attributed to, advanced as the sequence moves.
-  // A single-verb run has no phases and `publishLiveRun` drops it; it is carried
-  // anyway so the catch-all below has one honest answer for every verb.
-  let phase: DeployPhase = run.verb === "ship" ? "ship" : "converge";
+  // Only an `update` has phases; a single-verb run's failing phase is its verb.
+  let phase: DeployPhase | null = run.verb === "update" ? "converge" : null;
   try {
-    // The gates come before EVERY verb and before anything else: a run one of
-    // them refuses ends `needs-approval` having converged and shipped nothing.
-    // Memoized, so a resumed sequence is not re-judged halfway through.
-    const verdict = await ctx.step("gate", () =>
-      checkDeployGates(
-        { deploymentId: run.deploymentId, compositionId: run.compositionId },
-        DeployGates.Gate.getContributions(),
-      ),
-    );
-    if (verdict.kind === "needs-approval") {
-      await holdRunForApproval(run.id, verdict.message, verdict.resolveIn);
-      return;
+    // The gates come before every verb that puts something on the host, and
+    // before anything else: a run one of them refuses ends `needs-approval`
+    // having converged and shipped nothing. A `restart` puts nothing there —
+    // it restarts what was already converged and shipped — so no gate can
+    // have a say, and holding it would keep a down site down for a reason
+    // that does not apply to it. Memoized, so a resumed sequence is not
+    // re-judged halfway through.
+    if (run.verb !== "restart") {
+      const verdict = await ctx.step("gate", () =>
+        checkDeployGates(
+          { deploymentId: run.deploymentId, compositionId: run.compositionId },
+          DeployGates.Gate.getContributions(),
+        ),
+      );
+      if (verdict.kind === "needs-approval") {
+        await holdRunForApproval(run.id, verdict.message, verdict.resolveIn);
+        return;
+      }
     }
     if (run.verb === "update") {
       await runUpdate(run, step, ctx, (next) => {
@@ -380,7 +385,7 @@ async function runLeg(
     await failRun(
       run.id,
       `could not run \`deploy ${leg}\`: ${outcome.message}`,
-      leg,
+      legPhase(leg),
     );
     return { ok: false };
   }

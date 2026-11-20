@@ -16,8 +16,14 @@ import { z } from "zod";
  * health gate; it only orders things the caller would otherwise have to order by
  * hand. It is the app's one primary action; `converge` and `ship` stay because
  * the row actions and scripted callers still name them individually.
+ *
+ * `restart` is a CLI subcommand of its own (`./equin deploy restart`): it
+ * restarts the installed unit — no converge, no upload, no flip — and holds the
+ * same health gate a ship does. It is how a site whose server answers but whose
+ * equin is not running (the box link's `down`) is brought back, recorded as a
+ * run like the others.
  */
-export const DEPLOY_VERBS = ["converge", "ship", "update"] as const;
+export const DEPLOY_VERBS = ["converge", "ship", "update", "restart"] as const;
 export const DeployVerbSchema = z.enum(DEPLOY_VERBS);
 export type DeployVerb = z.infer<typeof DeployVerbSchema>;
 
@@ -26,7 +32,7 @@ export type DeployVerb = z.infer<typeof DeployVerbSchema>;
  *
  * Reported as a field rather than parsed out of the log, because the log is the
  * CLI's prose and a UI that scraped it would break the first time a message
- * changed. Null for `converge` and `ship`, whose verb already names their only
+ * changed. Null for `converge`, `ship` and `restart`, whose verb already names their only
  * phase — so "a single-verb run has no phase" is a fact of the type, not a
  * convention.
  */

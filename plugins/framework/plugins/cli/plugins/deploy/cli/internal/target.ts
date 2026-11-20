@@ -70,6 +70,12 @@ export const UPLOAD_MS = 30 * 60_000;
  * revert.
  */
 export const ACTIVATE_MS = 20 * 60_000;
+/**
+ * The restart script: a `systemctl restart` plus the same health gate, so the
+ * same bound as {@link ACTIVATE_MS} — the gate's ready window and settle
+ * deadline, which a restarted process re-runs from a cold boot.
+ */
+export const RESTART_MS = ACTIVATE_MS;
 
 /** Health-gate bound: attempts × interval is the whole "not up yet" window. */
 export const READY_ATTEMPTS = 150;

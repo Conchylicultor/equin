@@ -3,17 +3,26 @@
 remote-deploy's part of the health report's deployed-site row
 ([`box-link/site-row`](../../../box-link/plugins/site-row/CLAUDE.md)):
 
-- `SiteLive.Section` **deploying** — while the site's latest run is running,
-  the `update`'s three legs (done · running · upcoming, named by core's
+- `SiteLive.Section` **deploying** — while the site's latest run is a running
+  `update`, its three legs (done · running · upcoming, named by core's
   `DEPLOY_PHASE_TITLES`) over a progress bar. Drawn from the row's own
-  `site.run`, so its exhibit is the component itself.
-- `SiteLive.Action` **deploy** — the site page's `update` (`runDeployment`),
-  labelled by the same `deployLabelOf` as the site page's button. Shown when
-  it is the next step: main ahead of what runs, the site down, or its release
-  too old for the link; hidden while a deploy runs (the row shows it) or after
-  one failed (Investigate is next). Blocked, with the reason as its tooltip,
-  while the connection to the box is lost (reconnecting / unreachable /
-  refused) or by the server's own gate (`useBlockedReason`).
+  `site.run`, so its exhibit is the component itself. A single-step run (a
+  converge, ship or restart) has no legs: nothing is drawn.
+- `SiteLive.Action` **deploy** — the row's primary action, the next step
+  (`rowActionOf`):
+  - **Restart site** while the server answers SSH but equin does not run
+    (the link's `down`) — the `restart` verb (`./equin deploy restart`: the
+    service restarted on the release it has, behind the ship's health gate,
+    recorded as a run in the site's history). "Restarting…", pending, while
+    that run is in flight (the row's summary says Restarting too).
+  - **Deploy** — the site page's `update` (`runDeployment`), labelled by the
+    same `deployLabelOf` as the site page's button: main ahead of what runs,
+    or a release too old for the link. Blocked, with the reason as its
+    tooltip, while the connection to the box is lost (reconnecting /
+    unreachable / refused).
+  - Hidden while a deploy runs (the row shows it) or after a run failed
+    (Investigate is next). Both are gated by the server's own gate
+    (`useBlockedReason`).
 
 **Why a child plugin.** `box-link/link`'s `deploy.site-health` folds in
 remote-deploy's running commit, so `link` imports remote-deploy; site-row
@@ -24,7 +33,7 @@ close that loop — this child sits beside it, importing both.
 
 ## Plugin reference
 
-- Description: remote-deploy in the health report's deployed-site row: the deploy in progress in its body (the update's legs — done, running, upcoming — over a progress bar) and Deploy in its footer when it is the next step (main ahead, the site down or its release too old for the link), labelled as the site page's button (deployLabelOf) and blocked, with the reason, while the connection to the box is lost or the server's own gate says so. Its own plugin because the row's health value (box-link/link) reads remote-deploy's running commit.
+- Description: remote-deploy in the health report's deployed-site row: the deploy in progress in its body (the update's legs — done, running, upcoming — over a progress bar) and its footer's primary action when there is a next step — Restart site (the restart verb: the service restarted behind the ship's health gate, a recorded run; Restarting… while it runs) while the server answers but equin does not, else Deploy (main ahead, or a release too old for the link), labelled as the site page's button (deployLabelOf) and blocked, with the reason, while the connection to the box is lost or the server's own gate says so. Its own plugin because the row's health value (box-link/link) reads remote-deploy's running commit.
 - Web:
   - Contributes:
     - `SiteLive.Section` "deploying" → `DeployingSection`

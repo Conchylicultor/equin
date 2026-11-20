@@ -3595,7 +3595,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/deploy-history/investigate-failure`
               - `apps/deploy/remote-deploy/site-live`
           - Plugins:
-            - **`site-live`** — remote-deploy in the health report's deployed-site row: the deploy in progress in its body (the update's legs — done, running, upcoming — over a progress bar) and Deploy in its footer when it is the next step (main ahead, the site down or its release too old for the link), labelled as the site page's button (deployLabelOf) and blocked, with the reason, while the connection to the box is lost or the server's own gate says so. Its own plugin because the row's health value (box-link/link) reads remote-deploy's running commit.
+            - **`site-live`** — remote-deploy in the health report's deployed-site row: the deploy in progress in its body (the update's legs — done, running, upcoming — over a progress bar) and its footer's primary action when there is a next step — Restart site (the restart verb: the service restarted behind the ship's health gate, a recorded run; Restarting… while it runs) while the server answers but equin does not, else Deploy (main ahead, or a release too old for the link), labelled as the site page's button (deployLabelOf) and blocked, with the reason, while the connection to the box is lost or the server's own gate says so. Its own plugin because the row's health value (box-link/link) reads remote-deploy's running commit.
               - Web:
                 - Contributes:
                   - `SiteLive.Section` "deploying" → `DeployingSection`
@@ -32645,7 +32645,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`db`** — `./equin db` — worktree database operations; today just `db fork`, which gives a hand-made `git worktree add` checkout the DB fork it never got.
           - Cli:
             - Uses: `framework/server-core.installDeclaredListEntries`
-        - **`deploy`** — `./equin deploy converge|ship` — converge a host to serve a composition (run user, dirs, env, Caddy, systemd, firewall) and ship release bundles to it behind a health gate.
+        - **`deploy`** — `./equin deploy converge|ship|restart` — converge a host to serve a composition (run user, dirs, env, Caddy, systemd, firewall), ship release bundles to it behind a health gate, and restart its installed service behind the same gate.
         - **`doctor`** — The prerequisite doctor: doctor.sh names every missing prerequisite (Xcode CLT/git, mise active, the locked toolchain) in one run, with its fix, and advises on Claude Code (installed and signed in) without failing on it. Run as `mise run doctor` and at the end of every `mise install`; assertPrerequisites() runs it as the first step of `start` and `build`.
           - Cross-plugin:
             - Imported by:

@@ -19,6 +19,7 @@
  */
 
 import { HARD_KILL_EXIT_CODE } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
+import type { DeployLeg } from "./legs";
 
 /**
  * The prefix `./equin deploy`'s `refuse()` puts on every named refusal.
@@ -43,7 +44,7 @@ const REFUSAL_PREFIX = "deploy: ";
  */
 export interface VerbEnding {
   /** Which verb was spawned — named in the message, since a run has two legs. */
-  verb: "converge" | "ship";
+  verb: DeployLeg;
   /**
    * The child's status, in the shell's own convention — `128 + signo` for a
    * signalled death. **Not a status when `signalCode` is set**, and

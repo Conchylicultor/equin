@@ -1,9 +1,10 @@
 /**
- * `./equin deploy converge|ship` — the two verbs over a deployment.
+ * `./equin deploy converge|ship|restart` — the verbs over a deployment.
  *
  * **converge** makes a host serve a composition: run user, dir layout, the
  * `env` EnvironmentFile, Caddy, the systemd unit, the firewall.
  * **ship** puts a bundle on it and activates it behind a health gate.
+ * **restart** restarts the installed service and holds that same gate.
  *
  * Design: `research/2026-07-29-global-composition-production-deployment.md`
  * (D3 + D4). Three properties of that design shape this command:
@@ -97,6 +98,25 @@ export default defineCliCommand({
         },
       ],
       run: () => import("./ship"),
+    }),
+    defineCliCommand<[string], { server: string }>({
+      name: "restart",
+      description:
+        "Restart a composition's installed service on its server and hold the ship's health gate (for a site whose server answers but whose equin has stopped)",
+      arguments: [
+        {
+          name: "<composition>",
+          description: "Composition name (as in the `compositions` config)",
+        },
+      ],
+      options: [
+        {
+          flags: "--server <server>",
+          description: "Registered deploy server (id, or its name)",
+          required: true,
+        },
+      ],
+      run: () => import("./restart"),
     }),
   ],
 });
