@@ -18,13 +18,15 @@ import type { AnyCardDef, CardCtx, KitElement } from "./types";
  * across state changes.
  */
 export interface CardRuntime {
-  /** Mount the card of an iceberg piece (its `.vz[data-card]`), if it has one. */
-  open(item: Element): void;
-  /** Unmount the card of an iceberg piece. */
-  close(item: Element): void;
-  /** Mount a card into a `.vz[data-card]` box directly. */
-  mount(vz: HTMLElement): void;
-  unmount(vz: HTMLElement): void;
+  /**
+   * Mount the cards of iceberg pieces (each piece's `.vz[data-card]`, if it
+   * has one). Takes every piece opening at once: their heights are measured
+   * together, so opening N cards lays the page out once per state, not once
+   * per state of every card.
+   */
+  open(items: readonly Element[]): void;
+  /** Unmount the cards of iceberg pieces. */
+  close(items: readonly Element[]): void;
   /** Pause / resume every autoplay. */
   pause(on: boolean): void;
   /** Debug: timers, frames and listeners registered by mounted cards (0 once every card is closed). */
@@ -124,26 +126,45 @@ export function createCardRuntime(
   // state, measured by visiting every state once before the first paint, so a
   // state that shows more pieces fills space the card already has instead of
   // pushing the page below it. Measured again once the web fonts land.
-  function lockHeight(inst: Inst) {
-    const n = inst.def.states;
-    if (!n) return;
-    const measure = () => {
-      if (!insts.has(inst.vz)) return;
-      const cur = inst.state;
-      const { root } = inst;
-      root.style.minHeight = "";
-      let h = 0;
-      for (let s = 0; s < n; s++) {
-        go(inst, s, true);
-        h = Math.max(h, root.offsetHeight);
-      }
-      go(inst, cur, true);
-      if (h) root.style.minHeight = `${h}px`;
-    };
-    measure();
-    if (document.fonts.status !== "loaded")
-      void document.fonts.ready.then(measure);
+  //
+  // Every card being measured is measured at once, state by state: all of them
+  // are put in state s (writes only), then all their heights are read (ONE
+  // layout of the page), then state s + 1. Reading one card's height between
+  // another's writes would lay the whole page out again for every state of
+  // every card — ~350 layouts (~1 s of forced style/layout on a phone) for the
+  // foundations page's open cards.
+  function lockHeights(list: readonly Inst[]) {
+    const ms = list.filter((i) => insts.has(i.vz) && i.def.states);
+    if (!ms.length) return;
+    const cur = ms.map((i) => i.state);
+    const tallest = ms.map(() => 0);
+    ms.forEach((i) => (i.root.style.minHeight = ""));
+    const most = Math.max(...ms.map((i) => i.def.states ?? 0));
+    for (let s = 0; s < most; s++) {
+      const at = ms.filter((i) => s < (i.def.states ?? 0));
+      at.forEach((i) => go(i, s, true));
+      at.forEach((i) => {
+        const k = ms.indexOf(i);
+        tallest[k] = Math.max(tallest[k] ?? 0, i.root.offsetHeight);
+      });
+    }
+    ms.forEach((i, k) => {
+      go(i, cur[k] ?? 0, true);
+      const h = tallest[k] ?? 0;
+      if (h) i.root.style.minHeight = `${h}px`;
+    });
+    // Asked after the reads: laying a card out is what starts loading a font
+    // only it uses (the mono face of a few drawings). The fonts landing
+    // re-measures every card mounted by then, together — once per round.
+    if (document.fonts.status !== "loaded" && !fontsPending) {
+      fontsPending = true;
+      void document.fonts.ready.then(() => {
+        fontsPending = false;
+        lockHeights([...insts.values()]);
+      });
+    }
   }
+  let fontsPending = false;
 
   // ---------- ctx ----------
   function makeCtx(inst: Inst): CardCtx<any> {
@@ -272,8 +293,8 @@ export function createCardRuntime(
   }
 
   // ---------- mount / unmount ----------
-  function mount(vz: HTMLElement) {
-    if (insts.has(vz)) return;
+  function mount(vz: HTMLElement): Inst | undefined {
+    if (insts.has(vz)) return undefined;
     const key = vz.dataset.card ?? "";
     const def = cards[key];
     if (!def) throw new Error(`[kit] no card "${key}"`);
@@ -308,7 +329,6 @@ export function createCardRuntime(
     };
     inst.ctx = makeCtx(inst);
     insts.set(vz, inst);
-    lockHeight(inst);
     go(inst, def.start ?? 0, true);
     def.mount?.(inst.ctx);
     if (inst.auto) {
@@ -317,6 +337,7 @@ export function createCardRuntime(
       );
       inst.watcher.observe(vz);
     }
+    return inst;
   }
 
   function unmount(vz: HTMLElement) {
@@ -432,16 +453,21 @@ export function createCardRuntime(
     item.querySelector<HTMLElement>(".vz[data-card]");
 
   return {
-    open: (item) => {
-      const vz = vzOf(item);
-      if (vz) mount(vz);
+    open(items) {
+      const mounted: Inst[] = [];
+      for (const item of items) {
+        const vz = vzOf(item);
+        const inst = vz && mount(vz);
+        if (inst) mounted.push(inst);
+      }
+      lockHeights(mounted);
     },
-    close: (item) => {
-      const vz = vzOf(item);
-      if (vz) unmount(vz);
+    close(items) {
+      for (const item of items) {
+        const vz = vzOf(item);
+        if (vz) unmount(vz);
+      }
     },
-    mount,
-    unmount,
     pause(on) {
       paused = on;
       if (!on) restartHolds();

@@ -64,7 +64,6 @@ export function drawBergIn(
   if (!second || !last)
     throw new Error("iceberg: the berg needs at least two layers");
   const water = second.offsetTop;
-  host.style.setProperty("--water", water + "px");
   // Measure the host without the berg: its old height would count itself.
   box.style.height = "0px";
   const W = host.clientWidth;

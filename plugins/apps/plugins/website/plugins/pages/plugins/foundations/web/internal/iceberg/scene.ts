@@ -130,6 +130,16 @@ export function mountIcebergScene({
     });
   }
 
+  // The sky's sizing variables are set on the sky alone (the hero and the apps
+  // layer, the only places iceberg.css reads them), never on the scene: a
+  // custom property inherits, so a write on the scene restyles every element
+  // of the page — every open card's drawing — each time the fit below is
+  // tried (~2,500 elements, ~130 ms a try on a phone).
+  const setSky = (name: "--svh" | "--fit", value: string) => {
+    hero.style.setProperty(name, value);
+    L0.style.setProperty(name, value);
+  };
+
   // The first screen is all sky: the waterline lands exactly at its bottom edge, so any scroll brings up the water.
   function fitSurface() {
     hero.style.paddingTop = hero.style.paddingBottom = "";
@@ -137,13 +147,13 @@ export function mountIcebergScene({
     const opened = [...L0.querySelectorAll(".iceberg-item.open")];
     opened.forEach((el) => el.classList.remove("open"));
     const H = screenHeight();
-    scene.style.setProperty("--svh", H / 100 + "px");
+    setSky("--svh", H / 100 + "px");
     // shrink until the sky fits the screen (never below .55)
     let fit = 1;
-    scene.style.setProperty("--fit", "1");
+    setSky("--fit", "1");
     while (L1.offsetTop > H && fit > 0.56) {
       fit -= 0.05;
-      scene.style.setProperty("--fit", fit.toFixed(2));
+      setSky("--fit", fit.toFixed(2));
     }
     // room to spare: split it above and below the title, so the tip keeps its shape
     const spare = H - L1.offsetTop;
@@ -413,8 +423,8 @@ export function mountIcebergScene({
       () => {
         el.classList.toggle("open");
         el.setAttribute("aria-expanded", String(opening));
-        if (opening) runtime.open(el);
-        else runtime.close(el);
+        if (opening) runtime.open([el]);
+        else runtime.close([el]);
       },
       opening ? [el] : [],
       opening ? [] : [el],
@@ -450,8 +460,8 @@ export function mountIcebergScene({
           el.classList.toggle("open", on);
           el.setAttribute("aria-expanded", String(on));
         });
-        opening.forEach((el) => runtime.open(el));
-        closing.forEach((el) => runtime.close(el));
+        runtime.open(opening);
+        runtime.close(closing);
       },
       opening,
       closing,
@@ -510,9 +520,7 @@ export function mountIcebergScene({
     relayout();
   };
   // pieces rendered open (everything below the apps) carry their drawing from the start
-  pieces()
-    .filter((el) => el.classList.contains("open"))
-    .forEach((el) => runtime.open(el));
+  runtime.open(pieces().filter((el) => el.classList.contains("open")));
   syncExpander();
   let disposed = false;
   void document.fonts.ready.then(() => {

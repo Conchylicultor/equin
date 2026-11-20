@@ -261,6 +261,18 @@
 }
 
 /* ---------- the pieces: pills on their layer's row ---------- */
+/* A row's widths, set by the scene on each row (`sizeItems`) and read by the
+ * row alone: registered as NOT inherited, so writing them restyles the row,
+ * never every piece and card drawing inside it (an unregistered custom
+ * property inherits — one write restyled ~2,400 elements of the page). */
+@property --row {
+  syntax: "*";
+  inherits: false;
+}
+@property --row-open {
+  syntax: "*";
+  inherits: false;
+}
 .iceberg-pieces {
   display: flex;
   flex-wrap: wrap;
