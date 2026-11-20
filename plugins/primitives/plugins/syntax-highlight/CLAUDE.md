@@ -19,6 +19,7 @@
     - `HighlightedHtmlResult`
     - `UseHighlightedHtmlOptions`
   - Exports (values):
+    - `codeBackground`
     - `CodeListing`
     - `CodePaneSurface`
     - `getHighlighter`
@@ -64,6 +65,7 @@
     - `primitives/file-viewer/code`
     - `primitives/markdown`
     - `primitives/syntax-highlight/code-preview/mermaid`
+    - `primitives/syntax-highlight/overlay-textarea`
     - `ui/theme-engine/theme-gallery`
 - Sub-plugins:
   - **`code-preview`** [1 sub-plugin] — Registry of code previews keyed by fence language: a CodePreview.Renderer contribution ({ lang, aliases, label, Component }) draws a language's source as what it describes — a mermaid fence as its…

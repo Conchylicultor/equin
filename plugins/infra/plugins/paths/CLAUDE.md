@@ -503,8 +503,8 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `worktreeDataDir`
     - `worktreesDir`
 - Cross-plugin:
-  - Imported by: 148 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra` ×38
+  - Imported by: 149 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra` ×39
     - `framework` ×25
     - `apps` ×18
     - `debug` ×15
@@ -572,6 +572,7 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `listWorktreeDirsAsync`
     - `listWorktreeDirsSync`
     - `LSOF`
+    - `MACOS_TRASH`
     - `MKFIFO`
     - `PGREP`
     - `PLUGINS_DIR`

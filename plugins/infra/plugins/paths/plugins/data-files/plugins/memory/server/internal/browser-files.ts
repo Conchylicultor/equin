@@ -33,8 +33,18 @@ import {
   browserDirPeek,
   browserFileBytes,
   browserFileListing,
+  browserFileCreate,
+  browserFileDelete,
   browserFileMove,
+  browserFileRename,
   browserFileStat,
+  browserFileWrite,
+  isValidEntryName,
+  type FileCreateResult,
+  type FileRemoveOutcome,
+  type FileRemoveResult,
+  type FileRenameResult,
+  type FileWriteResult,
   browserFileText,
   contentTypeOf,
   type FileDirPeek,
@@ -750,6 +760,182 @@ export const handleBrowserFileMove = implement(
       body.resolutions ?? {},
       originOf(req),
     ),
+);
+
+// ── edits ────────────────────────────────────────────────────────────────────
+
+/**
+ * An entry of the home's own tree that may be changed: located on the home
+ * mount, not its root. Anything else answers why not — no path of this
+ * system (`missing`), or a folder the system keeps (the root, or the apps'
+ * folders under `~/.equin/`: `archive`, as a move answers).
+ */
+type Editable =
+  | { kind: "ok"; store: StoreOps; path: RelPath; spelled: string }
+  | { kind: "missing" | "archive"; path: string };
+
+function editable(raw: string, { root }: { root: boolean }): Editable {
+  const at = locateOrNull(raw);
+  if (at === null) return { kind: "missing", path: raw };
+  if (at.kind === "missing") return { kind: "missing", path: at.path };
+  if (at.kind === "implied" || at.mount.app || (!root && at.path === "")) {
+    return {
+      kind: "archive",
+      path: at.kind === "implied" ? at.path : spellIn(at.mount, at.path),
+    };
+  }
+  return {
+    kind: "ok",
+    store: at.mount.store,
+    path: at.path,
+    spelled: spellIn(at.mount, at.path),
+  };
+}
+
+/** `name` in the home folder `dir`, located — `null` when it lands elsewhere (`~/.equin`). */
+function childOf(dir: Editable & { kind: "ok" }, name: string): RelPath | null {
+  const child = joinRel(dir.path, name);
+  const at = locateOrNull(spellIn(homeMount(), child));
+  return at?.kind === "mount" && !at.mount.app ? child : null;
+}
+
+/** An empty file or folder in a folder of the home (as the computer's create). */
+export async function createBrowserEntry(
+  dirRaw: string,
+  name: string,
+  kind: "file" | "dir",
+  writer: WriteOrigin,
+): Promise<FileCreateResult> {
+  if (!isValidEntryName(name)) return { kind: "invalid-name", name };
+  const dir = editable(dirRaw, { root: true });
+  if (dir.kind !== "ok") return dir;
+  if (dir.path !== "") {
+    const stat = await dir.store.stat(dir.path);
+    if (stat.kind === "missing") return { kind: "missing", path: dir.spelled };
+    if (stat.entry.kind !== "dir") {
+      return { kind: "not-a-dir", path: dir.spelled };
+    }
+  }
+  const wanted = childOf(dir, name);
+  if (wanted === null) return { kind: "archive", path: dir.spelled };
+  const path =
+    (await dir.store.stat(wanted)).kind === "missing"
+      ? wanted
+      : await freeName(dir.store, dir.path, name, kind === "file");
+  if (kind === "file") await dir.store.write(path, "", { writer });
+  else await dir.store.mkdir(path, { writer });
+  return { kind: "created", path: spellIn(homeMount(), path) };
+}
+
+/** Rename an entry of the home in place, never replacing (as the computer's). */
+export async function renameBrowserEntry(
+  raw: string,
+  name: string,
+  writer: WriteOrigin,
+): Promise<FileRenameResult> {
+  if (!isValidEntryName(name)) return { kind: "invalid-name", name };
+  const at = editable(raw, { root: false });
+  if (at.kind !== "ok") return at;
+  if ((await at.store.stat(at.path)).kind === "missing") {
+    return { kind: "missing", path: at.spelled };
+  }
+  const parent = editable(spellIn(homeMount(), relParent(at.path)), {
+    root: true,
+  });
+  if (parent.kind !== "ok") return { kind: "archive", path: at.spelled };
+  const to = childOf(parent, name);
+  if (to === null) return { kind: "archive", path: at.spelled };
+  const toSpelled = spellIn(homeMount(), to);
+  if (to === at.path)
+    return { kind: "renamed", from: at.spelled, to: toSpelled };
+  const renamed = await at.store.rename(at.path, to, { writer });
+  switch (renamed) {
+    case "renamed":
+      return { kind: "renamed", from: at.spelled, to: toSpelled };
+    case "target-exists":
+      return { kind: "exists", from: at.spelled, to: toSpelled };
+    case "missing":
+      return { kind: "missing", path: at.spelled };
+  }
+}
+
+/** Delete entries of the home for good, a folder with everything in it. */
+export async function deleteBrowserPaths(
+  paths: readonly string[],
+  writer: WriteOrigin,
+): Promise<FileRemoveResult> {
+  const results: FileRemoveOutcome[] = [];
+  for (const raw of paths) {
+    const at = editable(raw, { root: false });
+    if (at.kind !== "ok") {
+      results.push(at);
+      continue;
+    }
+    if ((await at.store.stat(at.path)).kind === "missing") {
+      results.push({ kind: "missing", path: at.spelled });
+      continue;
+    }
+    await at.store.remove(at.path, { recursive: true, writer });
+    results.push({ kind: "removed", path: at.spelled });
+  }
+  return { results };
+}
+
+/**
+ * Save text into an existing file of the home — only while it still holds
+ * `expected`, when given (else `changed`).
+ */
+export async function writeBrowserText(
+  raw: string,
+  text: string,
+  expected: string | undefined,
+  writer: WriteOrigin,
+): Promise<FileWriteResult> {
+  const at = editable(raw, { root: false });
+  if (at.kind !== "ok") return at;
+  const stat = await at.store.stat(at.path);
+  if (stat.kind === "missing") return { kind: "missing", path: at.spelled };
+  if (stat.entry.kind !== "file")
+    return { kind: "not-a-file", path: at.spelled };
+  if (expected !== undefined) {
+    const read = await at.store.read(at.path);
+    if (read.kind === "missing") return { kind: "missing", path: at.spelled };
+    if ((await read.blob.text()) !== expected) {
+      return { kind: "changed", path: at.spelled };
+    }
+  }
+  await at.store.write(at.path, text, { writer });
+  return {
+    kind: "written",
+    path: at.spelled,
+    size: new TextEncoder().encode(text).byteLength,
+  };
+}
+
+/** `POST /api/files/browser/create`. */
+export const handleBrowserFileCreate = implement(
+  browserFileCreate,
+  ({ body, req }) =>
+    createBrowserEntry(body.dir, body.name, body.kind, originOf(req)),
+);
+
+/** `POST /api/files/browser/rename`. */
+export const handleBrowserFileRename = implement(
+  browserFileRename,
+  ({ body, req }) => renameBrowserEntry(body.path, body.name, originOf(req)),
+);
+
+/** `POST /api/files/browser/delete`. */
+export const handleBrowserFileDelete = implement(
+  browserFileDelete,
+  ({ body, req }) => deleteBrowserPaths(body.paths, originOf(req)),
+);
+
+/** `POST /api/files/browser/write`. */
+export const handleBrowserFileWrite = implement(
+  browserFileWrite,
+  ({ body, req }) =>
+    writeBrowserText(body.path, body.text, body.expected, originOf(req)),
 );
 
 // ── writes from a seed ───────────────────────────────────────────────────────

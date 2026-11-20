@@ -118,7 +118,7 @@ file viewer all name a file system and read through here.
 
 ## Plugin reference
 
-- Description: One read of a file in any file system: useFileText, useFileBytes and useFileStat take a FileLocation and read that system's live value (the computer's disk, the browser's storage, a checkout), so a reader never branches on where a file lives; a system this host cannot run is `unavailable`, nothing read. useFileSystems reads which systems this host serves (files.systems), useFolderListing(fs, path) a folder's pages and meta, and useFileMove(fs) one system's move as one mutation shape. Which file systems this host serves: FileSystemProvided(fs), contributed by the half serving a system's reads, and the files.systems value listing them (fixed per build) — what a browser reads to leave out a system nobody answers here.
+- Description: One read of a file in any file system: useFileText, useFileBytes and useFileStat take a FileLocation and read that system's live value (the computer's disk, the browser's storage, a checkout), so a reader never branches on where a file lives; a system this host cannot run is `unavailable`, nothing read. useFileSystems reads which systems this host serves (files.systems), useFolderListing(fs, path) a folder's pages and meta, useFileMove(fs) one system's move as one mutation shape, and useFileEdits(fs) its edits (create, rename, delete, save text, and the computer's move to the Trash) the same way. Which file systems this host serves: FileSystemProvided(fs), contributed by the half serving a system's reads, and the files.systems value listing them (fixed per build) — what a browser reads to leave out a system nobody answers here.
 - Server:
   - Contributes: `resource.declare` "files.systems"
   - Uses: `network/live.serveValue`
@@ -131,6 +131,7 @@ file viewer all name a file system and read through here.
   - Exports (types):
     - `FileBytesState`
     - `FileBytesUnavailable`
+    - `FileEdits`
     - `FileStatState`
     - `FileSystemsState`
     - `FileTextState`
@@ -139,6 +140,7 @@ file viewer all name a file system and read through here.
     - `fileBytesUnavailableMessage`
     - `fileTextUnavailableMessage`
     - `useFileBytes`
+    - `useFileEdits`
     - `useFileMove`
     - `useFileStat`
     - `useFileSystems`
@@ -162,6 +164,7 @@ file viewer all name a file system and read through here.
     - `DraggedFiles`
     - `FileArchiveReason`
     - `FileCompletions`
+    - `FileCreateResult`
     - `FileDirPeek`
     - `FileEntry`
     - `FileExtractResult`
@@ -172,6 +175,9 @@ file viewer all name a file system and read through here.
     - `FileMoveResult`
     - `FileOpenResult`
     - `FileReadAccess`
+    - `FileRemoveOutcome`
+    - `FileRemoveResult`
+    - `FileRenameResult`
     - `FileStat`
     - `FileStatValue`
     - `FileSystemCapabilities`
@@ -180,6 +186,7 @@ file viewer all name a file system and read through here.
     - `FileText`
     - `FileVolume`
     - `FileWithin`
+    - `FileWriteResult`
     - `FolderImageSize`
     - `ImageSize`
     - `ReadFileLocationsResult`
@@ -189,11 +196,15 @@ file viewer all name a file system and read through here.
     - `BROWSABLE_FILE_SYSTEMS`
     - `browserDirPeek`
     - `browserFileBytes`
+    - `browserFileCreate`
+    - `browserFileDelete`
     - `browserFileListing`
     - `browserFileMove`
     - `browserFileRaw`
+    - `browserFileRename`
     - `browserFileStat`
     - `browserFileText`
+    - `browserFileWrite`
     - `checkoutFileBytes`
     - `checkoutFileRaw`
     - `checkoutFileText`
@@ -201,13 +212,18 @@ file viewer all name a file system and read through here.
     - `computerDirPeek`
     - `computerFileBytes`
     - `computerFileCompletions`
+    - `computerFileCreate`
+    - `computerFileDelete`
     - `computerFileExtract`
     - `computerFileListing`
     - `computerFileMove`
     - `computerFileOpen`
     - `computerFileRaw`
+    - `computerFileRename`
     - `computerFileStat`
     - `computerFileText`
+    - `computerFileTrash`
+    - `computerFileWrite`
     - `computerImageResized`
     - `computerImageSizes`
     - `computerResizedAsset`
@@ -216,6 +232,7 @@ file viewer all name a file system and read through here.
     - `dirPeekOf`
     - `FILE_BYTES_MAX`
     - `FILE_COMPLETE_LIMIT`
+    - `FILE_DELETE_MAX_PATHS`
     - `FILE_LOCATIONS_MIME`
     - `FILE_MOVE_MAX_SOURCES`
     - `FILE_PEEK_MAX_NAMES`
@@ -223,6 +240,7 @@ file viewer all name a file system and read through here.
     - `FILE_TEXT_MAX_BYTES`
     - `FileArchiveReasonSchema`
     - `FileCompletionsSchema`
+    - `FileCreateResultSchema`
     - `FileDirPeekSchema`
     - `FileEntrySchema`
     - `FileExtractResultSchema`
@@ -234,6 +252,9 @@ file viewer all name a file system and read through here.
     - `FileMoveResultSchema`
     - `FileOpenResultSchema`
     - `FileReadAccessSchema`
+    - `FileRemoveOutcomeSchema`
+    - `FileRemoveResultSchema`
+    - `FileRenameResultSchema`
     - `fileStatOf`
     - `FileStatSchema`
     - `fileSystemsServed`
@@ -241,6 +262,7 @@ file viewer all name a file system and read through here.
     - `fileUrl`
     - `FileVolumeSchema`
     - `FileWithinSchema`
+    - `FileWriteResultSchema`
     - `FolderImageSizeSchema`
     - `handOffComputerFiles`
     - `hasFileLocations`
@@ -248,6 +270,7 @@ file viewer all name a file system and read through here.
     - `isBrowsable`
     - `isBrowsableFileSystem`
     - `isResizableName`
+    - `isValidEntryName`
     - `locationKey`
     - `locationName`
     - `MACOS_FILES_AND_FOLDERS_SETTINGS`

@@ -20,6 +20,11 @@ research/2026-11-09-global-one-file-system-api.md.
 | `POST /api/files/computer/open {path, reveal?}` (file-systems' `computerFileOpen`) | `opened` · `in-archive` · `missing`; 501 off macOS |
 | `POST /api/files/computer/extract {path}` (`computerFileExtract`) | `extracted {created, layout: single \| folder}` · `not-an-archive` · `missing` · `denied` · `unreadable-archive` |
 | `POST /api/files/computer/move {sources, destDir, resolutions?}` (`computerFileMove`) | `ok {destDir, results}` — one per source: `moved {from, to}` · `exists {from, to}` · `skipped` · `into-self` · `replaces-ancestor` · `same-dir` · `missing` · `denied` · `archive`; or, for the destination, `missing` · `denied` · `not-a-dir` · `archive` |
+| `POST /api/files/computer/create {dir, name, kind: file \| dir}` (`computerFileCreate`) | `created {path}` — an empty file or folder, a taken name numbered (`untitled 2.txt`), never overwritten · `missing` · `denied` · `not-a-dir` · `archive` · `invalid-name` |
+| `POST /api/files/computer/rename {path, name}` (`computerFileRename`) | `renamed {from, to}` · `exists` (never replaces; a change of case only goes through) · `missing` · `denied` · `archive` · `invalid-name` |
+| `POST /api/files/computer/delete {paths}` (`computerFileDelete`) | `{results}` — one per path: `removed` · `missing` · `denied` · `archive` (for good, a folder with its contents) |
+| `POST /api/files/computer/trash {paths}` (`computerFileTrash`) | as delete, through macOS's `/usr/bin/trash` (Put Back works); 501 off macOS 15+ |
+| `POST /api/files/computer/write {path, text, expected?}` (`computerFileWrite`) | `written {size}` — UTF-8, atomic (a hidden sibling renamed over the file, its mode kept, a symlink's target written) · `changed` (the file no longer holds `expected`: nothing written) · `missing` · `denied` · `not-a-file` · `archive` |
 
 ## Live reads (the reads above, kept fresh)
 
@@ -168,7 +173,7 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
 - **No path sandbox.** The server reads whatever the user account can read;
   **filesystem permissions are the boundary**, and hitting one is the typed
   `denied` state (e.g. `~/.Trash` without Full Disk Access).
-- **Read-only, with three side effects.** `POST open` spawns macOS `open <path>`
+- **Read-only but for the user's own edits.** `POST open` spawns macOS `open <path>`
   (or `open -R <path>` to reveal) through `infra/spawn`, the path one argv
   element (never a shell) and always absolute, so it cannot be read as a flag.
   `POST extract` writes an archive's members beside it — only NEW paths (a
@@ -176,7 +181,11 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
   folder (member names are normalised: no `..`, no absolute path; symlink
   members are not written), staged in a hidden sibling and renamed into place.
   `POST move` renames paths the user dragged; it overwrites only on an explicit
-  per-source `replace`.
+  per-source `replace`. The edits (create, rename, delete, trash, write) act
+  on the paths the user picked in Files: create and rename never replace,
+  delete is confirmed in the UI first, trash goes through macOS's own
+  `trash`, and write replaces a file's bytes only while it still holds the
+  text the edit began from (unless the user chose to overwrite).
 - **The exposure is other web pages in the user's browser, not the user.** A
   site must not be able to read `~/.ssh` through `localhost:<port>`:
   - Every host-fs route is owner-only (none declares `access: { public }`),

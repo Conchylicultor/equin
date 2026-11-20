@@ -231,6 +231,11 @@ export function diskTree(opts: DiskTreeOptions): Mount {
       await writeRawAtomic(abs(path), data);
     },
 
+    async mkdir(dir) {
+      notRoot("mkdir", dir);
+      await mkdir(abs(dir), { recursive: true });
+    },
+
     async remove(path, { recursive }) {
       notRoot("remove", path);
       const target = abs(path);

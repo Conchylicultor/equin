@@ -5608,26 +5608,29 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FileBrowserHeader` "filter" → `FileBrowserFilter`
               - `FileBrowserHeader` "toggles" → `FileBrowserToggles`
               - `FilePreviewHeader` "tabs" → `FilePreviewTabs`
+              - `FilePreviewHeader` "edit" → `FilePreviewEdit`
               - `FilePreviewHeader` "open-with" → `OpenWithDefaultApp`
               - `ConfigV2.WebRegister` "files"
               - `FileBrowserSlots.RowActions` "extract" → `ExtractAction`
               - `FileBrowserSlots.RowActions` "copy-path" → `CopyPathAction`
-            - Uses: 88 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
-              - `primitives/data-view` ×10
+            - Uses: 102 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
+              - `primitives/data-view` ×11
               - `primitives/pane` ×9
+              - `primitives/css/ui-kit` ×7
               - `primitives/file-viewer` ×7
-              - `primitives/css/ui-kit` ×5
+              - `primitives/kept-state` ×7
+              - `infra/paths/file-systems` ×6
               - `network/live` ×4
-              - `primitives/kept-state` ×4
               - `infra/endpoints` ×3
-              - `infra/paths/file-systems` ×3
               - `network/live/live-state` ×3
               - `primitives/css/resizable` ×3
               - `primitives/path-bar` ×3
               - `config_v2` ×2
               - `primitives/copy-to-clipboard` ×2
+              - `primitives/dom/web-storage` ×2
               - `primitives/link-gesture` ×2
               - `primitives/networking` ×2
+              - `primitives/overlay/cursor-menu` ×2
               - `shell/notifications` ×2
               - `companions/menu-bar/app-window.useNativeFileDrag`
               - `primitives/bar.Bar`
@@ -5642,7 +5645,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/text.Text`
               - `primitives/css/theme-boundary.Theme`
               - `primitives/dom/scroll-reveal.focusElement`
-              - `primitives/dom/web-storage.defineStore`
               - `primitives/file-type.FileTypeIcon`
               - `primitives/icon-button.IconButton`
               - `primitives/loading.Loading`
@@ -5652,6 +5654,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/scope/surface-id.useSurfaceTabId`
               - `primitives/search.SearchInput`
               - `primitives/shortcuts.useSurfaceShortcuts`
+              - `primitives/syntax-highlight/overlay-textarea.CodeTextarea`
+              - `ui/icons.Icon`
               - `ui/theme-engine.ThemeEngine`
             - Exports (types):
               - `ExplorerLensItem`
@@ -40676,8 +40680,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 148 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
-          - `infra` ×38
+        - Imported by: 149 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+          - `infra` ×39
           - `framework` ×25
           - `apps` ×18
           - `debug` ×15
@@ -40745,6 +40749,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `listWorktreeDirsAsync`
           - `listWorktreeDirsSync`
           - `LSOF`
+          - `MACOS_TRASH`
           - `MKFIFO`
           - `PGREP`
           - `PLUGINS_DIR`
@@ -40844,7 +40849,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `describeDataFilesConformance` — Register the conformance suite for one provider. `makeHarness` is called once per test.
               - Types: `ConformanceHarness`
           - Plugins:
-            - **`memory`** (excluded) — Data files in memory: provides the DataFiles host service for a host without the computer's disk (the browser composition), every root's tree kept in this process and written through to the host's declared storage (read back after a reload when it is persistent) — directories made as a write's parents, one monotonic clock, in-process locks, and a watch that hears every mutation as one change per microtask. And the browser's file system (FileSystemProvided("browser"): files.browser.list / .peek / .stat / .text / .bytes, GET /api/files/browser/raw and POST /api/files/browser/move): this storage laid out like a home folder — the home's own tree (~/Documents, …) beside the hidden data folder holding each root at its data dir, as the desktop keeps them; writeBrowserHomeFiles writes a fixture into the home for a demo's seed. Never booted by the desktop.
+            - **`memory`** (excluded) — Data files in memory: provides the DataFiles host service for a host without the computer's disk (the browser composition), every root's tree kept in this process and written through to the host's declared storage (read back after a reload when it is persistent) — directories made as a write's parents, one monotonic clock, in-process locks, and a watch that hears every mutation as one change per microtask. And the browser's file system (FileSystemProvided("browser"): files.browser.list / .peek / .stat / .text / .bytes, GET /api/files/browser/raw POST /api/files/browser/move and the edits — POST create / rename / delete / write): this storage laid out like a home folder — the home's own tree (~/Documents, …) beside the hidden data folder holding each root at its data dir, as the desktop keeps them; writeBrowserHomeFiles writes a fixture into the home for a demo's seed. Never booted by the desktop.
               - Server:
                 - Contributes:
                   - `host-service:data-files.store` "data-files.store"
@@ -40949,7 +40954,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SECRETS_DIR_DISPLAY`
               - `USER_CONFIG_DIR_DISPLAY`
               - `WORKTREES_DIR_DISPLAY`
-        - **`file-systems`** — One read of a file in any file system: useFileText, useFileBytes and useFileStat take a FileLocation and read that system's live value (the computer's disk, the browser's storage, a checkout), so a reader never branches on where a file lives; a system this host cannot run is `unavailable`, nothing read. useFileSystems reads which systems this host serves (files.systems), useFolderListing(fs, path) a folder's pages and meta, and useFileMove(fs) one system's move as one mutation shape. Which file systems this host serves: FileSystemProvided(fs), contributed by the half serving a system's reads, and the files.systems value listing them (fixed per build) — what a browser reads to leave out a system nobody answers here.
+        - **`file-systems`** — One read of a file in any file system: useFileText, useFileBytes and useFileStat take a FileLocation and read that system's live value (the computer's disk, the browser's storage, a checkout), so a reader never branches on where a file lives; a system this host cannot run is `unavailable`, nothing read. useFileSystems reads which systems this host serves (files.systems), useFolderListing(fs, path) a folder's pages and meta, useFileMove(fs) one system's move as one mutation shape, and useFileEdits(fs) its edits (create, rename, delete, save text, and the computer's move to the Trash) the same way. Which file systems this host serves: FileSystemProvided(fs), contributed by the half serving a system's reads, and the files.systems value listing them (fixed per build) — what a browser reads to leave out a system nobody answers here.
           - Server:
             - Contributes: `resource.declare` "files.systems"
             - Uses: `network/live.serveValue`
@@ -40962,6 +40967,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types):
               - `FileBytesState`
               - `FileBytesUnavailable`
+              - `FileEdits`
               - `FileStatState`
               - `FileSystemsState`
               - `FileTextState`
@@ -40970,6 +40976,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fileBytesUnavailableMessage`
               - `fileTextUnavailableMessage`
               - `useFileBytes`
+              - `useFileEdits`
               - `useFileMove`
               - `useFileStat`
               - `useFileSystems`
@@ -40993,6 +41000,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DraggedFiles`
               - `FileArchiveReason`
               - `FileCompletions`
+              - `FileCreateResult`
               - `FileDirPeek`
               - `FileEntry`
               - `FileExtractResult`
@@ -41003,6 +41011,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FileMoveResult`
               - `FileOpenResult`
               - `FileReadAccess`
+              - `FileRemoveOutcome`
+              - `FileRemoveResult`
+              - `FileRenameResult`
               - `FileStat`
               - `FileStatValue`
               - `FileSystemCapabilities`
@@ -41011,6 +41022,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FileText`
               - `FileVolume`
               - `FileWithin`
+              - `FileWriteResult`
               - `FolderImageSize`
               - `ImageSize`
               - `ReadFileLocationsResult`
@@ -41020,11 +41032,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `BROWSABLE_FILE_SYSTEMS`
               - `browserDirPeek`
               - `browserFileBytes`
+              - `browserFileCreate`
+              - `browserFileDelete`
               - `browserFileListing`
               - `browserFileMove`
               - `browserFileRaw`
+              - `browserFileRename`
               - `browserFileStat`
               - `browserFileText`
+              - `browserFileWrite`
               - `checkoutFileBytes`
               - `checkoutFileRaw`
               - `checkoutFileText`
@@ -41032,13 +41048,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `computerDirPeek`
               - `computerFileBytes`
               - `computerFileCompletions`
+              - `computerFileCreate`
+              - `computerFileDelete`
               - `computerFileExtract`
               - `computerFileListing`
               - `computerFileMove`
               - `computerFileOpen`
               - `computerFileRaw`
+              - `computerFileRename`
               - `computerFileStat`
               - `computerFileText`
+              - `computerFileTrash`
+              - `computerFileWrite`
               - `computerImageResized`
               - `computerImageSizes`
               - `computerResizedAsset`
@@ -41047,6 +41068,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `dirPeekOf`
               - `FILE_BYTES_MAX`
               - `FILE_COMPLETE_LIMIT`
+              - `FILE_DELETE_MAX_PATHS`
               - `FILE_LOCATIONS_MIME`
               - `FILE_MOVE_MAX_SOURCES`
               - `FILE_PEEK_MAX_NAMES`
@@ -41054,6 +41076,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FILE_TEXT_MAX_BYTES`
               - `FileArchiveReasonSchema`
               - `FileCompletionsSchema`
+              - `FileCreateResultSchema`
               - `FileDirPeekSchema`
               - `FileEntrySchema`
               - `FileExtractResultSchema`
@@ -41065,6 +41088,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FileMoveResultSchema`
               - `FileOpenResultSchema`
               - `FileReadAccessSchema`
+              - `FileRemoveOutcomeSchema`
+              - `FileRemoveResultSchema`
+              - `FileRenameResultSchema`
               - `fileStatOf`
               - `FileStatSchema`
               - `fileSystemsServed`
@@ -41072,6 +41098,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fileUrl`
               - `FileVolumeSchema`
               - `FileWithinSchema`
+              - `FileWriteResultSchema`
               - `FolderImageSizeSchema`
               - `handOffComputerFiles`
               - `hasFileLocations`
@@ -41079,6 +41106,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `isBrowsable`
               - `isBrowsableFileSystem`
               - `isResizableName`
+              - `isValidEntryName`
               - `locationKey`
               - `locationName`
               - `MACOS_FILES_AND_FOLDERS_SETTINGS`
@@ -57126,6 +57154,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/desktop/shelf`
               - `apps/desktop/wallpaper`
               - `apps/desktop/windows`
+              - `apps/file-explorer/browser`
           - Exemptions:
             - Exempts itself from: `layout/no-adhoc-layout` — `.` (sanctioned)
         - **`floating-action`** — Disclosure-intent floating action: a single morphing panel revealed by hover, focus, or touch via the useDisclosureIntent state machine (grace-delay close, no re-entry dead zone, Esc/outside-press dismiss), over a stable hover hitbox that cures open/close flicker.
@@ -58993,6 +59022,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HighlightedHtmlResult`
           - `UseHighlightedHtmlOptions`
         - Exports (values):
+          - `codeBackground`
           - `CodeListing`
           - `CodePaneSurface`
           - `getHighlighter`
@@ -59038,6 +59068,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/file-viewer/code`
           - `primitives/markdown`
           - `primitives/syntax-highlight/code-preview/mermaid`
+          - `primitives/syntax-highlight/overlay-textarea`
           - `ui/theme-engine/theme-gallery`
       - Plugins:
         - **`code-preview`** — Registry of code previews keyed by fence language: a CodePreview.Renderer contribution ({ lang, aliases, label, Component }) draws a language's source as what it describes — a mermaid fence as its diagram. Consumers (markdown fences, the page code block) read it only through useCodePreviewRenderer / useCodePreviewLangs, so a new language needs no consumer change; CodePreviewError is the shared failure chrome.
@@ -59109,7 +59140,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `SequenceNote`
                   - `SequenceParticipant`
                 - Exports (values): `parseMermaid`
-        - **`overlay-textarea`** — Editable highlighted text: <OverlayTextarea> lays a transparent textarea (visible caret) exactly over an underlay <pre> rendering decorate(value), which sizes the box so the field grows as you type. Both layers share one metrics class, so glyphs, wrapping and the caret stay aligned.
+        - **`overlay-textarea`** — Editable highlighted text: <OverlayTextarea> lays a transparent textarea (visible caret) exactly over an underlay <pre> rendering decorate(value), which sizes the box so the field grows as you type. Both layers share one metrics class, so glyphs, wrapping and the caret stay aligned. <CodeTextarea path> is a file's text so: coloured by shiki in the scheme's theme, on that theme's background.
           - Web:
             - Uses:
               - `primitives/css/clip.Clip`
@@ -59118,15 +59149,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/text.textVariantClass`
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.Textarea`
-            - Exports (types): `OverlayTextareaProps`
-            - Exports (values): `OverlayTextarea`
+              - `primitives/syntax-highlight.codeBackground`
+              - `primitives/syntax-highlight.getHighlighter`
+              - `primitives/syntax-highlight.languageForPath`
+              - `primitives/syntax-highlight.SHIKI_LANGS`
+              - `primitives/syntax-highlight.themeForMode`
+              - `primitives/syntax-highlight.useDarkMode`
+            - Exports (types):
+              - `CodeTextareaProps`
+              - `OverlayTextareaProps`
+            - Exports (values):
+              - `CodeTextarea`
+              - `OverlayTextarea`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --foreground`
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/density --space-md`
               - `ui/tokens/density --space-sm`
-            - Imported by: `apps/sonata/sources/chord-grid`
+            - Imported by:
+              - `apps/file-explorer/browser`
+              - `apps/sonata/sources/chord-grid`
     - **`tabbed-view`** — Factory for slot-backed tab-host views: per-tab availability gates and count badges, a pill or underline tab strip, and the active tab either device-local (localStorage) or controlled by the caller (a URL param).
       - Web:
         - Uses:

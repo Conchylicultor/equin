@@ -118,3 +118,28 @@ export type {
   ReadFileLocationsResult,
 } from "./internal/drag";
 export { fileSystemsServed } from "./internal/systems";
+export {
+  FILE_DELETE_MAX_PATHS,
+  FileCreateResultSchema,
+  FileRemoveOutcomeSchema,
+  FileRemoveResultSchema,
+  FileRenameResultSchema,
+  FileWriteResultSchema,
+  browserFileCreate,
+  browserFileDelete,
+  browserFileRename,
+  browserFileWrite,
+  computerFileCreate,
+  computerFileDelete,
+  computerFileRename,
+  computerFileTrash,
+  computerFileWrite,
+  isValidEntryName,
+} from "./internal/edits";
+export type {
+  FileCreateResult,
+  FileRemoveOutcome,
+  FileRemoveResult,
+  FileRenameResult,
+  FileWriteResult,
+} from "./internal/edits";

@@ -18,7 +18,11 @@ import {
   FileBrowserNav,
   FileBrowserToggles,
 } from "./components/file-browser-header";
-import { FilePreviewTabs, OpenWithDefaultApp } from "./components/file-preview";
+import {
+  FilePreviewEdit,
+  FilePreviewTabs,
+  OpenWithDefaultApp,
+} from "./components/file-preview";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { filesConfig } from "../core";
@@ -104,6 +108,7 @@ export default {
     FileBrowserHeader({ id: "filter", component: FileBrowserFilter }),
     FileBrowserHeader({ id: "toggles", component: FileBrowserToggles }),
     FilePreviewHeader({ id: "tabs", component: FilePreviewTabs }),
+    FilePreviewHeader({ id: "edit", component: FilePreviewEdit }),
     FilePreviewHeader({ id: "open-with", component: OpenWithDefaultApp }),
     ConfigV2.WebRegister({ descriptor: filesConfig }),
     FileBrowserSlots.RowActions({ id: "extract", component: ExtractAction }),

@@ -78,6 +78,7 @@ export function defineFileRoot<const S extends FileRootSpec>(
     stat: (path) => store().stat(path),
     read: (path) => store().read(path),
     write: (path, data, opts) => store().write(path, data, opts),
+    mkdir: (dir, opts) => store().mkdir(dir, opts),
     remove: (path, opts) => store().remove(path, opts),
     rename: (from, to, opts) => store().rename(from, to, opts),
     withLock: (key, fn) => store().withLock(key, fn),

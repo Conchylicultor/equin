@@ -52,7 +52,15 @@ export type {
   ReclaimPolicy,
 } from "../core/internal/data-dir";
 
-export { GIT, LSOF, MKFIFO, PGREP, PS, SAMPLE } from "./internal/bins";
+export {
+  GIT,
+  LSOF,
+  MACOS_TRASH,
+  MKFIFO,
+  PGREP,
+  PS,
+  SAMPLE,
+} from "./internal/bins";
 
 export {
   listWorktreeDirsSync,

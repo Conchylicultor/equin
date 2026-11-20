@@ -238,6 +238,15 @@ export interface HierarchyConfig<TRow> {
    * children are already in `rows`.
    */
   lazyChildren?: LazyChildren<TRow>;
+  /**
+   * Open a row's label editor from outside the tree — a context menu's
+   * Rename, or a row the host just created itself (not through `onCreate`):
+   * the row whose label (the primary field, which must write back with
+   * `onEdit`) opens for editing once it is painted, as a row `onCreate`
+   * made does. Each request is a new object: the same id asked twice opens
+   * it twice. `null` / absent: nothing asked.
+   */
+  editLabel?: { readonly id: string } | null;
 }
 
 /**

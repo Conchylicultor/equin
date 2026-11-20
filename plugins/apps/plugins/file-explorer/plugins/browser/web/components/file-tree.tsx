@@ -5,6 +5,7 @@ import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   DataView,
   defineDataView,
+  fieldOverrides,
   rowRead,
   type FieldDef,
   type HierarchyConfig,
@@ -435,6 +436,13 @@ export interface FileTreeProps {
   ) => void;
   /** Files dropped on a folder row (`dir`, display form). */
   onDropInto: (dir: string, dt: DataTransfer) => void;
+  /**
+   * Rename a row (its name edited in place — a second click on the selected
+   * row, or `editLabel`); absent where the system cannot rename.
+   */
+  onRename: ((row: EntryRow, name: string) => void) | undefined;
+  /** A row whose name to open for editing (Rename, a new entry): each request a new object. */
+  editLabel: { readonly id: string } | null;
 }
 
 /**
@@ -463,6 +471,8 @@ export function FileTree({
   rowSelection,
   onDragPaths,
   onDropInto,
+  onRename,
+  editLabel,
 }: FileTreeProps): ReactNode {
   // "Today" is today as of this visit to the folder.
   const [now] = useState(() => Date.now());
@@ -481,8 +491,25 @@ export function FileTree({
         load: (r) => request(r.path),
         onOpenChange: (open) => setOpen(open.map((r) => r.path)),
       },
+      editLabel,
     }),
-    [listings, request, setOpen],
+    [listings, request, setOpen, editLabel],
+  );
+
+  // The name is edited in place where the system renames — never inside an
+  // archive, whose entries cannot be written.
+  const overrides = useMemo(
+    () =>
+      onRename === undefined
+        ? undefined
+        : fieldOverrides(fileEntry, {
+            name: {
+              onEdit: (row, next) => {
+                if (typeof next === "string") onRename(row, next);
+              },
+            },
+          }),
+    [onRename],
   );
 
   // Rows drag as files of their system with their kinds (the selection when
@@ -632,6 +659,7 @@ export function FileTree({
     <DataView<EntryRow>
       rows={rows}
       collection={fileEntry}
+      {...(overrides !== undefined ? { overrides } : {})}
       extraFields={extraFields}
       itemActions={FileBrowserSlots.RowActions}
       rowKey={(r) => r.id}

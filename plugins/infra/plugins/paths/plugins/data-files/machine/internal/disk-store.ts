@@ -124,6 +124,10 @@ export function createDiskDataFiles(opts: DiskDataFilesOptions): DataFilesImpl {
         await tree.write(path, data, wopts);
         await ledger.noteComplete(wopts.writer, path);
       },
+      mkdir(dir, wopts) {
+        refuseUnledgerable(wopts.writer, "mkdir", dir);
+        return tree.mkdir(dir, wopts);
+      },
       async remove(path, ropts) {
         const st = await tree.stat(path);
         if (st.kind === "found" && st.entry.kind === "dir") {

@@ -49,7 +49,20 @@ import {
   useOpenHostFile,
   type FileRenderersHandle,
 } from "@plugins/primitives/plugins/file-viewer/web";
-import type { FileViewerGit } from "@plugins/primitives/plugins/file-viewer/core";
+import {
+  isBinaryPath,
+  type FileViewerGit,
+} from "@plugins/primitives/plugins/file-viewer/core";
+import {
+  fileTextUnavailableMessage,
+  useFileText,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/web";
+import { CodeTextarea } from "@plugins/primitives/plugins/syntax-highlight/plugins/overlay-textarea/web";
+import {
+  FILE_EDIT_MAX_CHARS,
+  useFileEdit,
+  type FileEditSession,
+} from "../internal/file-edit";
 import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
 import { FILES_SCOPE, filesDocumentTheme } from "../internal/theme";
 import {
@@ -60,6 +73,9 @@ import { WithLenses } from "../internal/lenses";
 import { baseName, formatModified, formatSize, parentPath } from "../../core";
 
 const closeIcon = symbol("close");
+const editIcon = symbol("edit");
+const saveIcon = symbol("save");
+const revertIcon = symbol("undo");
 
 type ArchiveMembership = ReturnType<typeof useArchiveMembership>;
 
@@ -78,6 +94,13 @@ interface FilePreviewReady {
    * items, or by the host as its pane's own Expand — never both.
    */
   rendererExpand: RendererExpandPlacement;
+  /**
+   * The file's edit in place (Edit → Save / Revert), or `null` where this
+   * preview edits nothing: the host offers no editing (an attachment), the
+   * system cannot save, the file sits inside an archive, or that is not known
+   * yet.
+   */
+  edit: FileEditSession | null;
 }
 
 /**
@@ -143,7 +166,10 @@ function useReadyFilePreview(): FilePreviewReady {
  * body share them) and its archive membership. `name` is what to call it when
  * that is not its name on disk — an attachment is stored as `<uuid>.pdf` but
  * is the `report.pdf` the user attached. `git` is its git context, when a lens
- * knows it. `rendererExpand` is who draws the renderer's Expand.
+ * knows it. `rendererExpand` is who draws the renderer's Expand. `editable`:
+ * whether the host lets the preview edit the file at all (Files does, on a
+ * system that saves — `capabilities.edit`; an attachment is not the user's
+ * file to edit).
  */
 export function useFilePreview({
   fs,
@@ -152,6 +178,7 @@ export function useFilePreview({
   home,
   git,
   rendererExpand,
+  editable,
 }: {
   fs: BrowsableFileSystem;
   path: string;
@@ -159,6 +186,7 @@ export function useFilePreview({
   home: string;
   git: FileViewerGit | undefined;
   rendererExpand: RendererExpandPlacement;
+  editable: boolean;
 }): FilePreviewValue {
   const file = useMemo(() => ({ fs, path }), [fs, path]);
   const renderers = useFileRenderers({
@@ -166,13 +194,37 @@ export function useFilePreview({
     ...(git !== undefined ? { git } : {}),
   });
   const membership = useArchiveMembership(file);
+  const session = useFileEdit({ fs, path });
+  const edit =
+    editable && membership.kind === "known" && !membership.inArchive
+      ? session
+      : null;
   const displayName = name ?? baseName(path);
   return useMemo(
     () => ({
       name: displayName,
-      ready: { fs, path, home, file, renderers, membership, rendererExpand },
+      ready: {
+        fs,
+        path,
+        home,
+        file,
+        renderers,
+        membership,
+        rendererExpand,
+        edit,
+      },
     }),
-    [displayName, fs, path, home, file, renderers, membership, rendererExpand],
+    [
+      displayName,
+      fs,
+      path,
+      home,
+      file,
+      renderers,
+      membership,
+      rendererExpand,
+      edit,
+    ],
   );
 }
 
@@ -188,25 +240,29 @@ export function usePendingFilePreview(name: string): FilePreviewValue {
 export function FilePreviewTitle(): ReactNode {
   const { name, ready } = useFilePreviewHeader();
   return (
-    // The mockup's header: 10px between its parts.
-    <Line className="gap-smd">
-      {/* The mockup's 20px icon box holding a 14px glyph: the Seti glyphs are
-          cropped to fill their box, so the box alone would draw them half
-          again too large. */}
-      <Center className={cn(rigidClass(), "size-5")}>
-        <FileTypeIcon name={name} className="size-3.5" />
-      </Center>
-      <Fill>
-        <Stack gap="none">
-          <Text as="span" className="truncate font-semibold text-foreground">
-            {name}
-          </Text>
-          {ready !== null && (
-            <PreviewMeta fs={ready.fs} path={ready.path} home={ready.home} />
-          )}
-        </Stack>
-      </Fill>
-    </Line>
+    // Shrinks with the header (its items take what they need): the place
+    // truncates rather than the Copy path button being clipped away.
+    <Fill>
+      {/* The mockup's header: 10px between its parts. */}
+      <Line className="gap-smd">
+        {/* The mockup's 20px icon box holding a 14px glyph: the Seti glyphs are
+            cropped to fill their box, so the box alone would draw them half
+            again too large. */}
+        <Center className={cn(rigidClass(), "size-5")}>
+          <FileTypeIcon name={name} className="size-3.5" />
+        </Center>
+        <Fill>
+          <Stack gap="none">
+            <Text as="span" className="truncate font-semibold text-foreground">
+              {name}
+            </Text>
+            {ready !== null && (
+              <PreviewMeta fs={ready.fs} path={ready.path} home={ready.home} />
+            )}
+          </Stack>
+        </Fill>
+      </Line>
+    </Fill>
   );
 }
 
@@ -225,6 +281,74 @@ export function FilePreviewTabs(): ReactNode {
       {rendererExpand === "items" && <FileExpandButton renderers={renderers} />}
       {renderers.resolved.length > 1 && <FileTabs {...renderers} />}
     </>
+  );
+}
+
+/**
+ * Edit the file in place: an Edit button while it is shown (a text file the
+ * preview may edit), which becomes Save and Revert while it is edited. Save
+ * writes it (⌘S does too); Revert drops the edit. Nothing for a file the
+ * preview does not edit, or that is not text.
+ */
+export function FilePreviewEdit(): ReactNode {
+  const { ready } = useFilePreviewHeader();
+  if (ready === null || ready.edit === null) return null;
+  const { edit } = ready;
+  if (edit.kind === "editing") {
+    return (
+      <Line className="gap-xs">
+        <IconButton
+          icon={revertIcon}
+          label="Revert"
+          tooltip="Revert: drop your changes"
+          variant="ghost"
+          disabled={edit.saving}
+          onClick={edit.revert}
+        />
+        <IconButton
+          icon={saveIcon}
+          label="Save (⌘S)"
+          variant="ghost"
+          disabled={edit.saving || !edit.dirty}
+          onClick={() => void edit.save()}
+        />
+      </Line>
+    );
+  }
+  // A file known not to be text is never read for an edit.
+  if (isBinaryPath(ready.path)) return null;
+  return <EditButton file={ready.file} start={edit.start} />;
+}
+
+/** Edit: begins once the file's text is read, from that text. */
+function EditButton({
+  file,
+  start,
+}: {
+  file: FileLocation;
+  start: (content: string) => void;
+}): ReactNode {
+  const text = useFileText(file);
+  if (text.kind === "unavailable" && text.reason === "binary") return null;
+  const why =
+    text.kind === "unavailable"
+      ? fileTextUnavailableMessage(text)
+      : text.kind === "error"
+        ? text.message
+        : text.kind === "ok" && text.content.length > FILE_EDIT_MAX_CHARS
+          ? "Too large to edit here"
+          : null;
+  return (
+    <IconButton
+      icon={editIcon}
+      label="Edit"
+      tooltip={why ?? "Edit"}
+      variant="ghost"
+      disabled={text.kind !== "ok" || why !== null}
+      onClick={() => {
+        if (text.kind === "ok") start(text.content);
+      }}
+    />
   );
 }
 
@@ -260,7 +384,10 @@ export function OpenWithDefaultApp(): ReactNode {
  * renderer for it.
  */
 export function FilePreviewBody(): ReactNode {
-  const { file, renderers } = useReadyFilePreview();
+  const { file, renderers, edit } = useReadyFilePreview();
+  if (edit?.kind === "editing") {
+    return <FileTextEditor path={file.path} edit={edit} />;
+  }
   return (
     <Column
       fill
@@ -279,6 +406,48 @@ export function FilePreviewBody(): ReactNode {
           >
             <FileContent file={file} renderers={renderers} />
           </Theme>
+        </Scroll>
+      }
+    />
+  );
+}
+
+/**
+ * The file's text being edited: the whole body, coloured as its listing is,
+ * ⌘S saving it.
+ */
+function FileTextEditor({
+  path,
+  edit,
+}: {
+  path: string;
+  edit: FileEditSession & { kind: "editing" };
+}): ReactNode {
+  return (
+    <Column
+      fill
+      className="h-full"
+      scrollBody={false}
+      data-files-preview=""
+      body={
+        <Scroll
+          axis="y"
+          className="h-full"
+          onKeyDown={(e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+              e.preventDefault();
+              if (!edit.saving) void edit.save();
+            }
+          }}
+        >
+          <CodeTextarea
+            value={edit.text}
+            onChange={edit.setText}
+            path={path}
+            ariaLabel={`Edit ${baseName(path)}`}
+            className="min-h-full"
+            autoFocus={edit.focus}
+          />
         </Scroll>
       }
     />
@@ -430,6 +599,7 @@ function ReadyFilePreviewPane({
     home: system.home,
     git,
     rendererExpand: "pane",
+    editable: system.capabilities.edit,
   });
   // Already in Files beside its folder, the preview has no fuller view of its
   // own: Expand is the file's in the app that plays it (Open in Sonata), and
@@ -520,6 +690,7 @@ function SplitPreviewReady({
     home: system.home,
     git,
     rendererExpand: "items",
+    editable: system.capabilities.edit,
   });
   return (
     <FilePreviewProvider value={preview}>
@@ -537,6 +708,7 @@ function SplitPreviewReady({
               </Text>
             </Fill>
             <FilePreviewTabs />
+            <FilePreviewEdit />
             <OpenWithDefaultApp />
             {onClose && (
               <IconButton

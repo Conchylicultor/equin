@@ -129,6 +129,13 @@ export type TreeModelArgs<T extends TreeItem> = {
    */
   lazyChildren?: LazyChildren<T>;
   /**
+   * A row whose label to open for editing, asked from outside the tree (a
+   * host's Rename, a row the host created itself): handed to the same
+   * pending-focus signal a row `onCreate` made takes, so it opens once the
+   * row is painted. Each request is a new object; `null`: nothing asked.
+   */
+  editLabel?: { readonly id: string } | null;
+  /**
    * The OPEN gesture — double-click a row, or Enter on a focused row — distinct
    * from the single-click activation (`onSelect` / `expandOnActivate`). For a
    * file browser: click selects, double-click descends into the folder or opens
@@ -202,6 +209,7 @@ export function useTreeModel<T extends TreeItem>(
     lazyChildren,
     onOpen,
     guides = false,
+    editLabel = null,
   } = args;
 
   // The row whose name input should take focus once it appears: set by a create
@@ -209,6 +217,13 @@ export function useTreeModel<T extends TreeItem>(
   // by THIS tree, never page-wide, so two mounted trees can't take each other's.
   const [pendingFocusId, setPendingFocusId] = useState<string | null>(null);
   const clearPendingFocus = useCallback(() => setPendingFocusId(null), []);
+  // A host's request to edit a row's label rides the same signal, once per
+  // request object (adjusted while rendering: the request is a prop change).
+  const [seenEditLabel, setSeenEditLabel] = useState<typeof editLabel>(null);
+  if (editLabel !== seenEditLabel) {
+    setSeenEditLabel(editLabel);
+    if (editLabel !== null) setPendingFocusId(editLabel.id);
+  }
 
   // One-shot per tree mount: the first row to read it (the initially selected
   // one) gets its mount-reveal; every later reader — incidental row remounts

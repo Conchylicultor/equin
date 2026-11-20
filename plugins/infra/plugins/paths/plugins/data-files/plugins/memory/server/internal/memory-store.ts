@@ -225,6 +225,13 @@ export function createMemoryDataFiles(opts?: {
         if (existing === undefined) touch(t, relParent(path));
         changed(spec, [path]);
       },
+      async mkdir(dir, _opts) {
+        assertNotRoot(spec, dir, "mkdir");
+        const t = tree();
+        if (t.get(dir)?.kind === "dir") return;
+        ensureDir(spec, t, dir);
+        changed(spec, [dir]);
+      },
       async remove(path, opts) {
         assertNotRoot(spec, path, "remove");
         const t = tree();

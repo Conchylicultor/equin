@@ -1,4 +1,4 @@
-// @hash 84ea15f09dd3
+// @hash d87395b33264
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -9,12 +9,14 @@
 {
   // The shared file-preview header (the Files preview column, the attachment
   // preview), read left to right: the file's title (icon, name, place · size ·
-  // modified) holds the slack, then — after the spacer — the renderer tabs and
-  // Open with default app. The pane's × follows, as in every pane.
+  // modified) holds the slack, then — after the spacer — the renderer tabs,
+  // Edit (Save / Revert while editing) and Open with default app. The pane's ×
+  // follows, as in every pane.
   "items": [
     "primitives.pane:title",
     { "type": "spacer", "id": "spacer-1" },
     "apps.file-explorer.browser:tabs",
+    "apps.file-explorer.browser:edit",
     "apps.file-explorer.browser:open-with"
   ]
 }

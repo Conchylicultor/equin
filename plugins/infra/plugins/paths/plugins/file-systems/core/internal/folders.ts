@@ -44,6 +44,13 @@ export function isBrowsableFileSystem(fs: string): fs is BrowsableFileSystem {
 export interface FileSystemCapabilities {
   /** Move entries into a folder (a drag onto a folder). */
   move: boolean;
+  /**
+   * Create, rename and delete entries, and save a text file
+   * (`./edits.ts`, bound per system by `useFileEdits(fs)`, web).
+   */
+  edit: boolean;
+  /** Move entries to the system's Trash, to be put back (`computerFileTrash`). */
+  trash: boolean;
   /** Browse into an archive file like a folder, and extract it beside itself. */
   archives: boolean;
   /**
@@ -76,6 +83,8 @@ export const FILE_SYSTEMS: Readonly<
     label: "This computer",
     capabilities: {
       move: true,
+      edit: true,
+      trash: true,
       archives: true,
       openNative: true,
       completions: true,
@@ -87,6 +96,8 @@ export const FILE_SYSTEMS: Readonly<
     label: "This browser",
     capabilities: {
       move: true,
+      edit: true,
+      trash: false,
       archives: false,
       openNative: false,
       completions: false,

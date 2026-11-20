@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
   type DragEvent,
+  type MouseEvent,
   type ReactNode,
 } from "react";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
@@ -64,6 +65,9 @@ import {
   type Listings,
 } from "../internal/listings";
 import { useMoveInto } from "../internal/move-into";
+import { useEntryEdits, type RemoveMode } from "../internal/entry-edits";
+import { useFileEditDrafts } from "../internal/file-edit";
+import { EntryMenu, type EntryMenuState } from "./entry-menu";
 import { useViewportAtMost } from "../internal/use-viewport-at-most";
 import { FileTree } from "./file-tree";
 import { SplitPreview } from "./file-preview";
@@ -397,6 +401,102 @@ function Listing({ browser }: { browser: FileBrowserReady }): ReactNode {
     onDrop: (dt) => dropInto(dir, dt),
   });
 
+  // ── edits: the context menu, rename in place, new entries, removal ──────
+  const edits = useEntryEdits(system);
+  const fileEditDrafts = useFileEditDrafts();
+  const [editLabel, setEditLabel] = useState<{ readonly id: string } | null>(
+    null,
+  );
+  const [menu, setMenu] = useState<EntryMenuState | null>(null);
+  // New entries go into a folder listed as one of the system's own (never
+  // one inside an archive).
+  const writable = (folder: string) =>
+    edits !== null && isOnDisk(listings, folder);
+  const folderOf = (path: string) => parentPath(path, home) ?? dir;
+
+  const forgetRemoved = (gone: readonly string[]) => {
+    if (gone.length === 0) return;
+    const isGone = (p: string) => gone.some((g) => isWithin(p, g));
+    setSelection((s) => ({
+      selected: new Set([...s.selected].filter((p) => !isGone(p))),
+      anchor: s.anchor !== null && isGone(s.anchor) ? null : s.anchor,
+    }));
+    if (open !== null && isGone(open)) {
+      runActivation(nav.fileTo(null), PLAIN_GESTURE);
+    }
+  };
+
+  const renameEntry = (path: string, name: string) => {
+    if (edits === null) return;
+    void edits.rename(path, name).then((to) => {
+      if (to === null) return;
+      const moved = (p: string) =>
+        isWithin(p, path) ? to + p.slice(path.length) : p;
+      setSelection((s) => ({
+        selected: new Set([...s.selected].map(moved)),
+        anchor: s.anchor === null ? null : moved(s.anchor),
+      }));
+      // The open file (or the folder holding it) was renamed: its preview,
+      // and any edit not saved yet, follow it.
+      if (open !== null && isWithin(open, path)) {
+        fileEditDrafts.move(system.fs, open, moved(open));
+        runActivation(nav.fileTo(moved(open)), PLAIN_GESTURE);
+      }
+    });
+  };
+
+  const newEntry = (folder: string, kind: "file" | "dir") => {
+    if (edits === null) return;
+    void edits.create(folder, kind).then((path) => {
+      if (path === null) return;
+      setSelection(only(path));
+      // Named first: its name opens for editing once the row lands.
+      setEditLabel({ id: path });
+      // A new text file opens beside the listing, ready to type into.
+      if (kind === "file") {
+        fileEditDrafts.begin(system.fs, path, "");
+        runActivation(fileAt(path), PLAIN_GESTURE);
+      }
+    });
+  };
+
+  const removeEntries = (paths: readonly string[], mode: RemoveMode) => {
+    if (edits === null) return;
+    void edits.remove(paths, mode).then(forgetRemoved);
+  };
+
+  const onContextMenu = (e: MouseEvent<HTMLElement>) => {
+    if (edits === null) return;
+    const target = e.target instanceof Element ? e.target : null;
+    // A text field (a name being edited) keeps the browser's own menu.
+    if (target?.closest("input, textarea") != null) return;
+    e.preventDefault();
+    const anchor = { x: e.clientX, y: e.clientY };
+    const row = target?.closest<HTMLElement>("[data-tree-row]");
+    const path = row?.dataset.treeId;
+    if (path === undefined) {
+      setMenu({
+        anchor,
+        target: { kind: "folder", dir },
+        writable: writable(dir),
+      });
+      return;
+    }
+    // The Finder's rule: a right-click inside the selection acts on all of
+    // it; outside, it selects the entry it landed on.
+    const inSelection = selection.selected.has(path);
+    if (!inSelection) setSelection(only(path));
+    setMenu({
+      anchor,
+      target: {
+        kind: "entry",
+        path,
+        paths: inSelection ? [...selection.selected] : [path],
+      },
+      writable: writable(folderOf(path)),
+    });
+  };
+
   const rootListing = listings.get(dir);
   const entries =
     rootListing?.kind === "ok"
@@ -451,6 +551,24 @@ function Listing({ browser }: { browser: FileBrowserReady }): ReactNode {
         rowSelection={{ ...selection, onChange: onSelectionChange }}
         onDragPaths={onDragPaths}
         onDropInto={dropInto}
+        onRename={
+          edits === null
+            ? undefined
+            : (row, name) => {
+                if (isOnDisk(listings, folderOf(row.path))) {
+                  renameEntry(row.path, name);
+                } else {
+                  toast({
+                    type: "file-explorer-rename-in-archive",
+                    variant: "error",
+                    title: `“${row.name}” can't be renamed inside an archive`,
+                    description: "",
+                    category: "other",
+                  });
+                }
+              }
+        }
+        editLabel={editLabel}
       />
     );
   }
@@ -464,6 +582,7 @@ function Listing({ browser }: { browser: FileBrowserReady }): ReactNode {
         <Scroll
           ref={treeRef}
           {...background.props}
+          onContextMenu={onContextMenu}
           className={cn(
             "h-full rail-x-sm",
             background.over && cn(DROP_TARGET_RING, "ring-inset"),
@@ -481,6 +600,22 @@ function Listing({ browser }: { browser: FileBrowserReady }): ReactNode {
             />
           ) : null}
           {body}
+          <EntryMenu
+            menu={menu}
+            onClose={() => setMenu(null)}
+            canTrash={system.capabilities.trash}
+            onRename={(path) => setEditLabel({ id: path })}
+            onNew={(kind) => {
+              if (menu === null) return;
+              const t = menu.target;
+              newEntry(t.kind === "entry" ? folderOf(t.path) : t.dir, kind);
+            }}
+            onRemove={(mode) => {
+              if (menu?.target.kind === "entry") {
+                removeEntries(menu.target.paths, mode);
+              }
+            }}
+          />
         </Scroll>
       }
       footer={

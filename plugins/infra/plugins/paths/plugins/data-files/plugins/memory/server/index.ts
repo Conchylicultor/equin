@@ -2,8 +2,12 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { rawEndpointHandler } from "@plugins/infra/plugins/endpoints/server";
 import { DataFiles } from "@plugins/infra/plugins/paths/plugins/data-files/server";
 import {
+  browserFileCreate,
+  browserFileDelete,
   browserFileMove,
   browserFileRaw,
+  browserFileRename,
+  browserFileWrite,
 } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { FileSystemProvided } from "@plugins/infra/plugins/paths/plugins/file-systems/server";
 import { memoryDataFiles } from "./internal/memory-store";
@@ -13,7 +17,11 @@ import {
   browserFileListingServed,
   browserFileStatServed,
   browserFileTextServed,
+  handleBrowserFileCreate,
+  handleBrowserFileDelete,
   handleBrowserFileMove,
+  handleBrowserFileRename,
+  handleBrowserFileWrite,
   handleBrowserFileRaw,
 } from "./internal/browser-files";
 
@@ -25,12 +33,16 @@ export {
 
 export default {
   description:
-    "Data files in memory: provides the DataFiles host service for a host without the computer's disk (the browser composition), every root's tree kept in this process and written through to the host's declared storage (read back after a reload when it is persistent) — directories made as a write's parents, one monotonic clock, in-process locks, and a watch that hears every mutation as one change per microtask. And the browser's file system (FileSystemProvided(\"browser\"): files.browser.list / .peek / .stat / .text / .bytes, GET /api/files/browser/raw and POST /api/files/browser/move): this storage laid out like a home folder — the home's own tree (~/Documents, …) beside the hidden data folder holding each root at its data dir, as the desktop keeps them; writeBrowserHomeFiles writes a fixture into the home for a demo's seed. Never booted by the desktop.",
+    "Data files in memory: provides the DataFiles host service for a host without the computer's disk (the browser composition), every root's tree kept in this process and written through to the host's declared storage (read back after a reload when it is persistent) — directories made as a write's parents, one monotonic clock, in-process locks, and a watch that hears every mutation as one change per microtask. And the browser's file system (FileSystemProvided(\"browser\"): files.browser.list / .peek / .stat / .text / .bytes, GET /api/files/browser/raw POST /api/files/browser/move and the edits — POST create / rename / delete / write): this storage laid out like a home folder — the home's own tree (~/Documents, …) beside the hidden data folder holding each root at its data dir, as the desktop keeps them; writeBrowserHomeFiles writes a fixture into the home for a demo's seed. Never booted by the desktop.",
   httpRoutes: {
     [browserFileRaw.route]: rawEndpointHandler(browserFileRaw, (req) =>
       handleBrowserFileRaw(req),
     ),
     [browserFileMove.route]: handleBrowserFileMove,
+    [browserFileCreate.route]: handleBrowserFileCreate,
+    [browserFileRename.route]: handleBrowserFileRename,
+    [browserFileDelete.route]: handleBrowserFileDelete,
+    [browserFileWrite.route]: handleBrowserFileWrite,
   },
   contributions: [
     DataFiles.provide(memoryDataFiles),

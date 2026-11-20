@@ -32,6 +32,8 @@ export interface OverlayTextareaProps {
    * a field whose text maps to something else — a position to jump to.
    */
   onCaretClick?: (offset: number) => void;
+  /** Take the focus when it mounts (an editor the person just opened). */
+  autoFocus?: boolean;
 }
 
 /**
@@ -82,6 +84,7 @@ export function OverlayTextarea({
   ariaLabel,
   className,
   onCaretClick,
+  autoFocus,
 }: OverlayTextareaProps) {
   return (
     <Clip className={cn("relative", className)}>
@@ -109,6 +112,7 @@ export function OverlayTextarea({
         }}
         placeholder={placeholder}
         aria-label={ariaLabel}
+        autoFocus={autoFocus}
         spellCheck={false}
         autoCapitalize="off"
         autoComplete="off"

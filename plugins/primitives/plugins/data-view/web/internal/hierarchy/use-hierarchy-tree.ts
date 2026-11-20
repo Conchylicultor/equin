@@ -404,6 +404,7 @@ export function useHierarchyTree(args: {
       openOnActivate: openOnActivate ? wrappedOpenOnActivate : undefined,
       lazyChildren,
       onOpen,
+      editLabel: hierarchy?.editLabel ?? null,
     },
   };
 }

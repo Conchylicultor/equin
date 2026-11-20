@@ -100,6 +100,11 @@ export interface Mount {
    */
   write(path: RelPath, data: FileData, opts: WriteOpts): Promise<void>;
   /**
+   * Create the directory `dir` and its missing parents; one already there is a
+   * no-op. A file in the way throws. The root throws.
+   */
+  mkdir(dir: RelPath, opts: WriteOpts): Promise<void>;
+  /**
    * Remove a file or a directory; nothing there is a no-op. A non-empty
    * directory without `recursive` throws. The root throws.
    */

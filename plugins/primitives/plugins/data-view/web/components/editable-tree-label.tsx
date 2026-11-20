@@ -67,6 +67,15 @@ export function EditableTreeLabel(props: {
           className={cn("min-w-0 flex-1", className)}
           onClick={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
+          // A rename starts with the whole name selected, so typing replaces
+          // it (as a file manager or a sidebar does). The editor is focused
+          // once, as it opens: leaving it commits and closes it.
+          onFocus={(e) => {
+            const field = e.target;
+            if (field instanceof HTMLInputElement && field.type === "text") {
+              field.select();
+            }
+          }}
         >
           {editor}
         </span>

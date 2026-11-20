@@ -1,10 +1,22 @@
 import { HttpError } from "@plugins/infra/plugins/endpoints/core";
 import { implementMachine } from "@plugins/infra/plugins/endpoints/machine";
 import {
+  computerFileCreate,
+  computerFileDelete,
   computerFileExtract,
   computerFileMove,
   computerFileOpen,
+  computerFileRename,
+  computerFileTrash,
+  computerFileWrite,
 } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
+import {
+  createHostEntry,
+  deleteHostPaths,
+  renameHostEntry,
+  trashHostPaths,
+  writeHostText,
+} from "./edit";
 import { extractHostArchive } from "../../server/internal/extract";
 import { moveHostPaths } from "../../server/internal/move";
 import { openHostPath } from "../../server/internal/open";
@@ -13,7 +25,8 @@ import { resolveHostPath } from "../../server/internal/path";
 // host-fs's routes: every one reads or changes the host filesystem, so each
 // endpoint is declared `needsMachine` and served here — a host without the
 // computer (the in-browser demo) answers it unavailable without a request.
-// The writes (open, extract, move) are file-systems' `computer` endpoints; the
+// The writes (open, extract, move, and the edits: create, rename, delete,
+// trash, write) are file-systems' `computer` endpoints; the
 // reads a surface makes (stat, complete, …) are live values (`./reads.ts`,
 // `./complete.ts`); `raw` (file-systems' `computerFileRaw`, `./file-system.ts`) stays a route because a byte URL is an asset.
 // Who may call them is the socket host's principal gate, not a per-route
@@ -46,3 +59,23 @@ export const handleMove = implementMachine(computerFileMove, ({ body }) => {
     resolutions,
   );
 });
+
+export const handleCreate = implementMachine(computerFileCreate, ({ body }) =>
+  createHostEntry(resolveHostPath(body.dir), body.name, body.kind),
+);
+
+export const handleRename = implementMachine(computerFileRename, ({ body }) =>
+  renameHostEntry(resolveHostPath(body.path), body.name),
+);
+
+export const handleDelete = implementMachine(computerFileDelete, ({ body }) =>
+  deleteHostPaths(body.paths.map((p) => resolveHostPath(p))),
+);
+
+export const handleTrash = implementMachine(computerFileTrash, ({ body }) =>
+  trashHostPaths(body.paths.map((p) => resolveHostPath(p))),
+);
+
+export const handleWrite = implementMachine(computerFileWrite, ({ body }) =>
+  writeHostText(resolveHostPath(body.path), body.text, body.expected),
+);

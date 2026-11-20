@@ -38,26 +38,29 @@
     - `FileBrowserHeader` "filter" → `FileBrowserFilter`
     - `FileBrowserHeader` "toggles" → `FileBrowserToggles`
     - `FilePreviewHeader` "tabs" → `FilePreviewTabs`
+    - `FilePreviewHeader` "edit" → `FilePreviewEdit`
     - `FilePreviewHeader` "open-with" → `OpenWithDefaultApp`
     - `ConfigV2.WebRegister` "files"
     - `FileBrowserSlots.RowActions` "extract" → `ExtractAction`
     - `FileBrowserSlots.RowActions` "copy-path" → `CopyPathAction`
-  - Uses: 88 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×10
+  - Uses: 102 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×11
     - `primitives/pane` ×9
+    - `primitives/css/ui-kit` ×7
     - `primitives/file-viewer` ×7
-    - `primitives/css/ui-kit` ×5
+    - `primitives/kept-state` ×7
+    - `infra/paths/file-systems` ×6
     - `network/live` ×4
-    - `primitives/kept-state` ×4
     - `infra/endpoints` ×3
-    - `infra/paths/file-systems` ×3
     - `network/live/live-state` ×3
     - `primitives/css/resizable` ×3
     - `primitives/path-bar` ×3
     - `config_v2` ×2
     - `primitives/copy-to-clipboard` ×2
+    - `primitives/dom/web-storage` ×2
     - `primitives/link-gesture` ×2
     - `primitives/networking` ×2
+    - `primitives/overlay/cursor-menu` ×2
     - `shell/notifications` ×2
     - `companions/menu-bar/app-window.useNativeFileDrag`
     - `primitives/bar.Bar`
@@ -72,7 +75,6 @@
     - `primitives/css/text.Text`
     - `primitives/css/theme-boundary.Theme`
     - `primitives/dom/scroll-reveal.focusElement`
-    - `primitives/dom/web-storage.defineStore`
     - `primitives/file-type.FileTypeIcon`
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
@@ -82,6 +84,8 @@
     - `primitives/scope/surface-id.useSurfaceTabId`
     - `primitives/search.SearchInput`
     - `primitives/shortcuts.useSurfaceShortcuts`
+    - `primitives/syntax-highlight/overlay-textarea.CodeTextarea`
+    - `ui/icons.Icon`
     - `ui/theme-engine.ThemeEngine`
   - Exports (types):
     - `ExplorerLensItem`

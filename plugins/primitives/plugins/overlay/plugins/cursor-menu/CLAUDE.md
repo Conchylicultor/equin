@@ -33,6 +33,7 @@ intact, and `DropdownMenuContent` already self-portals + theme-forwards.
     - `apps/desktop/shelf`
     - `apps/desktop/wallpaper`
     - `apps/desktop/windows`
+    - `apps/file-explorer/browser`
 - Exemptions:
   - Exempts itself from: `layout/no-adhoc-layout` — `.` (sanctioned)
 

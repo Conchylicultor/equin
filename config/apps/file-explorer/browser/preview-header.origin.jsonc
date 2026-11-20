@@ -1,4 +1,4 @@
-// @hash 84ea15f09dd3
+// @hash d87395b33264
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -8,6 +8,7 @@
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
     "apps.file-explorer.browser:tabs",
+    "apps.file-explorer.browser:edit",
     "apps.file-explorer.browser:open-with",
     "primitives.pane:title"
   ]

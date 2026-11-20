@@ -125,6 +125,8 @@ function ReadyAttachmentPreview({
     // Its pane's Expand leaves the host for Files; the renderer's (Open in
     // Sonata) is one of the header's items beside it.
     rendererExpand: "items",
+    // An attachment is a copy the app keeps, not the user's file to edit.
+    editable: false,
   });
   return (
     <FilePreviewProvider value={preview}>
