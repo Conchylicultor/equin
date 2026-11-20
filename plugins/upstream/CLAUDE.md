@@ -95,8 +95,12 @@ off main; re-read on restart and on an adopted deploy).
 - **The bell** (`actions`, every state) toggles `shared/reminder-config.ts`
   (`enabled`, `config/upstream/reminders.jsonc`). Having actions, the row never
   folds into System checks.
-- "Never checked" is `absent` rather than "Checking…": the first check can be
-  a day away, and a grey pulsing dot for a day is a false alarm.
+- "Never checked" is `absent` rather than "Checking…". It is short-lived: the
+  `upstream.first-check` warm-up (`machine/internal/first-check.ts`, main
+  only) enqueues the daily job right after boot while `upstream_release_check`
+  has no row, so a fresh install learns where it stands within minutes rather
+  than at the next 05:00 UTC tick. An unreachable upstream records nothing, so
+  the next boot asks again.
 
 ## The releases row (the checkout that publishes)
 
@@ -268,6 +272,7 @@ that cannot run on this database).
     - `network/live.serveValue`
   - Register:
     - `defineJob('upstream.detect-updates')`
+    - `defineWarmup('upstream.first-check')`
     - `defineAutomation('upstream-merge')`
 - Core:
   - Uses:

@@ -41873,7 +41873,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WarmupHost`
           - `warmupRunOf`
       - Cross-plugin:
-        - Imported by: 34 plugins — full list in [`plugins/infra/plugins/warmup/REFERENCE.md`](../plugins/infra/plugins/warmup/REFERENCE.md)
+        - Imported by: 35 plugins — full list in [`plugins/infra/plugins/warmup/REFERENCE.md`](../plugins/infra/plugins/warmup/REFERENCE.md)
           - `apps` ×8
           - `tasks` ×7
           - `infra` ×6
@@ -41885,6 +41885,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports/engine`
           - `stats/cost`
           - `ui/icons/sprites/bundled-symbols`
+          - `upstream`
       - Plugins:
         - **`background-arm`** — Warm-ups in the Background activity catalog: registers the `warmup` background kind — every declared warm-up under After boot, its scope from the warm-up's (host → main only, worktree → every worktree), and its one run in this process (duration, error, or skipped off main) — and pushes the catalog as each warm-up starts and settles. Corpus indexes appear through the warm-up they declare.
           - Server:
@@ -69410,6 +69411,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `network/live.serveValue`
     - Register:
       - `defineJob('upstream.detect-updates')`
+      - `defineWarmup('upstream.first-check')`
       - `defineAutomation('upstream-merge')`
   - Core:
     - Uses:
