@@ -645,7 +645,7 @@ export class IsleEngine {
       this.cam.y = CY;
     }
     this.bindInput();
-    this.raf = requestAnimationFrame((t) => this.frame(t));
+    this.raf = requestAnimationFrame(() => this.frame());
   }
 
   dispose(): void {
@@ -2376,10 +2376,37 @@ export class IsleEngine {
 
   // ---------------------------------------------------------------- the frame
 
-  private frame(now: number): void {
+  /**
+   * One frame. Its clock is `performance.now()` read here, never the rAF
+   * timestamp: input handlers stamp effects (the walk marker, the dust, the
+   * iris) with `performance.now()` too, and the rAF timestamp is the frame's
+   * start as the browser saw it — Firefox's can trail a handler that ran
+   * before it by hundreds of ms after a busy frame. Two clocks made an
+   * effect's age negative, and the marker's ripple an ellipse with a negative
+   * radius, which Firefox throws on (report-1795142633-3f9jsw). Read here,
+   * every stamp taken before this frame is at most `now`, so no age is < 0.
+   */
+  private frame(): void {
+    const now = performance.now();
     if (this.disposed) return;
     if (this.failure) throw this.failure;
-    this.raf = requestAnimationFrame((t) => this.frame(t));
+    // scheduled before drawing, so one frame that throws never stops the loop
+    this.raf = requestAnimationFrame(() => this.frame());
+    try {
+      this.drawFrame(now);
+    } catch (err) {
+      // A throw leaves the context as it stopped — saves never restored, a
+      // clip, an alpha, a blend — and the next frame would draw through it.
+      // Setting the width resets every bit of that state (Safari below 18 has
+      // no ctx.reset()); the next frame repaints all. Then it is rethrown:
+      // the error is reported, the island keeps animating.
+      const width = this.canvas.width;
+      this.canvas.width = width;
+      throw err;
+    }
+  }
+
+  private drawFrame(now: number): void {
     if (this.vw <= 0 || this.vh <= 0 || !this.layout || !this.scene) {
       this.last = now;
       return;

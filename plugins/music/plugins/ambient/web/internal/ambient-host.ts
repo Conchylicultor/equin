@@ -101,7 +101,7 @@ export function createAmbientHost(): AmbientHost {
     const b = { ctx, ambient };
     built = b;
     ctx.onstatechange = apply;
-    if (wanted.on) void ctx.resume();
+    if (wanted.on) resume(ctx);
     apply();
     return b;
   }
@@ -154,11 +154,11 @@ export function createAmbientHost(): AmbientHost {
         cancelScheduled();
         b = build();
       }
-      void b.ctx.resume();
+      resume(b.ctx);
     },
     set(opts) {
       wanted = { on: opts.on, mood: opts.mood ?? wanted.mood };
-      if (built && wanted.on) void built.ctx.resume();
+      if (built && wanted.on) resume(built.ctx);
       apply();
     },
     setGain(next) {
@@ -176,6 +176,26 @@ export function createAmbientHost(): AmbientHost {
       return () => listeners.delete(listener);
     },
   };
+}
+
+/**
+ * Resumes `ctx`, fire-and-forget. A resume asked for without a user gesture
+ * stays pending until the browser allows sound; the last release closes the
+ * context meanwhile (leaving the app before ever clicking), and close rejects
+ * every pending resume with an InvalidStateError ("AudioContext is closed",
+ * report-1795142633-urk0aa). That rejection is the teardown we asked for, not a
+ * failure: absorbed only when the context is closed, anything else thrown on.
+ */
+function resume(ctx: AudioContext): void {
+  void ctx.resume().catch((err: unknown) => {
+    if (
+      err instanceof DOMException &&
+      err.name === "InvalidStateError" &&
+      ctx.state === "closed"
+    )
+      return;
+    throw err;
+  });
 }
 
 /**
