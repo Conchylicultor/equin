@@ -794,9 +794,9 @@ out of the way: **what it opens takes its column**.
 - Load-bearing: yes
 - Web:
   - Slots: `Pane.Register`
-  - Slot contributors: 103 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Pane.Register` ×103
-  - Contributes: 136 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 104 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Pane.Register` ×104
+  - Contributes: 137 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `FileBrowserHeader` "title" → `PaneTitleItem`
     - `FilePreviewHeader` "title" → `PaneTitleItem`
     - `SlotRender.ListMiddleware`
@@ -930,6 +930,7 @@ out of the way: **what it opens takes its column**.
     - `themeCustomizerPane.Actions` "title" → `PaneTitleItem`
     - `threadPane.Actions` "title" → `PaneTitleItem`
     - `traceDetailPane.Actions` "title" → `PaneTitleItem`
+    - `webPagePane.Actions` "title" → `PaneTitleItem`
     - `welcomePane.Actions` "title" → `PaneTitleItem`
     - `workflow-node.actions` "title" → `PaneTitleItem`
     - `worktreeCleanupPane.Actions` "title" → `PaneTitleItem`
@@ -1093,8 +1094,8 @@ out of the way: **what it opens takes its column**.
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --spacing`
-  - Imported by: 219 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×78
+  - Imported by: 220 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×79
     - `conversations` ×33
     - `debug` ×29
     - `active-data` ×14

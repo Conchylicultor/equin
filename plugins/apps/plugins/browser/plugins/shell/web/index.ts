@@ -13,6 +13,7 @@ export {
   useBrowserTabs,
   useBrowserRemote,
   BrowserTabsStore,
+  singlePageTabs,
 } from "./nav-store";
 export type {
   BrowserNavApi,
@@ -26,6 +27,11 @@ export type {
   BrowserNavRequest,
 } from "./nav-store";
 export { Favicon, type FaviconProps } from "./components/favicon";
+export { BrowserToolbar } from "./components/browser-layout";
+export {
+  useAddBrowserTab,
+  type BrowserTabHandoff,
+} from "./internal/saved-tabs";
 
 export default {
   description:

@@ -805,6 +805,12 @@
       "parent": null
     },
     {
+      "paneId": "web-page",
+      "segment": "web/:url;page",
+      "appIndex": false,
+      "parent": null
+    },
+    {
       "paneId": "website-apps",
       "segment": "apps;app",
       "appIndex": false,

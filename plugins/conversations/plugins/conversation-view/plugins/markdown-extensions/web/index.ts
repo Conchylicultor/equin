@@ -8,7 +8,7 @@ import { ImgEnhancer } from "./internal/img-enhancer";
 
 export default {
   description:
-    "Conversation-scoped markdown enhancers: file-links, inline code enhancements, and image proxying.",
+    "Conversation-scoped markdown enhancers: file-links, web links (a plain click opens the site in the Browser's web-page side pane beside the conversation; ⌘/middle-click opens it in a new browser tab), inline code enhancements, and image proxying.",
   contributions: [
     MarkdownEnhancerSlot({
       id: "file-links",

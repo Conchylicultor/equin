@@ -24,33 +24,24 @@ one path → file-peek target builder.
 
 ## Plugin reference
 
-- Description: Conversation-scoped markdown enhancers: file-links, inline code enhancements, and image proxying.
+- Description: Conversation-scoped markdown enhancers: file-links, web links (a plain click opens the site in the Browser's web-page side pane beside the conversation; ⌘/middle-click opens it in a new browser tab), inline code enhancements, and image proxying.
 - Web:
   - Contributes:
     - `MarkdownEnhancerSlot`
     - `MarkdownEnhancerSlot`
     - `MarkdownEnhancerSlot`
     - `InlineTextWalkerSlot`
-  - Uses:
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/markdown` ×5
+    - `primitives/inline-text` ×4
+    - `primitives/file-links` ×3
+    - `primitives/overlay/image-viewer` ×2
+    - `primitives/text-editor/paste-images` ×2
+    - `apps/browser/page-pane.useWebPageLink`
     - `conversations/conversation-view/code/file-pane.filePeekPane`
     - `primitives/css/link-chip.LinkChip`
-    - `primitives/file-links.linkifyChildren`
-    - `primitives/file-links.parseFileLinks`
-    - `primitives/file-links.useFileLinksWorkspace`
-    - `primitives/inline-text.InlineTextWalker`
-    - `primitives/inline-text.InlineTextWalkerContext`
-    - `primitives/inline-text.InlineTextWalkerSlot`
-    - `primitives/inline-text.useInlineTextWalker`
     - `primitives/link-gesture.activationProps`
-    - `primitives/markdown.MarkdownEnhancement`
-    - `primitives/markdown.MarkdownEnhancementContext`
-    - `primitives/markdown.MarkdownEnhancerSlot`
-    - `primitives/markdown.useMarkdownEnhancement`
-    - `primitives/overlay/image-viewer.AssetThumbnail`
-    - `primitives/overlay/image-viewer.ViewerThumbnail`
     - `primitives/pane.useOpenPane`
-    - `primitives/text-editor/paste-images.attachmentUrl`
-    - `primitives/text-editor/paste-images.isAttachmentUrl`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --info`

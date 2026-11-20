@@ -19,6 +19,38 @@ import { PersistBrowserTabs } from "./persist-tabs";
 import "./browser-layout.css";
 
 /**
+ * The browser's toolbar: nav controls, the flexible omnibox in the truncating
+ * fill track, the trailing actions. Shared by the Browser app's chrome block
+ * and every surface that shows one page with the browser's own controls (the
+ * web-page side pane). Must render inside `<BrowserTabsStore.Provider>`.
+ */
+export function BrowserToolbar() {
+  return (
+    <Bar
+      tier="chrome"
+      endSafeArea={false}
+      className="border-b-0 px-chrome text-muted-foreground"
+    >
+      <Line className="w-full gap-xs">
+        <Browser.NavControls.Render />
+        <Fill>
+          <Browser.Omnibox.Render />
+        </Fill>
+        <Stack
+          direction="row"
+          gap="xs"
+          align="center"
+          justify="end"
+          className={rigidClass()}
+        >
+          <Browser.Actions.Render />
+        </Stack>
+      </Line>
+    </Bar>
+  );
+}
+
+/**
  * Inner layout — sits INSIDE `<BrowserTabsStore.Provider>` so its children (the
  * tab strip, chrome bars, sub-bar, viewport, effects) can read the per-surface
  * tab store.
@@ -60,27 +92,7 @@ function BrowserInner() {
         </Fill>
       </Line>
       <Stack gap="none" className={cn("border-b", rigidClass())}>
-        <Bar
-          tier="chrome"
-          endSafeArea={false}
-          className="border-b-0 px-chrome text-muted-foreground"
-        >
-          <Line className="w-full gap-xs">
-            <Browser.NavControls.Render />
-            <Fill>
-              <Browser.Omnibox.Render />
-            </Fill>
-            <Stack
-              direction="row"
-              gap="xs"
-              align="center"
-              justify="end"
-              className={rigidClass()}
-            >
-              <Browser.Actions.Render />
-            </Stack>
-          </Line>
-        </Bar>
+        <BrowserToolbar />
         <Browser.SubBar.Render />
       </Stack>
       <Clip as="main" fill>

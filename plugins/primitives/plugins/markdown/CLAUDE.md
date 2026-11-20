@@ -79,6 +79,7 @@ Design rationale lives in:
     - `Markdown`
     - `MarkdownEnhancementContext`
     - `MarkdownEnhancerSlot`
+    - `MarkdownLink`
     - `nodeToText`
     - `useMarkdownEnhancement`
     - `useMarkdownLoaded`

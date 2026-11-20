@@ -997,6 +997,33 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-body`
             - Imported by: `apps/browser/start-page`
+        - **`page-pane`** — Web pages in a side pane, in the Browser's own rendering: the web-page pane (web/:url;page) shows one page of the engine's Chromium beside the pane that linked to it, under the browser's toolbar (nav controls, omnibox, actions; the tab strip only once the page opened a popup), its remote page keyed in the URL so a reload re-attaches it, and Expand hands that very page to the Browser app's tabs. useWebPageLink(url) is the link that opens it — plain click opens the pane, ⌘/middle-click leaves the site to a new browser tab.
+          - Web:
+            - Slots: `webPagePane.Actions`
+            - Slot contributors: `webPagePane.Actions` ← `primitives.pane`
+            - Contributes: `Pane.Register` "web-page"
+            - Uses:
+              - `apps-core/tabs.useAppLink`
+              - `apps/browser/shell.Browser`
+              - `apps/browser/shell.BrowserTabsStore`
+              - `apps/browser/shell.BrowserToolbar`
+              - `apps/browser/shell.singlePageTabs`
+              - `apps/browser/shell.useAddBrowserTab`
+              - `apps/browser/shell.useBrowserTabs`
+              - `primitives/css/clip.Clip`
+              - `primitives/css/rigid.rigidClass`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/pane.defineRoute`
+              - `primitives/pane.Pane`
+              - `primitives/pane.PaneChrome`
+              - `primitives/pane.PaneExpandTarget`
+              - `primitives/pane.useOpenPane`
+            - Exports (values):
+              - `useWebPageLink`
+              - `webPagePane`
+          - Cross-plugin:
+            - Imported by: `conversations/conversation-view/markdown-extensions`
         - **`shell`** — App shell for the Browser app. Registers the /browser app entry, owns the per-surface tab store (each tab a page in the engine's Chromium, addressed by key: navigation requests out, host-reported page state in) over the browser's one tab set, saved in localStorage so tabs and their remote pages come back after a reload and stay in sync between surfaces, defines the Browser.* slots, exports the <Favicon> component, and contributes the app's own theme (the mockup's palette in both modes, the system font at 13px, Lucide icons, its control geometry), which the browser app selects.
           - Web:
             - Slots:
@@ -1050,6 +1077,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `BrowserOpenOptions`
               - `BrowserRemoteApi`
               - `BrowserTab`
+              - `BrowserTabHandoff`
               - `BrowserTabsApi`
               - `BrowserTabsState`
               - `BrowserTabSummary`
@@ -1057,7 +1085,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `Browser`
               - `BrowserTabsStore`
+              - `BrowserToolbar`
               - `Favicon`
+              - `singlePageTabs`
+              - `useAddBrowserTab`
               - `useBrowserNav`
               - `useBrowserRemote`
               - `useBrowserTabs`
@@ -1081,6 +1112,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/browser/isle-building`
               - `apps/browser/navigation`
               - `apps/browser/omnibox`
+              - `apps/browser/page-pane`
               - `apps/browser/start-page`
               - `apps/browser/tabs`
               - `apps/browser/webview`
@@ -14896,8 +14928,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceShowsAppsSideBySide`
           - `useTabs`
       - Cross-plugin:
-        - Imported by: 50 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
-          - `apps` ×21
+        - Imported by: 51 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+          - `apps` ×22
           - `apps-core` ×9
           - `debug` ×4
           - `shell` ×3
@@ -22096,33 +22128,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/launch-prompts-button.tsx` (debt)
           - Shared:
             - Exports (values): `launchPromptsConfig`
-        - **`markdown-extensions`** — Conversation-scoped markdown enhancers: file-links, inline code enhancements, and image proxying.
+        - **`markdown-extensions`** — Conversation-scoped markdown enhancers: file-links, web links (a plain click opens the site in the Browser's web-page side pane beside the conversation; ⌘/middle-click opens it in a new browser tab), inline code enhancements, and image proxying.
           - Web:
             - Contributes:
               - `MarkdownEnhancerSlot`
               - `MarkdownEnhancerSlot`
               - `MarkdownEnhancerSlot`
               - `InlineTextWalkerSlot`
-            - Uses:
+            - Uses: 21 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/markdown-extensions/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/markdown-extensions/REFERENCE.md)
+              - `primitives/markdown` ×5
+              - `primitives/inline-text` ×4
+              - `primitives/file-links` ×3
+              - `primitives/overlay/image-viewer` ×2
+              - `primitives/text-editor/paste-images` ×2
+              - `apps/browser/page-pane.useWebPageLink`
               - `conversations/conversation-view/code/file-pane.filePeekPane`
               - `primitives/css/link-chip.LinkChip`
-              - `primitives/file-links.linkifyChildren`
-              - `primitives/file-links.parseFileLinks`
-              - `primitives/file-links.useFileLinksWorkspace`
-              - `primitives/inline-text.InlineTextWalker`
-              - `primitives/inline-text.InlineTextWalkerContext`
-              - `primitives/inline-text.InlineTextWalkerSlot`
-              - `primitives/inline-text.useInlineTextWalker`
               - `primitives/link-gesture.activationProps`
-              - `primitives/markdown.MarkdownEnhancement`
-              - `primitives/markdown.MarkdownEnhancementContext`
-              - `primitives/markdown.MarkdownEnhancerSlot`
-              - `primitives/markdown.useMarkdownEnhancement`
-              - `primitives/overlay/image-viewer.AssetThumbnail`
-              - `primitives/overlay/image-viewer.ViewerThumbnail`
               - `primitives/pane.useOpenPane`
-              - `primitives/text-editor/paste-images.attachmentUrl`
-              - `primitives/text-editor/paste-images.isAttachmentUrl`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --info`
@@ -44912,23 +44935,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `waitForFlock`
     - **`floor-compat`** — Floor-safe spellings of built-ins newer than the browser floor (framework/tooling/lint/browser-floor), each answering as the built-in does: canParseUrl (URL.canParse), parseUrl (URL.parse), jsonResponse (Response.json), promiseWithResolvers (Promise.withResolvers). Plain JS on every host.
       - Cross-plugin:
-        - Imported by:
-          - `apps/browser/history`
-          - `apps/deploy/analytics/collect`
-          - `apps/deploy/ssh-setup`
-          - `apps/events/event-list`
-          - `apps/events/events-core`
-          - `apps/prototypes/files`
-          - `apps/sonata/transcription`
+        - Imported by: 21 plugins — full list in [`plugins/packages/plugins/floor-compat/REFERENCE.md`](../plugins/packages/plugins/floor-compat/REFERENCE.md)
+          - `apps` ×8
+          - `conversations` ×3
+          - `framework` ×2
+          - `infra` ×2
           - `auth`
           - `companions/browser-extension`
-          - `conversations/conversation-view/jsonl-viewer/tool-call/web-fetch`
-          - `conversations/conversation-view/jsonl-viewer/tool-call/web-search`
           - `database`
-          - `framework/http-router`
-          - `framework/principal`
-          - `infra/endpoints`
-          - `infra/namespace`
           - `integrations/youtube`
           - `network/live/resource-runtime`
           - `primitives/networking/request-guard`
@@ -51508,8 +51522,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Clip`
               - `clipClasses`
           - Cross-plugin:
-            - Imported by: 65 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
-              - `apps` ×20
+            - Imported by: 66 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
+              - `apps` ×21
               - `primitives` ×11
               - `conversations` ×8
               - `page` ×6
@@ -52232,8 +52246,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Rigid`
               - `rigidClass`
           - Cross-plugin:
-            - Imported by: 148 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
-              - `apps` ×36
+            - Imported by: 149 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+              - `apps` ×37
               - `conversations` ×29
               - `primitives` ×20
               - `debug` ×14
@@ -52459,8 +52473,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 459 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
-              - `apps` ×110
+            - Imported by: 460 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+              - `apps` ×111
               - `conversations` ×80
               - `primitives` ×55
               - `debug` ×39
@@ -53023,9 +53037,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 483 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 484 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+              - `apps` ×114
               - `primitives` ×114
-              - `apps` ×113
               - `conversations` ×55
               - `page` ×27
               - `debug` ×25
@@ -56452,6 +56466,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Markdown`
           - `MarkdownEnhancementContext`
           - `MarkdownEnhancerSlot`
+          - `MarkdownLink`
           - `nodeToText`
           - `useMarkdownEnhancement`
           - `useMarkdownLoaded`
@@ -57501,9 +57516,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
         - Slots: `Pane.Register`
-        - Slot contributors: 103 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `Pane.Register` ×103
-        - Contributes: 136 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Slot contributors: 104 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `Pane.Register` ×104
+        - Contributes: 137 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `FileBrowserHeader` "title" → `PaneTitleItem`
           - `FilePreviewHeader` "title" → `PaneTitleItem`
           - `SlotRender.ListMiddleware`
@@ -57637,6 +57652,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `themeCustomizerPane.Actions` "title" → `PaneTitleItem`
           - `threadPane.Actions` "title" → `PaneTitleItem`
           - `traceDetailPane.Actions` "title" → `PaneTitleItem`
+          - `webPagePane.Actions` "title" → `PaneTitleItem`
           - `welcomePane.Actions` "title" → `PaneTitleItem`
           - `workflow-node.actions` "title" → `PaneTitleItem`
           - `worktreeCleanupPane.Actions` "title" → `PaneTitleItem`
@@ -57800,8 +57816,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --spacing`
-        - Imported by: 219 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `apps` ×78
+        - Imported by: 220 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `apps` ×79
           - `conversations` ×33
           - `debug` ×29
           - `active-data` ×14
@@ -60202,8 +60218,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 309 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×309
+    - Contributes: 310 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×310
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -60227,8 +60243,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 308 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×308
+    - Contributes: 309 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×309
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:

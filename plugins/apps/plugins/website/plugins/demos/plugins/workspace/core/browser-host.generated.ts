@@ -56,6 +56,8 @@ export const browserHost = {
     "apps.agent-manager.prototypes-nav",
     "apps.agent-manager.shell",
     "apps.agent-manager.welcome",
+    "apps.browser.page-pane",
+    "apps.browser.shell",
     "apps.debug.shell",
     "apps.desktop.launcher",
     "apps.desktop.shelf",

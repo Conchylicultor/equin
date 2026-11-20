@@ -15,6 +15,7 @@
 
 // App-content plugins pinned EAGER (would otherwise defer), and why:
 //   - apps/plugins/agent-manager/plugins/welcome: watched boot slot Shell.Sidebar
+//   - apps/plugins/browser/plugins/page-pane: dependency closure (imported by an eager plugin)
 //   - apps/plugins/deploy/plugins/analytics/plugins/collect: dependency closure (imported by an eager plugin)
 //   - apps/plugins/events/plugins/events-core: dependency closure (imported by an eager plugin)
 //   - apps/plugins/events/plugins/sources: dependency closure (imported by an eager plugin)

@@ -296,6 +296,10 @@
       "name": "@equin/plugin-apps-browser-omnibox",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/browser/plugins/page-pane": {
+      "name": "@equin/plugin-apps-browser-page-pane",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/browser/plugins/shell": {
       "name": "@equin/plugin-apps-browser-shell",
       "version": "0.0.1",
@@ -8486,6 +8490,8 @@
     "@equin/plugin-apps-browser-navigation": ["@equin/plugin-apps-browser-navigation@workspace:plugins/apps/plugins/browser/plugins/navigation"],
 
     "@equin/plugin-apps-browser-omnibox": ["@equin/plugin-apps-browser-omnibox@workspace:plugins/apps/plugins/browser/plugins/omnibox"],
+
+    "@equin/plugin-apps-browser-page-pane": ["@equin/plugin-apps-browser-page-pane@workspace:plugins/apps/plugins/browser/plugins/page-pane"],
 
     "@equin/plugin-apps-browser-shell": ["@equin/plugin-apps-browser-shell@workspace:plugins/apps/plugins/browser/plugins/shell"],
 

@@ -29,23 +29,14 @@ throws on an invalid URL); anything else is rethrown.
 
 - Description: Floor-safe spellings of built-ins newer than the browser floor (framework/tooling/lint/browser-floor), each answering as the built-in does: canParseUrl (URL.canParse), parseUrl (URL.parse), jsonResponse (Response.json), promiseWithResolvers (Promise.withResolvers). Plain JS on every host.
 - Cross-plugin:
-  - Imported by:
-    - `apps/browser/history`
-    - `apps/deploy/analytics/collect`
-    - `apps/deploy/ssh-setup`
-    - `apps/events/event-list`
-    - `apps/events/events-core`
-    - `apps/prototypes/files`
-    - `apps/sonata/transcription`
+  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×8
+    - `conversations` ×3
+    - `framework` ×2
+    - `infra` ×2
     - `auth`
     - `companions/browser-extension`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/web-fetch`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/web-search`
     - `database`
-    - `framework/http-router`
-    - `framework/principal`
-    - `infra/endpoints`
-    - `infra/namespace`
     - `integrations/youtube`
     - `network/live/resource-runtime`
     - `primitives/networking/request-guard`

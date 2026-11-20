@@ -102,6 +102,24 @@ function freshState(): BrowserTabsState {
   return { tabs: [first], activeId: first.id, seq: 1, pendingCloses: [] };
 }
 
+/**
+ * One tab showing the page `key` — a surface of its own that is not the
+ * browser's tab set (the web-page side pane). The tab is not marked remote:
+ * its first `attach` carries `url`, which recreates the page at `url` when the
+ * host no longer holds `key`, and re-attaches the live page when it does.
+ */
+export function singlePageTabs(page: {
+  key: string;
+  url: string;
+}): BrowserTabsState {
+  const tab: BrowserTab = {
+    ...freshTab({ url: page.url }),
+    id: page.key,
+    key: page.key,
+  };
+  return { tabs: [tab], activeId: tab.id, seq: 1, pendingCloses: [] };
+}
+
 /** The saved tab set, or — the first time — one start-page tab. */
 export function initialBrowserTabs(saved: Store<SavedTabs>): BrowserTabsState {
   const read = saved.read(SAVED_TABS_ID);

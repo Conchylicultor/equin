@@ -28,3 +28,52 @@ export const SAVED_TABS_ID = "tabs";
 export function useSavedTabs(): Store<SavedTabs> {
   return useStore(savedTabs);
 }
+
+/** A page another surface holds, handed to the browser's tab set. */
+export interface BrowserTabHandoff {
+  /** The remote page's key on the engine host. */
+  key: string;
+  url: string;
+  title: string;
+}
+
+/**
+ * Adds a page to the browser's saved tab set and makes it the tab a newly
+ * mounted Browser surface selects — the page itself (its key), not a copy, so
+ * its history and state come along. A page already in the set is only
+ * selected. A surface already showing the Browser merges it in by key.
+ */
+export function useAddBrowserTab(): (page: BrowserTabHandoff) => void {
+  const saved = useSavedTabs();
+  return (page) => {
+    const read = saved.read(SAVED_TABS_ID);
+    // A set this build cannot read (another build's schema, storage off) is
+    // never written over: the user's tabs outrank one handed-off page.
+    if (
+      read.kind === "none" &&
+      (read.why === "other-schema" || read.why === "unavailable")
+    ) {
+      throw new Error(
+        `Cannot add the page to the browser's tabs: the saved tab set is ${read.why}`,
+      );
+    }
+    const tabs = read.kind === "value" ? read.value.tabs : [];
+    const next: SavedTabs = {
+      tabs: tabs.some((t) => t.key === page.key)
+        ? tabs
+        : [
+            ...tabs,
+            {
+              key: page.key,
+              url: page.url,
+              pageUrl: page.url,
+              title: page.title,
+              faviconUrl: null,
+            },
+          ],
+      activeKey: page.key,
+    };
+    // A refused write is announced by web-storage itself (toast, health row).
+    saved.write(SAVED_TABS_ID, next);
+  };
+}

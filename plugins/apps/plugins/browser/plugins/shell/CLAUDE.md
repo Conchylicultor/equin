@@ -57,6 +57,7 @@
     - `BrowserOpenOptions`
     - `BrowserRemoteApi`
     - `BrowserTab`
+    - `BrowserTabHandoff`
     - `BrowserTabsApi`
     - `BrowserTabsState`
     - `BrowserTabSummary`
@@ -64,7 +65,10 @@
   - Exports (values):
     - `Browser`
     - `BrowserTabsStore`
+    - `BrowserToolbar`
     - `Favicon`
+    - `singlePageTabs`
+    - `useAddBrowserTab`
     - `useBrowserNav`
     - `useBrowserRemote`
     - `useBrowserTabs`
@@ -88,6 +92,7 @@
     - `apps/browser/isle-building`
     - `apps/browser/navigation`
     - `apps/browser/omnibox`
+    - `apps/browser/page-pane`
     - `apps/browser/start-page`
     - `apps/browser/tabs`
     - `apps/browser/webview`

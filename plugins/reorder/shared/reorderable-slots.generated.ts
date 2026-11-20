@@ -25,6 +25,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "apps-core.surface.placement", pluginId: "apps-core.surface", configName: "placement" },
   { slotId: "apps-core.tab-bar-actions", pluginId: "apps-core", configName: "tab-bar-actions" },
   { slotId: "apps.agent-manager.welcome.welcome.actions", pluginId: "apps.agent-manager.welcome", configName: "welcome.actions" },
+  { slotId: "apps.browser.page-pane.web-page.actions", pluginId: "apps.browser.page-pane", configName: "web-page.actions" },
   { slotId: "apps.browser.shell.actions", pluginId: "apps.browser.shell", configName: "actions" },
   { slotId: "apps.browser.shell.nav-controls", pluginId: "apps.browser.shell", configName: "nav-controls" },
   { slotId: "apps.browser.shell.omnibox", pluginId: "apps.browser.shell", configName: "omnibox" },

@@ -6,21 +6,33 @@ import {
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import {
   MarkdownEnhancementContext,
+  MarkdownLink,
   useMarkdownEnhancement,
   type MarkdownEnhancement,
 } from "@plugins/primitives/plugins/markdown/web";
 import { useFileTarget } from "./use-file-target";
+import { WebLink, isWebUrl } from "./web-link";
 
 export function FileLinksEnhancer({ children }: { children: ReactNode }) {
   const fileTarget = useFileTarget();
 
-  const enhancement = useMemo((): MarkdownEnhancement | null => {
-    if (!fileTarget) return null;
-    return {
-      transform: (c: ReactNode) => linkifyChildren(c, fileTarget),
+  const enhancement = useMemo(
+    (): MarkdownEnhancement => ({
+      transform: fileTarget
+        ? (c: ReactNode) => linkifyChildren(c, fileTarget)
+        : undefined,
       components: {
         a: ({ href, children: kids, ...p }) => {
-          if (href && !href.startsWith("http") && !href.startsWith("#")) {
+          // A web page opens beside the conversation (WebLink), whether or
+          // not this transcript can resolve file paths.
+          if (href !== undefined && isWebUrl(href)) {
+            return (
+              <WebLink href={href} {...p}>
+                {kids}
+              </WebLink>
+            );
+          }
+          if (fileTarget && href && !href.startsWith("#")) {
             const segments = parseFileLinks(href);
             if (segments.length === 1 && segments[0]?.type === "path") {
               return (
@@ -35,20 +47,15 @@ export function FileLinksEnhancer({ children }: { children: ReactNode }) {
             }
           }
           return (
-            <a
-              className="text-primary-text underline"
-              href={href}
-              target={href?.startsWith("http") ? "_blank" : undefined}
-              rel={href?.startsWith("http") ? "noopener noreferrer" : undefined}
-              {...p}
-            >
+            <MarkdownLink href={href} {...p}>
               {kids}
-            </a>
+            </MarkdownLink>
           );
         },
       },
-    };
-  }, [fileTarget]);
+    }),
+    [fileTarget],
+  );
 
   const value = useMarkdownEnhancement(enhancement);
   return (

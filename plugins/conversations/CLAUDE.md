@@ -408,7 +408,7 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
           - **`user-image`** — Renders inline image thumbnails for user-image events.
           - **`user-text`** — Renders user text events in the JSONL viewer.
       - **`launch-prompts`** [exempt] — Pre-configured prompts that launch a new background conversation in the same worktree.
-      - **`markdown-extensions`** — Conversation-scoped markdown enhancers: file-links, inline code enhancements, and image proxying.
+      - **`markdown-extensions`** — Conversation-scoped markdown enhancers: file-links, web links (a plain click opens the site in the Browser's web-page side pane beside the conversation; ⌘/middle-click opens it in a new browser…
       - **`model`** — Displays the conversation model as a colored chip in the toolbar.
       - **`new-child-task`** — Deprecated — functionality merged into the Improve button via ambient relate context.
       - **`notes`** — Free-form per-conversation notes, auto-saved to the server. A note with text always shows, with a dot on the note button that follows the draft as it is typed; the button opens and hides an empty…

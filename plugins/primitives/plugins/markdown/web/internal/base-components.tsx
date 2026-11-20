@@ -74,8 +74,15 @@ function BaseImg({
   );
 }
 
-/** The base link: as {@link BaseImg}, an `/api` address only the page serves by URL. */
-function BaseLink({ href, ...p }: { href?: string } & Record<string, unknown>) {
+/**
+ * The base link: as {@link BaseImg}, an `/api` address only the page serves by
+ * URL. Exported (as `MarkdownLink`) for an enhancer whose `a` override handles
+ * some links itself and leaves the rest to the base behaviour.
+ */
+export function BaseLink({
+  href,
+  ...p
+}: { href?: string } & Record<string, unknown>) {
   const { servesUrls } = useTransport();
   const pageApi = href !== undefined && !servesUrls && isPageApiUrl(href);
   return (
