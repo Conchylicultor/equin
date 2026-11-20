@@ -257,7 +257,10 @@ old investigation task so the report is back on the worklist
 
 ## The report history outlives the reports
 
-`reports` rows are swept after 7 days, a report's fixes cascade away with it and
+`reports` rows are swept after 7 days (an investigated one — `task_id` set — never; one
+a commit claimed fixed only 30 days after its fix state last changed, so the ledger
+can still see the fix hold or regress: `server/internal/retention.ts`), a report's
+fixes cascade away with it and
 `hourly` keeps 24 hours — so "is the app converging?" had no answer past a week.
 Three tables keep that history (`server/internal/tables.ts`), filled by triggers
 (`server/internal/trend-triggers.ts`, the `reports.trend` trigger set) so every

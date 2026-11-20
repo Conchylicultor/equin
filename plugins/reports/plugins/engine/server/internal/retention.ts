@@ -1,4 +1,4 @@
-import { isNull } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { defineRetention } from "@plugins/infra/plugins/retention/server";
 import { _reports } from "@plugins/reports/server";
 import {
@@ -36,12 +36,28 @@ import {
 // (`taskId IS NULL`). This still bounds the firehose — all automatic telemetry
 // starts and stays `taskId null` — while the small, human-curated investigated
 // subset is retained.
+//
+// `fix_state` — the FIX LEDGER's scope. A report a commit claims fixed is what
+// the fix ledger (`report_fixes`, which cascades away with its report) judges
+// on: Landed → Fixed once deployed → Regressed by a later occurrence of the
+// SAME row. Swept on the createdAt clock, a report filed 7 days before its fix
+// landed vanished hours after the fix (2026-11-20: three fixed reports swept at
+// 04:00 the night after their fixes landed) — taking its ledger rows with it, so
+// a recurrence opened a fresh row the fix knew nothing about (no Regressed), and
+// every advance of main re-read the still-in-window claim against a report
+// main no longer held (UnknownFixedReport, ~1/min). So a report whose fix state
+// moved off `open` is kept for `FIXED_REPORT_KEEP_DAYS` after its last
+// change of fix state (landed / deployed / regressed) — long enough to see a
+// fix hold or come back — and swept by the same nightly job afterwards. Still
+// bounded: every row ages out on one of the two clocks.
+const FIXED_REPORT_KEEP_DAYS = 30;
+
 export const reportsRetention = defineRetention({
   table: _reports,
   column: "createdAt",
   ttlDays: 7,
   perWorktree: true,
-  where: isNull(_reports.taskId),
+  where: sql`${_reports.taskId} IS NULL AND (${_reports.fixState} = 'open' OR ${_reports.fixStateAt} < now() - make_interval(days => ${FIXED_REPORT_KEEP_DAYS}))`,
 });
 
 // The report history (./tables.ts) outlives the reports by design: a year and
