@@ -4,7 +4,9 @@ import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { openShortLivedClient } from "@plugins/database/plugins/admin/server";
 import { dbLog } from "@plugins/database/server";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
+import { sleptDuring } from "@plugins/infra/plugins/host/plugins/machine-sleep/server";
 import {
+  awakeSessionRows,
   DB_IDLE_TRANSACTION_ENDED_KIND,
   DB_LOCK_HOLDER_KIND,
   LOCK_WATCH_THRESHOLD_MS,
@@ -67,7 +69,12 @@ export const lockWatchJob = defineJob({
     const observation: LockWatchObservation = {
       observedAt,
       thresholdMs: LOCK_WATCH_THRESHOLD_MS,
-      holders: lockHolders(rows, LOCK_WATCH_THRESHOLD_MS),
+      // Judged on awake time: a wait or an idle transaction open across a
+      // nap is not a minute of anyone held back (`awakeSessionRows`).
+      holders: lockHolders(
+        awakeSessionRows(rows, observedAt, sleptDuring),
+        LOCK_WATCH_THRESHOLD_MS,
+      ),
     };
     publishObservation(observation);
 

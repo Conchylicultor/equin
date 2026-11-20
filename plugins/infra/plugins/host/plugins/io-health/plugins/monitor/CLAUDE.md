@@ -66,8 +66,16 @@ alone: the same binary's `uninstall-root --dir … --root-label …` (sudo) boot
 out, removes the plist and hands every file back to you.
 
 **One writer per log, and never none.** The user agent stands aside while the
-root daemon is *writing* — a root tick within the last four intervals
-(`root_tick_at` in the state file) — not while its plist merely exists. When
+root daemon is *writing* — a root tick within the last four intervals of
+**awake** time (`fs-latency.root-tick.json`, written by the root tick alone:
+its wall instant, the machine's awake clock `CLOCK_UPTIME_RAW` and the boot it
+counts from) — not while its plist merely exists. Awake time, because launchd
+fires both jobs together on every wake, the user agent a second or two first:
+judged on the wall clock, the root's last tick was as old as the nap and the
+user agent ticked in its place as `not-writing` — a false `root-daemon`
+finding on most wakes (2026-11-20). A file of its own, because a user tick
+running beside a root one rewrote the shared state file and dropped the
+root's mark. When
 the plist is installed and the root daemon is not writing, the user agent ticks
 in its place and says why in the tick's `root_daemon` (`empty`, `invalid`,
 `not-loaded` or `not-writing`, with the plist, the daemon's own log and the

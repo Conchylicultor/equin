@@ -40,6 +40,32 @@ export interface SessionRow {
   backendStartMs: number | null;
 }
 
+/**
+ * The rows with their ages in AWAKE time: each `xactMs` / `stateMs` less the
+ * sleep `sleptDuring` places inside the span it covers, up to `observedAt`.
+ *
+ * Postgres ages a session on the wall clock, so a transaction or a lock wait
+ * open across a nap is as old as the nap the instant the machine wakes. The
+ * lock watch's first look after a wake named a 17 min wait on main
+ * (2026-11-14, 1.4 s after a 1025 s sleep) that the next look no longer saw.
+ * A wait that runs on while the machine is awake keeps its full age, so the
+ * watch still names it. Ages stay wall-clock where the sleep is unknown
+ * (`sleptDuring` → null).
+ */
+export function awakeSessionRows(
+  rows: readonly SessionRow[],
+  observedAt: number,
+  sleptDuring: (startMs: number, endMs: number) => number | null,
+): SessionRow[] {
+  const awake = (ms: number | null): number | null =>
+    ms === null ? null : ms - (sleptDuring(observedAt - ms, observedAt) ?? 0);
+  return rows.map((r) => ({
+    ...r,
+    xactMs: awake(r.xactMs),
+    stateMs: awake(r.stateMs),
+  }));
+}
+
 /** A session holding its transaction where the watch names it. */
 export const LockHolderSchema = z.object({
   pid: z.number().int(),
@@ -49,9 +75,9 @@ export const LockHolderSchema = z.object({
   sql: z.string(),
   state: z.string().nullable(),
   applicationName: z.string(),
-  /** How long its transaction has been open. */
+  /** How long its transaction has been open, in awake time (`awakeSessionRows`). */
   xactMs: z.number().nullable(),
-  /** How long it has sat idle inside its transaction; null when it is not idle in one. */
+  /** How long it has sat idle inside its transaction, in awake time; null when it is not idle in one. */
   idleMs: z.number().nullable(),
   /** Every session waiting on it, directly or down a chain. */
   waiting: z.number().int(),

@@ -13,7 +13,10 @@ The machine's sleep clock as a live value, so a browser can tell a nap from work
   `onSleepReadingChanged()` are what the machine half serves from. Over the
   sleeps it has placed: `sleptDuring(start, end)` (slow-ops), `awakeSpanStart`
   (the job sweeper's grace) and `wakeBefore(at, within)` — the sleep whose wake
-  came just before an instant (the reports engine stamps it on an occurrence). It stays in
+  came just before an instant (the reports engine stamps it on an occurrence). A process
+  knows the sleeps it lived through, plus the one before its first reading:
+  the clock's own last sleep (`kern.sleeptime` → `kern.waketime`), so a
+  backend booted on a wake still takes that nap off what crossed it. It stays in
   `server/` because health-monitor's server calls `publishSleepReading()`.
 - `machine` — serves the value (`source: "external"`, `live/machine`): the
   declaration is `needsMachine` (the clock is the computer's), so a host without
@@ -70,6 +73,7 @@ reaches the browser within one tick.
 - Cross-plugin:
   - Imported by:
     - `conversations/conversation-view/op-status`
+    - `database/lock-watch`
     - `debug/health-monitor`
     - `debug/profiling/ops`
     - `debug/queue-health`

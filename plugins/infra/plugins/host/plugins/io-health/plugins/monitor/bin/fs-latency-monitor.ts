@@ -81,6 +81,7 @@ import type {
   WrittenTick,
 } from "@plugins/infra/plugins/host/plugins/io-health/core";
 import {
+  awakeClock,
   currentFsEventId,
   diskBytesRead,
   physFootprint,
@@ -92,9 +93,12 @@ import {
   diagnoseRootDaemon,
   handBack,
   installRoot,
+  readRootTick,
   rootDaemonStatus,
   rootIsWriting,
+  rootTickPath,
   uninstallRoot,
+  writeRootTick,
   type RootDaemonSpec,
 } from "./root-daemon";
 import { run } from "./run";
@@ -145,7 +149,11 @@ interface State {
   readers_prev?: Record<string, number>;
   readers_t?: number;
   last_incident?: number;
-  /** Epoch seconds of the root daemon's last tick: the user agent stands aside while it is recent. */
+  /**
+   * Epoch seconds of the root daemon's last tick, as binaries before its own
+   * file (`readRootTick`) wrote it: read only while that file does not exist
+   * yet, aged on the wall clock.
+   */
   root_tick_at?: number;
 }
 
@@ -600,12 +608,18 @@ function runTick(spec: RootDaemonSpec): void {
   mkdirSync(dir, { recursive: true });
   const state = readState(statePath);
   const now = Date.now() / 1000;
+  const clock = { at: now, ...awakeClock() };
   // One writer per log: the user agent stands aside while the root daemon
   // writes (it also attributes) — and only then. One installed but silent is
   // reported in the tick the user agent writes in its place.
   let rootDaemon: WrittenTick["root_daemon"];
   if (!isRoot) {
-    if (rootIsWriting(state.root_tick_at, now, spec.intervalS)) return;
+    const rootTick =
+      readRootTick(dir) ??
+      (state.root_tick_at === undefined
+        ? undefined
+        : { at: state.root_tick_at, awakeMs: 0, boot: "" });
+    if (rootIsWriting(rootTick, clock, spec.intervalS)) return;
     const problem = diagnoseRootDaemon(spec.label);
     if (problem !== null) rootDaemon = rootDaemonStatus(spec, problem);
   }
@@ -705,7 +719,7 @@ function runTick(spec: RootDaemonSpec): void {
   };
   if (rootDaemon !== undefined) rec.root_daemon = rootDaemon;
   if (isRoot) {
-    state.root_tick_at = now;
+    writeRootTick(dir, clock);
     Object.assign(rec, diskReaders(now, state));
     rec.fseventsd_logs = fseventsdLogs();
     if (rec.stall) {
@@ -722,6 +736,7 @@ function runTick(spec: RootDaemonSpec): void {
   if (isRoot)
     handBack(dir, [
       statePath,
+      rootTickPath(dir),
       log,
       join(dir, ARCHIVE_DIR),
       join(dir, INCIDENTS_DIR),

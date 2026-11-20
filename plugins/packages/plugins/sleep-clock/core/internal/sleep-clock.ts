@@ -27,6 +27,13 @@ export type SleepClockReading =
       asleepMs: number;
       /** kern.waketime: the wall instant (epoch ms) of the last wake; null if never woke or unreadable. */
       wakeAtMs: number | null;
+      /**
+       * kern.sleeptime: the wall instant (epoch ms) the machine last went to
+       * sleep; null if it never slept or unreadable. Before `wakeAtMs`, the
+       * two bound the last sleep — so a process started after a wake can
+       * still place it.
+       */
+      sleepAtMs: number | null;
     }
   /** This platform offers no such clocks here — NOT "it did not sleep". */
   | { supported: false };
@@ -109,11 +116,11 @@ function readBootSession(): string {
   return bootSession;
 }
 
-/** kern.waketime is a `struct timeval` — on darwin (LP64) an i64 tv_sec and an
- *  i32 tv_usec padded to 16 bytes. */
-function readWakeAtMs(): number | null {
+/** kern.waketime / kern.sleeptime are a `struct timeval` — on darwin (LP64)
+ *  an i64 tv_sec and an i32 tv_usec padded to 16 bytes. */
+function readTimevalMs(name: string): number | null {
   const buf = new Uint8Array(16);
-  const len = libSystem().sysctl("kern.waketime", buf);
+  const len = libSystem().sysctl(name, buf);
   if (len === null || len < 12) return null;
   const view = new DataView(buf.buffer);
   const sec = Number(view.getBigInt64(0, true));
@@ -138,7 +145,8 @@ export function readSleepClock(): SleepClockReading {
     supported: true,
     boot: readBootSession(),
     asleepMs: ns > 0n ? Number(ns) / 1e6 : 0,
-    wakeAtMs: readWakeAtMs(),
+    wakeAtMs: readTimevalMs("kern.waketime"),
+    sleepAtMs: readTimevalMs("kern.sleeptime"),
   };
 }
 

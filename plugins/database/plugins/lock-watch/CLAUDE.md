@@ -10,6 +10,15 @@ past it has already been failed by its own deadline). It names each one by the
 (`database#machine`'s `tagClientQueriesWithOrigin`; the format is
 `database/connection` core's `tagSqlWithOrigin` / `parseSqlOrigin`).
 
+Ages are **awake time** (`awakeSessionRows`, core): Postgres ages a session on
+the wall clock, so a wait or an idle transaction open across a nap is as old as
+the nap the moment the machine wakes. Each age is taken off the sleep
+`machine-sleep`'s `sleptDuring` places inside it — on main the first look after
+a 17 min sleep named a "17 min" wait the next look no longer saw (2026-11-14).
+A wait that runs on while the machine is awake keeps its full age. The
+`db-idle-transaction-ended` inference below keeps the wall-clock ages: the
+cluster's own timeout counts the wall clock too.
+
 Why: on 2026-11-03 a chain of 16 sessions blocked main for 5 h. The head was a
 `conversations.usage:sync` transaction whose connection had been abandoned
 mid-transaction; `application_name` was empty, nothing reported the chain, and
@@ -165,6 +174,7 @@ The words are `describeLockHolder` (core), shared by the report and the row.
     - `database/connection.formatIdleTransactionEndedLogLine`
     - `database/connection.IdleTransactionEndedEvent`
     - `database/connection.idleTransactionEndedSink`
+    - `infra/host/machine-sleep.sleptDuring`
     - `infra/jobs.defineJob`
     - `infra/warmup.defineWarmup`
     - `network/live.serveValue`
@@ -188,6 +198,7 @@ The words are `describeLockHolder` (core), shared by the report and the row.
     - `LockWatchState`
     - `SessionRow`
   - Exports (values):
+    - `awakeSessionRows`
     - `cutLockWatchSql`
     - `DB_IDLE_TRANSACTION_ENDED_KIND`
     - `DB_LOCK_HOLDER_KIND`

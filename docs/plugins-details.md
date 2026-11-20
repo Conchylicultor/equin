@@ -25121,6 +25121,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/connection.formatIdleTransactionEndedLogLine`
           - `database/connection.IdleTransactionEndedEvent`
           - `database/connection.idleTransactionEndedSink`
+          - `infra/host/machine-sleep.sleptDuring`
           - `infra/jobs.defineJob`
           - `infra/warmup.defineWarmup`
           - `network/live.serveValue`
@@ -25144,6 +25145,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LockWatchState`
           - `SessionRow`
         - Exports (values):
+          - `awakeSessionRows`
           - `cutLockWatchSql`
           - `DB_IDLE_TRANSACTION_ENDED_KIND`
           - `DB_LOCK_HOLDER_KIND`
@@ -38660,6 +38662,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `conversations/conversation-view/op-status`
+              - `database/lock-watch`
               - `debug/health-monitor`
               - `debug/profiling/ops`
               - `debug/queue-health`

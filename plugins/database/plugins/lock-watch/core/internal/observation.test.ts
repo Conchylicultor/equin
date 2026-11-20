@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { tagSqlWithOrigin } from "@plugins/database/plugins/connection/core";
-import { lockHolders, type SessionRow } from "./observation";
+import { awakeSessionRows, lockHolders, type SessionRow } from "./observation";
 
 const MIN = 60_000;
 
@@ -113,5 +113,66 @@ describe("lockHolders", () => {
         MIN,
       ),
     ).toEqual([]);
+  });
+});
+
+describe("awakeSessionRows", () => {
+  // main, 2026-11-14 21:31:03: the first look 1.4 s after a 1025 s sleep
+  // named a session holding one waiter for "17 min"; a minute later, nothing.
+  const observedAt = 1_794_691_863_747;
+  const nap = {
+    startMs: 1_794_691_862_393 - 1_025_095,
+    endMs: 1_794_691_862_393,
+  };
+  const sleptDuring = (start: number, end: number): number =>
+    Math.max(0, Math.min(end, nap.endMs) - Math.max(start, nap.startMs));
+  const chain = (waitMs: number, idleMs: number | null): SessionRow[] => [
+    session({
+      pid: 54152,
+      state: idleMs === null ? "active" : "idle in transaction",
+      xactMs: Math.max(waitMs, idleMs ?? 0) + 2_000,
+      stateMs: idleMs ?? 2_000,
+    }),
+    session({ pid: 2, stateMs: waitMs, blockedBy: [54152] }),
+  ];
+
+  test("a wait open across a nap is not named the moment the machine wakes", () => {
+    const rows = chain(1_025_095 + 1_400 + 500, null);
+    expect(lockHolders(rows, MIN)).toHaveLength(1);
+    expect(
+      lockHolders(awakeSessionRows(rows, observedAt, sleptDuring), MIN),
+    ).toEqual([]);
+  });
+
+  test("an idle transaction open across a nap is not named either", () => {
+    const rows = chain(0, 1_025_095 + 3_000).slice(0, 1);
+    expect(lockHolders(rows, MIN)).toHaveLength(1);
+    expect(
+      lockHolders(awakeSessionRows(rows, observedAt, sleptDuring), MIN),
+    ).toEqual([]);
+  });
+
+  test("a wait that runs on past the bound in awake time is still named, aged in awake time", () => {
+    // Blocked 10 s before the nap, still blocked 55 s after the wake: 65 s awake.
+    const later = observedAt + 55_000;
+    const rows = chain(10_000 + 1_025_095 + 55_000, null);
+    const holders = lockHolders(
+      awakeSessionRows(rows, later, sleptDuring),
+      MIN,
+    );
+    expect(holders.map((h) => h.pid)).toEqual([54152]);
+    expect(Math.round(holders[0]!.longestWaitMs)).toBe(65_000);
+  });
+
+  test("on a machine that stays awake, every age and holder is as Postgres reports it", () => {
+    const rows = chain(2 * MIN, null);
+    const awake = awakeSessionRows(rows, observedAt, () => 0);
+    expect(awake).toEqual(rows);
+    expect(lockHolders(awake, MIN)).toEqual(lockHolders(rows, MIN));
+  });
+
+  test("where the sleep is unknown, the wall-clock ages stand", () => {
+    const rows = chain(1_025_095, null);
+    expect(awakeSessionRows(rows, observedAt, () => null)).toEqual(rows);
   });
 });

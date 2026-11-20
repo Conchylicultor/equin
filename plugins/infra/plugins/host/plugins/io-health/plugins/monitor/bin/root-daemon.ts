@@ -13,6 +13,7 @@ import {
   existsSync,
   lchownSync,
   lstatSync,
+  readFileSync,
   readdirSync,
   renameSync,
   rmSync,
@@ -90,22 +91,69 @@ export function installRootCommand(s: RootDaemonSpec): string {
 
 /**
  * The root daemon is writing while its last tick is at most this many of
- * launchd's intervals old. Four, not one: a tick on a stalled disk runs long
- * and launchd skips the next while it does, and two writers meanwhile would
- * interleave the log.
+ * launchd's intervals old, in AWAKE time. Four, not one: a tick on a stalled
+ * disk runs long and launchd skips the next while it does, and two writers
+ * meanwhile would interleave the log.
  */
 export const ROOT_FRESH_INTERVALS = 4;
 
-/** Whether the user agent stands aside: a root tick landed within the fresh window. */
+/** Where the root daemon says it last ticked: a file only it writes. */
+export function rootTickPath(dir: string): string {
+  return join(dir, "fs-latency.root-tick.json");
+}
+
+/**
+ * The root daemon's last tick: its wall instant (epoch s) and the awake clock
+ * then. A file of its own, written by the root tick alone — inside the shared
+ * state file, a user tick running beside a root one (both fire together on
+ * wake) rewrote the state it had read before the root tick landed, and the
+ * next user tick found the root silent again (2026-11-20 03:00:52).
+ */
+export interface RootTick {
+  at: number;
+  awakeMs: number;
+  boot: string;
+}
+
+/** The root daemon's last tick, or undefined when it never wrote one. */
+export function readRootTick(dir: string): RootTick | undefined {
+  let text: string;
+  try {
+    text = readFileSync(rootTickPath(dir), "utf8");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    throw err;
+  }
+  return JSON.parse(text) as RootTick;
+}
+
+/** Record a root tick (root only): written beside, then renamed into place. */
+export function writeRootTick(dir: string, tick: RootTick): void {
+  const path = rootTickPath(dir);
+  writeFileSync(`${path}.tmp`, JSON.stringify(tick));
+  renameSync(`${path}.tmp`, path);
+}
+
+/**
+ * Whether the user agent stands aside: a root tick landed within the fresh
+ * window of AWAKE time. A nap is not the root daemon going quiet: on every
+ * wake launchd fires both jobs at once, the user agent a second or two first,
+ * and judged on the wall clock it found the root's last tick 15 min old and
+ * ticked in its place as "not-writing" (main, 2026-11-20: 13 of 15 such ticks
+ * came right after a sleep). Across a reboot the awake clock restarts, so a
+ * tick from another boot is aged on the wall clock.
+ */
 export function rootIsWriting(
-  rootTickAt: number | undefined,
-  nowS: number,
+  root: RootTick | undefined,
+  now: RootTick,
   intervalS: number,
 ): boolean {
-  return (
-    rootTickAt !== undefined &&
-    nowS - rootTickAt <= ROOT_FRESH_INTERVALS * intervalS
-  );
+  if (root === undefined) return false;
+  const ageMs =
+    root.boot === now.boot
+      ? now.awakeMs - root.awakeMs
+      : (now.at - root.at) * 1000;
+  return ageMs <= ROOT_FRESH_INTERVALS * intervalS * 1000;
 }
 
 const isLoaded = (label: string) =>

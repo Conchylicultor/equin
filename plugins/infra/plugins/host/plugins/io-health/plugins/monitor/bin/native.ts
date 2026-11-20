@@ -1,8 +1,9 @@
 // The calls the monitor makes that no command line exposes, over bun:ffi
 // (macOS only): into libSystem, darwinbg on this process, page residency of a
-// file (mincore over a read-only mapping) and a process's disk bytes read and
-// physical footprint (proc_pid_rusage); into CoreServices, the current FSEvents event id.
-import { dlopen, FFIType } from "bun:ffi";
+// file (mincore over a read-only mapping), a process's disk bytes read and
+// physical footprint (proc_pid_rusage), and the machine's awake clock with the
+// boot it belongs to; into CoreServices, the current FSEvents event id.
+import { dlopen, FFIType, ptr } from "bun:ffi";
 import { closeSync, openSync } from "node:fs";
 
 const lib = dlopen("/usr/lib/libSystem.B.dylib", {
@@ -29,6 +30,11 @@ const lib = dlopen("/usr/lib/libSystem.B.dylib", {
   },
   proc_pid_rusage: {
     args: [FFIType.i32, FFIType.i32, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  clock_gettime_nsec_np: { args: [FFIType.i32], returns: FFIType.u64 },
+  sysctlbyname: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.u64],
     returns: FFIType.i32,
   },
 });
@@ -121,4 +127,31 @@ export function physFootprint(pid: number): number | null {
  */
 export function currentFsEventId(): number {
   return Number(coreServices.symbols.FSEventsGetCurrentEventId());
+}
+
+// mach_absolute_time as a <time.h> clock: it pauses while the machine sleeps.
+const CLOCK_UPTIME_RAW = 8;
+
+/**
+ * Where the machine's awake clock stands: ms it has been AWAKE since boot
+ * (CLOCK_UPTIME_RAW, which stops while it sleeps), and the boot it counts from
+ * (kern.bootsessionuuid) — two readings subtract only within one boot. Their
+ * difference is the time the machine was awake between them, so an age judged
+ * on it does not count a nap (packages/sleep-clock reads the same clock; this
+ * binary imports no repo module at run time).
+ */
+export function awakeClock(): { awakeMs: number; boot: string } {
+  const awakeMs =
+    Number(lib.symbols.clock_gettime_nsec_np(CLOCK_UPTIME_RAW)) / 1e6;
+  const name = Buffer.from("kern.bootsessionuuid\0", "utf8");
+  const buf = new Uint8Array(64);
+  const size = new BigUint64Array([BigInt(buf.byteLength)]);
+  if (lib.symbols.sysctlbyname(ptr(name), ptr(buf), ptr(size), null, 0) !== 0)
+    throw new Error("sysctl kern.bootsessionuuid failed");
+  const end = buf.indexOf(0);
+  const boot = new TextDecoder().decode(
+    buf.subarray(0, end === -1 ? Number(size[0]) : end),
+  );
+  if (boot === "") throw new Error("sysctl kern.bootsessionuuid is empty");
+  return { awakeMs, boot };
 }

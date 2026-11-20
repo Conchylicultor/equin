@@ -4,6 +4,7 @@ import {
   armAwakeTimeout,
   awakeSpanStartMs,
   createSleepPublisher,
+  lastSleepOf,
   overlapMs,
   sleepBetween,
   sleepNowChanged,
@@ -31,20 +32,33 @@ describe("createSleepPublisher", () => {
       boot: BOOT,
       asleepMs: 1000,
       wakeAtMs: 5,
+      sleepAtMs: null,
     });
     h.p.publish();
     expect(h.notified()).toBe(1);
     expect(h.p.current()).toEqual({ boot: BOOT, asleepMs: 1000, wakeAtMs: 5 });
 
     // Same reading (modulo sub-ms read jitter): no push.
-    h.set({ supported: true, boot: BOOT, asleepMs: 1000.0004, wakeAtMs: 5 });
+    h.set({
+      supported: true,
+      boot: BOOT,
+      asleepMs: 1000.0004,
+      wakeAtMs: 5,
+      sleepAtMs: null,
+    });
     h.p.publish();
     h.p.publish();
     expect(h.notified()).toBe(1);
     expect(h.p.current()?.asleepMs).toBe(1000);
 
     // A wake: more sleep and a new waketime.
-    h.set({ supported: true, boot: BOOT, asleepMs: 61_000, wakeAtMs: 90_000 });
+    h.set({
+      supported: true,
+      boot: BOOT,
+      asleepMs: 61_000,
+      wakeAtMs: 90_000,
+      sleepAtMs: null,
+    });
     h.p.publish();
     expect(h.notified()).toBe(2);
     expect(h.p.current()).toEqual({
@@ -69,13 +83,20 @@ describe("createSleepPublisher", () => {
       boot: BOOT,
       asleepMs: 0,
       wakeAtMs: 1,
+      sleepAtMs: null,
     });
     let other = 0;
     const stop = h.p.subscribe(() => other++);
     h.p.publish();
     expect(other).toBe(1);
     stop();
-    h.set({ supported: true, boot: BOOT, asleepMs: 5_000, wakeAtMs: 2 });
+    h.set({
+      supported: true,
+      boot: BOOT,
+      asleepMs: 5_000,
+      wakeAtMs: 2,
+      sleepAtMs: null,
+    });
     h.p.publish();
     expect(other).toBe(1);
     expect(h.notified()).toBe(2);
@@ -104,10 +125,17 @@ describe("sleptDuring", () => {
       boot: BOOT,
       asleepMs: 0,
       wakeAtMs: null,
+      sleepAtMs: null,
     });
     h.p.publish();
     // 60 s of sleep, ended by the wake at t=100 000.
-    h.set({ supported: true, boot: BOOT, asleepMs: 60_000, wakeAtMs: 100_000 });
+    h.set({
+      supported: true,
+      boot: BOOT,
+      asleepMs: 60_000,
+      wakeAtMs: 100_000,
+      sleepAtMs: null,
+    });
     expect(h.p.sleptDuring(0, 200_000)).toBe(60_000);
     expect(h.p.sleptDuring(90_000, 200_000)).toBe(10_000);
     expect(h.p.sleptDuring(100_000, 200_000)).toBe(0);
@@ -176,9 +204,16 @@ describe("awakeSpanStart", () => {
       boot: BOOT,
       asleepMs: 0,
       wakeAtMs: null,
+      sleepAtMs: null,
     });
     h.p.publish();
-    h.set({ supported: true, boot: BOOT, asleepMs: 60_000, wakeAtMs: 100_000 });
+    h.set({
+      supported: true,
+      boot: BOOT,
+      asleepMs: 60_000,
+      wakeAtMs: 100_000,
+      sleepAtMs: null,
+    });
     expect(h.p.awakeSpanStart(110_000, 30_000)).toBe(20_000);
     expect(harness({ supported: false }).p.awakeSpanStart(1, 1)).toBeNull();
   });
@@ -224,6 +259,7 @@ describe("armAwakeTimeout", () => {
       boot: BOOT,
       asleepMs: 0,
       wakeAtMs: null,
+      sleepAtMs: null,
     });
     const t = env();
     let fired = 0;
@@ -234,6 +270,7 @@ describe("armAwakeTimeout", () => {
       boot: BOOT,
       asleepMs: 918_000,
       wakeAtMs: 920_000,
+      sleepAtMs: null,
     });
     t.advance(921_000);
     expect(fired).toBe(0);
@@ -250,6 +287,7 @@ describe("armAwakeTimeout", () => {
       boot: BOOT,
       asleepMs: 0,
       wakeAtMs: null,
+      sleepAtMs: null,
     });
     const t = env();
     let fired = 0;
@@ -291,6 +329,7 @@ describe("wakeBefore", () => {
       boot: BOOT,
       asleepMs: 0,
       wakeAtMs: null,
+      sleepAtMs: null,
     });
     h.p.publish();
     h.set({
@@ -298,6 +337,7 @@ describe("wakeBefore", () => {
       boot: BOOT,
       asleepMs: 268_000,
       wakeAtMs: 300_000,
+      sleepAtMs: null,
     });
     expect(h.p.wakeBefore(300_500, 30_000)).toEqual({
       supported: true,
@@ -310,5 +350,49 @@ describe("wakeBefore", () => {
     expect(harness({ supported: false }).p.wakeBefore(1, 1)).toEqual({
       supported: false,
     });
+  });
+});
+
+describe("a process started after a wake", () => {
+  // The queue-health gap (2026-11-20): a backend booted on the wake had no
+  // previous reading to diff, placed no sleep, and judged the nap on the wall
+  // clock. The clock's own last sleep (kern.sleeptime → kern.waketime) places it.
+  const woke = {
+    supported: true as const,
+    boot: BOOT,
+    asleepMs: 2_000_000,
+    sleepAtMs: 1_000_000,
+    wakeAtMs: 1_961_000,
+  };
+
+  test("places the sleep before its first reading", () => {
+    const p = createSleepPublisher(() => woke);
+    expect(p.sleptDuring(900_000, 2_000_000)).toBe(961_000);
+    expect(p.wakeBefore(1_961_400, 30_000)).toEqual({
+      supported: true,
+      sleep: { startMs: 1_000_000, endMs: 1_961_000 },
+    });
+  });
+
+  test("current() as the first read places it too, without pushing", () => {
+    let notified = 0;
+    const p = createSleepPublisher(() => woke);
+    p.subscribe(() => notified++);
+    p.current();
+    expect(notified).toBe(0);
+    expect(p.sleptDuring(900_000, 2_000_000)).toBe(961_000);
+  });
+
+  test("an awake span of a process that never saw a sleep stays whole", () => {
+    const p = createSleepPublisher(() => woke);
+    expect(p.sleptDuring(1_970_000, 2_030_000)).toBe(0);
+  });
+
+  test("places nothing the pair does not bound", () => {
+    // Asleep again since the last wake (read mid dark-wake), never slept, or unreadable.
+    expect(lastSleepOf({ ...woke, sleepAtMs: 1_962_000 })).toBeNull();
+    expect(lastSleepOf({ ...woke, sleepAtMs: null })).toBeNull();
+    expect(lastSleepOf({ ...woke, wakeAtMs: null })).toBeNull();
+    expect(lastSleepOf({ supported: false })).toBeNull();
   });
 });

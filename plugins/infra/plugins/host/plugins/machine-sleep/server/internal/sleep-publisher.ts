@@ -50,6 +50,20 @@ export function sleepBetween(
   return { startMs: next.wakeAtMs - slept, endMs: next.wakeAtMs };
 }
 
+/**
+ * The last sleep as the clock itself places it — from when the machine went to
+ * sleep to when it woke — or null when it cannot (never slept, unreadable, or
+ * asleep again since the wake: then the pair bounds no one sleep). This is
+ * what a process started AFTER a wake knows of the sleep before it: without
+ * it, a backend booted on the wake judged everything that crossed the nap on
+ * the wall clock (queue-health filed one post-wake backlog per such boot).
+ */
+export function lastSleepOf(r: SleepClockReading): SleepInterval | null {
+  if (!r.supported || r.wakeAtMs === null || r.sleepAtMs === null) return null;
+  if (r.sleepAtMs >= r.wakeAtMs) return null;
+  return { startMs: r.sleepAtMs, endMs: r.wakeAtMs };
+}
+
 /** ms of `[startMs, endMs]` covered by the union of `sleeps`. */
 export function overlapMs(
   sleeps: readonly SleepInterval[],
@@ -155,21 +169,32 @@ export function createSleepPublisher(
   let last: { value: SleepNow } | null = null;
   const listeners = new Set<() => void>();
   const sleeps: SleepInterval[] = [];
+  const place = (s: SleepInterval | null): void => {
+    if (s === null) return;
+    sleeps.push(s);
+    if (sleeps.length > SLEEP_RING_CAP) sleeps.shift();
+  };
+  // The first reading has no previous one to diff: the clock's own last sleep
+  // is the one sleep it can place (the one this process started after).
+  const first = (reading: SleepClockReading): SleepNow => {
+    place(lastSleepOf(reading));
+    last = { value: toSleepNow(reading) };
+    return last.value;
+  };
   const publish = (): void => {
-    const next = toSleepNow(read());
-    if (last !== null && !sleepNowChanged(last.value, next)) return;
-    const placed = last === null ? null : sleepBetween(last.value, next);
-    if (placed !== null) {
-      sleeps.push(placed);
-      if (sleeps.length > SLEEP_RING_CAP) sleeps.shift();
+    const reading = read();
+    if (last === null) first(reading);
+    else {
+      const next = toSleepNow(reading);
+      if (!sleepNowChanged(last.value, next)) return;
+      place(sleepBetween(last.value, next));
+      last = { value: next };
     }
-    last = { value: next };
     for (const fn of listeners) fn();
   };
   return {
     current() {
-      last ??= { value: toSleepNow(read()) };
-      return last.value;
+      return last === null ? first(read()) : last.value;
     },
     publish,
     sleptDuring(startMs, endMs) {

@@ -1,4 +1,5 @@
 export {
+  awakeSessionRows,
   LOCK_WATCH_THRESHOLD_MS,
   LOCK_WATCH_HOLDERS_MAX,
   LOCK_WATCH_SQL_MAX,
