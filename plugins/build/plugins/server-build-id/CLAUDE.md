@@ -58,6 +58,7 @@ So it is read once at boot. See `resource-protocol` / `resource-runtime`.
     - `serverPinCommit`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/box-link/box`
     - `build/deployment`
     - `reports/engine`
     - `upstream`

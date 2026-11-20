@@ -2049,6 +2049,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `analyticsMirrorTables`
                   - `countVisits`
                   - `readVisitGroups`
+                  - `readVisitorPulse`
                   - `readVisitPages`
                   - `readVisitPagesByPath`
                   - `readVisitsById`
@@ -2137,6 +2138,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `VisitCut`
                   - `VisitDimension`
                   - `VisitFilterColumn`
+                  - `VisitorPulse`
                 - Exports (values):
                   - `addDays`
                   - `addMetrics`
@@ -2228,6 +2230,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `parseEventPropValue`
                   - `PeriodReportSchema`
                   - `planPeriods`
+                  - `PULSE_MINUTES`
                   - `RAW_RETENTION_DAYS`
                   - `RECORDED_COLUMNS`
                   - `RECORDED_FIELDS`
@@ -2255,6 +2258,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `VISIT_DIMENSIONS`
                   - `VISIT_FILTER_COLUMNS`
                   - `VisitCutSchema`
+                  - `VisitorPulseSchema`
+                  - `VISITORS_NOW_WINDOW_MS`
                   - `visitorShare`
                   - `ZERO_ADDITIVE_METRICS`
               - Cross-plugin:
@@ -2284,19 +2289,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Test helpers:
                 - Core: `@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core/testing`
                   - `ZERO_METRICS`
-            - **`dashboard`** — Analytics tab of a site's page, shown only when the deployment's composition ships the collect plugin: range and comparison controls, KPI tiles choosing a trend line with a dashed previous period, ranked Pages / Sources / Locations / Devices / Events panels whose rows filter the whole dashboard (one filter on ranges past the raw window), and what one visit records. Reads the report computed from this computer's copy of the site's tables (pushed as the copy syncs), under the copy's freshness line; loading until a first copy is in place, an explicit state for a refusal or a failed read. Serves a deployment's analytics report: collect's own runAnalyticsQuery run on this computer's copy of the site's analytics tables (site-mirror's readSiteMirror, as of the box's clock at the last page synced), pushed on each page the copy applies — report, refused, or not-copied while no whole first copy is in place (rendered as loading).
+            - **`dashboard`** — Analytics tab of a site's page, shown only when the deployment's composition ships the collect plugin: range and comparison controls, KPI tiles choosing a trend line with a dashed previous period, ranked Pages / Sources / Locations / Devices / Events panels whose rows filter the whole dashboard (one filter on ranges past the raw window), and what one visit records. In the health report's deployed-site row: visitors now on its title line and the Visitors block (today with its SiteVisitors.Note notes, the last hour as a sparkline with its freshness). Reads the report computed from this computer's copy of the site's tables (pushed as the copy syncs), under the copy's freshness line; loading until a first copy is in place, an explicit state for a refusal or a failed read. Serves a deployment's analytics report: collect's own runAnalyticsQuery run on this computer's copy of the site's analytics tables (site-mirror's readSiteMirror, as of the box's clock at the last page synced), pushed on each page the copy applies — report, refused, or not-copied while no whole first copy is in place (rendered as loading); and its pulse (deploy-analytics.pulse: visitors now, today and the last hour per minute, collect's readVisitorPulse on the same copy, as of the same clock).
               - Web:
+                - Slots: `SiteVisitors.Note`
+                - Slot contributors: `SiteVisitors.Note` ← `apps.deploy.site-messages.inbox`
                 - Contributes:
+                  - `SiteLive.Glance` "visitors-now" → `VisitorsNow`
+                  - `SiteLive.Section` "visitors" → `VisitorsSection`
                   - `SiteTabs.View` "Analytics" → `AnalyticsSection`
                   - `SiteOverview.Card` "traffic" → `TrafficCard`
                   - `SiteOverview.Card` "top" → `TopCards`
                   - `SiteOverview.Card` "owner-devices" → `OwnerDevicesCard`
-                - Uses: 42 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md)
+                - Uses: 53 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md)
+                  - `apps/deploy/box-link/site-row` ×8
                   - `apps/deploy/deployments` ×6
                   - `apps/deploy/host-query` ×4
+                  - `primitives/css/ui-kit` ×3
                   - `primitives/css/coords` ×2
                   - `primitives/css/text` ×2
-                  - `primitives/css/ui-kit` ×2
                   - `primitives/kept-state` ×2
                   - `primitives/link-gesture` ×2
                   - `apps/deploy/site-mirror/pull.MirrorFreshness`
@@ -2320,11 +2330,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/icon-button.IconButton`
                   - `primitives/link-gesture/new-tab.NewTabLink`
                   - `primitives/loading.Loading`
+                  - `primitives/relative-time.formatRelativeTime`
+                  - `primitives/slot-render.defineRenderSlot`
                   - `ui/icons.Icon`
+                - Exports (types):
+                  - `SiteVisitorsNote`
+                  - `SiteVisitorsNoteProps`
+                - Exports (values): `SiteVisitors`
               - Server:
-                - Contributes: `resource.declare` "deploy-analytics.report"
+                - Contributes:
+                  - `resource.declare` "deploy-analytics.pulse"
+                  - `resource.declare` "deploy-analytics.report"
                 - Uses:
                   - `apps/deploy/analytics/collect.analyticsMirrorTables`
+                  - `apps/deploy/analytics/collect.readVisitorPulse`
                   - `apps/deploy/analytics/collect.runAnalyticsQuery`
                   - `apps/deploy/deployments._deployDeployments`
                   - `apps/deploy/site-mirror/pull.onSiteMirrorApplied`
@@ -2332,17 +2351,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `database.db`
                   - `database/table-mirror/replica.tableMirrorReplicas`
                   - `network/live.serveValue`
-                - Resources: `deploy-analytics.report` (push, notified)
+                - Resources:
+                  - `deploy-analytics.pulse` (push, notified)
+                  - `deploy-analytics.report` (push, notified)
               - Core:
                 - Uses:
                   - `apps/deploy/analytics/collect.AnalyticsFilter`
                   - `apps/deploy/analytics/collect.AnalyticsQueryResultSchema`
                   - `apps/deploy/analytics/collect.AnalyticsQuerySchema`
+                  - `apps/deploy/analytics/collect.VisitorPulseSchema`
                   - `network/live.liveValue`
                   - `network/live/canonical-params.canonicalJson`
-                - Exports (types): `DeploymentAnalyticsResult`
+                - Exports (types):
+                  - `DeploymentAnalyticsResult`
+                  - `DeploymentPulse`
                 - Exports (values):
                   - `deploymentAnalytics`
+                  - `deploymentPulse`
                   - `filtersFit`
               - Cross-plugin:
                 - Uses tokens:
@@ -2355,11 +2380,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --popover`
                   - `ui/tokens/color-palette --popover-foreground`
                   - `ui/tokens/color-palette --primary`
+                  - `ui/tokens/color-palette --strong-foreground`
                   - `ui/tokens/color-palette --success`
                   - `ui/tokens/density --control-height-xs`
                   - `ui/tokens/density --space-sm`
                   - `ui/tokens/shape --radius`
                   - `ui/tokens/shape --spacing`
+                  - `ui/tokens/type-scale --font-weight-semibold`
+                - Imported by: `apps/deploy/site-messages/inbox`
               - Test helpers:
                 - Web: `@plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/web/testing`
                   - `metrics`
@@ -2369,6 +2397,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Cross-plugin:
                 - Imported by:
                   - `apps/deploy/analytics/collect`
+                  - `apps/deploy/box-link/box`
                   - `apps/deploy/deploy-secrets`
                   - `apps/deploy/host-query`
                   - `apps/deploy/site-messages/intake`
@@ -2525,6 +2554,187 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/type-scale` ×2
                   - `ui/tokens/font-family --font-mono`
                   - `ui/tokens/shadow --shadow-lg`
+        - **`box-link`** — The permanent link from this computer to each deployed site's box: the NDJSON stream protocol (hello, beat, signal), the link-state union and the deploy.box-links live value; the box half serving the stream and the local half holding one tunnel per server and one stream per deployment.
+          - Core:
+            - Uses:
+              - `infra/endpoints.defineEndpoint`
+              - `infra/ssh.SshTunnelFailureKindSchema`
+              - `network/live.liveValue`
+              - `packages/list-bound.cappedList`
+              - `packages/list-bound.wholeRecord`
+            - Exports (types):
+              - `BoxBeat`
+              - `BoxBeatFrame`
+              - `BoxHelloFrame`
+              - `BoxHelloInfo`
+              - `BoxHostMetrics`
+              - `BoxLink`
+              - `BoxSignalFrame`
+              - `LinkFailureClass`
+              - `LinkRefusal`
+              - `LinkState`
+              - `LinkStateKind`
+              - `ReconnectCause`
+            - Exports (values):
+              - `BOX_LINK_BEAT_MS`
+              - `BOX_LINK_PROTOCOL_VERSION`
+              - `BOX_LINK_STREAM_PATH`
+              - `BoxBeatFrameSchema`
+              - `BoxBeatSchema`
+              - `BoxHelloFrameSchema`
+              - `BoxHelloInfoSchema`
+              - `BoxHostMetricsSchema`
+              - `boxLinks`
+              - `BoxLinkSchema`
+              - `boxLinkStreamEndpoint`
+              - `BoxSignalFrameSchema`
+              - `LinkFailureClassSchema`
+              - `LinkRefusalSchema`
+              - `LinkStateSchema`
+              - `readBoxFrame`
+              - `ReconnectCauseSchema`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/deploy/box-link/box`
+              - `apps/deploy/box-link/link`
+              - `apps/deploy/box-link/site-row`
+          - Plugins:
+            - **`box`** — Ships on the deployed box: the BoxSignal contribution kind ({ source, subscribe(emit) }) — the signal sources a box's link stream relays, collected generically (site-mirror/box contributes the table-mirror one). Its machine half serves the stream. Imported by site-mirror/box, so it ships wherever a mirror set does.
+              - Machine:
+                - Uses: `infra/endpoints.machineHandler`
+              - Cross-plugin:
+                - Imported by: `apps/deploy/site-mirror/box`
+              - Server:
+                - Exports (types): `BoxSignalSpec`
+                - Exports (values): `BoxSignal`
+            - **`link`** — The box link's portable half: onBoxSignal(source, fn) — a linked box's signals, the payload the source's own vocabulary — and onBoxHello(fn) — every (re)connect, the catch-up cue; the deploy_deployments_ext_box_link side-table (a link's record at its last state change, read back at boot: readKeptBoxLinks / writeBoxLinkState); and onLinkTargetsChanged(fn), a NOTIFY rung by a statement trigger on the deployments, servers, server-health (pinned host key) and stand-in tables. The links themselves live in the machine half.
+              - Server:
+                - Contributes:
+                  - `db-trigger` "box-link.targets"
+                  - `resource.declare` "deploy.box-links"
+                  - `resource.declare` "deploy.site-health"
+                - Uses:
+                  - `apps/deploy/deployments._deployDeployments`
+                  - `apps/deploy/health.serverHealth`
+                  - `apps/deploy/host-query.deployHostStandIns`
+                  - `apps/deploy/servers._deployServers`
+                  - `database.DatabaseDriver`
+                  - `database.db`
+                  - `database.ListenSession`
+                  - `database/db-triggers.DbTrigger`
+                  - `database/db-triggers.defineDbTriggers`
+                  - `infra/entity-extensions.defineExtension`
+                - DB schema: `plugins/apps/plugins/deploy/plugins/box-link/plugins/link/server/internal/tables.ts`
+                - Entity extension of: `apps/deploy/deployments` (table `deploy_deployments_ext_box_link`)
+                - Exports (types):
+                  - `BoxHelloHandler`
+                  - `BoxSignalHandler`
+                  - `KeptBoxLink`
+                - Exports (values):
+                  - `onBoxHello`
+                  - `onBoxSignal`
+                  - `onLinkTargetsChanged`
+                  - `readKeptBoxLinks`
+                  - `writeBoxLinkState`
+                - Resources:
+                  - `deploy.box-links` (push, notified, whole: one entry per linked deployment — a handful)
+                  - `deploy.site-health` (push, notified, whole: one entry per deployment row — a handful)
+              - Machine:
+                - Uses:
+                  - `infra/endpoints.implementMachine`
+                  - `network/live.serveValue`
+                - Register:
+                  - `defineDaemon('deploy.box-link.tunnel')`
+                  - `defineFileWatcher('deploy.box-link.tunnel-sockets')`
+                - Routes: `POST /api/box-link/:deploymentId/retry`
+              - Core:
+                - Uses:
+                  - `apps/deploy/box-link.BoxLinkSchema`
+                  - `apps/deploy/deployments.DeployRunSchema`
+                  - `apps/deploy/remote-deploy.RunningCommitSchema`
+                  - `infra/endpoints.defineEndpoint`
+                  - `network/live.liveValue`
+                  - `packages/list-bound.wholeRecord`
+                - Exports (types):
+                  - `SiteHealth`
+                  - `SiteLink`
+                  - `SiteRun`
+                - Exports (values):
+                  - `boxLinkRetryEndpoint`
+                  - `siteHealth`
+                  - `SiteHealthSchema`
+                  - `SiteLinkSchema`
+                  - `SiteRunSchema`
+              - Cross-plugin:
+                - Imported by:
+                  - `apps/deploy/box-link/site-row`
+                  - `apps/deploy/site-mirror/pull`
+            - **`site-row`** — The health report's deployed-site rows: one row per deployment from deploy.site-health (titled by its hostname; ok while live — behind main or not —, transitioning while deploying, attention while reconnecting, after a failed deploy or with a release too old for the link, critical while down, unreachable or refused), and its body — the alert (what is wrong, in one sentence) over blocks — drawn from three render slots the owning plugins contribute to — SiteLive.Glance (the title line's figure), SiteLive.Section (body blocks) and SiteLive.Action (the footer's controls), each told the deployment and its health. Contributes its own Server block (CPU / memory / disk from the last heartbeat, uptime or last heard, dimmed when stale), Retry now and Open site.
+              - Web:
+                - Slots:
+                  - `SiteLive.Glance`
+                  - `SiteLive.Section`
+                  - `SiteLive.Action`
+                - Slot contributors:
+                  - `SiteLive.Glance` ← `apps.deploy.analytics.dashboard`
+                  - `SiteLive.Section` ← `apps.deploy.analytics.dashboard`
+                  - `SiteLive.Section` ← `apps.deploy.box-link.site-row`
+                  - `SiteLive.Section` ← `apps.deploy.remote-deploy.site-live`
+                  - `SiteLive.Action` ← `apps.deploy.box-link.site-row`
+                  - `SiteLive.Action` ← `apps.deploy.deploy-history`
+                  - `SiteLive.Action` ← `apps.deploy.deploy-history.investigate-failure`
+                  - `SiteLive.Action` ← `apps.deploy.remote-deploy.site-live`
+                - Contributes:
+                  - `HealthReport.Row` "Deployed sites" → `SiteDetail`
+                  - `SiteLive.Section` "server" → `ServerSection`
+                  - `SiteLive.Action` "retry" → `RetryAction`
+                  - `SiteLive.Action` "open-site" → `OpenSiteAction`
+                - Uses:
+                  - `infra/endpoints.useEndpointMutation`
+                  - `network/live.useLive`
+                  - `network/live/live-state.mapResource`
+                  - `network/live/live-state.ResourceErrorInline`
+                  - `network/live/live-state.ResourceResult`
+                  - `primitives/css/fill.Fill`
+                  - `primitives/css/inline.Inline`
+                  - `primitives/css/line.Line`
+                  - `primitives/css/meter.Meter`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.Text`
+                  - `primitives/css/ui-kit.Button`
+                  - `primitives/css/ui-kit.cn`
+                  - `primitives/link-gesture/new-tab.NewTabButton`
+                  - `primitives/loading.Loading`
+                  - `primitives/relative-time.RelativeTime`
+                  - `primitives/slot-render.defineRenderSlot`
+                  - `shell/health-report.HealthReport`
+                - Exports (types):
+                  - `SiteExhibitState`
+                  - `SiteFreshness`
+                  - `SiteLiveExhibitProps`
+                  - `SiteLivePart`
+                  - `SiteLiveProps`
+                - Exports (values):
+                  - `siteFreshness`
+                  - `SiteLive`
+                  - `SiteLiveAside`
+                  - `SiteLiveBlock`
+              - Cross-plugin:
+                - Uses tokens:
+                  - `ui/tokens/color-palette --destructive`
+                  - `ui/tokens/color-palette --muted-foreground`
+                  - `ui/tokens/color-palette --strong-foreground`
+                  - `ui/tokens/color-palette --success`
+                  - `ui/tokens/color-palette --warning`
+                  - `ui/tokens/density --space-2xs`
+                  - `ui/tokens/density --space-sm`
+                  - `ui/tokens/type-scale --font-weight-semibold`
+                - Imported by:
+                  - `apps/deploy/analytics/dashboard`
+                  - `apps/deploy/deploy-history`
+                  - `apps/deploy/deploy-history/investigate-failure`
+                  - `apps/deploy/remote-deploy/site-live`
+                  - `apps/deploy/site-messages/inbox`
         - **`composition`** — Composition section of the site page's Settings tab: which composition this deployment builds and ships, the shape of it (category, entry points, what it extends, how many contributors are opted in), and a cross-app link into that composition's Studio detail pane where its membership is actually edited.
           - Web:
             - Contributes: `DeploymentDetail.Section` "Composition" → `CompositionSection`
@@ -2542,7 +2752,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/text.Text`
               - `primitives/loading.Loading`
               - `ui/icons.Icon`
-        - **`deploy-history`** — The Activity page (/deploy/activity, its sidebar entry): every deploy run across every site as the merged runs surface (RunsDataView) with its own view pills — Recent, Running, Needs approval, Failed. Deployments tab of a site's page: this deployment's durable run ledger (`deploy_runs`) as a live DataView window (`deployRunHistory`, sortable and filterable by the surface's custom columns) — outcome and the leg a failure died on, verb, short commit, pinned release run, duration and relative time, with a failed run's CLI message verbatim. The record beside the in-memory live view, so what happened here survives a backend restart. Owns the row-action slot its children hang a failed run's next step off.
+        - **`deploy-history`** — The Activity page (/deploy/activity, its sidebar entry): every deploy run across every site as the merged runs surface (RunsDataView) with its own view pills — Recent, Running, Needs approval, Failed. Deployments tab of a site's page: this deployment's durable run ledger (`deploy_runs`) as a live DataView window (`deployRunHistory`, sortable and filterable by the surface's custom columns) — outcome and the leg a failure died on, verb, short commit, pinned release run, duration and relative time, with a failed run's CLI message verbatim. The record beside the in-memory live view, so what happened here survives a backend restart. Owns the row-action slot its children hang a failed run's next step off. In the health report's deployed-site row: Open run (the site's Deployments tab) while a deploy runs or after one failed.
           - Web:
             - Slots:
               - `DeployRunItemActions`
@@ -2555,12 +2765,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Deploy.Sidebar` "Activity"
               - `SiteTabs.View` "Deployments" → `DeployHistorySection`
               - `SiteOverview.Card` "deployments" → `DeployOverviewCard`
-            - Uses: 35 symbols — full list in [`plugins/apps/plugins/deploy/plugins/deploy-history/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deploy-history/REFERENCE.md)
-              - `apps/deploy/deployments` ×8
+              - `SiteLive.Action` "open-run" → `SiteOpenRunAction`
+            - Uses: 38 symbols — full list in [`plugins/apps/plugins/deploy/plugins/deploy-history/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deploy-history/REFERENCE.md)
+              - `apps/deploy/deployments` ×9
               - `primitives/data-view` ×6
               - `network/live/live-state` ×3
               - `primitives/pane` ×3
               - `primitives/css/spacing` ×2
+              - `apps-core/tabs.useAppLinkProps`
+              - `apps/deploy/box-link/site-row.SiteLive`
               - `apps/deploy/shell.Deploy`
               - `network/live.useLive`
               - `primitives/app-shell.opensPane`
@@ -2585,13 +2798,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-xl`
             - Imported by: `apps/deploy/deploy-history/rollback`
           - Plugins:
-            - **`investigate-failure`** — Contributes the site page's failure banner (the newest run failed: its leg, the CLI's message verbatim, what the box still serves, Investigate) and the investigate row action to every failed run in a site's Deployments tab, launching an agent briefed on that failure — the CLI's own message verbatim, the run's identity and pinned bundle, and where the transcript is.
+            - **`investigate-failure`** — Contributes the site page's failure banner (the newest run failed: its leg, the CLI's message verbatim, what the box still serves, Investigate) and the investigate row action to every failed run in a site's Deployments tab, launching an agent briefed on that failure (also offered on the health report's deployed-site row while its latest run failed) — the CLI's own message verbatim, the run's identity and pinned bundle, and where the transcript is.
               - Web:
                 - Contributes:
                   - `SiteBanner` "failed"
                   - `DataViewSlots.CollectionItemAction` "deploy.run-history:investigate" → `CollectionInvestigate`
+                  - `SiteLive.Action` "investigate" → `SiteInvestigateAction`
                 - Uses:
+                  - `apps/deploy/box-link/site-row.SiteLive`
                   - `apps/deploy/deployments.SiteBanner`
+                  - `network/live.rowOrStale`
                   - `network/live.useLive`
                   - `network/live/live-state.foldResource`
                   - `network/live/live-state.ResourceResult`
@@ -2641,7 +2857,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/deploy`
               - `integrations/google-maps/browser-config`
               - `integrations/google-maps/browser-config/deployed-key`
-            - Endpoint callers: `host-only`
+            - Endpoint callers:
+              - `box`
+              - `host-only`
           - Exemptions:
             - Exempts itself from: `user-path/no-unproven-claim` — `machine/internal/read-credential.ts` (sanctioned)
           - Plugins:
@@ -2875,10 +3093,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DeployGate`
               - `DeployGateSubject`
               - `DeployGateVerdict`
+              - `DeployRunListener`
             - Exports (values):
               - `_deployDeployments`
               - `_deployRuns`
               - `DeployGates`
+              - `deployRunsServed`
+              - `latestDeployRun`
+              - `onDeployRunChanged`
               - `publishWrittenRuns`
             - Register:
               - `defineJob('retention.deploy_runs')`
@@ -2993,6 +3215,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/deploy/analytics/dashboard`
               - `apps/deploy/analytics/sessions`
+              - `apps/deploy/box-link/link`
               - `apps/deploy/composition`
               - `apps/deploy/deploy-history`
               - `apps/deploy/deploy-history/investigate-failure`
@@ -3003,9 +3226,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/host-query`
               - `apps/deploy/local-serve`
               - `apps/deploy/remote-deploy`
+              - `apps/deploy/remote-deploy/site-live`
               - `apps/deploy/site-messages/inbox`
               - `apps/deploy/site-mirror/pull`
               - `framework/cli/deploy`
+            - Extended by:
+              - `apps/deploy/box-link/link` (table `deploy_deployments_ext_box_link`)
+              - `apps/deploy/site-messages/inbox` (table `deploy_deployments_ext_messages_seen`)
+            - Endpoint callers: `inbox`
           - Exemptions:
             - Exempts itself from:
               - `paths:no-hardcoded-paths` — `core/derive.ts` (sanctioned)
@@ -3155,6 +3383,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --radius`
             - Imported by:
+              - `apps/deploy/box-link/link`
               - `apps/deploy/deployments`
               - `apps/deploy/fixtures`
               - `apps/deploy/host-query`
@@ -3174,7 +3403,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ServerHealthRowSchema`
               - `serverHealthShape`
               - `SshCheckResultSchema`
-        - **`host-query`** — The deploy app's shared pieces for a section that reads its deployment's box over SSH: HostQueryFailureState renders every way the read can fail (no SSH key, unverified host, SSH failure, failed request, unreadable answer) in one vocabulary, and useDeploymentShips(deploymentId, pluginId) answers whether the deployment's composition closure includes a plugin (useShipsGate: the tab gate over it — shown unless the answer is no). hostOnlyQueryOverSsh(deploymentId, path, schema, { maxAnswerBytes? }): resolves a deployment's server and pinned SSH target, curls one host-only route of the install through its own gateway on the loopback port (two SSH sessions at most), refuses an answer over maxAnswerBytes unread (curl --max-filesize on the box, re-checked here), and answers the parsed answer, which of SSH, the request or the answer failed, or not-found. markServerBoxIsThisInstance(serverId) marks a demo's server whose box is this instance: its host-only routes are answered through this instance's own gateway, no SSH (the same answer cap applies).
+        - **`host-query`** — The deploy app's shared pieces for a section that reads its deployment's box over SSH: HostQueryFailureState renders every way the read can fail (no SSH key, unverified host, SSH failure, failed request, unreadable answer) in one vocabulary, and useDeploymentShips(deploymentId, pluginId) answers whether the deployment's composition closure includes a plugin (useShipsGate: the tab gate over it — shown unless the answer is no). hostOnlyQueryOverSsh(deploymentId, path, schema, { maxAnswerBytes? }): resolves a deployment's server and pinned SSH target, curls one host-only route of the install through its own gateway on the loopback port (two SSH sessions at most), refuses an answer over maxAnswerBytes unread (curl --max-filesize on the box, re-checked here), and answers the parsed answer, which of SSH, the request or the answer failed, or not-found. markServerBoxIsThisInstance(serverId) marks a demo's server whose box is this instance: its host-only routes are answered through this instance's own gateway, no SSH (the same answer cap applies); standInServerIds() lists those servers.
           - Web:
             - Uses:
               - `network/live.LiveRowResult`
@@ -3203,8 +3432,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `HostQueryAnswer`
               - `HostQueryOptions`
             - Exports (values):
+              - `deployHostStandIns`
               - `hostOnlyQueryOverSsh`
               - `markServerBoxIsThisInstance`
+              - `standInServerIds`
           - Core:
             - Uses: `infra/ssh.SshFailureKindSchema`
             - Exports (types): `HostQueryFailure`
@@ -3216,6 +3447,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/deploy/analytics/dashboard`
               - `apps/deploy/analytics/sessions`
+              - `apps/deploy/box-link/link`
               - `apps/deploy/fixtures`
               - `apps/deploy/site-messages/inbox`
               - `apps/deploy/site-mirror/pull`
@@ -3246,7 +3478,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/icon-button.IconButton`
               - `primitives/link-gesture/new-tab.NewTabButton`
               - `ui/icons.Icon`
-        - **`remote-deploy`** — Deploy one composition to its remote server, on the site page: the header's Deploy button launching the `update` sequence (converge → build a platform-pinned candidate unless one is already current → ship that pinned run id), labelled by what it would do now (Redeploy / Deploy N commits / Retry deploy / Deploying…); the production strip's Status, Running (sha + subject), Deployed and Bundle cells; the deploying banner (the three legs and the tail of the log the running leg writes) and the behind-main banner; and the `Release` client field (`releaseFields`) of the deployments list. Serves deploy.running-commit: the commit a deployment's newest succeeded ship recorded, its subject, and how many commits the main ref holds that it does not — recomputed when a deploy run lands or main advances.
+        - **`remote-deploy`** — Deploy one composition to its remote server, on the site page: the header's Deploy button launching the `update` sequence (converge → build a platform-pinned candidate unless one is already current → ship that pinned run id), labelled by what it would do now (Redeploy / Deploy N commits / Retry deploy / Deploying…); the production strip's Status, Running (sha + subject), Deployed and Bundle cells; the deploying banner (the three legs and the tail of the log the running leg writes) and the behind-main banner; and the `Release` client field (`releaseFields`) of the deployments list. Serves deploy.running-commit: the commit a deployment's newest succeeded ship recorded, its subject, and how many commits the main ref holds that it does not — recomputed when a deploy run lands or main advances — and readRunningCommit(deploymentId), the same answer for a server-side reader.
           - Web:
             - Contributes:
               - `SiteHeader.Action` "deploy" → `DeployButton`
@@ -3288,6 +3520,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `release/bundles.countCommitsBehind`
               - `release/bundles.readCommitSubject`
               - `release/bundles.readRefSha`
+            - Exports (values): `readRunningCommit`
             - Resources: `deploy.running-commit` (push, notified)
           - Core:
             - Uses:
@@ -3301,11 +3534,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `RunningCommit`
             - Exports (values):
               - `candidatePredatesLatest`
+              - `DEPLOY_PHASE_TITLES`
+              - `deployLabelOf`
               - `RELEASE_STATE_OPTIONS`
               - `releaseFields`
               - `releaseStateLabel`
               - `resolveReleaseState`
               - `runningCommit`
+              - `RunningCommitSchema`
               - `shortSha`
               - `stalenessChipLabel`
               - `stalenessSentence`
@@ -3321,7 +3557,41 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --success`
               - `ui/tokens/color-palette --warning`
               - `ui/tokens/shape --spacing`
-            - Imported by: `apps/deploy/deploy-history/investigate-failure`
+            - Imported by:
+              - `apps/deploy/box-link/link`
+              - `apps/deploy/box-link/site-row`
+              - `apps/deploy/deploy-history/investigate-failure`
+              - `apps/deploy/remote-deploy/site-live`
+          - Plugins:
+            - **`site-live`** — remote-deploy in the health report's deployed-site row: the deploy in progress in its body (the update's legs — done, running, upcoming — over a progress bar) and Deploy in its footer when it is the next step (main ahead, the site down or its release too old for the link), labelled as the site page's button (deployLabelOf) and blocked, with the reason, while the connection to the box is lost or the server's own gate says so. Its own plugin because the row's health value (box-link/link) reads remote-deploy's running commit.
+              - Web:
+                - Contributes:
+                  - `SiteLive.Section` "deploying" → `DeployingSection`
+                  - `SiteLive.Action` "deploy" → `SiteDeployAction`
+                - Uses:
+                  - `apps/deploy/box-link/site-row.SiteLive`
+                  - `apps/deploy/deployments.useBlockedReason`
+                  - `infra/endpoints.useEndpointMutation`
+                  - `network/live.rowOrStale`
+                  - `network/live.useLive`
+                  - `primitives/css/grow.growClass`
+                  - `primitives/css/inline.Inline`
+                  - `primitives/css/line.Line`
+                  - `primitives/css/meter.Meter`
+                  - `primitives/css/rigid.rigidClass`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/status-dot.StatusDot`
+                  - `primitives/css/text.Text`
+                  - `primitives/css/ui-kit.Button`
+                  - `primitives/css/ui-kit.cn`
+                  - `primitives/css/ui-kit.Separator`
+              - Cross-plugin:
+                - Uses tokens:
+                  - `ui/tokens/color-palette --border`
+                  - `ui/tokens/color-palette --primary-text`
+                  - `ui/tokens/color-palette --success`
+                  - `ui/tokens/density --space-xs`
+                  - `ui/tokens/shape --spacing`
         - **`servers`** — Server registry for the deployment platform.
           - Web:
             - Slots:
@@ -3457,6 +3727,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape` ×2
               - `ui/tokens/font-family --font-mono`
             - Imported by:
+              - `apps/deploy/box-link/link`
               - `apps/deploy/deployments`
               - `apps/deploy/deployments/runs-arm`
               - `apps/deploy/fixtures`
@@ -3531,22 +3802,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/health`
               - `apps/deploy/isle-building`
               - `apps/deploy/servers`
+              - `apps/deploy/site-messages/inbox`
               - `apps/website`
         - **`site-messages`** — Umbrella for messages a deployed site's visitors send: the intake half that ships inside the site (table, public endpoint, abuse limits, notification email, the site_messages mirror set) and the inbox half in the local deploy app (a live window over this computer's copy of the site's messages).
           - Plugins:
-            - **`inbox`** — Messages tab of a site's page, shown only when the deployment's composition ships the site-messages intake: every message visitors sent through the site, from this computer's copy of the site's messages (site-mirror), as a live DataView paged, searched and filtered in SQL (received, from as a reply link, the message with its full text on open, verdict, notification state), under the copy's freshness line; the Overview's newest-messages card and the tab's 7-day badge read the same copy. Serves deploy-site-messages.inbox: a deployed site's contact-form messages as a live window over this computer's copy of the site's site_messages (site-mirror's replica of the intake's mirror set) — newest first, filtered, searched, grouped and counted in SQL on the copy, re-read whenever a sync applies a page.
+            - **`inbox`** — Messages tab of a site's page, shown only when the deployment's composition ships the site-messages intake: every message visitors sent through the site, from this computer's copy of the site's messages (site-mirror), as a live DataView paged, searched and filtered in SQL (received, from as a reply link, the message with its full text on open, verdict, notification state), under the copy's freshness line; the Overview's newest-messages card, the tab's 7-day badge and the health report's deployed-site row ("N new messages" since the tab was last opened, linking to it) read the same copy. Serves deploy-site-messages.inbox: a deployed site's contact-form messages as a live window over this computer's copy of the site's site_messages (site-mirror's replica of the intake's mirror set) — newest first, filtered, searched, grouped and counted in SQL on the copy, re-read whenever a sync applies a page. Owns the deploy_deployments_ext_messages_seen side-table — how far the user has read each site's messages, as the site's clock when they last opened the Messages tab — served by id (deploy-site-messages.seen) and moved forward by POST /api/deploy/deployments/:id/messages-seen.
               - Web:
                 - Contributes:
                   - `DataViewSlots.CollectionItemAction` "deploy-site-messages.inbox:investigate" → `CollectionInvestigate`
+                  - `SiteVisitors.Note` "new-messages" → `NewMessagesNote`
                   - `SiteTabs.View` "Messages" → `MessagesSection`
                   - `SiteOverview.Card` "messages" → `MessagesCard`
-                - Uses: 30 symbols — full list in [`plugins/apps/plugins/deploy/plugins/site-messages/plugins/inbox/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/site-messages/plugins/inbox/REFERENCE.md)
-                  - `apps/deploy/deployments` ×7
+                - Uses: 36 symbols — full list in [`plugins/apps/plugins/deploy/plugins/site-messages/plugins/inbox/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/site-messages/plugins/inbox/REFERENCE.md)
+                  - `apps/deploy/deployments` ×8
                   - `primitives/data-view` ×4
                   - `apps/deploy/host-query` ×3
-                  - `network/live` ×2
+                  - `network/live` ×3
                   - `primitives/relative-time` ×2
+                  - `apps-core/tabs.useAppLinkProps`
+                  - `apps/deploy/analytics/dashboard.SiteVisitors`
+                  - `apps/deploy/box-link/site-row.SiteLiveAside`
                   - `apps/deploy/site-mirror/pull.MirrorFreshness`
+                  - `infra/endpoints.useEndpointMutation`
                   - `network/live/live-state.ResourceErrorInline`
                   - `primitives/css/card.Card`
                   - `primitives/css/fill.Fill`
@@ -3564,20 +3841,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `resource.declare` "deploy-site-messages.inbox:count"
                   - `resource.declare` "deploy-site-messages.inbox:groups"
                   - `resource.declare` "deploy-site-messages.inbox:rows"
+                  - `resource.declare` "deploy-site-messages.seen:rows"
                 - Uses:
+                  - `apps/deploy/deployments._deployDeployments`
                   - `apps/deploy/site-messages/intake.siteMessages`
                   - `apps/deploy/site-mirror/pull.onSiteMirrorApplied`
                   - `apps/deploy/site-mirror/pull.readSiteMirror`
+                  - `database.db`
                   - `database/sql-projection.parsed`
                   - `database/table-mirror/replica.ReplicaTx`
                   - `database/table-mirror/replica.tableMirrorReplicas`
+                  - `infra/endpoints.HttpError`
+                  - `infra/endpoints.implement`
+                  - `infra/entity-extensions.defineExtension`
                   - `network/live.serveCollection`
                   - `network/live/filter.filterSql`
+                - DB schema: `plugins/apps/plugins/deploy/plugins/site-messages/plugins/inbox/server/internal/tables.ts`
+                - Entity extension of: `apps/deploy/deployments` (table `deploy_deployments_ext_messages_seen`)
                 - Resources:
                   - `deploy-site-messages.inbox` (keyed, window)
                   - `deploy-site-messages.inbox:count` (push)
                   - `deploy-site-messages.inbox:groups` (push)
                   - `deploy-site-messages.inbox:rows` (keyed, point)
+                  - `deploy-site-messages.seen:rows` (keyed, point)
+                - Routes: `POST /api/deploy/deployments/:id/messages-seen`
               - Core:
                 - Uses:
                   - `apps/deploy/site-messages/intake.NOTIFY_STATES`
@@ -3596,7 +3883,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `siteMessageRowId`
                   - `siteMessagesInbox`
               - Cross-plugin:
-                - Uses tokens: `ui/tokens/color-palette --border`
+                - Uses tokens:
+                  - `ui/tokens/color-palette --border`
+                  - `ui/tokens/type-scale --font-weight-semibold`
+              - Shared:
+                - Exports (values):
+                  - `markSiteMessagesSeen`
+                  - `messagesSeenShape`
+                  - `siteMessagesSeen`
             - **`intake`** — useSendSiteMessage() — the contact form's send (sent or rate-limited); a site takes messages by importing this barrel, which pulls the intake's server half into its composition. Registers the site-message id kind (smsg) with the web id registry — the server barrel registers the same kind. Owns site_messages: the public POST /api/site-messages endpoint (body capped at 8 KB; honeypot, a send under three seconds or a bot user agent stored as spam and still answered sent; 3 per 10 minutes and 10 per day per salted IP hash, the IP never stored), the site-messages.notify job emailing each accepted message through Resend from the approved RESEND_API_KEY deploy secret (not-configured without one, at most 30 emails a day, the rest held and counted in the next), the site-messages.confirm job emailing the visitor a copy so they know it arrived (at most 30 a day and 3 a day per address), the 30-day spam sweep, and the site_messages mirror set the deploy app copies (ip_hash omitted, the salt never mirrored).
               - Web:
                 - Contributes: `IdKinds.Kind` "smsg"
@@ -3692,9 +3986,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database/table-mirror.MirrorRowsAnswerSchema`
               - `database/table-mirror.MirrorRowsRequestSchema`
               - `infra/endpoints.defineEndpoint`
+            - Exports (types): `MirrorBoxSignal`
             - Exports (values):
               - `MIRROR_ANSWER_MAX_BYTES`
+              - `MIRROR_BOX_SIGNAL_SOURCE`
               - `MIRROR_QUESTION_MAX_CHARS`
+              - `MIRROR_SIGNAL_THROTTLE_MS`
+              - `MirrorBoxSignalSchema`
               - `MirrorChangesAnswerSchema`
               - `mirrorChangesEndpoint`
               - `MirrorCopyAnswerSchema`
@@ -3708,27 +4006,32 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/site-mirror/box`
               - `apps/deploy/site-mirror/pull`
           - Plugins:
-            - **`box`** — Ships on the deployed box: the host-only table-mirror routes — changes, copy, keys and rows, each one page of table-mirror/source's readers for a set this release contributes (unknown-set otherwise), behind hostOnly and Caddy's host-only 404. A companion of table-mirror/source (MirrorReaderRoutes), so every composition holding a mirror set serves its readers.
+            - **`box`** — Ships on the deployed box: the host-only table-mirror routes — changes, copy, keys and rows, each one page of table-mirror/source's readers for a set this release contributes (unknown-set otherwise), behind hostOnly and Caddy's host-only 404. A companion of table-mirror/source (MirrorReaderRoutes), so every composition holding a mirror set serves its readers — and, through its import of box-link/box, the box-link stream, to which it contributes the table-mirror signal: { setId } whenever a set's source log advanced, throttled to one ring per set per 2 s.
               - Server:
-                - Contributes: `table-mirror-reader-routes` "apps/deploy/site-mirror/box serves the readers as host-only routes, curled over SSH by the deploy app's site-mirror/pull"
+                - Contributes:
+                  - `table-mirror-reader-routes` "apps/deploy/site-mirror/box serves the readers as host-only routes, curled over SSH by the deploy app's site-mirror/pull"
+                  - `box-link.signal` "table-mirror"
                 - Uses:
                   - `apps/deploy/analytics/host-only.hostOnly`
+                  - `apps/deploy/box-link/box.BoxSignal`
                   - `database.db`
                   - `database/table-mirror/source.MirrorReaderRoutes`
+                  - `database/table-mirror/source.onMirrorLogAdvanced`
                   - `database/table-mirror/source.readMirrorChanges`
                   - `database/table-mirror/source.readMirrorCopy`
                   - `database/table-mirror/source.readMirrorKeys`
                   - `database/table-mirror/source.readMirrorRows`
                   - `database/table-mirror/source.resolveMirrorSet`
                   - `infra/endpoints.implement`
-            - **`pull`** — MirrorFreshness({ deploymentId, setId, subject }): how fresh this computer's copy of a deployed site's mirrored set is — Synced N ago with Sync now, Copying… / Reconciling… while a pass runs, a failed pull in host-query's failure vocabulary (a site whose release predates the set: redeploy it) above the still-readable older data — asking for a pull on open when the copy is a few minutes old or missing. Keeps one table-mirror replica per (deployment, mirror set) of each deployed site's box, pulled over SSH through host-query (each page one host-only GET, a key list cut to what one question carries): the site-mirror.pull job (one bounded chunk per run, re-enqueued while behind, one pending per replica), its hourly main-only site-mirror.pull-all (drops deleted deployments' replicas and orphan schemas, then pulls every replica), POST /api/site-mirror/sync (on a tab open and on Sync now; creates the set's replica on first ask), the SiteMirrorSink contribution (a set read as a change stream through its owner's sink — only the content-free key index kept — kept for every deployment and pulled at its own pace, one bounded page per hourly run, never on demand), the site-mirror.status live value (phase, progress, last sync, last outcome), and readSiteMirror / onSiteMirrorApplied — a consumer's own SQL on a deployment's copy, and its change signal.
+            - **`pull`** — MirrorFreshness({ deploymentId, setId, subject }): how fresh this computer's copy of a deployed site's mirrored set is — Synced N ago with Sync now, Copying… / Reconciling… while a pass runs, a failed pull in host-query's failure vocabulary (a site whose release predates the set: redeploy it) above the still-readable older data — asking for a pull on open when the copy is a few minutes old or missing. Keeps one table-mirror replica per (deployment, mirror set) of each deployed site's box, pulled over SSH through host-query (each page one host-only GET, a key list cut to what one question carries): the site-mirror.pull job (one bounded chunk per run, re-enqueued while behind, one pending per replica), its hourly main-only site-mirror.pull-all (drops deleted deployments' replicas and orphan schemas, then pulls every replica), POST /api/site-mirror/sync (on a tab open and on Sync now; creates the set's replica on first ask), the SiteMirrorSink contribution (a set read as a change stream through its owner's sink — only the content-free key index kept — kept for every deployment and pulled at its own pace, one bounded page per hourly run, never on demand), the site-mirror.status live value (phase, progress, last sync, last outcome), and readSiteMirror / onSiteMirrorApplied — a consumer's own SQL on a deployment's copy, and its change signal. Answers the box link's doorbell: a box's table-mirror signal pulls the set it names, spaced at least 5 s after the replica's last attempt (a sink set by its pace's minIntervalMs), and a box's hello pulls every replica of that deployment.
               - Server:
                 - Contributes:
                   - `resource.declare` "site-mirror.status"
                   - `fork-data-exclusion` "site_mirror_replicas"
-                - Uses: 25 symbols — full list in [`plugins/apps/plugins/deploy/plugins/site-mirror/plugins/pull/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/site-mirror/plugins/pull/REFERENCE.md)
+                - Uses: 27 symbols — full list in [`plugins/apps/plugins/deploy/plugins/site-mirror/plugins/pull/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/site-mirror/plugins/pull/REFERENCE.md)
                   - `database/table-mirror/replica` ×12
                   - `infra/endpoints` ×3
+                  - `apps/deploy/box-link/link` ×2
                   - `database/table-mirror/source` ×2
                   - `ids` ×2
                   - `apps/deploy/deployments._deployDeployments`
@@ -14593,8 +14896,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceShowsAppsSideBySide`
           - `useTabs`
       - Cross-plugin:
-        - Imported by: 48 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
-          - `apps` ×19
+        - Imported by: 50 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+          - `apps` ×21
           - `apps-core` ×9
           - `debug` ×4
           - `shell` ×3
@@ -16220,6 +16523,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serverPinCommit`
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/box-link/box`
           - `build/deployment`
           - `reports/engine`
           - `upstream`
@@ -24640,8 +24944,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadedDatabaseConfig`
       - `readDatabaseConfigSync`
   - Cross-plugin:
-    - Imported by: 181 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
-      - `apps` ×48
+    - Imported by: 183 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+      - `apps` ×50
       - `conversations` ×22
       - `tasks` ×20
       - `infra` ×18
@@ -24895,6 +25199,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `installDbTriggers`
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/box-link/link`
           - `conversations/usage`
           - `database`
           - `database/derived-tables`
@@ -25797,7 +26102,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `sql-writes:fit:hand-written` — `server/internal/schema-sink.ts` (sanctioned)
               - `sql-writes:fit:dynamic` — `server/internal/schema-sink.ts` (sanctioned)
               - `imperative-create-table-allowlisted` — `server/internal/schema-sink.ts` (sanctioned)
-        - **`source`** — The table mirror's source half: defineMirrorSet / MirrorSet (tables mirrored together) and NeverMirrored (tables whose rows never leave, refused at module eval and at boot); generated statement-level change-log triggers (one table_mirror_log row per primary key — cascaded deletes, retention and TRUNCATE included); the source identity and per-table fingerprints; the readers — the delta stream paged by a { floor, after } xid8 cursor, a first-sync copy, and reconciliation's key + hash walk and rows by key; and the daily log prune at the 30-day horizon, below which a replica is answered reconcile-required.
+        - **`source`** — The table mirror's source half: defineMirrorSet / MirrorSet (tables mirrored together) and NeverMirrored (tables whose rows never leave, refused at module eval and at boot); generated statement-level change-log triggers (one table_mirror_log row per primary key — cascaded deletes, retention and TRUNCATE included — each ringing the table_mirror_log NOTIFY channel with its set id, heard through onMirrorLogAdvanced); the source identity and per-table fingerprints; the readers — the delta stream paged by a { floor, after } xid8 cursor, a first-sync copy, and reconciliation's key + hash walk and rows by key; and the daily log prune at the 30-day horizon, below which a replica is answered reconcile-required.
           - Server:
             - Contributes:
               - `db-trigger-claim` "table-mirror"
@@ -25805,6 +26110,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `database.DatabaseDriver`
               - `database.db`
+              - `database.ListenHandlers`
+              - `database.ListenSession`
               - `database/db-triggers.DbFunctionDdl`
               - `database/db-triggers.DbTriggerClaim`
               - `database/db-triggers.DbTriggerDdl`
@@ -25816,6 +26123,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - DB schema: `plugins/database/plugins/table-mirror/plugins/source/server/internal/tables.ts`
             - Exports (types):
               - `MirroredTable`
+              - `MirrorLogAdvancedHandler`
               - `MirrorSetDefinition`
               - `MirrorSetSpec`
               - `NeverMirroredSpec`
@@ -25829,6 +26137,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `MirrorSet`
               - `mirrorSql`
               - `NeverMirrored`
+              - `onMirrorLogAdvanced`
               - `readMirrorChanges`
               - `readMirrorCopy`
               - `readMirrorKeys`
@@ -29627,9 +29936,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Fields.Identity` ×35
     - Exports (values): `Fields`
   - Cross-plugin:
-    - Imported by: 144 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
+    - Imported by: 145 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
       - `fields` ×65
-      - `apps` ×24
+      - `apps` ×25
       - `conversations` ×12
       - `tasks` ×7
       - `infra` ×6
@@ -30059,8 +30368,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `DateFieldDef`
             - Exports (values): `dateField`
           - Cross-plugin:
-            - Imported by: 69 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
-              - `apps` ×17
+            - Imported by: 70 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
+              - `apps` ×18
               - `conversations` ×12
               - `infra` ×7
               - `tasks` ×7
@@ -30813,8 +31122,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Imported by: 45 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
-              - `apps` ×9
+            - Imported by: 46 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
+              - `apps` ×10
               - `conversations` ×8
               - `debug` ×5
               - `infra` ×5
@@ -31707,8 +32016,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 118 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
-              - `apps` ×32
+            - Imported by: 119 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+              - `apps` ×33
               - `conversations` ×22
               - `tasks` ×16
               - `infra` ×8
@@ -33067,13 +33376,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withNotifyBatch`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 123 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
+        - Imported by: 125 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
           - `infra` ×28
           - `conversations` ×14
           - `debug` ×14
           - `tasks` ×13
+          - `apps` ×10
           - `database` ×10
-          - `apps` ×8
           - `network` ×5
           - `reports` ×5
           - `framework` ×3
@@ -37256,8 +37565,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 274 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×80
+        - Imported by: 280 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+          - `apps` ×86
           - `conversations` ×36
           - `infra` ×23
           - `debug` ×21
@@ -37441,8 +37750,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineExtensionShape`
           - `EXTENSION_TIMESTAMPS`
       - Cross-plugin:
-        - Imported by: 48 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
-          - `apps` ×17
+        - Imported by: 50 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
+          - `apps` ×19
           - `tasks` ×14
           - `conversations` ×13
           - `page` ×3
@@ -37768,12 +38077,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Register: `file-sink-exit-flush`
     - **`file-watcher`** — defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, depth, mainOnly) whose start({dirs, label, onChange, onLost}) — start({files, …}) for a writesWhileOpen one, which follows writes to the named files only (kqueue on darwin, one descriptor per file; every follow of a directory shares one subscription) — opens instances over one @parcel/watcher engine (debounce + ceiling flush; no timer — a dropped event is reported to onLost, the one backstop). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: refcounted native watches, a dir under a watched root riding its watch (a watcher never moved off a live root: a root opening above leaves it where it is), with subtree or children (depth-1 listing) scope — a children request with no root above it opening only a single-directory watch (depth children), never a recursive one. On macOS a children watch is kqueue's (a descriptor on the dir and each entry, budgeted — a dir past the budget rides FSEvents), so watching / or ~ puts nothing on fseventsd; every other FSEvents watch with no ignore rides the process's stream pool — one stream per watched root, a dir under an open recursive stream riding it, whatever declaration asks (fsEventsStreams reads it).
       - Cross-plugin:
-        - Imported by: 45 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
+        - Imported by: 46 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
           - `infra` ×16
           - `debug` ×10
           - `build` ×5
+          - `apps` ×4
           - `conversations` ×4
-          - `apps` ×3
           - `companions/browser-extension`
           - `config_v2`
           - `framework/cli/await`
@@ -37988,6 +38297,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `RefHeadSchema`
           - Cross-plugin:
             - Imported by:
+              - `apps/deploy/box-link/link`
               - `apps/deploy/remote-deploy`
               - `build/deployment`
               - `build/serve-composition`
@@ -38736,6 +39046,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SleepNowSchema`
           - Cross-plugin:
             - Imported by:
+              - `apps/deploy/box-link/link`
               - `conversations`
               - `conversations/conversation-view/op-status`
               - `database/lock-watch`
@@ -39767,10 +40078,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `renderGatewayPortRecord`
               - `servedGatewayPort`
           - Cross-plugin:
-            - Imported by: 38 plugins — full list in [`plugins/infra/plugins/launcher/plugins/gateway-port/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/gateway-port/REFERENCE.md)
+            - Imported by: 39 plugins — full list in [`plugins/infra/plugins/launcher/plugins/gateway-port/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/gateway-port/REFERENCE.md)
               - `debug` ×7
+              - `apps` ×6
               - `framework` ×6
-              - `apps` ×5
               - `infra` ×5
               - `conversations` ×3
               - `auth` ×2
@@ -40145,8 +40456,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `namespaceUrl`
           - `resolveNamespaceAlias`
       - Cross-plugin:
-        - Imported by: 88 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
-          - `apps` ×15
+        - Imported by: 89 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
+          - `apps` ×16
           - `framework` ×15
           - `infra` ×12
           - `debug` ×11
@@ -40169,18 +40480,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `namespace:no-hand-built-url` — `core/namespace.ts`, `check/index.ts` (sanctioned)
           - `namespace:legacy-host` — `core/namespace.test.ts` (sanctioned)
           - `product-name:legacy-id` — `core/namespace.test.ts` (sanctioned)
-    - **`ndjson-stream`** — Client NDJSON stream reader: an async generator yielding one parsed JSON frame per line from a streamed endpoint over the caller's transport (readNdjson(transport, endpoint, params, opts) — a write endpoint's contract builds the request; a GET def is a tsc error), guarding res.ok and reporting via EndpointError. NDJSON (application/x-ndjson) streaming Response builder: wrap a frame-emitting producer into a chunked stream that survives Bun's idle timeout, for a mutation whose steps the caller shows as they run (a progressive read is a notified live value instead).
+    - **`ndjson-stream`** — Client NDJSON stream reader: an async generator yielding one parsed JSON frame per line from a streamed endpoint over the caller's transport (readNdjson(transport, endpoint, params, opts) — a write endpoint's contract builds the request; a GET def is a tsc error), guarding res.ok and reporting via EndpointError. NDJSON (application/x-ndjson) streaming Response builder and reader: ndjsonResponse wraps a frame-emitting producer into a chunked stream (the producer handed an AbortSignal that fires when the reader goes away), for a mutation whose steps the caller shows as they run or a host-only stream a peer process reads; readNdjson(body, signal) parses a streamed body one JSON frame per line, failing loudly on a malformed line. A progressive read is a notified live value instead.
       - Web:
         - Uses:
           - `infra/endpoints.EndpointError`
           - `infra/endpoints.endpointErrorSink`
         - Exports (values): `readNdjson`
       - Cross-plugin:
-        - Imported by: `debug/worktree-cleanup`
+        - Imported by:
+          - `apps/deploy/box-link/box`
+          - `apps/deploy/box-link/link`
+          - `debug/worktree-cleanup`
       - Exemptions:
         - Exempts itself from: `endpoints/no-raw-web-fetch` — `web` (sanctioned)
       - Server:
-        - Exports (values): `ndjsonResponse`
+        - Exports (types):
+          - `NdjsonEmit`
+          - `NdjsonResponseOptions`
+        - Exports (values):
+          - `NdjsonParseError`
+          - `ndjsonResponse`
+          - `readNdjson`
     - **`paths`** — Canonical machine paths, plus the boot-time publication of this namespace's declared data-dir set so an audit running in another checkout can tell one of this branch's directories from an orphan.
       - Core:
         - Uses: 37 symbols — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
@@ -40722,10 +41042,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `REPO_ROOT_MODULE`
               - `scriptPath`
           - Cross-plugin:
-            - Imported by: 63 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
+            - Imported by: 64 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
               - `framework` ×15
               - `infra` ×10
-              - `apps` ×7
+              - `apps` ×8
               - `build` ×6
               - `debug` ×4
               - `packages` ×4
@@ -40867,12 +41187,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runtimeNamespace`
           - `servingSocketPath`
       - Cross-plugin:
-        - Imported by: 81 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
+        - Imported by: 82 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
           - `infra` ×18
           - `debug` ×15
           - `build` ×9
           - `conversations` ×9
-          - `apps` ×5
+          - `apps` ×6
           - `database` ×4
           - `tasks` ×4
           - `framework` ×3
@@ -40971,12 +41291,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SPAN_MEASURES`
           - `waitSplit`
       - Cross-plugin:
-        - Imported by: 78 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
-          - `infra` ×24
+        - Imported by: 82 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
+          - `infra` ×25
           - `debug` ×21
-          - `apps` ×7
+          - `apps` ×9
           - `conversations` ×6
-          - `database` ×3
+          - `database` ×4
           - `packages` ×3
           - `build` ×2
           - `reports` ×2
@@ -41203,10 +41523,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `spawnToFile`
           - `watchChildKills`
       - Cross-plugin:
-        - Imported by: 111 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
+        - Imported by: 112 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
           - `infra` ×33
           - `framework` ×32
-          - `apps` ×9
+          - `apps` ×10
           - `database` ×5
           - `debug` ×5
           - `build` ×3
@@ -41240,7 +41560,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/spawn` (0 debt)
           - `packages/flock` (0 debt)
       - Plugins:
-        - **`daemon`** — defineDaemon: the one declared long-lived process or thread a backend runs on its own — a named, described declaration (startedBy boot | on-demand, where every-worktree | main | host-singleton, restart never | backoff) whose spawnProcess / spawnWorker supervise a child process or Bun Worker (one respawn loop: doubling backoff, give-up after repeated rapid exits, healthy on survival or a ready signal), and whose launchDetached / attach follow a detached process by its pid file. Records per declaration its instances (pid, since, restarts, last exit) and each incarnation as a run for the Background activity catalog (onDaemonActivity / listDaemons / daemonRecentRuns).
+        - **`daemon`** — defineDaemon: the one declared long-lived process or thread a backend runs on its own — a named, described declaration (startedBy boot | on-demand, where every-worktree | main | host-singleton, restart never | backoff) whose spawnProcess / spawnWorker supervise a child process or Bun Worker (one respawn loop: doubling backoff, give-up after repeated rapid exits unless giveUp "never", healthy on survival or a ready signal — a process's onSpawn ctx.ready() or a worker's; respawnNow skips a pending wait; exit transitions carry the process's { code, signal }), and whose launchDetached / attach follow a detached process by its pid file. Records per declaration its instances (pid, since, restarts, last exit) and each incarnation as a run for the Background activity catalog (onDaemonActivity / listDaemons / daemonRecentRuns).
           - Server:
             - Uses:
               - `infra/file-watcher.defineFileWatcher`
@@ -41251,6 +41571,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DaemonArm`
               - `DaemonDecl`
               - `DaemonDeclBase`
+              - `DaemonExit`
               - `DaemonInstance`
               - `DaemonInstanceInfo`
               - `DaemonRestart`
@@ -41263,7 +41584,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DetachedLaunch`
               - `PidFileRead`
               - `ProcessLaunch`
+              - `ProcessSpawnContext`
               - `SpawnedCode`
+              - `SupervisedDaemonInstance`
               - `SupervisedIncarnation`
               - `UnsupervisedDeclExtras`
               - `WorkerDaemonInstance`
@@ -41285,6 +41608,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps/browser/engine`
+              - `apps/deploy/box-link/link`
               - `build/restart-skip`
               - `conversations/runtime-sdk`
               - `debug/paging-probe`
@@ -41327,9 +41651,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `DaemonBundle`
                   - `DaemonBundleSpec`
                 - Exports (values): `bundleDaemon`
-    - **`ssh`** — Hermetic SSH client primitive: sshRun (one remote command) and sshUpload (one file, over scp) open a session to (host, port, user) with EXACTLY the private key they are given — IdentitiesOnly + IdentityAgent=none + -F /dev/null keep the machine's own agent, config and multiplexed sessions out, so a connection test proves the key it was handed works — and return a discriminated result whose failures are classified from OpenSSH stderr (dns / unreachable / timeout / auth / host-key-mismatch / command-failed / unknown). Both are built from one shared hermetic invocation, so the isolation flags cannot drift between them. Host-key policy is pinned-or-learn with no 'off'; the key is materialized 0600 into a mkdtemp dir removed in finally. An upload lands on a staging sibling and is renamed over its destination, so it can neither fail because the destination is being executed nor leave a truncated file where a working one was.
+    - **`ssh`** — Hermetic SSH client primitive: sshRun (one remote command) and sshUpload (one file, over scp) open a session to (host, port, user) with EXACTLY the private key they are given — IdentitiesOnly + IdentityAgent=none + -F /dev/null keep the machine's own agent, config and multiplexed sessions out, so a connection test proves the key it was handed works — and return a discriminated result whose failures are classified from OpenSSH stderr (dns / unreachable / timeout / auth / host-key-mismatch / command-failed / unknown). Both are built from one shared hermetic invocation, so the isolation flags cannot drift between them. Host-key policy is pinned-or-learn with no 'off'; the key is materialized 0600 into a mkdtemp dir removed in finally. A long-lived ssh is built from the same block: materializeHermetic returns a caller-owned handle (the scratch dir with key and pinned known_hosts, its argv builder, dispose), sshTunnelArgv turns it into a forward-only ssh (-N, local Unix socket → remote loopback TCP port, ExitOnForwardFailure, 15 s keep-alives, StreamLocalBindUnlink; socket paths under macOS's 104-byte sun_path, asserted), and classifyTunnelStderr / classifyTunnelStderrLine read its stderr into its own vocabulary (adds forwarding-refused and disconnected; tunnelFailureRetryable in core says which a respawn can fix). An upload lands on a staging sibling and is renamed over its destination, so it can neither fail because the destination is being executed nor leave a truncated file where a working one was.
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/box-link`
+          - `apps/deploy/box-link/link`
           - `apps/deploy/health`
           - `apps/deploy/host-query`
           - `framework/cli/deploy`
@@ -41337,16 +41663,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/session.ts`, `server/internal/upload.ts` (debt)
       - Server:
         - Exports (types):
+          - `HermeticHandle`
           - `SshFailure`
+          - `SshForward`
           - `SshRunResult`
           - `SshTarget`
           - `SshUploadResult`
         - Exports (values):
+          - `classifyTunnelStderr`
+          - `classifyTunnelStderrLine`
+          - `materializeHermetic`
           - `sshRun`
+          - `sshTunnelArgv`
           - `sshUpload`
+          - `tunnelFailureMessage`
       - Core:
-        - Exports (types): `SshFailureKind`
-        - Exports (values): `SshFailureKindSchema`
+        - Exports (types):
+          - `SshFailureKind`
+          - `SshTunnelFailureKind`
+        - Exports (values):
+          - `SshFailureKindSchema`
+          - `SshTunnelFailureKindSchema`
+          - `tunnelFailureRetryable`
     - **`stack-sampler`** — The one owner of bun:jsc's JSC sampling profiler: claimStackSampler(owner) arms it once per process and hands a single reader drain() → normalized stacks (innermost → outermost, JSC's no-line sentinel as null), refusing a second owner because every read empties the shared buffer. Bun-only leaf in core, so a CLI process and a server can both import it; frameKey is the one spelling of a frame's identity.
       - Cross-plugin:
         - Imported by:
@@ -43474,8 +43812,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 365 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `apps` ×91
+        - Imported by: 369 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `apps` ×95
           - `conversations` ×74
           - `debug` ×36
           - `tasks` ×32
@@ -43896,8 +44234,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 322 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
-              - `apps` ×86
+            - Imported by: 323 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+              - `apps` ×87
               - `conversations` ×50
               - `debug` ×31
               - `ui` ×26
@@ -44470,11 +44808,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `createCoalescer`
           - `createKeyedCoalescer`
       - Cross-plugin:
-        - Imported by: 25 plugins — full list in [`plugins/packages/plugins/coalesce/REFERENCE.md`](../plugins/packages/plugins/coalesce/REFERENCE.md)
+        - Imported by: 26 plugins — full list in [`plugins/packages/plugins/coalesce/REFERENCE.md`](../plugins/packages/plugins/coalesce/REFERENCE.md)
           - `infra` ×11
+          - `apps` ×3
           - `conversations` ×3
           - `debug` ×3
-          - `apps` ×2
           - `database/migrations/schema-question`
           - `framework/tooling/web-artifacts`
           - `packages/watched-memo`
@@ -44484,6 +44822,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`deadline`** — Bound an await, on AWAKE time: withDeadline(work, budgetMs, onTimeout) races a promise against armAwakeDeadline — the one timer a machine sleep does not spend (performance.now pauses through sleep; a setTimeout does not, so it re-arms for what is left) — rejecting with the caller's own error on expiry (the work's own rejection wins when it comes first) and always clearing the timer. It never cancels the work — the caller keeps its handle and decides what a still-running promise means.
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/box-link/link`
           - `conversations`
           - `conversations/runtime-sdk`
           - `database`
@@ -44504,14 +44843,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withDeadline`
     - **`error-subject`** — What an error is about, carried by the error: SubjectError (a shared throw site — the migration runner, the trigger installer — names the one subject it failed for), errorSubject(err) (the subjects along the cause chain plus the innermost class code, ENOENT / SQLSTATE) and crashFieldsOf(err, scope?) — the errorType / stack / scope every crash filer derives from an error, and normalizeMessage(message) — a message as an identity (ids, hashes and numbers stripped), shared by every kind and subject keyed on a failure's text, so a shared throw site's failures land on one report row per cause instead of one for all. Enforced by error-subject/crash-fields-of.
       - Cross-plugin:
-        - Imported by: 35 plugins — full list in [`plugins/packages/plugins/error-subject/REFERENCE.md`](../plugins/packages/plugins/error-subject/REFERENCE.md)
+        - Imported by: 36 plugins — full list in [`plugins/packages/plugins/error-subject/REFERENCE.md`](../plugins/packages/plugins/error-subject/REFERENCE.md)
           - `infra` ×9
           - `database` ×6
           - `conversations` ×5
+          - `apps` ×3
           - `debug` ×3
           - `framework` ×3
           - `reports` ×3
-          - `apps` ×2
           - `network` ×2
           - `integrations/github-events`
           - `tasks/tasks-core`
@@ -44617,6 +44956,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`host-memory`** — The host's memory, one shape on macOS and Linux: readHostMemory() reads vm_stat on macOS, /proc/meminfo and /proc/vmstat on Linux, into what the system can hand out (available), kernel memory no process carries (macOS wired; Linux what is neither free, on a page LRU nor reclaimable slab), the RAM processes hold (macOS anonymous + compressor; Linux AnonPages + Shmem), the compressor's size and the swap / compression counters — or unsupported on another OS. readOomKillCount() reads the kernel's OOM-kill count since boot (Linux /proc/vmstat oom_kill), as a typed result: unsupported on macOS, unstated on a kernel without the line, unreadable when the read fails — never a 0 that could read as no kills.
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/box-link/box`
           - `debug/health-monitor`
           - `debug/sentinel/machine-usage`
           - `framework/cli/build`
@@ -44697,10 +45037,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `installInflightJoinMeter`
     - **`keyed-mutex`** — Keyed FIFO mutex: createKeyedMutex().run(key, fn) runs fn once every earlier run for the same key has settled, in arrival order, while different keys run concurrently; a key's entry is dropped the moment its queue drains.
       - Cross-plugin:
-        - Imported by: 23 plugins — full list in [`plugins/packages/plugins/keyed-mutex/REFERENCE.md`](../plugins/packages/plugins/keyed-mutex/REFERENCE.md)
+        - Imported by: 24 plugins — full list in [`plugins/packages/plugins/keyed-mutex/REFERENCE.md`](../plugins/packages/plugins/keyed-mutex/REFERENCE.md)
           - `infra` ×11
           - `conversations` ×5
-          - `apps` ×2
+          - `apps` ×3
           - `config_v2`
           - `debug/sentinel/status-file`
           - `integrations/github-events`
@@ -44733,8 +45073,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wholeRecord`
           - `wholeTuple`
       - Cross-plugin:
-        - Imported by: 140 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
-          - `apps` ×30
+        - Imported by: 142 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
+          - `apps` ×32
           - `debug` ×21
           - `conversations` ×17
           - `infra` ×17
@@ -45398,10 +45738,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TIMED_FS_CALLS`
           - `withFsCallTally`
       - Cross-plugin:
-        - Imported by: 192 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+        - Imported by: 194 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
           - `infra` ×59
           - `framework` ×29
-          - `apps` ×16
+          - `apps` ×18
           - `debug` ×16
           - `conversations` ×13
           - `backup` ×11
@@ -51428,8 +51768,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 186 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
-              - `apps` ×51
+            - Imported by: 187 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+              - `apps` ×52
               - `primitives` ×33
               - `conversations` ×27
               - `debug` ×18
@@ -51473,6 +51813,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `active-data/go`
+              - `apps/deploy/remote-deploy/site-live`
               - `apps/pages/page-tree`
               - `apps/sonata/sources/ultimate-guitar`
               - `conversations/agent-thread`
@@ -51512,8 +51853,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 123 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
-              - `apps` ×23
+            - Imported by: 125 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+              - `apps` ×25
               - `reports` ×21
               - `debug` ×20
               - `primitives` ×14
@@ -51614,8 +51955,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `LineProps`
             - Exports (values): `Line`
           - Cross-plugin:
-            - Imported by: 130 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
-              - `apps` ×38
+            - Imported by: 132 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
+              - `apps` ×40
               - `primitives` ×20
               - `conversations` ×19
               - `debug` ×8
@@ -51688,10 +52029,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --foreground`
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/color-palette --primary-text`
+              - `ui/tokens/color-palette --success`
               - `ui/tokens/color-palette --warning`
             - Imported by:
               - `apps/browser/webview`
               - `apps/chord/song-index`
+              - `apps/deploy/box-link/site-row`
+              - `apps/deploy/remote-deploy/site-live`
               - `apps/file-explorer/places`
               - `apps/sonata/playback-history`
               - `conversations/runtime-sdk`
@@ -51888,8 +52232,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Rigid`
               - `rigidClass`
           - Cross-plugin:
-            - Imported by: 147 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
-              - `apps` ×35
+            - Imported by: 148 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+              - `apps` ×36
               - `conversations` ×29
               - `primitives` ×20
               - `debug` ×14
@@ -52115,8 +52459,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 457 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
-              - `apps` ×108
+            - Imported by: 459 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+              - `apps` ×110
               - `conversations` ×80
               - `primitives` ×55
               - `debug` ×39
@@ -52189,8 +52533,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --status-dot-md`
               - `ui/tokens/density --status-dot-sm`
               - `ui/tokens/density --status-dot-xs`
-            - Imported by: 48 plugins — full list in [`plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md)
-              - `apps` ×12
+            - Imported by: 49 plugins — full list in [`plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md)
+              - `apps` ×13
               - `conversations` ×10
               - `debug` ×9
               - `active-data` ×3
@@ -52350,8 +52694,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 437 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
-              - `apps` ×111
+            - Imported by: 439 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+              - `apps` ×113
               - `conversations` ×84
               - `primitives` ×48
               - `debug` ×39
@@ -52679,9 +53023,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 481 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 483 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×114
-              - `apps` ×111
+              - `apps` ×113
               - `conversations` ×55
               - `page` ×27
               - `debug` ×25
@@ -55876,8 +56220,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `NewTabLink`
               - `NewTabMenuItem`
           - Cross-plugin:
-            - Imported by: 23 plugins — full list in [`plugins/primitives/plugins/link-gesture/plugins/new-tab/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/plugins/new-tab/REFERENCE.md)
-              - `apps` ×13
+            - Imported by: 24 plugins — full list in [`plugins/primitives/plugins/link-gesture/plugins/new-tab/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/plugins/new-tab/REFERENCE.md)
+              - `apps` ×14
               - `conversations` ×3
               - `page` ×2
               - `primitives` ×2
@@ -55910,8 +56254,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 242 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
-          - `apps` ×73
+        - Imported by: 243 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+          - `apps` ×74
           - `conversations` ×26
           - `ui` ×24
           - `debug` ×20
@@ -57922,8 +58266,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
       - Cross-plugin:
-        - Imported by: 76 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
-          - `apps` ×25
+        - Imported by: 78 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
+          - `apps` ×27
           - `debug` ×15
           - `conversations` ×10
           - `tasks` ×6
@@ -58446,8 +58790,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useDispatchOutcome`
           - `useSlotOrder`
       - Cross-plugin:
-        - Imported by: 99 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
-          - `apps` ×31
+        - Imported by: 101 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
+          - `apps` ×33
           - `primitives` ×15
           - `conversations` ×13
           - `apps-core` ×6
@@ -59858,8 +60202,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 305 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×305
+    - Contributes: 309 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×309
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -59883,8 +60227,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 304 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×304
+    - Contributes: 308 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×308
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:
@@ -61988,6 +62332,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Slots: `HealthReport.Row`
         - Slot contributors:
+          - `HealthReport.Row` ← `apps.deploy.box-link.site-row`
           - `HealthReport.Row` ← `build`
           - `HealthReport.Row` ← `conversations.runtime-sdk`
           - `HealthReport.Row` ← `database.query-deadline`
@@ -62033,8 +62378,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HealthState`
           - `HealthStatus`
           - `InfoRow`
+          - `SetItem`
+          - `SetItemProps`
+          - `SetRow`
+          - `SetRows`
           - `StatusRow`
-        - Exports (values): `HealthReport`
+        - Exports (values):
+          - `HealthLineView`
+          - `HealthReport`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
@@ -62049,6 +62400,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --font-weight-semibold`
         - Imported by:
+          - `apps/deploy/box-link/site-row`
           - `build`
           - `conversations/runtime-sdk`
           - `database/query-deadline`
@@ -62082,6 +62434,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ReportedStatus`
           - `ReportItem`
           - `RowLevel`
+          - `SetItem`
+          - `SetItemProps`
+          - `SetRow`
+          - `SetRows`
           - `SortableRow`
           - `StatusRow`
         - Exports (values):
@@ -67833,8 +68189,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ColorPaletteTokenValues`
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
-            - Tokens used by: 561 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
-              - `apps` ×123
+            - Tokens used by: 563 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+              - `apps` ×125
               - `conversations` ×97
               - `primitives` ×79
               - `debug` ×42
@@ -67992,9 +68348,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `densityGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --radius`
-            - Tokens used by: 362 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 364 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+              - `apps` ×74
               - `primitives` ×73
-              - `apps` ×72
               - `conversations` ×51
               - `debug` ×29
               - `ui` ×29
@@ -68462,9 +68818,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 418 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 419 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×97
-              - `apps` ×80
+              - `apps` ×81
               - `primitives` ×62
               - `page` ×36
               - `debug` ×28
@@ -68659,8 +69015,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `TypeScaleTokenValues`
             - Exports (values): `typeScaleGroup`
           - Cross-plugin:
-            - Tokens used by: 235 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
-              - `apps` ×59
+            - Tokens used by: 238 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
+              - `apps` ×62
               - `conversations` ×40
               - `primitives` ×38
               - `debug` ×15

@@ -98,6 +98,7 @@ Measure: `scripts/measure-ref-delivery.ts`; in the app, the
     - `RefHeadSchema`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/box-link/link`
     - `apps/deploy/remote-deploy`
     - `build/deployment`
     - `build/serve-composition`

@@ -4,7 +4,7 @@ import {
 } from "@plugins/infra/plugins/ndjson-stream/server";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
-import { setAwakeTimeout } from "@plugins/infra/plugins/host/plugins/machine-sleep/server";
+import { armAwakeDeadline } from "@plugins/packages/plugins/deadline/core";
 import {
   BOX_LINK_STREAM_PATH,
   readBoxFrame,
@@ -76,9 +76,8 @@ async function attempt(
   let cancelWatchdog = () => {};
   const arm = () => {
     cancelWatchdog();
-    cancelWatchdog = setAwakeTimeout(
-      () => inner.abort(new WatchdogFired()),
-      STREAM_WATCHDOG_MS,
+    cancelWatchdog = armAwakeDeadline(STREAM_WATCHDOG_MS, () =>
+      inner.abort(new WatchdogFired()),
     );
   };
   let heardHello = false;
@@ -225,10 +224,10 @@ export function createStreamClient(
       events.failed(end.error);
       const wait = backoffMs;
       backoffMs = Math.min(backoffMs * 2, BACKOFF_MAX_MS);
-      cancelWait = setAwakeTimeout(() => {
+      cancelWait = armAwakeDeadline(wait, () => {
         cancelWait = null;
         connect();
-      }, wait);
+      });
     });
   }
 

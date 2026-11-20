@@ -400,6 +400,7 @@ dropped and re-copied.
     - `analyticsMirrorTables`
     - `countVisits`
     - `readVisitGroups`
+    - `readVisitorPulse`
     - `readVisitPages`
     - `readVisitPagesByPath`
     - `readVisitsById`
@@ -488,6 +489,7 @@ dropped and re-copied.
     - `VisitCut`
     - `VisitDimension`
     - `VisitFilterColumn`
+    - `VisitorPulse`
   - Exports (values):
     - `addDays`
     - `addMetrics`
@@ -579,6 +581,7 @@ dropped and re-copied.
     - `parseEventPropValue`
     - `PeriodReportSchema`
     - `planPeriods`
+    - `PULSE_MINUTES`
     - `RAW_RETENTION_DAYS`
     - `RECORDED_COLUMNS`
     - `RECORDED_FIELDS`
@@ -606,6 +609,8 @@ dropped and re-copied.
     - `VISIT_DIMENSIONS`
     - `VISIT_FILTER_COLUMNS`
     - `VisitCutSchema`
+    - `VisitorPulseSchema`
+    - `VISITORS_NOW_WINDOW_MS`
     - `visitorShare`
     - `ZERO_ADDITIVE_METRICS`
 - Cross-plugin:

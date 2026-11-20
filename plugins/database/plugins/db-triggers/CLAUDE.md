@@ -143,6 +143,7 @@ export const clusterTriggers = defineDbTriggers({
     - `installDbTriggers`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/box-link/link`
     - `conversations/usage`
     - `database`
     - `database/derived-tables`

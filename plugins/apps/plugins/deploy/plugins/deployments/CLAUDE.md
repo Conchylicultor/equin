@@ -546,10 +546,14 @@ default, a left rail revealing each (`useRevealSection`).
     - `DeployGate`
     - `DeployGateSubject`
     - `DeployGateVerdict`
+    - `DeployRunListener`
   - Exports (values):
     - `_deployDeployments`
     - `_deployRuns`
     - `DeployGates`
+    - `deployRunsServed`
+    - `latestDeployRun`
+    - `onDeployRunChanged`
     - `publishWrittenRuns`
   - Register:
     - `defineJob('retention.deploy_runs')`
@@ -664,6 +668,7 @@ default, a left rail revealing each (`useRevealSection`).
   - Imported by:
     - `apps/deploy/analytics/dashboard`
     - `apps/deploy/analytics/sessions`
+    - `apps/deploy/box-link/link`
     - `apps/deploy/composition`
     - `apps/deploy/deploy-history`
     - `apps/deploy/deploy-history/investigate-failure`
@@ -674,9 +679,14 @@ default, a left rail revealing each (`useRevealSection`).
     - `apps/deploy/host-query`
     - `apps/deploy/local-serve`
     - `apps/deploy/remote-deploy`
+    - `apps/deploy/remote-deploy/site-live`
     - `apps/deploy/site-messages/inbox`
     - `apps/deploy/site-mirror/pull`
     - `framework/cli/deploy`
+  - Extended by:
+    - `apps/deploy/box-link/link` (table `deploy_deployments_ext_box_link`)
+    - `apps/deploy/site-messages/inbox` (table `deploy_deployments_ext_messages_seen`)
+  - Endpoint callers: `inbox`
 - Exemptions:
   - Exempts itself from:
     - `paths:no-hardcoded-paths` — `core/derive.ts` (sanctioned)

@@ -9,9 +9,9 @@ import { namespaceUrl } from "@plugins/infra/plugins/namespace/core";
 import { servedGatewayPort } from "@plugins/infra/plugins/launcher/plugins/gateway-port/core";
 import {
   onSleepReadingChanged,
-  setAwakeTimeout,
   sleptDuring,
 } from "@plugins/infra/plugins/host/plugins/machine-sleep/server";
+import { armAwakeDeadline } from "@plugins/packages/plugins/deadline/core";
 import {
   latestDeployRun,
   onDeployRunChanged,
@@ -115,13 +115,10 @@ function armGrace(link: BoxLink): void {
   current?.cancel();
   graceTimers.set(id, {
     until,
-    cancel: setAwakeTimeout(
-      () => {
-        graceTimers.delete(id);
-        dispatch(id, { kind: "grace-check", at: Date.now() });
-      },
-      Math.max(0, until - Date.now()),
-    ),
+    cancel: armAwakeDeadline(Math.max(0, until - Date.now()), () => {
+      graceTimers.delete(id);
+      dispatch(id, { kind: "grace-check", at: Date.now() });
+    }),
   });
 }
 

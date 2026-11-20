@@ -194,6 +194,7 @@ probes, is mounted per page.
 - Web:
   - Slots: `HealthReport.Row`
   - Slot contributors:
+    - `HealthReport.Row` ← `apps.deploy.box-link.site-row`
     - `HealthReport.Row` ← `build`
     - `HealthReport.Row` ← `conversations.runtime-sdk`
     - `HealthReport.Row` ← `database.query-deadline`
@@ -239,8 +240,14 @@ probes, is mounted per page.
     - `HealthState`
     - `HealthStatus`
     - `InfoRow`
+    - `SetItem`
+    - `SetItemProps`
+    - `SetRow`
+    - `SetRows`
     - `StatusRow`
-  - Exports (values): `HealthReport`
+  - Exports (values):
+    - `HealthLineView`
+    - `HealthReport`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`
@@ -255,6 +262,7 @@ probes, is mounted per page.
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by:
+    - `apps/deploy/box-link/site-row`
     - `build`
     - `conversations/runtime-sdk`
     - `database/query-deadline`
@@ -288,6 +296,10 @@ probes, is mounted per page.
     - `ReportedStatus`
     - `ReportItem`
     - `RowLevel`
+    - `SetItem`
+    - `SetItemProps`
+    - `SetRow`
+    - `SetRows`
     - `SortableRow`
     - `StatusRow`
   - Exports (values):
