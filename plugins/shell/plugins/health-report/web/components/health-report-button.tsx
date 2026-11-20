@@ -136,6 +136,8 @@ function HealthReportTrigger({
  * The health report's button: one dot merging every `HealthReport.Row`.
  *
  * - all ok → a green dot, nothing else;
+ * - something worth knowing, nothing wrong (a new version waiting, a deploy
+ *   under way) → a blue dot, pulsing while that work runs, no count;
  * - an ambient condition (the machine busy) → the dot keeps its colour, with
  *   the condition's small icons beside it (`mergeDot`);
  * - some rows need a look → an amber / red dot plus how many, in tinted figures;

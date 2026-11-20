@@ -8,17 +8,20 @@ import type {
 } from "./types";
 
 /**
- * Severity rank, worst first. `unknown` outranks `ok` so the merged dot can
- * never claim green before every row has vouched for itself. `not-applicable`
+ * Severity rank, worst first. `unknown` outranks `info` and `ok` so the
+ * merged dot can never claim a known state before every row has vouched for
+ * itself; `info` outranks `ok` so something worth knowing (a new version
+ * waiting, a deploy under way) turns the dot blue, never hidden in green. `not-applicable`
  * ranks only rows (last); the merge never folds it.
  */
 const RANK: Record<RowLevel, number> = {
   critical: 0,
   attention: 1,
   unknown: 2,
-  ok: 3,
-  "not-applicable": 4,
-  absent: 5,
+  info: 3,
+  ok: 4,
+  "not-applicable": 5,
+  absent: 6,
 };
 
 /** `undefined` = a registered status row whose probe has not reported yet. */
@@ -60,7 +63,8 @@ export function isPulsing(status: ReportedStatus): boolean {
 /**
  * Fold every status row's status into what the dot shows.
  *
- * Precedence `critical > attention > unknown > ok`. Zero rows is `ok`: with
+ * Precedence `critical > attention > unknown > info > ok`; `info` never
+ * counts (it is not a problem). Zero rows is `ok`: with
  * nothing registered there is nothing that could be wrong, and nothing pending.
  * A `not-applicable` or `absent` row is left out, as if it were not registered.
  */
@@ -112,6 +116,8 @@ function fold(
  * tooltip and accessible name.
  *
  * - `ok` → "All systems normal"
+ * - `info`: exactly one informative row → its own words (its state's `title`,
+ *   else its summary); more → "N things to know"
  * - some row needs attention: exactly one → that row's own summary (its
  *   state's `title`, when it carries one); more → "N things need attention"
  * - `unknown` while some row is not known yet → "Checking…"
@@ -125,6 +131,12 @@ export function verdictOf(statuses: ReadonlyArray<ReportedStatus>): string {
   switch (merged.state) {
     case "ok":
       return "All systems normal";
+    case "info": {
+      const informative = statuses.filter((s) => levelOf(s) === "info");
+      const only = informative.length === 1 ? informative[0] : undefined;
+      const words = only === undefined ? undefined : wordsOf(only);
+      return words ?? `${informative.length} things to know`;
+    }
     case "unknown": {
       if (merged.pending) return "Checking…";
       const unreadable = statuses.filter((s) => levelOf(s) === "unknown");
@@ -140,12 +152,15 @@ export function verdictOf(statuses: ReadonlyArray<ReportedStatus>): string {
         return level === "attention" || level === "critical";
       });
       // `count === 1` guarantees a match; the fallback only satisfies the type.
-      if (only === undefined || only.summary === undefined)
-        return "1 thing needs attention";
-      // A row whose state names itself says it in its own words.
-      return ("title" in only ? only.title : undefined) ?? only.summary;
+      const words = only === undefined ? undefined : wordsOf(only);
+      return words ?? "1 thing needs attention";
     }
   }
+}
+
+/** A row's own words for the verdict: a row whose state names itself says its title, else its summary. */
+function wordsOf(status: HealthStatus): string | undefined {
+  return ("title" in status ? status.title : undefined) ?? status.summary;
 }
 
 /** The field `sortRows` arranges by — a contribution or its sealed read. */

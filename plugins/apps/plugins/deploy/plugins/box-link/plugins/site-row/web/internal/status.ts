@@ -51,8 +51,9 @@ export const REFUSAL_WORDS: Record<LinkRefusal, string> = {
  *
  * | Site | Status |
  * |---|---|
- * | live, up to date / behind main | `ok` |
- * | deploying | `ok`, transitioning |
+ * | live, up to date | `ok` |
+ * | live, behind main | `info` (a new version waits — not a problem) |
+ * | deploying | `info`, transitioning |
  * | reconnecting | `attention`, transitioning |
  * | deploy failed / outdated | `attention` |
  * | down / unreachable / refused | `critical` |
@@ -104,7 +105,7 @@ export function siteStatus(site: SiteHealth): HealthStatus {
   }
   if (run?.status === "running") {
     return {
-      state: "ok",
+      state: "info",
       transitioning: true,
       summary: `Deploying · since ${clockTime(run.startedAt)}`,
     };
@@ -115,7 +116,11 @@ export function siteStatus(site: SiteHealth): HealthStatus {
       summary: `${prefix} · ${releaseName(site)} · deploy failed`,
     };
   }
-  return { state: "ok", summary: `${prefix} · ${releaseWords(site)}` };
+  const behind = site.release.kind === "known" && site.release.behindMain > 0;
+  return {
+    state: behind ? "info" : "ok",
+    summary: `${prefix} · ${releaseWords(site)}`,
+  };
 }
 
 /**

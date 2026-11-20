@@ -14,8 +14,8 @@ key = deployment id, title = hostname ?? composition, status = `siteStatus`
 | Site | Status | Summary |
 |---|---|---|
 | live, up to date | `ok` | Live · a1b2c3d · up to date |
-| behind main | `ok` | Live · a1b2c3d · 142 commits behind main |
-| deploying | `ok`, transitioning | Deploying · since 7:01 PM |
+| behind main | `info` | Live · a1b2c3d · 142 commits behind main |
+| deploying | `info`, transitioning | Deploying · since 7:01 PM |
 | reconnecting | `attention`, transitioning | Live · a1b2c3d · reconnecting… |
 | deploy failed | `attention` | Live · a1b2c3d · deploy failed |
 | outdated | `attention` | a1b2c3d · … · too old for the live link |
@@ -29,10 +29,10 @@ from the runs and the running commit, nothing is dimmed, and the box's
 meters (Server) and Retry are absent. A host without the computer
 (`unavailable`) has no sites: the set is `ready` with none.
 
-Deviations from the design table, both for the prototype's sake: the title
-stays the hostname in every state (the design's "N commits behind main" is
-the summary), and every `ok` is the theme's success green — the report has
-no info / blue level (the prototype's blue dot for behind / deploying).
+Deviation from the design table, for the prototype's sake: the title stays
+the hostname in every state (the design's "N commits behind main" is the
+summary). Behind main and deploying are the report's `info` level — the
+prototype's blue dot (pulsing while deploying): worth knowing, not a problem.
 
 ## The parts — three render slots, contributed by their owners
 
@@ -87,7 +87,7 @@ retries or opens anything.
 
 ## Plugin reference
 
-- Description: The health report's deployed-site rows: one row per deployment from deploy.site-health (titled by its hostname; ok while live — behind main or not —, transitioning while deploying, attention while reconnecting, after a failed deploy or with a release too old for the link, critical while down, unreachable or refused), and its body — the alert (what is wrong, in one sentence) over blocks — drawn from three render slots the owning plugins contribute to — SiteLive.Glance (the title line's figure), SiteLive.Section (body blocks) and SiteLive.Action (the footer's controls), each told the deployment and its health. Contributes its own Server block (CPU / memory / disk from the last heartbeat, uptime or last heard, dimmed when stale), Retry now and Open site.
+- Description: The health report's deployed-site rows: one row per deployment from deploy.site-health (titled by its hostname; ok while live and up to date, info (blue) while behind main, info and transitioning while deploying, attention while reconnecting, after a failed deploy or with a release too old for the link, critical while down, unreachable or refused), and its body — the alert (what is wrong, in one sentence) over blocks — drawn from three render slots the owning plugins contribute to — SiteLive.Glance (the title line's figure), SiteLive.Section (body blocks) and SiteLive.Action (the footer's controls), each told the deployment and its health. Contributes its own Server block (CPU / memory / disk from the last heartbeat, uptime or last heard, dimmed when stale), Retry now and Open site.
 - Web:
   - Slots:
     - `SiteLive.Glance`

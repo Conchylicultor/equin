@@ -115,11 +115,12 @@ const UP_TO_DATE_TITLE = `${PRODUCT_NAME} is up to date`;
 /**
  * The row's health, titled by its state.
  *
- * Being behind is not a problem: `out-of-date` is `ok` — the row's title says
- * it, and its Send agent button is one of the row's actions. An
- * update in progress follows its conversation: working → ok and pulsing; at
- * rest (waiting on the user, done, disconnected) or never started → attention,
- * since the next step is the user's.
+ * Being behind is not a problem, but worth knowing: `out-of-date` is `info`
+ * (blue) — the row's title says it, and its Send agent button is one of the
+ * row's actions. An update in progress follows its conversation: working →
+ * info and pulsing; at rest (waiting on the user, done, disconnected) or never
+ * started → attention, since the next step is the user's. Installing is info
+ * and pulsing (work under way); up to date is `ok`.
  */
 export function updatesHealth(view: UpdatesView): HealthStatus {
   switch (view.kind) {
@@ -131,7 +132,7 @@ export function updatesHealth(view: UpdatesView): HealthStatus {
       return { state: "absent" };
     case "out-of-date":
       return {
-        state: "ok",
+        state: "info",
         title: OUT_OF_DATE_TITLE,
         summary: outOfDateSummary(view.current, view.latest, view.commits),
       };
@@ -142,7 +143,7 @@ export function updatesHealth(view: UpdatesView): HealthStatus {
         (view.run.status === "working" || view.run.status === "starting");
       return busy
         ? {
-            state: "ok",
+            state: "info",
             title: IN_PROGRESS_TITLE,
             summary,
             transitioning: true,
@@ -151,7 +152,7 @@ export function updatesHealth(view: UpdatesView): HealthStatus {
     }
     case "installing":
       return {
-        state: "ok",
+        state: "info",
         title: INSTALLING_TITLE,
         summary: releaseVersion(view.latest),
         transitioning: true,

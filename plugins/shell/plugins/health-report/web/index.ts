@@ -23,7 +23,7 @@ export type {
 
 export default {
   description:
-    "Unified health report: one dot merging every HealthReport.Row contribution (critical > attention > unknown > ok, with a count of rows needing a look), opening a popover that lists info rows first, then status rows in the slot's reorder layout order. Owns the slot, and contributes its button as the action bar's leading mark (ActionBar.Lead); knows no contributor.",
+    "Unified health report: one dot merging every HealthReport.Row contribution (critical > attention > unknown > info > ok — info is blue: worth knowing, not a problem, so it is not counted — with a count of rows needing a look), opening a popover that lists info rows first, then status rows in the slot's reorder layout order. Owns the slot, and contributes its button as the action bar's leading mark (ActionBar.Lead); knows no contributor.",
   contributions: [
     // The bar's always-visible leading mark. A companion of the bar, so it
     // ships wherever the bar does.

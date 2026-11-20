@@ -51,9 +51,15 @@ HealthReport.Row({
 
 - **`useStatus` runs all the time**, report open or not — it is what colours the
   dot. Keep it a cheap read of state that is already resident. It returns
-  `{ state: "ok" | "attention" | "critical", summary, transitioning? }`,
+  `{ state: "ok" | "info" | "attention" | "critical", summary, transitioning? }`,
   `{ state: "unknown", summary? }`, `{ state: "not-applicable", summary }` or
   `{ state: "absent" }`.
+- **`info` is "fine, and worth knowing"** (blue): a new version waiting, a
+  deploy under way. Not a problem — it is not counted, offers no `remedy`, and
+  leaves the quiet card like any non-`ok` row. With `transitioning` it pulses:
+  work in progress. Use it instead of `ok` whenever green would hide something
+  the user would want to see, and instead of `attention` whenever nothing
+  needs them.
 - **`unknown` is a state, not a stand-in.** Without a summary it means "not
   known yet": grey and pulsing, and the report says "Checking…". With one it
   means "known to be unreadable right now" ("Unknown while disconnected"): grey
@@ -68,7 +74,7 @@ HealthReport.Row({
   repo that has nothing to update from). Use `not-applicable` when the user
   should see that the check exists but does not apply.
 - **A row whose state is its name** returns a `title` with its known state
-  (`{ state: "attention", title: "equin is out of date", summary: "…" }`); the
+  (`{ state: "info", title: "equin is out of date", summary: "…" }`); the
   row is drawn under that title instead of its own, and the verdict uses it.
 - **Info rows cannot move the dot.** They have no field to declare a state
   through, so this holds by construction. Their `useInfo` runs only while the
@@ -107,8 +113,10 @@ HealthReport.Row({
 ## Merge
 
 `mergeHealth` (`core/merge.ts`, pure, bun-tested): precedence
-`critical > attention > unknown > ok`, so the dot cannot claim green before
-every status row has reported. `count` is the rows in attention or critical.
+`critical > attention > unknown > info > ok`, so the dot cannot claim a known
+state before every status row has reported, and something worth knowing turns
+it blue rather than hiding in green. `count` is the rows in attention or
+critical (never `info`).
 `not-applicable` rows are skipped, exactly as if unregistered.
 The dot pulses while any row is not known yet or is `transitioning`.
 
@@ -118,13 +126,17 @@ header.
 
 The verdict (`verdictOf`) is the header text, the button's tooltip and its
 accessible name: "All systems normal", "Checking…", the one non-green row's own
-summary, or "N things need attention". When every unknown row has said why it
+words (its state's `title`, else its summary), "N things to know" (several
+`info` rows), or "N things need attention". When every unknown row has said why it
 is unknown, the verdict gives that reason instead of "Checking…".
 
 The dot — in the action bar and in the report's header alike — is `mergeDot`:
-an ambient attention row (`ambient`, e.g. a release waiting) folds as `ok` and
-adds its marks, so being merely out of date never turns either dot orange. The
-row itself still draws attention, and the verdict still names it.
+an ambient attention row (`ambient`: the machine watcher's duress from memory
+alone, the watcher already holding builds back) folds as `ok` and adds its
+marks (a small icon beside the dot), so routine machine load never turns
+either dot orange. The row itself still draws attention, and the verdict still
+names it. This is not `info`: ambient is an attention the dot deliberately
+does not show; `info` is no problem at all, shown blue.
 
 **Quiet rows fold into one card** (`foldQuietRows`, pure, bun-tested): a
 status row with nothing beyond its summary at rest (no `glance` or `actions`;
@@ -190,7 +202,7 @@ probes, is mounted per page.
 
 ## Plugin reference
 
-- Description: Unified health report: one dot merging every HealthReport.Row contribution (critical > attention > unknown > ok, with a count of rows needing a look), opening a popover that lists info rows first, then status rows in the slot's reorder layout order. Owns the slot, and contributes its button as the action bar's leading mark (ActionBar.Lead); knows no contributor.
+- Description: Unified health report: one dot merging every HealthReport.Row contribution (critical > attention > unknown > info > ok — info is blue: worth knowing, not a problem, so it is not counted — with a count of rows needing a look), opening a popover that lists info rows first, then status rows in the slot's reorder layout order. Owns the slot, and contributes its button as the action bar's leading mark (ActionBar.Lead); knows no contributor.
 - Web:
   - Slots: `HealthReport.Row`
   - Slot contributors:
@@ -251,6 +263,7 @@ probes, is mounted per page.
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --info`
     - `ui/tokens/color-palette --muted`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --success`

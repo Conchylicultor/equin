@@ -2,8 +2,17 @@ import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { ComponentType } from "react";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
-/** A known verdict about one health check. */
-export type HealthState = "ok" | "attention" | "critical";
+/**
+ * A known verdict about one health check.
+ *
+ * - `ok` — fine, nothing to say (green).
+ * - `info` — fine, but there is something worth knowing (blue): a new version
+ *   waiting, a deploy under way. Not a problem, so it never counts toward
+ *   "N need a look" and never offers a `remedy`; with `transitioning` it pulses
+ *   (work in progress).
+ * - `attention` / `critical` — needs a look (orange / red).
+ */
+export type HealthState = "ok" | "info" | "attention" | "critical";
 
 /**
  * What a status row's `useStatus` hook returns on every render.
@@ -40,7 +49,7 @@ export type HealthStatus =
   // `summary?: never` keeps `status.summary` readable on the whole union.
   | { state: "absent"; summary?: never }
   | {
-      state: "ok" | "critical";
+      state: "ok" | "info" | "critical";
       summary: string;
       title?: string;
       transitioning?: boolean;
@@ -213,7 +222,7 @@ export type HealthReportRow = StatusRow | InfoRow | SetRow;
 
 /** The fold of every status row's status — what the dot shows. */
 export interface HealthMerge {
-  /** Worst state: `critical > attention > unknown > ok`. `ok` for zero rows. */
+  /** Worst state: `critical > attention > unknown > info > ok`. `ok` for zero rows. */
   state: HealthLevel;
   /** Rows in `attention` or `critical`. */
   count: number;

@@ -64,9 +64,9 @@ describe("the updates row", () => {
     ).toEqual({ state: "absent" });
   });
 
-  test("out of date: being behind is not a problem", () => {
+  test("out of date: being behind is worth knowing, not a problem", () => {
     expect(health({})).toEqual({
-      state: "ok",
+      state: "info",
       title: "equin is out of date",
       summary: "2026.10.30 → 2026.11.14 · 312 commits",
     });
@@ -78,14 +78,14 @@ describe("the updates row", () => {
     ).toMatchObject({ summary: "2026.11.14 available · 312 commits" });
   });
 
-  test("an update whose agent works is ok and pulsing", () => {
+  test("an update whose agent works is info and pulsing", () => {
     expect(
       health({
         task: ready({ taskId: "task-1" }),
         runs: ready([run("done"), run("working")]),
       }),
     ).toEqual({
-      state: "ok",
+      state: "info",
       title: "Update in progress",
       summary: "2026.10.30 → 2026.11.14",
       transitioning: true,
@@ -120,7 +120,7 @@ describe("the updates row", () => {
         release: ready({ ...current, installed: false }),
       }),
     ).toEqual({
-      state: "ok",
+      state: "info",
       title: "Installing",
       summary: "2026.11.14",
       transitioning: true,

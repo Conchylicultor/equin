@@ -62,15 +62,15 @@ describe("siteStatus", () => {
     });
   });
 
-  it("stays ok, naming the commits, while behind main", () => {
+  it("is info, naming the commits, while behind main", () => {
     const s = siteStatus(site(LIVE, { behind: 142 }));
-    expect(s.state).toBe("ok");
+    expect(s.state).toBe("info");
     expect(s.summary).toBe("Live · abcdef0 · 142 commits behind main");
   });
 
-  it("is ok and transitioning while deploying", () => {
+  it("is info and transitioning while deploying", () => {
     const s = siteStatus(site(LIVE, { run: "running" }));
-    expect(s).toMatchObject({ state: "ok", transitioning: true });
+    expect(s).toMatchObject({ state: "info", transitioning: true });
   });
 
   it("needs attention after a failed deploy, or a release too old", () => {

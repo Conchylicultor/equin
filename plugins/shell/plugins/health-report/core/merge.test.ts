@@ -20,6 +20,11 @@ const critical = (summary = "broken"): HealthStatus => ({
   state: "critical",
   summary,
 });
+const info = (summary = "fyi", transitioning = false): HealthStatus => ({
+  state: "info",
+  summary,
+  transitioning,
+});
 const notApplicable = (summary = "Not here."): HealthStatus => ({
   state: "not-applicable",
   summary,
@@ -54,6 +59,58 @@ describe("mergeDot", () => {
   it("leaves the report's own merge counting the ambient row", () => {
     expect(mergeHealth([ok(), busy("cpu")]).state).toBe("attention");
     expect(verdictOf([ok(), busy("cpu")])).toBe("busy");
+  });
+});
+
+describe("info", () => {
+  it("ranks below attention and unknown, above ok, and is never counted", () => {
+    expect(mergeHealth([ok(), info()])).toMatchObject({
+      state: "info",
+      count: 0,
+    });
+    expect(mergeHealth([info(), attention()]).state).toBe("attention");
+    expect(mergeHealth([info(), { state: "unknown" }]).state).toBe("unknown");
+    expect(mergeHealth([info(), attention()]).count).toBe(1);
+  });
+
+  it("pulses while transitioning (work under way)", () => {
+    expect(mergeDot([ok(), info("Deploying", true)])).toMatchObject({
+      state: "info",
+      transitioning: true,
+    });
+  });
+
+  it("says the one informative row's own words, or how many", () => {
+    expect(verdictOf([ok(), info("142 commits behind main")])).toBe(
+      "142 commits behind main",
+    );
+    expect(
+      verdictOf([
+        { state: "info", title: "equin is out of date", summary: "a → b" },
+      ]),
+    ).toBe("equin is out of date");
+    expect(verdictOf([info(), info()])).toBe("2 things to know");
+  });
+
+  it("takes an informative row out of the quiet card", () => {
+    const rows = [
+      { kind: "status" as const, id: "a" },
+      { kind: "status" as const, id: "b" },
+      { kind: "status" as const, id: "c" },
+    ];
+    const statuses: Record<string, HealthStatus> = {
+      a: ok(),
+      b: info(),
+      c: ok(),
+    };
+    const items = foldQuietRows(
+      rows,
+      (r) => statuses[r.id],
+      () => true,
+    );
+    expect(items.map((item) => item.kind)).toEqual(["row", "quiet"]);
+    expect(items[0]).toMatchObject({ row: { id: "b" } });
+    expect(items[1]).toMatchObject({ rows: [{ id: "a" }, { id: "c" }] });
   });
 });
 

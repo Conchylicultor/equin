@@ -37,7 +37,7 @@ const SEND_TOOLTIP =
 
 /**
  * The updates row's actions: "Send agent to update" while it is out of date
- * (being behind is not a problem, so the row stays `ok` and the button is an
+ * (being behind is not a problem, so the row is `info` and the button is an
  * action, not a remedy), then the reminder bell in every state.
  */
 export function UpdatesActions() {

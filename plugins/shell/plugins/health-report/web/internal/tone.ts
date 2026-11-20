@@ -5,6 +5,7 @@ import type { HealthLevel, HealthState, RowLevel } from "../../core";
 /** The dot's fill for each level. Theme tokens only. */
 export const DOT_CLASS: Record<HealthLevel, ClassName> = {
   ok: cn("bg-success"),
+  info: cn("bg-info"),
   attention: cn("bg-warning"),
   critical: cn("bg-destructive"),
   unknown: cn("bg-muted-foreground/50"),
@@ -18,14 +19,16 @@ export const DOT_CLASS: Record<HealthLevel, ClassName> = {
  */
 export const DOT_HALO_CLASS: Record<HealthLevel, ClassName> = {
   ok: cn("ring-3 ring-success/18"),
+  info: cn("ring-3 ring-info/18"),
   attention: cn("ring-3 ring-warning/18"),
   critical: cn("ring-3 ring-destructive/18"),
   unknown: cn(""),
 };
 
-/** Summary text colour: only a row that needs a look is tinted. */
+/** Summary text colour: only a row that needs a look is tinted (an `info` row's dot says it; its words stay quiet). */
 export const SUMMARY_CLASS: Record<RowLevel, ClassName> = {
   ok: cn("text-muted-foreground"),
+  info: cn("text-muted-foreground"),
   attention: cn("text-warning"),
   critical: cn("text-destructive"),
   unknown: cn("text-muted-foreground"),
@@ -41,7 +44,7 @@ export const SUMMARY_CLASS: Record<RowLevel, ClassName> = {
  * its count are what carry the alarm, not an outlined pill inside the bar.
  */
 export const BUTTON_TINT_CLASS: Record<
-  Exclude<HealthState, "ok">,
+  Exclude<HealthState, "ok" | "info">,
   ClassName
 > = {
   attention: cn(
