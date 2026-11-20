@@ -327,6 +327,15 @@ export const oauthCallback = defineEndpoint({
   `HTTP <status> from <route>: <the body's message / reason>` (a caller's
   `describe` overrides it), so an `EndpointError` that escapes unhandled —
   reported with only its message — says what was refused.
+- **An HTML page is not our refusal.** No equin server answers an API request
+  with HTML (backend and gateway: JSON or plain text; the site's Caddy edge:
+  empty), so a non-2xx served as `text/html` or opening with `<!doctype html` /
+  `<html` was answered by something between the browser and the site — a
+  corporate proxy's block page, a network filter, an extension.
+  `readEndpointResponse` throws `EndpointForeignAnswerError` (still an
+  `EndpointError`), worded `… refused before reaching equin — …`, subject
+  `<route> <status> not-from-equin`: its own report row, never the route's real
+  refusals'. Keep it true: never answer an API request with HTML.
 
 ## Writes no browser sends — `internal`
 

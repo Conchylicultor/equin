@@ -3,6 +3,7 @@ import type { AnyEndpointDef as AnyDef } from "./define-endpoint";
 import {
   EndpointAgentWriteRefusedError,
   EndpointError,
+  EndpointForeignAnswerError,
   EndpointNetworkError,
   EndpointResponseUnreadableError,
   ResponseBodyDecodeError,
@@ -244,6 +245,12 @@ export async function readEndpointResponse<
         // Not JSON — keep the text, which is exactly what HttpError sends.
       }
     }
+    // An HTML page is not ours (`EndpointForeignAnswerError`): something
+    // between the browser and the site answered. A caller's own `describe`
+    // does not apply — what it words is OUR server's refusal.
+    if (isHtmlPage(res, rawBody)) {
+      throw new EndpointForeignAnswerError(endpoint.route, res.status, rawBody);
+    }
     const message =
       describe?.(res.status, rawBody) ??
       describeRefusal(endpoint.route, res.status, errorBody);
@@ -268,6 +275,18 @@ export async function readEndpointResponse<
   } catch (err) {
     throw unreadableAnswer(endpoint.route, res, err);
   }
+}
+
+/**
+ * Whether a reply is an HTML page: served as `text/html`, or a body opening
+ * with a document's own start (`<!doctype html`, `<html`) whatever its
+ * declared type.
+ */
+function isHtmlPage(res: Response, rawBody: string | null): boolean {
+  const type = res.headers.get("content-type");
+  if (type !== null && /^\s*text\/html\b/i.test(type)) return true;
+  if (rawBody === null) return false;
+  return /^\s*(?:<!doctype\s+html|<html[\s>])/i.test(rawBody);
 }
 
 /**

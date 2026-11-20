@@ -3,6 +3,7 @@ import { z } from "zod";
 import { defineEndpoint } from "./define-endpoint";
 import {
   EndpointError,
+  EndpointForeignAnswerError,
   EndpointNetworkError,
   EndpointResponseUnreadableError,
 } from "./endpoint-error";
@@ -139,6 +140,42 @@ describe("readEndpointResponse — a refusal names its request", () => {
     expect((await refusal(new Response("", { status: 502 }))).message).toBe(
       "HTTP 502 from POST /api/x/collect",
     );
+  });
+
+  test("an HTML page is not our answer: refused before reaching equin, on its own row", async () => {
+    // report-1795142633-zarb92: a corporate web gateway's block page.
+    const page = "<!DOCTYPE html>\n<html><head><title>Access denied</title>";
+    const byType = await refusal(
+      new Response(page, {
+        status: 403,
+        headers: { "content-type": "text/html; charset=utf-8" },
+      }),
+    );
+    expect(byType).toBeInstanceOf(EndpointForeignAnswerError);
+    expect(byType.status).toBe(403);
+    expect(byType.body).toBe(page);
+    expect(byType.message).toStartWith(
+      "HTTP 403 from POST /api/x/collect: refused before reaching equin",
+    );
+    expect(crashFieldsOf(byType).scope).toBe(
+      "POST /api/x/collect 403 not-from-equin",
+    );
+    // A page served under another type (or none) is sniffed by its start.
+    expect(
+      await refusal(new Response("  <html lang=en>…", { status: 403 })),
+    ).toBeInstanceOf(EndpointForeignAnswerError);
+  });
+
+  test("our own refusals stay ours: JSON and plain text, whatever they say", async () => {
+    for (const res of [
+      Response.json({ message: "<html> is not allowed" }, { status: 403 }),
+      new Response("Forbidden: <html> tags", { status: 403 }),
+      new Response("", { status: 403 }),
+    ]) {
+      const err = await refusal(res);
+      expect(err).not.toBeInstanceOf(EndpointForeignAnswerError);
+      expect(crashFieldsOf(err).scope).toBe("POST /api/x/collect 403");
+    }
   });
 
   test("a caller's own describe wins", async () => {

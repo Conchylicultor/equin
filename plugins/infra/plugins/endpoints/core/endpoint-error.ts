@@ -21,8 +21,36 @@ export class EndpointError extends SubjectError {
     public readonly status: number,
     public readonly body: unknown,
     message = `HTTP ${status} from ${route}`,
+    subject = `${route} ${status}`,
   ) {
-    super(message, { subject: `${route} ${status}` });
+    super(message, { subject });
+  }
+}
+
+/**
+ * A non-2xx whose body is an HTML page: not equin's answer. No equin server
+ * answers an API request with HTML — the backend's refusals are JSON or plain
+ * text, the gateway's JSON or plain text, the site's edge (Caddy) answers
+ * empty — so a proxy, network filter or browser extension between the browser
+ * and the site answered instead (report-1795142633-zarb92: a corporate web
+ * gateway's "403" block page on a visitor's analytics beacon, a request the
+ * site's access log shows never arrived).
+ *
+ * Still an `EndpointError` with the status and the page as `body`, so every
+ * caller handles it as the refusal it is; its message and subject say it was
+ * refused before reaching equin, so a crash it raises lands on its own report
+ * row, never on the row of the route's real refusals.
+ */
+export class EndpointForeignAnswerError extends EndpointError {
+  override readonly name = "EndpointForeignAnswerError";
+  constructor(route: string, status: number, body: unknown) {
+    super(
+      route,
+      status,
+      body,
+      `HTTP ${status} from ${route}: refused before reaching equin — the answer is an HTML page, which no equin server sends to an API request (a proxy, network filter or browser extension answered)`,
+      `${route} ${status} not-from-equin`,
+    );
   }
 }
 
