@@ -81,7 +81,11 @@ function fakeSource(): PathBarSource & {
     asked,
     placesFor,
     places: (parent, at) => {
-      placesFor(parent, [...at.trail], at.activationFor(parent));
+      placesFor(
+        parent,
+        [...at.trail],
+        at.activationFor({ kind: "dir", path: parent }),
+      );
       return <span data-places-of={parent} />;
     },
     segments: (path) => {

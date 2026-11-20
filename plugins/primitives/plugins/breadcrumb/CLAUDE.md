@@ -18,8 +18,10 @@ with a comment saying why. The trails today:
 - **Pages** (`apps/pages/page-tree`): the pages under each parent. A zoomed
   block's leaf is `null`.
 - **File paths** (`path-bar`, `filepath-breadcrumb`, through
-  `path-bar/folder-places`): the folders in each parent. The root crumb is
-  `null`.
+  `path-bar/folder-places`): the folders in each parent, then its files
+  where the trail can open one (the Files path bar, a file preview — so a
+  file's own crumb switches to a sibling file; a folder picker lists folders
+  only). The root crumb is `null`.
 - **Plugins** (`plugin-meta/plugin-view`): the plugins beside each one, from
   the tree already loaded.
 - **Spend breakdown** (`tasks/supervisor-roles/spend`): the levels beside

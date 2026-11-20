@@ -17,8 +17,11 @@ export interface PathPlacesAt {
    * place on it is listed first and marked.
    */
   trail: ReadonlySet<string>;
-  /** Where choosing a place goes — `undefined` for a trail that goes nowhere. */
-  activationFor: (path: string) => Activation | undefined;
+  /**
+   * Where choosing a place goes — a folder or a file — `undefined` for a
+   * place the trail cannot go to (the row is shown, inert).
+   */
+  activationFor: (target: PathTarget) => Activation | undefined;
 }
 
 /**

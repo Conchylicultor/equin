@@ -13,7 +13,7 @@ export interface FilepathBreadcrumbProps {
   onNavigate?: (dirPath: string) => void;
   /**
    * The places beside each crumb, listed while the pointer rests on it (a
-   * click still navigates): `folderPlaces(fs)` for a path on a file system
+   * click still navigates): `folderPlaces(fs, { files: false })` for a path on a file system
    * (`primitives/path-bar/folder-places`). Required, so a trail without them
    * says why: `null` only where the path's folders cannot be listed (a file
    * with no browsable place).
@@ -40,7 +40,11 @@ export function FilepathBreadcrumb({
   const dirs = pathSegments.map((_, i) => prefixPath(pathSegments, i + 1));
   const at: PathPlacesAt = {
     trail: new Set(dirs),
-    activationFor: (dir) => (onNavigate ? () => onNavigate(dir) : undefined),
+    // Only folders are navigated to here: a file place is listed inert.
+    activationFor: (target) =>
+      onNavigate && target.kind === "dir"
+        ? () => onNavigate(target.path)
+        : undefined,
   };
   const segments: BreadcrumbSegment[] = pathSegments.map((seg, i) => {
     const parent = i > 0 ? dirs[i - 1] : undefined;

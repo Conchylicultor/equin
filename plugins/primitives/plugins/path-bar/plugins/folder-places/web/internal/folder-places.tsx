@@ -8,6 +8,7 @@ import { useFolderListing } from "@plugins/infra/plugins/paths/plugins/file-syst
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { BreadcrumbPlaces } from "@plugins/primitives/plugins/breadcrumb/web";
 import { DropdownMenuItem } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { FileTypeIcon } from "@plugins/primitives/plugins/file-type/web";
 import type {
   PathPlaces,
   PathPlacesAt,
@@ -25,32 +26,49 @@ function childPath(parent: string, name: string): string {
   return parent === "/" ? `/${name}` : `${parent}/${name}`;
 }
 
+/** What a level lists besides its folders. */
+export interface FolderPlacesOptions {
+  /**
+   * List the files too, after the folders — so a trail ending at a file (a
+   * file preview) switches to a sibling file from its own crumb. `false` for
+   * a trail where only a folder is a place (a folder picker).
+   */
+  files: boolean;
+}
+
 /**
- * The places of `fs` as a crumb's menu: every level its folders, read when
- * the level opens. Hand it to a path bar source's `places` or to a
- * `FilepathBreadcrumb`.
+ * The places of `fs` as a crumb's menu: every level its folders (and files,
+ * when asked), read when the level opens. Hand it to a path bar source's
+ * `places` or to a `FilepathBreadcrumb`.
  */
-export function folderPlaces(fs: BrowsableFileSystem): PathPlaces {
-  return (parent, at) => <FolderPlaces fs={fs} path={parent} at={at} />;
+export function folderPlaces(
+  fs: BrowsableFileSystem,
+  options: FolderPlacesOptions,
+): PathPlaces {
+  return (parent, at) => (
+    <FolderPlaces fs={fs} path={parent} at={at} {...options} />
+  );
 }
 
 /**
  * One level: the folders inside `path` (a symlink to a folder counts; an
- * archive does not — it is a file you can open, not a place on a path), as
- * people sort them. A hidden folder is listed only when it is on the trail,
- * as the explorer hides dotfolders. Every folder opens its own folders as a
- * submenu: whether it has any is only known by reading it, which waits for
- * its submenu to open (an empty one says "No folders").
+ * archive does not — it is a file you can open, not a place on a path), then
+ * — with `files` — its files, each run as people sort them and each row with
+ * its file-type icon. A hidden entry is listed only when it is on the trail,
+ * as the explorer hides dotfiles. Every folder opens its own level as a
+ * submenu: whether it has anything is only known by reading it, which waits
+ * for its submenu to open.
  */
 export function FolderPlaces({
   fs,
   path,
   at,
+  files,
 }: {
   fs: BrowsableFileSystem;
   path: string;
   at: PathPlacesAt;
-}): ReactElement {
+} & FolderPlacesOptions): ReactElement {
   const { pages } = useFolderListing(fs, path, { limit: LEVEL_LIMIT });
   switch (pages.status) {
     case "loading":
@@ -71,26 +89,50 @@ export function FolderPlaces({
         />
       );
     case "ready": {
-      const folders = pages.data
-        .filter((entry: FileEntry) => entry.kind === "dir")
+      const listed = pages.data
+        .filter(
+          (entry: FileEntry) =>
+            entry.kind === "dir" || (files && entry.kind === "file"),
+        )
         .map((entry) => ({ entry, path: childPath(path, entry.name) }))
         .filter(({ entry, path }) => !entry.hidden || at.trail.has(path))
-        .sort((a, b) => compareFileNames(a.entry.name, b.entry.name));
+        .sort(
+          (a, b) =>
+            Number(b.entry.kind === "dir") - Number(a.entry.kind === "dir") ||
+            compareFileNames(a.entry.name, b.entry.name),
+        );
       return (
         <BreadcrumbPlaces
-          places={folders.map(({ entry, path }) => ({
-            key: entry.name,
-            label: entry.name,
-            activation: at.activationFor(path),
-            onTrail: at.trail.has(path),
-            inside: <FolderPlaces fs={fs} path={path} at={at} />,
-          }))}
+          places={listed.map(({ entry, path }) => {
+            const isDir = entry.kind === "dir";
+            return {
+              key: entry.name,
+              label: (
+                <>
+                  <FileTypeIcon name={entry.name} isDir={isDir} />
+                  {entry.name}
+                </>
+              ),
+              activation: at.activationFor({
+                kind: isDir ? "dir" : "file",
+                path,
+              }),
+              onTrail: at.trail.has(path),
+              ...(isDir
+                ? {
+                    inside: (
+                      <FolderPlaces fs={fs} path={path} at={at} files={files} />
+                    ),
+                  }
+                : {}),
+            };
+          })}
           more={
             pages.canGrow || pages.growing
               ? { load: pages.loadMore, growing: pages.growing }
               : undefined
           }
-          empty="No folders"
+          empty={files ? "Empty folder" : "No folders"}
         />
       );
     }

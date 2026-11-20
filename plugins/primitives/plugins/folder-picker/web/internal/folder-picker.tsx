@@ -151,8 +151,9 @@ export function FolderPicker({ fs, value, onSelect }: FolderPickerProps) {
             path={crumbPath}
             showCopy={false}
             onNavigate={(dir) => setBrowsePath(dir)}
-            // Resting on a crumb lists the folders beside it, to jump across.
-            places={folderPlaces(fs)}
+            // Resting on a crumb lists the folders beside it, to jump across
+            // — folders only: a folder is what is picked here.
+            places={folderPlaces(fs, { files: false })}
           />
         ) : meta.status === "loading" ? (
           <Loading />

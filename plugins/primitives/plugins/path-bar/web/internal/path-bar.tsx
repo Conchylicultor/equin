@@ -132,7 +132,7 @@ export function PathBar({
   const crumbs = useMemo(() => {
     const at = {
       trail: new Set(segments.map((seg) => seg.path)),
-      activationFor: (dir: string) => activationFor({ kind: "dir", path: dir }),
+      activationFor,
     };
     return segments.map((seg, i) => {
       const parent = segments[i - 1];

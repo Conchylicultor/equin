@@ -55486,6 +55486,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/file-explorer/browser`
           - `primitives/file-viewer`
           - `primitives/file-viewer/media`
+          - `primitives/path-bar/folder-places`
           - `primitives/text-editor/paste-images`
     - **`file-viewer`** — Domain-neutral file viewer: the tiered FileViewer.Renderer registry (native / contextual / fallback / last-resort, offered as tabs), the FileView / FileContent / FileTabs hosts, over a FileLocation in any file system (infra/paths/file-systems' reads: the computer's disk, the browser's storage, a checkout) — a renderer never asks which.
       - Web:
@@ -58049,13 +58050,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/path-bar.tsx` (debt)
       - Plugins:
-        - **`folder-places`** — A file system's folders as a path crumb's menu: folderPlaces(fs) is the PathPlaces a path bar source or a FilepathBreadcrumb hands its crumbs — each level the folders inside one folder (hidden ones only when on the trail), read with useFolderListing when its menu opens, sorted as people sort, the one on the trail first and marked, each folder's own folders a submenu read when it opens; the loading and failure states drawn in the menu, and a bounded window with More for a very large folder.
+        - **`folder-places`** — A file system's folders (and, with { files: true }, its files after them, each row with its file-type icon) as a path crumb's menu: folderPlaces(fs, { files }) is the PathPlaces a path bar source or a FilepathBreadcrumb hands its crumbs — each level the folders inside one folder (hidden ones only when on the trail), read with useFolderListing when its menu opens, sorted as people sort, the one on the trail first and marked, each folder's own folders a submenu read when it opens; the loading and failure states drawn in the menu, and a bounded window with More for a very large folder.
           - Web:
             - Uses:
               - `infra/paths/file-systems.useFolderListing`
               - `network/live/live-state.ResourceErrorInline`
               - `primitives/breadcrumb.BreadcrumbPlaces`
               - `primitives/css/ui-kit.DropdownMenuItem`
+              - `primitives/file-type.FileTypeIcon`
+            - Exports (types): `FolderPlacesOptions`
             - Exports (values):
               - `folderPlaces`
               - `FolderPlaces`
