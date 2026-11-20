@@ -32,6 +32,7 @@ The `scratch` workspace: `state/workspaces/<attemptId>/`, holding the profile's
     - `conversations/workspace.ScratchProfile`
     - `conversations/workspace.Workspace`
     - `conversations/workspace.WorkspaceImpl`
+    - `conversations/workspace.WorkspaceReclaimed`
     - `infra/endpoints.endpointPath`
     - `infra/jobs.defineJob`
     - `infra/mcp.Mcp`

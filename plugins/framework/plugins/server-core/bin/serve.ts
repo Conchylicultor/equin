@@ -400,6 +400,11 @@ export async function serve({
     mode: "serve",
     // A desktop host boots both halves of every plugin as one graph.
     entries: [...server.serverEntries, ...machine.machineEntries],
+    listEntries: {
+      kind: "written",
+      entries: (await import("../core/list-entries.generated"))
+        .serverListEntries,
+    },
     beforeReadyBarrier: installRoutes,
   });
   markServerReady();

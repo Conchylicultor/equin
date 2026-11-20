@@ -52,8 +52,6 @@ dropped out from under it.
     - `report-kind` "fork-undeclared-schema"
   - Uses:
     - `database/admin.describeUndeclaredSchema`
-    - `database/admin.ExcludeFromFork`
-    - `database/admin.ExcludeSchemaDataFromFork`
     - `database/admin.forkDatabase`
     - `database/admin.forkExclusions`
     - `database/admin.ForkPlanError`

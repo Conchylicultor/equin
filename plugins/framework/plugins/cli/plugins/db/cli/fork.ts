@@ -29,24 +29,23 @@ import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 // What a fork must not copy is DECLARED by the plugins that own the tables
-// (`ExcludeFromFork` / `ExcludeSchemaDataFromFork`): static data on their
-// server definitions, so a function of THIS checkout's code. We read it off the
-// code itself: a child process (`./internal/declared-exclusions-probe.ts`)
-// loads the plugin graph this checkout's backend would boot
-// (`loadDeclaredGraph`, server-core/cli) and stops before anything touches a
-// database. A child, because loading the graph declares a runtime namespace,
-// which this process must not have (see the probe's header).
+// (`ExcludeFromFork` / `ExcludeSchemaDataFromFork`): two data lists, which the
+// build writes down from THIS checkout's code (server-core's
+// `list-entries.generated.ts`) and every host reads from there. A child
+// process (`./internal/declared-exclusions-probe.ts`) reads them for the
+// registry this checkout's backend would boot, loading no plugin and touching
+// no database. A child, because selecting the registry declares a runtime
+// namespace, which this process must not have (see the probe's header).
 //
 // It used to ask a RUNNING backend over HTTP (this checkout's, else main's),
 // which made the recovery path depend on the thing it recovers from:
 // `--replace` exists for a worktree DB that cannot boot, and on 2026-11-08 it
 // could not run while main's backend was crash-looping and then down.
 //
-// A missing input is still loud, never an empty set: a module that fails to
-// load fails the probe, `forkExclusionsFrom` throws when the graph declares no
-// exclusion at all, and an answer that does not parse is refused — forking
-// with none would copy ~2 GB of main's traces and notifications and look like
-// it worked.
+// A missing input is still loud, never an empty set: entries never installed
+// throw, `forkExclusions` throws when the registry declares no exclusion at
+// all, and an answer that does not parse is refused — forking with none would
+// copy ~2 GB of main's traces and notifications and look like it worked.
 const PROBE = join(import.meta.dir, "internal/declared-exclusions-probe.ts");
 
 const ForkExclusionsSchema = z.object({

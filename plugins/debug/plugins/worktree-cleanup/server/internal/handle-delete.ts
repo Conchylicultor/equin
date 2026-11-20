@@ -1,3 +1,4 @@
+import { WorkspaceReclaimed } from "@plugins/conversations/plugins/workspace/server";
 import { getAttempt } from "@plugins/tasks/plugins/tasks-core/server";
 import { ndjsonResponse } from "@plugins/infra/plugins/ndjson-stream/server";
 import { orphanDirPath } from "./dirs";
@@ -31,6 +32,7 @@ export async function handleDelete(
       await reapAttempt(id, {
         worktreePath,
         onStep: (step) => emit({ step }),
+        reclaimed: WorkspaceReclaimed.getContributions(),
       });
     } catch (e) {
       reapError = e;

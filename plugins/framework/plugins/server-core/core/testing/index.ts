@@ -16,7 +16,10 @@ export { clearRelationBases } from "../resources";
 
 // Collected contributions are process-global: a suite that boots (or fakes) a
 // collect resets it, so a later "read before collect" assertion still holds.
-export { clearCollectedContributions } from "../contributions";
+export {
+  clearCollectedContributions,
+  clearListEntries,
+} from "../contributions";
 
 // Declared host services are process-global too: a suite that boots its own
 // graph (or declares services of its own) starts from none and gets the

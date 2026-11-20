@@ -1,4 +1,5 @@
 import { getAttempt } from "@plugins/tasks/plugins/tasks-core/server";
+import { WorkspaceReclaimed } from "@plugins/conversations/plugins/workspace/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { bulkDeleteWorktrees } from "../../shared/endpoints";
 import { orphanDirPath } from "./dirs";
@@ -16,7 +17,10 @@ async function deleteOne(id: string): Promise<{ id: string; ok: true } | { id: s
   if (!worktreePath) return { id, ok: false, error: "No such attempt or worktree" };
 
   try {
-    await reapAttempt(id, { worktreePath });
+    await reapAttempt(id, {
+      worktreePath,
+      reclaimed: WorkspaceReclaimed.getContributions(),
+    });
   } catch (e) {
     return { id, ok: false, error: String(e) };
   }

@@ -24843,6 +24843,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/workspace.ScratchProfile`
               - `conversations/workspace.Workspace`
               - `conversations/workspace.WorkspaceImpl`
+              - `conversations/workspace.WorkspaceReclaimed`
               - `infra/endpoints.endpointPath`
               - `infra/jobs.defineJob`
               - `infra/mcp.Mcp`
@@ -25440,8 +25441,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `report-kind` "fork-undeclared-schema"
         - Uses:
           - `database/admin.describeUndeclaredSchema`
-          - `database/admin.ExcludeFromFork`
-          - `database/admin.ExcludeSchemaDataFromFork`
           - `database/admin.forkDatabase`
           - `database/admin.forkExclusions`
           - `database/admin.ForkPlanError`
@@ -29905,13 +29904,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `report-kind` "worktree-reap-failed"
           - `resource.declare` "debug.worktree-cleanup.worktrees"
           - `resource.declare` "debug.worktree-cleanup.worktrees:meta"
-        - Uses: 45 symbols — full list in [`plugins/debug/plugins/worktree-cleanup/REFERENCE.md`](../plugins/debug/plugins/worktree-cleanup/REFERENCE.md)
+        - Uses: 46 symbols — full list in [`plugins/debug/plugins/worktree-cleanup/REFERENCE.md`](../plugins/debug/plugins/worktree-cleanup/REFERENCE.md)
           - `infra/worktree` ×15
           - `database/admin` ×4
           - `infra/worktree/reclaim` ×4
           - `tasks/tasks-core` ×4
+          - `conversations/workspace` ×3
           - `infra/endpoints` ×3
-          - `conversations/workspace` ×2
           - `infra/host/host-read-pool` ×2
           - `infra/jobs/supervised-job` ×2
           - `infra/paths` ×2
@@ -32645,7 +32644,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `upstream`
         - **`db`** — `./equin db` — worktree database operations; today just `db fork`, which gives a hand-made `git worktree add` checkout the DB fork it never got.
           - Cli:
-            - Uses: `framework/server-core.loadDeclaredGraph`
+            - Uses: `framework/server-core.installDeclaredListEntries`
         - **`deploy`** — `./equin deploy converge|ship` — converge a host to serve a composition (run user, dirs, env, Caddy, systemd, firewall) and ship release bundles to it behind a health gate.
         - **`doctor`** — The prerequisite doctor: doctor.sh names every missing prerequisite (Xcode CLT/git, mise active, the locked toolchain) in one run, with its fix, and advises on Claude Code (installed and signed in) without failing on it. Run as `mise run doctor` and at the end of every `mise install`; assertPrerequisites() runs it as the first step of `start` and `build`.
           - Cross-plugin:
@@ -33240,6 +33239,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HttpHandler`
           - `HttpRoutes`
           - `KeyedServerResourceOptions`
+          - `ListData`
           - `LiveStateSnapshotHooks`
           - `LoadedServerPlugin`
           - `LoaderAggregateView`
@@ -33296,6 +33296,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `StartSetInput`
           - `TableChange`
           - `TableLayoutRequirement`
+          - `WrittenListEntries`
           - `WsData`
           - `WsHandler`
         - Exports (values):
@@ -33308,6 +33309,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `composedHome`
           - `composedOnly`
           - `composedWebPlugins`
+          - `DATA_ENTRY`
           - `defineDeferredResource`
           - `defineExternalResource`
           - `defineHostService`
@@ -33333,6 +33335,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isProcessCrashHandled`
           - `isServerReady`
           - `keptSnapshotValue`
+          - `listEntryJson`
           - `LIVE_STATE_SOCKET_ACCESS`
           - `loadResourceByKey`
           - `loadResourceFresh`
@@ -33399,7 +33402,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withNotifyBatch`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 125 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
+        - Imported by: 126 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
           - `infra` ×28
           - `conversations` ×14
           - `debug` ×14
@@ -33408,7 +33411,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database` ×10
           - `network` ×5
           - `reports` ×5
-          - `framework` ×3
+          - `framework` ×4
           - `integrations` ×3
           - `page` ×3
           - `primitives` ×3
@@ -33435,12 +33438,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/server-core` (0 debt)
       - Cli:
         - Exports (values):
+          - `installDeclaredListEntries`
           - `loadDeclaredGraph`
           - `runExec`
       - Test helpers:
         - Core: `@plugins/framework/plugins/server-core/core/testing`
           - `bootPluginGraph` — Load the plugin graph, run `register`, collect contributions, run the `onReadyBlocking` barrier.
           - `clearCollectedContributions` — Forget what was collected — back to the pre-boot state.
+          - `clearListEntries` — Forget the installed list entries.
           - `clearRelationBases` — Back to "not set" (test support: a suite that set bases must not leak them into the next).
           - `declaredHostServiceIds` — Every declared host service's id, sorted — test support (`core/testing`): what a graph whose modules are loaded must provide.
           - `getReadSetIndex` — The whole index as a plain object, each key's tables sorted — every key that ever captured a table, including one a removal emptied (`[]`).
@@ -34148,14 +34153,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`unscoped-highlight-pseudo`**
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 165 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 172 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `config_v2` ×17
               - `plugin-meta/parse-utils` ×17
               - `framework/plugin-id` ×13
+              - `framework/tooling/checks/source-analysis` ×11
               - `network/live/resource-vocabulary` ×11
               - `plugin-meta/plugin-records` ×11
               - `framework/slot-declaration` ×6
-              - `framework/tooling/checks/source-analysis` ×6
               - `plugin-meta/barrel-import` ×6
               - `plugin-meta/closure` ×6
               - `plugin-meta/composition` ×6
@@ -34168,6 +34173,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/shared-work` ×4
               - `config_v2/ledger` ×3
               - `framework/tooling/format` ×3
+              - `framework/server-core` ×2
               - `framework/tooling/boundaries` ×2
               - `framework/tooling/collected-dir/discovery` ×2
               - `framework/tooling/lint` ×2

@@ -45,13 +45,20 @@ import { tableLabel } from "./table-label";
 // hosting the token there would close a cycle. `admin` reaches only two leaf
 // plugins, so no declaring plugin can ever cycle back into it.
 //
-// Collected by the framework at boot before any `onReadyBlocking` runs (same as
-// the `View` and `ExcludeFromChangeFeed` contributions), so the fork job sees
-// every exclusion regardless of module import order.
-export const ExcludeFromFork = defineServerContribution<{
-  table: PgTable | string;
-  reason: string;
-}>("fork-data-exclusion", { docLabel: (c) => tableLabel(c.table) });
+// A DATA list (`data: true`): the build writes every entry down
+// (server-core's `list-entries.generated.ts`) and every host reads the list
+// from there — so the fork job reads all of it without starting a single
+// contributor, and an entry cannot be missing in its process while present in
+// the server's. A contributor passes a table object (refactor-safe, a typo is
+// a tsc error); the entry is its name.
+export const ExcludeFromFork = defineServerContribution("fork-data-exclusion", {
+  project: (c: { table: PgTable | string; reason: string }) => ({
+    table: tableLabel(c.table),
+    reason: c.reason,
+  }),
+  docLabel: (c: { table: string }) => c.table,
+  data: true,
+});
 
 // Schemas a plugin's runtime creates for ITSELF rather than declaring as drizzle
 // tables — a job queue's bookkeeping, a sync engine's replication state.
@@ -94,14 +101,15 @@ export const ExcludeSchemaDataFromFork = defineServerContribution<{
   schema: string;
   keep: readonly string[];
   reason: string;
-}>("fork-schema-data-exclusion", { docLabel: (c) => c.schema });
+}>("fork-schema-data-exclusion", { docLabel: (c) => c.schema, data: true });
 
 // `ExcludeFromFork` can take a table OBJECT (see ./table-label) because the
 // table is ours, and `ExcludeSchemaDataFromFork` cannot, because a foreign
 // runtime's schema has none. That tsc-checked spelling is why the two
 // contributions above stay two, now that both only ever empty tables: merging
 // them would mean giving up the checked form for the twelve declarations that
-// have it.
+// have it. (The checked form is the contributor's input; the entry the build
+// writes down is the name.)
 
 /** One schema-level declaration, as pure data. */
 export interface ForkSchemaExclusion {
@@ -124,25 +132,26 @@ export interface ForkExclusions {
   readonly schemas: readonly ForkSchemaExclusion[];
 }
 
-// The declared exclusion set, read two ways off one derivation:
+// The declared exclusion set, read two ways:
 //
-//   - `forkExclusions(tables, schemas)` — in a BOOTED process (the fork job),
-//     from the two lists it read (`ctx.read`, its declared `reads`, so its
-//     child started every contributor of both);
-//   - `forkExclusionsFrom(plugins)` — anywhere else (`./equin db fork`), from
-//     loaded plugin definitions (`loadDeclaredGraph`, server-core/cli), so it
-//     needs no running backend.
+//   - `forkExclusions()` — what every host and `./equin db fork` reads: the
+//     data lists, i.e. what the build wrote down (installed by every boot, and
+//     by the db fork probe, which boots nothing);
+//   - `forkExclusionsFrom(plugins)` — the CODE side, from loaded plugin
+//     definitions, for a check or test asking what the code declares (the
+//     migrations check's declared-schema inputs).
 //
 // Both THROW on an empty set. Silently returning "exclude nothing" would
 // produce a full ~2 GB fork that looks like it worked; the declarations in
 // this repo guarantee a non-empty set in any complete graph, so an empty one
-// means the wrong (or no) graph was read. (`getContributions()` itself already
-// throws in a process that never collected.)
-export function forkExclusions(
-  tables: readonly { table: PgTable | string }[],
-  schemas: readonly { schema: string; keep: readonly string[] }[],
-): ForkExclusions {
-  return toForkExclusions(tables, schemas, "forkExclusions()");
+// means the wrong (or no) entries were read. (`getContributions()` itself
+// already throws in a process that never installed them.)
+export function forkExclusions(): ForkExclusions {
+  return toForkExclusions(
+    ExcludeFromFork.getContributions(),
+    ExcludeSchemaDataFromFork.getContributions(),
+    "forkExclusions()",
+  );
 }
 
 export function forkExclusionsFrom(
@@ -156,17 +165,17 @@ export function forkExclusionsFrom(
 }
 
 function toForkExclusions(
-  tables: readonly { table: PgTable | string }[],
+  tables: readonly { table: string }[],
   schemas: readonly { schema: string; keep: readonly string[] }[],
   reader: string,
 ): ForkExclusions {
   if (tables.length === 0 && schemas.length === 0) {
     throw new Error(
-      `${reader}: no fork exclusions are declared by any loaded plugin.`,
+      `${reader}: no fork exclusions are declared by any plugin of this composition.`,
     );
   }
   return {
-    tables: tables.map((c) => tableLabel(c.table)),
+    tables: tables.map((c) => c.table),
     schemas: schemas.map((c) => ({ schema: c.schema, keep: c.keep })),
   };
 }

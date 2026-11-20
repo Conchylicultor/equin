@@ -32,17 +32,21 @@ export const WorkspaceReclaimed =
 
 /**
  * Tell every {@link WorkspaceReclaimed} handler that `attemptIds`' workspaces
- * are gone — called by a reaper once it deleted them. Every handler runs, even
+ * are gone — called by a reaper once it deleted them. The reaper passes the
+ * handlers it read (`WorkspaceReclaimed.getContributions()` in a backend;
+ * `read(WorkspaceReclaimed)` in a supervised job's body, which is what makes
+ * its child start every handler's plugin). Every handler runs, even
  * after one throws; then a single error names each that failed, for the
  * reaper's own containment (its workspaces are gone either way, so a handler's
  * leftovers are what the handler's own backstop collects).
  */
 export async function announceWorkspacesReclaimed(
+  handlers: readonly WorkspaceReclaimedHandler[],
   attemptIds: readonly string[],
 ): Promise<void> {
   if (attemptIds.length === 0) return;
   const failures: string[] = [];
-  for (const handler of WorkspaceReclaimed.getContributions()) {
+  for (const handler of handlers) {
     try {
       await handler.onReclaimed(attemptIds);
     } catch (err) {

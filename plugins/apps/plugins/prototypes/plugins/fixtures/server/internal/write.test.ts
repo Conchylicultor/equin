@@ -160,6 +160,7 @@ describe.if(IN_CHILD)("writePrototypeFixture, after the host is up", () => {
     // few non-portable server barrels a worker's own graph does not.
     const ordered = await bootPluginGraph({
       mode: "exec",
+      listEntries: { kind: "not-shipped", reason: "a test boot" },
       entries: await withPortableHost([
         ...registryClosureOf([...SUBJECT_ENTRY.dependsOn, ...HOST_PLUMBING]),
         SUBJECT_ENTRY,

@@ -46,6 +46,11 @@ export const beatFeaturesJob = defineSupervisedJob({
   channel: audioAnalysisLog,
   lock: ({ videoId, settings }) => `${settingsKey(settings)}/${videoId}`,
   runAttempts: 2,
+  // Debt: its child starts every plugin.
+  wholeApp: {
+    reason:
+      "not moved yet: what this body reads through other plugins’ code has not been checked",
+  },
   async run({ videoId, force, settings, device }, { log, exec }) {
     await ensureBeatFeatures(videoId, exec, { log, force, settings, device });
   },

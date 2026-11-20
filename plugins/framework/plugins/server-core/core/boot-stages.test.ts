@@ -50,6 +50,7 @@ describe("bootPluginGraph — the preload-declare assert", () => {
     let barrierRan = false;
     const boot = bootPluginGraph({
       mode: "exec",
+      listEntries: { kind: "not-shipped", reason: "a test boot" },
       entries: [
         {
           pluginPath: "test/undeclared",

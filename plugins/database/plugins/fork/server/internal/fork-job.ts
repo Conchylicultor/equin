@@ -5,8 +5,6 @@ import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/plugins/file/core";
 import {
   describeUndeclaredSchema,
-  ExcludeFromFork,
-  ExcludeSchemaDataFromFork,
   forkDatabase,
   ForkPlanError,
   forkExclusions,
@@ -49,24 +47,19 @@ export const databaseForkJob = defineSupervisedJob({
   channel: forkLog,
   lock: (input) => input.target,
   runAttempts: 5,
-  // The two lists the fork reads whole: its child starts this plugin, what it
-  // imports and every contributor of these (not the whole app).
-  reads: [ExcludeFromFork, ExcludeSchemaDataFromFork],
-  async run({ source, target }, { log, read }) {
+  // Its child starts this plugin and what it imports, nothing more: the two
+  // "do not copy" lists are data lists, read from what the build wrote down,
+  // so none of their contributors starts.
+  async run({ source, target }, { log }) {
     log(`fork ${source} → ${target}: starting`);
     // Only the fork itself is inside the try: a failure to raise a bell about
     // what the fork FOUND must never be reported as the fork having failed.
     let outcome: ForkOutcome;
     try {
-      // Read the declared exclusion set here, inside a booted runtime whose
-      // start included every contributor of both lists (`reads`).
+      // The declared exclusion set, whole on every host (data lists).
       // `forkExclusions` throws rather than returning an empty set, so a
-      // process that never booted can never quietly fork everything.
-      outcome = await forkDatabase(
-        source,
-        target,
-        forkExclusions(read(ExcludeFromFork), read(ExcludeSchemaDataFromFork)),
-      );
+      // process that read nothing can never quietly fork everything.
+      outcome = await forkDatabase(source, target, forkExclusions());
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       log(`fork ${source} → ${target} failed: ${message}`, "stderr");

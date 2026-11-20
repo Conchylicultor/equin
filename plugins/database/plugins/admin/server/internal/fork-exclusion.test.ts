@@ -41,7 +41,7 @@ describe("forkExclusionsFrom", () => {
 
   test("throws on a graph that declares no exclusion", () => {
     expect(() => forkExclusionsFrom([{ contributions: [] }, {}])).toThrow(
-      "no fork exclusions are declared by any loaded plugin",
+      "no fork exclusions are declared by any plugin of this composition",
     );
   });
 });

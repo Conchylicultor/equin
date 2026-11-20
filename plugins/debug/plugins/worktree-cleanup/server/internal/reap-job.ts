@@ -78,15 +78,16 @@ export const worktreeReapJob = defineSupervisedJob({
   channel: reapLog,
   schedule: { cron: "0 * * * *" }, // hourly — REAP_PERIOD_MS below
   runAttempts: 1,
-  // Its child starts this plugin and what it imports, plus every plugin that
-  // keeps per-attempt state: a reap tells each of them (`Workspace.Reclaimed`,
-  // read by `announceWorkspacesReclaimed`), so that list must be whole.
-  reads: [WorkspaceReclaimed],
   // The sweep reaps in its child, so the panel's held scans (this backend's
   // memory) are told here, at its end: their rows the sweep moved re-read.
   // Idempotent — it only looks at what is on disk and in the catalog now.
   onEnded: () => refreshSweptRows(),
-  async run(_input, { log }) {
+  // Its child starts this plugin and what it imports, plus every plugin that
+  // keeps per-attempt state: the body reads `Workspace.Reclaimed` with `read`
+  // (the build derives the child's start from that call) and hands it to every
+  // reap, which tells each of them.
+  async run(_input, { log, read }) {
+    const reclaimHandlers = read(WorkspaceReclaimed);
     // Files of earlier removals whose own delete was killed or whose process
     // died. `removeWorktree` moves a checkout into the trash atomically, so
     // whatever is left there is disk space only, never a half-removed checkout.
@@ -182,6 +183,7 @@ export const worktreeReapJob = defineSupervisedJob({
       contain(t.id, async () => {
         const removal = await reapAttempt(t.id, {
           worktreePath: t.worktreePath,
+          reclaimed: reclaimHandlers,
         });
         if (removal.kind === "removed") {
           log(

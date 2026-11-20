@@ -1,12 +1,16 @@
 export { machineCollectedDir, serverCollectedDir } from "./collected-dir";
 export {
   collectContributions,
+  DATA_ENTRY,
   defineServerContribution,
   isPartialStart,
+  listEntryJson,
   PartialListReadError,
 } from "./contributions";
 export type {
+  ListData,
   PartialList,
+  WrittenListEntries,
   ServerContribution,
   ServerContributionToken,
 } from "./contributions";

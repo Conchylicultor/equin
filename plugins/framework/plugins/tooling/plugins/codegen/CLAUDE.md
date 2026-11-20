@@ -234,14 +234,14 @@ wrapper fixpoint reads.
 
 - Description: Plugin doc generation and registry codegen
 - Core:
-  - Uses: 165 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 172 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `config_v2` ×17
     - `plugin-meta/parse-utils` ×17
     - `framework/plugin-id` ×13
+    - `framework/tooling/checks/source-analysis` ×11
     - `network/live/resource-vocabulary` ×11
     - `plugin-meta/plugin-records` ×11
     - `framework/slot-declaration` ×6
-    - `framework/tooling/checks/source-analysis` ×6
     - `plugin-meta/barrel-import` ×6
     - `plugin-meta/closure` ×6
     - `plugin-meta/composition` ×6
@@ -254,6 +254,7 @@ wrapper fixpoint reads.
     - `packages/shared-work` ×4
     - `config_v2/ledger` ×3
     - `framework/tooling/format` ×3
+    - `framework/server-core` ×2
     - `framework/tooling/boundaries` ×2
     - `framework/tooling/collected-dir/discovery` ×2
     - `framework/tooling/lint` ×2

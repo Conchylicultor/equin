@@ -13,12 +13,13 @@ defineSupervisedJob({
   name, input, channel,
   // WHAT runs — exactly one of:
   argv:  (input, runId) => ({ argv, cwd?, envOverrides? }),  // one child, a command line
-  run:   async (input, { runId, log, exec }) => { … },       // one child, in-process code
+  run:   async (input, { runId, log, exec, read }) => { … }, // one child, in-process code
   steps: async (input, { runId, step, ctx }) => { … },       // several children, sequenced
   // WHERE runs are recorded:
   ledger?: { kindId, claim, listUnfinished, setPid, closeRow, beginStep?, onReattach? },
   lock?:   (input) => string,     // built-in ledger only
   admission?: HostPoolId,         // `run` body only: a host pool the child waits on before booting
+  wholeApp?: { reason },          // `run` body only, debt: the child starts every plugin
   schedule?, runAttempts?, onEnded?,   // runAttempts / onEnded: single-child only
   hold?: "instant" | "seconds",   // steps only
 });
@@ -671,6 +672,29 @@ The task is registered under the job name by the job's own `register:` token,
 and is internal — there is no separate task to declare. Detach, pid, transcript,
 exit marker, boot reconcile, suspend and resume are unchanged. A `run` body
 changes **what** is spawned, never how it is supervised.
+
+### What the child starts: derived, never declared
+
+A `run` body's child starts only what its job needs (server-core's partial
+start): the plugin whose `register` registered the job (`--start`), what it
+imports, and every contributor of each list the body reads **with
+`read(List)`**. Nothing names those lists by hand: the build reads the body's
+`read(…)` calls (codegen's `job-reads.scan.ts`, fail-closed — `read` passed on,
+the context escaping, a list not imported by name, a body not written inline:
+each fails the build naming the call) and resolves each list's import to its
+`defineServerContribution("<name>")`, writing `cli/job-reads.generated.ts`
+(`server-contributors-in-sync` fails on drift). The child looks its job up
+there; a job missing from it fails loudly.
+
+- A **data list** (`defineServerContribution(name, { data: true })` — the fork's
+  "do not copy" lists) needs no `read`: every host reads it whole from what the
+  build wrote down, so it starts nobody.
+- A complete list read any other way — `getContributions()` deep in a helper —
+  throws (the list rule), naming the list, the plugins not started and the fix.
+  So a read the build did not see is a loud failure, never a silent miss.
+- `wholeApp: { reason }` makes the child start every plugin instead: debt, for
+  the jobs not moved yet (backup, song index, deps install, beat features, UG
+  alignment), whose bodies read lists through helpers the build cannot follow.
 
 ### `exec` is the whole trick
 

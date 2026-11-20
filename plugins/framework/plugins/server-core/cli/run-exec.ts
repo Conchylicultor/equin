@@ -184,12 +184,19 @@ export async function runExec(
     // or the part the work needs (`opts.start`), resolved from it with the
     // build's contributor table (loaded only then: no serving path reads it).
     const entries = [...serverEntries, ...machineEntries];
+    // The data lists, as the build wrote them (`installListEntries`).
+    const listEntries = {
+      kind: "written" as const,
+      entries: (await import("../core/list-entries.generated"))
+        .serverListEntries,
+    };
     ordered = await bootPluginGraph(
       opts.start === undefined
-        ? { mode: "exec", entries }
+        ? { mode: "exec", entries, listEntries }
         : {
             mode: "exec",
             entries,
+            listEntries,
             start: {
               ...opts.start,
               contributors: (await import("../core/contributors.generated"))

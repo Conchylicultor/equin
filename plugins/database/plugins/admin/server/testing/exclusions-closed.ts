@@ -42,7 +42,9 @@ export function assertExclusionsClosed(
   // The catalog holds only the app schema, so a schema-level declaration has
   // nothing here to match.
   planForkExclusions(catalog, {
-    tables: ExcludeFromFork.getContributions().map((c) => tableLabel(c.table)),
+    // The declarations collected over the plugin under test (a data list's
+    // `getContributions()` reads the build's file, which a test never installs).
+    tables: ExcludeFromFork.startedContributions().map((c) => c.table),
     schemas: [],
   });
 }

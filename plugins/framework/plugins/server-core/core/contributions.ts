@@ -54,6 +54,35 @@ export interface ServerContributionToken<P, I = P> {
 }
 
 /**
+ * What an entry of a DATA list may hold: what the build can write down as
+ * JSON (`defineServerContribution(name, { data: true })`). A function, a class
+ * instance (a drizzle table), a symbol or a value computed at run time has no
+ * spelling here — `project` it to its data (a table to its name) first.
+ */
+export type ListData =
+  | string
+  | number
+  | boolean
+  | null
+  | readonly ListData[]
+  | { readonly [key: string]: ListData };
+
+/**
+ * One entry of a data list as the build wrote it down
+ * (`list-entries.generated.ts`): the graph node whose barrel contributed it
+ * (`<pluginPath>` or `<pluginPath>#machine`) and the entry itself.
+ */
+export interface WrittenListEntry {
+  readonly node: string;
+  readonly entry: unknown;
+}
+
+/** Every data list's entries, as the build wrote them: debug name → entries. */
+export type WrittenListEntries = Readonly<
+  Record<string, readonly WrittenListEntry[]>
+>;
+
+/**
  * A contribution kind a process may run without some of its contributors (see
  * `defineServerContribution`): why each entry only matters to the plugin that
  * contributed it, so a process that did not start that plugin is right not to
@@ -79,7 +108,14 @@ export interface ServerCompanionFlag {
 // never an empty map.
 let byKind: Map<symbol, ServerContribution[]> | null = null;
 
-function stripKind<P>({ _kind: _, ...rest }: ServerContribution): P {
+/** The key a data list's contribution carries (`{ data: true }`), read by the build. */
+export const DATA_ENTRY = "_dataEntry";
+
+function stripKind<P>({
+  _kind: _,
+  [DATA_ENTRY]: _data,
+  ...rest
+}: ServerContribution): P {
   return rest as P;
 }
 
@@ -151,6 +187,22 @@ export function defineServerContribution<P, I>(
     partial?: PartialList;
   },
 ): ServerContributionToken<P, I>;
+export function defineServerContribution<P extends ListData>(
+  debugName: string,
+  opts: {
+    docLabel?: (props: P) => string | undefined;
+    data: true;
+  },
+): ServerContributionToken<P>;
+export function defineServerContribution<P extends ListData, I>(
+  debugName: string,
+  opts: {
+    docLabel?: (props: P) => string | undefined;
+    /** The payload a contributor's input declares — here, its data. */
+    project: (input: I) => P;
+    data: true;
+  },
+): ServerContributionToken<P, I>;
 export function defineServerContribution<P, I>(
   debugName: string,
   opts?: {
@@ -158,11 +210,20 @@ export function defineServerContribution<P, I>(
     project?: (input: I) => P;
     partial?: PartialList;
     companions?: true;
+    data?: true;
   },
 ): ServerContributionToken<P, I> {
   const kind = Symbol(debugName);
   const partial = opts?.partial !== undefined;
+  const data = opts?.data === true;
   if (opts?.companions === true) companionKinds.add(debugName);
+  if (data) {
+    if (dataKinds.has(debugName))
+      throw new Error(
+        `[lists] data list "${debugName}" is defined twice: a list's debug name is its identity in the build's list entries.`,
+      );
+    dataKinds.set(debugName, kind);
+  }
   const project = opts?.project ?? ((input: I) => input as unknown as P);
 
   const token = ((input: I) => {
@@ -172,9 +233,17 @@ export function defineServerContribution<P, I>(
       input,
     );
     const props = project(payload);
+    // A data list's entry is checked HERE, where the live value still is
+    // what it is: the build evaluates every barrel, so an entry holding a
+    // class instance, a function or a value plain JSON cannot keep fails the
+    // build at the contributing plugin (and any boot), never written wrong.
+    if (data) listEntryJson(props, `"${debugName}" entry`);
     return {
       _kind: kind,
       _doc: { label: opts?.docLabel?.(props) },
+      // What tells the build this entry is written down as data
+      // (`list-entries.generated.ts`) — a record of the barrel keeps it.
+      ...(data ? { [DATA_ENTRY]: true } : {}),
       ...props,
       ...(companion ? { companion: true } : {}),
     };
@@ -182,6 +251,10 @@ export function defineServerContribution<P, I>(
   (token as { debugName: string }).debugName = debugName;
 
   token.getContributionsIfCollected = () => {
+    // A data list is read from what the build wrote down, on every host —
+    // never from what this process happened to start.
+    if (data)
+      return writtenEntries === null ? undefined : writtenOf<P>(debugName);
     if (byKind === null) return undefined;
     if (!partial) assertWholeList(debugName);
     return (byKind.get(kind) ?? []).map((c) => stripKind<Collected<P>>(c));
@@ -197,6 +270,14 @@ export function defineServerContribution<P, I>(
   };
 
   token.getContributions = () => {
+    if (data) {
+      if (writtenEntries === null)
+        throw new Error(
+          `[lists] "${debugName}" is a data list, read before this process installed the build's list entries ` +
+            "(`installListEntries` — every boot does it before collecting).",
+        );
+      return writtenOf<P>(debugName);
+    }
     if (byKind === null) {
       throw new Error(
         `[contributions] "${debugName}" read before collectContributions ran: this process never booted the plugin graph. ` +
@@ -371,5 +452,190 @@ export function collectContributions(
       }
       list.push(c);
     }
+  }
+}
+
+// ── Lists whose entries are data ─────────────────────────────────────────────
+//
+// A list defined with `data: true` is read from what the BUILD wrote down
+// (`list-entries.generated.ts`, from the records it keeps of every plugin
+// barrel), on every host — the full server included. So reading it starts
+// nobody: a job reads every entry without starting a single contributor, and
+// "complete in the server, missing an entry in a job" has no spelling. The
+// file is kept equal to the code by the `server-contributors-in-sync` check,
+// and every boot compares it with what its started plugins declare
+// (`assertWrittenListsMatch`): an entry computed from something only known at
+// run time fails there, loudly, never read wrong.
+
+// Every data list this process's modules defined: debug name → its kind.
+const dataKinds = new Map<string, symbol>();
+
+// What the build wrote, kept to this process's registry: `null` until a boot
+// (or a reader that boots nothing) installs it — a state, not an empty table.
+let writtenEntries: {
+  readonly table: WrittenListEntries;
+  /** Graph node → its plugin's id (`_pluginId`), for every node of this registry. */
+  readonly pluginOf: ReadonlyMap<string, string>;
+} | null = null;
+
+/**
+ * Install the build's data-list entries, kept to `registry` (graph node →
+ * plugin id): an entry of a plugin outside this process's composition is not
+ * part of its lists. Before collecting (`bootPluginGraph`), or by a process
+ * that boots nothing and reads a data list (`./equin db fork`'s probe).
+ */
+export function installListEntries(
+  table: WrittenListEntries,
+  registry: ReadonlyMap<string, string>,
+): void {
+  writtenEntries = { table, pluginOf: registry };
+}
+
+/** Forget the installed list entries. Test support (`core/testing`). */
+export function clearListEntries(): void {
+  writtenEntries = null;
+}
+
+function writtenOf<P>(debugName: string): Collected<P>[] {
+  const { table, pluginOf } = writtenEntries!;
+  // A data list nobody contributes to has no key in the table: the build
+  // writes only what it found, and the in-sync check keeps the two equal.
+  return (table[debugName] ?? []).flatMap((e) => {
+    const pluginId = pluginOf.get(e.node);
+    return pluginId === undefined
+      ? []
+      : [{ ...(e.entry as P), _pluginId: pluginId } as Collected<P>];
+  });
+}
+
+/** `value` as canonical JSON, or why it is not plain data (`path` names where). */
+function canonicalData(value: unknown, path: string): string {
+  if (value === null) return "null";
+  switch (typeof value) {
+    case "string":
+    case "boolean":
+      return JSON.stringify(value);
+    case "number":
+      if (Number.isFinite(value)) return JSON.stringify(value);
+      throw new NotDataError(path, String(value));
+    case "object":
+      break;
+    case "bigint":
+    case "function":
+    case "symbol":
+    case "undefined":
+      throw new NotDataError(path, `a ${typeof value}`);
+  }
+  if (Array.isArray(value))
+    return `[${value.map((x, i) => canonicalData(x, `${path}[${i}]`)).join(",")}]`;
+  const proto = Object.getPrototypeOf(value) as object | null;
+  if (proto !== Object.prototype && proto !== null)
+    throw new NotDataError(
+      path,
+      `an instance of ${(value as object).constructor?.name ?? "a class"}`,
+    );
+  const keys = Object.keys(value).sort();
+  return `{${keys
+    .map((k) => {
+      const x = (value as Record<string, unknown>)[k];
+      return `${JSON.stringify(k)}:${canonicalData(x, `${path}.${k}`)}`;
+    })
+    .join(",")}}`;
+}
+
+class NotDataError extends Error {
+  constructor(
+    readonly path: string,
+    readonly what: string,
+  ) {
+    super(`${path} is ${what}, not plain data`);
+  }
+}
+
+/**
+ * A data list's entry as canonical JSON — key order ignored — or a throw
+ * naming where it is not plain data. Shared by the build (which writes the
+ * entries) and the boot check (which compares them), so both judge "data" the
+ * same way.
+ */
+export function listEntryJson(entry: unknown, where: string): string {
+  try {
+    return canonicalData(entry, "entry");
+  } catch (err) {
+    if (!(err instanceof NotDataError)) throw err;
+    throw new Error(
+      `[lists] ${where}: ${err.message}. A data list's entry is written down by the build and read from that file on every host, ` +
+        "so it must be plain data the build can see — `project` it to its data (a table to its name), or, if it is computed from something only known at run time, it cannot be a data list's entry.",
+    );
+  }
+}
+
+/** A contribution's own entry: what a data list's reader gets, without its bookkeeping. */
+function ownEntry(c: ServerContribution): Record<string, unknown> {
+  const {
+    _kind: _k,
+    _doc: _d,
+    _pluginId: _p,
+    _pluginDescription: _pd,
+    [DATA_ENTRY]: _data,
+    ...entry
+  } = c;
+  return entry;
+}
+
+/**
+ * Every data list's entries this process's STARTED graph nodes declare equal
+ * what the build wrote for them, entry for entry — the boot's backstop for an entry
+ * computed from something only known at run time (an environment variable, the
+ * clock), which the build would have written as it was on the build's machine.
+ * Throws naming the list, the plugin and the entries that differ. Run by
+ * `bootPluginGraph` right after collecting.
+ */
+export function assertWrittenListsMatch(
+  startedNodes: ReadonlySet<string>,
+): void {
+  if (byKind === null || writtenEntries === null) {
+    throw new Error(
+      "[lists] assertWrittenListsMatch before collectContributions and installListEntries",
+    );
+  }
+  const { table, pluginOf } = writtenEntries;
+  const failures: string[] = [];
+  for (const [name, kind] of dataKinds) {
+    const live = byKind.get(kind) ?? [];
+    // Compared over the graph nodes that started (a server half and its
+    // machine half apart): one this process did not start declares nothing
+    // here, and its written entries are still read.
+    const key = (pluginId: string, json: string) => `${pluginId} ${json}`;
+    const declared = live
+      .map((c) =>
+        key(
+          c._pluginId!,
+          listEntryJson(ownEntry(c), `"${name}" entry of ${c._pluginId}`),
+        ),
+      )
+      .sort();
+    const written = (table[name] ?? [])
+      .flatMap((e) => {
+        const pluginId = pluginOf.get(e.node);
+        return pluginId === undefined || !startedNodes.has(e.node)
+          ? []
+          : [key(pluginId, listEntryJson(e.entry, `"${name}" written entry`))];
+      })
+      .sort();
+    const onlyLive = declared.filter((x) => !written.includes(x));
+    const onlyWritten = written.filter((x) => !declared.includes(x));
+    if (declared.join("\n") !== written.join("\n")) {
+      failures.push(
+        `"${name}": declared by the code but not written by the build: ${onlyLive.join(" | ") || "none"}; ` +
+          `written by the build but not declared: ${onlyWritten.join(" | ") || "none"}`,
+      );
+    }
+  }
+  if (failures.length > 0) {
+    throw new Error(
+      `[lists] the build's list entries (list-entries.generated.ts) disagree with what the started plugins declare:\n${failures.join("\n")}\n` +
+        "Run `./equin build` to rewrite them. If they still disagree, an entry is computed from something only known at run time — it cannot be a data list's entry.",
+    );
   }
 }

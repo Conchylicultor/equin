@@ -16,10 +16,13 @@ import {
   declaredHostServiceIds,
   hostServicesProvidedBy,
 } from "./host-service";
+import type { WrittenListEntries } from "./contributions";
 import {
+  assertWrittenListsMatch,
   collectContributions,
   declarePartialStart,
   definedCompanionKinds,
+  installListEntries,
 } from "./contributions";
 import { declaredHandledSinkIds } from "@plugins/primitives/plugins/report-sink/core";
 import {
@@ -112,8 +115,19 @@ export interface ServerRegistryEntry {
   core: (() => Promise<unknown>) | null;
 }
 
+/**
+ * The data lists' entries this host reads (`defineServerContribution(name, {
+ * data: true })`): what the build wrote (`core/list-entries.generated.ts`,
+ * loaded by the host's entry point), or why this host ships no such file — a
+ * data list read there then throws, loudly, never answers empty.
+ */
+export type ListEntriesSpec =
+  | { kind: "written"; entries: WrittenListEntries }
+  | { kind: "not-shipped"; reason: string };
+
 export type BootSpec = {
   entries: ServerRegistryEntry[];
+  listEntries: ListEntriesSpec;
   /**
    * Start only what one piece of work needs, not every entry: `entries` is
    * then the whole registry, and the set started is resolved from it
@@ -159,6 +173,17 @@ export async function bootPluginGraph(
 ): Promise<LoadedServerPlugin[]> {
   // Before any plugin loads, so every phase hook can ask which mode it runs in.
   setBootMode(spec.mode);
+  // The data lists' entries, as the build wrote them, kept to this registry —
+  // before any module evaluates, so a data list reads whole from the first
+  // line (`installListEntries`). Handed in by the host's entry point (a `bin/`
+  // or `cli/` module), never imported here: this module is in every server
+  // barrel's closure, so importing the file would re-key every plugin record
+  // each time a data entry changes.
+  if (spec.listEntries.kind === "written")
+    installListEntries(
+      spec.listEntries.entries,
+      new Map(spec.entries.map((e) => [graphNodeOf(e), pluginOfNode(e.id)])),
+    );
   const ordered =
     spec.start === undefined
       ? await loadServerPlugins(spec.entries)
@@ -182,6 +207,16 @@ export async function bootPluginGraph(
       contributions: p.contributions,
     })),
   );
+
+  // What the started plugins declare to a data list is what the build wrote
+  // down for them — else an entry is computed from something only known at
+  // run time, and fails here rather than being read wrong.
+  if (spec.listEntries.kind === "written") {
+    const nodeOf = new Map(spec.entries.map((e) => [e.id, graphNodeOf(e)]));
+    assertWrittenListsMatch(
+      new Set(ordered.flatMap((p) => nodeOf.get(p.id) ?? [])),
+    );
+  }
 
   // Every host service a loaded module declared has exactly one provider in
   // this graph — before any phase hook can read one. A host that loads a

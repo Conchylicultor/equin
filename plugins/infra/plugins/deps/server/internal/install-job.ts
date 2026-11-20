@@ -29,6 +29,11 @@ export const depsInstallJob = defineSupervisedJob({
   input: z.object({ id: z.string() }),
   channel: depsInstallLog,
   lock: ({ id }) => id,
+  // Debt: its child starts every plugin.
+  wholeApp: {
+    reason:
+      "not moved yet: what this body reads through other plugins’ code has not been checked",
+  },
   async run({ id }, { log, exec }) {
     await ensureDep(await declaredDep(id), exec, { log });
   },

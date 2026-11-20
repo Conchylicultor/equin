@@ -6,8 +6,9 @@
 //   ./equin run plugins/framework/plugins/server-core/scripts/exec-boot-cost.ts \
 //     --namespace <ns> [--json] [--start <pluginPath> [--reads <kind>,…]]
 //
-// `--start` boots the way a job that declares its `reads` does
-// (`defineSupervisedJob`): only that plugin and what it needs
+// `--start` boots the way a supervised job's child does (`--reads`: the lists
+// the build derived its body reads, `supervised-job/cli/job-reads.generated.ts`):
+// only that plugin and what it needs
 // (`resolveStartSet`), the list rule armed — so a complete list read while
 // starting throws here exactly as it would in the job.
 //

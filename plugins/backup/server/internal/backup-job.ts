@@ -67,6 +67,11 @@ export const backupRunJob = defineSupervisedJob({
   // act, which is why there is no `onEnded`: nothing outside the archive
   // changes when a backup finishes, and `closeRow` covers a child that never
   // got that far.
+  // Debt: its child starts every plugin.
+  wholeApp: {
+    reason:
+      "the backup body reads its sources, targets and exclusions through helpers outside the run body, which the build cannot follow yet",
+  },
   run: (input, { runId }) => runBackupBody(runId, input.trigger),
 
   // The nightly tick, on the job itself. Recur on the user-configured cron;

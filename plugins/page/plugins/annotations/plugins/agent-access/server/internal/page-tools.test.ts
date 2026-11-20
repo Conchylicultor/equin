@@ -114,6 +114,7 @@ describe.if(IN_CHILD)("pageTools on a portable host", () => {
   beforeAll(async () => {
     await bootPluginGraph({
       mode: "exec",
+      listEntries: { kind: "not-shipped", reason: "a test boot" },
       entries: await withPortableHost(
         registryClosureOf([SUBJECT, "page/plugins/text"]),
       ),

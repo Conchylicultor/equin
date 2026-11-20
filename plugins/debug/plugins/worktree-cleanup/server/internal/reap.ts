@@ -20,7 +20,10 @@ import {
   namespacesOwnedByCheckout,
   reclaimNamespace,
 } from "@plugins/infra/plugins/worktree/plugins/reclaim/server";
-import { announceWorkspacesReclaimed } from "@plugins/conversations/plugins/workspace/server";
+import {
+  announceWorkspacesReclaimed,
+  type WorkspaceReclaimedHandler,
+} from "@plugins/conversations/plugins/workspace/server";
 import type { ReapStep } from "../../shared/endpoints";
 
 export async function dirExists(path: string): Promise<boolean> {
@@ -48,6 +51,12 @@ export async function reapAttempt(
   opts: {
     worktreePath?: string;
     onStep?: (step: ReapStep) => void;
+    /**
+     * Every plugin's `Workspace.Reclaimed` handler, told once the checkout is
+     * gone: the caller reads the list (the sweep's child with `read`, so it
+     * starts them all; a serving backend with `getContributions()`).
+     */
+    reclaimed: readonly WorkspaceReclaimedHandler[];
   },
 ): Promise<WorktreeRemoval> {
   let removal: WorktreeRemoval = { kind: "absent" };
@@ -126,7 +135,7 @@ export async function reapAttempt(
   // its leftovers are its own backstop's to collect.
   if (checkoutGone) {
     try {
-      await announceWorkspacesReclaimed([id]);
+      await announceWorkspacesReclaimed(opts.reclaimed, [id]);
     } catch (err) {
       derivedFailures.push(String(err));
     }

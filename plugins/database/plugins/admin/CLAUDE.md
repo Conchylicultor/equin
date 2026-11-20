@@ -100,15 +100,19 @@ Two more things that look wrong but are load-bearing:
 - The contributions live in `admin`, not next to the fork job in `database/fork`,
   because `database/fork` imports `shell/notifications` — itself a declaring
   plugin — so hosting them there closes a cycle.
+- **Both are data lists** (`defineServerContribution(name, { data: true })`):
+  a contributor passes a table object (or a name), the entry is the table's
+  name. The build writes every entry down (server-core's
+  `list-entries.generated.ts`) and every host reads them from there — the
+  fork job's child included, which therefore starts none of their ~17
+  contributors. See server-core's CLAUDE.md, "Contribution kinds".
 - `forkDatabase(source, target, exclusions)` takes the set as a **required
-  parameter** instead of reading the registry. `getContributions()` answers `[]`
-  in any process that never booted the server, so a registry read here would let
-  `./equin db fork` silently produce a full ~2 GB copy that looks fine.
-  `forkExclusions(tables, schemas)` (the fork job's read lists) and `forkExclusionsFrom(plugins)`
-  (loaded definitions — what `./equin db fork` reads, in a probe child that
-  loads the plugin graph with no backend running) throw on empty for the same
-  reason. The probe hands the set back as JSON, which is why `ForkExclusions`
-  is pure data and the flag-building lives in `fork-plan`.
+  parameter** instead of reading the lists itself. `forkExclusions()` (the data
+  lists — what the fork job and `./equin db fork`'s probe read) and
+  `forkExclusionsFrom(plugins)` (the code side, for a check or test) throw on
+  an empty set: forking with none silently produces a full ~2 GB copy that
+  looks fine. The probe hands the set back as JSON, which is why
+  `ForkExclusions` is pure data and the flag-building lives in `fork-plan`.
 
 ## Connections and long statements
 

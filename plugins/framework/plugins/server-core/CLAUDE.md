@@ -109,8 +109,9 @@ graph never serves.
 
 ### A job starts only what it needs: the partial start
 
-An `exec` child of a supervised job that declares `reads` (`defineSupervisedJob`)
-starts only its declaring plugin and what it needs, not the whole app:
+An `exec` child of a supervised job (`defineSupervisedJob`, unless it is
+marked `wholeApp`) starts only its declaring plugin and what it needs, not the
+whole app:
 `runExec(ns, body, { start: { root, reads, label, fix } })` →
 `bootPluginGraph({ start })` → `loadStartSet`, over `resolveStartSet`
 (`core/start-set.ts`, pure, each member with the reason it is there):
@@ -119,7 +120,11 @@ starts only its declaring plugin and what it needs, not the whole app:
    `registeringPlugin()` and handed to the child as `--start`), and every
    plugin its `dependsOn` reaches;
 2. each plugin whole — the machine half of every server half;
-3. every contributor of a list the job reads (`reads`, `--reads`);
+3. every contributor of a list the job's body reads with `read(List)` — never
+   declared by hand: the build derives them from those calls
+   (`supervised-job/cli/job-reads.generated.ts`, looked up by the child under
+   the job's name). A data list (below) is not among them: reading it starts
+   nobody;
 4. to a fixpoint, by loading: the provider of every host service its modules
    declare, the handler of every report sink they declare
    (`defineReportSink(id)` / `sinkHandler` — a report emitted with no handler
@@ -137,8 +142,9 @@ is loaded only by a partial start.
 from then on reading a COMPLETE list — a kind without `partial: { reason }` —
 whose contributors in this registry did not all start throws
 `PartialListReadError`, naming the list, the plugins not started, the job and
-the fix (add the list to the job's `reads`, or classify the kind `partial`
-when each entry only matters to its contributor). Not classified means
+the fix (read the list with `read(List)` in the job's body, define the kind
+`data: true` when its entries are plain data, or classify it `partial` when
+each entry only matters to its contributor). Not classified means
 complete: a forgotten declaration is a loud failure, never a silent miss.
 `Kind.startedContributions()` is the one sanctioned partial read ("what do my
 started plugins declare?" — the schema verifier). A partial start skips the
@@ -448,6 +454,24 @@ static options shape what the build does with a kind:
 
 - `partial: { reason }` — a host may run without some contributors (the
   browser-host coverage guard's contributions arm).
+- `data: true` — a **data list**: its entries are plain data (`P extends
+  ListData`, a tsc error otherwise; `project` an entry to its data first — a
+  table to its name, as `ExcludeFromFork` does). The build writes every entry
+  down (`core/list-entries.generated.ts`, from the evaluated barrel records,
+  by codegen's `server-contributors-gen.ts`; an entry that is not plain data
+  fails the build naming the list and plugin; `server-contributors-in-sync`
+  fails on drift), and **every host reads the list from that file**, the full
+  server included — `bootPluginGraph` installs it (`installListEntries`, kept
+  to the host's registry: an entry of a plugin outside the composition is not
+  in its lists) before any module evaluates. So reading a data list starts no
+  contributor and is never partial; a job reads it whole with
+  `getContributions()`. One path, kept equal to the code twice over: the
+  in-sync check, and `assertWrittenListsMatch` after every collect — what the
+  STARTED plugins declare must equal what the build wrote for them, so an
+  entry computed from something only known at run time fails boot loudly
+  rather than being read wrong. A process that boots nothing reads them with
+  `installDeclaredListEntries(namespace)` (`server-core/cli`, `./equin db
+  fork`'s probe). `Kind.from(plugins)` still reads the code side (a check).
 - `companions: true` — opens the kind to **companions**: a contribution passing
   `companion: true` ships wherever the kind's declaring plugin ships (the
   closure engine's owner → contributor hard edge, `plugin-meta/closure`). For
@@ -626,6 +650,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `HttpHandler`
     - `HttpRoutes`
     - `KeyedServerResourceOptions`
+    - `ListData`
     - `LiveStateSnapshotHooks`
     - `LoadedServerPlugin`
     - `LoaderAggregateView`
@@ -682,6 +707,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `StartSetInput`
     - `TableChange`
     - `TableLayoutRequirement`
+    - `WrittenListEntries`
     - `WsData`
     - `WsHandler`
   - Exports (values):
@@ -694,6 +720,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `composedHome`
     - `composedOnly`
     - `composedWebPlugins`
+    - `DATA_ENTRY`
     - `defineDeferredResource`
     - `defineExternalResource`
     - `defineHostService`
@@ -719,6 +746,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `isProcessCrashHandled`
     - `isServerReady`
     - `keptSnapshotValue`
+    - `listEntryJson`
     - `LIVE_STATE_SOCKET_ACCESS`
     - `loadResourceByKey`
     - `loadResourceFresh`
@@ -785,7 +813,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `withNotifyBatch`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
-  - Imported by: 125 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 126 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×28
     - `conversations` ×14
     - `debug` ×14
@@ -794,7 +822,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `database` ×10
     - `network` ×5
     - `reports` ×5
-    - `framework` ×3
+    - `framework` ×4
     - `integrations` ×3
     - `page` ×3
     - `primitives` ×3
@@ -821,12 +849,14 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `framework/server-core` (0 debt)
 - Cli:
   - Exports (values):
+    - `installDeclaredListEntries`
     - `loadDeclaredGraph`
     - `runExec`
 - Test helpers:
   - Core: `@plugins/framework/plugins/server-core/core/testing`
     - `bootPluginGraph` — Load the plugin graph, run `register`, collect contributions, run the `onReadyBlocking` barrier.
     - `clearCollectedContributions` — Forget what was collected — back to the pre-boot state.
+    - `clearListEntries` — Forget the installed list entries.
     - `clearRelationBases` — Back to "not set" (test support: a suite that set bases must not leak them into the next).
     - `declaredHostServiceIds` — Every declared host service's id, sorted — test support (`core/testing`): what a graph whose modules are loaded must provide.
     - `getReadSetIndex` — The whole index as a plain object, each key's tables sorted — every key that ever captured a table, including one a removal emptied (`[]`).

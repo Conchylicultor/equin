@@ -12,6 +12,7 @@ describe("defineSupervisedTask invoke", () => {
       id: "t.plain",
       payload,
       run,
+      partialStart: false,
     }).invoke({
       n: 1,
     });
@@ -29,6 +30,7 @@ describe("defineSupervisedTask invoke", () => {
       id: "t.admitted",
       payload,
       run,
+      partialStart: false,
       admission: "worktree-prepare",
     }).invoke({ n: 1 });
     const at = argv.indexOf("--admit");

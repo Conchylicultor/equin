@@ -8,4 +8,7 @@
 // under `framework/cli/plugins`: it is the legal cross-plugin entry point for a
 // `./equin` verb that needs a booted runtime.
 export { runExec } from "./run-exec";
-export { loadDeclaredGraph } from "./load-declared-graph";
+export {
+  installDeclaredListEntries,
+  loadDeclaredGraph,
+} from "./load-declared-graph";

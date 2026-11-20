@@ -1,6 +1,9 @@
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { declareRuntimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
+import { pluginOfNode } from "@plugins/framework/plugins/plugin-id/core";
 import { loadServerPlugins } from "../core/boot-stages";
+import { installListEntries } from "../core/contributions";
+import { graphNodeOf } from "../core/start-set";
 import type { LoadedServerPlugin } from "../core/types";
 
 // ── What a backend's graph DECLARES, without booting it ─────────────────────
@@ -43,4 +46,29 @@ export async function loadDeclaredGraph(
   const { serverEntries, machineEntries } =
     await import("../bin/active-runtime");
   return loadServerPlugins([...serverEntries, ...machineEntries]);
+}
+
+/**
+ * Install the data lists' entries the build wrote down
+ * (`core/list-entries.generated.ts`), kept to the registry `namespace` boots —
+ * importing NO plugin. A data list (`defineServerContribution(name, { data:
+ * true })`) then reads whole with `Kind.getContributions()`, the way every
+ * booted host reads it: one path. For a process that only needs data lists
+ * (`./equin db fork`'s probe).
+ */
+export async function installDeclaredListEntries(
+  namespace: Namespace,
+): Promise<void> {
+  declareRuntimeNamespace(namespace);
+  const { serverEntries, machineEntries } =
+    await import("../bin/active-runtime");
+  installListEntries(
+    (await import("../core/list-entries.generated")).serverListEntries,
+    new Map(
+      [...serverEntries, ...machineEntries].map((e) => [
+        graphNodeOf(e),
+        pluginOfNode(e.id),
+      ]),
+    ),
+  );
 }

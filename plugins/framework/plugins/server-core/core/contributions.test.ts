@@ -1,11 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import {
+  assertWrittenListsMatch,
   clearCollectedContributions,
+  clearListEntries,
   clearPartialStart,
   collectContributions,
   declarePartialStart,
   defineServerContribution,
+  installListEntries,
   isPartialStart,
+  listEntryJson,
   PartialListReadError,
 } from "./contributions";
 
@@ -144,5 +148,123 @@ describe("the list rule (a partial start)", () => {
       clearCollectedContributions();
     }
     expect(isPartialStart()).toBe(false);
+  });
+});
+
+describe("data lists (`data: true`)", () => {
+  const Rows = defineServerContribution("test.data-rows", {
+    project: (c: { table: { name: string }; reason: string }) => ({
+      table: c.table.name,
+      reason: c.reason,
+    }),
+    data: true,
+  });
+  const written = {
+    "test.data-rows": [
+      { node: "a", entry: { reason: "r1", table: "t1" } },
+      { node: "b#machine", entry: { reason: "r2", table: "t2" } },
+      { node: "outside", entry: { reason: "r3", table: "t3" } },
+    ],
+  };
+  const registry = new Map([
+    ["a", "a"],
+    ["b#machine", "b"],
+  ]);
+  const reset = () => {
+    clearCollectedContributions();
+    clearPartialStart();
+    clearListEntries();
+  };
+
+  test("reads what the build wrote, kept to the registry, before anything is collected", () => {
+    reset();
+    expect(() => Rows.getContributions()).toThrow(/installListEntries/);
+    installListEntries(written, registry);
+    expect(Rows.getContributions()).toEqual([
+      { reason: "r1", table: "t1", _pluginId: "a" },
+      { reason: "r2", table: "t2", _pluginId: "b" },
+    ]);
+    reset();
+  });
+
+  test("is whole in a partial start: the list rule does not apply, nobody needs starting", () => {
+    reset();
+    installListEntries(written, registry);
+    collectContributions([{ id: "a", contributions: [] }]);
+    declarePartialStart({
+      startedFrom: "test",
+      started: 1,
+      total: 2,
+      missingContributors: () => ["b#machine"],
+      fix: () => "",
+    });
+    expect(Rows.getContributions().map((c) => c.table)).toEqual(["t1", "t2"]);
+    reset();
+  });
+
+  test("the boot check passes when the started plugins declare what was written", () => {
+    reset();
+    installListEntries(written, registry);
+    collectContributions([
+      {
+        id: "a",
+        contributions: [Rows({ table: { name: "t1" }, reason: "r1" })],
+      },
+    ]);
+    expect(() => assertWrittenListsMatch(new Set(["a"]))).not.toThrow();
+    reset();
+  });
+
+  test("the boot check fails, naming the entry, when a started plugin declares something else", () => {
+    reset();
+    installListEntries(written, registry);
+    collectContributions([
+      {
+        id: "a",
+        contributions: [
+          Rows({ table: { name: "t1-at-runtime" }, reason: "r1" }),
+        ],
+      },
+    ]);
+    expect(() => assertWrittenListsMatch(new Set(["a"]))).toThrow(
+      /t1-at-runtime/,
+    );
+    reset();
+  });
+
+  test("a contribution whose entry is not plain data throws where it is made (the build evaluates it)", () => {
+    class Table {
+      constructor(readonly name: string) {}
+    }
+    const Raw = defineServerContribution("test.data-raw", {
+      project: (c: { t: Table }) => ({ t: c.t as unknown as string }),
+      data: true,
+    });
+    expect(() => Raw({ t: new Table("x") })).toThrow(/an instance of Table/);
+  });
+
+  test("the boot check compares per graph node: a machine half alone does not expect its server half's entries", () => {
+    reset();
+    installListEntries(written, registry);
+    collectContributions([
+      {
+        id: "b",
+        contributions: [Rows({ table: { name: "t2" }, reason: "r2" })],
+      },
+    ]);
+    expect(() => assertWrittenListsMatch(new Set(["b#machine"]))).not.toThrow();
+    reset();
+  });
+
+  test("an entry that is not plain data is refused, naming where", () => {
+    expect(() => listEntryJson({ a: { b: () => 1 } }, "x")).toThrow(
+      /entry\.a\.b is a function/,
+    );
+    expect(() => listEntryJson({ when: new Date(0) }, "x")).toThrow(
+      /an instance of Date/,
+    );
+    expect(listEntryJson({ b: 1, a: [null, "s", true] }, "x")).toBe(
+      '{"a":[null,"s",true],"b":1}',
+    );
   });
 });

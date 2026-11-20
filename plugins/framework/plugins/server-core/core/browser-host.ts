@@ -143,6 +143,13 @@ export async function bootBrowserHost(
   const ordered = await bootPluginGraph({
     mode: "browser",
     entries: opts.entries,
+    // Not shipped to a worker yet (the design's stage 2 ships the lists to the
+    // page): no browser host's graph reads a data list today, and one that
+    // does throws, naming the list.
+    listEntries: {
+      kind: "not-shipped",
+      reason: "a browser host does not ship the build's list entries yet",
+    },
   });
 
   // No per-plugin check here: the graph is portable by construction — codegen

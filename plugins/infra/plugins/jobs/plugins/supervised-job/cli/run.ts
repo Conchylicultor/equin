@@ -28,15 +28,22 @@ import {
  */
 const run: CliAction<
   [string, string],
-  { namespace: string; admit?: string; start?: string; reads?: string }
+  { namespace: string; admit?: string; start?: string }
 > = async (taskId, payloadJson, opts) => {
   // Validated here, at the process boundary where a string off a command line
   // becomes an identity: the namespace goes on to name a database and a
   // directory, so a malformed one must be loud rather than become a path.
   const namespace = asNamespace(opts.namespace);
-  if (opts.reads !== undefined && opts.start === undefined) {
+  // The lists the job's body reads (its `read(List)` calls), as the build
+  // derived them — loaded only for a partial start, never by a serving path.
+  // A job missing from the table is a build that did not see it: loud.
+  const reads =
+    opts.start === undefined
+      ? undefined
+      : (await import("./job-reads.generated")).jobReads[taskId];
+  if (opts.start !== undefined && reads === undefined) {
     throw new Error(
-      "[supervised-exec] --reads names the lists a partial start reads, and only means something with --start <pluginPath>.",
+      `[supervised-exec] job ${JSON.stringify(taskId)} is not in the build's job-reads table (cli/job-reads.generated.ts): run \`./equin build\`.`,
     );
   }
   const pool =
@@ -49,21 +56,19 @@ const run: CliAction<
       exitCodeFor: supervisedChildExitCode,
       // Given back while the boot only waits for its schema (`runExec`).
       ...(admission === undefined ? {} : { admission }),
-      // The job declared what it reads: start its plugin and what it needs,
-      // not the whole app. A complete list it did not declare throws when
-      // read, naming the job and this fix.
-      ...(opts.start === undefined
+      // Start the job's plugin and what it needs, not the whole app: the
+      // contributors of each list its body reads, as the build derived them.
+      // A complete list read anyway throws, naming the job and this fix.
+      ...(opts.start === undefined || reads === undefined
         ? {}
         : {
             start: {
               root: opts.start,
-              reads:
-                opts.reads === undefined || opts.reads === ""
-                  ? []
-                  : opts.reads.split(","),
+              reads,
               label: `job ${taskId} (plugin ${opts.start})`,
               fix: (kind: string) =>
-                `add the "${kind}" list to the \`reads\` of job ${taskId} (\`defineSupervisedJob\`), or — if each entry only matters to the plugin that contributed it — declare the list \`partial: { reason }\` (\`defineServerContribution\`).`,
+                `read the "${kind}" list in the run body of job ${taskId} with \`read(List)\` (the build derives the lists a job's child starts from those calls), ` +
+                "or — if its entries are plain data — define it `data: true`, or — if each entry only matters to the plugin that contributed it — `partial: { reason }` (`defineServerContribution`).",
             },
           }),
     });

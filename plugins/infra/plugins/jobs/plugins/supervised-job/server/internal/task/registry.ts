@@ -92,11 +92,12 @@ export interface DefineSupervisedTaskSpec<P extends z.ZodType> {
   /**
    * Start the child with only what the task needs: the plugin that registers
    * it (read at registration, so it cannot name another), what that plugin
-   * imports, and the contributors of `reads` — the contributed lists (debug
-   * names) the body reads whole. Every other complete list throws when read
-   * (server-core's list rule). Absent, the child starts the whole app.
+   * imports, and the contributors of the lists the build derived the job's
+   * body reads (`cli/job-reads.generated.ts`, looked up by the child under the
+   * task id). Every other complete list throws when read (server-core's list
+   * rule). False: the child starts the whole app.
    */
-  start?: { readonly reads: readonly string[] };
+  partialStart: boolean;
 }
 
 const tasks = new Map<string, RegisteredSupervisedTask>();
@@ -129,22 +130,16 @@ export function defineSupervisedTask<P extends z.ZodType>(
     );
   }
   // The plugin whose `register` registered this task — its child's starting
-  // point (`spec.start`). Set at registration, which every invoke follows.
+  // point (`spec.partialStart`). Set at registration, which every invoke follows.
   let declaredBy: string | null = null;
   const startArgs = (): string[] => {
-    if (spec.start === undefined) return [];
+    if (!spec.partialStart) return [];
     if (declaredBy === null) {
       throw new Error(
         `[supervised-task] ${spec.id}: invoked before its plugin registered it, so its child's starting plugin is unknown.`,
       );
     }
-    return [
-      "--start",
-      declaredBy,
-      ...(spec.start.reads.length === 0
-        ? []
-        : ["--reads", spec.start.reads.join(",")]),
-    ];
+    return ["--start", declaredBy];
   };
   const task: SupervisedTask<P> = {
     id: spec.id,
@@ -188,7 +183,7 @@ export function defineSupervisedTask<P extends z.ZodType>(
       }
       tasks.set(spec.id, task);
       const plugin = registeringPlugin();
-      if (spec.start !== undefined && plugin === null) {
+      if (spec.partialStart && plugin === null) {
         throw new Error(
           `[supervised-task] ${spec.id}: registered outside a plugin's register phase, so its child's starting plugin is unknown.`,
         );

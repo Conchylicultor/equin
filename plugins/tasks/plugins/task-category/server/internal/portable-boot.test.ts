@@ -82,6 +82,7 @@ describe.if(IN_CHILD)("task-category's server closure boots portably", () => {
   beforeAll(async () => {
     await bootPluginGraph({
       mode: "exec",
+      listEntries: { kind: "not-shipped", reason: "a test boot" },
       entries: await withPortableHost(registryClosureOf([SUBJECT])),
     });
   });

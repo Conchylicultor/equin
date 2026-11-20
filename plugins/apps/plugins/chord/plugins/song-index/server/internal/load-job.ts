@@ -41,6 +41,11 @@ export const songIndexLoadJob = defineSupervisedJob({
   input: z.object({}),
   channel: songIndexLog,
   lock: () => "chord.song-index.load",
+  // Debt: its child starts every plugin.
+  wholeApp: {
+    reason:
+      "not moved yet: what this body reads through other plugins’ code has not been checked",
+  },
   async run(_input, { log, exec }) {
     const target = currentIndexTarget();
     if (isIndexCurrent(await readIndexState(), target)) {

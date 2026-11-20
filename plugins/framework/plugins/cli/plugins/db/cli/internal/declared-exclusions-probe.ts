@@ -1,14 +1,15 @@
 import { writeFileSync } from "node:fs";
 import { readNamespaceArgv } from "@plugins/infra/plugins/runtime-identity/core";
-import { loadDeclaredGraph } from "@plugins/framework/plugins/server-core/cli";
-import { forkExclusionsFrom } from "@plugins/database/plugins/admin/server";
+import { installDeclaredListEntries } from "@plugins/framework/plugins/server-core/cli";
+import { forkExclusions } from "@plugins/database/plugins/admin/server";
 
-// Spawned by `../fork.ts` (never imported): loads the plugin graph of
-// `--namespace <ns>` and writes the fork exclusions it DECLARES, as JSON, to
-// `--out <file>`.
+// Spawned by `../fork.ts` (never imported): reads the fork exclusions the
+// checkout of `--namespace <ns>` declares — two data lists, so from what the
+// build wrote down for that namespace's registry, as every host reads them,
+// with no plugin loaded — and writes them, as JSON, to `--out <file>`.
 //
-// A process of its own because loading the graph means declaring a runtime
-// namespace (modules resolve namespace-scoped paths at module eval), and the
+// A process of its own because reading the registry means declaring a runtime
+// namespace (it selects the registry), and the
 // `db fork` process must not have one: with a namespace, its own database
 // connections would claim to report their ends through sinks nothing in a CLI
 // drains (`database/connection`'s `hasRuntimeNamespace()` reads).
@@ -25,6 +26,7 @@ if (namespace === undefined || out === undefined) {
     "declared-exclusions-probe: usage: --namespace <ns> --out <file> (spawned by `./equin db fork`).",
   );
 }
-const exclusions = forkExclusionsFrom(await loadDeclaredGraph(namespace));
+await installDeclaredListEntries(namespace);
+const exclusions = forkExclusions();
 writeFileSync(out, JSON.stringify(exclusions));
 process.exit(0);

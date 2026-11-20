@@ -303,6 +303,11 @@ export const ugAlignJob = defineSupervisedJob({
   input: UgAlignInputSchema,
   channel: ugAlignmentLog,
   lock: (input) => input.songId,
+  // Debt: its child starts every plugin.
+  wholeApp: {
+    reason:
+      "not moved yet: what this body reads through other plugins’ code has not been checked",
+  },
   async run({ songId }, { log, exec }) {
     const work = await readWork(songId);
     switch (work.kind) {

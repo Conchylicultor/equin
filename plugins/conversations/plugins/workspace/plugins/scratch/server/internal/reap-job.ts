@@ -4,7 +4,10 @@ import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { attemptEndings } from "@plugins/tasks/plugins/tasks-core/server";
-import { announceWorkspacesReclaimed } from "@plugins/conversations/plugins/workspace/server";
+import {
+  announceWorkspacesReclaimed,
+  WorkspaceReclaimed,
+} from "@plugins/conversations/plugins/workspace/server";
 import { scratchWorkspacesDir } from "../../data-dirs";
 import { decideScratchReap } from "./reap-policy";
 
@@ -62,7 +65,10 @@ export const scratchReapJob = defineJob({
       // is the attempt id). The deletions are done either way, so a retry
       // would not announce them again — a handler that throws fails the run
       // loudly, and its leftovers are its own backstop's.
-      await announceWorkspacesReclaimed(reclaimed);
+      await announceWorkspacesReclaimed(
+        WorkspaceReclaimed.getContributions(),
+        reclaimed,
+      );
     }
   },
 });

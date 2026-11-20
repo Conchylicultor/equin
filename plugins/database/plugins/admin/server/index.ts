@@ -27,9 +27,9 @@ export type { ForkOutcome } from "./internal/fork";
 export { describeUndeclaredSchema, ForkPlanError } from "./internal/fork-plan";
 export type { ForkPlan, UndeclaredSchema } from "./internal/fork-plan";
 // A plugin declares "don't fork my data" for its own table / schema (see
-// ./internal/fork-exclusion for the trade this makes); `forkExclusions` (a
-// booted backend) / `forkExclusionsFrom` (loaded definitions, no backend) is
-// the declared set every `forkDatabase` caller must pass.
+// ./internal/fork-exclusion for the trade this makes); `forkExclusions` (the
+// data lists, as the build wrote them) is the declared set every
+// `forkDatabase` caller passes; `forkExclusionsFrom` reads the code side.
 export {
   ExcludeFromFork,
   ExcludeSchemaDataFromFork,

@@ -43,7 +43,7 @@ export { takeRunErrorPath, writeRunErrorSync } from "./internal/run-error";
  */
 export default defineCliCommand<
   [string, string],
-  { namespace: string; admit?: string; start?: string; reads?: string }
+  { namespace: string; admit?: string; start?: string }
 >({
   name: SUPERVISED_EXEC_COMMAND,
   description:
@@ -83,19 +83,14 @@ export default defineCliCommand<
         "A host-admission pool to take a slot of before booting, held until exit",
     },
     {
-      // Appended by the job's invocation when it declared `reads`
-      // (`defineSupervisedJob`): the child starts only this plugin and what
-      // it needs (server-core's `resolveStartSet`), not the whole app.
+      // Appended by the job's invocation unless it starts the whole app
+      // (`defineSupervisedJob`'s `wholeApp`): the child starts only this
+      // plugin and what it needs (server-core's `resolveStartSet`) — with the
+      // contributors of the lists the build derived its body reads
+      // (`./job-reads.generated.ts`).
       flags: "--start <pluginPath>",
       description:
         "Start only this plugin and what it needs, not the whole app (the job's declaring plugin)",
-    },
-    {
-      // With `--start`: the contributed lists (debug names, comma-separated)
-      // the job reads whole, so their contributors start too.
-      flags: "--reads <kinds>",
-      description:
-        "With --start: the contributed lists the job reads whole (comma-separated debug names)",
     },
   ],
   detachable: true,
