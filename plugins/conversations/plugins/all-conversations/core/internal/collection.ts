@@ -58,7 +58,7 @@ const CONVERSATION_LIST_OWN_FIELDS = {
 
 /** What a row carries that no list shows. */
 const CONVERSATION_LIST_CARRY = {
-  pick: ["id", "statusUnverifiedSince"],
+  pick: ["id", "statusUnverifiedSince", "titleByUser"],
   fields: { taskId: textField() },
 } as const;
 

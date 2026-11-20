@@ -62,6 +62,7 @@ describe("conversation list fields", () => {
       ...LIST_FIELD_IDS,
       "id",
       "statusUnverifiedSince",
+      "titleByUser",
       "taskId",
     ]);
     expect(Object.keys(allConversations.exposes ?? {})).toEqual([

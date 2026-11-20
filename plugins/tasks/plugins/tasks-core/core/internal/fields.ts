@@ -132,6 +132,10 @@ export const conversationFields = {
   // Labels, the title flag and each enum's options are what every list of
   // conversations shows (the fields spelling: `liveCollection({ from, pick })`).
   title: nullable(textField({ label: "Title", primary: true })),
+  // Whether the user named the conversation by hand (conversations/rename).
+  // Such a title is never replaced by its task's generated one, and a list
+  // that names rows by their task names this row by its own title.
+  titleByUser: boolField(),
   // Narrowed text columns: the DDL stays plain `text`, and the field's own
   // schema is what decodes it (the `text` storage arm), so the union in the
   // value type is derived rather than asserted.

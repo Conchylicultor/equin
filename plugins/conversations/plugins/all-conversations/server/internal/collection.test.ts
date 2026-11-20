@@ -133,6 +133,8 @@ describe("conversation lists — routes", () => {
         // when a reconcile cannot check the row, and when it next can.
         "status_unverified_since",
         "title",
+        // Whether the user named it: the list names such a row by its title.
+        "title_by_user",
         "updated_at",
       ].sort(),
     );

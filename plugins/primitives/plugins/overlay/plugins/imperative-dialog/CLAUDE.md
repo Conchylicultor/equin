@@ -109,6 +109,7 @@ owns only the content + a `DialogTitle` (for a11y). Never wrap your own
     - `apps/events/sources`
     - `apps/file-explorer/browser`
     - `apps/sonata/library`
+    - `conversations/rename`
     - `primitives/overlay/imperative-dialog/confirm`
     - `ui/theme-engine/theme-gallery`
 - Sub-plugins:

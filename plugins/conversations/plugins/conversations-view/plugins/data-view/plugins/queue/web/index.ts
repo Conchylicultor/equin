@@ -11,6 +11,7 @@ import {
   AddToQueueAction,
   CloseAction,
 } from "./components/queue-item-actions";
+import { RenameConversationAction } from "@plugins/conversations/plugins/rename/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
@@ -32,6 +33,7 @@ export default {
     QueueItemActions({ id: "step-down", component: StepDownAction }),
     QueueItemActions({ id: "demote", component: DemoteAction }),
     QueueItemActions({ id: "add-to-queue", component: AddToQueueAction }),
+    QueueItemActions({ id: "rename", component: RenameConversationAction }),
     QueueItemActions({ id: "close", component: CloseAction }),
   ],
   slots: { queueActions: QueueItemActions },

@@ -5,6 +5,7 @@ import {
   HistoryItemActions,
   CloseConvAction,
 } from "./components/sidebar-history";
+import { RenameConversationAction } from "@plugins/conversations/plugins/rename/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
@@ -18,6 +19,7 @@ export default {
       views: ["list"],
       component: HistorySource,
     }),
+    HistoryItemActions({ id: "rename", component: RenameConversationAction }),
     HistoryItemActions({ id: "close", component: CloseConvAction }),
   ],
   slots: { historyActions: HistoryItemActions },

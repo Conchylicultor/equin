@@ -227,6 +227,8 @@ export {
   insertConversationOnConflictDoNothing,
   updateConversation,
   updateConversationsTitleForTask,
+  setConversationTitleByUser,
+  UnknownConversationError,
   deleteConversationRow,
   moveConversationToAttempt,
   markConversationGone,

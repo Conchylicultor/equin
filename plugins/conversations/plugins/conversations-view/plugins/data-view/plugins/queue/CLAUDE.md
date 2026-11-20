@@ -51,13 +51,15 @@ turn) — it waits on its agents, not on you; its dot stays amber.
     - `queue-actions` "step-down" → `StepDownAction`
     - `queue-actions` "demote" → `DemoteAction`
     - `queue-actions` "add-to-queue" → `AddToQueueAction`
+    - `queue-actions` "rename" → `RenameConversationAction`
     - `queue-actions` "close" → `CloseAction`
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×8
     - `conversations/conversations-view/data-view` ×4
     - `primitives/data-view` ×4
     - `conversations/conversations-view/queue` ×2
     - `network/live/live-state` ×2
+    - `conversations/rename.RenameConversationAction`
     - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`
     - `primitives/icon-button.IconButton`

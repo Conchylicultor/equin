@@ -9,6 +9,7 @@ const conv = {
   kind: "user" as const,
   createdAt: new Date(),
   taskTitle: "Add a conversation list title setting",
+  titleByUser: false,
 };
 const none = { shortTitle: null, sourceTitle: null };
 const fresh = {
@@ -67,6 +68,16 @@ describe("resolveListTitle", () => {
       label: conv.taskTitle,
       full: conv.taskTitle,
     });
+  });
+
+  it("a conversation the user renamed shows its own title in every mode", () => {
+    const renamed = { ...conv, titleByUser: true };
+    for (const mode of ["conversation", "task", "short"]) {
+      expect(resolveListTitle(mode, renamed, fresh)).toEqual({
+        label: conv.title,
+        full: conv.title,
+      });
+    }
   });
 
   it("throws on an unknown mode", () => {

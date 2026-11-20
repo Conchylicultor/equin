@@ -2707,6 +2707,10 @@
       "name": "@equin/plugin-conversations-recover",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/rename": {
+      "name": "@equin/plugin-conversations-rename",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/runtime-catalog": {
       "name": "@equin/plugin-conversations-runtime-catalog",
       "version": "0.0.1",
@@ -9716,6 +9720,8 @@
     "@equin/plugin-conversations-question-relay": ["@equin/plugin-conversations-question-relay@workspace:plugins/conversations/plugins/question-relay"],
 
     "@equin/plugin-conversations-recover": ["@equin/plugin-conversations-recover@workspace:plugins/conversations/plugins/recover"],
+
+    "@equin/plugin-conversations-rename": ["@equin/plugin-conversations-rename@workspace:plugins/conversations/plugins/rename"],
 
     "@equin/plugin-conversations-runtime-catalog": ["@equin/plugin-conversations-runtime-catalog@workspace:plugins/conversations/plugins/runtime-catalog"],
 

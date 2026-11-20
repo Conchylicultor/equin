@@ -14,7 +14,10 @@ export type ShortTitleRow = {
 };
 
 /**
- * What a conversation-list row is named by, per the `titleMode` setting.
+ * What a conversation-list row is named by, per the `titleMode` setting —
+ * except a conversation the user named by hand (`titleByUser`,
+ * conversations/rename), which is named by that title in every mode: a name
+ * the user chose is never replaced by its task's.
  *
  * `short` takes the short title only while it was made from the task's CURRENT
  * title (`sourceTitle === conv.taskTitle`): a stale one — the task was renamed
@@ -26,9 +29,13 @@ export type ShortTitleRow = {
  */
 export function resolveListTitle(
   mode: string,
-  conv: ConversationItemConv & { taskTitle: string },
+  conv: ConversationItemConv & { taskTitle: string; titleByUser: boolean },
   short: ShortTitleRow,
 ): ConvTitleOverride {
+  if (conv.titleByUser) {
+    const title = conversationTitle(conv);
+    return { label: title, full: title };
+  }
   switch (mode) {
     case "conversation": {
       const title = conversationTitle(conv);

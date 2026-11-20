@@ -327,7 +327,8 @@ export async function updateConversation(
 // Copies a task's freshly generated title onto its conversations that still
 // carry no title or the one it replaced (`replacing`: the placeholder or
 // fallback the task was filed with, which `insertConversation` copied onto them).
-// A conversation titled anything else keeps its title.
+// A conversation titled anything else keeps its title, and one the user named
+// (`titleByUser`) always does.
 export async function updateConversationsTitleForTask(
   taskId: string,
   title: string,
@@ -340,6 +341,7 @@ export async function updateConversationsTitleForTask(
     .where(
       and(
         eq(_attempts.taskId, taskId),
+        eq(_conversations.titleByUser, false),
         or(
           isNull(_conversations.title),
           inArray(_conversations.title, [...replacing]),
@@ -358,6 +360,28 @@ export async function updateConversationsTitleForTask(
         rows.map((r) => r.id),
       ),
     );
+}
+
+// Names a conversation by hand (conversations/rename): the title, marked as the
+// user's so no generated title replaces it. Throws on an unknown id.
+export async function setConversationTitleByUser(
+  id: string,
+  title: string,
+): Promise<void> {
+  const rows = await db
+    .update(_conversations)
+    .set({ title, titleByUser: true })
+    .where(eq(_conversations.id, id))
+    .returning({ id: _conversations.id });
+  if (rows.length === 0) throw new UnknownConversationError(id);
+}
+
+/** A write named a conversation that does not exist. */
+export class UnknownConversationError extends Error {
+  constructor(readonly conversationId: string) {
+    super(`Unknown conversation "${conversationId}"`);
+    this.name = "UnknownConversationError";
+  }
 }
 
 // Re-points a conversation at another attempt. Both tasks' derived statuses may

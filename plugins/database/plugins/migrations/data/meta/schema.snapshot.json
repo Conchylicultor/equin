@@ -1,6 +1,6 @@
 {
-  "id": "a00fe99c-4c11-450d-a7e0-2de76b7bbc9d",
-  "prevId": "dca84999-6b9e-4696-9508-524f8eef6055",
+  "id": "d795b926-da39-4ba5-8240-f52e065ea7ad",
+  "prevId": "a00fe99c-4c11-450d-a7e0-2de76b7bbc9d",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -17966,6 +17966,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "title_by_user": {
+          "name": "title_by_user",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "status": {
           "name": "status",

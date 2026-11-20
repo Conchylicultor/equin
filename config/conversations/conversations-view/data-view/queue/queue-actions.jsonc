@@ -1,4 +1,4 @@
-// @hash 01e08988b4ba
+// @hash ac2eb2df1441
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -10,7 +10,7 @@
   // The conversation sidebar is a narrow column and these rows already carry a
   // title, chips and a status dot, so only Pin — the action a user reaches for
   // repeatedly while triaging the queue — keeps an inline icon. Move to (whose
-  // section menu opens from its row in the panel), the queue moves and Close
+  // section menu opens from its row in the panel), the queue moves, Rename and Close
   // fold behind the row's single `⋯`. This split is a judgement about THIS
   // surface's width; it is authored, never inferred.
   "items": [
@@ -24,6 +24,7 @@
         "conversations.conversations-view.data-view.queue:step-down",
         "conversations.conversations-view.data-view.queue:demote",
         "conversations.conversations-view.data-view.queue:add-to-queue",
+        "conversations.conversations-view.data-view.queue:rename",
         "conversations.conversations-view.data-view.queue:close"
       ]
     }

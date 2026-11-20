@@ -223,6 +223,7 @@ const conversationsEntity = defineEntity(
         id: false,
         attemptId: false,
         title: true,
+        titleByUser: false,
         model: true,
         status: { into: ["working", "done"], outOf: ["working"] },
         runtime: false,
@@ -256,6 +257,7 @@ const conversationsEntity = defineEntity(
       createdAt: { default: defaultNow() },
       updatedAt: { default: defaultNow() },
       closeRequested: { default: false },
+      titleByUser: { default: false },
     },
     // attempts_v / tasks_v derive status via per-attempt correlated subqueries on
     // conversations.attempt_id, several of them filtered by status (max_ended_at,

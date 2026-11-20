@@ -605,6 +605,7 @@ const CONVERSATION_QUEUE_CARRY = {
     "hibernatedAt",
     "resumingSince",
     "lastViewedAt",
+    "titleByUser",
   ],
   fields: { taskId: textField(), active: boolField() },
 } as const;

@@ -10,12 +10,14 @@
   - Slot contributors: `history-actions` ← `conversations.conversations-view.data-view.history`
   - Contributes:
     - `SidebarSources` "History" → `HistorySource`
+    - `history-actions` "rename" → `RenameConversationAction`
     - `history-actions` "close" → `CloseConvAction`
   - Uses:
     - `conversations/conversations-view/data-view.ConversationSidebarProps`
     - `conversations/conversations-view/data-view.SIDEBAR_VIEW`
     - `conversations/conversations-view/data-view.SidebarConversationItem`
     - `conversations/conversations-view/data-view.SidebarSources`
+    - `conversations/rename.RenameConversationAction`
     - `primitives/data-view.defineItemActions`
     - `primitives/data-view.liveDataSource`
     - `primitives/icon-button.IconButton`

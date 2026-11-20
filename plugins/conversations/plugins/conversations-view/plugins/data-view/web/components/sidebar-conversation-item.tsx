@@ -28,13 +28,15 @@ import { conversationRowAnchor } from "../../core";
 type SidebarConv = ConversationItemConv & {
   taskId: string;
   taskTitle: string;
+  titleByUser: boolean;
   updatedAt: Date;
   $columns: ContributedColumns;
 };
 
 /**
  * One row of the conversations list (every source's `renderRow`), named per the
- * `titleMode` setting. Only this list reads the setting — chips and every other
+ * `titleMode` setting (one the user renamed always by its own title). Only
+ * this list reads the setting — chips and every other
  * surface keep the conversation title.
  *
  * `useConfig` (not `useConfigResult`): every mode's label is a true name for the

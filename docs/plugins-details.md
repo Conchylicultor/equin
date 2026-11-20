@@ -17921,6 +17921,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Endpoint callers:
       - `close`
       - `compaction-context`
+      - `rename`
       - `stop-gate`
       - `transcript-api`
   - Exemptions:
@@ -23082,12 +23083,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Slot contributors: `history-actions` ← `conversations.conversations-view.data-view.history`
                 - Contributes:
                   - `SidebarSources` "History" → `HistorySource`
+                  - `history-actions` "rename" → `RenameConversationAction`
                   - `history-actions` "close" → `CloseConvAction`
                 - Uses:
                   - `conversations/conversations-view/data-view.ConversationSidebarProps`
                   - `conversations/conversations-view/data-view.SIDEBAR_VIEW`
                   - `conversations/conversations-view/data-view.SidebarConversationItem`
                   - `conversations/conversations-view/data-view.SidebarSources`
+                  - `conversations/rename.RenameConversationAction`
                   - `primitives/data-view.defineItemActions`
                   - `primitives/data-view.liveDataSource`
                   - `primitives/icon-button.IconButton`
@@ -23103,13 +23106,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `queue-actions` "step-down" → `StepDownAction`
                   - `queue-actions` "demote" → `DemoteAction`
                   - `queue-actions` "add-to-queue" → `AddToQueueAction`
+                  - `queue-actions` "rename" → `RenameConversationAction`
                   - `queue-actions` "close" → `CloseAction`
-                - Uses: 24 symbols — full list in [`plugins/conversations/plugins/conversations-view/plugins/data-view/plugins/queue/REFERENCE.md`](../plugins/conversations/plugins/conversations-view/plugins/data-view/plugins/queue/REFERENCE.md)
+                - Uses: 25 symbols — full list in [`plugins/conversations/plugins/conversations-view/plugins/data-view/plugins/queue/REFERENCE.md`](../plugins/conversations/plugins/conversations-view/plugins/data-view/plugins/queue/REFERENCE.md)
                   - `primitives/css/ui-kit` ×8
                   - `conversations/conversations-view/data-view` ×4
                   - `primitives/data-view` ×4
                   - `conversations/conversations-view/queue` ×2
                   - `network/live/live-state` ×2
+                  - `conversations/rename.RenameConversationAction`
                   - `infra/endpoints.useFetchEndpoint`
                   - `network/live.useLive`
                   - `primitives/icon-button.IconButton`
@@ -23778,6 +23783,39 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `restoreBatch`
           - `RestoreBatchBodySchema`
+    - **`rename`** — Rename a conversation by hand: RenameConversationAction, the item action a conversation list contributes to its rows (the sidebar's Queue and History, in the row's ⋯ menu), opening a dialog that writes the conversation's own title as the user's. Renaming a conversation, every host's half: PUT /api/conversations/:id/title writes the conversation's own title and marks it as the user's (titleByUser), so no generated title replaces it and the conversation lists name the row by it whatever their title setting.
+      - Web:
+        - Uses:
+          - `infra/endpoints.EndpointError`
+          - `infra/endpoints.getEndpointErrorMessage`
+          - `infra/endpoints.useEndpointMutation`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.Button`
+          - `primitives/css/ui-kit.DialogTitle`
+          - `primitives/css/ui-kit.Input`
+          - `primitives/icon-button.IconButton`
+          - `primitives/kept-state.defineKept`
+          - `primitives/kept-state.useKept`
+          - `primitives/overlay/imperative-dialog.useOpenDialog`
+        - Exports (values): `RenameConversationAction`
+      - Server:
+        - Uses:
+          - `infra/endpoints.HttpError`
+          - `infra/endpoints.implement`
+          - `tasks/tasks-core.setConversationTitleByUser`
+          - `tasks/tasks-core.UnknownConversationError`
+        - Routes: `PUT /api/conversations/:id/title`
+      - Core:
+        - Uses: `infra/endpoints.defineEndpoint`
+        - Exports (values):
+          - `CONVERSATION_TITLE_MAX`
+          - `renameConversation`
+      - Cross-plugin:
+        - Imported by:
+          - `conversations/conversations-view/data-view/history`
+          - `conversations/conversations-view/data-view/queue`
     - **`runtime-catalog`**
       - Cross-plugin:
         - Imported by:
@@ -37594,9 +37632,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 280 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 281 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×86
-          - `conversations` ×36
+          - `conversations` ×37
           - `infra` ×23
           - `debug` ×21
           - `tasks` ×21
@@ -51789,10 +51827,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 187 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+            - Imported by: 188 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
               - `apps` ×52
               - `primitives` ×33
-              - `conversations` ×27
+              - `conversations` ×28
               - `debug` ×18
               - `page` ×11
               - `tasks` ×9
@@ -52480,9 +52518,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 460 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 461 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×111
-              - `conversations` ×80
+              - `conversations` ×81
               - `primitives` ×55
               - `debug` ×39
               - `ui` ×32
@@ -52715,9 +52753,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 439 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 440 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×113
-              - `conversations` ×84
+              - `conversations` ×85
               - `primitives` ×48
               - `debug` ×39
               - `page` ×25
@@ -53044,10 +53082,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 484 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 485 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `apps` ×114
               - `primitives` ×114
-              - `conversations` ×55
+              - `conversations` ×56
               - `page` ×27
               - `debug` ×25
               - `ui` ×22
@@ -55805,9 +55843,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 143 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 144 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×47
-          - `conversations` ×23
+          - `conversations` ×24
           - `primitives` ×23
           - `tasks` ×9
           - `page` ×7
@@ -55944,10 +55982,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `writeDraft`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/color-palette --input`
-        - Imported by: 130 plugins — full list in [`plugins/primitives/plugins/kept-state/REFERENCE.md`](../plugins/primitives/plugins/kept-state/REFERENCE.md)
+        - Imported by: 131 plugins — full list in [`plugins/primitives/plugins/kept-state/REFERENCE.md`](../plugins/primitives/plugins/kept-state/REFERENCE.md)
           - `apps` ×38
           - `primitives` ×27
-          - `conversations` ×12
+          - `conversations` ×13
           - `fields` ×11
           - `page` ×9
           - `ui` ×5
@@ -57365,6 +57403,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/events/sources`
               - `apps/file-explorer/browser`
               - `apps/sonata/library`
+              - `conversations/rename`
               - `primitives/overlay/imperative-dialog/confirm`
               - `ui/theme-engine/theme-gallery`
           - Plugins:
@@ -66429,6 +66468,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `removeTaskDependency`
           - `runtimeOfConversationLookup`
           - `setConversationHibernated`
+          - `setConversationTitleByUser`
           - `setMandate`
           - `taskAttachments`
           - `taskCreated`
@@ -66447,6 +66487,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasksView`
           - `taskTitleChanged`
           - `touchConversationViewed`
+          - `UnknownConversationError`
           - `updateConversation`
           - `updateConversationsTitleForTask`
           - `updateTask`
@@ -66635,8 +66676,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TRAILER_LOG_FORMAT`
           - `UNATTRIBUTED_TRAILER_KEY`
       - Cross-plugin:
-        - Imported by: 130 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
-          - `conversations` ×52
+        - Imported by: 131 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `conversations` ×53
           - `tasks` ×41
           - `debug` ×6
           - `active-data` ×5
@@ -66864,9 +66905,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedSprites`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 607 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 608 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×157
-          - `conversations` ×123
+          - `conversations` ×124
           - `primitives` ×54
           - `page` ×52
           - `fields` ×41

@@ -375,6 +375,7 @@ export const browserHost = {
     "conversations.prompt-snippets",
     "conversations.question-relay",
     "conversations.recover",
+    "conversations.rename",
     "conversations.runtime-sdk",
     "conversations.session-chain",
     "conversations.summary",

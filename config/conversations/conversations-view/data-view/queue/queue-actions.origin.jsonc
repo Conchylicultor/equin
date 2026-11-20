@@ -1,4 +1,4 @@
-// @hash 01e08988b4ba
+// @hash ac2eb2df1441
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -13,6 +13,7 @@
     "conversations.conversations-view.data-view.queue:step-down",
     "conversations.conversations-view.data-view.queue:demote",
     "conversations.conversations-view.data-view.queue:add-to-queue",
+    "conversations.conversations-view.data-view.queue:rename",
     "conversations.conversations-view.data-view.queue:close"
   ]
 }

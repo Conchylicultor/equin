@@ -1,4 +1,4 @@
-// @hash d66df1640334
+// @hash 25d3e9f2646e
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -7,7 +7,14 @@
 //   Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
 //   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
 {
+  // Close stays inline (the History row's one frequent action); Rename, an
+  // occasional one, folds behind the row's `⋯` like the Queue's.
   "items": [
-    "conversations.conversations-view.data-view.history:close"
+    "conversations.conversations-view.data-view.history:close",
+    {
+      "type": "overflow",
+      "id": "row-overflow",
+      "items": ["conversations.conversations-view.data-view.history:rename"]
+    }
   ]
 }
