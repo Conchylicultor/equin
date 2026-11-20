@@ -116,7 +116,8 @@ function createCtx(onWait?: (name: string) => void): {
         opts: Parameters<LoopCtx["waitFor"]>[1],
       ): Promise<T | null> => {
         // A run's end must be re-read once the wait is armed (`settled`).
-        if (!("recheck" in opts.settled)) throw new Error("wait without recheck");
+        if (!("recheck" in opts.settled))
+          throw new Error("wait without recheck");
         const name = opts.name ?? "";
         waits.push(name);
         onWait?.(name);
