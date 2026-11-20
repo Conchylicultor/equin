@@ -180,6 +180,7 @@ export type ExemptableRuleId =
   | "report-sink/collect-through-companion"
   | "report-sink/collector-from-matches"
   | "report-sink/no-direct-sink-register"
+  | "report-sink/sink-id-matches-declaration"
   | "resize-observer-safety/no-raw-resize-observer"
   | "resource-runtime:compiled-routes"
   | "route-teardown-safety/no-unroute"

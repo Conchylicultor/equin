@@ -26,6 +26,17 @@ exec child skips `onReady`, so a handler registered there never drained a
 supervised job's child. The `report-sink/no-direct-sink-register` lint
 (type-aware, outside `web/`) enforces it.
 
+**A sink's id is its declaration.** `defineReportSink(id)` / `defineRequestSink(id)`
+take `"<plugin path>:<binding>"` — the plugin the file lies in and the `const`
+the call initializes (`database/plugins/connection:queryDeadlineSink`). It keys
+the sink's handler in the build's table (`contributors.generated.ts`, as
+`sink:<id>`), which a partial start (a job process) reads to start the handler
+of every sink its modules declare; a copied id would merge two sinks there. The
+`report-sink/sink-id-matches-declaration` lint (autofixed) requires the literal
+to match its declaration; the `report-sink:unique-sink-ids` check fails when two
+declarations share one (the same binding in two files of a plugin) — a
+whole-repo fact the per-file, incrementally cached lint cannot see.
+
 **A browser collector of ANOTHER plugin's sink is a companion, never a
 `Core.Root` that calls `register`.** It is
 `ReportSinks.Collector({ from: "<producer id>", collect: drain(sink, handler),
