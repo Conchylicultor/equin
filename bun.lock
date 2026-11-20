@@ -6687,6 +6687,10 @@
       "name": "@equin/plugin-primitives-dom-tree-focus",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/dom/plugins/web-locks": {
+      "name": "@equin/plugin-primitives-dom-web-locks",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/dom/plugins/web-storage": {
       "name": "@equin/plugin-primitives-dom-web-storage",
       "version": "0.0.1",
@@ -11550,6 +11554,8 @@
     "@equin/plugin-primitives-dom-static-render": ["@equin/plugin-primitives-dom-static-render@workspace:plugins/primitives/plugins/dom/plugins/static-render"],
 
     "@equin/plugin-primitives-dom-tree-focus": ["@equin/plugin-primitives-dom-tree-focus@workspace:plugins/primitives/plugins/dom/plugins/tree-focus"],
+
+    "@equin/plugin-primitives-dom-web-locks": ["@equin/plugin-primitives-dom-web-locks@workspace:plugins/primitives/plugins/dom/plugins/web-locks"],
 
     "@equin/plugin-primitives-dom-web-storage": ["@equin/plugin-primitives-dom-web-storage@workspace:plugins/primitives/plugins/dom/plugins/web-storage"],
 

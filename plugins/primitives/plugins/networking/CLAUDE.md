@@ -322,6 +322,7 @@ built on them — see
     - `endpoints/no-raw-web-fetch` — `web` (sanctioned)
     - `networking/no-request-guard-capability` — `web/use-reconnecting-ws.ts`, `web/shared-websocket.ts` (sanctioned)
     - `dom-access-safety/no-module-scope-dom` — `web/shared-ws.worker.ts` (sanctioned)
+    - `web-locks/no-raw-navigator-locks` — `web/shared-ws.worker.ts` (sanctioned)
   - Exempted by:
     - `apps-core/app-usage` (0 debt)
     - `apps/deploy/analytics/collect` (0 debt)

@@ -17,6 +17,7 @@
 // made by a page that found the lock taken — which skips the name
 // (`passed`) and connects to the next one the caller gives.
 
+import { webLocks } from "@plugins/primitives/plugins/dom/plugins/web-locks/core";
 import type { FromHost, ToHost } from "./port";
 
 /** The Web Lock a SharedWorker host named `workerName` retires under. */
@@ -45,22 +46,27 @@ export interface SharedHostConnection {
  * Web Lock for it until `leave` (or the tab is gone) and names it to the host
  * (`hello`), so a host with no page left can retire.
  *
- * Without Web Locks (a test realm) there is nothing to hold: it connects to
- * `name()` as is.
+ * Without Web Locks (`webLocks()` unsupported: a test realm, iOS Lockdown
+ * Mode, some webviews) there is nothing to hold: it connects to `name()` as is.
  */
 export async function connectSharedHost(opts: {
   open: (name: string) => SharedWorker;
   name: () => string;
   passed: (name: string) => void;
 }): Promise<SharedHostConnection> {
-  if (typeof navigator === "undefined" || navigator.locks === undefined) {
+  const lockHere = webLocks();
+  if (lockHere.kind === "unsupported") {
     const name = opts.name();
     const port = opts.open(name).port;
     return { name, port, leave: () => port.close() };
   }
   for (;;) {
     const name = opts.name();
-    const connection = await connectUnlessRetiring(opts.open, name);
+    const connection = await connectUnlessRetiring(
+      lockHere.locks,
+      opts.open,
+      name,
+    );
     if (connection !== null) return connection;
     opts.passed(name);
     if (opts.name() === name) {
@@ -73,11 +79,12 @@ export async function connectSharedHost(opts: {
 
 /** Connect to `name` while its retire lock is free, holding it until `accepted`; `null` when taken. */
 function connectUnlessRetiring(
+  locks: LockManager,
   open: (name: string) => SharedWorker,
   name: string,
 ): Promise<SharedHostConnection | null> {
   return new Promise((resolve, reject) => {
-    navigator.locks
+    locks
       .request(
         retireLockName(name),
         { mode: "shared", ifAvailable: true },
@@ -92,11 +99,7 @@ function connectUnlessRetiring(
             const presence = `equin-port:${globalThis.crypto.randomUUID()}`;
             let gone!: () => void;
             const held = new Promise<void>((r) => (gone = r));
-            void navigator.locks.request(
-              presence,
-              { mode: "exclusive" },
-              () => held,
-            );
+            void locks.request(presence, { mode: "exclusive" }, () => held);
             const port = open(name).port;
             const onMessage = (event: MessageEvent): void => {
               if ((event.data as FromHost).t !== "accepted") return;

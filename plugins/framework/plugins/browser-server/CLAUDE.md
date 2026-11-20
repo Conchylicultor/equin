@@ -332,6 +332,7 @@ reaching the server, detach on unmount).
     - `packages/error-subject.crashFieldsOf`
     - `packages/error-subject.normalizeMessage`
     - `packages/error-subject.SubjectError`
+    - `primitives/dom/web-locks.webLocks`
     - `primitives/perfs/task-marks.runMarked`
     - `primitives/perfs/task-marks.TaskMarkText`
   - Exports (types):

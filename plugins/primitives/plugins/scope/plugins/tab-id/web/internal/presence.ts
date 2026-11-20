@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { webLocks } from "@plugins/primitives/plugins/dom/plugins/web-locks/core";
 
 // A tab is present while some page holding its id is alive. Each page holds a
 // SHARED Web Lock named for its tab id for its whole life, so the browser
@@ -16,9 +17,10 @@ let claimed = false;
 export function claimTabPresence(tabId: string): void {
   if (claimed) return;
   claimed = true;
-  if (!locksSupported()) return;
+  const lockHere = webLocks();
+  if (lockHere.kind === "unsupported") return;
   // Never resolves: the lock is released by the page going away.
-  void navigator.locks.request(
+  void lockHere.locks.request(
     LOCK_PREFIX + tabId,
     { mode: "shared" },
     () => new Promise<never>(() => {}),
@@ -33,20 +35,17 @@ export function claimTabPresence(tabId: string): void {
  */
 export type TabPresence = "loading" | "open" | "closed" | "unknown";
 
-function locksSupported(): boolean {
-  return typeof navigator !== "undefined" && navigator.locks !== undefined;
-}
-
 export function useTabPresence(tabId: string | null): TabPresence {
   const [answer, setAnswer] = useState<{
     tabId: string;
     presence: Exclude<TabPresence, "loading">;
   } | null>(null);
   useEffect(() => {
-    if (tabId === null || !locksSupported()) return;
+    const lockHere = webLocks();
+    if (tabId === null || lockHere.kind === "unsupported") return;
     let live = true;
     const name = LOCK_PREFIX + tabId;
-    void navigator.locks.query().then((snapshot) => {
+    void lockHere.locks.query().then((snapshot) => {
       if (!live) return;
       const held = [...(snapshot.held ?? []), ...(snapshot.pending ?? [])];
       setAnswer({
@@ -58,6 +57,6 @@ export function useTabPresence(tabId: string | null): TabPresence {
       live = false;
     };
   }, [tabId]);
-  if (tabId === null || !locksSupported()) return "unknown";
+  if (tabId === null || webLocks().kind === "unsupported") return "unknown";
   return answer?.tabId === tabId ? answer.presence : "loading";
 }

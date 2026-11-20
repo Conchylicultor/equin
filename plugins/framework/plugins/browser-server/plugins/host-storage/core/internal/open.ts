@@ -33,7 +33,17 @@
 //   to now yet: a store's owner says how its values move in time when it opens
 //   it (`HostStoreOptions.shiftTime`), and one not opened on that boot owes it
 //   until it is.
+//
+// A persistent storage needs ONE owner (`ownership.ts`: an exclusive Web
+// Lock). Where the worker has no Web Locks (`webLocks()` unsupported — iOS
+// Lockdown Mode, some in-app webviews; equin.ai's demo on Safari,
+// report-1795088221-b1uksj) no owner can be established, and two workers
+// writing one IndexedDB PGlite would corrupt it. So such a storage opens IN
+// MEMORY (`openInMemory`), filled from its snapshot as a fresh one would be:
+// the host serves, and what the visitor does is lost with the worker — the
+// limit, said in the boot report (`HostBoot.data`) and the worker's console.
 
+import { webLocks } from "@plugins/primitives/plugins/dom/plugins/web-locks/core";
 import {
   ENTRIES_STORE,
   LIFECYCLE_KEY,
@@ -134,8 +144,11 @@ export async function openHostStorage(
       wipe: () => Promise.resolve(),
     };
   }
+  const lockHere = webLocks();
+  if (lockHere.kind === "unsupported") return openInMemory(spec);
   let opened: OpenedHostStorage | null = null;
   const ownership = await acquireOwnership({
+    locks: lockHere.locks,
     name: spec.name,
     migrations: spec.migrations,
     snapshotTakenAt: spec.start?.snapshot.takenAt,
@@ -186,19 +199,8 @@ async function openPersistent(
     await deleteAll(prefix, storesName);
     db = await idbOpen(storesName, [ENTRIES_STORE, META_STORE]);
   };
-  /** The snapshot `start` names, loaded and checked against this code's migrations. */
-  const loadSnapshot = async (ref: HostSnapshotRef): Promise<HostSnapshot> => {
-    // The pages waiting for the host see the download as it arrives.
-    const snapshot = decodeHostSnapshot(await ref.load(reportDataProgress));
-    const unknown = snapshot.migrations.filter((m) => !migrations.includes(m));
-    const missing = migrations.filter((m) => !snapshot.migrations.includes(m));
-    if (unknown.length > 0 || missing.length > 0) {
-      throw new Error(
-        `[host-storage] ${name}: snapshot ${ref.version.slice(0, 12)} was built at other migrations than this code's (${missing.length} missing, ${unknown.length} unknown) — the build ships a snapshot built at its own migrations, so this is a build bug`,
-      );
-    }
-    return snapshot;
-  };
+  const loadSnapshot = (ref: HostSnapshotRef): Promise<HostSnapshot> =>
+    loadCheckedSnapshot(name, migrations, ref);
 
   // The record as it is now; every write of it writes this whole, and moves
   // `current` before it awaits, so a later write always starts from it.
@@ -465,6 +467,94 @@ async function openPersistent(
         ownership.release();
       }
     },
+  };
+}
+
+/** The snapshot `ref` names, loaded and checked against this code's migrations. */
+async function loadCheckedSnapshot(
+  name: string,
+  migrations: readonly string[],
+  ref: HostSnapshotRef,
+): Promise<HostSnapshot> {
+  // The pages waiting for the host see the download as it arrives.
+  const snapshot = decodeHostSnapshot(await ref.load(reportDataProgress));
+  const unknown = snapshot.migrations.filter((m) => !migrations.includes(m));
+  const missing = migrations.filter((m) => !snapshot.migrations.includes(m));
+  if (unknown.length > 0 || missing.length > 0) {
+    throw new Error(
+      `[host-storage] ${name}: snapshot ${ref.version.slice(0, 12)} was built at other migrations than this code's (${missing.length} missing, ${unknown.length} unknown) — the build ships a snapshot built at its own migrations, so this is a build bug`,
+    );
+  }
+  return snapshot;
+}
+
+/**
+ * A persistent storage where this worker has no Web Locks: nothing can make
+ * it the one owner of the stored data, so it touches none of it — it serves
+ * from memory, filled from the snapshot `start` names (empty without one),
+ * its times shifted to now as a fresh storage's are. Lost with the worker;
+ * a Reset just ends it (the next worker starts from the snapshot again), and
+ * another build or tab never claims it (there is nothing to hand over).
+ */
+async function openInMemory(
+  spec: Extract<HostStorageSpec, { kind: "persistent" }>,
+): Promise<OpenedHostStorage> {
+  console.warn(
+    `[host-storage] ${spec.name}: this worker has no Web Locks, so nothing can keep another worker off its stored data — it keeps its data in memory for this visit instead (lost on reload)`,
+  );
+  const snapshot =
+    spec.start === undefined
+      ? null
+      : await loadCheckedSnapshot(
+          spec.name,
+          spec.migrations,
+          spec.start.snapshot,
+        );
+  const shiftMs = snapshot === null ? 0 : Date.now() - snapshot.takenAt;
+  const stores = new Map<string, HostStore<unknown>>();
+  const resources: HostStorageResource[] = [];
+  const close = async (): Promise<void> => {
+    for (const r of resources.splice(0)) await r.close();
+  };
+  return {
+    kind: "memory",
+    databaseDir: undefined,
+    databaseStart:
+      snapshot === null
+        ? { from: "stored-or-empty" }
+        : { from: "snapshot", dataDir: snapshot.database, shiftMs },
+    origin:
+      snapshot === null
+        ? { kind: "empty" }
+        : { kind: "snapshot", replacedOutdated: false },
+    store<V>(
+      storeName: string,
+      options: HostStoreOptions<V>,
+      ..._blobFree: BlobFree<V>
+    ): HostStore<V> {
+      let store = stores.get(storeName);
+      if (store === undefined) {
+        const entries = (snapshot?.stores[storeName] ?? []) as Array<
+          [string, V]
+        >;
+        store = {
+          loaded: new Map(
+            entries.map(([k, v]) => [k, options.shiftTime(v, shiftMs)]),
+          ),
+          // Checked as a persistent store checks them, kept nowhere.
+          put: (key, value) => assertStoreValue(value, `${storeName}[${key}]`),
+          delete() {},
+        };
+        stores.set(storeName, store);
+      }
+      return store as HostStore<V>;
+    },
+    adopt(resource) {
+      resources.push(resource);
+    },
+    booted: () => Promise.resolve(),
+    close,
+    wipe: close,
   };
 }
 

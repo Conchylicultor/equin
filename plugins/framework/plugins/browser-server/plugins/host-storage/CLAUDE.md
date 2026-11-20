@@ -93,6 +93,15 @@ serveBrowserHost({
   told `updated`; dedicated workers (no SharedWorker) → yield, `unshared`.
   No timeout: the claimant waits on the lock itself. Design:
   `research/2026-11-11-framework-demo-tabs-join-never-take.md`.
+- **No Web Locks in the worker → in memory** (`open.ts`'s `openInMemory`).
+  Where `webLocks()` (`primitives/dom/web-locks`) is unsupported — iOS
+  Lockdown Mode, some in-app webviews (report-1795088221-b1uksj: Safari's
+  demo worker died on `navigator.locks.request`) — no owner can be
+  established, and two workers writing one IndexedDB PGlite would corrupt it.
+  So a persistent storage opens in memory instead, filled from its snapshot
+  as a fresh one would be: the host serves, nothing it writes outlives the
+  worker, and no stored data is touched. The boot report's `data` says so
+  (`snapshot, in memory (no Web Locks in this worker)`).
 - **Several tabs** share one SharedWorker per build (the page's
   `startShared(name)`; `serveBrowserHost` accepts every connection). A tab that
   goes away is noticed through the Web Lock its page holds for its end
@@ -155,6 +164,7 @@ serveBrowserHost({
     - `framework/browser-server/host-storage/stored.META_STORE`
     - `framework/browser-server/host-storage/stored.storagePrefix`
     - `framework/browser-server/host-storage/stored.storesDbName`
+    - `primitives/dom/web-locks.webLocks`
   - Exports (types):
     - `BlobFree`
     - `BrowserHostStorage`

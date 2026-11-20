@@ -127,6 +127,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "primitives/plugins/dom/plugins/media-element", id: "primitives.dom.media-element", loader: () => import("@plugins/primitives/plugins/dom/plugins/media-element/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/dom/plugins/speech-synthesis", id: "primitives.dom.speech-synthesis", loader: () => import("@plugins/primitives/plugins/dom/plugins/speech-synthesis/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/dom/plugins/static-render", id: "primitives.dom.static-render", loader: () => import("@plugins/primitives/plugins/dom/plugins/static-render/lint"), dependsOn: [] },
+  { pluginPath: "primitives/plugins/dom/plugins/web-locks", id: "primitives.dom.web-locks", loader: () => import("@plugins/primitives/plugins/dom/plugins/web-locks/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/dom/plugins/web-storage", id: "primitives.dom.web-storage", loader: () => import("@plugins/primitives/plugins/dom/plugins/web-storage/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/embed/plugins/frame", id: "primitives.embed.frame", loader: () => import("@plugins/primitives/plugins/embed/plugins/frame/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/icon-button", id: "primitives.icon-button", loader: () => import("@plugins/primitives/plugins/icon-button/lint"), dependsOn: [] },

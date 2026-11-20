@@ -1,4 +1,5 @@
 import { wsTestHook, type WsTestHook } from "../core";
+import { webLocks } from "@plugins/primitives/plugins/dom/plugins/web-locks/core";
 import { publishWsStatus, type WsStatus } from "./ws-status-bus";
 import { nativeWebSocket } from "@plugins/primitives/plugins/networking/plugins/request-guard/web";
 import { publishNetDiag } from "./net-diag-bus";
@@ -195,12 +196,9 @@ let inPageSeams: WorkerSeams | null = null;
  * the same behaviour for every consumer.
  */
 function defaultSeams(): WorkerSeams {
-  const locks =
-    typeof navigator !== "undefined"
-      ? (navigator as Navigator & { locks?: LockManagerLike }).locks
-      : undefined;
-  if (typeof SharedWorker !== "undefined" && locks !== undefined) {
-    return { makeSharedWorker: realSharedWorker, locks };
+  const lockHere = webLocks();
+  if (typeof SharedWorker !== "undefined" && lockHere.kind === "supported") {
+    return { makeSharedWorker: realSharedWorker, locks: lockHere.locks };
   }
   if (inPageSeams === null) {
     const inPageLocks = createInPageLocks();

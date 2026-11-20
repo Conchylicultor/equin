@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-primitives-dom-web-locks",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The Web Locks API, only where it exists: webLocks() answers unsupported (iOS Lockdown Mode, some in-app webviews, an insecure context, some worker kinds — navigator.locks is simply absent) or supported with the LockManager, in a page and a worker alike — so a caller must branch before it can lock, and decides what it does without cross-context coordination. locksRefused(err) tells a browser that has them but refuses this page (a SecurityError: site data blocked). Its lint rule (no-raw-navigator-locks) sends every other navigator.locks read here."
+}

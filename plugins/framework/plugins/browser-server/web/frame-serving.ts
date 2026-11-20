@@ -4,6 +4,7 @@
 // loads by URL (`Transport.frameBase`). The page itself stays outside the
 // scope, never controlled: only frame documents reach the Service Worker.
 
+import { webLocks } from "@plugins/primitives/plugins/dom/plugins/web-locks/core";
 import { attachPort, type PortEnd } from "../core";
 import {
   framesScope,
@@ -164,13 +165,14 @@ const scopeLockName = (scope: string): string => `frames-scope ${scope}`;
  * Hold `scope`'s lock, shared, until the returned release: what tells another
  * tab's {@link dropStaleScopes} this scope is still in use. Resolves once held,
  * so a page serves only under a scope no GC can miss. Without Web Locks (a test
- * DOM — every browser offering Service Workers offers them) there is nothing to
- * hold, and no GC runs either.
+ * DOM, iOS Lockdown Mode, some webviews) there is nothing to hold, and no GC
+ * runs either.
  */
 async function holdScope(scope: string): Promise<() => void> {
-  if (!("locks" in navigator)) return () => undefined;
+  const lockHere = webLocks();
+  if (lockHere.kind === "unsupported") return () => undefined;
   return new Promise<() => void>((held) => {
-    void navigator.locks.request(
+    void lockHere.locks.request(
       scopeLockName(scope),
       { mode: "shared" },
       () => new Promise<void>((release) => held(release)),
@@ -189,8 +191,9 @@ async function dropStaleScopes(
   container: ServiceWorkerContainer,
   current: string,
 ): Promise<void> {
-  if (!("locks" in navigator)) return;
-  const locks = await navigator.locks.query();
+  const lockHere = webLocks();
+  if (lockHere.kind === "unsupported") return;
+  const locks = await lockHere.locks.query();
   const inUse = new Set(
     [...(locks.held ?? []), ...(locks.pending ?? [])].map((l) => l.name),
   );

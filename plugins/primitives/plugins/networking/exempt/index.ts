@@ -29,4 +29,11 @@ export default [
     reason:
       "The SharedWorker entry: built as its own chunk and started by `new SharedWorker(new URL(...))`, never imported, so no module graph evaluates it. It needs navigator.locks once, at worker start, and fails loudly when it is missing.",
   },
+  {
+    rule: "web-locks/no-raw-navigator-locks",
+    paths: ["web/shared-ws.worker.ts"],
+    kind: "sanctioned",
+    reason:
+      "The SharedWorker entry is bundled whole and may import no other plugin (web-artifacts' inline audit), so it cannot reach webLocks(). It is started only by a page whose webLocks() is supported (shared-websocket.ts's defaultSeams), and fails loudly if its own context has none.",
+  },
 ] satisfies Exemptions;

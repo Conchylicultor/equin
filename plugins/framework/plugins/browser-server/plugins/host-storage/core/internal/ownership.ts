@@ -27,6 +27,10 @@
 // waits for the lock and opens what it left. A holder that takes the lock
 // while claims are in flight announces itself (`held`), so a claimant that
 // posted before there was anyone to answer claims again.
+//
+// Without Web Locks in the worker (`webLocks()` unsupported: iOS Lockdown Mode,
+// some webviews) there is no owning at all — `open.ts` keeps the storage in
+// memory instead, so no second worker can ever write under this one.
 
 import { HostRefusedError } from "@plugins/framework/plugins/browser-server/core";
 import { StorageNewerThanCodeError } from "./errors";
@@ -124,6 +128,8 @@ export function answerClaim(
  * once it settles.
  */
 export async function acquireOwnership(opts: {
+  /** This worker's lock manager (`webLocks()`): without one, nothing can own a storage. */
+  locks: LockManager;
   name: string;
   migrations: readonly string[];
   /** When the snapshot this code starts a fresh storage from was taken; absent: it has none. */
@@ -150,7 +156,7 @@ export async function acquireOwnership(opts: {
   const held = new Promise<void>((resolve) => (release = resolve));
 
   const granted = new Promise<void>((resolve, reject) => {
-    navigator.locks
+    opts.locks
       .request(lockName, { signal: refused.signal }, () => {
         resolve();
         // Held until `release`.

@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { z } from "zod";
+import { webLocks } from "@plugins/primitives/plugins/dom/plugins/web-locks/core";
 import {
   INITIAL_MUSIC_STATE,
   startedPlaying,
@@ -103,11 +104,16 @@ function announceState() {
   post({ t: "state", from: pageId, now });
 }
 
-/** Learns when page `other` is gone: its lock is released with it. */
+/**
+ * Learns when page `other` is gone: its lock is released with it. Without Web
+ * Locks here no page's going away can be heard: its last state stays shown
+ * until it says otherwise (or this page reloads).
+ */
 function watchPage(other: string) {
-  if (watched.has(other)) return;
+  const lockHere = webLocks();
+  if (watched.has(other) || lockHere.kind === "unsupported") return;
   watched.add(other);
-  void navigator.locks.request(LOCK_PREFIX + other, { mode: "shared" }, () => {
+  void lockHere.locks.request(LOCK_PREFIX + other, { mode: "shared" }, () => {
     watched.delete(other);
     dispatch({ kind: "remote-gone", pageId: other });
   });
@@ -141,11 +147,15 @@ function onMessage(raw: unknown) {
 /** Joins the browser's other pages. Once per page, from the service's root. */
 export function connectPages(): () => void {
   if (channel) throw new Error("background music: connected twice");
-  // Held for the page's life: released only by the page going away.
-  void navigator.locks.request(
-    LOCK_PREFIX + pageId,
-    () => new Promise<never>(() => {}),
-  );
+  // Held for the page's life: released only by the page going away. Without
+  // Web Locks there is nothing to hold (the other pages cannot hear this one go).
+  const lockHere = webLocks();
+  if (lockHere.kind === "supported") {
+    void lockHere.locks.request(
+      LOCK_PREFIX + pageId,
+      () => new Promise<never>(() => {}),
+    );
+  }
   const ch = new BroadcastChannel(CHANNEL);
   channel = ch;
   ch.onmessage = (e: MessageEvent<unknown>) => onMessage(e.data);

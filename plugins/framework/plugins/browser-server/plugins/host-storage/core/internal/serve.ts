@@ -118,7 +118,11 @@ export function serveBrowserHost(opts: {
             { name: "storage", ms: openedMs },
             ...host.boot.stages,
           ],
-          data: originLabel(storage.origin),
+          // A persistent storage opened in memory: no Web Locks here (`open.ts`).
+          data:
+            opts.storage.kind === "persistent" && storage.kind === "memory"
+              ? `${originLabel(storage.origin)}, in memory (no Web Locks in this worker)`
+              : originLabel(storage.origin),
           createdAt: performance.timeOrigin,
         },
       };

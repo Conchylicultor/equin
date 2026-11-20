@@ -31853,6 +31853,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/error-subject.crashFieldsOf`
           - `packages/error-subject.normalizeMessage`
           - `packages/error-subject.SubjectError`
+          - `primitives/dom/web-locks.webLocks`
           - `primitives/perfs/task-marks.runMarked`
           - `primitives/perfs/task-marks.TaskMarkText`
         - Exports (types):
@@ -31966,6 +31967,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/browser-server/host-storage/stored.META_STORE`
               - `framework/browser-server/host-storage/stored.storagePrefix`
               - `framework/browser-server/host-storage/stored.storesDbName`
+              - `primitives/dom/web-locks.webLocks`
             - Exports (types):
               - `BlobFree`
               - `BrowserHostStorage`
@@ -54594,6 +54596,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Exports (types): `TreeFocus`
             - Exports (values): `useTreeFocus`
+        - **`web-locks`** — The Web Locks API, only where it exists: webLocks() answers unsupported (iOS Lockdown Mode, some in-app webviews, an insecure context, some worker kinds — navigator.locks is simply absent) or supported with the LockManager, in a page and a worker alike — so a caller must branch before it can lock, and decides what it does without cross-context coordination. locksRefused(err) tells a browser that has them but refuses this page (a SecurityError: site data blocked). Its lint rule (no-raw-navigator-locks) sends every other navigator.locks read here.
+          - Cross-plugin:
+            - Imported by:
+              - `framework/browser-server`
+              - `framework/browser-server/demo/scope`
+              - `framework/browser-server/host-storage`
+              - `music/background`
+              - `primitives/networking`
+              - `primitives/scope/tab-id`
+              - `reports/main-thread-stall`
+          - Exemptions:
+            - Exempted by:
+              - `primitives/networking` (0 debt)
+              - `reports/main-thread-stall` (0 debt)
+          - Core:
+            - Exports (types): `WebLocks`
+            - Exports (values):
+              - `locksRefused`
+              - `webLocks`
         - **`web-storage`** — The one door to browser storage (localStorage / sessionStorage): defineStore declares an owner — key prefix s:<owner>:, byte cap, TTL, what to do when full (evict-oldest for caches, refuse for what the user typed), a zod schema — and returns a typed read/write/remove/subscribe handle with one {v, ts} envelope — per composition scope by default (a ScopedStore, bound by useStore / in(useStorageScope()): a PluginScope subtree such as /demo writes s:<owner>@<scope>:, never the page's own s:<owner>: keys; pageWide: { reason } for state about the page itself), and clearStorageScope wipes one scope. The caps of an area's owners sum under the browser's quota (asserted at declaration and statically by the budget-fits check), so no owner can fill storage for another. Every refused write and unreadable entry is announced (onStorageFailure); useStorageUsage and scanArea feed the health row; the no-raw-web-storage lint rule bans touching Web Storage anywhere else.
           - Web:
             - Slots: `WebStorageSlots.Root`
@@ -56410,6 +56431,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `endpoints/no-raw-web-fetch` — `web` (sanctioned)
           - `networking/no-request-guard-capability` — `web/use-reconnecting-ws.ts`, `web/shared-websocket.ts` (sanctioned)
           - `dom-access-safety/no-module-scope-dom` — `web/shared-ws.worker.ts` (sanctioned)
+          - `web-locks/no-raw-navigator-locks` — `web/shared-ws.worker.ts` (sanctioned)
         - Exempted by:
           - `apps-core/app-usage` (0 debt)
           - `apps/deploy/analytics/collect` (0 debt)
@@ -60666,6 +60688,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/deploy/site-reports/channel/slow-load`
           - `apps/deploy/site-reports/import`
+      - Exemptions:
+        - Exempts itself from: `web-locks/no-raw-navigator-locks` — `web/stall-watchdog.worker.ts` (sanctioned)
       - Plugins:
         - **`tab-evidence`** — What a browser tab's own thread ran over a window, as evidence a report carries: the JS stacks its rolling JS Self-Profiling trace sampled (StallStacks) and its JS heap around it (StallMemory), with the markdown sections a task renders them as. Never identity. A leaf, so slow-ops (whose sink main-thread-stall feeds) can carry it on a `main-thread` slow-op report without a cycle.
           - Cross-plugin:

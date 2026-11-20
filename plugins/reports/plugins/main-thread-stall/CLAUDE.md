@@ -399,6 +399,8 @@ renderer forever — so the script kills it with CDP `Page.crash`.
   - Imported by:
     - `apps/deploy/site-reports/channel/slow-load`
     - `apps/deploy/site-reports/import`
+- Exemptions:
+  - Exempts itself from: `web-locks/no-raw-navigator-locks` — `web/stall-watchdog.worker.ts` (sanctioned)
 - Sub-plugins:
   - **`tab-evidence`** — What a browser tab's own thread ran over a window, as evidence a report carries: the JS stacks its rolling JS Self-Profiling trace sampled (StallStacks) and its JS heap around it (StallMemory), with…
 

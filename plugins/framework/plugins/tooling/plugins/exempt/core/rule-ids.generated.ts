@@ -240,6 +240,7 @@ export type ExemptableRuleId =
   | "watcher-safety/no-detached-watch-reaction"
   | "watcher-safety/no-direct-parcel-watcher"
   | "watcher-safety/no-raw-fs-watch"
+  | "web-locks/no-raw-navigator-locks"
   | "web-storage/no-raw-web-storage"
   | "worktree/no-raw-worktree-git"
   | "z-layers/no-adhoc-zindex"

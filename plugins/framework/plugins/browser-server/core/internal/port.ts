@@ -29,6 +29,7 @@ import {
   runMarked,
   type TaskMarkText,
 } from "@plugins/primitives/plugins/perfs/plugins/task-marks/core";
+import { webLocks } from "@plugins/primitives/plugins/dom/plugins/web-locks/core";
 import { watchHostProgress, type HostProgress } from "./boot-progress";
 import {
   declarePageInputs,
@@ -400,16 +401,23 @@ export function serveHost(opts: ServeHostOptions): ServedHost {
       return;
     }
     if (msg.t === "hello") {
+      const lockHere = webLocks();
+      if (lockHere.kind === "unsupported") {
+        // The page holds a lock this worker cannot wait on (its page has Web
+        // Locks, the worker none): its going away cannot be heard, so the end
+        // stays — as one whose tab was killed before its `hello` — and this
+        // host lives until the browser ends it.
+        console.warn(
+          "[browser-server] no Web Locks in this worker: a page's going away cannot be noticed, so the host will not retire",
+        );
+        return;
+      }
       // The page releases the lock when it ends (or its tab goes away).
-      void navigator.locks.request(
-        msg.lock,
-        { mode: "exclusive" },
-        async () => {
-          dropSockets(sockets);
-          ends.delete(end);
-          maybeRetire();
-        },
-      );
+      void lockHere.locks.request(msg.lock, { mode: "exclusive" }, async () => {
+        dropSockets(sockets);
+        ends.delete(end);
+        maybeRetire();
+      });
       return;
     }
     if (msg.t === "inputs") {
@@ -511,18 +519,31 @@ export function serveHost(opts: ServeHostOptions): ServedHost {
       !bootFailed &&
       (ends.size > 0 || inFlight.size > 0 || !bootSettled);
     if (held()) return;
+    const retireNow = async (): Promise<void> => {
+      if (held() || (stopping && ended === null) || retired) return;
+      retired = true;
+      if (ended === null) endAll("retired");
+      await retire.run().catch((err: unknown) => {
+        // Loud — the worker's uncaught error — and the lock still held.
+        reportError(err);
+      });
+    };
+    const lockHere = webLocks();
+    if (lockHere.kind === "unsupported") {
+      // No Web Locks in this worker, so none in a page could gate on it
+      // either (`connectSharedHost` connects as is): retire at once, ungated —
+      // a page connecting in this window may reach the closing worker, the
+      // risk every page without Web Locks already runs.
+      void retireNow();
+      return;
+    }
     const ask = new AbortController();
     retiring = ask;
-    void navigator.locks
+    void lockHere.locks
       .request(retire.lock, { signal: ask.signal }, async () => {
         if (retiring === ask) retiring = null;
         if (held() || (stopping && ended === null) || retired) return;
-        retired = true;
-        if (ended === null) endAll("retired");
-        await retire.run().catch((err: unknown) => {
-          // Loud — the worker's uncaught error — and the lock still held.
-          reportError(err);
-        });
+        await retireNow();
         // Held until the worker is gone, even when closing failed: a page
         // that finds it held connects to another worker, never to this
         // closing one.

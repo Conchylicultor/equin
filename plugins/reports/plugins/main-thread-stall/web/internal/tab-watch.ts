@@ -1,5 +1,6 @@
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
+import { webLocks } from "@plugins/primitives/plugins/dom/plugins/web-locks/core";
 import {
   onTaskMark,
   runMarked,
@@ -56,7 +57,18 @@ export function installStallWatch(readTab: () => StallTab): StallWatch {
   let frozen = false;
   let session: Session | null = null;
   let disposed = false;
-  const useWorker = typeof SharedWorker !== "undefined" && "locks" in navigator;
+  const lockHere = webLocks();
+  const locks = lockHere.kind === "supported" ? lockHere.locks : null;
+  const useWorker = typeof SharedWorker !== "undefined" && locks !== null;
+  /** The lock manager the watchdog's tab half holds its locks with: only ever attached with one. */
+  const watchLocks = (): LockManager => {
+    if (locks === null) {
+      throw new Error(
+        "main-thread-stall: the watchdog attached in a page without Web Locks",
+      );
+    }
+    return locks;
+  };
   // Sampled while visible, rotated on each ping / heartbeat: the stacks a
   // recovered stall's report carries.
   const profiler = installStallProfiler();
@@ -88,18 +100,15 @@ export function installStallWatch(readTab: () => StallTab): StallWatch {
         // The watchdog runs inside some tab's renderer and dies with it (a
         // hung renderer Chrome kills, a crash). Its lifetime lock frees then:
         // re-attach, which starts a fresh watchdog that adopts what it left.
-        void navigator.locks.request(
-          workerLockName(PREFIX, msg.workerId),
-          () => {
-            if (s !== session) return;
-            clientLog(
-              LOG_CHANNEL,
-              JSON.stringify({ kind: "watchdog-lost", workerId: msg.workerId }),
-            );
-            detach();
-            if (!disposed) attach();
-          },
-        );
+        void watchLocks().request(workerLockName(PREFIX, msg.workerId), () => {
+          if (s !== session) return;
+          clientLog(
+            LOG_CHANNEL,
+            JSON.stringify({ kind: "watchdog-lost", workerId: msg.workerId }),
+          );
+          detach();
+          if (!disposed) attach();
+        });
         return;
       case "ping":
         post({ kind: "pong" });
@@ -152,7 +161,7 @@ export function installStallWatch(readTab: () => StallTab): StallWatch {
       );
     // Hold the port's liveness lock for its whole life and attach only once it
     // is held: the worker queues for the same lock, so its grant means "gone".
-    void navigator.locks.request(
+    void watchLocks().request(
       portLockName(PREFIX, s.portId),
       { mode: "exclusive" },
       () =>
