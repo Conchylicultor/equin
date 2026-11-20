@@ -36,8 +36,7 @@ The `scratch` workspace: `state/workspaces/<attemptId>/`, holding the profile's
     - `infra/jobs.defineJob`
     - `infra/mcp.Mcp`
     - `primitives/log-channels.defineLogSink`
-    - `tasks/tasks-core.getAttempt`
-    - `tasks/tasks-core.getTask`
+    - `tasks/tasks-core.attemptEndings`
   - Register:
     - `mcpScope('scope')`
     - `defineJob('workspace.scratch-reap')`

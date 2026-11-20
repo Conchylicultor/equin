@@ -3,10 +3,10 @@ import { readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
-import { getAttempt, getTask } from "@plugins/tasks/plugins/tasks-core/server";
+import { attemptEndings } from "@plugins/tasks/plugins/tasks-core/server";
 import { announceWorkspacesReclaimed } from "@plugins/conversations/plugins/workspace/server";
 import { scratchWorkspacesDir } from "../../data-dirs";
-import { decideScratchReap, type ScratchDirFacts } from "./reap-policy";
+import { decideScratchReap } from "./reap-policy";
 
 const reapLog = defineLogSink({
   id: "workspace-scratch-reap",
@@ -38,15 +38,23 @@ export const scratchReapJob = defineJob({
     const entries = await readdir(root, { withFileTypes: true });
     const now = Date.now();
     const reclaimed: string[] = [];
+    const dirs = entries.filter((e) => e.isDirectory()).map((e) => e.name);
+    // Every workspace's attempt in one read: a directory per attempt ever
+    // launched (~350), so two reads per directory was ~700 point reads,
+    // each `tasks_v` one O(the dependency graph).
+    const endings = await attemptEndings(dirs);
     try {
-      for (const entry of entries) {
-        if (!entry.isDirectory()) continue;
-        const dir = scratchWorkspacesDir.file(entry.name);
-        const decision = decideScratchReap(await factsOf(entry.name, dir), now);
+      for (const name of dirs) {
+        const dir = scratchWorkspacesDir.file(name);
+        const { mtimeMs } = await stat(dir);
+        const decision = decideScratchReap(
+          { attemptId: name, mtimeMs, attempt: endings.get(name) ?? null },
+          now,
+        );
         if (!decision.reap) continue;
         reapLog.publish(`removing ${dir}: ${decision.reason}`);
         await rm(dir, { recursive: true, force: true });
-        reclaimed.push(entry.name);
+        reclaimed.push(name);
       }
     } finally {
       // Every directory removed so far, whatever stopped the loop: what other
@@ -58,22 +66,3 @@ export const scratchReapJob = defineJob({
     }
   },
 });
-
-async function factsOf(
-  attemptId: string,
-  dir: string,
-): Promise<ScratchDirFacts> {
-  const { mtimeMs } = await stat(dir);
-  const attempt = await getAttempt(attemptId);
-  if (!attempt) return { attemptId, mtimeMs, attempt: null };
-  const task = await getTask(attempt.taskId);
-  return {
-    attemptId,
-    mtimeMs,
-    attempt: {
-      retained: attempt.retained,
-      finishedAt: attempt.finishedAt,
-      taskDroppedAt: task?.droppedAt ?? null,
-    },
-  };
-}

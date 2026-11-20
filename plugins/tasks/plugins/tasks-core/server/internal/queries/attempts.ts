@@ -1,6 +1,6 @@
 import { asc, eq, inArray } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { _attemptDeliveries, _attempts } from "../tables";
+import { _attemptDeliveries, _attempts, _tasks } from "../tables";
 import { attempts } from "../views";
 import type { Attempt } from "../schema";
 import type { DbExecutor } from "../status-batch";
@@ -25,6 +25,50 @@ export async function attemptRetention(
     .from(attempts)
     .where(inArray(attempts.id, [...ids]));
   return new Map(rows.map((r) => [r.id, r.retained]));
+}
+
+/** Where one attempt stands in its lifecycle, for a reaper deciding its leftovers. */
+export interface AttemptEnding {
+  /** The user has not finished with it (`attempts_v.retained`). */
+  retained: boolean;
+  /** When it finished (its conversations closed), if it did. */
+  finishedAt: Date | null;
+  /** When its task was dropped, if it was. */
+  taskDroppedAt: Date | null;
+}
+
+/**
+ * {@link AttemptEnding} of each of these attempts, in ONE read — a reaper
+ * walking a directory per attempt asks for all of them at once, never an
+ * attempt and a task read per directory (a `tasks_v` read is O(the whole
+ * dependency graph) however few ids it names). The task's `dropped_at` is read
+ * from the `tasks` TABLE: nothing derived is needed. An id with no row is
+ * absent from the map (unknown here: another backend may hold it).
+ */
+export async function attemptEndings(
+  ids: readonly string[],
+): Promise<Map<string, AttemptEnding>> {
+  if (ids.length === 0) return new Map();
+  const rows = await db
+    .select({
+      id: attempts.id,
+      retained: attempts.retained,
+      finishedAt: attempts.finishedAt,
+      taskDroppedAt: _tasks.droppedAt,
+    })
+    .from(attempts)
+    .leftJoin(_tasks, eq(_tasks.id, attempts.taskId))
+    .where(inArray(attempts.id, [...ids]));
+  return new Map(
+    rows.map((r) => [
+      r.id,
+      {
+        retained: r.retained,
+        finishedAt: r.finishedAt,
+        taskDroppedAt: r.taskDroppedAt,
+      },
+    ]),
+  );
 }
 
 export async function getAttempt(id: string): Promise<Attempt | null> {

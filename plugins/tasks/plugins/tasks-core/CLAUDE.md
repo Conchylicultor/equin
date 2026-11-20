@@ -509,6 +509,7 @@ serves them.
     - `addTaskDependency`
     - `attemptConversationIdsServed`
     - `attemptDeliveriesServed`
+    - `attemptEndings`
     - `attemptPushIdsServed`
     - `attemptRetention`
     - `AttemptSchema`
@@ -786,16 +787,16 @@ serves them.
     - `TRAILER_LOG_FORMAT`
     - `UNATTRIBUTED_TRAILER_KEY`
 - Cross-plugin:
-  - Imported by: 129 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 130 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×52
     - `tasks` ×41
     - `debug` ×6
     - `active-data` ×5
     - `apps` ×3
     - `code-explorer` ×3
+    - `infra` ×3
     - `page` ×3
     - `review` ×3
-    - `infra` ×2
     - `primitives` ×2
     - `stats` ×2
     - `backup/sources/transcripts`

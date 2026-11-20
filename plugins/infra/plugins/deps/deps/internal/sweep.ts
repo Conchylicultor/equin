@@ -25,7 +25,11 @@ export const SWEEP_IDLE_MS = 14 * DAY_MS;
 export interface SweepReport {
   removed: string[];
   kept: string[];
-  /** Checkouts whose identity of some dep could not be derived (skipped). */
+  /**
+   * Checkouts whose identity of some dep could not be derived (skipped) —
+   * only those asked: a dependency with an idle install, up to the checkout
+   * where every one of them was found current.
+   */
   underivable: string[];
 }
 
@@ -37,6 +41,17 @@ export interface SweepReport {
  * A checkout where an identity cannot be derived (its installer is missing,
  * it predates the dep) contributes nothing to "current" — the idle window is
  * what protects its installs, so nothing recently used is ever removed.
+ *
+ * **Bounded by what can be removed, not by declarations × checkouts.** The
+ * cheap facts come first: an identity used within the idle window, or held,
+ * is kept without deriving anything. Only the rest — the candidates — need
+ * "is it current somewhere?", and that is asked only of the dependencies that
+ * have one, checkout by checkout, stopping once every candidate of the
+ * dependency is found current. Deriving an identity spawns processes in the
+ * checkout (a build kind's `git ls-files` per glob and its tool's version), so
+ * asking every declaration of every checkout cost ~20 × ~450 derivations a
+ * day — an hour of git under load (2026-11-20) — where a day's candidates
+ * name a handful of dependencies.
  */
 export async function sweepDeps(args: {
   store: DepStore;
@@ -47,43 +62,66 @@ export async function sweepDeps(args: {
 }): Promise<SweepReport> {
   const { store, deps, checkouts, now, idleMs } = args;
   const report: SweepReport = { removed: [], kept: [], underivable: [] };
-
-  const current = new Set<string>();
-  for (const dep of deps) {
-    for (const root of checkouts) {
-      try {
-        const { identity } = await currentIdentity(dep, root);
-        current.add(`${dep.id}/${identity}`);
-      } catch (err) {
-        report.underivable.push(
-          `${dep.id} @ ${root}: ${err instanceof Error ? err.message : String(err)}`,
-        );
-      }
-    }
-  }
-
   if (!(await exists(store.cacheRoot))) return report;
+
+  // Installed identities the cheap facts keep go straight to `kept`; the
+  // rest are candidates, by dependency id.
+  const candidates = new Map<string, string[]>();
   for (const id of await readdir(store.cacheRoot)) {
     const idDir = join(store.cacheRoot, id);
     if (!(await stat(idDir)).isDirectory()) continue;
     for (const identity of await readdir(idDir)) {
-      const key = `${id}/${identity}`;
       const paths = installPaths(store, id, identity);
       if (!(await stat(paths.root)).isDirectory()) continue;
       if (
-        current.has(key) ||
         (await isHeld(paths)) ||
         now.getTime() - (await lastUsedAt(paths)) < idleMs
       ) {
+        report.kept.push(`${id}/${identity}`);
+        continue;
+      }
+      candidates.set(id, [...(candidates.get(id) ?? []), identity]);
+    }
+  }
+
+  for (const [id, identities] of candidates) {
+    // A dependency no checkout declares any more has no current identity.
+    const dep = deps.find((d) => d.id === id);
+    const notCurrent = new Set(identities);
+    if (dep !== undefined) {
+      for (const root of checkouts) {
+        if (notCurrent.size === 0) break;
+        try {
+          notCurrent.delete((await currentIdentity(dep, root)).identity);
+        } catch (err) {
+          report.underivable.push(
+            `${dep.id} @ ${root}: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        }
+      }
+    }
+    for (const identity of identities) {
+      const key = `${id}/${identity}`;
+      if (!notCurrent.has(identity)) {
         report.kept.push(key);
         continue;
       }
+      const paths = installPaths(store, id, identity);
       const fd = await tryLock(paths.lock);
       if (fd === null) {
         report.kept.push(key);
         continue;
       }
       try {
+        // Read again under the lock: a use or a hold writes its file without
+        // it, and the derivations above may have taken minutes since.
+        if (
+          (await isHeld(paths)) ||
+          now.getTime() - (await lastUsedAt(paths)) < idleMs
+        ) {
+          report.kept.push(key);
+          continue;
+        }
         await rm(paths.root, { recursive: true, force: true });
         report.removed.push(key);
       } finally {

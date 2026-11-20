@@ -24486,8 +24486,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/jobs.defineJob`
               - `infra/mcp.Mcp`
               - `primitives/log-channels.defineLogSink`
-              - `tasks/tasks-core.getAttempt`
-              - `tasks/tasks-core.getTask`
+              - `tasks/tasks-core.attemptEndings`
             - Register:
               - `mcpScope('scope')`
               - `defineJob('workspace.scratch-reap')`
@@ -37014,13 +37013,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values):
                   - `CARGO_HOLDS`
                   - `CARGO_HOLDS_FILE`
-        - **`sweep`** — The daily deps.sweep job: removes installed optional-dependency identities that no checkout of this repo declares and that sat unused for 14 days (sweepUnusedDeps over the git worktree list).
+        - **`sweep`** — The daily deps.sweep job: removes installed optional-dependency identities that no checkout in use declares (main's, and the agent checkouts whose attempt is retained) and that sat unused for 14 days (sweepUnusedDeps over the git worktree list).
           - Server:
             - Uses:
               - `infra/jobs.defineJob`
               - `infra/worktree.appCheckoutOf`
+              - `infra/worktree.ensureMainWorktreeRoot`
               - `infra/worktree.listWorktreePaths`
               - `primitives/log-channels.Log`
+              - `tasks/tasks-core.attemptRetention`
             - Register: `defineJob('deps.sweep')`
         - **`updates`** — Registers the Dependency upgrades automation's config (schedule, push policy, model, prompt template) for the Automations pane and Settings → Config. The updater registry (UpdaterDeclare) and the Dependency upgrades automation (deps-upgrades; its job automation.deps-upgrades runs on the schedule its config sets — weekly by default — editable live from the Automations pane): when any included updater has something newer than its lock records and no upgrade task is open, files ONE auto-started task (Dependencies category) covering every outdated updater and every decision a DecisionDeclare source says is due (a pinned host daemon lagging main past its bound — its agent raises a flag for the person, never acts), whose agent runs `./equin deps upgrade` (all updaters behind one baseline, a regressed batch narrowed down to its culprits on its own) and pushes what landed on an `upgraded` or `partial` verdict as far as its Push setting allows.
           - Web:
@@ -65835,6 +65836,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `addTaskDependency`
           - `attemptConversationIdsServed`
           - `attemptDeliveriesServed`
+          - `attemptEndings`
           - `attemptPushIdsServed`
           - `attemptRetention`
           - `AttemptSchema`
@@ -66112,16 +66114,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TRAILER_LOG_FORMAT`
           - `UNATTRIBUTED_TRAILER_KEY`
       - Cross-plugin:
-        - Imported by: 129 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Imported by: 130 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations` ×52
           - `tasks` ×41
           - `debug` ×6
           - `active-data` ×5
           - `apps` ×3
           - `code-explorer` ×3
+          - `infra` ×3
           - `page` ×3
           - `review` ×3
-          - `infra` ×2
           - `primitives` ×2
           - `stats` ×2
           - `backup/sources/transcripts`
