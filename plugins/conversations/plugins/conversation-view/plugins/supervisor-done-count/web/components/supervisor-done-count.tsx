@@ -11,6 +11,7 @@ import {
   mandateIsKindOf,
 } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/definitions/core";
 import {
+  conversationsById,
   taskMandates,
   taskMandateShape,
   taskWindow,
@@ -27,7 +28,7 @@ import { useMemo } from "react";
  * the mandate and is not one. Loading until the mandate is known; read live,
  * so a mandate changed mid-conversation moves it.
  */
-export function useIsSupervisorRoot(
+function useIsSupervisorRoot(
   taskId: string | null | undefined,
 ): ResourceResult<boolean> {
   const id = taskId ?? null;
@@ -48,6 +49,32 @@ export function useIsSupervisorRoot(
           stated !== null && mandateIsKindOf(defs, stated, supervisorMandate),
       ),
     [mandate, definitions, id],
+  );
+}
+
+/**
+ * Whether a conversation is its supervisor's — the one running a task that is
+ * a supervisor's root ({@link useIsSupervisorRoot}), not a conversation opened
+ * beside it in the same worktree: a side chat states a mandate of its own
+ * (`mandateRef`, a plain `interactive`) and is no supervisor, whatever its
+ * task is.
+ */
+export function useIsSupervisorConversation(conv: {
+  id: string;
+  taskId?: string | null;
+}): ResourceResult<boolean> {
+  const row = useLive(conversationsById, { id: conv.id });
+  const root = useIsSupervisorRoot(conv.taskId);
+  return useMemo(
+    () =>
+      mapResource(
+        combineResources({
+          ownMandate: mapRow(row, (r) => (r == null ? null : r.mandateRef)),
+          root,
+        }),
+        ({ ownMandate, root: isRoot }) => ownMandate === null && isRoot,
+      ),
+    [row, root],
   );
 }
 

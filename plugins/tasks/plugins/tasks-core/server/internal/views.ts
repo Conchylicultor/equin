@@ -298,14 +298,10 @@ export const tasks = pgView("tasks_v").as((qb) => {
 });
 
 // Conversation view adds derived fields from the attempt and task joins.
-// `mandateRef` is a server-only column: off the view, as it is off the wire.
-const { mandateRef: _conversationMandateRef, ...conversationColumns } =
-  getTableColumns(_conversations);
-
 export const conversations = pgView("conversations_v").as((qb) =>
   qb
     .select({
-      ...conversationColumns,
+      ...getTableColumns(_conversations),
       worktreePath: _attempts.worktreePath,
       taskId: _attempts.taskId,
       // The owning task's title, beside the conversation's own. Aliased: both

@@ -606,6 +606,7 @@ const CONVERSATION_QUEUE_CARRY = {
     "resumingSince",
     "lastViewedAt",
     "titleByUser",
+    "mandateRef",
   ],
   fields: { taskId: textField(), active: boolField() },
 } as const;

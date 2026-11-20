@@ -222,4 +222,12 @@ export const conversationFields = {
   // reports the session live (or the process never came up).
   resumingSince: nullable(dateField()),
   lastViewedAt: nullable(dateField()),
+  // The mandate this conversation works under IN PLACE of its task's
+  // (`tasks/orchestration/mandate`'s `conversationMandate`). NULL = its task's
+  // — the conversation that runs the task. A conversation opened beside it in
+  // the same attempt (a side chat) states `interactive`, so it is a plain
+  // conversation, never a second supervisor; a fork copies its source's.
+  // Stated once, at insert (conversations' `prepareConversation`).
+  // Plain text: an id, parsed (MandateIdSchema) where it is resolved.
+  mandateRef: nullable(textField()),
 } satisfies FieldsRecord;

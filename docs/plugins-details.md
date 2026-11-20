@@ -17713,8 +17713,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `report-kind` "conversation-stuck-turn"
       - `report-kind` "held-turn-undelivered"
       - `resource.declare` "conversations.partial-message"
-    - Uses: 93 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
-      - `tasks/tasks-core` ×28
+    - Uses: 92 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+      - `tasks/tasks-core` ×27
       - `conversations/turn-ledger` ×15
       - `conversations/transcript-watcher` ×8
       - `conversations/conversation-preprompt` ×3
@@ -18826,7 +18826,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-ui/item.Item`
           - `conversations/conversation-view.conversationPane`
           - `conversations/conversation-view/supervisor-done-count.SupervisorDoneCount`
-          - `conversations/conversation-view/supervisor-done-count.useIsSupervisorRoot`
+          - `conversations/conversation-view/supervisor-done-count.useIsSupervisorConversation`
           - `network/live.LiveRowResult`
           - `network/live.rowOrStale`
           - `network/live.useLive`
@@ -22870,7 +22870,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --warning`
               - `ui/tokens/density --space-xs`
             - Imported by: `upstream`
-        - **`supervisor-done-count`** — A supervisor's done count (SupervisorDoneCount): how many tasks of its tree are done, however deep, with a ring filled by the done share of the whole tree; hover for done / open / dropped. useIsSupervisorRoot(taskId) tells whether a task states the supervisor mandate. The conversation progress chip draws it in place of its step bar on a supervisor's conversation.
+        - **`supervisor-done-count`** — A supervisor's done count (SupervisorDoneCount): how many tasks of its tree are done, however deep, with a ring filled by the done share of the whole tree; hover for done / open / dropped. useIsSupervisorConversation(conv) tells whether a conversation is its supervisor's — running a task that states the supervisor mandate, not a side chat beside it (one stating its own mandate). The conversation progress chip draws it in place of its step bar on a supervisor's conversation.
           - Web:
             - Uses:
               - `network/live.mapRow`
@@ -22883,7 +22883,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks.useTask`
             - Exports (values):
               - `SupervisorDoneCount`
-              - `useIsSupervisorRoot`
+              - `useIsSupervisorConversation`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --muted-foreground`
@@ -64155,7 +64155,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database.db`
               - `network/live.serveValue`
               - `tasks/orchestration/mandate/definitions.mandateDefinitionEntries`
-              - `tasks/tasks-core.conversationStatedMandate`
               - `tasks/tasks-core.getConversation`
               - `tasks/tasks-core.nearestMandate`
             - Exports (types):
@@ -64248,6 +64247,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`policy`** — The mandate's value types, as a leaf: defineCapability (a capability's id, schema and label, and grant(value)), the branded MandatePolicy built only by mandatePolicy(grants) — a capability granted twice throws — and MandatePolicySchema, the tasks.mandate column decoder. Imports nothing from tasks, so tasks-core can store a policy and the mandate server can read tasks-core.
               - Cross-plugin:
                 - Imported by:
+                  - `conversations`
                   - `conversations/conversation-view/push-and-exit/capabilities`
                   - `conversations/self-compact/capability`
                   - `infra/deps/updates`
@@ -66416,7 +66416,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversationRuntimesServed`
           - `ConversationSchema`
           - `conversationSessionTailsServed`
-          - `conversationStatedMandate`
           - `conversationStatusChanged`
           - `conversationWorkspacesServed`
           - `createAttempt`

@@ -3,19 +3,20 @@ import { SegmentedProgressBar } from "@plugins/ui/plugins/segmented-progress-bar
 import type { ConversationItemConv } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import {
   SupervisorDoneCount,
-  useIsSupervisorRoot,
+  useIsSupervisorConversation,
 } from "@plugins/conversations/plugins/conversation-view/plugins/supervisor-done-count/web";
 import { PHASE_STEPS, PROGRESS_SUMMARY } from "../../core";
 import { useProgressFor } from "../internal/use-progress";
 
 /**
  * A conversation row's progress: its 4-step bar — or, on a supervisor's
- * conversation (its task states the supervisor mandate), the supervisor's done
- * count instead, since a supervisor's progress is its tree's.
+ * conversation (the one running a task that states the supervisor mandate —
+ * not a side chat beside it), the supervisor's done count instead, since a
+ * supervisor's progress is its tree's.
  */
 export function ProgressBarRow({ conv }: { conv: ConversationItemConv }) {
   const result = useProgressFor(conv.id);
-  const supervisor = useIsSupervisorRoot(conv.taskId);
+  const supervisor = useIsSupervisorConversation(conv);
   if (conv.kind === "agent") return null;
   if (supervisor.status === "loading") return null;
   if (supervisor.status === "error")

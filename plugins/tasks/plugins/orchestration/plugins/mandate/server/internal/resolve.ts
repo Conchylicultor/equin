@@ -3,11 +3,11 @@ import { db } from "@plugins/database/server";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import type { McpToolContext } from "@plugins/infra/plugins/mcp/server";
 import {
-  conversationStatedMandate,
   getConversation,
   nearestMandate,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import {
+  MandateIdSchema,
   scopeKey,
   type Capability,
   type GrantScope,
@@ -79,14 +79,12 @@ export function conversationMandate(
   return conversationMandates.run(conversationId, async () => {
     const conversation = await getConversation(conversationId);
     if (conversation === null) return { kind: "none" } as const;
-    const [mandate, stated] = await Promise.all([
-      mandateOf(conversation.taskId),
-      conversationStatedMandate(conversationId, db),
-    ]);
+    const mandate = await mandateOf(conversation.taskId);
     if (mandate.kind === "none") return mandate;
     const at: GrantScope =
       mandate.rootTaskId === conversation.taskId ? "root" : "below";
-    if (stated === null) return { ...mandate, at };
+    if (conversation.mandateRef === null) return { ...mandate, at };
+    const stated = MandateIdSchema.parse(conversation.mandateRef);
     return { ...mandate, mandateId: stated, policy: policyOf(stated), at };
   });
 }

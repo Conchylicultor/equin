@@ -28,6 +28,7 @@ by `MandatePolicySchema`), and the mandate's server half resolves it through
 - Description: The mandate's value types, as a leaf: defineCapability (a capability's id, schema and label, and grant(value)), the branded MandatePolicy built only by mandatePolicy(grants) — a capability granted twice throws — and MandatePolicySchema, the tasks.mandate column decoder. Imports nothing from tasks, so tasks-core can store a policy and the mandate server can read tasks-core.
 - Cross-plugin:
   - Imported by:
+    - `conversations`
     - `conversations/conversation-view/push-and-exit/capabilities`
     - `conversations/self-compact/capability`
     - `infra/deps/updates`

@@ -7,7 +7,6 @@ import { dirname, join } from "node:path";
 import {
   createTask,
   createAttempt,
-  conversationStatedMandate,
   getAttemptRow,
   insertConversation,
   getConversation,
@@ -23,12 +22,12 @@ import {
   type DbExecutor,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import type { EmitTx } from "@plugins/infra/plugins/events/server";
-import type {
-  MandateId,
-  MandateRef,
+import {
+  MandateIdSchema,
+  type MandateId,
+  type MandateRef,
 } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 import { interactiveMandate } from "@plugins/tasks/plugins/mandate-presets/core";
-import { db } from "@plugins/database/server";
 import type {
   ConversationLaunch,
   TaskFiling,
@@ -118,11 +117,22 @@ function resolveRuntimeId(
 // The per-task thinking mode (effort), applied to Claude Code at launch and on
 // resume. Read live from the task side-table (no per-conversation snapshot), so
 // changing a task's mode re-applies on the next launch/resume under it.
+// A conversation's thinking mode: its task's when it runs the task, the
+// default (undefined) for one opened beside it — read at every spawn, so a
+// resume keeps the rule.
 async function resolveTaskEffort(
   taskId: string | undefined,
+  runsItsTask: boolean,
 ): Promise<EffortLevel | undefined> {
-  if (!taskId) return undefined;
+  if (!taskId || !runsItsTask) return undefined;
   return (await getTaskEffort(taskId))?.level;
+}
+
+// The thinking mode of an existing conversation's next spawn (resume, retry).
+function conversationEffort(
+  row: Conversation,
+): Promise<EffortLevel | undefined> {
+  return resolveTaskEffort(row.taskId, row.mandateRef === null);
 }
 
 /**
@@ -308,6 +318,8 @@ export async function prepareConversation(
   let attemptId = opts.attemptId;
   let inheritedModel: ConversationModel | undefined;
   let inheritedRuntime: ConversationRuntimeId | undefined;
+  // A fork's source's own mandate (null: it runs its task).
+  let inheritedMandate: MandateId | null = null;
   let transcriptCopy: TranscriptCopy | undefined;
   // `--fork-session`: the CLI copies the source's WHOLE history under a new id.
   let forkSession = false;
@@ -335,6 +347,10 @@ export async function prepareConversation(
     resumeSessionId = source.claudeSessionId;
     inheritedModel = source.model;
     inheritedRuntime = Runtime.get(source.runtime).id;
+    inheritedMandate =
+      source.mandateRef === null
+        ? null
+        : MandateIdSchema.parse(source.mandateRef);
 
     if (opts.forkAtMessageUuid) {
       // Fork from a chosen message: resume OUR truncated copy rather than let
@@ -446,30 +462,36 @@ export async function prepareConversation(
       }
     : undefined;
 
-  // The preprompt the conversation runs under. A fork keeps its source's —
-  // the session it continues was started under those instructions. Otherwise
-  // the launching task's: a launch has no preprompt of its own, so a
-  // conversation can never run under one its task does not show. A dangling
-  // or empty selection resolves to undefined → nothing is appended.
-  const preprompt = opts.forkFromConversationId
-    ? await getConversationPreprompt(opts.forkFromConversationId)
-    : await taskPreprompt(effectiveTaskId);
-
-  // The mandate. The conversation that runs its task works under the task's;
-  // a conversation opened BESIDE it in the same attempt (a side chat, a
-  // launch prompt) is a plain one — `interactive` — never a second holder of
-  // what the task states (a supervisor's powers, its events, its tree watch).
-  // A fork keeps its source's: it continues that conversation.
+  // Whether this conversation runs its task, or is opened BESIDE the one that
+  // does (a side chat, a launch prompt: a new conversation in an existing
+  // attempt). A side conversation is a plain one: it takes none of what the
+  // task states for its own agent — not its mandate (it works as
+  // `interactive`, never a second holder of a supervisor's powers, events or
+  // tree watch), not its preprompt, not its thinking mode. A fork continues
+  // its source, so it is whatever its source is.
   const statedMandate = opts.forkFromConversationId
-    ? ((await conversationStatedMandate(opts.forkFromConversationId, db)) ??
-      undefined)
+    ? (inheritedMandate ?? undefined)
     : target.kind === "reuse"
       ? interactiveMandate.id
       : undefined;
+  const runsItsTask = statedMandate === undefined;
 
-  // Thinking mode: the launching task's, for the same reason as the preprompt.
-  // Threaded to the runtime as CLI args (ultracode rides --settings).
-  const effort = await resolveTaskEffort(effectiveTaskId);
+  // The preprompt the conversation runs under. A fork keeps its source's —
+  // the session it continues was started under those instructions. A side
+  // conversation has none. Otherwise the launching task's: a launch has no
+  // preprompt of its own, so a conversation can never run under one its task
+  // does not show. A dangling or empty selection resolves to undefined →
+  // nothing is appended.
+  const preprompt = opts.forkFromConversationId
+    ? await getConversationPreprompt(opts.forkFromConversationId)
+    : runsItsTask
+      ? await taskPreprompt(effectiveTaskId)
+      : undefined;
+
+  // Thinking mode: the task's for the conversation that runs it, the default
+  // for a side one (and a fork of it). Threaded to the runtime as CLI args
+  // (ultracode rides --settings).
+  const effort = await resolveTaskEffort(effectiveTaskId, runsItsTask);
   const runtimeId = resolveRuntimeId(opts.runtimeId, inheritedRuntime);
 
   return {
@@ -844,7 +866,7 @@ async function respawnResume(
           // spawn, composed now (system-prompt).
           appendSystemPrompt: await spawnSystemPrompt(row.id),
           model: row.model,
-          effort: await resolveTaskEffort(row.taskId),
+          effort: await conversationEffort(row),
         },
       );
     } catch (err) {
@@ -973,7 +995,7 @@ export async function retryLaunch(id: string): Promise<void> {
   const workspace = await workspaceOf(row);
   const create = {
     model: row.model,
-    effort: await resolveTaskEffort(row.taskId),
+    effort: await conversationEffort(row),
     forkSession: false,
   };
   await updateConversation(

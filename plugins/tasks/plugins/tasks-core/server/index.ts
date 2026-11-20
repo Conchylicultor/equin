@@ -160,7 +160,6 @@ export {
   findNextRankInFolder,
   isDescendant,
   nearestMandate,
-  conversationStatedMandate,
   taskDependsOn,
   readTaskStatuses,
 } from "./internal/queries/tasks";

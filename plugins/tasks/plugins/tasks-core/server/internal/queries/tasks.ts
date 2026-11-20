@@ -8,7 +8,7 @@ import {
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import { db } from "@plugins/database/server";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
-import { _conversations, _taskDependencies, _tasks } from "../tables";
+import { _taskDependencies, _tasks } from "../tables";
 import { directDepIsBlocking, taskBlocking, tasks } from "../views";
 import type { Task, TaskStatus } from "../schema";
 import { TaskGraph } from "../../../core";
@@ -59,23 +59,6 @@ export async function nearestMandate(
   return row
     ? { kind: "found", rootTaskId: row.id, mandateId: row.mandate_ref }
     : { kind: "none" };
-}
-
-/**
- * The mandate a conversation states in place of its task's (`mandateRef`),
- * or `null` when it works under its task's — or does not exist.
- */
-export async function conversationStatedMandate(
-  conversationId: string,
-  exec: DbExecutor,
-): Promise<MandateId | null> {
-  const rows = await executeRows(exec, {
-    label: "conversation stated mandate",
-    query: sql`SELECT mandate_ref FROM ${_conversations}
-         WHERE id = ${conversationId} AND mandate_ref IS NOT NULL`,
-    row: z.object({ mandate_ref: MandateIdSchema }),
-  });
-  return rows[0]?.mandate_ref ?? null;
 }
 
 export async function listTasks(exec: DbExecutor = db): Promise<Task[]> {
