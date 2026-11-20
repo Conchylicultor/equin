@@ -13,12 +13,12 @@ import type { GitStatus } from "../../shared/resources";
 import { assembleStatus, parsePorcelainV2Z } from "./parse-status";
 
 /**
- * One read of the whole checkout, bounded by what changed: untracked and
- * ignored folders come back collapsed. `--ignored=matching` rather than
- * `traditional`: the same collapsed `node_modules/`, without walking every
- * ignored folder to prove all of its contents ignored (measured 3–4× slower on
- * this repo) — a folder whose files are each ignored by a file pattern lists
- * those files instead.
+ * One read of the whole checkout, bounded by what changed: untracked folders
+ * come back collapsed. Never `--ignored`: git disables its untracked cache for
+ * any `--ignored` read, so one walks every directory of the tree (0.9 s on
+ * main's checkout, 9.7k folders, quiet; 2.4 s under load) where this read rides
+ * the untracked cache and fsmonitor (0.14 s). What git ignores is asked per
+ * folder the browser lists instead (`ignored.ts`).
  */
 const STATUS_ARGS = [
   "status",
@@ -26,7 +26,6 @@ const STATUS_ARGS = [
   "-z",
   "--branch",
   "--untracked-files=normal",
-  "--ignored=matching",
 ];
 
 const MAIN = "refs/heads/main";
@@ -57,7 +56,7 @@ async function readMergeBase(root: string): Promise<string | null> {
 
 /**
  * The value's inputs, fingerprinted without the diff: the porcelain read
- * itself (HEAD, every status vs HEAD, untracked and ignored), `main`'s commit
+ * itself (HEAD, every status vs HEAD, untracked), `main`'s commit
  * (which with HEAD fixes the merge-base), and each path changed vs HEAD's
  * `lstat` — a dirty file can come to match or leave main's version while its
  * status vs HEAD stays `M`. Ungated, like edited-files' signature.

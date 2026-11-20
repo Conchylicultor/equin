@@ -15,22 +15,41 @@ missing column). Plan: `research/2026-10-02-apps-file-explorer-git-and-code-expl
   what the browser's paths are made relative to). Missing, denied or non-repo
   folders are `none`.
 - **Status.** `file-explorer.git-status` (`{ root }`, external, pushed): one
-  `status --porcelain=v2 --ignored=matching --untracked-files=normal` plus one
-  `diff -M --name-status <merge-base main HEAD>`. Untracked and ignored folders
-  come back collapsed, so the payload is bounded by what changed; the client
-  resolves descendants by prefix (`shared/status-index.ts`). `matching` rather
-  than `traditional` because it never walks an ignored folder (3–4× faster
-  here); a folder whose files are each ignored by a file pattern lists those
-  files rather than itself. Each list is capped at `GIT_STATUS_MAX_PATHS`
+  `status --porcelain=v2 --untracked-files=normal` plus one
+  `diff -M --name-status <merge-base main HEAD>`. Untracked folders come back
+  collapsed, so the payload is bounded by what changed; the client resolves
+  descendants by prefix (`shared/status-index.ts`). **Never `--ignored`**: git
+  turns its untracked cache off for any `--ignored` read, so one walks every
+  directory of the tree — 0.9 s on main's checkout quiet (9.7k folders), 2.4 s
+  under load (report-1795173315-cgmvhq) — where this read rides the untracked
+  cache and fsmonitor (0.14 s). Each list is capped at `GIT_STATUS_MAX_PATHS`
   (5,000, in the schema): past it the loader keeps the first 5,000 and sets
   `truncated`, and `useGitView` turns that into `failed` (a path left out would
   otherwise read clean).
+- **Ignored.** `file-explorer.git-ignored` (`{ root, dir }`, `dir` relative,
+  external, pushed): what git ignores among ONE folder's entries and its
+  subfolders' entries (its rows, each collapsed folder's item count, and an
+  expanded subfolder's rows before its own answer lands), as paths relative to
+  the folder. Two rounds — the folder's entries, then the entries of the
+  subfolders git does not ignore — each a `readdir` plus one
+  `git check-ignore --no-index --stdin` (every path asked as `./<path>`, so a
+  name like `:(glob)x` is a name; check-ignore refuses `--literal-pathspecs`)
+  and, when something matched, one `--literal-pathspecs ls-files` (chunked
+  under ARG_MAX) to keep what git tracks (a folder holding a tracked file is not
+  hidden, as `git status --ignored` lists its ignored files instead). Nothing is
+  ignored beyond a symlink (git never descends one). The lens reads it for each
+  folder the browser lists (`useLens(folder, listed)`), so its cost follows what
+  is shown; a path below an ignored entry is ignored by prefix, and while a newly
+  listed folder's answer loads the last settled answer stands (no flash).
+  Pushed from the folder's tree watch (riding the checkout watch's) filtered to
+  those two levels, and the checkout watch's `.gitignore` / git-dir changes.
+  Capped at `GIT_IGNORED_MAX_PATHS`, subfolder entries cut first (`truncated`).
+  Refused: `invalid-path`, `missing`.
 - **Freshness.** A `createSignedMemo` keyed by root, whose signature is the
   porcelain read, `main`'s sha and an `lstat` of each path changed vs HEAD.
-  While subscribed, a `defineFileWatcher` on the checkout and its git dir
-  (`HEAD`, `index`, refs — a linked worktree's live outside the checkout)
-  notifies; changes inside folders the last status called ignored are dropped
-  before they cost a recompute. No polling.
+  While subscribed, the shared checkout watch (`infra/git/checkout-watch`:
+  working tree + git dir; changes to paths git ignores are dropped there)
+  notifies. No polling.
 - **Desktop only.** Both reads are served by `machine/` and declared `needsMachine`: on a host without the computer (the demo) `useGitView` answers `unavailable` and the fields carry no value.
 - **Web.** `useGitView(dir)` → loading / none / unavailable / failed / ready. The lens hides
   ignored entries and hands a changed file its `FileViewerGit` (status vs main,
@@ -63,9 +82,11 @@ missing column). Plan: `research/2026-10-02-apps-file-explorer-git-and-code-expl
 - Server:
   - Contributes:
     - `resource.declare` "file-explorer.git-checkout"
+    - `resource.declare` "file-explorer.git-ignored"
     - `resource.declare` "file-explorer.git-status"
   - Resources:
     - `file-explorer.git-checkout` (invalidate, snapshot)
+    - `file-explorer.git-ignored` (push, notified, capped: GIT_IGNORED_MAX_PATHS)
     - `file-explorer.git-status` (push, notified, capped: GIT_STATUS_MAX_PATHS)
 - Machine:
   - Uses: `network/live.serveValue`
@@ -82,6 +103,8 @@ missing column). Plan: `research/2026-10-02-apps-file-explorer-git-and-code-expl
 - Cross-plugin:
   - Uses tokens: `ui/tokens/color-palette --warning`
 - Exemptions:
-  - Exempts itself from: `live-state/no-handrolled-result` — `web/components/git-fields.tsx` (sanctioned)
+  - Exempts itself from:
+    - `live-state/no-handrolled-result` — `web/components/git-fields.tsx` (sanctioned)
+    - `repo-walk-safety/no-adhoc-repo-listing` — `machine/internal/ignored.ts` (sanctioned)
 
 <!-- AUTOGENERATED:END -->

@@ -11,8 +11,6 @@ const status: GitStatus = {
     "lib/c.ts": { vsHead: null, vsMain: "added" },
   },
   untrackedDirs: ["newdir/sub"],
-  ignoredDirs: ["node_modules", "pkg/node_modules"],
-  ignoredFiles: ["src/z.log"],
   truncated: false,
 };
 
@@ -35,15 +33,6 @@ describe("indexGitStatus", () => {
     });
     // A sibling sharing the prefix is not inside.
     expect(index.entry("newdir/subway.ts")).toBeNull();
-  });
-
-  test("ignored: listed files, and anything at or below an ignored folder", () => {
-    expect(index.isIgnored("node_modules")).toBe(true);
-    expect(index.isIgnored("node_modules/react/index.js")).toBe(true);
-    expect(index.isIgnored("pkg/node_modules/x")).toBe(true);
-    expect(index.isIgnored("node_modules_extra")).toBe(false);
-    expect(index.isIgnored("src/z.log")).toBe(true);
-    expect(index.isIgnored("src/a.ts")).toBe(false);
   });
 
   test("a folder rolls up changes below it, vs HEAD or main", () => {

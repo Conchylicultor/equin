@@ -85,7 +85,7 @@ export function useGitView(dir: string | null): GitView {
         kind: "failed",
         error: new ResourceError(
           "loader-failed",
-          `More than ${GIT_STATUS_MAX_PATHS} changed or ignored paths in this checkout — too many to show git status`,
+          `More than ${GIT_STATUS_MAX_PATHS} changed or untracked paths in this checkout — too many to show git status`,
           null,
         ),
         refetch: refetchStatus,

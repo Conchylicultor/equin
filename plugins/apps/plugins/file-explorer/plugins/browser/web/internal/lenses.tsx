@@ -24,17 +24,26 @@ export interface ComposedLens {
 export function WithLenses({
   fs,
   dir,
+  listed = NO_LISTED,
   children,
 }: {
   fs: BrowsableFileSystem;
   dir: string;
+  /** The folders the browser lists (absolute); none for a file preview. */
+  listed?: readonly string[];
   children: (lens: ComposedLens) => ReactNode;
 }): ReactNode {
   const items = FileBrowserSlots.Lens.useContributions();
   const folder = useMemo<ExplorerFolder>(() => ({ fs, dir }), [fs, dir]);
   return (
     <ExplorerDirContext.Provider value={folder}>
-      <LensStep items={items} index={0} dir={folder} answers={NO_ANSWERS}>
+      <LensStep
+        items={items}
+        index={0}
+        dir={folder}
+        listed={listed}
+        answers={NO_ANSWERS}
+      >
         {children}
       </LensStep>
     </ExplorerDirContext.Provider>
@@ -42,17 +51,20 @@ export function WithLenses({
 }
 
 const NO_ANSWERS: readonly ExplorerLens[] = [];
+const NO_LISTED: readonly string[] = [];
 
 function LensStep({
   items,
   index,
   dir,
+  listed,
   answers,
   children,
 }: {
   items: readonly ExplorerLensItem[];
   index: number;
   dir: ExplorerFolder;
+  listed: readonly string[];
   answers: readonly ExplorerLens[];
   children: (lens: ComposedLens) => ReactNode;
 }): ReactNode {
@@ -61,9 +73,21 @@ function LensStep({
     return <Compose answers={answers}>{children}</Compose>;
   }
   return (
-    <ResolveLens key={item.id} item={item} dir={dir} answers={answers}>
+    <ResolveLens
+      key={item.id}
+      item={item}
+      dir={dir}
+      listed={listed}
+      answers={answers}
+    >
       {(next) => (
-        <LensStep items={items} index={index + 1} dir={dir} answers={next}>
+        <LensStep
+          items={items}
+          index={index + 1}
+          dir={dir}
+          listed={listed}
+          answers={next}
+        >
           {children}
         </LensStep>
       )}
@@ -74,16 +98,18 @@ function LensStep({
 function ResolveLens({
   item,
   dir,
+  listed,
   answers,
   children,
 }: {
   item: ExplorerLensItem;
   dir: ExplorerFolder;
+  listed: readonly string[];
   answers: readonly ExplorerLens[];
   children: (answers: readonly ExplorerLens[]) => ReactNode;
 }): ReactNode {
   const { useLens } = item;
-  const answer = useLens(dir);
+  const answer = useLens(dir, listed);
   const next = useMemo(() => [...answers, answer], [answers, answer]);
   return children(next);
 }

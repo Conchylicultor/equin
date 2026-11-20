@@ -9,7 +9,7 @@ const H = "78981922613b2afb6025042ff6bd878ac1994e85";
 const z = (...records: string[]) => records.map((r) => `${r}\0`).join("");
 
 describe("parsePorcelainV2Z", () => {
-  test("reads head, changes, and collapsed untracked / ignored folders", () => {
+  test("reads head, changes, and collapsed untracked folders", () => {
     const out = z(
       `# branch.oid ${SHA}`,
       "# branch.head feat",
@@ -19,8 +19,6 @@ describe("parsePorcelainV2Z", () => {
       `1 AD N... 000000 100644 000000 ${H} ${H} src/never.ts`,
       "? newdir/",
       "? src/u.ts",
-      "! node_modules/",
-      "! src/z.log",
     );
     const s = parsePorcelainV2Z(out);
     expect(s.head).toBe(SHA);
@@ -31,8 +29,6 @@ describe("parsePorcelainV2Z", () => {
     ]);
     expect(s.untrackedDirs).toEqual(["newdir"]);
     expect(s.untrackedFiles).toEqual(["src/u.ts"]);
-    expect(s.ignoredDirs).toEqual(["node_modules"]);
-    expect(s.ignoredFiles).toEqual(["src/z.log"]);
   });
 
   test("a staged rename reports the new path and consumes the original", () => {
@@ -58,6 +54,10 @@ describe("parsePorcelainV2Z", () => {
 
   test("an unknown record fails loudly", () => {
     expect(() => parsePorcelainV2Z(z("x what"))).toThrow();
+  });
+
+  test("an ignored record fails loudly: the read never asks for them", () => {
+    expect(() => parsePorcelainV2Z(z("! node_modules/"))).toThrow();
   });
 });
 

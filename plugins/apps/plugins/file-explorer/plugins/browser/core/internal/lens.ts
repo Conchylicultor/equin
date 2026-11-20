@@ -25,8 +25,9 @@ export interface LensHideRule {
 
 /**
  * What one `FileBrowserSlots.Lens` contribution makes of the folder the
- * browser shows. It answers for any depth below that folder, so lazily
- * expanded subfolders are covered. Every path is absolute.
+ * browser shows. It answers for the entries of every folder the browser lists
+ * (the folder and its expanded subfolders — the `listed` it is handed), so a
+ * lens's reads follow what is shown. Every path is absolute.
  */
 export interface ExplorerLens {
   hide?: LensHideRule;

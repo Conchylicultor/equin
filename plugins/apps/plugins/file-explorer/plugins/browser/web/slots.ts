@@ -5,15 +5,20 @@ import { defineItemActions } from "@plugins/primitives/plugins/data-view/web";
 import type { EntryRow, ExplorerFolder, ExplorerLens } from "../core";
 
 /**
- * A lens on the browser's folder: `useLens(folder)` (a hook, so a lens may
- * read the server) answers what it hides and what it knows of a file's git
+ * A lens on the browser's folder: `useLens(folder, listed)` (a hook, so a lens
+ * may read the server) answers what it hides and what it knows of a file's git
  * state. `folder.dir` is absolute in `folder.fs`; a lens that knows only one
- * file system answers nothing for another.
+ * file system answers nothing for another. `listed` is every folder whose
+ * entries the browser lists now (absolute: the folder and each expanded
+ * subfolder; none for a file preview) — what a hide rule must answer for, so
+ * a lens reads per listed folder, never the whole tree below the folder.
  */
 export interface ExplorerLensItem {
   /** Unique among lenses. */
   id: string;
-  useLens: Hook<(folder: ExplorerFolder) => ExplorerLens>;
+  useLens: Hook<
+    (folder: ExplorerFolder, listed: readonly string[]) => ExplorerLens
+  >;
 }
 
 /**

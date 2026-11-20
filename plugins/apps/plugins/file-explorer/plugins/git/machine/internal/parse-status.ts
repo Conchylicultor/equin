@@ -14,8 +14,6 @@ export interface PorcelainStatus {
   vsHead: Map<string, GitChange>;
   untrackedFiles: string[];
   untrackedDirs: string[];
-  ignoredFiles: string[];
-  ignoredDirs: string[];
 }
 
 /** `n` space-separated fields, then the rest of the record (a path may hold spaces). */
@@ -52,9 +50,8 @@ function pushPath(path: string, dirs: string[], files: string[]): void {
 }
 
 /**
- * Parse `git status --porcelain=v2 -z --branch --untracked-files=normal
- * --ignored=matching`. Untracked and ignored directories arrive collapsed as
- * `dir/`; a rename (`2`) record is followed by its original path, which is not
+ * Parse `git status --porcelain=v2 -z --branch --untracked-files=normal`.
+ * Untracked directories arrive collapsed as `dir/`; a rename (`2`) record is followed by its original path, which is not
  * on disk and so is not reported.
  */
 export function parsePorcelainV2Z(out: string): PorcelainStatus {
@@ -63,8 +60,6 @@ export function parsePorcelainV2Z(out: string): PorcelainStatus {
     vsHead: new Map(),
     untrackedFiles: [],
     untrackedDirs: [],
-    ignoredFiles: [],
-    ignoredDirs: [],
   };
   const records = out.split("\0");
   if (records.at(-1) === "") records.pop();
@@ -100,9 +95,6 @@ export function parsePorcelainV2Z(out: string): PorcelainStatus {
       case "?":
         pushPath(record.slice(2), result.untrackedDirs, result.untrackedFiles);
         break;
-      case "!":
-        pushPath(record.slice(2), result.ignoredDirs, result.ignoredFiles);
-        break;
       default:
         throw new Error(`git status: unknown record ${JSON.stringify(record)}`);
     }
@@ -134,13 +126,8 @@ export function assembleStatus(
     };
   }
   const paths = Object.keys(entries);
-  const lists = [
-    porcelain.untrackedDirs,
-    porcelain.ignoredDirs,
-    porcelain.ignoredFiles,
-  ];
   const truncated =
-    paths.length > maxPaths || lists.some((l) => l.length > maxPaths);
+    paths.length > maxPaths || porcelain.untrackedDirs.length > maxPaths;
   return {
     head: porcelain.head,
     mergeBase,
@@ -150,8 +137,6 @@ export function assembleStatus(
         )
       : entries,
     untrackedDirs: porcelain.untrackedDirs.slice(0, maxPaths),
-    ignoredDirs: porcelain.ignoredDirs.slice(0, maxPaths),
-    ignoredFiles: porcelain.ignoredFiles.slice(0, maxPaths),
     truncated,
   };
 }

@@ -1067,6 +1067,7 @@ export const hostReads: readonly {
   { key: "edited-files", needsMachine: true },
   { key: "edited-files.file", needsMachine: true },
   { key: "file-explorer.git-checkout", needsMachine: true },
+  { key: "file-explorer.git-ignored", needsMachine: true },
   { key: "file-explorer.git-status", needsMachine: true },
   { key: "file-explorer.main-checkout", needsMachine: true },
   { key: "files.browser.bytes", needsMachine: false },

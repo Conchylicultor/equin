@@ -10,8 +10,6 @@ export interface GitStatusIndex {
   readonly truncated: boolean;
   /** The path's own status: its entry, or untracked when inside an untracked dir. */
   entry(rel: string): GitEntry | null;
-  /** Whether git ignores the path: a listed ignored file, or inside an ignored dir. */
-  isIgnored(rel: string): boolean;
   /** Whether some path strictly below the folder `rel` changed (vs HEAD or vs main). */
   hasChangedDescendant(rel: string): boolean;
   /** Whether some path strictly below the folder `rel` changed vs main. */
@@ -24,7 +22,7 @@ function isAtOrBelow(rel: string, dir: string): boolean {
 }
 
 /** Every strict ancestor folder of `rel`, the root `""` included. */
-function ancestors(rel: string): string[] {
+export function ancestors(rel: string): string[] {
   const out = [""];
   let cut = rel.indexOf("/");
   while (cut >= 0) {
@@ -35,7 +33,6 @@ function ancestors(rel: string): string[] {
 }
 
 export function indexGitStatus(status: GitStatus): GitStatusIndex {
-  const ignoredFiles = new Set(status.ignoredFiles);
   const untrackedEntry: GitEntry = {
     vsHead: "untracked",
     vsMain: status.mergeBase === null ? null : "untracked",
@@ -65,10 +62,6 @@ export function indexGitStatus(status: GitStatus): GitStatusIndex {
       return status.untrackedDirs.some((d) => isAtOrBelow(rel, d))
         ? untrackedEntry
         : null;
-    },
-    isIgnored(rel) {
-      if (ignoredFiles.has(rel)) return true;
-      return status.ignoredDirs.some((d) => isAtOrBelow(rel, d));
     },
     hasChangedDescendant(rel) {
       return changedFolders.has(rel);

@@ -1,5 +1,12 @@
 import { HOME, absolutePath } from "@plugins/infra/plugins/host-account/core";
-import { createContext, useContext, useMemo, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
@@ -49,6 +56,7 @@ const hiddenOffIcon = symbol("visibility-off");
 /** Which lens hide rules are switched to show, by rule id. Absent → hidden. */
 export type LensShown = Readonly<Record<string, boolean>>;
 const NONE_SHOWN: LensShown = {};
+const NO_LISTED: readonly string[] = [];
 
 /** The folder's name filter, with the folder it filters (view state). */
 const folderFilter = defineKept({
@@ -129,6 +137,12 @@ export interface FileBrowserReady {
   fileTarget: ((path: string) => Activation) | undefined;
   previewMode: "split" | "pane";
   lens: ComposedLens;
+  /**
+   * The body reports the folders it lists (absolute: the folder and each
+   * expanded subfolder) — what the lenses answer for, so their reads follow
+   * what is shown.
+   */
+  setListed: (folders: readonly string[]) => void;
   showHidden: boolean;
   toggleHidden: () => void;
   lensShown: LensShown;
@@ -280,10 +294,21 @@ function ReadyProvider({
     open: null,
   });
   const nav = navigator ?? local;
+  const [listed, setListedState] = useState<readonly string[]>(NO_LISTED);
+  const setListed = useCallback(
+    (next: readonly string[]) =>
+      setListedState((prev) =>
+        prev.length === next.length && prev.every((p, i) => p === next[i])
+          ? prev
+          : next,
+      ),
+    [],
+  );
   return (
     <WithLenses
       fs={system.fs}
       dir={absolutePath(nav.location.dir, system.home)}
+      listed={listed}
     >
       {(lens) => (
         <PublishReady
@@ -293,6 +318,7 @@ function ReadyProvider({
           fileTarget={fileTarget}
           previewMode={previewMode}
           lens={lens}
+          setListed={setListed}
         >
           {children}
         </PublishReady>
@@ -308,6 +334,7 @@ function PublishReady({
   fileTarget,
   previewMode,
   lens,
+  setListed,
   children,
 }: {
   system: ExplorerSystem;
@@ -316,6 +343,7 @@ function PublishReady({
   fileTarget: ((path: string) => Activation) | undefined;
   previewMode: "split" | "pane";
   lens: ComposedLens;
+  setListed: (folders: readonly string[]) => void;
   children: ReactNode;
 }): ReactNode {
   const { home } = system;
@@ -340,6 +368,7 @@ function PublishReady({
       fileTarget,
       previewMode,
       lens,
+      setListed,
       showHidden,
       toggleHidden: () => setShowHidden(!showHidden),
       lensShown,
@@ -362,6 +391,7 @@ function PublishReady({
     fileTarget,
     previewMode,
     lens,
+    setListed,
     showHidden,
     setShowHidden,
     lensShown,

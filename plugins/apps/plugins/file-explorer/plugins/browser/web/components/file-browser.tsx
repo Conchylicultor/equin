@@ -4,6 +4,7 @@ import {
 } from "@plugins/infra/plugins/host-account/core";
 import {
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -234,7 +235,17 @@ function Listing({ browser }: { browser: FileBrowserReady }): ReactNode {
   }));
   const selected = selection.anchor;
   const treeRef = useRef<HTMLElement | null>(null);
-  const { listings, request, setOpen, readers } = useListings(system.fs, dir);
+  const { listings, request, setOpen, paths, readers } = useListings(
+    system.fs,
+    dir,
+  );
+  // The lenses answer for the folders this listing reads, no more.
+  const { setListed } = browser;
+  useEffect(() => {
+    setListed(paths.map((p) => absolutePath(p, home)));
+    // Gone (a phone's open file replaces the listing): nothing is listed.
+    return () => setListed([]);
+  }, [paths, home, setListed]);
   const moveInto = useMoveInto(system.fs);
   const toast = useToast();
   // The paths this listing is dragging right now: dropping them back into

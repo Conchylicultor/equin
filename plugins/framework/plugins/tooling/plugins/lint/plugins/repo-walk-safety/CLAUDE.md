@@ -62,6 +62,7 @@ declared in its plugin's `exempt/index.ts` with the reason
 - Description: repo-walk-safety lint rules: no-adhoc-repo-walk (no hand-written build-output deny-list), no-adhoc-repo-listing (no working-tree listing — git ls-files, loadRepoFiles — outside a pass root: take the caller's file set)
 - Exemptions:
   - Exempted by:
+    - `apps/file-explorer/git` (0 debt)
     - `code-explorer/file-resolve` (0 debt)
     - `conversations/conversation-progress` (0 debt)
     - `conversations/conversation-view/code` (0 debt)

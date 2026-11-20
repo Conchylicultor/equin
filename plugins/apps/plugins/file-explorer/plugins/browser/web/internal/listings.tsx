@@ -89,6 +89,8 @@ export function useListings(
   request: (path: string) => void;
   /** The folders the tree has open now (the tree's `onOpenChange`). */
   setOpen: (paths: readonly string[]) => void;
+  /** The folders read now: `root`, then each open or asked-for folder. */
+  paths: readonly string[];
   readers: ReactNode;
 } {
   const [open, setOpenPaths] = useState<readonly string[]>([]);
@@ -137,7 +139,7 @@ export function useListings(
   const readers = paths.map((p) => (
     <ListingReader key={p} fs={fs} path={p} report={report} />
   ));
-  return { listings, request, setOpen, readers };
+  return { listings, request, setOpen, paths, readers };
 }
 
 /** A listing read's failure: its refusal, or a read that failed. */

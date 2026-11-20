@@ -5458,9 +5458,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Server:
             - Contributes:
               - `resource.declare` "file-explorer.git-checkout"
+              - `resource.declare` "file-explorer.git-ignored"
               - `resource.declare` "file-explorer.git-status"
             - Resources:
               - `file-explorer.git-checkout` (invalidate, snapshot)
+              - `file-explorer.git-ignored` (push, notified, capped: GIT_IGNORED_MAX_PATHS)
               - `file-explorer.git-status` (push, notified, capped: GIT_STATUS_MAX_PATHS)
           - Machine:
             - Uses: `network/live.serveValue`
@@ -5477,7 +5479,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --warning`
           - Exemptions:
-            - Exempts itself from: `live-state/no-handrolled-result` — `web/components/git-fields.tsx` (sanctioned)
+            - Exempts itself from:
+              - `live-state/no-handrolled-result` — `web/components/git-fields.tsx` (sanctioned)
+              - `repo-walk-safety/no-adhoc-repo-listing` — `machine/internal/ignored.ts` (sanctioned)
         - **`isle-building`** — The File Explorer's building on Isle: the archive barn, its doors open on shelves of boxes and scrolls.
           - Web:
             - Contributes: `Isle.Building` "file-explorer"
@@ -34587,6 +34591,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`repo-walk-safety`** — repo-walk-safety lint rules: no-adhoc-repo-walk (no hand-written build-output deny-list), no-adhoc-repo-listing (no working-tree listing — git ls-files, loadRepoFiles — outside a pass root: take the caller's file set)
               - Exemptions:
                 - Exempted by:
+                  - `apps/file-explorer/git` (0 debt)
                   - `code-explorer/file-resolve` (0 debt)
                   - `conversations/conversation-progress` (0 debt)
                   - `conversations/conversation-view/code` (0 debt)
@@ -37735,12 +37740,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Register: `file-sink-exit-flush`
     - **`file-watcher`** — defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, depth, mainOnly) whose start({dirs, label, onChange, onLost}) — start({files, …}) for a writesWhileOpen one, which follows writes to the named files only (kqueue on darwin, one descriptor per file; every follow of a directory shares one subscription) — opens instances over one @parcel/watcher engine (debounce + ceiling flush; no timer — a dropped event is reported to onLost, the one backstop). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: refcounted native watches, a dir under a watched root riding its watch (a watcher never moved off a live root: a root opening above leaves it where it is), with subtree or children (depth-1 listing) scope — a children request with no root above it opening only a single-directory watch (depth children), never a recursive one. On macOS a children watch is kqueue's (a descriptor on the dir and each entry, budgeted — a dir past the budget rides FSEvents), so watching / or ~ puts nothing on fseventsd; every other FSEvents watch with no ignore rides the process's stream pool — one stream per watched root, a dir under an open recursive stream riding it, whatever declaration asks (fsEventsStreams reads it).
       - Cross-plugin:
-        - Imported by: 44 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
+        - Imported by: 45 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
           - `infra` ×16
           - `debug` ×10
           - `build` ×5
           - `conversations` ×4
-          - `apps` ×2
+          - `apps` ×3
           - `companions/browser-extension`
           - `config_v2`
           - `framework/cli/await`
@@ -40668,9 +40673,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `snapEdge`
               - `writeFileLocations`
           - Cross-plugin:
-            - Imported by: 25 plugins — full list in [`plugins/infra/plugins/paths/plugins/file-systems/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/file-systems/REFERENCE.md)
+            - Imported by: 26 plugins — full list in [`plugins/infra/plugins/paths/plugins/file-systems/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/file-systems/REFERENCE.md)
               - `primitives` ×10
-              - `apps` ×5
+              - `apps` ×6
               - `conversations` ×4
               - `infra` ×3
               - `active-data/folder-link`
