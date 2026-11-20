@@ -1,4 +1,5 @@
--- singularity:snapshot id=deeec945-0891-4d25-b5a1-dcfdd510a805 parents=5e5de393-5537-46c3-ad6a-ac76c52ba1f4
+-- singularity:snapshot id=c5689e50-027c-4bb8-8418-e5908718a049 parents=d85ac621-8f7e-4ff1-b8c2-0591df62f09a
+-- singularity:supersedes 58bc9bed
 -- singularity:phase expand
 CREATE TABLE "deploy_deployments_ext_box_link" (
 	"parent_id" text PRIMARY KEY NOT NULL,
