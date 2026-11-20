@@ -58,7 +58,11 @@ import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 //
 // Deadlock-free: a ticket is only ever held by a *waiter*; a slot-holder never
 // needs one, and the head waits only for a slot, which holders always release.
-// The wait-for graph is acyclic.
+// The wait-for graph is acyclic. One head may HOLD slots while it waits for
+// more: a rigid share's (`AcquireHooks.min > 1`), which gathers its share slot
+// by slot. Only the background lane at `normal` priority may ask for one, so
+// at most one such gatherer exists per pool (its class line's head), every
+// other waiter holds nothing, and the graph stays acyclic.
 //
 // Cancellable: every wait above accepts an optional `AbortSignal` (see
 // `AcquireHooks.signal`). Both waits are waits on a CHILD's stdout, so cancellation
@@ -87,7 +91,7 @@ import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 // (single-flight) share it.
 
 export interface HostShare {
-  /** Slots actually held — always >= 1, never > the requested max. */
+  /** Slots actually held — always >= the requested min (default 1), never > the requested max. */
   readonly slots: number;
   /** Idempotent. Closes local fds and reaps the winner child (if one was spawned). */
   release(): Promise<void>;
@@ -230,6 +234,27 @@ export interface AcquireHooks {
    */
   priority?: Priority;
   /**
+   * The fewest slots this share may be granted (default 1, an integer in
+   * `1 … max`). The default share is ELASTIC: under load it is granted fewer
+   * than `max`, and its holder narrows its fan-out to fit. A holder whose
+   * cost cannot narrow — one process whose peak is set by what it runs, not
+   * by how many slots it got — asks for `min = max`, a RIGID share: it is
+   * granted exactly that many or keeps waiting, never a short share it would
+   * overrun.
+   *
+   * The head of the line gathers a rigid share slot by slot, holding what it
+   * has taken while it waits for the rest (a share that waited for `min` free
+   * slots at once would wait for ever behind a stream of one-slot holders).
+   * It waits holding NOTHING while the window (`capacity`, the lane's slots)
+   * is narrower than `min`, and hands everything back whenever the window
+   * moves. Only the `background` lane at `normal` priority may ask for
+   * `min > 1` (else the acquire throws): one gatherer per pool is what keeps
+   * the wait-for graph acyclic (two gatherers could each hold what the other
+   * waits for). A `min` the lane's window can never hold — above
+   * `backgroundLimit` — throws too: it would wait for ever.
+   */
+  min?: number;
+  /**
    * How many of the pool's slots this acquire may count on — it sweeps, fans out
    * over and tops up from the LOW `capacity` indices only (default: every slot).
    * Within that window the lanes keep their meaning: `background` is confined to
@@ -371,8 +396,9 @@ export interface HostSemaphore {
    * `max` is clamped to the acquiring lane's window size (`backgroundLimit` for the
    * `background` lane, `size` for `interactive`) — asking for more slots than the
    * window holds is a no-op past the ceiling, not an error. Never returns fewer than
-   * 1 slot — it blocks or throws instead, so a caller never has to distinguish "got a
-   * share" from "got nothing". The `lane` field of `hooks` selects the reserved-floor
+   * `hooks.min` slots (default 1) — it blocks or throws instead, so a caller never
+   * has to distinguish "got a share" from "got nothing", nor a rigid holder "got its
+   * share" from "got part of it". The `lane` field of `hooks` selects the reserved-floor
    * window and sweep order (default `background`; see `Lane`).
    *
    * `hooks.signal` cancels the ACQUIRE only. Once a share is in your hands, its
@@ -911,23 +937,39 @@ export function createHostSemaphore(opts: {
     await held.release();
   }
 
-  /** What one acquisition holds: fds swept in-process, plus a fan-out winner. */
+  /**
+   * What one acquisition holds: fds swept in-process, plus the fan-out winners
+   * (one per fan-out: at most one for an elastic share, up to `min` for a
+   * rigid one gathered slot by slot).
+   */
   interface Taken {
     fds: OwnedFd[];
-    winner: HeldFlock | undefined;
+    winners: HeldFlock[];
   }
+
+  const heldCount = (taken: Taken): number =>
+    taken.fds.length + taken.winners.length;
 
   // Hand back everything `taken` holds, synchronously (see `HostShare.releaseSlots`).
   function releaseTakenNow(taken: Taken): void {
     for (const slot of taken.fds) slot.close();
-    // Signals the child holding the winner's slot; it exits, its fd closes and
+    // Signals each child holding a winner's slot; it exits, its fd closes and
     // the flock releases. The async release below reaps it.
-    taken.winner?.releaseNow();
+    for (const winner of taken.winners) winner.releaseNow();
   }
 
   async function releaseTaken(taken: Taken): Promise<void> {
     releaseTakenNow(taken);
-    if (taken.winner) await taken.winner.release();
+    for (const winner of taken.winners) await winner.release();
+  }
+
+  // Hand back what a gathering head holds and start its share over — `taken`
+  // is emptied, so a later release of it is a no-op rather than a double close.
+  async function dropTaken(taken: Taken): Promise<void> {
+    const held: Taken = { fds: taken.fds, winners: taken.winners };
+    taken.fds = [];
+    taken.winners = [];
+    await releaseTaken(held);
   }
 
   // The class line an acquire waits in: one per (lane, priority), so arrival
@@ -955,7 +997,8 @@ export function createHostSemaphore(opts: {
 
   // The slow path: wait in the class line, then — at its head — take slots the
   // way the head always has: re-sweep, else fan out over the lane window for the
-  // first freed slot. The line is left BEFORE sweeping for extras, so the next
+  // first freed slot (a rigid share, `min > 1`, keeps what it took and repeats
+  // until it holds `min`). The line is left BEFORE sweeping for extras, so the next
   // waiter starts its own wait while this one tops up its share. A `normal`
   // acquire holds the demand lock shared across the whole wait, so `low`
   // acquires yield to it; a `low` acquire keeps its ticket across every yield,
@@ -968,6 +1011,7 @@ export function createHostSemaphore(opts: {
   // the head. A waiter behind it needs nothing: it reads the latest value when
   // its turn comes.
   async function waitInLine(
+    min: number,
     max: number,
     lane: Lane,
     capacity: CapacityFeed | undefined,
@@ -1008,61 +1052,97 @@ export function createHostSemaphore(opts: {
       // acquire from here on yields to it.
       if (priority === "normal") releaseDemand = await holdDemand(waitSignal);
       ticket = await line.join({ signal: waitSignal });
-      for (;;) {
-        if (priority === "low" && (await demandPresent()))
-          await awaitNoDemand(waitSignal);
-        const order = laneOrder(lane, checkCapacity(current));
-        const fds = await sweepKeep(Math.min(max, order.length), order);
-        let winner: HeldFlock | undefined;
-        if (fds.length === 0) {
-          const moved = new AbortController();
-          fanning = { width: order.length, moved };
-          try {
-            // The capacity moved while this pass swept: start over on it.
-            if (windowWidth(current) !== order.length) continue;
-            const until = AbortSignal.any([waitSignal, moved.signal]);
-            // An empty window has no slot to fan out over: wait, at the head,
-            // for the feed to move it (or the caller to give up).
-            if (order.length === 0) await abortOf(until);
-            winner = await fanOut(order, until);
-          } catch (err) {
-            // Our own "the window moved" abort, not the caller's: fan out
-            // again over the new window, still at the head of the line.
-            if (moved.signal.aborted && !waitSignal.aborted) continue;
-            // The caller's abort (or the follow breaking) wins over a move
-            // that raced it: throw ITS reason, never `CapacityMoved`.
-            if (waitSignal.aborted) throw waitSignal.reason;
-            throw err;
-          } finally {
-            fanning = undefined;
+      // What the head holds. An elastic share (`min` 1) holds nothing until
+      // its pass returns; a rigid one keeps what it has gathered across passes
+      // (`AcquireHooks.min`). From the first slot taken every step awaits, and
+      // one that throws (a failed open, an abort) hands them all back below —
+      // never stranded in a share nobody will release.
+      const taken: Taken = { fds: [], winners: [] };
+      // The window width the held slots were gathered in: a share gathered
+      // across a move would hold slots the new window may not include.
+      let takenWidth = 0;
+      try {
+        for (;;) {
+          if (priority === "low" && (await demandPresent()))
+            await awaitNoDemand(waitSignal);
+          const order = laneOrder(lane, checkCapacity(current));
+          if (heldCount(taken) > 0 && order.length !== takenWidth)
+            await dropTaken(taken);
+          takenWidth = order.length;
+          // A window narrower than `min` cannot hold the share: take nothing
+          // from it, and wait below for it to widen.
+          if (order.length >= min)
+            taken.fds.push(
+              ...(await sweepKeep(
+                Math.max(0, Math.min(max, order.length) - heldCount(taken)),
+                order,
+              )),
+            );
+          if (heldCount(taken) < min) {
+            const moved = new AbortController();
+            fanning = { width: order.length, moved };
+            try {
+              // The capacity moved while this pass swept: start over on it.
+              if (windowWidth(current) !== order.length) {
+                await dropTaken(taken);
+                continue;
+              }
+              const until = AbortSignal.any([waitSignal, moved.signal]);
+              // A window with too few slots for the share: wait, at the head
+              // and holding nothing, for the feed to move it (or the caller
+              // to give up).
+              if (order.length < min) {
+                await dropTaken(taken);
+                await abortOf(until);
+              }
+              // Every slot of the window this head does not hold is busy:
+              // the first to free wakes it. (A slot it already holds never
+              // grants another of its waits — flock conflicts across open
+              // file descriptions — so its child is simply a loser.)
+              taken.winners.push(await fanOut(order, until));
+            } catch (err) {
+              // Our own "the window moved" abort, not the caller's: start the
+              // share again over the new window, still at the head of the line.
+              if (moved.signal.aborted && !waitSignal.aborted) {
+                await dropTaken(taken);
+                continue;
+              }
+              // The caller's abort (or the follow breaking) wins over a move
+              // that raced it: throw ITS reason, never `CapacityMoved`.
+              if (waitSignal.aborted) throw waitSignal.reason;
+              throw err;
+            } finally {
+              fanning = undefined;
+            }
+            // A rigid share still short of `min`: sweep for what freed
+            // meanwhile, and wait again for the rest.
+            if (heldCount(taken) < min) continue;
           }
-        }
-        const taken: Taken = { fds, winner };
-        // From here we HOLD slots, and every step below awaits: one that throws
-        // (a failed open) must hand them back, never strand them in a share
-        // nobody will release.
-        let yielded: boolean;
-        try {
           // A `normal` acquire started waiting meanwhile — most often while we
           // were fanned out for this very slot. Hand it straight back: the
           // `normal` waiter's fan-out takes it.
-          yielded = priority === "low" && (await demandPresent());
-          if (!yielded) {
-            await ticket.leave();
-            if (taken.winner) {
-              // Extras from the window as it stands now, not as it stood
-              // when the fan-out began.
-              const now = laneOrder(lane, checkCapacity(current));
-              taken.fds = await sweepKeep(Math.min(max, now.length) - 1, now);
-            }
+          if (priority === "low" && (await demandPresent())) {
+            await dropTaken(taken);
+            waitSignal.throwIfAborted();
+            continue;
           }
-        } catch (err) {
-          await releaseTaken(taken);
-          throw err;
+          await ticket.leave();
+          if (taken.winners.length > 0) {
+            // Extras from the window as it stands now, not as it stood when
+            // the fan-out began.
+            const now = laneOrder(lane, checkCapacity(current));
+            taken.fds.push(
+              ...(await sweepKeep(
+                Math.max(0, Math.min(max, now.length) - heldCount(taken)),
+                now,
+              )),
+            );
+          }
+          return taken;
         }
-        if (!yielded) return taken;
-        await releaseTaken(taken);
-        waitSignal.throwIfAborted();
+      } catch (err) {
+        await dropTaken(taken);
+        throw err;
       }
     } finally {
       // Decremented FIRST, synchronously: a throwing release below must never
@@ -1091,6 +1171,22 @@ export function createHostSemaphore(opts: {
     if (!Number.isInteger(max) || max < 1) {
       throw new Error(
         `acquireShare: max must be a positive integer, got ${max}`,
+      );
+    }
+    const min = hooks?.min ?? 1;
+    if (!Number.isInteger(min) || min < 1 || min > max) {
+      throw new Error(
+        `acquireShare: min must be an integer in 1..${max} (the max), got ${min}`,
+      );
+    }
+    if (
+      min > 1 &&
+      ((hooks?.lane ?? "background") !== "background" ||
+        (hooks?.priority ?? "normal") !== "normal")
+    ) {
+      // One gatherer per pool keeps the wait-for graph acyclic (`AcquireHooks.min`).
+      throw new Error(
+        `acquireShare: a rigid share (min ${min}) is taken only in the background lane at normal priority`,
       );
     }
     const signal = hooks?.signal;
@@ -1123,6 +1219,15 @@ export function createHostSemaphore(opts: {
     // clamp to the window size (`backgroundLimit` for background, `size` for
     // interactive, each narrowed by `capacity`) so the fast-path sweep and the extras re-sweep agree on the bound.
     const effectiveMax = Math.min(max, order.length);
+    // A rigid share the lane's whole window can never hold would wait for
+    // ever — say so instead (the window here is the capacity's; the lane's
+    // own is its ceiling).
+    const ceiling = laneOrder(lane, Number.POSITIVE_INFINITY).length;
+    if (min > ceiling) {
+      throw new Error(
+        `createHostSemaphore(${name}): a share of at least ${min} slots can never be granted in the ${lane} lane, which holds ${ceiling}`,
+      );
+    }
 
     // `onWaitStart` fires once per acquire, however many times a `low` acquire
     // goes back to waiting.
@@ -1151,8 +1256,11 @@ export function createHostSemaphore(opts: {
       (priority === "normal" || !(await demandPresent()))
     ) {
       const fds = await sweepKeep(effectiveMax, order);
-      if (fds.length > 0) {
-        const swept: Taken = { fds, winner: undefined };
+      // Short of a rigid share's `min`: hand them back and gather it in line.
+      if (fds.length > 0 && fds.length < min) {
+        for (const fd of fds) fd.close();
+      } else if (fds.length > 0) {
+        const swept: Taken = { fds, winners: [] };
         let yielded: boolean;
         try {
           yielded = priority === "low" && (await demandPresent());
@@ -1165,6 +1273,7 @@ export function createHostSemaphore(opts: {
       }
     }
     taken ??= await waitInLine(
+      min,
       max,
       lane,
       hooks?.capacity,
@@ -1194,7 +1303,7 @@ export function createHostSemaphore(opts: {
       // Reap the killed child. Awaiting a settled `exited` is a no-op, so calling
       // `release()` again — or calling it after an abort listener already ran
       // `releaseSlots()` — stays idempotent.
-      if (held.winner) await held.winner.release();
+      for (const winner of held.winners) await winner.release();
     };
 
     if (signal?.aborted) {
@@ -1213,11 +1322,11 @@ export function createHostSemaphore(opts: {
 
     hooks?.onAcquired?.(performance.now() - t0);
 
-    // slots = (the winner child's one slot, if we took the slow path) + the fds we
-    // hold directly. Always >= 1: on the fast path fds.length >= 1 (we only fall to
-    // the slow path when it's 0); on the slow path the winner contributes the 1.
+    // slots = the winner children's slots (one per fan-out on the slow path) +
+    // the fds we hold directly. Always >= min: the fast path keeps a sweep only
+    // at `min` or more, and the slow path returns only once it holds `min`.
     return {
-      slots: (held.winner ? 1 : 0) + held.fds.length,
+      slots: heldCount(held),
       release,
       releaseSlots,
     };

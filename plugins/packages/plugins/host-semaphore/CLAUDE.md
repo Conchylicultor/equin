@@ -218,8 +218,16 @@ additional free slots up to `max` with a single non-blocking sweep, returning a
   capped, not an error); a non-integer or `< 1` `max` throws loudly. `slots` is never
   `0` — the call blocks or throws instead, so a caller never has to distinguish "got a
   share" from "got nothing".
+- **`hooks.min` — a rigid share** (default 1, an integer in `1 … max`): the share is
+  granted at least `min` slots or keeps waiting — for a holder whose cost cannot
+  narrow to a short share. The head of the line GATHERS it: it keeps the slots it
+  has taken and fans out again for each next one, holds nothing while its window
+  (`capacity`, the lane's slots) is narrower than `min`, and hands everything back
+  when the window moves or it is cancelled. Only the `background` lane at `normal`
+  priority may ask for `min > 1` (one gatherer per pool keeps the wait-for graph
+  acyclic), and a `min` above the lane's window throws instead of waiting for ever.
 - `release()` is idempotent: it closes the held fds (flock auto-release) and reaps
-  the winner child if one was spawned. Trade-off: the whole share is held until
+  the winner children if any were spawned. Trade-off: the whole share is held until
   `release`, so there is some tail waste once only the slowest unit is left —
   releasing slots as work drains is a possible later refinement.
 

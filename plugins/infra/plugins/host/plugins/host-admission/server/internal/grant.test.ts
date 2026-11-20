@@ -19,15 +19,17 @@ function fakePool(slots: number) {
     max: [] as number[],
     lanes: [] as unknown[],
     capacities: [] as unknown[],
+    mins: [] as unknown[],
     released: 0,
   };
   return {
     calls,
     acquireShare: async (
       max: number,
-      hooks?: { lane?: unknown; capacity?: unknown },
+      hooks?: { lane?: unknown; capacity?: unknown; min?: unknown },
     ) => {
       calls.max.push(max);
+      calls.mins.push(hooks?.min);
       calls.lanes.push(hooks?.lane);
       calls.capacities.push(hooks?.capacity);
       return {
@@ -63,6 +65,23 @@ test("withPoolGrant grants the share's units, runs fn and releases the share", a
   expect(pool.calls.max).toEqual([3]);
   expect(pool.calls.lanes).toEqual(["background"]);
   expect(pool.calls.released).toBe(1);
+});
+
+// A rigid share's floor reaches the pool, so a heavy holder whose peak cannot
+// shrink is never handed a short share; an elastic one passes none.
+test("withPoolGrant forwards a rigid share's min to the pool, and none for an elastic one", async () => {
+  const pool = fakePool(5);
+  await withPoolGrant(
+    pool,
+    { lane: "background", priority: "normal", max: 5, min: 5 },
+    async (g) => expect(g.units).toBe(5),
+  );
+  await withPoolGrant(
+    pool,
+    { lane: "background", priority: "normal", max: 5 },
+    async () => {},
+  );
+  expect(pool.calls.mins).toEqual([5, undefined]);
 });
 
 // The holder runs its granted body out of darwinbg in BOTH lanes, and goes back

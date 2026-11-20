@@ -18,7 +18,10 @@ file.
 - Main only (a scheduled job's default), in a supervised child: a background
   grant of the DUAL weight (`typeCheckWorkerUnits("dual")`, from the measured
   `TYPE_CHECK_BACKSTOP_PEAK_BYTES` — the oracle is one unbatched whole program,
-  far heavier than a batched worker), then a worker slot. Not part of any
+  far heavier than a batched worker), then a worker slot. The grant is RIGID
+  (`min: max`): unlike a batched worker the oracle cannot shrink to a short
+  grant, so it waits for its whole weight rather than run ~16 GB on a share of
+  a few — and an inherited grant smaller than the weight is refused. Not part of any
   build. Its run is recorded in the worker memory log like every worker's
   (`spawnTypeCheckWorker`), with the oracle's footprint, and
   `type-check:worker-weight-measured` holds the weight to it. The transcript's

@@ -148,6 +148,10 @@ export interface HolderReserve {
  * - Too few records (`< MIN_HOLDER_PEAKS`): `units × PER_UNIT_BYTES`, the
  *   whole quantum per slot — what every share was charged before. A work
  *   nobody has measured is reserved as if each unit were the heaviest class.
+ *   Of the units GRANTED: an elastic share that came back short is reserved
+ *   that short share, which is right for a holder that narrows to fit it and
+ *   wrong for one that cannot — such a holder takes a rigid share
+ *   (`withHostGrant`'s `min`), so its units are always its whole weight.
  * - Otherwise the `HOLDER_RESERVE_QUANTILE` of its peaks — and never below
  *   the largest of its `RECENT_HOLDER_PEAKS` latest — whatever the units:
  *   a holder's peak is set by what it runs, not by how many slots it got (a

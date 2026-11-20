@@ -588,6 +588,100 @@ describe("capacity", () => {
 // `background` to slot-0..1 and reserves slot-2..3 for `interactive`, which sweeps
 // high-first. These four tests pin the window, the reverse order, the fast-path floor
 // grant, and the split's presence in the pool identity.
+// A rigid share (`min`): a holder whose cost cannot shrink is granted its whole
+// share or waits — never a short one it would overrun.
+describe("rigid share (AcquireHooks.min)", () => {
+  test("a min outside 1..max, or outside the background lane at normal priority, throws", async () => {
+    const sem = createHostSemaphore({ slots: uniqueSlots("min-bad"), size: 4 });
+    for (const min of [0, 1.5, 3]) {
+      expect(sem.acquireShare(2, { min })).rejects.toThrow(/min must be/);
+    }
+    expect(
+      sem.acquireShare(2, { min: 2, lane: "interactive" }),
+    ).rejects.toThrow(/background lane at normal priority/);
+    expect(sem.acquireShare(2, { min: 2, priority: "low" })).rejects.toThrow(
+      /background lane at normal priority/,
+    );
+  });
+
+  test("a min the lane's window can never hold throws instead of waiting for ever", async () => {
+    const sem = createHostSemaphore({
+      slots: uniqueSlots("min-ceiling"),
+      size: 6,
+      backgroundLimit: 3,
+    });
+    expect(sem.acquireShare(4, { min: 4 })).rejects.toThrow(
+      /can never be granted in the background lane, which holds 3/,
+    );
+  });
+
+  test("with fewer free slots than min, it takes none early and is granted the whole share once they free", async () => {
+    const slots = uniqueSlots("min-gather");
+    const slotsDir = slots.path;
+    const sem = createHostSemaphore({ slots, size: 4 });
+    const h1 = await sem.acquireShare(2); // slot-0, slot-1
+    const h2 = await sem.acquireShare(1); // slot-2
+    let resolved = false;
+    const rigid = sem.acquireShare(3, { min: 3 }).then((s) => {
+      resolved = true;
+      return s;
+    });
+    await sleep(150);
+    expect(resolved).toBe(false);
+    // It gathers: the one free slot is held while it waits for the rest.
+    expect(isSlotHeld(slotsDir, 3)).toBe(true);
+
+    await h2.release();
+    await sleep(150);
+    expect(resolved).toBe(false); // 2 of 3: still short
+
+    await h1.release();
+    const share = await rigid;
+    expect(share.slots).toBe(3);
+    await share.release();
+    for (let i = 0; i < 4; i++) expect(isSlotHeld(slotsDir, i)).toBe(false);
+  });
+
+  test("a window narrower than min holds nothing until it widens", async () => {
+    const slots = uniqueSlots("min-window");
+    const slotsDir = slots.path;
+    const sem = createHostSemaphore({ slots, size: 4 });
+    const cap = movableCapacity(2);
+    let resolved = false;
+    const rigid = sem
+      .acquireShare(3, { min: 3, capacity: cap.feed })
+      .then((s) => {
+        resolved = true;
+        return s;
+      });
+    await sleep(150);
+    expect(resolved).toBe(false);
+    expect(isSlotHeld(slotsDir, 0)).toBe(false);
+    expect(isSlotHeld(slotsDir, 1)).toBe(false);
+
+    cap.move(4);
+    const share = await rigid;
+    expect(share.slots).toBe(3);
+    await share.release();
+  });
+
+  test("a cancelled gatherer hands back every slot it gathered", async () => {
+    const slots = uniqueSlots("min-abort");
+    const slotsDir = slots.path;
+    const sem = createHostSemaphore({ slots, size: 3 });
+    const holder = await sem.acquireShare(2); // slot-0, slot-1
+    const ac = new AbortController();
+    const rigid = sem.acquireShare(3, { min: 3, signal: ac.signal });
+    await sleep(150);
+    expect(isSlotHeld(slotsDir, 2)).toBe(true);
+    ac.abort(new Error("gave up"));
+    expect(rigid).rejects.toThrow("gave up");
+    await sleep(100);
+    expect(isSlotHeld(slotsDir, 2)).toBe(false);
+    await holder.release();
+  });
+});
+
 describe("reserved floor (lanes)", () => {
   test("background never takes a slot at or above backgroundLimit", async () => {
     const slots = uniqueSlots("bg-floor");

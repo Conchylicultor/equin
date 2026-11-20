@@ -98,16 +98,25 @@ const run: CliAction<[], object> = async () => {
       },
       report,
     );
+  // What a dual run weighs (its whole-program oracle), never a batched
+  // worker's weight. RIGID: the oracle is one process as large as the whole
+  // program, so unlike a batched worker it cannot shrink to a short grant —
+  // admitted on fewer units, it would take ~16 GB on a share of a few.
+  const units = typeCheckWorkerUnits("dual");
   const inherited = inheritedGrant();
-  if (inherited) await spawn(inherited);
-  else
+  if (inherited) {
+    if (inherited.units < units)
+      throw new Error(
+        `type-check backstop: the inherited grant holds ${inherited.units} unit(s), and a dual run weighs ${units} (its whole-program oracle cannot run in less) — run it outside a grant holder, where it takes its own`,
+      );
+    await spawn(inherited);
+  } else
     await withHostGrant(
       {
         lane: "background",
         priority: "normal",
-        // What a dual run weighs (its whole-program oracle), never a
-        // batched worker's weight.
-        max: typeCheckWorkerUnits("dual"),
+        max: units,
+        min: units,
         work: "type-check-backstop",
       },
       spawn,

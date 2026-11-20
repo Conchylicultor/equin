@@ -102,8 +102,9 @@ function spendOf(want: number | undefined, held: number): number {
  * measures the machine), run `fn` with a grant
  * over exactly the slots held, and release the share afterwards. `acquireShare`
  * guarantees `>= 1` slot, so a grant always has `units >= 1`: a 1-unit grant
- * merely serializes the holder's children — no starvation branch, no `min > 1`
- * acquire that could livelock two builds each holding one slot.
+ * merely serializes the holder's children — no starvation branch, and no two
+ * holders each waiting with part of a share (only a rigid share, `opts.min`,
+ * gathers, and only at the head of the background line: one per pool).
  *
  * `opts.hooks` are the acquire's observability seam, forwarded to the pool. They
  * were dropped here for the pool's whole life, which is what made EVERY host-grant
@@ -142,6 +143,22 @@ export async function withHostGrant<T>(
     lane: Lane;
     priority: Priority;
     max: number;
+    /**
+     * The fewest units this share may be granted (default 1: ELASTIC — under
+     * load the share comes back with fewer than `max`, and the holder narrows
+     * its fan-out to fit, as a batched type-check worker shrinks its profile).
+     * `min: max` makes it RIGID: exactly `max` units or keep waiting. For a
+     * holder whose peak cannot shrink — one process that is as large as what
+     * it runs, such as the type-check backstop's whole-program oracle — an
+     * elastic share admits it on a fraction of what it then takes, and
+     * reserves it only that fraction while its work has no record
+     * (`holderReserve`'s per-unit quantum of the units granted). A rigid share
+     * is reserved its whole weight from the first run.
+     *
+     * Background lane only, and never above the lane's window on this host
+     * (`backgroundLimit`): both throw (`AcquireHooks.min`).
+     */
+    min?: number;
     /**
      * What kind of work this share is: required, because the share's memory
      * reservation is what holders of that work were measured to peak at
@@ -272,6 +289,8 @@ export async function withPoolGrant<T>(
     lane: Lane;
     priority: Priority;
     max: number;
+    /** The fewest units the share may be granted (`withHostGrant`'s `min`). */
+    min?: number;
     hooks?: GrantHooks;
     /** The pool slots this acquire may count on, followed while it waits (`AcquireHooks.capacity`). */
     capacity?: CapacityFeed;
@@ -282,6 +301,7 @@ export async function withPoolGrant<T>(
     ...opts.hooks,
     lane: opts.lane,
     priority: opts.priority,
+    ...(opts.min === undefined ? {} : { min: opts.min }),
     ...(opts.capacity === undefined ? {} : { capacity: opts.capacity }),
   });
   const grant = grantOfUnits(share.slots, opts.lane);

@@ -372,7 +372,7 @@ nothing. Waits on work that itself needs a grant (the worktree DB fork, a
 backend job) run before the admission, never inside it:
 
 ```ts
-withHostGrant({ lane, max }, (grant) => { … })   // acquire, run, release
+withHostGrant({ lane, max, min?, work }, (grant) => { … })   // acquire, run, release
 inheritedGrant(): Grant | undefined              // the parent's grant, via env
 ```
 
@@ -388,6 +388,20 @@ the returned `slots` in an in-process `createSemaphore(slots)`
 - `grant.units` — slots actually held (always `>= 1`, so a 1-unit grant merely
   serializes the holder's children — no starvation branch, no `min > 1` acquire
   that would livelock two builds each holding one slot).
+- **Elastic by default, rigid on request.** A share is elastic: under load it
+  comes back with fewer than `max` units and the holder narrows to fit (a
+  batched type-check worker picks its one-unit profile, `typeCheckProfileFor`).
+  A holder whose peak CANNOT narrow — one process as large as what it runs,
+  the type-check backstop's whole-program oracle (15.7–16.8 GB) — passes
+  `min: max`: exactly `max` units or keep waiting (host-semaphore's
+  `AcquireHooks.min`: the background line's head gathers the share slot by
+  slot, holding nothing while the memory window is narrower than `min`). An
+  elastic share would admit it on a few GB, and — while its work has under 10
+  ledger records — reserve it only `units × PER_UNIT_BYTES` of that short
+  grant; a rigid share is reserved its whole weight from its first run.
+  Background lane only; a `min` above the lane's window on this host
+  (`backgroundLimit`) throws rather than wait for ever (a 16 GB host cannot
+  run the backstop).
 - `grant.run(fn)` — spend one unit through the in-process semaphore. Every heavy
   child (a type-check worker, tsc, vite, the Chromium suite) goes through it.
   `grant.run(fn, { units })` spends more than one — see *Weighted spend* below.
