@@ -54,16 +54,26 @@ async function judgeOccurrence(o: FixedReportOccurrence): Promise<void> {
 export const regressionJudge = sinkHandler(
   fixedReportOccurrenceSink,
   () => (o) => {
-    void runTracked("reports:judge-regression", async () => {
-      try {
-        await judgeOccurrence(o);
-      } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
-        reportServerError({
-          message: `[reports] could not judge whether report ${o.reportId} regressed: ${error.message}`,
-          ...crashFieldsOf(error),
-        });
-      }
-    });
+    void runTracked(
+      "reports:judge-regression",
+      async () => {
+        try {
+          await judgeOccurrence(o);
+        } catch (err) {
+          const error = err instanceof Error ? err : new Error(String(err));
+          reportServerError({
+            message: `[reports] could not judge whether report ${o.reportId} regressed: ${error.message}`,
+            ...crashFieldsOf(error),
+          });
+        }
+      },
+      {
+        // 2026-11-20: main's onAllReady fix-claim ingest filed an
+        // UnknownFixedReport occurrence of a report with a pending fix, and the
+        // judge it started was charged to that hook.
+        outlivesBootHook:
+          "one occurrence's regression verdict, started by whichever write recorded the occurrence (a boot hook only when that hook happened to file a report with a pending or live fix) — not a pass over anything the boot owes",
+      },
+    );
   },
 );
