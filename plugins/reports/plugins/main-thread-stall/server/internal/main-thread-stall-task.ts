@@ -87,7 +87,7 @@ function renderDescription(row: ReportRow, d: MainThreadStallPayload): string {
   lines.push(`- **URL:** ${d.url}`);
   lines.push(`- **Tab:** \`${d.tabId}\`${d.focused ? " (focused)" : ""}`);
   lines.push(
-    `- **When:** ${new Date(d.startedAt).toISOString()} → ${new Date(d.endedAt).toISOString()}`,
+    `- **When:** ${new Date(d.startedAt).toISOString()} → ${new Date(d.endedAt).toISOString()}${d.sleptMs > 0 ? ` — the device slept ${(d.sleptMs / 1000).toFixed(1)} s of it, not counted in the ${(d.durationMs / 1000).toFixed(1)} s` : ""}`,
   );
   lines.push(`- **Detector:** ${d.detector}`);
   lines.push(`- **Browser:** ${d.client.family} on ${d.client.os}`);

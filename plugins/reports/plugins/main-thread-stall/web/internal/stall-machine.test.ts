@@ -372,6 +372,8 @@ describe("endings", () => {
           startedAt: 1,
           endedAt: 9001,
           durationMs: 9000,
+          sleptMs: 0,
+          returnedOutOfView: null,
           durationIsLowerBound: true,
           ended: "unknown",
           detector: "worker",
@@ -992,5 +994,129 @@ describe("sampled stacks", () => {
   test("a report filed before stacks existed parses as unavailable, with the reason", () => {
     const old = MainThreadStallPayloadSchema.parse(recovered());
     expect(old.stacks.kind).toBe("unavailable");
+  });
+});
+
+describe("judged on awake, visible time", () => {
+  const delivered = (fx: StallEffect[]) => of(fx, "deliver");
+  const nearMiss = (fx: StallEffect[]) =>
+    of(fx, "log").find((l) => l.line.kind === "near-miss")?.line;
+
+  test("a tab answering on wake, before the late tick, is not a freeze: the sleep is measured, not judged", () => {
+    const m = machine();
+    attach(m, "a", tab("A", { focused: true }));
+    const fx = run(m, T0, T0 + 3000, []);
+    expect(m.incidents.size).toBe(1);
+    // The device slept 1740 s; on wake the tab's pong is delivered before the
+    // worker's late tick, the sleep fed first (as the worker does).
+    const wake = T0 + 3000 + 1_740_000;
+    fx.push(...step(m, { type: "slept", ms: 1_739_000 }));
+    fx.push(...step(m, { type: "pong", portId: "a", now: wake }));
+    fx.push(...run(m, wake + 1000, wake + 4000, ["a"]));
+    expect(delivered(fx)).toEqual([]);
+    expect(nearMiss(fx)).toMatchObject({ reason: "slept", sleptMs: 1_739_000 });
+  });
+
+  test("a tab leaving on wake (gone) is not a freeze either", () => {
+    const m = machine();
+    attach(m, "a", tab("A", { focused: true }));
+    const fx = run(m, T0, T0 + 3000, []);
+    fx.push(...step(m, { type: "slept", ms: 1_739_000 }));
+    fx.push(
+      ...step(m, { type: "gone", portId: "a", now: T0 + 3000 + 1_740_000 }),
+    );
+    expect(delivered(fx)).toEqual([]);
+    expect(nearMiss(fx)).toMatchObject({ reason: "slept", ended: "gone" });
+  });
+
+  test("a real freeze with a sleep inside it is filed on its awake time, the sleep split out", () => {
+    const m = machine();
+    attach(m, "a", tab("A"));
+    const fx = run(m, T0, T0 + 4000, []);
+    // Frozen since T0 (its last pong); 60 s asleep, then awake and still
+    // frozen until T0 + 68 s.
+    fx.push(...step(m, { type: "slept", ms: 60_000 }));
+    fx.push(...step(m, { type: "pong", portId: "a", now: T0 + 68_000 }));
+    fx.push(...run(m, T0 + 69_000, T0 + 71_000, ["a"]));
+    const [d] = delivered(fx);
+    if (!d) throw new Error("not filed");
+    expect(d.payload.durationMs).toBe(8_000);
+    expect(d.payload.sleptMs).toBe(60_000);
+    expect(d.payload.endedAt - d.payload.startedAt).toBe(68_000);
+  });
+
+  test("a silence whose first word is 'hidden' (report-1795184320-vzpbkp's shape) is delivered marked out of view — recorded, never reported", () => {
+    const m = machine();
+    attach(m, "a", tab("A", { focused: true }));
+    attach(m, "b", tab("B", { visible: false }));
+    // 29 min silent while the worker (and every other tab) ran on.
+    const fx = run(m, T0, T0 + 1_740_000, ["b"]);
+    expect(m.incidents.size).toBe(1);
+    // Back: its queued visibilitychange says hidden, then it unloads.
+    fx.push(
+      ...step(m, {
+        type: "state",
+        portId: "a",
+        tab: tab("A", { visible: false }),
+        frozen: false,
+        now: T0 + 1_740_200,
+      }),
+    );
+    fx.push(...step(m, { type: "gone", portId: "a", now: T0 + 1_740_220 }));
+    const [d] = delivered(fx);
+    if (!d) throw new Error("not delivered: a silence is never dropped unseen");
+    expect(d.payload.returnedOutOfView).toBe("hidden");
+    expect(d.payload.ended).toBe("gone");
+  });
+
+  test("…unless a long frame proves the thread was busy: then it is filed on that frame", () => {
+    const m = machine();
+    attach(m, "a", tab("A", { focused: true }));
+    attach(m, "b", tab("B", { visible: false }));
+    const fx = run(m, T0, T0 + 9000, ["b"]);
+    fx.push(
+      ...step(m, {
+        type: "state",
+        portId: "a",
+        tab: tab("A", { visible: false }),
+        frozen: false,
+        now: T0 + 9500,
+      }),
+    );
+    fx.push(
+      ...step(m, {
+        type: "frame",
+        portId: "a",
+        frame: frame(T0 + 200, 9000),
+        now: T0 + 9600,
+      }),
+    );
+    fx.push(...run(m, T0 + 10_000, T0 + 13_000, ["b"]));
+    const [d] = delivered(fx);
+    if (!d) throw new Error("not filed");
+    expect(d.payload.durationMs).toBe(9000);
+    expect(d.payload.sleptMs).toBe(0);
+    expect(d.payload.returnedOutOfView).toBeNull();
+    expect(d.payload.topFunction).toBe("spin (Window.setTimeout)");
+  });
+
+  test("a busy freeze while visible is still filed (synthetic busy loop, no sleep)", () => {
+    const m = machine();
+    attach(m, "a", tab("A", { focused: true }));
+    const fx = run(m, T0, T0 + 7000, []);
+    fx.push(...step(m, { type: "pong", portId: "a", now: T0 + 7100 }));
+    fx.push(
+      ...step(m, {
+        type: "frame",
+        portId: "a",
+        frame: frame(T0 + 300, 6700),
+        now: T0 + 7150,
+      }),
+    );
+    fx.push(...run(m, T0 + 8000, T0 + 10_000, ["a"]));
+    const [d] = delivered(fx);
+    if (!d) throw new Error("not filed");
+    expect(d.payload.ended).toBe("recovered");
+    expect(d.payload.durationMs).toBe(6700);
   });
 });

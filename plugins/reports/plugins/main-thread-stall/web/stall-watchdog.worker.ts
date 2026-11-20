@@ -98,7 +98,18 @@ function boot(): void {
     }
   };
 
+  // The device's sleep, measured at every event: the wall clock runs through
+  // a sleep, performance.now() does not. A gap between them is fed before the
+  // event it was measured at, so whatever arrives first on wake — a tab's
+  // answer, its departure, the late tick — is judged on awake time.
+  let clocks = { wall: Date.now(), awake: performance.now() };
   const feed = (ev: StallEvent): void => {
+    const wall = Date.now();
+    const awake = performance.now();
+    const sleptMs = wall - clocks.wall - (awake - clocks.awake);
+    clocks = { wall, awake };
+    if (sleptMs >= STALL.SLEPT_MIN_MS)
+      apply(step(machine, { type: "slept", ms: Math.round(sleptMs) }));
     apply(step(machine, ev));
     syncClock();
   };

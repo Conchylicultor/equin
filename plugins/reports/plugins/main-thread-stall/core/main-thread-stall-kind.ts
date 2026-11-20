@@ -128,7 +128,20 @@ export const MainThreadStallPayloadSchema = StallTabSchema.extend({
   // (unknown — the duration is then a lower bound).
   startedAt: z.number(),
   endedAt: z.number(),
+  // The time the device was AWAKE inside [startedAt, endedAt) — what is
+  // judged. The rest is `sleptMs`, split out, never counted as frozen.
   durationMs: z.number(),
+  // Device sleep the watchdog measured inside the stall (its wall clock ran
+  // on, its awake clock did not): endedAt − startedAt − durationMs. 0 on
+  // reports filed before it was measured.
+  sleptMs: z.number().default(0),
+  // The silence's first word was the tab saying it is hidden (or
+  // Page-Lifecycle-frozen), and no long frame proved its thread busy: the
+  // browser most likely took the page out of view while its thread was not
+  // running (suspended, paused), and it learned only on return. Recorded as
+  // the `main-thread` slow-op only — never a report, never a bell. Null:
+  // it came back in view, or a long frame covers it.
+  returnedOutOfView: z.enum(["hidden", "frozen"]).nullable().default(null),
   durationIsLowerBound: z.boolean(),
   // recovered: the tab answered again on its own. gone: it was reloaded,
   // closed or killed while frozen. unknown: the watchdog itself died with the

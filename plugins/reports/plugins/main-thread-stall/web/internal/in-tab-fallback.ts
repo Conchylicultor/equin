@@ -136,6 +136,11 @@ function payload(
     startedAt,
     endedAt,
     durationMs: endedAt - startedAt,
+    // A LoAF frame is timed on the awake clock (a sleep does not lengthen
+    // it); a heartbeat gap is a lower bound the fallback cannot split.
+    sleptMs: 0,
+    // The fallback has no watchdog to hear the tab's first word.
+    returnedOutOfView: null,
     // The gap runs from the last heartbeat to this load: it includes the
     // reload itself, and the freeze began up to one beat after.
     durationIsLowerBound: false,

@@ -70,6 +70,19 @@ interface Incident {
    */
   readonly interaction: InteractionBegin | null;
   startedAt: number;
+  /**
+   * Device sleep the worker measured inside the silence (its wall clock ran on,
+   * its awake clock did not): never counted as frozen — the stall is judged on
+   * the rest, and the payload carries it split out.
+   */
+  sleptMs: number;
+  /**
+   * The silence's first sign of life was the tab saying it is hidden (or
+   * Page-Lifecycle-frozen): the browser took the page out of view while its
+   * thread was not running, and the tab learned only on its return. Without a
+   * long frame proving the thread was busy, nothing in it was judged visible.
+   */
+  returnedOutOfView: "hidden" | "frozen" | null;
   phase: "open" | "settling";
   endedAt: number | null;
   ended: "recovered" | "gone" | null;
@@ -139,6 +152,14 @@ export type StallEvent =
   /** The tab's port is gone: its liveness lock was granted to us, or it detached. */
   | { type: "gone"; portId: string; now: number }
   | { type: "tick"; now: number }
+  /**
+   * The device slept `ms` since the worker's previous event: its wall clock
+   * advanced that much more than its awake clock (performance.now(), which
+   * pauses while the machine sleeps). Fed before the event it was measured
+   * at, so a tab's answer or departure delivered on wake — ahead of the late
+   * first tick — is judged on awake time.
+   */
+  | { type: "slept"; ms: number }
   /**
    * The clock (re)started at `now`: the reference its first tick is judged
    * late against. Without it a first tick that came late — the worker itself
@@ -210,6 +231,11 @@ export function step(m: StallMachine, ev: StallEvent): StallEffect[] {
     case "state": {
       const p = m.ports.get(ev.portId);
       if (!p) break;
+      const inc = primaryIncident(m, p.portId);
+      // Its first word after the silence is that it is out of view: hidden
+      // while it was not running (see Incident.returnedOutOfView).
+      if (inc?.phase === "open" && (!ev.tab.visible || ev.frozen))
+        inc.returnedOutOfView = ev.frozen ? "frozen" : "hidden";
       const becameWatchable =
         (!p.tab.visible || p.frozen) && ev.tab.visible && !ev.frozen;
       p.tab = ev.tab;
@@ -254,6 +280,11 @@ export function step(m: StallMachine, ev: StallEvent): StallEffect[] {
       break;
     case "tick":
       onTick(m, ev.now, out);
+      break;
+    case "slept":
+      for (const inc of m.incidents.values())
+        if (inc.phase === "open") inc.sleptMs += ev.ms;
+      out.push({ type: "log", line: { kind: "slept", sleptMs: ev.ms } });
       break;
     case "clock-started":
       m.lastTick = ev.now;
@@ -306,8 +337,9 @@ function alive(
   inc.ended = "recovered";
   // The pong measures an UPPER bound (the freeze began somewhere in the second
   // after the last pong): under the report bar it cannot be a reportable stall.
-  if (now - inc.startedAt < STALL.REPORT_MIN_MS) {
-    drop(m, inc, out, "under-report-bar");
+  // Judged on awake time: the device's sleep inside it froze nothing.
+  if (awakeMs(inc, now) < STALL.REPORT_MIN_MS) {
+    drop(m, inc, out, inc.sleptMs > 0 ? "slept" : "under-report-bar");
     return;
   }
   inc.phase = "settling";
@@ -429,9 +461,10 @@ function onTick(m: StallMachine, now: number, out: StallEffect[]): void {
   // watchdog dies with the stall still open.
   for (const inc of m.incidents.values()) {
     if (inc.phase !== "open") continue;
-    const age = now - inc.startedAt;
+    // Awake age: a stored lower bound must itself clear the report bar.
+    const age = awakeMs(inc, now);
     if (age < STALL.REPORT_MIN_MS) continue;
-    if (inc.persistedAt !== null && age < 2 * (inc.persistedAt - inc.startedAt))
+    if (inc.persistedAt !== null && age < 2 * awakeMs(inc, inc.persistedAt))
       continue;
     inc.persistedAt = now;
     out.push({
@@ -505,6 +538,8 @@ function openStalls(m: StallMachine, now: number, out: StallEffect[]): void {
     frozenIn: primary.open?.mark ?? null,
     interaction: causingInteraction(primary),
     startedAt: primary.lastPong,
+    sleptMs: 0,
+    returnedOutOfView: null,
     phase: "open",
     endedAt: null,
     ended: null,
@@ -536,7 +571,12 @@ function openStalls(m: StallMachine, now: number, out: StallEffect[]): void {
 function finalize(m: StallMachine, inc: Incident, out: StallEffect[]): void {
   const ended = inc.ended ?? "recovered";
   const frame = inc.stallFrame;
+  // A long frame proves the thread was busy: then the stall is that frame,
+  // whatever the tab said on return.
+  if (frame) inc.returnedOutOfView = null;
   if (frame) {
+    // The frame is timed on the awake clock: it is the stall, whole.
+    inc.sleptMs = 0;
     inc.startedAt = frame.startedAt;
     const frameEnd = frame.startedAt + frame.durationMs;
     inc.endedAt = frameEnd;
@@ -552,9 +592,9 @@ function finalize(m: StallMachine, inc: Incident, out: StallEffect[]): void {
     inc.during.splice(0, inc.during.length, ...inside);
   }
   const endedAt = inc.endedAt ?? inc.startedAt;
-  if (endedAt - inc.startedAt < STALL.REPORT_MIN_MS) {
+  if (awakeMs(inc, endedAt) < STALL.REPORT_MIN_MS) {
     // Its LoAF entry (≥ SLOW_OP_MIN_MS) is the tab's own slow-op already.
-    drop(m, inc, out, "under-report-bar");
+    drop(m, inc, out, inc.sleptMs > 0 ? "slept" : "under-report-bar");
     return;
   }
   const payload = payloadOf(inc, ended, endedAt, false);
@@ -571,6 +611,8 @@ function finalize(m: StallMachine, inc: Incident, out: StallEffect[]): void {
       id: inc.id,
       ended,
       durationMs: payload.durationMs,
+      sleptMs: payload.sleptMs,
+      returnedOutOfView: payload.returnedOutOfView,
     },
   });
 }
@@ -590,7 +632,10 @@ function drop(
       reason,
       id: inc.id,
       tabId: inc.primaryTab.tabId,
-      durationMs: (inc.endedAt ?? inc.startedAt) - inc.startedAt,
+      // The silence on the wall clock, and what of it the device slept.
+      silentMs: (inc.endedAt ?? inc.startedAt) - inc.startedAt,
+      sleptMs: inc.sleptMs,
+      ended: inc.ended,
     },
   });
 }
@@ -608,7 +653,9 @@ function payloadOf(
     ...inc.primaryTab,
     startedAt: inc.startedAt,
     endedAt,
-    durationMs: endedAt - inc.startedAt,
+    durationMs: awakeMs(inc, endedAt),
+    sleptMs: inc.sleptMs,
+    returnedOutOfView: inc.returnedOutOfView,
     durationIsLowerBound: lowerBound,
     ended,
     detector: "worker",
@@ -651,6 +698,11 @@ function deliver(m: StallMachine, out: StallEffect[]): void {
 }
 
 // --- helpers -----------------------------------------------------------------
+
+/** The stall's time from its start to `end` the device was awake: what is judged. */
+function awakeMs(inc: Incident, end: number): number {
+  return Math.max(0, end - inc.startedAt - inc.sleptMs);
+}
 
 /** Tabs that answer: not inside an incident, not a covered cohort member. */
 function liveTabs(m: StallMachine): PortState[] {
@@ -713,7 +765,7 @@ function isStallFrame(inc: Incident, frame: StallFrame, now: number): boolean {
 function stallTopFunction(inc: Incident, endedAt: number): string | null {
   if (inc.stallFrame) return topFunction([inc.stallFrame]);
   const coveredMs = inc.during.reduce((sum, f) => sum + f.durationMs, 0);
-  const share = coveredMs / Math.max(1, endedAt - inc.startedAt);
+  const share = coveredMs / Math.max(1, awakeMs(inc, endedAt));
   return share >= STALL.DURING_ATTRIBUTION_MIN_SHARE
     ? topFunction(inc.during)
     : null;

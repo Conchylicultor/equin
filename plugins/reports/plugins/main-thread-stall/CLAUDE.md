@@ -51,6 +51,32 @@ All rules live (and are tested) there:
   (report-1795091821-xwqzky: `frozenIn` begun 12.7 s after the last sign of
   life, so no tick ran in between; its last heap reading was 7.3 h old — the
   moment the analytics saw it hidden).
+- **Awake time**: the worker reads both clocks at every event — the wall
+  clock runs through a device sleep, `performance.now()` does not — and feeds
+  a gap ≥ 1 s between them as `slept` BEFORE the event it was measured at.
+  An open stall is judged on its awake time only (`durationMs`); the sleep
+  is split out as `sleptMs` (`endedAt − startedAt − durationMs`), never
+  hidden, and a stall under the bar once its sleep is taken out is dropped
+  (`near-miss`, reason `slept`). The late-tick rule only fires on the first
+  tick after a wake; a tab's pong or departure delivered before that tick
+  used to charge the whole sleep as a freeze.
+- **Out of view on return**: when a silence's first word is the tab saying
+  it is hidden (or frozen), and no long frame proves its thread was busy, the
+  browser most likely took the page out of view while its thread was not
+  running, and the tab learned it only on return. Such a stall is delivered
+  with `returnedOutOfView` set. The filing tab records it as the
+  `main-thread` slow-op only (variant `out of view on return (…)`, drawn on
+  the Timeline): never a `main-thread-stall` report, never a bell. This is
+  the 1740.2 s / 1740.4 s pair of 2026-11-19 (report-1795184320-vzpbkp,
+  -0u5m7d). The machine was awake throughout (main's 10 s health samples
+  run on), and the other tabs answered. Each tab's thread ran nothing for
+  29 min, then woke with its overdue tab-memory timer reading
+  `visible: false`, and unloaded.
+  - Downgraded, never dropped, because the task order is not proven. A real
+    busy freeze ended by a reload or close has been seen to answer a queued
+    ping first (`recovered`, then `gone`), and on Chromium it leaves its LoAF
+    frame, which clears the mark. If unload ever ran ahead of both, that
+    freeze would still be on the Timeline.
 - **Cohort**: tabs silent within 1.5 s of each other froze together (one
   renderer): one incident, the focused visible tab primary, the others
   `cohort[]`; they stay `covered` (no second incident) until they answer.

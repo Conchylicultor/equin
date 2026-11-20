@@ -16,6 +16,11 @@ export const STALL = {
   // A worker tick this much later than PING_MS means the host or machine slept:
   // every tab looks stale for the same reason, so nothing is filed.
   SLEEP_LATE_MS: 3000,
+  // The worker's wall clock advancing this much more than its awake clock
+  // (performance.now(), paused while the machine sleeps) between two events is
+  // device sleep, taken out of every open stall. Above wall-clock jitter and
+  // small NTP slews; a sleep is seconds at least.
+  SLEPT_MIN_MS: 1000,
   // Tabs that stopped answering within this of each other froze together
   // (one renderer process): one incident, the others its cohort.
   COHORT_WINDOW_MS: 1500,

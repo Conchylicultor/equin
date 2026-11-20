@@ -68,9 +68,14 @@ export async function fileStall(
     tab: payload,
     durationMs: payload.durationMs,
     endedAt: payload.endedAt,
-    topFunction: payload.topFunction,
+    topFunction: payload.returnedOutOfView
+      ? `out of view on return (${payload.returnedOutOfView})`
+      : payload.topFunction,
     reportedBy: "main-thread-stall",
   });
+  // Not a freeze anyone saw (see returnedOutOfView): recorded and drawn on
+  // the Timeline, never a report or a bell.
+  if (payload.returnedOutOfView) return true;
   const res = await report({
     kind: "main-thread-stall",
     source: "client-main-thread-stall",
