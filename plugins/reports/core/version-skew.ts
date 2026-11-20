@@ -71,6 +71,7 @@ export const SKEW_PROOF: Record<
   "boot-snapshot": "none",
   "client-boot-task": "none",
   "client-boot-crash": "none",
+  "client-list-catalog": "none",
   "client-missing-companion": "none",
   "plugin-load": "retired-file",
   "client-storage": "none",

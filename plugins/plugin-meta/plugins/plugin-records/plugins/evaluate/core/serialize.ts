@@ -15,7 +15,9 @@
  * - a slot → whatever the caller's `slot(identity)` returns (a stub the
  *   record naming resolves);
  * - a Map / Set / Date / RegExp → the same kind of value;
- * - another class instance → a plain object of its own enumerable fields;
+ * - another class instance → a {@link RecordedInstance} holding its own
+ *   enumerable fields (not a plain object: a reader judging "is this plain
+ *   data" — the list catalog's facts — answers as it would of the live value);
  * - what cannot be data — a zod schema, a React element, a cycle, a value
  *   nested past {@link MAX_DEPTH} — → a value that THROWS when read. A reader
  *   that needs one (a check validating a file against a descriptor's schema)
@@ -154,6 +156,13 @@ function elided(why: string): object {
   );
 }
 
+/**
+ * What a class instance (not a Map, Set, Date or RegExp) revives as: its own
+ * enumerable fields on an object whose prototype is not `Object.prototype`, so
+ * it is told apart from a plain object exactly as the live instance is.
+ */
+export class RecordedInstance {}
+
 /** The inverse of {@link serializeValue}, with stand-ins for what was a marker. */
 export function reviveValue(json: Json, opts: ReviveOptions): unknown {
   const walk = (j: Json): unknown => {
@@ -208,7 +217,7 @@ export function reviveValue(json: Json, opts: ReviveOptions): unknown {
       case "re":
         return new RegExp(v as string, j.f as string);
       case "obj": {
-        const out: Record<string, unknown> = {};
+        const out = new RecordedInstance() as Record<string, unknown>;
         for (const [k, x] of Object.entries(v as { [key: string]: Json }))
           out[k] = walk(x);
         return out;

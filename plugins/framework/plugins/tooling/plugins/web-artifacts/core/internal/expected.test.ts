@@ -53,6 +53,11 @@ describe("map-in-sync re-plans the tree over the dist's recorded edges", () => {
     webScopedEntries: [],
     deferredPaths: new Set<string>(),
     registryFile,
+    catalogSources: {
+      page: "export const webCatalog = { lists: [], entries: [], companionProviders: {} };\n",
+      onDemand:
+        "export const webCatalog = { lists: [], entries: [], companionProviders: {} };\n",
+    },
     registrySlug: "web-registry-edges",
   };
   const plan = (repo: RepoSnapshot, reads: PlanReads) =>

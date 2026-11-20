@@ -71,7 +71,13 @@ import { appRootOf } from "@plugins/apps-core/plugins/app-preload/core";
 import type { PreRenderedChunk } from "rolldown";
 import { sha256Hex } from "../hash";
 import { isBrowserUnreachableDynamic, WORKER_ONLY_KINDS } from "../constants";
-import { COMPOSITION_REGISTRY_SPECIFIER } from "../composition-modules";
+import {
+  COMPOSITION_CATALOG_FILE,
+  COMPOSITION_CATALOG_SPECIFIER,
+  COMPOSITION_ON_DEMAND_CATALOG_FILE,
+  COMPOSITION_ON_DEMAND_CATALOG_SPECIFIER,
+  COMPOSITION_REGISTRY_SPECIFIER,
+} from "../composition-modules";
 import {
   parseStatementBindings,
   renderStatement,
@@ -474,6 +480,14 @@ export async function planLinkGraph(
     inputs.registryDirName,
   );
   bySpecifier.set(COMPOSITION_REGISTRY_SPECIFIER, registryFile);
+  bySpecifier.set(
+    COMPOSITION_CATALOG_SPECIFIER,
+    `${io.storePath(inputs.registryDirName)}/${COMPOSITION_CATALOG_FILE}`,
+  );
+  bySpecifier.set(
+    COMPOSITION_ON_DEMAND_CATALOG_SPECIFIER,
+    `${io.storePath(inputs.registryDirName)}/${COMPOSITION_ON_DEMAND_CATALOG_FILE}`,
+  );
 
   /** The store dir (and its dirName) a module file lives in. */
   const storeDirOf = (file: string): { dir: string; dirName: string } => {

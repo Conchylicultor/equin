@@ -22,6 +22,7 @@ export type {
   SlotNamingEntry,
   SlotLookup,
   SlotHandle,
+  SlotMeta,
   SlotSource,
   SlotRecord,
   SlotDeclaration,

@@ -26,6 +26,12 @@ const check: Check = {
   // Its code is covered by the check-source hash (it and source-analysis live
   // under `tooling/`); the parser's version is the signature.
   inputKeyed: true,
+  wholeTreeRead: {
+    kind: "debt",
+    task: "task-1795203463-xer6gw",
+    reason:
+      "a run re-reads every source its analysis reaches (~1,000 files): an edit to any of them re-runs the whole analysis instead of its own part",
+  },
   async cacheSignature() {
     return `typescript@${(await loadTs()).version}`;
   },

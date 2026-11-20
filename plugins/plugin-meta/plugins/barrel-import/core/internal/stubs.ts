@@ -235,7 +235,7 @@ export function setPreBarrelImportGuard(fn: () => void | Promise<void>): void {
  * import loop of their own — the two scoped declaration passes, the docs tree,
  * `token-group-vars`, `config-origin`, `registrations-paired`, the page checks.
  * Any two of them selected together is the hazard; `./equin check
- * reorderable-slots-in-sync facets:render-complete` is one live pair.
+ * list-catalog-in-sync facets:render-complete` is one live pair.
  *
  * DO NOT REMOVE AS REDUNDANT. Before the declaration pass was scoped per
  * `(scope, root)`, a single memo per root meant concurrent callers joined ONE

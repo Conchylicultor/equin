@@ -683,7 +683,7 @@ imports, and every contributor of each list the body reads **with
 the context escaping, a list not imported by name, a body not written inline:
 each fails the build naming the call) and resolves each list's import to its
 `defineServerContribution("<name>")`, writing `cli/job-reads.generated.ts`
-(`server-contributors-in-sync` fails on drift). The child looks its job up
+(`list-catalog-in-sync` fails on drift). The child looks its job up
 there; a job missing from it fails loudly.
 
 - A **data list** (`defineServerContribution(name, { data: true })` — the fork's

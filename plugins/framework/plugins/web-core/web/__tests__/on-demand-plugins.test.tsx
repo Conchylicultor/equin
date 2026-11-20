@@ -69,6 +69,7 @@ function setup() {
       registry={registry}
       composition={{ id: "page", home: null }}
       scopeRoots={<RenderScopeRoot />}
+      catalog={{ lists: [], entries: [], companionProviders: {} }}
       onDemand={onDemand}
     >
       {children}
@@ -191,6 +192,7 @@ describe("on-demand plugins", () => {
         registry={registry}
         composition={{ id: "page", home: null }}
         scopeRoots={<RenderScopeRoot />}
+        catalog={{ lists: [], entries: [], companionProviders: {} }}
       >
         <Items testId="page" />
         <Demo enabled={false} />

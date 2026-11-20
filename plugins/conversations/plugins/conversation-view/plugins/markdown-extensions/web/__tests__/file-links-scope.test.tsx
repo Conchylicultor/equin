@@ -61,6 +61,7 @@ function Plugins({ children }: { children: ReactNode }) {
       registry={registry}
       composition={{ id: "test", home: null }}
       scopeRoots={null}
+      catalog={{ lists: [], entries: [], companionProviders: {} }}
     >
       {children}
     </PluginProvider>

@@ -30,4 +30,11 @@ export default [
     reason:
       "Written before sourceAnalysis(ctx): reads code through parse-utils' text helpers (regexes over masked source), which skip what they cannot guess.",
   },
+  {
+    rule: "product-name:legacy-id",
+    paths: ["core/web-list-entries.generated.json"],
+    kind: "sanctioned",
+    reason:
+      "The list catalog's web entries, written by the build: each entry's data copied verbatim from what its plugin declares — the repo checkout's file-explorer place keeps its stored id (LEGACY_IDS.fileExplorerPlace), read from the constant in its own source.",
+  },
 ] satisfies Exemptions;

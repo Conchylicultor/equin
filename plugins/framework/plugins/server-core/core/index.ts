@@ -94,6 +94,8 @@ export {
   type ComposedHome,
 } from "./composed-web-plugins";
 export type { ComposedEntry } from "./composed-web-plugins";
+export { webListFacts } from "./web-lists";
+export type { WebListFact } from "./web-lists";
 export { sinkHandler } from "./sink-handler";
 export { isProcessCrashHandled, processCrashSink } from "./process-crash";
 export type { ProcessCrash, ProcessCrashEvent } from "./process-crash";

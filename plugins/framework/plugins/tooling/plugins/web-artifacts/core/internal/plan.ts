@@ -35,6 +35,7 @@ import {
   type ArtifactKind,
 } from "../own-roots";
 import { computeBuilderIdentity, type BuilderIdentity } from "./identity";
+import { renderPageCatalog, type PageCatalogSources } from "./page-catalog";
 import { ownHashFor, type OwnSources } from "./own-files";
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import { allStaticImports, artifactDirName, type ArtifactEdges } from "./store";
@@ -73,6 +74,11 @@ export interface FleetSource {
   /** The registry module the registry artifact is built from (absolute path). */
   registryFile: AppPath;
   /**
+   * The page's list catalog modules (`page-catalog.ts`), kept to this
+   * composition's web plugins — the registry artifact's other modules.
+   */
+  catalogSources: PageCatalogSources;
+  /**
    * Store slug for the registry artifact. The `@composition-web-registry`
    * import-map alias stays FIXED across sources (it is the seam the entry
    * artifact imports — same entry, different registry artifact = different
@@ -96,6 +102,11 @@ export async function defaultFleetSource(root: AppPath): Promise<FleetSource> {
     webScopedEntries,
     deferredPaths: DEFERRED_PLUGIN_PATHS,
     registryFile,
+    catalogSources: await renderPageCatalog(
+      root,
+      webEntries.map((e) => e.id),
+      webScopedEntries.map((e) => e.id),
+    ),
     registrySlug: "composition-web-registry",
   };
 }
@@ -149,6 +160,11 @@ export async function compositionFleetSource(opts: {
     webScopedEntries,
     deferredPaths: DEFERRED_PLUGIN_PATHS,
     registryFile,
+    catalogSources: await renderPageCatalog(
+      opts.root,
+      webEntries.map((e) => e.id),
+      webScopedEntries.map((e) => e.id),
+    ),
     registrySlug: `web-registry-${opts.name}`,
   };
 }
@@ -166,6 +182,8 @@ export interface RegistryTargetPlan {
   dirName: string;
   inputsHash: string;
   registryFile: AppPath;
+  /** The page's list catalog modules, built beside the registry. */
+  catalogSources: PageCatalogSources;
 }
 
 export interface FleetPlan {
@@ -355,7 +373,9 @@ export async function planFleet(opts: {
     async (): Promise<RegistryTargetPlan> => {
       const registrySource = await readFile(registryFile, "utf8");
       const registryInputsHash = computeInputsHash({
-        ownHash: sha256Hex(registrySource),
+        ownHash: sha256Hex(
+          `${registrySource}\0${source.catalogSources.page}\0${source.catalogSources.onDemand}`,
+        ),
         kind: "registry",
         identityHash: identity.identityHash,
       });
@@ -368,6 +388,7 @@ export async function planFleet(opts: {
         dirName,
         inputsHash: registryInputsHash,
         registryFile,
+        catalogSources: source.catalogSources,
       };
     },
   );

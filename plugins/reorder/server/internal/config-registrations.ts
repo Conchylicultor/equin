@@ -1,7 +1,7 @@
 import { ConfigV2 } from "@plugins/config_v2/server";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { reorderDirectiveDescriptor } from "../../shared/directive";
-import { reorderableSlots } from "../../shared/reorderable-slots.generated";
+import { reorderableSlots } from "../../shared/reorderable-lists";
 
 /**
  * One `ConfigV2.Register` contribution per reorderable slot, planted under the

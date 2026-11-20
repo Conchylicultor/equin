@@ -1,4 +1,4 @@
-import { useRawContributions } from "./context";
+import { useFactsOf, useRawContributions, type EntryFact } from "./context";
 import {
   recordCreatedSlot,
   slotIdFor,
@@ -15,6 +15,13 @@ import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 export interface Slot<P> extends SlotHandle {
   (props: P): Contribution;
   useContributions: Hook<() => readonly SealContributions<P>[]>;
+  /**
+   * The FACTS of this list's entries (`Fact<P>`: every field that is data,
+   * none that is code), from the list catalog the page was shipped — complete
+   * at the first render, before any plugin has loaded. Reading a code field
+   * (`component`) is a compile error: an entry's code is its plugin's.
+   */
+  useFacts: Hook<() => readonly EntryFact<P>[]>;
 }
 
 // The sealed view of a slot's list, shared by every reader of that list: keyed
@@ -83,6 +90,12 @@ export interface SlotOptions<P> {
    * filters (see `SlotMeta.pageWide`).
    */
   pageWide?: true;
+  /**
+   * Leave this list out of the list catalog, saying why (see
+   * `SlotMeta.catalog`): only for a kind of declaration with its own declared
+   * form (settings).
+   */
+  catalog?: { omitted: string };
 }
 
 /**
@@ -116,6 +129,7 @@ export function defineSlot<P>(
     reorderable: false,
     ...(opts?.companions ? { companions: opts.companions } : {}),
     ...(opts?.pageWide ? { pageWide: true } : {}),
+    ...(opts?.catalog ? { catalog: opts.catalog } : {}),
   };
   // DERIVED, never given. There is no id parameter, so a computed id — the
   // `` `pane.${paneId}.actions` `` that build-time scanners could not read, and
@@ -141,6 +155,9 @@ export function defineSlot<P>(
   slot.useContributions = () =>
     // eslint-disable-next-line react-hooks/rules-of-hooks -- method named useContributions; ESLint doesn't recognize object.useX as a hook
     sealed(useRawContributions(slot)) as readonly SealContributions<P>[];
+  slot.useFacts = () =>
+    // eslint-disable-next-line react-hooks/rules-of-hooks -- method named useFacts; ESLint doesn't recognize object.useX as a hook
+    useFactsOf<P>(slot);
 
   return slot;
 }

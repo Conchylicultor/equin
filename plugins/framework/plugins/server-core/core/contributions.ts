@@ -462,7 +462,7 @@ export function collectContributions(
 // barrel), on every host — the full server included. So reading it starts
 // nobody: a job reads every entry without starting a single contributor, and
 // "complete in the server, missing an entry in a job" has no spelling. The
-// file is kept equal to the code by the `server-contributors-in-sync` check,
+// file is kept equal to the code by the `list-catalog-in-sync` check,
 // and every boot compares it with what its started plugins declare
 // (`assertWrittenListsMatch`): an entry computed from something only known at
 // run time fails there, loudly, never read wrong.

@@ -1,16 +1,16 @@
 import { useCallback } from "react";
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
-import { companionManifest } from "./companions.generated";
-import { readerOf, type PluginRegistry } from "./registry";
+import { usePageCatalog } from "./catalog";
 import { useDeferredLoadComplete } from "./deferred-load-store";
 
 /**
- * A companion the repo provides is not in the running bundle.
+ * A companion the page's list catalog says this page holds is not loaded.
  *
  * The closure engine ships a companion wherever its owner ships (keyed: wherever
- * its key is used), so this is a closure bug, a stale registry or a plugin that
- * failed to load — never a state to degrade through. Without it the owner falls
- * back quietly: blank icons, slots in registration order, a DataView cell drawn
+ * its key is used), and the catalog is the build's facts of exactly what this
+ * composition's plugins add to each list, so this is a closure bug, a stale
+ * registry or a plugin that failed to load — never a state to degrade through.
+ * Without it the owner falls back quietly: blank icons, a DataView cell drawn
  * as text.
  */
 export class MissingCompanionError extends Error {
@@ -18,56 +18,26 @@ export class MissingCompanionError extends Error {
 }
 
 /**
- * Every `companions: true` slot the loaded plugins declare whose repo-wide
- * companions (`companions.generated.ts`) did not all contribute, as messages.
- * Meaningful once the deferred tier has settled — before that a companion may
- * simply not have loaded yet. A slot opened to companions that the manifest does
- * not list is reported too: the manifest is stale, so this guard would be blind.
- *
- * Keyed slots are not judged here: whether one of their companions is needed
- * depends on what the page uses, so {@link useCompanionLookup} judges them at
- * the lookup that misses.
- */
-export function missingCompanions(registry: PluginRegistry): string[] {
-  const reader = readerOf(registry);
-  const problems: string[] = [];
-  for (const { slot, id, pluginId } of reader.declared()) {
-    if (!slot.meta.companions) continue;
-    const entry = companionManifest[id];
-    if (!entry) {
-      problems.push(
-        `slot "${id}" (${pluginId}) is opened to companions, but companions.generated.ts does not list it — run \`./equin build\``,
-      );
-      continue;
-    }
-    if (!("always" in entry)) continue;
-    const present = new Set(reader.read(slot).map((c) => String(c._pluginId)));
-    for (const plugin of entry.always)
-      if (!present.has(plugin))
-        problems.push(
-          `${pluginId} needs its companion ${plugin} (slot "${id}"), which this bundle does not ship`,
-        );
-  }
-  return problems;
-}
-
-/**
  * The lookup of a KEYED companion slot (`companions: { key, space }`) along a
  * chain of keys — a field type and the types it extends — returning the first
  * contribution serving one of them, or `undefined` when none does.
  *
- * A key with no provider anywhere in the repo is passed over: its absence is
- * the design (a type without its own cell draws its ancestor's). A key the repo
- * DOES provide but this bundle lacks throws {@link MissingCompanionError} once
- * the deferred tier has settled — from render, so the nearest error boundary
- * shows it in place. Before that it resolves to `undefined` without walking on,
- * and the reader re-renders when the tier settles.
+ * Which keys have a provider is read from the list catalog's companion
+ * providers — repo-wide, not only this page's: a key no plugin provides is
+ * passed over — its absence is the design (a type without its own cell draws
+ * its ancestor's). A key some plugin provides but the loaded plugins do not throws
+ * {@link MissingCompanionError} once the deferred tier has settled — from
+ * render, so the nearest error boundary shows it in place. Before that it
+ * resolves to `undefined` without walking on, and the reader re-renders when
+ * the tier settles. Under a provider given no catalog (a test's), every key is
+ * looked up in the loaded list alone.
  */
 export function useCompanionLookup<C extends object>(
   slot: SlotHandle,
   list: readonly C[],
 ): (keys: readonly string[]) => C | undefined {
   const settled = useDeferredLoadComplete();
+  const catalog = usePageCatalog();
   return useCallback(
     (keys) => {
       const option = slot.meta.companions;
@@ -75,25 +45,28 @@ export function useCompanionLookup<C extends object>(
         throw new Error(
           `useCompanionLookup: slot "${slot.id}" is not a keyed companion slot (\`companions: { key, space }\`)`,
         );
-      // A slot no loaded plugin declares has no owner here, so nothing in this
+      // A slot no loaded plugin declares has no id here, so nothing in this
       // registry expects its companions (a test rendering a view on its own).
-      const entry =
-        slot._pluginId === undefined ? undefined : companionManifest[slot.id];
-      const provided = entry && "keyed" in entry ? entry.keyed : undefined;
+      const provided =
+        catalog === null || slot._pluginId === undefined
+          ? []
+          : (catalog.companionProviders[slot.id] ?? []);
       for (const key of keys) {
         const hit = list.find(
           (c) => (c as Record<string, unknown>)[option.key] === key,
         );
         if (hit) return hit;
-        const providers = provided?.[key];
-        if (!providers) continue;
+        const providers = provided
+          .filter((p) => p.key === key)
+          .map((p) => p.plugin);
+        if (providers.length === 0) continue;
         if (!settled) return undefined;
         throw new MissingCompanionError(
-          `${slot.id}: ${option.space} "${key}" is served by ${providers.join(", ")}, which this bundle does not ship`,
+          `${slot.id}: ${option.space} "${key}" is served by ${providers.join(", ")}, which this page has not loaded`,
         );
       }
       return undefined;
     },
-    [slot, list, settled],
+    [slot, list, settled, catalog],
   );
 }

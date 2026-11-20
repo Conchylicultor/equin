@@ -16,6 +16,11 @@ export const Automations = {
    */
   Config: defineSlot<{ descriptor: ConfigDescriptor<AutomationConfigFields> }>({
     docLabel: (c) => c.descriptor.name,
+    // Each entry is a config descriptor: settings have their own declared
+    // form and build readers, so not list entries of the catalog.
+    catalog: {
+      omitted: "each entry is an automation's config descriptor (settings)",
+    },
   }),
   /**
    * A section of one automation's detail pane, for the settings only it has

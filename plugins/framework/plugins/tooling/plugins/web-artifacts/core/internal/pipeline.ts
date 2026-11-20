@@ -380,6 +380,7 @@ async function runPipeline(
             dirName: plan.registryTarget.dirName,
             inputsHash: plan.registryTarget.inputsHash,
             registryFile: plan.registryTarget.registryFile,
+            catalogSources: plan.registryTarget.catalogSources,
             minify: opts.minify,
           });
           metas.set(plan.registryTarget.dirName, meta);

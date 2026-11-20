@@ -6,6 +6,7 @@ export {
 export type {
   TokenGroupField,
   TokenGroupSchema,
+  TokenGroupContribution,
   TokenGroupDescriptor,
   TokenGroupSpec,
   TokenGroupFragment,

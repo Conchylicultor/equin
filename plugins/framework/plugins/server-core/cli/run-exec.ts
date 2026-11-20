@@ -1,3 +1,4 @@
+import type { WebListEntry } from "@plugins/framework/plugins/list-catalog/core";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { declareRuntimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { settleDeclaredDataDirMoves } from "@plugins/infra/plugins/paths/core";
@@ -8,6 +9,7 @@ import {
   declareComposedHome,
   declareComposedWebPlugins,
 } from "../core/composed-web-plugins";
+import { installWebListEntries } from "../core/web-lists";
 import { declareExecAdmission, type ExecAdmission } from "../core/schema-role";
 
 // ── `exec` — the short-lived boot mode ───────────────────────────────────────
@@ -180,6 +182,12 @@ export async function runExec(
     // The same answer `serve` declares, off the same registry.
     declareComposedWebPlugins(serverComposition.webPlugins);
     declareComposedHome(serverComposition);
+    // What its browser's web lists hold, as the build wrote it (the list
+    // catalog's entries; `webListFacts` keeps the composition's own).
+    installWebListEntries(
+      (await import("../core/web-list-entries.generated.json"))
+        .default as readonly WebListEntry[],
+    );
     // The same graph a serving desktop backend boots: both halves — whole,
     // or the part the work needs (`opts.start`), resolved from it with the
     // build's contributor table (loaded only then: no serving path reads it).

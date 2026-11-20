@@ -12,6 +12,12 @@ import {
 } from "react";
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
 import type { Contribution, LoadedPlugin } from "./types";
+import type {
+  Fact,
+  WebCatalog,
+  WebListEntry,
+} from "@plugins/framework/plugins/list-catalog/core";
+import { CatalogContext, catalogEntriesOf, indexCatalog } from "./catalog";
 import {
   createPluginRegistry,
   excludingReader,
@@ -206,6 +212,60 @@ export function useRawContributions(
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
 
+/** One entry's fact, with the plugin it came from — what `useEntries` reads. */
+export type EntryFact<P> = Fact<P> & { readonly _pluginId: string };
+
+// The facts view of one catalog list for one reader view, shared by every
+// component reading it: keyed by the reader, then by the catalog's array.
+const factsByReader = new WeakMap<
+  PluginRegistryReader,
+  WeakMap<readonly WebListEntry[], readonly unknown[]>
+>();
+
+/**
+ * The FACTS of `slot`'s entries — from the list catalog the page was shipped,
+ * so complete at the first render, before any plugin has loaded: how many
+ * entries, in which order, and every field that is data. A field that is code
+ * (a component, a callback) does not exist on a fact (`Fact<P>`): its code is
+ * in its plugin. Kept to the enclosing view (a `PluginScope` keeps its own
+ * plugins' entries, as it does their contributions). Changes nothing about
+ * loading: plugins load as they always did.
+ *
+ * Throws when the provider was given no catalog, or when the slot has no id
+ * yet (its declaring plugin has not loaded) — a fact read has no "not known
+ * yet" state to fall back to, and must not invent one.
+ */
+export function useFactsOf<P>(slot: SlotHandle): readonly EntryFact<P>[] {
+  const reader = useContext(PluginRegistryContext);
+  const catalog = useContext(CatalogContext);
+  if (!reader) {
+    throw new Error("slot entries must be read within PluginProvider");
+  }
+  if (catalog === null) {
+    throw new Error(
+      "slot.useFacts() needs a PluginProvider given the page's list catalog (`catalog`, from `@composition-web-catalog`)",
+    );
+  }
+  if (slot.meta.catalog !== undefined) {
+    throw new Error(
+      `slot.useFacts(): "${slot.id}" is left out of the list catalog (${slot.meta.catalog.omitted}) — it has no facts to read`,
+    );
+  }
+  const entries = catalogEntriesOf(catalog, slot);
+  let byList = factsByReader.get(reader);
+  if (byList === undefined) factsByReader.set(reader, (byList = new WeakMap()));
+  let out = byList.get(entries);
+  if (out === undefined) {
+    out = Object.freeze(
+      entries
+        .filter((e) => reader.keeps(slot, e.plugin))
+        .map((e) => Object.freeze({ ...e.fact, _pluginId: e.plugin })),
+    );
+    byList.set(entries, out);
+  }
+  return out as readonly EntryFact<P>[];
+}
+
 /**
  * The contributions to `slot` that are on the page but that the innermost
  * `<PluginScope>` leaves out, though its composition does not negate their
@@ -307,6 +367,12 @@ export function PluginProvider(
            * page's, which is the bug this exists to close.
            */
           scopeRoots: ReactNode;
+          /**
+           * The page's list catalog (`@composition-web-catalog`): every web
+           * list entry's fact, read by `slot.useFacts()` and the companion
+           * lookups before any plugin has loaded. Required on the boot path.
+           */
+          catalog: WebCatalog;
           plugins?: never;
         }
       // Tests and standalone mounts provide one only when what they render reads it.
@@ -317,6 +383,8 @@ export function PluginProvider(
           onDemand?: never;
           /** As on the boot path; absent = a scope mounts no root hosts. */
           scopeRoots?: ReactNode;
+          /** As on the boot path; absent = no facts read (`useEntries` throws). */
+          catalog?: WebCatalog;
         }
     ),
 ) {
@@ -332,6 +400,11 @@ export function PluginProvider(
   });
   const onDemand = props.onDemand ?? null;
   const scopeRoots = props.scopeRoots ?? null;
+  const catalogProp = props.catalog;
+  const catalog = useMemo(
+    () => (catalogProp === undefined ? null : indexCatalog(catalogProp)),
+    [catalogProp],
+  );
   // The page's own view: the whole registry minus what it holds on demand.
   const [reader] = useState(() =>
     onDemand === null || onDemand.ids.size === 0
@@ -353,9 +426,11 @@ export function PluginProvider(
       <PluginScopeBaseContext.Provider value={reader === whole ? null : whole}>
         <OnDemandContext.Provider value={onDemand}>
           <ScopeRootsContext.Provider value={scopeRoots}>
-            <CompositionContext.Provider value={composition}>
-              {children}
-            </CompositionContext.Provider>
+            <CatalogContext.Provider value={catalog}>
+              <CompositionContext.Provider value={composition}>
+                {children}
+              </CompositionContext.Provider>
+            </CatalogContext.Provider>
           </ScopeRootsContext.Provider>
         </OnDemandContext.Provider>
       </PluginScopeBaseContext.Provider>

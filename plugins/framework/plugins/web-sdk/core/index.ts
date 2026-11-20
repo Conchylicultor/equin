@@ -30,19 +30,17 @@ export {
   usePluginScopeId,
   useScopePlugins,
 } from "./context";
+export { catalogMismatches } from "./catalog";
 export type {
   CompositionIdentity,
   OnDemandPlugins,
   ScopePluginsState,
   ScopedComposition,
   SlotReadDetail,
+  EntryFact,
 } from "./context";
 export { createPluginRegistry } from "./registry";
-export {
-  MissingCompanionError,
-  missingCompanions,
-  useCompanionLookup,
-} from "./companions";
+export { MissingCompanionError, useCompanionLookup } from "./companions";
 export type { PluginRegistry } from "./registry";
 export type {
   PluginDefinition,

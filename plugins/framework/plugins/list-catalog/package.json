@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-framework-list-catalog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "The list catalog's vocabulary: a list entry's FACT — its plain-data half, with a code marker where a field is code (factOf, shared by the build that writes the catalog and the page that checks it) — the Fact<P> type on which code fields do not exist, and the catalog's shapes (each declared web list, each entry with the plugin it came from)."
+}

@@ -11,4 +11,5 @@ export { runExec } from "./run-exec";
 export {
   installDeclaredListEntries,
   loadDeclaredGraph,
+  loadWebListEntries,
 } from "./load-declared-graph";

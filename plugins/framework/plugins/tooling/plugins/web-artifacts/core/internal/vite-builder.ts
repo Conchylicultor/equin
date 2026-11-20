@@ -32,7 +32,12 @@ import {
 } from "es-module-lexer/minimal";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import type { OrderedBabelContributions } from "@plugins/framework/plugins/web-core/core";
-import { COMPOSITION_REGISTRY_SPECIFIER } from "../composition-modules";
+import {
+  COMPOSITION_CATALOG_FILE,
+  COMPOSITION_ON_DEMAND_CATALOG_FILE,
+  COMPOSITION_REGISTRY_SPECIFIER,
+} from "../composition-modules";
+import type { PageCatalogSources } from "./page-catalog";
 import { WORKER_ONLY_KINDS } from "../constants";
 import { WORKER_ASSETS_DIR } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/plugins/served-paths/core";
 import { babelContributionsPlugin } from "./babel-transform";
@@ -710,7 +715,8 @@ export async function buildArtifact(
 
 /**
  * The registry artifact — the composition artifact (`composition-modules.ts`):
- * `index.js` ← `web.generated.ts`, type-stripped to plain ESM, its
+ * `index.js` ← `web.generated.ts`, and `catalog.js` ← the page's list catalog
+ * (`page-catalog.ts`), type-stripped to plain ESM, the registry's
  * `() => import("@plugins/…/web")` dynamic imports preserved as bare specifiers
  * (the import map resolves them). No bundling — it has no static import.
  */
@@ -718,19 +724,37 @@ export async function buildRegistryArtifact(opts: {
   dirName: string;
   inputsHash: string;
   registryFile: AppPath;
+  /** The page's list catalog modules (`page-catalog.ts`). */
+  catalogSources: PageCatalogSources;
   minify: boolean;
 }): Promise<ArtifactMeta> {
   const { transform } = await import("esbuild");
   const tmpDir = artifactTmpDir(opts.dirName);
-  const modules = [{ file: opts.registryFile, out: "index.js" }];
+  const modules = [
+    {
+      source: readFileSync(opts.registryFile, "utf8"),
+      name: basename(opts.registryFile),
+      out: "index.js",
+    },
+    {
+      source: opts.catalogSources.page,
+      name: "web-catalog.ts",
+      out: COMPOSITION_CATALOG_FILE,
+    },
+    {
+      source: opts.catalogSources.onDemand,
+      name: "web-catalog-on-demand.ts",
+      out: COMPOSITION_ON_DEMAND_CATALOG_FILE,
+    },
+  ];
   for (const m of modules) {
-    const result = await transform(readFileSync(m.file, "utf8"), {
+    const result = await transform(m.source, {
       loader: "ts",
       format: "esm",
       minify: opts.minify,
       keepNames: true,
       sourcemap: true,
-      sourcefile: basename(m.file),
+      sourcefile: m.name,
     });
     writeFileSync(
       joinAppPath(tmpDir, m.out),

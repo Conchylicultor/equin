@@ -14,7 +14,9 @@
     "jsx": "react-jsx",
     "paths": {
       "@plugins/*": ["./plugins/*"],
-      "@composition-web-registry": ["./plugins/framework/plugins/web-sdk/core/web.generated"]
+      "@composition-web-registry": ["./plugins/framework/plugins/web-sdk/core/web.generated"],
+      "@composition-web-catalog": ["./plugins/framework/plugins/web-sdk/core/web-catalog"],
+      "@composition-web-catalog-on-demand": ["./plugins/framework/plugins/web-sdk/core/web-catalog-on-demand"]
     }
   }
 }

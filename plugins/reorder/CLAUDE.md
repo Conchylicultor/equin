@@ -96,14 +96,14 @@ The directive descriptor sets config_v2's `requiresAuthoredOverride`, so **`./eq
 
 ### web↔server bridge
 
-The live server can't see web-slot contributions, so build-time codegen emits `shared/reorderable-slots.generated.ts` (`{ slotId, pluginId }[]`) from the slots facet. reorder registers one descriptor per slot on **both** runtimes from this manifest:
+The live server can't see web slots, so it reads the reorderable lists as a VIEW of the list catalog's declared web lists (`shared/reorderable-lists.ts` over `framework/list-catalog/web-lists`, written at build from each plugin's `slots` declaration, filtered on `meta.reorderable`). reorder registers one descriptor per slot on **both** runtimes (the web from the slot objects themselves):
 
 - web: `ConfigV2.WebRegister` (in `web/internal/config-registrations.ts`)
 - server: `ConfigV2.Register` (in `server/internal/config-registrations.ts`)
 
 both with the slot's `pluginId` so the file lands under the defining plugin. `useConfig`/`useSetConfig` match descriptors by **reference identity**, so the web runtime builds its descriptors once in `web/internal/descriptors.ts` and reuses those instances for both registration and reads.
 
-The `reorderable-slots-in-sync` check fails if the manifest drifts; rebuild to regenerate.
+The `list-catalog-in-sync` check fails if the declared lists drift; rebuild to regenerate.
 
 ### Write path
 

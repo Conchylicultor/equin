@@ -1,5 +1,5 @@
 // Times the server's first-frame theme render (renderThemeHead) over the real
-// declarations — every token group and code theme the build generated (the
+// declarations — every token group and code theme of the list catalog (the
 // main composition's, unfiltered) — and `--apps` tab apps (stand-ins: which
 // apps a backend paints is its composition's, declared only by a serving
 // process), `--themed` of them with a theme of their own (the rest follow the
@@ -8,8 +8,9 @@
 //   ./equin run plugins/ui/plugins/theme-engine/scripts/measure-theme-head.ts [--apps 20] [--themed 4] [--runs 10]
 //
 // Research: research/2026-11-08-infra-file-watcher-close-stall.md (§ theme)
-import * as declared from "../server/internal/theme-declarations.generated";
+import { loadWebListEntries } from "@plugins/framework/plugins/server-core/cli";
 import { renderThemeHead } from "../server/internal/theme-head";
+import type { Theme, TokenGroupContribution, TokenGroupSpec } from "../core";
 
 const argv = process.argv.slice(2);
 const flag = (name: string, fallback: number): number => {
@@ -19,8 +20,21 @@ const flag = (name: string, fallback: number): number => {
 const themed = flag("themed", 4);
 const runs = flag("runs", 10);
 const appCount = flag("apps", 20);
-const tokenGroups = declared.tokenGroups.map((e) => e.value);
-const codeThemes = declared.codeThemes.map((e) => e.value);
+// The list catalog's facts of the two theme-engine lists (main's, unfiltered).
+const entries = await loadWebListEntries();
+const tokenGroups: TokenGroupSpec[] = entries
+  .filter((e) => e.list === "ui.theme-engine.token-group")
+  .map((e) => {
+    const { descriptor } = e.fact as unknown as TokenGroupContribution;
+    return {
+      id: descriptor.id,
+      schema: descriptor.schema,
+      vars: descriptor.vars,
+    };
+  });
+const codeThemes = entries
+  .filter((e) => e.list === "ui.theme-engine.theme")
+  .map((e) => e.fact as unknown as Theme);
 
 const sources = {
   groups: tokenGroups,

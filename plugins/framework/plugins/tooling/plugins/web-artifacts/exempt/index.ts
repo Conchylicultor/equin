@@ -15,6 +15,7 @@ export default [
       "core/internal/link.ts",
       "core/internal/own-files.ts",
       "core/internal/package-assets.ts",
+      "core/internal/page-catalog.ts",
       "core/internal/pipeline.ts",
       "core/internal/plan.ts",
       "core/internal/precompress.ts",

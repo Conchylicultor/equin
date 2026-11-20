@@ -238,6 +238,8 @@ export async function evaluateBarrels(
         reorderable: m.reorderable,
         ...(m.companions ? { companions: m.companions } : {}),
         ...(m.pageWide ? { pageWide: true } : {}),
+        ...(m.partOfComponent ? { partOfComponent: true } : {}),
+        ...(m.catalog ? { catalog: m.catalog } : {}),
       },
       { slot: () => undefined },
     );

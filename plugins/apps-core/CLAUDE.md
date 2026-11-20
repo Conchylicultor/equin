@@ -177,6 +177,9 @@ so ⌘/middle-click opens a desktop in a new browser tab.
   - Uses: `framework/product-name.PRODUCT_NAME`
   - Exports (types):
     - `AppDeclaration`
+    - `AppEntry`
+    - `AppEntrySpec`
+    - `AppLaunch`
     - `Placement`
     - `RailFramingProps`
   - Exports (values):

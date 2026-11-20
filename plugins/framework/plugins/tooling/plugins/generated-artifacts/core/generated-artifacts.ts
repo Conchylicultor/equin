@@ -25,6 +25,7 @@ export const GENERATED_ARTIFACTS: readonly GeneratedArtifact[] = [
   { pattern: "docs/routes.md", driver: "regen-generated" },
   { pattern: "plugins/**/REFERENCE.md", driver: "regen-generated" },
   { pattern: `plugins/**/*${GENERATED_TS_SUFFIX}`, driver: "regen-generated" },
+  { pattern: "plugins/**/*.generated.json", driver: "regen-generated" },
   { pattern: "config/**/*.origin.jsonc", driver: "regen-generated" },
   {
     pattern: "plugins/database/plugins/migrations/data/*.sql",

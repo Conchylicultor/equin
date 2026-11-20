@@ -15,13 +15,34 @@ import {
   themeSelectionConfig,
   type Theme,
   type ThemeId,
+  type TokenGroupContribution,
+  type TokenGroupSpec,
 } from "../../core";
 import { declaredApps } from "@plugins/apps-core/server";
 import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
-import { composedOnly } from "@plugins/framework/plugins/server-core/core";
-import * as declared from "./theme-declarations.generated";
+import { webListFacts } from "@plugins/framework/plugins/server-core/core";
 import { ThemeEngine } from "./source";
 import { renderThemeHead } from "./theme-head";
+
+/**
+ * The composition's own token groups and code themes: the facts of the two
+ * theme-engine lists in the list catalog, kept to the plugins its browser
+ * loads (`webListFacts`) — never every theme of the checkout. Sub-themes and
+ * fixed themes are not read: the browser paints them in its first commit.
+ */
+function declaredTokenGroups(): TokenGroupSpec[] {
+  return webListFacts<TokenGroupContribution>(
+    "ui.theme-engine.token-group",
+  ).map(({ fact }) => ({
+    id: fact.descriptor.id,
+    schema: fact.descriptor.schema,
+    vars: fact.descriptor.vars,
+  }));
+}
+
+function declaredCodeThemes(): Theme[] {
+  return webListFacts<Theme>("ui.theme-engine.theme").map(({ fact }) => fact);
+}
 
 /** Every theme that can be painted now: the code themes plus every source's. */
 async function themesById(): Promise<Map<ThemeId, Theme>> {
@@ -29,10 +50,7 @@ async function themesById(): Promise<Map<ThemeId, Theme>> {
     ThemeEngine.Source.getContributions().map((s) => s.list()),
   );
   const byId = new Map<ThemeId, Theme>();
-  for (const theme of [
-    ...composedOnly(declared.codeThemes),
-    ...stored.flat(),
-  ]) {
+  for (const theme of [...declaredCodeThemes(), ...stored.flat()]) {
     if (byId.has(theme.id)) {
       throw new Error(
         `[theme-engine] two themes claim the id "${theme.id}" — theme ids must be unique across code themes and every ThemeEngine.Source.`,
@@ -68,9 +86,7 @@ async function render(): Promise<HeadFragments> {
   }));
   return renderThemeHead(
     {
-      // The composition's own declarations: the entries of the plugins its
-      // browser loads (`composedOnly`), never every app's of the checkout.
-      groups: composedOnly(declared.tokenGroups),
+      groups: declaredTokenGroups(),
       themesById: await themesById(),
     },
     apps,

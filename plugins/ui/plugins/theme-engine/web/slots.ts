@@ -10,7 +10,7 @@ import type {
   SubTheme,
   Theme,
   ThemeId,
-  TokenGroupDescriptor,
+  TokenGroupContribution,
 } from "../core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
@@ -25,16 +25,7 @@ export interface VariantGroupContribution {
   component: ComponentType;
 }
 
-/**
- * A token group: the CSS variables it declares and their schema defaults. Its
- * VALUES come from the theme a scope selects (`useResolvedTheme`), never from a
- * per-group setting.
- */
-export interface TokenGroupContribution {
-  id: string;
-  label: string;
-  descriptor: TokenGroupDescriptor;
-}
+export type { TokenGroupContribution } from "../core";
 
 /** A catalog row a browse source offers before it is saved (a tweakcn community theme). */
 export interface ThemeSourceEntry {

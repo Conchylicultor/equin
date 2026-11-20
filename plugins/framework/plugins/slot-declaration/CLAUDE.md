@@ -43,6 +43,7 @@ import — keep it that way.
     - `SlotDeclaringPlugin`
     - `SlotHandle`
     - `SlotLookup`
+    - `SlotMeta`
     - `SlotNaming`
     - `SlotNamingEntry`
     - `SlotRecord`

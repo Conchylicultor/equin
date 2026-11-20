@@ -1,3 +1,4 @@
+import type { WebListEntry } from "@plugins/framework/plugins/list-catalog/core";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { declareRuntimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { pluginOfNode } from "@plugins/framework/plugins/plugin-id/core";
@@ -71,4 +72,15 @@ export async function installDeclaredListEntries(
       ]),
     ),
   );
+}
+
+/**
+ * Every web list entry the build wrote down (the list catalog's
+ * `core/web-list-entries.generated.json`), unfiltered — for a script or check
+ * that reads the main composition's web lists without booting anything (the
+ * theme head's measure).
+ */
+export async function loadWebListEntries(): Promise<readonly WebListEntry[]> {
+  return (await import("../core/web-list-entries.generated.json"))
+    .default as readonly WebListEntry[];
 }

@@ -153,9 +153,14 @@ export const CLIENT_REPORT_SOURCES = [
   // The boot sequence itself threw before the app rendered (web-core's App):
   // the page shows "Couldn't start the app" instead of the app.
   "client-boot-crash",
-  // A companion the repo provides is missing from the running bundle once
-  // every plugin loaded (web-sdk's `missingCompanions`): its owner degrades
-  // with no error of its own.
+  // The loaded plugins disagree with the list catalog the page was shipped,
+  // once every plugin loaded (web-sdk's `catalogMismatches`): an entry the
+  // catalog holds that never loaded (a missing companion: its owner degrades
+  // with no error of its own), or an entry whose fact differs from the build's.
+  "client-list-catalog",
+  // Retired: web-sdk's repo-wide companion manifest check, folded into the
+  // list catalog check above. Nothing files it now; kept so existing rows
+  // (and reports imported from older builds) still parse.
   "client-missing-companion",
   "plugin-load",
   "client-storage",

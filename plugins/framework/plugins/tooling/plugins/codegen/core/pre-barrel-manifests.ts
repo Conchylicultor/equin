@@ -5,10 +5,6 @@ import {
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { writeGenerated } from "./write-generated";
 import {
-  reorderableSlotsManifestPath,
-  renderReorderableSlotsManifest,
-} from "./reorderable-slots-gen";
-import {
   customUtilitiesManifestPath,
   renderCustomUtilities,
 } from "./custom-utilities-gen";
@@ -19,21 +15,10 @@ import {
 } from "./fields-eager-gen";
 import { iconManifestPath, renderIconManifest } from "./icon-manifest-gen";
 import {
-  renderThemeDeclarationsManifest,
-  themeDeclarationsManifestPath,
-} from "./theme-declarations-gen";
-import {
-  appDeclarationsManifestPath,
-  renderAppDeclarationsManifest,
-} from "./app-declarations-gen";
-import {
-  companionManifestPath,
-  renderCompanionManifest,
-} from "./companion-manifest-gen";
-import {
   eagerTierManifestPath,
   renderEagerTierManifest,
 } from "./eager-tier-gen";
+import { renderWebLists, webListsPath } from "./list-catalog-gen";
 import type { CodegenPass } from "./codegen-pass";
 import { buildRegistryGenContext } from "./plugin-registry-gen";
 
@@ -68,8 +53,6 @@ import { buildRegistryGenContext } from "./plugin-registry-gen";
  *   - fieldsEager / eagerTier: barrel-free tree scans.
  *   - iconManifest: a plain source-file walk for `symbol("…")` / `brand("…")`
  *     literals; the icon sprites server barrel reaches it at module-load.
- *   - companionManifest: a barrel-free tree scan; the
- *     web-sdk core barrel reaches it at module-load.
  *
  * A manifest whose renderer NEEDS barrels cannot satisfy that rule and does not
  * belong here — see {@link postWebManifests}.
@@ -127,15 +110,6 @@ export const preBarrelManifests: readonly PreBarrelManifest[] = [
     path: iconManifestPath,
     render: renderIconManifest,
   },
-  {
-    // Which plugin provides each companion, repo-wide. The web-sdk core barrel
-    // reads it (to fail loudly on a companion missing at runtime), and its
-    // renderer is a barrel-free tree scan, so regenerating it pre-barrel is
-    // sound.
-    id: "companionManifest",
-    path: companionManifestPath,
-    render: renderCompanionManifest,
-  },
 ];
 
 /**
@@ -150,25 +124,15 @@ export const preBarrelManifests: readonly PreBarrelManifest[] = [
  * later. `pre-barrel-manifests-complete` enforces both halves: reachable from a
  * barrel ⇒ registered somewhere, and registered here ⇒ unreachable from web.
  *
- * The entries:
- *   - `reorderableSlots`, whose set is each plugin's own `slots` declaration
- *     plus `meta.reorderable` — facts that exist only once the web barrels have
- *     evaluated. Only `reorder/server` reads it (the server cannot see web
- *     slots); the web runtime derives the same set from the slot objects.
- *   - `themeDeclarations`, the token groups and themes contributed to
- *     theme-engine's web slots, as data. Only `ui/theme-engine/server` reads it
- *     (to paint the first frame's theme CSS into the HTML); the web runtime
- *     reads the contributions themselves.
- *   - `appDeclarations`, the apps contributed to `Apps.App` (whole `AppRef` +
- *     launch kind), as data. Read by `apps-core/server` (`declaredApps()`)
- *     for the web-app manifests and the theme's first frame.
+ * The entry — the declared half of the list catalog (`list-catalog-gen.ts`),
+ * facts that exist only once the web barrels have evaluated:
+ *   - `webLists`, every declared web list of the main composition (id,
+ *     declaring plugin, key, `meta`). `reorder/server` reads it at load (one
+ *     config directive per reorderable list); the web runtime reads the slot
+ *     objects themselves.
  *
- * The last two are what a composition's browser REGISTERS, so they differ per
- * composition: each entry is tagged with its contributing plugin, and a backend
- * keeps those of the plugins its own composition loads (server-core's
- * `composedOnly`, against the web plugins its server registry states). One
- * committed file serves every composition — a dev backend and a compiled
- * release read it the same way.
+ * The entries' facts are not a manifest: no barrel reaches them, and they need
+ * the full evaluation (written with the server lists, `generateServerContributors`).
  */
 export interface PostWebManifest extends Omit<PreBarrelManifest, "render"> {
   render: (pass: CodegenPass) => Promise<string>;
@@ -176,19 +140,9 @@ export interface PostWebManifest extends Omit<PreBarrelManifest, "render"> {
 
 export const postWebManifests: readonly PostWebManifest[] = [
   {
-    id: "reorderableSlots",
-    path: reorderableSlotsManifestPath,
-    render: renderReorderableSlotsManifest,
-  },
-  {
-    id: "themeDeclarations",
-    path: themeDeclarationsManifestPath,
-    render: renderThemeDeclarationsManifest,
-  },
-  {
-    id: "appDeclarations",
-    path: appDeclarationsManifestPath,
-    render: renderAppDeclarationsManifest,
+    id: "webLists",
+    path: webListsPath,
+    render: renderWebLists,
   },
 ];
 

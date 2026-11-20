@@ -17,6 +17,7 @@ plugins/**/CLAUDE.md                          merge=regen-claudemd
 
 # Plugin registry codegen
 plugins/**/*.generated.ts                     merge=regen-generated
+plugins/**/*.generated.json                   merge=regen-generated
 
 # Config origin files
 config/**/*.origin.jsonc                      merge=regen-generated

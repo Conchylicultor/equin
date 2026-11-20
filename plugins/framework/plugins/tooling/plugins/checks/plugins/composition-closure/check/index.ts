@@ -36,7 +36,6 @@ import { companionsVisible } from "./companions-visible";
 import { keysDefined } from "./keys-defined";
 import { rootMountsReached } from "./root-mounts-reached";
 import { pageHostsOnDemand } from "./page-hosts-on-demand";
-import { companionsInSync } from "./companions-in-sync";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = {
@@ -628,5 +627,4 @@ export default [
   keysDefined,
   rootMountsReached,
   pageHostsOnDemand,
-  companionsInSync,
 ];

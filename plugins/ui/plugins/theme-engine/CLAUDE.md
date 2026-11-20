@@ -278,11 +278,12 @@ them to `shell/document-head`, which writes them where the gateway splices them
 into `index.html` — so the first frame is themed with no browser storage, and
 the browser adopts the elements by id. What the server reads:
 
-- token groups and code themes from
-  `theme-declarations.generated.ts`, generated at build from this plugin's web
-  slots (`theme-declarations-in-sync`) — the server cannot see web slots;
-- the apps' base paths from `declaredApps` (`apps-core/server`, generated the
-  same way from `Apps.App`);
+- token groups and code themes: the facts of this plugin's two web lists in
+  the list catalog (`webListFacts`, server-core; written at build by
+  `framework/list-catalog`, `list-catalog-in-sync`) — the server cannot see
+  web slots;
+- the apps' base paths from `declaredApps` (`apps-core/server`, the facts of
+  `Apps.App` in the same catalog);
 - stored themes from the server `ThemeEngine.Source` contribution (saved-themes);
 - the selections, the global `colorMode` and each app's override from config,
   resolved with each app's declared default (`declaredApps`) by
@@ -440,6 +441,7 @@ the `""` entry.
     - `ThemePaintSources`
     - `ThemeResolution`
     - `ThemeSource`
+    - `TokenGroupContribution`
     - `TokenGroupDescriptor`
     - `TokenGroupField`
     - `TokenGroupFragment`
@@ -483,13 +485,6 @@ the `""` entry.
     - `tokenGroupMatchesSearch`
     - `transformValues`
 - Cross-plugin:
-  - Uses tokens: 67 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/density` ×27
-    - `ui/tokens/color-palette` ×26
-    - `ui/tokens/shadow` ×4
-    - `ui/tokens/shape` ×4
-    - `ui/tokens/type-scale` ×4
-    - `ui/tokens/data-view` ×2
   - Imported by: 76 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui` ×51
     - `apps` ×19

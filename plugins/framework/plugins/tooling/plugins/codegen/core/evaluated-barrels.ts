@@ -194,6 +194,27 @@ const namings: Record<SlotScope, (pass: CodegenPass) => Promise<SlotNaming>> = {
 };
 
 /**
+ * The slot naming over EVERY web barrel of the repo (and web-sdk's seed),
+ * whatever composition bundles it — the web lists any page of any composition
+ * can declare. Over the web evaluation alone, so it is settled before any
+ * server barrel is imported (the list catalog's declared lists are read by a
+ * server barrel at load).
+ */
+export const recordAllWebSlotNaming: (
+  pass: CodegenPass,
+) => Promise<SlotNaming> = sharedMemo(
+  "slot naming: every web barrel",
+  async (pass) => {
+    const ev = await evaluateWebBarrels(pass);
+    return settleSlotNaming(
+      declaringPlugins(ev, pass.root, "source"),
+      "source",
+    );
+  },
+  { owner: (pass) => pass.repo },
+);
+
+/**
  * The slot naming over the evaluated records — the build's twin of a live
  * declaration pass (`declareSlotsFromBarrels`), through the same
  * `collectSlots` normalisation and the same refusals, but over the records'

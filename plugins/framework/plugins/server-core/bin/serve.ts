@@ -5,6 +5,7 @@
 // `serve` with them, so which app this process is was decided by the file the
 // spec's `command` ran, and the code it runs is a closure a source digest can
 // follow (research/2026-11-05-global-backend-code-identity.md).
+import type { WebListEntry } from "@plugins/framework/plugins/list-catalog/core";
 import {
   BOOT_JOURNAL_CHANNEL,
   installBootJournal,
@@ -41,6 +42,7 @@ import {
   declareComposedHome,
   declareComposedWebPlugins,
 } from "../core/composed-web-plugins";
+import { installWebListEntries } from "../core/web-lists";
 // The desktop's native probes (memory, snapshot hash), installed into `core`
 // before the graph loads — see `./host-probes`.
 import "./host-probes";
@@ -199,6 +201,12 @@ export async function serve({
   // manifests (its apps, its themes — `composedOnly`), before any plugin loads.
   declareComposedWebPlugins(server.composition.webPlugins);
   declareComposedHome(server.composition);
+  // What its browser's web lists hold, as the build wrote it (the list
+  // catalog's entries; `webListFacts` keeps the composition's own).
+  installWebListEntries(
+    (await import("../core/web-list-entries.generated.json"))
+      .default as readonly WebListEntry[],
+  );
 
   // Which tier this boot starts in, journaled: a background-started backend
   // boots darwinbg (gateway `taskpolicy -b`) until the gateway's probe says

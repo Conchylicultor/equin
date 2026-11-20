@@ -234,7 +234,7 @@ wrapper fixpoint reads.
 
 - Description: Plugin doc generation and registry codegen
 - Core:
-  - Uses: 172 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 173 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `config_v2` ×17
     - `plugin-meta/parse-utils` ×17
     - `framework/plugin-id` ×13
@@ -243,10 +243,10 @@ wrapper fixpoint reads.
     - `plugin-meta/plugin-records` ×11
     - `framework/slot-declaration` ×6
     - `plugin-meta/barrel-import` ×6
-    - `plugin-meta/closure` ×6
     - `plugin-meta/composition` ×6
     - `framework/tooling` ×5
     - `packages/timed-fs` ×5
+    - `plugin-meta/closure` ×5
     - `plugin-meta/facets` ×5
     - `plugin-meta/plugin-records/evaluate` ×5
     - `framework/tooling/codegen/composition-registries` ×4
@@ -254,6 +254,7 @@ wrapper fixpoint reads.
     - `packages/shared-work` ×4
     - `config_v2/ledger` ×3
     - `framework/tooling/format` ×3
+    - `framework/list-catalog` ×2
     - `framework/server-core` ×2
     - `framework/tooling/boundaries` ×2
     - `framework/tooling/collected-dir/discovery` ×2
@@ -308,7 +309,6 @@ wrapper fixpoint reads.
     - `WebSlotContribution`
   - Exports (values):
     - `appCssPath`
-    - `appDeclarationsManifestPath`
     - `assertSlotsDeclared`
     - `barrelStubsPath`
     - `buildBarrelFreeTree`
@@ -331,7 +331,6 @@ wrapper fixpoint reads.
     - `COLOR_TOKEN_REF_GROUPS`
     - `colorTokenRefPath`
     - `committedRegistryBundle`
-    - `companionManifestPath`
     - `computeEagerTier`
     - `customUtilitiesManifestPath`
     - `dataViewsManifestPath`
@@ -360,7 +359,6 @@ wrapper fixpoint reads.
     - `generateFieldsEager`
     - `generatePluginDocs`
     - `generatePluginRegistry`
-    - `generateReorderableSlots`
     - `generateServerContributors`
     - `generateSpaceRamp`
     - `generateStaticHosts`
@@ -389,7 +387,6 @@ wrapper fixpoint reads.
     - `recordSlotNaming`
     - `regenerateManifestCodegen`
     - `regenerateRegistryCodegen`
-    - `renderAppDeclarationsManifest`
     - `renderBackendEntry`
     - `renderBarrelStubs`
     - `renderBrowserHost`
@@ -398,7 +395,6 @@ wrapper fixpoint reads.
     - `renderCollectedDirRegistry`
     - `renderColorTokenRef`
     - `renderCompactDoc`
-    - `renderCompanionManifest`
     - `renderConfigOriginContent`
     - `renderCustomUtilities`
     - `renderDataViewsManifest`
@@ -410,13 +406,12 @@ wrapper fixpoint reads.
     - `renderIconManifest`
     - `renderPluginClaudeMd`
     - `renderPluginReferenceMd`
-    - `renderReorderableSlotsManifest`
     - `renderServerContributors`
     - `renderSpaceRamp`
     - `renderStaticHostFile`
-    - `renderThemeDeclarationsManifest`
     - `renderTokenGroupVarsManifest`
-    - `reorderableSlotsManifestPath`
+    - `renderWebListEntries`
+    - `renderWebLists`
     - `resolveHostConfigCoverage`
     - `resolveHostContributionCoverage`
     - `resolveMainComposition`
@@ -433,8 +428,9 @@ wrapper fixpoint reads.
     - `setDefaultOriginDefaults`
     - `setDefaultOriginDefaultsPreparer`
     - `spaceRampManifestPath`
-    - `themeDeclarationsManifestPath`
     - `tokenGroupVarsManifestPath`
+    - `webListEntriesPath`
+    - `webListsPath`
     - `withPackageName`
     - `writeGenerated`
     - `writePreBarrelManifest`

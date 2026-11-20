@@ -869,7 +869,6 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
 - Sub-plugins:
   - **`app-css-utilities-in-sync`**
   - **`app-css-utilities-unshadowed`**
-  - **`app-declarations-in-sync`**
   - **`barrel-stubs-in-sync`**
   - **`bun-runtime`** [exempt]
   - **`cache-prune`** — The hourly checks.cache-prune job: ages out and caps the shared check-result cache and reclaims idle flight files, so no check run lists the whole cache.
@@ -893,6 +892,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
   - **`host-pools-declared`**
   - **`inherited-theme-defaults-scoped`** [exempt]
   - **`lint-directives-stable`**
+  - **`list-catalog-in-sync`**
   - **`migration-hashes-unique`** [exempt]
   - **`migration-metadata-consistent`**
   - **`migrations-in-sync`**
@@ -917,15 +917,12 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
   - **`plugins-registry-in-sync`**
   - **`pre-barrel-manifests-complete`**
   - **`registry`** — The check registry: the check collected-dir marker, its generated check.generated.ts, and loadChecks / listAllChecks — every registered check with the module its code lives in. Apart from…
-  - **`reorderable-slots-in-sync`**
-  - **`server-contributors-in-sync`**
   - **`snapshot-chain-intact`**
   - **`source-analysis`**
   - **`space-ramp-in-sync`**
   - **`table-defs-in-schema-glob`** [exempt]
   - **`tailwind-scan-covers-classes`**
   - **`theme-bridge-reads`** [exempt]
-  - **`theme-declarations-in-sync`**
   - **`token-group-vars-in-sync`**
   - **`tsconfig-alias-single-owner`**
   - **`type-check`** [exempt] [1 sub-plugin] — spawnTypeCheckWorker: the one way to start a repo-program type-check worker — admitted first as a small run through the laned type-check-light pool (its worker refuses any program over…

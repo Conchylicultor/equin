@@ -4,7 +4,7 @@ import { generateBarrelStubs } from "./barrel-stubs-gen";
 import { generateBrowserHosts } from "./browser-host-gen";
 import { generateStaticHosts } from "./static-host-gen";
 import { generateConfigOrigins } from "./config-origin-gen";
-import { generateServerContributors } from "./server-contributors-gen";
+import { generateServerContributors } from "./list-catalog-gen";
 import { stampOverrideLegends } from "./override-legend-stamp";
 import { generatePluginDocs } from "./docgen";
 import { buildBarrelFreeTree } from "./barrel-free-tree";

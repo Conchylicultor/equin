@@ -108,32 +108,13 @@ export {
 // default origin-annotations preparer (side effect at load). Both the build
 // step and the `config-origins-in-sync` check import this barrel, so both
 // processes emit identical contribution-catalog comments in generated origins.
-export {
-  generateReorderableSlots,
-  renderReorderableSlotsManifest,
-  reorderableSlotsManifestPath,
-  type ReorderableSlotEntry,
-} from "./reorderable-slots-gen";
-
-export {
-  renderThemeDeclarationsManifest,
-  themeDeclarationsManifestPath,
-} from "./theme-declarations-gen";
+import "./reorderable-slots-gen";
+export { type ReorderableSlotEntry } from "./reorderable-slots-gen";
 
 export {
   collectWebSlotContributions,
   type WebSlotContribution,
 } from "./web-slot-contributions";
-
-export {
-  appDeclarationsManifestPath,
-  renderAppDeclarationsManifest,
-} from "./app-declarations-gen";
-
-export {
-  companionManifestPath,
-  renderCompanionManifest,
-} from "./companion-manifest-gen";
 
 export {
   assertSlotsDeclared,
@@ -296,5 +277,9 @@ export type {
 export {
   generateServerContributors,
   renderServerContributors,
+  renderWebListEntries,
+  renderWebLists,
   serverContributorsPath,
-} from "./server-contributors-gen";
+  webListEntriesPath,
+  webListsPath,
+} from "./list-catalog-gen";

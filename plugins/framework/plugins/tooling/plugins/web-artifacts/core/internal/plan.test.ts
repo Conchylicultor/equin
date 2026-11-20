@@ -238,6 +238,11 @@ describe("planFleet with an injected fleet source", () => {
         webScopedEntries: [{ pluginPath: "tasks", id: "tasks", dependsOn: [] }],
         deferredPaths,
         registryFile,
+        catalogSources: {
+          page: "export const webCatalog = { lists: [], entries: [], companionProviders: {} };\n",
+          onDemand:
+            "export const webCatalog = { lists: [], entries: [], companionProviders: {} };\n",
+        },
         registrySlug: "web-registry-testcomp",
       },
     });
@@ -271,6 +276,11 @@ describe("planFleet with an injected fleet source", () => {
       webScopedEntries: [],
       deferredPaths: new Set<string>(),
       registryFile,
+      catalogSources: {
+        page: "export const webCatalog = { lists: [], entries: [], companionProviders: {} };\n",
+        onDemand:
+          "export const webCatalog = { lists: [], entries: [], companionProviders: {} };\n",
+      },
       registrySlug: "web-registry-other",
     };
     const opts = { root: repoRoot, minify: false, source };

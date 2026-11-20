@@ -11,5 +11,13 @@ export const ConfigV2 = {
   WebRegister: defineSlot<{
     descriptor: ConfigDescriptor;
     pluginId?: PluginId;
-  }>({ docLabel: (c) => c.descriptor.name }),
+  }>({
+    docLabel: (c) => c.descriptor.name,
+    // Settings have their own declared form and build readers (the config
+    // origins, the descriptor index): not list entries of the catalog.
+    catalog: {
+      omitted:
+        "settings are declared through their own descriptors, read by their own build steps",
+    },
+  }),
 };

@@ -140,8 +140,8 @@ node pushes every item after it to the far end of the row. Splitting one row acr
 slots to right-align some items is the wrong tool (`spacer/no-split-slot-row` flags it) —
 the node forms are listed in the `// @legend` block the build keeps at the top of the file.
 
-`./equin check reorderable-slots-in-sync` names the exact override path a new slot
-will owe, before any build. If the order should never be user-curated the slot is headless —
+`./equin check list-catalog-in-sync` names the exact override path a newly
+reorderable list will owe, before any build. If the order should never be user-curated the slot is headless —
 use `defineMountSlot`, which is not reorderable and owes nothing. Details:
 [`plugins/reorder/authoring-overrides.md`](../../../reorder/authoring-overrides.md).
 
@@ -190,6 +190,26 @@ const contributions = FilePane.Renderer.useContributions();
 const match = contributions.find((c) => supportsFile(c, file));
 if (match) return renderIsolated(FilePane.Renderer.id, match, { file });
 ```
+
+#### `slot.useFacts()` — the entries' data, before any plugin loads
+
+Every page is shipped its composition's **list catalog** (`framework/list-catalog`:
+every web list and every entry's FACT — its plain-data half, with the plugin it
+came from), handed to `PluginProvider` as `catalog` by App.tsx. `slot.useFacts()`
+reads a list's facts from it: complete at the first render, before any plugin
+has loaded (how many entries, their order, every field that is data). A field
+that is code does not exist on a fact (`Fact<P>`) — reading `fact.component` is
+a compile error. Scoped like contributions (a `PluginScope` keeps its plugins'
+facts). It changes nothing about loading. A slot whose declaring plugin has not
+loaded has no id yet, and `useFacts()` throws there.
+
+Once every plugin has loaded, App.tsx checks the loaded plugins against the
+catalog (`catalogMismatches`): an entry of a page plugin that never loaded (a
+companion the page lacks — its owner would degrade silently), an entry whose
+fact differs from the build's (computed from something only known at run time),
+or a declared list the catalog lacks (stale) is reported
+(`client-list-catalog`). `useCompanionLookup` reads which keys the page serves
+from the catalog too.
 
 #### `UNSAFE_unsealSlotComponent()` — framework exemptions only
 
@@ -408,6 +428,9 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `Core.Boot` ×2
 - Core:
   - Uses:
+    - `framework/list-catalog.factJson`
+    - `framework/list-catalog.WebCatalog`
+    - `framework/list-catalog.WebListEntry`
     - `framework/plugin-id.asPluginId`
     - `framework/plugin-loader.topoSortPlugins`
     - `framework/slot-declaration.declarePluginSlots`
@@ -422,6 +445,7 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `Contribution`
     - `DeferredLoadState`
     - `DocMeta`
+    - `EntryFact`
     - `LoadedPlugin`
     - `OnDemandPlugins`
     - `PluginDefinition`
@@ -442,6 +466,7 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `SlotOptions`
     - `SlotReadDetail`
   - Exports (values):
+    - `catalogMismatches`
     - `Core`
     - `createPluginRegistry`
     - `defineRootSlot`
@@ -459,7 +484,6 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `markDeferredPluginsLoaded`
     - `markPageReach`
     - `MissingCompanionError`
-    - `missingCompanions`
     - `pageReachLostSince`
     - `partitionWebEntries`
     - `planDeferredLoad`

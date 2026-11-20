@@ -127,7 +127,6 @@ The pane's shared content inset is not here: it is density's `contentInset`
     - `primitives/data-view/list`
     - `primitives/data-view/table`
     - `primitives/data-view/view-core`
-    - `ui/theme-engine`
   - Imported by:
     - `apps/prototypes/shell`
     - `apps/sonata/shell`

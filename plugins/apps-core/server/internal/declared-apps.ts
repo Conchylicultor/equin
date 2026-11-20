@@ -1,18 +1,33 @@
 import {
   composedHome,
-  composedOnly,
+  webListFacts,
+  type WebListFact,
 } from "@plugins/framework/plugins/server-core/core";
-import type { AppDeclaration } from "../../core";
-import { appEntries } from "./apps.generated";
+import type { AppDeclaration, AppEntry } from "../../core";
+
+/** The `Apps.App` list (its slot id: apps-core's `app` key). */
+const APPS_LIST = "apps-core.app";
+
+/** One app's declaration, from its entry's fact. */
+function declarationOf(f: WebListFact<AppEntry>): AppDeclaration {
+  return {
+    app: f.fact.app,
+    launch:
+      "surfaceMode" in f.fact && f.fact.surfaceMode !== undefined
+        ? "surface"
+        : "tab",
+  };
+}
 
 /**
  * Every app this backend's composition registers in its browser (its Apps.App
- * contributions), as data: the generated manifest's entries of the plugins the
- * composition loads (server-core's `composedOnly`). Read at request time — the
- * composition is declared by the process root before the graph loads.
+ * contributions), as data: the facts of the `Apps.App` list in the list
+ * catalog, kept to the plugins the composition loads (server-core's
+ * `webListFacts`). Read at request time — the process root installs the
+ * catalog before the graph loads.
  */
 export function declaredApps(): readonly AppDeclaration[] {
-  return composedOnly(appEntries);
+  return declaredAppPlugins().map((d) => d.declaration);
 }
 
 /** One declared app with the web plugin that contributes it (dot-form id). */
@@ -21,19 +36,18 @@ export interface DeclaredAppOf {
   declaration: AppDeclaration;
 }
 
-// One array for the process: `composedOnly` memoizes per manifest array.
-const appEntriesWithPlugin = appEntries.map((e) => ({
-  plugin: e.plugin,
-  value: { plugin: e.plugin, declaration: e.value },
-}));
+let declared: readonly DeclaredAppOf[] | undefined;
 
 /**
  * {@link declaredApps}, each with its contributing web plugin — for a reader
  * that needs to know where an app's code lives (its plugin subtree), not only
- * what it is.
+ * what it is. Sorted by app id, as the apps were always listed.
  */
 export function declaredAppPlugins(): readonly DeclaredAppOf[] {
-  return composedOnly(appEntriesWithPlugin);
+  declared ??= webListFacts<AppEntry>(APPS_LIST)
+    .map((f) => ({ plugin: f.plugin, declaration: declarationOf(f) }))
+    .sort((a, b) => a.declaration.app.id.localeCompare(b.declaration.app.id));
+  return declared;
 }
 
 /**

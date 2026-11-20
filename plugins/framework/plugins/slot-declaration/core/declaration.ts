@@ -71,6 +71,14 @@ export interface SlotMeta {
    * `defineSlot({ pageWide: true })`.
    */
   pageWide?: true;
+  /**
+   * The list is left OUT of the list catalog (the build's facts of every web
+   * list entry, `framework/list-catalog`), as a whole and for the stated
+   * reason: a kind of declaration that has its own declared form and its own
+   * build readers (settings: `ConfigV2.WebRegister`). Set through
+   * `defineSlot({ catalog: { omitted: "<why>" } })`.
+   */
+  catalog?: { omitted: string };
 }
 
 /**

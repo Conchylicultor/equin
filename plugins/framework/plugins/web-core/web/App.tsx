@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { flushSync } from "react-dom";
 import {
   PluginProvider,
   createPluginRegistry,
@@ -9,7 +10,7 @@ import {
   markDeferredPluginsLoaded,
   markDeferredLoadComplete,
   markDeferredPluginsFailed,
-  missingCompanions,
+  catalogMismatches,
   pluginLoadReportSink,
   hasFirstPaintHolds,
   takeFirstPaintHolds,
@@ -53,6 +54,8 @@ import {
   webEntries,
   webScopedEntries,
 } from "@composition-web-registry";
+import { webCatalog } from "@composition-web-catalog";
+import type { WebCatalog } from "@plugins/framework/plugins/list-catalog/core";
 import { appRootOf } from "@plugins/apps-core/plugins/app-preload/core";
 import { PluginLoadErrors } from "./components/plugin-load-errors";
 import { BootScreen } from "./components/boot-screen";
@@ -101,12 +104,30 @@ function bootTasksOf(plugins: LoadedPlugin[]): BootTask[] {
 function createOnDemandPlugins(
   entries: readonly WebEntry[],
   registry: PluginRegistry,
+  onCatalog: (catalog: WebCatalog) => void,
 ): OnDemandPlugins {
   const byId = new Map(entries.map((e) => [e.id, e]));
   const loaded = new Set<string>();
   const inFlight = new Map<string, Promise<void>>();
+  // The list catalog WITH the on-demand plugins: their facts are the page's
+  // from the moment they load, never before — fetched once, beside them.
+  let fullCatalog: Promise<WebCatalog> | null = null;
+  const loadCatalog = (): Promise<WebCatalog> =>
+    (fullCatalog ??= import("@composition-web-catalog-on-demand").then(
+      (m) => m.webCatalog,
+      (err: unknown) => {
+        fullCatalog = null;
+        throw err;
+      },
+    ));
   const loadBatch = async (batch: WebEntry[]): Promise<void> => {
-    const { plugins, errors } = await loadPlugins(batch);
+    const [{ plugins, errors }, full] = await Promise.all([
+      loadPlugins(batch),
+      loadCatalog(),
+    ]);
+    // Committed BEFORE the plugins join the registry, so none of their
+    // components ever renders without its facts.
+    onCatalog(full);
     const booting = plugins.filter((p) => bootTasksOf([p]).length > 0);
     if (booting.length > 0) {
       throw new Error(
@@ -156,23 +177,28 @@ function createOnDemandPlugins(
   };
 }
 
-// A companion the repo provides that this bundle lacks (see
-// `missingCompanions`): the capability that needs it degrades with no error of
-// its own, so this is the only signal. Same funnel as a boot problem.
-function reportMissingCompanion(message: string): void {
-  console.error(`[companions] ${message}`);
+// The loaded plugins disagree with the list catalog the page was shipped (see
+// `catalogMismatches`): an entry that never loaded — a companion the page
+// lacks, whose owner degrades with no error of its own — or one whose fact the
+// build wrote differently. Same funnel as a boot problem.
+function reportCatalogMismatch(message: string): void {
+  console.error(`[list-catalog] ${message}`);
   void report({
     kind: "crash",
-    source: "client-missing-companion",
+    source: "client-list-catalog",
     message,
     url: window.location.href,
     userAgent: navigator.userAgent,
     data: {
-      errorType: "MissingCompanion",
+      errorType: "ListCatalogMismatch",
       stack: new Error(message).stack ?? null,
     },
   });
 }
+
+// The page's own plugins (not the on-demand ones a scope loads when asked):
+// an entry of one of them that never loaded is a loss, not a wait.
+const pagePlugins: ReadonlySet<string> = new Set(webEntries.map((e) => e.id));
 
 // The boot sequence itself threw before the app rendered. Same funnel as a
 // boot problem — and for the same reason a direct POST: no plugin (the crash
@@ -354,8 +380,27 @@ function PageApp() {
   // re-renders only the readers of the slots it changed, never App and never
   // the whole tree. Created once per App mount.
   const [registry] = useState(createPluginRegistry);
+  // The page's list catalog: its own plugins' facts upfront, every on-demand
+  // plugin's too once a scope loads them (`createOnDemandPlugins`).
+  const [catalog, setCatalog] = useState<WebCatalog>(webCatalog);
+  // The latest catalog for the post-load check, which runs outside render.
+  const [latestCatalog] = useState(() => {
+    let current: WebCatalog = webCatalog;
+    return {
+      read: (): WebCatalog => current,
+      set: (next: WebCatalog): void => {
+        current = next;
+      },
+    };
+  });
   const [onDemand] = useState(() =>
-    createOnDemandPlugins(webScopedEntries, registry),
+    createOnDemandPlugins(webScopedEntries, registry, (full) => {
+      if (latestCatalog.read() === full) return;
+      latestCatalog.set(full);
+      // Synchronously: the registry append right after notifies its readers
+      // at sync priority, and they must already read this catalog.
+      flushSync(() => setCatalog(full));
+    }),
   );
   // Resolves once the first app frame has committed: the deferred tier's
   // drain waits on it, so its evaluation never competes with that render.
@@ -574,10 +619,17 @@ function PageApp() {
         "Deferred plugin tier loaded",
       );
       markDeferredLoadComplete();
-      // Every plugin has loaded or failed: a companion still absent is one the
-      // bundle lacks, and its owner is degrading silently right now.
-      for (const message of missingCompanions(registry))
-        reportMissingCompanion(message);
+      // Every plugin has loaded or failed: what they declare must be what the
+      // build wrote into the page's list catalog. An entry still absent is one
+      // the page lacks (a companion: its owner is degrading silently right
+      // now); one that differs is a fact the build could not see right.
+      for (const message of await catalogMismatches(
+        registry,
+        latestCatalog.read(),
+        (id) => pagePlugins.has(id),
+        yieldToMain,
+      ))
+        reportCatalogMismatch(message);
     })().catch((err: unknown) => {
       // After the first render the app is on screen and its own crash
       // collector reports an unhandled rejection: leave it to that.
@@ -594,7 +646,7 @@ function PageApp() {
     return () => {
       cancelled = true;
     };
-  }, [registry, appCommitted]);
+  }, [registry, appCommitted, latestCatalog]);
 
   if (state.phase === "loading-code")
     return <BootScreen phase="loading-code" />;
@@ -621,6 +673,7 @@ function PageApp() {
           composition={composition}
           onDemand={onDemand}
           scopeRoots={<RenderScopeRoot />}
+          catalog={catalog}
         >
           <RenderCoreRoot />
         </PluginProvider>

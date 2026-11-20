@@ -134,8 +134,8 @@ whole app:
    and the contributors of every kind opened to companions they define.
 
 Who contributes what, and who handles which sink, comes from the build's
-table, `core/contributors.generated.ts` (codegen's `server-contributors-gen.ts`
-over the evaluated barrels; `server-contributors-in-sync` fails on drift). It
+table, `core/contributors.generated.ts` (codegen's `list-catalog-gen.ts`
+over the evaluated barrels; `list-catalog-in-sync` fails on drift). It
 is loaded only by a partial start.
 
 **The list rule.** A partial start declares itself (`declarePartialStart`), and
@@ -458,8 +458,8 @@ static options shape what the build does with a kind:
   ListData`, a tsc error otherwise; `project` an entry to its data first — a
   table to its name, as `ExcludeFromFork` does). The build writes every entry
   down (`core/list-entries.generated.ts`, from the evaluated barrel records,
-  by codegen's `server-contributors-gen.ts`; an entry that is not plain data
-  fails the build naming the list and plugin; `server-contributors-in-sync`
+  by codegen's `list-catalog-gen.ts`; an entry that is not plain data
+  fails the build naming the list and plugin; `list-catalog-in-sync`
   fails on drift), and **every host reads the list from that file**, the full
   server included — `bootPluginGraph` installs it (`installListEntries`, kept
   to the host's registry: an entry of a plugin outside the composition is not
@@ -707,6 +707,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `StartSetInput`
     - `TableChange`
     - `TableLayoutRequirement`
+    - `WebListFact`
     - `WrittenListEntries`
     - `WsData`
     - `WsHandler`
@@ -809,6 +810,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `validatePersistedValue`
     - `visitorReadable`
     - `visitorReadsTuple`
+    - `webListFacts`
     - `whenReplaySettled`
     - `withNotifyBatch`
 - Cross-plugin:
@@ -844,6 +846,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `live/no-legacy-resource-spelling` — `.` (sanctioned)
     - `server-core/no-process-crash-listener` — `core/process-crash-listeners.ts` (sanctioned)
     - `source-read-safety/no-text-source-read` — `check/index.ts` (debt)
+    - `product-name:legacy-id` — `core/web-list-entries.generated.json` (sanctioned)
   - Exempted by:
     - `debug/boot-events` (0 debt)
     - `framework/server-core` (0 debt)
@@ -851,6 +854,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
   - Exports (values):
     - `installDeclaredListEntries`
     - `loadDeclaredGraph`
+    - `loadWebListEntries`
     - `runExec`
 - Test helpers:
   - Core: `@plugins/framework/plugins/server-core/core/testing`
@@ -858,9 +862,11 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `clearCollectedContributions` — Forget what was collected — back to the pre-boot state.
     - `clearListEntries` — Forget the installed list entries.
     - `clearRelationBases` — Back to "not set" (test support: a suite that set bases must not leak them into the next).
+    - `clearWebListEntries` — Forget the installed entries.
     - `declaredHostServiceIds` — Every declared host service's id, sorted — test support (`core/testing`): what a graph whose modules are loaded must provide.
     - `getReadSetIndex` — The whole index as a plain object, each key's tables sorted — every key that ever captured a table, including one a removal emptied (`[]`).
     - `hostServicesProvidedBy` — The ids of the declared host services `contributions` provide, sorted — test support (`core/testing`), for a suite choosing a graph's providers.
+    - `installWebListEntries` — Install the build's web-list entries (the generated table).
     - `isHostService` — True IFF `value` is a service `defineHostService` made — test support (`core/testing`), for a suite reading which services a module exports.
     - `isolateHostServices` — Isolate this test file's declared host services: from here on no service is declared (so a graph the suite boots is not asked for the `bun test` preload's desktop providers, and the services the suite declares are its own), and once the file's tests are done the process's declared set comes back exactly as it was — the suite's own services gone, the preload's back for every later suite in the same bun process.
     - `removeReadSetTable` — Remove `table` from the read-set of every key EXCEPT those in `keepKeys` — the one eviction path of an append-only index (a suite isolating its own keys from another's captures).

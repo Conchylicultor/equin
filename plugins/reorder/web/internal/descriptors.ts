@@ -8,7 +8,7 @@ import { reorderDirectiveDescriptor } from "../../shared/directive";
  * from the slots themselves — `meta.reorderable` says which slots owe one, and
  * the declaration says who owns each.
  *
- * NOTHING here reads the generated `reorderable-slots.generated.ts`. That is not
+ * NOTHING here reads the list catalog's generated declared lists. That is not
  * a preference: the manifest is now derived from the declarations by importing
  * web barrels, so a web barrel that imported it at module-load would freeze the
  * PREVIOUS run's copy in the codegen process (Bun's ESM cache) and no later

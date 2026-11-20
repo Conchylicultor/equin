@@ -45,6 +45,7 @@ function mount() {
       registry={registry}
       composition={{ id: "test", home: null }}
       scopeRoots={null}
+      catalog={{ lists: [], entries: [], companionProviders: {} }}
     >
       <ReaderA key={`a${pass}`} />
       <ReaderB key={`b${pass}`} />

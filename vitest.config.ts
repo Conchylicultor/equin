@@ -96,6 +96,16 @@ export default defineConfig(async () => {
           __dirname,
           "plugins/framework/plugins/web-sdk/core/web.generated.ts",
         ),
+        // The page's list catalog is a build output (web-artifacts'
+        // `page-catalog.ts`); a suite pulling in App.tsx gets an empty one.
+        "@composition-web-catalog": path.resolve(
+          __dirname,
+          "plugins/framework/plugins/web-core/web/__tests__/empty-web-catalog.ts",
+        ),
+        "@composition-web-catalog-on-demand": path.resolve(
+          __dirname,
+          "plugins/framework/plugins/web-core/web/__tests__/empty-web-catalog.ts",
+        ),
       },
     },
     test: {

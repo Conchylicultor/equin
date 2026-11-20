@@ -58,6 +58,12 @@ export interface PluginRegistryReader {
    * every scope, and for a `pageWide` slot. Same identity contract as `read`.
    */
   scopedOut(slot: SlotHandle): readonly Contribution[];
+  /**
+   * Whether this view keeps `pluginId`'s entries of `slot` — the same filter
+   * `read` applies to contributions, applied to the list catalog's facts
+   * (`slot.useFacts()`), so a scope's facts are exactly its contributions'.
+   */
+  keeps(slot: SlotHandle, pluginId: string): boolean;
 }
 
 /** Shared "no contributions" list, so an empty slot's snapshot is stable. */
@@ -224,6 +230,7 @@ export function createPluginRegistry(): PluginRegistry {
     replace,
     declared: () => declared,
     scopedOut: () => NO_CONTRIBUTIONS,
+    keeps: () => true,
   });
   return registry;
 }
@@ -271,6 +278,9 @@ export function scopedReader(
       return out;
     },
     subscribe: (slot, listener) => parent.subscribe(slot, listener),
+    keeps: (slot, pluginId) =>
+      parent.keeps(slot, pluginId) &&
+      (slot.meta.pageWide === true || plugins.has(pluginId)),
     replace() {
       throw new Error(
         "[plugins] a scoped plugin registry is read-only — its plugin set belongs to the enclosing PluginProvider",
@@ -346,6 +356,9 @@ export function excludingReader(
       return out;
     },
     subscribe: (slot, listener) => parent.subscribe(slot, listener),
+    keeps: (slot, pluginId) =>
+      parent.keeps(slot, pluginId) &&
+      (slot.meta.pageWide === true || !excluded.has(pluginId)),
     replace: (plugins) => parent.replace(plugins),
     declared() {
       const all = parent.declared();

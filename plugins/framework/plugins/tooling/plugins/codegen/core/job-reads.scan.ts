@@ -11,7 +11,7 @@ import { resolveSpecifier } from "@plugins/plugin-meta/plugins/plugin-records/pl
 import type { FileScan } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import ts from "typescript";
 
-// The job-reads generator's per-file scan (`server-contributors-gen.ts`): the
+// The job-reads generator's per-file scan (`list-catalog-gen.ts`): the
 // contributed lists each supervised job's `run` body reads whole, read from
 // its `read(List)` calls. A scan's records are keyed by its module's whole
 // closure (`FileScan.url`), so this module holds the scan and the code it runs,

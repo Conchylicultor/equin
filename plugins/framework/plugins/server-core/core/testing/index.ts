@@ -13,6 +13,9 @@ export { removeReadSetTable } from "../read-set";
 // that installs some resets it after, so the next suite in the same bun process
 // still sees the "read before set" throw.
 export { clearRelationBases } from "../resources";
+// The build's web list entries are installed once per process by its root; a
+// suite reading a web list's facts installs its own and forgets them after.
+export { clearWebListEntries, installWebListEntries } from "../web-lists";
 
 // Collected contributions are process-global: a suite that boots (or fakes) a
 // collect resets it, so a later "read before collect" assertion still holds.

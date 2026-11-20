@@ -896,6 +896,7 @@ describe("<DemoScope>", () => {
         composition={{ id: "page", home: null }}
         onDemand={onDemand}
         scopeRoots={null}
+        catalog={{ lists: [], entries: [], companionProviders: {} }}
       >
         <Boundary>
           <DemoScope

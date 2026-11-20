@@ -14297,6 +14297,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Uses: `framework/product-name.PRODUCT_NAME`
     - Exports (types):
       - `AppDeclaration`
+      - `AppEntry`
+      - `AppEntrySpec`
+      - `AppLaunch`
       - `Placement`
       - `RailFramingProps`
     - Exports (values):
@@ -33084,6 +33087,33 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isBrowserHostSnapshotSpecifier`
           - `isBrowserHostSpecifier`
           - `isImportMapOnlySpecifier`
+    - **`list-catalog`** — The list catalog's vocabulary: a list entry's FACT — its plain-data half, with a code marker where a field is code (factOf, shared by the build that writes the catalog and the page that checks it) — the Fact<P> type on which code fields do not exist, and the catalog's shapes (each declared web list, each entry with the plugin it came from).
+      - Cross-plugin:
+        - Imported by:
+          - `framework/tooling/codegen`
+          - `framework/tooling/web-artifacts`
+          - `framework/web-sdk`
+      - Core:
+        - Exports (types):
+          - `CodeMarker`
+          - `Fact`
+          - `FactValue`
+          - `WebCatalog`
+          - `WebListDeclaration`
+          - `WebListEntry`
+        - Exports (values):
+          - `catalogFor`
+          - `CODE`
+          - `factJson`
+          - `factOf`
+          - `isCodeMarker`
+          - `NotDataError`
+      - Plugins:
+        - **`web-lists`** — Every web list the main composition declares, as the build wrote it (webLists: id, declaring plugin, key, meta) — the declared half of the list catalog, read by the server, which cannot see web slots (reorder registers a config directive per reorderable list). A child of its own so only its readers re-key when a list is declared.
+          - Cross-plugin:
+            - Imported by: `reorder`
+          - Core:
+            - Exports (values): `webLists`
     - **`plugin-id`** — Canonical plugin identity: the branded PluginId type and its derived path encodings.
       - Core:
         - Uses: `framework/product-name.PRODUCT_NAME`
@@ -33341,6 +33371,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `StartSetInput`
           - `TableChange`
           - `TableLayoutRequirement`
+          - `WebListFact`
           - `WrittenListEntries`
           - `WsData`
           - `WsHandler`
@@ -33443,6 +33474,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `validatePersistedValue`
           - `visitorReadable`
           - `visitorReadsTuple`
+          - `webListFacts`
           - `whenReplaySettled`
           - `withNotifyBatch`
       - Cross-plugin:
@@ -33478,6 +33510,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `live/no-legacy-resource-spelling` — `.` (sanctioned)
           - `server-core/no-process-crash-listener` — `core/process-crash-listeners.ts` (sanctioned)
           - `source-read-safety/no-text-source-read` — `check/index.ts` (debt)
+          - `product-name:legacy-id` — `core/web-list-entries.generated.json` (sanctioned)
         - Exempted by:
           - `debug/boot-events` (0 debt)
           - `framework/server-core` (0 debt)
@@ -33485,6 +33518,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `installDeclaredListEntries`
           - `loadDeclaredGraph`
+          - `loadWebListEntries`
           - `runExec`
       - Test helpers:
         - Core: `@plugins/framework/plugins/server-core/core/testing`
@@ -33492,9 +33526,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `clearCollectedContributions` — Forget what was collected — back to the pre-boot state.
           - `clearListEntries` — Forget the installed list entries.
           - `clearRelationBases` — Back to "not set" (test support: a suite that set bases must not leak them into the next).
+          - `clearWebListEntries` — Forget the installed entries.
           - `declaredHostServiceIds` — Every declared host service's id, sorted — test support (`core/testing`): what a graph whose modules are loaded must provide.
           - `getReadSetIndex` — The whole index as a plain object, each key's tables sorted — every key that ever captured a table, including one a removal emptied (`[]`).
           - `hostServicesProvidedBy` — The ids of the declared host services `contributions` provide, sorted — test support (`core/testing`), for a suite choosing a graph's providers.
+          - `installWebListEntries` — Install the build's web-list entries (the generated table).
           - `isHostService` — True IFF `value` is a service `defineHostService` made — test support (`core/testing`), for a suite reading which services a module exports.
           - `isolateHostServices` — Isolate this test file's declared host services: from here on no service is declared (so a graph the suite boots is not asked for the `bun test` preload's desktop providers, and the services the suite declares are its own), and once the file's tests are done the process's declared set comes back exactly as it was — the suite's own services gone, the preload's back for every later suite in the same bun process.
           - `removeReadSetTable` — Remove `table` from the read-set of every key EXCEPT those in `keepKeys` — the one eviction path of an append-only index (a suite isolating its own keys from another's captures).
@@ -33526,6 +33562,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SlotDeclaringPlugin`
           - `SlotHandle`
           - `SlotLookup`
+          - `SlotMeta`
           - `SlotNaming`
           - `SlotNamingEntry`
           - `SlotRecord`
@@ -33737,7 +33774,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/guards` (11 debt)
               - `framework/tooling/import-closure` (1 debt)
               - `framework/tooling/lint` (2 debt)
-              - `framework/tooling/web-artifacts` (23 debt)
+              - `framework/tooling/web-artifacts` (24 debt)
               - `framework/web-core` (1 debt)
               - `infra/asset-mirror/bundle` (1 debt)
               - `infra/claude-cli/usage-ledger/pricing/price-table` (1 debt)
@@ -33949,7 +33986,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Plugins:
             - **`app-css-utilities-in-sync`**
             - **`app-css-utilities-unshadowed`**
-            - **`app-declarations-in-sync`**
             - **`barrel-stubs-in-sync`**
             - **`bun-runtime`**
               - Exemptions:
@@ -34009,6 +34045,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
                   - `source-read-safety/no-text-source-read` — `check/index.ts` (debt)
             - **`lint-directives-stable`**
+            - **`list-catalog-in-sync`**
             - **`migration-hashes-unique`**
               - Exemptions:
                 - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
@@ -34073,8 +34110,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `loadChecks`
               - Cross-plugin:
                 - Imported by: `framework/cli/check`
-            - **`reorderable-slots-in-sync`**
-            - **`server-contributors-in-sync`**
             - **`snapshot-chain-intact`**
             - **`source-analysis`**
               - Cross-plugin:
@@ -34120,7 +34155,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`theme-bridge-reads`**
               - Exemptions:
                 - Exempts itself from: `source-read-safety/no-text-source-read` — `check/theme-bridge-reads.scan.ts` (debt)
-            - **`theme-declarations-in-sync`**
             - **`token-group-vars-in-sync`**
             - **`tsconfig-alias-single-owner`**
             - **`type-check`** — spawnTypeCheckWorker: the one way to start a repo-program type-check worker — admitted first as a small run through the laned type-check-light pool (its worker refuses any program over TYPE_CHECK_LIGHT_SOURCES), else — or once refused — through the laned type-check-worker pool (background may hold one slot, the interactive lane the other), then the holder's grant; the worker runs in the foreground as the slot's holder.
@@ -34198,7 +34232,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`unscoped-highlight-pseudo`**
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 172 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 173 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `config_v2` ×17
               - `plugin-meta/parse-utils` ×17
               - `framework/plugin-id` ×13
@@ -34207,10 +34241,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/plugin-records` ×11
               - `framework/slot-declaration` ×6
               - `plugin-meta/barrel-import` ×6
-              - `plugin-meta/closure` ×6
               - `plugin-meta/composition` ×6
               - `framework/tooling` ×5
               - `packages/timed-fs` ×5
+              - `plugin-meta/closure` ×5
               - `plugin-meta/facets` ×5
               - `plugin-meta/plugin-records/evaluate` ×5
               - `framework/tooling/codegen/composition-registries` ×4
@@ -34218,6 +34252,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/shared-work` ×4
               - `config_v2/ledger` ×3
               - `framework/tooling/format` ×3
+              - `framework/list-catalog` ×2
               - `framework/server-core` ×2
               - `framework/tooling/boundaries` ×2
               - `framework/tooling/collected-dir/discovery` ×2
@@ -34272,7 +34307,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `WebSlotContribution`
             - Exports (values):
               - `appCssPath`
-              - `appDeclarationsManifestPath`
               - `assertSlotsDeclared`
               - `barrelStubsPath`
               - `buildBarrelFreeTree`
@@ -34295,7 +34329,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `COLOR_TOKEN_REF_GROUPS`
               - `colorTokenRefPath`
               - `committedRegistryBundle`
-              - `companionManifestPath`
               - `computeEagerTier`
               - `customUtilitiesManifestPath`
               - `dataViewsManifestPath`
@@ -34324,7 +34357,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `generateFieldsEager`
               - `generatePluginDocs`
               - `generatePluginRegistry`
-              - `generateReorderableSlots`
               - `generateServerContributors`
               - `generateSpaceRamp`
               - `generateStaticHosts`
@@ -34353,7 +34385,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `recordSlotNaming`
               - `regenerateManifestCodegen`
               - `regenerateRegistryCodegen`
-              - `renderAppDeclarationsManifest`
               - `renderBackendEntry`
               - `renderBarrelStubs`
               - `renderBrowserHost`
@@ -34362,7 +34393,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `renderCollectedDirRegistry`
               - `renderColorTokenRef`
               - `renderCompactDoc`
-              - `renderCompanionManifest`
               - `renderConfigOriginContent`
               - `renderCustomUtilities`
               - `renderDataViewsManifest`
@@ -34374,13 +34404,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `renderIconManifest`
               - `renderPluginClaudeMd`
               - `renderPluginReferenceMd`
-              - `renderReorderableSlotsManifest`
               - `renderServerContributors`
               - `renderSpaceRamp`
               - `renderStaticHostFile`
-              - `renderThemeDeclarationsManifest`
               - `renderTokenGroupVarsManifest`
-              - `reorderableSlotsManifestPath`
+              - `renderWebListEntries`
+              - `renderWebLists`
               - `resolveHostConfigCoverage`
               - `resolveHostContributionCoverage`
               - `resolveMainComposition`
@@ -34397,8 +34426,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `setDefaultOriginDefaults`
               - `setDefaultOriginDefaultsPreparer`
               - `spaceRampManifestPath`
-              - `themeDeclarationsManifestPath`
               - `tokenGroupVarsManifestPath`
+              - `webListEntriesPath`
+              - `webListsPath`
               - `withPackageName`
               - `writeGenerated`
               - `writePreBarrelManifest`
@@ -35122,9 +35152,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `source-read-safety/no-text-source-read` — `check/index.ts`, `check/runner-split.scan.ts` (debt)
         - **`web-artifacts`** — Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
           - Core:
-            - Uses: 53 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
+            - Uses: 57 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
               - `packages/timed-fs` ×8
               - `framework/import-map-names` ×6
+              - `framework/list-catalog` ×4
               - `framework/plugin-id` ×4
               - `framework/web-core` ×4
               - `infra/host-fs/user-path` ×4
@@ -35197,12 +35228,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `seedAddressDir`
           - Cross-plugin:
             - Imported by:
+              - `debug/profiling/cold-start`
               - `framework/cli/build`
               - `framework/tooling/codegen`
               - `framework/tooling/web-artifacts/prune`
           - Exemptions:
             - Exempts itself from:
-              - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/global-css.ts`, `core/internal/host-snapshots.ts`, `core/internal/crawl-snapshot.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/link.ts`, `core/internal/own-files.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/tailwind-candidates.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts`, `core/internal/worker-bundle.ts` (debt)
+              - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/global-css.ts`, `core/internal/host-snapshots.ts`, `core/internal/crawl-snapshot.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/link.ts`, `core/internal/own-files.ts`, `core/internal/package-assets.ts`, `core/internal/page-catalog.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/tailwind-candidates.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts`, `core/internal/worker-bundle.ts` (debt)
               - `user-path/no-unproven-claim` — `core/internal/identity.ts`, `core/internal/plan.ts`, `core/internal/vendors.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/internal/vendor-cache.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/internal/global-css.ts`, `core/internal/package-assets.ts`, `core/internal/staged-verify.ts` (sanctioned)
@@ -35348,6 +35380,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Core.Boot` ×2
       - Core:
         - Uses:
+          - `framework/list-catalog.factJson`
+          - `framework/list-catalog.WebCatalog`
+          - `framework/list-catalog.WebListEntry`
           - `framework/plugin-id.asPluginId`
           - `framework/plugin-loader.topoSortPlugins`
           - `framework/slot-declaration.declarePluginSlots`
@@ -35362,6 +35397,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Contribution`
           - `DeferredLoadState`
           - `DocMeta`
+          - `EntryFact`
           - `LoadedPlugin`
           - `OnDemandPlugins`
           - `PluginDefinition`
@@ -35382,6 +35418,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SlotOptions`
           - `SlotReadDetail`
         - Exports (values):
+          - `catalogMismatches`
           - `Core`
           - `createPluginRegistry`
           - `defineRootSlot`
@@ -35399,7 +35436,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `markDeferredPluginsLoaded`
           - `markPageReach`
           - `MissingCompanionError`
-          - `missingCompanions`
           - `pageReachLostSince`
           - `partitionWebEntries`
           - `planDeferredLoad`
@@ -45833,11 +45869,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TIMED_FS_CALLS`
           - `withFsCallTally`
       - Cross-plugin:
-        - Imported by: 194 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+        - Imported by: 195 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
           - `infra` ×59
           - `framework` ×29
           - `apps` ×18
-          - `debug` ×16
+          - `debug` ×17
           - `conversations` ×13
           - `backup` ×11
           - `build` ×7
@@ -67857,6 +67893,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ThemePaintSources`
           - `ThemeResolution`
           - `ThemeSource`
+          - `TokenGroupContribution`
           - `TokenGroupDescriptor`
           - `TokenGroupField`
           - `TokenGroupFragment`
@@ -67900,13 +67937,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tokenGroupMatchesSearch`
           - `transformValues`
       - Cross-plugin:
-        - Uses tokens: 67 vars — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
-          - `ui/tokens/density` ×27
-          - `ui/tokens/color-palette` ×26
-          - `ui/tokens/shadow` ×4
-          - `ui/tokens/shape` ×4
-          - `ui/tokens/type-scale` ×4
-          - `ui/tokens/data-view` ×2
         - Imported by: 76 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
           - `ui` ×51
           - `apps` ×19
@@ -68310,14 +68340,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ColorPaletteTokenValues`
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
-            - Tokens used by: 563 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 562 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×125
               - `conversations` ×97
               - `primitives` ×79
               - `debug` ×42
               - `page` ×34
               - `plugin-meta` ×28
-              - `ui` ×27
+              - `ui` ×26
               - `tasks` ×18
               - `reports` ×17
               - `fields` ×12
@@ -68429,7 +68459,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/data-view/list`
               - `primitives/data-view/table`
               - `primitives/data-view/view-core`
-              - `ui/theme-engine`
             - Imported by:
               - `apps/prototypes/shell`
               - `apps/sonata/shell`
@@ -68469,12 +68498,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `densityGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --radius`
-            - Tokens used by: 364 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 363 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `apps` ×74
               - `primitives` ×73
               - `conversations` ×51
               - `debug` ×29
-              - `ui` ×29
+              - `ui` ×28
               - `page` ×21
               - `plugin-meta` ×13
               - `tasks` ×10
@@ -68865,10 +68894,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ShadowParamsSchema`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --popover`
-            - Tokens used by: 62 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
+            - Tokens used by: 61 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
               - `apps` ×24
               - `primitives` ×13
-              - `ui` ×6
+              - `ui` ×5
               - `framework` ×4
               - `page` ×3
               - `apps-core` ×2
@@ -68939,13 +68968,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 419 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 418 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×97
               - `apps` ×81
               - `primitives` ×62
               - `page` ×36
               - `debug` ×28
-              - `ui` ×26
+              - `ui` ×25
               - `tasks` ×13
               - `plugin-meta` ×9
               - `fields` ×8
@@ -69136,7 +69165,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `TypeScaleTokenValues`
             - Exports (values): `typeScaleGroup`
           - Cross-plugin:
-            - Tokens used by: 238 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
+            - Tokens used by: 237 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
               - `apps` ×62
               - `conversations` ×40
               - `primitives` ×38
@@ -69144,7 +69173,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta` ×14
               - `page` ×11
               - `tasks` ×10
-              - `ui` ×8
+              - `ui` ×7
               - `fields` ×4
               - `review` ×4
               - `stats` ×4

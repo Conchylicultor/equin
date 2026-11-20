@@ -189,3 +189,16 @@ export function tokenGroupMatchesSearch(
     return label.toLowerCase().includes(q) || cssVar.toLowerCase().includes(q);
   });
 }
+
+/**
+ * A token group, as contributed to `ThemeEngine.TokenGroup`: the CSS variables
+ * it declares and their schema defaults. Its VALUES come from the theme a
+ * scope selects (`useResolvedTheme`), never from a per-group setting. In core
+ * so the server, which reads the list's facts from the list catalog to paint
+ * the first frame, names the same type.
+ */
+export interface TokenGroupContribution {
+  id: string;
+  label: string;
+  descriptor: TokenGroupDescriptor;
+}

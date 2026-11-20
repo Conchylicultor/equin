@@ -3986,6 +3986,14 @@
       "name": "@equin/plugin-framework-import-map-names",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/list-catalog": {
+      "name": "@equin/plugin-framework-list-catalog",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/list-catalog/plugins/web-lists": {
+      "name": "@equin/plugin-framework-list-catalog-web-lists",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/plugin-id": {
       "name": "@equin/plugin-framework-plugin-id",
       "version": "0.0.1",
@@ -4039,10 +4047,6 @@
     },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/app-css-utilities-unshadowed": {
       "name": "@equin/plugin-framework-tooling-checks-app-css-utilities-unshadowed",
-      "version": "0.0.1",
-    },
-    "plugins/framework/plugins/tooling/plugins/checks/plugins/app-declarations-in-sync": {
-      "name": "@equin/plugin-framework-tooling-checks-app-declarations-in-sync",
       "version": "0.0.1",
     },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/barrel-stubs-in-sync": {
@@ -4135,6 +4139,10 @@
     },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/lint-directives-stable": {
       "name": "@equin/plugin-framework-tooling-checks-lint-directives-stable",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/list-catalog-in-sync": {
+      "name": "@equin/plugin-framework-tooling-checks-list-catalog-in-sync",
       "version": "0.0.1",
     },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/migration-hashes-unique": {
@@ -4233,14 +4241,6 @@
       "name": "@equin/plugin-framework-tooling-checks-registry",
       "version": "0.0.1",
     },
-    "plugins/framework/plugins/tooling/plugins/checks/plugins/reorderable-slots-in-sync": {
-      "name": "@equin/plugin-framework-tooling-checks-reorderable-slots-in-sync",
-      "version": "0.0.1",
-    },
-    "plugins/framework/plugins/tooling/plugins/checks/plugins/server-contributors-in-sync": {
-      "name": "@equin/plugin-framework-tooling-checks-server-contributors-in-sync",
-      "version": "0.0.1",
-    },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/snapshot-chain-intact": {
       "name": "@equin/plugin-framework-tooling-checks-snapshot-chain-intact",
       "version": "0.0.1",
@@ -4263,10 +4263,6 @@
     },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/theme-bridge-reads": {
       "name": "@equin/plugin-framework-tooling-checks-theme-bridge-reads",
-      "version": "0.0.1",
-    },
-    "plugins/framework/plugins/tooling/plugins/checks/plugins/theme-declarations-in-sync": {
-      "name": "@equin/plugin-framework-tooling-checks-theme-declarations-in-sync",
       "version": "0.0.1",
     },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/token-group-vars-in-sync": {
@@ -10333,6 +10329,10 @@
 
     "@equin/plugin-framework-import-map-names": ["@equin/plugin-framework-import-map-names@workspace:plugins/framework/plugins/import-map-names"],
 
+    "@equin/plugin-framework-list-catalog": ["@equin/plugin-framework-list-catalog@workspace:plugins/framework/plugins/list-catalog"],
+
+    "@equin/plugin-framework-list-catalog-web-lists": ["@equin/plugin-framework-list-catalog-web-lists@workspace:plugins/framework/plugins/list-catalog/plugins/web-lists"],
+
     "@equin/plugin-framework-plugin-id": ["@equin/plugin-framework-plugin-id@workspace:plugins/framework/plugins/plugin-id"],
 
     "@equin/plugin-framework-plugin-loader": ["@equin/plugin-framework-plugin-loader@workspace:plugins/framework/plugins/plugin-loader"],
@@ -10356,8 +10356,6 @@
     "@equin/plugin-framework-tooling-checks-app-css-utilities-in-sync": ["@equin/plugin-framework-tooling-checks-app-css-utilities-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/app-css-utilities-in-sync"],
 
     "@equin/plugin-framework-tooling-checks-app-css-utilities-unshadowed": ["@equin/plugin-framework-tooling-checks-app-css-utilities-unshadowed@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/app-css-utilities-unshadowed"],
-
-    "@equin/plugin-framework-tooling-checks-app-declarations-in-sync": ["@equin/plugin-framework-tooling-checks-app-declarations-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/app-declarations-in-sync"],
 
     "@equin/plugin-framework-tooling-checks-barrel-stubs-in-sync": ["@equin/plugin-framework-tooling-checks-barrel-stubs-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/barrel-stubs-in-sync"],
 
@@ -10404,6 +10402,8 @@
     "@equin/plugin-framework-tooling-checks-inherited-theme-defaults-scoped": ["@equin/plugin-framework-tooling-checks-inherited-theme-defaults-scoped@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/inherited-theme-defaults-scoped"],
 
     "@equin/plugin-framework-tooling-checks-lint-directives-stable": ["@equin/plugin-framework-tooling-checks-lint-directives-stable@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/lint-directives-stable"],
+
+    "@equin/plugin-framework-tooling-checks-list-catalog-in-sync": ["@equin/plugin-framework-tooling-checks-list-catalog-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/list-catalog-in-sync"],
 
     "@equin/plugin-framework-tooling-checks-migration-hashes-unique": ["@equin/plugin-framework-tooling-checks-migration-hashes-unique@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/migration-hashes-unique"],
 
@@ -10453,10 +10453,6 @@
 
     "@equin/plugin-framework-tooling-checks-registry": ["@equin/plugin-framework-tooling-checks-registry@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/registry"],
 
-    "@equin/plugin-framework-tooling-checks-reorderable-slots-in-sync": ["@equin/plugin-framework-tooling-checks-reorderable-slots-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/reorderable-slots-in-sync"],
-
-    "@equin/plugin-framework-tooling-checks-server-contributors-in-sync": ["@equin/plugin-framework-tooling-checks-server-contributors-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/server-contributors-in-sync"],
-
     "@equin/plugin-framework-tooling-checks-snapshot-chain-intact": ["@equin/plugin-framework-tooling-checks-snapshot-chain-intact@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/snapshot-chain-intact"],
 
     "@equin/plugin-framework-tooling-checks-source-analysis": ["@equin/plugin-framework-tooling-checks-source-analysis@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/source-analysis"],
@@ -10468,8 +10464,6 @@
     "@equin/plugin-framework-tooling-checks-tailwind-scan-covers-classes": ["@equin/plugin-framework-tooling-checks-tailwind-scan-covers-classes@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/tailwind-scan-covers-classes"],
 
     "@equin/plugin-framework-tooling-checks-theme-bridge-reads": ["@equin/plugin-framework-tooling-checks-theme-bridge-reads@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/theme-bridge-reads"],
-
-    "@equin/plugin-framework-tooling-checks-theme-declarations-in-sync": ["@equin/plugin-framework-tooling-checks-theme-declarations-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/theme-declarations-in-sync"],
 
     "@equin/plugin-framework-tooling-checks-token-group-vars-in-sync": ["@equin/plugin-framework-tooling-checks-token-group-vars-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/token-group-vars-in-sync"],
 
