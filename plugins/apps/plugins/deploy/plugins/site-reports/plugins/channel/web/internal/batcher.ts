@@ -1,6 +1,7 @@
 import { hash53 } from "@plugins/packages/plugins/string-hash/core";
 import {
   SITE_REPORT_LIMITS,
+  type PageDropReason,
   type SiteReportEntry,
   type SiteReportsResponse,
 } from "@plugins/apps/plugins/deploy/plugins/site-reports/plugins/intake/core";
@@ -52,6 +53,7 @@ export interface BatcherDeps {
   /** One POST of a batch. Throws on a network error or a non-2xx answer. */
   send(
     entries: SiteReportEntry[],
+    dropped: PageDrops,
     opts: { keepalive: boolean },
   ): Promise<SiteReportsResponse>;
   /** One-shot timer. */
@@ -67,7 +69,16 @@ interface Held {
   unsent: number;
 }
 
+/** What the page counted instead of filing, per reason (the body's `dropped`). */
+export type PageDrops = Partial<Record<PageDropReason, number>>;
+
 export interface ReportBatcher {
+  /**
+   * Count one measurement the page judged not to be one (a load no one waited
+   * for): it rides the next batch as a count under its reason, so the intake's
+   * drop counts show it — never a report.
+   */
+  drop(reason: PageDropReason): void;
   /** Take one occurrence: `batched` (queued or counted) or `dropped` (over the visit's caps). */
   add(report: BatchedReport): "batched" | "dropped";
   /** Send what is waiting now — `pagehide` passes `keepalive` so it outlives the page. */
@@ -99,6 +110,8 @@ export interface ReportBatcher {
 export function createReportBatcher(deps: BatcherDeps): ReportBatcher {
   const limits = deps.limits ?? BATCHER_LIMITS;
   const held = new Map<number, Held>();
+  /** Drop counts not yet delivered. */
+  let unsentDrops: PageDrops = {};
   let posts = 0;
   let failures = 0;
   let stopped = false;
@@ -150,6 +163,26 @@ export function createReportBatcher(deps: BatcherDeps): ReportBatcher {
     return "batched";
   }
 
+  function drop(reason: PageDropReason): void {
+    if (stopped) {
+      droppedLocally += 1;
+      return;
+    }
+    unsentDrops[reason] = (unsentDrops[reason] ?? 0) + 1;
+    arm(limits.batchDelayMs);
+  }
+
+  function hasDrops(d: PageDrops): boolean {
+    return Object.keys(d).length > 0;
+  }
+
+  /** Put undelivered drop counts back, to ride the next batch. */
+  function restoreDrops(d: PageDrops): void {
+    for (const [reason, n] of Object.entries(d) as [PageDropReason, number][]) {
+      unsentDrops[reason] = (unsentDrops[reason] ?? 0) + n;
+    }
+  }
+
   async function flush(opts?: { keepalive?: boolean }): Promise<void> {
     if (stopped) return;
     timerGeneration += 1;
@@ -162,12 +195,24 @@ export function createReportBatcher(deps: BatcherDeps): ReportBatcher {
     }
     if (posts >= limits.maxPosts) {
       stopped = true;
+      // What can no longer be sent is counted on the page, like a report.
+      for (const n of Object.values(unsentDrops)) droppedLocally += n ?? 0;
+      unsentDrops = {};
       return;
     }
     const batch: { held: Held; count: number }[] = [];
+    // The drop counts ride whole (a few short keys).
+    const drops: PageDrops = {};
+    for (const [reason, n] of Object.entries(unsentDrops) as [
+      PageDropReason,
+      number,
+    ][]) {
+      drops[reason] = Math.min(n, SITE_REPORT_LIMITS.maxCount);
+    }
     // `{"reports":[` + `],"automated":false}` (the channel's flag, at its
-    // longest), then each entry and its comma.
-    let bodyBytes = 32;
+    // longest) and the drop counts, then each entry and its comma.
+    let bodyBytes =
+      32 + encoder.encode(`,"dropped":${JSON.stringify(drops)}`).length;
     for (const h of held.values()) {
       if (h.unsent === 0) continue;
       const size = entryBytes(h.report) + 1;
@@ -176,8 +221,16 @@ export function createReportBatcher(deps: BatcherDeps): ReportBatcher {
       batch.push({ held: h, count: h.unsent });
       if (batch.length >= limits.maxBatch) break;
     }
-    if (batch.length === 0) return;
+    if (batch.length === 0 && !hasDrops(drops)) return;
     for (const b of batch) b.held.unsent -= b.count;
+    for (const [reason, n] of Object.entries(drops) as [
+      PageDropReason,
+      number,
+    ][]) {
+      const left = (unsentDrops[reason] ?? 0) - n;
+      if (left > 0) unsentDrops[reason] = left;
+      else delete unsentDrops[reason];
+    }
     posts += 1;
     sending = true;
     let answer: SiteReportsResponse | null = null;
@@ -187,6 +240,7 @@ export function createReportBatcher(deps: BatcherDeps): ReportBatcher {
           ...b.held.report,
           count: Math.min(b.count, SITE_REPORT_LIMITS.maxCount),
         })),
+        drops,
         { keepalive: opts?.keepalive ?? false },
       );
     } catch (err) {
@@ -206,6 +260,7 @@ export function createReportBatcher(deps: BatcherDeps): ReportBatcher {
         // The page is going away: no timer will fire, send now.
         if (answer?.kind !== "accepted") {
           for (const b of batch) b.held.unsent += b.count;
+          restoreDrops(drops);
         }
         await flush({ keepalive: true });
         return;
@@ -217,6 +272,7 @@ export function createReportBatcher(deps: BatcherDeps): ReportBatcher {
     } else {
       // Not delivered: the occurrences go back, to ride the next batch.
       for (const b of batch) b.held.unsent += b.count;
+      restoreDrops(drops);
       if (answer?.kind === "rate-limited") {
         backoffMs = Math.min(answer.retryAfterS * 1000, limits.maxBackoffMs);
       } else {
@@ -232,16 +288,16 @@ export function createReportBatcher(deps: BatcherDeps): ReportBatcher {
       }
     }
     // More waiting (a burst past maxBatch, or a failure's counts): send later.
-    for (const h of held.values()) {
-      if (h.unsent > 0) {
-        arm(answer?.kind === "accepted" ? limits.batchDelayMs : backoffMs);
-        break;
-      }
+    const waiting =
+      hasDrops(unsentDrops) || [...held.values()].some((h) => h.unsent > 0);
+    if (waiting) {
+      arm(answer?.kind === "accepted" ? limits.batchDelayMs : backoffMs);
     }
   }
 
   return {
     add,
+    drop,
     flush,
     state: () => ({ distinct: held.size, posts, stopped, droppedLocally }),
   };

@@ -3,6 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Page-shown record. The first instant this document was not visible
+         (performance.now() ms), kept on window.__equinFirstHiddenAt
+         (boot-trace's FIRST_HIDDEN_GLOBAL) by a listener installed while the
+         head parses — before any module runs. A load timing read once the app
+         has booted (the site's slow-load report, analytics' load) cannot see a
+         hide that happened before it subscribed; this record can, in every
+         browser. Read by boot-trace's readPageShown. -->
+    <script id="page-shown">
+      (function () {
+        function seen() {
+          if (document.visibilityState === "visible") return;
+          window.__equinFirstHiddenAt = performance.now();
+          document.removeEventListener("visibilitychange", seen);
+        }
+        document.addEventListener("visibilitychange", seen);
+        seen();
+      })();
+    </script>
     <!-- First-frame color scheme floor. The theme itself arrives with this
          document: the gateway splices the server-rendered theme CSS (and the
          desktop's `data-color-scheme`) in at the end of the head — see

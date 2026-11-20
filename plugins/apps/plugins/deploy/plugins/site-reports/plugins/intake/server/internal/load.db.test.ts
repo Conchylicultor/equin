@@ -296,6 +296,48 @@ describe("site-reports intake under load", () => {
     });
   });
 
+  test("a page's own drop counts are counted under their reason, never stored", async () => {
+    const { intake } = setup();
+    // A drop-only batch is a valid body (a load no one waited for, nothing to file).
+    const body = SiteReportsBodySchema.parse({
+      reports: [],
+      dropped: { "background-load": 2, "prerendered-load": 1 },
+    });
+    expect(
+      await intake.submit(
+        body.reports,
+        { kind: "visitor", ip: "192.0.2.40" },
+        body.dropped,
+      ),
+    ).toEqual({ kind: "accepted", accepted: 0, dropped: 3 });
+    expect(
+      await intake.submit(
+        [crash("kept")],
+        { kind: "visitor", ip: "192.0.2.41" },
+        {
+          "background-load": 1,
+        },
+      ),
+    ).toEqual({ kind: "accepted", accepted: 1, dropped: 1 });
+    await intake.flush();
+    const rows = await t.db.select().from(siteReports);
+    expect(rows.map((row) => row.message)).toEqual([crash("kept").message]);
+    const drops = await t.db.select().from(siteReportDrops);
+    expect(Object.fromEntries(drops.map((d) => [d.reason, d.count]))).toEqual({
+      "background-load": 3,
+      "prerendered-load": 1,
+    });
+  });
+
+  test("an empty batch is refused by the body schema", () => {
+    expect(SiteReportsBodySchema.safeParse({ reports: [] }).success).toBe(
+      false,
+    );
+    expect(
+      SiteReportsBodySchema.safeParse({ reports: [], dropped: {} }).success,
+    ).toBe(false);
+  });
+
   test("an unknown kind or a payload its schema refuses is dropped and counted", async () => {
     const { intake } = setup();
     const r = await submit(

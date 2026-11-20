@@ -15,3 +15,5 @@ export {
 } from "./instants";
 export { firstByteSplit, MAX_PROTOCOL_LENGTH } from "./first-byte";
 export type { FirstByteSplit, NavigationTimingFields } from "./first-byte";
+export { FIRST_HIDDEN_GLOBAL, pageShown, notShownFromMs } from "./page-shown";
+export type { PageShown, PageShownRecords } from "./page-shown";

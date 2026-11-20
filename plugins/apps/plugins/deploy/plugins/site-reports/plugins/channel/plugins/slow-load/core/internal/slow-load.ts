@@ -1,6 +1,11 @@
 import { z } from "zod";
+import type { PageDropReason } from "@plugins/apps/plugins/deploy/plugins/site-reports/plugins/intake/core";
 import { FirstByteSplitSchema } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
-import type { FirstByteSplit } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/core";
+import {
+  notShownFromMs,
+  type FirstByteSplit,
+  type PageShown,
+} from "@plugins/primitives/plugins/perfs/plugins/boot-trace/core";
 import {
   StallClientSchema,
   type StallClient,
@@ -158,6 +163,59 @@ export function judgeHiddenLoad(
     client: ctx.client,
     connection: ctx.connection,
   };
+}
+
+/** The verdict on one page load so far. */
+export type LoadVerdict =
+  /** Not ready yet and visible throughout: wait for more. */
+  | { kind: "pending" }
+  /** Ready under the bar, or hidden before the bar with no wait to report. */
+  | { kind: "fast" }
+  | { kind: "slow"; payload: SlowPageLoadPayload }
+  /**
+   * No one waited for it (the intake's page-declared drop reasons): its
+   * milestones measure the visitor, not the load — counted, never filed.
+   */
+  | { kind: "not-waited"; reason: PageDropReason };
+
+/**
+ * The one verdict on a page load: a load is judged only on what the visitor
+ * could see. Visible from the navigation's start until ready → judged ready
+ * (slow at or past the bar); not visible at some instant before ready → the
+ * visitor waited until then: `not-ready` when that was the bar or more, else
+ * not waited at all (a background load). A prerendered load is never judged.
+ *
+ * `awaitPaint`: the browser times paint, so ready also needs the first
+ * contentful paint. PURE.
+ */
+export function judgeLoad(
+  m: LoadMilestones,
+  shown: PageShown,
+  ctx: Context & { awaitPaint: boolean },
+): LoadVerdict {
+  if (shown.kind === "prerendered") {
+    return { kind: "not-waited", reason: "prerendered-load" };
+  }
+  const hiddenAt = notShownFromMs(shown);
+  const complete = m.readyMs !== null && (!ctx.awaitPaint || m.fcpMs !== null);
+  if (complete && (hiddenAt === null || m.readyMs! <= hiddenAt)) {
+    const payload = judgeReadyLoad(m, ctx);
+    return payload ? { kind: "slow", payload } : { kind: "fast" };
+  }
+  if (hiddenAt === null) return { kind: "pending" };
+  const barMs = ctx.barMs ?? SLOW_PAGE_LOAD_BAR_MS;
+  if (hiddenAt < barMs) {
+    return { kind: "not-waited", reason: "background-load" };
+  }
+  // What was reached only after the hide is the tab being shown again.
+  const before = (ms: number | null) =>
+    ms !== null && ms < hiddenAt ? ms : null;
+  const payload = judgeHiddenLoad(
+    { ttfbMs: before(m.ttfbMs), fcpMs: before(m.fcpMs), readyMs: null },
+    hiddenAt,
+    ctx,
+  );
+  return payload ? { kind: "slow", payload } : { kind: "fast" };
 }
 
 const MOBILE_OSES: ReadonlySet<StallClient["os"]> = new Set(["ios", "android"]);

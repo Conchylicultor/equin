@@ -33,6 +33,22 @@ export const SITE_REPORT_LIMITS = {
 } as const;
 
 /**
+ * What a page itself may count instead of filing: a measurement it judged
+ * not to be one. Sent as counts beside a batch's reports (`dropped`), counted
+ * under the same reason in `site_report_drops`, never stored:
+ * - `background-load` — a page load no one could see before it was ready
+ *   and hid before the slow-load bar (a tab opened in the background, a
+ *   restored session, a tab switch right after the click): its paint waited
+ *   for the visitor to come back (`site-reports/channel/slow-load`);
+ * - `prerendered-load` — a page loaded before it was shown (prerendering).
+ */
+export const PAGE_DROP_REASONS = [
+  "background-load",
+  "prerendered-load",
+] as const;
+export type PageDropReason = (typeof PAGE_DROP_REASONS)[number];
+
+/**
  * Why an entry (or a whole batch) wrote no row of its own. Every one is
  * counted in `site_report_drops`, per window — never queued, never silent.
  */
@@ -61,5 +77,7 @@ export const SITE_REPORT_DROP_REASONS = [
   "pending-cap",
   // A new fingerprint while the table holds maxRows.
   "row-cap",
+  // The page's own verdict: what it measured is no one's wait.
+  ...PAGE_DROP_REASONS,
 ] as const;
 export type SiteReportDropReason = (typeof SITE_REPORT_DROP_REASONS)[number];

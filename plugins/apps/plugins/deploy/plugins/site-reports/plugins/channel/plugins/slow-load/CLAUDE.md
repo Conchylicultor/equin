@@ -19,8 +19,20 @@ FCP and the route's content commit), ms from the navigation start:
   `first-paint`, `app-ready`); judged once FCP is in, where paint is timed;
 - hidden before ready after waiting the bar → `not-ready` (the visitor left or
   looked away; past 10 min it is clamped, not dropped);
-- a load begun in a hidden tab (opened in the background) → nothing: its
-  paint waits for the visitor.
+- not visible at some instant before ready, and hidden before the bar → not
+  waited (`background-load`); a prerendered page → not waited
+  (`prerendered-load`). Counted as the intake's drops under that reason
+  (channel's `countPageDrop`), never filed: its paint waited for the visitor.
+
+**What the visitor could see is read from records that start with the page**
+(boot-trace's `readPageShown`), never from the moment the reporter mounted:
+the shell's inline first-hide record (`web-core`'s `index.html`, every
+browser), Chromium's `visibility-state` entries (every one, not just the
+first), and prerendering (`document.prerendering` / `activationStart`). The
+first version checked only the first visibility entry at mount and subscribed
+to `visibilitychange` then — so a tab switched away during the seconds before
+the app booted was judged on a first paint that came minutes later, when the
+visitor returned (equin.ai, 2026-11-20: "ready after 261.2 s", "183.4 s").
 
 **Identity**: `<phase>:<mobile|desktop>` — at most eight rows on the site, each
 counting every slow load of its kind; the latest sample is the row's payload
@@ -40,12 +52,14 @@ automated one is counted as a drop), against a local website build or
 
 ## Plugin reference
 
-- Description: A site page's slow load as a report: judged once per page load from the boot trace (first byte, first paint, the route's content commit) — ready at or past 3 s, or hidden before ready after 3 s — and filed through report() as slow-page-load with the coarse browser (family, OS) and network class only. Excluded from every composition (base-exclusions) under its parent channel; the website names it — elsewhere the app's own slow-ops page-load signal covers loads. The slow-page-load report kind on the site's server: the schema and fingerprint (one row per slowest stretch × phone or not) the site's intake identifies a visitor's slow load by.
+- Description: A site page's slow load as a report: judged once per page load from the boot trace (first byte, first paint, the route's content commit) — judged only on what the visitor could see (boot-trace's readPageShown: a hide recorded from the navigation's start, prerendering): ready at or past 3 s, or hidden before ready after 3 s — and filed through report() as slow-page-load with the coarse browser (family, OS) and network class only; a load hidden before the bar or prerendered is no one's wait, counted as the intake's background-load / prerendered-load drop (countPageDrop). Excluded from every composition (base-exclusions) under its parent channel; the website names it — elsewhere the app's own slow-ops page-load signal covers loads. The slow-page-load report kind on the site's server: the schema and fingerprint (one row per slowest stretch × phone or not) the site's intake identifies a visitor's slow load by.
 - Excluded: yes
 - Web:
   - Contributes: `Core.Root` → `SlowLoadReporter`
   - Uses:
+    - `apps/deploy/site-reports/channel.countPageDrop`
     - `primitives/perfs/boot-trace.readFirstByteSplit`
+    - `primitives/perfs/boot-trace.readPageShown`
     - `primitives/perfs/boot-trace.subscribeBootTrace`
     - `reports.report`
 - Server:
@@ -54,15 +68,20 @@ automated one is counted as a drop), against a local website build or
 - Core:
   - Uses:
     - `apps/deploy/analytics/collect.FirstByteSplitSchema`
+    - `primitives/perfs/boot-trace.FirstByteSplit`
+    - `primitives/perfs/boot-trace.notShownFromMs`
+    - `primitives/perfs/boot-trace.PageShown`
     - `reports/main-thread-stall.StallClient`
     - `reports/main-thread-stall.StallClientSchema`
   - Exports (types):
     - `LoadMilestones`
+    - `LoadVerdict`
     - `SlowLoadPhase`
     - `SlowPageLoadPayload`
   - Exports (values):
     - `CONNECTION_TYPES`
     - `judgeHiddenLoad`
+    - `judgeLoad`
     - `judgeReadyLoad`
     - `SLOW_LOAD_PHASES`
     - `SLOW_PAGE_LOAD_BAR_MS`

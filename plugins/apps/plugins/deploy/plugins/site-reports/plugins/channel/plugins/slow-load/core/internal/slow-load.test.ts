@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   judgeHiddenLoad,
+  judgeLoad,
   judgeReadyLoad,
   SlowPageLoadPayloadSchema,
   slowPageLoadFingerprint,
@@ -146,5 +147,124 @@ describe("the first byte's split", () => {
     )!;
     const { firstByte: _, ...old } = p;
     expect(SlowPageLoadPayloadSchema.parse(old).firstByte).toBeNull();
+  });
+});
+
+describe("judgeLoad — only what the visitor could see is judged", () => {
+  const shown = { kind: "shown" } as const;
+  const hiddenAt = (atMs: number) => ({ kind: "hidden", atMs }) as const;
+  const ctx = { ...laptop, awaitPaint: true };
+
+  test("visible throughout: judged on ready, slow at the bar", () => {
+    expect(
+      judgeLoad({ ttfbMs: 200, fcpMs: 900, readyMs: 1_500 }, shown, ctx),
+    ).toEqual({ kind: "fast" });
+    const v = judgeLoad(
+      { ttfbMs: 200, fcpMs: 4_000, readyMs: 4_000 },
+      shown,
+      ctx,
+    );
+    expect(v.kind === "slow" && v.payload.phase).toBe("first-paint");
+  });
+
+  test("not ready yet and visible: pending (waits for paint where it is timed)", () => {
+    expect(
+      judgeLoad({ ttfbMs: 200, fcpMs: null, readyMs: null }, shown, ctx).kind,
+    ).toBe("pending");
+    expect(
+      judgeLoad({ ttfbMs: 200, fcpMs: null, readyMs: 800 }, shown, ctx).kind,
+    ).toBe("pending");
+  });
+
+  test("ready before the first hide is a ready load", () => {
+    const v = judgeLoad(
+      { ttfbMs: 300, fcpMs: 3_500, readyMs: 3_500 },
+      hiddenAt(9_000),
+      ctx,
+    );
+    expect(v.kind === "slow" && v.payload.readyMs).toBe(3_500);
+  });
+
+  test("hidden before ready and before the bar: no one waited — a background load", () => {
+    // Opened in the background (hidden from 0), or switched away right after
+    // the click: its first paint is the visitor coming back, minutes later.
+    for (const at of [0, 400, 2_999]) {
+      expect(
+        judgeLoad(
+          { ttfbMs: 450, fcpMs: 261_236, readyMs: 261_236 },
+          hiddenAt(at),
+          ctx,
+        ),
+      ).toEqual({ kind: "not-waited", reason: "background-load" });
+    }
+  });
+
+  test("hidden before ready after waiting the bar: not-ready, at the hide, paint after it ignored", () => {
+    const v = judgeLoad(
+      { ttfbMs: 100, fcpMs: 183_400, readyMs: 183_400 },
+      hiddenAt(5_421),
+      ctx,
+    );
+    expect(v.kind).toBe("slow");
+    if (v.kind !== "slow") return;
+    expect(v.payload).toMatchObject({
+      phase: "not-ready",
+      hiddenAtMs: 5_421,
+      fcpMs: null,
+      readyMs: null,
+      ttfbMs: 100,
+    });
+  });
+
+  test("a prerendered load is never judged", () => {
+    expect(
+      judgeLoad(
+        { ttfbMs: 200, fcpMs: 183_400, readyMs: 183_400 },
+        { kind: "prerendered" },
+        ctx,
+      ),
+    ).toEqual({ kind: "not-waited", reason: "prerendered-load" });
+  });
+
+  // The slow-page-load occurrences equin.ai recorded (main's reports, latest
+  // sample per row, 2026-11-19/20), replayed: the real 3–11 s loads are kept
+  // on a page visible throughout; the minutes-long ones, whose first paint
+  // came only when the tab was shown, are dropped once the record shows the
+  // page hidden before it was ready.
+  const recorded = [
+    { id: "4ub9k8", ttfbMs: 704, fcpMs: 6_839, readyMs: 6_839, real: true },
+    { id: "82si50", ttfbMs: 9_821, fcpMs: 10_849, readyMs: 10_849, real: true },
+    { id: "z70nni", ttfbMs: 1_906, fcpMs: 3_120, readyMs: 3_120, real: true },
+    {
+      id: "sh7lst",
+      ttfbMs: 459,
+      fcpMs: 261_236,
+      readyMs: 261_236,
+      real: false,
+    },
+    {
+      id: "sh7lst@08:50",
+      ttfbMs: 200,
+      fcpMs: 183_400,
+      readyMs: 183_400,
+      real: false,
+    },
+  ];
+  test.each(recorded)("replay $id", ({ ttfbMs, fcpMs, readyMs, real }) => {
+    const m = { ttfbMs, fcpMs, readyMs };
+    if (real) {
+      expect(judgeLoad(m, shown, ctx).kind).toBe("slow");
+    } else {
+      // Visible at the navigation, hidden before the app mounted (what the old
+      // reporter missed: it looked only at the first visibility entry and
+      // subscribed at mount), or opened in the background.
+      for (const shownAs of [
+        hiddenAt(0),
+        hiddenAt(1_200),
+        { kind: "prerendered" } as const,
+      ]) {
+        expect(judgeLoad(m, shownAs, ctx).kind).toBe("not-waited");
+      }
+    }
   });
 });

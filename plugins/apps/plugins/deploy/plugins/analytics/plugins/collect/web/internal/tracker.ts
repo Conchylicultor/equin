@@ -81,6 +81,12 @@ export interface LoadMilestones {
   firstByte: FirstByteSplit | null;
   firstContentfulPaintAt: number | null;
   readyAt: number | null;
+  /**
+   * From when the page was no longer seen, by records that start with the
+   * page (boot-trace's `readPageShown`: a hide before the tracker watched,
+   * prerendering = 0); null while it was visible throughout.
+   */
+  notShownFrom: number | null;
 }
 
 /** One pageview whose visible time is being counted. */
@@ -235,8 +241,9 @@ export function createTracker(deps: TrackerDeps): Tracker {
   /** The load as sent: paint milestones reached only after a hide do not count. */
   const loadTiming = (): LoadTiming => {
     const m = deps.loadMilestones();
+    const hiddenFrom = Math.min(firstHiddenAt, m.notShownFrom ?? Infinity);
     const beforeHide = (at: number | null) =>
-      at !== null && at < firstHiddenAt ? at : null;
+      at !== null && at < hiddenFrom ? at : null;
     return {
       ttfbMs: loadMs(m.firstByteAt),
       firstByte: firstByteOf(m.firstByte),

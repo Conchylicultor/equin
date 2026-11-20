@@ -102,12 +102,14 @@ saying so, never dropped.
     - `reports.CLIENT_REPORT_SOURCES`
     - `reports.REPORT_CATEGORIES`
   - Exports (types):
+    - `PageDropReason`
     - `SiteReportDropReason`
     - `SiteReportEntry`
     - `SiteReportRecord`
     - `SiteReportsBody`
     - `SiteReportsResponse`
   - Exports (values):
+    - `PAGE_DROP_REASONS`
     - `SITE_REPORT_DROP_REASONS`
     - `SITE_REPORT_LIMITS`
     - `SITE_REPORTS_MIRROR_SET_ID`

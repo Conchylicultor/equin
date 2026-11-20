@@ -49,6 +49,7 @@ function harness(
     firstByte: null,
     firstContentfulPaintAt: null,
     readyAt: null,
+    notShownFrom: null,
   };
   const tracker = createTracker({
     host: "equin.dev",
@@ -511,6 +512,7 @@ describe("load timing", () => {
     firstByte: null,
     firstContentfulPaintAt: 1640.2,
     readyAt: 1700,
+    notShownFrom: null,
   };
   const engagements = (sent: CollectBody[]) =>
     sent.filter((b) => b.kind === "engagement");
@@ -587,9 +589,30 @@ describe("load timing", () => {
       firstByte: null,
       firstContentfulPaintAt: 60_050,
       readyAt: 60_100,
+      notShownFrom: null,
     });
     h.setVisible(true);
     h.tracker.visible();
+    h.advance(1000);
+    h.tracker.hidden();
+    expect(engagements(h.sent)[0]).toMatchObject({
+      load: { ttfbMs: 90, fcpMs: null, readyMs: null },
+    });
+  });
+
+  it("a hide before the tracker watched (or prerendering) still voids the paint", async () => {
+    const h = harness();
+    // Visible when the tracker started, but the page record says it was
+    // hidden 1.2 s into the load, before the app booted.
+    h.tracker.pathChanged("/about");
+    await h.respond(0, { outcome: "pageview", pageviewId: PV_A });
+    h.setMilestones({
+      firstByteAt: 90,
+      firstByte: null,
+      firstContentfulPaintAt: 65_000,
+      readyAt: 65_100,
+      notShownFrom: 1_200,
+    });
     h.advance(1000);
     h.tracker.hidden();
     expect(engagements(h.sent)[0]).toMatchObject({
@@ -611,6 +634,7 @@ describe("load timing", () => {
       firstByte: null,
       firstContentfulPaintAt: 300,
       readyAt: 10_600,
+      notShownFrom: null,
     });
     h.tracker.pathChanged("/about");
     await h.respond(0, { outcome: "pageview", pageviewId: PV_A });
@@ -646,6 +670,7 @@ describe("load timing", () => {
       firstByte: null,
       firstContentfulPaintAt: 11 * 60 * 1000,
       readyAt: null,
+      notShownFrom: null,
     });
     h.tracker.pathChanged("/about");
     await h.respond(0, { outcome: "pageview", pageviewId: PV_A });

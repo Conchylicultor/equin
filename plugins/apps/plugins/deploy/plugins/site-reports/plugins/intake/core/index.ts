@@ -1,8 +1,9 @@
 export {
+  PAGE_DROP_REASONS,
   SITE_REPORT_DROP_REASONS,
   SITE_REPORT_LIMITS,
 } from "./internal/limits";
-export type { SiteReportDropReason } from "./internal/limits";
+export type { PageDropReason, SiteReportDropReason } from "./internal/limits";
 export type {
   SiteReportEntry,
   SiteReportsBody,

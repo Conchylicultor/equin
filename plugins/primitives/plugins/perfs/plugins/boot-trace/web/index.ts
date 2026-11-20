@@ -8,7 +8,9 @@ export type {
   AssetTiming,
   BootTrace,
   FirstByteSplit,
+  PageShown,
 } from "../core";
+export { readPageShown } from "./internal/page-shown";
 export {
   startBootSpan,
   markBootInstant,

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { cappedList } from "@plugins/packages/plugins/list-bound/core";
 import { CLIENT_REPORT_SOURCES } from "@plugins/reports/core";
-import { SITE_REPORT_LIMITS as L } from "./limits";
+import { PAGE_DROP_REASONS, SITE_REPORT_LIMITS as L } from "./limits";
 
 /**
  * One report a site page sends: anonymous by construction — no client id, no
@@ -33,13 +33,26 @@ export type SiteReportEntry = z.infer<typeof SiteReportEntrySchema>;
 
 export const SiteReportsBodySchema = z
   .object({
-    reports: cappedList(SiteReportEntrySchema, { max: L.maxBatch }).min(1),
+    reports: cappedList(SiteReportEntrySchema, { max: L.maxBatch }),
+    // What the page counted instead of filing (a load no one waited for),
+    // per reason: counted as drops under that reason, never stored. Absent
+    // from a page released before it.
+    dropped: z
+      .partialRecord(
+        z.enum(PAGE_DROP_REASONS),
+        z.number().int().min(1).max(L.maxCount),
+      )
+      .optional(),
     // Whether the page runs under automation (`navigator.webdriver`): such a
     // batch is counted as an `automated` drop, never stored. Absent from a
     // page released before it, which is read as a visitor's, as it was then.
     automated: z.boolean().optional(),
   })
-  .strict();
+  .strict()
+  .refine(
+    (b) => b.reports.length > 0 || Object.keys(b.dropped ?? {}).length > 0,
+    "a batch carries a report or a drop count",
+  );
 export type SiteReportsBody = z.infer<typeof SiteReportsBodySchema>;
 
 /**

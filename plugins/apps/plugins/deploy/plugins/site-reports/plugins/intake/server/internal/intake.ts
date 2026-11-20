@@ -5,6 +5,7 @@ import type { ReportCategory } from "@plugins/reports/core";
 import type { FanOutGate, ReportKindSpec } from "@plugins/reports/server";
 import {
   SITE_REPORT_LIMITS,
+  type PageDropReason,
   type SiteReportDropReason,
   type SiteReportEntry,
   type SiteReportsResponse,
@@ -78,10 +79,14 @@ export interface FlushStats {
 export type SiteReportSender =
   { kind: "visitor"; ip: string } | { kind: "bot" } | { kind: "automated" };
 
+/** What a page counted instead of filing, per reason (the body's `dropped`). */
+export type PageDrops = Partial<Record<PageDropReason, number>>;
+
 export interface SiteReportsIntake {
   submit(
     entries: readonly SiteReportEntry[],
     sender: SiteReportSender,
+    pageDrops?: PageDrops,
   ): Promise<SiteReportsResponse>;
   /** Write what is pending (the timer calls it; a test or shutdown may too). */
   flush(): Promise<FlushStats>;
@@ -112,6 +117,7 @@ export function createSiteReportsIntake(deps: IntakeDeps): SiteReportsIntake {
   const flushLock = createKeyedMutex();
 
   function drop(reason: SiteReportDropReason, n = 1): void {
+    if (n <= 0) return;
     drops.set(reason, (drops.get(reason) ?? 0) + n);
     arm();
   }
@@ -127,12 +133,17 @@ export function createSiteReportsIntake(deps: IntakeDeps): SiteReportsIntake {
   async function submit(
     entries: readonly SiteReportEntry[],
     sender: SiteReportSender,
+    pageDrops: PageDrops = {},
   ): Promise<SiteReportsResponse> {
+    const declared = Object.entries(pageDrops) as [PageDropReason, number][];
+    const declaredCount = declared.reduce((n, [, c]) => n + c, 0);
     // Not a visitor: counted, never read further and never charged to the
-    // admission budgets a visitor's reports need.
+    // admission budgets a visitor's reports need. Its page's own drop counts
+    // are the bot's / automation's too.
     if (sender.kind !== "visitor") {
-      drop(sender.kind, entries.length);
-      return { kind: "accepted", accepted: 0, dropped: entries.length };
+      const n = entries.length + declaredCount;
+      drop(sender.kind, n);
+      return { kind: "accepted", accepted: 0, dropped: n };
     }
     const now = deps.now();
     const admission = deps.admission.admit(
@@ -143,9 +154,12 @@ export function createSiteReportsIntake(deps: IntakeDeps): SiteReportsIntake {
       drop(admission.reason, entries.length);
       return { kind: "rate-limited", retryAfterS: admission.retryAfterS };
     }
+    // The page's own verdicts, admitted with its batch: counted under their
+    // reason (a refused batch is sent again, counts included).
+    for (const [reason, n] of declared) drop(reason, n);
     const kinds = deps.kinds();
     let accepted = 0;
-    let dropped = 0;
+    let dropped = declaredCount;
     for (const entry of entries) {
       const outcome = await take(entry, kinds, now);
       if (outcome === "accepted") accepted += 1;

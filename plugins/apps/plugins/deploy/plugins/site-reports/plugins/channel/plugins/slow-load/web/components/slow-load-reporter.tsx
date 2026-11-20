@@ -5,35 +5,22 @@ import {
 } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/core";
 import {
   readFirstByteSplit,
+  readPageShown,
   subscribeBootTrace,
 } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
+import { countPageDrop } from "@plugins/apps/plugins/deploy/plugins/site-reports/plugins/channel/web";
 import { coarseClient } from "@plugins/reports/plugins/main-thread-stall/core";
 import { firstByteOf } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
 import { report } from "@plugins/reports/web";
 import {
-  judgeHiddenLoad,
-  judgeReadyLoad,
+  judgeLoad,
   SLOW_PAGE_LOAD_KIND,
   slowPageLoadSummary,
   type LoadMilestones,
+  type LoadVerdict,
   type SlowPageLoadPayload,
 } from "../../core";
 import { connectionType } from "../internal/connection";
-
-/**
- * Whether this page load began in a hidden tab (opened in the background): its
- * paint waits for the visitor to look, so its milestones measure the visitor,
- * not the load. From the page's own visibility record where the browser keeps
- * one (Chromium's `visibility-state` entries start at the navigation, so a tab
- * shown before the reporter mounted is still known for what it was); else
- * from whether it is hidden now.
- */
-function beganHidden(): boolean {
-  const first = performance.getEntriesByType("visibility-state")[0];
-  return first
-    ? first.name === "hidden"
-    : document.visibilityState === "hidden";
-}
 
 /** Whether the browser reports paint timing at all (else FCP is never awaited). */
 function paintTimed(): boolean {
@@ -86,45 +73,41 @@ function context() {
 }
 
 /**
- * Headless (`Core.Root`, page): judges this page load once — when the route's
- * content has committed and the first contentful paint is in (slow when ready
- * at or past the bar), or when the page is hidden before that (slow when the
- * visitor had already waited the bar) — and files a slow one through
- * `report()`, which on a site is the site's channel. A load begun in a hidden
- * tab is not judged. Push-driven: the boot trace notifies as paint timing and
- * spans land.
+ * Headless (`Core.Root`, page): judges this page load once (`judgeLoad`) —
+ * on what the visitor could see, read from records that start with the page
+ * (boot-trace's `readPageShown`: the shell's first-hide record, Chromium's
+ * visibility entries, prerendering), never from the moment it mounted: a
+ * page hidden before the app booted, or loaded before it was shown, is not
+ * a wait. Re-judged as the boot trace lands milestones and on every
+ * visibility change, until a verdict: a slow load is filed through
+ * `report()` (the site's channel), a load no one waited for is counted as
+ * the intake's drop under its reason.
  */
 export function SlowLoadReporter(): null {
   useEffect(() => {
     if (judged) return;
-    if (beganHidden()) {
-      judged = true;
-      return;
-    }
     const awaitPaint = paintTimed();
     let unsubscribe: () => void = () => undefined;
     const stop = () => {
       unsubscribe();
-      document.removeEventListener("visibilitychange", onVisibility);
+      document.removeEventListener("visibilitychange", judgeNow);
     };
-    const judge = (payload: SlowPageLoadPayload | null) => {
+    const settle = (verdict: LoadVerdict) => {
+      if (verdict.kind === "pending") return;
       judged = true;
       stop();
-      if (payload) file(payload);
+      if (verdict.kind === "slow") file(verdict.payload);
+      else if (verdict.kind === "not-waited") countPageDrop(verdict.reason);
     };
-    function onTrace() {
+    function judgeNow() {
       if (judged) return;
-      const m = milestones();
-      if (m.readyMs === null || (awaitPaint && m.fcpMs === null)) return;
-      judge(judgeReadyLoad(m, context()));
+      settle(
+        judgeLoad(milestones(), readPageShown(), { ...context(), awaitPaint }),
+      );
     }
-    function onVisibility() {
-      if (judged || document.visibilityState !== "hidden") return;
-      judge(judgeHiddenLoad(milestones(), performance.now(), context()));
-    }
-    unsubscribe = subscribeBootTrace(onTrace);
-    document.addEventListener("visibilitychange", onVisibility);
-    onTrace();
+    unsubscribe = subscribeBootTrace(judgeNow);
+    document.addEventListener("visibilitychange", judgeNow);
+    judgeNow();
     return stop;
   }, []);
   return null;

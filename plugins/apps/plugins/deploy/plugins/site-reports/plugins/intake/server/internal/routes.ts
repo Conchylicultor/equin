@@ -45,6 +45,7 @@ export const handleSubmitSiteReports = rawEndpointHandler(
           userAgent: req.headers.get("user-agent") ?? "",
           automated: body.automated ?? false,
         }),
+        body.dropped,
       ),
     ),
   ),

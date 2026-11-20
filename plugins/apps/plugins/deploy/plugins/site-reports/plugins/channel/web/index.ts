@@ -4,6 +4,8 @@ import {
 } from "@plugins/framework/plugins/web-sdk/core";
 import { reportChannel } from "@plugins/reports/web";
 import { siteReportChannel } from "./internal/channel";
+
+export { countPageDrop } from "./internal/channel";
 import { FlushReportsOnPagehide } from "./components/flush-on-pagehide";
 
 export default {

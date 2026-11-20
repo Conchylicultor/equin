@@ -7,6 +7,7 @@ import {
   createReportBatcher,
   type BatchedReport,
   type BatcherLimits,
+  type PageDrops,
 } from "./batcher";
 
 const limits: BatcherLimits = {
@@ -36,19 +37,21 @@ function harness(
   overrides: Partial<BatcherLimits> = {},
 ) {
   const sent: SiteReportEntry[][] = [];
+  const sentDrops: PageDrops[] = [];
   const timers: { fn: () => void; delayMs: number }[] = [];
   const warnings: string[] = [];
   const batcher = createReportBatcher({
     limits: { ...limits, ...overrides },
-    send: (entries) => {
+    send: (entries, dropped) => {
       sent.push(entries);
+      sentDrops.push(dropped);
       const a = answer();
       return a instanceof Error ? Promise.reject(a) : Promise.resolve(a);
     },
     schedule: (fn, delayMs) => timers.push({ fn, delayMs }),
     warn: (m) => warnings.push(m),
   });
-  return { batcher, sent, timers, warnings };
+  return { batcher, sent, sentDrops, timers, warnings };
 }
 
 const ok = (): SiteReportsResponse => ({
@@ -58,6 +61,38 @@ const ok = (): SiteReportsResponse => ({
 });
 
 describe("report batcher", () => {
+  test("a page's drop counts ride a batch, alone or beside reports", async () => {
+    const h = harness(ok);
+    h.batcher.drop("background-load");
+    h.batcher.drop("background-load");
+    expect(h.timers).toHaveLength(1);
+    await h.batcher.flush();
+    expect(h.sent).toEqual([[]]);
+    expect(h.sentDrops).toEqual([{ "background-load": 2 }]);
+    h.batcher.add(report("boom"));
+    h.batcher.drop("prerendered-load");
+    await h.batcher.flush();
+    expect(h.sent[1]).toEqual([{ ...report("boom"), count: 1 }]);
+    expect(h.sentDrops[1]).toEqual({ "prerendered-load": 1 });
+    // Nothing left: no empty batch.
+    await h.batcher.flush();
+    expect(h.sent).toHaveLength(2);
+  });
+
+  test("undelivered drop counts ride the next batch", async () => {
+    let fail = true;
+    const h = harness(() => (fail ? new Error("offline") : ok()));
+    h.batcher.drop("background-load");
+    await h.batcher.flush();
+    fail = false;
+    h.batcher.drop("background-load");
+    await h.batcher.flush();
+    expect(h.sentDrops).toEqual([
+      { "background-load": 1 },
+      { "background-load": 2 },
+    ]);
+  });
+
   test("a repeat is only counted: one entry per fingerprint, its count folded", async () => {
     const h = harness(ok);
     for (let i = 0; i < 50; i++) h.batcher.add(report("boom"));

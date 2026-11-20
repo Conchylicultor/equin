@@ -222,6 +222,9 @@ through `web-core`):
   `bootWindowEnd`: its first commit is the loading screen, so it repeats FCP.
 - A paint after the tab was first hidden is the tab being shown: `fcpMs` /
   `readyMs` null. Read at beacon time (first hide / leave), so no subscription.
+  The first hide is the earlier of the tracker's own and boot-trace's
+  `readPageShown` (records that start with the page: a hide before the
+  tracker watched; prerendering counts as hidden from 0).
 - Whole positive ms or null, never 0. The server keeps the first load per hit;
   `NULL` = not recorded.
 
@@ -395,6 +398,7 @@ after new visits, a rollup and a retention sweep arrive as deltas.
     - `primitives/pane.usePathname`
     - `primitives/perfs/boot-trace.getBootTrace`
     - `primitives/perfs/boot-trace.readFirstByteSplit`
+    - `primitives/perfs/boot-trace.readPageShown`
   - Exports (types):
     - `AnalyticsConsent`
     - `ConsentState`

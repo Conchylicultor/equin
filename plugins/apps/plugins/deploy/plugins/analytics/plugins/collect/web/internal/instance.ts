@@ -1,10 +1,14 @@
 import { fetchEndpointOver } from "@plugins/infra/plugins/endpoints/web";
 import { pageTransport } from "@plugins/primitives/plugins/networking/plugins/page-transport/web";
 import { currentRoutePath } from "@plugins/primitives/plugins/pane/web";
-import { ROUTE_CONTENT_COMMIT_ID } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/core";
+import {
+  notShownFromMs,
+  ROUTE_CONTENT_COMMIT_ID,
+} from "@plugins/primitives/plugins/perfs/plugins/boot-trace/core";
 import {
   getBootTrace,
   readFirstByteSplit,
+  readPageShown,
 } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
 import {
   EVENT_NAME_PATTERN,
@@ -109,6 +113,7 @@ function loadMilestones(): LoadMilestones {
     firstByte: readFirstByteSplit(),
     firstContentfulPaintAt: fcp,
     readyAt: content === null ? null : Math.max(content, fcp ?? 0),
+    notShownFrom: notShownFromMs(readPageShown()),
   };
 }
 

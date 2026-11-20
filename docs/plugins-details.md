@@ -2072,6 +2072,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/pane.usePathname`
                   - `primitives/perfs/boot-trace.getBootTrace`
                   - `primitives/perfs/boot-trace.readFirstByteSplit`
+                  - `primitives/perfs/boot-trace.readPageShown`
                 - Exports (types):
                   - `AnalyticsConsent`
                   - `ConsentState`
@@ -3801,16 +3802,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/networking/page-transport.pageTransport`
                   - `primitives/scope/automation.AUTOMATED_BROWSER`
                   - `reports.reportChannel`
+                - Exports (values): `countPageDrop`
+              - Cross-plugin:
+                - Imported by: `apps/deploy/site-reports/channel/slow-load`
               - Exemptions:
                 - Exempts itself from:
                   - `networking/no-page-transport` — `web/internal/channel.ts` (sanctioned)
                   - `report-sink/collect-through-companion` — `web/index.ts` (sanctioned)
               - Plugins:
-                - **`slow-load`** (excluded) — A site page's slow load as a report: judged once per page load from the boot trace (first byte, first paint, the route's content commit) — ready at or past 3 s, or hidden before ready after 3 s — and filed through report() as slow-page-load with the coarse browser (family, OS) and network class only. Excluded from every composition (base-exclusions) under its parent channel; the website names it — elsewhere the app's own slow-ops page-load signal covers loads. The slow-page-load report kind on the site's server: the schema and fingerprint (one row per slowest stretch × phone or not) the site's intake identifies a visitor's slow load by.
+                - **`slow-load`** (excluded) — A site page's slow load as a report: judged once per page load from the boot trace (first byte, first paint, the route's content commit) — judged only on what the visitor could see (boot-trace's readPageShown: a hide recorded from the navigation's start, prerendering): ready at or past 3 s, or hidden before ready after 3 s — and filed through report() as slow-page-load with the coarse browser (family, OS) and network class only; a load hidden before the bar or prerendered is no one's wait, counted as the intake's background-load / prerendered-load drop (countPageDrop). Excluded from every composition (base-exclusions) under its parent channel; the website names it — elsewhere the app's own slow-ops page-load signal covers loads. The slow-page-load report kind on the site's server: the schema and fingerprint (one row per slowest stretch × phone or not) the site's intake identifies a visitor's slow load by.
                   - Web:
                     - Contributes: `Core.Root` → `SlowLoadReporter`
                     - Uses:
+                      - `apps/deploy/site-reports/channel.countPageDrop`
                       - `primitives/perfs/boot-trace.readFirstByteSplit`
+                      - `primitives/perfs/boot-trace.readPageShown`
                       - `primitives/perfs/boot-trace.subscribeBootTrace`
                       - `reports.report`
                   - Server:
@@ -3819,15 +3825,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - Core:
                     - Uses:
                       - `apps/deploy/analytics/collect.FirstByteSplitSchema`
+                      - `primitives/perfs/boot-trace.FirstByteSplit`
+                      - `primitives/perfs/boot-trace.notShownFromMs`
+                      - `primitives/perfs/boot-trace.PageShown`
                       - `reports/main-thread-stall.StallClient`
                       - `reports/main-thread-stall.StallClientSchema`
                     - Exports (types):
                       - `LoadMilestones`
+                      - `LoadVerdict`
                       - `SlowLoadPhase`
                       - `SlowPageLoadPayload`
                     - Exports (values):
                       - `CONNECTION_TYPES`
                       - `judgeHiddenLoad`
+                      - `judgeLoad`
                       - `judgeReadyLoad`
                       - `SLOW_LOAD_PHASES`
                       - `SLOW_PAGE_LOAD_BAR_MS`
@@ -3913,12 +3924,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `reports.CLIENT_REPORT_SOURCES`
                   - `reports.REPORT_CATEGORIES`
                 - Exports (types):
+                  - `PageDropReason`
                   - `SiteReportDropReason`
                   - `SiteReportEntry`
                   - `SiteReportRecord`
                   - `SiteReportsBody`
                   - `SiteReportsResponse`
                 - Exports (values):
+                  - `PAGE_DROP_REASONS`
                   - `SITE_REPORT_DROP_REASONS`
                   - `SITE_REPORT_LIMITS`
                   - `SITE_REPORTS_MIRROR_SET_ID`
@@ -57660,12 +57673,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FirstByteSplit`
               - `LongTask`
               - `NavTiming`
+              - `PageShown`
             - Exports (values):
               - `bootWindowEnd`
               - `getBootTrace`
               - `markBootInstant`
               - `markBootInstantAtNextCommit`
               - `readFirstByteSplit`
+              - `readPageShown`
               - `recordBootSpan`
               - `refreshBootTrace`
               - `startBootSpan`
@@ -57684,13 +57699,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `LongTask`
               - `NavigationTimingFields`
               - `NavTiming`
+              - `PageShown`
+              - `PageShownRecords`
             - Exports (values):
               - `BOOT_PLUGIN_TIMING_PREFIX`
               - `BOOT_TIMING_PREFIX`
               - `DEFERRED_LOAD_COMPLETE_ID`
               - `FIRST_DATA_COMMIT_ID`
+              - `FIRST_HIDDEN_GLOBAL`
               - `firstByteSplit`
               - `MAX_PROTOCOL_LENGTH`
+              - `notShownFromMs`
+              - `pageShown`
               - `ROUTE_CONTENT_COMMIT_ID`
         - **`latency-signal`** — The closed vocabulary of client latency signals (update: a pushed change applied; confirm: an optimistic write confirmed), each a fixed tuple of named phases, as plain data; ClientLatencySample (a union on signal, so a missing or misspelled phase is a tsc error), the clientLatencySink observation sink producers emit into and consumers subscribe to, and splitPhases.
           - Core:
