@@ -213,8 +213,12 @@ through `web-core`):
 
 - `ttfbMs` — document's first byte; `fcpMs` — first contentful paint.
 - `firstByte` — where `ttfbMs` went: boot-trace's `firstByteSplit`
-  (redirect/setup, DNS, TCP, TLS — the whole QUIC handshake on h3 —, request
-  → response, other; whole ms adding up to the total) and the protocol. Says
+  (redirect/setup, before DNS, DNS, DNS→connect, TCP, TLS — the whole QUIC
+  handshake on h3 —, connect→request, request → response; the three gaps are
+  where the browser's own queueing lands, by position — which one depends on
+  the browser and the connection, see `first-byte.ts`; whole ms adding up
+  to the total) and the protocol. `otherMs` is the three gaps' sum, the only
+  form splits recorded before they were named (2026-11-20) hold. Says
   whether a slow first byte was the visitor's network (handshake round trips
   to the one box) or the server (`waitMs`). Absent on loads stored before it
   (2026-11-20), null when the browser gave none.
@@ -443,6 +447,7 @@ dropped and re-copied.
     - `packages/list-bound.cappedRecord`
     - `packages/list-bound.wholeList`
     - `primitives/pane.pathWithoutSurfaceViews`
+    - `primitives/perfs/boot-trace.FIRST_BYTE_GAPS`
     - `primitives/perfs/boot-trace.FirstByteSplit`
     - `primitives/perfs/boot-trace.MAX_PROTOCOL_LENGTH`
   - Exports (types):
@@ -484,6 +489,7 @@ dropped and re-copied.
     - `SeriesPoint`
     - `Session`
     - `SessionHit`
+    - `StoredFirstByteSplit`
     - `UtmTags`
     - `Viewport`
     - `VisitCut`

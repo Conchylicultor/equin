@@ -126,6 +126,9 @@ describe("the first byte's split", () => {
       tcpMs: 905,
       tlsMs: 910,
       waitMs: 1_050,
+      queueMs: 0,
+      stallMs: 20,
+      sendMs: 0,
       otherMs: 20,
       protocol: "h2",
     };
@@ -136,7 +139,7 @@ describe("the first byte's split", () => {
     expect(p?.firstByte).toEqual(firstByte);
     expect(SlowPageLoadPayloadSchema.parse(p)).toEqual(p!);
     expect(slowPageLoadSummary(p!)).toContain(
-      "[first byte: DNS 412 ms + TCP 905 ms + TLS 910 ms + request→response 1050 ms + other 20 ms over h2]",
+      "[first byte: DNS 412 ms + DNS→connect 20 ms + TCP 905 ms + TLS 910 ms + request→response 1050 ms over h2]",
     );
   });
 
@@ -266,5 +269,27 @@ describe("judgeLoad — only what the visitor could see is judged", () => {
         expect(judgeLoad(m, shownAs, ctx).kind).toBe("not-waited");
       }
     }
+  });
+
+  test("a split recorded before its gaps were named shows their sum as other", () => {
+    const p = SlowPageLoadPayloadSchema.parse({
+      ...judgeReadyLoad(
+        { ttfbMs: 3_142, fcpMs: 4_464, readyMs: 4_464 },
+        laptop,
+      )!,
+      firstByte: {
+        totalMs: 3_141,
+        beforeFetchMs: 2,
+        dnsMs: 0,
+        tcpMs: 46,
+        tlsMs: 39,
+        waitMs: 77,
+        otherMs: 2_977,
+        protocol: "h2",
+      },
+    });
+    expect(slowPageLoadSummary(p)).toContain(
+      "[first byte: redirect/setup 2 ms + TCP 46 ms + TLS 39 ms + request→response 77 ms + other 2977 ms over h2]",
+    );
   });
 });

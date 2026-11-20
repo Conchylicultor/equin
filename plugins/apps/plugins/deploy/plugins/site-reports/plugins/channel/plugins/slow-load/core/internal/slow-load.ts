@@ -1,6 +1,9 @@
 import { z } from "zod";
 import type { PageDropReason } from "@plugins/apps/plugins/deploy/plugins/site-reports/plugins/intake/core";
-import { FirstByteSplitSchema } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
+import {
+  FirstByteSplitSchema,
+  type StoredFirstByteSplit,
+} from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
 import {
   notShownFromMs,
   type FirstByteSplit,
@@ -76,8 +79,8 @@ export const SlowPageLoadPayloadSchema = z
     hiddenAtMs: LoadMsSchema,
     barMs: z.number().int().positive(),
     /**
-     * Where the first byte went (analytics' split: redirects and unload, DNS,
-     * TCP, TLS, request → response). Null when the browser gave none, and on
+     * Where the first byte went (analytics' split: redirect/setup, DNS, TCP,
+     * TLS, request → response, and the browser's gaps between them). Null when the browser gave none, and on
      * reports filed before it was recorded.
      */
     firstByte: FirstByteSplitSchema.nullable().default(null),
@@ -239,23 +242,34 @@ function seconds(ms: number | null): string {
   return ms === null ? "—" : `${(ms / 1000).toFixed(1)} s`;
 }
 
-const SPLIT_WORDS: [keyof FirstByteSplit, string][] = [
+/** The parts in the order the browser goes through them. */
+const SPLIT_WORDS: [keyof StoredFirstByteSplit, string][] = [
   ["beforeFetchMs", "redirect/setup"],
+  ["queueMs", "before DNS"],
   ["dnsMs", "DNS"],
+  ["stallMs", "DNS→connect"],
   ["tcpMs", "TCP"],
   ["tlsMs", "TLS"],
+  ["sendMs", "connect→request"],
   ["waitMs", "request→response"],
-  ["otherMs", "other"],
 ];
 
-/** `DNS 312 ms + TCP 905 ms + …` — the first byte's nonzero parts, over h2/h3. */
-function splitWords(split: FirstByteSplit): string {
+/**
+ * `DNS 312 ms + TCP 905 ms + …` — the first byte's nonzero parts, over h2/h3.
+ * A split recorded before its gaps were named shows their sum as `other`.
+ */
+function splitWords(split: StoredFirstByteSplit): string {
   const quic = split.protocol?.startsWith("h3") ?? false;
   const parts = SPLIT_WORDS.flatMap(([key, label]) => {
     const ms = split[key];
     const word = quic && key === "tlsMs" ? "QUIC" : label;
     return typeof ms === "number" && ms > 0 ? [`${word} ${ms} ms`] : [];
   });
+  const named =
+    split.queueMs !== undefined &&
+    split.stallMs !== undefined &&
+    split.sendMs !== undefined;
+  if (!named && split.otherMs > 0) parts.push(`other ${split.otherMs} ms`);
   const over = split.protocol ? ` over ${split.protocol}` : "";
   return `${parts.join(" + ")}${over}`;
 }

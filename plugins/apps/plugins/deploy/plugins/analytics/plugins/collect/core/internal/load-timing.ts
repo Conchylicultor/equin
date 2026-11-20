@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   MAX_PROTOCOL_LENGTH,
+  type FIRST_BYTE_GAPS,
   type FirstByteSplit,
 } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/core";
 
@@ -33,6 +34,17 @@ const LoadMsSchema = z.number().int().positive().max(MAX_LOAD_MS).nullable();
 
 const PartMsSchema = z.number().int().nonnegative().max(MAX_LOAD_MS);
 
+/**
+ * A first-byte split as stored: boot-trace's `FirstByteSplit`, its three named
+ * gaps optional — the splits recorded before they were named (2026-11-20) hold
+ * only their sum, `otherMs`.
+ */
+export type StoredFirstByteSplit = Omit<
+  FirstByteSplit,
+  (typeof FIRST_BYTE_GAPS)[number]
+> &
+  Partial<Pick<FirstByteSplit, (typeof FIRST_BYTE_GAPS)[number]>>;
+
 /** The wire form of boot-trace's `FirstByteSplit` (whole ms, parts add up). */
 export const FirstByteSplitSchema = z
   .object({
@@ -42,10 +54,13 @@ export const FirstByteSplitSchema = z
     tcpMs: PartMsSchema,
     tlsMs: PartMsSchema,
     waitMs: PartMsSchema,
+    queueMs: PartMsSchema.optional(),
+    stallMs: PartMsSchema.optional(),
+    sendMs: PartMsSchema.optional(),
     otherMs: PartMsSchema,
     protocol: z.string().max(MAX_PROTOCOL_LENGTH).nullable(),
   })
-  .strict() satisfies z.ZodType<FirstByteSplit>;
+  .strict() satisfies z.ZodType<StoredFirstByteSplit>;
 
 export const LoadTimingSchema = z
   .object({

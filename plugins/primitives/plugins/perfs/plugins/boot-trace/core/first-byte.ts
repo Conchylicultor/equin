@@ -5,8 +5,9 @@
 
 /**
  * The fields of a `PerformanceNavigationTiming` entry the split reads (ms from
- * the navigation's start; 0 = the phase did not happen, e.g. a reused
- * connection has no DNS, TCP or TLS). `nextHopProtocol` may be missing or
+ * the navigation's start). A phase that did not happen reads as the instant
+ * before it (a reused connection's DNS and connect fields equal `fetchStart`)
+ * or, in some browsers, as 0 — either is read as "no time spent".) `nextHopProtocol` may be missing or
  * empty where a browser does not report it.
  */
 export interface NavigationTimingFields {
@@ -39,8 +40,21 @@ export const MAX_PROTOCOL_LENGTH = 32;
  *   whole QUIC handshake.
  * - `waitMs` — request sent → first byte: one round trip plus the server's
  *   own time.
- * - `otherMs` — the gaps between those (the browser queueing, a cache
- *   lookup): what is left of `totalMs`.
+ * - `queueMs` — fetch start → DNS start.
+ * - `stallMs` — DNS end → connect start.
+ * - `sendMs` — connected → request sent.
+ * - `otherMs` — the three gaps together (`queueMs + stallMs + sendMs`), kept
+ *   so a split recorded before the gaps were named still reads.
+ *
+ * The three gaps are named by POSITION, not by cause: the browser's own wait
+ * (its HTTP cache lookup, a request queued for a free connection — Chrome's
+ * DevTools "Queueing" / "Stalled", Firefox's "Blocked") lands in whichever
+ * gap the browser's fields leave it. In Chrome, with DNS timed it is
+ * `queueMs` (Chrome trims connectStart to domainLookupEnd, so `stallMs` is
+ * ~0); with no DNS timing (a cached lookup reported as fetchStart) it can be
+ * `stallMs`; on a reused or preconnected connection every DNS and connect
+ * field equals fetchStart, so it is `sendMs`. Large gaps say "the browser
+ * waited before talking to the server", never "the server was slow".
  * - `protocol` — the protocol the document came over (`h2`, `h3`,
  *   `http/1.1`), null when the browser does not say.
  */
@@ -51,9 +65,15 @@ export interface FirstByteSplit {
   tcpMs: number;
   tlsMs: number;
   waitMs: number;
+  queueMs: number;
+  stallMs: number;
+  sendMs: number;
   otherMs: number;
   protocol: string | null;
 }
+
+/** The three gaps `otherMs` sums, named — absent on a split recorded before they were. */
+export const FIRST_BYTE_GAPS = ["queueMs", "stallMs", "sendMs"] as const;
 
 /**
  * The split of one navigation's first byte. PURE. Null when the entry has no
@@ -91,16 +111,20 @@ export function firstByteSplit(
   const quic = protocol !== null && protocol.startsWith("h3");
   const tcpMs = quic ? 0 : handshakeStart - connectStart;
   const tlsMs = quic ? connectEnd - connectStart : connectEnd - handshakeStart;
-  const dnsMs = dnsEnd - dnsStart;
-  const waitMs = totalMs - requestStart;
+  const queueMs = dnsStart - fetch;
+  const stallMs = connectStart - dnsEnd;
+  const sendMs = requestStart - connectEnd;
   return {
     totalMs,
     beforeFetchMs: fetch,
-    dnsMs,
+    dnsMs: dnsEnd - dnsStart,
     tcpMs,
     tlsMs,
-    waitMs,
-    otherMs: totalMs - fetch - dnsMs - tcpMs - tlsMs - waitMs,
+    waitMs: totalMs - requestStart,
+    queueMs,
+    stallMs,
+    sendMs,
+    otherMs: queueMs + stallMs + sendMs,
     protocol,
   };
 }

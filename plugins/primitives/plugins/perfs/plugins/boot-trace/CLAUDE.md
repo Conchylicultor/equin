@@ -69,6 +69,7 @@ clip long tasks to the boot window.
     - `BOOT_PLUGIN_TIMING_PREFIX`
     - `BOOT_TIMING_PREFIX`
     - `DEFERRED_LOAD_COMPLETE_ID`
+    - `FIRST_BYTE_GAPS`
     - `FIRST_DATA_COMMIT_ID`
     - `FIRST_HIDDEN_GLOBAL`
     - `firstByteSplit`

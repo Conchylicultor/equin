@@ -23,6 +23,9 @@ describe("firstByteSplit", () => {
       tcpMs: 100,
       tlsMs: 100,
       waitMs: 142,
+      queueMs: 1,
+      stallMs: 0,
+      sendMs: 2,
       otherMs: 3,
       protocol: "h2",
     });
@@ -88,10 +91,51 @@ describe("firstByteSplit", () => {
       requestStart: 900, // past the first byte
     })!;
     const parts =
-      s.beforeFetchMs + s.dnsMs + s.tcpMs + s.tlsMs + s.waitMs + s.otherMs;
+      s.beforeFetchMs +
+      s.queueMs +
+      s.dnsMs +
+      s.stallMs +
+      s.tcpMs +
+      s.tlsMs +
+      s.sendMs +
+      s.waitMs;
     expect(parts).toBe(s.totalMs);
-    for (const v of [s.dnsMs, s.tcpMs, s.tlsMs, s.waitMs, s.otherMs])
+    for (const v of [
+      s.queueMs,
+      s.dnsMs,
+      s.stallMs,
+      s.tcpMs,
+      s.tlsMs,
+      s.sendMs,
+      s.waitMs,
+      s.otherMs,
+    ])
       expect(v).toBeGreaterThanOrEqual(0);
     expect(s.waitMs).toBe(0);
+  });
+
+  test("a wait for a connection slot is named, not lost in other", () => {
+    // A shape that fits report-1795153614-z70nni (DNS untimed, ~3 s before
+    // connecting); the report itself kept only the gaps' sum.
+    const s = firstByteSplit({
+      fetchStart: 2,
+      domainLookupStart: 2,
+      domainLookupEnd: 2,
+      connectStart: 2_979,
+      secureConnectionStart: 3_025,
+      connectEnd: 3_064,
+      requestStart: 3_064,
+      responseStart: 3_141,
+      nextHopProtocol: "h2",
+    });
+    expect(s).toMatchObject({
+      queueMs: 0,
+      stallMs: 2_977,
+      sendMs: 0,
+      otherMs: 2_977,
+      tcpMs: 46,
+      tlsMs: 39,
+      waitMs: 77,
+    });
   });
 });

@@ -72,7 +72,7 @@ export {
   MAX_LOAD_MS,
   loadMs,
 } from "./internal/load-timing";
-export type { LoadTiming } from "./internal/load-timing";
+export type { LoadTiming, StoredFirstByteSplit } from "./internal/load-timing";
 export {
   MAX_PAGE_SECTIONS,
   MAX_SECTION_NAME_LENGTH,

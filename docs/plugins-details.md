@@ -2124,6 +2124,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `packages/list-bound.cappedRecord`
                   - `packages/list-bound.wholeList`
                   - `primitives/pane.pathWithoutSurfaceViews`
+                  - `primitives/perfs/boot-trace.FIRST_BYTE_GAPS`
                   - `primitives/perfs/boot-trace.FirstByteSplit`
                   - `primitives/perfs/boot-trace.MAX_PROTOCOL_LENGTH`
                 - Exports (types):
@@ -2165,6 +2166,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `SeriesPoint`
                   - `Session`
                   - `SessionHit`
+                  - `StoredFirstByteSplit`
                   - `UtmTags`
                   - `Viewport`
                   - `VisitCut`
@@ -4160,6 +4162,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - Core:
                     - Uses:
                       - `apps/deploy/analytics/collect.FirstByteSplitSchema`
+                      - `apps/deploy/analytics/collect.StoredFirstByteSplit`
                       - `primitives/perfs/boot-trace.FirstByteSplit`
                       - `primitives/perfs/boot-trace.notShownFromMs`
                       - `primitives/perfs/boot-trace.PageShown`
@@ -58111,6 +58114,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `BOOT_PLUGIN_TIMING_PREFIX`
               - `BOOT_TIMING_PREFIX`
               - `DEFERRED_LOAD_COMPLETE_ID`
+              - `FIRST_BYTE_GAPS`
               - `FIRST_DATA_COMMIT_ID`
               - `FIRST_HIDDEN_GLOBAL`
               - `firstByteSplit`

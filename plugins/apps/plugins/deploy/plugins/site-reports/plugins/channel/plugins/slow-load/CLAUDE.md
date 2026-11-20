@@ -40,7 +40,8 @@ and path. **Payload**: the milestones, the bar, the coarse browser
 (`coarseClient`: family and OS, never the user agent) and the network class
 (`navigator.connection.effectiveType`, Chromium only), and where the first
 byte went (`firstByte`: analytics' split — redirect/setup, DNS, TCP, TLS,
-request → response — named in the report's message) — nothing naming the
+request → response, and the browser's own gaps between them, named by
+position: before DNS, DNS→connect, connect→request — in the report's message) — nothing naming the
 visitor. Lighthouse-style speed testers are bots at the intake
 (`isBotUserAgent`), and automated browsers are dropped there too.
 
@@ -68,6 +69,7 @@ automated one is counted as a drop), against a local website build or
 - Core:
   - Uses:
     - `apps/deploy/analytics/collect.FirstByteSplitSchema`
+    - `apps/deploy/analytics/collect.StoredFirstByteSplit`
     - `primitives/perfs/boot-trace.FirstByteSplit`
     - `primitives/perfs/boot-trace.notShownFromMs`
     - `primitives/perfs/boot-trace.PageShown`

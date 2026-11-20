@@ -653,6 +653,9 @@ describe("load timing", () => {
       tcpMs: 30,
       tlsMs: 30,
       waitMs: 25,
+      queueMs: 1,
+      stallMs: 0,
+      sendMs: 0,
       otherMs: 1,
       protocol: "h2",
     };
