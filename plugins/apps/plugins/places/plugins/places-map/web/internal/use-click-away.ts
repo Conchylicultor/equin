@@ -15,7 +15,12 @@ const CLICK_SLOP_PX = 5;
  * - a click the surface claimed: its handler called `claim()` (selecting
  *   another row swaps the panel's content, it does not close it);
  * - anything outside `region`: popovers, menus and dialogs portalled to the
- *   body (the panel's own tag picker, its delete confirm) and the app chrome.
+ *   body (the panel's own tag picker, its delete confirm) and the app chrome;
+ * - a click into a modal dialog, or one that opened it: the map vendor's own
+ *   dialogs live inside `region` (Google's "Keyboard shortcuts" button opens
+ *   a `<dialog>` with `showModal()` in the map's box). The user went into the
+ *   dialog, and the card is what they come back to — closing it there also
+ *   swapped the side panel back to its list under the dialog's own layout.
  *
  * Listens on the document in the bubble phase, so it hears a click only after
  * React has dispatched it — a claim made in the click's own handler is already
@@ -56,7 +61,9 @@ export function useClickAway({
       if (wasClaimed || dragged) return;
       const target = e.target;
       if (!(target instanceof Node)) return;
-      if (region.current?.contains(target) !== true) return;
+      const screen = region.current;
+      if (screen?.contains(target) !== true) return;
+      if (inModal(screen, target)) return;
       if (panels.some((p) => p.current?.contains(target) === true)) return;
       dismiss();
     };
@@ -73,4 +80,17 @@ export function useClickAway({
     claimed.current = true;
   }, []);
   return { claim };
+}
+
+/**
+ * Whether a click landed in a dialog or opened a modal one in `screen`: inside
+ * a `<dialog>`, or with a `showModal()` dialog in the screen once the target's
+ * own handlers ran (this listener bubbles last). `dialog:modal`, never bare
+ * `:modal`, which also matches the fullscreen element (the app's Fullscreen
+ * switch fullscreens the whole page).
+ */
+function inModal(screen: HTMLElement, target: Node): boolean {
+  const el = target instanceof Element ? target : target.parentElement;
+  if (el !== null && el.closest("dialog") !== null) return true;
+  return screen.querySelector("dialog:modal") !== null;
 }
