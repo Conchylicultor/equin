@@ -68,6 +68,7 @@ clip long tasks to the boot window.
   - Exports (values):
     - `BOOT_PLUGIN_TIMING_PREFIX`
     - `BOOT_TIMING_PREFIX`
+    - `connectionTimed`
     - `DEFERRED_LOAD_COMPLETE_ID`
     - `FIRST_BYTE_GAPS`
     - `FIRST_DATA_COMMIT_ID`

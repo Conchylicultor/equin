@@ -70,6 +70,7 @@ automated one is counted as a drop), against a local website build or
   - Uses:
     - `apps/deploy/analytics/collect.FirstByteSplitSchema`
     - `apps/deploy/analytics/collect.StoredFirstByteSplit`
+    - `primitives/perfs/boot-trace.connectionTimed`
     - `primitives/perfs/boot-trace.FirstByteSplit`
     - `primitives/perfs/boot-trace.notShownFromMs`
     - `primitives/perfs/boot-trace.PageShown`

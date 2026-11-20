@@ -14,6 +14,7 @@ export {
   DEFERRED_LOAD_COMPLETE_ID,
 } from "./instants";
 export {
+  connectionTimed,
   FIRST_BYTE_GAPS,
   firstByteSplit,
   MAX_PROTOCOL_LENGTH,

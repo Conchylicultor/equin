@@ -5,6 +5,7 @@ import {
   type StoredFirstByteSplit,
 } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
 import {
+  connectionTimed,
   notShownFromMs,
   type FirstByteSplit,
   type PageShown,
@@ -232,7 +233,7 @@ export function slowPageLoadFingerprint(p: SlowPageLoadPayload): string {
 }
 
 const PHASE_WORDS: Record<SlowLoadPhase, string> = {
-  server: "mostly waiting for the server",
+  server: "mostly before the first byte",
   "first-paint": "mostly before the first paint",
   "app-ready": "mostly the app starting after the first paint",
   "not-ready": "hidden before it was ready",
@@ -281,6 +282,15 @@ export function slowPageLoadSummary(p: SlowPageLoadPayload): string {
       ? `Slow page load: not ready after ${seconds(p.hiddenAtMs)}`
       : `Slow page load: ready after ${seconds(p.readyMs)}`;
   const net = p.connection ? `, ${p.connection}` : "";
-  const split = p.firstByte ? ` [first byte: ${splitWords(p.firstByte)}]` : "";
+  // A connection the browser did not time (reused, or Safari's untimed setup)
+  // hides any setup in the later parts, so a long request→response is not the
+  // server's alone. Said FIRST: the import keeps a message's start (300 chars).
+  const untimed =
+    p.firstByte && !connectionTimed(p.firstByte)
+      ? ", connection untimed (reused or unreported)"
+      : "";
+  const split = p.firstByte
+    ? ` [first byte${untimed}: ${splitWords(p.firstByte)}]`
+    : "";
   return `${head} (first byte ${seconds(p.ttfbMs)}, first paint ${seconds(p.fcpMs)}) — ${PHASE_WORDS[p.phase]}; ${p.client.os}/${p.client.family}${net}${split}`;
 }

@@ -4163,6 +4163,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses:
                       - `apps/deploy/analytics/collect.FirstByteSplitSchema`
                       - `apps/deploy/analytics/collect.StoredFirstByteSplit`
+                      - `primitives/perfs/boot-trace.connectionTimed`
                       - `primitives/perfs/boot-trace.FirstByteSplit`
                       - `primitives/perfs/boot-trace.notShownFromMs`
                       - `primitives/perfs/boot-trace.PageShown`
@@ -58187,6 +58188,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `BOOT_PLUGIN_TIMING_PREFIX`
               - `BOOT_TIMING_PREFIX`
+              - `connectionTimed`
               - `DEFERRED_LOAD_COMPLETE_ID`
               - `FIRST_BYTE_GAPS`
               - `FIRST_DATA_COMMIT_ID`

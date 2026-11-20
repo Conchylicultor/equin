@@ -129,6 +129,20 @@ export function firstByteSplit(
   };
 }
 
+/**
+ * Whether the split timed a connection being set up: some DNS, TCP or TLS
+ * time. False is ambiguous by construction — the entry looks the same for a
+ * connection the browser reused (nothing to set up) and for one it opened
+ * without timing it (Safari often reports every DNS and connect field as the
+ * fetch start). Then any setup is counted in the later parts (connect →
+ * request, request → response), so those cannot be read as the server's. PURE.
+ */
+export function connectionTimed(
+  split: Pick<FirstByteSplit, "dnsMs" | "tcpMs" | "tlsMs">,
+): boolean {
+  return split.dnsMs + split.tcpMs + split.tlsMs > 0;
+}
+
 function protocolOf(raw: string | undefined): string | null {
   if (typeof raw !== "string" || raw === "") return null;
   return raw.slice(0, MAX_PROTOCOL_LENGTH);

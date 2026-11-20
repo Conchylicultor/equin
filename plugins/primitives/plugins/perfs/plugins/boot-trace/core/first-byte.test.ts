@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { firstByteSplit, type NavigationTimingFields } from "./first-byte";
+import {
+  connectionTimed,
+  firstByteSplit,
+  type NavigationTimingFields,
+} from "./first-byte";
 
 const COLD: NavigationTimingFields = {
   fetchStart: 5,
@@ -137,5 +141,10 @@ describe("firstByteSplit", () => {
       tlsMs: 39,
       waitMs: 77,
     });
+  });
+
+  test("connectionTimed: a timed setup is true, all-zero DNS/TCP/TLS false", () => {
+    expect(connectionTimed(firstByteSplit(COLD)!)).toBe(true);
+    expect(connectionTimed({ dnsMs: 0, tcpMs: 0, tlsMs: 0 })).toBe(false);
   });
 });

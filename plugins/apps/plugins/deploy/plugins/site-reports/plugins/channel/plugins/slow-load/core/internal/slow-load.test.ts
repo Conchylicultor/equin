@@ -292,4 +292,34 @@ describe("judgeLoad — only what the visitor could see is judged", () => {
       "[first byte: redirect/setup 2 ms + TCP 46 ms + TLS 39 ms + request→response 77 ms + other 2977 ms over h2]",
     );
   });
+
+  test("an untimed connection says so, so request→response is not read as the server's", () => {
+    // equin.ai/download, macOS Safari: no DNS / TCP / TLS time, 7.1 s to the first byte.
+    const p = judgeReadyLoad(
+      { ttfbMs: 7_131, fcpMs: 7_900, readyMs: 7_900 },
+      {
+        ...laptop,
+        firstByte: {
+          totalMs: 7_131,
+          beforeFetchMs: 1,
+          dnsMs: 0,
+          tcpMs: 0,
+          tlsMs: 0,
+          waitMs: 7_130,
+          queueMs: 0,
+          stallMs: 0,
+          sendMs: 0,
+          otherMs: 0,
+          protocol: "h2",
+        },
+      },
+    )!;
+    const text = slowPageLoadSummary(p);
+    expect(text).toContain("mostly before the first byte;");
+    expect(text).toContain(
+      "[first byte, connection untimed (reused or unreported): redirect/setup 1 ms + request→response 7130 ms over h2]",
+    );
+    // The import keeps a message's first 300 chars: the note survives.
+    expect(text.indexOf("connection untimed")).toBeLessThan(300);
+  });
 });
