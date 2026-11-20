@@ -2,8 +2,5 @@
   "name": "@equin/plugin-fields-uuid",
   "version": "0.0.1",
   "private": true,
-  "description": "UUID field type: identity only, extends text — a string value primarily used as a storage/PK type, reusing text's cell and filter via the extends chain.",
-  "equin": {
-    "collapsed": true
-  }
+  "description": "UUID field type: identity only, extends text — a string value primarily used as a storage/PK type, reusing text's cell and filter via the extends chain."
 }

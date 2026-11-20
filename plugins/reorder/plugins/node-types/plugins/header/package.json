@@ -2,8 +2,5 @@
   "name": "@equin/plugin-reorder-node-types-header",
   "version": "0.0.1",
   "private": true,
-  "description": "Header reorder node type: the one container type — a labeled, collapsible box rendering its members. Owns the label/collapsed payload schema; collapse toggles via onPatch.",
-  "equin": {
-    "collapsed": true
-  }
+  "description": "Header reorder node type: the one container type — a labeled, collapsible box rendering its members. Owns the label/collapsed payload schema; collapse toggles via onPatch."
 }

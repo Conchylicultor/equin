@@ -3,7 +3,6 @@ import { Reports } from "@plugins/reports/web";
 import { ReportStormSummary } from "./components/report-storm-summary";
 
 export default {
-  collapsed: true,
   description:
     "Report-storm renderer: a one-line Debug → Reports summary (collapsed kind + how many fingerprints raised how many alerts against the window budget) for the report-storm kind.",
   contributions: [

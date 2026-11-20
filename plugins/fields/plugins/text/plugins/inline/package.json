@@ -2,8 +2,5 @@
   "name": "@equin/plugin-fields-text-inline",
   "version": "0.0.1",
   "private": true,
-  "description": "Text field type: data-view inline cell editor (compact text input editor).",
-  "equin": {
-    "collapsed": true
-  }
+  "description": "Text field type: data-view inline cell editor (compact text input editor)."
 }

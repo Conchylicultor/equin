@@ -5,7 +5,6 @@ import { bootWatchdogConfig } from "../core";
 import { BootWedgeSummary } from "./components/boot-wedge-summary";
 
 export default {
-  collapsed: true,
   description:
     "Boot-wedge report renderer: a one-line Debug → Reports summary for the boot-wedge kind, plus the boot-watchdog budget/lookback config registration.",
   contributions: [

@@ -2,8 +2,5 @@
   "name": "@equin/plugin-fields-int",
   "version": "0.0.1",
   "private": true,
-  "description": "Integer field type: identity only, extends number — reuses number's cell and filter via the extends chain.",
-  "equin": {
-    "collapsed": true
-  }
+  "description": "Integer field type: identity only, extends number — reuses number's cell and filter via the extends chain."
 }

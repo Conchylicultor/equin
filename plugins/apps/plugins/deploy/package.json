@@ -2,6 +2,5 @@
   "name": "@equin/plugin-apps-deploy",
   "description": "Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.",
   "private": true,
-  "version": "0.0.1",
-  "equin": { "collapsed": true }
+  "version": "0.0.1"
 }

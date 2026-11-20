@@ -3,7 +3,6 @@ import { attachmentRenderer } from "@plugins/conversations/plugins/conversation-
 import { EnvironmentView } from "./components/environment-view";
 
 export default {
-  collapsed: true,
   description:
     "Renders the environment attachment — where the agent is running — as either the opening snapshot or, when the harness reports changes, the fields that moved with their from → to values.",
   contributions: [

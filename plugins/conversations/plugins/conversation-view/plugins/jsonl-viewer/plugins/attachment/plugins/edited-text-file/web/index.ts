@@ -3,7 +3,6 @@ import { attachmentRenderer } from "@plugins/conversations/plugins/conversation-
 import { EditedTextFileView } from "./components/edited-text-file-view";
 
 export default {
-  collapsed: true,
   description:
     "Renders edited-text-file attachment events as a collapsible file path with the resulting file content shown as a syntax-highlighted code listing.",
   contributions: [

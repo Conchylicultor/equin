@@ -2,8 +2,5 @@
   "name": "@equin/plugin-fields-location-storage",
   "version": "0.0.1",
   "private": true,
-  "description": "Location field type: DB storage capability — a jsonb column decoded by LocationSchema.",
-  "equin": {
-    "collapsed": true
-  }
+  "description": "Location field type: DB storage capability — a jsonb column decoded by LocationSchema."
 }

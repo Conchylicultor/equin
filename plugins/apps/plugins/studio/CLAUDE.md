@@ -10,35 +10,9 @@ future home of the plugin marketplace.
 
 - Description: Plugin inspection and visualization; home for the plugin graph and contribution tables.
 - Sub-plugins:
-  - **`compositions`** — Compositions pane: list named compositions and open a composition's detail pane, whose sections (draft, closure, release) are contributed by sub-plugins.
-    - Plugins:
-      - **`closure-tree`** — Closure section in the composition detail pane: the plugin tree tinted by the active composition's membership.
-      - **`contributors`** — Contributor selection section in the composition detail pane: toggle the available frontier with per-chip impact cost.
-      - **`draft-actions`** — Draft persistence section in the composition detail pane: editable name plus Save / Delete / Clear.
-      - **`entry-points`** — Entry-point editor section in the composition detail pane: the draft's entry plugins, with add / remove.
-      - **`home`** — Home app section of the Studio composition detail pane: picks the app that owns bare `/` when the composition is deployed, among the apps its bundle holds.
-      - **`membership-summary`** — Bundle-size summary section in the composition detail pane: plugin counts per membership state.
-      - **`release`** — Release sections of the Studio composition detail pane (target picker + Run, and this composition's run history), plus the run-detail pane hosting the info / logs / artifact sections.
-        - Plugins:
-          - **`release-artifact`** — Artifact path plus local preview (start/stop + live link) section in the release detail pane.
-          - **`release-info`** — Status, composition, target, platform, and timing section in the release detail pane.
-          - **`release-logs`** — Live + persisted release log stream section in the release detail pane.
-  - **`contributions`** — Central view of all plugin contributions aggregated by type.
-    - Plugins:
-      - **`tables`** — Per-table detail pane (with an extensible section slot) opened from the Contributions Tables tab.
-        - Plugins:
-          - **`columns`** [exempt] — Table column definitions section in the table detail view.
-          - **`foreign-keys`** [exempt] — FK relationships section (outgoing and incoming) in the table detail view.
-          - **`indexes`** [exempt] — Table indexes section in the table detail view.
-          - **`row-count`** [exempt] — Live row count section (estimated from pg_stat_user_tables) in the table detail view.
-          - **`sample-rows`** [exempt] — Sample rows section (first 10 rows) in the table detail view.
-  - **`explorer`** — Sidebar entry and filterable tree pane for browsing and inspecting the plugin tree.
-    - Plugins:
-      - **`child-count`** — Recursive child count badge in the explorer plugin tree row.
-      - **`collapsed`** — Collapsed badge in the explorer plugin tree row.
-      - **`excluded`** — Not-in-the-app badge in the explorer plugin tree row.
-      - **`load-bearing`** — Load-bearing badge in the explorer plugin tree row.
-      - **`membership`** — Tints each explorer tree row by its membership state in the active composition, with a pin-as-root affordance.
+  - **`compositions`** [10 sub-plugins] — Compositions pane: list named compositions and open a composition's detail pane, whose sections (draft, closure, release) are contributed by sub-plugins.
+  - **`contributions`** [exempt] [6 sub-plugins] — Central view of all plugin contributions aggregated by type.
+  - **`explorer`** [5 sub-plugins] — Sidebar entry and filterable tree pane for browsing and inspecting the plugin tree.
   - **`graph`** — Studio Plugin Graph pane: focused closure subgraph (deps + dependents) around a plugin, tinted by the active composition's membership, with depth / direction controls and click-to-recenter.
   - **`isle-building`** — Studio's building on Isle: the conservatory laboratory, a glasshouse of plants and jars.
   - **`membership-tint`** — Single source of truth for the membership-state tint + legend (shared by the Explorer membership band and the Studio graph pane).

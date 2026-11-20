@@ -2,8 +2,5 @@
   "name": "@equin/plugin-fields-float",
   "version": "0.0.1",
   "private": true,
-  "description": "Float field type: identity only, extends number — reuses number's cell and filter via the extends chain.",
-  "equin": {
-    "collapsed": true
-  }
+  "description": "Float field type: identity only, extends number — reuses number's cell and filter via the extends chain."
 }

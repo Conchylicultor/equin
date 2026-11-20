@@ -3,7 +3,6 @@ import { attachmentRenderer } from "@plugins/conversations/plugins/conversation-
 import { TeamContextView } from "./components/team-context-view";
 
 export default {
-  collapsed: true,
   description:
     "Renders the team_context attachment — the harness telling the agent which teammate it is, and in which session team.",
   contributions: [

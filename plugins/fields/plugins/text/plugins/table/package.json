@@ -2,8 +2,5 @@
   "name": "@equin/plugin-fields-text-table",
   "version": "0.0.1",
   "private": true,
-  "description": "Text field type: data-view table cell (read-only text cell).",
-  "equin": {
-    "collapsed": true
-  }
+  "description": "Text field type: data-view table cell (read-only text cell)."
 }

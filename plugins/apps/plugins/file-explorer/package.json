@@ -2,6 +2,5 @@
   "name": "@equin/plugin-apps-file-explorer",
   "description": "File explorer app.",
   "private": true,
-  "version": "0.0.1",
-  "equin": { "collapsed": true }
+  "version": "0.0.1"
 }

@@ -5,7 +5,6 @@ import { liveStateChurnConfig } from "../core";
 import { NoopSummary } from "./components/noop-summary";
 
 export default {
-  collapsed: true,
   description:
     "Live-state churn report renderer: a one-line Debug → Reports summary for the live-state-noop kind, plus the threshold config registration.",
   contributions: [

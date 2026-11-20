@@ -3,7 +3,6 @@ import { attachmentRenderer } from "@plugins/conversations/plugins/conversation-
 import { ToolOutputNoticeView } from "./components/tool-output-notice-view";
 
 export default {
-  collapsed: true,
   description:
     "Renders the harness's notes about a tool's output — a Read that came back partial, and a Bash command whose output only the agent saw.",
   contributions: [

@@ -3,7 +3,6 @@ import { attachmentRenderer } from "@plugins/conversations/plugins/conversation-
 import { TaskReminderAttachmentView } from "./components/task-reminder-attachment-view";
 
 export default {
-  collapsed: true,
   description:
     "Renders task-reminder attachment events showing periodic task list injections.",
   contributions: [

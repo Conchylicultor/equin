@@ -15,6 +15,7 @@ function fields(description: string): PluginFields {
     descriptions: {},
     loadBearing: false,
     collapsed: false,
+    expanded: false,
     compositionRoot: false,
     runtimes: { web: true, server: false, machine: false, central: false },
   };

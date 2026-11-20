@@ -2,8 +2,5 @@
   "name": "@equin/plugin-fields-reorder-tree",
   "version": "0.0.1",
   "private": true,
-  "description": "Reorder-tree field type: identity only — value is a recursive tagged-node tree (ReorderTree).",
-  "equin": {
-    "collapsed": true
-  }
+  "description": "Reorder-tree field type: identity only — value is a recursive tagged-node tree (ReorderTree)."
 }

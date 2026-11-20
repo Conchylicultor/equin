@@ -3,7 +3,6 @@ import { attachmentRenderer } from "@plugins/conversations/plugins/conversation-
 import { SessionModeView } from "./components/session-mode-view";
 
 export default {
-  collapsed: true,
   description:
     "Renders the attachments that announce the rules the session runs under from here on — auto mode and its switches, entering and leaving plan mode, and ultracode.",
   contributions: [

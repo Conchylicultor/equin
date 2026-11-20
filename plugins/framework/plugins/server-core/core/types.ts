@@ -144,7 +144,14 @@ export interface ServerPluginDefinition {
    * `PluginDefinition.loadBearing` in `plugin-core/types.ts` for semantics.
    */
   loadBearing?: boolean;
+  /**
+   * Fold this TOP-LEVEL plugin's sub-tree into one `[N sub-plugins]` entry in
+   * `docs/plugins-compact.md`. A nested plugin's sub-tree is folded by default
+   * (the flag there is refused); it opts out with `expanded: true`.
+   */
   collapsed?: boolean;
+  /** List this NESTED plugin's sub-plugins in `docs/plugins-compact.md` (see `collapsed`). */
+  expanded?: boolean;
   httpRoutes?: HttpRoutes<PortableHttpHandler>;
   wsRoutes?: Record<string, WsHandler>;
   /**

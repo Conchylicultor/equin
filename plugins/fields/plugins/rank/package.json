@@ -2,8 +2,5 @@
   "name": "@equin/plugin-fields-rank",
   "version": "0.0.1",
   "private": true,
-  "description": "Rank field type: identity only, extends text — a fractional-indexing string stored in the rank_text (C-collation) domain so keys sort by byte order.",
-  "equin": {
-    "collapsed": true
-  }
+  "description": "Rank field type: identity only, extends text — a fractional-indexing string stored in the rank_text (C-collation) domain so keys sort by byte order."
 }

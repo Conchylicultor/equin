@@ -3,7 +3,6 @@ import { attachmentRenderer } from "@plugins/conversations/plugins/conversation-
 import { HookMessageView } from "./components/hook-message-view";
 
 export default {
-  collapsed: true,
   description:
     "Renders hook_system_message attachment events — a hook's informational line (a tip, a reminder) — as a calm one-line row, distinct from the loud hook-error card.",
   contributions: [

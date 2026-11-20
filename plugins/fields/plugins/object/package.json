@@ -2,8 +2,5 @@
   "name": "@equin/plugin-fields-object",
   "version": "0.0.1",
   "private": true,
-  "description": "Object (fixed-structure named sub-fields) field type: identity only.",
-  "equin": {
-    "collapsed": true
-  }
+  "description": "Object (fixed-structure named sub-fields) field type: identity only."
 }

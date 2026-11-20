@@ -2,8 +2,5 @@
   "name": "@equin/plugin-fields-number-inline",
   "version": "0.0.1",
   "private": true,
-  "description": "Number field type: data-view inline cell editor (compact numeric input editor).",
-  "equin": {
-    "collapsed": true
-  }
+  "description": "Number field type: data-view inline cell editor (compact numeric input editor)."
 }

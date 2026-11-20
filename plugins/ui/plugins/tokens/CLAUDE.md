@@ -56,66 +56,27 @@ exactly this (`plugins/apps/plugins/website/plugins/shell/web/internal/theme.ts`
 
 - Description: Umbrella for CSS token group plugins: each declares its variables and schema defaults and registers them, its customizer section a `customizer` child of its own so painting never depends on the editor loading.
 - Sub-plugins:
-  - **`categorical`** — Categorical color palette token group: the categorical-1…10 series colors. Its customizer section is the `customizer` child.
-    - Plugins:
-      - **`customizer`** — Customizer section for the categorical palette token group (categorical-1…10).
-  - **`chart`** — Chart color token group: the chart-1…5 ramp. Its customizer section is the `customizer` child.
-    - Plugins:
-      - **`customizer`** — Customizer section for the chart color token group (chart-1…5).
-  - **`chord-palette`** — Chord colour token group: --chord-1…7 (one colour per Roman numeral's number, I … VII, ♭VII sharing VII's) and --chord-outside (a chord with no key). Its customizer section is the `customizer` child.
-    - Plugins:
-      - **`customizer`** — Customizer section for the chord colour token group (--chord-1…7, --chord-outside).
+  - **`categorical`** [1 sub-plugin] — Categorical color palette token group: the categorical-1…10 series colors. Its customizer section is the `customizer` child.
+  - **`chart`** [1 sub-plugin] — Chart color token group: the chart-1…5 ramp. Its customizer section is the `customizer` child.
+  - **`chord-palette`** [1 sub-plugin] — Chord colour token group: --chord-1…7 (one colour per Roman numeral's number, I … VII, ♭VII sharing VII's) and --chord-outside (a chord with no key). Its customizer section is the `customizer` child.
   - **`color-adjust`** — Customizer section for a theme's color adjustment — the hue / saturation / lightness shift applied to every color it paints — with "Fill from…" shortcuts.
-  - **`color-palette`** — Color palette token group (surfaces, text, accents, status colors). Its customizer section is the `customizer` child.
-    - Plugins:
-      - **`customizer`** — Customizer section for the color palette token group, with the palette dots in its header.
+  - **`color-palette`** [1 sub-plugin] — Color palette token group (surfaces, text, accents, status colors). Its customizer section is the `customizer` child.
   - **`color-ref`** — ColorTokenRef: a typed reference to a declared palette colour token (its CSS var, drawn as var(<ref>)) — a GENERATED string-literal union of every var the palette token groups declare, in a…
-  - **`data-view`** — DataView token group (each part's type pick — rung, emphasis, family — plus the inks and metrics of the toolbar pills, view chips, gallery card and cover, group headers and the soft table; every…
-    - Plugins:
-      - **`customizer`** — Customizer section for the DataView token group.
-  - **`density`** — Density token group (padding intents, control heights, the spacing ramp). Its customizer section is the `customizer` child.
-    - Plugins:
-      - **`customizer`** — Customizer section for the density token group, with "Fill from…" shortcuts.
-  - **`file-type-palette`** — File-type colour token group: the closed --file-<tone> tints file-type glyphs are drawn in (Seti's palette on dark, darkened on light) and the --folder tint. Its customizer section is the…
-    - Plugins:
-      - **`customizer`** — Customizer section for the file-type colour token group (--file-<tone>, --folder).
-  - **`font-family`** — Font-family token group (sans/serif/mono families, letter-spacing). Its customizer section is the `customizer` child.
-    - Plugins:
-      - **`customizer`** — Customizer section for the font-family token group.
-      - **`google-fonts`** — Loads the Google Fonts that the theme each scope selects asks for (the desktop's and every app's own), so a per-app font loads whether or not that app is focused.
-  - **`icons`** — Icons token group (family — Material Symbols or their Lucide counterparts — and the shape, fill, active fill and stroke of the Material Symbols a scope draws; Material, outline, filled when active…
-    - Plugins:
-      - **`customizer`** — Customizer section for the icons token group.
-  - **`material`** — Material token group (a floating panel's fill and backdrop filter — opaque, unfiltered by default; frosted glass when a theme sets them). Its customizer section is the `customizer` child.
-    - Plugins:
-      - **`customizer`** — Customizer section for the material token group.
-  - **`overlay`** — Overlay token group (how a floating panel enters — instant by default — and the tooltip's fill, ink, ring, corners, padding, shadow, distance and arrow). Its customizer section is the `customizer`…
-    - Plugins:
-      - **`customizer`** — Customizer section for the overlay token group.
-  - **`place-palette`** — Place colour token group: the --place-<family> colours place cards are painted with (Google Maps' own pin colours by default), plus --place-overlay — the accent of a page's places laid over the…
-    - Plugins:
-      - **`customizer`** — Customizer section for the place colour token group.
+  - **`data-view`** [1 sub-plugin] — DataView token group (each part's type pick — rung, emphasis, family — plus the inks and metrics of the toolbar pills, view chips, gallery card and cover, group headers and the soft table; every…
+  - **`density`** [1 sub-plugin] — Density token group (padding intents, control heights, the spacing ramp). Its customizer section is the `customizer` child.
+  - **`file-type-palette`** [1 sub-plugin] — File-type colour token group: the closed --file-<tone> tints file-type glyphs are drawn in (Seti's palette on dark, darkened on light) and the --folder tint. Its customizer section is the…
+  - **`font-family`** [2 sub-plugins] — Font-family token group (sans/serif/mono families, letter-spacing). Its customizer section is the `customizer` child.
+  - **`icons`** [1 sub-plugin] — Icons token group (family — Material Symbols or their Lucide counterparts — and the shape, fill, active fill and stroke of the Material Symbols a scope draws; Material, outline, filled when active…
+  - **`material`** [1 sub-plugin] — Material token group (a floating panel's fill and backdrop filter — opaque, unfiltered by default; frosted glass when a theme sets them). Its customizer section is the `customizer` child.
+  - **`overlay`** [1 sub-plugin] — Overlay token group (how a floating panel enters — instant by default — and the tooltip's fill, ink, ring, corners, padding, shadow, distance and arrow). Its customizer section is the `customizer`…
+  - **`place-palette`** [1 sub-plugin] — Place colour token group: the --place-<family> colours place cards are painted with (Google Maps' own pin colours by default), plus --place-overlay — the accent of a page's places laid over the…
   - **`rich-text-palette`** — Rich-text color palette token group: the closed --rt-color-<token> vars backing inline text color in the page block editor.
-  - **`scrollbar`** — Scrollbar token group (the thumb and track colours of the native scrollbar, `auto` by default). Its customizer section is the `customizer` child.
-    - Plugins:
-      - **`customizer`** — Customizer section for the scrollbar token group.
-  - **`shadow`** — Shadow token group (the shadow-2xs…2xl tiers). Its param-driven customizer section is the `customizer` child.
-    - Plugins:
-      - **`customizer`** — Param-driven customizer section for the shadow token group, with "Fill from…" shortcuts.
-  - **`shape`** — Shape token group (border radius, base spacing). Its customizer section is the `customizer` child.
-    - Plugins:
-      - **`customizer`** — Customizer section for the shape token group, with "Fill from…" shortcuts.
-  - **`sidebar-metrics`** — Sidebar metrics token group (panel width, nav row height, padding, icon size, icon gap — no type: the nav label is the `label` role). Its customizer section is the `customizer` child.
-    - Plugins:
-      - **`customizer`** — Customizer section for the sidebar metrics token group.
-  - **`sidebar-palette`** — Sidebar palette token group. Its customizer section is the `customizer` child.
-    - Plugins:
-      - **`customizer`** — Customizer section for the sidebar palette token group, with the palette dots in its header.
-  - **`spend-palette`** — Spend colour token group: --spend-1…5 (a spend breakdown's parts, in order) and --spend-rest (the folded remainder). Its customizer section is the `customizer` child.
-    - Plugins:
-      - **`customizer`** — Customizer section for the spend colour token group (--spend-1…5, --spend-rest).
-  - **`type-scale`** [exempt] — Type-scale token group (font sizes, line heights, weights). Its customizer section is the `customizer` child.
-    - Plugins:
-      - **`customizer`** — Customizer section for the type-scale token group.
+  - **`scrollbar`** [1 sub-plugin] — Scrollbar token group (the thumb and track colours of the native scrollbar, `auto` by default). Its customizer section is the `customizer` child.
+  - **`shadow`** [1 sub-plugin] — Shadow token group (the shadow-2xs…2xl tiers). Its param-driven customizer section is the `customizer` child.
+  - **`shape`** [1 sub-plugin] — Shape token group (border radius, base spacing). Its customizer section is the `customizer` child.
+  - **`sidebar-metrics`** [1 sub-plugin] — Sidebar metrics token group (panel width, nav row height, padding, icon size, icon gap — no type: the nav label is the `label` role). Its customizer section is the `customizer` child.
+  - **`sidebar-palette`** [1 sub-plugin] — Sidebar palette token group. Its customizer section is the `customizer` child.
+  - **`spend-palette`** [1 sub-plugin] — Spend colour token group: --spend-1…5 (a spend breakdown's parts, in order) and --spend-rest (the folded remainder). Its customizer section is the `customizer` child.
+  - **`type-scale`** [exempt] [1 sub-plugin] — Type-scale token group (font sizes, line heights, weights). Its customizer section is the `customizer` child.
 
 <!-- AUTOGENERATED:END -->

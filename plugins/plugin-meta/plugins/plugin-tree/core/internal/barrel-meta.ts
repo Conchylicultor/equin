@@ -12,11 +12,12 @@ export interface BarrelMeta {
   description?: string;
   loadBearing: boolean;
   collapsed: boolean;
+  expanded: boolean;
 }
 
 /**
  * Parse a plugin barrel's own `export default { … } satisfies PluginDefinition`
- * body and read its top-level `description` / `loadBearing` / `collapsed` fields.
+ * body and read its top-level `description` / `loadBearing` / `collapsed` / `expanded` fields.
  *
  * Throws when the barrel has no default-exported object literal (a loader
  * invariant, new — cannot fire on today's tree) or when `description` is present
@@ -53,5 +54,6 @@ export function parsePluginBarrel(src: string, file: string): BarrelMeta {
     description,
     loadBearing: parseBoolField(body, "loadBearing", { depth0: true }),
     collapsed: parseBoolField(body, "collapsed", { depth0: true }),
+    expanded: parseBoolField(body, "expanded", { depth0: true }),
   };
 }

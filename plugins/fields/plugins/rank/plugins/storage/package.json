@@ -2,8 +2,5 @@
   "name": "@equin/plugin-fields-rank-storage",
   "version": "0.0.1",
   "private": true,
-  "description": "Rank field type: DB storage capability — maps to the rank_text (C-collation) Postgres domain column.",
-  "equin": {
-    "collapsed": true
-  }
+  "description": "Rank field type: DB storage capability — maps to the rank_text (C-collation) Postgres domain column."
 }

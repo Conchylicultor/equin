@@ -2,8 +2,5 @@
   "name": "@equin/plugin-fields-uuid-storage",
   "version": "0.0.1",
   "private": true,
-  "description": "UUID field type: DB storage capability — maps to a Postgres uuid column.",
-  "equin": {
-    "collapsed": true
-  }
+  "description": "UUID field type: DB storage capability — maps to a Postgres uuid column."
 }

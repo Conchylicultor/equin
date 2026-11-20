@@ -2,8 +2,5 @@
   "name": "@equin/plugin-fields-identifier-storage",
   "version": "0.0.1",
   "private": true,
-  "description": "Identifier field type: DB storage capability — a Postgres text column.",
-  "equin": {
-    "collapsed": true
-  }
+  "description": "Identifier field type: DB storage capability — a Postgres text column."
 }

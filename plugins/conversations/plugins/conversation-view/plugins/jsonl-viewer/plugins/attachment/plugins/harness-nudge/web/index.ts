@@ -3,7 +3,6 @@ import { attachmentRenderer } from "@plugins/conversations/plugins/conversation-
 import { HarnessNudgeView } from "./components/harness-nudge-view";
 
 export default {
-  collapsed: true,
   description:
     "Renders the coaching notes the harness slips the agent mid-session, as collapsed cards — the batching reminder and the check-in reminder.",
   contributions: [

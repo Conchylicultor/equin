@@ -77,7 +77,14 @@ export interface PluginDefinition {
    * agents); other plugins appear only as a name + one-liner.
    */
   loadBearing?: boolean;
+  /**
+   * Fold this TOP-LEVEL plugin's sub-tree into one `[N sub-plugins]` entry in
+   * `docs/plugins-compact.md`. A nested plugin's sub-tree is folded by default
+   * (the flag there is refused); it opts out with `expanded: true`.
+   */
   collapsed?: boolean;
+  /** List this NESTED plugin's sub-plugins in `docs/plugins-compact.md` (see `collapsed`). */
+  expanded?: boolean;
   contributions?: Contribution[];
   /**
    * The slots this plugin OWNS, keyed by the name each one gets — the exact

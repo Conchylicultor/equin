@@ -2,8 +2,5 @@
   "name": "@equin/plugin-fields-multiline-text-config",
   "version": "0.0.1",
   "private": true,
-  "description": "Long-text field type: config-render capability (textarea) plus the multilineTextField factory.",
-  "equin": {
-    "collapsed": true
-  }
+  "description": "Long-text field type: config-render capability (textarea) plus the multilineTextField factory."
 }

@@ -3,7 +3,6 @@ import { attachmentRenderer } from "@plugins/conversations/plugins/conversation-
 import { CommandPermissionsView } from "./components/command-permissions-view";
 
 export default {
-  collapsed: true,
   description:
     "Renders command-permissions attachment events showing permission grants for the session.",
   contributions: [

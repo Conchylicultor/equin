@@ -2,8 +2,5 @@
   "name": "@equin/plugin-fields-date-filter",
   "version": "0.0.1",
   "private": true,
-  "description": "Date field type: data-view filter (inclusive date-range control).",
-  "equin": {
-    "collapsed": true
-  }
+  "description": "Date field type: data-view filter (inclusive date-range control)."
 }

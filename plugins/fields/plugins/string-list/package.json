@@ -2,8 +2,5 @@
   "name": "@equin/plugin-fields-string-list",
   "version": "0.0.1",
   "private": true,
-  "description": "String-list field type: identity only — value is a plain string[].",
-  "equin": {
-    "collapsed": true
-  }
+  "description": "String-list field type: identity only — value is a plain string[]."
 }

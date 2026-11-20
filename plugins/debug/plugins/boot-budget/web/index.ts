@@ -5,7 +5,6 @@ import { bootBudgetConfig } from "../core";
 import { BootBudgetSummary } from "./components/boot-budget-summary";
 
 export default {
-  collapsed: true,
   description:
     "Boot-budget report renderer: a one-line Debug → Reports summary for the boot-budget kind, plus the per-phase budget config registration.",
   contributions: [

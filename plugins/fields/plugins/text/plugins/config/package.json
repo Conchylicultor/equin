@@ -2,8 +2,5 @@
   "name": "@equin/plugin-fields-text-config",
   "version": "0.0.1",
   "private": true,
-  "description": "Text field type: config-render capability (single-line input) plus the textField factory.",
-  "equin": {
-    "collapsed": true
-  }
+  "description": "Text field type: config-render capability (single-line input) plus the textField factory."
 }

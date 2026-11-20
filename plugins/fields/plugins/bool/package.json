@@ -2,8 +2,5 @@
   "name": "@equin/plugin-fields-bool",
   "version": "0.0.1",
   "private": true,
-  "description": "Boolean field type: identity only. The data-view cell (check/cross) and filter (yes/no) capabilities live in the plugins/{table,filter} sub-plugins.",
-  "equin": {
-    "collapsed": true
-  }
+  "description": "Boolean field type: identity only. The data-view cell (check/cross) and filter (yes/no) capabilities live in the plugins/{table,filter} sub-plugins."
 }

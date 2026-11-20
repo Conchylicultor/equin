@@ -4,7 +4,6 @@ import { DeferredToolsDeltaView } from "./components/deferred-tools-delta-view";
 import { DeferredToolsRecordView } from "./components/deferred-tools-record-view";
 
 export default {
-  collapsed: true,
   description:
     "Renders both spellings of the deferred-tool roster: the full deferred_tools_record listing and the deferred_tools_delta showing tools becoming available or removed mid-session.",
   contributions: [

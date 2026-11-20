@@ -2,8 +2,5 @@
   "name": "@equin/plugin-fields-bool-data-view-group",
   "version": "0.0.1",
   "private": true,
-  "description": "Boolean field type: data-view grouping strategy (Yes / No sections, false first).",
-  "equin": {
-    "collapsed": true
-  }
+  "description": "Boolean field type: data-view grouping strategy (Yes / No sections, false first)."
 }

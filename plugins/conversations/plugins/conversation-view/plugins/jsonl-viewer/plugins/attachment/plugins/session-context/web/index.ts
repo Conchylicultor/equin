@@ -3,7 +3,6 @@ import { attachmentRenderer } from "@plugins/conversations/plugins/conversation-
 import { SessionContextView } from "./components/session-context-view";
 
 export default {
-  collapsed: true,
   description:
     "Renders the session-context attachment — the ambient briefing blocks (user identity, git status, …) the harness injected at launch — as one collapsed card with a section per block.",
   contributions: [

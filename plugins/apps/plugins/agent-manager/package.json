@@ -2,8 +2,5 @@
   "name": "@equin/plugin-apps-agent-manager",
   "description": "Agent manager app shell and layout.",
   "private": true,
-  "version": "0.0.1",
-  "equin": {
-    "collapsed": true
-  }
+  "version": "0.0.1"
 }

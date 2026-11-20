@@ -2,6 +2,5 @@
   "name": "@equin/plugin-fields-uuid-config",
   "version": "0.0.1",
   "private": true,
-  "description": "UUID field factory (uuidField) for building field records.",
-  "equin": { "collapsed": true }
+  "description": "UUID field factory (uuidField) for building field records."
 }

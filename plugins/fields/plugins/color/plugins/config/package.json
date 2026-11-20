@@ -2,8 +2,5 @@
   "name": "@equin/plugin-fields-color-config",
   "version": "0.0.1",
   "private": true,
-  "description": "Color field type: config-render capability (hex/oklch popover picker) plus the colorField factory.",
-  "equin": {
-    "collapsed": true
-  }
+  "description": "Color field type: config-render capability (hex/oklch popover picker) plus the colorField factory."
 }

@@ -2,8 +2,5 @@
   "name": "@equin/plugin-fields-bool-data-view-codec",
   "version": "0.0.1",
   "private": true,
-  "description": "Boolean field type: data-view custom-column value codec (native boolean ↔ canonical text).",
-  "equin": {
-    "collapsed": true
-  }
+  "description": "Boolean field type: data-view custom-column value codec (native boolean ↔ canonical text)."
 }

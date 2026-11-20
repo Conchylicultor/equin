@@ -2,8 +2,5 @@
   "name": "@equin/plugin-fields-rank-config",
   "version": "0.0.1",
   "private": true,
-  "description": "Rank field factory (rankField) for building field records.",
-  "equin": {
-    "collapsed": true
-  }
+  "description": "Rank field factory (rankField) for building field records."
 }

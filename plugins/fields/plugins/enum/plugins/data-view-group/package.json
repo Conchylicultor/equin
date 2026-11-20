@@ -2,8 +2,5 @@
   "name": "@equin/plugin-fields-enum-data-view-group",
   "version": "0.0.1",
   "private": true,
-  "description": "Enum field type: data-view grouping strategy (bucket by value, labelled and ordered by `field.options`).",
-  "equin": {
-    "collapsed": true
-  }
+  "description": "Enum field type: data-view grouping strategy (bucket by value, labelled and ordered by `field.options`)."
 }

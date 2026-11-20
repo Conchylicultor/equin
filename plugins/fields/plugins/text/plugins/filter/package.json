@@ -2,8 +2,5 @@
   "name": "@equin/plugin-fields-text-filter",
   "version": "0.0.1",
   "private": true,
-  "description": "Text field type: data-view filter (substring contains control).",
-  "equin": {
-    "collapsed": true
-  }
+  "description": "Text field type: data-view filter (substring contains control)."
 }

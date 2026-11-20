@@ -5,7 +5,6 @@ import { stallMonitorConfig } from "../core";
 import { StallSummary } from "./components/stall-summary";
 
 export default {
-  collapsed: true,
   description:
     "Event-loop stall report renderer: a one-line Debug → Reports summary for the event-loop-stall kind (hot frame + View-trace chip), plus the enabled config registration.",
   contributions: [

@@ -2,8 +2,5 @@
   "name": "@equin/plugin-fields-date",
   "version": "0.0.1",
   "private": true,
-  "description": "Date field type: identity plus the data-view cell (relative time) and filter (date range) capabilities.",
-  "equin": {
-    "collapsed": true
-  }
+  "description": "Date field type: identity plus the data-view cell (relative time) and filter (date range) capabilities."
 }

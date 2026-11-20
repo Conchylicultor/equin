@@ -2,8 +2,5 @@
   "name": "@equin/plugin-apps-browser",
   "private": true,
   "version": "0.0.1",
-  "equin": {
-    "collapsed": true
-  },
   "description": "Web browser app: each tab is a page in a real Chromium on the machine (persistent profile, so logins stick), streamed to a canvas with input sent back."
 }

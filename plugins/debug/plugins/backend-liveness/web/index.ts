@@ -3,7 +3,6 @@ import { Reports } from "@plugins/reports/web";
 import { BackendFrozenSummary } from "./components/backend-frozen-summary";
 
 export default {
-  collapsed: true,
   description:
     "Backend-frozen report renderer: a one-line Debug → Reports summary for the backend-frozen kind.",
   contributions: [

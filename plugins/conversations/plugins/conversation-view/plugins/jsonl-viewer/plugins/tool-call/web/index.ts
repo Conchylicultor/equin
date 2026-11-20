@@ -29,7 +29,6 @@ export {
 } from "./components/tool-section";
 
 export default {
-  collapsed: true,
   description:
     "Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.",
   contributions: [

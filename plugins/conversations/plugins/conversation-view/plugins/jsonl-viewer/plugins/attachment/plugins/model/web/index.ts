@@ -3,7 +3,6 @@ import { attachmentRenderer } from "@plugins/conversations/plugins/conversation-
 import { ModelView } from "./components/model-view";
 
 export default {
-  collapsed: true,
   description:
     "Renders the model attachment — which model the harness put behind the session — as a one-line row naming the model, its exact id, and its knowledge cutoff.",
   contributions: [

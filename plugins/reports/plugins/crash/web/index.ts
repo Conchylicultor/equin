@@ -19,7 +19,6 @@ import {
 } from "./internal/crash-sinks";
 
 export default {
-  collapsed: true,
   description:
     "Crash report kind: browser crash collector and the Debug → Reports summary view.",
   contributions: [

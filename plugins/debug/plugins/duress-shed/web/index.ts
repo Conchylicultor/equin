@@ -3,7 +3,6 @@ import { Reports } from "@plugins/reports/web";
 import { DuressShedSummary } from "./components/duress-shed-summary";
 
 export default {
-  collapsed: true,
   description:
     "Duress-shed report renderer: a one-line Debug → Reports summary (buffer kind + shed/dropped/replayed accounting) for the duress-shed kind.",
   contributions: [

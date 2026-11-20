@@ -3,7 +3,6 @@ import { attachmentRenderer } from "@plugins/conversations/plugins/conversation-
 import { DateAttachmentView } from "./components/date-attachment-view";
 
 export default {
-  collapsed: true,
   description:
     "Renders the harness calendar-date attachments — the routine date stamp and the mid-conversation date change — across both the current `date` spelling and the legacy `date_change` one.",
   contributions: [

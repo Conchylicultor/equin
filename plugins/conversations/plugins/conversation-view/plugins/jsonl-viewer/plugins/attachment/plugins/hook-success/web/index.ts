@@ -6,7 +6,6 @@ import {
 } from "./components/hook-success-view";
 
 export default {
-  collapsed: true,
   description:
     "Renders hook_success attachment events: the execution record of a hook command (which hook, exit code, duration), surfacing stderr/non-zero exits.",
   contributions: [

@@ -6,7 +6,6 @@ import { OpRateSummary } from "./components/op-rate-summary";
 import { OpTimeSummary } from "./components/op-time-summary";
 
 export default {
-  collapsed: true,
   description:
     "Op-rate + op-time report renderers: one-line Debug → Reports summaries for the op-rate (call-count) and op-time (aggregate-time, with View-trace chip) kinds, plus the per-kind threshold/budget config registration.",
   contributions: [

@@ -25,6 +25,13 @@ export interface PluginNode {
   description?: string;
   descriptions: Partial<Record<Runtime, string>>;
   loadBearing: boolean;
+  /**
+   * Whether the compact plugin index folds this plugin's sub-tree into one
+   * `[N sub-plugins]` entry — derived by {@link assemblePluginTree}, never
+   * read off one flag: a top-level plugin shows its children unless it
+   * declares `collapsed: true`; a nested plugin with children is folded
+   * unless it declares `expanded: true`. A leaf is never collapsed.
+   */
   collapsed: boolean;
   compositionRoot: boolean;
   runtimes: Record<Runtime, boolean>;
@@ -171,7 +178,10 @@ export interface PluginFields {
   description?: string;
   descriptions: Partial<Record<Runtime, string>>;
   loadBearing: boolean;
+  /** Its `collapsed` flag, as declared (top-level plugins only). */
   collapsed: boolean;
+  /** Its `expanded` flag, as declared (nested plugins only). */
+  expanded: boolean;
   compositionRoot: boolean;
   runtimes: Record<Runtime, boolean>;
 }
@@ -218,6 +228,7 @@ export type KeyFileFacts =
       kind: "package";
       description?: string;
       collapsed: boolean;
+      expanded: boolean;
       compositionRoot: boolean;
     };
 
@@ -237,6 +248,7 @@ export function parseKeyFile(
   }
   let description: string | undefined;
   let collapsed = false;
+  let expanded = false;
   let compositionRoot = false;
   try {
     const pkg = JSON.parse(text);
@@ -244,6 +256,7 @@ export function parseKeyFile(
       description = pkg.description;
     const own = pkg[PLUGIN_MANIFEST_KEY];
     if (own?.collapsed === true) collapsed = true;
+    if (own?.expanded === true) expanded = true;
     if (own?.compositionRoot === true) compositionRoot = true;
     // eslint-disable-next-line promise-safety/no-bare-catch
   } catch {}
@@ -251,6 +264,7 @@ export function parseKeyFile(
     kind: "package",
     ...(description === undefined ? {} : { description }),
     collapsed,
+    expanded,
     compositionRoot,
   };
 }
@@ -293,6 +307,8 @@ export function pluginFieldsFrom(
     collapsed:
       metas.some((m) => m?.collapsed ?? false) ||
       (pkgFacts?.collapsed ?? false),
+    expanded:
+      metas.some((m) => m?.expanded ?? false) || (pkgFacts?.expanded ?? false),
     compositionRoot: pkgFacts?.compositionRoot ?? false,
     runtimes: {
       web: webMeta !== null,
@@ -329,6 +345,40 @@ function computeIds(nodes: PluginNode[], parentId: string): void {
 }
 
 /**
+ * Set each node's {@link PluginNode.collapsed} from its depth and its declared
+ * flag. Branches are folded by default below the top level, so the compact
+ * index stays one screen of umbrellas and their direct children however deep a
+ * new sub-tree grows; a nested branch worth listing in full opts in with
+ * `expanded: true`. A flag that cannot change anything where it sits
+ * (`expanded` on a top-level plugin, `collapsed` on a nested one) throws,
+ * naming the plugin — a no-op flag would read as if it did something.
+ */
+function deriveCollapsed(
+  roots: readonly PluginNode[],
+  fields: readonly (readonly [string, PluginFields])[],
+): void {
+  const byPath = new Map(fields);
+  const visit = (node: PluginNode, nested: boolean) => {
+    const own = byPath.get(node.path);
+    if (own?.expanded && !nested) {
+      throw new Error(
+        `plugins/${node.path}: \`expanded: true\` on a top-level plugin does nothing — a top-level plugin lists its children unless it declares \`collapsed: true\`. Remove the flag.`,
+      );
+    }
+    if (own?.collapsed && nested) {
+      throw new Error(
+        `plugins/${node.path}: \`collapsed: true\` on a nested plugin does nothing — a nested plugin's sub-plugins are folded unless it declares \`expanded: true\`. Remove the flag.`,
+      );
+    }
+    node.collapsed =
+      node.children.length > 0 &&
+      (nested ? !(own?.expanded ?? false) : (own?.collapsed ?? false));
+    for (const c of node.children) visit(c, true);
+  };
+  for (const r of roots) visit(r, false);
+}
+
+/**
  * Link plugins into a tree: each node under its nearest plugin ancestor,
  * siblings by name, hierarchy ids computed. Pure and in memory — `plugins`
  * maps each plugin's path under `pluginsRoot` to its fields, in any order.
@@ -350,7 +400,7 @@ export function assemblePluginTree(
       description: fields.description,
       descriptions: { ...fields.descriptions },
       loadBearing: fields.loadBearing,
-      collapsed: fields.collapsed,
+      collapsed: false,
       compositionRoot: fields.compositionRoot,
       runtimes: { ...fields.runtimes },
       children: [],
@@ -384,6 +434,7 @@ export function assemblePluginTree(
   sortRec(roots);
 
   computeIds(roots, "");
+  deriveCollapsed(roots, sorted);
 
   return { pluginsRoot, byDir, byPath, roots };
 }

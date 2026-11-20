@@ -2,8 +2,5 @@
   "name": "@equin/plugin-fields-directory-path",
   "description": "Directory-path field type: identity only. The config-render capability (a folder picker) and the dirPathField factory live in the plugins/config sub-plugin.",
   "private": true,
-  "version": "0.0.1",
-  "equin": {
-    "collapsed": true
-  }
+  "version": "0.0.1"
 }

@@ -9,7 +9,6 @@ export { attachmentRenderer } from "./attachment-renderer";
 export type { AttachmentRole } from "./attachment-renderer";
 
 export default {
-  collapsed: true,
   description:
     "Renders attachment JSONL events with subtype dispatch to per-attachment renderer plugins.",
   contributions: [

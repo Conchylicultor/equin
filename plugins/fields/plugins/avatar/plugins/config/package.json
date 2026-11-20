@@ -2,8 +2,5 @@
   "name": "@equin/plugin-fields-avatar-config",
   "version": "0.0.1",
   "private": true,
-  "description": "Avatar field type: config-render capability (icon + color picker) plus the avatarField factory.",
-  "equin": {
-    "collapsed": true
-  }
+  "description": "Avatar field type: config-render capability (icon + color picker) plus the avatarField factory."
 }

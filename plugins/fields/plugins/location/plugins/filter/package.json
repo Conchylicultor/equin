@@ -2,8 +2,5 @@
   "name": "@equin/plugin-fields-location-filter",
   "version": "0.0.1",
   "private": true,
-  "description": "Location field type: data-view filter (is set / is not set).",
-  "equin": {
-    "collapsed": true
-  }
+  "description": "Location field type: data-view filter (is set / is not set)."
 }

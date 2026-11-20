@@ -2,8 +2,5 @@
   "name": "@equin/plugin-fields-icon-config",
   "version": "0.0.1",
   "private": true,
-  "description": "Icon field type: config-render capability (icon picker popover) plus the iconField factory.",
-  "equin": {
-    "collapsed": true
-  }
+  "description": "Icon field type: config-render capability (icon picker popover) plus the iconField factory."
 }

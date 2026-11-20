@@ -3,7 +3,6 @@ import { attachmentRenderer } from "@plugins/conversations/plugins/conversation-
 import { NestedMemoryAttachmentView } from "./components/nested-memory-attachment-view";
 
 export default {
-  collapsed: true,
   description:
     "Renders nested-memory attachment events showing which CLAUDE.md files were loaded as context.",
   contributions: [

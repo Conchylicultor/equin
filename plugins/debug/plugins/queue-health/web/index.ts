@@ -15,7 +15,6 @@ import { OpenQueueAction } from "./components/open-queue-action";
 import { useQueueHealth } from "./internal/use-queue-health";
 
 export default {
-  collapsed: true,
   description:
     "Queue-health report renderers: one-line Debug → Reports summaries for the queue-wedged, queue-class-starved, queue-dead-job, queue-backlog, queue-slot-hog, and queue-slot-blocked kinds, plus the threshold config registration, and the health report's Job queue row: per-class slot bars, the jobs that explain its colour, pickup-time stats, and an Open queue action.",
   contributions: [

@@ -3,7 +3,6 @@ import { attachmentRenderer } from "@plugins/conversations/plugins/conversation-
 import { SkillListingView } from "./components/skill-listing-view";
 
 export default {
-  collapsed: true,
   description:
     "Renders skill-listing attachment events showing skills available in the current session.",
   contributions: [

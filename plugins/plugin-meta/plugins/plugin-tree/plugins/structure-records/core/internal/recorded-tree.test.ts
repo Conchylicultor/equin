@@ -64,6 +64,8 @@ describe("buildRecordedPluginTree", () => {
       overlaySnapshot(real, {
         [web]: barrel("second", "\n  loadBearing: true,"),
         [pkg]: JSON.stringify({ [PLUGIN_MANIFEST_KEY]: { collapsed: true } }),
+        // A child, so the top-level `collapsed` flag has a sub-tree to fold.
+        [pj(`${PATH}/plugins/kid/web/index.ts`)]: barrel("kid"),
       }),
     );
     const node = second.byPath.get(PATH);
