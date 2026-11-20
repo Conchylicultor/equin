@@ -54,6 +54,7 @@ That is "cannot tell", never "did not sleep" — a caller decides what to do wit
     - `debug/profiling/op-log`
     - `framework/cli/test`
     - `infra/file-watcher`
+    - `infra/host/host-admission`
     - `infra/host/machine-sleep`
     - `infra/spawn`
 - Exemptions:

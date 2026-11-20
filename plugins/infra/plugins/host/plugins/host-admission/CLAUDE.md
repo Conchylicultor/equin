@@ -173,8 +173,8 @@ window  = clamp(heldUnits + floor((allowed − charged) / PER_UNIT_BYTES), 1, B)
   move): the op log records them as the host-grant wait's reason, and a direct
   op prints them when it queues.
 - **Unmeasured → the floor, reported.** No reading, or none within
-  `FLEET_MEMORY_LEASE_MS` (120 s: main's sampler stopped, main down or
-  restarting for longer than that), admits on `unmeasuredWindow` = `min(B, 2)`:
+  `FLEET_MEMORY_LEASE_MS` (120 s of the machine being AWAKE: main's sampler
+  stopped, main down or restarting for longer than that), admits on `unmeasuredWindow` = `min(B, 2)`:
   one background slot and one reserved interactive slot, so agents run one op
   at a time while a human-blocked op (main's own recovery build) never queues
   behind them. Not `B`: the static ceiling alone is the model that let the
@@ -188,6 +188,15 @@ window  = clamp(heldUnits + floor((allowed − charged) / PER_UNIT_BYTES), 1, B)
   data in `core/internal/unmeasured-report.ts`, registered by
   [`reports/fleet-memory-unmeasured`](../../../../../reports/plugins/fleet-memory-unmeasured). A stopped sampler is a broken
   assumption to fix, not a mode.
+- **The lease counts awake time.** The sampler stamps each reading with the
+  machine's sleep clock (`sleep`: packages/sleep-clock's boot and cumulative
+  `asleepMs`), and admission ages it by wall time less the sleep since
+  (`sleptSince`): a nap freezes the sampler and the memory it measures alike,
+  so it ages nothing. On the wall clock, the first acquire after every wake
+  read the whole nap as staleness (2026-11-20: a lid-shut Mac dark-waking every
+  ~15 min, 653–1035 s "old" with 17–48 s awake). Across a reboot, off macOS,
+  or for an unstamped reading the sleep cannot be compared and the wall clock
+  judges alone.
 
 Limits, stated rather than hidden:
 
@@ -498,6 +507,7 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
     - `listCpuHolders`
     - `publishFleetMemory`
     - `pushPool`
+    - `readClocks`
     - `readHolderPeaks`
     - `recordHolderPeak`
     - `repoPushLock`
@@ -527,6 +537,7 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
     - `watcher-safety/no-raw-fs-watch` — `server/internal/fleet-memory.ts` (sanctioned)
 - Core:
   - Exports (types):
+    - `AdmissionNow`
     - `CpuBudget`
     - `CpuHolderMarker`
     - `FleetAdmission`

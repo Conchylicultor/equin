@@ -3,6 +3,7 @@ import {
   cpuPool,
   listCpuHolders,
   publishFleetMemory,
+  readClocks,
   readHolderPeaks,
   recordHolderPeak,
 } from "@plugins/infra/plugins/host/plugins/host-admission/server";
@@ -128,8 +129,12 @@ async function publishFleetReading({
       `[machine-usage] host memory is not measured on ${read.platform}: host admission has no fleet reading`,
     );
   const memory = read.memory;
+  // Both clocks, so admission ages the reading by the time the machine was
+  // awake: a nap freezes this sampler and the memory it measures alike.
+  const clocks = readClocks();
   await publishFleetMemory({
-    sampledAt: Date.now(),
+    sampledAt: clocks.wallMs,
+    sleep: clocks.sleep,
     ramBytes: totalmem(),
     wiredBytes: memory.kernelBytes,
     // Floored at 0: ops whose footprints exceed what processes hold in all

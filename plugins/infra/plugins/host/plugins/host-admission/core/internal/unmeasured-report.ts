@@ -16,7 +16,7 @@ export const FLEET_MEMORY_UNMEASURED_KIND = "fleet-memory-unmeasured";
 export const FleetMemoryUnmeasuredPayloadSchema = z.object({
   /** `absent`: no reading was ever written; `stale`: the last one is past its lease. */
   cause: z.enum(["absent", "stale"]),
-  /** How old the last reading was (`stale`), or null (`absent`). */
+  /** How long the machine had been awake since the last reading (`stale`), or null (`absent`). */
   ageMs: z.number().nullable(),
   /** The window admitted on meanwhile (host-admission's `unmeasuredWindow`). */
   slots: z.number().int(),
@@ -50,7 +50,7 @@ export function fleetMemoryUnmeasuredMessage(
   const why =
     d.cause === "absent"
       ? "nothing has measured it yet"
-      : `its last measurement is ${Math.round((d.ageMs ?? 0) / 1000)} s old`;
+      : `its last measurement is ${Math.round((d.ageMs ?? 0) / 1000)} s old (awake time)`;
   return (
     `${d.slots === 1 ? "one heavy task" : `up to ${d.slots} heavy tasks`} at a time for now, the safe pace until equin has measured this computer's free memory: ${why} ` +
     `(equin's memory sampler, part of the running app, is not running) — cpu grant admission on the ${d.slots}-slot floor`

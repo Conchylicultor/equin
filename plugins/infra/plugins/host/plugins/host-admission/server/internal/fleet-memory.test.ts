@@ -33,6 +33,7 @@ function tempDir(): AppPath {
 function readingFor(slots: number, sampledAt = Date.now()): FleetMemoryReading {
   return {
     sampledAt,
+    sleep: null,
     ramBytes: 1_000e9,
     wiredBytes: 0,
     otherBytes: 1_000e9 - slots * PER_UNIT_BYTES - 1,

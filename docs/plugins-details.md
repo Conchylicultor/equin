@@ -38369,6 +38369,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `listCpuHolders`
               - `publishFleetMemory`
               - `pushPool`
+              - `readClocks`
               - `readHolderPeaks`
               - `recordHolderPeak`
               - `repoPushLock`
@@ -38398,6 +38399,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `watcher-safety/no-raw-fs-watch` — `server/internal/fleet-memory.ts` (sanctioned)
           - Core:
             - Exports (types):
+              - `AdmissionNow`
               - `CpuBudget`
               - `CpuHolderMarker`
               - `FleetAdmission`
@@ -44985,6 +44987,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/profiling/op-log`
           - `framework/cli/test`
           - `infra/file-watcher`
+          - `infra/host/host-admission`
           - `infra/host/machine-sleep`
           - `infra/spawn`
       - Exemptions:

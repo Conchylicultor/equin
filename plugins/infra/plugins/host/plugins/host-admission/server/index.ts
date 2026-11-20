@@ -16,7 +16,7 @@ export {
   inheritedGrant,
 } from "./internal/grant";
 export { pushPool, repoPushLock } from "./internal/push";
-export { publishFleetMemory } from "./internal/fleet-memory";
+export { publishFleetMemory, readClocks } from "./internal/fleet-memory";
 export type { HolderPeaks } from "./internal/holders";
 export {
   listCpuHolders,

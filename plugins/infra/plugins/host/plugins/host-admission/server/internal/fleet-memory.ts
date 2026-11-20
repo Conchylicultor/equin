@@ -5,6 +5,7 @@ import {
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { mkdir, open, rename, writeFile } from "node:fs/promises";
 import { readFile } from "@plugins/packages/plugins/timed-fs/core";
+import { readSleepClock } from "@plugins/packages/plugins/sleep-clock/core";
 import { createCoalescer } from "@plugins/packages/plugins/coalesce/core";
 import type {
   CapacityFeed,
@@ -16,6 +17,7 @@ import {
   FLEET_MEMORY_LEASE_MS,
   FleetMemoryReadingSchema,
   laneCapacity,
+  type AdmissionNow,
   type FleetAdmission,
   type FleetMemoryReading,
   type Lane,
@@ -56,9 +58,25 @@ async function readFleetReading(
   return FleetMemoryReadingSchema.parse(JSON.parse(raw));
 }
 
+/**
+ * This instant on both clocks: the wall clock, and the machine's sleep clock
+ * (null where it cannot be read). The sampler stamps a reading with the same
+ * pair (`sampledAt`, `sleep`), so admission can age it by the time the machine
+ * was awake.
+ */
+export function readClocks(): AdmissionNow {
+  const clock = readSleepClock();
+  return {
+    wallMs: Date.now(),
+    sleep: clock.supported
+      ? { boot: clock.boot, asleepMs: clock.asleepMs }
+      : null,
+  };
+}
+
 /** What admission acts on now, from the file on disk. */
 async function readFleetAdmission(dir: AppPath): Promise<FleetAdmission> {
-  return fleetAdmission(await readFleetReading(dir), Date.now());
+  return fleetAdmission(await readFleetReading(dir), readClocks());
 }
 
 /**
@@ -117,12 +135,14 @@ export function fleetCapacity(
         // The lease ends with no write when the sampler has stopped: that
         // instant is when admission turns unmeasured, so be there for it.
         // Never later than one lease from now, so a reading stamped in the
-        // future cannot overflow the timer into a re-read loop.
+        // future cannot overflow the timer into a re-read loop. The lease is
+        // awake time and this timer runs through sleep, so after a nap it
+        // fires early: the re-read finds the lease still running and re-arms.
         if (admission.kind === "measured")
           leaseEnd = setTimeout(
             () => reread.trigger(),
             Math.min(
-              Math.max(0, admission.expiresAtMs - Date.now()),
+              Math.max(0, admission.leaseLeftMs),
               FLEET_MEMORY_LEASE_MS,
             ) + 1,
           ).unref();

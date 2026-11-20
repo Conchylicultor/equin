@@ -57,12 +57,30 @@ import { HolderReadingSchema, type HolderReading } from "./holders";
 // where background shares it at low priority.
 
 /**
+ * Where the machine's sleep clock stood at one instant (packages/sleep-clock's
+ * `readSleepClock`, less its `wakeAtMs`): two stamps of one `boot` differ in
+ * `asleepMs` by exactly the time the machine slept between them, whichever
+ * processes took them.
+ */
+export const SleepStampSchema = z.object({
+  boot: z.string(),
+  asleepMs: z.number().nonnegative(),
+});
+export type SleepStamp = z.infer<typeof SleepStampSchema>;
+
+/**
  * One reading of the fleet's memory, published by main's owner sampler (see
  * `publishFleetMemory`) and read at every grant acquire.
  */
 export const FleetMemoryReadingSchema = z.object({
   /** When the footprints were read (epoch ms). */
   sampledAt: z.number(),
+  /**
+   * The machine's sleep clock at `sampledAt`, or null where it cannot be read
+   * (off macOS, or a sampler that predates the stamp): the lease is then judged
+   * on the wall clock alone.
+   */
+  sleep: SleepStampSchema.nullable().default(null),
   /** Physical memory of the host. */
   ramBytes: z.number().positive(),
   /** Kernel memory in no process's footprint (host-memory `kernelBytes`: macOS wired pages, Linux RAM neither free, on a page LRU nor reclaimable slab). */
@@ -84,12 +102,41 @@ export const FleetMemoryReadingSchema = z.object({
 export type FleetMemoryReading = z.infer<typeof FleetMemoryReadingSchema>;
 
 /**
- * How old a reading may be and still decide admission: four of the sampler's
- * 30 s ticks. A reading older than that means main's sampler is not running
- * (main restarting, or down), and admission says so (`unmeasured`) instead of
- * acting on a picture of the machine minutes out of date.
+ * How long a reading may have been AWAKE and still decide admission: four of
+ * the sampler's 30 s ticks. A reading older than that means main's sampler is
+ * not running (main restarting, or down), and admission says so (`unmeasured`)
+ * instead of acting on a picture of the machine minutes out of date.
+ *
+ * Awake time, not wall time: while the machine sleeps every process is frozen,
+ * the sampler and the memory it measures alike, so a nap ages nothing the
+ * reading describes. On the wall clock, the first acquire after every wake
+ * found the reading as old as the nap: on 2026-11-20 00:42–06:38 UTC a lid-shut
+ * Mac dark-woke every ~15 min, main's deploy build acquired its grant within
+ * 0.3–1.5 s of each wake, and read 653–1035 s of "staleness" of which only
+ * 17–48 s were awake (report-1794949494-gejwlo) — the sampler had not missed a
+ * single awake tick.
  */
 export const FLEET_MEMORY_LEASE_MS = 120_000;
+
+/** The instant admission is judged at: the wall clock and, where readable, the sleep clock. */
+export interface AdmissionNow {
+  wallMs: number;
+  sleep: SleepStamp | null;
+}
+
+/**
+ * How long the machine slept between a reading and `now`: the sleep-clock
+ * difference when both were stamped in one boot, else 0 (cannot tell — the
+ * wall clock then judges alone, never in the reading's favour).
+ */
+export function sleptSince(
+  reading: FleetMemoryReading,
+  now: AdmissionNow,
+): number {
+  if (reading.sleep === null || now.sleep === null) return 0;
+  if (reading.sleep.boot !== now.sleep.boot) return 0;
+  return Math.max(0, now.sleep.asleepMs - reading.sleep.asleepMs);
+}
 
 /** What the fleet is charged and what it may have, in bytes and in slots. */
 export interface FleetWindow {
@@ -244,13 +291,13 @@ export type FleetAdmission =
       kind: "measured";
       window: FleetWindow;
       reading: FleetMemoryReading;
-      /** When this reading's lease ends and admission turns `unmeasured`. */
-      expiresAtMs: number;
+      /** Awake time left on this reading's lease before admission turns `unmeasured`. */
+      leaseLeftMs: number;
     }
   | {
       kind: "unmeasured";
       cause: UnmeasuredCause;
-      /** How old the last reading is (`stale`), or null (`absent`). */
+      /** How long the machine has been awake since the last reading (`stale`), or null (`absent`). */
       ageMs: number | null;
       /**
        * The last reading's own `sampledAt` (`stale`), or null (`absent`): the
@@ -261,10 +308,10 @@ export type FleetAdmission =
       slots: number;
     };
 
-/** Admission at `nowMs` given the latest reading (`null`: none was ever written). */
+/** Admission at `now` given the latest reading (`null`: none was ever written). */
 export function fleetAdmission(
   reading: FleetMemoryReading | null,
-  nowMs: number,
+  now: AdmissionNow,
   host: HostFacts = thisHost(),
 ): FleetAdmission {
   if (reading === null)
@@ -275,7 +322,7 @@ export function fleetAdmission(
       sampledAt: null,
       slots: unmeasuredWindow(host),
     };
-  const ageMs = nowMs - reading.sampledAt;
+  const ageMs = now.wallMs - reading.sampledAt - sleptSince(reading, now);
   if (ageMs > FLEET_MEMORY_LEASE_MS)
     return {
       kind: "unmeasured",
@@ -288,7 +335,7 @@ export function fleetAdmission(
     kind: "measured",
     window: fleetWindow(reading, host),
     reading,
-    expiresAtMs: reading.sampledAt + FLEET_MEMORY_LEASE_MS,
+    leaseLeftMs: FLEET_MEMORY_LEASE_MS - ageMs,
   };
 }
 

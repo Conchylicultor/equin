@@ -41,6 +41,7 @@ export {
   unmeasuredWindow,
 } from "./internal/fleet-memory";
 export type {
+  AdmissionNow,
   FleetAdmission,
   FleetMemoryReading,
   FleetWindow,

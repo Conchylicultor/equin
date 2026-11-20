@@ -13,6 +13,7 @@ import {
   FLEET_MEMORY_LEASE_MS,
   laneCapacity,
   unmeasuredWindow,
+  type AdmissionNow,
   type FleetMemoryReading,
 } from "./fleet-memory";
 
@@ -23,6 +24,7 @@ const GB = 1e9;
 function reading(r: Partial<FleetMemoryReading>): FleetMemoryReading {
   return {
     sampledAt: 0,
+    sleep: null,
     ramBytes: BOX.ramBytes,
     wiredBytes: 5 * GB,
     otherBytes: 20 * GB,
@@ -293,6 +295,7 @@ describe("laneCapacity", () => {
     const busy = fleetWindow(
       {
         sampledAt: 0,
+        sleep: null,
         ramBytes: host.ramBytes,
         wiredBytes: 2.5 * GB,
         otherBytes: 11 * GB,
@@ -352,17 +355,19 @@ describe("grantPriority", () => {
 });
 
 describe("fleetAdmission", () => {
-  test("a reading inside its lease is measured, and says when the lease ends", () => {
-    const a = fleetAdmission(reading({ sampledAt: 1_000 }), 31_000, BOX);
+  const wall = (wallMs: number): AdmissionNow => ({ wallMs, sleep: null });
+
+  test("a reading inside its lease is measured, and says how much lease is left", () => {
+    const a = fleetAdmission(reading({ sampledAt: 1_000 }), wall(31_000), BOX);
     expect(a.kind).toBe("measured");
     if (a.kind !== "measured") return;
     expect(a.window.slots).toBe(9);
-    expect(a.expiresAtMs).toBe(1_000 + FLEET_MEMORY_LEASE_MS);
+    expect(a.leaseLeftMs).toBe(FLEET_MEMORY_LEASE_MS - 30_000);
   });
 
   // Not the static ceiling: B alone is what let the host swap.
   test("no reading, or one past its lease: the two-slot floor, not B", () => {
-    expect(fleetAdmission(null, 0, BOX)).toEqual({
+    expect(fleetAdmission(null, wall(0), BOX)).toEqual({
       kind: "unmeasured",
       cause: "absent",
       ageMs: null,
@@ -371,7 +376,7 @@ describe("fleetAdmission", () => {
     });
     const stale = fleetAdmission(
       reading({ sampledAt: 0 }),
-      FLEET_MEMORY_LEASE_MS + 1,
+      wall(FLEET_MEMORY_LEASE_MS + 1),
       BOX,
     );
     expect(stale).toEqual({
@@ -381,6 +386,104 @@ describe("fleetAdmission", () => {
       sampledAt: 0,
       slots: 2,
     });
+  });
+
+  // report-1794949494-gejwlo, 2026-11-20: a lid-shut Mac dark-woke every ~15
+  // min and main's deploy build acquired its grant within ~1 s of each wake.
+  // Each kept occurrence: the reading's wall age, and the nap just before
+  // (its `afterWake.sleptMs`). On the wall clock every one tripped the lease.
+  const NIGHT = [
+    { wallAgeMs: 1_035_025, sleptMs: 1_015_120 },
+    { wallAgeMs: 964_000, sleptMs: 943_712 },
+    { wallAgeMs: 653_000, sleptMs: 633_210 },
+    { wallAgeMs: 1_022_000, sleptMs: 974_826 },
+    { wallAgeMs: 786_000, sleptMs: 768_812 },
+    { wallAgeMs: 915_000, sleptMs: 897_440 },
+    { wallAgeMs: 915_000, sleptMs: 897_848 },
+  ];
+  const BOOT = "boot-a";
+  const sampledAt = 1_795_000_000_000;
+  const asleepAtSample = 50_000_000;
+
+  test("a nap ages no reading: every occurrence of the night is measured on awake time", () => {
+    for (const o of NIGHT) {
+      const r = reading({
+        sampledAt,
+        sleep: { boot: BOOT, asleepMs: asleepAtSample },
+      });
+      const now: AdmissionNow = {
+        wallMs: sampledAt + o.wallAgeMs,
+        sleep: { boot: BOOT, asleepMs: asleepAtSample + o.sleptMs },
+      };
+      expect(fleetAdmission(r, wall(now.wallMs), BOX).kind).toBe("unmeasured");
+      const a = fleetAdmission(r, now, BOX);
+      expect(a.kind).toBe("measured");
+      if (a.kind !== "measured") continue;
+      expect(a.leaseLeftMs).toBe(
+        FLEET_MEMORY_LEASE_MS - (o.wallAgeMs - o.sleptMs),
+      );
+    }
+  });
+
+  test("a sampler dead while the machine is awake still turns stale on the lease", () => {
+    const r = reading({
+      sampledAt,
+      sleep: { boot: BOOT, asleepMs: asleepAtSample },
+    });
+    // 15 min of wall time, of which a 10 min nap: 5 min awake with no reading.
+    const a = fleetAdmission(
+      r,
+      {
+        wallMs: sampledAt + 900_000,
+        sleep: { boot: BOOT, asleepMs: asleepAtSample + 600_000 },
+      },
+      BOX,
+    );
+    expect(a).toMatchObject({
+      kind: "unmeasured",
+      cause: "stale",
+      ageMs: 300_000,
+    });
+    // And with no nap at all, exactly as on the wall clock.
+    expect(
+      fleetAdmission(
+        r,
+        {
+          wallMs: sampledAt + FLEET_MEMORY_LEASE_MS + 1,
+          sleep: { boot: BOOT, asleepMs: asleepAtSample },
+        },
+        BOX,
+      ).kind,
+    ).toBe("unmeasured");
+  });
+
+  test("a sleep clock that cannot be compared credits no sleep: the wall clock judges", () => {
+    const now = (sleep: AdmissionNow["sleep"]): AdmissionNow => ({
+      wallMs: sampledAt + 900_000,
+      sleep,
+    });
+    const stamped = reading({
+      sampledAt,
+      sleep: { boot: BOOT, asleepMs: asleepAtSample },
+    });
+    // Another boot: its sleep clock restarted.
+    expect(
+      fleetAdmission(
+        stamped,
+        now({ boot: "boot-b", asleepMs: asleepAtSample + 899_000 }),
+        BOX,
+      ).kind,
+    ).toBe("unmeasured");
+    // This side cannot read the clock (off macOS).
+    expect(fleetAdmission(stamped, now(null), BOX).kind).toBe("unmeasured");
+    // A reading from a sampler that predates the stamp.
+    expect(
+      fleetAdmission(
+        reading({ sampledAt }),
+        now({ boot: BOOT, asleepMs: asleepAtSample + 899_000 }),
+        BOX,
+      ).kind,
+    ).toBe("unmeasured");
   });
 
   test("the floor keeps one background slot and one reserved interactive slot", () => {

@@ -28,10 +28,10 @@ export const fleetMemoryUnmeasuredKind = ReportKind({
         fleetMemoryUnmeasuredMessage(d),
         "",
         `- Acquired by: pid ${d.pid}, \`${d.command}\` (${d.lane} lane)`,
-        `- Last reading's age: ${d.ageMs === null ? "none ever written" : `${Math.round(d.ageMs / 1000)} s`}`,
+        `- Last reading's age (time the machine was awake since): ${d.ageMs === null ? "none ever written" : `${Math.round(d.ageMs / 1000)} s`}`,
         `- Window admitted on: ${d.slots} slots (one background, one reserved interactive)`,
         "",
-        "Every `cpu` grant is sized from main's owner sampler reading (`locks/fleet-memory/fleet-memory.json`, every 30 s; `plugins/debug/plugins/sentinel/plugins/machine-usage`). Without one, admission cannot see the machine and holds the agent fleet to one op at a time. Find out why the sampler stopped writing (main down or restarting for over 2 min? the `machine-usage.owner-sampler` timer failing?) — the floor is a safe stand-in, not a mode to live in.",
+        "Every `cpu` grant is sized from main's owner sampler reading (`locks/fleet-memory/fleet-memory.json`, every 30 s; `plugins/debug/plugins/sentinel/plugins/machine-usage`). Without one, admission cannot see the machine and holds the agent fleet to one op at a time. Find out why the sampler stopped writing (main down or restarting for over 2 min of awake time? the `machine-usage.owner-sampler` timer failing?) — the floor is a safe stand-in, not a mode to live in.",
       ].join("\n"),
     };
   },
