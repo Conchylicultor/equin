@@ -4,7 +4,7 @@
  * design "a job that starts the whole app, or names the lists it reads, should
  * have no spelling" (wiki: Import time and lazy imports, 2026-11-20).
  *
- *   ./equin run plugins/framework/plugins/tooling/plugins/codegen/scripts/measure-job-read-reach.ts \
+ *   ./equin run plugins/framework/plugins/server-core/scripts/measure-job-read-reach.ts \
  *     [--job <name>] [--json] [--sites] [--why [--level <level>]]
  *
  * Every non-test, non-web module under `plugins/` is parsed once (syntax only):
@@ -28,7 +28,7 @@
  *
  * `nodes` is the start set the resolver gives for those lists (plugin halves,
  * before host-service providers and sink handlers, which only a load finds):
- * measure the real start with `server-core/scripts/exec-boot-cost.ts --start
+ * measure the real start with `scripts/exec-boot-cost.ts --start
  * <plugin> --reads <lists>`. `--why` prints, per list, the chain of names that
  * reached it; `--sites` every whole read in the repo with its list.
  *
@@ -41,13 +41,10 @@ import { join } from "node:path";
 import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { resolveSpecifier } from "@plugins/plugin-meta/plugins/plugin-records/plugins/specifier/core";
 import ts from "typescript";
-import { serverEntries } from "@plugins/framework/plugins/server-core/core/server.generated";
-import { machineEntries } from "@plugins/framework/plugins/server-core/core/machine.generated";
-import { serverContributors } from "@plugins/framework/plugins/server-core/core/contributors.generated";
-import {
-  graphNodeOf,
-  resolveStartSet,
-} from "@plugins/framework/plugins/server-core/core/start-set";
+import { serverEntries } from "../core/server.generated";
+import { machineEntries } from "../core/machine.generated";
+import { serverContributors } from "../core/contributors.generated";
+import { graphNodeOf, resolveStartSet } from "../core/start-set";
 import { isMachineNode } from "@plugins/framework/plugins/plugin-id/core";
 
 const ROOT = process.cwd();
