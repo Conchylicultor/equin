@@ -33,7 +33,7 @@ import { PageIcon } from "@plugins/page/plugins/editor/web";
 import { usePageReferenceTint } from "@plugins/page/plugins/page-reference/web";
 import { pageDetailPane } from "../panes";
 import { createPageWithSeed } from "../internal/create-page-with-seed";
-import { useOpenNewPage } from "../internal/new-page-focus";
+import { useOpenNewPage } from "../internal/open-new-page";
 import { PageTree } from "../slots";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";

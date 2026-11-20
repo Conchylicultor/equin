@@ -1,4 +1,3 @@
-import { PLAIN_GESTURE } from "@plugins/primitives/plugins/link-gesture/core";
 import { createContext, useContext, type ReactNode } from "react";
 import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 
@@ -48,6 +47,13 @@ export interface PageNavigation {
    * block view declares none, and the "Open as page" affordance is then absent.
    */
   openBlock?(blockId: string): LinkTarget;
+  /**
+   * Open a page the user has just MADE, in place, ready to be written in: the
+   * host puts the caret in its title, so the new page can be named without a
+   * click. Not a `LinkTarget` — it is never a link the user follows, only the
+   * step after a create.
+   */
+  openNew(pageId: string): void;
 }
 
 const PageNavigationContext = createContext<PageNavigation | undefined>(
@@ -100,7 +106,7 @@ export function useOpenMadePage(): (
   const nav = usePageNavigation();
   return (made, pageId) => {
     void made.then(() => {
-      nav?.open(pageId).open(PLAIN_GESTURE);
+      nav?.openNew(pageId);
     });
   };
 }

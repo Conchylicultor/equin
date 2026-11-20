@@ -34,7 +34,7 @@ export {
   createPageWithSeed,
   type PageSeedBlock,
 } from "./internal/create-page-with-seed";
-export { useOpenNewPage } from "./internal/new-page-focus";
+export { useOpenNewPage } from "./internal/open-new-page";
 
 export default {
   description:

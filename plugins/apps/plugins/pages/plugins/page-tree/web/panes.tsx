@@ -46,6 +46,7 @@ import {
   type PageNavigation,
 } from "@plugins/page/plugins/page-reference/web";
 import { TrashedPageView } from "./components/trashed-page";
+import { requestNewPageFocus } from "./internal/new-page-focus";
 import { PageHeader } from "./components/page-header";
 import { PageBreadcrumb } from "./components/page-breadcrumb";
 import { PageCover } from "./components/page-cover";
@@ -227,6 +228,10 @@ function usePagesNavigation(): PageNavigation {
     () => ({
       open: (id) =>
         openPane.to(pageDetailPane, { pageId: id }, { mode: "swap" }),
+      openNew: (id) => {
+        requestNewPageFocus(id);
+        openPane(pageDetailPane, { pageId: id }, { mode: "swap" });
+      },
       openAside: (id) =>
         openPane.to(pageDetailPane, { pageId: id }, { mode: "push" }),
       openBlock: (id) =>

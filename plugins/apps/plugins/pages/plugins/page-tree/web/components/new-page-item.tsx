@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { PagesSidebarRow } from "@plugins/apps/plugins/pages/plugins/shell/web";
-import { useOpenNewPage } from "../internal/new-page-focus";
+import { useOpenNewPage } from "../internal/open-new-page";
 import { createPageWithSeed } from "../internal/create-page-with-seed";
 
 const addIcon = symbol("add");
