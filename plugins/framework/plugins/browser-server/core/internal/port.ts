@@ -620,11 +620,25 @@ function hostFailure(err: unknown): HostServerError {
 export class PortHostBootError extends SubjectError {
   constructor(readonly hostError: HostServerError) {
     super(
-      `the browser server's worker failed to boot:\n${hostError.stack ?? hostError.message}`,
-      { subject: bootFailureSubject(hostError) },
+      `the browser server's worker failed to boot:\n${hostErrorText(hostError)}`,
+      {
+        subject: bootFailureSubject(hostError),
+      },
     );
     this.name = "PortHostBootError";
   }
+}
+
+/**
+ * The worker's error as text: its message, then its stack. V8 starts a stack
+ * with `Name: message`; WebKit's and Gecko's stacks hold only the frames, so
+ * the stack alone loses what went wrong (report-1795156708-k37rzk: a Safari
+ * boot failure whose text was frames only).
+ */
+function hostErrorText(error: HostServerError): string {
+  if (error.stack === null) return error.message;
+  if (error.stack.includes(error.message)) return error.stack;
+  return `${error.message}\n${error.stack}`;
 }
 
 /** The cause of a failed boot, as stable words (`PortHostBootError`'s subject). */

@@ -163,6 +163,25 @@ describe("a browser server over a port", () => {
     );
   });
 
+  test("a worker error whose stack holds only frames (WebKit, Gecko) keeps its message", async () => {
+    const channel = new MessageChannel();
+    channel.port1.start();
+    channel.port2.start();
+    const served = serveOverPort(channel.port2, async () => {
+      const err = new Error("ERRORDATA_STACK_SIZE exceeded");
+      // Safari's format: no `Name: message` line, frames only.
+      err.stack = "parse@https://equin.ai/a.js:1:2\nwasm-stub@[wasm code]";
+      throw err;
+    });
+    const [, pageErr] = await Promise.all([
+      served.catch((e: unknown) => e),
+      portBrowserServer(channel.port1).catch((e: unknown) => e),
+    ]);
+    const message = (pageErr as PortHostBootError).message;
+    expect(message).toContain("ERRORDATA_STACK_SIZE exceeded");
+    expect(message).toContain("parse@https://equin.ai/a.js:1:2");
+  });
+
   test("a failed boot names its cause: one report per cause, not one for every boot failure", async () => {
     const pageError = async (fail: () => never): Promise<PortHostBootError> => {
       const channel = new MessageChannel();

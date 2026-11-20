@@ -426,9 +426,11 @@ type ScopeState =
  *   visit: entering downloads the server and its data);
  * - `starting` — the visitor entered and the host is still booting,
  *   `progress` its worker's report so far (`null` until the first arrives);
- * - `failed` — the host could not boot, or the scope's own web plugins did
- *   not load (most often a module the visitor's network lost on the way: a
- *   dropped connection, a content blocker). The failure is already reported
+ * - `failed` — the host could not boot (`cause: "host"`: anything its
+ *   worker threw — a module lost on the way, its database failing to open),
+ *   or the scope's own web plugins did not load (`cause: "plugins"`: a module
+ *   the visitor's network lost — a dropped connection, a content blocker),
+ *   so a page says which. The failure is already reported
  *   (`reportError`, as an uncaught error is; a plugin by the loader's
  *   plugin-load report); `retry` boots a fresh host, or loads the plugins
  *   again — fetching what was lost again. The page draws it in the demo's own box, so a demo that
@@ -438,7 +440,12 @@ export type DemoBoot =
   | { kind: "checking" }
   | { kind: "gate"; enter(): void }
   | { kind: "starting"; progress: HostProgress | null }
-  | { kind: "failed"; error: unknown; retry(): void };
+  | {
+      kind: "failed";
+      cause: "host" | "plugins";
+      error: unknown;
+      retry(): void;
+    };
 
 /**
  * How the visitor came into a gated demo: `"gate"` — they clicked Enter in
@@ -774,7 +781,7 @@ export function DemoScope({
   // a retry (reported by the effect above), else it reaches the error boundary.
   if (state.kind === "failed") {
     if (boot === undefined) throw state.error;
-    return boot({ kind: "failed", error: state.error, retry });
+    return boot({ kind: "failed", cause: "host", error: state.error, retry });
   }
   // The scope's on-demand plugins that did not load (a module of theirs the
   // visitor's network lost): drawn in the demo's box like a failed host, never
@@ -784,6 +791,7 @@ export function DemoScope({
     if (boot === undefined) throw scopePlugins.error;
     return boot({
       kind: "failed",
+      cause: "plugins",
       error: scopePlugins.error,
       retry: scopePlugins.retry,
     });

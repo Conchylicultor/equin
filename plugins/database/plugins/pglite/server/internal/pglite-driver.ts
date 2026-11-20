@@ -31,6 +31,34 @@ export interface PgliteDriverOptions {
   storage?: () => HostStorage;
 }
 
+/** How much of a failed statement its error carries. */
+const STATEMENT_PREVIEW_CHARS = 300;
+
+/**
+ * Run one statement (or script), its failure naming it: the error's message
+ * gains the statement's text, cut short. PGlite's own error says only what
+ * Postgres said, so a failure deep in a boot — the schema layer, a clock
+ * shift, a plugin's first read — reached its crash report with no word of
+ * which of the boot's hundreds of statements ran (report-1795156708-k37rzk:
+ * "ERRORDATA_STACK_SIZE exceeded", nothing else). The error itself is kept —
+ * its `code` and fields are what callers branch on.
+ */
+async function naming<T>(text: string, run: () => Promise<T>): Promise<T> {
+  try {
+    return await run();
+  } catch (err) {
+    if (err instanceof Error) {
+      const flat = text.replaceAll(/\s+/g, " ").trim();
+      const preview =
+        flat.length > STATEMENT_PREVIEW_CHARS
+          ? `${flat.slice(0, STATEMENT_PREVIEW_CHARS)}…`
+          : flat;
+      err.message = `${err.message}\n  in statement: ${preview}`;
+    }
+    throw err;
+  }
+}
+
 /**
  * The one difference between node-postgres and PGlite the app's SQL can hit:
  * node-postgres sends a PARAMETERLESS query over the simple protocol, which
@@ -55,7 +83,9 @@ function scriptQueries<C extends PGlite | Transaction>(client: C): C {
       (params === undefined || params.length === 0) &&
       options?.rowMode !== "array"
     ) {
-      const last = (await client.exec(text, options)).at(-1);
+      const last = (await naming(text, () => client.exec(text, options))).at(
+        -1,
+      );
       if (last === undefined) {
         throw new Error(
           `[pglite] exec returned no result for: ${text.slice(0, 120)}`,
@@ -63,7 +93,7 @@ function scriptQueries<C extends PGlite | Transaction>(client: C): C {
       }
       return last;
     }
-    return client.query(text, params, options);
+    return naming(text, () => client.query(text, params, options));
   }
   return new Proxy(client, {
     get(target, prop, receiver) {
@@ -111,16 +141,14 @@ async function shiftClock(pglite: PGlite, ms: number): Promise<void> {
   }
   const quote = (id: string): string => `"${id.replaceAll('"', '""')}"`;
   await pglite.transaction(async (tx) => {
-    await tx.exec("SET LOCAL session_replication_role = replica");
+    const replica = "SET LOCAL session_replication_role = replica";
+    await naming(replica, () => tx.exec(replica));
     for (const [table, cols] of byTable) {
-      await tx.exec(
-        // sql-writes:hand-written — clock shift over every timestamp column the catalog lists
-        `UPDATE ${quote(table)} SET ${cols
-          .map(
-            (c) => `${quote(c)} = ${quote(c)} + interval '${ms} milliseconds'`,
-          )
-          .join(", ")}`,
-      );
+      // sql-writes:hand-written — clock shift over every timestamp column the catalog lists
+      const shift = `UPDATE ${quote(table)} SET ${cols
+        .map((c) => `${quote(c)} = ${quote(c)} + interval '${ms} milliseconds'`)
+        .join(", ")}`;
+      await naming(shift, () => tx.exec(shift));
     }
   });
 }

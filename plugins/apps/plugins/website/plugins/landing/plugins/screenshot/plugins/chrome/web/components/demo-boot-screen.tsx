@@ -46,9 +46,10 @@ const isStarting = (progress: HostProgress | null): boolean =>
  *   another tab (`checking`, a few ms), the logo alone;
  * - while it starts, one bar in the logo's gradient, what it is doing and
  *   how much it downloaded so far, in place of the button;
- * - when it could not start (a module lost on the visitor's network), what
- *   happened and Try again, in the button's place — the page around it is
- *   untouched.
+ * - when it could not start, what happened and Try again, in the button's
+ *   place — "part of it did not download" only when that is the cause (the
+ *   demo's own plugins lost on the visitor's network), never for a server
+ *   that failed to start — the page around it is untouched.
  *
  * It fills its box: the website's demo band — or the whole
  * page, where the URL it opens is maximized.
@@ -97,7 +98,9 @@ export function DemoBootScreen({ state }: { state: DemoBoot }): ReactNode {
                 className="demo-boot-sub"
                 role="alert"
               >
-                equin could not start: part of it did not download.
+                {state.cause === "plugins"
+                  ? "equin could not start: part of it did not download."
+                  : "equin could not start in this browser."}
               </Text>
             </>
           )}
